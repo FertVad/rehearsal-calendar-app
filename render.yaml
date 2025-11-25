@@ -1,0 +1,34 @@
+services:
+  # Backend API Server
+  - type: web
+    name: rehearsal-calendar-api
+    env: node
+    region: frankfurt
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rehearsal-calendar-db
+          property: connectionString
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: WEBHOOK_URL
+        value: https://rehearsal-calendar-api.onrender.com
+
+databases:
+  - name: rehearsal-calendar-db
+    databaseName: rehearsal_calendar
+    plan: free
+    region: frankfurt

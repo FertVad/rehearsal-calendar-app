@@ -136,6 +136,11 @@ app.use((req, _res, next) => {
   next();
 });
 
+// Health check endpoint for monitoring/deployment
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.use('/api/auth', authRoutes); // Native app authentication
 app.use('/api/native', nativeRoutes); // Native app endpoints (projects, rehearsals)
 app.use('/api/availability', availabilityRoutes); // Native app availability
