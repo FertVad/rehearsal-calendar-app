@@ -39,3 +39,32 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+server/*.db
+server/*.sqlite
+server/*.sqlite3
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Server uploads
+server/uploads/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Cache
+.cache/

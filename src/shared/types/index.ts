@@ -1,0 +1,53 @@
+export interface TimeRange {
+    start: string;
+    end: string;
+}
+
+export interface AvailabilityInfo {
+    timeRanges: TimeRange[];
+}
+
+export type RSVPStatus = 'invited' | 'confirmed' | 'declined' | 'tentative';
+
+export interface UserResponse {
+    status: RSVPStatus;
+    responseAt?: string;
+    notes?: string;
+}
+
+export interface ResponseStats {
+    total: number;
+    confirmed: number;
+    declined: number;
+    tentative: number;
+    invited: number;
+}
+
+export interface Rehearsal {
+    id: string;
+    date: string;
+    time: string;
+    endTime?: string;
+    location?: string;
+    status?: string;
+    projectId?: string;
+    projectName?: string;
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+    // RSVP data
+    myResponse?: UserResponse;
+    responseStats?: ResponseStats;
+}
+
+export interface Project {
+    id: string;
+    chat_id: string;
+    name: string;
+    description?: string;
+    timezone?: string;
+    is_admin?: boolean;
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+    created_at?: string;
+    updated_at?: string;
+}
