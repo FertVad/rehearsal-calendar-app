@@ -8,6 +8,22 @@ function generateInviteCode() {
   return crypto.randomBytes(16).toString('hex');
 }
 
+// Generate invite URL based on environment
+function generateInviteUrl(inviteCode) {
+  // In development: Use Expo dev server URL (for testing)
+  // In production: Use the production app scheme
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+
+  if (isDevelopment) {
+    // For local development with Expo Go
+    const devHost = process.env.DEV_HOST || '192.168.1.38:8081';
+    return `exp://${devHost}/--/invite/${inviteCode}`;
+  } else {
+    // For production builds (standalone apps)
+    return `rehearsalapp://invite/${inviteCode}`;
+  }
+}
+
 /**
  * Router for React Native app endpoints (non-Telegram)
  * These endpoints work with regular user accounts (email/password)
@@ -551,7 +567,7 @@ router.post('/projects/:projectId/invite', requireAuth, async (req, res) => {
       return res.json({
         inviteCode: project.invite_code,
         expiresAt: project.invite_expires_at,
-        inviteUrl: `exp://192.168.1.38:8081/--/invite/${project.invite_code}`,
+        inviteUrl: generateInviteUrl(project.invite_code),
       });
     }
 
@@ -564,7 +580,7 @@ router.post('/projects/:projectId/invite', requireAuth, async (req, res) => {
     res.json({
       inviteCode,
       expiresAt: expiresAt.toISOString(),
-      inviteUrl: `exp://192.168.1.38:8081/--/invite/${inviteCode}`,
+      inviteUrl: generateInviteUrl(inviteCode),
     });
   } catch (error) {
     console.error('Error creating invite:', error);
@@ -607,7 +623,7 @@ router.get('/projects/:projectId/invite', requireAuth, async (req, res) => {
       invite: {
         inviteCode: project.invite_code,
         expiresAt: project.invite_expires_at,
-        inviteUrl: `exp://192.168.1.38:8081/--/invite/${project.invite_code}`,
+        inviteUrl: generateInviteUrl(project.invite_code),
       },
     });
   } catch (error) {
