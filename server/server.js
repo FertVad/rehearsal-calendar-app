@@ -154,6 +154,72 @@ app.use('/api/analytics', analyticsTrackRoutes);
 app.use('/api/analytics/admin/auth', analyticsAuthRoutes);
 app.use('/api/analytics/admin', analyticsAdminRoutes);
 
+// Universal deep link route - redirect to app
+app.get('/invite/:code', (req, res) => {
+  const { code } = req.params;
+  const appScheme = 'rehearsalapp://invite/' + code;
+
+  // HTML page that redirects to the app
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Join Project - Rehearsal App</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          margin: 0;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+        .container {
+          text-align: center;
+          padding: 2rem;
+        }
+        h1 { margin-bottom: 1rem; }
+        .button {
+          display: inline-block;
+          padding: 1rem 2rem;
+          background: white;
+          color: #667eea;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: 600;
+          margin-top: 1rem;
+        }
+      </style>
+      <script>
+        // Try to open the app immediately
+        window.location.href = '${appScheme}';
+
+        // Fallback: if app doesn't open, show instructions
+        setTimeout(() => {
+          document.getElementById('message').style.display = 'block';
+        }, 1000);
+      </script>
+    </head>
+    <body>
+      <div class="container">
+        <h1>Opening Rehearsal App...</h1>
+        <p>You're being redirected to the app</p>
+        <div id="message" style="display: none; margin-top: 2rem;">
+          <p>If the app doesn't open automatically:</p>
+          <a href="${appScheme}" class="button">Open in App</a>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  res.send(html);
+});
+
 // Webhook route (only if bot is enabled)
 if (bot) {
   app.use(

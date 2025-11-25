@@ -10,18 +10,12 @@ function generateInviteCode() {
 
 // Generate invite URL based on environment
 function generateInviteUrl(inviteCode) {
-  // In development: Use Expo dev server URL (for testing)
-  // In production: Use the production app scheme
-  const isDevelopment = process.env.NODE_ENV !== 'production';
-
-  if (isDevelopment) {
-    // For local development with Expo Go
-    const devHost = process.env.DEV_HOST || '192.168.1.38:8081';
-    return `exp://${devHost}/--/invite/${inviteCode}`;
-  } else {
-    // For production builds (standalone apps)
-    return `rehearsalapp://invite/${inviteCode}`;
-  }
+  // Always use production URL for invite links
+  // This works in both development and production because:
+  // 1. The HTML page on Render will redirect to the app scheme
+  // 2. Users can share these links and they work everywhere
+  // 3. No localhost issues in simulators
+  return `https://rehearsal-calendar-app.onrender.com/invite/${inviteCode}`;
 }
 
 /**
