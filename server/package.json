@@ -19,7 +19,8 @@
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^12.2.0",
     "pg": "^8.11.3",
-    "telegraf": "^4.16.3"
+    "telegraf": "^4.16.3",
+    "date-fns": "^3.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
