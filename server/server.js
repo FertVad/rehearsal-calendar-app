@@ -181,8 +181,17 @@ app.get('/invite/:code', (req, res) => {
         .container {
           text-align: center;
           padding: 2rem;
+          max-width: 500px;
         }
-        h1 { margin-bottom: 1rem; }
+        h1 {
+          margin-bottom: 1rem;
+          font-size: 2rem;
+        }
+        p {
+          margin-bottom: 2rem;
+          font-size: 1.1rem;
+          opacity: 0.9;
+        }
         .button {
           display: inline-block;
           padding: 1rem 2rem;
@@ -191,27 +200,20 @@ app.get('/invite/:code', (req, res) => {
           text-decoration: none;
           border-radius: 8px;
           font-weight: 600;
-          margin-top: 1rem;
+          font-size: 1.1rem;
+          transition: transform 0.2s;
+          cursor: pointer;
+        }
+        .button:hover {
+          transform: scale(1.05);
         }
       </style>
-      <script>
-        // Try to open the app immediately
-        window.location.href = '${appScheme}';
-
-        // Fallback: if app doesn't open, show instructions
-        setTimeout(() => {
-          document.getElementById('message').style.display = 'block';
-        }, 1000);
-      </script>
     </head>
     <body>
       <div class="container">
-        <h1>Opening Rehearsal App...</h1>
-        <p>You're being redirected to the app</p>
-        <div id="message" style="display: none; margin-top: 2rem;">
-          <p>If the app doesn't open automatically:</p>
-          <a href="${appScheme}" class="button">Open in App</a>
-        </div>
+        <h1>🎭 Rehearsal App</h1>
+        <p>Нажмите кнопку ниже, чтобы присоединиться к проекту</p>
+        <a href="${appScheme}" class="button">Открыть приложение</a>
       </div>
     </body>
     </html>
