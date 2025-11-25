@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // For real device: http://YOUR_COMPUTER_IP:3001
 const API_URL = __DEV__
   ? 'http://localhost:3001/api'
-  : 'https://rehearsal-calendar-api.onrender.com/api';
+  : 'https://rehearsal-calendar-app.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,
