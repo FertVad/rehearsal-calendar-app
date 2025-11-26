@@ -16,13 +16,24 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rehearsal.app",
-      "associatedDomains": ["applinks:rehearsal-calendar-app.onrender.com"],
+      "associatedDomains": [
+        "applinks:rehearsal-calendar-app.onrender.com",
+        "applinks:rehearsal-calendar-app.onrender.com"
+      ],
       "infoPlist": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["rehearsalapp"]
+            "CFBundleURLSchemes": [
+              "rehearsalapp"
+            ]
+          },
+          {
+            "CFBundleURLSchemes": [
+              "rehearsalapp"
+            ]
           }
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -45,7 +56,10 @@
               "scheme": "rehearsalapp"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "edgeToEdgeEnabled": true,
@@ -56,6 +70,11 @@
     },
     "plugins": [
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3151ccee-abfe-4f07-925e-00004d2fade8"
+      }
+    }
   }
 }

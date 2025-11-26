@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // For Android emulator: http://10.0.2.2:3001
 // For real device: http://YOUR_COMPUTER_IP:3001
 const API_URL = __DEV__
-  ? 'http://localhost:3001/api'
+  ? 'http://192.168.1.38:3001/api'  // Use IP address for real device support
   : 'https://rehearsal-calendar-app.onrender.com/api';
 
 const api = axios.create({
