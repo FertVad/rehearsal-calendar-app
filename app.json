@@ -15,13 +15,39 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rehearsal.app"
+      "bundleIdentifier": "com.rehearsal.app",
+      "associatedDomains": ["applinks:rehearsal-calendar-app.onrender.com"],
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["rehearsalapp"]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "package": "com.rehearsal.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "rehearsal-calendar-app.onrender.com",
+              "pathPrefix": "/invite"
+            },
+            {
+              "scheme": "rehearsalapp"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },

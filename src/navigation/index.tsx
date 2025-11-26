@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -19,11 +19,17 @@ import ProfileScreen from '../features/profile/screens/ProfileScreen';
 
 const prefix = Linking.createURL('/');
 
-const linking = {
-  prefixes: [prefix, 'rehearsalapp://'],
+const linking: any = {
+  prefixes: [
+    prefix,
+    'rehearsalapp://',
+    'https://rehearsal-calendar-app.onrender.com',
+    'http://localhost:3001'
+  ],
   config: {
     screens: {
       MainTabs: {
+        path: 'tabs',
         screens: {
           Calendar: 'calendar',
           Projects: 'projects',
@@ -188,6 +194,57 @@ function AppNavigator() {
 
 export default function Navigation() {
   const { isAuthenticated, loading } = useAuth();
+  const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
+  const navigationRef = React.useRef<any>(null);
+
+  // Handle deep links for unauthenticated users
+  useEffect(() => {
+    const handleUrl = async (url: string) => {
+      console.log('Received URL:', url);
+
+      // Extract invite code from URL
+      const inviteMatch = url.match(/invite\/([a-f0-9]+)/);
+      if (inviteMatch) {
+        const code = inviteMatch[1];
+        console.log('Extracted invite code:', code);
+
+        if (isAuthenticated && navigationRef.current) {
+          // User is authenticated, navigate directly
+          navigationRef.current.navigate('JoinProject', { code });
+        } else {
+          // User not authenticated, save for later
+          setPendingInviteCode(code);
+        }
+      }
+    };
+
+    // Handle initial URL (app opened from link)
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleUrl(url);
+      }
+    });
+
+    // Handle URL when app is already open
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleUrl(event.url);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated]);
+
+  // Navigate to invite when user logs in
+  useEffect(() => {
+    if (isAuthenticated && pendingInviteCode && navigationRef.current) {
+      // Small delay to ensure navigation is ready
+      setTimeout(() => {
+        navigationRef.current?.navigate('JoinProject', { code: pendingInviteCode });
+        setPendingInviteCode(null);
+      }, 500);
+    }
+  }, [isAuthenticated, pendingInviteCode]);
 
   if (loading) {
     // TODO: Add proper loading screen later
@@ -195,7 +252,10 @@ export default function Navigation() {
   }
 
   return (
-    <NavigationContainer linking={isAuthenticated ? linking : undefined}>
+    <NavigationContainer
+      ref={navigationRef}
+      linking={isAuthenticated ? linking : undefined}
+    >
       {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );

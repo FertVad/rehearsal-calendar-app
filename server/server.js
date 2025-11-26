@@ -154,12 +154,44 @@ app.use('/api/analytics', analyticsTrackRoutes);
 app.use('/api/analytics/admin/auth', analyticsAuthRoutes);
 app.use('/api/analytics/admin', analyticsAdminRoutes);
 
-// Universal deep link route - redirect to app
+// Apple App Site Association for Universal Links (iOS)
+app.get('/.well-known/apple-app-site-association', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json({
+    applinks: {
+      apps: [],
+      details: [
+        {
+          appID: 'TEAM_ID.com.rehearsal.app', // Will need actual Team ID for production
+          paths: ['/invite/*']
+        }
+      ]
+    }
+  });
+});
+
+// Android assetlinks.json for App Links
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.json([
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.rehearsal.app',
+        sha256_cert_fingerprints: [
+          // Will need actual SHA256 fingerprint from keystore
+          'YOUR_ANDROID_SHA256_FINGERPRINT'
+        ]
+      }
+    }
+  ]);
+});
+
+// Universal deep link route - smart redirect page
 app.get('/invite/:code', (req, res) => {
   const { code } = req.params;
-  const appScheme = 'rehearsalapp://invite/' + code;
+  const expoHost = req.query.expoHost;
 
-  // HTML page that redirects to the app
   const html = `
     <!DOCTYPE html>
     <html>
@@ -183,17 +215,11 @@ app.get('/invite/:code', (req, res) => {
           padding: 2rem;
           max-width: 500px;
         }
-        h1 {
-          margin-bottom: 1rem;
-          font-size: 2rem;
-        }
-        p {
-          margin-bottom: 2rem;
-          font-size: 1.1rem;
-          opacity: 0.9;
-        }
+        h1 { margin-bottom: 1rem; font-size: 2rem; }
+        p { margin-bottom: 1rem; font-size: 1.1rem; opacity: 0.9; }
         .button {
           display: inline-block;
+          margin: 0.5rem;
           padding: 1rem 2rem;
           background: white;
           color: #667eea;
@@ -201,20 +227,60 @@ app.get('/invite/:code', (req, res) => {
           border-radius: 8px;
           font-weight: 600;
           font-size: 1.1rem;
-          transition: transform 0.2s;
           cursor: pointer;
         }
-        .button:hover {
-          transform: scale(1.05);
+        .spinner {
+          margin: 2rem auto;
+          width: 50px; height: 50px;
+          border: 4px solid rgba(255,255,255,0.3);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
       </style>
     </head>
     <body>
       <div class="container">
         <h1>🎭 Rehearsal App</h1>
-        <p>Нажмите кнопку ниже, чтобы присоединиться к проекту</p>
-        <a href="${appScheme}" class="button">Открыть приложение</a>
+        <div id="status">
+          <div class="spinner"></div>
+          <p>Открываем приложение...</p>
+        </div>
+        <div id="manual" style="display: none;">
+          <p>Приложение не открылось автоматически?</p>
+          <a href="#" onclick="openApp(); return false;" class="button">Открыть приложение</a>
+        </div>
       </div>
+      <script>
+        const code = '${code}';
+        ${expoHost ? `const expoHost = '${expoHost}';` : 'const expoHost = null;'}
+
+        function openApp() {
+          const schemes = [];
+          if (expoHost) {
+            schemes.push('exp://' + expoHost + '/--/invite/' + code);
+          }
+          schemes.push('rehearsalapp://invite/' + code);
+
+          let tried = 0;
+          schemes.forEach((scheme, index) => {
+            setTimeout(() => {
+              console.log('Trying:', scheme);
+              window.location.href = scheme;
+              tried++;
+              if (tried === schemes.length) {
+                setTimeout(() => {
+                  document.getElementById('status').style.display = 'none';
+                  document.getElementById('manual').style.display = 'block';
+                }, 2000);
+              }
+            }, index * 500);
+          });
+        }
+
+        window.onload = () => { openApp(); };
+      </script>
     </body>
     </html>
   `;
