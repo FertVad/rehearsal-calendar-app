@@ -1,21 +1,20 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator, TouchableOpacity, Alert, FlatList, Dimensions } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, SafeAreaView, ScrollView, ActivityIndicator, TouchableOpacity, Alert, FlatList } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect, CompositeScreenProps } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors } from '../../../shared/constants/colors';
 import { TabParamList, AppStackParamList } from '../../../navigation';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import DayDetailsModal from '../components/DayDetailsModal';
 import MyRehearsalsModal from '../components/MyRehearsalsModal';
-import { Rehearsal, Project, RSVPStatus } from '../../../shared/types';
+import { Rehearsal } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { formatDateLocalized, formatDateToString, parseDateString } from '../../../shared/utils/time';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const UPCOMING_CARD_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md;
+import { useRehearsals, useRSVP } from '../hooks';
+import { calendarScreenStyles as styles } from '../styles';
 
 type CalendarScreenProps = CompositeScreenProps<
   BottomTabScreenProps<TabParamList, 'Calendar'>,
@@ -23,13 +22,10 @@ type CalendarScreenProps = CompositeScreenProps<
 >;
 
 export default function CalendarScreen({ navigation }: CalendarScreenProps) {
-  const { projects, selectedProject, setSelectedProject } = useProjects();
+  const { projects, selectedProject } = useProjects();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
-  const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalDate, setModalDate] = useState<string>('');
   const [myRehearsalsVisible, setMyRehearsalsVisible] = useState(false);
@@ -38,26 +34,18 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   // null means "All projects"
   const [filterProjectId, setFilterProjectId] = useState<string | null>(null);
 
-  // RSVP responses state: rehearsalId -> status
-  const [rsvpResponses, setRsvpResponses] = useState<Record<string, RSVPStatus>>({});
-  const [respondingId, setRespondingId] = useState<string | null>(null);
+  // Use custom hooks for data management
+  const {
+    rehearsals,
+    loading,
+    error,
+    rsvpResponses,
+    setRsvpResponses,
+    adminStats,
+    fetchRehearsals,
+  } = useRehearsals(projects, filterProjectId);
 
-  // Admin stats for rehearsals: rehearsalId -> stats
-  const [adminStats, setAdminStats] = useState<Record<string, { confirmed: number; declined: number; pending: number }>>({});
-
-  // Handle RSVP response
-  const handleRSVP = useCallback(async (rehearsalId: string, status: 'confirmed' | 'declined') => {
-    setRespondingId(rehearsalId);
-    try {
-      await rehearsalsAPI.respond(rehearsalId, status);
-      setRsvpResponses(prev => ({ ...prev, [rehearsalId]: status }));
-    } catch (err: any) {
-      console.error('Failed to submit RSVP:', err);
-      Alert.alert('Ошибка', err.message || 'Не удалось отправить ответ');
-    } finally {
-      setRespondingId(null);
-    }
-  }, []);
+  const { respondingId, handleRSVP } = useRSVP();
 
   const handleDayLongPress = useCallback((date: string) => {
     setModalDate(date);
@@ -77,103 +65,6 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   }, []);
 
   const modalRehearsals = rehearsals.filter(r => r.date === modalDate);
-
-  const fetchRehearsals = useCallback(async () => {
-    if (projects.length === 0) {
-      setRehearsals([]);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      let fetchedRehearsals: Rehearsal[] = [];
-
-      // If filter is null (All projects), fetch from all projects
-      if (filterProjectId === null) {
-        const allRehearsals: Rehearsal[] = [];
-        for (const project of projects) {
-          try {
-            const response = await rehearsalsAPI.getAll(project.id);
-            const projectRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) => ({
-              ...r,
-              projectName: project.name,
-              projectId: project.id,
-            }));
-            allRehearsals.push(...projectRehearsals);
-          } catch (err) {
-            // Skip failed project fetches
-            console.error(`Failed to fetch rehearsals for project ${project.id}:`, err);
-          }
-        }
-        fetchedRehearsals = allRehearsals;
-      } else {
-        // Fetch from selected project only
-        const response = await rehearsalsAPI.getAll(filterProjectId);
-        const project = projects.find(p => p.id === filterProjectId);
-        const projectRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) => ({
-          ...r,
-          projectName: project?.name,
-          projectId: filterProjectId,
-        }));
-        fetchedRehearsals = projectRehearsals;
-      }
-
-      setRehearsals(fetchedRehearsals);
-
-      // Fetch user's RSVP responses and admin stats for upcoming rehearsals
-      const today = formatDateToString(new Date());
-      const upcomingRehearsals = fetchedRehearsals.filter(r => r.date >= today);
-
-      if (upcomingRehearsals.length > 0) {
-        const responses: Record<string, RSVPStatus> = {};
-        const stats: Record<string, { confirmed: number; declined: number; pending: number }> = {};
-
-        await Promise.all(
-          upcomingRehearsals.map(async (rehearsal) => {
-            // Check if user is admin for this project
-            const project = projects.find(p => p.id === rehearsal.projectId);
-            const isAdmin = project?.is_admin;
-
-            if (isAdmin) {
-              // For admin - fetch stats
-              try {
-                const res = await rehearsalsAPI.getResponses(rehearsal.id);
-                if (res.data.stats) {
-                  stats[rehearsal.id] = {
-                    confirmed: res.data.stats.confirmed,
-                    declined: res.data.stats.declined,
-                    pending: res.data.stats.invited + res.data.stats.tentative,
-                  };
-                }
-              } catch (err) {
-                // Ignore errors
-              }
-            } else {
-              // For regular user - fetch their response
-              try {
-                const res = await rehearsalsAPI.getMyResponse(rehearsal.id);
-                if (res.data.response?.status) {
-                  responses[rehearsal.id] = res.data.response.status;
-                }
-              } catch (err) {
-                // Ignore errors
-              }
-            }
-          })
-        );
-        setRsvpResponses(responses);
-        setAdminStats(stats);
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch rehearsals:', err);
-      setError(err.message || 'Failed to load rehearsals');
-      setRehearsals([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [projects, filterProjectId]);
 
   // Fetch rehearsals when screen is focused (to get updates after creating new rehearsals)
   useFocusEffect(
@@ -200,7 +91,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
           onPress: async () => {
             try {
               await rehearsalsAPI.delete(projectId, rehearsalId);
-              setRehearsals(prev => prev.filter(r => r.id !== rehearsalId));
+              // Refetch rehearsals after deletion
+              await fetchRehearsals();
             } catch (err: any) {
               console.error('Failed to delete rehearsal:', err);
               Alert.alert('Ошибка', err.message || 'Не удалось удалить репетицию');
@@ -459,7 +351,9 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                       <View style={styles.rsvpButtons}>
                         <TouchableOpacity
                           style={[styles.rsvpButton, styles.rsvpConfirmButton]}
-                          onPress={() => handleRSVP(rehearsal.id, 'confirmed')}
+                          onPress={() => handleRSVP(rehearsal.id, 'confirmed', (id, status) => {
+                            setRsvpResponses(prev => ({ ...prev, [id]: status }));
+                          })}
                           disabled={isResponding}
                         >
                           {isResponding ? (
@@ -474,7 +368,9 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
 
                         <TouchableOpacity
                           style={[styles.rsvpButton, styles.rsvpDeclineButton]}
-                          onPress={() => handleRSVP(rehearsal.id, 'declined')}
+                          onPress={() => handleRSVP(rehearsal.id, 'declined', (id, status) => {
+                            setRsvpResponses(prev => ({ ...prev, [id]: status }));
+                          })}
                           disabled={isResponding}
                         >
                           <Ionicons name="close-circle" size={18} color={Colors.accent.red} />
@@ -510,324 +406,3 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bg.primary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: Spacing.xl,
-  },
-  filterContainer: {
-    marginBottom: Spacing.md,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
-  filterButtonText: {
-    flex: 1,
-    fontSize: FontSize.base,
-    color: Colors.text.primary,
-    fontWeight: FontWeight.medium,
-  },
-  filterDropdown: {
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-    overflow: 'hidden',
-  },
-  filterOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.glass.border,
-  },
-  filterOptionSelected: {
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
-  },
-  filterOptionText: {
-    fontSize: FontSize.base,
-    color: Colors.text.primary,
-  },
-  filterOptionTextSelected: {
-    color: Colors.accent.purple,
-    fontWeight: FontWeight.semibold,
-  },
-  upcomingSection: {
-    marginTop: Spacing.xl,
-  },
-  sectionTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.md,
-    textTransform: 'capitalize',
-  },
-  upcomingList: {
-    paddingRight: Spacing.md,
-  },
-  upcomingCard: {
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    marginRight: Spacing.md,
-    width: UPCOMING_CARD_WIDTH,
-  },
-  upcomingCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  upcomingDateBadge: {
-    backgroundColor: 'rgba(147, 51, 234, 0.15)',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-  },
-  upcomingDateText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Colors.accent.purple,
-  },
-  adminBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-  },
-  adminBadgeText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.medium,
-    color: Colors.accent.purple,
-  },
-  upcomingContent: {
-    gap: Spacing.xs,
-  },
-  upcomingTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  upcomingTime: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
-  upcomingProjectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  upcomingProject: {
-    fontSize: FontSize.sm,
-    color: Colors.accent.blue,
-    flex: 1,
-  },
-  upcomingLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  upcomingLocation: {
-    fontSize: FontSize.sm,
-    color: Colors.text.secondary,
-    flex: 1,
-  },
-  rehearsalsSection: {
-    marginTop: Spacing.xxl,
-  },
-  emptyState: {
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: 16,
-    padding: Spacing.xxl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: FontSize.base,
-    color: Colors.text.secondary,
-  },
-  loadingState: {
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: 16,
-    padding: Spacing.xxl,
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: FontSize.base,
-    color: Colors.text.secondary,
-    marginTop: Spacing.md,
-  },
-  errorState: {
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.accent.red,
-    borderRadius: 16,
-    padding: Spacing.xxl,
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: FontSize.base,
-    color: Colors.accent.red,
-  },
-  rehearsalCard: {
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  rehearsalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.xs,
-  },
-  rehearsalInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  rehearsalTime: {
-    fontSize: FontSize.sm,
-    color: Colors.accent.purple,
-    fontWeight: FontWeight.semibold,
-  },
-  rehearsalDuration: {
-    fontSize: FontSize.xs,
-    color: Colors.text.tertiary,
-  },
-  deleteButton: {
-    padding: Spacing.xs,
-  },
-  rehearsalScene: {
-    fontSize: FontSize.base,
-    color: Colors.text.primary,
-    fontWeight: FontWeight.medium,
-    marginBottom: Spacing.xs,
-  },
-  rehearsalProject: {
-    fontSize: FontSize.xs,
-    color: Colors.accent.blue,
-    marginBottom: Spacing.xs,
-  },
-  rehearsalNotes: {
-    fontSize: FontSize.sm,
-    color: Colors.text.secondary,
-  },
-  // RSVP Styles
-  rsvpButtons: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-  },
-  rsvpButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    gap: Spacing.xs,
-  },
-  rsvpConfirmButton: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-  },
-  rsvpDeclineButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
-  rsvpButtonTextConfirm: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    color: Colors.accent.green,
-  },
-  rsvpButtonTextDecline: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    color: Colors.accent.red,
-  },
-  rsvpStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-    borderRadius: BorderRadius.sm,
-  },
-  rsvpConfirmed: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-  },
-  rsvpDeclined: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-  },
-  rsvpStatusText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    flex: 1,
-  },
-  rsvpStatusConfirmed: {
-    color: Colors.accent.green,
-  },
-  rsvpStatusDeclined: {
-    color: Colors.accent.red,
-  },
-  // Admin stats styles
-  adminStatsSection: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-    alignItems: 'center',
-  },
-  adminStatsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.lg,
-  },
-  adminStatItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  adminStatText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.secondary,
-  },
-});

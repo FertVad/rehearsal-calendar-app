@@ -12,6 +12,63 @@ async function getUserTimezone(userId) {
   return user?.timezone || 'Asia/Jerusalem';
 }
 
+// Convert time string (HH:MM) to minutes for comparison
+function timeToMinutes(time) {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+// Validate that start time is before end time
+function validateTimeSlot(slot) {
+  const startMinutes = timeToMinutes(slot.start);
+  const endMinutes = timeToMinutes(slot.end);
+
+  if (startMinutes >= endMinutes) {
+    return {
+      valid: false,
+      error: `Invalid time slot: start time (${slot.start}) must be before end time (${slot.end})`
+    };
+  }
+
+  return { valid: true };
+}
+
+// Check if two slots overlap
+function slotsOverlap(slot1, slot2) {
+  const start1 = timeToMinutes(slot1.start);
+  const end1 = timeToMinutes(slot1.end);
+  const start2 = timeToMinutes(slot2.start);
+  const end2 = timeToMinutes(slot2.end);
+
+  // Slots overlap if one starts before the other ends
+  return (start1 < end2 && end1 > start2);
+}
+
+// Validate an array of slots for overlaps
+function validateSlots(slots) {
+  // Validate each slot individually first
+  for (let i = 0; i < slots.length; i++) {
+    const validation = validateTimeSlot(slots[i]);
+    if (!validation.valid) {
+      return validation;
+    }
+  }
+
+  // Check for overlaps between slots
+  for (let i = 0; i < slots.length; i++) {
+    for (let j = i + 1; j < slots.length; j++) {
+      if (slotsOverlap(slots[i], slots[j])) {
+        return {
+          valid: false,
+          error: `Time slots overlap: ${slots[i].start}-${slots[i].end} and ${slots[j].start}-${slots[j].end}`
+        };
+      }
+    }
+  }
+
+  return { valid: true };
+}
+
 // Convert slots from user timezone to UTC for storage
 function convertSlotsToUTC(date, slots, timezone) {
   if (!slots || slots.length === 0) return [];
@@ -186,6 +243,15 @@ router.put('/:date', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Slots are required for partial availability' });
     }
 
+    // Validate slot times for tentative/custom entries
+    if (type === 'tentative' && slots && slots.length > 0) {
+      const validation = validateSlots(slots);
+      if (!validation.valid) {
+        console.log(`[Availability] Validation failed for ${date}:`, validation.error);
+        return res.status(400).json({ error: validation.error });
+      }
+    }
+
     // Get user timezone and convert slots to UTC
     const timezone = await getUserTimezone(req.userId);
     let utcSlots = [];
@@ -256,6 +322,24 @@ router.post('/bulk', requireAuth, async (req, res) => {
       }
       if (!['available', 'busy', 'tentative'].includes(entry.type)) {
         return res.status(400).json({ error: `Invalid type for ${entry.date}` });
+      }
+
+      // Skip validation for past dates - they're already done
+      const today = new Date().toISOString().split('T')[0];
+      const isPast = entry.date < today;
+      if (isPast) {
+        console.log(`[Availability] Skipping validation for past date ${entry.date}`);
+      } else {
+        // Validate slots for tentative/custom entries (only future dates)
+        if (entry.type === 'tentative' && entry.slots && entry.slots.length > 0) {
+          const validation = validateSlots(entry.slots);
+          if (!validation.valid) {
+            console.log(`[Availability] Validation failed for ${entry.date}:`, validation.error);
+            return res.status(400).json({
+              error: `Invalid slots for ${entry.date}: ${validation.error}`
+            });
+          }
+        }
       }
 
       // Convert slots from user timezone to UTC

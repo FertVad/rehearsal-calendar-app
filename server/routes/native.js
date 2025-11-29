@@ -3,6 +3,63 @@ import crypto from 'crypto';
 import db from '../database/db.js';
 import { requireAuth } from '../middleware/jwtMiddleware.js';
 
+/**
+ * Helper function to book availability slots for rehearsal participants
+ */
+async function bookRehearsalSlots(rehearsalId, userId, date, startTime, endTime) {
+  try {
+    // Check if slot already exists
+    const existing = await db.get(
+      `SELECT id FROM native_user_availability
+       WHERE user_id = $1 AND date = $2 AND start_time = $3 AND end_time = $4 AND source = 'rehearsal'`,
+      [userId, date, startTime, endTime]
+    );
+
+    if (!existing) {
+      await db.run(
+        `INSERT INTO native_user_availability
+         (user_id, date, start_time, end_time, type, source, external_event_id, title)
+         VALUES ($1, $2, $3, $4, 'busy', 'rehearsal', $5, 'Rehearsal')`,
+        [userId, date, startTime, endTime, String(rehearsalId)]
+      );
+    }
+  } catch (err) {
+    console.error(`Failed to book slot for user ${userId}:`, err.message);
+  }
+}
+
+/**
+ * Helper function to update booked slots for a rehearsal
+ */
+async function updateRehearsalSlots(rehearsalId, userId, newDate, newStartTime, newEndTime) {
+  try {
+    // Update existing slot
+    await db.run(
+      `UPDATE native_user_availability
+       SET date = $1, start_time = $2, end_time = $3
+       WHERE user_id = $4 AND external_event_id = $5 AND source = 'rehearsal'`,
+      [newDate, newStartTime, newEndTime, userId, String(rehearsalId)]
+    );
+  } catch (err) {
+    console.error(`Failed to update slot for user ${userId}:`, err.message);
+  }
+}
+
+/**
+ * Helper function to delete booked slots for a rehearsal
+ */
+async function deleteRehearsalSlots(rehearsalId) {
+  try {
+    await db.run(
+      `DELETE FROM native_user_availability
+       WHERE external_event_id = $1 AND source = 'rehearsal'`,
+      [String(rehearsalId)]
+    );
+  } catch (err) {
+    console.error(`Failed to delete slots for rehearsal ${rehearsalId}:`, err.message);
+  }
+}
+
 // Generate unique invite code
 function generateInviteCode() {
   return crypto.randomBytes(16).toString('hex');
@@ -10,12 +67,18 @@ function generateInviteCode() {
 
 // Generate invite URL based on environment
 function generateInviteUrl(inviteCode) {
-  // Always use production URL for invite links
-  // This works in both development and production because:
-  // 1. The HTML page on Render will redirect to the app scheme
-  // 2. Users can share these links and they work everywhere
-  // 3. No localhost issues in simulators
-  return `https://rehearsal-calendar-app.onrender.com/invite/${inviteCode}`;
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  if (isDevelopment) {
+    // In development, use custom URL scheme for direct app opening
+    // This works with both iPhone and simulators without needing Universal Links
+    return `rehearsalapp://invite/${inviteCode}`;
+  } else {
+    // In production, use HTTPS URL
+    // Note: Universal Links require Associated Domains capability (paid Apple Developer account)
+    // Without it, users will need to manually choose "Open in app"
+    return `https://rehearsal-calendar-app.onrender.com/invite/${inviteCode}`;
+  }
 }
 
 /**
@@ -264,7 +327,7 @@ router.post('/projects/:projectId/rehearsals', requireAuth, async (req, res) => 
   try {
     const accountId = req.userId;
     const projectId = req.params.projectId;
-    const { date, time, end_time, location } = req.body;
+    const { date, time, end_time, location, participant_ids } = req.body;
 
     // Check if user is admin
     const membership = await db.get(
@@ -288,6 +351,25 @@ router.post('/projects/:projectId/rehearsals', requireAuth, async (req, res) => 
     );
 
     const rehearsal = result;
+
+    // Add participants if provided
+    if (participant_ids && Array.isArray(participant_ids) && participant_ids.length > 0) {
+      for (const userId of participant_ids) {
+        try {
+          // Add participant to rehearsal
+          await db.run(
+            `INSERT INTO native_rehearsal_participants (rehearsal_id, user_id, status)
+             VALUES ($1, $2, 'invited')`,
+            [rehearsal.id, userId]
+          );
+
+          // Auto-book availability slot for participant
+          await bookRehearsalSlots(rehearsal.id, userId, date, time, end_time || time);
+        } catch (err) {
+          console.warn(`Failed to add participant ${userId} to rehearsal ${rehearsal.id}:`, err.message);
+        }
+      }
+    }
 
     res.status(201).json({
       rehearsal: {
@@ -325,12 +407,24 @@ router.put('/projects/:projectId/rehearsals/:rehearsalId', requireAuth, async (r
       return res.status(403).json({ error: 'Only admins can update rehearsals' });
     }
 
+    // Get current participants to update their slots
+    const participants = await db.all(
+      'SELECT user_id FROM native_rehearsal_participants WHERE rehearsal_id = $1',
+      [rehearsalId]
+    );
+
+    // Update rehearsal
     await db.run(
       `UPDATE native_rehearsals
        SET date = $1, start_time = $2, end_time = $3, location = $4, status = $5, updated_at = NOW()
        WHERE id = $6 AND project_id = $7`,
       [date, time, end_time || time, location || '', status || 'scheduled', rehearsalId, projectId]
     );
+
+    // Update availability slots for all participants
+    for (const participant of participants) {
+      await updateRehearsalSlots(rehearsalId, participant.user_id, date, time, end_time || time);
+    }
 
     const rehearsal = await db.get('SELECT * FROM native_rehearsals WHERE id = $1', [rehearsalId]);
 
@@ -369,6 +463,10 @@ router.delete('/projects/:projectId/rehearsals/:rehearsalId', requireAuth, async
       return res.status(403).json({ error: 'Only admins can delete rehearsals' });
     }
 
+    // Delete availability slots for all participants
+    await deleteRehearsalSlots(rehearsalId);
+
+    // Delete rehearsal (this will also cascade delete participants due to FK)
     await db.run('DELETE FROM native_rehearsals WHERE id = $1 AND project_id = $2', [rehearsalId, projectId]);
 
     res.json({ success: true });

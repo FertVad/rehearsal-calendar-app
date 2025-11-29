@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, BorderRadius, FontSize, FontWeight } from '../constants/colors';
+import { Colors, BorderRadius, FontSize, FontWeight } from '../../constants/colors';
 
 interface GlassButtonProps {
   title: string;

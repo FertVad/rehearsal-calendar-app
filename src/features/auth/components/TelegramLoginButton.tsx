@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import GlassButton from '../../../shared/components/GlassButton';
+import { GlassButton } from '../../../shared/components';
 import TelegramLoginWebView from './TelegramLoginWebView';
 import { Colors, FontSize } from '../../../shared/constants/colors';
 

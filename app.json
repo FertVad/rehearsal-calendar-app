@@ -16,17 +16,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rehearsal.app",
-      "associatedDomains": [
-        "applinks:rehearsal-calendar-app.onrender.com",
-        "applinks:rehearsal-calendar-app.onrender.com"
-      ],
       "infoPlist": {
         "CFBundleURLTypes": [
-          {
-            "CFBundleURLSchemes": [
-              "rehearsalapp"
-            ]
-          },
           {
             "CFBundleURLSchemes": [
               "rehearsalapp"

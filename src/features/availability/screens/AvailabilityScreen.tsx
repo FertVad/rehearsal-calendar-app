@@ -2,160 +2,55 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Modal,
   Pressable,
-  Dimensions,
   FlatList,
   Platform,
   Animated,
-  KeyboardAvoidingView,
   Alert,
   ActivityIndicator,
 } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, Spacing } from '../../../shared/constants/colors';
 import { TabParamList } from '../../../navigation';
 import { availabilityAPI } from '../../../shared/services/api';
+import { CalendarMonth, EditorHeader, ModeInfo } from '../components';
+import { getDayStatus } from '../utils';
+import { styles } from '../styles';
+import { SCREEN_HEIGHT, PANEL_HEIGHT } from '../constants';
+import { DayMode, TimeSlot } from '../types';
+import {
+  generateMonths,
+  formatDate,
+  validateSlots,
+  calculateDateOffset
+} from '../utils';
+import { useAvailabilityData } from '../hooks';
 
 type AvailabilityScreenProps = BottomTabScreenProps<TabParamList, 'Availability'>;
 
-interface TimeSlot {
-  start: string;
-  end: string;
-}
-
-type DayMode = 'free' | 'busy' | 'custom';
-
-interface DayState {
-  mode: DayMode;
-  slots: TimeSlot[];
-}
-
-interface AvailabilityData {
-  [date: string]: DayState;
-}
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const DAY_SIZE = (SCREEN_WIDTH - Spacing.xl * 2 - Spacing.xs * 6) / 7;
-
-// Calculate month height for scroll calculations
-const MONTH_TITLE_HEIGHT = FontSize.lg + Spacing.md; // Title + marginBottom
-const WEEKDAY_ROW_HEIGHT = FontSize.xs + Spacing.sm; // Labels + marginBottom
-const DAY_ROW_HEIGHT = DAY_SIZE + Spacing.xs; // Day cell + marginBottom
-
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const MONTHS_RU = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-];
-
 const DEFAULT_SLOT: TimeSlot = { start: '10:00', end: '18:00' };
 
-// Generate months data for calendar
-const generateMonths = (count: number) => {
-  const months = [];
-  const today = new Date();
-
-  for (let i = 0; i < count; i++) {
-    const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
-    months.push({
-      year: date.getFullYear(),
-      month: date.getMonth(),
-      key: `${date.getFullYear()}-${date.getMonth()}`,
-    });
-  }
-
-  return months;
-};
-
-// Get days in month with padding for week alignment
-const getDaysInMonth = (year: number, month: number) => {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const daysInMonth = lastDay.getDate();
-
-  // Get day of week (0 = Sunday, convert to Monday = 0)
-  let startDayOfWeek = firstDay.getDay() - 1;
-  if (startDayOfWeek < 0) startDayOfWeek = 6;
-
-  const days: (number | null)[] = [];
-
-  // Add empty cells for days before month starts
-  for (let i = 0; i < startDayOfWeek; i++) {
-    days.push(null);
-  }
-
-  // Add days of month
-  for (let i = 1; i <= daysInMonth; i++) {
-    days.push(i);
-  }
-
-  return days;
-};
-
-// Format date as YYYY-MM-DD
-const formatDate = (year: number, month: number, day: number) => {
-  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-};
-
-// Calculate scroll offset for a specific date
-const calculateDateOffset = (
-  targetYear: number,
-  targetMonth: number,
-  targetDay: number,
-  months: { year: number; month: number; key: string }[]
-) => {
-  let offset = Spacing.xl; // Initial padding
-
-  for (let i = 0; i < months.length; i++) {
-    const m = months[i];
-
-    if (m.year === targetYear && m.month === targetMonth - 1) {
-      // Found the month, now calculate position within it
-      offset += MONTH_TITLE_HEIGHT;
-      offset += WEEKDAY_ROW_HEIGHT;
-
-      // Calculate which row the day is in
-      const firstDay = new Date(m.year, m.month, 1);
-      let startDayOfWeek = firstDay.getDay() - 1;
-      if (startDayOfWeek < 0) startDayOfWeek = 6;
-
-      const dayIndex = startDayOfWeek + targetDay - 1;
-      const rowIndex = Math.floor(dayIndex / 7);
-
-      offset += rowIndex * DAY_ROW_HEIGHT;
-
-      return offset;
-    }
-
-    // Add height of this month
-    const firstDay = new Date(m.year, m.month, 1);
-    const lastDay = new Date(m.year, m.month + 1, 0);
-    let startDayOfWeek = firstDay.getDay() - 1;
-    if (startDayOfWeek < 0) startDayOfWeek = 6;
-
-    const totalCells = startDayOfWeek + lastDay.getDate();
-    const numRows = Math.ceil(totalCells / 7);
-
-    const monthHeight = MONTH_TITLE_HEIGHT + WEEKDAY_ROW_HEIGHT + (numRows * DAY_ROW_HEIGHT) + Spacing.xl;
-    offset += monthHeight;
-  }
-
-  return offset;
-};
-
 export default function AvailabilityScreen({ navigation }: AvailabilityScreenProps) {
-  const [availability, setAvailability] = useState<AvailabilityData>({});
+  // Use custom hook for availability data management
+  const {
+    availability,
+    setAvailability,
+    loading,
+    saving,
+    setSaving,
+    hasChanges,
+    setHasChanges,
+    getDayState,
+  } = useAvailabilityData();
+
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Time picker state
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -164,7 +59,6 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   // Animation for bottom panel
   const panelAnimation = useRef(new Animated.Value(0)).current;
-  const PANEL_HEIGHT = 320;
 
   const months = useMemo(() => generateMonths(7), []);
   const today = new Date().toISOString().split('T')[0];
@@ -174,71 +68,6 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   // Panel is open when there are selected dates
   const panelOpen = selectedDates.length > 0;
-
-  // Load availability data on mount
-  useEffect(() => {
-    loadAvailability();
-  }, []);
-
-  const loadAvailability = async () => {
-    try {
-      setLoading(true);
-      const response = await availabilityAPI.getAll();
-      const serverData = response.data.availability;
-
-      // Convert server format to local format
-      const localData: AvailabilityData = {};
-      for (const [dateKey, slots] of Object.entries(serverData)) {
-        const typedSlots = slots as Array<{ startTime: string; endTime: string; type: string }>;
-        if (typedSlots.length === 0) continue;
-
-        // Ensure date is in YYYY-MM-DD format (handle Date objects from PostgreSQL)
-        let formattedDate = dateKey;
-        if (!dateKey.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          // It's a Date object string, convert it using local date to avoid timezone issues
-          const dateObj = new Date(dateKey);
-          const year = dateObj.getFullYear();
-          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-          const day = String(dateObj.getDate()).padStart(2, '0');
-          formattedDate = `${year}-${month}-${day}`;
-        }
-
-        // Determine mode based on type and slots
-        const firstSlot = typedSlots[0];
-        let mode: DayMode = 'free';
-
-        // Strip seconds from time (HH:MM:SS -> HH:MM)
-        const formatTime = (time: string) => time.substring(0, 5);
-        const startTime = formatTime(firstSlot.startTime);
-        const endTime = formatTime(firstSlot.endTime);
-
-        if (firstSlot.type === 'busy' && startTime === '00:00' && endTime === '23:59') {
-          // Full day busy
-          mode = 'busy';
-        } else if (firstSlot.type === 'available' && startTime === '00:00' && endTime === '23:59') {
-          // Full day available
-          mode = 'free';
-        } else {
-          // Partial availability - slots represent busy time
-          mode = 'custom';
-        }
-
-        localData[formattedDate] = {
-          mode,
-          slots: typedSlots.map(s => ({
-            start: formatTime(s.startTime),
-            end: formatTime(s.endTime)
-          })),
-        };
-      }
-
-      setAvailability(localData);
-    } catch (err) {
-      console.error('Failed to load availability:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Animate panel
   useEffect(() => {
@@ -250,17 +79,20 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     }).start();
   }, [panelOpen, panelAnimation]);
 
-  const getDayState = (date: string): DayState => {
-    return availability[date] || { mode: 'free', slots: [{ ...DEFAULT_SLOT }] };
-  };
-
-  const getDayStatus = (date: string): 'free' | 'busy' | 'partial' | 'none' => {
-    const state = availability[date];
-    if (!state) return 'none';
-    if (state.mode === 'free') return 'free';
-    if (state.mode === 'busy') return 'busy';
-    return 'partial';
-  };
+  // Validate slots when selection or availability changes
+  useEffect(() => {
+    if (selectedDate) {
+      const state = getDayState(selectedDate);
+      if (state.mode === 'custom') {
+        const validation = validateSlots(state.slots);
+        setValidationError(validation.isValid ? null : validation.error!);
+      } else {
+        setValidationError(null);
+      }
+    } else {
+      setValidationError(null);
+    }
+  }, [selectedDate, availability]);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -443,6 +275,93 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   const handleSave = async () => {
     try {
+      console.log('=== SAVING AVAILABILITY ===');
+      console.log('Availability data:', JSON.stringify(availability, null, 2));
+
+      // Debug: show alert that save started
+      console.log('🔍 handleSave CALLED');
+
+      // Validate all custom slots before saving
+      const dates = Object.entries(availability);
+      console.log(`Total dates to check: ${dates.length}`);
+
+      for (let i = 0; i < dates.length; i++) {
+        const [date, state] = dates[i];
+        console.log(`\n[${i + 1}/${dates.length}] Checking date: ${date}`);
+        console.log(`  Mode: ${state.mode}`);
+        console.log(`  Slots count: ${state.slots?.length || 0}`);
+
+        // Skip validation for past dates - they're already done, no need to block saving
+        const isPast = date < today;
+        if (isPast) {
+          console.log(`  ⏭️ Skipping validation for past date ${date}`);
+          continue;
+        }
+
+        if (state.mode === 'custom') {
+          console.log(`  Slots data:`, JSON.stringify(state.slots, null, 4));
+
+          // Validate each slot individually first
+          for (let j = 0; j < state.slots.length; j++) {
+            const slot = state.slots[j];
+            console.log(`    Slot ${j}: ${slot.start} - ${slot.end}`);
+            const slotValidation = validateSlot(slot);
+            console.log(`    Slot ${j} validation:`, slotValidation);
+
+            if (!slotValidation.isValid) {
+              const dateObj = new Date(date);
+              const formattedDate = dateObj.toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+              });
+
+              console.log(`  ❌ VALIDATION FAILED for slot ${j}`);
+              Alert.alert(
+                'Невозможно сохранить',
+                `Ошибка в дате ${formattedDate}:\n\n${slotValidation.error}\n\nПожалуйста, исправьте время слотов и попробуйте снова.`,
+                [{ text: 'Понятно' }]
+              );
+              return;
+            }
+          }
+
+          // Now check for overlaps
+          console.log(`  Checking overlaps...`);
+          for (let j = 0; j < state.slots.length; j++) {
+            for (let k = j + 1; k < state.slots.length; k++) {
+              const slot1 = state.slots[j];
+              const slot2 = state.slots[k];
+              const overlaps = slotsOverlap(slot1, slot2);
+              console.log(`    Slots ${j} and ${k} overlap: ${overlaps}`);
+              console.log(`      Slot ${j}: ${slot1.start} - ${slot1.end}`);
+              console.log(`      Slot ${k}: ${slot2.start} - ${slot2.end}`);
+
+              if (overlaps) {
+                const dateObj = new Date(date);
+                const formattedDate = dateObj.toLocaleDateString('ru-RU', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric'
+                });
+
+                console.log(`  ❌ OVERLAP DETECTED between slots ${j} and ${k}`);
+                Alert.alert(
+                  'Невозможно сохранить',
+                  `Ошибка в дате ${formattedDate}:\n\nСлоты не должны пересекаться\n\nСлот ${j + 1}: ${slot1.start} - ${slot1.end}\nСлот ${k + 1}: ${slot2.start} - ${slot2.end}\n\nПожалуйста, исправьте время слотов и попробуйте снова.`,
+                  [{ text: 'Понятно' }]
+                );
+                return;
+              }
+            }
+          }
+
+          console.log(`  ✅ All slots valid for ${date}`);
+        }
+      }
+
+      console.log('\n✅ ALL VALIDATIONS PASSED, proceeding with save');
+
       setSaving(true);
 
       // Convert local format to API format for bulk save
@@ -485,67 +404,16 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   const selectedDayState = selectedDate ? getDayState(selectedDate) : null;
 
   const renderMonth = ({ item }: { item: { year: number; month: number; key: string } }) => {
-    const days = getDaysInMonth(item.year, item.month);
-
     return (
-      <View style={styles.monthContainer}>
-        <Text style={styles.monthTitle}>
-          {MONTHS_RU[item.month]} {item.year}
-        </Text>
-
-        {/* Weekday headers */}
-        <View style={styles.weekdayRow}>
-          {WEEKDAYS.map(day => (
-            <Text key={day} style={styles.weekdayLabel}>{day}</Text>
-          ))}
-        </View>
-
-        {/* Days grid */}
-        <View style={styles.daysGrid}>
-          {days.map((day, index) => {
-            if (day === null) {
-              return <View key={`empty-${index}`} style={styles.dayCell} />;
-            }
-
-            const date = formatDate(item.year, item.month, day);
-            const status = getDayStatus(date);
-            const isToday = date === today;
-            const isPast = date < today;
-            const isSelected = selectedDates.includes(date);
-
-            return (
-              <TouchableOpacity
-                key={date}
-                style={[
-                  styles.dayCell,
-                  isToday && styles.dayCellToday,
-                  isPast && styles.dayCellPast,
-                  isSelected && styles.dayCellSelected,
-                ]}
-                onPress={() => !isPast && handleDayPress(item.year, item.month, day)}
-                disabled={isPast}
-              >
-                <Text style={[
-                  styles.dayText,
-                  isToday && styles.dayTextToday,
-                  isPast && styles.dayTextPast,
-                  isSelected && styles.dayTextSelected,
-                ]}>
-                  {day}
-                </Text>
-                {status !== 'none' && (
-                  <View style={[
-                    styles.statusDot,
-                    status === 'free' && styles.statusDotFree,
-                    status === 'busy' && styles.statusDotBusy,
-                    status === 'partial' && styles.statusDotPartial,
-                  ]} />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+      <CalendarMonth
+        year={item.year}
+        month={item.month}
+        selectedDates={selectedDates}
+        availability={availability}
+        today={today}
+        onDayPress={handleDayPress}
+        getDayStatus={(date) => getDayStatus(date, availability)}
+      />
     );
   };
 
@@ -626,30 +494,58 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         <View style={styles.bottomSheetHandle} />
 
         {/* Header */}
-        <View style={styles.bottomSheetHeader}>
-          <View style={styles.bottomSheetHeaderLeft}>
-            <Text style={styles.bottomSheetTitle}>
-              {selectedDates.length === 1
-                ? new Date(selectedDate!).toLocaleDateString('ru-RU', {
-                    day: 'numeric',
-                    month: 'long',
-                  })
-                : `Выбрано: ${selectedDates.length}`
-              }
-            </Text>
-            {selectedDates.length > 0 && (
-              <TouchableOpacity onPress={clearSelection} style={styles.clearButton}>
-                <Text style={styles.clearButtonText}>Очистить</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity onPress={clearSelection}>
-            <Ionicons name="chevron-down" size={24} color={Colors.text.secondary} />
-          </TouchableOpacity>
-        </View>
+        <EditorHeader
+          selectedCount={selectedDates.length}
+          selectedDate={selectedDate}
+          onClear={clearSelection}
+        />
 
         <ScrollView style={styles.bottomSheetContent} showsVerticalScrollIndicator={false}>
-          {/* Mode Selection */}
+          {/* Warning for past dates */}
+          {selectedDate && selectedDate < today && (
+            <View style={styles.pastDateWarning}>
+              <Ionicons name="information-circle" size={20} color={Colors.accent.yellow} />
+              <Text style={styles.pastDateWarningText}>
+                Это прошедшая дата. Вы можете удалить данные, но не редактировать.
+              </Text>
+            </View>
+          )}
+
+          {/* Delete button for past dates */}
+          {selectedDate && selectedDate < today && (
+            <TouchableOpacity
+              style={styles.deletePastDateButton}
+              onPress={() => {
+                Alert.alert(
+                  'Удалить данные?',
+                  `Вы уверены, что хотите удалить данные занятости для этой прошедшей даты?`,
+                  [
+                    { text: 'Отмена', style: 'cancel' },
+                    {
+                      text: 'Удалить',
+                      style: 'destructive',
+                      onPress: () => {
+                        setAvailability(prev => {
+                          const updated = { ...prev };
+                          selectedDates.forEach(date => delete updated[date]);
+                          return updated;
+                        });
+                        setHasChanges(true);
+                        clearSelection();
+                      }
+                    }
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.accent.red} />
+              <Text style={styles.deletePastDateButtonText}>Удалить данные этой даты</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Mode Selection (only for future/today dates) */}
+          {(!selectedDate || selectedDate >= today) && (
+          <>
           <View style={styles.modeSelector}>
             <TouchableOpacity
               style={[
@@ -720,6 +616,14 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             <View style={styles.slotsSection}>
               <Text style={styles.slotsTitle}>Время когда занят</Text>
 
+              {/* Validation Error */}
+              {validationError && (
+                <View style={styles.validationError}>
+                  <Ionicons name="warning" size={18} color={Colors.accent.red} />
+                  <Text style={styles.validationErrorText}>{validationError}</Text>
+                </View>
+              )}
+
               {selectedDayState.slots.map((slot, index) => (
                 <View key={index} style={styles.slotRow}>
                   <View style={styles.slotInputs}>
@@ -767,22 +671,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           )}
 
           {/* Info for free/busy modes */}
-          {selectedDayState?.mode === 'free' && (
-            <View style={styles.modeInfo}>
-              <Ionicons name="information-circle" size={20} color={Colors.accent.green} />
-              <Text style={styles.modeInfoText}>
-                Вы доступны весь день для репетиций
-              </Text>
-            </View>
+          {selectedDayState?.mode && (
+            <ModeInfo mode={selectedDayState.mode} />
           )}
-
-          {selectedDayState?.mode === 'busy' && (
-            <View style={styles.modeInfo}>
-              <Ionicons name="information-circle" size={20} color={Colors.accent.red} />
-              <Text style={styles.modeInfoText}>
-                Вы недоступны в этот день
-              </Text>
-            </View>
+          </>
           )}
         </ScrollView>
       </Animated.View>
@@ -828,349 +720,3 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bg.primary,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-  },
-  saveHeaderButton: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.accent.purple,
-    borderRadius: BorderRadius.md,
-  },
-  saveHeaderButtonText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.inverse,
-  },
-  saveHeaderButtonDisabled: {
-    opacity: 0.7,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: Spacing.md,
-    fontSize: FontSize.base,
-    color: Colors.text.secondary,
-  },
-  legend: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendText: {
-    fontSize: FontSize.xs,
-    color: Colors.text.secondary,
-  },
-  calendarContent: {
-    paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.xxl,
-  },
-  monthContainer: {
-    marginBottom: Spacing.xl,
-  },
-  monthTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.md,
-    textAlign: 'center',
-  },
-  weekdayRow: {
-    flexDirection: 'row',
-    marginBottom: Spacing.sm,
-  },
-  weekdayLabel: {
-    width: DAY_SIZE,
-    textAlign: 'center',
-    fontSize: FontSize.xs,
-    color: Colors.text.tertiary,
-    fontWeight: FontWeight.medium,
-  },
-  daysGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayCell: {
-    width: DAY_SIZE,
-    height: DAY_SIZE,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  dayCellToday: {
-    backgroundColor: 'rgba(147, 51, 234, 0.2)',
-    borderRadius: DAY_SIZE / 2,
-  },
-  dayCellPast: {
-    opacity: 0.3,
-  },
-  dayText: {
-    fontSize: FontSize.sm,
-    color: Colors.text.primary,
-  },
-  dayTextToday: {
-    fontWeight: FontWeight.bold,
-    color: Colors.accent.purple,
-  },
-  dayTextPast: {
-    color: Colors.text.tertiary,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginTop: 2,
-  },
-  statusDotFree: {
-    backgroundColor: Colors.accent.green,
-  },
-  statusDotBusy: {
-    backgroundColor: Colors.accent.red,
-  },
-  statusDotPartial: {
-    backgroundColor: Colors.accent.yellow,
-  },
-  bottomPanel: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 320,
-    backgroundColor: Colors.bg.primary,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  bottomSheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: Colors.glass.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  bottomSheetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.glass.border,
-  },
-  bottomSheetHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  bottomSheetTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
-  clearButton: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-  },
-  clearButtonText: {
-    fontSize: FontSize.sm,
-    color: Colors.accent.purple,
-    fontWeight: FontWeight.medium,
-  },
-  bottomSheetContent: {
-    padding: Spacing.xl,
-  },
-  modeSelector: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.xl,
-  },
-  modeButton: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    gap: Spacing.xs,
-  },
-  modeButtonActive: {
-    borderWidth: 2,
-  },
-  modeButtonFree: {
-    borderColor: Colors.accent.green,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-  },
-  modeButtonCustom: {
-    borderColor: Colors.accent.yellow,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-  },
-  modeButtonBusy: {
-    borderColor: Colors.accent.red,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-  },
-  modeButtonText: {
-    fontSize: FontSize.xs,
-    color: Colors.text.secondary,
-    fontWeight: FontWeight.medium,
-  },
-  modeButtonTextActive: {
-    color: Colors.text.primary,
-  },
-  slotsSection: {
-    marginBottom: Spacing.lg,
-  },
-  slotsTitle: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    color: Colors.text.secondary,
-    marginBottom: Spacing.md,
-  },
-  slotRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  slotInputs: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeInput: {
-    flex: 1,
-  },
-  timeSeparator: {
-    paddingHorizontal: Spacing.sm,
-    paddingTop: Spacing.md,
-  },
-  timeLabel: {
-    fontSize: FontSize.xs,
-    color: Colors.text.tertiary,
-    marginBottom: 4,
-  },
-  timeButton: {
-    flexDirection: 'row',
-    backgroundColor: Colors.bg.secondary,
-    borderRadius: BorderRadius.sm,
-    padding: Spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  timeValue: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.medium,
-    color: Colors.text.primary,
-  },
-  removeSlotButton: {
-    padding: Spacing.sm,
-    marginLeft: Spacing.sm,
-  },
-  addSlotButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.accent.purple,
-    borderStyle: 'dashed',
-    gap: Spacing.xs,
-    marginTop: Spacing.sm,
-  },
-  addSlotText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    color: Colors.accent.purple,
-  },
-  modeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.glass.bg,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
-  modeInfoText: {
-    flex: 1,
-    fontSize: FontSize.sm,
-    color: Colors.text.secondary,
-  },
-  dayCellSelected: {
-    backgroundColor: Colors.accent.purple,
-    borderRadius: DAY_SIZE / 2,
-  },
-  dayTextSelected: {
-    color: Colors.text.inverse,
-    fontWeight: FontWeight.bold,
-  },
-  timePickerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  timePickerContainer: {
-    backgroundColor: Colors.bg.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 20,
-  },
-  timePickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.glass.border,
-  },
-  timePickerTitle: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
-  timePickerCancel: {
-    fontSize: FontSize.base,
-    color: Colors.text.secondary,
-  },
-  timePickerDone: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.accent.purple,
-  },
-});

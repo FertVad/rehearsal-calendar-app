@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TextInput,
@@ -17,11 +16,15 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
-import { rehearsalsAPI } from '../../../shared/services/api';
-import { Project } from '../../../shared/types';
+import { rehearsalsAPI, projectsAPI } from '../../../shared/services/api';
+import { Project, ProjectMember } from '../../../shared/types';
+import { ActorSelector } from '../components/ActorSelector';
+import { TimeRecommendations } from '../components/TimeRecommendations';
+import { TimeRange } from '../../../shared/utils/availability';
+import { addRehearsalScreenStyles as styles } from '../styles';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
@@ -39,6 +42,9 @@ export default function AddRehearsalScreen() {
   });
   const [location, setLocation] = useState('');
   const [localSelectedProject, setLocalSelectedProject] = useState<Project | null>(selectedProject);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [memberAvailability, setMemberAvailability] = useState<Record<string, { timeRanges: TimeRange[] }>>({});
 
   // UI state
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -46,6 +52,74 @@ export default function AddRehearsalScreen() {
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+
+  // Load members when project changes
+  useEffect(() => {
+    const loadMembers = async () => {
+      if (!localSelectedProject) {
+        setMembers([]);
+        setSelectedMemberIds([]);
+        return;
+      }
+
+      setLoadingMembers(true);
+      try {
+        const response = await projectsAPI.getMembers(localSelectedProject.id);
+        setMembers(response.data.members || []);
+      } catch (error) {
+        console.error('Failed to load members:', error);
+        Alert.alert('Ошибка', 'Не удалось загрузить участников проекта');
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
+
+    loadMembers();
+  }, [localSelectedProject]);
+
+  // Load availability when date or members change
+  useEffect(() => {
+    const loadAvailability = async () => {
+      if (!localSelectedProject) {
+        setMemberAvailability({});
+        return;
+      }
+
+      setLoadingAvailability(true);
+      try {
+        // Since backend endpoint doesn't exist yet, initialize with empty object for each member
+        const availability: Record<string, { timeRanges: TimeRange[] }> = {};
+        selectedMemberIds.forEach(memberId => {
+          availability[memberId] = { timeRanges: [] };
+        });
+        setMemberAvailability(availability);
+      } catch (error) {
+        console.error('Failed to load availability:', error);
+        setMemberAvailability({});
+      } finally {
+        setLoadingAvailability(false);
+      }
+    };
+
+    loadAvailability();
+  }, [localSelectedProject, date, selectedMemberIds]);
+
+  const handleTimeSelect = (startTime: string, endTime: string) => {
+    // Parse HH:MM format and create Date objects with today's date
+    const [startHours, startMinutes] = startTime.split(':').map(Number);
+    const [endHours, endMinutes] = endTime.split(':').map(Number);
+
+    const newStartTime = new Date(date);
+    newStartTime.setHours(startHours, startMinutes, 0, 0);
+
+    const newEndTime = new Date(date);
+    newEndTime.setHours(endHours, endMinutes, 0, 0);
+
+    setStartTime(newStartTime);
+    setEndTime(newEndTime);
+  };
 
   const formatDate = (d: Date) => {
     return d.toISOString().split('T')[0];
@@ -126,6 +200,7 @@ export default function AddRehearsalScreen() {
   const handleSelectProject = (project: Project) => {
     setLocalSelectedProject(project);
     setSelectedProject(project); // Also update global context
+    setSelectedMemberIds([]); // Reset selection when changing project
     setShowProjectPicker(false);
   };
 
@@ -154,6 +229,7 @@ export default function AddRehearsalScreen() {
         time: formatTime(startTime),
         end_time: formatTime(endTime),
         location: location.trim() || undefined,
+        participant_ids: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
       };
 
       await rehearsalsAPI.create(localSelectedProject.id, rehearsalData);
@@ -232,6 +308,32 @@ export default function AddRehearsalScreen() {
               />
             )}
           </View>
+
+          {/* Participants */}
+          {localSelectedProject && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Участники</Text>
+              <ActorSelector
+                members={members}
+                selectedMemberIds={selectedMemberIds}
+                onSelectionChange={setSelectedMemberIds}
+                loading={loadingMembers}
+                date={formatDate(date)}
+                memberAvailability={memberAvailability}
+              />
+            </View>
+          )}
+
+          {/* Time Recommendations */}
+          {localSelectedProject && selectedMemberIds.length > 0 && (
+            <TimeRecommendations
+              selectedDate={formatDate(date)}
+              selectedMembers={members.filter(m => selectedMemberIds.includes(m.userId))}
+              memberAvailability={memberAvailability}
+              onTimeSelect={handleTimeSelect}
+              loading={loadingAvailability}
+            />
+          )}
 
           {/* Start Time */}
           <View style={styles.inputGroup}>
@@ -385,182 +487,3 @@ export default function AddRehearsalScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bg.primary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: Spacing.xl,
-  },
-  header: {
-    marginBottom: Spacing.xl,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xs,
-  },
-  projectName: {
-    fontSize: FontSize.base,
-    color: Colors.accent.purple,
-    fontWeight: FontWeight.medium,
-  },
-  form: {
-    gap: Spacing.lg,
-  },
-  inputGroup: {
-    gap: Spacing.sm,
-  },
-  label: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  pickerButton: {
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  pickerButtonText: {
-    fontSize: FontSize.base,
-    color: Colors.text.primary,
-    flex: 1,
-  },
-  placeholderText: {
-    color: Colors.text.tertiary,
-  },
-  chevronIcon: {
-    marginLeft: 'auto',
-  },
-  locationInputContainer: {
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: BorderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationIcon: {
-    paddingLeft: Spacing.md,
-  },
-  locationInput: {
-    flex: 1,
-    padding: Spacing.md,
-    fontSize: FontSize.base,
-    color: Colors.text.primary,
-  },
-  submitButton: {
-    backgroundColor: Colors.accent.purple,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: '#fff',
-  },
-  // Project Picker Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Colors.bg.secondary,
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
-    maxHeight: '70%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.glass.border,
-  },
-  modalTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
-  projectList: {
-    paddingBottom: Spacing.md,
-  },
-  projectItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.md,
-    marginHorizontal: Spacing.md,
-    marginVertical: Spacing.xs / 2,
-    borderRadius: BorderRadius.md,
-  },
-  projectItemSelected: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
-  },
-  projectItemLeft: {
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  projectItemName: {
-    fontSize: FontSize.base,
-    color: Colors.text.primary,
-  },
-  projectItemNameSelected: {
-    fontWeight: FontWeight.semibold,
-    color: Colors.accent.purple,
-  },
-  projectItemDescription: {
-    fontSize: FontSize.sm,
-    color: Colors.text.tertiary,
-    marginTop: 2,
-  },
-  emptyProjectsContainer: {
-    padding: Spacing.xxl,
-    alignItems: 'center',
-  },
-  emptyProjectsText: {
-    fontSize: FontSize.base,
-    color: Colors.text.tertiary,
-    marginTop: Spacing.md,
-  },
-  createProjectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.xl,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-    paddingTop: Spacing.lg,
-  },
-  createProjectButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.medium,
-    color: Colors.accent.purple,
-  },
-});

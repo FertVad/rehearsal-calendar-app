@@ -39,6 +39,29 @@ export interface Rehearsal {
     responseStats?: ResponseStats;
 }
 
+export interface Actor {
+    id: string;
+    telegram_id: string;
+    name: string;
+    is_admin: boolean;
+    project_id?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface ProjectMember {
+    id: string;
+    userId: string;
+    role: 'owner' | 'admin' | 'member';
+    characterName?: string;
+    status: 'active' | 'invited' | 'declined' | 'left';
+    joinedAt?: string;
+    firstName: string;
+    lastName?: string;
+    email?: string;
+    avatarUrl?: string;
+}
+
 export interface Project {
     id: string;
     chat_id: string;

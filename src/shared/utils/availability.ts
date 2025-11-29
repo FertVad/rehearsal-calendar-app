@@ -8,12 +8,12 @@ export const WORKDAY_END = '23:00';
 
 const DAY_END = 23 * 60 + 59;
 
-const toMinutes = (t: string): number => {
+export const toMinutes = (t: string): number => {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 };
 
-const toTimeString = (m: number): string => {
+export const toTimeString = (m: number): string => {
   const h = Math.floor(m / 60);
   const mm = m % 60;
   return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
@@ -27,7 +27,6 @@ const maxTime = (a: string, b: string): string =>
 
 const timeLt = (a: string, b: string): boolean => toMinutes(a) < toMinutes(b);
 
-// Обрезает интервал занятности рабочим окном и возвращает null, если он вне окна
 export function clampToWorkday(range: { start: string; end: string }) {
   const start = maxTime(range.start, WORKDAY_START);
   const end = minTime(range.end, WORKDAY_END);
@@ -111,5 +110,3 @@ export const busyToFreeGaps = (ranges: TimeRange[]): TimeRange[] => {
   }
   return result.filter(r => timeLt(r.start, r.end));
 };
-
-export { toMinutes, toTimeString };

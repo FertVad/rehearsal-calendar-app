@@ -1,0 +1,312 @@
+/**
+ * Styles for AvailabilityScreen
+ */
+import { StyleSheet } from 'react-native';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.bg.primary,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+  },
+  title: {
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.text.primary,
+  },
+  saveHeaderButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.accent.purple,
+    borderRadius: BorderRadius.md,
+  },
+  saveHeaderButtonText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.inverse,
+  },
+  saveHeaderButtonDisabled: {
+    opacity: 0.7,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: FontSize.base,
+    color: Colors.text.secondary,
+  },
+  legend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: FontSize.xs,
+    color: Colors.text.secondary,
+  },
+  calendarContent: {
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.xxl,
+  },
+  statusDotFree: {
+    backgroundColor: Colors.accent.green,
+  },
+  statusDotBusy: {
+    backgroundColor: Colors.accent.red,
+  },
+  statusDotPartial: {
+    backgroundColor: Colors.accent.yellow,
+  },
+  bottomPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 320,
+    backgroundColor: Colors.bg.primary,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  bottomSheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.glass.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  bottomSheetContent: {
+    padding: Spacing.xl,
+  },
+  modeSelector: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.glass.bg,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    gap: Spacing.xs,
+  },
+  modeButtonActive: {
+    borderWidth: 2,
+  },
+  modeButtonFree: {
+    borderColor: Colors.accent.green,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
+  modeButtonCustom: {
+    borderColor: Colors.accent.yellow,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+  },
+  modeButtonBusy: {
+    borderColor: Colors.accent.red,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  modeButtonText: {
+    fontSize: FontSize.xs,
+    color: Colors.text.secondary,
+    fontWeight: FontWeight.medium,
+  },
+  modeButtonTextActive: {
+    color: Colors.text.primary,
+  },
+  slotsSection: {
+    marginBottom: Spacing.lg,
+  },
+  slotsTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.md,
+  },
+  slotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  slotInputs: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timeInput: {
+    flex: 1,
+  },
+  timeSeparator: {
+    paddingHorizontal: Spacing.sm,
+    paddingTop: Spacing.md,
+  },
+  timeLabel: {
+    fontSize: FontSize.xs,
+    color: Colors.text.tertiary,
+    marginBottom: 4,
+  },
+  timeButton: {
+    flexDirection: 'row',
+    backgroundColor: Colors.bg.secondary,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  timeValue: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.medium,
+    color: Colors.text.primary,
+  },
+  removeSlotButton: {
+    padding: Spacing.sm,
+    marginLeft: Spacing.sm,
+  },
+  addSlotButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.accent.purple,
+    borderStyle: 'dashed',
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
+  },
+  addSlotText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.accent.purple,
+  },
+  timePickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  timePickerContainer: {
+    backgroundColor: Colors.bg.primary,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 20,
+  },
+  timePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.glass.border,
+  },
+  timePickerTitle: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.primary,
+  },
+  timePickerCancel: {
+    fontSize: FontSize.base,
+    color: Colors.text.secondary,
+  },
+  timePickerDone: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.purple,
+  },
+  validationError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  validationErrorText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.accent.red,
+    fontWeight: FontWeight.medium,
+  },
+  pastDateWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  pastDateWarningText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.accent.yellow,
+    fontWeight: FontWeight.medium,
+  },
+  deletePastDateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  deletePastDateButtonText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.red,
+  },
+  modeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.glass.bg,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  modeInfoText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+  },
+});
