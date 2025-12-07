@@ -1,13 +1,36 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 // Change this to your backend URL
 // For iOS simulator: http://localhost:3001
 // For Android emulator: http://10.0.2.2:3001
 // For real device: http://YOUR_COMPUTER_IP:3001
-const API_URL = __DEV__
-  ? 'http://192.168.1.38:3001/api'  // Use IP address for real device support
+
+// Auto-detect IP from Expo DevServer
+// When running with Expo, manifest.debuggerHost contains the IP
+const getLocalIP = () => {
+  const debuggerHost = Constants.expoConfig?.hostUri;
+  if (debuggerHost) {
+    // debuggerHost format is "192.168.1.38:8081", extract IP
+    return debuggerHost.split(':')[0];
+  }
+  // For iOS Simulator, use 127.0.0.1 (IPv4) instead of localhost
+  // localhost can resolve to ::1 (IPv6) which the server doesn't listen on
+  return '127.0.0.1';
+};
+
+// TEMPORARY: Force local development URL
+const USE_LOCAL = true;
+
+const API_URL = USE_LOCAL
+  ? `http://${getLocalIP()}:3001/api`
   : 'https://rehearsal-calendar-app.onrender.com/api';
+
+console.log('[API] __DEV__:', __DEV__);
+console.log('[API] USE_LOCAL:', USE_LOCAL);
+console.log('[API] API_URL:', API_URL);
+console.log('[API] Local IP:', getLocalIP());
 
 const api = axios.create({
   baseURL: API_URL,
@@ -24,6 +47,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log('[API] Request:', config.method?.toUpperCase(), config.url, config.params);
     return config;
   },
   (error) => {
@@ -113,6 +137,25 @@ export const projectsAPI = {
   // Get project members
   getMembers: (projectId: string) =>
     api.get(`/native/projects/${projectId}/members`),
+
+  // Get members availability for a specific date
+  getMembersAvailability: (projectId: string, date: string, userIds?: string[]) =>
+    api.get(`/native/projects/${projectId}/members/availability`, {
+      params: {
+        date,
+        userIds: userIds?.join(','),
+      },
+    }),
+
+  // Get members availability for a date range (for Smart Planner)
+  getMembersAvailabilityRange: (projectId: string, startDate: string, endDate: string, userIds?: string[]) =>
+    api.get(`/native/projects/${projectId}/members/availability`, {
+      params: {
+        startDate,
+        endDate,
+        userIds: userIds?.join(','),
+      },
+    }),
 
   // Create new project
   createProject: (data: { name: string; description?: string; timezone?: string }) =>
