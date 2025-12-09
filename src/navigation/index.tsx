@@ -16,6 +16,7 @@ import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
 import ProjectDetailScreen from '../features/projects/screens/ProjectDetailScreen';
 import AvailabilityScreen from '../features/availability/screens/AvailabilityScreen';
 import ProfileScreen from '../features/profile/screens/ProfileScreen';
+import SmartPlannerScreen from '../features/smart-planner/screens/SmartPlannerScreen';
 
 const prefix = Linking.createURL('/');
 
@@ -57,10 +58,16 @@ export type TabParamList = {
 
 export type AppStackParamList = {
   MainTabs: undefined;
-  AddRehearsal: undefined;
+  AddRehearsal: {
+    projectId?: string;
+    prefilledDate?: string;
+    prefilledTime?: string;
+    prefilledEndTime?: string;
+  };
   CreateProject: undefined;
   JoinProject: { code: string };
   ProjectDetail: { projectId: string };
+  SmartPlanner: { projectId: string };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -187,6 +194,10 @@ function AppNavigator() {
       <AppStack.Screen
         name="ProjectDetail"
         component={ProjectDetailScreen}
+      />
+      <AppStack.Screen
+        name="SmartPlanner"
+        component={SmartPlannerScreen}
       />
     </AppStack.Navigator>
   );

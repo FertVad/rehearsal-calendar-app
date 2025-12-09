@@ -1,6 +1,11 @@
+import { timeToMinutes, minutesToTime } from './time';
+
 export interface TimeRange {
   start: string;
   end: string;
+  type?: 'available' | 'busy' | 'tentative';
+  title?: string;
+  notes?: string;
 }
 
 export const WORKDAY_START = '09:00';
@@ -8,16 +13,9 @@ export const WORKDAY_END = '23:00';
 
 const DAY_END = 23 * 60 + 59;
 
-export const toMinutes = (t: string): number => {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-};
-
-export const toTimeString = (m: number): string => {
-  const h = Math.floor(m / 60);
-  const mm = m % 60;
-  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-};
+// Re-export for backward compatibility
+export const toMinutes = timeToMinutes;
+export const toTimeString = minutesToTime;
 
 const minTime = (a: string, b: string): string =>
   toMinutes(a) < toMinutes(b) ? a : b;

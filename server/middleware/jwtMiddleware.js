@@ -1,82 +1,56 @@
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m'; // 15 minutes
-const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d'; // 7 days
+const JWT_EXPIRES_IN = '15m'; // Access token expires in 15 minutes
+const REFRESH_TOKEN_EXPIRES_IN = '7d'; // Refresh token expires in 7 days
 
-/**
- * Generate access token
- */
-export function generateAccessToken(userId) {
-  return jwt.sign(
-    { userId, type: 'access' },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
-  );
+export function generateTokens(userId) {
+  const accessToken = jwt.sign({ userId, type: 'access' }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
+
+  const refreshToken = jwt.sign({ userId, type: 'refresh' }, JWT_SECRET, {
+    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+  });
+
+  return { accessToken, refreshToken };
 }
 
-/**
- * Generate refresh token
- */
-export function generateRefreshToken(userId) {
-  return jwt.sign(
-    { userId, type: 'refresh' },
-    JWT_SECRET,
-    { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
-  );
-}
-
-/**
- * Verify JWT token
- */
-export function verifyToken(token) {
+export function verifyToken(token, type = 'access') {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.type !== type) {
+      throw new Error('Invalid token type');
+    }
+    return decoded;
   } catch (err) {
     return null;
   }
 }
 
-/**
- * Middleware to require JWT authentication
- */
-export function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
+export function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
   }
 
-  const token = authHeader.substring(7); // Remove "Bearer " prefix
-  const decoded = verifyToken(token);
-
+  const decoded = verifyToken(token, 'access');
   if (!decoded) {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 
-  if (decoded.type !== 'access') {
-    return res.status(401).json({ error: 'Invalid token type' });
-  }
-
-  // Attach user ID to request
   req.userId = decoded.userId;
   next();
 }
 
-/**
- * Optional auth - doesn't fail if no token, but attaches userId if present
- */
-export function optionalAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
+// Alias for backwards compatibility
+export const requireAuth = authenticateToken;
 
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-
-    if (decoded && decoded.type === 'access') {
-      req.userId = decoded.userId;
-    }
-  }
-
-  next();
-}
+export default {
+  generateTokens,
+  verifyToken,
+  authenticateToken,
+  requireAuth,
+};

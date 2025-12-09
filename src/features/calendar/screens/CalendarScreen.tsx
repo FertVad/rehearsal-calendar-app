@@ -9,6 +9,7 @@ import { TabParamList, AppStackParamList } from '../../../navigation';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import DayDetailsModal from '../components/DayDetailsModal';
 import MyRehearsalsModal from '../components/MyRehearsalsModal';
+import StatsPanel from '../components/StatsPanel';
 import { Rehearsal } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -34,6 +35,35 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   // null means "All projects"
   const [filterProjectId, setFilterProjectId] = useState<string | null>(null);
 
+  // Check if user has any admin role
+  const hasAnyAdminRole = useMemo(() =>
+    projects.some(p => p.is_admin),
+    [projects]
+  );
+
+  // Get current UI mode based on filter and admin status
+  const screenMode = useMemo(() => {
+    if (filterProjectId === null) {
+      // "All projects" - show admin UI if user is admin in at least one project
+      return hasAnyAdminRole ? 'admin' : 'user';
+    }
+    // Specific project - check admin status for that project
+    const project = projects.find(p => p.id === filterProjectId);
+    return project?.is_admin ? 'admin' : 'user';
+  }, [filterProjectId, projects, hasAnyAdminRole]);
+
+  // Get list of projects where user is admin
+  const adminProjects = useMemo(() =>
+    projects.filter(p => p.is_admin),
+    [projects]
+  );
+
+  // Get current project (if specific project is selected)
+  const currentProject = useMemo(() =>
+    filterProjectId ? projects.find(p => p.id === filterProjectId) : null,
+    [filterProjectId, projects]
+  );
+
   // Use custom hooks for data management
   const {
     rehearsals,
@@ -42,7 +72,9 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
     rsvpResponses,
     setRsvpResponses,
     adminStats,
+    setAdminStats,
     fetchRehearsals,
+    updateAdminStats,
   } = useRehearsals(projects, filterProjectId);
 
   const { respondingId, handleRSVP } = useRSVP();
@@ -157,6 +189,15 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
           >
             <Ionicons name="funnel-outline" size={18} color={Colors.accent.purple} />
             <Text style={styles.filterButtonText}>{getFilterLabel()}</Text>
+
+            {/* Admin Badge - only show for specific project where user is admin */}
+            {screenMode === 'admin' && currentProject && (
+              <View style={styles.adminBadgeInline}>
+                <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
+                <Text style={styles.adminBadgeText}>Админ</Text>
+              </View>
+            )}
+
             <Ionicons
               name={filterExpanded ? "chevron-up" : "chevron-down"}
               size={18}
@@ -216,6 +257,50 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
           selectedDate={selectedDate}
         />
 
+        {/* Stats Panel - only show for admin users */}
+        {screenMode === 'admin' && (
+          <StatsPanel
+            rehearsals={rehearsals}
+            adminProjects={adminProjects}
+            adminStats={adminStats}
+            filterProjectId={filterProjectId}
+          />
+        )}
+
+        {/* Smart Planner Button - only show for admins */}
+        {screenMode === 'admin' && adminProjects.length > 0 && (
+          <View style={styles.smartPlannerContainer}>
+            <TouchableOpacity
+              style={styles.smartPlannerButton}
+              onPress={() => {
+                // Get the most recent admin project
+                const sortedProjects = [...adminProjects].sort((a, b) => {
+                  // Sort by updatedAt or createdAt (most recent first)
+                  const dateA = new Date((a as any).updatedAt || (a as any).createdAt || 0);
+                  const dateB = new Date((b as any).updatedAt || (b as any).createdAt || 0);
+                  return dateB.getTime() - dateA.getTime();
+                });
+                const defaultProject = sortedProjects[0];
+
+                navigation.navigate('SmartPlanner', {
+                  projectId: defaultProject.id
+                });
+              }}
+            >
+              <View style={styles.smartPlannerIconContainer}>
+                <Ionicons name="bulb" size={20} color={Colors.accent.purple} />
+              </View>
+              <View style={styles.smartPlannerTextContainer}>
+                <Text style={styles.smartPlannerTitle}>Smart Planner</Text>
+                <Text style={styles.smartPlannerSubtitle}>
+                  Найти оптимальное время для репетиции
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Upcoming Events */}
         <View style={styles.upcomingSection}>
           <Text style={styles.sectionTitle}>Ближайшие события</Text>
@@ -249,7 +334,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                 const currentResponse = rsvpResponses[rehearsal.id];
                 const isResponding = respondingId === rehearsal.id;
                 const project = projects.find(p => p.id === rehearsal.projectId);
-                const isAdmin = project?.is_admin;
+                // Check if user is admin for THIS specific rehearsal's project
+                const isAdminForThisRehearsal = project?.is_admin || false;
                 const stats = adminStats[rehearsal.id];
 
                 return (
@@ -268,7 +354,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                             {getRelativeDateLabel(rehearsal.date)}
                           </Text>
                         </View>
-                        {isAdmin && (
+                        {isAdminForThisRehearsal && (
                           <View style={styles.adminBadge}>
                             <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
                             <Text style={styles.adminBadgeText}>Админ</Text>
@@ -306,8 +392,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                     </TouchableOpacity>
 
                     {/* RSVP Section - different for admin and regular user */}
-                    {isAdmin ? (
-                      // Admin sees stats
+                    {isAdminForThisRehearsal ? (
+                      // Admin sees stats for their projects
                       <View style={styles.adminStatsSection}>
                         {stats ? (
                           <View style={styles.adminStatsRow}>
@@ -353,6 +439,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                           style={[styles.rsvpButton, styles.rsvpConfirmButton]}
                           onPress={() => handleRSVP(rehearsal.id, 'confirmed', (id, status) => {
                             setRsvpResponses(prev => ({ ...prev, [id]: status }));
+                            // Update only stats for this rehearsal (no full refetch)
+                            updateAdminStats(id);
                           })}
                           disabled={isResponding}
                         >
@@ -370,6 +458,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                           style={[styles.rsvpButton, styles.rsvpDeclineButton]}
                           onPress={() => handleRSVP(rehearsal.id, 'declined', (id, status) => {
                             setRsvpResponses(prev => ({ ...prev, [id]: status }));
+                            // Update only stats for this rehearsal (no full refetch)
+                            updateAdminStats(id);
                           })}
                           disabled={isResponding}
                         >

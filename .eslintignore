@@ -1,0 +1,9 @@
+node_modules/
+ios/
+android/
+.expo/
+.metro-cache/
+dist/
+build/
+*.min.js
+coverage/

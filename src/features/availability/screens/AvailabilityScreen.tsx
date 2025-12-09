@@ -28,6 +28,8 @@ import {
   generateMonths,
   formatDate,
   validateSlots,
+  validateSlot,
+  slotsOverlap,
   calculateDateOffset
 } from '../utils';
 import { useAvailabilityData } from '../hooks';

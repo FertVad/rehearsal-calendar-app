@@ -34,7 +34,11 @@ export const useTimeRecommendations = (
     memberIds.forEach(userId => {
       const availability = memberAvailability[userId];
       if (availability?.timeRanges) {
-        ranges.push(...availability.timeRanges);
+        // Only consider 'busy' and 'tentative' ranges as conflicts
+        const busyRanges = availability.timeRanges.filter(
+          r => r.type === 'busy' || r.type === 'tentative'
+        );
+        ranges.push(...busyRanges);
       }
     });
 

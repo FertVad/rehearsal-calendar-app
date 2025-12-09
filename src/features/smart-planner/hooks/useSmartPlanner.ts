@@ -1,0 +1,170 @@
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { projectsAPI, rehearsalsAPI } from '../../../shared/services/api';
+import type { Project, Rehearsal, ProjectMember } from '../../../shared/types';
+import type { TimeSlot, SlotCategory, Member, AvailabilityData } from '../types';
+import {
+  generateTimeSlots,
+  filterSlotsByCategory,
+  countSlotsByCategory,
+  groupSlotsByDate,
+} from '../utils/slotGenerator';
+import { mergeAvailabilityWithRehearsals, type MemberAvailability } from '../utils/availabilityMerger';
+
+interface UseSmartPlannerProps {
+  projectId: string;
+  startDate: string;
+  endDate: string;
+  selectedCategories: SlotCategory[];
+  selectedMemberIds: string[];
+}
+
+export function useSmartPlanner({
+  projectId,
+  startDate,
+  endDate,
+  selectedCategories,
+  selectedMemberIds,
+}: UseSmartPlannerProps) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [memberAvailability, setMemberAvailability] = useState<MemberAvailability[]>([]);
+  const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
+
+  // Load all data
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadData() {
+      if (!projectId || !startDate || !endDate) {
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        console.log('[Smart Planner] Loading data for project:', projectId);
+        console.log('[Smart Planner] Date range:', startDate, 'to', endDate);
+
+        // Load project info, members, availability, and rehearsals in parallel
+        const [projectRes, membersRes, availabilityRes, rehearsalsRes] = await Promise.all([
+          projectsAPI.getProject(projectId),
+          projectsAPI.getMembers(projectId),
+          projectsAPI.getMembersAvailabilityRange(projectId, startDate, endDate),
+          rehearsalsAPI.getAll(projectId),
+        ]);
+
+        if (!mounted) return;
+
+        console.log('[Smart Planner] Project:', projectRes.data);
+        console.log('[Smart Planner] Members:', membersRes.data.members.length);
+        console.log('[Smart Planner] Availability:', availabilityRes.data.availability.length);
+        console.log('[Smart Planner] Rehearsals:', rehearsalsRes.data.rehearsals.length);
+
+        setProject(projectRes.data.project);
+        setMembers(membersRes.data.members);
+        setMemberAvailability(availabilityRes.data.availability);
+        setRehearsals(rehearsalsRes.data.rehearsals);
+      } catch (err: any) {
+        console.error('[Smart Planner] Error loading data:', err);
+        if (mounted) {
+          setError(err.response?.data?.error || err.message || 'Failed to load data');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [projectId, startDate, endDate]);
+
+  // Convert members to simple format for slot generator
+  const simpleMembers: Member[] = useMemo(() => {
+    return members.map(m => ({
+      id: m.userId,
+      name: `${m.firstName}${m.lastName ? ` ${m.lastName}` : ''}`,
+    }));
+  }, [members]);
+
+  // Merge availability with rehearsals
+  const mergedAvailability: AvailabilityData[] = useMemo(() => {
+    if (simpleMembers.length === 0) return [];
+
+    console.log('[Smart Planner] Merging availability with rehearsals');
+    console.log('[Smart Planner] Simple members:', simpleMembers.length);
+    console.log('[Smart Planner] Member availability:', memberAvailability.length);
+    console.log('[Smart Planner] Rehearsals:', rehearsals.length);
+
+    const merged = mergeAvailabilityWithRehearsals(
+      simpleMembers,
+      memberAvailability,
+      rehearsals
+    );
+
+    console.log('[Smart Planner] Merged availability entries:', merged.length);
+    return merged;
+  }, [simpleMembers, memberAvailability, rehearsals]);
+
+  // Generate time slots
+  const allSlots: TimeSlot[] = useMemo(() => {
+    if (!startDate || !endDate || simpleMembers.length === 0) {
+      return [];
+    }
+
+    // If no members selected, use all members
+    const memberIds = selectedMemberIds.length > 0
+      ? selectedMemberIds
+      : simpleMembers.map(m => m.id);
+
+    console.log('[Smart Planner] Generating slots');
+    console.log('[Smart Planner] Selected members:', memberIds.length);
+
+    const slots = generateTimeSlots(
+      startDate,
+      endDate,
+      simpleMembers,
+      mergedAvailability,
+      memberIds
+    );
+
+    console.log('[Smart Planner] Generated slots:', slots.length);
+    return slots;
+  }, [startDate, endDate, simpleMembers, mergedAvailability, selectedMemberIds]);
+
+  // Filter slots by category
+  const filteredSlots = useMemo(() => {
+    const filtered = filterSlotsByCategory(allSlots, selectedCategories);
+    console.log('[Smart Planner] Filtered slots:', filtered.length);
+    return filtered;
+  }, [allSlots, selectedCategories]);
+
+  // Count slots by category
+  const categoryCounts = useMemo(() => {
+    return countSlotsByCategory(allSlots);
+  }, [allSlots]);
+
+  // Group slots by date
+  const slotsByDate = useMemo(() => {
+    return groupSlotsByDate(filteredSlots);
+  }, [filteredSlots]);
+
+  return {
+    loading,
+    error,
+    project,
+    members,
+    simpleMembers,
+    allSlots,
+    filteredSlots,
+    categoryCounts,
+    slotsByDate,
+  };
+}

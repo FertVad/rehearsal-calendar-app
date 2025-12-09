@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "index.ts",
+    "App.tsx",
+    "server/server.js"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "server/**/*.{js,ts}"
+  ],
+  "ignore": [
+    "**/*.test.{ts,tsx,js}",
+    "**/__tests__/**",
+    "**/node_modules/**"
+  ],
+  "ignoreDependencies": [
+    "@react-navigation/stack",
+    "react-native-gesture-handler",
+    "i18next",
+    "react-i18next",
+    "date-fns"
+  ],
+  "ignoreExportsUsedInFile": true
+}

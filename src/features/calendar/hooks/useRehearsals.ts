@@ -83,7 +83,14 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
               try {
                 const res = await rehearsalsAPI.getMyResponse(rehearsal.id);
                 if (res.data.response) {
-                  responses[rehearsal.id] = res.data.response.status;
+                  // Map server response ('yes'/'no'/'maybe') to client status ('confirmed'/'declined'/'tentative')
+                  const responseMap: Record<string, RSVPStatus> = {
+                    'yes': 'confirmed',
+                    'no': 'declined',
+                    'maybe': 'tentative',
+                  };
+                  const serverResponse = res.data.response.response;
+                  responses[rehearsal.id] = responseMap[serverResponse] || serverResponse as RSVPStatus;
                 }
               } catch (err) {
                 console.error(`Failed to fetch RSVP for ${rehearsal.id}:`, err);
@@ -103,6 +110,24 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
     }
   }, [projects, filterProjectId]);
 
+  const updateAdminStats = useCallback(async (rehearsalId: string) => {
+    try {
+      const res = await rehearsalsAPI.getResponses(rehearsalId);
+      if (res.data.stats) {
+        setAdminStats(prev => ({
+          ...prev,
+          [rehearsalId]: {
+            confirmed: res.data.stats.confirmed,
+            declined: res.data.stats.declined,
+            pending: res.data.stats.invited + res.data.stats.tentative,
+          },
+        }));
+      }
+    } catch (err) {
+      console.error(`Failed to update admin stats for ${rehearsalId}:`, err);
+    }
+  }, []);
+
   return {
     rehearsals,
     loading,
@@ -110,6 +135,8 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
     rsvpResponses,
     setRsvpResponses,
     adminStats,
+    setAdminStats,
     fetchRehearsals,
+    updateAdminStats,
   };
 };

@@ -1,8 +1,20 @@
 /**
  * Export all availability utils
  */
-export * from './validationUtils';
-export * from './calendarUtils';
-export * from './dateUtils';
-export * from './slotValidation';
-export * from './scrollUtils';
+
+// Calendar utilities - все функции для работы с календарем
+export {
+  generateMonths,
+  getDaysInMonth,
+  formatDate,
+  getDayStatus,
+  calculateDateOffset,
+} from './calendarUtils';
+
+// Validation utilities
+export {
+  timeToMinutes,
+  validateSlot,
+  slotsOverlap,
+  validateSlots,
+} from './validationUtils';

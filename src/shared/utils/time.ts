@@ -24,6 +24,44 @@ export const formatDateToString = (date: Date): string => {
 };
 
 /**
+ * Format Date to YYYY-MM-DD string in UTC timezone.
+ */
+export const formatDateToStringUTC = (date: Date): string => {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Format Date to HH:mm string in UTC timezone.
+ */
+export const formatTimeUTC = (date: Date): string => {
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+/**
+ * Convert time string (HH:mm) to minutes since midnight.
+ * @example timeToMinutes('14:30') => 870
+ */
+export const timeToMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+/**
+ * Convert minutes since midnight to time string (HH:mm).
+ * @example minutesToTime(870) => '14:30'
+ */
+export const minutesToTime = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+};
+
+/**
  * Format YYYY-MM-DD string to localized date string (e.g., "25 ноября, понедельник").
  */
 export const formatDateLocalized = (

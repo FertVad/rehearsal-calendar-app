@@ -17,6 +17,7 @@ import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
+import { formatDateToString as formatDateToStringUtil } from '../../../shared/utils/time';
 
 type ProjectDetailScreenProps = NativeStackScreenProps<AppStackParamList, 'ProjectDetail'>;
 
@@ -57,12 +58,8 @@ function formatDate(dateStr: string): string {
   return `${date.getDate()} ${months[date.getMonth()]}`;
 }
 
-function formatDateToString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+// Use shared utility
+const formatDateToString = formatDateToStringUtil;
 
 export default function ProjectDetailScreen({ route, navigation }: ProjectDetailScreenProps) {
   const { projectId } = route.params;

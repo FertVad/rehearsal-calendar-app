@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,13 +24,36 @@ import { Project, ProjectMember } from '../../../shared/types';
 import { ActorSelector } from '../components/ActorSelector';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { TimeRange } from '../../../shared/utils/availability';
+import { checkSchedulingConflicts, formatConflictMessage } from '../../../shared/utils/conflictDetection';
 import { addRehearsalScreenStyles as styles } from '../styles';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
+type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
 
 export default function AddRehearsalScreen() {
   const navigation = useNavigation<NavigationType>();
+  const route = useRoute<RouteType>();
   const { projects, selectedProject, setSelectedProject } = useProjects();
+
+  // Get route params
+  const { projectId: prefilledProjectId, prefilledDate, prefilledTime, prefilledEndTime } = route.params || {};
+
+  // Filter projects - only show where user is admin
+  const adminProjects = useMemo(() => projects.filter(p => p.is_admin), [projects]);
+
+  // Get the most recent admin project (by created_at or createdAt)
+  const defaultProject = useMemo((): Project | null => {
+    if (adminProjects.length === 0) return null;
+
+    // Sort by creation date (newest first)
+    const sorted = [...adminProjects].sort((a, b) => {
+      const dateA = new Date(a.created_at || a.createdAt || 0).getTime();
+      const dateB = new Date(b.created_at || b.createdAt || 0).getTime();
+      return dateB - dateA; // Newest first
+    });
+
+    return sorted[0];
+  }, [adminProjects]);
 
   // Form state
   const [date, setDate] = useState(new Date());
@@ -41,7 +64,9 @@ export default function AddRehearsalScreen() {
     return end;
   });
   const [location, setLocation] = useState('');
-  const [localSelectedProject, setLocalSelectedProject] = useState<Project | null>(selectedProject);
+  const [localSelectedProject, setLocalSelectedProject] = useState<Project | null>(
+    selectedProject?.is_admin ? selectedProject : null
+  );
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [memberAvailability, setMemberAvailability] = useState<Record<string, { timeRanges: TimeRange[] }>>({});
@@ -54,6 +79,54 @@ export default function AddRehearsalScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+
+  // Prefill form from route params
+  useEffect(() => {
+    if (prefilledProjectId) {
+      const project = projects.find(p => p.id === prefilledProjectId);
+      if (project && project.is_admin) {
+        setLocalSelectedProject(project);
+        setSelectedProject(project);
+      }
+    }
+
+    if (prefilledDate) {
+      const parsedDate = new Date(prefilledDate + 'T00:00:00');
+      setDate(parsedDate);
+    }
+
+    if (prefilledTime) {
+      const [hours, minutes] = prefilledTime.split(':').map(Number);
+      const timeDate = new Date();
+      timeDate.setHours(hours, minutes, 0, 0);
+      setStartTime(timeDate);
+    }
+
+    if (prefilledEndTime) {
+      const [hours, minutes] = prefilledEndTime.split(':').map(Number);
+      const timeDate = new Date();
+      timeDate.setHours(hours, minutes, 0, 0);
+      setEndTime(timeDate);
+    }
+  }, [prefilledProjectId, prefilledDate, prefilledTime, prefilledEndTime, projects]);
+
+  // Update selected project when projects list changes or default changes
+  useEffect(() => {
+    // Don't override if we have a prefilled project
+    if (prefilledProjectId) return;
+
+    // If current selection is not an admin project, select the default
+    if (localSelectedProject && !localSelectedProject.is_admin) {
+      setLocalSelectedProject(defaultProject);
+      if (defaultProject) {
+        setSelectedProject(defaultProject);
+      }
+    } else if (!localSelectedProject && defaultProject) {
+      // If no project selected and there is a default, select it
+      setLocalSelectedProject(defaultProject);
+      setSelectedProject(defaultProject);
+    }
+  }, [defaultProject, prefilledProjectId]);
 
   // Load members when project changes
   useEffect(() => {
@@ -82,21 +155,56 @@ export default function AddRehearsalScreen() {
   // Load availability when date or members change
   useEffect(() => {
     const loadAvailability = async () => {
-      if (!localSelectedProject) {
+      console.log('[DEBUG] loadAvailability called', {
+        hasProject: !!localSelectedProject,
+        memberCount: selectedMemberIds.length,
+        projectId: localSelectedProject?.id,
+        memberIds: selectedMemberIds,
+      });
+
+      if (!localSelectedProject || selectedMemberIds.length === 0) {
+        console.log('[DEBUG] Skipping - no project or members');
         setMemberAvailability({});
         return;
       }
 
       setLoadingAvailability(true);
       try {
-        // Since backend endpoint doesn't exist yet, initialize with empty object for each member
-        const availability: Record<string, { timeRanges: TimeRange[] }> = {};
-        selectedMemberIds.forEach(memberId => {
-          availability[memberId] = { timeRanges: [] };
+        const dateStr = date.toISOString().split('T')[0];
+        console.log('[DEBUG] Calling API with:', { projectId: localSelectedProject.id, dateStr, memberIds: selectedMemberIds });
+
+        const response = await projectsAPI.getMembersAvailability(
+          localSelectedProject.id,
+          dateStr,
+          selectedMemberIds
+        );
+
+        console.log('[DEBUG] API response:', response.data);
+
+        // Transform array response to Record<userId, {timeRanges}>
+        const availabilityMap: Record<string, { timeRanges: TimeRange[] }> = {};
+        const availabilityArray = response.data.availability || [];
+
+        for (const userAvail of availabilityArray) {
+          // Find the data for the current date
+          const dateData = userAvail.dates?.find((d: any) => d.date === dateStr);
+          if (dateData && dateData.timeRanges) {
+            availabilityMap[userAvail.userId] = {
+              timeRanges: dateData.timeRanges
+            };
+          }
+        }
+
+        console.log('[DEBUG] Transformed availability:', availabilityMap);
+        setMemberAvailability(availabilityMap);
+      } catch (error: any) {
+        console.error('[DEBUG] Failed to load availability:', error);
+        console.error('[DEBUG] Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
         });
-        setMemberAvailability(availability);
-      } catch (error) {
-        console.error('Failed to load availability:', error);
+        Alert.alert('Ошибка', 'Не удалось загрузить доступность участников');
         setMemberAvailability({});
       } finally {
         setLoadingAvailability(false);
@@ -126,7 +234,9 @@ export default function AddRehearsalScreen() {
   };
 
   const formatTime = (d: Date) => {
-    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
   };
 
   const formatDisplayDate = (d: Date) => {
@@ -221,13 +331,59 @@ export default function AddRehearsalScreen() {
       return;
     }
 
+    // Check for scheduling conflicts
+    if (selectedMemberIds.length > 0) {
+      const selectedMembers = members.filter(m => selectedMemberIds.includes(m.userId));
+      const rehearsalStart = formatTime(startTime);
+      const rehearsalEnd = formatTime(endTime);
+
+      const conflicts = checkSchedulingConflicts(
+        selectedMembers,
+        memberAvailability,
+        rehearsalStart,
+        rehearsalEnd
+      );
+
+      if (conflicts.hasConflicts) {
+        const conflictMessage = formatConflictMessage(conflicts);
+
+        // Show warning and ask for confirmation
+        Alert.alert(
+          '⚠️ Конфликт расписания',
+          `${conflictMessage}\n\nВы уверены, что хотите создать репетицию?`,
+          [
+            {
+              text: 'Отмена',
+              style: 'cancel',
+            },
+            {
+              text: 'Создать всё равно',
+              style: 'destructive',
+              onPress: () => createRehearsal(),
+            },
+          ]
+        );
+        return;
+      }
+    }
+
+    // No conflicts, create rehearsal
+    createRehearsal();
+  };
+
+  const createRehearsal = async () => {
+    if (!localSelectedProject) {
+      Alert.alert('Ошибка', 'Проект не выбран');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const rehearsalData = {
         date: formatDate(date),
-        time: formatTime(startTime),
-        end_time: formatTime(endTime),
+        startTime: formatTime(startTime),
+        endTime: formatTime(endTime),
         location: location.trim() || undefined,
         participant_ids: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
       };
@@ -296,11 +452,30 @@ export default function AddRehearsalScreen() {
               <Ionicons name="calendar-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.pickerButtonText}>{formatDisplayDate(date)}</Text>
             </TouchableOpacity>
-            {showDatePicker && (
+            {showDatePicker && Platform.OS === 'ios' && (
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => setShowDatePicker(false)}
+                style={styles.pickerOverlay}
+              >
+                <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+                  <DateTimePicker
+                    value={date}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                    locale="ru-RU"
+                    themeVariant="dark"
+                    textColor={Colors.text.primary}
+                  />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            )}
+            {showDatePicker && Platform.OS === 'android' && (
               <DateTimePicker
                 value={date}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="default"
                 onChange={handleDateChange}
                 locale="ru-RU"
                 themeVariant="dark"
@@ -345,11 +520,30 @@ export default function AddRehearsalScreen() {
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.pickerButtonText}>{formatTime(startTime)}</Text>
             </TouchableOpacity>
-            {showStartTimePicker && (
+            {showStartTimePicker && Platform.OS === 'ios' && (
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => setShowStartTimePicker(false)}
+                style={styles.pickerOverlay}
+              >
+                <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+                  <DateTimePicker
+                    value={startTime}
+                    mode="time"
+                    display="spinner"
+                    onChange={handleStartTimeChange}
+                    is24Hour={true}
+                    themeVariant="dark"
+                    textColor={Colors.text.primary}
+                  />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            )}
+            {showStartTimePicker && Platform.OS === 'android' && (
               <DateTimePicker
                 value={startTime}
                 mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="default"
                 onChange={handleStartTimeChange}
                 is24Hour={true}
                 themeVariant="dark"
@@ -368,11 +562,30 @@ export default function AddRehearsalScreen() {
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.pickerButtonText}>{formatTime(endTime)}</Text>
             </TouchableOpacity>
-            {showEndTimePicker && (
+            {showEndTimePicker && Platform.OS === 'ios' && (
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => setShowEndTimePicker(false)}
+                style={styles.pickerOverlay}
+              >
+                <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+                  <DateTimePicker
+                    value={endTime}
+                    mode="time"
+                    display="spinner"
+                    onChange={handleEndTimeChange}
+                    is24Hour={true}
+                    themeVariant="dark"
+                    textColor={Colors.text.primary}
+                  />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            )}
+            {showEndTimePicker && Platform.OS === 'android' && (
               <DateTimePicker
                 value={endTime}
                 mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="default"
                 onChange={handleEndTimeChange}
                 is24Hour={true}
                 themeVariant="dark"
@@ -434,14 +647,18 @@ export default function AddRehearsalScreen() {
               </TouchableOpacity>
             </View>
 
-            {projects.length === 0 ? (
+            {adminProjects.length === 0 ? (
               <View style={styles.emptyProjectsContainer}>
                 <Ionicons name="folder-open-outline" size={48} color={Colors.text.tertiary} />
-                <Text style={styles.emptyProjectsText}>Нет проектов</Text>
+                <Text style={styles.emptyProjectsText}>
+                  {projects.length === 0
+                    ? 'Нет проектов'
+                    : 'Нет проектов, где вы являетесь администратором'}
+                </Text>
               </View>
             ) : (
               <FlatList
-                data={projects}
+                data={adminProjects}
                 keyExtractor={(item) => String(item.id)}
                 renderItem={({ item }) => (
                   <TouchableOpacity

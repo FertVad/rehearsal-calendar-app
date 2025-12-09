@@ -109,6 +109,15 @@ export const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
   },
+  adminBadgeInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+  },
   adminBadgeText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
@@ -321,6 +330,42 @@ export const styles = StyleSheet.create({
   adminStatText: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
+    color: Colors.text.secondary,
+  },
+  // Smart Planner button styles
+  smartPlannerContainer: {
+    marginHorizontal: Spacing.xl,
+    marginVertical: Spacing.md,
+  },
+  smartPlannerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.glass.bg,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  smartPlannerIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(147, 51, 234, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smartPlannerTextContainer: {
+    flex: 1,
+  },
+  smartPlannerTitle: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  smartPlannerSubtitle: {
+    fontSize: FontSize.sm,
     color: Colors.text.secondary,
   },
 });

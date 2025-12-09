@@ -18,7 +18,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Ionicons name="alert-circle-outline" size={64} color={Colors.status.error} />
+      <Ionicons name="alert-circle-outline" size={64} color={Colors.accent.red} />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
       {onRetry && (

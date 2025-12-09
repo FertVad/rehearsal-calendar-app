@@ -48,9 +48,9 @@ export async function initDatabase() {
       },
     };
   } else {
-    const dbPath = path.join(process.cwd(), 'database', 'data.sqlite');
+    const dbPath = path.join(process.cwd(), 'server', 'database', 'data.sqlite');
     sqlite = new Database(dbPath);
-    console.log('[DB] Using SQLite database at:', dbPath);
+    console.log('[DB] Using SQLite database');
     db = {
       run(sql, params = []) {
         const info = sqlite.prepare(sql).run(params);

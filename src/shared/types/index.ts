@@ -26,12 +26,15 @@ export interface ResponseStats {
 export interface Rehearsal {
     id: string;
     date: string;
-    time: string;
+    time?: string;
     endTime?: string;
+    duration?: string;
     location?: string;
     status?: string;
     projectId?: string;
     projectName?: string;
+    scene?: string;
+    actorNameSnapshot?: string[];
     createdAt?: string | Date;
     updatedAt?: string | Date;
     // RSVP data

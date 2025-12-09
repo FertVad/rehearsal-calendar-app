@@ -95,6 +95,15 @@ export const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: '#fff',
   },
+  // DateTimePicker overlay for iOS (tap to close)
+  pickerOverlay: {
+    padding: Spacing.md,
+    backgroundColor: Colors.glass.bg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    marginTop: Spacing.sm,
+  },
   // Project Picker Modal styles
   modalOverlay: {
     flex: 1,

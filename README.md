@@ -1,180 +1,224 @@
-# Rehearsal Calendar - Native App
+# Rehearsal Calendar - Mobile App
 
-> React Native приложение для управления репетициями творческих коллективов
+> 🎭 Приложение для планирования театральных репетиций с умными рекомендациями времени
 
-## 📱 О проекте
+[![React Native](https://img.shields.io/badge/React%20Native-0.81.5-61DAFB?logo=react)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-54-000020?logo=expo)](https://expo.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-339933?logo=node.js)](https://nodejs.org/)
 
-Нативное мобильное приложение (iOS/Android) на базе Telegram Mini App [rehearsal-calendar-tg](https://github.com/FertVad/rehearsal-calendar-tg).
+## 📱 Features
 
-### Ключевые особенности
+- ✅ **Authentication:** Email/Password + Telegram login
+- ✅ **Multi-project management:** Create and join multiple projects
+- ✅ **Rehearsal scheduling:** Create rehearsals with conflict detection
+- ✅ **Availability management:** Set your available/busy time slots
+- ✅ **RSVP system:** Confirm or decline rehearsal invitations
+- ✅ **Smart recommendations:** AI-powered time suggestions based on team availability
+- ✅ **Invite links:** Easy project sharing via deep links
+- ✅ **Internationalization:** English & Russian support
 
-- ✅ Календарь репетиций
-- ✅ Управление доступностью участников
-- ✅ Умное планирование (поиск оптимального времени)
-- ✅ Email/Password авторизация
-- ✅ Мультиязычность (RU/EN)
-- ✅ Dark theme с glass morphism дизайном
+## 🚀 Quick Start
 
-## 🛠 Технологический стек
+### Prerequisites
+- Node.js >= 18.0.0
+- npm or yarn
+- Xcode (for iOS development)
+- PostgreSQL or SQLite
 
-- **Frontend:** React Native (Expo)
-- **Навигация:** React Navigation
-- **Язык:** TypeScript
-- **Стейт:** React Hooks + Context API
-- **API:** Axios
-- **Локализация:** i18next
-- **Даты:** date-fns
-
-## 📦 Установка
-
-### Требования
-
-- Node.js >= 20.19.2
-- npm >= 10.8.2
-- Expo Go app (для тестирования на устройстве)
-
-### Шаги установки
+### Installation
 
 ```bash
-# 1. Клонировать репозиторий
+# 1. Clone repository
 git clone <repo-url>
 cd rehearsal-calendar-native
 
-# 2. Установить зависимости
+# 2. Install dependencies
 npm install
+cd server && npm install && cd ..
 
-# 3. Запустить проект
-npm start
+# 3. Setup environment
+cp server/.env.example server/.env
+# Edit server/.env with your configuration
 
-# Или запустить на конкретной платформе:
-npm run ios     # iOS симулятор
-npm run android # Android эмулятор
-npm run web     # Web версия
+# 4. Initialize database
+cd server && npm run migrate:dev && cd ..
 ```
 
-## 📁 Структура проекта
+### Running the App
+
+```bash
+# Terminal 1: Start backend server
+cd server && node server.js
+
+# Terminal 2: Start Metro bundler
+npx expo start -c
+
+# Terminal 3: Run iOS (via Xcode)
+open ios/rehearsalcalendarnative.xcworkspace
+# In Xcode: Product → Run (⌘R)
+```
+
+## 📚 Documentation
+
+- **[PROJECT_INFO.md](./PROJECT_INFO.md)** - Complete project documentation
+  - Tech stack details
+  - Database schema
+  - API endpoints
+  - Architecture overview
+
+- **[CLEANUP_RECOMMENDATIONS.md](./CLEANUP_RECOMMENDATIONS.md)** - Code cleanup guide
+  - Dead code analysis
+  - Files to remove
+  - Optimization tips
+
+## 🏗 Tech Stack
+
+**Frontend:**
+- React Native 0.81.5
+- Expo SDK 54
+- TypeScript 5.9.2
+- React Navigation 7
+- Axios for HTTP
+- i18next for i18n
+
+**Backend:**
+- Node.js + Express.js
+- PostgreSQL (production)
+- SQLite (development)
+- JWT authentication
+- bcrypt for passwords
+
+## 📂 Project Structure
 
 ```
 rehearsal-calendar-native/
-├── src/
-│   ├── components/       # UI компоненты
-│   │   └── GlassButton.tsx
-│   ├── screens/          # Экраны приложения
-│   │   ├── LoginScreen.tsx
-│   │   └── RegisterScreen.tsx (TODO)
-│   ├── navigation/       # React Navigation
-│   ├── shared/
-│   │   ├── types/        # TypeScript типы
-│   │   ├── utils/        # Утилиты (time, availability)
-│   │   ├── constants/    # Константы (colors, spacing)
-│   │   ├── services/     # API сервисы
-│   │   └── hooks/        # Custom hooks
-│   └── contexts/         # React Contexts (Auth, Settings)
-├── assets/               # Изображения, иконки
-├── App.tsx              # Главный компонент
-└── package.json
+├── src/                          # React Native app
+│   ├── features/                 # Feature modules
+│   │   ├── auth/                 # Authentication
+│   │   ├── calendar/             # Calendar & rehearsals
+│   │   ├── projects/             # Project management
+│   │   ├── profile/              # User profile
+│   │   └── availability/         # Availability management
+│   ├── navigation/               # Navigation setup
+│   ├── contexts/                 # React contexts
+│   ├── shared/                   # Shared utilities
+│   │   ├── components/           # Reusable components
+│   │   ├── constants/            # Design tokens
+│   │   ├── services/             # API client
+│   │   └── utils/                # Helper functions
+│   └── i18n/                     # Translations
+│
+├── server/                       # Backend server
+│   ├── routes/                   # API routes
+│   ├── database/                 # DB layer & migrations
+│   ├── middleware/               # Express middleware
+│   └── server.js                 # Entry point
+│
+├── ios/                          # iOS native code
+└── android/                      # Android (not configured)
+```
+
+## 🔧 Common Commands
+
+```bash
+# Development
+npx expo start -c              # Clear cache and start Metro
+npm run ios                    # Run on iOS simulator
+npm run android                # Run on Android emulator
+
+# Type checking
+npx tsc --noEmit               # Check TypeScript errors
+
+# Database
+cd server
+npm run migrate:dev            # Run migrations (SQLite)
+npm run migrate:neon           # Run migrations (PostgreSQL)
+
+# Clean build (iOS)
+cd ios
+rm -rf build Pods Podfile.lock
+pod install
 ```
 
 ## 🎨 Design System
 
-### Цветовая палитра
-
+### Color Palette
 ```typescript
-Colors.bg.primary      // #0d1117 (фон)
-Colors.bg.secondary    // #161b22 (вторичный фон)
-Colors.text.primary    // #e6edf3 (основной текст)
-Colors.text.secondary  // #8b949e (вторичный текст)
-Colors.accent.purple   // #A855F7 (акцент)
-Colors.glass.bg        // rgba(22, 27, 34, 0.7) (glass effect)
+Colors.bg.primary      // #0A0A0F (Dark background)
+Colors.bg.secondary    // #16161F (Card background)
+Colors.accent.purple   // #A855F7 (Primary brand)
+Colors.accent.blue     // #3B82F6
+Colors.accent.green    // #10B981
+Colors.text.primary    // #FFFFFF
+Colors.text.secondary  // #A1A1AA
 ```
 
-### Компоненты
+### Components
+- **GlassButton** - Button with glass morphism effect
+- **Card** - Container with glass background
+- **Section** - Content section wrapper
+- **LoadingSpinner** - Loading indicator
+- **ErrorState** - Error display component
 
-- **GlassButton** - кнопка с glass morphism эффектом
-  - Вариант `glass` - прозрачная кнопка
-  - Вариант `purple` - фиолетовая с градиентом
+## 🌐 API Configuration
 
-## 🗺 Дорожная карта (Спринты)
-
-### ✅ Sprint 0: Подготовка (DONE)
-- [x] Создание проекта Expo
-- [x] Структура папок
-- [x] Копирование shared кода из web версии
-- [x] Design system (цвета, константы)
-- [x] Базовые компоненты (GlassButton)
-- [x] Login Screen
-
-### 📋 Sprint 1: Авторизация (текущий)
-- [ ] Backend endpoints (JWT auth)
-- [ ] Register Screen
-- [ ] AuthContext
-- [ ] API сервисы (login, register)
-- [ ] AsyncStorage для токенов
-- [ ] Protected navigation
-
-### 🔜 Sprint 2: Проекты
-- [ ] Список проектов
-- [ ] Создание проекта
-- [ ] Приглашение участников
-
-### 🔜 Sprint 3: Календарь
-- [ ] Календарь репетиций
-- [ ] Отображение репетиций
-
-### 🔜 Sprint 4: CRUD репетиций
-- [ ] Добавление репетиции
-- [ ] Редактирование
-- [ ] Удаление
-
-### 🔜 Sprint 5: Доступность
-- [ ] Указание доступности
-- [ ] Time range picker
-
-### 🔜 Sprint 6: Smart Planning
-- [ ] Алгоритм поиска слотов
-- [ ] Фильтры
-- [ ] Рекомендации времени
-
-### 🔜 Sprint 7: Настройки + i18n
-- [ ] Настройки пользователя
-- [ ] Мультиязычность
-- [ ] Переключение языка
-
-### 🔜 Sprint 8: Полировка
-- [ ] Анимации
-- [ ] Error states
-- [ ] Loading states
-
-## 🔗 Связанные проекты
-
-- **Web App:** [rehearsal-calendar-tg](https://github.com/FertVad/rehearsal-calendar-tg)
-- **Backend:** Общий backend с web версией
-
-## 📝 Запуск для разработки
-
-```bash
-# Запуск с очисткой кэша
-npm start -- --clear
-
-# Запуск с туннелем (для тестирования на реальном устройстве)
-npm start -- --tunnel
-
-# Проверка TypeScript
-npx tsc --noEmit
+Development:
+```typescript
+// src/shared/services/api.ts
+const API_URL = 'http://192.168.1.39:3001/api';
 ```
 
-## 🐛 Отладка
+Production:
+```typescript
+const API_URL = 'https://your-domain.com/api';
+```
 
-- Используйте Expo Go app для быстрого тестирования
-- React Native Debugger для детальной отладки
-- Console.log выводится в терминале
+## 🗺 Roadmap
 
-## 📄 Лицензия
+### ✅ Completed
+- [x] Authentication system
+- [x] Project management
+- [x] Rehearsal CRUD
+- [x] Availability management
+- [x] RSVP system
+- [x] Smart time recommendations
+- [x] Invite links
+- [x] Internationalization
 
-MIT
+### 🔜 Upcoming
+- [ ] Push notifications
+- [ ] Offline mode
+- [ ] Calendar export (iCal)
+- [ ] Multi-timezone support
+- [ ] Analytics integration
+- [ ] Android configuration
+
+## 🐛 Known Issues
+
+- TypeScript errors in availability utils (non-blocking)
+- Android not configured yet (iOS only)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Open a Pull Request
+
+## 📄 License
+
+MIT License - See LICENSE file for details
+
+## 📞 Support
+
+- **Issues:** GitHub Issues
+- **Documentation:** [PROJECT_INFO.md](./PROJECT_INFO.md)
+- **Email:** your-email@example.com
 
 ---
 
-**Дата создания:** 2025-01-17
-**Версия:** 0.1.0
-**Автор:** Vadim Fertik
+**Version:** 1.0.0
+**Last Updated:** December 3, 2024
+**Author:** Vadim Fertik

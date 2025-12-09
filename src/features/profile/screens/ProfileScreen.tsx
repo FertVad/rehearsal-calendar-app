@@ -67,7 +67,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={styles.avatarContainer}>
             <Ionicons name="person-circle" size={64} color={Colors.accent.purple} />
           </View>
-          <Text style={styles.userName}>{user?.name || 'Пользователь'}</Text>
+          <Text style={styles.userName}>
+            {user?.firstName ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}` : 'Пользователь'}
+          </Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
         </View>
 

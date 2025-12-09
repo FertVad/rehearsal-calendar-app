@@ -2,14 +2,10 @@
  * Validation utilities for availability time slots
  */
 import { TimeSlot, SlotValidation } from '../types/availability';
+import { timeToMinutes } from '../../../shared/utils/time';
 
-/**
- * Convert time string (HH:MM) to minutes
- */
-export const timeToMinutes = (time: string): number => {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-};
+// Re-export for backward compatibility
+export { timeToMinutes };
 
 /**
  * Validate a single time slot

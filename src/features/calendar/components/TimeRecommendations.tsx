@@ -27,9 +27,6 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
   );
 
   const formatRecommendation = (rec: TimeSlot) => {
-    if (rec.startTime === '00:00' && rec.endTime === '23:59') {
-      return 'Весь день свободен';
-    }
     const duration = rec.duration % 1 === 0 ? rec.duration : rec.duration.toFixed(1);
     return `${rec.startTime}-${rec.endTime} (${duration}ч)`;
   };
