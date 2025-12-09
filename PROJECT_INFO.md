@@ -142,16 +142,22 @@ UNIQUE(project_id, user_id)
 #### `native_rehearsals`
 Репетиции
 ```sql
-id              INTEGER PRIMARY KEY
-project_id      INTEGER REFERENCES native_projects(id) ON DELETE CASCADE
-date            TEXT NOT NULL  -- YYYY-MM-DD
-time            TEXT NOT NULL  -- HH:MM
-end_time        TEXT           -- HH:MM
-location        TEXT
-notes           TEXT
-created_by      INTEGER REFERENCES native_users(id)
-created_at      TIMESTAMP
-updated_at      TIMESTAMP
+id                  INTEGER PRIMARY KEY
+project_id          INTEGER REFERENCES native_projects(id) ON DELETE CASCADE
+date                DATE NOT NULL           -- Stored in UTC
+start_time          TIME NOT NULL           -- Stored in UTC
+end_time            TIME NOT NULL           -- Stored in UTC
+location            VARCHAR                 -- Simple location string
+location_address    TEXT                    -- Detailed address (optional)
+location_notes      TEXT                    -- Location notes (optional)
+status              VARCHAR DEFAULT 'scheduled'  -- 'scheduled', 'cancelled', etc.
+created_by          INTEGER REFERENCES native_users(id) NOT NULL
+recurrence_rule     TEXT                    -- For recurring rehearsals (optional)
+parent_rehearsal_id INTEGER REFERENCES native_rehearsals(id)  -- For recurring instances
+created_at          TIMESTAMP DEFAULT NOW()
+updated_at          TIMESTAMP DEFAULT NOW()
+title               VARCHAR                 -- Optional title (not used in UI)
+description         TEXT                    -- Optional description (not used in UI)
 ```
 
 #### `native_rehearsal_participants`
@@ -163,31 +169,36 @@ user_id         INTEGER REFERENCES native_users(id) ON DELETE CASCADE
 UNIQUE(rehearsal_id, user_id)
 ```
 
-#### `native_rsvp_responses`
+#### `native_rehearsal_responses`
 RSVP ответы на репетиции
 ```sql
 id              INTEGER PRIMARY KEY
 rehearsal_id    INTEGER REFERENCES native_rehearsals(id) ON DELETE CASCADE
 user_id         INTEGER REFERENCES native_users(id) ON DELETE CASCADE
-status          TEXT NOT NULL  -- 'confirmed', 'declined', 'tentative'
+response        VARCHAR(10) NOT NULL CHECK (response IN ('yes', 'no', 'maybe'))
 notes           TEXT
-created_at      TIMESTAMP
-updated_at      TIMESTAMP
+created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 UNIQUE(rehearsal_id, user_id)
 ```
 
 #### `native_user_availability`
 Доступность пользователей
 ```sql
-id              INTEGER PRIMARY KEY
-user_id         INTEGER REFERENCES native_users(id) ON DELETE CASCADE
-date            TEXT NOT NULL  -- YYYY-MM-DD
-start_time      TEXT NOT NULL  -- HH:MM
-end_time        TEXT NOT NULL  -- HH:MM
-type            TEXT DEFAULT 'busy'  -- 'available', 'busy', 'tentative'
-title           TEXT
-notes           TEXT
-created_at      TIMESTAMP
+id                  INTEGER PRIMARY KEY
+user_id             INTEGER REFERENCES native_users(id) ON DELETE CASCADE
+date                DATE NOT NULL             -- Stored in UTC
+start_time          TIME NOT NULL             -- Stored in UTC
+end_time            TIME NOT NULL             -- Stored in UTC
+type                VARCHAR NOT NULL          -- 'available', 'busy', 'tentative', 'booked'
+source              VARCHAR DEFAULT 'manual'  -- 'manual', 'rehearsal', 'external'
+external_event_id   VARCHAR                   -- ID of external event (e.g., rehearsal ID)
+title               VARCHAR
+notes               TEXT
+recurrence_rule     TEXT                      -- For recurring availability
+is_all_day          BOOLEAN DEFAULT FALSE     -- Flag for all-day slots (00:00-23:59)
+created_at          TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+updated_at          TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 ```
 
 #### `native_invites`
@@ -516,11 +527,16 @@ npx expo run:android
 - [ ] TypeScript errors в availability utils (duplicate exports)
 - [ ] Android не настроен (только iOS)
 
+### Recent Fixes (December 2024)
+- [x] ✅ Упрощена логика работы с таймзонами - добавлен флаг `is_all_day` для целодневных слотов
+- [x] ✅ Исправлена работа с БД - приведено в соответствие со схемой production
+- [x] ✅ Исправлен `formatTime()` в AddRehearsalScreen - использует ручное форматирование вместо `toLocaleTimeString()`
+- [x] ✅ Исправлена логика букирования слотов репетиций - используются колонки `source` и `external_event_id`
+
 ### TODO
 - [ ] Push notifications (Expo Notifications)
 - [ ] Offline mode (Redux + Redux Persist)
 - [ ] Calendar export (iCal format)
-- [ ] Multi-timezone support
 - [ ] Analytics integration
 
 ---
@@ -594,6 +610,209 @@ Private project - All rights reserved
 
 ---
 
-**Last updated**: December 3, 2024
-**Version**: 1.0.0
+## 🌐 Timezone Handling
+
+### Архитектура работы с таймзонами
+
+**Принцип**: Все даты и времена хранятся в UTC в базе данных, конвертация происходит на уровне API.
+
+#### Хранение в БД (UTC)
+```sql
+-- Пример: Репетиция 13 декабря 2025, 08:00-16:00 по местному времени (Asia/Jerusalem = UTC+2)
+date: '2025-12-13'        -- Дата в UTC (может отличаться от локальной!)
+start_time: '06:00:00'    -- 08:00 Jerusalem = 06:00 UTC
+end_time: '14:00:00'      -- 16:00 Jerusalem = 14:00 UTC
+```
+
+#### Функции конвертации
+**Location**: `server/utils/timezone.js`
+
+- `localToUTC(date, time, timezone)` - конвертирует локальное время в UTC
+- `utcToLocal(date, time, timezone)` - конвертирует UTC во время пользователя
+- `convertSlotsToUTC(date, slots, timezone)` - конвертирует массив слотов в UTC
+- `convertSlotsFromUTC(date, slots, timezone)` - конвертирует массив слотов из UTC
+
+#### All-Day Slots (Целодневные слоты)
+Специальная логика для целодневных слотов (00:00-23:59):
+- Флаг `is_all_day = TRUE` в таблице `native_user_availability`
+- НЕ конвертируются через таймзоны (представляют весь локальный день)
+- Всегда возвращаются как `{ start: '00:00', end: '23:59', isAllDay: true }`
+
+#### Как это работает в коде
+
+**1. Создание репетиции (клиент → сервер)**
+```typescript
+// Клиент отправляет в локальном времени
+{ date: '2025-12-13', startTime: '08:00', endTime: '16:00' }
+
+// Сервер конвертирует в UTC перед сохранением
+const startUTC = localToUTC('2025-12-13', '08:00', 'Asia/Jerusalem');
+// → { date: '2025-12-12', time: '06:00:00' }  // Может быть предыдущий день!
+```
+
+**2. Получение репетиций (сервер → клиент)**
+```javascript
+// Сервер читает из БД (UTC)
+{ date: '2025-12-12', start_time: '06:00:00', end_time: '14:00:00' }
+
+// Конвертирует в timezone пользователя перед отправкой
+const local = utcToLocal('2025-12-12', '06:00:00', 'Asia/Jerusalem');
+// → { date: '2025-12-13', time: '08:00' }
+```
+
+#### Важные нюансы
+
+1. **Дата может меняться** при конвертации через таймзоны:
+   - 23:00 сегодня в одной зоне = 01:00 завтра в другой
+
+2. **Проект имеет timezone**:
+   - Хранится в `native_projects.timezone`
+   - По умолчанию: `'Asia/Jerusalem'`
+   - Используется для всех репетиций проекта
+
+3. **Пользователь имеет timezone**:
+   - Хранится в `native_users.timezone`
+   - Используется для доступности пользователя
+
+---
+
+## 🏛 Architecture Improvements (December 2024)
+
+### Timezone Conversion Refactoring
+
+Улучшена архитектура работы с timezone для лучшей поддерживаемости и расширяемости кода.
+
+#### Новые файлы
+
+**1. [server/constants/timezone.js](server/constants/timezone.js)** - Централизованные константы
+```javascript
+// Константы для типов доступности
+AVAILABILITY_TYPES = {
+  FREE: 'free',
+  BUSY: 'busy',
+  TENTATIVE: 'tentative',
+}
+
+// Источники для availability slots
+AVAILABILITY_SOURCES = {
+  MANUAL: 'manual',
+  REHEARSAL: 'rehearsal',
+  GOOGLE: 'google_calendar',
+  APPLE: 'apple_calendar',
+}
+
+// RSVP status mapping между DB и клиентом
+RSVP_STATUS_DB = { YES: 'yes', NO: 'no', MAYBE: 'maybe', INVITED: 'invited' }
+RSVP_STATUS_CLIENT = { CONFIRMED: 'confirmed', DECLINED: 'declined', TENTATIVE: 'tentative', INVITED: 'invited' }
+
+// Функции-мапперы для конвертации статусов
+mapDBStatusToClient(dbStatus)
+mapClientStatusToDB(clientStatus)
+
+// Default timezone
+DEFAULT_TIMEZONE = 'Asia/Jerusalem'
+```
+
+**2. [server/middleware/timezoneMiddleware.js](server/middleware/timezoneMiddleware.js)** - Middleware для конвертации
+```javascript
+// Конвертация запроса клиента (local → UTC)
+convertRehearsalRequest(rehearsalData) → { date, startTime, endTime, startUTC, endUTC }
+
+// Конвертация ответа сервера (UTC → local)
+convertRehearsalResponse(rehearsal, timezone) → { ...rehearsal, localDate, localStartTime, localEndTime }
+
+// Массовая конвертация ответов
+convertRehearsalsResponse(rehearsals, timezone) → Array<Rehearsal>
+
+// Валидация timezone
+isValidTimezone(timezone) → boolean
+```
+
+**3. [server/utils/timezone.js](server/utils/timezone.js)** - Добавлены JSDoc type annotations
+```javascript
+/**
+ * @typedef {Object} DateTimeResult
+ * @property {string} date - Date in YYYY-MM-DD format
+ * @property {string} time - Time in HH:mm format
+ */
+
+/**
+ * @typedef {Object} AvailabilitySlot
+ * @property {string} start - Start time in HH:mm format
+ * @property {string} end - End time in HH:mm format
+ * @property {boolean} [isAllDay] - Whether this is an all-day slot
+ * ...
+ */
+
+// Все функции теперь имеют полные JSDoc аннотации с типами параметров и возврата
+```
+
+#### Улучшения в существующих файлах
+
+**[server/routes/native/rehearsals.js](server/routes/native/rehearsals.js)**
+- Добавлены импорты констант и middleware
+- Заменены magic strings на константы: `AVAILABILITY_TYPES.BUSY`, `AVAILABILITY_SOURCES.REHEARSAL`, `DEFAULT_TIMEZONE`
+- Добавлены JSDoc аннотации для всех функций
+- Использование параметризованных SQL запросов с константами
+
+**Преимущества новой архитектуры:**
+
+1. **Централизация** - все константы в одном месте, легко поддерживать
+2. **Type Safety** - JSDoc аннотации помогают избежать ошибок
+3. **Расширяемость** - легко добавить новые типы availability или источники
+4. **Читаемость** - код самодокументируется через именованные константы
+5. **Переиспользование** - middleware функции можно использовать в разных endpoint'ах
+
+**Пример использования:**
+```javascript
+// До рефакторинга
+await db.run(
+  `INSERT INTO native_user_availability (...) VALUES (..., 'busy', 'rehearsal', ...)`,
+  [...]
+);
+
+// После рефакторинга
+import { AVAILABILITY_TYPES, AVAILABILITY_SOURCES } from '../../constants/timezone.js';
+
+await db.run(
+  `INSERT INTO native_user_availability (...) VALUES (..., $5, $6, ...)`,
+  [..., AVAILABILITY_TYPES.BUSY, AVAILABILITY_SOURCES.REHEARSAL, ...]
+);
+```
+
+---
+
+### Database Schema Fix: DATE Column Types
+
+**Проблема**: Колонки `date` в таблицах `native_rehearsals` и `native_user_availability` имели тип `TIMESTAMP WITH TIME ZONE`, что вызывало нежелательную timezone конвертацию при сохранении дат.
+
+**Симптом**: При создании репетиции на дату X, она сохранялась как дата X-1 из-за timezone conversion PostgreSQL.
+
+**Решение**: Создана миграция [server/migrations/fix-date-column-types.sql](server/migrations/fix-date-column-types.sql), которая изменяет тип колонок с `TIMESTAMP WITH TIME ZONE` на `DATE`:
+
+```sql
+-- Fix native_rehearsals.date column
+ALTER TABLE native_rehearsals
+  ALTER COLUMN date TYPE DATE USING date::DATE;
+
+-- Fix native_user_availability.date column
+ALTER TABLE native_user_availability
+  ALTER COLUMN date TYPE DATE USING date::DATE;
+```
+
+**Результат**:
+- Даты теперь сохраняются корректно без timezone conversion
+- Колонка `date` хранит только дату (YYYY-MM-DD) без временной части
+- Timezone conversion применяется только к колонкам `start_time` и `end_time`
+
+**Дополнительно**:
+- Добавлены импорты timezone conversion utilities в [server/routes/native/availability.js](server/routes/native/availability.js)
+- Реализована полная timezone конвертация для availability endpoints (GET/POST/PUT/DELETE)
+- Все availability slots теперь конвертируются из local timezone → UTC при сохранении
+- Все availability slots конвертируются из UTC → local timezone при чтении
+
+---
+
+**Last updated**: December 9, 2025
+**Version**: 1.2.1
 **Maintainer**: Vadim Fertik
