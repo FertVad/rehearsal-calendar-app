@@ -31,46 +31,58 @@ router.get('/', requireAuth, async (req, res) => {
     const timezone = await getUserTimezone(userId);
 
     // Get availability from DB (stored in UTC)
+    // Use date::text to prevent timezone conversion by pg driver
     const availability = await db.all(
-      `SELECT id, date, start_time, end_time, type, title, notes, is_all_day, source, external_event_id, created_at
+      `SELECT id, date::text as date, start_time, end_time, type, title, notes, is_all_day, source, external_event_id, created_at
        FROM native_user_availability
        WHERE user_id = $1
        ORDER BY date ASC, start_time ASC`,
       [userId]
     );
 
+    console.log('[Availability API] Raw data from DB (BEFORE timezone conversion):');
+    console.log(JSON.stringify(availability, null, 2));
+
     // Group by date for conversion
     const byDate = {};
     for (const slot of availability) {
-      if (!byDate[slot.date]) {
-        byDate[slot.date] = [];
+      const dateStr = slot.date; // Already a string from date::text
+      if (!byDate[dateStr]) {
+        byDate[dateStr] = [];
       }
-      byDate[slot.date].push(slot);
+      byDate[dateStr].push(slot);
     }
 
     // Convert each date's slots from UTC to local timezone
     const converted = [];
     for (const [date, slots] of Object.entries(byDate)) {
-      const localSlots = convertSlotsFromUTC(date, slots, timezone);
+      try {
+        const localSlots = convertSlotsFromUTC(date, slots, timezone);
 
-      // Re-attach metadata to converted slots
-      for (let i = 0; i < localSlots.length; i++) {
-        converted.push({
-          id: slots[i].id,
-          date: date, // Keep original date for reference
-          start: localSlots[i].start,
-          end: localSlots[i].end,
-          type: localSlots[i].type,
-          title: localSlots[i].title,
-          notes: localSlots[i].notes,
-          isAllDay: slots[i].is_all_day,
-          source: slots[i].source,
-          externalEventId: slots[i].external_event_id,
-          createdAt: slots[i].created_at,
-        });
+        // Re-attach metadata to converted slots
+        for (let i = 0; i < localSlots.length; i++) {
+          converted.push({
+            id: slots[i].id,
+            date: date, // Keep original date for reference
+            start: localSlots[i].start,
+            end: localSlots[i].end,
+            type: localSlots[i].type,
+            title: localSlots[i].title,
+            notes: localSlots[i].notes,
+            isAllDay: slots[i].is_all_day,
+            source: slots[i].source,
+            externalEventId: slots[i].external_event_id,
+            createdAt: slots[i].created_at,
+          });
+        }
+      } catch (err) {
+        console.error(`Error converting slots for date ${date}:`, err);
+        console.error('Slots:', slots);
       }
     }
 
+    console.log(`[Availability API] Returning ${converted.length} slots for user ${req.userId}`);
+    console.log('[Availability API] All slots:', JSON.stringify(converted, null, 2));
     res.json(converted);
   } catch (error) {
     console.error('Error fetching availability:', error);

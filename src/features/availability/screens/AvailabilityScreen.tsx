@@ -4,6 +4,7 @@ import {
   Text,
   SafeAreaView,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   Modal,
   Pressable,
@@ -49,9 +50,11 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     hasChanges,
     setHasChanges,
     getDayState,
+    loadAvailability,
   } = useAvailabilityData();
 
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Time picker state
@@ -367,18 +370,18 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       setSaving(true);
 
       // Convert local format to API format for bulk save
-      const entries: { date: string; type: 'available' | 'busy' | 'tentative'; slots?: { start: string; end: string }[] }[] = [];
+      const entries: { date: string; type: 'available' | 'busy' | 'tentative'; slots?: { start: string; end: string; isAllDay?: boolean }[] }[] = [];
 
       for (const [date, state] of Object.entries(availability)) {
         let type: 'available' | 'busy' | 'tentative' = 'available';
-        let slots: { start: string; end: string }[] | undefined;
+        let slots: { start: string; end: string; isAllDay?: boolean }[] | undefined;
 
         if (state.mode === 'free') {
           type = 'available';
-          slots = [{ start: '00:00', end: '23:59' }];
+          slots = [{ start: '00:00', end: '23:59', isAllDay: true }];
         } else if (state.mode === 'busy') {
           type = 'busy';
-          slots = [{ start: '00:00', end: '23:59' }];
+          slots = [{ start: '00:00', end: '23:59', isAllDay: true }];
         } else if (state.mode === 'custom') {
           // Custom mode: user specifies when they are BUSY
           type = 'tentative';
@@ -401,6 +404,12 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   const clearSelection = () => {
     setSelectedDates([]);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadAvailability();
+    setRefreshing(false);
   };
 
   const selectedDayState = selectedDate ? getDayState(selectedDate) : null;
@@ -472,6 +481,13 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             styles.calendarContent,
             panelOpen && { paddingBottom: PANEL_HEIGHT + Spacing.xl }
           ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.accent.purple}
+            />
+          }
         />
       )}
 

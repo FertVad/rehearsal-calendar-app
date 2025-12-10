@@ -220,19 +220,19 @@ export const invitesAPI = {
 export const availabilityAPI = {
   // Get all availability for current user
   getAll: () =>
-    api.get('/availability'),
+    api.get('/native/availability'),
 
   // Set availability for a specific date
   setForDate: (date: string, type: 'available' | 'busy' | 'tentative', slots?: { start: string; end: string }[]) =>
-    api.put(`/availability/${date}`, { type, slots }),
+    api.put(`/native/availability/${date}`, { type, slots }),
 
   // Bulk set availability for multiple dates
   bulkSet: (entries: { date: string; type: 'available' | 'busy' | 'tentative'; slots?: { start: string; end: string }[] }[]) =>
-    api.post('/availability/bulk', { entries }),
+    api.post('/native/availability/bulk', { entries }),
 
   // Delete availability for a specific date
   delete: (date: string) =>
-    api.delete(`/availability/${date}`),
+    api.delete(`/native/availability/${date}`),
 };
 
 export default api;

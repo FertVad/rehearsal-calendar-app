@@ -23,18 +23,25 @@ export const useAvailabilityData = () => {
       const rawRecords = Array.isArray(response.data) ? response.data : [];
 
       // Group by date
-      const serverData: Record<string, Array<{ startTime: string; endTime: string; type: string; is_all_day?: boolean }>> = {};
+      const serverData: Record<string, Array<{ startTime: string; endTime: string; type: string; isAllDay?: boolean; source?: string }>> = {};
       for (const record of rawRecords) {
         // Extract date without timezone offset
         const dateStr = record.date.split('T')[0];
         if (!serverData[dateStr]) {
           serverData[dateStr] = [];
         }
+
+        // Handle both old format (start_time/end_time) and new format (start/end)
+        const startTime = record.start || record.start_time;
+        const endTime = record.end || record.end_time;
+        const isAllDay = record.isAllDay ?? record.is_all_day;
+
         serverData[dateStr].push({
-          startTime: record.start_time,
-          endTime: record.end_time,
+          startTime,
+          endTime,
           type: record.type,
-          is_all_day: record.is_all_day
+          isAllDay,
+          source: record.source
         });
       }
 
@@ -54,15 +61,15 @@ export const useAvailabilityData = () => {
           formattedDate = `${year}-${month}-${day}`;
         }
 
-        // Determine mode based on type and is_all_day flag
+        // Determine mode based on type and isAllDay flag
         const firstSlot = typedSlots[0];
         let mode: DayMode = 'free';
 
         // Strip seconds from time (HH:MM:SS -> HH:MM)
         const formatTime = (time: string) => time.substring(0, 5);
 
-        // Check if this is an all-day slot using the is_all_day flag
-        if (firstSlot.is_all_day || (firstSlot as any).isAllDay) {
+        // Check if this is an all-day slot using the isAllDay flag
+        if (firstSlot.isAllDay) {
           if (firstSlot.type === 'busy') {
             mode = 'busy';
           } else if (firstSlot.type === 'available') {
