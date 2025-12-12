@@ -15,12 +15,16 @@ interface MemberFilterProps {
   members: Member[];
   selected: string[];
   onSelectionChange: (memberIds: string[]) => void;
+  onSelectAll?: () => void;
+  onClearAll?: () => void;
 }
 
 export const MemberFilter: React.FC<MemberFilterProps> = ({
   members,
   selected,
   onSelectionChange,
+  onSelectAll,
+  onClearAll,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -52,13 +56,29 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.trigger}
-        onPress={() => setIsOpen(true)}
-      >
-        <Text style={styles.triggerText}>{getButtonText()}</Text>
-        <ChevronDown size={16} color="#6b7280" />
-      </TouchableOpacity>
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          style={styles.trigger}
+          onPress={() => setIsOpen(true)}
+        >
+          <Text style={styles.triggerText}>{getButtonText()}</Text>
+          <ChevronDown size={16} color="#9ca3af" />
+        </TouchableOpacity>
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={onSelectAll || selectAll}
+          >
+            <Text style={styles.quickActionText}>Все</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={onClearAll || clearAll}
+          >
+            <Text style={styles.quickActionText}>Очистить</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <Modal
         visible={isOpen}
@@ -121,21 +141,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
   trigger: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   triggerText: {
     fontSize: 14,
-    color: '#374151',
+    color: '#f9fafb',
     flex: 1,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  quickActionBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(147, 51, 234, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(147, 51, 234, 0.3)',
+    borderRadius: 8,
+  },
+  quickActionText: {
+    fontSize: 12,
+    color: '#9333ea',
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -144,7 +187,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1f2937',
     borderRadius: 12,
     width: '85%',
     maxHeight: '70%',
@@ -161,16 +204,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1f2937',
+    color: '#f9fafb',
   },
   closeButton: {
     fontSize: 24,
-    color: '#6b7280',
+    color: '#9ca3af',
   },
   actions: {
     flexDirection: 'row',
@@ -178,7 +221,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   actionBtn: {
     paddingHorizontal: 16,
@@ -186,7 +229,7 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     fontSize: 14,
-    color: '#3b82f6',
+    color: '#9333ea',
     fontWeight: '600',
   },
   list: {
@@ -198,14 +241,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -214,14 +257,14 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 2,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#9333ea',
   },
   memberName: {
     fontSize: 15,
-    color: '#374151',
+    color: '#f9fafb',
   },
   applyButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#9333ea',
     marginHorizontal: 16,
     marginVertical: 12,
     paddingVertical: 12,

@@ -23,16 +23,6 @@ import { smartPlannerScreenStyles as styles } from '../styles';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SmartPlanner'>;
 
-const CATEGORY_CONFIG: Record<
-  SlotCategory,
-  { emoji: string; color: string; label: string }
-> = {
-  perfect: { emoji: '🟢', color: '#10b981', label: 'Идеально' },
-  good: { emoji: '🟡', color: '#fbbf24', label: 'Хорошо' },
-  ok: { emoji: '🟠', color: '#f97316', label: 'Норм' },
-  bad: { emoji: '🔴', color: '#ef4444', label: 'Плохо' },
-};
-
 function formatDateRange(startDate: string, endDate: string): string {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -56,7 +46,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const { projects } = useProjects();
 
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'custom'>('week');
-  const [selectedCategories, setSelectedCategories] = useState<SlotCategory[]>([
+  const [selectedCategories] = useState<SlotCategory[]>([
     'perfect',
     'good',
     'ok',
@@ -104,7 +94,6 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     project,
     simpleMembers,
     filteredSlots,
-    categoryCounts,
     slotsByDate,
   } = useSmartPlanner({
     projectId,
@@ -122,14 +111,6 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
       setSelectedMemberIds(simpleMembers.map(m => m.id));
     }
   }, [simpleMembers, selectedMemberIds.length]);
-
-  const toggleCategory = useCallback((category: SlotCategory) => {
-    setSelectedCategories(prev =>
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
-  }, []);
 
   const handleSelectProject = useCallback((newProjectId: string) => {
     setIsProjectModalOpen(false);
@@ -214,7 +195,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
 
   const renderPeriodSelector = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>📅 Период</Text>
+      <Text style={styles.sectionTitle}>Период</Text>
       <View style={styles.periodButtons}>
         <TouchableOpacity
           style={[
@@ -284,53 +265,26 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     </View>
   );
 
-  const renderCategoryFilters = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Категории</Text>
-      <View style={styles.categoryGrid}>
-        {(Object.entries(CATEGORY_CONFIG) as [SlotCategory, typeof CATEGORY_CONFIG[SlotCategory]][]).map(
-          ([category, config]) => {
-            const isSelected = selectedCategories.includes(category);
-            const count = categoryCounts[category];
-
-            return (
-              <TouchableOpacity
-                key={category}
-                style={[
-                  styles.categoryButton,
-                  isSelected && { borderColor: config.color },
-                ]}
-                onPress={() => toggleCategory(category)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.categoryEmoji}>{config.emoji}</Text>
-                <Text
-                  style={[
-                    styles.categoryLabel,
-                    isSelected && { color: config.color },
-                  ]}
-                >
-                  {config.label}
-                </Text>
-                <Text style={styles.categoryCount}>{count}</Text>
-              </TouchableOpacity>
-            );
-          }
-        )}
+  const renderMemberFilter = () => {
+    const selectAll = () => {
+      setSelectedMemberIds(simpleMembers.map(m => m.id));
+    };
+    const clearAll = () => {
+      setSelectedMemberIds([]);
+    };
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Участники</Text>
+        <MemberFilter
+          members={simpleMembers}
+          selected={selectedMemberIds}
+          onSelectionChange={setSelectedMemberIds}
+          onSelectAll={selectAll}
+          onClearAll={clearAll}
+        />
       </View>
-    </View>
-  );
-
-  const renderMemberFilter = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>👥 Участники</Text>
-      <MemberFilter
-        members={simpleMembers}
-        selected={selectedMemberIds}
-        onSelectionChange={setSelectedMemberIds}
-      />
-    </View>
-  );
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -375,7 +329,6 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         contentContainerStyle={styles.scrollContent}
       >
         {renderPeriodSelector()}
-        {renderCategoryFilters()}
         {renderMemberFilter()}
 
         {loading ? (

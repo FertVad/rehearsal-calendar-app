@@ -129,7 +129,9 @@ export const DayCard: React.FC<DayCardProps> = ({ date, slots, onCreateRehearsal
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -141,17 +143,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   dateText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1f2937',
+    color: '#f9fafb',
     textTransform: 'capitalize',
   },
   slotCount: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#9ca3af',
   },
   categorySection: {
     marginBottom: 8,
@@ -176,11 +178,11 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: '#d1d5db',
   },
   categoryCount: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#9ca3af',
     marginLeft: 4,
   },
   categorySlots: {

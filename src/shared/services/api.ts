@@ -10,14 +10,27 @@ import Constants from 'expo-constants';
 // Auto-detect IP from Expo DevServer
 // When running with Expo, manifest.debuggerHost contains the IP
 const getLocalIP = () => {
-  const debuggerHost = Constants.expoConfig?.hostUri;
+  // Debug: log all possible paths
+  console.log('[API] Constants.expoConfig?.hostUri:', Constants.expoConfig?.hostUri);
+  console.log('[API] Constants.manifest?.debuggerHost:', (Constants.manifest as any)?.debuggerHost);
+  console.log('[API] Constants.manifest2?.extra?.expoGo?.debuggerHost:', (Constants.manifest2 as any)?.extra?.expoGo?.debuggerHost);
+
+  // Try multiple paths for Expo SDK 54+
+  const debuggerHost =
+    Constants.expoConfig?.hostUri ||
+    (Constants.manifest as any)?.debuggerHost ||
+    (Constants.manifest2 as any)?.extra?.expoGo?.debuggerHost;
+
   if (debuggerHost) {
     // debuggerHost format is "192.168.1.38:8081", extract IP
-    return debuggerHost.split(':')[0];
+    const ip = debuggerHost.split(':')[0];
+    console.log('[API] ✅ Detected IP from Expo:', ip);
+    return ip;
   }
-  // For iOS Simulator, use 127.0.0.1 (IPv4) instead of localhost
-  // localhost can resolve to ::1 (IPv6) which the server doesn't listen on
-  return '127.0.0.1';
+
+  // For real iPhone, we need network IP, not localhost
+  console.log('[API] ⚠️ No Expo hostUri detected - using hardcoded network IP');
+  return '192.168.1.38'; // Hardcoded fallback for now
 };
 
 // TEMPORARY: Force local development URL

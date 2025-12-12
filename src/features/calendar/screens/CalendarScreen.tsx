@@ -294,7 +294,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
           onRSVP={handleRSVP}
           onDeleteRehearsal={handleDeleteRehearsal}
           setRsvpResponses={setRsvpResponses}
-          setAdminStats={setAdminStats}
+          updateAdminStats={updateAdminStats}
         />
 
         {/* Upcoming Events */}

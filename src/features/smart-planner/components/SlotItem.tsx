@@ -65,15 +65,12 @@ const styles = StyleSheet.create({
   slot: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   indicator: {
     width: 4,
@@ -87,15 +84,15 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1f2937',
+    color: '#f9fafb',
     marginBottom: 4,
   },
   status: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#9ca3af',
   },
   addButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#9333ea',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,

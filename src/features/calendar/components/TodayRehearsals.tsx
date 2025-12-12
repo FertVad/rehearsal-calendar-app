@@ -23,20 +23,17 @@ interface TodayRehearsalsProps {
   selectedDate: string;
   loading: boolean;
   projects: Project[];
-  rsvpResponses: Record<string, 'yes' | 'no'>;
+  rsvpResponses: Record<string, 'confirmed' | 'declined'>;
   respondingId: string | null;
   adminStats: Record<string, AdminStats>;
   onRSVP: (
     rehearsalId: string,
-    response: 'yes' | 'no',
-    rsvpResponses: Record<string, 'yes' | 'no'>,
-    setRsvpResponses: React.Dispatch<React.SetStateAction<Record<string, 'yes' | 'no'>>>,
-    adminStats: Record<string, AdminStats>,
-    setAdminStats: React.Dispatch<React.SetStateAction<Record<string, AdminStats>>>
+    response: 'confirmed' | 'declined',
+    onSuccess: (rehearsalId: string, status: 'confirmed' | 'declined') => void
   ) => Promise<void>;
   onDeleteRehearsal: (rehearsalId: string) => void;
-  setRsvpResponses: React.Dispatch<React.SetStateAction<Record<string, 'yes' | 'no'>>>;
-  setAdminStats: React.Dispatch<React.SetStateAction<Record<string, AdminStats>>>;
+  setRsvpResponses: React.Dispatch<React.SetStateAction<Record<string, 'confirmed' | 'declined'>>>;
+  updateAdminStats: (rehearsalId: string) => Promise<void>;
 }
 
 export default function TodayRehearsals({
@@ -50,7 +47,7 @@ export default function TodayRehearsals({
   onRSVP,
   onDeleteRehearsal,
   setRsvpResponses,
-  setAdminStats,
+  updateAdminStats,
 }: TodayRehearsalsProps) {
   // Get date label (Сегодня, Завтра, or formatted date)
   const dateLabel = useMemo(() => {
@@ -98,62 +95,82 @@ export default function TodayRehearsals({
           const stats = adminStats[rehearsal.id];
 
           return (
-            <View key={rehearsal.id} style={styles.rehearsalCard}>
-              <View style={styles.rehearsalHeader}>
-                <View style={styles.rehearsalInfo}>
-                  <Text style={styles.rehearsalTime}>
-                    {rehearsal.time}
-                  </Text>
-                  {rehearsal.endTime && (
-                    <Text style={styles.rehearsalDuration}>
-                      - {rehearsal.endTime}
+            <View key={rehearsal.id} style={styles.upcomingCard}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.upcomingTimeRow}>
+                    <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
+                    <Text style={styles.upcomingTime}>
+                      {rehearsal.time?.substring(0, 5) || ''}
+                      {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
                     </Text>
+                  </View>
+
+                  {project && (
+                    <View style={styles.upcomingProjectRow}>
+                      <Ionicons name="folder-outline" size={14} color={Colors.accent.blue} />
+                      <Text style={styles.upcomingProject} numberOfLines={1}>
+                        {project.name}
+                      </Text>
+                    </View>
+                  )}
+
+                  {rehearsal.location && (
+                    <View style={styles.upcomingLocationRow}>
+                      <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
+                      <Text style={styles.upcomingLocation} numberOfLines={1}>
+                        {rehearsal.location}
+                      </Text>
+                    </View>
                   )}
                 </View>
+
                 {isAdminForThisRehearsal && (
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => onDeleteRehearsal(rehearsal.id)}
-                  >
-                    <Ionicons name="trash-outline" size={20} color={Colors.accent.red} />
-                  </TouchableOpacity>
+                  <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                    <View style={styles.adminBadge}>
+                      <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
+                      <Text style={styles.adminBadgeText}>Админ</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => onDeleteRehearsal(rehearsal.id)}
+                      style={{ padding: 4 }}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        // TODO: Implement edit functionality
+                      }}
+                      style={{ padding: 4 }}
+                    >
+                      <Ionicons name="create-outline" size={18} color={Colors.text.secondary} />
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
-
-              <Text style={styles.rehearsalScene}>{rehearsal.scene}</Text>
-
-              {project && (
-                <Text style={styles.rehearsalProject}>
-                  {project.name}
-                </Text>
-              )}
-
-              {rehearsal.location && (
-                <Text style={styles.rehearsalNotes}>{rehearsal.location}</Text>
-              )}
 
               {/* RSVP Section */}
               {currentResponse ? (
                 <View
                   style={[
                     styles.rsvpStatus,
-                    currentResponse === 'yes' ? styles.rsvpConfirmed : styles.rsvpDeclined,
+                    currentResponse === 'confirmed' ? styles.rsvpConfirmed : styles.rsvpDeclined,
                   ]}
                 >
                   <Ionicons
-                    name={currentResponse === 'yes' ? 'checkmark-circle' : 'close-circle'}
+                    name={currentResponse === 'confirmed' ? 'checkmark-circle' : 'close-circle'}
                     size={20}
-                    color={currentResponse === 'yes' ? Colors.accent.green : Colors.accent.red}
+                    color={currentResponse === 'confirmed' ? Colors.accent.green : Colors.accent.red}
                   />
                   <Text
                     style={[
                       styles.rsvpStatusText,
-                      currentResponse === 'yes'
+                      currentResponse === 'confirmed'
                         ? styles.rsvpStatusConfirmed
                         : styles.rsvpStatusDeclined,
                     ]}
                   >
-                    {currentResponse === 'yes' ? 'Вы подтвердили участие' : 'Вы отклонили'}
+                    {currentResponse === 'confirmed' ? 'Репетиция подтверждена' : 'Вы отказались'}
                   </Text>
                 </View>
               ) : (
@@ -161,14 +178,10 @@ export default function TodayRehearsals({
                   <TouchableOpacity
                     style={[styles.rsvpButton, styles.rsvpConfirmButton]}
                     onPress={() =>
-                      onRSVP(
-                        rehearsal.id,
-                        'yes',
-                        rsvpResponses,
-                        setRsvpResponses,
-                        adminStats,
-                        setAdminStats
-                      )
+                      onRSVP(rehearsal.id, 'confirmed', (id, status) => {
+                        setRsvpResponses(prev => ({ ...prev, [id]: status }));
+                        updateAdminStats(id);
+                      })
                     }
                     disabled={isResponding}
                   >
@@ -178,14 +191,10 @@ export default function TodayRehearsals({
                   <TouchableOpacity
                     style={[styles.rsvpButton, styles.rsvpDeclineButton]}
                     onPress={() =>
-                      onRSVP(
-                        rehearsal.id,
-                        'no',
-                        rsvpResponses,
-                        setRsvpResponses,
-                        adminStats,
-                        setAdminStats
-                      )
+                      onRSVP(rehearsal.id, 'declined', (id, status) => {
+                        setRsvpResponses(prev => ({ ...prev, [id]: status }));
+                        updateAdminStats(id);
+                      })
                     }
                     disabled={isResponding}
                   >
