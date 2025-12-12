@@ -1,12 +1,3 @@
-export interface TimeRange {
-    start: string;
-    end: string;
-}
-
-export interface AvailabilityInfo {
-    timeRanges: TimeRange[];
-}
-
 export type RSVPStatus = 'invited' | 'confirmed' | 'declined' | 'tentative';
 
 export interface UserResponse {
@@ -23,9 +14,18 @@ export interface ResponseStats {
     invited: number;
 }
 
+/**
+ * ISO 8601 timestamp string (e.g., "2025-12-10T19:00:00+02:00")
+ */
+export type ISOTimestamp = string;
+
 export interface Rehearsal {
     id: string;
-    date: string;
+    // New TIMESTAMPTZ format (ISO 8601)
+    startsAt: ISOTimestamp;
+    endsAt: ISOTimestamp;
+    // Legacy fields for backward compatibility
+    date?: string;
     time?: string;
     endTime?: string;
     duration?: string;
@@ -40,16 +40,6 @@ export interface Rehearsal {
     // RSVP data
     myResponse?: UserResponse;
     responseStats?: ResponseStats;
-}
-
-export interface Actor {
-    id: string;
-    telegram_id: string;
-    name: string;
-    is_admin: boolean;
-    project_id?: string;
-    created_at?: string;
-    updated_at?: string;
 }
 
 export interface ProjectMember {
@@ -77,3 +67,4 @@ export interface Project {
     created_at?: string;
     updated_at?: string;
 }
+

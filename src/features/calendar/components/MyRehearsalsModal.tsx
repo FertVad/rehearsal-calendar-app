@@ -32,12 +32,15 @@ export default function MyRehearsalsModal({
     const todayStr = today.toISOString().split('T')[0];
 
     return rehearsals
-      .filter(r => r.date >= todayStr)
+      .filter(r => r.date && r.date >= todayStr)
       .sort((a, b) => {
-        if (a.date !== b.date) {
+        if (a.date && b.date && a.date !== b.date) {
           return a.date.localeCompare(b.date);
         }
-        return a.time.localeCompare(b.time);
+        if (a.time && b.time) {
+          return a.time.localeCompare(b.time);
+        }
+        return 0;
       });
   }, [rehearsals]);
 
@@ -46,10 +49,11 @@ export default function MyRehearsalsModal({
     const groups: { [key: string]: Rehearsal[] } = {};
 
     upcomingRehearsals.forEach(rehearsal => {
-      if (!groups[rehearsal.date]) {
-        groups[rehearsal.date] = [];
+      const date = rehearsal.date || '';
+      if (!groups[date]) {
+        groups[date] = [];
       }
-      groups[rehearsal.date].push(rehearsal);
+      groups[date].push(rehearsal);
     });
 
     return groups;
@@ -135,7 +139,7 @@ export default function MyRehearsalsModal({
                         <View style={styles.timeContainer}>
                           <View style={styles.timeIndicator} />
                           <Text style={styles.timeText}>
-                            {formatTime(rehearsal.time)}
+                            {formatTime(rehearsal.time || '')}
                           </Text>
                           {rehearsal.duration && (
                             <Text style={styles.durationText}>

@@ -24,25 +24,6 @@ export const formatDateToString = (date: Date): string => {
 };
 
 /**
- * Format Date to YYYY-MM-DD string in UTC timezone.
- */
-export const formatDateToStringUTC = (date: Date): string => {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-/**
- * Format Date to HH:mm string in UTC timezone.
- */
-export const formatTimeUTC = (date: Date): string => {
-  const hours = String(date.getUTCHours()).padStart(2, '0');
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-};
-
-/**
  * Convert time string (HH:mm) to minutes since midnight.
  * @example timeToMinutes('14:30') => 870
  */
@@ -74,4 +55,40 @@ export const formatDateLocalized = (
 ): string => {
   const date = parseDateString(dateStr);
   return date.toLocaleDateString('ru-RU', options);
+};
+
+/**
+ * Convert ISO 8601 timestamp to local date string (YYYY-MM-DD)
+ * @param isoTimestamp - ISO 8601 timestamp (e.g., "2025-12-10T19:00:00+02:00")
+ * @returns Date string in YYYY-MM-DD format in local timezone
+ */
+export const isoToDateString = (isoTimestamp: string): string => {
+  const date = new Date(isoTimestamp);
+  return formatDateToString(date);
+};
+
+/**
+ * Convert ISO 8601 timestamp to local time string (HH:mm)
+ * @param isoTimestamp - ISO 8601 timestamp (e.g., "2025-12-10T19:00:00+02:00")
+ * @returns Time string in HH:mm format in local timezone
+ */
+export const isoToTimeString = (isoTimestamp: string): string => {
+  const date = new Date(isoTimestamp);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+/**
+ * Convert date and time strings to ISO 8601 timestamp
+ * Assumes local timezone
+ * @param dateStr - Date in YYYY-MM-DD format
+ * @param timeStr - Time in HH:mm format
+ * @returns ISO 8601 timestamp string
+ */
+export const dateTimeToISO = (dateStr: string, timeStr: string): string => {
+  const date = parseDateString(dateStr);
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  date.setHours(hours, minutes, 0, 0);
+  return date.toISOString();
 };

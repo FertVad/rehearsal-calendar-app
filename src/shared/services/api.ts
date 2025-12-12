@@ -226,8 +226,8 @@ export const availabilityAPI = {
   setForDate: (date: string, type: 'available' | 'busy' | 'tentative', slots?: { start: string; end: string }[]) =>
     api.put(`/native/availability/${date}`, { type, slots }),
 
-  // Bulk set availability for multiple dates
-  bulkSet: (entries: { date: string; type: 'available' | 'busy' | 'tentative'; slots?: { start: string; end: string }[] }[]) =>
+  // Bulk set availability for multiple dates (ISO timestamp format)
+  bulkSet: (entries: { startsAt: string; endsAt: string; type: 'available' | 'busy' | 'tentative'; isAllDay?: boolean }[]) =>
     api.post('/native/availability/bulk', { entries }),
 
   // Delete availability for a specific date

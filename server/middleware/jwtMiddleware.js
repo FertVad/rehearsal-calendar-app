@@ -47,10 +47,3 @@ export function authenticateToken(req, res, next) {
 
 // Alias for backwards compatibility
 export const requireAuth = authenticateToken;
-
-export default {
-  generateTokens,
-  verifyToken,
-  authenticateToken,
-  requireAuth,
-};

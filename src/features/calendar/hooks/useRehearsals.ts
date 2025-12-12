@@ -1,7 +1,31 @@
 import { useState, useCallback } from 'react';
 import { Rehearsal, Project, RSVPStatus } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
-import { formatDateToString } from '../../../shared/utils/time';
+import { formatDateToString, isoToDateString, isoToTimeString } from '../../../shared/utils/time';
+
+/**
+ * Transform rehearsal from API format to UI format
+ * Converts ISO timestamps to legacy date/time fields for backward compatibility
+ */
+const transformRehearsal = (r: Rehearsal): Rehearsal => {
+  // If rehearsal already has legacy format, return as-is
+  if (r.date && r.time) {
+    return r;
+  }
+
+  // Convert from new format (startsAt/endsAt) to legacy format (date/time/endTime)
+  if (r.startsAt && r.endsAt) {
+    return {
+      ...r,
+      date: isoToDateString(r.startsAt),
+      time: isoToTimeString(r.startsAt),
+      endTime: isoToTimeString(r.endsAt),
+    };
+  }
+
+  // Fallback: return as-is
+  return r;
+};
 
 export const useRehearsals = (projects: Project[], filterProjectId: string | null) => {
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
@@ -28,11 +52,13 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
         for (const project of projects) {
           try {
             const response = await rehearsalsAPI.getAll(project.id);
-            const projectRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) => ({
-              ...r,
-              projectName: project.name,
-              projectId: project.id,
-            }));
+            const projectRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) =>
+              transformRehearsal({
+                ...r,
+                projectName: project.name,
+                projectId: project.id,
+              })
+            );
             allRehearsals.push(...projectRehearsals);
           } catch (err) {
             console.error(`Failed to fetch rehearsals for project ${project.id}:`, err);
@@ -43,11 +69,13 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
         // Fetch from selected project only
         const response = await rehearsalsAPI.getAll(filterProjectId);
         const project = projects.find(p => p.id === filterProjectId);
-        const projectRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) => ({
-          ...r,
-          projectName: project?.name,
-          projectId: filterProjectId,
-        }));
+        const projectRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) =>
+          transformRehearsal({
+            ...r,
+            projectName: project?.name,
+            projectId: filterProjectId,
+          })
+        );
         fetchedRehearsals = projectRehearsals;
       }
 
@@ -55,7 +83,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
 
       // Fetch user's RSVP responses and admin stats for upcoming rehearsals
       const today = formatDateToString(new Date());
-      const upcomingRehearsals = fetchedRehearsals.filter(r => r.date >= today);
+      const upcomingRehearsals = fetchedRehearsals.filter(r => r.date && r.date >= today);
 
       if (upcomingRehearsals.length > 0) {
         const responses: Record<string, RSVPStatus> = {};

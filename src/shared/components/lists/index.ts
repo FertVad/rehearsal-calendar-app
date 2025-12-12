@@ -1,1 +1,2 @@
-export { CollapsibleSection } from './CollapsibleSection';
+// List components index file
+// Currently empty - components removed during dead code cleanup

@@ -16,19 +16,6 @@ export interface TimeSlot {
   busyMembers: BusyMember[];
 }
 
-export interface SmartPlannerFilters {
-  projectId: string;
-  startDate: string;
-  endDate: string;
-  selectedCategories: SlotCategory[];
-  selectedMemberIds: string[];
-}
-
-export interface PeriodPreset {
-  type: 'week' | 'month' | 'custom';
-  label: string;
-}
-
 export interface Member {
   id: string;
   name: string;

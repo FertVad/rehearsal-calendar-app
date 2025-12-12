@@ -144,9 +144,8 @@ UNIQUE(project_id, user_id)
 ```sql
 id                  INTEGER PRIMARY KEY
 project_id          INTEGER REFERENCES native_projects(id) ON DELETE CASCADE
-date                DATE NOT NULL           -- Stored in UTC
-start_time          TIME NOT NULL           -- Stored in UTC
-end_time            TIME NOT NULL           -- Stored in UTC
+starts_at           TIMESTAMPTZ NOT NULL    -- Start time with timezone (ISO 8601)
+ends_at             TIMESTAMPTZ NOT NULL    -- End time with timezone (ISO 8601)
 location            VARCHAR                 -- Simple location string
 location_address    TEXT                    -- Detailed address (optional)
 location_notes      TEXT                    -- Location notes (optional)
@@ -159,6 +158,12 @@ updated_at          TIMESTAMP DEFAULT NOW()
 title               VARCHAR                 -- Optional title (not used in UI)
 description         TEXT                    -- Optional description (not used in UI)
 ```
+
+**Timezone Handling:**
+- Uses `TIMESTAMPTZ` (PostgreSQL) - stores UTC timestamps with timezone info
+- API sends/receives ISO 8601 format: `"2025-12-10T19:00:00+02:00"`
+- Client displays in user's local timezone
+- See [MIGRATION_TO_TIMESTAMPTZ.md](MIGRATION_TO_TIMESTAMPTZ.md) for details
 
 #### `native_rehearsal_participants`
 Участники репетиций (many-to-many)
@@ -187,9 +192,8 @@ UNIQUE(rehearsal_id, user_id)
 ```sql
 id                  INTEGER PRIMARY KEY
 user_id             INTEGER REFERENCES native_users(id) ON DELETE CASCADE
-date                DATE NOT NULL             -- Stored in UTC
-start_time          TIME NOT NULL             -- Stored in UTC
-end_time            TIME NOT NULL             -- Stored in UTC
+starts_at           TIMESTAMPTZ NOT NULL      -- Start time with timezone (ISO 8601)
+ends_at             TIMESTAMPTZ NOT NULL      -- End time with timezone (ISO 8601)
 type                VARCHAR NOT NULL          -- 'available', 'busy', 'tentative', 'booked'
 source              VARCHAR DEFAULT 'manual'  -- 'manual', 'rehearsal', 'external'
 external_event_id   VARCHAR                   -- ID of external event (e.g., rehearsal ID)
@@ -200,6 +204,13 @@ is_all_day          BOOLEAN DEFAULT FALSE     -- Flag for all-day slots (00:00-2
 created_at          TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 updated_at          TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 ```
+
+**Timezone Handling:**
+- Uses `TIMESTAMPTZ` (PostgreSQL) - stores UTC timestamps with timezone info
+- API accepts date + slots format: `{ "date": "2025-12-10", "slots": [...] }`
+- Server converts slots to ISO 8601 timestamps internally
+- All-day events: stored as `00:00:00` in user's timezone with `is_all_day: true`
+- See [MIGRATION_TO_TIMESTAMPTZ.md](MIGRATION_TO_TIMESTAMPTZ.md) for details
 
 #### `native_invites`
 Инвайт-ссылки для проектов
@@ -299,10 +310,11 @@ GET    /api/native/rehearsals/:id/responses                    # Get all RSVPs (
 
 ### Availability
 ```
-GET    /api/availability                       # Get user's availability
-PUT    /api/availability/:date                 # Set availability for date
-POST   /api/availability/bulk                  # Bulk set availability
-DELETE /api/availability/:date                 # Delete availability
+GET    /api/native/availability                         # Get user's availability
+POST   /api/native/availability/bulk                    # Bulk set availability (ISO timestamps)
+PUT    /api/native/availability/:date                   # DEPRECATED - use bulk instead
+DELETE /api/native/availability/:date                   # Delete manual availability for date
+GET    /api/native/projects/:id/members/availability    # Get members' availability (range)
 ```
 
 ---
@@ -528,10 +540,13 @@ npx expo run:android
 - [ ] Android не настроен (только iOS)
 
 ### Recent Fixes (December 2024)
+- [x] ✅ **MAJOR**: Миграция на TIMESTAMPTZ - все даты/времена теперь используют ISO 8601 с timezone
 - [x] ✅ Упрощена логика работы с таймзонами - добавлен флаг `is_all_day` для целодневных слотов
 - [x] ✅ Исправлена работа с БД - приведено в соответствие со схемой production
 - [x] ✅ Исправлен `formatTime()` в AddRehearsalScreen - использует ручное форматирование вместо `toLocaleTimeString()`
 - [x] ✅ Исправлена логика букирования слотов репетиций - используются колонки `source` и `external_event_id`
+- [x] ✅ Добавлен Smart Planner - умный планировщик с анализом доступности и рекомендациями времени
+- [x] ✅ Добавлен DateRangePicker - компонент выбора диапазона дат для custom периодов
 
 ### TODO
 - [ ] Push notifications (Expo Notifications)
@@ -612,25 +627,36 @@ Private project - All rights reserved
 
 ## 🌐 Timezone Handling
 
+### ВАЖНО: Миграция на TIMESTAMPTZ (December 2024)
+
+**НОВАЯ АРХИТЕКТУРА**: Все даты и времена теперь используют PostgreSQL `TIMESTAMPTZ` и ISO 8601 формат.
+
+См. подробную документацию: [MIGRATION_TO_TIMESTAMPTZ.md](MIGRATION_TO_TIMESTAMPTZ.md)
+
 ### Архитектура работы с таймзонами
 
-**Принцип**: Все даты и времена хранятся в UTC в базе данных, конвертация происходит на уровне API.
+**Принцип**: Все даты и времена хранятся в UTC с timezone информацией в базе данных, конвертация происходит автоматически PostgreSQL.
 
-#### Хранение в БД (UTC)
+#### Хранение в БД (TIMESTAMPTZ)
 ```sql
 -- Пример: Репетиция 13 декабря 2025, 08:00-16:00 по местному времени (Asia/Jerusalem = UTC+2)
-date: '2025-12-13'        -- Дата в UTC (может отличаться от локальной!)
-start_time: '06:00:00'    -- 08:00 Jerusalem = 06:00 UTC
-end_time: '14:00:00'      -- 16:00 Jerusalem = 14:00 UTC
+starts_at: '2025-12-13T08:00:00+02:00'::timestamptz  -- ISO 8601 с timezone
+ends_at:   '2025-12-13T16:00:00+02:00'::timestamptz  -- PostgreSQL хранит в UTC автоматически
 ```
 
 #### Функции конвертации
 **Location**: `server/utils/timezone.js`
 
+**TIMESTAMPTZ Utilities:**
+- `timestampToLocal(isoTimestamp, timezone)` - ISO 8601 → {date, time} в user timezone
+- `localToTimestamp(date, time, timezone)` - {date, time} → ISO 8601 в UTC
+- `timestampToISO(timestamp)` - Date object → ISO 8601 string
+- `formatAvailabilitySlotsResponse(slots, timezone)` - форматирует слоты для API ответа
+- `formatRehearsalResponse(rehearsal)` - форматирует репетицию для API ответа
+
+**Устаревшие (для legacy кода):**
 - `localToUTC(date, time, timezone)` - конвертирует локальное время в UTC
 - `utcToLocal(date, time, timezone)` - конвертирует UTC во время пользователя
-- `convertSlotsToUTC(date, slots, timezone)` - конвертирует массив слотов в UTC
-- `convertSlotsFromUTC(date, slots, timezone)` - конвертирует массив слотов из UTC
 
 #### All-Day Slots (Целодневные слоты)
 Специальная логика для целодневных слотов (00:00-23:59):
@@ -642,22 +668,28 @@ end_time: '14:00:00'      -- 16:00 Jerusalem = 14:00 UTC
 
 **1. Создание репетиции (клиент → сервер)**
 ```typescript
-// Клиент отправляет в локальном времени
-{ date: '2025-12-13', startTime: '08:00', endTime: '16:00' }
+// Клиент отправляет ISO 8601 timestamp с timezone offset
+{
+  startsAt: '2025-12-13T08:00:00+02:00',
+  endsAt: '2025-12-13T16:00:00+02:00'
+}
 
-// Сервер конвертирует в UTC перед сохранением
-const startUTC = localToUTC('2025-12-13', '08:00', 'Asia/Jerusalem');
-// → { date: '2025-12-12', time: '06:00:00' }  // Может быть предыдущий день!
+// Сервер сохраняет в PostgreSQL TIMESTAMPTZ
+// PostgreSQL автоматически конвертирует в UTC для хранения
 ```
 
 **2. Получение репетиций (сервер → клиент)**
 ```javascript
-// Сервер читает из БД (UTC)
-{ date: '2025-12-12', start_time: '06:00:00', end_time: '14:00:00' }
+// Сервер читает из БД (PostgreSQL возвращает Date object в UTC)
+{ starts_at: Date('2025-12-13T06:00:00.000Z'), ends_at: Date('2025-12-13T14:00:00.000Z') }
 
-// Конвертирует в timezone пользователя перед отправкой
-const local = utcToLocal('2025-12-12', '06:00:00', 'Asia/Jerusalem');
-// → { date: '2025-12-13', time: '08:00' }
+// Конвертирует в ISO 8601 для отправки клиенту
+{
+  startsAt: '2025-12-13T06:00:00.000Z',
+  endsAt: '2025-12-13T14:00:00.000Z'
+}
+
+// Клиент отображает в локальном времени браузера/устройства
 ```
 
 #### Важные нюансы
@@ -813,6 +845,97 @@ ALTER TABLE native_user_availability
 
 ---
 
-**Last updated**: December 9, 2025
-**Version**: 1.2.1
+## 🎯 Smart Planner
+
+**Location**: `src/features/smart-planner/`
+
+Smart Planner - это умный планировщик репетиций, который анализирует доступность участников и предлагает оптимальные временные слоты.
+
+### Функциональность
+
+1. **Анализ доступности**:
+   - Загружает доступность всех участников проекта за выбранный период
+   - Учитывает существующие репетиции как "busy" слоты
+   - Поддерживает фильтрацию по участникам
+
+2. **Категории слотов**:
+   - 🟢 **Идеально** (perfect): Все участники свободны
+   - 🟡 **Хорошо** (good): Большинство (80%+) свободны
+   - 🟠 **Возможно** (possible): Половина (50%+) свободны
+   - 🔴 **Сложно** (difficult): Менее половины свободны
+
+3. **Периоды планирования**:
+   - Неделя (7 дней)
+   - Две недели (14 дней)
+   - Месяц (30 дней)
+   - Свой период (выбор диапазона дат)
+
+4. **DateRangePicker**:
+   - Компонент выбора диапазона дат
+   - Календарный интерфейс с выбором начала и конца периода
+   - Минимальная дата (не раньше сегодня)
+   - Валидация: конец не может быть раньше начала
+
+### API
+
+**Endpoints**:
+```
+GET /api/native/projects/:projectId/members/availability?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&userIds=1,2,3
+```
+
+**Response**:
+```json
+{
+  "availability": [
+    {
+      "userId": "2",
+      "firstName": "Вадим",
+      "lastName": "Ферт",
+      "email": "test@mail.com",
+      "dates": [
+        {
+          "date": "2025-12-12",
+          "timeRanges": [
+            {
+              "start": "21:10",
+              "end": "23:10",
+              "type": "busy",
+              "isAllDay": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Компоненты
+
+- `SmartPlannerScreen.tsx` - Главный экран планировщика
+- `DayCard.tsx` - Карточка дня с слотами
+- `SlotCard.tsx` - Карточка временного слота
+- `MemberFilter.tsx` - Фильтр по участникам
+- `DateRangePicker.tsx` - Выбор диапазона дат
+
+### Hooks
+
+- `useSmartPlanner.ts` - Основная логика планировщика
+  - Загрузка данных
+  - Генерация слотов
+  - Фильтрация по категориям и участникам
+  - Мерж доступности с репетициями
+
+### Утилиты
+
+- `src/shared/utils/availability.ts` - Утилиты для работы с доступностью
+  - `mergeAvailabilityWithRehearsals()` - Объединяет availability с rehearsals
+  - `generateTimeSlots()` - Генерирует временные слоты на основе доступности
+  - `categorizeSlot()` - Определяет категорию слота
+  - `filterSlotsByCategory()` - Фильтрует слоты по категориям
+
+---
+
+**Last updated**: December 12, 2025
+**Version**: 1.3.0
 **Maintainer**: Vadim Fertik

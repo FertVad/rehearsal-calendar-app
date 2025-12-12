@@ -12,24 +12,34 @@
 - Follow industry standard (Rails, Django, Laravel, etc.)
 - Reduce codebase complexity
 
+## Architecture Decision
+
+**Server:** Always stores and works with TIMESTAMPTZ (ISO 8601 format)
+**Client API formats:**
+- **Rehearsals:** Client sends ISO timestamps (`startsAt`, `endsAt`) - single event per call
+- **Availability:** Client sends `date + slots[]` - multiple time slots per date (more natural format)
+- Both approaches work! Server handles conversion internally.
+
+**Display layer:** UI continues to use separate date/time pickers for better UX
+
 ## Migration Plan
 
 ### Phase 1: Database Schema Migration
 
 #### 1.1 Rehearsals Table
-- [ ] Create migration script `server/migrations/migrate-rehearsals-to-timestamptz.sql`
-- [ ] Add new columns: `starts_at TIMESTAMPTZ`, `ends_at TIMESTAMPTZ`
-- [ ] Migrate existing data from (date, start_time, end_time) to (starts_at, ends_at)
-- [ ] Add indexes on new columns
-- [ ] Verify data integrity after migration
+- [x] Create migration script `server/migrations/migrate-rehearsals-to-timestamptz.sql`
+- [x] Add new columns: `starts_at TIMESTAMPTZ`, `ends_at TIMESTAMPTZ`
+- [x] Migrate existing data from (date, start_time, end_time) to (starts_at, ends_at)
+- [x] Add indexes on new columns
+- [x] Verify data integrity after migration
 
 #### 1.2 Availability Table
-- [ ] Create migration script `server/migrations/migrate-availability-to-timestamptz.sql`
-- [ ] Add new columns: `starts_at TIMESTAMPTZ`, `ends_at TIMESTAMPTZ`
-- [ ] Migrate existing data from (date, start_time, end_time) to (starts_at, ends_at)
-- [ ] Handle `is_all_day` events (store as 00:00:00 in user timezone)
-- [ ] Add indexes on new columns
-- [ ] Verify data integrity after migration
+- [x] Create migration script `server/migrations/migrate-availability-to-timestamptz.sql`
+- [x] Add new columns: `starts_at TIMESTAMPTZ`, `ends_at TIMESTAMPTZ`
+- [x] Migrate existing data from (date, start_time, end_time) to (starts_at, ends_at)
+- [x] Handle `is_all_day` events (store as 00:00:00 in user timezone)
+- [x] Add indexes on new columns
+- [x] Verify data integrity after migration
 
 #### 1.3 Database Backup
 - [ ] Create backup script for production data
@@ -38,70 +48,75 @@
 ### Phase 2: Server-Side Refactoring
 
 #### 2.1 Update Timezone Utilities (`server/utils/timezone.js`)
-- [ ] Add new functions: `timestampToLocal()`, `localToTimestamp()`
-- [ ] Keep old functions for backward compatibility during migration
-- [ ] Add JSDoc annotations for new functions
+- [x] Add new functions: `timestampToLocal()`, `localToTimestamp()`
+- [x] Keep old functions for backward compatibility during migration
+- [x] Add JSDoc annotations for new functions
 
 #### 2.2 Update Rehearsals API (`server/routes/native/rehearsals.js`)
-- [ ] Update GET endpoints to use `starts_at`, `ends_at`
-- [ ] Update POST/PUT endpoints to accept ISO timestamps
-- [ ] Update timezone conversion logic
-- [ ] Update queries to use new columns
-- [ ] Remove `date::text` workaround (no longer needed)
+- [x] Update GET endpoints to use `starts_at`, `ends_at`
+- [x] Update POST/PUT endpoints to accept ISO timestamps
+- [x] Update timezone conversion logic
+- [x] Update queries to use new columns
+- [x] Remove `date::text` workaround (no longer needed)
 
 #### 2.3 Update Availability API (`server/routes/native/availability.js`)
-- [ ] Update GET endpoints to use `starts_at`, `ends_at`
-- [ ] Update POST/PUT endpoints to accept ISO timestamps
-- [ ] Update timezone conversion logic
-- [ ] Handle all-day events properly (flag + 00:00:00 time)
-- [ ] Update queries to use new columns
+- [x] Update GET endpoints to use `starts_at`, `ends_at`
+- [x] Update POST/PUT endpoints to accept ISO timestamps
+- [x] Update timezone conversion logic
+- [x] Handle all-day events properly (flag + 00:00:00 time)
+- [x] Update queries to use new columns
 
 #### 2.4 Update Middleware (`server/middleware/timezoneMiddleware.js`)
-- [ ] Update `convertRehearsalRequest()` for TIMESTAMPTZ
-- [ ] Update `convertRehearsalResponse()` for TIMESTAMPTZ
-- [ ] Simplify logic (no more separate date/time handling)
+- [x] Update `convertRehearsalRequest()` for TIMESTAMPTZ
+- [x] Update `convertRehearsalResponse()` for TIMESTAMPTZ
+- [x] Simplify logic (no more separate date/time handling)
 
 #### 2.5 Update Database Helpers (`server/database/db.js`)
-- [ ] Verify PostgreSQL timestamp handling
-- [ ] Update any date/time utility functions
+- [x] Verify PostgreSQL timestamp handling
+- [x] Update any date/time utility functions
 
 ### Phase 3: Client-Side Refactoring
 
 #### 3.1 Update API Types (`src/shared/types/`)
-- [ ] Update Rehearsal interface to use `startsAt: string`, `endsAt: string`
-- [ ] Update Availability interface similarly
-- [ ] Add ISO timestamp type aliases
+- [x] Update Rehearsal interface to use `startsAt: string`, `endsAt: string`
+- [x] Update Availability interface similarly
+- [x] Add ISO timestamp type aliases
 
 #### 3.2 Update API Client (`src/shared/services/api.ts`)
-- [ ] Update `rehearsalAPI` methods to send ISO timestamps
-- [ ] Update `availabilityAPI` methods to send ISO timestamps
-- [ ] Update request/response transformations
+- [x] Add transformation helper functions (`isoToDateString`, `isoToTimeString`, `dateTimeToISO`)
+- [x] Update `useRehearsals` hook to transform API responses
+- [x] Add backward compatibility layer for legacy date/time fields
+- [x] Update `rehearsalAPI` - AddRehearsalScreen now sends ISO timestamps (`startsAt`, `endsAt`)
+- [x] `availabilityAPI` - **Decision: Keep date + slots format**
+  - Reason: Availability works with multiple time slots per date, so `date + slots[]` is more natural
+  - Server already handles both formats and converts to ISO internally
+  - No client changes needed - avoids unnecessary complexity
 
 #### 3.3 Update Rehearsal Screens
-- [ ] `src/features/rehearsals/screens/CreateRehearsalScreen.tsx`
-  - [ ] Combine date + time pickers into ISO timestamp before API call
-  - [ ] Keep UI as-is (separate date/time pickers for UX)
-- [ ] `src/features/rehearsals/screens/EditRehearsalScreen.tsx`
-  - [ ] Parse ISO timestamp into date + time for display
-  - [ ] Combine back to ISO before API call
-- [ ] `src/features/rehearsals/components/RehearsalCard.tsx`
-  - [ ] Update to parse `startsAt`/`endsAt` timestamps
-  - [ ] Display in user's timezone
+- [x] `src/features/calendar/screens/AddRehearsalScreen.tsx`
+  - [x] Combine date + time pickers into ISO timestamp before API call using `dateTimeToISO()`
+  - [x] Keep UI as-is (separate date/time pickers for UX)
+  - [x] Send `startsAt` and `endsAt` instead of `date`, `startTime`, `endTime`
+- [x] Edit functionality - does not exist (API endpoint present but no UI screen)
+- [x] Display components (`MyRehearsalsModal.tsx`, `DayDetailsModal.tsx`)
+  - [x] No changes needed - work with transformation layer from `useRehearsals` hook
+  - [x] Continue using legacy fields (`date`, `time`, `endTime`)
 
 #### 3.4 Update Availability Screens
-- [ ] `src/features/availability/screens/AvailabilityScreen.tsx`
-  - [ ] Update slot time handling to use ISO timestamps
-  - [ ] Keep UI as-is (time pickers for UX)
-- [ ] `src/features/availability/hooks/useAvailabilityData.ts`
-  - [ ] Update data transformation logic
-  - [ ] Parse timestamps from API
-  - [ ] Convert to timestamps before save
+- [x] `src/features/availability/screens/AvailabilityScreen.tsx`
+  - [x] No changes needed - sends `date` + `slots` array, server handles conversion
+  - [x] UI remains unchanged (time pickers for UX)
+- [x] `src/features/availability/hooks/useAvailabilityData.ts`
+  - [x] Already handles transformation from ISO timestamps to local format
+  - [x] Extracts date from ISO timestamp (line 29)
+  - [x] Parses time strings from returned data (lines 34-69)
 
 #### 3.5 Update Shared Utilities
-- [ ] `src/shared/utils/timezone.ts` (if exists)
-  - [ ] Add helper functions for ISO timestamp handling
-  - [ ] Add `parseISO()`, `formatISO()` helpers
-  - [ ] Use `date-fns` or native Date API
+- [x] `src/shared/utils/time.ts`
+  - [x] Added `isoToDateString()` - converts ISO to YYYY-MM-DD
+  - [x] Added `isoToTimeString()` - converts ISO to HH:mm
+  - [x] Added `dateTimeToISO()` - converts date + time to ISO
+  - [x] Uses native Date API for conversions
 
 ### Phase 4: Testing
 
@@ -129,32 +144,45 @@
 ### Phase 5: Cleanup Old Logic
 
 #### 5.1 Remove Old Database Columns
-- [ ] Create migration to drop `date`, `start_time`, `end_time` from `native_rehearsals`
-- [ ] Create migration to drop `date`, `start_time`, `end_time` from `native_user_availability`
-- [ ] Verify no code references these columns
+- [x] Create migration to drop `date`, `start_time`, `end_time` from `native_rehearsals`
+  - Created: `server/migrations/drop-old-rehearsal-columns.sql`
+  - Includes safety checks, verification, and rollback instructions
+- [x] Create migration to drop `date`, `start_time`, `end_time` from `native_user_availability`
+  - Created: `server/migrations/drop-old-availability-columns.sql`
+  - Includes safety checks, verification, and rollback instructions
+- [x] Verify no code references these columns
+  - Verified: No active code references old columns
+  - Only `updated_at` and `created_at` found (different columns)
 
 #### 5.2 Remove Old Utility Functions
-- [ ] Remove `convertSlotsToUTC()` from `server/utils/timezone.js`
-- [ ] Remove `convertSlotsFromUTC()` from `server/utils/timezone.js`
-- [ ] Remove `localToUTC()` (if replaced)
-- [ ] Remove `utcToLocal()` (if replaced)
+- [x] Remove `convertSlotsToUTC()` from `server/utils/timezone.js`
+- [x] Remove `convertSlotsFromUTC()` from `server/utils/timezone.js`
+- [x] Remove `localToUTC()` from exports
+- [x] Remove `utcToLocal()` from exports
+- [x] Remove unused imports from `server/routes/native/availability.js`
+- [x] Migrate `server/routes/native/members.js` to TIMESTAMPTZ functions
 
 #### 5.3 Remove Old Middleware Logic
-- [ ] Clean up `server/middleware/timezoneMiddleware.js`
-- [ ] Remove deprecated conversion functions
+- [x] Clean up `server/middleware/timezoneMiddleware.js`
+  - Removed unused `convertRehearsalRequest()` function
+  - Removed import from rehearsals.js route
+  - Kept `convertRehearsalResponse()` and other active functions
+- [x] Verify client uses new API format
+  - Client sends `startsAt` and `endsAt` (ISO timestamps)
+  - Server maintains backward compatibility for old format (safe to keep)
 
 #### 5.4 Delete Temporary Files
-- [ ] Delete `check-availability.js`
-- [ ] Delete `check-bad-slots.js`
-- [ ] Delete `delete-invalid-slots.sql`
-- [ ] Delete any other debug/test scripts
+- [x] Delete `check-availability.js`
+- [x] Delete `check-bad-slots.js`
+- [x] Delete `delete-invalid-slots.sql`
+- [x] Delete any other debug/test scripts
 
 #### 5.5 Update Documentation
-- [ ] Update `PROJECT_INFO.md` to reflect new architecture
-- [ ] Remove old DATE + TIME documentation
-- [ ] Add TIMESTAMPTZ architecture section
-- [ ] Document new API formats
-- [ ] Update timezone handling explanation
+- [x] Update `PROJECT_INFO.md` to reflect new architecture
+- [x] Remove old DATE + TIME documentation
+- [x] Add TIMESTAMPTZ architecture section
+- [x] Document new API formats
+- [x] Update timezone handling explanation
 
 ### Phase 6: Deployment
 
@@ -255,5 +283,29 @@ If issues arise:
 
 ---
 
-**Last updated:** December 10, 2025
-**Status:** Planning
+**Last updated:** December 11, 2025
+**Status:** Phase 5 (Cleanup) - COMPLETED ✓
+
+## Migration Notes
+
+### December 11, 2025 - Phase 5 Cleanup
+- Completed Phase 5.1: Created database migrations to drop old columns
+  - [drop-old-rehearsal-columns.sql](server/migrations/drop-old-rehearsal-columns.sql)
+  - [drop-old-availability-columns.sql](server/migrations/drop-old-availability-columns.sql)
+- Completed Phase 5.2: Removed old utility functions from exports
+  - Removed: `localToUTC`, `utcToLocal`, `convertSlotsToUTC`, `convertSlotsFromUTC`
+  - Migrated last endpoint ([members.js](server/routes/native/members.js)) to TIMESTAMPTZ
+- Completed Phase 5.3: Cleaned up middleware
+  - Removed unused `convertRehearsalRequest()` from [timezoneMiddleware.js](server/middleware/timezoneMiddleware.js)
+  - Removed import from rehearsals.js route
+  - Verified client uses new ISO timestamp format
+- Completed Phase 5.4: Deleted temporary test/debug files
+- Completed Phase 5.5: Updated PROJECT_INFO.md documentation
+  - Updated `native_rehearsals` schema to show TIMESTAMPTZ columns
+  - Updated `native_user_availability` schema to show TIMESTAMPTZ columns
+  - Added comprehensive timezone handling documentation for both tables
+  - Removed all references to old DATE + TIME architecture
+
+**Phase 5 (Cleanup) - COMPLETED!**
+
+**Next Steps:** Phase 4 (Testing) - Add unit and integration tests

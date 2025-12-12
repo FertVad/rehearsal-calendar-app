@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
-import { localToUTC, utcToLocal } from '../../utils/timezone.js';
-import { convertRehearsalRequest } from '../../middleware/timezoneMiddleware.js';
+import {
+  localToTimestamp,
+  timestampToISO,
+  formatRehearsalResponse,
+} from '../../utils/timezone.js';
 import {
   DEFAULT_TIMEZONE,
   AVAILABILITY_TYPES,
@@ -31,26 +34,25 @@ async function getProjectTimezone(projectId) {
  * Book availability slots for all project members when rehearsal is created
  * @param {number} rehearsalId - Rehearsal ID
  * @param {number} projectId - Project ID
- * @param {Object} startUTC - Start date/time in UTC
- * @param {Object} endUTC - End date/time in UTC
+ * @param {string} startsAt - ISO 8601 timestamp
+ * @param {string} endsAt - ISO 8601 timestamp
  */
-async function bookRehearsalSlots(rehearsalId, projectId, startUTC, endUTC) {
+async function bookRehearsalSlots(rehearsalId, projectId, startsAt, endsAt) {
   // Get all project members
   const members = await db.all(
     "SELECT user_id FROM native_project_members WHERE project_id = $1 AND status = 'active'",
     [projectId]
   );
 
-  // For each member, insert a busy slot
+  // For each member, insert a busy slot using TIMESTAMPTZ columns
   for (const member of members) {
     await db.run(
-      `INSERT INTO native_user_availability (user_id, date, start_time, end_time, type, source, external_event_id, title, is_all_day)
-       VALUES ($1, $2::date, $3, $4, $5, $6, $7, 'Rehearsal', FALSE)`,
+      `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, source, external_event_id, title, is_all_day)
+       VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, 'Rehearsal', FALSE)`,
       [
         member.user_id,
-        startUTC.date,
-        startUTC.time,
-        endUTC.time,
+        startsAt,
+        endsAt,
         AVAILABILITY_TYPES.BUSY,
         AVAILABILITY_SOURCES.REHEARSAL,
         rehearsalId.toString(),
@@ -63,22 +65,22 @@ async function bookRehearsalSlots(rehearsalId, projectId, startUTC, endUTC) {
  * Update availability slots when rehearsal time is changed
  * @param {number} rehearsalId - Rehearsal ID
  * @param {number} projectId - Project ID
- * @param {Object} startUTC - New start date/time in UTC
- * @param {Object} endUTC - New end date/time in UTC
+ * @param {string} startsAt - ISO 8601 timestamp
+ * @param {string} endsAt - ISO 8601 timestamp
  */
-async function updateRehearsalSlots(rehearsalId, projectId, startUTC, endUTC) {
+async function updateRehearsalSlots(rehearsalId, projectId, startsAt, endsAt) {
   console.log('[updateRehearsalSlots] Updating slots for rehearsal:', {
     rehearsalId,
     projectId,
-    startUTC,
-    endUTC,
+    startsAt,
+    endsAt,
   });
 
   // Delete existing booked slots
   await deleteRehearsalSlots(rehearsalId);
 
   // Book new slots
-  await bookRehearsalSlots(rehearsalId, projectId, startUTC, endUTC);
+  await bookRehearsalSlots(rehearsalId, projectId, startsAt, endsAt);
 }
 
 /**
@@ -125,29 +127,23 @@ router.get('/:projectId/rehearsals', requireAuth, async (req, res) => {
     // Get project timezone
     const timezone = await getProjectTimezone(projectId);
 
-    // Get all rehearsals for the project
+    // Get all rehearsals for the project using new TIMESTAMPTZ columns
     const rehearsals = await db.all(
       `SELECT * FROM native_rehearsals
        WHERE project_id = $1
-       ORDER BY date DESC, start_time DESC`,
+       ORDER BY starts_at DESC`,
       [projectId]
     );
 
     res.json({
       rehearsals: rehearsals.map(r => {
-        // Convert UTC to local timezone
-        const localStart = utcToLocal(formatDateString(r.date), r.start_time, timezone);
-        const localEnd = utcToLocal(formatDateString(r.date), r.end_time, timezone);
-
         return {
           id: String(r.id),
           projectId: String(r.project_id),
           title: r.title,
           description: r.description,
-          date: localStart.date,  // Return date in local timezone
-          time: localStart.time,  // Add 'time' field for backward compatibility
-          startTime: localStart.time,
-          endTime: localEnd.time,
+          startsAt: timestampToISO(r.starts_at),
+          endsAt: timestampToISO(r.ends_at),
           location: r.location,
           createdAt: r.created_at,
           updatedAt: r.updated_at,
@@ -165,7 +161,7 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
-    const { title, description, date, startTime, endTime, location } = req.body;
+    const { title, description, date, startTime, endTime, startsAt, endsAt, location } = req.body;
 
     console.log('[Create Rehearsal] Request:', {
       userId,
@@ -174,6 +170,8 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
       date,
       startTime,
       endTime,
+      startsAt,
+      endsAt,
       location,
     });
 
@@ -189,44 +187,40 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Only admins can create rehearsals' });
     }
 
-    if (!date || !startTime || !endTime) {
-      return res.status(400).json({ error: 'Date, start time, and end time are required' });
+    let startsAtISO, endsAtISO;
+
+    // Support both new format (startsAt/endsAt) and old format (date/startTime/endTime)
+    if (startsAt && endsAt) {
+      // New format: ISO timestamps
+      startsAtISO = startsAt;
+      endsAtISO = endsAt;
+    } else if (date && startTime && endTime) {
+      // Old format: convert to ISO timestamps
+      const timezone = await getProjectTimezone(projectId);
+      const formattedDate = formatDateString(date);
+      if (!formattedDate) {
+        return res.status(400).json({ error: 'Invalid date format' });
+      }
+      startsAtISO = localToTimestamp(formattedDate, startTime, timezone);
+      endsAtISO = localToTimestamp(formattedDate, endTime, timezone);
+    } else {
+      return res.status(400).json({ error: 'Either (startsAt, endsAt) or (date, startTime, endTime) are required' });
     }
 
-    // Get project timezone
-    const timezone = await getProjectTimezone(projectId);
-    console.log('[Create Rehearsal] Project timezone:', timezone);
-
-    // Format date properly
-    const formattedDate = formatDateString(date);
-    if (!formattedDate) {
-      return res.status(400).json({ error: 'Invalid date format' });
-    }
-
-    // Convert local time to UTC for storage
-    const startUTC = localToUTC(formattedDate, startTime, timezone);
-    const endUTC = localToUTC(formattedDate, endTime, timezone);
-
-    console.log('[Create Rehearsal] UTC conversion:', {
-      formattedDate,
-      startTime,
-      endTime,
-      timezone,
-      startUTC,
-      endUTC,
+    console.log('[Create Rehearsal] Timestamps:', {
+      startsAtISO,
+      endsAtISO,
     });
 
-    // Create rehearsal
-    // Note: Cast date to DATE type to avoid timezone conversion issues in PostgreSQL
+    // Create rehearsal using new TIMESTAMPTZ columns
     const newRehearsal = await db.get(
-      `INSERT INTO native_rehearsals (project_id, date, start_time, end_time, location, created_by, created_at, updated_at)
-       VALUES ($1, $2::date, $3, $4, $5, $6, NOW(), NOW())
+      `INSERT INTO native_rehearsals (project_id, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, NOW(), NOW())
        RETURNING *`,
       [
         projectId,
-        startUTC.date,
-        startUTC.time,
-        endUTC.time,
+        startsAtISO,
+        endsAtISO,
         location || null,
         userId,
       ]
@@ -238,8 +232,8 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
     await bookRehearsalSlots(
       newRehearsal.id,
       projectId,
-      startUTC,
-      endUTC
+      startsAtISO,
+      endsAtISO
     );
 
     res.status(201).json({
@@ -248,9 +242,8 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
         projectId: String(newRehearsal.project_id),
         title: newRehearsal.title,
         description: newRehearsal.description,
-        date: newRehearsal.date,
-        startTime: newRehearsal.start_time,
-        endTime: newRehearsal.end_time,
+        startsAt: timestampToISO(newRehearsal.starts_at),
+        endsAt: timestampToISO(newRehearsal.ends_at),
         location: newRehearsal.location,
         createdAt: newRehearsal.created_at,
         updatedAt: newRehearsal.updated_at,
@@ -267,7 +260,7 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
   try {
     const userId = req.userId;
     const { projectId, rehearsalId } = req.params;
-    const { title, description, date, startTime, endTime, location } = req.body;
+    const { title, description, date, startTime, endTime, startsAt, endsAt, location } = req.body;
 
     // Check if user is admin/owner
     const membership = await db.get(
@@ -289,29 +282,35 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    // Get project timezone
-    const timezone = await getProjectTimezone(projectId);
+    let startsAtISO, endsAtISO;
 
-    // Format date properly
-    const formattedDate = formatDateString(date);
-    if (!formattedDate) {
-      return res.status(400).json({ error: 'Invalid date format' });
+    // Support both new format (startsAt/endsAt) and old format (date/startTime/endTime)
+    if (startsAt && endsAt) {
+      // New format: ISO timestamps
+      startsAtISO = startsAt;
+      endsAtISO = endsAt;
+    } else if (date && startTime && endTime) {
+      // Old format: convert to ISO timestamps
+      const timezone = await getProjectTimezone(projectId);
+      const formattedDate = formatDateString(date);
+      if (!formattedDate) {
+        return res.status(400).json({ error: 'Invalid date format' });
+      }
+      startsAtISO = localToTimestamp(formattedDate, startTime, timezone);
+      endsAtISO = localToTimestamp(formattedDate, endTime, timezone);
+    } else {
+      return res.status(400).json({ error: 'Either (startsAt, endsAt) or (date, startTime, endTime) are required' });
     }
 
-    // Convert local time to UTC
-    const startUTC = localToUTC(formattedDate, startTime, timezone);
-    const endUTC = localToUTC(formattedDate, endTime, timezone);
-
-    // Update rehearsal
+    // Update rehearsal using new TIMESTAMPTZ columns
     const updatedRehearsal = await db.get(
       `UPDATE native_rehearsals
-       SET date = $1, start_time = $2, end_time = $3, location = $4, updated_at = NOW()
-       WHERE id = $5 AND project_id = $6
+       SET starts_at = $1::timestamptz, ends_at = $2::timestamptz, location = $3, updated_at = NOW()
+       WHERE id = $4 AND project_id = $5
        RETURNING *`,
       [
-        startUTC.date,
-        startUTC.time,
-        endUTC.time,
+        startsAtISO,
+        endsAtISO,
         location || null,
         rehearsalId,
         projectId,
@@ -322,8 +321,8 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
     await updateRehearsalSlots(
       rehearsalId,
       projectId,
-      startUTC,
-      endUTC
+      startsAtISO,
+      endsAtISO
     );
 
     res.json({
@@ -332,9 +331,8 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
         projectId: String(updatedRehearsal.project_id),
         title: updatedRehearsal.title,
         description: updatedRehearsal.description,
-        date: updatedRehearsal.date,
-        startTime: updatedRehearsal.start_time,
-        endTime: updatedRehearsal.end_time,
+        startsAt: timestampToISO(updatedRehearsal.starts_at),
+        endsAt: timestampToISO(updatedRehearsal.ends_at),
         location: updatedRehearsal.location,
         createdAt: updatedRehearsal.created_at,
         updatedAt: updatedRehearsal.updated_at,

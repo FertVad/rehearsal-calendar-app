@@ -72,7 +72,7 @@ export const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   upcomingList: {
-    paddingRight: Spacing.md,
+    gap: Spacing.sm,
   },
   upcomingCard: {
     backgroundColor: Colors.glass.bg,
@@ -80,8 +80,6 @@ export const styles = StyleSheet.create({
     borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
-    marginRight: Spacing.md,
-    width: UPCOMING_CARD_WIDTH,
   },
   upcomingCardHeader: {
     flexDirection: 'row',
@@ -334,24 +332,32 @@ export const styles = StyleSheet.create({
   },
   // Smart Planner button styles
   smartPlannerContainer: {
-    marginHorizontal: Spacing.xl,
-    marginVertical: Spacing.md,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  // Today's rehearsals section
+  todaySection: {
+    marginBottom: Spacing.xl,
+  },
+  todayList: {
+    gap: Spacing.sm,
   },
   smartPlannerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.glass.bg,
+    backgroundColor: 'rgba(147, 51, 234, 0.15)',
     borderWidth: 1,
-    borderColor: Colors.glass.border,
+    borderColor: 'rgba(147, 51, 234, 0.3)',
     borderRadius: BorderRadius.md,
-    padding: Spacing.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     gap: Spacing.sm,
   },
   smartPlannerIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(147, 51, 234, 0.15)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.accent.purple,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -361,11 +367,10 @@ export const styles = StyleSheet.create({
   smartPlannerTitle: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-    marginBottom: 2,
+    color: Colors.accent.purple,
   },
   smartPlannerSubtitle: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     color: Colors.text.secondary,
   },
 });

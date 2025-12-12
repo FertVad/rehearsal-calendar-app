@@ -91,14 +91,3 @@ export const DATE_FORMATS = {
   DATETIME: 'YYYY-MM-DD HH:mm',
   ISO8601: 'YYYY-MM-DDTHH:mm:ss',
 };
-
-export default {
-  DEFAULT_TIMEZONE,
-  AVAILABILITY_TYPES,
-  AVAILABILITY_SOURCES,
-  RSVP_STATUS_DB,
-  RSVP_STATUS_CLIENT,
-  DATE_FORMATS,
-  mapDBStatusToClient,
-  mapClientStatusToDB,
-};

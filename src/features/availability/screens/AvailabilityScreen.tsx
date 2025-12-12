@@ -369,27 +369,66 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
       setSaving(true);
 
-      // Convert local format to API format for bulk save
-      const entries: { date: string; type: 'available' | 'busy' | 'tentative'; slots?: { start: string; end: string; isAllDay?: boolean }[] }[] = [];
+      // Helper function to create ISO timestamp from date and time in user's timezone
+      const createTimestamp = (dateStr: string, timeStr: string): string => {
+        // Parse date (YYYY-MM-DD) and time (HH:mm)
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const [hours, minutes] = timeStr.split(':').map(Number);
+
+        // Create date string in ISO format without timezone
+        const isoDateTimeStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+
+        // Create Date object which interprets this as local time
+        const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+
+        // Get timezone offset in minutes and convert to ±HH:MM format
+        const offsetMinutes = -localDate.getTimezoneOffset();
+        const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+        const offsetMins = Math.abs(offsetMinutes) % 60;
+        const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+        const offsetStr = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+
+        // Return ISO string with timezone offset (not UTC)
+        return `${isoDateTimeStr}${offsetStr}`;
+      };
+
+      // Convert local format to API format with ISO timestamps
+      const entries: { startsAt: string; endsAt: string; type: 'available' | 'busy' | 'tentative'; isAllDay?: boolean }[] = [];
 
       for (const [date, state] of Object.entries(availability)) {
         let type: 'available' | 'busy' | 'tentative' = 'available';
-        let slots: { start: string; end: string; isAllDay?: boolean }[] | undefined;
 
         if (state.mode === 'free') {
           type = 'available';
-          slots = [{ start: '00:00', end: '23:59', isAllDay: true }];
+          entries.push({
+            startsAt: createTimestamp(date, '00:00'),
+            endsAt: createTimestamp(date, '23:59'),
+            type,
+            isAllDay: true
+          });
         } else if (state.mode === 'busy') {
           type = 'busy';
-          slots = [{ start: '00:00', end: '23:59', isAllDay: true }];
+          entries.push({
+            startsAt: createTimestamp(date, '00:00'),
+            endsAt: createTimestamp(date, '23:59'),
+            type,
+            isAllDay: true
+          });
         } else if (state.mode === 'custom') {
           // Custom mode: user specifies when they are BUSY
           type = 'tentative';
-          slots = state.slots; // These are busy slots
+          for (const slot of state.slots) {
+            entries.push({
+              startsAt: createTimestamp(date, slot.start),
+              endsAt: createTimestamp(date, slot.end),
+              type,
+              isAllDay: false
+            });
+          }
         }
-
-        entries.push({ date, type, slots });
       }
+
+      console.log('Sending entries with ISO timestamps:', JSON.stringify(entries, null, 2));
 
       await availabilityAPI.bulkSet(entries);
       setHasChanges(false);

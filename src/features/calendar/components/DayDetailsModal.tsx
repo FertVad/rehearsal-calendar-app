@@ -100,7 +100,7 @@ export default function DayDetailsModal({
                     <View style={styles.timeContainer}>
                       <View style={styles.timeIndicator} />
                       <Text style={styles.timeText}>
-                        {formatTime(rehearsal.time)}
+                        {formatTime(rehearsal.time || '')}
                       </Text>
                       {rehearsal.endTime && (
                         <Text style={styles.durationText}>

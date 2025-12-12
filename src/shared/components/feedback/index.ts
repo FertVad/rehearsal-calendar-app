@@ -1,3 +1,2 @@
-export { LoadingSpinner } from './LoadingSpinner';
-export { EmptyState } from './EmptyState';
-export { ErrorState } from './ErrorState';
+// Feedback components index file
+// Currently empty - components removed during dead code cleanup

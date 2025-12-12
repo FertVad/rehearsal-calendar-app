@@ -1,2 +1,2 @@
-export { Section } from './Section';
-export { Card } from './Card';
+// Layout components index file
+// Currently empty - components removed during dead code cleanup

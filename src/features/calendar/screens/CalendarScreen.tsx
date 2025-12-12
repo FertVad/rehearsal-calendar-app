@@ -9,7 +9,8 @@ import { TabParamList, AppStackParamList } from '../../../navigation';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import DayDetailsModal from '../components/DayDetailsModal';
 import MyRehearsalsModal from '../components/MyRehearsalsModal';
-import StatsPanel from '../components/StatsPanel';
+import TodayRehearsals from '../components/TodayRehearsals';
+import SmartPlannerButton from '../components/SmartPlannerButton';
 import { Rehearsal } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -151,18 +152,34 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
     ? projects.find(p => p.id === filterProjectId)?.is_admin
     : false;
 
-  // Get upcoming rehearsals (today + next 7 days)
+  // Get rehearsals for selected date (defaults to today)
+  const selectedDateRehearsals = useMemo(() => {
+    return rehearsals
+      .filter(r => r.date === selectedDate)
+      .sort((a, b) => {
+        if (a.time && b.time) {
+          return a.time.localeCompare(b.time);
+        }
+        return 0;
+      });
+  }, [rehearsals, selectedDate]);
+
   const upcomingRehearsals = useMemo(() => {
     const today = formatDateToString(new Date());
     const todayDate = parseDateString(today);
 
     // Filter rehearsals from today onwards, sorted by date and time
     return rehearsals
-      .filter(r => r.date >= today)
+      .filter(r => r.date && r.date >= today)
       .sort((a, b) => {
-        const dateCompare = a.date.localeCompare(b.date);
-        if (dateCompare !== 0) return dateCompare;
-        return a.time.localeCompare(b.time);
+        if (a.date && b.date) {
+          const dateCompare = a.date.localeCompare(b.date);
+          if (dateCompare !== 0) return dateCompare;
+        }
+        if (a.time && b.time) {
+          return a.time.localeCompare(b.time);
+        }
+        return 0;
       });
   }, [rehearsals]);
 
@@ -257,49 +274,28 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
           selectedDate={selectedDate}
         />
 
-        {/* Stats Panel - only show for admin users */}
+        {/* Smart Planner Button - only show for admins */}
         {screenMode === 'admin' && (
-          <StatsPanel
-            rehearsals={rehearsals}
+          <SmartPlannerButton
             adminProjects={adminProjects}
-            adminStats={adminStats}
-            filterProjectId={filterProjectId}
+            onPress={(projectId) => navigation.navigate('SmartPlanner', { projectId })}
           />
         )}
 
-        {/* Smart Planner Button - only show for admins */}
-        {screenMode === 'admin' && adminProjects.length > 0 && (
-          <View style={styles.smartPlannerContainer}>
-            <TouchableOpacity
-              style={styles.smartPlannerButton}
-              onPress={() => {
-                // Get the most recent admin project
-                const sortedProjects = [...adminProjects].sort((a, b) => {
-                  // Sort by updatedAt or createdAt (most recent first)
-                  const dateA = new Date((a as any).updatedAt || (a as any).createdAt || 0);
-                  const dateB = new Date((b as any).updatedAt || (b as any).createdAt || 0);
-                  return dateB.getTime() - dateA.getTime();
-                });
-                const defaultProject = sortedProjects[0];
-
-                navigation.navigate('SmartPlanner', {
-                  projectId: defaultProject.id
-                });
-              }}
-            >
-              <View style={styles.smartPlannerIconContainer}>
-                <Ionicons name="bulb" size={20} color={Colors.accent.purple} />
-              </View>
-              <View style={styles.smartPlannerTextContainer}>
-                <Text style={styles.smartPlannerTitle}>Smart Planner</Text>
-                <Text style={styles.smartPlannerSubtitle}>
-                  Найти оптимальное время для репетиции
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Selected Date Rehearsals */}
+        <TodayRehearsals
+          rehearsals={selectedDateRehearsals}
+          selectedDate={selectedDate}
+          loading={loading}
+          projects={projects}
+          rsvpResponses={rsvpResponses}
+          respondingId={respondingId}
+          adminStats={adminStats}
+          onRSVP={handleRSVP}
+          onDeleteRehearsal={handleDeleteRehearsal}
+          setRsvpResponses={setRsvpResponses}
+          setAdminStats={setAdminStats}
+        />
 
         {/* Upcoming Events */}
         <View style={styles.upcomingSection}>
@@ -324,13 +320,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
               <Text style={styles.emptyText}>Нет предстоящих репетиций</Text>
             </View>
           ) : (
-            <FlatList
-              data={upcomingRehearsals}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.upcomingList}
-              renderItem={({ item: rehearsal }) => {
+            <View style={styles.upcomingList}>
+              {upcomingRehearsals.map((rehearsal) => {
                 const currentResponse = rsvpResponses[rehearsal.id];
                 const isResponding = respondingId === rehearsal.id;
                 const project = projects.find(p => p.id === rehearsal.projectId);
@@ -339,19 +330,21 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                 const stats = adminStats[rehearsal.id];
 
                 return (
-                  <View style={styles.upcomingCard}>
+                  <View key={rehearsal.id} style={styles.upcomingCard}>
                     <TouchableOpacity
                       onPress={() => {
-                        setSelectedDate(rehearsal.date);
-                        setModalDate(rehearsal.date);
-                        setModalVisible(true);
+                        if (rehearsal.date) {
+                          setSelectedDate(rehearsal.date);
+                          setModalDate(rehearsal.date);
+                          setModalVisible(true);
+                        }
                       }}
                       activeOpacity={0.7}
                     >
                       <View style={styles.upcomingCardHeader}>
                         <View style={styles.upcomingDateBadge}>
                           <Text style={styles.upcomingDateText}>
-                            {getRelativeDateLabel(rehearsal.date)}
+                            {getRelativeDateLabel(rehearsal.date || '')}
                           </Text>
                         </View>
                         {isAdminForThisRehearsal && (
@@ -366,7 +359,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                         <View style={styles.upcomingTimeRow}>
                           <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
                           <Text style={styles.upcomingTime}>
-                            {rehearsal.time.substring(0, 5)}
+                            {rehearsal.time?.substring(0, 5) || ''}
                             {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
                           </Text>
                         </View>
@@ -470,8 +463,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                     )}
                   </View>
                 );
-              }}
-            />
+              })}
+            </View>
           )}
         </View>
       </ScrollView>

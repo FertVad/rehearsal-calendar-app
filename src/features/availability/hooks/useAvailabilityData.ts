@@ -25,16 +25,36 @@ export const useAvailabilityData = () => {
       // Group by date
       const serverData: Record<string, Array<{ startTime: string; endTime: string; type: string; isAllDay?: boolean; source?: string }>> = {};
       for (const record of rawRecords) {
+        // Extract date from startsAt (ISO timestamp) or legacy date field
+        const dateSource = record.startsAt || record.date;
+        if (!dateSource) continue;
+
         // Extract date without timezone offset
-        const dateStr = record.date.split('T')[0];
+        const dateStr = dateSource.split('T')[0];
         if (!serverData[dateStr]) {
           serverData[dateStr] = [];
         }
 
-        // Handle both old format (start_time/end_time) and new format (start/end)
-        const startTime = record.start || record.start_time;
-        const endTime = record.end || record.end_time;
+        // Handle multiple formats:
+        // - New TIMESTAMPTZ: startsAt/endsAt (ISO 8601)
+        // - Old format: start/end or start_time/end_time (HH:mm)
+        let startTime, endTime;
+
+        if (record.startsAt && record.endsAt) {
+          // Extract time from ISO timestamp (e.g., "2025-12-11T10:00:00.000Z" -> "10:00")
+          const startsAtDate = new Date(record.startsAt);
+          const endsAtDate = new Date(record.endsAt);
+          startTime = `${String(startsAtDate.getHours()).padStart(2, '0')}:${String(startsAtDate.getMinutes()).padStart(2, '0')}`;
+          endTime = `${String(endsAtDate.getHours()).padStart(2, '0')}:${String(endsAtDate.getMinutes()).padStart(2, '0')}`;
+        } else {
+          startTime = record.start || record.start_time;
+          endTime = record.end || record.end_time;
+        }
+
         const isAllDay = record.isAllDay ?? record.is_all_day;
+
+        // Skip if we couldn't extract valid times
+        if (!startTime || !endTime) continue;
 
         serverData[dateStr].push({
           startTime,
@@ -48,7 +68,7 @@ export const useAvailabilityData = () => {
       // Convert server format to local format
       const localData: AvailabilityData = {};
       for (const [dateKey, slots] of Object.entries(serverData)) {
-        const typedSlots = slots as Array<{ startTime: string; endTime: string; type: string }>;
+        const typedSlots = slots as Array<{ startTime: string; endTime: string; type: string; isAllDay?: boolean }>;
         if (typedSlots.length === 0) continue;
 
         // Ensure date is in YYYY-MM-DD format
@@ -66,7 +86,7 @@ export const useAvailabilityData = () => {
         let mode: DayMode = 'free';
 
         // Strip seconds from time (HH:MM:SS -> HH:MM)
-        const formatTime = (time: string) => time.substring(0, 5);
+        const formatTime = (time: string) => time?.substring(0, 5) || '00:00';
 
         // Check if this is an all-day slot using the isAllDay flag
         if (firstSlot.isAllDay) {

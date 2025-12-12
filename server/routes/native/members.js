@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
-import { convertSlotsFromUTC } from '../../utils/timezone.js';
+import { timestampToLocal, timestampToISO } from '../../utils/timezone.js';
 
 const router = Router();
 
@@ -68,15 +68,19 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
     const users = await db.all(usersQuery, targetUserIds);
     const usersMap = new Map(users.map(u => [u.id, u]));
 
-    // Batch fetch all availability records for all users and dates
+    // Build date range for TIMESTAMPTZ query
+    // We need to query starts_at timestamps that fall on these dates in each user's timezone
+    // For safety, query the full day range expanded by 24 hours on both sides
     const startDateStr = dates[0];
     const endDateStr = dates[dates.length - 1];
+
     const availabilityRecords = await db.all(
-      `SELECT * FROM native_user_availability
+      `SELECT user_id, starts_at, ends_at, type, is_all_day
+       FROM native_user_availability
        WHERE user_id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})
-         AND date >= $${targetUserIds.length + 1}
-         AND date <= $${targetUserIds.length + 2}
-       ORDER BY user_id, date, start_time ASC`,
+         AND starts_at >= $${targetUserIds.length + 1}::date - interval '1 day'
+         AND starts_at < $${targetUserIds.length + 2}::date + interval '2 days'
+       ORDER BY user_id, starts_at ASC`,
       [...targetUserIds, startDateStr, endDateStr]
     );
 
@@ -108,36 +112,38 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
         dates: []
       };
 
-      // Group records by date (convert from UTC to user's local timezone)
+      // Group records by date in user's timezone
       const recordsByDate = new Map();
       for (const record of userRecords) {
-        let dateStr;
-        if (record.date instanceof Date) {
-          // Convert UTC date to user's local timezone date
-          const utcDate = record.date;
-          const localDate = new Date(utcDate.toLocaleString('en-US', { timeZone: userTimezone }));
-          const year = localDate.getFullYear();
-          const month = String(localDate.getMonth() + 1).padStart(2, '0');
-          const day = String(localDate.getDate()).padStart(2, '0');
-          dateStr = `${year}-${month}-${day}`;
-        } else {
-          // If it's a string, extract just the date part
-          dateStr = typeof record.date === 'string' ? record.date.split('T')[0] : record.date;
-        }
+        // Convert timestamp to user's local date
+        const startsAtISO = timestampToISO(record.starts_at);
+        const { date: localDate } = timestampToLocal(startsAtISO, userTimezone);
 
-        if (!recordsByDate.has(dateStr)) {
-          recordsByDate.set(dateStr, []);
+        if (!recordsByDate.has(localDate)) {
+          recordsByDate.set(localDate, []);
         }
-        recordsByDate.get(dateStr).push(record);
+        recordsByDate.get(localDate).push(record);
       }
 
-      // Process each date
+      // Process each requested date
       for (const currentDate of dates) {
         const records = recordsByDate.get(currentDate) || [];
 
         if (records.length > 0) {
-          // Convert UTC times to user's local timezone
-          const timeRanges = convertSlotsFromUTC(currentDate, records, userTimezone);
+          // Convert timestamps to time ranges in user's local timezone
+          const timeRanges = records.map(record => {
+            const startsAtISO = timestampToISO(record.starts_at);
+            const endsAtISO = timestampToISO(record.ends_at);
+            const { time: startTime } = timestampToLocal(startsAtISO, userTimezone);
+            const { time: endTime } = timestampToLocal(endsAtISO, userTimezone);
+
+            return {
+              start: startTime,
+              end: endTime,
+              type: record.type,
+              isAllDay: record.is_all_day
+            };
+          });
 
           userAvailability.dates.push({
             date: currentDate,
@@ -149,6 +155,7 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
       availability.push(userAvailability);
     }
 
+    console.log('[Members Availability] Response:', JSON.stringify(availability, null, 2));
     res.json({ availability });
   } catch (error) {
     console.error('[Availability] Error getting members availability:', error);

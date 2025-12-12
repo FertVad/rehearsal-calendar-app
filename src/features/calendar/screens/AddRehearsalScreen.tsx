@@ -25,6 +25,7 @@ import { ActorSelector } from '../components/ActorSelector';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { TimeRange } from '../../../shared/utils/availability';
 import { checkSchedulingConflicts, formatConflictMessage } from '../../../shared/utils/conflictDetection';
+import { dateTimeToISO } from '../../../shared/utils/time';
 import { addRehearsalScreenStyles as styles } from '../styles';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
@@ -380,10 +381,14 @@ export default function AddRehearsalScreen() {
     setLoading(true);
 
     try {
+      // Convert date + time to ISO timestamps
+      const dateString = formatDate(date);
+      const startTimeString = formatTime(startTime);
+      const endTimeString = formatTime(endTime);
+
       const rehearsalData = {
-        date: formatDate(date),
-        startTime: formatTime(startTime),
-        endTime: formatTime(endTime),
+        startsAt: dateTimeToISO(dateString, startTimeString),
+        endsAt: dateTimeToISO(dateString, endTimeString),
         location: location.trim() || undefined,
         participant_ids: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
       };

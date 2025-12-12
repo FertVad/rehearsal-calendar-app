@@ -27,8 +27,3 @@ export interface MonthData {
   year: number;
   month: number;
 }
-
-export interface DayData {
-  day: number;
-  isPadding: boolean;
-}

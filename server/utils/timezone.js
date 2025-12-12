@@ -27,86 +27,22 @@
  * @property {string} [notes] - Optional notes for the slot
  */
 
-/**
- * Convert local time in user's timezone to UTC
- * @param {string} date - Date in YYYY-MM-DD format
- * @param {string} time - Time in HH:mm format
- * @param {string} timezone - IANA timezone (e.g., 'Europe/Moscow')
- * @returns {DateTimeResult} - Date and time in UTC
- */
-export function localToUTC(date, time, timezone) {
-  // Parse date and time
-  const [year, month, day] = date.split('-').map(Number);
-  const [hours, minutes] = time.split(':').map(Number);
-
-  // Create a date/time string in ISO format for the target timezone
-  const dateTimeStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-
-  // Create a formatter that will parse this as being in the target timezone
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-
-  // Parse the local time in the target timezone and get UTC timestamp
-  // We create a date object and format it back in the target timezone to ensure correct parsing
-  const parts = dateTimeStr.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-  const localYear = parseInt(parts[1]);
-  const localMonth = parseInt(parts[2]);
-  const localDay = parseInt(parts[3]);
-  const localHour = parseInt(parts[4]);
-  const localMinute = parseInt(parts[5]);
-
-  // Create a Date object that represents this time in the target timezone
-  // We do this by creating the date in UTC and then adjusting for the timezone offset
-  const testDate = new Date(Date.UTC(localYear, localMonth - 1, localDay, localHour, localMinute));
-
-  // Get the formatter to tell us what this UTC time looks like in the target timezone
-  const formatted = formatter.format(testDate);
-  const formattedParts = formatted.match(/(\d{2})\/(\d{2})\/(\d{4}),\s*(\d{2}):(\d{2}):(\d{2})/);
-
-  // Calculate the difference between what we want and what we got
-  const gotMonth = parseInt(formattedParts[1]);
-  const gotDay = parseInt(formattedParts[2]);
-  const gotYear = parseInt(formattedParts[3]);
-  const gotHour = parseInt(formattedParts[4]);
-  const gotMinute = parseInt(formattedParts[5]);
-
-  // Calculate offset in minutes
-  const wantedMs = Date.UTC(localYear, localMonth - 1, localDay, localHour, localMinute);
-  const gotMs = Date.UTC(gotYear, gotMonth - 1, gotDay, gotHour, gotMinute);
-  const offsetMs = wantedMs - gotMs;
-
-  // Apply the offset to get the correct UTC time
-  const utcMs = testDate.getTime() + offsetMs;
-  const utcDate = new Date(utcMs);
-
-  return {
-    date: formatDate(utcDate),
-    time: formatTime(utcDate),
-  };
-}
+// =============================================================================
+// TIMESTAMPTZ UTILITIES
+// =============================================================================
 
 /**
- * Convert UTC time to user's local timezone
- * @param {string} date - Date in YYYY-MM-DD format (UTC)
- * @param {string} time - Time in HH:mm format (UTC)
- * @param {string} timezone - IANA timezone
+ * Convert ISO 8601 timestamp to local date/time components in user's timezone
+ * @param {string} isoTimestamp - ISO 8601 timestamp string (e.g., "2025-12-10T19:00:00+02:00")
+ * @param {string} timezone - IANA timezone (e.g., 'Asia/Jerusalem')
  * @returns {DateTimeResult} - Date and time in local timezone
+ *
+ * @example
+ * timestampToLocal("2025-12-10T19:00:00+02:00", "Asia/Jerusalem")
+ * // Returns: { date: "2025-12-10", time: "19:00" }
  */
-export function utcToLocal(date, time, timezone) {
-  // Parse UTC date and time
-  const [year, month, day] = date.split('-').map(Number);
-  const [hours, minutes] = time.split(':').map(Number);
-
-  // Create UTC date
-  const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+export function timestampToLocal(isoTimestamp, timezone) {
+  const date = new Date(isoTimestamp);
 
   // Format in target timezone
   const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -119,58 +55,121 @@ export function utcToLocal(date, time, timezone) {
     hour12: false,
   });
 
-  const parts = formatter.formatToParts(utcDate);
+  const parts = formatter.formatToParts(date);
   const dateParts = {};
   for (const part of parts) {
     dateParts[part.type] = part.value;
   }
 
+  // Fix hour=24 edge case (midnight can be formatted as 24:00 instead of 00:00)
+  let hour = dateParts.hour;
+  if (hour === '24') {
+    hour = '00';
+  }
+
   return {
     date: `${dateParts.year}-${dateParts.month}-${dateParts.day}`,
-    time: `${dateParts.hour}:${dateParts.minute}`,
+    time: `${hour}:${dateParts.minute}`,
   };
 }
 
 /**
- * Convert availability slots from user timezone to UTC
- * @param {string} date - Date in YYYY-MM-DD format (local timezone)
- * @param {AvailabilitySlot[]} slots - Array of availability slots in local timezone
- * @param {string} timezone - IANA timezone
- * @returns {Array<Object>} - Slots converted to UTC with DB fields
+ * Convert local date/time in user's timezone to ISO 8601 TIMESTAMPTZ string
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @param {string} time - Time in HH:mm format
+ * @param {string} timezone - IANA timezone (e.g., 'Asia/Jerusalem')
+ * @returns {string} - ISO 8601 timestamp in UTC (Z format)
+ *
+ * @example
+ * localToTimestamp("2025-12-10", "19:00", "Asia/Jerusalem")
+ * // Returns: "2025-12-10T17:00:00.000Z" (19:00 Jerusalem = 17:00 UTC)
  */
-export function convertSlotsToUTC(date, slots, timezone) {
-  if (!timezone || timezone === 'UTC') {
-    return slots.map(slot => ({
-      ...slot,
-      date,
-      startTime: slot.start,
-      endTime: slot.end,
-    }));
+export function localToTimestamp(date, time, timezone) {
+  // Parse date and time
+  const [year, month, day] = date.split('-').map(Number);
+  const [hours, minutes] = time.split(':').map(Number);
+
+  // Create date string for the target timezone
+  const dateTimeStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+
+  // Use Intl.DateTimeFormat to interpret this time in the target timezone
+  // and convert to UTC
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  // Create a UTC date and adjust for timezone
+  const testDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+
+  // Format in target timezone to see what time it shows
+  const formatted = formatter.format(testDate);
+  const parts = formatted.match(/(\d{2})\/(\d{2})\/(\d{4}),\s*(\d{2}):(\d{2}):(\d{2})/);
+
+  if (!parts) {
+    throw new Error('Failed to parse formatted date');
   }
 
+  const gotMonth = parseInt(parts[1]);
+  const gotDay = parseInt(parts[2]);
+  const gotYear = parseInt(parts[3]);
+  const gotHour = parseInt(parts[4]);
+  const gotMinute = parseInt(parts[5]);
+
+  // Calculate the difference between what we want and what we got
+  const wantedMs = Date.UTC(year, month - 1, day, hours, minutes);
+  const gotMs = Date.UTC(gotYear, gotMonth - 1, gotDay, gotHour, gotMinute);
+  const offsetMs = wantedMs - gotMs;
+
+  // Apply offset to get correct UTC time
+  const utcMs = testDate.getTime() + offsetMs;
+  const correctDate = new Date(utcMs);
+
+  // Return ISO string in UTC (Z format) - PostgreSQL handles this correctly
+  return correctDate.toISOString();
+}
+
+/**
+ * Convert TIMESTAMPTZ from database to ISO 8601 string
+ * PostgreSQL TIMESTAMPTZ is returned as JS Date object by node-postgres
+ * @param {Date} timestamp - Date object from PostgreSQL TIMESTAMPTZ column
+ * @returns {string} - ISO 8601 timestamp string
+ *
+ * @example
+ * timestampToISO(new Date("2025-12-10T17:00:00.000Z"))
+ * // Returns: "2025-12-10T17:00:00.000Z"
+ */
+export function timestampToISO(timestamp) {
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  return new Date(timestamp).toISOString();
+}
+
+/**
+ * Convert availability slots with TIMESTAMPTZ to API response format
+ * @param {Array} slots - Array of availability slots from database with starts_at/ends_at
+ * @param {string} timezone - IANA timezone for the user
+ * @returns {Array} - Slots formatted for API response
+ *
+ * @example
+ * formatAvailabilitySlotsResponse([
+ *   { starts_at: new Date(...), ends_at: new Date(...), is_all_day: false }
+ * ], "Asia/Jerusalem")
+ */
+export function formatAvailabilitySlotsResponse(slots, timezone) {
   return slots.map(slot => {
-    // Special case: all-day slots should NOT be timezone converted
-    // They represent the entire local day, regardless of timezone
-    if (slot.isAllDay) {
-      return {
-        date,
-        startTime: '00:00',
-        endTime: '23:59',
-        isAllDay: true,
-        title: slot.title,
-        notes: slot.notes,
-      };
-    }
-
-    const startUTC = localToUTC(date, slot.start, timezone);
-    const endUTC = localToUTC(date, slot.end, timezone);
-
     return {
-      date: startUTC.date,
-      startTime: startUTC.time,
-      endTime: endUTC.time,
-      endDate: endUTC.date !== startUTC.date ? endUTC.date : undefined,
-      isAllDay: false,
+      startsAt: timestampToISO(slot.starts_at),
+      endsAt: timestampToISO(slot.ends_at),
+      isAllDay: slot.is_all_day,
+      type: slot.type,
       title: slot.title,
       notes: slot.notes,
     };
@@ -178,78 +177,25 @@ export function convertSlotsToUTC(date, slots, timezone) {
 }
 
 /**
- * Convert availability slots from UTC to user timezone
- * @param {string} date - Date in YYYY-MM-DD format (local timezone reference)
- * @param {DBAvailabilitySlot[]} slots - Array of availability slots from database (UTC)
- * @param {string} timezone - IANA timezone
- * @returns {AvailabilitySlot[]} - Slots converted to local timezone
+ * Convert rehearsal with TIMESTAMPTZ to API response format
+ * @param {Object} rehearsal - Rehearsal object from database with starts_at/ends_at
+ * @returns {Object} - Rehearsal formatted for API response
+ *
+ * @example
+ * formatRehearsalResponse({
+ *   id: 1,
+ *   starts_at: new Date(...),
+ *   ends_at: new Date(...),
+ *   ...
+ * })
  */
-export function convertSlotsFromUTC(date, slots, timezone) {
-  if (!timezone || timezone === 'UTC') {
-    return slots.map(slot => ({
-      date,
-      start: slot.start_time,
-      end: slot.end_time,
-      type: slot.type,
-      title: slot.title,
-      notes: slot.notes,
-    }));
-  }
-
-  return slots.map(slot => {
-    // Special case: all-day slots should NOT be timezone converted
-    // They represent the entire local day, regardless of timezone
-    if (slot.is_all_day) {
-      return {
-        start: '00:00',
-        end: '23:59',
-        type: slot.type,
-        title: slot.title,
-        notes: slot.notes,
-      };
-    }
-
-    const startLocal = utcToLocal(date, slot.start_time, timezone);
-    const endLocal = utcToLocal(date, slot.end_time, timezone);
-
-    return {
-      start: startLocal.time,
-      end: endLocal.time,
-      type: slot.type,
-      title: slot.title,
-      notes: slot.notes,
-    };
-  });
+export function formatRehearsalResponse(rehearsal) {
+  return {
+    ...rehearsal,
+    startsAt: timestampToISO(rehearsal.starts_at),
+    endsAt: timestampToISO(rehearsal.ends_at),
+    // Remove old fields if they exist
+    starts_at: undefined,
+    ends_at: undefined,
+  };
 }
-
-/**
- * Format Date object as YYYY-MM-DD string in UTC
- * @param {Date} date - Date object to format
- * @returns {string} - Formatted date string
- * @private
- */
-function formatDate(date) {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-/**
- * Format Date object as HH:mm string in UTC
- * @param {Date} date - Date object to format
- * @returns {string} - Formatted time string
- * @private
- */
-function formatTime(date) {
-  const hours = String(date.getUTCHours()).padStart(2, '0');
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-}
-
-export default {
-  localToUTC,
-  utcToLocal,
-  convertSlotsToUTC,
-  convertSlotsFromUTC,
-};

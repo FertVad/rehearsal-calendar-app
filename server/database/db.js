@@ -1,3 +1,13 @@
+/**
+ * Database abstraction layer for PostgreSQL and SQLite
+ *
+ * TIMESTAMPTZ handling:
+ * - PostgreSQL: node-postgres automatically converts TIMESTAMPTZ columns to JavaScript Date objects
+ * - SQLite: Timestamps are stored as ISO 8601 strings
+ *
+ * No special date/time conversion needed here - handled by the database driver.
+ */
+
 import Database from 'better-sqlite3';
 import path from 'path';
 import pkg from 'pg';

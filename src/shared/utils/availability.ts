@@ -50,44 +50,6 @@ export const mergeBusyRanges = (ranges: TimeRange[]): TimeRange[] => {
   return merged.map(r => ({ start: toTimeString(r.start), end: toTimeString(r.end) }));
 };
 
-export function subtractRanges(
-  ranges: TimeRange[] = [],
-  toSubtract?: TimeRange,
-): TimeRange[] {
-  if (!toSubtract) return ranges;
-  const subStart = toMinutes(toSubtract.start);
-  const subEnd = toMinutes(toSubtract.end);
-  const result: TimeRange[] = [];
-  for (const r of ranges) {
-    const start = toMinutes(r.start);
-    const end = toMinutes(r.end);
-    if (subEnd <= start || subStart >= end) {
-      result.push(r);
-      continue;
-    }
-    if (subStart > start) {
-      result.push({ start: toTimeString(start), end: toTimeString(Math.min(subStart, end)) });
-    }
-    if (subEnd < end) {
-      result.push({ start: toTimeString(Math.max(subEnd, start)), end: toTimeString(end) });
-    }
-  }
-  return result;
-}
-
-export const isDayFullyBusy = (ranges: TimeRange[]): boolean =>
-  ranges.length === 1 && ranges[0].start === '00:00' && ranges[0].end === '23:59';
-
-export function classifyDayByRanges(ranges: TimeRange[]): 'free' | 'partial' | 'busy' {
-  const rs = Array.isArray(ranges) ? ranges : [];
-  if (rs.length === 0) return 'free';
-  const first = rs[0];
-  const last = rs[rs.length - 1];
-  return toMinutes(first.start) <= 0 && toMinutes(last.end) >= DAY_END
-    ? 'busy'
-    : 'partial';
-}
-
 export const busyToFreeGaps = (ranges: TimeRange[]): TimeRange[] => {
   const merged = mergeBusyRanges(ranges)
     .map(clampToWorkday)
