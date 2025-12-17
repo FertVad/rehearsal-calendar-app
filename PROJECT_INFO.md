@@ -11,7 +11,7 @@
 - ✅ Управление доступностью участников
 - ✅ RSVP система для репетиций
 - ✅ Умные рекомендации времени на основе доступности
-- ✅ Многоязычность (i18n)
+- ✅ **Полная локализация (Русский/English)** - все экраны, компоненты, уведомления
 - ✅ Push-уведомления (готово к интеграции)
 
 ---
@@ -551,6 +551,12 @@ npx expo run:android
 - [x] ✅ Исправлена RSVP функциональность - корректная сигнатура handleRSVP с callback паттерном
 - [x] ✅ Удалены emoji иконки из Smart Planner (Период, Участники)
 - [x] ✅ Добавлены quick action кнопки в MemberFilter для быстрого выбора всех/очистки участников
+- [x] ✅ **MAJOR**: Полная локализация приложения (Русский/English)
+  - Все экраны переведены на оба языка
+  - Динамические календарные компоненты (месяцы, дни недели)
+  - Локализованные DateTimePicker и Calendar компоненты
+  - Компонент ActorSelector с переводами статусов доступности
+  - Unified i18n система с централизованными переводами
 
 ### TODO
 - [ ] Push notifications (Expo Notifications)
@@ -626,6 +632,114 @@ curl http://localhost:3001/api/auth/me  # Должен вернуть 401 (эт�
 ## 📄 License
 
 Private project - All rights reserved
+
+---
+
+## 🌍 Internationalization (i18n)
+
+### Система локализации
+
+Приложение полностью поддерживает два языка: **Русский** и **English**.
+
+**Location**: `src/i18n/translations.ts`, `src/contexts/I18nContext.tsx`
+
+### Архитектура
+
+**1. Translations File** (`src/i18n/translations.ts`)
+```typescript
+export type Language = 'ru' | 'en';
+
+export interface Translations {
+  common: { save, cancel, delete, ... },
+  nav: { calendar, projects, ... },
+  auth: { login, register, ... },
+  calendar: { ... },
+  projects: { ... },
+  rehearsals: { ... },
+  availability: { ... },
+  smartPlanner: { ... },
+  profile: { ... },
+  days: { monday, tuesday, ..., short: { ... } },
+  months: string[]
+}
+
+const ru: Translations = { ... };
+const en: Translations = { ... };
+```
+
+**2. I18n Context** (`src/contexts/I18nContext.tsx`)
+```typescript
+const { t, language, changeLanguage } = useI18n();
+
+// Использование
+<Text>{t.common.save}</Text>
+<Text>{t.rehearsals.selectedCount(5, 10)}</Text>
+<Text>{t.months[monthIndex]}</Text>
+```
+
+**3. Dynamic Functions**
+Некоторые переводы - это функции для динамического текста:
+```typescript
+// В translations.ts
+selectedCount: (selected: number, total: number) => `Выбрано: ${selected} из ${total}`
+
+// Использование
+t.rehearsals.selectedCount(3, 10) // "Выбрано: 3 из 10"
+```
+
+### Локализованные компоненты
+
+**1. CalendarMonth** - Календарная сетка
+- Динамические названия месяцев (`t.months[month]`)
+- Локализованные дни недели (`t.days.short.*`)
+- Location: `src/features/availability/components/calendar/CalendarMonth.tsx`
+
+**2. DateRangePicker** - Выбор диапазона дат
+- Использует `react-native-calendars` с локализацией
+- Настроенные LocaleConfig для ru/en
+- Location: `src/shared/components/DateRangePicker.tsx`
+
+**3. DateTimePicker** - Выбор даты/времени
+- Пропс `locale` зависит от текущего языка
+- Location: используется в AddRehearsalScreen, AvailabilityScreen
+
+**4. ActorSelector** - Выбор участников
+- Статусы доступности: "Свободен"/"Available", "Занят весь день"/"Busy all day"
+- Контролы: "Выбрать всех"/"Select All", "Развернуть"/"Expand"
+- Location: `src/features/calendar/components/ActorSelector.tsx`
+
+### Переключение языка
+
+Язык выбирается в ProfileScreen:
+```typescript
+// ProfileScreen.tsx
+<TouchableOpacity onPress={() => changeLanguage('en')}>
+  <Text>English</Text>
+</TouchableOpacity>
+
+<TouchableOpacity onPress={() => changeLanguage('ru')}>
+  <Text>Русский</Text>
+</TouchableOpacity>
+```
+
+Язык сохраняется в AsyncStorage и автоматически применяется при следующем запуске.
+
+### Форматирование дат
+
+Динамическое форматирование на основе locale:
+```typescript
+const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+date.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+```
+
+### Добавление новых переводов
+
+См. подробную инструкцию: [LOCALIZATION_GUIDE.md](LOCALIZATION_GUIDE.md)
+
+**Краткий алгоритм:**
+1. Добавить ключ в интерфейс `Translations`
+2. Добавить переводы в объекты `ru` и `en`
+3. Использовать в компоненте через `t.section.key`
 
 ---
 
@@ -1019,6 +1133,6 @@ GET /api/native/projects/:projectId/members/availability?startDate=YYYY-MM-DD&en
 
 ---
 
-**Last updated**: December 12, 2025
-**Version**: 1.3.0
+**Last updated**: December 17, 2025
+**Version**: 1.4.0 - Full i18n Implementation
 **Maintainer**: Vadim Fertik
