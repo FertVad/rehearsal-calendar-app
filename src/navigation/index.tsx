@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../contexts/I18nContext';
 import { Colors } from '../shared/constants/colors';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
@@ -88,6 +89,8 @@ function AuthNavigator() {
 }
 
 function TabNavigator() {
+  const { t } = useI18n();
+
   return (
     <AppTabs.Navigator
       screenOptions={{
@@ -112,7 +115,7 @@ function TabNavigator() {
         name="Calendar"
         component={CalendarScreen}
         options={{
-          tabBarLabel: 'Дом',
+          tabBarLabel: t.nav.calendar,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
@@ -122,7 +125,7 @@ function TabNavigator() {
         name="Projects"
         component={ProjectsScreen}
         options={{
-          tabBarLabel: 'Проекты',
+          tabBarLabel: t.nav.projects,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="folder" size={size} color={color} />
           ),
@@ -132,7 +135,7 @@ function TabNavigator() {
         name="Create"
         component={AddRehearsalScreen}
         options={{
-          tabBarLabel: 'Создать',
+          tabBarLabel: t.nav.addRehearsal,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="add-circle" size={size + 4} color={color} />
           ),
@@ -142,7 +145,7 @@ function TabNavigator() {
         name="Availability"
         component={AvailabilityScreen}
         options={{
-          tabBarLabel: 'Занятость',
+          tabBarLabel: t.profile.availability,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="time" size={size} color={color} />
           ),
@@ -152,7 +155,7 @@ function TabNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarLabel: 'Профиль',
+          tabBarLabel: t.nav.profile,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),

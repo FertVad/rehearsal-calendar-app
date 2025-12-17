@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { createProjectScreenStyles as styles } from '../styles';
 
 type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
@@ -40,6 +41,7 @@ const TIMEZONES = [
 
 export default function CreateProjectScreen({ navigation }: CreateProjectScreenProps) {
   const { createProject } = useProjects();
+  const { t } = useI18n();
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
   const [projectTimezone, setProjectTimezone] = useState('Asia/Jerusalem');
@@ -53,7 +55,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
   const handleCreateProject = async () => {
     if (!projectName.trim()) {
-      Alert.alert('Ошибка', 'Введите название проекта');
+      Alert.alert(t.common.error, t.projects.nameRequired);
       return;
     }
 
@@ -62,7 +64,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
       await createProject(projectName.trim(), projectDescription.trim() || undefined, projectTimezone);
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Ошибка', err.message || 'Не удалось создать проект');
+      Alert.alert(t.common.error, err.message || t.projects.createError);
     } finally {
       setCreating(false);
     }
@@ -79,17 +81,17 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.title}>Новый проект</Text>
+          <Text style={styles.title}>{t.projects.createProject}</Text>
           <View style={styles.headerRight} />
         </View>
 
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
           {/* Project Name */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Название проекта</Text>
+            <Text style={styles.label}>{t.projects.projectName}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Введите название"
+              placeholder={t.projects.namePlaceholder}
               placeholderTextColor={Colors.text.tertiary}
               value={projectName}
               onChangeText={setProjectName}
@@ -99,10 +101,10 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
           {/* Description */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Описание (необязательно)</Text>
+            <Text style={styles.label}>{t.projects.projectDescription} {t.auth.optional}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Введите описание"
+              placeholder={t.projects.descriptionPlaceholder}
               placeholderTextColor={Colors.text.tertiary}
               value={projectDescription}
               onChangeText={setProjectDescription}
@@ -113,7 +115,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
           {/* Timezone Selector */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Часовой пояс</Text>
+            <Text style={styles.label}>Timezone</Text>
             <TouchableOpacity
               style={styles.timezoneSelector}
               activeOpacity={0.7}
@@ -136,7 +138,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
             style={styles.cancelButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.cancelButtonText}>Отмена</Text>
+            <Text style={styles.cancelButtonText}>{t.common.cancel}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -147,7 +149,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
             {creating ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.createButtonText}>Создать</Text>
+              <Text style={styles.createButtonText}>{t.projects.create}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -167,7 +169,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
         >
           <View style={styles.timezoneModalContent}>
             <View style={styles.timezoneModalHeader}>
-              <Text style={styles.timezoneModalTitle}>Выберите часовой пояс</Text>
+              <Text style={styles.timezoneModalTitle}>Select Timezone</Text>
               <TouchableOpacity onPress={() => setTimezonePickerVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>

@@ -3,12 +3,15 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../../../shared/constants/colors';
 import { DayMode } from '../../types';
+import { useI18n } from '../../../../contexts/I18nContext';
 
 interface ModeInfoProps {
   mode: DayMode;
 }
 
 export const ModeInfo: React.FC<ModeInfoProps> = ({ mode }) => {
+  const { t } = useI18n();
+
   if (mode !== 'free' && mode !== 'busy') {
     return null;
   }
@@ -21,9 +24,7 @@ export const ModeInfo: React.FC<ModeInfoProps> = ({ mode }) => {
         color={mode === 'free' ? Colors.accent.green : Colors.accent.red}
       />
       <Text style={styles.modeInfoText}>
-        {mode === 'free'
-          ? 'Вы доступны весь день для репетиций'
-          : 'Вы недоступны в этот день'}
+        {mode === 'free' ? t.availability.freeAllDay : t.availability.busyAllDay}
       </Text>
     </View>
   );

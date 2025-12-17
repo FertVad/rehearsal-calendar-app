@@ -14,6 +14,7 @@ import { Colors } from '../../../shared/constants/colors';
 import { GlassButton } from '../../../shared/components';
 import TelegramLoginButton from '../components/TelegramLoginButton';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { loginScreenStyles as styles } from '../styles';
 
@@ -23,10 +24,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, loading, error } = useAuth();
+  const { t } = useI18n();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Ошибка', 'Заполните все поля');
+      Alert.alert(t.common.error, t.auth.fillAllFields);
       return;
     }
 
@@ -34,7 +36,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       await login(email, password);
       // Navigation handled by AuthProvider
     } catch (err: any) {
-      Alert.alert('Ошибка входа', err.message);
+      Alert.alert(t.auth.loginError, err.message);
     }
   };
 
@@ -49,16 +51,16 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Rehearsal Calendar</Text>
-            <Text style={styles.subtitle}>Войдите в свой аккаунт</Text>
+            <Text style={styles.title}>{t.auth.loginTitle}</Text>
+            <Text style={styles.subtitle}>{t.auth.loginSubtitle}</Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t.auth.email}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="your@email.com"
+                placeholder={t.auth.emailPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 value={email}
                 onChangeText={setEmail}
@@ -69,10 +71,10 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Пароль</Text>
+              <Text style={styles.label}>{t.auth.password}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="••••••••"
+                placeholder={t.auth.passwordPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 value={password}
                 onChangeText={setPassword}
@@ -88,7 +90,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             )}
 
             <GlassButton
-              title="Войти"
+              title={t.auth.loginButton}
               onPress={handleLogin}
               variant="purple"
               loading={loading}
@@ -97,7 +99,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>или</Text>
+              <Text style={styles.dividerText}>{t.common.or}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -107,7 +109,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             />
 
             <GlassButton
-              title="Создать аккаунт"
+              title={t.auth.createAccount}
               onPress={() => navigation.navigate('Register')}
               variant="glass"
               style={styles.registerButton}

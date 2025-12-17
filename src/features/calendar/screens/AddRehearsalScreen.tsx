@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { rehearsalsAPI, projectsAPI } from '../../../shared/services/api';
 import { Project, ProjectMember } from '../../../shared/types';
 import { ActorSelector } from '../components/ActorSelector';
@@ -35,6 +36,7 @@ export default function AddRehearsalScreen() {
   const navigation = useNavigation<NavigationType>();
   const route = useRoute<RouteType>();
   const { projects, selectedProject, setSelectedProject } = useProjects();
+  const { t, language } = useI18n();
 
   // Get route params
   const { projectId: prefilledProjectId, prefilledDate, prefilledTime, prefilledEndTime } = route.params || {};
@@ -144,7 +146,7 @@ export default function AddRehearsalScreen() {
         setMembers(response.data.members || []);
       } catch (error) {
         console.error('Failed to load members:', error);
-        Alert.alert('Ошибка', 'Не удалось загрузить участников проекта');
+        Alert.alert(t.common.error, t.rehearsals.loadMembersError);
       } finally {
         setLoadingMembers(false);
       }
@@ -205,7 +207,7 @@ export default function AddRehearsalScreen() {
           response: error.response?.data,
           status: error.response?.status,
         });
-        Alert.alert('Ошибка', 'Не удалось загрузить доступность участников');
+        Alert.alert(t.common.error, t.rehearsals.loadAvailabilityError);
         setMemberAvailability({});
       } finally {
         setLoadingAvailability(false);
@@ -241,7 +243,8 @@ export default function AddRehearsalScreen() {
   };
 
   const formatDisplayDate = (d: Date) => {
-    return d.toLocaleDateString('ru-RU', {
+    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    return d.toLocaleDateString(locale, {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
@@ -323,12 +326,12 @@ export default function AddRehearsalScreen() {
   const handleSubmit = async () => {
     // Validation
     if (!localSelectedProject) {
-      Alert.alert('Ошибка', 'Выберите проект для создания репетиции');
+      Alert.alert(t.common.error, t.rehearsals.projectNotSelected);
       return;
     }
 
     if (endTime <= startTime) {
-      Alert.alert('Ошибка', 'Время окончания должно быть позже времени начала');
+      Alert.alert(t.common.error, t.rehearsals.endTimeError);
       return;
     }
 
@@ -350,15 +353,15 @@ export default function AddRehearsalScreen() {
 
         // Show warning and ask for confirmation
         Alert.alert(
-          '⚠️ Конфликт расписания',
-          `${conflictMessage}\n\nВы уверены, что хотите создать репетицию?`,
+          t.rehearsals.scheduleConflict,
+          `${conflictMessage}\n\n${t.rehearsals.scheduleConflictMessage}`,
           [
             {
-              text: 'Отмена',
+              text: t.common.cancel,
               style: 'cancel',
             },
             {
-              text: 'Создать всё равно',
+              text: t.rehearsals.createAnyway,
               style: 'destructive',
               onPress: () => createRehearsal(),
             },
@@ -374,7 +377,7 @@ export default function AddRehearsalScreen() {
 
   const createRehearsal = async () => {
     if (!localSelectedProject) {
-      Alert.alert('Ошибка', 'Проект не выбран');
+      Alert.alert(t.common.error, t.rehearsals.projectNotSelected);
       return;
     }
 
@@ -396,8 +399,8 @@ export default function AddRehearsalScreen() {
       await rehearsalsAPI.create(localSelectedProject.id, rehearsalData);
 
       Alert.alert(
-        'Успешно',
-        'Репетиция создана',
+        t.rehearsals.success,
+        t.rehearsals.rehearsalCreated,
         [
           {
             text: 'OK',
@@ -411,8 +414,8 @@ export default function AddRehearsalScreen() {
     } catch (error: any) {
       console.error('Failed to create rehearsal:', error);
       Alert.alert(
-        'Ошибка',
-        error.response?.data?.error || error.message || 'Не удалось создать репетицию'
+        t.common.error,
+        error.response?.data?.error || error.message || t.rehearsals.createError
       );
     } finally {
       setLoading(false);
@@ -424,14 +427,14 @@ export default function AddRehearsalScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Добавить репетицию</Text>
+          <Text style={styles.title}>{t.rehearsals.addRehearsal}</Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
           {/* Project Selector */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Проект</Text>
+            <Text style={styles.label}>{t.rehearsals.project}</Text>
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={() => setShowProjectPicker(true)}
@@ -441,7 +444,7 @@ export default function AddRehearsalScreen() {
                 styles.pickerButtonText,
                 !localSelectedProject && styles.placeholderText
               ]}>
-                {localSelectedProject?.name || 'Выберите проект'}
+                {localSelectedProject?.name || t.rehearsals.selectProject}
               </Text>
               <Ionicons name="chevron-down" size={20} color={Colors.text.tertiary} style={styles.chevronIcon} />
             </TouchableOpacity>
@@ -449,7 +452,7 @@ export default function AddRehearsalScreen() {
 
           {/* Date */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Дата</Text>
+            <Text style={styles.label}>{t.rehearsals.date}</Text>
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={openDatePicker}
@@ -469,7 +472,7 @@ export default function AddRehearsalScreen() {
                     mode="date"
                     display="spinner"
                     onChange={handleDateChange}
-                    locale="ru-RU"
+                    locale={language === 'ru' ? 'ru-RU' : 'en-US'}
                     themeVariant="dark"
                     textColor={Colors.text.primary}
                   />
@@ -482,7 +485,7 @@ export default function AddRehearsalScreen() {
                 mode="date"
                 display="default"
                 onChange={handleDateChange}
-                locale="ru-RU"
+                locale={language === 'ru' ? 'ru-RU' : 'en-US'}
                 themeVariant="dark"
                 textColor={Colors.text.primary}
               />
@@ -492,7 +495,7 @@ export default function AddRehearsalScreen() {
           {/* Participants */}
           {localSelectedProject && (
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Участники</Text>
+              <Text style={styles.label}>{t.rehearsals.participants}</Text>
               <ActorSelector
                 members={members}
                 selectedMemberIds={selectedMemberIds}
@@ -517,7 +520,7 @@ export default function AddRehearsalScreen() {
 
           {/* Start Time */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Время начала</Text>
+            <Text style={styles.label}>{t.rehearsals.startTime}</Text>
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={openStartTimePicker}
@@ -559,7 +562,7 @@ export default function AddRehearsalScreen() {
 
           {/* End Time */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Время окончания</Text>
+            <Text style={styles.label}>{t.rehearsals.endTime}</Text>
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={openEndTimePicker}
@@ -601,14 +604,14 @@ export default function AddRehearsalScreen() {
 
           {/* Location */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Место</Text>
+            <Text style={styles.label}>{t.rehearsals.location}</Text>
             <View style={styles.locationInputContainer}>
               <Ionicons name="location-outline" size={20} color={Colors.accent.purple} style={styles.locationIcon} />
               <TextInput
                 style={styles.locationInput}
                 value={location}
                 onChangeText={setLocation}
-                placeholder="Адрес или название места"
+                placeholder={t.rehearsals.locationPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
               />
             </View>
@@ -625,7 +628,7 @@ export default function AddRehearsalScreen() {
             ) : (
               <>
                 <Ionicons name="add-circle" size={20} color="#fff" />
-                <Text style={styles.submitButtonText}>Создать репетицию</Text>
+                <Text style={styles.submitButtonText}>{t.rehearsals.createRehearsal}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -646,7 +649,7 @@ export default function AddRehearsalScreen() {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Выберите проект</Text>
+              <Text style={styles.modalTitle}>{t.rehearsals.selectProject}</Text>
               <TouchableOpacity onPress={() => setShowProjectPicker(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
@@ -657,8 +660,8 @@ export default function AddRehearsalScreen() {
                 <Ionicons name="folder-open-outline" size={48} color={Colors.text.tertiary} />
                 <Text style={styles.emptyProjectsText}>
                   {projects.length === 0
-                    ? 'Нет проектов'
-                    : 'Нет проектов, где вы являетесь администратором'}
+                    ? t.rehearsals.noProjects
+                    : t.rehearsals.noAdminProjects}
                 </Text>
               </View>
             ) : (
@@ -701,7 +704,7 @@ export default function AddRehearsalScreen() {
               onPress={handleCreateProject}
             >
               <Ionicons name="add-circle-outline" size={20} color={Colors.accent.purple} />
-              <Text style={styles.createProjectButtonText}>Создать новый проект</Text>
+              <Text style={styles.createProjectButtonText}>{t.rehearsals.createNewProject}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

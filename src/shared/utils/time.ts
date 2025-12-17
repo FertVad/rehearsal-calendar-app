@@ -51,10 +51,11 @@ export const formatDateLocalized = (
     day: 'numeric',
     month: 'long',
     weekday: 'long',
-  }
+  },
+  locale: string = 'ru-RU'
 ): string => {
   const date = parseDateString(dateStr);
-  return date.toLocaleDateString('ru-RU', options);
+  return date.toLocaleDateString(locale, options);
 };
 
 /**

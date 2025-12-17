@@ -5,6 +5,7 @@ import { Colors } from '../../../shared/constants/colors';
 import { Rehearsal } from '../../../shared/types';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
 import { calendarScreenStyles as styles } from '../styles';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface Project {
   id: string;
@@ -49,6 +50,8 @@ export default function TodayRehearsals({
   setRsvpResponses,
   updateAdminStats,
 }: TodayRehearsalsProps) {
+  const { t, language } = useI18n();
+
   // Get date label (Сегодня, Завтра, or formatted date)
   const dateLabel = useMemo(() => {
     const today = formatDateToString(new Date());
@@ -56,10 +59,11 @@ export default function TodayRehearsals({
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = formatDateToString(tomorrow);
 
-    if (selectedDate === today) return 'Сегодня';
-    if (selectedDate === tomorrowStr) return 'Завтра';
-    return formatDateLocalized(selectedDate, { day: 'numeric', month: 'long', weekday: 'long' });
-  }, [selectedDate]);
+    if (selectedDate === today) return t.common.today;
+    if (selectedDate === tomorrowStr) return t.calendar.tomorrow;
+    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    return formatDateLocalized(selectedDate, { day: 'numeric', month: 'long', weekday: 'long' }, locale);
+  }, [selectedDate, t, language]);
 
   if (loading) {
     return (
@@ -77,7 +81,7 @@ export default function TodayRehearsals({
       <View style={styles.todaySection}>
         <Text style={styles.sectionTitle}>{dateLabel}</Text>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Репетиций не запланировано</Text>
+          <Text style={styles.emptyText}>{t.calendar.noRehearsals}</Text>
         </View>
       </View>
     );
@@ -129,7 +133,7 @@ export default function TodayRehearsals({
                   <View style={{ alignItems: 'flex-end', gap: 8 }}>
                     <View style={styles.adminBadge}>
                       <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
-                      <Text style={styles.adminBadgeText}>Админ</Text>
+                      <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
                     </View>
                     <TouchableOpacity
                       onPress={() => onDeleteRehearsal(rehearsal.id)}
@@ -170,7 +174,7 @@ export default function TodayRehearsals({
                         : styles.rsvpStatusDeclined,
                     ]}
                   >
-                    {currentResponse === 'confirmed' ? 'Репетиция подтверждена' : 'Вы отказались'}
+                    {currentResponse === 'confirmed' ? t.calendar.attendanceConfirmed : t.calendar.attendanceDeclined}
                   </Text>
                 </View>
               ) : (
@@ -186,7 +190,7 @@ export default function TodayRehearsals({
                     disabled={isResponding}
                   >
                     <Ionicons name="checkmark" size={18} color={Colors.accent.green} />
-                    <Text style={styles.rsvpButtonTextConfirm}>Приду</Text>
+                    <Text style={styles.rsvpButtonTextConfirm}>{t.calendar.willAttend}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.rsvpButton, styles.rsvpDeclineButton]}
@@ -199,7 +203,7 @@ export default function TodayRehearsals({
                     disabled={isResponding}
                   >
                     <Ionicons name="close" size={18} color={Colors.accent.red} />
-                    <Text style={styles.rsvpButtonTextDecline}>Не приду</Text>
+                    <Text style={styles.rsvpButtonTextDecline}>{t.calendar.wontAttend}</Text>
                   </TouchableOpacity>
                 </View>
               )}

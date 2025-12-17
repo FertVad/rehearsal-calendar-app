@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, NativeS
 import { Colors, FontSize, FontWeight, Spacing } from '../../../shared/constants/colors';
 import { Rehearsal } from '../../../shared/types';
 import { formatDateToString } from '../../../shared/utils/time';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface WeeklyCalendarProps {
   rehearsals: Rehearsal[];
@@ -25,15 +26,22 @@ interface WeekData {
   days: DayInfo[];
 }
 
-const DAYS_OF_WEEK = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const WEEK_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md * 2; // Account for container padding
 const INITIAL_WEEKS = 13; // ~3 months on each side
 const CENTER_INDEX = Math.floor(INITIAL_WEEKS / 2);
 
 export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
+  const { t, language } = useI18n();
   const flatListRef = useRef<FlatList>(null);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(CENTER_INDEX);
+
+  const DAYS_OF_WEEK = useMemo(() => {
+    if (language === 'ru') {
+      return ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+    }
+    return ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+  }, [language]);
 
   // Get the start of current week (Monday)
   const getWeekStart = useCallback((date: Date): Date => {
@@ -91,19 +99,18 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
 
   // Get current week's month/year
   const monthYear = useMemo(() => {
-    const months = [
-      'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-    ];
-
     if (weeks[currentWeekIndex]) {
       const weekStart = weeks[currentWeekIndex].weekStart;
-      return `${months[weekStart.getMonth()]} ${weekStart.getFullYear()}`;
+      const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+      const options: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
+      return weekStart.toLocaleDateString(locale, options);
     }
 
     const now = new Date();
-    return `${months[now.getMonth()]} ${now.getFullYear()}`;
-  }, [weeks, currentWeekIndex]);
+    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    const options: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
+    return now.toLocaleDateString(locale, options);
+  }, [weeks, currentWeekIndex, language]);
 
   // Handle scroll end to update current week index
   const handleScrollEnd = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -193,7 +200,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
       {/* Header with month/year and today button */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleGoToToday} style={styles.todayButton}>
-          <Text style={styles.todayButtonText}>Сегодня</Text>
+          <Text style={styles.todayButtonText}>{t.calendar.todayButton}</Text>
         </TouchableOpacity>
 
         <Text style={styles.monthYear}>{monthYear}</Text>

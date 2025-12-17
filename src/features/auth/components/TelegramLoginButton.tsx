@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { GlassButton } from '../../../shared/components';
 import TelegramLoginWebView from './TelegramLoginWebView';
+import { useI18n } from '../../../contexts/I18nContext';
 import { Colors, FontSize } from '../../../shared/constants/colors';
 
 interface TelegramLoginButtonProps {
@@ -14,6 +15,7 @@ const BOT_USERNAME = 'rehearsal_calendar_bot';
 
 export default function TelegramLoginButton({ style, mode = 'login' }: TelegramLoginButtonProps) {
   const [showWebView, setShowWebView] = useState(false);
+  const { t } = useI18n();
 
   const handlePress = () => {
     setShowWebView(true);
@@ -22,7 +24,7 @@ export default function TelegramLoginButton({ style, mode = 'login' }: TelegramL
   return (
     <>
       <GlassButton
-        title={mode === 'login' ? 'Войти через Telegram' : 'Зарегистрироваться через Telegram'}
+        title={mode === 'login' ? t.auth.loginWithTelegram : t.auth.registerWithTelegram}
         onPress={handlePress}
         variant="glass"
         style={style}

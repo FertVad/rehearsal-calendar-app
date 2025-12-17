@@ -14,6 +14,7 @@ import SmartPlannerButton from '../components/SmartPlannerButton';
 import { Rehearsal } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { formatDateLocalized, formatDateToString, parseDateString } from '../../../shared/utils/time';
 import { useRehearsals, useRSVP } from '../hooks';
 import { calendarScreenStyles as styles } from '../styles';
@@ -25,6 +26,7 @@ type CalendarScreenProps = CompositeScreenProps<
 
 export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   const { projects, selectedProject } = useProjects();
+  const { t } = useI18n();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
@@ -114,12 +116,12 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
     if (!projectId) return;
 
     Alert.alert(
-      'Удалить репетицию?',
-      'Это действие нельзя отменить',
+      t.rehearsals.deleteTitle,
+      t.rehearsals.deleteMessage,
       [
-        { text: 'Отмена', style: 'cancel' },
+        { text: t.common.cancel, style: 'cancel' },
         {
-          text: 'Удалить',
+          text: t.rehearsals.deleteConfirm,
           style: 'destructive',
           onPress: async () => {
             try {
@@ -128,7 +130,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
               await fetchRehearsals();
             } catch (err: any) {
               console.error('Failed to delete rehearsal:', err);
-              Alert.alert('Ошибка', err.message || 'Не удалось удалить репетицию');
+              Alert.alert(t.common.error, err.message || t.rehearsals.createError);
             }
           },
         },
@@ -137,9 +139,9 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   };
 
   const getFilterLabel = () => {
-    if (filterProjectId === null) return 'Все проекты';
+    if (filterProjectId === null) return t.calendar.allProjects;
     const project = projects.find(p => p.id === filterProjectId);
-    return project?.name || 'Выбрать проект';
+    return project?.name || t.projects.selectProject;
   };
 
   const handleSelectFilter = (projectId: string | null) => {
@@ -183,15 +185,15 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
       });
   }, [rehearsals]);
 
-  // Get relative date label (Сегодня, Завтра, or formatted date)
+  // Get relative date label (Today, Tomorrow, or formatted date)
   const getRelativeDateLabel = (dateStr: string) => {
     const today = formatDateToString(new Date());
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = formatDateToString(tomorrow);
 
-    if (dateStr === today) return 'Сегодня';
-    if (dateStr === tomorrowStr) return 'Завтра';
+    if (dateStr === today) return t.common.today;
+    if (dateStr === tomorrowStr) return t.calendar.tomorrow || 'Tomorrow';
     return formatDateLocalized(dateStr, { day: 'numeric', month: 'short', weekday: 'short' });
   };
 
@@ -211,7 +213,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
             {screenMode === 'admin' && currentProject && (
               <View style={styles.adminBadgeInline}>
                 <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
-                <Text style={styles.adminBadgeText}>Админ</Text>
+                <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
               </View>
             )}
 
@@ -237,7 +239,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                 styles.filterOptionText,
                 filterProjectId === null && styles.filterOptionTextSelected
               ]}>
-                Все проекты
+                {t.calendar.allProjects}
               </Text>
               {filterProjectId === null && (
                 <Ionicons name="checkmark" size={18} color={Colors.accent.purple} />
@@ -299,12 +301,12 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
 
         {/* Upcoming Events */}
         <View style={styles.upcomingSection}>
-          <Text style={styles.sectionTitle}>Ближайшие события</Text>
+          <Text style={styles.sectionTitle}>{t.calendar.upcomingEvents}</Text>
 
           {loading ? (
             <View style={styles.loadingState}>
               <ActivityIndicator size="large" color={Colors.accent.purple} />
-              <Text style={styles.loadingText}>Загрузка...</Text>
+              <Text style={styles.loadingText}>{t.common.loading}</Text>
             </View>
           ) : error ? (
             <View style={styles.errorState}>
@@ -312,12 +314,12 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
             </View>
           ) : projects.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>Создайте проект в разделе "Проекты"</Text>
+              <Text style={styles.emptyText}>{t.calendar.selectProject}</Text>
             </View>
           ) : upcomingRehearsals.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={32} color={Colors.text.tertiary} />
-              <Text style={styles.emptyText}>Нет предстоящих репетиций</Text>
+              <Text style={styles.emptyText}>{t.calendar.noUpcoming}</Text>
             </View>
           ) : (
             <View style={styles.upcomingList}>
@@ -350,7 +352,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                         {isAdminForThisRehearsal && (
                           <View style={styles.adminBadge}>
                             <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
-                            <Text style={styles.adminBadgeText}>Админ</Text>
+                            <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
                           </View>
                         )}
                       </View>
@@ -422,7 +424,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                           styles.rsvpStatusText,
                           currentResponse === 'confirmed' ? styles.rsvpStatusConfirmed : styles.rsvpStatusDeclined
                         ]}>
-                          {currentResponse === 'confirmed' ? 'Репетиция подтверждена' : 'Вы отказались'}
+                          {currentResponse === 'confirmed' ? t.rehearsals.rsvpConfirmed : t.rehearsals.rsvpDeclined}
                         </Text>
                       </View>
                     ) : (
@@ -442,7 +444,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                           ) : (
                             <>
                               <Ionicons name="checkmark-circle" size={18} color={Colors.accent.green} />
-                              <Text style={styles.rsvpButtonTextConfirm}>Приду</Text>
+                              <Text style={styles.rsvpButtonTextConfirm}>{t.rehearsals.confirmAttendance}</Text>
                             </>
                           )}
                         </TouchableOpacity>
@@ -457,7 +459,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                           disabled={isResponding}
                         >
                           <Ionicons name="close-circle" size={18} color={Colors.accent.red} />
-                          <Text style={styles.rsvpButtonTextDecline}>Не приду</Text>
+                          <Text style={styles.rsvpButtonTextDecline}>{t.rehearsals.declineAttendance}</Text>
                         </TouchableOpacity>
                       </View>
                     )}

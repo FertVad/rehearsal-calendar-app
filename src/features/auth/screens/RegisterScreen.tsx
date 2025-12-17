@@ -14,6 +14,7 @@ import { Colors } from '../../../shared/constants/colors';
 import { GlassButton } from '../../../shared/components';
 import TelegramLoginButton from '../components/TelegramLoginButton';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { registerScreenStyles as styles } from '../styles';
 
@@ -26,26 +27,27 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const { register, loading, error } = useAuth();
+  const { t } = useI18n();
 
   const validateForm = () => {
     if (!email || !firstName || !password || !confirmPassword) {
-      Alert.alert('Ошибка', 'Заполните обязательные поля');
+      Alert.alert(t.common.error, t.auth.fillAllFields);
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Ошибка', 'Неверный формат email');
+      Alert.alert(t.common.error, t.auth.invalidEmail);
       return false;
     }
 
     if (password.length < 6) {
-      Alert.alert('Ошибка', 'Пароль должен содержать минимум 6 символов');
+      Alert.alert(t.common.error, t.auth.passwordMinLength);
       return false;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Ошибка', 'Пароли не совпадают');
+      Alert.alert(t.common.error, t.auth.passwordsMismatch);
       return false;
     }
 
@@ -59,7 +61,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       await register(email, password, firstName, lastName || undefined);
       // Navigation handled by AuthProvider
     } catch (err: any) {
-      Alert.alert('Ошибка регистрации', err.message);
+      Alert.alert(t.auth.registerError, err.message);
     }
   };
 
@@ -74,16 +76,16 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Создать аккаунт</Text>
-            <Text style={styles.subtitle}>Присоединяйтесь к Rehearsal Calendar</Text>
+            <Text style={styles.title}>{t.auth.registerTitle}</Text>
+            <Text style={styles.subtitle}>{t.auth.registerSubtitle}</Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Имя *</Text>
+              <Text style={styles.label}>{t.auth.firstName} {t.auth.required}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Ваше имя"
+                placeholder={t.auth.firstNamePlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 value={firstName}
                 onChangeText={setFirstName}
@@ -93,10 +95,10 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Фамилия</Text>
+              <Text style={styles.label}>{t.auth.lastName}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Ваша фамилия (опционально)"
+                placeholder={t.auth.lastNamePlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 value={lastName}
                 onChangeText={setLastName}
@@ -106,10 +108,10 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email *</Text>
+              <Text style={styles.label}>{t.auth.email} {t.auth.required}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="your@email.com"
+                placeholder={t.auth.emailPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 value={email}
                 onChangeText={setEmail}
@@ -120,10 +122,10 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Пароль</Text>
+              <Text style={styles.label}>{t.auth.password}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Минимум 6 символов"
+                placeholder={t.auth.passwordMinLength}
                 placeholderTextColor={Colors.text.tertiary}
                 value={password}
                 onChangeText={setPassword}
@@ -133,10 +135,10 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Подтвердите пароль</Text>
+              <Text style={styles.label}>{t.auth.confirmPassword}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Повторите пароль"
+                placeholder={t.auth.confirmPasswordPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -152,7 +154,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             )}
 
             <GlassButton
-              title="Зарегистрироваться"
+              title={t.auth.registerButton}
               onPress={handleRegister}
               variant="purple"
               loading={loading}
@@ -161,7 +163,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>или</Text>
+              <Text style={styles.dividerText}>{t.common.or}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -171,7 +173,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             />
 
             <GlassButton
-              title="Уже есть аккаунт? Войти"
+              title={t.auth.alreadyHaveAccount}
               onPress={() => navigation.navigate('Login')}
               variant="glass"
               style={styles.loginButton}

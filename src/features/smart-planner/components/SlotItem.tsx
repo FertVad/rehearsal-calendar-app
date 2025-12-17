@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { TimeSlot } from '../types';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface SlotItemProps {
   slot: TimeSlot;
@@ -8,6 +9,8 @@ interface SlotItemProps {
 }
 
 export const SlotItem: React.FC<SlotItemProps> = ({ slot, onCreateRehearsal }) => {
+  const { t } = useI18n();
+
   const getCategoryColor = (): string => {
     switch (slot.category) {
       case 'perfect':
@@ -23,19 +26,19 @@ export const SlotItem: React.FC<SlotItemProps> = ({ slot, onCreateRehearsal }) =
 
   const getStatusText = (): string => {
     if (slot.category === 'perfect') {
-      return 'Все свободны';
+      return t.smartPlanner.allAvailable;
     }
     if (slot.busyMembers.length === slot.totalMembers) {
-      return 'Все заняты';
+      return t.smartPlanner.allBusy;
     }
     const names = slot.busyMembers.map(m => m.name).join(', ');
-    return `Заняты: ${names}`;
+    return `${t.smartPlanner.busyPrefix}: ${names}`;
   };
 
   const formatTimeRange = (): string => {
     // Check if entire workday (9:00-23:00)
     if (slot.startTime === '09:00' && slot.endTime === '23:00') {
-      return 'Весь день';
+      return t.smartPlanner.allDay;
     }
     return `${slot.startTime}-${slot.endTime}`;
   };
@@ -54,7 +57,7 @@ export const SlotItem: React.FC<SlotItemProps> = ({ slot, onCreateRehearsal }) =
           style={styles.addButton}
           onPress={() => onCreateRehearsal(slot)}
         >
-          <Text style={styles.addButtonText}>+ Добавить</Text>
+          <Text style={styles.addButtonText}>{t.smartPlanner.addButton}</Text>
         </TouchableOpacity>
       )}
     </View>

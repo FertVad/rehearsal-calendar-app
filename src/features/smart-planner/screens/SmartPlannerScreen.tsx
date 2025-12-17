@@ -18,32 +18,35 @@ import { useSmartPlanner } from '../hooks/useSmartPlanner';
 import { DayCard } from '../components/DayCard';
 import { MemberFilter } from '../components/MemberFilter';
 import { useProjects } from '../../../contexts/ProjectContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { DateRangePicker } from '../../../shared/components/DateRangePicker';
 import { smartPlannerScreenStyles as styles } from '../styles';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SmartPlanner'>;
 
-function formatDateRange(startDate: string, endDate: string): string {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-
-  const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-
-  const startDay = start.getDate();
-  const endDay = end.getDate();
-  const startMonth = months[start.getMonth()];
-  const endMonth = months[end.getMonth()];
-
-  if (start.getMonth() === end.getMonth()) {
-    return `${startDay}-${endDay} ${startMonth}`;
-  }
-
-  return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
-}
-
 export default function SmartPlannerScreen({ route, navigation }: Props) {
   const { projectId } = route.params;
   const { projects } = useProjects();
+  const { t, language } = useI18n();
+
+  const formatDateRange = (startDate: string, endDate: string): string => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    const options: Intl.DateTimeFormatOptions = { month: 'short' };
+
+    const startDay = start.getDate();
+    const endDay = end.getDate();
+    const startMonth = start.toLocaleDateString(locale, options);
+    const endMonth = end.toLocaleDateString(locale, options);
+
+    if (start.getMonth() === end.getMonth()) {
+      return `${startDay}-${endDay} ${startMonth}`;
+    }
+
+    return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+  };
 
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'custom'>('week');
   const [selectedCategories] = useState<SlotCategory[]>([
@@ -135,13 +138,13 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
           <Text style={styles.headerTitle} numberOfLines={1}>
             {projectName}
           </Text>
-          <Text style={styles.headerSubtitle}>Smart Planner</Text>
+          <Text style={styles.headerSubtitle}>{t.smartPlanner.title}</Text>
         </View>
         <TouchableOpacity
           style={styles.changeProjectButton}
           onPress={() => setIsProjectModalOpen(true)}
         >
-          <Text style={styles.changeProjectText}>Сменить</Text>
+          <Text style={styles.changeProjectText}>{t.common.change}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -160,7 +163,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
       >
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Выбрать проект</Text>
+            <Text style={styles.modalTitle}>{t.projects.selectProject}</Text>
             <TouchableOpacity onPress={() => setIsProjectModalOpen(false)}>
               <Text style={styles.closeButton}>✕</Text>
             </TouchableOpacity>
@@ -195,7 +198,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
 
   const renderPeriodSelector = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Период</Text>
+      <Text style={styles.sectionTitle}>{t.smartPlanner.period}</Text>
       <View style={styles.periodButtons}>
         <TouchableOpacity
           style={[
@@ -210,7 +213,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
               selectedPeriod === 'week' && styles.periodButtonTextActive,
             ]}
           >
-            Неделя
+            {t.smartPlanner.week}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -226,7 +229,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
               selectedPeriod === 'month' && styles.periodButtonTextActive,
             ]}
           >
-            Месяц
+            {t.smartPlanner.month}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -242,7 +245,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
               selectedPeriod === 'custom' && styles.periodButtonTextActive,
             ]}
           >
-            Свой
+            {t.smartPlanner.custom}
           </Text>
         </TouchableOpacity>
       </View>
@@ -274,7 +277,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     };
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Участники</Text>
+        <Text style={styles.sectionTitle}>{t.smartPlanner.members}</Text>
         <MemberFilter
           members={simpleMembers}
           selected={selectedMemberIds}
@@ -293,9 +296,9 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         size={64}
         color={Colors.text.tertiary}
       />
-      <Text style={styles.emptyStateTitle}>Нет доступных слотов</Text>
+      <Text style={styles.emptyStateTitle}>{t.smartPlanner.noSlots}</Text>
       <Text style={styles.emptyStateText}>
-        Попробуйте изменить период или выбрать другие категории
+        {t.smartPlanner.noSlotsMessage}
       </Text>
     </View>
   );
@@ -307,7 +310,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         size={64}
         color={Colors.accent.red}
       />
-      <Text style={styles.emptyStateTitle}>Ошибка загрузки</Text>
+      <Text style={styles.emptyStateTitle}>{t.smartPlanner.errorLoading}</Text>
       <Text style={styles.emptyStateText}>{error}</Text>
     </View>
   );
@@ -334,7 +337,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.accent.purple} />
-            <Text style={styles.loadingText}>Анализируем доступность...</Text>
+            <Text style={styles.loadingText}>{t.smartPlanner.analyzing}</Text>
           </View>
         ) : error ? (
           renderError()
@@ -342,7 +345,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
           renderEmptyState()
         ) : (
           <View style={styles.slotsContainer}>
-            <Text style={styles.sectionTitle}>Рекомендации</Text>
+            <Text style={styles.sectionTitle}>{t.smartPlanner.recommendations}</Text>
             {Array.from(slotsByDate.entries()).map(([date, slots]) => (
               <DayCard
                 key={date}

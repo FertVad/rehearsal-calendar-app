@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
 import type { Member } from '../types';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface MemberFilterProps {
   members: Member[];
@@ -26,6 +27,7 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
   onSelectAll,
   onClearAll,
 }) => {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMember = (memberId: string) => {
@@ -46,12 +48,12 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
 
   const getButtonText = () => {
     if (selected.length === 0) {
-      return 'Никто не выбран';
+      return t.smartPlanner.noneSelected;
     }
     if (selected.length === members.length) {
-      return 'Все участники';
+      return t.smartPlanner.allMembers;
     }
-    return `Выбрано: ${selected.length}`;
+    return `${t.smartPlanner.selectedMembers}: ${selected.length}`;
   };
 
   return (
@@ -69,13 +71,13 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
             style={styles.quickActionBtn}
             onPress={onSelectAll || selectAll}
           >
-            <Text style={styles.quickActionText}>Все</Text>
+            <Text style={styles.quickActionText}>{t.smartPlanner.selectAll}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionBtn}
             onPress={onClearAll || clearAll}
           >
-            <Text style={styles.quickActionText}>Очистить</Text>
+            <Text style={styles.quickActionText}>{t.smartPlanner.clearAll}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -92,7 +94,7 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
         >
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Участники</Text>
+              <Text style={styles.modalTitle}>{t.smartPlanner.selectMembers}</Text>
               <TouchableOpacity onPress={() => setIsOpen(false)}>
                 <Text style={styles.closeButton}>✕</Text>
               </TouchableOpacity>
@@ -100,10 +102,10 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
 
             <View style={styles.actions}>
               <TouchableOpacity style={styles.actionBtn} onPress={selectAll}>
-                <Text style={styles.actionBtnText}>Выбрать всех</Text>
+                <Text style={styles.actionBtnText}>{t.common.selectAll}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionBtn} onPress={clearAll}>
-                <Text style={styles.actionBtnText}>Очистить</Text>
+                <Text style={styles.actionBtnText}>{t.common.clear}</Text>
               </TouchableOpacity>
             </View>
 
@@ -128,7 +130,7 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
               style={styles.applyButton}
               onPress={() => setIsOpen(false)}
             >
-              <Text style={styles.applyButtonText}>Применить</Text>
+              <Text style={styles.applyButtonText}>{t.smartPlanner.applyFilter}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>

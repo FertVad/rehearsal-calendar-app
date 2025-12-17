@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { TabParamList, AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { useInviteLink } from '../hooks';
 import { projectsScreenStyles as styles } from '../styles';
 
@@ -18,13 +19,14 @@ type ProjectsScreenProps = CompositeScreenProps<
 export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
   const { projects, selectedProject, setSelectedProject, loading, error } = useProjects();
   const { generateInviteLink, generatingInvite } = useInviteLink();
+  const { t } = useI18n();
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Мои проекты</Text>
+          <Text style={styles.title}>{t.projects.title}</Text>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate('CreateProject')}
@@ -37,7 +39,7 @@ export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
         {loading ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={Colors.accent.purple} />
-            <Text style={styles.loadingText}>Загрузка проектов...</Text>
+            <Text style={styles.loadingText}>{t.projects.loading}</Text>
           </View>
         ) : error ? (
           <View style={styles.errorState}>
@@ -46,8 +48,8 @@ export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
         ) : projects.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="folder-open-outline" size={64} color={Colors.text.tertiary} />
-            <Text style={styles.emptyTitle}>Нет проектов</Text>
-            <Text style={styles.emptyText}>Создайте свой первый проект, чтобы начать работу</Text>
+            <Text style={styles.emptyTitle}>{t.projects.noProjects}</Text>
+            <Text style={styles.emptyText}>{t.projects.createFirst}</Text>
           </View>
         ) : (
           <View style={styles.projectsList}>
@@ -71,7 +73,7 @@ export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
                       {project.is_admin && (
                         <View style={styles.adminBadge}>
                           <Ionicons name="shield-checkmark" size={14} color={Colors.accent.purple} />
-                          <Text style={styles.adminText}>Админ</Text>
+                          <Text style={styles.adminText}>{t.projects.admin}</Text>
                         </View>
                       )}
                     </View>
@@ -99,7 +101,7 @@ export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
                       ) : (
                         <>
                           <Ionicons name="person-add-outline" size={16} color={Colors.accent.purple} />
-                          <Text style={styles.inviteButtonText}>Пригласить</Text>
+                          <Text style={styles.inviteButtonText}>{t.projects.inviteLink}</Text>
                         </>
                       )}
                     </TouchableOpacity>

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import type { TimeSlot, SlotCategory } from '../types';
 import { SlotItem } from './SlotItem';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface DayCardProps {
   date: string;
@@ -18,6 +19,8 @@ interface CategoryGroup {
 }
 
 export const DayCard: React.FC<DayCardProps> = ({ date, slots, onCreateRehearsal }) => {
+  const { t, language } = useI18n();
+
   // Track which categories are expanded (default: all expanded)
   const [expandedCategories, setExpandedCategories] = useState<Set<SlotCategory>>(
     new Set(['perfect', 'good', 'ok', 'bad'])
@@ -31,7 +34,7 @@ export const DayCard: React.FC<DayCardProps> = ({ date, slots, onCreateRehearsal
       day: 'numeric',
       month: 'short',
     };
-    return d.toLocaleDateString('ru-RU', options);
+    return d.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', options);
   };
 
   // Group slots by category
@@ -47,10 +50,10 @@ export const DayCard: React.FC<DayCardProps> = ({ date, slots, onCreateRehearsal
 
     const categoryOrder: SlotCategory[] = ['perfect', 'good', 'ok', 'bad'];
     const categoryLabels: Record<SlotCategory, string> = {
-      perfect: 'Отлично',
-      good: 'Хорошо',
-      ok: 'Приемлемо',
-      bad: 'Плохо',
+      perfect: t.smartPlanner.perfect,
+      good: t.smartPlanner.good,
+      ok: t.smartPlanner.possible,
+      bad: t.smartPlanner.difficult,
     };
     const categoryColors: Record<SlotCategory, string> = {
       perfect: '#10b981',
@@ -67,7 +70,7 @@ export const DayCard: React.FC<DayCardProps> = ({ date, slots, onCreateRehearsal
         label: categoryLabels[cat],
         color: categoryColors[cat],
       }));
-  }, [slots]);
+  }, [slots, t]);
 
   const toggleCategory = (category: SlotCategory) => {
     setExpandedCategories(prev => {
@@ -85,7 +88,7 @@ export const DayCard: React.FC<DayCardProps> = ({ date, slots, onCreateRehearsal
     <View style={styles.card}>
       <View style={styles.dateHeader}>
         <Text style={styles.dateText}>{formatDate(date)}</Text>
-        <Text style={styles.slotCount}>{slots.length} слотов</Text>
+        <Text style={styles.slotCount}>{slots.length} {t.smartPlanner.slots}</Text>
       </View>
 
       {categoryGroups.map(group => {

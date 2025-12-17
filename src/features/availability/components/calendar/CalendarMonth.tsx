@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing } from '../../../../shared/constants/colors';
 import { AvailabilityData } from '../../types';
 import { getDaysInMonth, formatDate } from '../../utils';
-import { WEEKDAYS, MONTHS_RU, DAY_SIZE } from '../../constants';
+import { DAY_SIZE } from '../../constants';
+import { useI18n } from '../../../../contexts/I18nContext';
 
 interface CalendarMonthProps {
   year: number;
@@ -24,17 +25,29 @@ export const CalendarMonth: React.FC<CalendarMonthProps> = ({
   onDayPress,
   getDayStatus,
 }) => {
+  const { t } = useI18n();
   const days = getDaysInMonth(year, month);
+
+  // Get localized weekdays in order: Mon, Tue, Wed, Thu, Fri, Sat, Sun
+  const weekdays = [
+    t.days.short.monday,
+    t.days.short.tuesday,
+    t.days.short.wednesday,
+    t.days.short.thursday,
+    t.days.short.friday,
+    t.days.short.saturday,
+    t.days.short.sunday,
+  ];
 
   return (
     <View style={styles.monthContainer}>
       <Text style={styles.monthTitle}>
-        {MONTHS_RU[month]} {year}
+        {t.months[month]} {year}
       </Text>
 
       {/* Weekday headers */}
       <View style={styles.weekdayRow}>
-        {WEEKDAYS.map(day => (
+        {weekdays.map(day => (
           <Text key={day} style={styles.weekdayLabel}>{day}</Text>
         ))}
       </View>

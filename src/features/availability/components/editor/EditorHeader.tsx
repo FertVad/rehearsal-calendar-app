@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing } from '../../../../shared/constants/colors';
+import { useI18n } from '../../../../contexts/I18nContext';
 
 interface EditorHeaderProps {
   selectedCount: number;
@@ -14,20 +15,22 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   selectedDate,
   onClear,
 }) => {
+  const { t, language } = useI18n();
+
   return (
     <View style={styles.bottomSheetHeader}>
       <View style={styles.bottomSheetHeaderLeft}>
         <Text style={styles.bottomSheetTitle}>
           {selectedCount === 1 && selectedDate
-            ? new Date(selectedDate).toLocaleDateString('ru-RU', {
+            ? new Date(selectedDate).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', {
                 day: 'numeric',
                 month: 'long',
               })
-            : `Выбрано: ${selectedCount}`}
+            : t.availability.selectedDates(selectedCount)}
         </Text>
         {selectedCount > 0 && (
           <TouchableOpacity onPress={onClear} style={styles.clearButton}>
-            <Text style={styles.clearButtonText}>Очистить</Text>
+            <Text style={styles.clearButtonText}>{t.common.clear}</Text>
           </TouchableOpacity>
         )}
       </View>

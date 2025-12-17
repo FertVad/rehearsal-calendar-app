@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity } from 'react-native';
-import { Calendar, DateData } from 'react-native-calendars';
+import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '../constants/colors';
+import { useI18n } from '../../contexts/I18nContext';
 
 interface DateRangePickerProps {
   visible: boolean;
@@ -12,6 +13,23 @@ interface DateRangePickerProps {
   minDate?: Date;
 }
 
+// Configure locales for react-native-calendars
+LocaleConfig.locales['ru'] = {
+  monthNames: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
+  monthNamesShort: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+  dayNames: ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
+  dayNamesShort: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+  today: 'Сегодня'
+};
+
+LocaleConfig.locales['en'] = {
+  monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  dayNamesShort: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+  today: 'Today'
+};
+
 export function DateRangePicker({
   visible,
   onClose,
@@ -20,6 +38,10 @@ export function DateRangePicker({
   initialEndDate,
   minDate,
 }: DateRangePickerProps) {
+  const { t, language } = useI18n();
+
+  // Set calendar locale
+  LocaleConfig.defaultLocale = language;
   const [startDate, setStartDate] = useState<string | null>(
     initialStartDate ? initialStartDate.toISOString().split('T')[0] : null
   );
@@ -113,7 +135,8 @@ export function DateRangePicker({
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
   };
 
   return (
@@ -126,19 +149,19 @@ export function DateRangePicker({
       <Pressable style={styles.overlay} onPress={handleCancel}>
         <Pressable style={styles.container} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
-            <Text style={styles.title}>Выберите период</Text>
+            <Text style={styles.title}>{t.common.selectPeriod}</Text>
           </View>
 
           <View style={styles.selectedRange}>
             <View style={styles.dateBox}>
-              <Text style={styles.dateLabel}>От:</Text>
+              <Text style={styles.dateLabel}>{t.common.from}</Text>
               <Text style={styles.dateValue}>{formatDate(startDate)}</Text>
             </View>
             <View style={styles.arrow}>
               <Text style={styles.arrowText}>→</Text>
             </View>
             <View style={styles.dateBox}>
-              <Text style={styles.dateLabel}>До:</Text>
+              <Text style={styles.dateLabel}>{t.common.to}</Text>
               <Text style={styles.dateValue}>{formatDate(endDate)}</Text>
             </View>
           </View>
@@ -170,7 +193,7 @@ export function DateRangePicker({
               style={[styles.button, styles.cancelButton]}
               onPress={handleCancel}
             >
-              <Text style={styles.cancelButtonText}>Отмена</Text>
+              <Text style={styles.cancelButtonText}>{t.common.cancel}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.confirmButton, !endDate && styles.disabledButton]}
@@ -178,7 +201,7 @@ export function DateRangePicker({
               disabled={!endDate}
             >
               <Text style={[styles.confirmButtonText, !endDate && styles.disabledButtonText]}>
-                Готово
+                {t.common.done}
               </Text>
             </TouchableOpacity>
           </View>

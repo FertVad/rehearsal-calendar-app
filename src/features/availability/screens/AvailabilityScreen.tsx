@@ -34,12 +34,15 @@ import {
   calculateDateOffset
 } from '../utils';
 import { useAvailabilityData } from '../hooks';
+import { useI18n } from '../../../contexts/I18nContext';
 
 type AvailabilityScreenProps = BottomTabScreenProps<TabParamList, 'Availability'>;
 
 const DEFAULT_SLOT: TimeSlot = { start: '10:00', end: '18:00' };
 
 export default function AvailabilityScreen({ navigation }: AvailabilityScreenProps) {
+  const { t, language } = useI18n();
+
   // Use custom hook for availability data management
   const {
     availability,
@@ -315,7 +318,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
             if (!slotValidation.isValid) {
               const dateObj = new Date(date);
-              const formattedDate = dateObj.toLocaleDateString('ru-RU', {
+              const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+              const formattedDate = dateObj.toLocaleDateString(locale, {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
@@ -323,9 +327,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
               console.log(`  ❌ VALIDATION FAILED for slot ${j}`);
               Alert.alert(
-                'Невозможно сохранить',
-                `Ошибка в дате ${formattedDate}:\n\n${slotValidation.error}\n\nПожалуйста, исправьте время слотов и попробуйте снова.`,
-                [{ text: 'Понятно' }]
+                t.availability.cannotSave,
+                `${t.common.error} (${formattedDate}):\n\n${slotValidation.error}\n\n${t.availability.invalidSlot}`,
+                [{ text: t.availability.understood }]
               );
               return;
             }
@@ -344,7 +348,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
               if (overlaps) {
                 const dateObj = new Date(date);
-                const formattedDate = dateObj.toLocaleDateString('ru-RU', {
+                const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+                const formattedDate = dateObj.toLocaleDateString(locale, {
                   day: 'numeric',
                   month: 'long',
                   year: 'numeric'
@@ -352,9 +357,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
                 console.log(`  ❌ OVERLAP DETECTED between slots ${j} and ${k}`);
                 Alert.alert(
-                  'Невозможно сохранить',
-                  `Ошибка в дате ${formattedDate}:\n\nСлоты не должны пересекаться\n\nСлот ${j + 1}: ${slot1.start} - ${slot1.end}\nСлот ${k + 1}: ${slot2.start} - ${slot2.end}\n\nПожалуйста, исправьте время слотов и попробуйте снова.`,
-                  [{ text: 'Понятно' }]
+                  t.availability.cannotSave,
+                  `${t.common.error} (${formattedDate}):\n\n${t.availability.slotsOverlap}\n\nSlot ${j + 1}: ${slot1.start} - ${slot1.end}\nSlot ${k + 1}: ${slot2.start} - ${slot2.end}\n\n${t.availability.fixSlots}`,
+                  [{ text: t.availability.understood }]
                 );
                 return;
               }
@@ -432,10 +437,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
       await availabilityAPI.bulkSet(entries);
       setHasChanges(false);
-      Alert.alert('Успешно', 'Занятость сохранена');
+      Alert.alert(t.rehearsals.success, t.availability.saved);
     } catch (err: any) {
       console.error('Failed to save availability:', err);
-      Alert.alert('Ошибка', err.response?.data?.error || 'Не удалось сохранить занятость');
+      Alert.alert(t.common.error, err.response?.data?.error || t.availability.saveError);
     } finally {
       setSaving(false);
     }
@@ -471,7 +476,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Занятость</Text>
+        <Text style={styles.title}>{t.availability.title}</Text>
         {hasChanges && (
           <TouchableOpacity
             style={[styles.saveHeaderButton, saving && styles.saveHeaderButtonDisabled]}
@@ -481,7 +486,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             {saving ? (
               <ActivityIndicator size="small" color={Colors.text.inverse} />
             ) : (
-              <Text style={styles.saveHeaderButtonText}>Сохранить</Text>
+              <Text style={styles.saveHeaderButtonText}>{t.common.save}</Text>
             )}
           </TouchableOpacity>
         )}
@@ -491,15 +496,15 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, styles.statusDotFree]} />
-          <Text style={styles.legendText}>Свободен</Text>
+          <Text style={styles.legendText}>{t.availability.free}</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, styles.statusDotPartial]} />
-          <Text style={styles.legendText}>Частично</Text>
+          <Text style={styles.legendText}>{t.availability.partial}</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, styles.statusDotBusy]} />
-          <Text style={styles.legendText}>Занят</Text>
+          <Text style={styles.legendText}>{t.availability.busy}</Text>
         </View>
       </View>
 
@@ -507,7 +512,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.accent.purple} />
-          <Text style={styles.loadingText}>Загрузка...</Text>
+          <Text style={styles.loadingText}>{t.common.loading}</Text>
         </View>
       ) : (
         <FlatList
@@ -563,7 +568,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             <View style={styles.pastDateWarning}>
               <Ionicons name="information-circle" size={20} color={Colors.accent.yellow} />
               <Text style={styles.pastDateWarningText}>
-                Это прошедшая дата. Вы можете удалить данные, но не редактировать.
+                {t.availability.pastDateWarning}
               </Text>
             </View>
           )}
@@ -574,12 +579,12 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
               style={styles.deletePastDateButton}
               onPress={() => {
                 Alert.alert(
-                  'Удалить данные?',
-                  `Вы уверены, что хотите удалить данные занятости для этой прошедшей даты?`,
+                  t.availability.deleteDataConfirm,
+                  t.availability.deleteDataMessage,
                   [
-                    { text: 'Отмена', style: 'cancel' },
+                    { text: t.common.cancel, style: 'cancel' },
                     {
-                      text: 'Удалить',
+                      text: t.common.delete,
                       style: 'destructive',
                       onPress: () => {
                         setAvailability(prev => {
@@ -596,7 +601,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
               }}
             >
               <Ionicons name="trash-outline" size={20} color={Colors.accent.red} />
-              <Text style={styles.deletePastDateButtonText}>Удалить данные этой даты</Text>
+              <Text style={styles.deletePastDateButtonText}>{t.availability.deleteData}</Text>
             </TouchableOpacity>
           )}
 
@@ -621,7 +626,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                 styles.modeButtonText,
                 selectedDayState?.mode === 'free' && styles.modeButtonTextActive,
               ]}>
-                Свободен
+                {t.availability.free}
               </Text>
             </TouchableOpacity>
 
@@ -642,7 +647,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                 styles.modeButtonText,
                 selectedDayState?.mode === 'custom' && styles.modeButtonTextActive,
               ]}>
-                Частично
+                {t.availability.partial}
               </Text>
             </TouchableOpacity>
 
@@ -663,7 +668,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                 styles.modeButtonText,
                 selectedDayState?.mode === 'busy' && styles.modeButtonTextActive,
               ]}>
-                Занят
+                {t.availability.busy}
               </Text>
             </TouchableOpacity>
           </View>
@@ -671,7 +676,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           {/* Time Slots (only for custom mode) */}
           {selectedDayState?.mode === 'custom' && (
             <View style={styles.slotsSection}>
-              <Text style={styles.slotsTitle}>Время когда занят</Text>
+              <Text style={styles.slotsTitle}>{t.availability.busyTime}</Text>
 
               {/* Validation Error */}
               {validationError && (
@@ -685,7 +690,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                 <View key={index} style={styles.slotRow}>
                   <View style={styles.slotInputs}>
                     <View style={styles.timeInput}>
-                      <Text style={styles.timeLabel}>С</Text>
+                      <Text style={styles.timeLabel}>{t.availability.from}</Text>
                       <TouchableOpacity
                         style={styles.timeButton}
                         onPress={() => openTimePicker(index, 'start')}
@@ -698,7 +703,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                       <Ionicons name="arrow-forward" size={16} color={Colors.text.tertiary} />
                     </View>
                     <View style={styles.timeInput}>
-                      <Text style={styles.timeLabel}>До</Text>
+                      <Text style={styles.timeLabel}>{t.availability.to}</Text>
                       <TouchableOpacity
                         style={styles.timeButton}
                         onPress={() => openTimePicker(index, 'end')}
@@ -722,7 +727,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
               <TouchableOpacity style={styles.addSlotButton} onPress={addSlot}>
                 <Ionicons name="add" size={20} color={Colors.accent.purple} />
-                <Text style={styles.addSlotText}>Добавить слот</Text>
+                <Text style={styles.addSlotText}>{t.availability.addSlot}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -751,13 +756,13 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             <Pressable style={styles.timePickerContainer} onPress={e => e.stopPropagation()}>
               <View style={styles.timePickerHeader}>
                 <TouchableOpacity onPress={() => setShowTimePicker(false)}>
-                  <Text style={styles.timePickerCancel}>Отмена</Text>
+                  <Text style={styles.timePickerCancel}>{t.common.cancel}</Text>
                 </TouchableOpacity>
                 <Text style={styles.timePickerTitle}>
-                  {editingSlot?.field === 'start' ? 'Время начала' : 'Время окончания'}
+                  {editingSlot?.field === 'start' ? t.availability.startTime : t.availability.endTime}
                 </Text>
                 <TouchableOpacity onPress={confirmTimePicker}>
-                  <Text style={styles.timePickerDone}>Готово</Text>
+                  <Text style={styles.timePickerDone}>{t.common.done}</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
@@ -767,7 +772,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                 onChange={(event, date) => {
                   if (date) setTempTime(date);
                 }}
-                locale="ru"
+                locale={language}
                 textColor={Colors.text.primary}
               />
             </Pressable>

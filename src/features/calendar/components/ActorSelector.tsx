@@ -9,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
 import { ProjectMember } from '../../../shared/types';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface ActorSelectorProps {
   members: ProjectMember[];
@@ -27,6 +28,7 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
   date,
   memberAvailability = {},
 }) => {
+  const { t } = useI18n();
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   const toggleMember = (memberId: string) => {
@@ -75,7 +77,7 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Загрузка участников...</Text>
+        <Text style={styles.loadingText}>{t.rehearsals.loadingMembers}</Text>
       </View>
     );
   }
@@ -84,7 +86,7 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="people-outline" size={48} color={Colors.text.tertiary} />
-        <Text style={styles.emptyText}>Нет участников в проекте</Text>
+        <Text style={styles.emptyText}>{t.rehearsals.noMembers}</Text>
       </View>
     );
   }
@@ -99,7 +101,7 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
               {allSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
             </View>
             <Text style={styles.selectAllText}>
-              {allSelected ? 'Снять выделение' : 'Выбрать всех'}
+              {allSelected ? t.rehearsals.deselectAll : t.rehearsals.selectAll}
             </Text>
           </TouchableOpacity>
         )}
@@ -109,7 +111,7 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
           onPress={() => setIsExpanded(!isExpanded)}
         >
           <Text style={styles.expandButtonText}>
-            {isExpanded ? 'Свернуть' : 'Развернуть'}
+            {isExpanded ? t.rehearsals.collapse : t.rehearsals.expand}
           </Text>
           <Ionicons
             name={isExpanded ? "chevron-up" : "chevron-down"}
@@ -123,7 +125,7 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
       {selectedMemberIds.length > 0 && (
         <View style={styles.summary}>
           <Text style={styles.summaryText}>
-            Выбрано: {selectedMemberIds.length} из {members.length}
+            {t.rehearsals.selectedCount(selectedMemberIds.length, members.length)}
           </Text>
         </View>
       )}
@@ -155,7 +157,7 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
                     </Text>
                     {isAdmin && (
                       <View style={styles.adminBadge}>
-                        <Text style={styles.adminBadgeText}>Админ</Text>
+                        <Text style={styles.adminBadgeText}>{t.rehearsals.admin}</Text>
                       </View>
                     )}
                   </View>
@@ -163,17 +165,17 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
                     <View style={styles.availabilityContainer}>
                       {availability.status === 'available' && (
                         <View style={[styles.statusChip, styles.statusAvailable]}>
-                          <Text style={styles.statusText}>Свободен</Text>
+                          <Text style={styles.statusText}>{t.rehearsals.availableStatus}</Text>
                         </View>
                       )}
                       {availability.status === 'busy' && (
                         <View style={[styles.statusChip, styles.statusBusy]}>
-                          <Text style={styles.statusText}>Занят весь день</Text>
+                          <Text style={styles.statusText}>{t.rehearsals.busyAllDay}</Text>
                         </View>
                       )}
                       {availability.status === 'partial' && availability.ranges.map((range, idx) => (
                         <View key={`${range.start}-${range.end}-${idx}`} style={[styles.statusChip, styles.statusPartial]}>
-                          <Text style={styles.statusText}>Занят {formatTimeRange(range.start, range.end)}</Text>
+                          <Text style={styles.statusText}>{t.rehearsals.busyTime} {formatTimeRange(range.start, range.end)}</Text>
                         </View>
                       ))}
                     </View>

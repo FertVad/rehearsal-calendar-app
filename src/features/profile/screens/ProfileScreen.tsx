@@ -4,6 +4,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { GlassButton } from '../../../shared/components';
 import { TabParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
@@ -28,8 +29,8 @@ const TIMEZONES = [
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { user, logout, updateUser } = useAuth();
+  const { t, language, setLanguage } = useI18n();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [language, setLanguage] = useState<'ru' | 'en'>('ru');
   const [timezoneModalVisible, setTimezoneModalVisible] = useState(false);
 
   const handleLogout = async () => {
@@ -37,7 +38,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   };
 
   const toggleLanguage = () => {
-    setLanguage(prev => prev === 'ru' ? 'en' : 'ru');
+    setLanguage(language === 'ru' ? 'en' : 'ru');
   };
 
   const handleTimezoneSelect = async (timezone: string) => {
@@ -59,7 +60,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Профиль</Text>
+          <Text style={styles.title}>{t.profile.title}</Text>
         </View>
 
         {/* User Info Card */}
@@ -68,14 +69,14 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             <Ionicons name="person-circle" size={64} color={Colors.accent.purple} />
           </View>
           <Text style={styles.userName}>
-            {user?.firstName ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}` : 'Пользователь'}
+            {user?.firstName ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}` : 'User'}
           </Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
         </View>
 
         {/* Settings Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Настройки</Text>
+          <Text style={styles.sectionTitle}>{t.profile.settings}</Text>
 
           {/* Notifications */}
           <View style={styles.settingItem}>
@@ -83,7 +84,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
                 <Ionicons name="notifications" size={20} color={Colors.accent.blue} />
               </View>
-              <Text style={styles.settingLabel}>Уведомления</Text>
+              <Text style={styles.settingLabel}>{t.profile.notifications}</Text>
             </View>
             <Switch
               value={notificationsEnabled}
@@ -99,11 +100,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
                 <Ionicons name="language" size={20} color={Colors.accent.purple} />
               </View>
-              <Text style={styles.settingLabel}>Язык</Text>
+              <Text style={styles.settingLabel}>{t.profile.language}</Text>
             </View>
             <View style={styles.settingRight}>
               <Text style={styles.settingValue}>
-                {language === 'ru' ? 'Русский' : 'English'}
+                {language === 'ru' ? '🇷🇺 Русский' : '🇬🇧 English'}
               </Text>
               <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
             </View>
@@ -115,7 +116,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
                 <Ionicons name="globe" size={20} color={Colors.accent.blue} />
               </View>
-              <Text style={styles.settingLabel}>Часовой пояс</Text>
+              <Text style={styles.settingLabel}>Timezone</Text>
             </View>
             <View style={styles.settingRight}>
               <Text style={styles.settingValue} numberOfLines={1}>
@@ -131,10 +132,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
                 <Ionicons name="moon" size={20} color={Colors.accent.green} />
               </View>
-              <Text style={styles.settingLabel}>Тема</Text>
+              <Text style={styles.settingLabel}>{t.profile.theme}</Text>
             </View>
             <View style={styles.settingRight}>
-              <Text style={styles.settingValue}>Тёмная</Text>
+              <Text style={styles.settingValue}>{t.profile.themeDark}</Text>
               <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
             </View>
           </TouchableOpacity>
@@ -145,7 +146,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
                 <Ionicons name="time" size={20} color={Colors.accent.yellow} />
               </View>
-              <Text style={styles.settingLabel}>Моя доступность</Text>
+              <Text style={styles.settingLabel}>{t.profile.availability}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
@@ -153,14 +154,14 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
         {/* About Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>О приложении</Text>
+          <Text style={styles.sectionTitle}>{t.profile.about}</Text>
 
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
                 <Ionicons name="information-circle" size={20} color={Colors.accent.yellow} />
               </View>
-              <Text style={styles.settingLabel}>Версия</Text>
+              <Text style={styles.settingLabel}>{t.profile.version}</Text>
             </View>
             <Text style={styles.settingValue}>1.0.0</Text>
           </TouchableOpacity>
@@ -170,7 +171,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
                 <Ionicons name="help-circle" size={20} color={Colors.accent.red} />
               </View>
-              <Text style={styles.settingLabel}>Помощь</Text>
+              <Text style={styles.settingLabel}>{t.profile.help}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
@@ -178,7 +179,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
         {/* Logout Button */}
         <GlassButton
-          title="Выйти из аккаунта"
+          title={t.profile.logout}
           onPress={handleLogout}
           variant="glass"
           style={styles.logoutButton}
