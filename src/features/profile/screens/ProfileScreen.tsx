@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, Modal, FlatList, Alert } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { CompositeScreenProps } from '@react-navigation/native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { GlassButton } from '../../../shared/components';
-import { TabParamList } from '../../../navigation';
+import { TabParamList, AppStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 
-type ProfileScreenProps = BottomTabScreenProps<TabParamList, 'Profile'>;
+type ProfileScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<TabParamList, 'Profile'>,
+  NativeStackScreenProps<AppStackParamList>
+>;
 
 // Common timezones for theatre/rehearsal apps
 const TIMEZONES = [
@@ -147,6 +152,17 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                 <Ionicons name="time" size={20} color={Colors.accent.yellow} />
               </View>
               <Text style={styles.settingLabel}>{t.profile.availability}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+          </TouchableOpacity>
+
+          {/* Calendar Sync */}
+          <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('CalendarSyncSettings')}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                <Ionicons name="sync" size={20} color={Colors.accent.purple} />
+              </View>
+              <Text style={styles.settingLabel}>{t.calendarSync.title}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>

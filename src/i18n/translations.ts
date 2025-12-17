@@ -249,6 +249,60 @@ export interface Translations {
     allBusy: string;
     busyPrefix: string;
   };
+  // Calendar Sync
+  calendarSync: {
+    // Navigation
+    title: string;
+    // Permissions
+    permissions: string;
+    permissionGranted: string;
+    permissionDenied: string;
+    permissionDeniedMessage: string;
+    permissionRequired: string;
+    grantPermission: string;
+    permissionInstructions: string;
+    checkingPermissions: string;
+    // Export Settings
+    exportSettings: string;
+    exportEnabled: string;
+    exportCalendar: string;
+    selectCalendar: string;
+    targetCalendar: string;
+    noCalendarSelected: string;
+    selectCalendarFirst: string;
+    // Actions
+    actions: string;
+    exportAll: string;
+    exportAllProgress: (current: number, total: number) => string;
+    removeAll: string;
+    removeAllConfirm: string;
+    // Status
+    status: string;
+    lastSynced: string;
+    lastSync: string;
+    neverSynced: string;
+    syncedCount: string;
+    never: string;
+    syncing: string;
+    syncSuccess: string;
+    exportSuccess: string;
+    exportAllSuccess: string;
+    removeSuccess: string;
+    removeAllSuccess: string;
+    syncError: string;
+    exportError: string;
+    exportErrorMessage: string;
+    rehearsalsSynced: (count: number) => string;
+    // Rehearsal indicators
+    syncedToCalendar: string;
+    notSynced: string;
+    // Errors
+    noCalendars: string;
+    noCalendarsMessage: string;
+    noWritableCalendars: string;
+    exportFailed: string;
+    deleteFailed: string;
+  };
   // Days
   days: {
     monday: string;
@@ -479,6 +533,59 @@ export const ru: Translations = {
     allAvailable: 'Все свободны',
     allBusy: 'Все заняты',
     busyPrefix: 'Заняты',
+  },
+  calendarSync: {
+    // Navigation
+    title: 'Синхронизация с календарём',
+    // Permissions
+    permissions: 'Разрешения',
+    permissionGranted: 'Доступ предоставлен',
+    permissionDenied: 'Доступ запрещён',
+    permissionDeniedMessage: 'Для использования этой функции необходим доступ к календарю',
+    permissionRequired: 'Требуется доступ к календарю',
+    grantPermission: 'Предоставить доступ',
+    permissionInstructions: 'Разрешите доступ к календарю для синхронизации репетиций',
+    checkingPermissions: 'Проверка разрешений...',
+    // Export Settings
+    exportSettings: 'Настройки экспорта',
+    exportEnabled: 'Экспортировать репетиции',
+    exportCalendar: 'Календарь для экспорта',
+    selectCalendar: 'Выбрать календарь',
+    targetCalendar: 'Целевой календарь',
+    noCalendarSelected: 'Календарь не выбран',
+    selectCalendarFirst: 'Сначала выберите календарь',
+    // Actions
+    actions: 'Действия',
+    exportAll: 'Экспортировать все репетиции',
+    exportAllProgress: (current: number, total: number) => `Экспорт ${current} из ${total}...`,
+    removeAll: 'Удалить все экспортированные',
+    removeAllConfirm: 'Удалить все репетиции из календаря?',
+    // Status
+    status: 'Статус',
+    lastSynced: 'Последняя синхронизация',
+    lastSync: 'Последняя синхронизация',
+    neverSynced: 'Никогда не синхронизировалось',
+    syncedCount: 'Синхронизировано репетиций',
+    never: 'Никогда',
+    syncing: 'Синхронизация...',
+    syncSuccess: 'Успешно синхронизировано',
+    exportSuccess: 'Успешно экспортировано',
+    exportAllSuccess: 'Все репетиции экспортированы',
+    removeSuccess: 'Успешно удалено',
+    removeAllSuccess: 'Все репетиции удалены из календаря',
+    syncError: 'Ошибка синхронизации',
+    exportError: 'Ошибка экспорта',
+    exportErrorMessage: 'Не удалось экспортировать репетиции',
+    rehearsalsSynced: (count: number) => `Синхронизировано репетиций: ${count}`,
+    // Rehearsal indicators
+    syncedToCalendar: 'Добавлено в календарь',
+    notSynced: 'Не синхронизировано',
+    // Errors
+    noCalendars: 'Календари не найдены',
+    noCalendarsMessage: 'На устройстве не найдено доступных календарей',
+    noWritableCalendars: 'Нет календарей для записи',
+    exportFailed: 'Не удалось экспортировать',
+    deleteFailed: 'Не удалось удалить из календаря',
   },
   availability: {
     title: 'Занятость',
@@ -743,6 +850,59 @@ export const en: Translations = {
     allAvailable: 'All available',
     allBusy: 'All busy',
     busyPrefix: 'Busy',
+  },
+  calendarSync: {
+    // Navigation
+    title: 'Calendar Sync',
+    // Permissions
+    permissions: 'Permissions',
+    permissionGranted: 'Access Granted',
+    permissionDenied: 'Access Denied',
+    permissionDeniedMessage: 'Calendar access is required to use this feature',
+    permissionRequired: 'Calendar access required',
+    grantPermission: 'Grant Access',
+    permissionInstructions: 'Grant calendar access to sync rehearsals',
+    checkingPermissions: 'Checking permissions...',
+    // Export Settings
+    exportSettings: 'Export Settings',
+    exportEnabled: 'Export rehearsals',
+    exportCalendar: 'Export to calendar',
+    selectCalendar: 'Select Calendar',
+    targetCalendar: 'Target Calendar',
+    noCalendarSelected: 'No calendar selected',
+    selectCalendarFirst: 'Please select a calendar first',
+    // Actions
+    actions: 'Actions',
+    exportAll: 'Export All Rehearsals',
+    exportAllProgress: (current: number, total: number) => `Exporting ${current} of ${total}...`,
+    removeAll: 'Remove All Exported',
+    removeAllConfirm: 'Remove all rehearsals from calendar?',
+    // Status
+    status: 'Status',
+    lastSynced: 'Last synced',
+    lastSync: 'Last Sync',
+    neverSynced: 'Never synced',
+    syncedCount: 'Synced Rehearsals',
+    never: 'Never',
+    syncing: 'Syncing...',
+    syncSuccess: 'Synced successfully',
+    exportSuccess: 'Exported successfully',
+    exportAllSuccess: 'All rehearsals exported',
+    removeSuccess: 'Removed successfully',
+    removeAllSuccess: 'All rehearsals removed from calendar',
+    syncError: 'Sync error',
+    exportError: 'Export Error',
+    exportErrorMessage: 'Failed to export rehearsals',
+    rehearsalsSynced: (count: number) => `${count} rehearsal${count !== 1 ? 's' : ''} synced`,
+    // Rehearsal indicators
+    syncedToCalendar: 'Added to calendar',
+    notSynced: 'Not synced',
+    // Errors
+    noCalendars: 'No calendars found',
+    noCalendarsMessage: 'No calendars available on this device',
+    noWritableCalendars: 'No writable calendars',
+    exportFailed: 'Export failed',
+    deleteFailed: 'Failed to delete from calendar',
   },
   availability: {
     title: 'Availability',

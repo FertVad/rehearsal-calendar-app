@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
 import { Rehearsal } from '../../../shared/types';
+import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
 
 interface MyRehearsalsModalProps {
   visible: boolean;
@@ -25,6 +26,8 @@ export default function MyRehearsalsModal({
   rehearsals,
   onSelectDate,
 }: MyRehearsalsModalProps) {
+  const [syncedRehearsals, setSyncedRehearsals] = useState<Record<string, boolean>>({});
+
   // Get upcoming rehearsals sorted by date
   const upcomingRehearsals = useMemo(() => {
     const today = new Date();
@@ -43,6 +46,22 @@ export default function MyRehearsalsModal({
         return 0;
       });
   }, [rehearsals]);
+
+  // Check which rehearsals are synced to calendar
+  useEffect(() => {
+    const checkSyncStatus = async () => {
+      const syncStatus: Record<string, boolean> = {};
+      for (const rehearsal of upcomingRehearsals) {
+        const isSynced = await isRehearsalSynced(rehearsal.id);
+        syncStatus[rehearsal.id] = isSynced;
+      }
+      setSyncedRehearsals(syncStatus);
+    };
+
+    if (upcomingRehearsals.length > 0 && visible) {
+      checkSyncStatus();
+    }
+  }, [upcomingRehearsals, visible]);
 
   // Group rehearsals by date
   const groupedRehearsals = useMemo(() => {
@@ -145,6 +164,9 @@ export default function MyRehearsalsModal({
                             <Text style={styles.durationText}>
                               ({rehearsal.duration})
                             </Text>
+                          )}
+                          {syncedRehearsals[rehearsal.id] && (
+                            <Ionicons name="calendar" size={12} color={Colors.accent.green} style={{ marginLeft: 4 }} />
                           )}
                         </View>
 

@@ -17,6 +17,7 @@ import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
 import ProjectDetailScreen from '../features/projects/screens/ProjectDetailScreen';
 import AvailabilityScreen from '../features/availability/screens/AvailabilityScreen';
 import ProfileScreen from '../features/profile/screens/ProfileScreen';
+import CalendarSyncSettingsScreen from '../features/profile/screens/CalendarSyncSettingsScreen';
 import SmartPlannerScreen from '../features/smart-planner/screens/SmartPlannerScreen';
 
 const prefix = Linking.createURL('/');
@@ -69,6 +70,7 @@ export type AppStackParamList = {
   JoinProject: { code: string };
   ProjectDetail: { projectId: string };
   SmartPlanner: { projectId: string };
+  CalendarSyncSettings: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -201,6 +203,10 @@ function AppNavigator() {
       <AppStack.Screen
         name="SmartPlanner"
         component={SmartPlannerScreen}
+      />
+      <AppStack.Screen
+        name="CalendarSyncSettings"
+        component={CalendarSyncSettingsScreen}
       />
     </AppStack.Navigator>
   );

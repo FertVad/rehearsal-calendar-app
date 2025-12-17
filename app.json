@@ -24,7 +24,9 @@
             ]
           }
         ],
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCalendarsUsageDescription": "This app needs access to your calendar to sync rehearsals and show your availability.",
+        "NSRemindersUsageDescription": "This app may set reminders for your rehearsals."
       }
     },
     "android": {
@@ -33,6 +35,10 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.rehearsal.app",
+      "permissions": [
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",

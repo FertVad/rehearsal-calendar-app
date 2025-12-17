@@ -28,6 +28,8 @@ import { TimeRange } from '../../../shared/utils/availability';
 import { checkSchedulingConflicts, formatConflictMessage } from '../../../shared/utils/conflictDetection';
 import { dateTimeToISO } from '../../../shared/utils/time';
 import { addRehearsalScreenStyles as styles } from '../styles';
+import { getSyncSettings } from '../../../shared/utils/calendarStorage';
+import { syncRehearsalToCalendar } from '../../../shared/services/calendarSync';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
@@ -396,7 +398,29 @@ export default function AddRehearsalScreen() {
         participant_ids: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
       };
 
-      await rehearsalsAPI.create(localSelectedProject.id, rehearsalData);
+      const response = await rehearsalsAPI.create(localSelectedProject.id, rehearsalData);
+      const createdRehearsal = response.data;
+
+      // Auto-sync to calendar if export is enabled
+      try {
+        const syncSettings = await getSyncSettings();
+        if (syncSettings.exportEnabled && syncSettings.exportCalendarId && createdRehearsal?.id) {
+          const rehearsalWithProject = {
+            id: createdRehearsal.id,
+            projectId: localSelectedProject.id,
+            projectName: localSelectedProject.name,
+            startsAt: rehearsalData.startsAt,
+            endsAt: rehearsalData.endsAt,
+            location: rehearsalData.location,
+          };
+
+          await syncRehearsalToCalendar(rehearsalWithProject, syncSettings.exportCalendarId);
+          console.log('[AddRehearsal] Auto-synced rehearsal to calendar');
+        }
+      } catch (syncError) {
+        // Don't fail the whole operation if sync fails, just log it
+        console.error('[AddRehearsal] Failed to auto-sync to calendar:', syncError);
+      }
 
       Alert.alert(
         t.rehearsals.success,

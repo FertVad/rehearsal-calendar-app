@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
@@ -6,6 +6,7 @@ import { Rehearsal } from '../../../shared/types';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
+import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
 
 interface Project {
   id: string;
@@ -51,6 +52,23 @@ export default function TodayRehearsals({
   updateAdminStats,
 }: TodayRehearsalsProps) {
   const { t, language } = useI18n();
+  const [syncedRehearsals, setSyncedRehearsals] = useState<Record<string, boolean>>({});
+
+  // Check which rehearsals are synced to calendar
+  useEffect(() => {
+    const checkSyncStatus = async () => {
+      const syncStatus: Record<string, boolean> = {};
+      for (const rehearsal of rehearsals) {
+        const isSynced = await isRehearsalSynced(rehearsal.id);
+        syncStatus[rehearsal.id] = isSynced;
+      }
+      setSyncedRehearsals(syncStatus);
+    };
+
+    if (rehearsals.length > 0) {
+      checkSyncStatus();
+    }
+  }, [rehearsals]);
 
   // Get date label (Сегодня, Завтра, or formatted date)
   const dateLabel = useMemo(() => {
@@ -108,6 +126,11 @@ export default function TodayRehearsals({
                       {rehearsal.time?.substring(0, 5) || ''}
                       {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
                     </Text>
+                    {syncedRehearsals[rehearsal.id] && (
+                      <View style={{ marginLeft: 8, flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="calendar" size={12} color={Colors.accent.green} />
+                      </View>
+                    )}
                   </View>
 
                   {project && (
