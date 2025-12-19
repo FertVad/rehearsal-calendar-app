@@ -4,11 +4,12 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { EventMapping, CalendarSyncSettings } from '../types/calendar';
+import { EventMapping, CalendarSyncSettings, ImportedEventMap } from '../types/calendar';
 
 // Storage keys
 const KEYS = {
   EXPORT_MAPPINGS: 'calendar-export-mappings',
+  IMPORT_TRACKING: 'calendar-import-tracking',
   SYNC_SETTINGS: 'calendar-sync-settings',
 };
 
@@ -119,20 +120,42 @@ export async function getSyncSettings(): Promise<CalendarSyncSettings> {
     if (!settingsJson) {
       // Default settings
       return {
+        // Export settings
         exportEnabled: false,
         exportCalendarId: null,
         lastExportTime: null,
+        // Import settings
+        importEnabled: false,
+        importCalendarIds: [],
+        importInterval: 'manual',
+        lastImportTime: null,
       };
     }
 
-    return JSON.parse(settingsJson);
+    const settings = JSON.parse(settingsJson);
+    // Ensure import settings exist (for backward compatibility)
+    return {
+      exportEnabled: settings.exportEnabled || false,
+      exportCalendarId: settings.exportCalendarId || null,
+      lastExportTime: settings.lastExportTime || null,
+      importEnabled: settings.importEnabled || false,
+      importCalendarIds: settings.importCalendarIds || [],
+      importInterval: settings.importInterval || 'manual',
+      lastImportTime: settings.lastImportTime || null,
+    };
   } catch (error) {
     console.error('[CalendarStorage] Failed to get sync settings:', error);
     // Return default settings on error
     return {
+      // Export settings
       exportEnabled: false,
       exportCalendarId: null,
       lastExportTime: null,
+      // Import settings
+      importEnabled: false,
+      importCalendarIds: [],
+      importInterval: 'manual',
+      lastImportTime: null,
     };
   }
 }
@@ -179,4 +202,132 @@ export async function isRehearsalSynced(rehearsalId: string): Promise<boolean> {
 export async function getSyncedRehearsalsCount(): Promise<number> {
   const mappings = await getAllMappings();
   return Object.keys(mappings).length;
+}
+
+/**
+ * ============================================================================
+ * Import Tracking (calendar eventId → availability slotId)
+ * Phase 2: Import from Calendar
+ * ============================================================================
+ */
+
+/**
+ * Save imported event mapping
+ */
+export async function saveImportedEvent(
+  eventId: string,
+  availabilitySlotId: string,
+  calendarId: string
+): Promise<void> {
+  try {
+    const trackingJson = await AsyncStorage.getItem(KEYS.IMPORT_TRACKING);
+    const tracking: ImportedEventMap = trackingJson ? JSON.parse(trackingJson) : {};
+
+    tracking[eventId] = {
+      availabilitySlotId,
+      calendarId,
+      lastImported: new Date().toISOString(),
+    };
+
+    await AsyncStorage.setItem(KEYS.IMPORT_TRACKING, JSON.stringify(tracking));
+    console.log(`[CalendarStorage] Saved import tracking for event ${eventId}`);
+  } catch (error) {
+    console.error('[CalendarStorage] Failed to save imported event:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all imported events
+ */
+export async function getImportedEvents(): Promise<ImportedEventMap> {
+  try {
+    const trackingJson = await AsyncStorage.getItem(KEYS.IMPORT_TRACKING);
+    return trackingJson ? JSON.parse(trackingJson) : {};
+  } catch (error) {
+    console.error('[CalendarStorage] Failed to get imported events:', error);
+    return {};
+  }
+}
+
+/**
+ * Check if event is already imported
+ */
+export async function isEventImported(eventId: string): Promise<boolean> {
+  try {
+    const tracking = await getImportedEvents();
+    return eventId in tracking;
+  } catch (error) {
+    console.error('[CalendarStorage] Failed to check if event imported:', error);
+    return false;
+  }
+}
+
+/**
+ * Get imported event info
+ */
+export async function getImportedEvent(
+  eventId: string
+): Promise<ImportedEventMap[string] | null> {
+  try {
+    const tracking = await getImportedEvents();
+    return tracking[eventId] || null;
+  } catch (error) {
+    console.error('[CalendarStorage] Failed to get imported event:', error);
+    return null;
+  }
+}
+
+/**
+ * Remove imported event tracking
+ */
+export async function removeImportedEvent(eventId: string): Promise<void> {
+  try {
+    const trackingJson = await AsyncStorage.getItem(KEYS.IMPORT_TRACKING);
+    if (!trackingJson) return;
+
+    const tracking: ImportedEventMap = JSON.parse(trackingJson);
+    delete tracking[eventId];
+
+    await AsyncStorage.setItem(KEYS.IMPORT_TRACKING, JSON.stringify(tracking));
+    console.log(`[CalendarStorage] Removed import tracking for event ${eventId}`);
+  } catch (error) {
+    console.error('[CalendarStorage] Failed to remove imported event:', error);
+    throw error;
+  }
+}
+
+/**
+ * Clear all imported event tracking
+ */
+export async function clearAllImportedEvents(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEYS.IMPORT_TRACKING);
+    console.log('[CalendarStorage] Cleared all import tracking');
+  } catch (error) {
+    console.error('[CalendarStorage] Failed to clear imported events:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get count of imported events
+ */
+export async function getImportedEventsCount(): Promise<number> {
+  const tracking = await getImportedEvents();
+  return Object.keys(tracking).length;
+}
+
+/**
+ * Update last import time
+ */
+export async function updateLastImportTime(): Promise<void> {
+  try {
+    const settings = await getSyncSettings();
+    settings.lastImportTime = new Date().toISOString();
+    await saveSyncSettings(settings);
+  } catch (error) {
+    console.error('[CalendarStorage] Failed to update last import time:', error);
+    throw error;
+  }
 }

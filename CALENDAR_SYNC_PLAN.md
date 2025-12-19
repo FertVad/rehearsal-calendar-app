@@ -1,692 +1,758 @@
-# 📅 Plan: Google & Apple Calendar Integration (Two-Way Sync)
+# 📅 Calendar Sync: Implementation Plan (Updated)
 
 > **Goal**: TWO-WAY sync between user availability and device calendars (Google Calendar on Android / Apple Calendar on iOS)
 
 **Created**: December 17, 2025
-**Status**: Planning
-**Estimated Time**: 4-5 hours implementation + testing
+**Updated**: December 17, 2025
+**Status**: Phase 1 Complete ✅ | Phase 2 Ready to Start
+**Branch**: `feature/calendar-sync`
 
 ---
 
-## 📋 Overview
+## 📊 Progress Overview
 
-This feature will implement **bidirectional synchronization**:
-
-### App → Calendar (Export)
-1. Export rehearsals to device calendar as events
-2. Auto-sync when creating/editing rehearsals
-3. Remove calendar events when rehearsals are deleted
-
-### Calendar → App (Import)
-4. **Import calendar events as "busy" slots** in user availability
-5. **Periodic sync** to fetch new/updated calendar events
-6. **Mark imported slots** with source `google_calendar` or `apple_calendar`
-7. **Detect conflicts** between calendar events and rehearsals
-
-### Settings & Management
-8. Choose which calendars to sync
-9. Enable/disable sync per calendar
-10. Manual sync button + auto-sync interval
-11. View sync status and last sync time
+| Phase | Status | Time Estimated | Time Actual | Description |
+|-------|--------|----------------|-------------|-------------|
+| **Phase 1** | ✅ **COMPLETE** | 2-3 hours | ~2.5 hours | Export (App → Calendar) |
+| **Phase 2** | 🔄 **IN PROGRESS** | 2-3 hours | - | Import (Calendar → App) |
+| **Phase 3** | ⏸️ Pending | 2 hours | - | Auto-Sync & Conflicts |
+| **Phase 4** | ⏸️ Pending | 1-2 hours | - | Polish & Edge Cases |
 
 ---
 
-## 🎯 Task Breakdown
+## ✅ Phase 1: Export (App → Calendar) - COMPLETE
 
-### Phase 1: Setup & Configuration (10 min)
+**Status**: ✅ Implemented and Ready for Testing
 
-#### ✅ What Claude Code will do:
+### What Was Built:
+- ✅ Export rehearsals to device calendar as events
+- ✅ Manual "Export All Rehearsals" button with progress tracking
+- ✅ Auto-export when creating rehearsals
+- ✅ Auto-delete from calendar when deleting rehearsals
+- ✅ Calendar sync settings screen with permissions management
+- ✅ Visual indicators (green calendar icons) for synced rehearsals
+- ✅ Full localization (Russian/English)
 
-- [ ] **Install expo-calendar library**
-  ```bash
-  npx expo install expo-calendar
+### Files Created:
+- `src/shared/services/calendarSync.ts` (363 lines)
+- `src/shared/utils/calendarStorage.ts` (183 lines)
+- `src/shared/types/calendar.ts` (52 lines)
+- `src/features/calendar/hooks/useCalendarSync.ts` (335 lines)
+- `src/features/profile/screens/CalendarSyncSettingsScreen.tsx` (387 lines)
+- `src/features/profile/styles/calendarSyncSettingsScreenStyles.ts`
+
+### Known Limitations:
+- ⚠️ Edit flow not implemented (calendar events not updated when rehearsal edited)
+- ⚠️ Pre-existing TypeScript errors in CalendarScreen.tsx (unrelated to sync)
+
+**Next Step**: Device testing → See [PHASE_1_EXPORT_PLAN.md](PHASE_1_EXPORT_PLAN.md)
+
+---
+
+## 🔄 Phase 2: Import (Calendar → App) - READY TO START
+
+**Goal**: Import calendar events as "busy" availability slots
+
+**Estimated Time**: 2-3 hours
+
+### ✅ Backend Analysis (from CALENDAR_SYNC_ANALYSIS.md):
+
+**Good News: Backend is READY!** No database migrations needed.
+
+#### Database Schema:
+```sql
+-- native_user_availability table ALREADY has:
+source VARCHAR            -- 'manual', 'google_calendar', 'apple_calendar'
+external_event_id VARCHAR -- Calendar event ID for tracking
+starts_at TIMESTAMPTZ     -- Timezone-aware
+ends_at TIMESTAMPTZ       -- Timezone-aware
+is_all_day BOOLEAN        -- For all-day events
+type VARCHAR              -- 'available', 'busy', 'tentative'
+```
+
+#### API Support:
+- ✅ `POST /api/native/availability/bulk` - Batch insert availability slots
+- ✅ `GET /api/native/availability` - Returns source and external_event_id
+- ✅ `DELETE` with source filtering - Can delete only imported slots
+- ✅ Constants: `AVAILABILITY_SOURCES.GOOGLE`, `AVAILABILITY_SOURCES.APPLE`
+
+**Conclusion**: Can start implementing immediately, no server changes required!
+
+---
+
+### 📋 Implementation Checklist
+
+#### Step 1: Add Import Functions to calendarSync.ts ✅ (45 min)
+
+**Location**: `src/shared/services/calendarSync.ts`
+
+- [ ] **Add `getCalendarEvents()` function**
+  ```typescript
+  export async function getCalendarEvents(
+    calendarIds: string[],
+    startDate: Date,
+    endDate: Date
+  ): Promise<Calendar.Event[]>
+  ```
+  - Fetch events from selected calendars
+  - Date range: -30 days to +365 days (to avoid performance issues)
+  - Filter out all-day events (optional, configurable)
+  - Return array of calendar events
+
+- [ ] **Add `importCalendarEventsToAvailability()` function**
+  ```typescript
+  export async function importCalendarEventsToAvailability(
+    calendarIds: string[],
+    onProgress?: (current: number, total: number) => void
+  ): Promise<ImportResult>
+  ```
+  - Get events from calendars
+  - Convert each event to availability slot format:
+    ```typescript
+    {
+      startsAt: event.startDate.toISOString(),
+      endsAt: event.endDate.toISOString(),
+      type: 'busy',
+      source: Platform.OS === 'ios' ? 'apple_calendar' : 'google_calendar',
+      external_event_id: event.id,
+      title: event.title,
+      is_all_day: event.allDay,
+    }
+    ```
+  - Batch insert via API (chunks of 50)
+  - Track imported event IDs
+  - Report progress
+
+- [ ] **Add `syncCalendarToAvailability()` function**
+  ```typescript
+  export async function syncCalendarToAvailability(
+    calendarIds: string[]
+  ): Promise<void>
+  ```
+  - Smart sync: Compare with previously imported events
+  - Detect new events → Insert
+  - Detect updated events → Update
+  - Detect deleted events → Delete from availability
+  - Use external_event_id for matching
+
+- [ ] **Add `removeAllImportedSlots()` function**
+  ```typescript
+  export async function removeAllImportedSlots(): Promise<void>
+  ```
+  - Delete all availability slots where source = 'google_calendar' or 'apple_calendar'
+  - Clear import tracking from AsyncStorage
+
+---
+
+#### Step 2: Extend calendarStorage.ts for Import Tracking ✅ (20 min)
+
+**Location**: `src/shared/utils/calendarStorage.ts`
+
+- [ ] **Add import tracking functions**
+  ```typescript
+  // Track which calendar events have been imported
+  export async function saveImportedEvent(
+    eventId: string,
+    availabilitySlotId: string,
+    calendarId: string
+  ): Promise<void>
+
+  export async function getImportedEvents(): Promise<ImportedEventMap>
+
+  export async function isEventImported(eventId: string): Promise<boolean>
+
+  export async function removeImportedEvent(eventId: string): Promise<void>
+
+  export async function clearAllImportedEvents(): Promise<void>
   ```
 
-- [ ] **Configure permissions in app.json**
-  - iOS: Add `NSCalendarsUsageDescription` and `NSRemindersUsageDescription`
-  - Android: Add `READ_CALENDAR` and `WRITE_CALENDAR` permissions
+- [ ] **Add import settings to CalendarSyncSettings**
+  ```typescript
+  export interface CalendarSyncSettings {
+    // Export settings (existing)
+    exportEnabled: boolean;
+    exportCalendarId: string | null;
+    lastExportTime: string | null;
 
-- [ ] **Update package.json** with new dependency
-
----
-
-### Phase 2: Calendar Service Implementation (60 min)
-
-#### ✅ What Claude Code will do:
-
-- [ ] **Create calendar service file**
-  - Location: `src/shared/services/calendarSync.ts`
-
-  **Export Functions (App → Calendar):**
-  - `requestCalendarPermissions()` - Request calendar permissions
-  - `getDeviceCalendars()` - Get list of device calendars
-  - `createCalendarEvent()` - Create rehearsal event in calendar
-  - `updateCalendarEvent()` - Update existing event
-  - `deleteCalendarEvent()` - Delete event from calendar
-  - `syncRehearsalToCalendar()` - Sync single rehearsal
-  - `syncAllRehearsals()` - Sync all future rehearsals
-  - `getDefaultCalendar()` - Get default calendar for platform
-
-  **Import Functions (Calendar → App):**
-  - `getCalendarEvents(calendarIds, startDate, endDate)` - Read events from calendars
-  - `importCalendarEventsAsAvailability()` - Import events as busy slots
-  - `syncCalendarToAvailability()` - Full sync from calendar to app
-  - `detectEventChanges()` - Compare with previous sync to detect changes
-  - `removeImportedSlots()` - Clean up imported availability slots
-
-- [ ] **Create calendar storage utilities**
-  - Location: `src/shared/utils/calendarStorage.ts`
-
-  **Export Mappings:**
-  - `saveEventMapping()` - Save rehearsalId → calendarEventId mapping
-  - `getEventMapping()` - Get calendar event ID for rehearsal
-  - `removeEventMapping()` - Remove mapping when deleted
-  - `getAllMappings()` - Get all synced events
-
-  **Import Mappings:**
-  - `saveImportedEvent()` - Track imported calendar events
-  - `getImportedEvents()` - Get list of imported event IDs
-  - `isEventImported()` - Check if event was already imported
-  - `removeImportedEvent()` - Remove imported event tracking
-
-- [ ] **Add types for calendar sync**
-  - Location: `src/shared/types/calendar.ts`
-  - Types:
-    - `CalendarEvent` - Calendar event structure
-    - `CalendarSyncSettings` - User sync preferences
-    - `EventMapping` - Rehearsal ↔ Calendar event mapping
-    - `ImportedEvent` - Tracking for imported events
-    - `SyncDirection` - 'export' | 'import' | 'both'
-    - `SyncStatus` - Sync state tracking
+    // Import settings (new)
+    importEnabled: boolean;
+    importCalendarIds: string[];  // Can select multiple calendars
+    importInterval: 'manual' | 'hourly' | '6hours' | 'daily';
+    lastImportTime: string | null;
+  }
+  ```
 
 ---
 
-### Phase 3: Availability Integration (45 min)
+#### Step 3: Update Types ✅ (10 min)
 
-#### ✅ What Claude Code will do:
+**Location**: `src/shared/types/calendar.ts`
 
-- [ ] **Update availability API to handle imported events**
-  - Location: Server-side if needed
-  - Ensure `source` field supports: `'manual'`, `'rehearsal'`, `'google_calendar'`, `'apple_calendar'`
-  - Add `external_event_id` to track calendar event ID
+- [ ] **Add import-related types**
+  ```typescript
+  export interface ImportedEventMap {
+    [eventId: string]: {
+      availabilitySlotId: string;
+      calendarId: string;
+      lastImported: string;
+    };
+  }
 
-- [ ] **Create availability import service**
-  - Location: `src/shared/services/availabilityImport.ts`
-  - Functions:
-    - `convertCalendarEventToAvailabilitySlot()` - Transform event to busy slot
-    - `batchImportSlots()` - Import multiple events efficiently
-    - `mergeWithExistingAvailability()` - Avoid duplicates
-    - `detectRemovedEvents()` - Clean up deleted calendar events
+  export interface ImportResult {
+    success: number;
+    failed: number;
+    skipped: number;  // Already imported
+    errors: string[];
+  }
 
-- [ ] **Add conflict detection for imported events**
-  - Detect when rehearsal overlaps with imported calendar event
-  - Show warning when scheduling rehearsal during user's busy time
-  - Display source of conflict (e.g., "John has a Google Calendar event")
-
----
-
-### Phase 4: UI Components (45 min)
-
-#### ✅ What Claude Code will do:
-
-- [ ] **Create comprehensive Calendar Sync Settings screen**
-  - Location: `src/features/profile/screens/CalendarSyncSettingsScreen.tsx`
-  - UI Sections:
-
-    **1. Sync Status:**
-    - Last sync time (import & export)
-    - Sync in progress indicator
-    - Manual "Sync Now" button
-
-    **2. Export Settings (App → Calendar):**
-    - Toggle: "Export rehearsals to calendar"
-    - Calendar picker: Select destination calendar
-    - Auto-sync toggle
-
-    **3. Import Settings (Calendar → App):**
-    - Toggle: "Import calendar events as busy slots"
-    - Multi-select: Choose calendars to import from
-    - List of selected calendars with toggle per calendar
-    - Sync interval: Manual / Every hour / Every 6 hours / Daily
-
-    **4. Actions:**
-    - Button: "Export All Rehearsals"
-    - Button: "Import Calendar Events Now"
-    - Button: "Clear All Imported Events" (danger)
-    - Button: "Remove All Exported Events" (danger)
-
-- [ ] **Add entry point in ProfileScreen**
-  - Location: `src/features/profile/screens/ProfileScreen.tsx`
-  - Add "Calendar Sync" option that navigates to settings screen
-  - Show sync status badge (syncing / last synced / error)
-
-- [ ] **Add calendar indicators to rehearsal cards**
-  - Locations:
-    - `src/features/calendar/components/TodayRehearsals.tsx`
-    - `src/features/calendar/screens/CalendarScreen.tsx`
-  - Features:
-    - Icon: Calendar icon if rehearsal is exported
-    - Badge: Show if rehearsal conflicts with user's calendar events
-    - Tooltip: "Synced to [Calendar Name]"
-
-- [ ] **Add visual indicators for imported availability**
-  - Location: `src/features/availability/screens/AvailabilityScreen.tsx`
-  - Features:
-    - Different color for imported busy slots (e.g., blue vs red)
-    - Icon: Calendar icon on imported slots
-    - Label: "From Google Calendar" or "From Apple Calendar"
-    - Non-editable: User can't modify imported slots directly
-
-- [ ] **Create sync conflict modal**
-  - Location: `src/features/calendar/components/SyncConflictModal.tsx`
-  - Shows when creating rehearsal during imported busy time
-  - Lists conflicting calendar events
-  - Options: "Schedule Anyway" or "Pick Different Time"
+  export interface AvailabilitySlot {
+    userId?: string;
+    startsAt: string;  // ISO 8601
+    endsAt: string;    // ISO 8601
+    type: 'busy' | 'available' | 'tentative';
+    source: 'manual' | 'rehearsal' | 'google_calendar' | 'apple_calendar';
+    external_event_id?: string;
+    title?: string;
+    notes?: string;
+    is_all_day?: boolean;
+  }
+  ```
 
 ---
 
-### Phase 5: Background Sync & Polling (30 min)
+#### Step 4: Update useCalendarSync Hook ✅ (30 min)
 
-#### ✅ What Claude Code will do:
+**Location**: `src/features/calendar/hooks/useCalendarSync.ts`
 
-- [ ] **Create background sync service**
-  - Location: `src/shared/services/backgroundSync.ts`
-  - Features:
-    - Periodic polling for calendar changes
-    - Use React Native AppState to sync when app comes to foreground
-    - Configurable sync interval
-    - Battery-friendly: don't sync too frequently
+- [ ] **Add import state**
+  ```typescript
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [lastImportTime, setLastImportTime] = useState<string | null>(null);
+  const [importedCount, setImportedCount] = useState(0);
+  ```
 
-- [ ] **Create sync orchestrator**
-  - Location: `src/shared/services/syncOrchestrator.ts`
-  - Coordinates import and export
-  - Handles errors and retries
-  - Prevents concurrent syncs
-  - Updates sync status in real-time
+- [ ] **Add import functions**
+  ```typescript
+  const importNow = async () => {
+    if (!settings?.importEnabled || !settings.importCalendarIds.length) {
+      return;
+    }
 
-- [ ] **Add sync hook**
-  - Location: `src/features/calendar/hooks/useCalendarSync.ts`
-  - Features:
-    - `syncExport()` - Export rehearsals to calendar
-    - `syncImport()` - Import calendar events to availability
-    - `syncBoth()` - Full bidirectional sync
-    - `isSyncing` - Loading state
-    - `syncError` - Error state
-    - `lastSyncTime` - Timestamp of last successful sync
-    - `syncStatus` - Detailed status per direction
+    setIsImporting(true);
+    setImportError(null);
+
+    try {
+      const result = await importCalendarEventsToAvailability(
+        settings.importCalendarIds,
+        (current, total) => {
+          // Progress callback
+        }
+      );
+
+      setImportedCount(result.success);
+      setLastImportTime(new Date().toISOString());
+      await updateSettings({ ...settings, lastImportTime: new Date().toISOString() });
+    } catch (error: any) {
+      setImportError(error.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const clearImported = async () => {
+    await removeAllImportedSlots();
+    setImportedCount(0);
+  };
+  ```
+
+- [ ] **Return new state/functions**
+  ```typescript
+  return {
+    // Existing export state/functions
+    hasPermission,
+    calendars,
+    settings,
+    isSyncing,
+    syncError,
+    lastSyncTime,
+    syncedCount,
+    requestPermissions,
+    updateSettings,
+    syncRehearsal,
+    unsync,
+    syncAll,
+    removeAll,
+
+    // New import state/functions
+    isImporting,
+    importError,
+    lastImportTime,
+    importedCount,
+    importNow,
+    clearImported,
+  };
+  ```
 
 ---
 
-### Phase 6: Localization (20 min)
+#### Step 5: Update CalendarSyncSettingsScreen UI ✅ (45 min)
 
-#### ✅ What Claude Code will do:
+**Location**: `src/features/profile/screens/CalendarSyncSettingsScreen.tsx`
 
-- [ ] **Add translations to src/i18n/translations.ts**
+- [ ] **Add Import Settings Section**
+  ```tsx
+  {/* Import Settings (Calendar → App) */}
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>{t.calendarSync.importSection}</Text>
 
-  **Russian translations:**
+    {/* Enable Import Toggle */}
+    <View style={styles.settingItem}>
+      <View style={styles.settingLeft}>
+        <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+          <Ionicons name="download" size={20} color={Colors.accent.blue} />
+        </View>
+        <Text style={styles.settingLabel}>{t.calendarSync.importEnabled}</Text>
+      </View>
+      <Switch
+        value={importEnabled}
+        onValueChange={handleToggleImport}
+        trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.blue }}
+        thumbColor={Colors.text.inverse}
+        disabled={isImporting}
+      />
+    </View>
+
+    {/* Calendar Multi-Selector */}
+    {importEnabled && (
+      <TouchableOpacity
+        style={styles.settingItem}
+        onPress={() => setCalendarImportPickerVisible(true)}
+      >
+        <View style={styles.settingLeft}>
+          <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+            <Ionicons name="list" size={20} color={Colors.accent.purple} />
+          </View>
+          <Text style={styles.settingLabel}>{t.calendarSync.importCalendars}</Text>
+        </View>
+        <View style={styles.settingRight}>
+          <Text style={styles.settingValue}>
+            {selectedImportCalendarIds.length === 0
+              ? t.calendarSync.selectCalendars
+              : t.calendarSync.calendarsSelected(selectedImportCalendarIds.length)}
+          </Text>
+          <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+        </View>
+      </TouchableOpacity>
+    )}
+  </View>
+  ```
+
+- [ ] **Add Import Actions Section**
+  ```tsx
+  {/* Import Actions */}
+  {importEnabled && selectedImportCalendarIds.length > 0 && (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{t.calendarSync.actions}</Text>
+
+      {/* Import Now Button */}
+      <GlassButton
+        title={t.calendarSync.importNow}
+        onPress={handleImportNow}
+        variant="blue"
+        disabled={isImporting}
+        loading={isImporting}
+        style={styles.actionButton}
+      />
+
+      {/* Clear Imported Button */}
+      {importedCount > 0 && (
+        <GlassButton
+          title={t.calendarSync.clearImported}
+          onPress={handleClearImported}
+          variant="glass"
+          disabled={isImporting}
+          style={styles.actionButton}
+        />
+      )}
+    </View>
+  )}
+  ```
+
+- [ ] **Add Multi-Select Calendar Picker Modal**
+  ```tsx
+  {/* Calendar Multi-Select Modal */}
+  <Modal
+    visible={calendarImportPickerVisible}
+    transparent
+    animationType="slide"
+    onRequestClose={() => setCalendarImportPickerVisible(false)}
+  >
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>{t.calendarSync.selectCalendars}</Text>
+          <TouchableOpacity onPress={() => setCalendarImportPickerVisible(false)}>
+            <Ionicons name="close" size={24} color={Colors.text.secondary} />
+          </TouchableOpacity>
+        </View>
+        <FlatList
+          data={calendars}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.calendarItem}
+              onPress={() => handleToggleImportCalendar(item.id)}
+            >
+              <View style={styles.calendarInfo}>
+                <View style={[styles.calendarColor, { backgroundColor: item.color }]} />
+                <Text style={styles.calendarTitle}>{item.title}</Text>
+              </View>
+              <Ionicons
+                name={selectedImportCalendarIds.includes(item.id) ? "checkbox" : "square-outline"}
+                size={24}
+                color={selectedImportCalendarIds.includes(item.id) ? Colors.accent.blue : Colors.text.tertiary}
+              />
+            </TouchableOpacity>
+          )}
+          style={styles.calendarList}
+        />
+        <GlassButton
+          title={t.common.done}
+          onPress={() => setCalendarImportPickerVisible(false)}
+          variant="purple"
+          style={styles.modalButton}
+        />
+      </View>
+    </View>
+  </Modal>
+  ```
+
+- [ ] **Update Import Status Display**
+  ```tsx
+  {/* Status */}
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>{t.calendarSync.status}</Text>
+
+    <View style={styles.statusCard}>
+      {/* Export Status */}
+      <View style={styles.statusRow}>
+        <Text style={styles.statusLabel}>{t.calendarSync.exportedCount}</Text>
+        <Text style={styles.statusValue}>{syncedCount}</Text>
+      </View>
+
+      <View style={styles.statusRow}>
+        <Text style={styles.statusLabel}>{t.calendarSync.lastExport}</Text>
+        <Text style={styles.statusValue}>{formatLastSyncTime()}</Text>
+      </View>
+
+      {/* Import Status */}
+      {importEnabled && (
+        <>
+          <View style={styles.divider} />
+
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>{t.calendarSync.importedCount}</Text>
+            <Text style={styles.statusValue}>{importedCount}</Text>
+          </View>
+
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>{t.calendarSync.lastImport}</Text>
+            <Text style={styles.statusValue}>{formatLastImportTime()}</Text>
+          </View>
+        </>
+      )}
+
+      {importError && (
+        <View style={styles.errorContainer}>
+          <Ionicons name="warning" size={16} color={Colors.accent.red} />
+          <Text style={styles.errorText}>{importError}</Text>
+        </View>
+      )}
+    </View>
+  </View>
+  ```
+
+---
+
+#### Step 6: Update Translations ✅ (15 min)
+
+**Location**: `src/i18n/translations.ts`
+
+- [ ] **Add import translations (Russian)**
   ```typescript
   calendarSync: {
-    // General
-    title: 'Синхронизация календаря',
-    syncNow: 'Синхронизировать сейчас',
-    lastSynced: 'Последняя синхронизация',
-    syncing: 'Синхронизация...',
-    syncSuccess: 'Успешно синхронизировано',
-    syncError: 'Ошибка синхронизации',
-    never: 'Никогда',
-
-    // Export (App → Calendar)
-    exportSection: 'Экспорт репетиций',
-    exportEnabled: 'Экспортировать репетиции в календарь',
-    exportCalendar: 'Календарь для экспорта',
-    exportAll: 'Экспортировать все репетиции',
-    exportSuccess: 'Репетиции экспортированы',
-    removeAllExported: 'Удалить все экспортированные события',
+    // ... existing export translations ...
 
     // Import (Calendar → App)
     importSection: 'Импорт из календаря',
     importEnabled: 'Импортировать события как занятость',
     importCalendars: 'Календари для импорта',
     selectCalendars: 'Выбрать календари',
-    importInterval: 'Частота синхронизации',
+    calendarsSelected: (count: number) => `Выбрано: ${count}`,
     importNow: 'Импортировать сейчас',
     importSuccess: 'События импортированы',
-    clearImported: 'Очистить импортированные события',
-
-    // Intervals
-    intervalManual: 'Вручную',
-    intervalHourly: 'Каждый час',
-    interval6Hours: 'Каждые 6 часов',
-    intervalDaily: 'Ежедневно',
-
-    // Sources
-    sourceGoogleCalendar: 'Google Calendar',
-    sourceAppleCalendar: 'Apple Calendar',
-    sourceManual: 'Вручную',
-    sourceRehearsal: 'Репетиция',
-
-    // Conflicts
-    conflictTitle: 'Конфликт с календарём',
-    conflictMessage: 'У участников есть события в это время:',
-    conflictScheduleAnyway: 'Запланировать всё равно',
-    conflictPickDifferent: 'Выбрать другое время',
-
-    // Permissions
-    permissionRequired: 'Требуется разрешение',
-    grantPermission: 'Предоставить доступ',
-    permissionDenied: 'Доступ запрещён',
-    permissionInstructions: 'Разрешите доступ к календарю в настройках устройства',
+    importError: 'Ошибка импорта',
+    clearImported: 'Очистить импортированные',
+    importedCount: 'Импортировано событий',
+    lastImport: 'Последний импорт',
 
     // Status
-    noCalendars: 'Календари не найдены',
-    noCalendarsSelected: 'Календари не выбраны',
-    calendarsSelected: (count: number) => `Выбрано календарей: ${count}`,
+    exportedCount: 'Экспортировано репетиций',
+    lastExport: 'Последний экспорт',
   }
   ```
 
-  **English translations:**
+- [ ] **Add import translations (English)**
   ```typescript
   calendarSync: {
-    // General
-    title: 'Calendar Sync',
-    syncNow: 'Sync Now',
-    lastSynced: 'Last synced',
-    syncing: 'Syncing...',
-    syncSuccess: 'Synced successfully',
-    syncError: 'Sync error',
-    never: 'Never',
-
-    // Export (App → Calendar)
-    exportSection: 'Export Rehearsals',
-    exportEnabled: 'Export rehearsals to calendar',
-    exportCalendar: 'Export to calendar',
-    exportAll: 'Export All Rehearsals',
-    exportSuccess: 'Rehearsals exported',
-    removeAllExported: 'Remove All Exported Events',
+    // ... existing export translations ...
 
     // Import (Calendar → App)
     importSection: 'Import from Calendar',
     importEnabled: 'Import events as busy slots',
     importCalendars: 'Calendars to import',
     selectCalendars: 'Select Calendars',
-    importInterval: 'Sync frequency',
+    calendarsSelected: (count: number) => `${count} selected`,
     importNow: 'Import Now',
     importSuccess: 'Events imported',
-    clearImported: 'Clear Imported Events',
-
-    // Intervals
-    intervalManual: 'Manual',
-    intervalHourly: 'Every hour',
-    interval6Hours: 'Every 6 hours',
-    intervalDaily: 'Daily',
-
-    // Sources
-    sourceGoogleCalendar: 'Google Calendar',
-    sourceAppleCalendar: 'Apple Calendar',
-    sourceManual: 'Manual',
-    sourceRehearsal: 'Rehearsal',
-
-    // Conflicts
-    conflictTitle: 'Calendar Conflict',
-    conflictMessage: 'Members have events at this time:',
-    conflictScheduleAnyway: 'Schedule Anyway',
-    conflictPickDifferent: 'Pick Different Time',
-
-    // Permissions
-    permissionRequired: 'Permission Required',
-    grantPermission: 'Grant Access',
-    permissionDenied: 'Access Denied',
-    permissionInstructions: 'Grant calendar access in device settings',
+    importError: 'Import error',
+    clearImported: 'Clear Imported',
+    importedCount: 'Imported events',
+    lastImport: 'Last import',
 
     // Status
-    noCalendars: 'No calendars found',
-    noCalendarsSelected: 'No calendars selected',
-    calendarsSelected: (count: number) => `${count} calendar${count !== 1 ? 's' : ''} selected`,
+    exportedCount: 'Exported rehearsals',
+    lastExport: 'Last export',
   }
   ```
 
 ---
 
-### Phase 7: Testing (You will do this)
+#### Step 7: Visual Indicators in Availability Screen ✅ (30 min)
 
-#### 👤 What YOU will do:
+**Location**: `src/features/availability/screens/AvailabilityScreen.tsx`
 
-**Export Testing (App → Calendar)**
+- [ ] **Add visual distinction for imported slots**
+  - Different background color for imported busy slots (blue vs red)
+  - Calendar icon badge
+  - Label: "From Google Calendar" or "From Apple Calendar"
+  - Make imported slots read-only (can't edit/delete)
 
-- [ ] **Step 1: Test permissions (5 min)**
-  - Run the app: `npm start`
-  - Open on physical device (not simulator!)
-  - Go to Profile → Calendar Sync
-  - Tap "Grant Access" button
-  - ✅ Verify: System permission dialog appears
-  - ✅ Grant permission
-  - ✅ Verify: Calendar list appears
-
-- [ ] **Step 2: Test manual rehearsal export (5 min)**
-  - Enable "Export rehearsals to calendar"
-  - Select a destination calendar
-  - Go to Calendar tab
-  - Create a new rehearsal
-  - ✅ Verify: Success message appears
-  - Open device Calendar app
-  - ✅ Verify: Event appears with correct date/time/location
-
-- [ ] **Step 3: Test "Export All" (5 min)**
-  - Go to Profile → Calendar Sync
-  - Tap "Export All Rehearsals"
-  - ✅ Verify: Progress indicator appears
-  - ✅ Verify: Success message shown
-  - Open device Calendar app
-  - ✅ Verify: All future rehearsals are present
-
-- [ ] **Step 4: Test rehearsal deletion (3 min)**
-  - Delete a synced rehearsal
-  - Open device Calendar app
-  - ✅ Verify: Corresponding event is removed
-
-- [ ] **Step 5: Test rehearsal edit (3 min)**
-  - Edit a synced rehearsal (change time/date/location)
-  - Save changes
-  - Open device Calendar app
-  - ✅ Verify: Event is updated with new details
-
-**Import Testing (Calendar → App)**
-
-- [ ] **Step 6: Test calendar event import (10 min)**
-  - Open device Calendar app
-  - Create a personal event (e.g., "Doctor appointment")
-  - Set date/time
-  - Go back to Rehearsal Calendar app
-  - Go to Profile → Calendar Sync
-  - Enable "Import events as busy slots"
-  - Select the calendar you created event in
-  - Tap "Import Now"
-  - ✅ Verify: Success message appears
-  - Go to Availability screen
-  - ✅ Verify: Busy slot appears for the calendar event
-  - ✅ Verify: Slot is marked as from Google/Apple Calendar
-  - ✅ Verify: Slot is NOT editable (read-only)
-
-- [ ] **Step 7: Test multiple calendar import (5 min)**
-  - Create events in different calendars (Work, Personal)
-  - Select multiple calendars in import settings
-  - Tap "Import Now"
-  - ✅ Verify: Events from all selected calendars are imported
-  - ✅ Verify: Each shows correct source calendar
-
-- [ ] **Step 8: Test conflict detection (5 min)**
-  - Create a calendar event at specific time
-  - Import it to app
-  - Try to create a rehearsal at the same time
-  - ✅ Verify: Conflict warning appears
-  - ✅ Verify: Shows which users have calendar conflicts
-  - ✅ Verify: Can proceed or cancel
-
-- [ ] **Step 9: Test calendar event deletion (5 min)**
-  - Delete a calendar event in device Calendar app
-  - Go to app
-  - Tap "Import Now" to sync
-  - ✅ Verify: Corresponding busy slot is removed from Availability
-
-- [ ] **Step 10: Test auto-sync interval (10 min)**
-  - Set sync interval to "Every hour"
-  - Create a calendar event
-  - Wait for 1+ hour (or manually trigger foreground sync)
-  - ✅ Verify: Event is automatically imported
-  - Check last sync time
-  - ✅ Verify: Shows recent timestamp
-
-**General Testing**
-
-- [ ] **Step 11: Test sync both directions (5 min)**
-  - Create a rehearsal (should export to calendar)
-  - Create a calendar event (should import to availability)
-  - ✅ Verify: Both operations work simultaneously
-  - ✅ Verify: No conflicts or errors
-
-- [ ] **Step 12: Test "Clear Imported" (3 min)**
-  - Tap "Clear Imported Events"
-  - ✅ Verify: Confirmation dialog appears
-  - Confirm
-  - ✅ Verify: All imported busy slots are removed
-  - ✅ Verify: Manual availability is NOT removed
-
-- [ ] **Step 13: Test "Remove All Exported" (3 min)**
-  - Tap "Remove All Exported Events"
-  - ✅ Verify: Confirmation dialog appears
-  - Confirm
-  - Open device Calendar app
-  - ✅ Verify: All rehearsal events are removed
-
-- [ ] **Step 14: Test on iOS (if available)**
-  - Repeat steps 1-13 on iOS device
-  - ✅ Verify: Works with Apple Calendar
-  - ✅ Verify: Events sync to iCloud
-
-- [ ] **Step 15: Test on Android (if available)**
-  - Repeat steps 1-13 on Android device
-  - ✅ Verify: Works with Google Calendar
-  - ✅ Verify: Supports multiple Google accounts
-
-- [ ] **Step 16: Test error scenarios (5 min)**
-  - Revoke calendar permission in device settings
-  - Try to sync
-  - ✅ Verify: Clear error message appears
-  - ✅ Verify: App doesn't crash
-  - ✅ Verify: Can re-grant permission
-
-- [ ] **Step 17: Test language switching (2 min)**
-  - Switch app language to Russian
-  - Go to Calendar Sync screen
-  - ✅ Verify: All text is in Russian
-  - Switch to English
-  - ✅ Verify: All text is in English
+- [ ] **Add filter toggle**
+  - Toggle: "Show imported events"
+  - Allow hiding imported slots if too cluttered
 
 ---
 
-## 📊 Technical Details
+### ⚠️ Important Considerations (from Analysis)
 
-### Export: Rehearsal → Calendar Event
+#### Performance:
+- ✅ **Limit date range**: -30 days to +365 days (avoid loading 1000+ events)
+- ✅ **Batch processing**: Insert in chunks of 50 events
+- ✅ **Progress indicator**: Show "Importing 25 of 100..."
+- ✅ **Debounce button**: Prevent spam clicks on "Import Now"
+
+#### Privacy:
+- ✅ **User choice**: Only import from selected calendars
+- ✅ **Local storage**: Keep event mappings in AsyncStorage, not server
+- ✅ **Clear on logout**: Remove all import data
+
+#### Timezone:
+- ✅ **Store as UTC**: Database TIMESTAMPTZ handles conversion
+- ✅ **All-day events**: Set `is_all_day: true`, don't convert timezone
+- ✅ **Display in local**: App shows in user's timezone
+
+#### Sync Consistency:
+- ✅ **Check external_event_id**: Avoid duplicate imports
+- ✅ **Compare timestamps**: Detect updated events
+- ✅ **Handle deletions**: Remove slots for deleted calendar events
+
+---
+
+## 📊 Phase 2 Technical Details
+
+### Import Process Flow:
 
 ```typescript
+1. User taps "Import Now"
+2. Check permissions
+3. Fetch events from selected calendars (date range: -30d to +365d)
+4. For each event:
+   a. Check if already imported (external_event_id)
+   b. If new → Convert to availability slot format
+   c. If exists → Compare timestamps, update if changed
+5. Batch insert to server (chunks of 50)
+6. Save import tracking to AsyncStorage
+7. Update UI with imported count
+8. Show success message
+```
+
+### Calendar Event → Availability Slot Conversion:
+
+```typescript
+Calendar Event:
 {
-  title: "Rehearsal: [Project Name]",
-  startDate: rehearsal.startsAt, // ISO 8601 with timezone
-  endDate: rehearsal.endsAt,     // ISO 8601 with timezone
-  location: rehearsal.location || "TBD",
-  notes: `Project: ${project.name}\n\nCreated via Rehearsal Calendar app`,
-  alarms: [
-    { relativeOffset: -30 } // 30 minutes before
-  ]
+  id: "event-123",
+  title: "Doctor appointment",
+  startDate: new Date("2025-12-20T14:00:00Z"),
+  endDate: new Date("2025-12-20T15:00:00Z"),
+  allDay: false,
+  calendarId: "calendar-1"
+}
+
+Availability Slot:
+{
+  startsAt: "2025-12-20T14:00:00.000Z",
+  endsAt: "2025-12-20T15:00:00.000Z",
+  type: "busy",
+  source: "google_calendar",  // or "apple_calendar"
+  external_event_id: "event-123",
+  title: "Doctor appointment",
+  is_all_day: false
 }
 ```
 
-### Import: Calendar Event → Availability Slot
+### AsyncStorage Format:
 
 ```typescript
 {
-  userId: currentUser.id,
-  startsAt: event.startDate, // ISO 8601
-  endsAt: event.endDate,     // ISO 8601
-  type: 'busy',
-  source: Platform.OS === 'ios' ? 'apple_calendar' : 'google_calendar',
-  external_event_id: event.id, // Calendar event ID
-  title: event.title,
-  notes: `Imported from ${calendarName}`,
-  is_all_day: event.allDay,
-}
-```
-
-### Storage Format
-
-**AsyncStorage keys:**
-
-```typescript
-{
-  // Export mappings (rehearsal → calendar event)
-  "calendar-export-mappings": {
-    "rehearsal-123": {
-      calendarEventId: "event-456",
-      calendarId: "calendar-1",
-      lastSynced: "2025-12-17T10:30:00Z"
-    }
-  },
-
-  // Import tracking (calendar event → availability slot)
   "calendar-import-tracking": {
-    "event-789": {
-      availabilitySlotId: "slot-101",
-      calendarId: "calendar-2",
-      lastImported: "2025-12-17T10:30:00Z"
-    }
+    "event-123": {
+      availabilitySlotId: "slot-456",
+      calendarId: "calendar-1",
+      lastImported: "2025-12-17T12:00:00Z"
+    },
+    "event-124": { ... }
   },
 
-  // Sync settings
   "calendar-sync-settings": {
     // Export settings
     exportEnabled: true,
     exportCalendarId: "calendar-1",
-    autoExport: true,
+    lastExportTime: "2025-12-17T12:00:00Z",
 
     // Import settings
     importEnabled: true,
-    importCalendarIds: ["calendar-2", "calendar-3"],
-    importInterval: "hourly", // 'manual' | 'hourly' | '6hours' | 'daily'
-
-    // Status
-    lastExportTime: "2025-12-17T10:30:00Z",
-    lastImportTime: "2025-12-17T10:35:00Z",
+    importCalendarIds: ["calendar-1", "calendar-2"],
+    importInterval: "manual",
+    lastImportTime: "2025-12-17T12:05:00Z"
   }
 }
 ```
 
-### Platform Differences
+---
 
-**iOS (Apple Calendar)**:
-- Uses `EKEventStore` via expo-calendar
-- Events sync to iCloud automatically if enabled
-- Supports multiple calendars (Personal, Work, Family, etc.)
-- Default calendar: User's primary calendar
-- Import source: `'apple_calendar'`
+## 🧪 Phase 2 Testing Checklist
 
-**Android (Google Calendar)**:
-- Uses `CalendarContract` via expo-calendar
-- Events sync to Google account automatically
-- Supports multiple Google accounts
-- Default calendar: Primary Google Calendar
-- Import source: `'google_calendar'`
+### Prerequisites:
+- ✅ Physical device (iOS or Android)
+- ✅ Calendar app with test events
+- ✅ Phase 1 working (export tested)
 
-### Sync Algorithm
+### Test Scenarios:
 
-**Import Process (Calendar → App):**
-1. Fetch events from selected calendars for date range (today - 30 days to today + 365 days)
-2. Compare with previously imported events (using `external_event_id`)
-3. For new events: Create availability slots with `source='google_calendar'` or `'apple_calendar'`
-4. For updated events: Update corresponding availability slots
-5. For deleted events: Remove corresponding availability slots
-6. Update import tracking in AsyncStorage
-7. Update last import time
+- [ ] **Test 1: Basic Import**
+  1. Create calendar event in device Calendar app
+  2. Go to Calendar Sync Settings
+  3. Enable "Import events as busy slots"
+  4. Select calendar
+  5. Tap "Import Now"
+  6. ✅ Success message appears
+  7. Go to Availability screen
+  8. ✅ Busy slot appears for calendar event
+  9. ✅ Slot marked as from Google/Apple Calendar
+  10. ✅ Slot is read-only
 
-**Export Process (App → Calendar):**
-1. Fetch all future rehearsals
-2. Compare with export mappings
-3. For new rehearsals: Create calendar events
-4. For updated rehearsals: Update calendar events
-5. For deleted rehearsals: Delete calendar events
-6. Update export mappings
-7. Update last export time
+- [ ] **Test 2: Multiple Calendars**
+  1. Create events in Work calendar
+  2. Create events in Personal calendar
+  3. Select both calendars in import settings
+  4. Tap "Import Now"
+  5. ✅ Events from both calendars imported
 
-**Conflict Detection:**
-- When creating/editing rehearsal, check if any participant has imported busy slot at that time
-- Show warning modal with list of conflicts
-- Allow admin to proceed or choose different time
+- [ ] **Test 3: All-Day Events**
+  1. Create all-day event in calendar
+  2. Import
+  3. ✅ Shows as all-day busy slot
+  4. ✅ No specific time shown
+
+- [ ] **Test 4: Event Updates**
+  1. Import calendar event
+  2. Edit event time in Calendar app
+  3. Tap "Import Now" again
+  4. ✅ Busy slot time updated
+
+- [ ] **Test 5: Event Deletion**
+  1. Import calendar event
+  2. Delete event from Calendar app
+  3. Tap "Import Now" again
+  4. ✅ Busy slot removed from availability
+
+- [ ] **Test 6: Duplicate Prevention**
+  1. Import events
+  2. Import again without clearing
+  3. ✅ No duplicate busy slots created
+
+- [ ] **Test 7: Clear Imported**
+  1. Import several events
+  2. Tap "Clear Imported"
+  3. ✅ Confirmation dialog
+  4. Confirm
+  5. ✅ All imported busy slots removed
+  6. ✅ Manual availability NOT removed
+
+- [ ] **Test 8: Language Switch**
+  1. Switch to Russian
+  2. ✅ All import UI in Russian
+  3. Switch to English
+  4. ✅ All import UI in English
+
+- [ ] **Test 9: Performance**
+  1. Create 100+ events in calendar
+  2. Import
+  3. ✅ Progress indicator shows
+  4. ✅ Completes in reasonable time (<30 sec)
+  5. ✅ App doesn't freeze
+
+- [ ] **Test 10: Error Handling**
+  1. Revoke calendar permission
+  2. Try to import
+  3. ✅ Clear error message
+  4. ✅ App doesn't crash
 
 ---
 
-## ⚠️ Important Notes
+## 🚀 Phase 3 & 4 (Future)
 
-### Requirements:
-1. **Physical device required** - Calendar API doesn't work properly in simulator/emulator
-2. **Permissions must be granted** - App will request READ_CALENDAR and WRITE_CALENDAR
-3. **No internet needed for sync** - Works locally with device calendar
-4. **Automatic cloud sync** - Calendar changes sync to Google/iCloud automatically
+### Phase 3: Auto-Sync & Conflicts (2 hours)
+- Background sync on app foreground
+- Conflict detection when scheduling rehearsals
+- Warning modal for conflicts
+- Smart Planner integration
 
-### Two-Way Sync Behavior:
-
-**Export (App → Calendar):**
-- Rehearsals are exported as calendar events
-- Updates to rehearsals update calendar events
-- Deleting rehearsal deletes calendar event
-- Only future rehearsals are exported
-
-**Import (Calendar → App):**
-- Calendar events are imported as "busy" availability slots
-- Imported slots are read-only (can't be edited in app)
-- Deleting calendar event removes busy slot on next sync
-- Only events in selected calendars are imported
-- Time range: Past 30 days to future 365 days
-
-### Limitations:
-1. **One-way modifications** - Can't edit imported slots in app, must edit in calendar
-2. **Polling-based** - Not real-time, syncs at intervals or manually
-3. **No recurring event handling** - Each instance treated separately
-4. **No calendar notifications** - App doesn't receive instant updates when calendar changes
-
-### Error Handling:
-- Permission denied → Clear message + instructions to grant in settings
-- No calendars found → Suggest creating calendar in system app
-- Event creation fails → Log error, show user-friendly message, don't block other operations
-- Conflict during import → Skip conflicting events, log warning
-- Network not required → All operations work offline
-
-### Performance Considerations:
-- Batch operations when importing/exporting multiple events
-- Use background thread for sync to avoid blocking UI
-- Limit date range to avoid loading too many events
-- Cache calendar list to reduce API calls
-- Debounce manual sync button to prevent spam
+### Phase 4: Polish (1-2 hours)
+- Undo functionality
+- Sync history/log
+- Advanced error handling
+- Performance optimizations
 
 ---
 
-## 🚀 Ready to Start?
+## ✅ Ready to Start Phase 2?
 
-**Once you say "start", I will:**
-1. ✅ Install expo-calendar library
-2. ✅ Configure permissions in app.json
-3. ✅ Create two-way sync service (export + import)
-4. ✅ Implement availability import logic
-5. ✅ Add comprehensive UI with settings screen
-6. ✅ Add visual indicators for imported/exported events
-7. ✅ Implement conflict detection
-8. ✅ Add background sync capability
-9. ✅ Add full localization (RU/EN)
-10. ✅ Give you detailed testing instructions
+**Status**: ✅ **READY**
 
-**Then you will:**
-1. Test export functionality (rehearsals → calendar)
-2. Test import functionality (calendar → availability)
-3. Test two-way sync working together
-4. Test on iOS and/or Android
-5. Report any issues or edge cases
-6. Confirm everything works as expected
+**Prerequisites Met:**
+- ✅ Backend schema ready (no migrations needed)
+- ✅ API endpoints ready
+- ✅ Phase 1 complete (export working)
+- ✅ Analysis done (limitations understood)
+
+**Estimated Time**: 2-3 hours
+
+**Complexity**: Medium (simpler than Phase 1 because backend ready)
 
 ---
 
-## 📚 Resources
-
-- [Expo Calendar Documentation](https://docs.expo.dev/versions/latest/sdk/calendar/)
-- [expo-calendar npm package](https://www.npmjs.com/package/expo-calendar)
-- [expo-calendar getEventsAsync examples](https://snyk.io/advisor/npm-package/expo-calendar/functions/expo-calendar.getEventsAsync)
-- [iOS Calendar Integration (EventKit)](https://developer.apple.com/documentation/eventkit)
-- [Android Calendar Provider](https://developer.android.com/guide/topics/providers/calendar-provider)
-
----
-
-**Status**: ⏸️ Awaiting confirmation to start
-
-**Total Tasks**: 56 checkboxes
-- **Claude Code**: 39 implementation tasks
-- **User Testing**: 17 test scenarios
-
-**Complexity**: Medium-High (two-way sync with conflict detection)
-**Estimated Time**: 4-5 hours implementation + 2 hours testing
+**Next Command**: Tell me to start, and I'll begin implementing Phase 2 (Import)! 🚀

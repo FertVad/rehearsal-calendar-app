@@ -28,6 +28,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
   const { t } = useI18n();
   const { projects } = useProjects();
   const {
+    // Export state/functions
     hasPermission,
     calendars,
     settings,
@@ -41,6 +42,13 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     syncAll,
     removeAll,
     refresh,
+    // Import state/functions (Phase 2)
+    isImporting,
+    importError,
+    importedCount,
+    lastImportTime,
+    importNow,
+    clearImported,
   } = useCalendarSync();
 
   const [calendarPickerVisible, setCalendarPickerVisible] = useState(false);
@@ -49,11 +57,24 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     settings?.exportCalendarId || null
   );
 
+  // Phase 2: Import state
+  const [importCalendarPickerVisible, setImportCalendarPickerVisible] = useState(false);
+  const [importEnabled, setImportEnabled] = useState(settings?.importEnabled || false);
+  const [selectedImportCalendarIds, setSelectedImportCalendarIds] = useState<string[]>(
+    settings?.importCalendarIds || []
+  );
+  const [importInterval, setImportInterval] = useState<'manual' | 'hourly' | '6hours' | 'daily'>(
+    settings?.importInterval || 'manual'
+  );
+
   // Update local state when settings change
   useEffect(() => {
     if (settings) {
       setExportEnabled(settings.exportEnabled);
       setSelectedCalendarId(settings.exportCalendarId);
+      setImportEnabled(settings.importEnabled);
+      setSelectedImportCalendarIds(settings.importCalendarIds);
+      setImportInterval(settings.importInterval);
     }
   }, [settings]);
 
@@ -181,6 +202,112 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     return date.toLocaleString();
   };
 
+  // ====== Phase 2: Import Handlers ======
+
+  const handleToggleImport = async (enabled: boolean) => {
+    setImportEnabled(enabled);
+
+    // If enabling and no calendars selected, show picker
+    if (enabled && selectedImportCalendarIds.length === 0) {
+      if (calendars.length > 0) {
+        setImportCalendarPickerVisible(true);
+      } else {
+        Alert.alert(t.calendarSync.noCalendars, t.calendarSync.noCalendarsMessage);
+        setImportEnabled(false);
+        return;
+      }
+    }
+
+    // Update settings
+    await updateSettings({
+      importEnabled: enabled,
+      importCalendarIds: selectedImportCalendarIds,
+      importInterval,
+    });
+  };
+
+  const handleToggleImportCalendar = (calendarId: string) => {
+    const newSelection = selectedImportCalendarIds.includes(calendarId)
+      ? selectedImportCalendarIds.filter((id) => id !== calendarId)
+      : [...selectedImportCalendarIds, calendarId];
+
+    setSelectedImportCalendarIds(newSelection);
+  };
+
+  const handleSaveImportCalendars = async () => {
+    setImportCalendarPickerVisible(false);
+
+    // Update settings
+    await updateSettings({
+      importEnabled,
+      importCalendarIds: selectedImportCalendarIds,
+      importInterval,
+    });
+  };
+
+  const getSelectedImportCalendarsText = (): string => {
+    if (selectedImportCalendarIds.length === 0) {
+      return t.calendarSync.selectCalendars || 'Select calendars';
+    }
+    if (selectedImportCalendarIds.length === 1) {
+      const calendar = calendars.find((c) => c.id === selectedImportCalendarIds[0]);
+      return calendar?.title || t.calendarSync.selectCalendars || 'Select calendars';
+    }
+    return t.calendarSync.calendarsSelected?.(selectedImportCalendarIds.length)
+      || `${selectedImportCalendarIds.length} calendars selected`;
+  };
+
+  const handleImportNow = async () => {
+    if (!hasPermission) {
+      Alert.alert(t.calendarSync.permissionDenied, t.calendarSync.permissionDeniedMessage);
+      return;
+    }
+
+    if (selectedImportCalendarIds.length === 0) {
+      Alert.alert(t.calendarSync.noCalendarsSelected, t.calendarSync.selectCalendarsFirst || 'Please select calendars to import from');
+      return;
+    }
+
+    try {
+      const result = await importNow();
+      Alert.alert(
+        t.calendarSync.importSuccess || 'Import Successful',
+        t.calendarSync.importSuccessMessage?.(result.success, result.failed, result.skipped)
+          || `Imported: ${result.success}, Failed: ${result.failed}, Skipped: ${result.skipped}`
+      );
+    } catch (error: any) {
+      Alert.alert(t.calendarSync.importError || 'Import Error', error.message || 'Failed to import events');
+    }
+  };
+
+  const handleClearImported = () => {
+    Alert.alert(
+      t.calendarSync.clearImported || 'Clear Imported Events',
+      t.calendarSync.clearImportedConfirm || 'Remove all imported events from your availability?',
+      [
+        { text: t.common?.cancel || 'Cancel', style: 'cancel' },
+        {
+          text: t.calendarSync.clearImported || 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearImported();
+              Alert.alert(t.calendarSync.clearSuccess || 'Success', t.calendarSync.clearImportedSuccess || 'Imported events cleared');
+            } catch (error: any) {
+              Alert.alert(t.calendarSync.importError || 'Error', error.message || 'Failed to clear imported events');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const formatLastImportTime = (): string => {
+    if (!lastImportTime) return t.calendarSync.neverImported || 'Never';
+    const date = new Date(lastImportTime);
+    return date.toLocaleString();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
@@ -296,9 +423,9 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
               </View>
             )}
 
-            {/* Status */}
+            {/* Export Status */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t.calendarSync.status}</Text>
+              <Text style={styles.sectionTitle}>{t.calendarSync.exportStatus || 'Export Status'}</Text>
 
               <View style={styles.statusCard}>
                 <View style={styles.statusRow}>
@@ -319,6 +446,104 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                 )}
               </View>
             </View>
+
+            {/* ====== Phase 2: Import Settings ====== */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t.calendarSync.importSettings || 'Import Settings'}</Text>
+
+              {/* Enable Import Toggle */}
+              <View style={styles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <View style={[styles.settingIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
+                    <Ionicons name="download" size={20} color={Colors.accent.green} />
+                  </View>
+                  <Text style={styles.settingLabel}>{t.calendarSync.importEnabled || 'Import calendar events'}</Text>
+                </View>
+                <Switch
+                  value={importEnabled}
+                  onValueChange={handleToggleImport}
+                  trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.green }}
+                  thumbColor={Colors.text.inverse}
+                  disabled={isImporting || isSyncing}
+                />
+              </View>
+
+              {/* Import Calendars Selector */}
+              {importEnabled && (
+                <TouchableOpacity
+                  style={styles.settingItem}
+                  onPress={() => setImportCalendarPickerVisible(true)}
+                  disabled={isImporting || isSyncing}
+                >
+                  <View style={styles.settingLeft}>
+                    <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                      <Ionicons name="albums" size={20} color={Colors.accent.blue} />
+                    </View>
+                    <Text style={styles.settingLabel}>{t.calendarSync.importCalendars || 'Import from calendars'}</Text>
+                  </View>
+                  <View style={styles.settingRight}>
+                    <Text style={styles.settingValue} numberOfLines={1}>
+                      {getSelectedImportCalendarsText()}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Import Actions */}
+            {importEnabled && selectedImportCalendarIds.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t.calendarSync.importActions || 'Import Actions'}</Text>
+
+                {/* Import Now Button */}
+                <GlassButton
+                  title={t.calendarSync.importNow || 'Import Now'}
+                  onPress={handleImportNow}
+                  variant="green"
+                  disabled={isImporting}
+                  loading={isImporting}
+                  style={styles.actionButton}
+                />
+
+                {/* Clear Imported Button */}
+                {importedCount > 0 && (
+                  <GlassButton
+                    title={t.calendarSync.clearImported || 'Clear All Imported'}
+                    onPress={handleClearImported}
+                    variant="glass"
+                    disabled={isImporting}
+                    style={styles.actionButton}
+                  />
+                )}
+              </View>
+            )}
+
+            {/* Import Status */}
+            {importEnabled && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t.calendarSync.importStatus || 'Import Status'}</Text>
+
+                <View style={styles.statusCard}>
+                  <View style={styles.statusRow}>
+                    <Text style={styles.statusLabel}>{t.calendarSync.importedCount || 'Imported events'}</Text>
+                    <Text style={styles.statusValue}>{importedCount}</Text>
+                  </View>
+
+                  <View style={styles.statusRow}>
+                    <Text style={styles.statusLabel}>{t.calendarSync.lastImport || 'Last import'}</Text>
+                    <Text style={styles.statusValue}>{formatLastImportTime()}</Text>
+                  </View>
+
+                  {importError && (
+                    <View style={styles.errorContainer}>
+                      <Ionicons name="warning" size={16} color={Colors.accent.red} />
+                      <Text style={styles.errorText}>{importError}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -379,6 +604,79 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                 </View>
               }
             />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Import Calendar Picker Modal (Multi-select) */}
+      <Modal
+        visible={importCalendarPickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setImportCalendarPickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t.calendarSync.selectImportCalendars || 'Select Calendars to Import'}</Text>
+              <TouchableOpacity onPress={() => setImportCalendarPickerVisible(false)}>
+                <Ionicons name="close" size={24} color={Colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={calendars}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => {
+                const isSelected = selectedImportCalendarIds.includes(item.id);
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.calendarItem,
+                      isSelected && styles.calendarItemSelected,
+                    ]}
+                    onPress={() => handleToggleImportCalendar(item.id)}
+                  >
+                    <View style={styles.calendarInfo}>
+                      <View
+                        style={[styles.calendarColor, { backgroundColor: item.color || Colors.accent.purple }]}
+                      />
+                      <View style={styles.calendarDetails}>
+                        <Text
+                          style={[
+                            styles.calendarTitle,
+                            isSelected && styles.calendarTitleSelected,
+                          ]}
+                        >
+                          {item.title}
+                        </Text>
+                        {item.source?.name && (
+                          <Text style={styles.calendarSource}>{item.source.name}</Text>
+                        )}
+                      </View>
+                    </View>
+                    {isSelected ? (
+                      <Ionicons name="checkbox" size={24} color={Colors.accent.green} />
+                    ) : (
+                      <Ionicons name="square-outline" size={24} color={Colors.text.tertiary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+              style={styles.calendarList}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>{t.calendarSync.noCalendarsMessage}</Text>
+                </View>
+              }
+            />
+            <View style={styles.modalFooter}>
+              <GlassButton
+                title={t.common?.save || 'Save'}
+                onPress={handleSaveImportCalendars}
+                variant="green"
+                style={styles.modalSaveButton}
+              />
+            </View>
           </View>
         </View>
       </Modal>

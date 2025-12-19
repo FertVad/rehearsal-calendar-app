@@ -1,6 +1,8 @@
 /**
  * useCalendarSync Hook
  * React hook for calendar sync functionality
+ * Phase 1: Export (App → Calendar)
+ * Phase 2: Import (Calendar → App)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -15,32 +17,45 @@ import {
   syncAllRehearsals,
   removeAllExportedEvents,
   BatchSyncResult,
+  importCalendarEventsToAvailability,
+  removeAllImportedSlots,
 } from '../../../shared/services/calendarSync';
 import {
   getSyncSettings,
   saveSyncSettings,
   isRehearsalSynced,
   getSyncedRehearsalsCount,
+  getImportedEventsCount,
 } from '../../../shared/utils/calendarStorage';
 import {
   DeviceCalendar,
   CalendarSyncSettings,
   RehearsalWithProject,
   SyncStatus,
+  ImportResult,
 } from '../../../shared/types/calendar';
 
 export function useCalendarSync() {
-  // State
+  // Export State
   const [hasPermission, setHasPermission] = useState(false);
   const [calendars, setCalendars] = useState<DeviceCalendar[]>([]);
   const [settings, setSettings] = useState<CalendarSyncSettings>({
     exportEnabled: false,
     exportCalendarId: null,
     lastExportTime: null,
+    importEnabled: false,
+    importCalendarIds: [],
+    importInterval: 'manual',
+    lastImportTime: null,
   });
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncedCount, setSyncedCount] = useState(0);
+
+  // Import State (Phase 2)
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importedCount, setImportedCount] = useState(0);
 
   // Initialize
   useEffect(() => {
@@ -57,9 +72,13 @@ export function useCalendarSync() {
       const savedSettings = await getSyncSettings();
       setSettings(savedSettings);
 
-      // Load synced count
+      // Load export synced count
       const count = await getSyncedRehearsalsCount();
       setSyncedCount(count);
+
+      // Load import count (Phase 2)
+      const imported = await getImportedEventsCount();
+      setImportedCount(imported);
 
       // If has permission, load calendars
       if (permission) {
@@ -268,8 +287,81 @@ export function useCalendarSync() {
     }
   }, []);
 
+  /**
+   * Import calendar events as availability slots
+   * Phase 2: Calendar → App
+   */
+  const importNow = useCallback(async (
+    onProgress?: (current: number, total: number) => void
+  ): Promise<ImportResult> => {
+    if (!hasPermission) {
+      throw new Error('Calendar permission not granted');
+    }
+
+    if (!settings.importEnabled || settings.importCalendarIds.length === 0) {
+      throw new Error('Import not enabled or no calendars selected');
+    }
+
+    setIsImporting(true);
+    setImportError(null);
+
+    try {
+      const result = await importCalendarEventsToAvailability(
+        settings.importCalendarIds,
+        onProgress
+      );
+
+      setIsImporting(false);
+
+      // Update imported count
+      const count = await getImportedEventsCount();
+      setImportedCount(count);
+
+      // Update last import time
+      await updateSettings({ lastImportTime: new Date().toISOString() });
+
+      return result;
+    } catch (error: any) {
+      console.error('[useCalendarSync] Import failed:', error);
+      setIsImporting(false);
+      setImportError(error.message);
+      throw error;
+    }
+  }, [hasPermission, settings, updateSettings]);
+
+  /**
+   * Remove all imported availability slots
+   * Phase 2: Clear imported events
+   */
+  const clearImported = useCallback(async (
+    onProgress?: (current: number, total: number) => void
+  ): Promise<ImportResult> => {
+    if (!hasPermission) {
+      throw new Error('Calendar permission not granted');
+    }
+
+    setIsImporting(true);
+    setImportError(null);
+
+    try {
+      const result = await removeAllImportedSlots(onProgress);
+
+      setIsImporting(false);
+
+      // Update imported count
+      setImportedCount(0);
+
+      return result;
+    } catch (error: any) {
+      console.error('[useCalendarSync] Clear imported failed:', error);
+      setIsImporting(false);
+      setImportError(error.message);
+      throw error;
+    }
+  }, [hasPermission]);
+
   return {
-    // State
+    // Export State
     hasPermission,
     calendars,
     settings,
@@ -279,7 +371,7 @@ export function useCalendarSync() {
     isSyncing: syncStatus === 'syncing',
     lastSyncTime: settings.lastExportTime,
 
-    // Functions
+    // Export Functions
     requestPermissions,
     updateSettings,
     syncRehearsal,
@@ -288,5 +380,15 @@ export function useCalendarSync() {
     removeAll,
     isSynced,
     refresh: init, // Re-initialize
+
+    // Import State (Phase 2)
+    isImporting,
+    importError,
+    importedCount,
+    lastImportTime: settings.lastImportTime,
+
+    // Import Functions (Phase 2)
+    importNow,
+    clearImported,
   };
 }

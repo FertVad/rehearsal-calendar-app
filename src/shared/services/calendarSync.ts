@@ -1,17 +1,30 @@
 /**
  * Calendar Sync Service
  * Phase 1: Export rehearsals to device calendar
+ * Phase 2: Import calendar events to availability
  */
 
 import * as Calendar from 'expo-calendar';
 import { Platform } from 'react-native';
-import { DeviceCalendar, RehearsalWithProject } from '../types/calendar';
+import {
+  DeviceCalendar,
+  RehearsalWithProject,
+  ImportResult,
+  AvailabilitySlot,
+} from '../types/calendar';
 import {
   saveEventMapping,
   getEventMapping,
   removeEventMapping,
   updateLastExportTime,
+  saveImportedEvent,
+  getImportedEvents,
+  getImportedEvent,
+  removeImportedEvent,
+  clearAllImportedEvents,
+  updateLastImportTime,
 } from '../utils/calendarStorage';
+import { availabilityAPI } from './api';
 
 /**
  * ============================================================================
@@ -357,6 +370,227 @@ export async function removeAllExportedEvents(
     return result;
   } catch (error) {
     console.error('[CalendarSync] Failed to remove all events:', error);
+    throw error;
+  }
+}
+
+/**
+ * ============================================================================
+ * Import Functions (Calendar → App)
+ * Phase 2: Import calendar events as availability slots
+ * ============================================================================
+ */
+
+/**
+ * Get calendar events from selected calendars
+ * Date range: -30 days to +365 days (to avoid performance issues)
+ */
+export async function getCalendarEvents(
+  calendarIds: string[],
+  startDate: Date,
+  endDate: Date
+): Promise<Calendar.Event[]> {
+  try {
+    const hasPermission = await checkCalendarPermissions();
+    if (!hasPermission) {
+      throw new Error('Calendar permission not granted');
+    }
+
+    let allEvents: Calendar.Event[] = [];
+
+    for (const calendarId of calendarIds) {
+      try {
+        const events = await Calendar.getEventsAsync(
+          [calendarId],
+          startDate,
+          endDate
+        );
+        allEvents = allEvents.concat(events);
+        console.log(`[CalendarSync] Fetched ${events.length} events from calendar ${calendarId}`);
+      } catch (error) {
+        console.error(`[CalendarSync] Failed to fetch events from calendar ${calendarId}:`, error);
+        // Continue with other calendars
+      }
+    }
+
+    console.log(`[CalendarSync] Total events fetched: ${allEvents.length}`);
+    return allEvents;
+  } catch (error) {
+    console.error('[CalendarSync] Failed to get calendar events:', error);
+    throw error;
+  }
+}
+
+/**
+ * Import calendar events as availability slots
+ * Returns: { success, failed, skipped, errors }
+ */
+export async function importCalendarEventsToAvailability(
+  calendarIds: string[],
+  onProgress?: (current: number, total: number) => void
+): Promise<ImportResult> {
+  const result: ImportResult = {
+    success: 0,
+    failed: 0,
+    skipped: 0,
+    errors: [],
+  };
+
+  try {
+    // Define date range: -30 days to +365 days
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 365);
+
+    // Fetch all events from selected calendars
+    const events = await getCalendarEvents(calendarIds, startDate, endDate);
+    const total = events.length;
+
+    if (total === 0) {
+      console.log('[CalendarSync] No events to import');
+      return result;
+    }
+
+    // Get previously imported events
+    const importedEvents = await getImportedEvents();
+
+    // Convert events to availability slots
+    const slotsToImport: (AvailabilitySlot & { eventId: string; calendarId: string })[] = [];
+
+    for (let i = 0; i < events.length; i++) {
+      const event = events[i];
+
+      // Report progress
+      if (onProgress) {
+        onProgress(i + 1, total);
+      }
+
+      // Skip if already imported and not changed
+      if (event.id in importedEvents) {
+        console.log(`[CalendarSync] Skipping already imported event: ${event.id}`);
+        result.skipped++;
+        continue;
+      }
+
+      // Convert calendar event to availability slot
+      try {
+        const slot: AvailabilitySlot & { eventId: string; calendarId: string } = {
+          startsAt: event.startDate.toISOString(),
+          endsAt: event.endDate.toISOString(),
+          type: 'busy',
+          source: Platform.OS === 'ios' ? 'apple_calendar' : 'google_calendar',
+          external_event_id: event.id,
+          title: event.title || 'Calendar Event',
+          is_all_day: event.allDay || false,
+          eventId: event.id,
+          calendarId: event.calendarId,
+        };
+
+        slotsToImport.push(slot);
+      } catch (error: any) {
+        console.error(`[CalendarSync] Failed to convert event ${event.id}:`, error);
+        result.failed++;
+        result.errors.push(`${event.title}: ${error.message}`);
+      }
+    }
+
+    // Batch import slots (chunks of 50)
+    const chunkSize = 50;
+    for (let i = 0; i < slotsToImport.length; i += chunkSize) {
+      const chunk = slotsToImport.slice(i, i + chunkSize);
+
+      try {
+        // Prepare entries for API
+        const entries = chunk.map(slot => ({
+          startsAt: slot.startsAt,
+          endsAt: slot.endsAt,
+          type: slot.type,
+          isAllDay: slot.is_all_day,
+          // Additional fields that backend should support
+          source: slot.source,
+          external_event_id: slot.external_event_id,
+          title: slot.title,
+        }));
+
+        // Call API to create availability slots
+        const response = await availabilityAPI.bulkSet(entries as any);
+
+        // Save import tracking for each event
+        // Note: API should return created slot IDs, but if not available, use event ID
+        for (const slot of chunk) {
+          await saveImportedEvent(
+            slot.eventId,
+            slot.eventId, // Using event ID as slot ID for now
+            slot.calendarId
+          );
+        }
+
+        result.success += chunk.length;
+        console.log(`[CalendarSync] Imported ${chunk.length} events (chunk ${Math.floor(i / chunkSize) + 1})`);
+      } catch (error: any) {
+        console.error(`[CalendarSync] Failed to import chunk:`, error);
+        result.failed += chunk.length;
+        result.errors.push(`Batch ${Math.floor(i / chunkSize) + 1}: ${error.message}`);
+      }
+
+      // Small delay between batches
+      if (i + chunkSize < slotsToImport.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    // Update last import time
+    await updateLastImportTime();
+
+    console.log(`[CalendarSync] Import complete: ${result.success} success, ${result.failed} failed, ${result.skipped} skipped`);
+    return result;
+  } catch (error: any) {
+    console.error('[CalendarSync] Failed to import calendar events:', error);
+    result.errors.push(error.message);
+    throw error;
+  }
+}
+
+/**
+ * Remove all imported availability slots
+ */
+export async function removeAllImportedSlots(
+  onProgress?: (current: number, total: number) => void
+): Promise<ImportResult> {
+  const result: ImportResult = {
+    success: 0,
+    failed: 0,
+    skipped: 0,
+    errors: [],
+  };
+
+  try {
+    const importedEvents = await getImportedEvents();
+    const eventIds = Object.keys(importedEvents);
+    const total = eventIds.length;
+
+    if (total === 0) {
+      console.log('[CalendarSync] No imported events to remove');
+      return result;
+    }
+
+    // Note: We would need an API endpoint to delete availability slots by source
+    // For now, we'll just clear the tracking
+    // TODO: Add API endpoint to delete availability slots where source = 'google_calendar' | 'apple_calendar'
+
+    console.warn('[CalendarSync] removeAllImportedSlots: API endpoint not implemented yet');
+    console.warn('[CalendarSync] Only clearing import tracking, slots remain in database');
+
+    // Clear all import tracking
+    await clearAllImportedEvents();
+
+    result.success = total;
+    console.log(`[CalendarSync] Cleared ${total} import tracking entries`);
+    return result;
+  } catch (error: any) {
+    console.error('[CalendarSync] Failed to remove imported slots:', error);
+    result.errors.push(error.message);
     throw error;
   }
 }

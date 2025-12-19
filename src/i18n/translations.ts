@@ -264,6 +264,7 @@ export interface Translations {
     checkingPermissions: string;
     // Export Settings
     exportSettings: string;
+    exportStatus: string;
     exportEnabled: string;
     exportCalendar: string;
     selectCalendar: string;
@@ -302,6 +303,30 @@ export interface Translations {
     noWritableCalendars: string;
     exportFailed: string;
     deleteFailed: string;
+    // Phase 2: Import Settings
+    importSettings: string;
+    importStatus: string;
+    importEnabled: string;
+    importCalendars: string;
+    selectCalendars: string;
+    selectImportCalendars: string;
+    calendarsSelected: (count: number) => string;
+    noCalendarsSelected: string;
+    selectCalendarsFirst: string;
+    // Phase 2: Import Actions
+    importActions: string;
+    importNow: string;
+    clearImported: string;
+    clearImportedConfirm: string;
+    importSuccess: string;
+    importSuccessMessage: (success: number, failed: number, skipped: number) => string;
+    clearSuccess: string;
+    clearImportedSuccess: string;
+    importError: string;
+    // Phase 2: Import Status
+    importedCount: string;
+    lastImport: string;
+    neverImported: string;
   };
   // Days
   days: {
@@ -548,6 +573,7 @@ export const ru: Translations = {
     checkingPermissions: 'Проверка разрешений...',
     // Export Settings
     exportSettings: 'Настройки экспорта',
+    exportStatus: 'Статус экспорта',
     exportEnabled: 'Экспортировать репетиции',
     exportCalendar: 'Календарь для экспорта',
     selectCalendar: 'Выбрать календарь',
@@ -586,6 +612,31 @@ export const ru: Translations = {
     noWritableCalendars: 'Нет календарей для записи',
     exportFailed: 'Не удалось экспортировать',
     deleteFailed: 'Не удалось удалить из календаря',
+    // Phase 2: Import Settings
+    importSettings: 'Настройки импорта',
+    importStatus: 'Статус импорта',
+    importEnabled: 'Импортировать события календаря',
+    importCalendars: 'Импорт из календарей',
+    selectCalendars: 'Выбрать календари',
+    selectImportCalendars: 'Выберите календари для импорта',
+    calendarsSelected: (count: number) => `Выбрано: ${count}`,
+    noCalendarsSelected: 'Календари не выбраны',
+    selectCalendarsFirst: 'Сначала выберите календари для импорта',
+    // Phase 2: Import Actions
+    importActions: 'Действия импорта',
+    importNow: 'Импортировать сейчас',
+    clearImported: 'Очистить импортированные',
+    clearImportedConfirm: 'Удалить все импортированные события из вашей доступности?',
+    importSuccess: 'Импорт выполнен',
+    importSuccessMessage: (success: number, failed: number, skipped: number) =>
+      `Импортировано: ${success}, Ошибок: ${failed}, Пропущено: ${skipped}`,
+    clearSuccess: 'Успешно очищено',
+    clearImportedSuccess: 'Импортированные события очищены',
+    importError: 'Ошибка импорта',
+    // Phase 2: Import Status
+    importedCount: 'Импортировано событий',
+    lastImport: 'Последний импорт',
+    neverImported: 'Никогда не импортировалось',
   },
   availability: {
     title: 'Занятость',
@@ -865,6 +916,7 @@ export const en: Translations = {
     checkingPermissions: 'Checking permissions...',
     // Export Settings
     exportSettings: 'Export Settings',
+    exportStatus: 'Export Status',
     exportEnabled: 'Export rehearsals',
     exportCalendar: 'Export to calendar',
     selectCalendar: 'Select Calendar',
@@ -903,6 +955,31 @@ export const en: Translations = {
     noWritableCalendars: 'No writable calendars',
     exportFailed: 'Export failed',
     deleteFailed: 'Failed to delete from calendar',
+    // Phase 2: Import Settings
+    importSettings: 'Import Settings',
+    importStatus: 'Import Status',
+    importEnabled: 'Import calendar events',
+    importCalendars: 'Import from calendars',
+    selectCalendars: 'Select calendars',
+    selectImportCalendars: 'Select Calendars to Import',
+    calendarsSelected: (count: number) => `${count} selected`,
+    noCalendarsSelected: 'No calendars selected',
+    selectCalendarsFirst: 'Please select calendars to import from',
+    // Phase 2: Import Actions
+    importActions: 'Import Actions',
+    importNow: 'Import Now',
+    clearImported: 'Clear All Imported',
+    clearImportedConfirm: 'Remove all imported events from your availability?',
+    importSuccess: 'Import Successful',
+    importSuccessMessage: (success: number, failed: number, skipped: number) =>
+      `Imported: ${success}, Failed: ${failed}, Skipped: ${skipped}`,
+    clearSuccess: 'Success',
+    clearImportedSuccess: 'Imported events cleared',
+    importError: 'Import Error',
+    // Phase 2: Import Status
+    importedCount: 'Imported events',
+    lastImport: 'Last import',
+    neverImported: 'Never',
   },
   availability: {
     title: 'Availability',

@@ -222,4 +222,12 @@ export const styles = StyleSheet.create({
     color: Colors.text.secondary,
     textAlign: 'center',
   },
+  modalFooter: {
+    padding: Spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: Colors.glass.border,
+  },
+  modalSaveButton: {
+    width: '100%',
+  },
 });
