@@ -475,9 +475,17 @@ export async function importCalendarEventsToAvailability(
 
       // Convert calendar event to availability slot
       try {
+        // Ensure dates are converted to ISO strings
+        const startDate = typeof event.startDate === 'string'
+          ? new Date(event.startDate).toISOString()
+          : event.startDate.toISOString();
+        const endDate = typeof event.endDate === 'string'
+          ? new Date(event.endDate).toISOString()
+          : event.endDate.toISOString();
+
         const slot: AvailabilitySlot & { eventId: string; calendarId: string } = {
-          startsAt: event.startDate.toISOString(),
-          endsAt: event.endDate.toISOString(),
+          startsAt: startDate,
+          endsAt: endDate,
           type: 'busy',
           source: Platform.OS === 'ios' ? 'apple_calendar' : 'google_calendar',
           external_event_id: event.id,

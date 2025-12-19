@@ -500,7 +500,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                 <GlassButton
                   title={t.calendarSync.importNow || 'Import Now'}
                   onPress={handleImportNow}
-                  variant="green"
+                  variant="purple"
                   disabled={isImporting}
                   loading={isImporting}
                   style={styles.actionButton}
@@ -673,7 +673,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
               <GlassButton
                 title={t.common?.save || 'Save'}
                 onPress={handleSaveImportCalendars}
-                variant="green"
+                variant="purple"
                 style={styles.modalSaveButton}
               />
             </View>
