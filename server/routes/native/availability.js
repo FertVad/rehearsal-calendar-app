@@ -109,18 +109,21 @@ router.post('/bulk', requireAuth, async (req, res) => {
 
     // Insert new slots
     for (const entry of entries) {
-      const { startsAt, endsAt, type, title, notes, isAllDay } = entry;
+      const { startsAt, endsAt, type, title, notes, isAllDay, source, external_event_id } = entry;
 
       if (!startsAt || !endsAt || !type) {
         console.warn('[Bulk Save] Skipping invalid entry:', entry);
         continue;
       }
 
-      console.log(`[Bulk Save] Inserting: ${startsAt} - ${endsAt}, type=${type}, isAllDay=${isAllDay}`);
+      // Use provided source or default to manual
+      const entrySource = source || AVAILABILITY_SOURCES.MANUAL;
+
+      console.log(`[Bulk Save] Inserting: ${startsAt} - ${endsAt}, type=${type}, source=${entrySource}, externalId=${external_event_id || 'none'}`);
 
       await db.run(
-        `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, title, notes, is_all_day, source)
-         VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, $7, $8)`,
+        `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, title, notes, is_all_day, source, external_event_id)
+         VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, $7, $8, $9)`,
         [
           userId,
           startsAt,
@@ -129,7 +132,8 @@ router.post('/bulk', requireAuth, async (req, res) => {
           title || null,
           notes || null,
           isAllDay || false,
-          AVAILABILITY_SOURCES.MANUAL
+          entrySource,
+          external_event_id || null
         ]
       );
     }
