@@ -175,7 +175,7 @@ export default function AddRehearsalScreen() {
 
       setLoadingAvailability(true);
       try {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = formatDate(date);
         console.log('[DEBUG] Calling API with:', { projectId: localSelectedProject.id, dateStr, memberIds: selectedMemberIds });
 
         const response = await projectsAPI.getMembersAvailability(
@@ -235,7 +235,10 @@ export default function AddRehearsalScreen() {
   };
 
   const formatDate = (d: Date) => {
-    return d.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const formatTime = (d: Date) => {
@@ -399,11 +402,17 @@ export default function AddRehearsalScreen() {
       };
 
       const response = await rehearsalsAPI.create(localSelectedProject.id, rehearsalData);
-      const createdRehearsal = response.data;
+      const createdRehearsal = response.data.rehearsal; // Server returns { rehearsal: {...} }
 
       // Auto-sync to calendar if export is enabled
       try {
         const syncSettings = await getSyncSettings();
+        console.log('[AddRehearsal] Sync settings:', {
+          exportEnabled: syncSettings.exportEnabled,
+          exportCalendarId: syncSettings.exportCalendarId,
+          rehearsalId: createdRehearsal?.id,
+        });
+
         if (syncSettings.exportEnabled && syncSettings.exportCalendarId && createdRehearsal?.id) {
           const rehearsalWithProject = {
             id: createdRehearsal.id,
@@ -414,8 +423,11 @@ export default function AddRehearsalScreen() {
             location: rehearsalData.location,
           };
 
+          console.log('[AddRehearsal] Syncing rehearsal to calendar:', rehearsalWithProject);
           await syncRehearsalToCalendar(rehearsalWithProject, syncSettings.exportCalendarId);
-          console.log('[AddRehearsal] Auto-synced rehearsal to calendar');
+          console.log('[AddRehearsal] ✓ Auto-synced rehearsal to calendar');
+        } else {
+          console.log('[AddRehearsal] Skipping auto-sync - conditions not met');
         }
       } catch (syncError) {
         // Don't fail the whole operation if sync fails, just log it

@@ -29,7 +29,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   const { projects, selectedProject } = useProjects();
   const { t } = useI18n();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return new Date().toISOString().split('T')[0];
+    return formatDateToString(new Date());
   });
   const [modalVisible, setModalVisible] = useState(false);
   const [modalDate, setModalDate] = useState<string>('');

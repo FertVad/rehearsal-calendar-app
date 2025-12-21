@@ -26,7 +26,10 @@
         ],
         "ITSAppUsesNonExemptEncryption": false,
         "NSCalendarsUsageDescription": "This app needs access to your calendar to sync rehearsals and show your availability.",
-        "NSRemindersUsageDescription": "This app may set reminders for your rehearsals."
+        "NSCalendarsFullAccessUsageDescription": "This app needs full access to your calendar to sync rehearsals and import events as availability slots.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "This app needs write access to your calendar to export rehearsals.",
+        "NSRemindersUsageDescription": "This app may set reminders for your rehearsals.",
+        "NSRemindersFullAccessUsageDescription": "This app needs full access to reminders for rehearsal notifications."
       }
     },
     "android": {

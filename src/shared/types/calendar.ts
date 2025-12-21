@@ -26,7 +26,7 @@ export interface CalendarSyncSettings {
   // Import settings (Calendar → App)
   importEnabled: boolean;
   importCalendarIds: string[];  // Multiple calendars can be selected
-  importInterval: 'manual' | 'hourly' | '6hours' | 'daily';
+  importInterval: 'manual' | 'always' | '15min' | 'hourly' | '6hours' | 'daily';
   lastImportTime: string | null; // ISO timestamp
 }
 

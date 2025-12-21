@@ -246,6 +246,10 @@ export const availabilityAPI = {
   // Delete availability for a specific date
   delete: (date: string) =>
     api.delete(`/native/availability/${date}`),
+
+  // Delete all imported calendar events
+  deleteAllImported: () =>
+    api.delete('/native/availability/imported/all'),
 };
 
 export default api;

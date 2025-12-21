@@ -2,17 +2,11 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
-import { Rehearsal } from '../../../shared/types';
+import { Rehearsal, RSVPStatus, Project } from '../../../shared/types';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
 import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
-
-interface Project {
-  id: string;
-  name: string;
-  is_admin: boolean;
-}
 
 interface AdminStats {
   confirmed: number;
@@ -25,16 +19,16 @@ interface TodayRehearsalsProps {
   selectedDate: string;
   loading: boolean;
   projects: Project[];
-  rsvpResponses: Record<string, 'confirmed' | 'declined'>;
+  rsvpResponses: Record<string, RSVPStatus>;
   respondingId: string | null;
   adminStats: Record<string, AdminStats>;
   onRSVP: (
     rehearsalId: string,
     response: 'confirmed' | 'declined',
-    onSuccess: (rehearsalId: string, status: 'confirmed' | 'declined') => void
+    onSuccess: (rehearsalId: string, status: RSVPStatus) => void
   ) => Promise<void>;
   onDeleteRehearsal: (rehearsalId: string) => void;
-  setRsvpResponses: React.Dispatch<React.SetStateAction<Record<string, 'confirmed' | 'declined'>>>;
+  setRsvpResponses: React.Dispatch<React.SetStateAction<Record<string, RSVPStatus>>>;
   updateAdminStats: (rehearsalId: string) => Promise<void>;
 }
 

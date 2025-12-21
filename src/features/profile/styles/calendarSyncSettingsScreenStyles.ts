@@ -102,10 +102,52 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.text.secondary,
   },
+  settingHint: {
+    fontSize: FontSize.sm,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xs / 2,
+  },
+
+  // Interval buttons
+  intervalButtonsContainer: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  intervalButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    backgroundColor: Colors.glass.bg,
+    alignItems: 'center',
+  },
+  intervalButtonActive: {
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    borderColor: Colors.accent.purple,
+  },
+  intervalButtonText: {
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+    fontWeight: FontWeight.medium,
+  },
+  intervalButtonTextActive: {
+    color: Colors.accent.purple,
+    fontWeight: FontWeight.semibold,
+  },
 
   // Action buttons
   actionButton: {
     marginBottom: Spacing.md,
+  },
+  syncHint: {
+    fontSize: FontSize.sm,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: Spacing.xs,
   },
 
   // Status card

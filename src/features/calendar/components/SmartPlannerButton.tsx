@@ -4,14 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
-
-interface Project {
-  id: string;
-  name: string;
-  is_admin: boolean;
-  updatedAt?: string;
-  createdAt?: string;
-}
+import { Project } from '../../../shared/types';
 
 interface SmartPlannerButtonProps {
   adminProjects: Project[];

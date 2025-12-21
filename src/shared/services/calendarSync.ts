@@ -16,6 +16,7 @@ import {
   saveEventMapping,
   getEventMapping,
   removeEventMapping,
+  getAllMappings,
   updateLastExportTime,
   saveImportedEvent,
   getImportedEvents,
@@ -135,7 +136,6 @@ export async function createCalendarEvent(
       title: `Rehearsal: ${rehearsal.projectName}`,
       startDate: new Date(rehearsal.startsAt),
       endDate: new Date(rehearsal.endsAt),
-      timeZone: 'default', // Use device timezone
       location: rehearsal.location || undefined,
       notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsal Calendar app`,
       alarms: [
@@ -396,6 +396,20 @@ export async function getCalendarEvents(
       throw new Error('Calendar permission not granted');
     }
 
+    // Log all available calendars for debugging
+    console.log('=== CALENDAR IMPORT DEBUG ===');
+    const allCalendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+    console.log(`[CalendarSync] Total calendars on device: ${allCalendars.length}`);
+    allCalendars.forEach(cal => {
+      console.log(`  - ${cal.title} (ID: ${cal.id}, source: ${cal.source?.name || 'unknown'})`);
+    });
+    console.log(`[CalendarSync] Selected calendars for import: ${calendarIds.length}`);
+    calendarIds.forEach(id => {
+      const cal = allCalendars.find(c => c.id === id);
+      console.log(`  - ${cal?.title || 'Unknown'} (ID: ${id})`);
+    });
+    console.log(`[CalendarSync] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+
     let allEvents: Calendar.Event[] = [];
 
     for (const calendarId of calendarIds) {
@@ -407,6 +421,13 @@ export async function getCalendarEvents(
         );
         allEvents = allEvents.concat(events);
         console.log(`[CalendarSync] Fetched ${events.length} events from calendar ${calendarId}`);
+
+        // Log details of each event
+        events.forEach((event, index) => {
+          console.log(`  Event ${index + 1}: "${event.title}" (ID: ${event.id})`);
+          console.log(`    Start: ${event.startDate}, End: ${event.endDate}`);
+          console.log(`    AllDay: ${event.allDay}, Calendar: ${event.calendarId}`);
+        });
       } catch (error) {
         console.error(`[CalendarSync] Failed to fetch events from calendar ${calendarId}:`, error);
         // Continue with other calendars
@@ -414,6 +435,7 @@ export async function getCalendarEvents(
     }
 
     console.log(`[CalendarSync] Total events fetched: ${allEvents.length}`);
+    console.log('=== END CALENDAR IMPORT DEBUG ===');
     return allEvents;
   } catch (error) {
     console.error('[CalendarSync] Failed to get calendar events:', error);
@@ -455,6 +477,13 @@ export async function importCalendarEventsToAvailability(
     // Get previously imported events
     const importedEvents = await getImportedEvents();
 
+    // Get exported rehearsal mappings to avoid importing them back
+    const exportedMappings = await getAllMappings();
+    const exportedEventIds = new Set(
+      Object.values(exportedMappings).map(m => m.eventId)
+    );
+    console.log(`[CalendarSync] Excluding ${exportedEventIds.size} exported rehearsals from import`);
+
     // Convert events to availability slots
     const slotsToImport: (AvailabilitySlot & { eventId: string; calendarId: string })[] = [];
 
@@ -466,6 +495,13 @@ export async function importCalendarEventsToAvailability(
         onProgress(i + 1, total);
       }
 
+      // Skip if this is an exported rehearsal (to avoid duplication)
+      if (exportedEventIds.has(event.id)) {
+        console.log(`[CalendarSync] Skipping exported rehearsal: ${event.id}`);
+        result.skipped++;
+        continue;
+      }
+
       // Skip if already imported and not changed
       if (event.id in importedEvents) {
         console.log(`[CalendarSync] Skipping already imported event: ${event.id}`);
@@ -475,13 +511,37 @@ export async function importCalendarEventsToAvailability(
 
       // Convert calendar event to availability slot
       try {
-        // Ensure dates are converted to ISO strings
-        const startDate = typeof event.startDate === 'string'
-          ? new Date(event.startDate).toISOString()
-          : event.startDate.toISOString();
-        const endDate = typeof event.endDate === 'string'
-          ? new Date(event.endDate).toISOString()
-          : event.endDate.toISOString();
+        let startDate: string;
+        let endDate: string;
+
+        // For all-day events, create timestamps for full day in UTC
+        // IMPORTANT: Use UTC midnight to avoid timezone conversion issues in PostgreSQL
+        if (event.allDay) {
+          // Extract just the date part (YYYY-MM-DD) from the event
+          const eventStartDate = typeof event.startDate === 'string'
+            ? new Date(event.startDate)
+            : event.startDate;
+
+          // Get local date components from the all-day event
+          const year = eventStartDate.getFullYear();
+          const month = String(eventStartDate.getMonth() + 1).padStart(2, '0');
+          const day = String(eventStartDate.getDate()).padStart(2, '0');
+
+          // Create UTC timestamps for full day (midnight to 23:59:59 in UTC)
+          // This ensures PostgreSQL stores it with the correct date
+          startDate = `${year}-${month}-${day}T00:00:00.000Z`;
+          endDate = `${year}-${month}-${day}T23:59:59.999Z`;
+
+          console.log(`[CalendarSync] All-day event "${event.title}": ${year}-${month}-${day} (UTC)`);
+        } else {
+          // For regular events, use the normal conversion
+          startDate = typeof event.startDate === 'string'
+            ? new Date(event.startDate).toISOString()
+            : event.startDate.toISOString();
+          endDate = typeof event.endDate === 'string'
+            ? new Date(event.endDate).toISOString()
+            : event.endDate.toISOString();
+        }
 
         const slot: AvailabilitySlot & { eventId: string; calendarId: string } = {
           startsAt: startDate,
@@ -583,18 +643,24 @@ export async function removeAllImportedSlots(
       return result;
     }
 
-    // Note: We would need an API endpoint to delete availability slots by source
-    // For now, we'll just clear the tracking
-    // TODO: Add API endpoint to delete availability slots where source = 'google_calendar' | 'apple_calendar'
+    console.log(`[CalendarSync] Removing ${total} imported events from database...`);
 
-    console.warn('[CalendarSync] removeAllImportedSlots: API endpoint not implemented yet');
-    console.warn('[CalendarSync] Only clearing import tracking, slots remain in database');
+    // Delete all imported calendar events from database
+    try {
+      const response = await availabilityAPI.deleteAllImported();
+      console.log(`[CalendarSync] ✓ Deleted from database:`, response.data);
+    } catch (apiError: any) {
+      console.error('[CalendarSync] Failed to delete from database:', apiError);
+      result.errors.push(`Database deletion failed: ${apiError.message}`);
+      result.failed = total;
+      throw apiError;
+    }
 
-    // Clear all import tracking
+    // Clear all import tracking from AsyncStorage
     await clearAllImportedEvents();
 
     result.success = total;
-    console.log(`[CalendarSync] Cleared ${total} import tracking entries`);
+    console.log(`[CalendarSync] ✓ Cleared ${total} imported events (database + tracking)`);
     return result;
   } catch (error: any) {
     console.error('[CalendarSync] Failed to remove imported slots:', error);

@@ -58,6 +58,8 @@ router.get('/', requireAuth, async (req, res) => {
       createdAt: slot.created_at,
     }));
 
+    console.log('[Availability API] Sample slots:', JSON.stringify(converted.slice(0, 3), null, 2));
+
     res.json(converted);
   } catch (error) {
     console.error('Error fetching availability:', error);
@@ -118,6 +120,20 @@ router.post('/bulk', requireAuth, async (req, res) => {
 
       // Use provided source or default to manual
       const entrySource = source || AVAILABILITY_SOURCES.MANUAL;
+
+      // For imported events (with external_event_id), check if already exists to avoid duplicates
+      if (external_event_id && entrySource !== AVAILABILITY_SOURCES.MANUAL) {
+        const existing = await db.get(
+          `SELECT id FROM native_user_availability
+           WHERE user_id = $1 AND external_event_id = $2 AND source = $3`,
+          [userId, external_event_id, entrySource]
+        );
+
+        if (existing) {
+          console.log(`[Bulk Save] Skipping duplicate: externalId=${external_event_id}, already exists with id=${existing.id}`);
+          continue;
+        }
+      }
 
       console.log(`[Bulk Save] Inserting: ${startsAt} - ${endsAt}, type=${type}, source=${entrySource}, externalId=${external_event_id || 'none'}`);
 
@@ -182,6 +198,33 @@ router.delete('/:date', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error deleting availability:', error);
     res.status(500).json({ error: 'Failed to delete availability' });
+  }
+});
+
+/**
+ * DELETE /api/native/availability/imported/all - Delete all imported calendar events
+ * Removes all availability slots from calendar sync (apple_calendar, google_calendar)
+ */
+router.delete('/imported/all', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    console.log(`[Delete Imported] Removing all imported calendar events for user ${userId}`);
+
+    // Delete all imported calendar events for this user
+    const result = await db.run(
+      `DELETE FROM native_user_availability
+       WHERE user_id = $1
+       AND source IN ($2, $3)`,
+      [userId, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE]
+    );
+
+    console.log(`[Delete Imported] Deleted ${result.changes || 0} imported events`);
+
+    res.json({ success: true, deletedCount: result.changes || 0 });
+  } catch (error) {
+    console.error('Error deleting imported calendar events:', error);
+    res.status(500).json({ error: 'Failed to delete imported calendar events' });
   }
 });
 

@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Spacing } from '../../../shared/constants/colors';
@@ -35,6 +36,7 @@ import {
 } from '../utils';
 import { useAvailabilityData } from '../hooks';
 import { useI18n } from '../../../contexts/I18nContext';
+import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
 
 type AvailabilityScreenProps = BottomTabScreenProps<TabParamList, 'Availability'>;
 
@@ -56,6 +58,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     loadAvailability,
   } = useAvailabilityData();
 
+  // Auto-sync hook for calendar import
+  const { performAutoSync } = useAutoCalendarSync();
+
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -70,6 +75,20 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   const months = useMemo(() => generateMonths(7), []);
   const today = new Date().toISOString().split('T')[0];
+
+  // Auto-reload data when screen comes into focus (e.g., after calendar import)
+  // Also trigger auto-sync to import latest calendar events
+  useFocusEffect(
+    React.useCallback(() => {
+      const syncAndLoad = async () => {
+        console.log('[AvailabilityScreen] Screen focused - triggering auto-sync');
+        await performAutoSync();
+        console.log('[AvailabilityScreen] Auto-sync complete - loading availability');
+        await loadAvailability();
+      };
+      syncAndLoad();
+    }, [])
+  );
 
   // Get first selected date for editing
   const selectedDate = selectedDates.length > 0 ? selectedDates[0] : null;

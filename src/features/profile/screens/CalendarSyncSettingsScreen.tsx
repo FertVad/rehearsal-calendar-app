@@ -51,19 +51,15 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     clearImported,
   } = useCalendarSync();
 
-  const [calendarPickerVisible, setCalendarPickerVisible] = useState(false);
   const [exportEnabled, setExportEnabled] = useState(settings?.exportEnabled || false);
   const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(
     settings?.exportCalendarId || null
   );
-
-  // Phase 2: Import state
-  const [importCalendarPickerVisible, setImportCalendarPickerVisible] = useState(false);
   const [importEnabled, setImportEnabled] = useState(settings?.importEnabled || false);
   const [selectedImportCalendarIds, setSelectedImportCalendarIds] = useState<string[]>(
     settings?.importCalendarIds || []
   );
-  const [importInterval, setImportInterval] = useState<'manual' | 'hourly' | '6hours' | 'daily'>(
+  const [importInterval, setImportInterval] = useState<'manual' | 'always' | '15min' | 'hourly' | '6hours' | 'daily'>(
     settings?.importInterval || 'manual'
   );
 
@@ -92,221 +88,143 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     }
   };
 
-  const handleToggleExport = async (enabled: boolean) => {
-    setExportEnabled(enabled);
-
-    // If enabling and no calendar selected, show picker
-    if (enabled && !selectedCalendarId) {
-      if (calendars.length > 0) {
-        setCalendarPickerVisible(true);
-      } else {
-        Alert.alert(t.calendarSync.noCalendars, t.calendarSync.noCalendarsMessage);
-        setExportEnabled(false);
-        return;
-      }
-    }
-
-    // Update settings
-    await updateSettings({
-      exportEnabled: enabled,
-      exportCalendarId: selectedCalendarId,
-      lastExportTime: settings?.lastExportTime || null,
-    });
-  };
-
-  const handleSelectCalendar = async (calendar: DeviceCalendar) => {
-    setSelectedCalendarId(calendar.id);
-    setCalendarPickerVisible(false);
-
-    // Update settings with new calendar
-    await updateSettings({
-      exportEnabled,
-      exportCalendarId: calendar.id,
-      lastExportTime: settings?.lastExportTime || null,
-    });
-  };
-
-  const handleSyncAll = async () => {
+  const handleToggleAutoSync = async (enabled: boolean) => {
     if (!hasPermission) {
       Alert.alert(t.calendarSync.permissionDenied, t.calendarSync.permissionDeniedMessage);
       return;
     }
 
-    if (!selectedCalendarId) {
-      Alert.alert(t.calendarSync.noCalendarSelected, t.calendarSync.selectCalendarFirst);
-      return;
-    }
-
-    try {
-      // Fetch all rehearsals from all projects
-      const allRehearsals: RehearsalWithProject[] = [];
-
-      for (const project of projects) {
-        try {
-          const response = await rehearsalsAPI.getAll(project.id);
-          const projectRehearsals = response.data.map((r: any) => ({
-            id: r.id,
-            projectId: project.id,
-            projectName: project.name,
-            startsAt: r.startsAt,
-            endsAt: r.endsAt,
-            location: r.location,
-            title: r.title,
-            description: r.description,
-          }));
-          allRehearsals.push(...projectRehearsals);
-        } catch (err) {
-          console.error(`Failed to fetch rehearsals for project ${project.id}:`, err);
-        }
-      }
-
-      // Sync all rehearsals
-      await syncAll(allRehearsals);
-      Alert.alert(t.calendarSync.exportSuccess, t.calendarSync.exportAllSuccess);
-    } catch (error: any) {
-      Alert.alert(t.calendarSync.exportError, error.message || t.calendarSync.exportErrorMessage);
-    }
-  };
-
-  const handleRemoveAll = () => {
-    Alert.alert(
-      t.calendarSync.removeAll,
-      t.calendarSync.removeAllConfirm,
-      [
-        { text: t.common?.cancel || 'Cancel', style: 'cancel' },
-        {
-          text: t.calendarSync.removeAll,
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeAll();
-              Alert.alert(t.calendarSync.removeSuccess, t.calendarSync.removeAllSuccess);
-            } catch (error: any) {
-              Alert.alert(t.calendarSync.exportError, error.message || 'Failed to remove events');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const getSelectedCalendarName = (): string => {
-    if (!selectedCalendarId) return t.calendarSync.selectCalendar;
-    const calendar = calendars.find((c) => c.id === selectedCalendarId);
-    return calendar?.title || t.calendarSync.selectCalendar;
-  };
-
-  const formatLastSyncTime = (): string => {
-    if (!lastSyncTime) return t.calendarSync.neverSynced;
-    const date = new Date(lastSyncTime);
-    return date.toLocaleString();
-  };
-
-  // ====== Phase 2: Import Handlers ======
-
-  const handleToggleImport = async (enabled: boolean) => {
-    setImportEnabled(enabled);
-
-    // If enabling and no calendars selected, show picker
-    if (enabled && selectedImportCalendarIds.length === 0) {
-      if (calendars.length > 0) {
-        setImportCalendarPickerVisible(true);
-      } else {
+    if (enabled) {
+      // Enabling auto-sync
+      if (calendars.length === 0) {
         Alert.alert(t.calendarSync.noCalendars, t.calendarSync.noCalendarsMessage);
-        setImportEnabled(false);
         return;
       }
+
+      // Select first available calendar for both import and export
+      const firstCalendar = calendars[0];
+
+      setExportEnabled(true);
+      setSelectedCalendarId(firstCalendar.id);
+      setImportEnabled(true);
+      setSelectedImportCalendarIds([firstCalendar.id]);
+      setImportInterval('always');
+
+      // Update settings - enable both import and export with 'always' interval
+      await updateSettings({
+        exportEnabled: true,
+        exportCalendarId: firstCalendar.id,
+        lastExportTime: settings?.lastExportTime || null,
+        importEnabled: true,
+        importCalendarIds: [firstCalendar.id],
+        importInterval: 'always',
+      });
+
+      console.log('[AutoSync] Enabled with calendar:', firstCalendar.title);
+    } else {
+      // Disabling auto-sync
+      setExportEnabled(false);
+      setImportEnabled(false);
+
+      // Update settings - disable both
+      await updateSettings({
+        exportEnabled: false,
+        exportCalendarId: selectedCalendarId,
+        lastExportTime: settings?.lastExportTime || null,
+        importEnabled: false,
+        importCalendarIds: selectedImportCalendarIds,
+        importInterval: importInterval,
+      });
+
+      console.log('[AutoSync] Disabled');
     }
-
-    // Update settings
-    await updateSettings({
-      importEnabled: enabled,
-      importCalendarIds: selectedImportCalendarIds,
-      importInterval,
-    });
   };
 
-  const handleToggleImportCalendar = (calendarId: string) => {
-    const newSelection = selectedImportCalendarIds.includes(calendarId)
-      ? selectedImportCalendarIds.filter((id) => id !== calendarId)
-      : [...selectedImportCalendarIds, calendarId];
 
-    setSelectedImportCalendarIds(newSelection);
-  };
-
-  const handleSaveImportCalendars = async () => {
-    setImportCalendarPickerVisible(false);
-
-    // Update settings
-    await updateSettings({
-      importEnabled,
-      importCalendarIds: selectedImportCalendarIds,
-      importInterval,
-    });
-  };
-
-  const getSelectedImportCalendarsText = (): string => {
-    if (selectedImportCalendarIds.length === 0) {
-      return t.calendarSync.selectCalendars || 'Select calendars';
-    }
-    if (selectedImportCalendarIds.length === 1) {
-      const calendar = calendars.find((c) => c.id === selectedImportCalendarIds[0]);
-      return calendar?.title || t.calendarSync.selectCalendars || 'Select calendars';
-    }
-    return t.calendarSync.calendarsSelected?.(selectedImportCalendarIds.length)
-      || `${selectedImportCalendarIds.length} calendars selected`;
-  };
-
-  const handleImportNow = async () => {
+  // Single synchronize handler that does both import and export
+  const handleSynchronize = async () => {
     if (!hasPermission) {
       Alert.alert(t.calendarSync.permissionDenied, t.calendarSync.permissionDeniedMessage);
       return;
     }
 
-    if (selectedImportCalendarIds.length === 0) {
-      Alert.alert(t.calendarSync.noCalendarsSelected, t.calendarSync.selectCalendarsFirst || 'Please select calendars to import from');
-      return;
-    }
+    const hasImport = importEnabled && selectedImportCalendarIds.length > 0;
+    const hasExport = exportEnabled && selectedCalendarId;
 
-    try {
-      const result = await importNow();
+    if (!hasImport && !hasExport) {
       Alert.alert(
-        t.calendarSync.importSuccess || 'Import Successful',
-        t.calendarSync.importSuccessMessage?.(result.success, result.failed, result.skipped)
-          || `Imported: ${result.success}, Failed: ${result.failed}, Skipped: ${result.skipped}`
+        t.calendarSync.noCalendarsSelected || 'No calendars selected',
+        'Please enable and configure import or export calendars first'
+      );
+      return;
+    }
+
+    try {
+      let importResult = null;
+      let exportResult = null;
+
+      // Import calendar events
+      if (hasImport) {
+        console.log('[Sync] Starting import...');
+        importResult = await importNow();
+        console.log('[Sync] Import completed:', importResult);
+      }
+
+      // Export rehearsals to calendar
+      if (hasExport) {
+        console.log('[Sync] Starting export...');
+        // Fetch all rehearsals from all projects
+        const allRehearsals: RehearsalWithProject[] = [];
+
+        for (const project of projects) {
+          try {
+            const response = await rehearsalsAPI.getAll(project.id);
+            const rehearsals = response.data.rehearsals || [];
+            const projectRehearsals = rehearsals.map((r: any) => ({
+              id: r.id,
+              projectId: project.id,
+              projectName: project.name,
+              startsAt: r.startsAt,
+              endsAt: r.endsAt,
+              location: r.location,
+              title: r.title,
+              description: r.description,
+            }));
+            allRehearsals.push(...projectRehearsals);
+          } catch (err) {
+            console.error(`Failed to fetch rehearsals for project ${project.id}:`, err);
+          }
+        }
+
+        await syncAll(allRehearsals);
+        console.log('[Sync] Export completed');
+        exportResult = { success: true };
+      }
+
+      // Show success message
+      const messages = [];
+      if (importResult) {
+        messages.push(
+          `${t.calendarSync.imported || 'Imported'}: ${importResult.success}, ${t.calendarSync.skipped || 'Skipped'}: ${importResult.skipped}`
+        );
+      }
+      if (exportResult) {
+        messages.push(t.calendarSync.exportAllSuccess || 'Rehearsals exported to calendar');
+      }
+
+      Alert.alert(
+        t.calendarSync.syncSuccess || 'Sync Complete',
+        messages.join('\n')
       );
     } catch (error: any) {
-      Alert.alert(t.calendarSync.importError || 'Import Error', error.message || 'Failed to import events');
+      console.error('[Sync] Error:', error);
+      Alert.alert(
+        t.calendarSync.syncError || 'Sync Error',
+        error.message || 'Failed to synchronize calendars'
+      );
     }
   };
 
-  const handleClearImported = () => {
-    Alert.alert(
-      t.calendarSync.clearImported || 'Clear Imported Events',
-      t.calendarSync.clearImportedConfirm || 'Remove all imported events from your availability?',
-      [
-        { text: t.common?.cancel || 'Cancel', style: 'cancel' },
-        {
-          text: t.calendarSync.clearImported || 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await clearImported();
-              Alert.alert(t.calendarSync.clearSuccess || 'Success', t.calendarSync.clearImportedSuccess || 'Imported events cleared');
-            } catch (error: any) {
-              Alert.alert(t.calendarSync.importError || 'Error', error.message || 'Failed to clear imported events');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const formatLastImportTime = (): string => {
-    if (!lastImportTime) return t.calendarSync.neverImported || 'Never';
-    const date = new Date(lastImportTime);
-    return date.toLocaleString();
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -320,366 +238,68 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
         </View>
 
         {/* Permission Status */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.calendarSync.permissions}</Text>
-
-          {hasPermission === null ? (
+        {!hasPermission && (
+          <View style={styles.section}>
             <View style={styles.permissionCard}>
-              <ActivityIndicator size="small" color={Colors.accent.purple} />
-              <Text style={styles.permissionStatus}>{t.calendarSync.checkingPermissions}</Text>
+              {hasPermission === null ? (
+                <>
+                  <ActivityIndicator size="small" color={Colors.accent.purple} />
+                  <Text style={styles.permissionStatus}>{t.calendarSync.checkingPermissions}</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="alert-circle" size={24} color={Colors.accent.yellow} />
+                  <Text style={styles.permissionStatus}>{t.calendarSync.permissionRequired}</Text>
+                  <GlassButton
+                    title={t.calendarSync.grantPermission}
+                    onPress={handleRequestPermissions}
+                    variant="glass"
+                    style={styles.permissionButton}
+                  />
+                </>
+              )}
             </View>
-          ) : hasPermission ? (
-            <View style={[styles.permissionCard, styles.permissionGranted]}>
-              <Ionicons name="checkmark-circle" size={24} color={Colors.accent.green} />
-              <Text style={[styles.permissionStatus, { color: Colors.accent.green }]}>
-                {t.calendarSync.permissionGranted}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.permissionCard}>
-              <Ionicons name="alert-circle" size={24} color={Colors.accent.yellow} />
-              <Text style={styles.permissionStatus}>{t.calendarSync.permissionRequired}</Text>
-              <GlassButton
-                title={t.calendarSync.grantPermission}
-                onPress={handleRequestPermissions}
-                variant="glass"
-                style={styles.permissionButton}
-              />
-            </View>
-          )}
-        </View>
+          </View>
+        )}
 
-        {/* Export Settings */}
+        {/* Auto Sync Toggle */}
         {hasPermission && (
           <>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t.calendarSync.exportSettings}</Text>
-
-              {/* Enable Export Toggle */}
               <View style={styles.settingItem}>
                 <View style={styles.settingLeft}>
                   <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
-                    <Ionicons name="calendar" size={20} color={Colors.accent.purple} />
+                    <Ionicons name="sync" size={20} color={Colors.accent.purple} />
                   </View>
-                  <Text style={styles.settingLabel}>{t.calendarSync.exportEnabled}</Text>
+                  <Text style={styles.settingLabel}>{t.calendarSync.autoSync || 'Автосинхронизация'}</Text>
                 </View>
                 <Switch
-                  value={exportEnabled}
-                  onValueChange={handleToggleExport}
+                  value={exportEnabled && importEnabled}
+                  onValueChange={handleToggleAutoSync}
                   trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.purple }}
                   thumbColor={Colors.text.inverse}
-                  disabled={isSyncing}
+                  disabled={isSyncing || isImporting}
                 />
               </View>
-
-              {/* Calendar Selector */}
-              {exportEnabled && (
-                <TouchableOpacity
-                  style={styles.settingItem}
-                  onPress={() => setCalendarPickerVisible(true)}
-                  disabled={isSyncing}
-                >
-                  <View style={styles.settingLeft}>
-                    <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                      <Ionicons name="list" size={20} color={Colors.accent.blue} />
-                    </View>
-                    <Text style={styles.settingLabel}>{t.calendarSync.targetCalendar}</Text>
-                  </View>
-                  <View style={styles.settingRight}>
-                    <Text style={styles.settingValue} numberOfLines={1}>
-                      {getSelectedCalendarName()}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
-                  </View>
-                </TouchableOpacity>
-              )}
             </View>
 
-            {/* Actions */}
-            {exportEnabled && selectedCalendarId && (
+            {/* Manual Sync Button */}
+            {(exportEnabled || importEnabled) && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t.calendarSync.actions}</Text>
-
-                {/* Export All Button */}
                 <GlassButton
-                  title={t.calendarSync.exportAll}
-                  onPress={handleSyncAll}
+                  title={t.calendarSync.synchronize || 'Синхронизировать'}
+                  onPress={handleSynchronize}
                   variant="purple"
-                  disabled={isSyncing}
-                  loading={isSyncing}
+                  disabled={isImporting || isSyncing}
+                  loading={isImporting || isSyncing}
                   style={styles.actionButton}
                 />
-
-                {/* Remove All Button */}
-                {syncedCount > 0 && (
-                  <GlassButton
-                    title={t.calendarSync.removeAll}
-                    onPress={handleRemoveAll}
-                    variant="glass"
-                    disabled={isSyncing}
-                    style={styles.actionButton}
-                  />
-                )}
-              </View>
-            )}
-
-            {/* Export Status */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t.calendarSync.exportStatus || 'Export Status'}</Text>
-
-              <View style={styles.statusCard}>
-                <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>{t.calendarSync.syncedCount}</Text>
-                  <Text style={styles.statusValue}>{syncedCount}</Text>
-                </View>
-
-                <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>{t.calendarSync.lastSync}</Text>
-                  <Text style={styles.statusValue}>{formatLastSyncTime()}</Text>
-                </View>
-
-                {syncError && (
-                  <View style={styles.errorContainer}>
-                    <Ionicons name="warning" size={16} color={Colors.accent.red} />
-                    <Text style={styles.errorText}>{syncError}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* ====== Phase 2: Import Settings ====== */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t.calendarSync.importSettings || 'Import Settings'}</Text>
-
-              {/* Enable Import Toggle */}
-              <View style={styles.settingItem}>
-                <View style={styles.settingLeft}>
-                  <View style={[styles.settingIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
-                    <Ionicons name="download" size={20} color={Colors.accent.green} />
-                  </View>
-                  <Text style={styles.settingLabel}>{t.calendarSync.importEnabled || 'Import calendar events'}</Text>
-                </View>
-                <Switch
-                  value={importEnabled}
-                  onValueChange={handleToggleImport}
-                  trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.green }}
-                  thumbColor={Colors.text.inverse}
-                  disabled={isImporting || isSyncing}
-                />
-              </View>
-
-              {/* Import Calendars Selector */}
-              {importEnabled && (
-                <TouchableOpacity
-                  style={styles.settingItem}
-                  onPress={() => setImportCalendarPickerVisible(true)}
-                  disabled={isImporting || isSyncing}
-                >
-                  <View style={styles.settingLeft}>
-                    <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                      <Ionicons name="albums" size={20} color={Colors.accent.blue} />
-                    </View>
-                    <Text style={styles.settingLabel}>{t.calendarSync.importCalendars || 'Import from calendars'}</Text>
-                  </View>
-                  <View style={styles.settingRight}>
-                    <Text style={styles.settingValue} numberOfLines={1}>
-                      {getSelectedImportCalendarsText()}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
-                  </View>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Import Actions */}
-            {importEnabled && selectedImportCalendarIds.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t.calendarSync.importActions || 'Import Actions'}</Text>
-
-                {/* Import Now Button */}
-                <GlassButton
-                  title={t.calendarSync.importNow || 'Import Now'}
-                  onPress={handleImportNow}
-                  variant="purple"
-                  disabled={isImporting}
-                  loading={isImporting}
-                  style={styles.actionButton}
-                />
-
-                {/* Clear Imported Button */}
-                {importedCount > 0 && (
-                  <GlassButton
-                    title={t.calendarSync.clearImported || 'Clear All Imported'}
-                    onPress={handleClearImported}
-                    variant="glass"
-                    disabled={isImporting}
-                    style={styles.actionButton}
-                  />
-                )}
-              </View>
-            )}
-
-            {/* Import Status */}
-            {importEnabled && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t.calendarSync.importStatus || 'Import Status'}</Text>
-
-                <View style={styles.statusCard}>
-                  <View style={styles.statusRow}>
-                    <Text style={styles.statusLabel}>{t.calendarSync.importedCount || 'Imported events'}</Text>
-                    <Text style={styles.statusValue}>{importedCount}</Text>
-                  </View>
-
-                  <View style={styles.statusRow}>
-                    <Text style={styles.statusLabel}>{t.calendarSync.lastImport || 'Last import'}</Text>
-                    <Text style={styles.statusValue}>{formatLastImportTime()}</Text>
-                  </View>
-
-                  {importError && (
-                    <View style={styles.errorContainer}>
-                      <Ionicons name="warning" size={16} color={Colors.accent.red} />
-                      <Text style={styles.errorText}>{importError}</Text>
-                    </View>
-                  )}
-                </View>
               </View>
             )}
           </>
         )}
       </ScrollView>
 
-      {/* Calendar Picker Modal */}
-      <Modal
-        visible={calendarPickerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setCalendarPickerVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t.calendarSync.selectCalendar}</Text>
-              <TouchableOpacity onPress={() => setCalendarPickerVisible(false)}>
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={calendars}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.calendarItem,
-                    selectedCalendarId === item.id && styles.calendarItemSelected,
-                  ]}
-                  onPress={() => handleSelectCalendar(item)}
-                >
-                  <View style={styles.calendarInfo}>
-                    <View
-                      style={[styles.calendarColor, { backgroundColor: item.color || Colors.accent.purple }]}
-                    />
-                    <View style={styles.calendarDetails}>
-                      <Text
-                        style={[
-                          styles.calendarTitle,
-                          selectedCalendarId === item.id && styles.calendarTitleSelected,
-                        ]}
-                      >
-                        {item.title}
-                      </Text>
-                      {item.source?.name && (
-                        <Text style={styles.calendarSource}>{item.source.name}</Text>
-                      )}
-                    </View>
-                  </View>
-                  {selectedCalendarId === item.id && (
-                    <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
-                  )}
-                </TouchableOpacity>
-              )}
-              style={styles.calendarList}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>{t.calendarSync.noCalendarsMessage}</Text>
-                </View>
-              }
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Import Calendar Picker Modal (Multi-select) */}
-      <Modal
-        visible={importCalendarPickerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setImportCalendarPickerVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t.calendarSync.selectImportCalendars || 'Select Calendars to Import'}</Text>
-              <TouchableOpacity onPress={() => setImportCalendarPickerVisible(false)}>
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={calendars}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => {
-                const isSelected = selectedImportCalendarIds.includes(item.id);
-                return (
-                  <TouchableOpacity
-                    style={[
-                      styles.calendarItem,
-                      isSelected && styles.calendarItemSelected,
-                    ]}
-                    onPress={() => handleToggleImportCalendar(item.id)}
-                  >
-                    <View style={styles.calendarInfo}>
-                      <View
-                        style={[styles.calendarColor, { backgroundColor: item.color || Colors.accent.purple }]}
-                      />
-                      <View style={styles.calendarDetails}>
-                        <Text
-                          style={[
-                            styles.calendarTitle,
-                            isSelected && styles.calendarTitleSelected,
-                          ]}
-                        >
-                          {item.title}
-                        </Text>
-                        {item.source?.name && (
-                          <Text style={styles.calendarSource}>{item.source.name}</Text>
-                        )}
-                      </View>
-                    </View>
-                    {isSelected ? (
-                      <Ionicons name="checkbox" size={24} color={Colors.accent.green} />
-                    ) : (
-                      <Ionicons name="square-outline" size={24} color={Colors.text.tertiary} />
-                    )}
-                  </TouchableOpacity>
-                );
-              }}
-              style={styles.calendarList}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>{t.calendarSync.noCalendarsMessage}</Text>
-                </View>
-              }
-            />
-            <View style={styles.modalFooter}>
-              <GlassButton
-                title={t.common?.save || 'Save'}
-                onPress={handleSaveImportCalendars}
-                variant="purple"
-                style={styles.modalSaveButton}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

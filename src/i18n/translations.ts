@@ -327,6 +327,31 @@ export interface Translations {
     importedCount: string;
     lastImport: string;
     neverImported: string;
+    // Phase 2: Auto-import Frequency
+    importInterval: string;
+    manualOnly: string;
+    autoImportEnabled: string;
+    manual: string;
+    always: string;
+    fifteenMin: string;
+    hourly: string;
+    sixHours: string;
+    daily: string;
+    // Unified Sync
+    autoSync: string;
+    synchronize: string;
+    syncHint: string;
+    // Time formatting
+    justNow: string;
+    minutesAgo: (minutes: number) => string;
+    hoursAgo: (hours: number) => string;
+    daysAgo: (days: number) => string;
+    // Additional status
+    imported: string;
+    skipped: string;
+    exportedRehearsals: string;
+    lastExport: string;
+    importedEvents: string;
   };
   // Days
   days: {
@@ -637,6 +662,31 @@ export const ru: Translations = {
     importedCount: 'Импортировано событий',
     lastImport: 'Последний импорт',
     neverImported: 'Никогда не импортировалось',
+    // Phase 2: Auto-import Frequency
+    importInterval: 'Частота автоимпорта',
+    manualOnly: 'Только вручную',
+    autoImportEnabled: 'Синхронизируется при открытии приложения',
+    manual: 'Вручную',
+    always: 'Всегда',
+    fifteenMin: '15 мин',
+    hourly: 'Каждый час',
+    sixHours: '6 часов',
+    daily: 'Ежедневно',
+    // Unified Sync
+    autoSync: 'Автосинхронизация',
+    synchronize: 'Синхронизировать',
+    syncHint: 'Автоматическая синхронизация при открытии приложения. Используйте для синхронизации вручную.',
+    // Time formatting
+    justNow: 'Только что',
+    minutesAgo: (minutes: number) => `${minutes} мин назад`,
+    hoursAgo: (hours: number) => `${hours}ч назад`,
+    daysAgo: (days: number) => `${days}д назад`,
+    // Additional status
+    imported: 'Импортировано',
+    skipped: 'Пропущено',
+    exportedRehearsals: 'Экспортировано репетиций',
+    lastExport: 'Последний экспорт',
+    importedEvents: 'Импортировано событий',
   },
   availability: {
     title: 'Занятость',
@@ -980,6 +1030,31 @@ export const en: Translations = {
     importedCount: 'Imported events',
     lastImport: 'Last import',
     neverImported: 'Never',
+    // Phase 2: Auto-import Frequency
+    importInterval: 'Auto-import frequency',
+    manualOnly: 'Import manually only',
+    autoImportEnabled: 'Syncs when app opens',
+    manual: 'Manual',
+    always: 'Always',
+    fifteenMin: '15 Min',
+    hourly: 'Hourly',
+    sixHours: '6 Hours',
+    daily: 'Daily',
+    // Unified Sync
+    autoSync: 'Auto Sync',
+    synchronize: 'Synchronize',
+    syncHint: 'Syncs automatically when app opens. Use this for manual sync.',
+    // Time formatting
+    justNow: 'Just now',
+    minutesAgo: (minutes: number) => `${minutes} min ago`,
+    hoursAgo: (hours: number) => `${hours}h ago`,
+    daysAgo: (days: number) => `${days}d ago`,
+    // Additional status
+    imported: 'Imported',
+    skipped: 'Skipped',
+    exportedRehearsals: 'Exported rehearsals',
+    lastExport: 'Last export',
+    importedEvents: 'Imported events',
   },
   availability: {
     title: 'Availability',
