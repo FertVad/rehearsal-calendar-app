@@ -80,14 +80,3 @@ export function mapClientStatusToDB(clientStatus) {
   };
   return mapping[clientStatus] || clientStatus;
 }
-
-/**
- * Date/time format constants
- * @type {Object<string, string>}
- */
-export const DATE_FORMATS = {
-  DATE_ONLY: 'YYYY-MM-DD',
-  TIME_ONLY: 'HH:mm',
-  DATETIME: 'YYYY-MM-DD HH:mm',
-  ISO8601: 'YYYY-MM-DDTHH:mm:ss',
-};

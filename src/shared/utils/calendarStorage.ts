@@ -251,19 +251,6 @@ export async function getImportedEvents(): Promise<ImportedEventMap> {
 }
 
 /**
- * Check if event is already imported
- */
-export async function isEventImported(eventId: string): Promise<boolean> {
-  try {
-    const tracking = await getImportedEvents();
-    return eventId in tracking;
-  } catch (error) {
-    console.error('[CalendarStorage] Failed to check if event imported:', error);
-    return false;
-  }
-}
-
-/**
  * Get imported event info
  */
 export async function getImportedEvent(

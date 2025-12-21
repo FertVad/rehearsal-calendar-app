@@ -14,10 +14,3 @@ export const WEEKDAY_ROW_HEIGHT = FontSize.xs + Spacing.sm; // Labels + marginBo
 export const DAY_ROW_HEIGHT = DAY_SIZE + Spacing.xs; // Day cell + marginBottom
 
 export const PANEL_HEIGHT = 320;
-
-export const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-
-export const MONTHS_RU = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-];
