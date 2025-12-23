@@ -290,27 +290,32 @@ export async function syncAllRehearsals(
   };
 
   const total = rehearsals.length;
+  const BATCH_SIZE = 10; // Process 10 rehearsals in parallel
 
-  for (let i = 0; i < rehearsals.length; i++) {
-    const rehearsal = rehearsals[i];
+  // Process in batches for better performance
+  for (let i = 0; i < rehearsals.length; i += BATCH_SIZE) {
+    const batch = rehearsals.slice(i, i + BATCH_SIZE);
 
-    try {
-      await syncRehearsalToCalendar(rehearsal, calendarId);
-      result.success++;
-    } catch (error: any) {
-      result.failed++;
-      result.errors.push(`${rehearsal.projectName}: ${error.message}`);
-      console.error(`[CalendarSync] Failed to sync rehearsal ${rehearsal.id}:`, error);
-    }
+    // Process batch in parallel
+    const results = await Promise.allSettled(
+      batch.map(rehearsal => syncRehearsalToCalendar(rehearsal, calendarId))
+    );
+
+    // Collect results
+    results.forEach((res, idx) => {
+      const rehearsal = batch[idx];
+      if (res.status === 'fulfilled') {
+        result.success++;
+      } else {
+        result.failed++;
+        result.errors.push(`${rehearsal.projectName}: ${res.reason?.message || 'Unknown error'}`);
+        console.error(`[CalendarSync] Failed to sync rehearsal ${rehearsal.id}:`, res.reason);
+      }
+    });
 
     // Report progress
     if (onProgress) {
-      onProgress(i + 1, total);
-    }
-
-    // Small delay to avoid overwhelming the system
-    if (i < rehearsals.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      onProgress(Math.min(i + batch.length, total), total);
     }
   }
 
@@ -338,28 +343,33 @@ export async function removeAllExportedEvents(
     };
 
     const total = rehearsalIds.length;
+    const BATCH_SIZE = 10; // Delete 10 events in parallel
 
-    for (let i = 0; i < rehearsalIds.length; i++) {
-      const rehearsalId = rehearsalIds[i];
-      const mapping = mappings[rehearsalId];
+    // Process in batches for better performance
+    for (let i = 0; i < rehearsalIds.length; i += BATCH_SIZE) {
+      const batchIds = rehearsalIds.slice(i, i + BATCH_SIZE);
 
-      try {
-        await deleteCalendarEvent(mapping.eventId);
-        result.success++;
-      } catch (error: any) {
-        result.failed++;
-        result.errors.push(`Event ${mapping.eventId}: ${error.message}`);
-        console.error(`[CalendarSync] Failed to delete event ${mapping.eventId}:`, error);
-      }
+      // Delete batch in parallel
+      const results = await Promise.allSettled(
+        batchIds.map(rehearsalId => deleteCalendarEvent(mappings[rehearsalId].eventId))
+      );
+
+      // Collect results
+      results.forEach((res, idx) => {
+        const rehearsalId = batchIds[idx];
+        const mapping = mappings[rehearsalId];
+        if (res.status === 'fulfilled') {
+          result.success++;
+        } else {
+          result.failed++;
+          result.errors.push(`Event ${mapping.eventId}: ${res.reason?.message || 'Unknown error'}`);
+          console.error(`[CalendarSync] Failed to delete event ${mapping.eventId}:`, res.reason);
+        }
+      });
 
       // Report progress
       if (onProgress) {
-        onProgress(i + 1, total);
-      }
-
-      // Small delay
-      if (i < rehearsalIds.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        onProgress(Math.min(i + batchIds.length, total), total);
       }
     }
 

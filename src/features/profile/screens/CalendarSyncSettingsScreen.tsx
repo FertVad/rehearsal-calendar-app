@@ -173,32 +173,28 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       // Export rehearsals to calendar
       if (hasExport) {
         console.log('[Sync] Starting export...');
-        // Fetch all rehearsals from all projects
-        const allRehearsals: RehearsalWithProject[] = [];
+        // Fetch all rehearsals from all projects using batch endpoint (performance optimization)
+        try {
+          const projectIds = projects.map(p => p.id);
+          const response = await rehearsalsAPI.getBatch(projectIds);
+          const allRehearsals: RehearsalWithProject[] = (response.data.rehearsals || []).map((r: any) => ({
+            id: r.id,
+            projectId: r.projectId,
+            projectName: r.projectName,
+            startsAt: r.startsAt,
+            endsAt: r.endsAt,
+            location: r.location,
+            title: r.title,
+            description: r.description,
+          }));
 
-        for (const project of projects) {
-          try {
-            const response = await rehearsalsAPI.getAll(project.id);
-            const rehearsals = response.data.rehearsals || [];
-            const projectRehearsals = rehearsals.map((r: any) => ({
-              id: r.id,
-              projectId: project.id,
-              projectName: project.name,
-              startsAt: r.startsAt,
-              endsAt: r.endsAt,
-              location: r.location,
-              title: r.title,
-              description: r.description,
-            }));
-            allRehearsals.push(...projectRehearsals);
-          } catch (err) {
-            console.error(`Failed to fetch rehearsals for project ${project.id}:`, err);
-          }
+          await syncAll(allRehearsals);
+          console.log('[Sync] Export completed');
+          exportResult = { success: true };
+        } catch (err) {
+          console.error('Failed to fetch rehearsals:', err);
+          throw err;
         }
-
-        await syncAll(allRehearsals);
-        console.log('[Sync] Export completed');
-        exportResult = { success: true };
       }
 
       // Show success message

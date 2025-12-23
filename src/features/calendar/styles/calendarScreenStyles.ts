@@ -307,6 +307,29 @@ export const styles = StyleSheet.create({
   rsvpStatusDeclined: {
     color: Colors.accent.red,
   },
+  // Like button styles (Telegram-style)
+  likeSection: {
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.glass.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    padding: Spacing.xs,
+  },
+  likeCount: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.secondary,
+  },
+  likeCountActive: {
+    color: Colors.accent.red,
+  },
   // Admin stats styles
   adminStatsSection: {
     marginTop: Spacing.md,

@@ -32,7 +32,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rsvpResponses, setRsvpResponses] = useState<Record<string, RSVPStatus>>({});
-  const [adminStats, setAdminStats] = useState<Record<string, { confirmed: number; declined: number; pending: number }>>({});
+  const [adminStats, setAdminStats] = useState<Record<string, { confirmed: number; declined: number; tentative: number; invited: number }>>({});
 
   const fetchRehearsals = useCallback(async () => {
     if (projects.length === 0) {
@@ -46,24 +46,15 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
     try {
       let fetchedRehearsals: Rehearsal[] = [];
 
-      // If filter is null (All projects), fetch from all projects
+      // If filter is null (All projects), fetch from all projects using batch endpoint
       if (filterProjectId === null) {
-        const allRehearsals: Rehearsal[] = [];
-        for (const project of projects) {
-          try {
-            const response = await rehearsalsAPI.getAll(project.id);
-            const projectRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) =>
-              transformRehearsal({
-                ...r,
-                projectName: project.name,
-                projectId: project.id,
-              })
-            );
-            allRehearsals.push(...projectRehearsals);
-          } catch (err) {
-            console.error(`Failed to fetch rehearsals for project ${project.id}:`, err);
-          }
-        }
+        // Use batch endpoint for better performance (single request instead of N requests)
+        const projectIds = projects.map(p => p.id);
+        const response = await rehearsalsAPI.getBatch(projectIds);
+        // Batch endpoint already includes projectName
+        const allRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) =>
+          transformRehearsal(r)
+        );
         fetchedRehearsals = allRehearsals;
       } else {
         // Fetch from selected project only
@@ -87,13 +78,31 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
 
       if (upcomingRehearsals.length > 0) {
         const responses: Record<string, RSVPStatus> = {};
-        const stats: Record<string, { confirmed: number; declined: number; pending: number }> = {};
+        const stats: Record<string, { confirmed: number; declined: number; tentative: number; invited: number }> = {};
 
         await Promise.all(
           upcomingRehearsals.map(async (rehearsal) => {
             const project = projects.find(p => p.id === rehearsal.projectId);
             const isAdmin = project?.is_admin;
 
+            // Load personal response for everyone (admin and non-admin)
+            try {
+              const res = await rehearsalsAPI.getMyResponse(rehearsal.id);
+              if (res.data.response) {
+                // Map server response ('yes'/'no'/'maybe') to client status ('confirmed'/'declined'/'tentative')
+                const responseMap: Record<string, RSVPStatus> = {
+                  'yes': 'confirmed',
+                  'no': 'declined',
+                  'maybe': 'tentative',
+                };
+                const serverResponse = res.data.response.response;
+                responses[rehearsal.id] = responseMap[serverResponse] || serverResponse as RSVPStatus;
+              }
+            } catch (err) {
+              console.error(`Failed to fetch RSVP for ${rehearsal.id}:`, err);
+            }
+
+            // Additionally load stats for admins
             if (isAdmin) {
               try {
                 const res = await rehearsalsAPI.getResponses(rehearsal.id);
@@ -101,27 +110,12 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
                   stats[rehearsal.id] = {
                     confirmed: res.data.stats.confirmed,
                     declined: res.data.stats.declined,
-                    pending: res.data.stats.invited + res.data.stats.tentative,
+                    tentative: res.data.stats.tentative,
+                    invited: res.data.stats.invited,
                   };
                 }
               } catch (err) {
                 console.error(`Failed to fetch admin stats for ${rehearsal.id}:`, err);
-              }
-            } else {
-              try {
-                const res = await rehearsalsAPI.getMyResponse(rehearsal.id);
-                if (res.data.response) {
-                  // Map server response ('yes'/'no'/'maybe') to client status ('confirmed'/'declined'/'tentative')
-                  const responseMap: Record<string, RSVPStatus> = {
-                    'yes': 'confirmed',
-                    'no': 'declined',
-                    'maybe': 'tentative',
-                  };
-                  const serverResponse = res.data.response.response;
-                  responses[rehearsal.id] = responseMap[serverResponse] || serverResponse as RSVPStatus;
-                }
-              } catch (err) {
-                console.error(`Failed to fetch RSVP for ${rehearsal.id}:`, err);
               }
             }
           })
@@ -147,7 +141,8 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
           [rehearsalId]: {
             confirmed: res.data.stats.confirmed,
             declined: res.data.stats.declined,
-            pending: res.data.stats.invited + res.data.stats.tentative,
+            tentative: res.data.stats.tentative,
+            invited: res.data.stats.invited,
           },
         }));
       }

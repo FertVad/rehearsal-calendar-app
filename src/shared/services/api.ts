@@ -181,6 +181,14 @@ export const rehearsalsAPI = {
   getAll: (projectId: string) =>
     api.get(`/native/projects/${projectId}/rehearsals`),
 
+  // Get rehearsals for multiple projects (batch - performance optimization)
+  getBatch: (projectIds: string[]) =>
+    api.get('/native/rehearsals/batch', {
+      params: {
+        projectIds: projectIds.join(','),
+      },
+    }),
+
   // Create rehearsal
   create: (projectId: string, data: any) =>
     api.post(`/native/projects/${projectId}/rehearsals`, data),

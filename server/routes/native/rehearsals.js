@@ -108,6 +108,74 @@ function formatDateString(dateStr) {
   return `${year}-${month}-${day}`;
 }
 
+// GET /api/native/rehearsals/batch?projectIds=1,2,3 - Get rehearsals for multiple projects (Performance optimization)
+router.get('/batch', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { projectIds } = req.query;
+
+    if (!projectIds) {
+      return res.status(400).json({ error: 'projectIds query parameter is required' });
+    }
+
+    // Parse comma-separated project IDs
+    const projectIdArray = projectIds.split(',').map(id => id.trim()).filter(Boolean);
+
+    if (projectIdArray.length === 0) {
+      return res.json({ rehearsals: [] });
+    }
+
+    console.log('[Batch Rehearsals] Fetching for projects:', projectIdArray);
+
+    // Check user membership for all projects in one query
+    const memberships = await db.all(
+      `SELECT project_id FROM native_project_members
+       WHERE project_id IN (${projectIdArray.map(() => '?').join(',')})
+       AND user_id = ?
+       AND status = 'active'`,
+      [...projectIdArray, userId]
+    );
+
+    const accessibleProjectIds = memberships.map(m => String(m.project_id));
+
+    if (accessibleProjectIds.length === 0) {
+      return res.json({ rehearsals: [] });
+    }
+
+    console.log('[Batch Rehearsals] User has access to:', accessibleProjectIds);
+
+    // Fetch all rehearsals for accessible projects in one query
+    const rehearsals = await db.all(
+      `SELECT r.*, p.name as project_name
+       FROM native_rehearsals r
+       JOIN native_projects p ON r.project_id = p.id
+       WHERE r.project_id IN (${accessibleProjectIds.map(() => '?').join(',')})
+       ORDER BY r.starts_at DESC`,
+      accessibleProjectIds
+    );
+
+    console.log(`[Batch Rehearsals] Found ${rehearsals.length} rehearsals`);
+
+    res.json({
+      rehearsals: rehearsals.map(r => ({
+        id: String(r.id),
+        projectId: String(r.project_id),
+        projectName: r.project_name,
+        title: r.title,
+        description: r.description,
+        startsAt: timestampToISO(r.starts_at),
+        endsAt: timestampToISO(r.ends_at),
+        location: r.location,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      })),
+    });
+  } catch (error) {
+    console.error('[Batch Rehearsals] Error:', error);
+    res.status(500).json({ error: 'Failed to fetch rehearsals' });
+  }
+});
+
 // GET /api/native/projects/:projectId/rehearsals - Get all rehearsals for a project
 router.get('/:projectId/rehearsals', requireAuth, async (req, res) => {
   try {
@@ -400,6 +468,7 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
       'confirmed': 'yes',
       'declined': 'no',
       'tentative': 'maybe',
+      'invited': 'maybe', // For like system: unliked/invited state
       // Also accept database values directly
       'yes': 'yes',
       'no': 'no',
@@ -443,8 +512,19 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
     console.log('[RSVP] Existing response:', existingResponse);
 
     let rsvpResponse;
+    let wasDeleted = false;
 
-    if (existingResponse) {
+    // For like system: if status is 'tentative' (unlike), delete the response instead of updating
+    if (status === 'tentative' && existingResponse) {
+      // Delete response (unlike)
+      await db.run(
+        'DELETE FROM native_rehearsal_responses WHERE rehearsal_id = $1 AND user_id = $2',
+        [rehearsalId, userId]
+      );
+      console.log('[RSVP] Deleted response (unlike)');
+      wasDeleted = true;
+      rsvpResponse = null;
+    } else if (existingResponse && status !== 'tentative') {
       // Update existing response
       rsvpResponse = await db.get(
         `UPDATE native_rehearsal_responses
@@ -454,7 +534,7 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
         [response, notes || null, rehearsalId, userId]
       );
       console.log('[RSVP] Updated response:', rsvpResponse);
-    } else {
+    } else if (!existingResponse && status !== 'tentative') {
       // Create new response
       rsvpResponse = await db.get(
         `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, notes, created_at, updated_at)
@@ -465,8 +545,31 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
       console.log('[RSVP] Created response:', rsvpResponse);
     }
 
+    // Calculate updated stats
+    const responses = await db.all(
+      'SELECT * FROM native_rehearsal_responses WHERE rehearsal_id = $1',
+      [rehearsalId]
+    );
+
+    const allMembers = await db.all(
+      "SELECT user_id FROM native_project_members WHERE project_id = $1 AND status = 'active'",
+      [rehearsal.project_id]
+    );
+
+    const respondedUserIds = responses.map(r => r.user_id);
+    const invited = allMembers.filter(m => !respondedUserIds.includes(m.user_id)).length;
+
+    const stats = {
+      confirmed: responses.filter(r => r.response === 'yes').length,
+      declined: responses.filter(r => r.response === 'no').length,
+      tentative: responses.filter(r => r.response === 'maybe').length,
+      invited: invited,
+    };
+
+    console.log('[RSVP] Updated stats:', stats);
+
     res.json({
-      response: {
+      response: wasDeleted ? null : {
         id: String(rsvpResponse.id),
         rehearsalId: String(rsvpResponse.rehearsal_id),
         userId: String(rsvpResponse.user_id),
@@ -475,6 +578,7 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
         createdAt: rsvpResponse.created_at,
         updatedAt: rsvpResponse.updated_at,
       },
+      stats, // Return updated stats
     });
   } catch (error) {
     console.error('Error submitting RSVP:', error);
@@ -515,13 +619,54 @@ router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
       [rehearsalId]
     );
 
+    // Get total project members to calculate who hasn't responded
+    const allMembers = await db.all(
+      "SELECT user_id FROM native_project_members WHERE project_id = $1 AND status = 'active'",
+      [rehearsal.project_id]
+    );
+
+    // Calculate how many members haven't responded
+    const respondedUserIds = responses.map(r => r.user_id);
+    const invited = allMembers.filter(m => !respondedUserIds.includes(m.user_id)).length;
+
     // Calculate stats
     const stats = {
       confirmed: responses.filter(r => r.response === 'yes').length,
       declined: responses.filter(r => r.response === 'no').length,
       tentative: responses.filter(r => r.response === 'maybe').length,
-      invited: 0, // We don't track invited separately yet
+      invited: invited,
     };
+
+    // Get all project members with their info
+    const allMembersWithInfo = await db.all(
+      `SELECT u.id, u.first_name, u.last_name, u.email
+       FROM native_project_members pm
+       JOIN native_users u ON pm.user_id = u.id
+       WHERE pm.project_id = $1 AND pm.status = 'active'
+       ORDER BY u.first_name, u.last_name`,
+      [rehearsal.project_id]
+    );
+
+    // Create a map of user responses for quick lookup
+    const responseMap = new Map();
+    responses.forEach(r => {
+      responseMap.set(r.user_id, r.response);
+    });
+
+    // Combine all members with their response status
+    const allParticipants = allMembersWithInfo.map(member => ({
+      userId: String(member.id),
+      firstName: member.first_name,
+      lastName: member.last_name,
+      email: member.email,
+      response: responseMap.get(member.id) || null, // null if no response
+    }));
+
+    console.log('[Responses] Returning data:', {
+      responsesCount: responses.length,
+      allParticipantsCount: allParticipants.length,
+      stats,
+    });
 
     res.json({
       responses: responses.map(r => ({
@@ -536,6 +681,7 @@ router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       })),
+      allParticipants, // All project members with their response status
       stats,
     });
   } catch (error) {

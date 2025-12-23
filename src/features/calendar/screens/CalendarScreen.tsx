@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, SafeAreaView, ScrollView, ActivityIndicator, TouchableOpacity, Alert, FlatList } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, ActivityIndicator, TouchableOpacity, Alert, FlatList, Pressable } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect, CompositeScreenProps } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { TabParamList, AppStackParamList } from '../../../navigation';
 import WeeklyCalendar from '../components/WeeklyCalendar';
@@ -11,6 +12,7 @@ import DayDetailsModal from '../components/DayDetailsModal';
 import MyRehearsalsModal from '../components/MyRehearsalsModal';
 import TodayRehearsals from '../components/TodayRehearsals';
 import SmartPlannerButton from '../components/SmartPlannerButton';
+import { ParticipantsModal } from '../components/ParticipantsModal';
 import { Rehearsal } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -35,6 +37,9 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   const [modalDate, setModalDate] = useState<string>('');
   const [myRehearsalsVisible, setMyRehearsalsVisible] = useState(false);
   const [filterExpanded, setFilterExpanded] = useState(false);
+  const [participantsModalVisible, setParticipantsModalVisible] = useState(false);
+  const [participantsModalData, setParticipantsModalData] = useState<any[]>([]);
+  const [participantsModalRehearsalId, setParticipantsModalRehearsalId] = useState<string | null>(null);
 
   // null means "All projects"
   const [filterProjectId, setFilterProjectId] = useState<string | null>(null);
@@ -98,6 +103,28 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
 
   const handleSelectDateFromModal = useCallback((date: string) => {
     setSelectedDate(date);
+  }, []);
+
+  // Load participants for modal (admin only)
+  const loadParticipants = useCallback(async (rehearsalId: string) => {
+    try {
+      const res = await rehearsalsAPI.getResponses(rehearsalId);
+      if (res.data.allParticipants) {
+        const participants = res.data.allParticipants.map((p: any) => ({
+          userId: p.userId,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          email: p.email,
+          hasLiked: p.response === 'yes',
+          hasResponded: p.response !== null,
+        }));
+        setParticipantsModalData(participants);
+        setParticipantsModalRehearsalId(rehearsalId);
+        setParticipantsModalVisible(true);
+      }
+    } catch (err) {
+      console.error('Failed to load participants:', err);
+    }
   }, []);
 
   const modalRehearsals = rehearsals.filter(r => r.date === modalDate);
@@ -307,7 +334,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
           onRSVP={handleRSVP}
           onDeleteRehearsal={handleDeleteRehearsal}
           setRsvpResponses={setRsvpResponses}
-          updateAdminStats={updateAdminStats}
+          setAdminStats={setAdminStats}
         />
 
         {/* Upcoming Events */}
@@ -397,83 +424,55 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                       </View>
                     </TouchableOpacity>
 
-                    {/* RSVP Section - different for admin and regular user */}
-                    {isAdminForThisRehearsal ? (
-                      // Admin sees stats for their projects
-                      <View style={styles.adminStatsSection}>
-                        {stats ? (
-                          <View style={styles.adminStatsRow}>
-                            <View style={styles.adminStatItem}>
-                              <Ionicons name="checkmark-circle" size={16} color={Colors.accent.green} />
-                              <Text style={styles.adminStatText}>{stats.confirmed}</Text>
-                            </View>
-                            <View style={styles.adminStatItem}>
-                              <Ionicons name="close-circle" size={16} color={Colors.accent.red} />
-                              <Text style={styles.adminStatText}>{stats.declined}</Text>
-                            </View>
-                            <View style={styles.adminStatItem}>
-                              <Ionicons name="help-circle" size={16} color={Colors.text.tertiary} />
-                              <Text style={styles.adminStatText}>{stats.pending}</Text>
-                            </View>
-                          </View>
-                        ) : (
-                          <ActivityIndicator size="small" color={Colors.accent.purple} />
-                        )}
-                      </View>
-                    ) : currentResponse ? (
-                      // Regular user with response
-                      <View style={[
-                        styles.rsvpStatus,
-                        currentResponse === 'confirmed' ? styles.rsvpConfirmed : styles.rsvpDeclined
-                      ]}>
-                        <Ionicons
-                          name={currentResponse === 'confirmed' ? 'checkmark-circle' : 'close-circle'}
-                          size={16}
-                          color={currentResponse === 'confirmed' ? Colors.accent.green : Colors.accent.red}
-                        />
-                        <Text style={[
-                          styles.rsvpStatusText,
-                          currentResponse === 'confirmed' ? styles.rsvpStatusConfirmed : styles.rsvpStatusDeclined
-                        ]}>
-                          {currentResponse === 'confirmed' ? t.rehearsals.rsvpConfirmed : t.rehearsals.rsvpDeclined}
-                        </Text>
-                      </View>
-                    ) : (
-                      // Regular user without response - show buttons
-                      <View style={styles.rsvpButtons}>
-                        <TouchableOpacity
-                          style={[styles.rsvpButton, styles.rsvpConfirmButton]}
-                          onPress={() => handleRSVP(rehearsal.id, 'confirmed', (id, status) => {
-                            setRsvpResponses(prev => ({ ...prev, [id]: status }));
-                            // Update only stats for this rehearsal (no full refetch)
-                            updateAdminStats(id);
-                          })}
-                          disabled={isResponding}
-                        >
-                          {isResponding ? (
-                            <ActivityIndicator size="small" color={Colors.accent.green} />
-                          ) : (
-                            <>
-                              <Ionicons name="checkmark-circle" size={18} color={Colors.accent.green} />
-                              <Text style={styles.rsvpButtonTextConfirm}>{t.rehearsals.confirmAttendance}</Text>
-                            </>
-                          )}
-                        </TouchableOpacity>
+                    {/* Like Button (Telegram-style) */}
+                    <View style={styles.likeSection}>
+                      <Pressable
+                        style={styles.likeButton}
+                        onPress={() => {
+                          // Light haptic feedback on tap
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-                        <TouchableOpacity
-                          style={[styles.rsvpButton, styles.rsvpDeclineButton]}
-                          onPress={() => handleRSVP(rehearsal.id, 'declined', (id, status) => {
+                          // Toggle logic is in the hook, just pass current status
+                          handleRSVP(rehearsal.id, currentResponse, (id, status, serverStats) => {
                             setRsvpResponses(prev => ({ ...prev, [id]: status }));
-                            // Update only stats for this rehearsal (no full refetch)
-                            updateAdminStats(id);
-                          })}
-                          disabled={isResponding}
-                        >
-                          <Ionicons name="close-circle" size={18} color={Colors.accent.red} />
-                          <Text style={styles.rsvpButtonTextDecline}>{t.rehearsals.declineAttendance}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
+                            // If server returned stats, use them immediately
+                            if (serverStats && isAdminForThisRehearsal) {
+                              setAdminStats(prev => ({
+                                ...prev,
+                                [id]: serverStats,
+                              }));
+                            }
+                          });
+                        }}
+                        onLongPress={() => {
+                          // Medium haptic feedback on long press
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          // Only admins can see participants list
+                          if (isAdminForThisRehearsal) {
+                            loadParticipants(rehearsal.id);
+                          }
+                        }}
+                        disabled={isResponding}
+                      >
+                        <Ionicons
+                          name={currentResponse === 'confirmed' ? 'heart' : 'heart-outline'}
+                          size={24}
+                          color={currentResponse === 'confirmed' ? Colors.accent.red : Colors.text.secondary}
+                        />
+                        {stats && (stats.confirmed > 0 || isAdminForThisRehearsal) && (() => {
+                          const totalParticipants = stats.confirmed + stats.declined + stats.tentative + stats.invited;
+                          const displayText = isAdminForThisRehearsal && totalParticipants > 0
+                            ? `${stats.confirmed}/${totalParticipants}`
+                            : `${stats.confirmed}`;
+
+                          return (
+                            <Text style={styles.likeCount}>
+                              {displayText}
+                            </Text>
+                          );
+                        })()}
+                      </Pressable>
+                    </View>
                   </View>
                 );
               })}
@@ -498,6 +497,15 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
         onClose={handleMyRehearsalsClose}
         rehearsals={rehearsals}
         onSelectDate={handleSelectDateFromModal}
+      />
+
+      {/* Participants Modal (Admin only) */}
+      <ParticipantsModal
+        visible={participantsModalVisible}
+        onClose={() => setParticipantsModalVisible(false)}
+        participants={participantsModalData}
+        totalCount={participantsModalData.length}
+        likedCount={participantsModalData.filter(p => p.hasLiked).length}
       />
     </SafeAreaView>
   );

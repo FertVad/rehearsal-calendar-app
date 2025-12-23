@@ -132,6 +132,17 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
         if (records.length > 0) {
           // Convert timestamps to time ranges in user's local timezone
           const timeRanges = records.map(record => {
+            // For all-day events, don't convert timezone - just return 00:00-23:59
+            if (record.is_all_day) {
+              return {
+                start: '00:00',
+                end: '23:59',
+                type: record.type,
+                isAllDay: true
+              };
+            }
+
+            // For regular events, convert to user's local timezone
             const startsAtISO = timestampToISO(record.starts_at);
             const endsAtISO = timestampToISO(record.ends_at);
             const { time: startTime } = timestampToLocal(startsAtISO, userTimezone);
@@ -141,7 +152,7 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
               start: startTime,
               end: endTime,
               type: record.type,
-              isAllDay: record.is_all_day
+              isAllDay: false
             };
           });
 
