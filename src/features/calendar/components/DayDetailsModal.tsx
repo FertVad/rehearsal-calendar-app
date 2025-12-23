@@ -141,12 +141,8 @@ export default function DayDetailsModal({
                           ) : statsMap[rehearsal.id] && statsMap[rehearsal.id].total > 0 ? (
                             <View style={styles.statsRow}>
                               <View style={styles.statItem}>
-                                <Ionicons name="checkmark-circle" size={14} color={Colors.accent.green} />
+                                <Ionicons name="heart" size={14} color={Colors.accent.red} />
                                 <Text style={styles.statText}>{statsMap[rehearsal.id].confirmed}</Text>
-                              </View>
-                              <View style={styles.statItem}>
-                                <Ionicons name="close-circle" size={14} color={Colors.accent.red} />
-                                <Text style={styles.statText}>{statsMap[rehearsal.id].declined}</Text>
                               </View>
                               <View style={styles.statItem}>
                                 <Ionicons name="help-circle" size={14} color={Colors.text.tertiary} />

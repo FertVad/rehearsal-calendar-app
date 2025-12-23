@@ -8,17 +8,16 @@ export const useRSVP = () => {
 
   /**
    * Toggle like status for a rehearsal with optimistic UI update
-   * - If current status is 'confirmed' → toggle to 'tentative' (unlike - deletes response)
-   * - Otherwise → toggle to 'confirmed' (like)
-   * Backend maps: confirmed → yes (DB), tentative → DELETE (unlike)
+   * - If current status is 'yes' → toggle to null (unlike - deletes response)
+   * - Otherwise → toggle to 'yes' (like)
    */
   const toggleLike = useCallback(async (
     rehearsalId: string,
     currentStatus: RSVPStatus | null,
     onSuccess: (rehearsalId: string, newStatus: RSVPStatus, stats?: any) => void
   ) => {
-    // Toggle logic: confirmed (liked) ↔ tentative (unliked/deleted)
-    const newStatus: 'confirmed' | 'tentative' = currentStatus === 'confirmed' ? 'tentative' : 'confirmed';
+    // Toggle logic: 'yes' (liked) ↔ null (unliked/deleted)
+    const newStatus: RSVPStatus = currentStatus === 'yes' ? null : 'yes';
 
     // Optimistic update - update UI immediately
     onSuccess(rehearsalId, newStatus);
@@ -35,7 +34,7 @@ export const useRSVP = () => {
     } catch (err: any) {
       console.error('Failed to toggle like:', err);
       // Revert optimistic update on error
-      onSuccess(rehearsalId, currentStatus || 'tentative');
+      onSuccess(rehearsalId, currentStatus);
       Alert.alert('Ошибка', err.message || 'Не удалось обновить статус');
     } finally {
       setRespondingId(null);
@@ -45,6 +44,5 @@ export const useRSVP = () => {
   return {
     respondingId,
     toggleLike,
-    handleRSVP: toggleLike, // Backward compatibility alias
   };
 };

@@ -201,8 +201,8 @@ export const rehearsalsAPI = {
   delete: (projectId: string, rehearsalId: string) =>
     api.delete(`/native/projects/${projectId}/rehearsals/${rehearsalId}`),
 
-  // RSVP - Submit response
-  respond: (rehearsalId: string, status: 'confirmed' | 'declined' | 'tentative', notes?: string) =>
+  // RSVP - Submit response ('yes' = like, null = unlike/delete)
+  respond: (rehearsalId: string, status: 'yes' | null, notes?: string) =>
     api.post(`/native/rehearsals/${rehearsalId}/respond`, { status, notes }),
 
   // RSVP - Get my response

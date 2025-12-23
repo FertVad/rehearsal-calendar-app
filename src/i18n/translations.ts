@@ -81,10 +81,6 @@ export interface Translations {
     tomorrow: string;
     todayButton: string;
     smartPlannerSubtitle: string;
-    willAttend: string;
-    wontAttend: string;
-    attendanceConfirmed: string;
-    attendanceDeclined: string;
   };
   // Projects
   projects: {
@@ -154,8 +150,6 @@ export interface Translations {
     rsvpConfirmed: string;
     rsvpDeclined: string;
     rsvpPending: string;
-    confirmAttendance: string;
-    declineAttendance: string;
     createRehearsal: string;
     loadMembersError: string;
     loadAvailabilityError: string;
@@ -453,10 +447,6 @@ export const ru: Translations = {
     tomorrow: 'Завтра',
     todayButton: 'Сегодня',
     smartPlannerSubtitle: 'Найти оптимальное время для репетиции',
-    willAttend: 'Приду',
-    wontAttend: 'Не приду',
-    attendanceConfirmed: 'Репетиция подтверждена',
-    attendanceDeclined: 'Вы отказались',
   },
   projects: {
     title: 'Мои проекты',
@@ -523,8 +513,6 @@ export const ru: Translations = {
     rsvpConfirmed: 'Подтвердили',
     rsvpDeclined: 'Отказались',
     rsvpPending: 'Ожидают',
-    confirmAttendance: 'Подтвердить',
-    declineAttendance: 'Отказаться',
     createRehearsal: 'Создать репетицию',
     loadMembersError: 'Не удалось загрузить участников проекта',
     loadAvailabilityError: 'Не удалось загрузить доступность участников',
@@ -821,10 +809,6 @@ export const en: Translations = {
     tomorrow: 'Tomorrow',
     todayButton: 'Today',
     smartPlannerSubtitle: 'Find the best time for rehearsal',
-    willAttend: "I'll attend",
-    wontAttend: "Won't attend",
-    attendanceConfirmed: 'Attendance confirmed',
-    attendanceDeclined: 'You declined',
   },
   projects: {
     title: 'My Projects',
@@ -891,8 +875,6 @@ export const en: Translations = {
     rsvpConfirmed: 'Confirmed',
     rsvpDeclined: 'Declined',
     rsvpPending: 'Pending',
-    confirmAttendance: 'Confirm',
-    declineAttendance: 'Decline',
     createRehearsal: 'Create Rehearsal',
     loadMembersError: 'Failed to load project members',
     loadAvailabilityError: 'Failed to load member availability',

@@ -1,4 +1,5 @@
-export type RSVPStatus = 'invited' | 'confirmed' | 'declined' | 'tentative';
+// Like system: 'yes' = liked, null = no response/unliked
+export type RSVPStatus = 'yes' | null;
 
 export interface UserResponse {
     status: RSVPStatus;
@@ -8,10 +9,8 @@ export interface UserResponse {
 
 export interface ResponseStats {
     total: number;
-    confirmed: number;
-    declined: number;
-    tentative: number;
-    invited: number;
+    confirmed: number; // Number of 'yes' responses
+    invited: number;   // Number of members without response
 }
 
 /**

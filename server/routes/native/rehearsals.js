@@ -463,23 +463,10 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
 
     console.log('[RSVP] Request:', { userId, rehearsalId, status, notes });
 
-    // Map client status to database response values
-    const statusMap = {
-      'confirmed': 'yes',
-      'declined': 'no',
-      'tentative': 'maybe',
-      'invited': 'maybe', // For like system: unliked/invited state
-      // Also accept database values directly
-      'yes': 'yes',
-      'no': 'no',
-      'maybe': 'maybe',
-    };
-
-    const response = statusMap[status];
-
-    // Validate response
-    if (!response) {
-      return res.status(400).json({ error: 'Invalid status. Must be confirmed, declined, tentative, yes, no, or maybe' });
+    // Like system: 'yes' = liked, null = unlike (will delete)
+    // Validate status
+    if (status !== 'yes' && status !== null) {
+      return res.status(400).json({ error: 'Invalid status. Must be "yes" or null' });
     }
 
     // Check if rehearsal exists and get project
@@ -514,8 +501,8 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
     let rsvpResponse;
     let wasDeleted = false;
 
-    // For like system: if status is 'tentative' (unlike), delete the response instead of updating
-    if (status === 'tentative' && existingResponse) {
+    // Like system: null = unlike (delete), 'yes' = like (insert/update)
+    if (status === null && existingResponse) {
       // Delete response (unlike)
       await db.run(
         'DELETE FROM native_rehearsal_responses WHERE rehearsal_id = $1 AND user_id = $2',
@@ -524,23 +511,23 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
       console.log('[RSVP] Deleted response (unlike)');
       wasDeleted = true;
       rsvpResponse = null;
-    } else if (existingResponse && status !== 'tentative') {
+    } else if (status === 'yes' && existingResponse) {
       // Update existing response
       rsvpResponse = await db.get(
         `UPDATE native_rehearsal_responses
          SET response = $1, notes = $2, updated_at = NOW()
          WHERE rehearsal_id = $3 AND user_id = $4
          RETURNING *`,
-        [response, notes || null, rehearsalId, userId]
+        ['yes', notes || null, rehearsalId, userId]
       );
       console.log('[RSVP] Updated response:', rsvpResponse);
-    } else if (!existingResponse && status !== 'tentative') {
+    } else if (status === 'yes' && !existingResponse) {
       // Create new response
       rsvpResponse = await db.get(
         `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, notes, created_at, updated_at)
          VALUES ($1, $2, $3, $4, NOW(), NOW())
          RETURNING *`,
-        [rehearsalId, userId, response, notes || null]
+        [rehearsalId, userId, 'yes', notes || null]
       );
       console.log('[RSVP] Created response:', rsvpResponse);
     }
@@ -559,10 +546,9 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
     const respondedUserIds = responses.map(r => r.user_id);
     const invited = allMembers.filter(m => !respondedUserIds.includes(m.user_id)).length;
 
+    // Like system: only count 'yes' responses and invited (no response)
     const stats = {
       confirmed: responses.filter(r => r.response === 'yes').length,
-      declined: responses.filter(r => r.response === 'no').length,
-      tentative: responses.filter(r => r.response === 'maybe').length,
       invited: invited,
     };
 

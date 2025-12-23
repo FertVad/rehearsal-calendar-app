@@ -13,8 +13,6 @@ import { rehearsalsAPI } from '../../../shared/services/api';
 
 interface AdminStats {
   confirmed: number;
-  declined: number;
-  tentative: number;
   invited: number;
 }
 
@@ -229,12 +227,12 @@ export default function TodayRehearsals({
                   disabled={isResponding}
                 >
                   <Ionicons
-                    name={currentResponse === 'confirmed' ? 'heart' : 'heart-outline'}
+                    name={currentResponse === 'yes' ? 'heart' : 'heart-outline'}
                     size={24}
-                    color={currentResponse === 'confirmed' ? Colors.accent.red : Colors.text.secondary}
+                    color={currentResponse === 'yes' ? Colors.accent.red : Colors.text.secondary}
                   />
                   {stats && (stats.confirmed > 0 || isAdminForThisRehearsal) && (() => {
-                    const totalParticipants = stats.confirmed + stats.declined + stats.tentative + stats.invited;
+                    const totalParticipants = stats.confirmed + stats.invited;
                     const displayText = isAdminForThisRehearsal && totalParticipants > 0
                       ? `${stats.confirmed}/${totalParticipants}`
                       : `${stats.confirmed}`;

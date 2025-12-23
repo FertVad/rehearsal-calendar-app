@@ -86,7 +86,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
     updateAdminStats,
   } = useRehearsals(projects, filterProjectId);
 
-  const { respondingId, handleRSVP } = useRSVP();
+  const { respondingId, toggleLike } = useRSVP();
 
   const handleDayLongPress = useCallback((date: string) => {
     setModalDate(date);
@@ -331,7 +331,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
           rsvpResponses={rsvpResponses}
           respondingId={respondingId}
           adminStats={adminStats}
-          onRSVP={handleRSVP}
+          onRSVP={toggleLike}
           onDeleteRehearsal={handleDeleteRehearsal}
           setRsvpResponses={setRsvpResponses}
           setAdminStats={setAdminStats}
@@ -433,7 +433,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
                           // Toggle logic is in the hook, just pass current status
-                          handleRSVP(rehearsal.id, currentResponse, (id, status, serverStats) => {
+                          toggleLike(rehearsal.id, currentResponse, (id, status, serverStats) => {
                             setRsvpResponses(prev => ({ ...prev, [id]: status }));
                             // If server returned stats, use them immediately
                             if (serverStats && isAdminForThisRehearsal) {
@@ -455,12 +455,12 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                         disabled={isResponding}
                       >
                         <Ionicons
-                          name={currentResponse === 'confirmed' ? 'heart' : 'heart-outline'}
+                          name={currentResponse === 'yes' ? 'heart' : 'heart-outline'}
                           size={24}
-                          color={currentResponse === 'confirmed' ? Colors.accent.red : Colors.text.secondary}
+                          color={currentResponse === 'yes' ? Colors.accent.red : Colors.text.secondary}
                         />
                         {stats && (stats.confirmed > 0 || isAdminForThisRehearsal) && (() => {
-                          const totalParticipants = stats.confirmed + stats.declined + stats.tentative + stats.invited;
+                          const totalParticipants = stats.confirmed + stats.invited;
                           const displayText = isAdminForThisRehearsal && totalParticipants > 0
                             ? `${stats.confirmed}/${totalParticipants}`
                             : `${stats.confirmed}`;
