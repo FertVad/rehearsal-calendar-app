@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = '15m'; // Access token expires in 15 minutes
-const REFRESH_TOKEN_EXPIRES_IN = '7d'; // Refresh token expires in 7 days
+const JWT_EXPIRES_IN = '30d'; // Access token expires in 30 days (mobile app convenience)
+const REFRESH_TOKEN_EXPIRES_IN = '90d'; // Refresh token expires in 90 days
 
 export function generateTokens(userId) {
   const accessToken = jwt.sign({ userId, type: 'access' }, JWT_SECRET, {
