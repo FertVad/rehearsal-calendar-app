@@ -440,7 +440,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           });
         } else if (state.mode === 'custom') {
           // Custom mode: user specifies when they are BUSY
-          type = 'tentative';
+          type = 'busy';
           for (const slot of state.slots) {
             entries.push({
               startsAt: createTimestamp(date, slot.start),
