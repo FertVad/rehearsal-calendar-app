@@ -49,10 +49,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await authAPI.getMe();
         setUser(response.data.user);
       }
-    } catch (err) {
-      console.log('No valid session found');
-      // Clear tokens if expired
-      await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+    } catch (err: any) {
+      // Only clear tokens if they are actually invalid (401/403)
+      // Don't clear on network errors, timeouts, etc.
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        console.log('Invalid or expired token, clearing session');
+        await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+      } else {
+        console.log('Failed to load user (non-auth error):', err.message);
+        // Keep tokens - might be network issue, server restart, etc.
+      }
     } finally {
       setLoading(false);
     }
