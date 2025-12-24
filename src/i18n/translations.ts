@@ -147,9 +147,6 @@ export interface Translations {
     deleteTitle: string;
     deleteMessage: string;
     participants: string;
-    rsvpConfirmed: string;
-    rsvpDeclined: string;
-    rsvpPending: string;
     createRehearsal: string;
     loadMembersError: string;
     loadAvailabilityError: string;
@@ -510,9 +507,6 @@ export const ru: Translations = {
     deleteTitle: 'Удалить репетицию?',
     deleteMessage: 'Это действие нельзя отменить',
     participants: 'Участники',
-    rsvpConfirmed: 'Подтвердили',
-    rsvpDeclined: 'Отказались',
-    rsvpPending: 'Ожидают',
     createRehearsal: 'Создать репетицию',
     loadMembersError: 'Не удалось загрузить участников проекта',
     loadAvailabilityError: 'Не удалось загрузить доступность участников',
@@ -872,9 +866,6 @@ export const en: Translations = {
     deleteTitle: 'Delete Rehearsal?',
     deleteMessage: 'This action cannot be undone',
     participants: 'Participants',
-    rsvpConfirmed: 'Confirmed',
-    rsvpDeclined: 'Declined',
-    rsvpPending: 'Pending',
     createRehearsal: 'Create Rehearsal',
     loadMembersError: 'Failed to load project members',
     loadAvailabilityError: 'Failed to load member availability',

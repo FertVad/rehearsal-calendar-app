@@ -615,11 +615,9 @@ router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
     const respondedUserIds = responses.map(r => r.user_id);
     const invited = allMembers.filter(m => !respondedUserIds.includes(m.user_id)).length;
 
-    // Calculate stats
+    // Calculate stats (like system: only 'yes' and invited)
     const stats = {
       confirmed: responses.filter(r => r.response === 'yes').length,
-      declined: responses.filter(r => r.response === 'no').length,
-      tentative: responses.filter(r => r.response === 'maybe').length,
       invited: invited,
     };
 
