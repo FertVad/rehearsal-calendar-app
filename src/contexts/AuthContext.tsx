@@ -44,23 +44,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadUser = async () => {
     try {
       const accessToken = await AsyncStorage.getItem('accessToken');
-      if (accessToken) {
-        // Verify token and get user
-        const response = await authAPI.getMe();
-        setUser(response.data.user);
+      if (!accessToken) {
+        // No token - user needs to login
+        setLoading(false);
+        return;
       }
+
+      // Verify token and get user
+      const response = await authAPI.getMe();
+      const user = response.data.user;
+      setUser(user);
+      // Cache user data for offline use
+      await AsyncStorage.setItem('cachedUser', JSON.stringify(user));
+      setLoading(false);
     } catch (err: any) {
       // Only clear tokens if they are actually invalid (401/403)
       // Don't clear on network errors, timeouts, etc.
       if (err.response?.status === 401 || err.response?.status === 403) {
         console.log('Invalid or expired token, clearing session');
         await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+        setUser(null);
+        setLoading(false);
       } else {
+        // Network error, server restart, etc. - keep user logged in offline
         console.log('Failed to load user (non-auth error):', err.message);
-        // Keep tokens - might be network issue, server restart, etc.
+        // Try to load cached user data from storage
+        try {
+          const cachedUser = await AsyncStorage.getItem('cachedUser');
+          if (cachedUser) {
+            setUser(JSON.parse(cachedUser));
+          }
+        } catch {
+          // No cached user - will show login screen
+        }
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -72,10 +90,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authAPI.login(email, password);
       const { user, accessToken, refreshToken } = response.data;
 
-      // Save tokens and clear any stale logout timestamp
+      // Save tokens, cache user, and clear any stale logout timestamp
       await AsyncStorage.multiSet([
         ['accessToken', accessToken],
         ['refreshToken', refreshToken],
+        ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
 
@@ -97,10 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authAPI.register(email, password, firstName, lastName);
       const { user, accessToken, refreshToken } = response.data;
 
-      // Save tokens and clear any stale logout timestamp
+      // Save tokens, cache user, and clear any stale logout timestamp
       await AsyncStorage.multiSet([
         ['accessToken', accessToken],
         ['refreshToken', refreshToken],
+        ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
 
@@ -122,10 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authAPI.loginWithTelegram(telegramData);
       const { user, accessToken, refreshToken } = response.data;
 
-      // Save tokens and clear any stale logout timestamp
+      // Save tokens, cache user, and clear any stale logout timestamp
       await AsyncStorage.multiSet([
         ['accessToken', accessToken],
         ['refreshToken', refreshToken],
+        ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
 
