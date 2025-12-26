@@ -30,53 +30,11 @@ export const AVAILABILITY_SOURCES = {
 };
 
 /**
- * RSVP status values (database)
+ * RSVP status values (like system - Telegram-style)
+ * Only 'yes' (like) or null (no like)
  * @type {Object<string, string>}
  */
-export const RSVP_STATUS_DB = {
-  YES: 'yes',
-  NO: 'no',
-  MAYBE: 'maybe',
-  INVITED: 'invited',
+export const RSVP_STATUS = {
+  YES: 'yes', // User liked/confirmed
+  // NO, MAYBE, TENTATIVE removed - not used in like system
 };
-
-/**
- * RSVP status values (client API)
- * @type {Object<string, string>}
- */
-export const RSVP_STATUS_CLIENT = {
-  CONFIRMED: 'confirmed',
-  DECLINED: 'declined',
-  TENTATIVE: 'tentative',
-  INVITED: 'invited',
-};
-
-/**
- * Map database RSVP status to client status
- * @param {string} dbStatus - Status from database ('yes', 'no', 'maybe', 'invited')
- * @returns {string} - Client status ('confirmed', 'declined', 'tentative', 'invited')
- */
-export function mapDBStatusToClient(dbStatus) {
-  const mapping = {
-    [RSVP_STATUS_DB.YES]: RSVP_STATUS_CLIENT.CONFIRMED,
-    [RSVP_STATUS_DB.NO]: RSVP_STATUS_CLIENT.DECLINED,
-    [RSVP_STATUS_DB.MAYBE]: RSVP_STATUS_CLIENT.TENTATIVE,
-    [RSVP_STATUS_DB.INVITED]: RSVP_STATUS_CLIENT.INVITED,
-  };
-  return mapping[dbStatus] || dbStatus;
-}
-
-/**
- * Map client RSVP status to database status
- * @param {string} clientStatus - Status from client ('confirmed', 'declined', 'tentative', 'invited')
- * @returns {string} - Database status ('yes', 'no', 'maybe', 'invited')
- */
-export function mapClientStatusToDB(clientStatus) {
-  const mapping = {
-    [RSVP_STATUS_CLIENT.CONFIRMED]: RSVP_STATUS_DB.YES,
-    [RSVP_STATUS_CLIENT.DECLINED]: RSVP_STATUS_DB.NO,
-    [RSVP_STATUS_CLIENT.TENTATIVE]: RSVP_STATUS_DB.MAYBE,
-    [RSVP_STATUS_CLIENT.INVITED]: RSVP_STATUS_DB.INVITED,
-  };
-  return mapping[clientStatus] || clientStatus;
-}

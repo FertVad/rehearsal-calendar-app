@@ -10,8 +10,6 @@ import {
   DEFAULT_TIMEZONE,
   AVAILABILITY_TYPES,
   AVAILABILITY_SOURCES,
-  mapDBStatusToClient,
-  mapClientStatusToDB,
 } from '../../constants/timezone.js';
 
 const router = Router();
@@ -144,17 +142,86 @@ router.get('/batch', requireAuth, async (req, res) => {
 
     console.log('[Batch Rehearsals] User has access to:', accessibleProjectIds);
 
-    // Fetch all rehearsals for accessible projects in one query
+    // Fetch all rehearsals for accessible projects with user's RSVP data
     const rehearsals = await db.all(
-      `SELECT r.*, p.name as project_name
+      `SELECT r.*, p.name as project_name,
+              ur.response as user_response
        FROM native_rehearsals r
        JOIN native_projects p ON r.project_id = p.id
+       LEFT JOIN native_rehearsal_responses ur ON r.id = ur.rehearsal_id AND ur.user_id = ?
        WHERE r.project_id IN (${accessibleProjectIds.map(() => '?').join(',')})
        ORDER BY r.starts_at DESC`,
-      accessibleProjectIds
+      [userId, ...accessibleProjectIds]
     );
 
     console.log(`[Batch Rehearsals] Found ${rehearsals.length} rehearsals`);
+
+    // For each rehearsal, fetch admin stats if user is admin
+    // Group rehearsals by project to check admin status
+    const projectAdminMap = {};
+    const membershipsWithRole = await db.all(
+      `SELECT project_id, is_admin FROM native_project_members
+       WHERE project_id IN (${accessibleProjectIds.map(() => '?').join(',')})
+       AND user_id = ?
+       AND status = 'active'`,
+      [...accessibleProjectIds, userId]
+    );
+
+    for (const m of membershipsWithRole) {
+      projectAdminMap[m.project_id] = m.is_admin;
+    }
+
+    // Collect rehearsal IDs where user is admin
+    const adminRehearsalIds = rehearsals
+      .filter(r => projectAdminMap[r.project_id])
+      .map(r => r.id);
+
+    // Fetch stats for admin rehearsals in batch
+    const statsMap = {};
+    if (adminRehearsalIds.length > 0) {
+      // Get all responses for admin rehearsals
+      const allResponses = await db.all(
+        `SELECT rehearsal_id, response
+         FROM native_rehearsal_responses
+         WHERE rehearsal_id IN (${adminRehearsalIds.map(() => '?').join(',')})`,
+        adminRehearsalIds
+      );
+
+      // Get total members for each project
+      const projectMemberCounts = await db.all(
+        `SELECT project_id, COUNT(*) as member_count
+         FROM native_project_members
+         WHERE project_id IN (${accessibleProjectIds.map(() => '?').join(',')})
+         AND status = 'active'
+         GROUP BY project_id`,
+        accessibleProjectIds
+      );
+
+      const memberCountMap = {};
+      for (const pm of projectMemberCounts) {
+        memberCountMap[pm.project_id] = pm.member_count;
+      }
+
+      // Calculate stats for each rehearsal
+      const responsesByRehearsal = {};
+      for (const response of allResponses) {
+        if (!responsesByRehearsal[response.rehearsal_id]) {
+          responsesByRehearsal[response.rehearsal_id] = [];
+        }
+        responsesByRehearsal[response.rehearsal_id].push(response.response);
+      }
+
+      for (const rehearsal of rehearsals) {
+        if (adminRehearsalIds.includes(rehearsal.id)) {
+          const responses = responsesByRehearsal[rehearsal.id] || [];
+          const confirmed = responses.filter(r => r === 'yes').length;
+          const totalMembers = memberCountMap[rehearsal.project_id] || 0;
+          const invited = totalMembers - responses.length;
+
+          statsMap[rehearsal.id] = { confirmed, invited };
+        }
+      }
+    }
 
     res.json({
       rehearsals: rehearsals.map(r => ({
@@ -168,6 +235,9 @@ router.get('/batch', requireAuth, async (req, res) => {
         location: r.location,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
+        // Include RSVP data
+        userResponse: r.user_response || null,
+        adminStats: statsMap[r.id] || null,
       })),
     });
   } catch (error) {

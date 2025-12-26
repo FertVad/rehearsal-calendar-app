@@ -45,16 +45,25 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
 
     try {
       let fetchedRehearsals: Rehearsal[] = [];
+      const responses: Record<string, RSVPStatus> = {};
+      const stats: Record<string, { confirmed: number; invited: number }> = {};
 
       // If filter is null (All projects), fetch from all projects using batch endpoint
       if (filterProjectId === null) {
         // Use batch endpoint for better performance (single request instead of N requests)
+        // Batch endpoint now includes RSVP data (userResponse + adminStats)
         const projectIds = projects.map(p => p.id);
         const response = await rehearsalsAPI.getBatch(projectIds);
-        // Batch endpoint already includes projectName
-        const allRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) =>
-          transformRehearsal(r)
-        );
+        const allRehearsals = (response.data.rehearsals || []).map((r: any) => {
+          // Extract RSVP data from batch response
+          if (r.userResponse === 'yes') {
+            responses[r.id] = 'yes';
+          }
+          if (r.adminStats) {
+            stats[r.id] = r.adminStats;
+          }
+          return transformRehearsal(r);
+        });
         fetchedRehearsals = allRehearsals;
       } else {
         // Fetch from selected project only
@@ -68,55 +77,50 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
           })
         );
         fetchedRehearsals = projectRehearsals;
+
+        // For single project view, still need to fetch RSVP data separately
+        // (since getAll endpoint doesn't include it yet)
+        const today = formatDateToString(new Date());
+        const upcomingRehearsals = fetchedRehearsals.filter(r => r.date && r.date >= today);
+
+        if (upcomingRehearsals.length > 0) {
+          await Promise.all(
+            upcomingRehearsals.map(async (rehearsal) => {
+              const isAdmin = project?.is_admin;
+
+              // Load personal response for everyone
+              try {
+                const res = await rehearsalsAPI.getMyResponse(rehearsal.id);
+                if (res.data.response) {
+                  const serverResponse = res.data.response.response;
+                  responses[rehearsal.id] = serverResponse === 'yes' ? 'yes' : null;
+                }
+              } catch (err) {
+                console.error(`Failed to fetch RSVP for ${rehearsal.id}:`, err);
+              }
+
+              // Load stats for admins
+              if (isAdmin) {
+                try {
+                  const res = await rehearsalsAPI.getResponses(rehearsal.id);
+                  if (res.data.stats) {
+                    stats[rehearsal.id] = {
+                      confirmed: res.data.stats.confirmed,
+                      invited: res.data.stats.invited,
+                    };
+                  }
+                } catch (err) {
+                  console.error(`Failed to fetch admin stats for ${rehearsal.id}:`, err);
+                }
+              }
+            })
+          );
+        }
       }
 
       setRehearsals(fetchedRehearsals);
-
-      // Fetch user's RSVP responses and admin stats for upcoming rehearsals
-      const today = formatDateToString(new Date());
-      const upcomingRehearsals = fetchedRehearsals.filter(r => r.date && r.date >= today);
-
-      if (upcomingRehearsals.length > 0) {
-        const responses: Record<string, RSVPStatus> = {};
-        const stats: Record<string, { confirmed: number; invited: number }> = {};
-
-        await Promise.all(
-          upcomingRehearsals.map(async (rehearsal) => {
-            const project = projects.find(p => p.id === rehearsal.projectId);
-            const isAdmin = project?.is_admin;
-
-            // Load personal response for everyone (admin and non-admin)
-            try {
-              const res = await rehearsalsAPI.getMyResponse(rehearsal.id);
-              if (res.data.response) {
-                // Server returns 'yes' directly, use as-is
-                const serverResponse = res.data.response.response;
-                responses[rehearsal.id] = serverResponse === 'yes' ? 'yes' : null;
-              }
-            } catch (err) {
-              console.error(`Failed to fetch RSVP for ${rehearsal.id}:`, err);
-            }
-
-            // Additionally load stats for admins
-            if (isAdmin) {
-              try {
-                const res = await rehearsalsAPI.getResponses(rehearsal.id);
-                if (res.data.stats) {
-                  stats[rehearsal.id] = {
-                    confirmed: res.data.stats.confirmed,
-                    invited: res.data.stats.invited,
-                  };
-                }
-              } catch (err) {
-                console.error(`Failed to fetch admin stats for ${rehearsal.id}:`, err);
-              }
-            }
-          })
-        );
-
-        setRsvpResponses(responses);
-        setAdminStats(stats);
-      }
+      setRsvpResponses(responses);
+      setAdminStats(stats);
     } catch (err: any) {
       console.error('Failed to fetch rehearsals:', err);
       setError(err.message || 'Failed to load rehearsals');
