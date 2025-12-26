@@ -10,59 +10,22 @@ import { getSyncSettings } from '../utils/calendarStorage';
 import { importCalendarEventsToAvailability } from '../services/calendarSync';
 
 /**
- * Get interval in milliseconds based on setting
- */
-function getIntervalMs(interval: 'manual' | 'always' | '15min' | 'hourly' | '6hours' | 'daily'): number | null {
-  switch (interval) {
-    case 'always':
-      return 0; // Sync on every app foreground
-    case '15min':
-      return 15 * 60 * 1000; // 15 minutes
-    case 'hourly':
-      return 60 * 60 * 1000; // 1 hour
-    case '6hours':
-      return 6 * 60 * 60 * 1000; // 6 hours
-    case 'daily':
-      return 24 * 60 * 60 * 1000; // 24 hours
-    case 'manual':
-    default:
-      return null; // No automatic sync
-  }
-}
-
-/**
- * Check if enough time has passed since last import
- * Returns settings if should import, null otherwise
+ * Check if should import now
+ * UI only has on/off toggle, so we sync if import is enabled
  */
 async function shouldImportNow(): Promise<{ importCalendarIds: string[] } | null> {
   try {
     const settings = await getSyncSettings();
 
-    // Check if import is enabled
+    // Simply check if import is enabled
+    // UI doesn't have interval selection - when Auto Sync is ON, we always sync
     if (!settings.importEnabled || settings.importCalendarIds.length === 0) {
+      console.log('[AutoSync] Import not enabled or no calendars selected');
       return null;
     }
 
-    // Check interval setting
-    const intervalMs = getIntervalMs(settings.importInterval);
-    if (!intervalMs) {
-      return null; // Manual only
-    }
-
-    // Check last import time
-    if (!settings.lastImportTime) {
-      return { importCalendarIds: settings.importCalendarIds }; // Never imported before
-    }
-
-    const lastImportTime = new Date(settings.lastImportTime).getTime();
-    const now = Date.now();
-    const timeSinceLastImport = now - lastImportTime;
-
-    if (timeSinceLastImport >= intervalMs) {
-      return { importCalendarIds: settings.importCalendarIds };
-    }
-
-    return null;
+    console.log('[AutoSync] Import enabled, will sync from', settings.importCalendarIds.length, 'calendars');
+    return { importCalendarIds: settings.importCalendarIds };
   } catch (error) {
     console.error('[AutoSync] Error checking if should import:', error);
     return null;
@@ -71,9 +34,10 @@ async function shouldImportNow(): Promise<{ importCalendarIds: string[] } | null
 
 /**
  * Hook to manage automatic calendar import
- * - Imports on app foreground if enough time has passed
- * - Respects importInterval setting
- * - Prevents duplicate syncs with throttling
+ * UI has simple on/off toggle - when enabled, sync happens automatically:
+ * - On app foreground (background → active)
+ * - Throttled to prevent duplicate syncs (5 sec minimum between attempts)
+ *
  * Note: Export happens automatically when rehearsals are created (see AddRehearsalScreen)
  */
 export function useAutoCalendarSync() {
@@ -124,7 +88,36 @@ export function useAutoCalendarSync() {
     }
   };
 
+  /**
+   * Force sync - ignores interval settings, always syncs if import is enabled
+   * Used for manual triggers like pull-to-refresh
+   */
+  const forceSync = async () => {
+    try {
+      const settings = await getSyncSettings();
+      console.log('[AutoSync] Force sync - current settings:', {
+        importEnabled: settings.importEnabled,
+        calendarsCount: settings.importCalendarIds.length,
+        lastImportTime: settings.lastImportTime
+      });
+
+      // Only check if import is enabled
+      if (!settings.importEnabled || settings.importCalendarIds.length === 0) {
+        console.log('[AutoSync] Force sync skipped - import not enabled');
+        return;
+      }
+
+      console.log('[AutoSync] Force syncing calendar events from', settings.importCalendarIds.length, 'calendars');
+      const result = await importCalendarEventsToAvailability(settings.importCalendarIds);
+      console.log('[AutoSync] Force sync completed:', result);
+    } catch (error) {
+      console.error('[AutoSync] Error during force sync:', error);
+      throw error;
+    }
+  };
+
   return {
-    performAutoSync, // Exposed for manual triggering if needed
+    performAutoSync, // Exposed for automatic triggering
+    forceSync, // Exposed for manual triggering (pull-to-refresh)
   };
 }

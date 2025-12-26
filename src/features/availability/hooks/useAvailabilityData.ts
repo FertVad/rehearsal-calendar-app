@@ -43,18 +43,24 @@ export const useAvailabilityData = () => {
         // - Old format: start/end or start_time/end_time (HH:mm)
         let startTime, endTime;
 
+        const isAllDay = record.isAllDay ?? record.is_all_day;
+
         if (record.startsAt && record.endsAt) {
-          // Extract time from ISO timestamp (e.g., "2025-12-11T10:00:00.000Z" -> "10:00")
-          const startsAtDate = new Date(record.startsAt);
-          const endsAtDate = new Date(record.endsAt);
-          startTime = `${String(startsAtDate.getHours()).padStart(2, '0')}:${String(startsAtDate.getMinutes()).padStart(2, '0')}`;
-          endTime = `${String(endsAtDate.getHours()).padStart(2, '0')}:${String(endsAtDate.getMinutes()).padStart(2, '0')}`;
+          // For all-day events, use standard 00:00 - 23:59 regardless of actual timestamps
+          if (isAllDay) {
+            startTime = '00:00';
+            endTime = '23:59';
+          } else {
+            // Extract time from ISO timestamp (e.g., "2025-12-11T10:00:00.000Z" -> "10:00")
+            const startsAtDate = new Date(record.startsAt);
+            const endsAtDate = new Date(record.endsAt);
+            startTime = `${String(startsAtDate.getHours()).padStart(2, '0')}:${String(startsAtDate.getMinutes()).padStart(2, '0')}`;
+            endTime = `${String(endsAtDate.getHours()).padStart(2, '0')}:${String(endsAtDate.getMinutes()).padStart(2, '0')}`;
+          }
         } else {
           startTime = record.start || record.start_time;
           endTime = record.end || record.end_time;
         }
-
-        const isAllDay = record.isAllDay ?? record.is_all_day;
 
         // Skip if we couldn't extract valid times
         if (!startTime || !endTime) continue;
@@ -66,6 +72,38 @@ export const useAvailabilityData = () => {
           isAllDay,
           source: record.source
         });
+      }
+
+      // DEDUPLICATION: Remove duplicate time slots (prioritize rehearsal > manual)
+      // If same time range exists with different sources, keep only rehearsal
+      for (const dateStr in serverData) {
+        const slots = serverData[dateStr];
+        const uniqueSlots: typeof slots = [];
+        const seenTimeRanges = new Set<string>();
+
+        // First pass: add all rehearsal slots
+        for (const slot of slots) {
+          if (slot.source === 'rehearsal') {
+            const key = `${slot.startTime}-${slot.endTime}`;
+            uniqueSlots.push(slot);
+            seenTimeRanges.add(key);
+          }
+        }
+
+        // Second pass: add manual/other slots only if time range not already covered by rehearsal
+        for (const slot of slots) {
+          if (slot.source !== 'rehearsal') {
+            const key = `${slot.startTime}-${slot.endTime}`;
+            if (!seenTimeRanges.has(key)) {
+              uniqueSlots.push(slot);
+              seenTimeRanges.add(key);
+            } else {
+              console.log(`[useAvailabilityData] Skipping duplicate ${slot.source} slot on ${dateStr} ${key} (covered by rehearsal)`);
+            }
+          }
+        }
+
+        serverData[dateStr] = uniqueSlots;
       }
 
       // Convert server format to local format

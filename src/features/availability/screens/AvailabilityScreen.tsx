@@ -37,6 +37,7 @@ import {
 import { useAvailabilityData } from '../hooks';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
+import { getSyncSettings } from '../../../shared/utils/calendarStorage';
 
 type AvailabilityScreenProps = BottomTabScreenProps<TabParamList, 'Availability'>;
 
@@ -59,11 +60,13 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   } = useAvailabilityData();
 
   // Auto-sync hook for calendar import
-  const { performAutoSync } = useAutoCalendarSync();
+  const { performAutoSync, forceSync } = useAutoCalendarSync();
 
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Time picker state
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -76,14 +79,62 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   const months = useMemo(() => generateMonths(7), []);
   const today = new Date().toISOString().split('T')[0];
 
+  // Load last sync time on mount
+  useEffect(() => {
+    const loadLastSyncTime = async () => {
+      const settings = await getSyncSettings();
+      setLastSyncTime(settings.lastImportTime);
+    };
+    loadLastSyncTime();
+  }, []);
+
+  // Smart auto-sync: only sync if >15 min passed since last sync
+  // This prevents excessive syncing when user navigates between screens frequently
+  const shouldAutoSync = async (): Promise<boolean> => {
+    const settings = await getSyncSettings();
+
+    // Skip if import not enabled (Auto Sync is OFF)
+    if (!settings.importEnabled || settings.importCalendarIds.length === 0) {
+      return false;
+    }
+
+    // If never synced, sync now
+    if (!settings.lastImportTime) {
+      return true;
+    }
+
+    // Check if 15+ minutes passed since last sync
+    const lastSync = new Date(settings.lastImportTime).getTime();
+    const now = Date.now();
+    const fifteenMinutes = 15 * 60 * 1000;
+
+    return (now - lastSync) >= fifteenMinutes;
+  };
+
   // Auto-reload data when screen comes into focus (e.g., after calendar import)
-  // Also trigger auto-sync to import latest calendar events
+  // Smart sync: only trigger auto-sync if 15+ minutes passed
   useFocusEffect(
     React.useCallback(() => {
       const syncAndLoad = async () => {
-        console.log('[AvailabilityScreen] Screen focused - triggering auto-sync');
-        await performAutoSync();
-        console.log('[AvailabilityScreen] Auto-sync complete - loading availability');
+        console.log('[AvailabilityScreen] Screen focused');
+
+        // Smart sync check
+        const shouldSync = await shouldAutoSync();
+
+        if (shouldSync) {
+          console.log('[AvailabilityScreen] 15+ min passed, triggering auto-sync');
+          setIsSyncing(true);
+          await performAutoSync();
+
+          // Update last sync time display
+          const settings = await getSyncSettings();
+          setLastSyncTime(settings.lastImportTime);
+          setIsSyncing(false);
+        } else {
+          console.log('[AvailabilityScreen] Recent sync (<15 min), skipping auto-sync');
+        }
+
+        console.log('[AvailabilityScreen] Loading availability');
         await loadAvailability();
       };
       syncAndLoad();
@@ -424,17 +475,19 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
         if (state.mode === 'free') {
           type = 'available';
+          // For all-day events, use UTC timestamps (as per PROJECT_INFO.md and calendarSync.ts)
           entries.push({
-            startsAt: createTimestamp(date, '00:00'),
-            endsAt: createTimestamp(date, '23:59'),
+            startsAt: `${date}T00:00:00.000Z`,
+            endsAt: `${date}T23:59:59.999Z`,
             type,
             isAllDay: true
           });
         } else if (state.mode === 'busy') {
           type = 'busy';
+          // For all-day events, use UTC timestamps (as per PROJECT_INFO.md and calendarSync.ts)
           entries.push({
-            startsAt: createTimestamp(date, '00:00'),
-            endsAt: createTimestamp(date, '23:59'),
+            startsAt: `${date}T00:00:00.000Z`,
+            endsAt: `${date}T23:59:59.999Z`,
             type,
             isAllDay: true
           });
@@ -469,13 +522,55 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     setSelectedDates([]);
   };
 
+  // Pull-to-refresh: sync calendar + reload availability
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadAvailability();
-    setRefreshing(false);
+    setIsSyncing(true);
+
+    try {
+      console.log('[AvailabilityScreen] Pull-to-refresh: force syncing calendar');
+      // Force sync - always syncs, ignoring interval settings
+      await forceSync();
+
+      // Update last sync time display (wait for next tick to ensure AsyncStorage updated)
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const settings = await getSyncSettings();
+      console.log('[AvailabilityScreen] Updated lastImportTime:', settings.lastImportTime);
+      setLastSyncTime(settings.lastImportTime);
+
+      console.log('[AvailabilityScreen] Pull-to-refresh: loading availability');
+      await loadAvailability();
+    } catch (error) {
+      console.error('[AvailabilityScreen] Pull-to-refresh error:', error);
+    } finally {
+      setRefreshing(false);
+      setIsSyncing(false);
+    }
   };
 
   const selectedDayState = selectedDate ? getDayState(selectedDate) : null;
+
+  // Format last sync time for display
+  const formatLastSync = (lastSync: string | null): string => {
+    if (!lastSync) return '';
+
+    const now = Date.now();
+    const syncTime = new Date(lastSync).getTime();
+    const diffMs = now - syncTime;
+    const diffMinutes = Math.floor(diffMs / (60 * 1000));
+    const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+    const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+
+    if (diffMinutes < 1) {
+      return t.calendarSync.justNow;
+    } else if (diffMinutes < 60) {
+      return t.calendarSync.minutesAgo(diffMinutes);
+    } else if (diffHours < 24) {
+      return t.calendarSync.hoursAgo(diffHours);
+    } else {
+      return t.calendarSync.daysAgo(diffDays);
+    }
+  };
 
   const renderMonth = ({ item }: { item: { year: number; month: number; key: string } }) => {
     return (
@@ -512,19 +607,36 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       </View>
 
       {/* Legend */}
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, styles.statusDotFree]} />
-          <Text style={styles.legendText}>{t.availability.free}</Text>
+      <View style={[
+        styles.legend,
+        !lastSyncTime && { justifyContent: 'center' }
+      ]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.lg }}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, styles.statusDotFree]} />
+            <Text style={styles.legendText}>{t.availability.free}</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, styles.statusDotPartial]} />
+            <Text style={styles.legendText}>{t.availability.partial}</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, styles.statusDotBusy]} />
+            <Text style={styles.legendText}>{t.availability.busy}</Text>
+          </View>
         </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, styles.statusDotPartial]} />
-          <Text style={styles.legendText}>{t.availability.partial}</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, styles.statusDotBusy]} />
-          <Text style={styles.legendText}>{t.availability.busy}</Text>
-        </View>
+
+        {/* Last sync time indicator - subtle, right-aligned */}
+        {lastSyncTime && (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {isSyncing && (
+              <ActivityIndicator size="small" color={Colors.text.tertiary} style={{ marginRight: 4 }} />
+            )}
+            <Text style={{ fontSize: 11, color: Colors.text.tertiary }}>
+              {formatLastSync(lastSyncTime)}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Calendar Grid */}

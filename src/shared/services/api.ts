@@ -258,6 +258,66 @@ export const availabilityAPI = {
   // Delete all imported calendar events
   deleteAllImported: () =>
     api.delete('/native/availability/imported/all'),
+
+  // Batch delete imported events by external_event_id
+  batchDeleteImported: (eventIds: string[]) =>
+    api.delete('/native/availability/imported/batch', { data: { eventIds } }),
+
+  // Batch update imported events
+  batchUpdateImported: (updates: Array<{
+    externalEventId: string;
+    startsAt: string;
+    endsAt: string;
+    title?: string;
+    isAllDay?: boolean;
+  }>) =>
+    api.put('/native/availability/imported/batch', { updates }),
+};
+
+// Calendar Sync API (Native App)
+export const calendarSyncAPI = {
+  // Calendar Connections
+  getConnections: () =>
+    api.get('/native/calendar-sync/connections'),
+
+  createOrUpdateConnection: (data: {
+    provider: 'apple' | 'google';
+    deviceCalendarId: string;
+    deviceCalendarName?: string;
+    syncEnabled?: boolean;
+    syncDirection?: 'both' | 'export' | 'import';
+  }) =>
+    api.post('/native/calendar-sync/connections', data),
+
+  deleteConnection: (connectionId: number) =>
+    api.delete(`/native/calendar-sync/connections/${connectionId}`),
+
+  updateSyncTime: (connectionId: number) =>
+    api.post(`/native/calendar-sync/connections/${connectionId}/update-sync-time`),
+
+  // Event Mappings
+  getMappings: (eventType?: 'rehearsal' | 'availability') =>
+    api.get('/native/calendar-sync/mappings', {
+      params: eventType ? { eventType } : {},
+    }),
+
+  getMappingByEvent: (eventType: 'rehearsal' | 'availability', internalEventId: string) =>
+    api.get(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`),
+
+  createOrUpdateMapping: (data: {
+    connectionId: number;
+    eventType: 'rehearsal' | 'availability';
+    internalEventId: string;
+    externalEventId: string;
+    syncDirection?: 'export' | 'import';
+  }) =>
+    api.post('/native/calendar-sync/mappings', data),
+
+  deleteMapping: (mappingId: number) =>
+    api.delete(`/native/calendar-sync/mappings/${mappingId}`),
+
+  deleteMappingByEvent: (eventType: 'rehearsal' | 'availability', internalEventId: string) =>
+    api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`),
 };
 
 export default api;

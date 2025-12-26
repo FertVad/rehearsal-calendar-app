@@ -1,5 +1,7 @@
 # Rehearsal Calendar Native App - Project Documentation
 
+> **🤖 For AI Assistants**: Before making ANY changes, read [AI_QUICK_REFERENCE.md](../AI_QUICK_REFERENCE.md) or [.claude/AI_INSTRUCTIONS.md](../.claude/AI_INSTRUCTIONS.md)
+
 ## 📱 Project Overview
 
 **Rehearsal Calendar** - это мобильное приложение для планирования театральных репетиций с управлением доступностью участников, автоматическими рекомендациями времени и поддержкой нескольких проектов.
@@ -9,7 +11,7 @@
 - ✅ Управление проектами (создание, присоединение по invite link)
 - ✅ Создание репетиций с проверкой конфликтов
 - ✅ Управление доступностью участников
-- ✅ RSVP система для репетиций
+- ✅ Like система для репетиций (Telegram-style)
 - ✅ Умные рекомендации времени на основе доступности
 - ✅ **Синхронизация с календарем** - экспорт репетиций в iOS/Google Calendar, импорт событий для availability
 - ✅ **Полная локализация (Русский/English)** - все экраны, компоненты, уведомления
@@ -177,17 +179,23 @@ UNIQUE(rehearsal_id, user_id)
 ```
 
 #### `native_rehearsal_responses`
-RSVP ответы на репетиции
+Like система для репетиций (Telegram-style)
 ```sql
 id              INTEGER PRIMARY KEY
 rehearsal_id    INTEGER REFERENCES native_rehearsals(id) ON DELETE CASCADE
 user_id         INTEGER REFERENCES native_users(id) ON DELETE CASCADE
-response        VARCHAR(10) NOT NULL CHECK (response IN ('yes', 'no', 'maybe'))
+response        VARCHAR(10) CHECK (response = 'yes')  -- Like system: 'yes' or NULL (unliked/deleted)
 notes           TEXT
 created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 UNIQUE(rehearsal_id, user_id)
 ```
+
+**Like System:**
+- Binary system: 'yes' (liked) or NULL (unliked/deleted)
+- No 'no' or 'maybe' statuses
+- Optimistic UI updates with haptic feedback
+- Telegram-style heart icon interaction
 
 #### `native_user_availability`
 Доступность пользователей
@@ -196,7 +204,7 @@ id                  INTEGER PRIMARY KEY
 user_id             INTEGER REFERENCES native_users(id) ON DELETE CASCADE
 starts_at           TIMESTAMPTZ NOT NULL      -- Start time with timezone (ISO 8601)
 ends_at             TIMESTAMPTZ NOT NULL      -- End time with timezone (ISO 8601)
-type                VARCHAR NOT NULL          -- 'available', 'busy', 'tentative', 'booked'
+type                VARCHAR NOT NULL          -- 'available', 'busy', 'tentative'
 source              VARCHAR DEFAULT 'manual'  -- 'manual', 'rehearsal', 'external'
 external_event_id   VARCHAR                   -- ID of external event (e.g., rehearsal ID)
 title               VARCHAR
@@ -206,6 +214,11 @@ is_all_day          BOOLEAN DEFAULT FALSE     -- Flag for all-day slots (00:00-2
 created_at          TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 updated_at          TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 ```
+
+**Type Usage:**
+- 'available' - User is free
+- 'busy' - User is occupied (used in custom mode and for rehearsals)
+- 'tentative' - Used for imported calendar events (e.g., from Google Calendar, Apple Calendar)
 
 **Timezone Handling:**
 - Uses `TIMESTAMPTZ` (PostgreSQL) - stores UTC timestamps with timezone info
@@ -256,10 +269,12 @@ CREATE INDEX idx_invites_code ON native_invites(code);
    - Links or creates account
 
 ### Token Management
-- **Access Token**: JWT, expires in 15 minutes
-- **Refresh Token**: JWT, expires in 7 days
-- **Storage**: AsyncStorage (React Native)
+- **Access Token**: JWT, expires in 30 days (mobile app convenience)
+- **Refresh Token**: JWT, expires in 90 days
+- **Storage**: AsyncStorage (React Native) - tokens and cached user data
 - **Auto-refresh**: Axios interceptor handles 401 responses
+- **Offline Support**: User data cached in AsyncStorage for offline use
+- **Error Handling**: Tokens only cleared on 401/403, preserved on network errors
 
 ### Protected Routes
 All `/api/native/*` routes require `Authorization: Bearer <token>` header
@@ -975,7 +990,7 @@ ends_at:   '2025-12-13T16:00:00+02:00'::timestamptz  -- PostgreSQL хранит 
 ```javascript
 // Константы для типов доступности
 AVAILABILITY_TYPES = {
-  FREE: 'free',
+  AVAILABLE: 'available',
   BUSY: 'busy',
   TENTATIVE: 'tentative',
 }
@@ -988,13 +1003,11 @@ AVAILABILITY_SOURCES = {
   APPLE: 'apple_calendar',
 }
 
-// RSVP status mapping между DB и клиентом
-RSVP_STATUS_DB = { YES: 'yes', NO: 'no', MAYBE: 'maybe', INVITED: 'invited' }
-RSVP_STATUS_CLIENT = { CONFIRMED: 'confirmed', DECLINED: 'declined', TENTATIVE: 'tentative', INVITED: 'invited' }
+// Like system status mapping (Binary system: 'yes' or NULL)
+LIKE_STATUS_DB = { YES: 'yes', NULL: null }
 
-// Функции-мапперы для конвертации статусов
-mapDBStatusToClient(dbStatus)
-mapClientStatusToDB(clientStatus)
+// Response stats for admins
+// Returns: { confirmed: number, invited: number }
 
 // Default timezone
 DEFAULT_TIMEZONE = 'Asia/Jerusalem'
@@ -1367,6 +1380,22 @@ GET /api/native/projects/:projectId/members/availability?startDate=YYYY-MM-DD&en
 
 ## 📋 Recent Updates
 
+### Version 1.6.0 - Like System & Authentication Improvements (December 24, 2024)
+- ✅ **Like System Migration** - Telegram-style binary like system
+  - Migrated from 3-state RSVP (yes/no/maybe) to binary like (yes/null)
+  - Optimistic UI updates for instant feedback
+  - Haptic feedback on like/unlike actions
+  - Removed unused RSVP translations and styles
+  - Fixed backend stats to return only confirmed + invited
+- ✅ **Authentication Improvements** - better offline support and token management
+  - Increased token TTL: access token 15m → 30d, refresh token 7d → 90d
+  - Offline user caching in AsyncStorage
+  - Fixed error handling: tokens only cleared on 401/403, not on network errors
+  - User stays logged in even when offline
+- ✅ **Availability Bug Fix** - fixed conflict detection
+  - Custom availability mode now uses 'busy' instead of 'tentative'
+  - Conflict detection now properly detects user-specified busy times
+
 ### Version 1.5.0 - Calendar Sync & Performance Optimization (December 23, 2024)
 - ✅ **Calendar Synchronization** - двусторонняя синхронизация с iOS/Google Calendar
   - Export: репетиции → события календаря (batch processing)
@@ -1386,6 +1415,6 @@ GET /api/native/projects/:projectId/members/availability?startDate=YYYY-MM-DD&en
 
 ---
 
-**Last updated**: December 23, 2024
-**Version**: 1.5.0 - Calendar Sync & Performance Optimization
+**Last updated**: December 24, 2024
+**Version**: 1.6.0 - Like System & Authentication Improvements
 **Maintainer**: Vadim Fertik

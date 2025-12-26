@@ -1,5 +1,7 @@
 # Руководство по локализации / Localization Guide
 
+**Last Updated:** December 24, 2024
+
 ## 📋 Обзор / Overview
 
 Приложение Rehearsal Calendar поддерживает многоязычность через систему i18n.
@@ -8,6 +10,11 @@ The Rehearsal Calendar app supports multi-language functionality through the i18
 **Поддерживаемые языки / Supported Languages:**
 - 🇷🇺 Русский (Russian) - `ru`
 - 🇬🇧 Английский (English) - `en`
+
+**Recent Changes:**
+- ✅ Removed outdated 3-state RSVP translations (rsvpConfirmed, rsvpDeclined, rsvpPending, willAttend, wontAttend, etc.)
+- ✅ Migrated to Telegram-style like system (binary: liked or not liked)
+- ✅ Simplified response UI - no complex RSVP status translations needed
 
 ---
 
@@ -92,7 +99,9 @@ src/
 - `startTime`, `endTime`, `selectDate`, `selectStartTime`, `selectEndTime`
 - `creating`, `created`, `createError`
 - `deleteConfirm`, `deleteTitle`, `deleteMessage`
-- RSVP: `rsvpConfirmed`, `rsvpDeclined`, `rsvpPending`, `confirmAttendance`, `declineAttendance`
+- **Like System** (Telegram-style): Binary like system - no RSVP translations needed
+  - Like/unlike handled via heart icon with optimistic updates and haptic feedback
+  - Stats shown as "confirmed" (liked) and "invited" (no response)
 
 #### `smartPlanner` - Умный планировщик
 - `title`, `period`, `members`, `recommendations`
@@ -205,6 +214,10 @@ const { t } = useI18n();
 3. ✅ **Добавлен I18nProvider в App.tsx** - обёртка для всего приложения
 4. ✅ **Полные переводы для всех экранов** - русский и английский
 5. ✅ **Обновлён LoginScreen** - работает как пример
+6. ✅ **Like System Migration (December 24, 2024)** - Removed outdated RSVP translations
+   - Deleted: rsvpConfirmed, rsvpDeclined, rsvpPending
+   - Deleted: willAttend, wontAttend, confirmAttendance, declineAttendance
+   - Simplified to Telegram-style like system (heart icon, no text needed)
 
 ---
 
@@ -352,3 +365,27 @@ export default function ProfileScreen() {
 **Готово к использованию! / Ready to use!** 🎉
 
 Локализация настроена и готова к работе. Следуйте примерам выше для обновления остальных компонентов.
+
+---
+
+## 🔄 Recent System Changes (December 24, 2024)
+
+### Like System Migration
+The app has migrated from a 3-state RSVP system to a Telegram-style binary like system:
+
+**Old System (Removed):**
+- ❌ `rsvpConfirmed` / `rsvpDeclined` / `rsvpPending`
+- ❌ `willAttend` / `wontAttend` / `maybeAttend`
+- ❌ `confirmAttendance` / `declineAttendance`
+
+**New System (Current):**
+- ✅ Binary like system (yes/null)
+- ✅ Heart icon with optimistic updates
+- ✅ Haptic feedback on interaction
+- ✅ Stats: "confirmed" (liked) and "invited" (no response)
+
+**What This Means for Localization:**
+- No complex RSVP status translations needed
+- Simplified UI text (just counts, no status labels)
+- Admin stats show only: "X confirmed, Y invited"
+- No need to translate button labels like "Confirm" / "Decline"

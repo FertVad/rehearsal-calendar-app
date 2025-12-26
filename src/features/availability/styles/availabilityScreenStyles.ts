@@ -47,9 +47,11 @@ export const styles = StyleSheet.create({
   },
   legend: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: Spacing.lg,
     paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
   },
   legendItem: {

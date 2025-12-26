@@ -18,8 +18,8 @@ The API uses JWT (JSON Web Token) based authentication with separate access and 
 
 ### Token Lifecycle
 
-- **Access Token**: Short-lived token (15 minutes) used for API requests
-- **Refresh Token**: Long-lived token (7 days) used to obtain new access tokens
+- **Access Token**: Long-lived token (30 days) used for API requests - optimized for mobile app convenience
+- **Refresh Token**: Extended token (90 days) used to obtain new access tokens
 
 ### How to Authenticate Requests
 
@@ -655,9 +655,9 @@ Delete a rehearsal.
 
 ---
 
-#### 5. RSVP to Rehearsal
+#### 5. Like/Unlike Rehearsal (Telegram-style Like System)
 
-Submit or update an RSVP response for a rehearsal.
+Like or unlike a rehearsal. This is a binary system - you can either like (yes) or unlike (delete response).
 
 **Endpoint:** `POST /native/rehearsals/:rehearsalId/respond`
 
@@ -669,17 +669,14 @@ Submit or update an RSVP response for a rehearsal.
 **Request Body:**
 ```json
 {
-  "status": "confirmed",
-  "notes": "I'll be there on time"
+  "status": "yes"
 }
 ```
 
 **Parameters:**
-- `status` (string, required): RSVP status - one of:
-  - `"confirmed"` or `"yes"` - User will attend
-  - `"declined"` or `"no"` - User will not attend
-  - `"tentative"` or `"maybe"` - User might attend
-- `notes` (string, optional): Additional notes or comments
+- `status` (string | null, required): Like status:
+  - `"yes"` - User likes the rehearsal (will attend)
+  - `null` - Unlike (removes the response / deletes the like)
 
 **Success Response (200):**
 ```json
@@ -689,9 +686,13 @@ Submit or update an RSVP response for a rehearsal.
     "rehearsalId": "1",
     "userId": "1",
     "response": "yes",
-    "notes": "I'll be there on time",
+    "notes": null,
     "createdAt": "2024-03-01T10:00:00.000Z",
     "updatedAt": "2024-03-01T10:00:00.000Z"
+  },
+  "stats": {
+    "confirmed": 5,
+    "invited": 3
   }
 }
 ```
@@ -699,11 +700,11 @@ Submit or update an RSVP response for a rehearsal.
 **Error Responses:**
 - `400 Bad Request`: Invalid status
   ```json
-  { "error": "Invalid status. Must be confirmed, declined, tentative, yes, no, or maybe" }
+  { "error": "Invalid status. Must be 'yes' or null" }
   ```
 - `403 Forbidden`: User is not a project member
   ```json
-  { "error": "You must be a project member to RSVP" }
+  { "error": "You must be a project member to like rehearsals" }
   ```
 - `404 Not Found`: Rehearsal not found
   ```json
@@ -711,9 +712,12 @@ Submit or update an RSVP response for a rehearsal.
   ```
 
 **Notes:**
-- If the user has already responded, this endpoint updates the existing response
-- The response is stored in the database as "yes", "no", or "maybe"
-- The API accepts both client-friendly ("confirmed", "declined", "tentative") and database values
+- **Binary system**: Only two states - liked ('yes') or unliked (NULL/deleted)
+- If status is `null`, the response record is deleted from the database
+- If the user has already liked, sending `null` will unlike (delete the response)
+- If the user hasn't liked yet, sending `"yes"` will create a new like
+- The response includes updated stats (confirmed count + invited count) for admins
+- Client implements optimistic updates with haptic feedback for instant UI response
 
 ---
 
@@ -759,9 +763,7 @@ Retrieve all RSVP responses for a rehearsal.
   ],
   "stats": {
     "confirmed": 1,
-    "declined": 1,
-    "tentative": 0,
-    "invited": 0
+    "invited": 1
   }
 }
 ```
@@ -778,7 +780,8 @@ Retrieve all RSVP responses for a rehearsal.
 
 **Notes:**
 - Includes user information (name, email) for each response
-- Stats object provides a summary of all responses
+- Stats object provides a summary: `confirmed` (number of 'yes' responses) and `invited` (number of members without response)
+- The like system is binary - users either have 'yes' response or no response at all
 
 ---
 
@@ -1490,14 +1493,14 @@ interface Rehearsal {
 }
 ```
 
-### Rehearsal Response (RSVP)
+### Rehearsal Response (Like System)
 
 ```typescript
 interface RehearsalResponse {
   id: string;
   rehearsalId: string;
   userId: string;
-  response: "yes" | "no" | "maybe";  // Database values
+  response: "yes" | null;        // Binary like system: 'yes' (liked) or null (unliked/deleted)
   notes: string | null;
   createdAt: string;             // ISO 8601 timestamp
   updatedAt: string;             // ISO 8601 timestamp
@@ -1508,6 +1511,12 @@ interface RehearsalResponse {
 }
 ```
 
+**Like System Notes:**
+- Binary system: only 'yes' or null (deleted)
+- No 'no' or 'maybe' statuses
+- Sending null deletes the response record
+- Client uses optimistic updates for instant feedback
+
 ### Availability Slot
 
 ```typescript
@@ -1515,7 +1524,7 @@ interface AvailabilitySlot {
   id: number;
   startsAt: string;              // ISO 8601 timestamp with timezone
   endsAt: string;                // ISO 8601 timestamp with timezone
-  type: "free" | "busy" | "tentative";
+  type: "available" | "busy" | "tentative";
   title: string | null;
   notes: string | null;
   isAllDay: boolean;
@@ -1524,6 +1533,11 @@ interface AvailabilitySlot {
   createdAt: string;             // ISO 8601 timestamp
 }
 ```
+
+**Type Usage:**
+- `"available"` - User is free
+- `"busy"` - User is occupied (used in custom mode and for rehearsals)
+- `"tentative"` - Used for imported calendar events (e.g., from Google Calendar, Apple Calendar)
 
 ### Project Member
 
@@ -1804,6 +1818,10 @@ For issues, questions, or feature requests, please contact the development team.
 
 ---
 
-**Last Updated:** 2024-12-11
+**Last Updated:** 2024-12-24
 
-**API Version:** 1.0
+**API Version:** 1.1
+
+**Recent Changes:**
+- v1.1 (2024-12-24): Like system migration, token TTL increased, availability type fixes
+- v1.0 (2024-12-11): Initial API release

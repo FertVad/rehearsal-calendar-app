@@ -7,6 +7,7 @@ import db, { initDatabase, testConnection, isPostgres } from './database/db.js';
 import authRoutes from './routes/auth.js';
 import nativeRoutes from './routes/native.js';
 import availabilityRoutes from './routes/native/availability.js';
+import calendarSyncRoutes from './routes/native/calendarSync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +68,9 @@ app.use('/api/auth', authRoutes);
 
 // Availability routes (at root /api level for backward compatibility)
 app.use('/api/availability', availabilityRoutes);
+
+// Calendar sync routes
+app.use('/api/native/calendar-sync', calendarSyncRoutes);
 
 // Native app routes
 app.use('/api/native', nativeRoutes);

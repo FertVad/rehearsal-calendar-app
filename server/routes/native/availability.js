@@ -100,14 +100,17 @@ router.post('/bulk', requireAuth, async (req, res) => {
 
     // Delete existing manual availability for these dates
     for (const date of affectedDates) {
-      await db.run(
+      const result = await db.run(
         `DELETE FROM native_user_availability
          WHERE user_id = $1
          AND DATE(starts_at AT TIME ZONE $2) = $3
          AND source = $4`,
         [userId, timezone, date, AVAILABILITY_SOURCES.MANUAL]
       );
+      console.log(`[Bulk Save] Deleted ${result.changes || 0} manual slots for date ${date}`);
     }
+
+    console.log(`[Bulk Save] Processing ${entries.length} entries`);
 
     // Insert new slots
     for (const entry of entries) {
@@ -225,6 +228,114 @@ router.delete('/imported/all', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error deleting imported calendar events:', error);
     res.status(500).json({ error: 'Failed to delete imported calendar events' });
+  }
+});
+
+/**
+ * DELETE /api/native/availability/imported/batch - Batch delete imported events by external_event_id
+ * Body: { eventIds: string[] }
+ */
+router.delete('/imported/batch', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { eventIds } = req.body;
+
+    console.log(`[Batch Delete] Received request:`, {
+      userId,
+      eventIdsCount: eventIds?.length,
+      eventIds: eventIds,
+    });
+
+    if (!Array.isArray(eventIds) || eventIds.length === 0) {
+      console.log('[Batch Delete] Invalid request - eventIds missing or empty');
+      return res.status(400).json({ error: 'eventIds array is required' });
+    }
+
+    console.log(`[Batch Delete] Deleting ${eventIds.length} imported events for user ${userId}`);
+
+    // Delete in batches of 50 to avoid SQL parameter limits
+    const BATCH_SIZE = 50;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < eventIds.length; i += BATCH_SIZE) {
+      const batch = eventIds.slice(i, i + BATCH_SIZE);
+      const placeholders = batch.map((_, idx) => `$${idx + 4}`).join(',');
+
+      const sql = `DELETE FROM native_user_availability
+         WHERE user_id = $1
+         AND source IN ($2, $3)
+         AND external_event_id IN (${placeholders})`;
+
+      console.log(`[Batch Delete] Executing SQL:`, sql);
+      console.log(`[Batch Delete] Parameters:`, [userId, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE, ...batch]);
+
+      const result = await db.run(sql, [userId, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE, ...batch]);
+
+      console.log(`[Batch Delete] Batch result:`, {
+        changes: result.changes,
+        batchSize: batch.length,
+      });
+
+      totalDeleted += result.changes || 0;
+    }
+
+    console.log(`[Batch Delete] Deleted ${totalDeleted} imported events`);
+    res.json({ success: true, deletedCount: totalDeleted });
+  } catch (error) {
+    console.error('Error batch deleting imported events:', error);
+    res.status(500).json({ error: 'Failed to batch delete imported events' });
+  }
+});
+
+/**
+ * PUT /api/native/availability/imported/batch - Batch update imported events
+ * Body: { updates: [{ externalEventId, startsAt, endsAt, title, isAllDay }] }
+ */
+router.put('/imported/batch', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { updates } = req.body;
+
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ error: 'updates array is required' });
+    }
+
+    console.log(`[Batch Update] Updating ${updates.length} imported events for user ${userId}`);
+
+    let totalUpdated = 0;
+
+    for (const update of updates) {
+      const { externalEventId, startsAt, endsAt, title, isAllDay } = update;
+
+      if (!externalEventId || !startsAt || !endsAt) {
+        console.warn('[Batch Update] Skipping invalid update:', update);
+        continue;
+      }
+
+      const result = await db.run(
+        `UPDATE native_user_availability
+         SET starts_at = $1::timestamptz,
+             ends_at = $2::timestamptz,
+             title = $3,
+             is_all_day = $4
+         WHERE user_id = $5
+         AND external_event_id = $6
+         AND source IN ($7, $8)`,
+        [startsAt, endsAt, title || null, isAllDay || false, userId, externalEventId, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE]
+      );
+
+      console.log(`[Batch Update] Updated event ${externalEventId}:`, {
+        changes: result.changes,
+      });
+
+      totalUpdated += result.changes || 0;
+    }
+
+    console.log(`[Batch Update] Updated ${totalUpdated} imported events`);
+    res.json({ success: true, updatedCount: totalUpdated });
+  } catch (error) {
+    console.error('Error batch updating imported events:', error);
+    res.status(500).json({ error: 'Failed to batch update imported events' });
   }
 });
 
