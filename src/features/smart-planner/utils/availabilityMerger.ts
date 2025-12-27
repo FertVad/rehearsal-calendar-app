@@ -2,6 +2,7 @@ import type { Rehearsal } from '../../../shared/types';
 import type { TimeRange } from '../../../shared/utils/availability';
 import { mergeBusyRanges } from '../../../shared/utils/availability';
 import type { AvailabilityData, Member } from '../types';
+import { logger } from '../../../shared/utils/logger';
 
 export interface MemberAvailability {
   userId: string;
@@ -83,12 +84,12 @@ export function mergeAvailabilityWithRehearsals(
       // Get manual availability for this date (busy and tentative ranges)
       const dateAvail = availData?.dates.find(d => d.date === date);
 
-      console.log(`[Availability Merger] Member ${member.id}, Date ${date}, Raw timeRanges:`, dateAvail?.timeRanges);
+      logger.debug(`[Availability Merger] Member ${member.id}, Date ${date}, Raw timeRanges:`, dateAvail?.timeRanges);
 
       const manualRanges =
         dateAvail?.timeRanges.filter(r => r.type === 'busy' || r.type === 'tentative') || [];
 
-      console.log(`[Availability Merger] Member ${member.id}, Date ${date}, Filtered busy ranges:`, manualRanges);
+      logger.debug(`[Availability Merger] Member ${member.id}, Date ${date}, Filtered busy ranges:`, manualRanges);
 
       // Get rehearsal ranges for this date (O(1) lookup)
       const rehearsalRanges = memberRehearsalDates?.get(date) || [];

@@ -42,8 +42,6 @@ router.get('/', requireAuth, async (req, res) => {
       [userId]
     );
 
-    console.log(`[Availability API] Returning ${availability.length} slots for user ${userId}`);
-
     // Convert to API response format with ISO timestamps
     const converted = availability.map(slot => ({
       id: slot.id,
@@ -57,8 +55,6 @@ router.get('/', requireAuth, async (req, res) => {
       externalEventId: slot.external_event_id,
       createdAt: slot.created_at,
     }));
-
-    console.log('[Availability API] Sample slots:', JSON.stringify(converted.slice(0, 3), null, 2));
 
     res.json(converted);
   } catch (error) {
@@ -83,8 +79,6 @@ router.post('/bulk', requireAuth, async (req, res) => {
     // Get user's timezone for date extraction
     const timezone = await getUserTimezone(userId);
 
-    console.log(`[Bulk Save] User ${userId}, saving ${entries.length} entries`);
-
     // Delete all existing manual availability for the affected dates
     const affectedDates = new Set();
     for (const entry of entries) {
@@ -96,28 +90,22 @@ router.post('/bulk', requireAuth, async (req, res) => {
       affectedDates.add(date);
     }
 
-    console.log(`[Bulk Save] Affected dates:`, Array.from(affectedDates));
-
     // Delete existing manual availability for these dates
     for (const date of affectedDates) {
-      const result = await db.run(
+      await db.run(
         `DELETE FROM native_user_availability
          WHERE user_id = $1
          AND DATE(starts_at AT TIME ZONE $2) = $3
          AND source = $4`,
         [userId, timezone, date, AVAILABILITY_SOURCES.MANUAL]
       );
-      console.log(`[Bulk Save] Deleted ${result.changes || 0} manual slots for date ${date}`);
     }
-
-    console.log(`[Bulk Save] Processing ${entries.length} entries`);
 
     // Insert new slots
     for (const entry of entries) {
       const { startsAt, endsAt, type, title, notes, isAllDay, source, external_event_id } = entry;
 
       if (!startsAt || !endsAt || !type) {
-        console.warn('[Bulk Save] Skipping invalid entry:', entry);
         continue;
       }
 
@@ -133,12 +121,9 @@ router.post('/bulk', requireAuth, async (req, res) => {
         );
 
         if (existing) {
-          console.log(`[Bulk Save] Skipping duplicate: externalId=${external_event_id}, already exists with id=${existing.id}`);
           continue;
         }
       }
-
-      console.log(`[Bulk Save] Inserting: ${startsAt} - ${endsAt}, type=${type}, source=${entrySource}, externalId=${external_event_id || 'none'}`);
 
       await db.run(
         `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, title, notes, is_all_day, source, external_event_id)
@@ -157,22 +142,11 @@ router.post('/bulk', requireAuth, async (req, res) => {
       );
     }
 
-    console.log(`[Bulk Save] Successfully saved ${entries.length} availability entries`);
     res.json({ success: true });
   } catch (error) {
     console.error('Error saving bulk availability:', error);
     res.status(500).json({ error: 'Failed to save availability' });
   }
-});
-
-/**
- * PUT /api/native/availability/:date - Set availability for a specific date
- * DEPRECATED: Use POST /bulk instead with ISO timestamps
- */
-router.put('/:date', requireAuth, async (req, res) => {
-  res.status(400).json({
-    error: 'This endpoint is deprecated. Use POST /native/availability/bulk with ISO timestamps instead.'
-  });
 });
 
 /**
@@ -212,8 +186,6 @@ router.delete('/imported/all', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
 
-    console.log(`[Delete Imported] Removing all imported calendar events for user ${userId}`);
-
     // Delete all imported calendar events for this user
     const result = await db.run(
       `DELETE FROM native_user_availability
@@ -221,8 +193,6 @@ router.delete('/imported/all', requireAuth, async (req, res) => {
        AND source IN ($2, $3)`,
       [userId, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE]
     );
-
-    console.log(`[Delete Imported] Deleted ${result.changes || 0} imported events`);
 
     res.json({ success: true, deletedCount: result.changes || 0 });
   } catch (error) {
@@ -240,18 +210,9 @@ router.delete('/imported/batch', requireAuth, async (req, res) => {
     const userId = req.userId;
     const { eventIds } = req.body;
 
-    console.log(`[Batch Delete] Received request:`, {
-      userId,
-      eventIdsCount: eventIds?.length,
-      eventIds: eventIds,
-    });
-
     if (!Array.isArray(eventIds) || eventIds.length === 0) {
-      console.log('[Batch Delete] Invalid request - eventIds missing or empty');
       return res.status(400).json({ error: 'eventIds array is required' });
     }
-
-    console.log(`[Batch Delete] Deleting ${eventIds.length} imported events for user ${userId}`);
 
     // Delete in batches of 50 to avoid SQL parameter limits
     const BATCH_SIZE = 50;
@@ -266,20 +227,11 @@ router.delete('/imported/batch', requireAuth, async (req, res) => {
          AND source IN ($2, $3)
          AND external_event_id IN (${placeholders})`;
 
-      console.log(`[Batch Delete] Executing SQL:`, sql);
-      console.log(`[Batch Delete] Parameters:`, [userId, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE, ...batch]);
-
       const result = await db.run(sql, [userId, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE, ...batch]);
-
-      console.log(`[Batch Delete] Batch result:`, {
-        changes: result.changes,
-        batchSize: batch.length,
-      });
 
       totalDeleted += result.changes || 0;
     }
 
-    console.log(`[Batch Delete] Deleted ${totalDeleted} imported events`);
     res.json({ success: true, deletedCount: totalDeleted });
   } catch (error) {
     console.error('Error batch deleting imported events:', error);
@@ -300,15 +252,12 @@ router.put('/imported/batch', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'updates array is required' });
     }
 
-    console.log(`[Batch Update] Updating ${updates.length} imported events for user ${userId}`);
-
     let totalUpdated = 0;
 
     for (const update of updates) {
       const { externalEventId, startsAt, endsAt, title, isAllDay } = update;
 
       if (!externalEventId || !startsAt || !endsAt) {
-        console.warn('[Batch Update] Skipping invalid update:', update);
         continue;
       }
 
@@ -324,14 +273,9 @@ router.put('/imported/batch', requireAuth, async (req, res) => {
         [startsAt, endsAt, title || null, isAllDay || false, userId, externalEventId, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE]
       );
 
-      console.log(`[Batch Update] Updated event ${externalEventId}:`, {
-        changes: result.changes,
-      });
-
       totalUpdated += result.changes || 0;
     }
 
-    console.log(`[Batch Update] Updated ${totalUpdated} imported events`);
     res.json({ success: true, updatedCount: totalUpdated });
   } catch (error) {
     console.error('Error batch updating imported events:', error);

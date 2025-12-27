@@ -82,7 +82,6 @@ export async function saveEventMapping(
     // Get or create connection
     const connectionId = await getOrCreateConnection(calendarId);
     if (!connectionId) {
-      console.warn('[CalendarMappings] Failed to get connection, mapping saved only to AsyncStorage');
       return;
     }
 
@@ -94,8 +93,6 @@ export async function saveEventMapping(
       externalEventId: eventId,
       syncDirection: 'export',
     });
-
-    console.log(`[CalendarMappings] ✓ Saved mapping: rehearsal ${rehearsalId} → event ${eventId}`);
   } catch (error) {
     console.error('[CalendarMappings] Failed to save mapping to DB:', error);
     // Fallback: at least AsyncStorage is saved
@@ -148,7 +145,6 @@ export async function removeEventMapping(rehearsalId: string): Promise<void> {
     // Remove from database
     try {
       await calendarSyncAPI.deleteMappingByEvent('rehearsal', rehearsalId);
-      console.log(`[CalendarMappings] ✓ Removed mapping for rehearsal ${rehearsalId}`);
     } catch (error: any) {
       // 404 is okay - mapping doesn't exist
       if (error.response?.status !== 404) {
@@ -182,7 +178,6 @@ export async function getAllMappings(): Promise<Record<string, { eventId: string
 
     // Update AsyncStorage cache
     // Note: This is a simplification, ideally we'd sync each one individually
-    console.log(`[CalendarMappings] ✓ Loaded ${mappings.length} mappings from DB`);
     return result;
   } catch (error) {
     console.error('[CalendarMappings] Failed to get mappings from DB, falling back to AsyncStorage:', error);
@@ -208,27 +203,11 @@ export async function clearAllMappings(): Promise<void> {
       for (const mapping of mappings) {
         await calendarSyncAPI.deleteMapping(mapping.id);
       }
-
-      console.log(`[CalendarMappings] ✓ Cleared ${mappings.length} mappings from DB`);
     } catch (error) {
       console.error('[CalendarMappings] Failed to clear DB mappings:', error);
     }
   } catch (error) {
     console.error('[CalendarMappings] Failed to clear mappings:', error);
     throw error;
-  }
-}
-
-/**
- * Update last sync time for connection
- */
-export async function updateLastSyncTime(calendarId: string): Promise<void> {
-  try {
-    const connectionId = await getOrCreateConnection(calendarId);
-    if (connectionId) {
-      await calendarSyncAPI.updateSyncTime(connectionId);
-    }
-  } catch (error) {
-    console.error('[CalendarMappings] Failed to update sync time:', error);
   }
 }

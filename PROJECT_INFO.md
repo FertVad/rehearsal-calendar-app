@@ -283,6 +283,8 @@ All `/api/native/*` routes require `Authorization: Bearer <token>` header
 
 ## 🌐 API Endpoints
 
+> **📖 Full API Specification**: See [API_DOCUMENTATION.md](API_DOCUMENTATION.md) for complete REST API reference with request/response examples, data models, and error handling.
+
 ### Authentication
 ```
 POST   /api/auth/register      # Register new user
@@ -330,7 +332,6 @@ GET    /api/native/rehearsals/:id/responses                    # Get all RSVPs (
 ```
 GET    /api/native/availability                         # Get user's availability
 POST   /api/native/availability/bulk                    # Bulk set availability (ISO timestamps)
-PUT    /api/native/availability/:date                   # DEPRECATED - use bulk instead
 DELETE /api/native/availability/:date                   # Delete manual availability for date
 DELETE /api/native/availability/imported/all           # Delete all imported calendar events
 GET    /api/native/projects/:id/members/availability    # Get members' availability (range)
@@ -597,22 +598,61 @@ PORT=3001
 # PostgreSQL (production)
 DATABASE_URL=postgresql://user:pass@host/db
 
-# JWT
-JWT_SECRET=your-secret-key
-JWT_REFRESH_SECRET=your-refresh-secret
+# JWT (REQUIRED in production - server will fail to start without it)
+# Generate: openssl rand -base64 32
+JWT_SECRET=your-generated-secret-here
 
 # Telegram Bot (optional)
 TELEGRAM_BOT_TOKEN=your-bot-token
 ENABLE_NOTIFICATIONS=false
 ```
 
-**src/shared/services/api.ts**
-```typescript
-// Development: Use your computer's IP address
-const API_URL = 'http://192.168.1.39:3001/api';
+**⚠️ CRITICAL: JWT_SECRET Requirement**
+- **Production**: JWT_SECRET is **REQUIRED**. Server will throw an error and refuse to start without it.
+- **Development**: JWT_SECRET is optional but **strongly recommended**. Server will show a warning if not set.
+- Generate a secure secret: `openssl rand -base64 32`
 
-// Production: Use deployed URL
-const API_URL = 'https://your-app.com/api';
+**API Configuration (Client-side)**
+
+The app automatically configures the API URL based on environment with smart platform detection:
+
+**Priority order:**
+
+1. **EXPO_PUBLIC_API_URL** (optional) - Override API URL
+   ```bash
+   # .env file
+   EXPO_PUBLIC_API_URL=http://192.168.1.100:3001/api
+   ```
+
+2. **Auto-detection (development)** - Automatically detects your computer's IP from Expo DevServer
+   - **Physical devices**: `http://<your-ip>:3001/api` (auto-detected from Expo debuggerHost)
+   - **iOS Simulator**: `http://localhost:3001/api`
+   - **Android Emulator**: `http://10.0.2.2:3001/api` (special address to reach host machine)
+
+3. **Production** - Uses deployed backend
+   - `https://rehearsal-calendar-app.onrender.com/api`
+
+**Platform-specific Localhost:**
+
+The app uses `Platform.OS` detection to automatically select the correct localhost address:
+- iOS and other platforms use `localhost:3001` (works in iOS simulator)
+- Android uses `10.0.2.2:3001` (Android emulator's special IP to reach host machine)
+
+This applies to both API baseURL ([src/shared/services/api.ts](src/shared/services/api.ts#L59-L61)) and deep linking URLs ([src/navigation/index.tsx](src/navigation/index.tsx#L27-L29)).
+
+**Device-specific Setup:**
+
+```bash
+# iOS Simulator (auto-works with localhost)
+npm run ios
+
+# Physical Device (auto-detects IP from Expo)
+npm start
+# Scan QR code with Expo Go or Camera app
+
+# Custom IP override (if auto-detection fails)
+echo "EXPO_PUBLIC_API_URL=http://192.168.1.100:3001/api" > .env
+npm start
 ```
 
 ---
@@ -788,6 +828,8 @@ Private project - All rights reserved
 ---
 
 ## 🌍 Internationalization (i18n)
+
+> **📖 Localization Guide**: See [LOCALIZATION_GUIDE.md](LOCALIZATION_GUIDE.md) for detailed i18n documentation, how to add translations, and examples.
 
 ### Система локализации
 

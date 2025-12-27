@@ -1,5 +1,6 @@
 import type { TimeSlot, SlotCategory, BusyMember, Member, AvailabilityData } from '../types';
 import { timeToMinutes } from '../../../shared/utils/time';
+import { logger } from '../../../shared/utils/logger';
 
 const SLOT_INTERVAL_MINUTES = 30;
 
@@ -86,7 +87,7 @@ function findFreeSlots(
   for (const avail of availabilityData) {
     if (avail.date === date) {
       availabilityMap.set(avail.memberId, avail.busyRanges);
-      console.log(`[Slot Generator] Date ${date}, Member ${avail.memberId}, Busy ranges:`, avail.busyRanges);
+      logger.debug(`[Slot Generator] Date ${date}, Member ${avail.memberId}, Busy ranges:`, avail.busyRanges);
     }
   }
 

@@ -982,68 +982,7 @@ Create or update multiple availability slots at once.
 
 ---
 
-#### 3. Set Availability for a Specific Date
-
-Create or update availability slots for a specific date.
-
-**Endpoint:** `PUT /native/availability/:date`
-
-**Authentication Required:** Yes
-
-**Path Parameters:**
-- `date` (string, required): Date in YYYY-MM-DD format
-
-**Request Body:**
-```json
-{
-  "type": "free",
-  "slots": [
-    {
-      "start": "09:00",
-      "end": "12:00",
-      "isAllDay": false
-    },
-    {
-      "start": "14:00",
-      "end": "18:00",
-      "isAllDay": false
-    }
-  ],
-  "title": "Available for rehearsals",
-  "notes": "Flexible on exact times"
-}
-```
-
-**Parameters:**
-- `type` (string, required): "free", "busy", or "tentative"
-- `slots` (array, required): Array of time slots
-  - `start` (string): Start time in HH:mm format
-  - `end` (string): End time in HH:mm format
-  - `isAllDay` (boolean, optional): Whether this is an all-day event
-- `title` (string, optional): Slot title
-- `notes` (string, optional): Additional notes
-
-**Success Response (200):**
-```json
-{
-  "success": true
-}
-```
-
-**Error Responses:**
-- `400 Bad Request`: Missing type
-  ```json
-  { "error": "Type is required" }
-  ```
-
-**Notes:**
-- Deletes all existing manual availability for the specified date
-- Preserves rehearsal and calendar sync availability
-- Times are converted using the user's configured timezone
-
----
-
-#### 4. Delete Availability for a Date
+#### 3. Delete Availability for a Date
 
 Delete all manually-created availability for a specific date.
 

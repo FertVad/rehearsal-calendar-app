@@ -1,21 +1,26 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+import { logger } from '../utils/logger';
 
-// Change this to your backend URL
-// For iOS simulator: http://localhost:3001
-// For Android emulator: http://10.0.2.2:3001
-// For real device: http://YOUR_COMPUTER_IP:3001
+/**
+ * API Configuration
+ *
+ * Priority order:
+ * 1. EXPO_PUBLIC_API_URL environment variable (if set)
+ * 2. Development mode: Auto-detect IP from Expo DevServer
+ * 3. Production: Use deployed backend URL
+ *
+ * Environment variables:
+ * - EXPO_PUBLIC_API_URL: Override API URL (e.g., "http://192.168.1.100:3001/api")
+ */
 
-// Auto-detect IP from Expo DevServer
-// When running with Expo, manifest.debuggerHost contains the IP
-const getLocalIP = () => {
-  // Debug: log all possible paths
-  console.log('[API] Constants.expoConfig?.hostUri:', Constants.expoConfig?.hostUri);
-  console.log('[API] Constants.manifest?.debuggerHost:', (Constants.manifest as any)?.debuggerHost);
-  console.log('[API] Constants.manifest2?.extra?.expoGo?.debuggerHost:', (Constants.manifest2 as any)?.extra?.expoGo?.debuggerHost);
+// Production backend URL
+const PRODUCTION_API_URL = 'https://rehearsal-calendar-app.onrender.com/api';
 
-  // Try multiple paths for Expo SDK 54+
+// Auto-detect local IP from Expo DevServer (for development on physical devices)
+const getLocalDevIP = (): string | null => {
   const debuggerHost =
     Constants.expoConfig?.hostUri ||
     (Constants.manifest as any)?.debuggerHost ||
@@ -24,26 +29,47 @@ const getLocalIP = () => {
   if (debuggerHost) {
     // debuggerHost format is "192.168.1.38:8081", extract IP
     const ip = debuggerHost.split(':')[0];
-    console.log('[API] ✅ Detected IP from Expo:', ip);
     return ip;
   }
 
-  // For real iPhone, we need network IP, not localhost
-  console.log('[API] ⚠️ No Expo hostUri detected - using hardcoded network IP');
-  return '192.168.1.38'; // Hardcoded fallback for now
+  // No Expo debugger host detected - using localhost
+  return null;
 };
 
-// TEMPORARY: Force local development URL
-const USE_LOCAL = true;
+// Determine API URL based on environment
+const getApiUrl = (): string => {
+  // Priority 1: Explicit environment variable
+  const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envApiUrl) {
+    logger.info(`Using EXPO_PUBLIC_API_URL: ${envApiUrl}`);
+    return envApiUrl;
+  }
 
-const API_URL = USE_LOCAL
-  ? `http://${getLocalIP()}:3001/api`
-  : 'https://rehearsal-calendar-app.onrender.com/api';
+  // Priority 2: Development mode with auto-detection
+  const isDev = process.env.NODE_ENV !== 'production';
+  if (isDev) {
+    const localIP = getLocalDevIP();
+    if (localIP) {
+      const devUrl = `http://${localIP}:3001/api`;
+      logger.info(`Development mode - using: ${devUrl}`);
+      return devUrl;
+    }
 
-console.log('[API] __DEV__:', __DEV__);
-console.log('[API] USE_LOCAL:', USE_LOCAL);
-console.log('[API] API_URL:', API_URL);
-console.log('[API] Local IP:', getLocalIP());
+    // Fallback: use platform-specific localhost
+    // Android emulator needs 10.0.2.2 to reach host machine
+    const localhostUrl = Platform.OS === 'android'
+      ? 'http://10.0.2.2:3001/api'
+      : 'http://localhost:3001/api';
+
+    logger.info(`Development mode - using: ${localhostUrl}`);
+    return localhostUrl;
+  }
+
+  // Priority 3: Production
+  return PRODUCTION_API_URL;
+};
+
+const API_URL = getApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,
@@ -60,7 +86,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log('[API] Request:', config.method?.toUpperCase(), config.url, config.params);
+    logger.debug(`Request: ${config.method?.toUpperCase()} ${config.url}`, config.params);
     return config;
   },
   (error) => {
@@ -203,7 +229,7 @@ export const rehearsalsAPI = {
 
   // RSVP - Submit response ('yes' = like, null = unlike/delete)
   respond: (rehearsalId: string, status: 'yes' | null, notes?: string) =>
-    api.post(`/native/rehearsals/${rehearsalId}/respond`, { status, notes }),
+    api.post(`/native/rehearsals/${rehearsalId}/respond`, { response: status, notes }),
 
   // RSVP - Get my response
   getMyResponse: (rehearsalId: string) =>
@@ -242,10 +268,6 @@ export const availabilityAPI = {
   // Get all availability for current user
   getAll: () =>
     api.get('/native/availability'),
-
-  // Set availability for a specific date
-  setForDate: (date: string, type: 'available' | 'busy' | 'tentative', slots?: { start: string; end: string }[]) =>
-    api.put(`/native/availability/${date}`, { type, slots }),
 
   // Bulk set availability for multiple dates (ISO timestamp format)
   bulkSet: (entries: { startsAt: string; endsAt: string; type: 'available' | 'busy' | 'tentative'; isAllDay?: boolean }[]) =>

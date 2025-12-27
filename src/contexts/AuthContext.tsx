@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../shared/services/api';
+import { logger } from '../shared/utils/logger';
 
 interface User {
   id: number;
@@ -61,13 +62,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Only clear tokens if they are actually invalid (401/403)
       // Don't clear on network errors, timeouts, etc.
       if (err.response?.status === 401 || err.response?.status === 403) {
-        console.log('Invalid or expired token, clearing session');
+        logger.info('Invalid or expired token, clearing session');
         await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
         setUser(null);
         setLoading(false);
       } else {
         // Network error, server restart, etc. - keep user logged in offline
-        console.log('Failed to load user (non-auth error):', err.message);
+        logger.warn('Failed to load user (non-auth error):', err.message);
         // Try to load cached user data from storage
         try {
           const cachedUser = await AsyncStorage.getItem('cachedUser');
@@ -175,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(null);
     } catch (err) {
-      console.error('Logout error:', err);
+      logger.error('Logout error:', err);
     } finally {
       setLoading(false);
     }

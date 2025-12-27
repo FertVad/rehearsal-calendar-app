@@ -37,14 +37,6 @@ export const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
 }) => {
   const { t } = useI18n();
 
-  console.log('[ParticipantsModal] Rendering with:', {
-    visible,
-    participantsCount: participants.length,
-    totalCount,
-    likedCount,
-    participants,
-  });
-
   const renderParticipant = ({ item }: { item: Participant }) => {
     const displayName = `${item.firstName}${item.lastName ? ' ' + item.lastName : ''}`;
 

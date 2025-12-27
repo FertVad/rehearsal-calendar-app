@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 import { projectsAPI } from '../shared/services/api';
 import { Project } from '../shared/types';
 import { useAuth } from './AuthContext';
+import { logger } from '../shared/utils/logger';
 
 interface ProjectContextType {
   projects: Project[];
@@ -38,7 +39,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setSelectedProject(projectsList[0]);
       }
     } catch (err: any) {
-      console.error('Failed to fetch projects:', err);
+      logger.error('Failed to fetch projects:', err);
       setError(err.message || 'Failed to load projects');
     } finally {
       setLoading(false);

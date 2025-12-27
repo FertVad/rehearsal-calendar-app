@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -22,12 +23,18 @@ import SmartPlannerScreen from '../features/smart-planner/screens/SmartPlannerSc
 
 const prefix = Linking.createURL('/');
 
+// Platform-specific localhost for deep links
+// Android emulator needs 10.0.2.2 to reach host machine
+const localhostPrefix = Platform.OS === 'android'
+  ? 'http://10.0.2.2:3001'
+  : 'http://localhost:3001';
+
 const linking: any = {
   prefixes: [
     prefix,
     'rehearsalapp://',
     'https://rehearsal-calendar-app.onrender.com',
-    'http://localhost:3001'
+    localhostPrefix
   ],
   config: {
     screens: {
@@ -220,13 +227,10 @@ export default function Navigation() {
   // Handle deep links for unauthenticated users
   useEffect(() => {
     const handleUrl = async (url: string) => {
-      console.log('Received URL:', url);
-
       // Extract invite code from URL
       const inviteMatch = url.match(/invite\/([a-f0-9]+)/);
       if (inviteMatch) {
         const code = inviteMatch[1];
-        console.log('Extracted invite code:', code);
 
         if (isAuthenticated && navigationRef.current) {
           // User is authenticated, navigate directly

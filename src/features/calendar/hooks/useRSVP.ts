@@ -28,8 +28,9 @@ export const useRSVP = () => {
       const response = await rehearsalsAPI.respond(rehearsalId, newStatus);
 
       // Update with actual stats from server
-      if (response.data.stats) {
-        onSuccess(rehearsalId, newStatus, response.data.stats);
+      // Backend returns stats directly in response.data, not in response.data.stats
+      if (response.data) {
+        onSuccess(rehearsalId, newStatus, response.data);
       }
     } catch (err: any) {
       console.error('Failed to toggle like:', err);

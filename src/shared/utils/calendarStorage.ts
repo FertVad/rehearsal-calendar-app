@@ -230,7 +230,6 @@ export async function saveImportedEvent(
     };
 
     await AsyncStorage.setItem(KEYS.IMPORT_TRACKING, JSON.stringify(tracking));
-    console.log(`[CalendarStorage] Saved import tracking for event ${eventId}`);
   } catch (error) {
     console.error('[CalendarStorage] Failed to save imported event:', error);
     throw error;
@@ -251,21 +250,6 @@ export async function getImportedEvents(): Promise<ImportedEventMap> {
 }
 
 /**
- * Get imported event info
- */
-export async function getImportedEvent(
-  eventId: string
-): Promise<ImportedEventMap[string] | null> {
-  try {
-    const tracking = await getImportedEvents();
-    return tracking[eventId] || null;
-  } catch (error) {
-    console.error('[CalendarStorage] Failed to get imported event:', error);
-    return null;
-  }
-}
-
-/**
  * Remove imported event tracking
  */
 export async function removeImportedEvent(eventId: string): Promise<void> {
@@ -277,7 +261,6 @@ export async function removeImportedEvent(eventId: string): Promise<void> {
     delete tracking[eventId];
 
     await AsyncStorage.setItem(KEYS.IMPORT_TRACKING, JSON.stringify(tracking));
-    console.log(`[CalendarStorage] Removed import tracking for event ${eventId}`);
   } catch (error) {
     console.error('[CalendarStorage] Failed to remove imported event:', error);
     throw error;
@@ -290,7 +273,6 @@ export async function removeImportedEvent(eventId: string): Promise<void> {
 export async function clearAllImportedEvents(): Promise<void> {
   try {
     await AsyncStorage.removeItem(KEYS.IMPORT_TRACKING);
-    console.log('[CalendarStorage] Cleared all import tracking');
   } catch (error) {
     console.error('[CalendarStorage] Failed to clear imported events:', error);
     throw error;

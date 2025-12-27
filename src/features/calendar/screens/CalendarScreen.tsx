@@ -20,7 +20,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { formatDateLocalized, formatDateToString, parseDateString } from '../../../shared/utils/time';
 import { useRehearsals, useRSVP } from '../hooks';
 import { calendarScreenStyles as styles } from '../styles';
-import { unsyncRehearsal } from '../../../shared/services/calendarSync';
+import { unsyncRehearsal } from '../../../shared/services/calendar';
 
 type CalendarScreenProps = CompositeScreenProps<
   BottomTabScreenProps<TabParamList, 'Calendar'>,
@@ -158,7 +158,6 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
               // Auto-unsync from calendar if it was synced
               try {
                 await unsyncRehearsal(rehearsalId);
-                console.log('[CalendarScreen] Auto-unsynced rehearsal from calendar');
               } catch (syncError) {
                 // Don't fail the whole operation if unsync fails
                 console.error('[CalendarScreen] Failed to unsync from calendar:', syncError);

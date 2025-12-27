@@ -11,6 +11,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import pkg from 'pg';
+import { logger } from '../utils/logger.js';
 
 const { Pool } = pkg;
 
@@ -25,10 +26,10 @@ export async function initDatabase() {
     pool = new Pool({ connectionString: databaseUrl });
     try {
       await pool.query('SELECT 1');
-      console.log('[DB] Connected to PostgreSQL');
+      logger.info('Connected to PostgreSQL');
       isPostgres = true;
     } catch (err) {
-      console.error('[DB] PostgreSQL connection failed, falling back to SQLite:', err);
+      logger.error('PostgreSQL connection failed, falling back to SQLite:', err);
       pool = null;
     }
   }
@@ -60,7 +61,7 @@ export async function initDatabase() {
   } else {
     const dbPath = path.join(process.cwd(), 'server', 'database', 'data.sqlite');
     sqlite = new Database(dbPath);
-    console.log('[DB] Using SQLite database');
+    logger.info('Using SQLite database');
     db = {
       run(sql, params = []) {
         const info = sqlite.prepare(sql).run(params);

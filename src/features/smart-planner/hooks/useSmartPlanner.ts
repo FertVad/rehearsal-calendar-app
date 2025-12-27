@@ -9,6 +9,7 @@ import {
   groupSlotsByDate,
 } from '../utils/slotGenerator';
 import { mergeAvailabilityWithRehearsals, type MemberAvailability } from '../utils/availabilityMerger';
+import { logger } from '../../../shared/utils/logger';
 
 interface UseSmartPlannerProps {
   projectId: string;
@@ -45,8 +46,8 @@ export function useSmartPlanner({
         setLoading(true);
         setError(null);
 
-        console.log('[Smart Planner] Loading data for project:', projectId);
-        console.log('[Smart Planner] Date range:', startDate, 'to', endDate);
+        logger.debug('[Smart Planner] Loading data for project:', projectId);
+        logger.debug('[Smart Planner] Date range:', startDate, 'to', endDate);
 
         // Load project info, members, availability, and rehearsals in parallel
         const [projectRes, membersRes, availabilityRes, rehearsalsRes] = await Promise.all([
@@ -58,17 +59,17 @@ export function useSmartPlanner({
 
         if (!mounted) return;
 
-        console.log('[Smart Planner] Project:', projectRes.data);
-        console.log('[Smart Planner] Members:', membersRes.data.members.length);
-        console.log('[Smart Planner] Availability:', availabilityRes.data.availability.length);
-        console.log('[Smart Planner] Rehearsals:', rehearsalsRes.data.rehearsals.length);
+        logger.debug('[Smart Planner] Project:', projectRes.data);
+        logger.debug('[Smart Planner] Members:', membersRes.data.members.length);
+        logger.debug('[Smart Planner] Availability:', availabilityRes.data.availability.length);
+        logger.debug('[Smart Planner] Rehearsals:', rehearsalsRes.data.rehearsals.length);
 
         setProject(projectRes.data.project);
         setMembers(membersRes.data.members);
         setMemberAvailability(availabilityRes.data.availability);
         setRehearsals(rehearsalsRes.data.rehearsals);
       } catch (err: any) {
-        console.error('[Smart Planner] Error loading data:', err);
+        logger.error('[Smart Planner] Error loading data:', err);
         if (mounted) {
           setError(err.response?.data?.error || err.message || 'Failed to load data');
         }
@@ -98,10 +99,10 @@ export function useSmartPlanner({
   const mergedAvailability: AvailabilityData[] = useMemo(() => {
     if (simpleMembers.length === 0) return [];
 
-    console.log('[Smart Planner] Merging availability with rehearsals');
-    console.log('[Smart Planner] Simple members:', simpleMembers.length);
-    console.log('[Smart Planner] Member availability:', memberAvailability.length);
-    console.log('[Smart Planner] Rehearsals:', rehearsals.length);
+    logger.debug('[Smart Planner] Merging availability with rehearsals');
+    logger.debug('[Smart Planner] Simple members:', simpleMembers.length);
+    logger.debug('[Smart Planner] Member availability:', memberAvailability.length);
+    logger.debug('[Smart Planner] Rehearsals:', rehearsals.length);
 
     const merged = mergeAvailabilityWithRehearsals(
       simpleMembers,
@@ -109,7 +110,7 @@ export function useSmartPlanner({
       rehearsals
     );
 
-    console.log('[Smart Planner] Merged availability entries:', merged.length);
+    logger.debug('[Smart Planner] Merged availability entries:', merged.length);
     return merged;
   }, [simpleMembers, memberAvailability, rehearsals]);
 
@@ -124,8 +125,8 @@ export function useSmartPlanner({
       ? selectedMemberIds
       : simpleMembers.map(m => m.id);
 
-    console.log('[Smart Planner] Generating slots');
-    console.log('[Smart Planner] Selected members:', memberIds.length);
+    logger.debug('[Smart Planner] Generating slots');
+    logger.debug('[Smart Planner] Selected members:', memberIds.length);
 
     const slots = generateTimeSlots(
       startDate,
@@ -135,14 +136,14 @@ export function useSmartPlanner({
       memberIds
     );
 
-    console.log('[Smart Planner] Generated slots:', slots.length);
+    logger.debug('[Smart Planner] Generated slots:', slots.length);
     return slots;
   }, [startDate, endDate, simpleMembers, mergedAvailability, selectedMemberIds]);
 
   // Filter slots by category
   const filteredSlots = useMemo(() => {
     const filtered = filterSlotsByCategory(allSlots, selectedCategories);
-    console.log('[Smart Planner] Filtered slots:', filtered.length);
+    logger.debug('[Smart Planner] Filtered slots:', filtered.length);
     return filtered;
   }, [allSlots, selectedCategories]);
 

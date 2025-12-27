@@ -42,7 +42,6 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
         const timeSinceLogout = Date.now() - parseInt(lastLogoutTime, 10);
         if (timeSinceLogout < 5000) {
           // This is a stale invite link from before logout, ignore it
-          console.log('Ignoring stale invite link from previous session');
           navigation.reset({
             index: 0,
             routes: [{ name: 'MainTabs' }],

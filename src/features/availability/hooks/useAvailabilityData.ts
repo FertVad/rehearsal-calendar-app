@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayMode, DayState } from '../types';
 
@@ -10,11 +10,7 @@ export const useAvailabilityData = () => {
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  useEffect(() => {
-    loadAvailability();
-  }, []);
-
-  const loadAvailability = async () => {
+  const loadAvailability = useCallback(async () => {
     try {
       setLoading(true);
       const response = await availabilityAPI.getAll();
@@ -162,7 +158,11 @@ export const useAvailabilityData = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadAvailability();
+  }, [loadAvailability]);
 
   const getDayState = (date: string): DayState => {
     return availability[date] || { mode: 'free', slots: [{ ...DEFAULT_SLOT }] };

@@ -4,10 +4,10 @@
  * Note: Export is already handled automatically in AddRehearsalScreen
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { getSyncSettings } from '../utils/calendarStorage';
-import { importCalendarEventsToAvailability } from '../services/calendarSync';
+import { importCalendarEventsToAvailability } from '../services/calendar';
 
 /**
  * Check if should import now
@@ -45,26 +45,7 @@ export function useAutoCalendarSync() {
   const lastSyncAttempt = useRef<number>(0);
   const THROTTLE_MS = 5000; // Minimum 5 seconds between sync attempts
 
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-    const previousState = appState.current;
-    appState.current = nextAppState;
-
-    // Only sync when coming to foreground
-    if (previousState.match(/inactive|background/) && nextAppState === 'active') {
-      console.log('[AutoSync] App came to foreground');
-      await performAutoSync();
-    }
-  };
-
-  const performAutoSync = async () => {
+  const performAutoSync = useCallback(async () => {
     // Throttle: prevent syncs within 5 seconds of each other
     const now = Date.now();
     if (now - lastSyncAttempt.current < THROTTLE_MS) {
@@ -86,13 +67,32 @@ export function useAutoCalendarSync() {
     } catch (error) {
       console.error('[AutoSync] Error during auto-import:', error);
     }
-  };
+  }, []);
+
+  const handleAppStateChange = useCallback(async (nextAppState: AppStateStatus) => {
+    const previousState = appState.current;
+    appState.current = nextAppState;
+
+    // Only sync when coming to foreground
+    if (previousState.match(/inactive|background/) && nextAppState === 'active') {
+      console.log('[AutoSync] App came to foreground');
+      await performAutoSync();
+    }
+  }, [performAutoSync]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [handleAppStateChange]);
 
   /**
    * Force sync - ignores interval settings, always syncs if import is enabled
    * Used for manual triggers like pull-to-refresh
    */
-  const forceSync = async () => {
+  const forceSync = useCallback(async () => {
     try {
       const settings = await getSyncSettings();
       console.log('[AutoSync] Force sync - current settings:', {
@@ -114,7 +114,7 @@ export function useAutoCalendarSync() {
       console.error('[AutoSync] Error during force sync:', error);
       throw error;
     }
-  };
+  }, []);
 
   return {
     performAutoSync, // Exposed for automatic triggering

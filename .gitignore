@@ -50,8 +50,11 @@ server/*.sqlite3
 
 # Environment variables
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
 
 # Server uploads
 server/uploads/

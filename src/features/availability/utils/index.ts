@@ -18,3 +18,10 @@ export {
   slotsOverlap,
   validateSlots,
 } from './validationUtils';
+
+// Slot helper utilities
+export {
+  applyToSelectedDates,
+  parseTimeToDate,
+  formatDateToTime,
+} from './slotHelpers';

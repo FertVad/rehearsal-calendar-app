@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.js';
 import nativeRoutes from './routes/native.js';
 import availabilityRoutes from './routes/native/availability.js';
 import calendarSyncRoutes from './routes/native/calendarSync.js';
+import { logger } from './utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,24 +19,24 @@ const DEBUG = toBool(process.env.DEBUG);
 const LOG_REQUESTS = DEBUG || toBool(process.env.LOG_REQUESTS);
 
 // Environment diagnostics
-console.log('=== ENVIRONMENT DIAGNOSTICS ===');
-console.log('[ENV] NODE_ENV:', process.env.NODE_ENV || 'NOT SET');
-console.log('[ENV] DATABASE_URL:', process.env.DATABASE_URL ? 'PROVIDED' : 'MISSING');
-console.log('[ENV] PORT:', process.env.PORT || '3001');
-console.log('================================');
+logger.info('=== ENVIRONMENT DIAGNOSTICS ===');
+logger.info(`NODE_ENV: ${process.env.NODE_ENV || 'NOT SET'}`);
+logger.info(`DATABASE_URL: ${process.env.DATABASE_URL ? 'PROVIDED' : 'MISSING'}`);
+logger.info(`PORT: ${process.env.PORT || '3001'}`);
+logger.info('================================');
 
 await initDatabase();
 
 try {
   await testConnection();
-  console.log(`[DB] Using ${isPostgres ? 'PostgreSQL' : 'SQLite'} database`);
-  console.log('[DB] Database connection info:', {
+  logger.info(`Using ${isPostgres ? 'PostgreSQL' : 'SQLite'} database`);
+  logger.debug('Database connection info:', {
     type: isPostgres ? 'PostgreSQL' : 'SQLite',
     url_defined: !!(process.env.DATABASE_URL || process.env.POSTGRES_URL),
     node_env: process.env.NODE_ENV,
   });
 } catch (err) {
-  console.error('[DB] Connection test failed', err);
+  logger.error('Connection test failed', err);
   if (isPostgres) {
     process.exit(1);
   }
@@ -45,7 +46,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-console.log('[Server] Starting API server for Native App');
+logger.info('Starting API server for Native App');
 
 // Attach db instance to requests
 app.use((req, _res, next) => {
@@ -54,7 +55,7 @@ app.use((req, _res, next) => {
 });
 
 app.use((req, _res, next) => {
-  if (LOG_REQUESTS) console.log(`[Request] ${req.method} ${req.originalUrl}`);
+  if (LOG_REQUESTS) logger.debug(`Request: ${req.method} ${req.originalUrl}`);
   next();
 });
 
@@ -186,7 +187,6 @@ app.get('/invite/:code', (req, res) => {
           let tried = 0;
           schemes.forEach((scheme, index) => {
             setTimeout(() => {
-              console.log('Trying:', scheme);
               window.location.href = scheme;
               tried++;
               if (tried === schemes.length) {
@@ -209,13 +209,13 @@ app.get('/invite/:code', (req, res) => {
 });
 
 app.use((err, _req, res, _next) => {
-  console.error('Unhandled error:', err);
+  logger.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error', details: String(err) });
 });
 
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {
-  console.log(`[Server] Native App API server running on http://${HOST}:${PORT}`);
-  console.log(`[Server] Also accessible at http://localhost:${PORT}`);
+  logger.info(`Native App API server running on http://${HOST}:${PORT}`);
+  logger.info(`Also accessible at http://localhost:${PORT}`);
 });

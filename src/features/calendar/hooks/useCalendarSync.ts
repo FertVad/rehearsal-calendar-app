@@ -19,7 +19,7 @@ import {
   BatchSyncResult,
   importCalendarEventsToAvailability,
   removeAllImportedSlots,
-} from '../../../shared/services/calendarSync';
+} from '../../../shared/services/calendar';
 import {
   getSyncSettings,
   saveSyncSettings,

@@ -67,6 +67,15 @@ export interface ImportedEventMap {
 }
 
 /**
+ * Result of batch sync operation (export)
+ */
+export interface BatchSyncResult {
+  success: number;    // Number of events successfully synced
+  failed: number;     // Number of events that failed to sync
+  errors: string[];   // Array of error messages
+}
+
+/**
  * Result of import operation
  * Phase 2: Import feedback
  */
@@ -75,20 +84,4 @@ export interface ImportResult {
   failed: number;     // Number of events that failed to import
   skipped: number;    // Number of events skipped (already imported)
   errors: string[];   // Array of error messages
-}
-
-/**
- * Availability slot format for API
- * Phase 2: Calendar → App import
- */
-export interface AvailabilitySlot {
-  userId?: string;
-  startsAt: string;   // ISO 8601 timestamp
-  endsAt: string;     // ISO 8601 timestamp
-  type: 'busy' | 'available' | 'tentative';
-  source: 'manual' | 'rehearsal' | 'google_calendar' | 'apple_calendar';
-  external_event_id?: string;  // Calendar event ID for tracking
-  title?: string;
-  notes?: string;
-  is_all_day?: boolean;
 }

@@ -166,7 +166,6 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
       availability.push(userAvailability);
     }
 
-    console.log('[Members Availability] Response:', JSON.stringify(availability, null, 2));
     res.json({ availability });
   } catch (error) {
     console.error('[Availability] Error getting members availability:', error);

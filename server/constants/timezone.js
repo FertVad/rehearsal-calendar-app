@@ -28,13 +28,3 @@ export const AVAILABILITY_SOURCES = {
   GOOGLE: 'google_calendar',
   APPLE: 'apple_calendar',
 };
-
-/**
- * RSVP status values (like system - Telegram-style)
- * Only 'yes' (like) or null (no like)
- * @type {Object<string, string>}
- */
-export const RSVP_STATUS = {
-  YES: 'yes', // User liked/confirmed
-  // NO, MAYBE, TENTATIVE removed - not used in like system
-};

@@ -10,7 +10,7 @@ import invitesRoutes from './native/invites.js';
  * These endpoints work with regular user accounts (email/password)
  *
  * The routes are organized into separate modules:
- * - availability.js: User availability management (GET/POST/PUT/DELETE /availability)
+ * - availability.js: User availability management (GET/POST/DELETE /availability)
  * - projects.js: Project CRUD operations (GET/POST /projects)
  * - members.js: Project members and their availability (GET /projects/:id/members)
  * - rehearsals.js: Rehearsal management and RSVP (GET/POST/PUT/DELETE /projects/:id/rehearsals, /rehearsals/:id/respond)
