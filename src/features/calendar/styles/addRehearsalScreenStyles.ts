@@ -95,6 +95,12 @@ export const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: '#fff',
   },
+  loadingOverlay: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
   // DateTimePicker overlay for iOS (tap to close)
   pickerOverlay: {
     padding: Spacing.md,

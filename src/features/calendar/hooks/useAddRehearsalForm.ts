@@ -1,15 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../../navigation';
 import { Project } from '../../../shared/types';
 import { parseTimeString } from '../utils/rehearsalFormatters';
+import { rehearsalsAPI } from '../../../shared/services/api';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
 interface RouteParams {
   projectId?: string;
+  rehearsalId?: string;
   prefilledDate?: string;
   prefilledTime?: string;
   prefilledEndTime?: string;
@@ -67,6 +69,8 @@ export function useAddRehearsalForm({
   // UI state
   const [openPicker, setOpenPicker] = useState<'date' | 'start' | 'end' | null>(null);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [loadingRehearsal, setLoadingRehearsal] = useState(false);
 
   // Prefill form from route params
   useEffect(() => {
@@ -109,6 +113,56 @@ export function useAddRehearsalForm({
       setSelectedProject(defaultProject);
     }
   }, [defaultProject, prefilledProjectId]);
+
+  // Load rehearsal data in edit mode
+  useEffect(() => {
+    const { rehearsalId, projectId } = routeParams || {};
+
+    if (!rehearsalId || !projectId) return;
+
+    const loadRehearsal = async () => {
+      setLoadingRehearsal(true);
+      setIsEditMode(true);
+
+      try {
+        // Get rehearsal data
+        const rehearsalResponse = await rehearsalsAPI.getBatch([String(projectId)]);
+        const rehearsals = rehearsalResponse.data.rehearsals || [];
+        const rehearsal = rehearsals.find((r: any) => r.id === rehearsalId);
+
+        if (!rehearsal) {
+          Alert.alert('Error', 'Rehearsal not found');
+          navigation.goBack();
+          return;
+        }
+
+        // Prefill form fields
+        const startsAt = new Date(rehearsal.startsAt);
+        const endsAt = new Date(rehearsal.endsAt);
+
+        setDate(startsAt);
+        setStartTime(startsAt);
+        setEndTime(endsAt);
+        setLocation(rehearsal.location || '');
+
+        // Load participants
+        const responsesResponse = await rehearsalsAPI.getResponses(rehearsalId);
+        const responses = responsesResponse.data.responses || [];
+        const participantIds = responses
+          .filter((r: any) => r.response === 'yes')
+          .map((r: any) => String(r.userId));
+        setSelectedMemberIds(participantIds);
+
+      } catch (error) {
+        console.error('Failed to load rehearsal:', error);
+        Alert.alert('Error', 'Failed to load rehearsal data');
+      } finally {
+        setLoadingRehearsal(false);
+      }
+    };
+
+    loadRehearsal();
+  }, [routeParams?.rehearsalId]);
 
   // Handlers
   const handleTimeSelect = (startTime: string, endTime: string) => {
@@ -179,7 +233,8 @@ export function useAddRehearsalForm({
 
   const handleCreateProject = () => {
     setShowProjectPicker(false);
-    navigation.navigate('CreateProject');
+    // @ts-ignore - Navigate to Projects tab -> CreateProject screen
+    navigation.navigate('Projects', { screen: 'CreateProject' });
   };
 
   return {
@@ -219,5 +274,9 @@ export function useAddRehearsalForm({
     resetForm,
     handleSelectProject,
     handleCreateProject,
+    // Edit mode state
+    isEditMode,
+    loadingRehearsal,
+    rehearsalId: routeParams?.rehearsalId,
   };
 }

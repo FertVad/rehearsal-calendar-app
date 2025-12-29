@@ -106,9 +106,9 @@ export const DayCard: React.FC<DayCardProps> = ({ date, slots, onCreateRehearsal
                 <Text style={styles.categoryCount}>({group.slots.length})</Text>
               </View>
               {isExpanded ? (
-                <ChevronDown size={20} color="#6b7280" />
+                <ChevronDown size={20} stroke="#6b7280" />
               ) : (
-                <ChevronRight size={20} color="#6b7280" />
+                <ChevronRight size={20} stroke="#6b7280" />
               )}
             </TouchableOpacity>
 

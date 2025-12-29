@@ -24,7 +24,15 @@ export interface NavTranslations {
   calendar: string;
   projects: string;
   addRehearsal: string;
+  planner: string;
   profile: string;
+}
+
+export interface ActionSheetTranslations {
+  title: string;
+  createRehearsal: string;
+  markBusy: string;
+  createProject: string;
 }
 
 export interface DaysTranslations {
@@ -70,9 +78,16 @@ export const ru = {
   },
   nav: {
     calendar: 'Календарь',
-    projects: 'Мои проекты',
-    addRehearsal: 'Добавить',
+    projects: 'Проекты',
+    addRehearsal: '',
+    planner: 'Planner',
     profile: 'Профиль',
+  },
+  actionSheet: {
+    title: 'Новое действие',
+    createRehearsal: 'Создать репетицию',
+    markBusy: 'Отметить занятость',
+    createProject: 'Создать проект',
   },
   days: {
     monday: 'Понедельник',
@@ -122,9 +137,16 @@ export const en = {
   },
   nav: {
     calendar: 'Calendar',
-    projects: 'My Projects',
-    addRehearsal: 'Add',
+    projects: 'Projects',
+    addRehearsal: '',
+    planner: 'Planner',
     profile: 'Profile',
+  },
+  actionSheet: {
+    title: 'New Action',
+    createRehearsal: 'Create Rehearsal',
+    markBusy: 'Mark Busy',
+    createProject: 'Create Project',
   },
   days: {
     monday: 'Monday',

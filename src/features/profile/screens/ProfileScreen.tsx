@@ -8,13 +8,10 @@ import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { GlassButton } from '../../../shared/components';
-import { TabParamList, AppStackParamList } from '../../../navigation';
+import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 
-type ProfileScreenProps = CompositeScreenProps<
-  BottomTabScreenProps<TabParamList, 'Profile'>,
-  NativeStackScreenProps<AppStackParamList>
->;
+type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
 // Common timezones for theatre/rehearsal apps
 const TIMEZONES = [

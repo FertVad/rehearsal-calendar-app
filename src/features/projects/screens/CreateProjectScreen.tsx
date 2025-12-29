@@ -16,12 +16,12 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
-import { AppStackParamList } from '../../../navigation';
+import { ProjectsStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { createProjectScreenStyles as styles } from '../styles';
 
-type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
+type CreateProjectScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'CreateProject'>;
 
 // Common timezones for theatre/rehearsal apps
 const TIMEZONES = [

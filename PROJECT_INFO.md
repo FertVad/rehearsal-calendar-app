@@ -99,6 +99,8 @@ rehearsal-calendar-native/
 
 ## 🗄 Database Schema
 
+> **📖 Complete Database Documentation**: See [../.claude/DB_SCHEMA.md](../.claude/DB_SCHEMA.md) for detailed schema documentation with all tables, columns, indexes, constraints, migrations, and AI safety rules.
+
 ### Core Tables (Native App)
 
 #### `native_users`

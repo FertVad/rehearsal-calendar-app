@@ -14,12 +14,12 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
-import { AppStackParamList } from '../../../navigation';
+import { ProjectsStackParamList } from '../../../navigation';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
 import { formatDateToString as formatDateToStringUtil } from '../../../shared/utils/time';
 
-type ProjectDetailScreenProps = NativeStackScreenProps<AppStackParamList, 'ProjectDetail'>;
+type ProjectDetailScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'ProjectDetail'>;
 
 interface Project {
   id: string;

@@ -64,7 +64,7 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
           onPress={() => setIsOpen(true)}
         >
           <Text style={styles.triggerText}>{getButtonText()}</Text>
-          <ChevronDown size={16} color="#9ca3af" />
+          <ChevronDown size={16} stroke="#9ca3af" />
         </TouchableOpacity>
         <View style={styles.quickActions}>
           <TouchableOpacity

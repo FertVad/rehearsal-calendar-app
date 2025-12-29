@@ -13,12 +13,12 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Spacing } from '../../../shared/constants/colors';
-import { TabParamList } from '../../../navigation';
+import { ProfileStackParamList } from '../../../navigation';
 import { CalendarMonth, EditorHeader, ModeInfo } from '../components';
 import { getDayStatus, formatDate, generateMonths } from '../utils';
 import { styles } from '../styles';
@@ -32,7 +32,7 @@ import {
 import { useI18n } from '../../../contexts/I18nContext';
 import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
 
-type AvailabilityScreenProps = BottomTabScreenProps<TabParamList, 'Availability'>;
+type AvailabilityScreenProps = NativeStackScreenProps<ProfileStackParamList, 'Availability'>;
 
 export default function AvailabilityScreen({ navigation }: AvailabilityScreenProps) {
   const { t, language } = useI18n();

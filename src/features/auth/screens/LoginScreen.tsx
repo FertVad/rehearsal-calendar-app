@@ -12,7 +12,6 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors } from '../../../shared/constants/colors';
 import { GlassButton } from '../../../shared/components';
-import TelegramLoginButton from '../components/TelegramLoginButton';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
@@ -95,17 +94,6 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               variant="purple"
               loading={loading}
               style={styles.loginButton}
-            />
-
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>{t.common.or}</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <TelegramLoginButton
-              mode="login"
-              style={styles.telegramButton}
             />
 
             <GlassButton

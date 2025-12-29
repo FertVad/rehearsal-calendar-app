@@ -5,16 +5,13 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
-import { TabParamList, AppStackParamList } from '../../../navigation';
+import { ProjectsStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useInviteLink } from '../hooks';
 import { projectsScreenStyles as styles } from '../styles';
 
-type ProjectsScreenProps = CompositeScreenProps<
-  BottomTabScreenProps<TabParamList, 'Projects'>,
-  NativeStackScreenProps<AppStackParamList>
->;
+type ProjectsScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'ProjectsMain'>;
 
 export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
   const { projects, selectedProject, setSelectedProject, loading, error } = useProjects();

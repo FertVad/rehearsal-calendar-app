@@ -84,10 +84,11 @@ export async function getRehearsalResponses(rehearsalId) {
       r.notes,
       r.created_at,
       r.updated_at,
-      u.name as user_name,
+      u.first_name,
+      u.last_name,
       u.email as user_email
      FROM native_rehearsal_responses r
-     JOIN users u ON r.user_id = u.id
+     JOIN native_users u ON r.user_id = u.id
      WHERE r.rehearsal_id = $1
      ORDER BY r.created_at DESC`,
     [rehearsalId]
@@ -103,7 +104,7 @@ export async function getRehearsalResponses(rehearsalId) {
     updatedAt: r.updated_at,
     user: {
       id: String(r.user_id),
-      name: r.user_name,
+      name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
       email: r.user_email,
     },
   }));

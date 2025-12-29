@@ -6,7 +6,7 @@ import { useFocusEffect, CompositeScreenProps } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
-import { TabParamList, AppStackParamList } from '../../../navigation';
+import { CalendarStackParamList, TabParamList } from '../../../navigation';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import DayDetailsModal from '../components/DayDetailsModal';
 import MyRehearsalsModal from '../components/MyRehearsalsModal';
@@ -22,10 +22,7 @@ import { useRehearsals, useRSVP } from '../hooks';
 import { calendarScreenStyles as styles } from '../styles';
 import { unsyncRehearsal } from '../../../shared/services/calendar';
 
-type CalendarScreenProps = CompositeScreenProps<
-  BottomTabScreenProps<TabParamList, 'Calendar'>,
-  NativeStackScreenProps<AppStackParamList>
->;
+type CalendarScreenProps = NativeStackScreenProps<CalendarStackParamList, 'CalendarMain'>;
 
 export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   const { projects, selectedProject } = useProjects();
@@ -317,7 +314,10 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
         {screenMode === 'admin' && (
           <SmartPlannerButton
             adminProjects={adminProjects}
-            onPress={(projectId) => navigation.navigate('SmartPlanner', { projectId })}
+            onPress={(projectId) => {
+              // @ts-ignore - Navigate to Planner tab, which is in parent TabNavigator
+              navigation.navigate('Planner', { screen: 'SmartPlanner', params: { projectId } });
+            }}
           />
         )}
 

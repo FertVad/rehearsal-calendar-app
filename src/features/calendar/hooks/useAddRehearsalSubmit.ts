@@ -25,6 +25,8 @@ interface UseAddRehearsalSubmitProps {
   memberAvailability: Record<string, { timeRanges: TimeRange[] }>;
   resetForm: () => void;
   t: any;
+  isEditMode: boolean;
+  rehearsalId?: string;
 }
 
 export function useAddRehearsalSubmit({
@@ -38,11 +40,13 @@ export function useAddRehearsalSubmit({
   memberAvailability,
   resetForm,
   t,
+  isEditMode,
+  rehearsalId,
 }: UseAddRehearsalSubmitProps) {
   const navigation = useNavigation<NavigationType>();
   const [loading, setLoading] = useState(false);
 
-  const createRehearsal = async () => {
+  const saveRehearsal = async () => {
     setLoading(true);
 
     try {
@@ -58,16 +62,28 @@ export function useAddRehearsalSubmit({
         participant_ids: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
       };
 
-      const response = await rehearsalsAPI.create(localSelectedProject!.id, rehearsalData);
-      const createdRehearsal = response.data.rehearsal; // Server returns { rehearsal: {...} }
+      let savedRehearsal;
+
+      // Update or create based on mode
+      if (isEditMode && rehearsalId) {
+        const response = await rehearsalsAPI.update(
+          localSelectedProject!.id,
+          rehearsalId,
+          rehearsalData
+        );
+        savedRehearsal = response.data.rehearsal || response.data;
+      } else {
+        const response = await rehearsalsAPI.create(localSelectedProject!.id, rehearsalData);
+        savedRehearsal = response.data.rehearsal;
+      }
 
       // Auto-sync to calendar if export is enabled
       try {
         const syncSettings = await getSyncSettings();
 
-        if (syncSettings.exportEnabled && syncSettings.exportCalendarId && createdRehearsal?.id) {
+        if (syncSettings.exportEnabled && syncSettings.exportCalendarId && savedRehearsal?.id) {
           const rehearsalWithProject = {
-            id: createdRehearsal.id,
+            id: savedRehearsal.id,
             projectId: localSelectedProject!.id,
             projectName: localSelectedProject!.name,
             startsAt: rehearsalData.startsAt,
@@ -82,9 +98,14 @@ export function useAddRehearsalSubmit({
         console.error('[AddRehearsal] Failed to auto-sync to calendar:', syncError);
       }
 
+      // Success message based on mode
+      const successMessage = isEditMode
+        ? t.rehearsals.rehearsalUpdated
+        : t.rehearsals.rehearsalCreated;
+
       Alert.alert(
         t.rehearsals.success,
-        t.rehearsals.rehearsalCreated,
+        successMessage,
         [
           {
             text: 'OK',
@@ -96,10 +117,14 @@ export function useAddRehearsalSubmit({
         ]
       );
     } catch (error: any) {
-      console.error('Failed to create rehearsal:', error);
+      console.error('Failed to save rehearsal:', error);
+      const errorMessage = isEditMode
+        ? t.rehearsals.updateError
+        : t.rehearsals.createError;
+
       Alert.alert(
         t.common.error,
-        error.response?.data?.error || error.message || t.rehearsals.createError
+        error.response?.data?.error || error.message || errorMessage
       );
     } finally {
       setLoading(false);
@@ -146,7 +171,7 @@ export function useAddRehearsalSubmit({
             {
               text: t.rehearsals.createAnyway,
               style: 'destructive',
-              onPress: () => createRehearsal(),
+              onPress: () => saveRehearsal(),
             },
           ]
         );
@@ -154,8 +179,8 @@ export function useAddRehearsalSubmit({
       }
     }
 
-    // No conflicts, create rehearsal
-    createRehearsal();
+    // No conflicts, save rehearsal
+    saveRehearsal();
   };
 
   return {

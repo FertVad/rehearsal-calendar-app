@@ -2,6 +2,9 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CalendarStackParamList } from '../../../navigation';
 import { Colors } from '../../../shared/constants/colors';
 import { Rehearsal, RSVPStatus, Project } from '../../../shared/types';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
@@ -48,6 +51,7 @@ export default function TodayRehearsals({
   setAdminStats,
 }: TodayRehearsalsProps) {
   const { t, language } = useI18n();
+  const navigation = useNavigation<NativeStackNavigationProp<CalendarStackParamList>>();
   const [syncedRehearsals, setSyncedRehearsals] = useState<Record<string, boolean>>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [modalParticipants, setModalParticipants] = useState<any[]>([]);
@@ -186,7 +190,10 @@ export default function TodayRehearsals({
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => {
-                        // TODO: Implement edit functionality
+                        navigation.navigate('AddRehearsal', {
+                          rehearsalId: rehearsal.id,
+                          projectId: rehearsal.projectId,
+                        });
                       }}
                       style={{ padding: 4 }}
                     >

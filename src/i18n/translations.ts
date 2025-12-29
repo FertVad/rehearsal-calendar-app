@@ -13,6 +13,8 @@ export interface Translations {
   common: common.CommonTranslations;
   // Navigation
   nav: common.NavTranslations;
+  // Action Sheet
+  actionSheet: common.ActionSheetTranslations;
   // Auth
   auth: auth.AuthTranslations;
   // Calendar

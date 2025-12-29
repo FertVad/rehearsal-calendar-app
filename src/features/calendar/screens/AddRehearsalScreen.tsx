@@ -15,7 +15,7 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
-import { AppStackParamList } from '../../../navigation';
+import { CalendarStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { ActorSelector } from '../components/ActorSelector';
@@ -29,7 +29,7 @@ import {
 } from '../hooks';
 import { formatDate, formatTime, formatDisplayDate } from '../utils/rehearsalFormatters';
 
-type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
+type RouteType = RouteProp<CalendarStackParamList, 'AddRehearsal'>;
 
 export default function AddRehearsalScreen() {
   const route = useRoute<RouteType>();
@@ -65,14 +65,28 @@ export default function AddRehearsalScreen() {
     memberAvailability,
     resetForm: form.resetForm,
     t,
+    isEditMode: form.isEditMode,
+    rehearsalId: form.rehearsalId,
   });
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        {/* Loading indicator for edit mode */}
+        {form.loadingRehearsal && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={Colors.accent.purple} />
+            <Text style={{ marginTop: 10, color: Colors.text.primary }}>
+              {t.common.loading}
+            </Text>
+          </View>
+        )}
+
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>{t.rehearsals.addRehearsal}</Text>
+          <Text style={styles.title}>
+            {form.isEditMode ? t.rehearsals.editRehearsal : t.rehearsals.addRehearsal}
+          </Text>
         </View>
 
         {/* Form */}
@@ -264,16 +278,22 @@ export default function AddRehearsalScreen() {
 
           {/* Submit Button */}
           <TouchableOpacity
-            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            style={[styles.submitButton, (loading || form.loadingRehearsal) && styles.submitButtonDisabled]}
             onPress={handleSubmit}
-            disabled={loading}
+            disabled={loading || form.loadingRehearsal}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Ionicons name="add-circle" size={20} color="#fff" />
-                <Text style={styles.submitButtonText}>{t.rehearsals.createRehearsal}</Text>
+                <Ionicons
+                  name={form.isEditMode ? 'checkmark-circle' : 'add-circle'}
+                  size={20}
+                  color="#fff"
+                />
+                <Text style={styles.submitButtonText}>
+                  {form.isEditMode ? t.rehearsals.updateRehearsal : t.rehearsals.createRehearsal}
+                </Text>
               </>
             )}
           </TouchableOpacity>

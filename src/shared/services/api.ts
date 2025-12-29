@@ -227,6 +227,10 @@ export const rehearsalsAPI = {
   delete: (projectId: string, rehearsalId: string) =>
     api.delete(`/native/projects/${projectId}/rehearsals/${rehearsalId}`),
 
+  // Get RSVP responses for rehearsal
+  getResponses: (rehearsalId: string) =>
+    api.get(`/native/rehearsals/${rehearsalId}/responses`),
+
   // RSVP - Submit response ('yes' = like, null = unlike/delete)
   respond: (rehearsalId: string, status: 'yes' | null, notes?: string) =>
     api.post(`/native/rehearsals/${rehearsalId}/respond`, { response: status, notes }),
@@ -234,10 +238,6 @@ export const rehearsalsAPI = {
   // RSVP - Get my response
   getMyResponse: (rehearsalId: string) =>
     api.get(`/native/rehearsals/${rehearsalId}/my-response`),
-
-  // RSVP - Get all responses (for admin)
-  getResponses: (rehearsalId: string) =>
-    api.get(`/native/rehearsals/${rehearsalId}/responses`),
 };
 
 // Invites API (Native App)

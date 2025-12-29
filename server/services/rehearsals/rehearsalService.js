@@ -262,7 +262,7 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
  * @returns {Promise<object>} - Updated rehearsal
  */
 export async function updateRehearsal(rehearsalId, projectId, updateData) {
-  const { title, description, date, startTime, endTime, startsAt, endsAt, location } = updateData;
+  const { title, description, date, startTime, endTime, startsAt, endsAt, location, participant_ids } = updateData;
 
   let startsAtISO, endsAtISO;
 
@@ -306,6 +306,22 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
     startsAtISO,
     endsAtISO
   );
+
+  // Update participants if provided
+  if (participant_ids !== undefined) {
+    // Delete existing responses for this rehearsal
+    await db.run('DELETE FROM native_rehearsal_responses WHERE rehearsal_id = $1', [rehearsalId]);
+
+    // Insert new participant responses (if any selected)
+    if (participant_ids.length > 0) {
+      for (const userId of participant_ids) {
+        await db.run(
+          'INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW())',
+          [rehearsalId, userId, 'yes']
+        );
+      }
+    }
+  }
 
   return {
     id: String(updatedRehearsal.id),

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useState, createContext, useContext } from 'react';
+import { Platform, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import * as Linking from 'expo-linking';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { Colors } from '../shared/constants/colors';
+import { CreateActionSheet } from '../shared/components/CreateActionSheet';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
 import CalendarScreen from '../features/calendar/screens/CalendarScreen';
@@ -20,6 +21,21 @@ import AvailabilityScreen from '../features/availability/screens/AvailabilityScr
 import ProfileScreen from '../features/profile/screens/ProfileScreen';
 import CalendarSyncSettingsScreen from '../features/profile/screens/CalendarSyncSettingsScreen';
 import SmartPlannerScreen from '../features/smart-planner/screens/SmartPlannerScreen';
+import SmartPlannerTabScreen from '../features/smart-planner/screens/SmartPlannerTabScreen';
+
+// Context for ActionSheet state
+const ActionSheetContext = createContext<{
+  showActionSheet: boolean;
+  setShowActionSheet: (show: boolean) => void;
+} | null>(null);
+
+const useActionSheet = () => {
+  const context = useContext(ActionSheetContext);
+  if (!context) {
+    throw new Error('useActionSheet must be used within ActionSheetProvider');
+  }
+  return context;
+};
 
 const prefix = Linking.createURL('/');
 
@@ -43,7 +59,7 @@ const linking: any = {
         screens: {
           Calendar: 'calendar',
           Projects: 'projects',
-          Availability: 'availability',
+          Planner: 'planner',
           Profile: 'profile',
         },
       },
@@ -57,32 +73,54 @@ export type AuthStackParamList = {
   Register: undefined;
 };
 
+export type CalendarStackParamList = {
+  CalendarMain: undefined;
+  AddRehearsal: {
+    projectId?: string;
+    rehearsalId?: string;
+    prefilledDate?: string;
+    prefilledTime?: string;
+    prefilledEndTime?: string;
+  };
+};
+
+export type ProjectsStackParamList = {
+  ProjectsMain: undefined;
+  CreateProject: undefined;
+  ProjectDetail: { projectId: string };
+};
+
+export type PlannerStackParamList = {
+  PlannerMain: undefined;
+  SmartPlanner: { projectId: string };
+};
+
+export type ProfileStackParamList = {
+  ProfileMain: undefined;
+  CalendarSyncSettings: undefined;
+  Availability: undefined;
+};
+
 export type TabParamList = {
   Calendar: undefined;
   Projects: undefined;
   Create: undefined;
-  Availability: undefined;
+  Planner: undefined;
   Profile: undefined;
 };
 
 export type AppStackParamList = {
   MainTabs: undefined;
-  AddRehearsal: {
-    projectId?: string;
-    prefilledDate?: string;
-    prefilledTime?: string;
-    prefilledEndTime?: string;
-  };
-  CreateProject: undefined;
   JoinProject: { code: string };
-  ProjectDetail: { projectId: string };
-  SmartPlanner: { projectId: string };
-  CalendarSyncSettings: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 const AppTabs = createBottomTabNavigator<TabParamList>();
+const CalendarStack = createNativeStackNavigator<CalendarStackParamList>();
+const ProjectsStack = createNativeStackNavigator<ProjectsStackParamList>();
+const PlannerStack = createNativeStackNavigator<PlannerStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 function AuthNavigator() {
   return (
@@ -97,125 +135,266 @@ function AuthNavigator() {
   );
 }
 
-function TabNavigator() {
-  const { t } = useI18n();
-
+// Calendar Stack Navigator
+function CalendarNavigator() {
   return (
-    <AppTabs.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: Colors.bg.secondary,
-          borderTopWidth: 1,
-          borderTopColor: Colors.glass.border,
-          paddingBottom: 28,
-          paddingTop: 8,
-          height: 80,
-        },
-        tabBarActiveTintColor: Colors.accent.purple,
-        tabBarInactiveTintColor: Colors.text.secondary,
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
-      }}
-    >
-      <AppTabs.Screen
-        name="Calendar"
-        component={CalendarScreen}
-        options={{
-          tabBarLabel: t.nav.calendar,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
-        }}
-      />
-      <AppTabs.Screen
-        name="Projects"
-        component={ProjectsScreen}
-        options={{
-          tabBarLabel: t.nav.projects,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="folder" size={size} color={color} />
-          ),
-        }}
-      />
-      <AppTabs.Screen
-        name="Create"
-        component={AddRehearsalScreen}
-        options={{
-          tabBarLabel: t.nav.addRehearsal,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" size={size + 4} color={color} />
-          ),
-        }}
-      />
-      <AppTabs.Screen
-        name="Availability"
-        component={AvailabilityScreen}
-        options={{
-          tabBarLabel: t.profile.availability,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time" size={size} color={color} />
-          ),
-        }}
-      />
-      <AppTabs.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          tabBarLabel: t.nav.profile,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-        }}
-      />
-    </AppTabs.Navigator>
-  );
-}
-
-function AppNavigator() {
-  return (
-    <AppStack.Navigator
+    <CalendarStack.Navigator
+      initialRouteName="CalendarMain"
       screenOptions={{
         headerShown: false,
       }}
     >
-      <AppStack.Screen name="MainTabs" component={TabNavigator} />
-      <AppStack.Screen
+      <CalendarStack.Screen name="CalendarMain" component={CalendarScreen} />
+      <CalendarStack.Screen
         name="AddRehearsal"
         component={AddRehearsalScreen}
         options={{
           presentation: 'modal',
         }}
       />
-      <AppStack.Screen
+    </CalendarStack.Navigator>
+  );
+}
+
+// Projects Stack Navigator
+function ProjectsNavigator() {
+  return (
+    <ProjectsStack.Navigator
+      initialRouteName="ProjectsMain"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <ProjectsStack.Screen name="ProjectsMain" component={ProjectsScreen} />
+      <ProjectsStack.Screen
         name="CreateProject"
         component={CreateProjectScreen}
         options={{
           presentation: 'modal',
         }}
       />
-      <AppStack.Screen
-        name="JoinProject"
-        component={JoinProjectScreen}
-        options={{
-          presentation: 'modal',
-        }}
-      />
-      <AppStack.Screen
+      <ProjectsStack.Screen
         name="ProjectDetail"
         component={ProjectDetailScreen}
       />
-      <AppStack.Screen
+    </ProjectsStack.Navigator>
+  );
+}
+
+// Planner Stack Navigator
+function PlannerNavigator() {
+  return (
+    <PlannerStack.Navigator
+      initialRouteName="PlannerMain"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <PlannerStack.Screen name="PlannerMain" component={SmartPlannerTabScreen} />
+      <PlannerStack.Screen
         name="SmartPlanner"
         component={SmartPlannerScreen}
       />
-      <AppStack.Screen
+    </PlannerStack.Navigator>
+  );
+}
+
+// Profile Stack Navigator
+function ProfileNavigator() {
+  return (
+    <ProfileStack.Navigator
+      initialRouteName="ProfileMain"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
+      <ProfileStack.Screen
         name="CalendarSyncSettings"
         component={CalendarSyncSettingsScreen}
       />
-    </AppStack.Navigator>
+      <ProfileStack.Screen
+        name="Availability"
+        component={AvailabilityScreen}
+      />
+    </ProfileStack.Navigator>
+  );
+}
+
+// Empty component for Create tab - never actually shown
+const EmptyCreateScreen = () => <View />;
+
+// Custom tab button component for the center "+" button
+const CreateTabButton = ({ onPress }: { onPress: () => void }) => {
+  return (
+    <TouchableOpacity
+      style={tabButtonStyles.container}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={tabButtonStyles.iconContainer}>
+        <Ionicons
+          name="add-circle"
+          size={56}
+          color={Colors.accent.purple}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const tabButtonStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: -14, // Align bottom edge with text baseline
+  },
+});
+
+// Wrapper component to handle ActionSheet navigation
+// Must use double-nested navigation since this is outside TabNavigator
+function ActionSheetWrapper() {
+  const navigation = useNavigation<any>();
+  const { showActionSheet, setShowActionSheet } = useActionSheet();
+
+  return (
+    <CreateActionSheet
+      visible={showActionSheet}
+      onClose={() => setShowActionSheet(false)}
+      onCreateRehearsal={() => {
+        setShowActionSheet(false);
+        navigation.navigate('MainTabs', {
+          screen: 'Calendar',
+          params: { screen: 'AddRehearsal', params: {} }
+        });
+      }}
+      onMarkBusy={() => {
+        setShowActionSheet(false);
+        navigation.navigate('MainTabs', {
+          screen: 'Profile',
+          params: { screen: 'Availability' }
+        });
+      }}
+      onCreateProject={() => {
+        setShowActionSheet(false);
+        navigation.navigate('MainTabs', {
+          screen: 'Projects',
+          params: { screen: 'CreateProject' }
+        });
+      }}
+    />
+  );
+}
+
+function TabNavigator() {
+  const { t } = useI18n();
+  const { showActionSheet, setShowActionSheet } = useActionSheet();
+
+  return (
+    <>
+      <AppTabs.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            backgroundColor: Colors.bg.secondary,
+            borderTopWidth: 1,
+            borderTopColor: Colors.glass.border,
+            paddingBottom: 28,
+            paddingTop: 8,
+            height: 80,
+          },
+          tabBarActiveTintColor: Colors.accent.purple,
+          tabBarInactiveTintColor: Colors.text.secondary,
+          tabBarLabelStyle: {
+            fontSize: 10,
+            fontWeight: '600',
+          },
+          tabBarItemStyle: {
+            paddingHorizontal: 0,
+          },
+        }}
+      >
+        <AppTabs.Screen
+          name="Calendar"
+          component={CalendarNavigator}
+          options={{
+            tabBarLabel: t.nav.calendar,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="calendar-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <AppTabs.Screen
+          name="Projects"
+          component={ProjectsNavigator}
+          options={{
+            tabBarLabel: t.nav.projects,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="people-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <AppTabs.Screen
+          name="Create"
+          component={EmptyCreateScreen}
+          options={{
+            tabBarLabel: t.nav.addRehearsal,
+            tabBarButton: (props) => (
+              <CreateTabButton onPress={() => setShowActionSheet(true)} />
+            ),
+          }}
+        />
+        <AppTabs.Screen
+          name="Planner"
+          component={PlannerNavigator}
+          options={{
+            tabBarLabel: t.nav.planner,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="bar-chart-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <AppTabs.Screen
+          name="Profile"
+          component={ProfileNavigator}
+          options={{
+            tabBarLabel: t.nav.profile,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="person-circle-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      </AppTabs.Navigator>
+      <ActionSheetWrapper />
+    </>
+  );
+}
+
+function AppNavigator() {
+  const [showActionSheet, setShowActionSheet] = useState(false);
+
+  return (
+    <ActionSheetContext.Provider value={{ showActionSheet, setShowActionSheet }}>
+      <AppStack.Navigator
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <AppStack.Screen name="MainTabs" component={TabNavigator} />
+        <AppStack.Screen
+          name="JoinProject"
+          component={JoinProjectScreen}
+          options={{
+            presentation: 'modal',
+          }}
+        />
+      </AppStack.Navigator>
+    </ActionSheetContext.Provider>
   );
 }
 

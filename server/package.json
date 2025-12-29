@@ -10,21 +10,25 @@
     "migrate": "node database/migrate.js",
     "migrate:neon": "node scripts/migrate-neon.js",
     "migrate:native": "node scripts/migrate-native-app.js",
-    "check": "node scripts/check-consistency.js"
+    "check": "node scripts/check-consistency.js",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "dependencies": {
-    "express": "^4.21.2",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.0",
-    "jsonwebtoken": "^9.0.2",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^12.2.0",
-    "pg": "^8.11.3",
-    "telegraf": "^4.16.3",
-    "date-fns": "^3.0.0"
+    "cors": "^2.8.5",
+    "date-fns": "^3.0.0",
+    "dotenv": "^17.2.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "jest": "^30.2.0",
+    "nodemon": "^3.0.1",
+    "supertest": "^7.1.4"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -175,27 +175,3 @@ export function formatAvailabilitySlotsResponse(slots, timezone) {
     };
   });
 }
-
-/**
- * Convert rehearsal with TIMESTAMPTZ to API response format
- * @param {Object} rehearsal - Rehearsal object from database with starts_at/ends_at
- * @returns {Object} - Rehearsal formatted for API response
- *
- * @example
- * formatRehearsalResponse({
- *   id: 1,
- *   starts_at: new Date(...),
- *   ends_at: new Date(...),
- *   ...
- * })
- */
-export function formatRehearsalResponse(rehearsal) {
-  return {
-    ...rehearsal,
-    startsAt: timestampToISO(rehearsal.starts_at),
-    endsAt: timestampToISO(rehearsal.ends_at),
-    // Remove old fields if they exist
-    starts_at: undefined,
-    ends_at: undefined,
-  };
-}

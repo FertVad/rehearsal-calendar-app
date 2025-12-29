@@ -47,6 +47,7 @@ export interface RehearsalsTranslations {
   deleteMessage: string;
   participants: string;
   createRehearsal: string;
+  updateRehearsal: string;
   loadMembersError: string;
   loadAvailabilityError: string;
   projectNotSelected: string;
@@ -56,6 +57,8 @@ export interface RehearsalsTranslations {
   createAnyway: string;
   success: string;
   rehearsalCreated: string;
+  rehearsalUpdated: string;
+  updateError: string;
   noProjects: string;
   noAdminProjects: string;
   createNewProject: string;
@@ -121,6 +124,7 @@ export const ru = {
     deleteMessage: 'Это действие нельзя отменить',
     participants: 'Участники',
     createRehearsal: 'Создать репетицию',
+    updateRehearsal: 'Сохранить изменения',
     loadMembersError: 'Не удалось загрузить участников проекта',
     loadAvailabilityError: 'Не удалось загрузить доступность участников',
     projectNotSelected: 'Выберите проект для создания репетиции',
@@ -130,6 +134,8 @@ export const ru = {
     createAnyway: 'Создать всё равно',
     success: 'Успешно',
     rehearsalCreated: 'Репетиция создана',
+    rehearsalUpdated: 'Репетиция успешно обновлена',
+    updateError: 'Не удалось обновить репетицию',
     noProjects: 'Нет проектов',
     noAdminProjects: 'Нет проектов, где вы являетесь администратором',
     createNewProject: 'Создать новый проект',
@@ -196,6 +202,7 @@ export const en = {
     deleteMessage: 'This action cannot be undone',
     participants: 'Participants',
     createRehearsal: 'Create Rehearsal',
+    updateRehearsal: 'Save Changes',
     loadMembersError: 'Failed to load project members',
     loadAvailabilityError: 'Failed to load member availability',
     projectNotSelected: 'Select a project to create a rehearsal',
@@ -205,6 +212,8 @@ export const en = {
     createAnyway: 'Create Anyway',
     success: 'Success',
     rehearsalCreated: 'Rehearsal created',
+    rehearsalUpdated: 'Rehearsal updated successfully',
+    updateError: 'Failed to update rehearsal',
     noProjects: 'No projects',
     noAdminProjects: 'No projects where you are an administrator',
     createNewProject: 'Create New Project',
