@@ -4,6 +4,7 @@ import { Colors, FontSize, FontWeight, Spacing } from '../../../shared/constants
 import { Rehearsal } from '../../../shared/types';
 import { formatDateToString } from '../../../shared/utils/time';
 import { useI18n } from '../../../contexts/I18nContext';
+import { useWeekStart, getWeekStart as getWeekStartUtil } from '../../../hooks/useWeekStart';
 
 interface WeeklyCalendarProps {
   rehearsals: Rehearsal[];
@@ -33,25 +34,26 @@ const CENTER_INDEX = Math.floor(INITIAL_WEEKS / 2);
 
 export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
   const { t, language } = useI18n();
+  const weekStartDay = useWeekStart();
   const flatListRef = useRef<FlatList>(null);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(CENTER_INDEX);
 
   const DAYS_OF_WEEK = useMemo(() => {
-    if (language === 'ru') {
-      return ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
-    }
-    return ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
-  }, [language]);
+    const daysMonday = language === 'ru'
+      ? ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС']
+      : ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
 
-  // Get the start of current week (Monday)
+    const daysSunday = language === 'ru'
+      ? ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ']
+      : ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+    return weekStartDay === 'monday' ? daysMonday : daysSunday;
+  }, [language, weekStartDay]);
+
+  // Get the start of current week based on user preference
   const getWeekStart = useCallback((date: Date): Date => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    d.setDate(diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
+    return getWeekStartUtil(date, weekStartDay);
+  }, [weekStartDay]);
 
   // Generate week data
   const generateWeekData = useCallback((weekStart: Date): DayInfo[] => {

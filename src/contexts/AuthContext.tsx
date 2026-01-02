@@ -13,6 +13,7 @@ interface User {
   avatarUrl?: string;
   timezone?: string;
   locale?: string;
+  weekStartDay?: 'monday' | 'sunday';
   notificationsEnabled?: boolean;
   emailNotifications?: boolean;
   createdAt: string;
@@ -54,9 +55,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Verify token and get user
       const response = await authAPI.getMe();
       const user = response.data.user;
+
+      if (!user) {
+        throw new Error('User data not found in response');
+      }
+
       setUser(user);
       // Cache user data for offline use
       await AsyncStorage.setItem('cachedUser', JSON.stringify(user));
+      // Sync language preference from database
+      if (user.locale) {
+        await AsyncStorage.setItem('userLanguage', user.locale);
+      }
+      // Sync week start preference from database
+      if (user.weekStartDay) {
+        await AsyncStorage.setItem('weekStartDay', user.weekStartDay);
+      }
       setLoading(false);
     } catch (err: any) {
       // Only clear tokens if they are actually invalid (401/403)
@@ -98,6 +112,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
+      // Sync language preference from database
+      if (user.locale) {
+        await AsyncStorage.setItem('userLanguage', user.locale);
+      }
+      // Sync week start preference from database
+      if (user.weekStartDay) {
+        await AsyncStorage.setItem('weekStartDay', user.weekStartDay);
+      }
 
       setUser(user);
     } catch (err: any) {
@@ -124,6 +146,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
+      // Sync language preference from database
+      if (user.locale) {
+        await AsyncStorage.setItem('userLanguage', user.locale);
+      }
+      // Sync week start preference from database
+      if (user.weekStartDay) {
+        await AsyncStorage.setItem('weekStartDay', user.weekStartDay);
+      }
 
       setUser(user);
     } catch (err: any) {
@@ -186,7 +216,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setError(null);
       const response = await authAPI.updateMe(data);
-      setUser(response.data.user);
+      const updatedUser = response.data.user;
+      setUser(updatedUser);
+      // Sync language preference if locale was updated
+      if (data.locale) {
+        await AsyncStorage.setItem('userLanguage', data.locale);
+      }
+      // Sync week start preference if weekStartDay was updated
+      if (data.weekStartDay) {
+        await AsyncStorage.setItem('weekStartDay', data.weekStartDay);
+      }
+      // Update cached user data
+      await AsyncStorage.setItem('cachedUser', JSON.stringify(updatedUser));
     } catch (err: any) {
       const message = err.response?.data?.error || 'Update failed';
       setError(message);

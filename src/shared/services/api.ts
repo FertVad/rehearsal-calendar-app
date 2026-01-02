@@ -156,6 +156,7 @@ export const authAPI = {
     password?: string;
     timezone?: string;
     locale?: string;
+    weekStartDay?: 'monday' | 'sunday';
     notificationsEnabled?: boolean;
     emailNotifications?: boolean;
   }) => api.put('/auth/me', data),

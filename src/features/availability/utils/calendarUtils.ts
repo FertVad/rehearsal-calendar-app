@@ -4,6 +4,7 @@
 import { Spacing } from '../../../shared/constants/colors';
 import { MonthData } from '../types/availability';
 import { MONTH_TITLE_HEIGHT, WEEKDAY_ROW_HEIGHT, DAY_ROW_HEIGHT } from '../constants/availabilityConstants';
+import { WeekStartDay } from '../../../hooks/useWeekStart';
 
 /**
  * Generate months data for calendar
@@ -27,14 +28,24 @@ export const generateMonths = (count: number): (MonthData & { key: string })[] =
 /**
  * Get days in month with padding for week alignment
  */
-export const getDaysInMonth = (year: number, month: number): (number | null)[] => {
+export const getDaysInMonth = (
+  year: number,
+  month: number,
+  weekStart: WeekStartDay = 'monday'
+): (number | null)[] => {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const daysInMonth = lastDay.getDate();
 
-  // Get day of week (0 = Sunday, convert to Monday = 0)
-  let startDayOfWeek = firstDay.getDay() - 1;
-  if (startDayOfWeek < 0) startDayOfWeek = 6;
+  // Get day of week (0 = Sunday, 6 = Saturday)
+  let startDayOfWeek = firstDay.getDay();
+
+  // Convert based on week start preference
+  if (weekStart === 'monday') {
+    // Convert to Monday = 0, Sunday = 6
+    startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+  }
+  // For Sunday start, use as-is (Sunday = 0, Saturday = 6)
 
   const days: (number | null)[] = [];
 
@@ -79,7 +90,8 @@ export const calculateDateOffset = (
   targetYear: number,
   targetMonth: number,
   targetDay: number,
-  months: { year: number; month: number; key: string }[]
+  months: { year: number; month: number; key: string }[],
+  weekStart: WeekStartDay = 'monday'
 ): number => {
   let offset = Spacing.xl; // Initial padding
 
@@ -93,8 +105,12 @@ export const calculateDateOffset = (
 
       // Calculate which row the day is in
       const firstDay = new Date(m.year, m.month, 1);
-      let startDayOfWeek = firstDay.getDay() - 1;
-      if (startDayOfWeek < 0) startDayOfWeek = 6;
+      let startDayOfWeek = firstDay.getDay();
+
+      // Convert based on week start preference
+      if (weekStart === 'monday') {
+        startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+      }
 
       const dayIndex = startDayOfWeek + targetDay - 1;
       const rowIndex = Math.floor(dayIndex / 7);
@@ -107,8 +123,12 @@ export const calculateDateOffset = (
     // Add height of this month
     const firstDay = new Date(m.year, m.month, 1);
     const lastDay = new Date(m.year, m.month + 1, 0);
-    let startDayOfWeek = firstDay.getDay() - 1;
-    if (startDayOfWeek < 0) startDayOfWeek = 6;
+    let startDayOfWeek = firstDay.getDay();
+
+    // Convert based on week start preference
+    if (weekStart === 'monday') {
+      startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+    }
 
     const totalCells = startDayOfWeek + lastDay.getDate();
     const numRows = Math.ceil(totalCells / 7);

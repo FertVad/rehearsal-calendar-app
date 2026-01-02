@@ -38,7 +38,7 @@ router.post('/register', async (req, res) => {
     // Get user data
     const user = await db.get(
       `SELECT id, email, first_name, last_name, timezone, locale,
-              notifications_enabled, email_notifications
+              notifications_enabled, email_notifications, week_start_day
        FROM native_users WHERE id = $1`,
       [userId]
     );
@@ -53,6 +53,7 @@ router.post('/register', async (req, res) => {
         locale: user.locale,
         notificationsEnabled: user.notifications_enabled,
         emailNotifications: user.email_notifications,
+        weekStartDay: user.week_start_day,
       },
       accessToken,
       refreshToken,
@@ -75,7 +76,7 @@ router.post('/login', async (req, res) => {
     // Get user
     const user = await db.get(
       `SELECT id, email, password_hash, first_name, last_name, timezone, locale,
-              notifications_enabled, email_notifications
+              notifications_enabled, email_notifications, week_start_day
        FROM native_users WHERE email = $1`,
       [email]
     );
@@ -106,6 +107,7 @@ router.post('/login', async (req, res) => {
         locale: user.locale,
         notificationsEnabled: user.notifications_enabled,
         emailNotifications: user.email_notifications,
+        weekStartDay: user.week_start_day,
       },
       accessToken,
       refreshToken,
@@ -145,7 +147,7 @@ router.get('/me', requireAuth, async (req, res) => {
   try {
     const user = await db.get(
       `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-              notifications_enabled, email_notifications, created_at
+              notifications_enabled, email_notifications, week_start_day, created_at
        FROM native_users WHERE id = $1`,
       [req.userId]
     );
@@ -155,17 +157,20 @@ router.get('/me', requireAuth, async (req, res) => {
     }
 
     res.json({
-      id: user.id,
-      email: user.email,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      phone: user.phone,
-      avatarUrl: user.avatar_url,
-      timezone: user.timezone,
-      locale: user.locale,
-      notificationsEnabled: user.notifications_enabled,
-      emailNotifications: user.email_notifications,
-      createdAt: user.created_at,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phone: user.phone,
+        avatarUrl: user.avatar_url,
+        timezone: user.timezone,
+        locale: user.locale,
+        notificationsEnabled: user.notifications_enabled,
+        emailNotifications: user.email_notifications,
+        weekStartDay: user.week_start_day,
+        createdAt: user.created_at,
+      }
     });
   } catch (err) {
     console.error('[Auth] Get me error:', err);
@@ -185,6 +190,7 @@ router.put('/me', requireAuth, async (req, res) => {
       notificationsEnabled,
       emailNotifications,
       password,
+      weekStartDay,
     } = req.body;
 
     const updates = [];
@@ -219,6 +225,14 @@ router.put('/me', requireAuth, async (req, res) => {
       updates.push(`email_notifications = $${paramIndex++}`);
       values.push(emailNotifications);
     }
+    if (weekStartDay !== undefined) {
+      // Validate weekStartDay
+      if (weekStartDay !== 'monday' && weekStartDay !== 'sunday') {
+        return res.status(400).json({ error: 'weekStartDay must be either "monday" or "sunday"' });
+      }
+      updates.push(`week_start_day = $${paramIndex++}`);
+      values.push(weekStartDay);
+    }
     if (password !== undefined) {
       const passwordHash = await bcrypt.hash(password, 10);
       updates.push(`password_hash = $${paramIndex++}`);
@@ -240,22 +254,25 @@ router.put('/me', requireAuth, async (req, res) => {
     // Get updated user
     const user = await db.get(
       `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-              notifications_enabled, email_notifications
+              notifications_enabled, email_notifications, week_start_day
        FROM native_users WHERE id = $1`,
       [req.userId]
     );
 
     res.json({
-      id: user.id,
-      email: user.email,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      phone: user.phone,
-      avatarUrl: user.avatar_url,
-      timezone: user.timezone,
-      locale: user.locale,
-      notificationsEnabled: user.notifications_enabled,
-      emailNotifications: user.email_notifications,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phone: user.phone,
+        avatarUrl: user.avatar_url,
+        timezone: user.timezone,
+        locale: user.locale,
+        notificationsEnabled: user.notifications_enabled,
+        emailNotifications: user.email_notifications,
+        weekStartDay: user.week_start_day,
+      }
     });
   } catch (err) {
     console.error('[Auth] Update me error:', err);

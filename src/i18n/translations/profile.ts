@@ -3,10 +3,9 @@ export interface ProfileTranslations {
   settings: string;
   notifications: string;
   language: string;
-  theme: string;
-  themeDark: string;
-  themeLight: string;
-  availability: string;
+  weekStart: string;
+  weekStartMonday: string;
+  weekStartSunday: string;
   about: string;
   version: string;
   help: string;
@@ -19,10 +18,9 @@ export const ru = {
     settings: 'Настройки',
     notifications: 'Уведомления',
     language: 'Язык',
-    theme: 'Тема',
-    themeDark: 'Тёмная',
-    themeLight: 'Светлая',
-    availability: 'Моя доступность',
+    weekStart: 'Начало недели',
+    weekStartMonday: 'Понедельник',
+    weekStartSunday: 'Воскресенье',
     about: 'О приложении',
     version: 'Версия',
     help: 'Помощь',
@@ -36,10 +34,9 @@ export const en = {
     settings: 'Settings',
     notifications: 'Notifications',
     language: 'Language',
-    theme: 'Theme',
-    themeDark: 'Dark',
-    themeLight: 'Light',
-    availability: 'My Availability',
+    weekStart: 'Week starts on',
+    weekStartMonday: 'Monday',
+    weekStartSunday: 'Sunday',
     about: 'About',
     version: 'Version',
     help: 'Help',

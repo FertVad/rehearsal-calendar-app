@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing } from '../../../../shared/constants/colors';
 import { AvailabilityData } from '../../types';
 import { getDaysInMonth, formatDate } from '../../utils';
 import { DAY_SIZE } from '../../constants';
 import { useI18n } from '../../../../contexts/I18nContext';
+import { useWeekStart } from '../../../../hooks/useWeekStart';
 
 interface CalendarMonthProps {
   year: number;
@@ -26,18 +27,33 @@ export const CalendarMonth: React.FC<CalendarMonthProps> = ({
   getDayStatus,
 }) => {
   const { t } = useI18n();
-  const days = getDaysInMonth(year, month);
+  const weekStartDay = useWeekStart();
+  const days = getDaysInMonth(year, month, weekStartDay);
 
-  // Get localized weekdays in order: Mon, Tue, Wed, Thu, Fri, Sat, Sun
-  const weekdays = [
-    t.days.short.monday,
-    t.days.short.tuesday,
-    t.days.short.wednesday,
-    t.days.short.thursday,
-    t.days.short.friday,
-    t.days.short.saturday,
-    t.days.short.sunday,
-  ];
+  // Get localized weekdays based on week start preference
+  const weekdays = useMemo(() => {
+    const daysMonday = [
+      t.days.short.monday,
+      t.days.short.tuesday,
+      t.days.short.wednesday,
+      t.days.short.thursday,
+      t.days.short.friday,
+      t.days.short.saturday,
+      t.days.short.sunday,
+    ];
+
+    const daysSunday = [
+      t.days.short.sunday,
+      t.days.short.monday,
+      t.days.short.tuesday,
+      t.days.short.wednesday,
+      t.days.short.thursday,
+      t.days.short.friday,
+      t.days.short.saturday,
+    ];
+
+    return weekStartDay === 'monday' ? daysMonday : daysSunday;
+  }, [t, weekStartDay]);
 
   return (
     <View style={styles.monthContainer}>

@@ -98,7 +98,6 @@ export type PlannerStackParamList = {
 export type ProfileStackParamList = {
   ProfileMain: undefined;
   CalendarSyncSettings: undefined;
-  Availability: undefined;
 };
 
 export type TabParamList = {
@@ -213,10 +212,6 @@ function ProfileNavigator() {
       <ProfileStack.Screen
         name="CalendarSyncSettings"
         component={CalendarSyncSettingsScreen}
-      />
-      <ProfileStack.Screen
-        name="Availability"
-        component={AvailabilityScreen}
       />
     </ProfileStack.Navigator>
   );

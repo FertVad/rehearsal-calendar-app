@@ -29,18 +29,33 @@ const TIMEZONES = [
   { value: 'America/Los_Angeles', label: 'Лос-Анджелес (UTC-8)' },
 ];
 
+// Week start options
+const WEEK_START_OPTIONS = [
+  { value: 'monday' as const, labelKey: 'weekStartMonday' as const },
+  { value: 'sunday' as const, labelKey: 'weekStartSunday' as const },
+];
+
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { user, logout, updateUser } = useAuth();
   const { t, language, setLanguage } = useI18n();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [timezoneModalVisible, setTimezoneModalVisible] = useState(false);
+  const [weekStartModalVisible, setWeekStartModalVisible] = useState(false);
 
   const handleLogout = async () => {
     await logout();
   };
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'ru' ? 'en' : 'ru');
+  const toggleLanguage = async () => {
+    const newLanguage = language === 'ru' ? 'en' : 'ru';
+    try {
+      // Save to local state and AsyncStorage
+      await setLanguage(newLanguage);
+      // Save to database
+      await updateUser({ locale: newLanguage });
+    } catch (err: any) {
+      Alert.alert('Ошибка', err.message || 'Не удалось изменить язык');
+    }
   };
 
   const handleTimezoneSelect = async (timezone: string) => {
@@ -55,6 +70,20 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const getCurrentTimezoneLabel = () => {
     const tz = TIMEZONES.find(t => t.value === user?.timezone);
     return tz?.label || user?.timezone || 'Не выбрана';
+  };
+
+  const handleWeekStartSelect = async (weekStart: 'monday' | 'sunday') => {
+    try {
+      await updateUser({ weekStartDay: weekStart });
+      setWeekStartModalVisible(false);
+    } catch (err: any) {
+      Alert.alert('Ошибка', err.message || 'Не удалось обновить начало недели');
+    }
+  };
+
+  const getCurrentWeekStartLabel = () => {
+    const weekStart = user?.weekStartDay || 'monday';
+    return weekStart === 'monday' ? t.profile.weekStartMonday : t.profile.weekStartSunday;
   };
 
   return (
@@ -106,7 +135,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <View style={styles.settingRight}>
               <Text style={styles.settingValue}>
-                {language === 'ru' ? '🇷🇺 Русский' : '🇬🇧 English'}
+                {language === 'ru' ? 'Русский' : 'English'}
               </Text>
               <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
             </View>
@@ -128,29 +157,20 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           </TouchableOpacity>
 
-          {/* Theme */}
-          <TouchableOpacity style={styles.settingItem}>
+          {/* Week Start */}
+          <TouchableOpacity style={styles.settingItem} onPress={() => setWeekStartModalVisible(true)}>
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-                <Ionicons name="moon" size={20} color={Colors.accent.green} />
+              <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                <Ionicons name="calendar-outline" size={20} color={Colors.accent.purple} />
               </View>
-              <Text style={styles.settingLabel}>{t.profile.theme}</Text>
+              <Text style={styles.settingLabel}>{t.profile.weekStart}</Text>
             </View>
             <View style={styles.settingRight}>
-              <Text style={styles.settingValue}>{t.profile.themeDark}</Text>
+              <Text style={styles.settingValue}>
+                {getCurrentWeekStartLabel()}
+              </Text>
               <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
             </View>
-          </TouchableOpacity>
-
-          {/* Availability */}
-          <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Availability')}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                <Ionicons name="time" size={20} color={Colors.accent.yellow} />
-              </View>
-              <Text style={styles.settingLabel}>{t.profile.availability}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
 
           {/* Calendar Sync */}
@@ -240,6 +260,54 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               )}
               style={styles.timezoneList}
             />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Week Start Selection Modal */}
+      <Modal
+        visible={weekStartModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setWeekStartModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {language === 'ru' ? 'Начало недели' : 'Week starts on'}
+              </Text>
+              <TouchableOpacity onPress={() => setWeekStartModalVisible(false)}>
+                <Ionicons name="close" size={24} color={Colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.weekStartOptions}>
+              {WEEK_START_OPTIONS.map((option) => {
+                const isSelected = (user?.weekStartDay || 'monday') === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.timezoneItem,
+                      isSelected && styles.timezoneItemSelected,
+                    ]}
+                    onPress={() => handleWeekStartSelect(option.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.timezoneLabel,
+                        isSelected && styles.timezoneLabelSelected,
+                      ]}
+                    >
+                      {t.profile[option.labelKey]}
+                    </Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         </View>
       </Modal>
