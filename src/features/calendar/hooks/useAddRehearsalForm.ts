@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Platform, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../../navigation';
@@ -23,6 +23,13 @@ interface UseAddRehearsalFormProps {
   setSelectedProject: (project: Project | null) => void;
   routeParams?: RouteParams;
 }
+
+// Helper function to set minutes to 00 (round hours)
+const setMinutesToZero = (date: Date): Date => {
+  const rounded = new Date(date);
+  rounded.setMinutes(0, 0, 0);
+  return rounded;
+};
 
 export function useAddRehearsalForm({
   projects,
@@ -52,11 +59,12 @@ export function useAddRehearsalForm({
     return sorted[0];
   }, [adminProjects]);
 
-  // Form state
+  // Form state - set minutes to 00 for better UX
   const [date, setDate] = useState(new Date());
-  const [startTime, setStartTime] = useState(new Date());
+  const [startTime, setStartTime] = useState(() => setMinutesToZero(new Date()));
   const [endTime, setEndTime] = useState(() => {
-    const end = new Date();
+    const start = setMinutesToZero(new Date());
+    const end = new Date(start);
     end.setHours(end.getHours() + 2);
     return end;
   });
@@ -66,8 +74,10 @@ export function useAddRehearsalForm({
   );
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
 
-  // UI state
-  const [openPicker, setOpenPicker] = useState<'date' | 'start' | 'end' | null>(null);
+  // UI state - separate state for each modal picker
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [loadingRehearsal, setLoadingRehearsal] = useState(false);
@@ -171,30 +181,24 @@ export function useAddRehearsalForm({
   };
 
   const openDatePicker = () => {
-    setOpenPicker('date');
+    setShowDatePicker(true);
   };
 
   const openStartTimePicker = () => {
-    setOpenPicker('start');
+    setShowStartTimePicker(true);
   };
 
   const openEndTimePicker = () => {
-    setOpenPicker('end');
+    setShowEndTimePicker(true);
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setOpenPicker(null);
-    }
     if (selectedDate) {
       setDate(selectedDate);
     }
   };
 
   const handleStartTimeChange = (event: any, selectedTime?: Date) => {
-    if (Platform.OS === 'android') {
-      setOpenPicker(null);
-    }
     if (selectedTime) {
       setStartTime(selectedTime);
       // Auto-adjust end time if it's before start time
@@ -207,9 +211,6 @@ export function useAddRehearsalForm({
   };
 
   const handleEndTimeChange = (event: any, selectedTime?: Date) => {
-    if (Platform.OS === 'android') {
-      setOpenPicker(null);
-    }
     if (selectedTime) {
       setEndTime(selectedTime);
     }
@@ -217,8 +218,9 @@ export function useAddRehearsalForm({
 
   const resetForm = () => {
     setDate(new Date());
-    setStartTime(new Date());
-    const end = new Date();
+    const start = setMinutesToZero(new Date());
+    setStartTime(start);
+    const end = new Date(start);
     end.setHours(end.getHours() + 2);
     setEndTime(end);
     setLocation('');
@@ -254,13 +256,13 @@ export function useAddRehearsalForm({
     setLocalSelectedProject,
     selectedMemberIds,
     setSelectedMemberIds,
-    // UI state (computed from openPicker)
-    showDatePicker: openPicker === 'date',
-    setShowDatePicker: (show: boolean) => setOpenPicker(show ? 'date' : null),
-    showStartTimePicker: openPicker === 'start',
-    setShowStartTimePicker: (show: boolean) => setOpenPicker(show ? 'start' : null),
-    showEndTimePicker: openPicker === 'end',
-    setShowEndTimePicker: (show: boolean) => setOpenPicker(show ? 'end' : null),
+    // UI state
+    showDatePicker,
+    setShowDatePicker,
+    showStartTimePicker,
+    setShowStartTimePicker,
+    showEndTimePicker,
+    setShowEndTimePicker,
     showProjectPicker,
     setShowProjectPicker,
     // Handlers

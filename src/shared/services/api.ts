@@ -231,8 +231,8 @@ export const rehearsalsAPI = {
   getResponses: (rehearsalId: string) =>
     api.get(`/native/rehearsals/${rehearsalId}/responses`),
 
-  // RSVP - Submit response ('yes' = like, null = unlike/delete)
-  respond: (rehearsalId: string, status: 'yes' | null, notes?: string) =>
+  // RSVP - Submit response ('yes' = accepted, 'no' = declined)
+  respond: (rehearsalId: string, status: 'yes' | 'no', notes?: string) =>
     api.post(`/native/rehearsals/${rehearsalId}/respond`, { response: status, notes }),
 
   // RSVP - Get my response

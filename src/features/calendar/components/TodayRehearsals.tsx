@@ -11,8 +11,7 @@ import { formatDateLocalized, formatDateToString } from '../../../shared/utils/t
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
 import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
-import { ParticipantsModal } from './ParticipantsModal';
-import { rehearsalsAPI } from '../../../shared/services/api';
+import { RehearsalDetailsModal } from './RehearsalDetailsModal';
 
 interface AdminStats {
   confirmed: number;
@@ -53,30 +52,8 @@ export default function TodayRehearsals({
   const { t, language } = useI18n();
   const navigation = useNavigation<NativeStackNavigationProp<CalendarStackParamList>>();
   const [syncedRehearsals, setSyncedRehearsals] = useState<Record<string, boolean>>({});
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalParticipants, setModalParticipants] = useState<any[]>([]);
-
-  // Load participants for modal
-  const loadParticipants = async (rehearsalId: string) => {
-    try {
-      const res = await rehearsalsAPI.getResponses(rehearsalId);
-
-      if (res.data.allParticipants) {
-        const participants = res.data.allParticipants.map((p: any) => ({
-          userId: p.userId,
-          firstName: p.firstName,
-          lastName: p.lastName,
-          email: p.email,
-          hasLiked: p.response === 'yes',
-          hasResponded: p.response !== null,
-        }));
-        setModalParticipants(participants);
-        setModalVisible(true);
-      }
-    } catch (err) {
-      console.error('Failed to load participants:', err);
-    }
-  };
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [selectedRehearsal, setSelectedRehearsal] = useState<Rehearsal | null>(null);
 
   // Check which rehearsals are synced to calendar
   useEffect(() => {
@@ -142,66 +119,78 @@ export default function TodayRehearsals({
 
           return (
             <View key={rehearsal.id} style={styles.upcomingCard}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.upcomingTimeRow}>
-                    <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
-                    <Text style={styles.upcomingTime}>
-                      {rehearsal.time?.substring(0, 5) || ''}
-                      {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
-                    </Text>
-                    {syncedRehearsals[rehearsal.id] && (
-                      <View style={{ marginLeft: 8, flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name="calendar" size={12} color={Colors.accent.green} />
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedRehearsal(rehearsal);
+                  setDetailsModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.upcomingTimeRow}>
+                      <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
+                      <Text style={styles.upcomingTime}>
+                        {rehearsal.time?.substring(0, 5) || ''}
+                        {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
+                      </Text>
+                      {syncedRehearsals[rehearsal.id] && (
+                        <View style={{ marginLeft: 8, flexDirection: 'row', alignItems: 'center' }}>
+                          <Ionicons name="calendar" size={12} color={Colors.accent.green} />
+                        </View>
+                      )}
+                    </View>
+
+                    {project && (
+                      <View style={styles.upcomingProjectRow}>
+                        <Ionicons name="folder-outline" size={14} color={Colors.accent.blue} />
+                        <Text style={styles.upcomingProject} numberOfLines={1}>
+                          {project.name}
+                        </Text>
+                      </View>
+                    )}
+
+                    {rehearsal.location && (
+                      <View style={styles.upcomingLocationRow}>
+                        <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
+                        <Text style={styles.upcomingLocation} numberOfLines={1}>
+                          {rehearsal.location}
+                        </Text>
                       </View>
                     )}
                   </View>
 
-                  {project && (
-                    <View style={styles.upcomingProjectRow}>
-                      <Ionicons name="folder-outline" size={14} color={Colors.accent.blue} />
-                      <Text style={styles.upcomingProject} numberOfLines={1}>
-                        {project.name}
-                      </Text>
-                    </View>
-                  )}
-
-                  {rehearsal.location && (
-                    <View style={styles.upcomingLocationRow}>
-                      <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
-                      <Text style={styles.upcomingLocation} numberOfLines={1}>
-                        {rehearsal.location}
-                      </Text>
+                  {isAdminForThisRehearsal && (
+                    <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                      <View style={styles.adminBadge}>
+                        <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
+                        <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          onDeleteRehearsal(rehearsal.id);
+                        }}
+                        style={{ padding: 4 }}
+                      >
+                        <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          navigation.navigate('AddRehearsal', {
+                            rehearsalId: rehearsal.id,
+                            projectId: rehearsal.projectId,
+                          });
+                        }}
+                        style={{ padding: 4 }}
+                      >
+                        <Ionicons name="create-outline" size={18} color={Colors.text.secondary} />
+                      </TouchableOpacity>
                     </View>
                   )}
                 </View>
-
-                {isAdminForThisRehearsal && (
-                  <View style={{ alignItems: 'flex-end', gap: 8 }}>
-                    <View style={styles.adminBadge}>
-                      <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
-                      <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => onDeleteRehearsal(rehearsal.id)}
-                      style={{ padding: 4 }}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        navigation.navigate('AddRehearsal', {
-                          rehearsalId: rehearsal.id,
-                          projectId: rehearsal.projectId,
-                        });
-                      }}
-                      style={{ padding: 4 }}
-                    >
-                      <Ionicons name="create-outline" size={18} color={Colors.text.secondary} />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
+              </TouchableOpacity>
 
               {/* Like Button (Telegram-style) */}
               <View style={styles.likeSection}>
@@ -223,14 +212,6 @@ export default function TodayRehearsals({
                       }
                     });
                   }}
-                  onLongPress={() => {
-                    // Medium haptic feedback on long press
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    // Only admins can see participants list
-                    if (isAdminForThisRehearsal) {
-                      loadParticipants(rehearsal.id);
-                    }
-                  }}
                   disabled={isResponding}
                 >
                   <Ionicons
@@ -239,9 +220,8 @@ export default function TodayRehearsals({
                     color={currentResponse === 'yes' ? Colors.accent.red : Colors.text.secondary}
                   />
                   {stats && (stats.confirmed > 0 || isAdminForThisRehearsal) && (() => {
-                    const totalParticipants = stats.confirmed + stats.invited;
-                    const displayText = isAdminForThisRehearsal && totalParticipants > 0
-                      ? `${stats.confirmed}/${totalParticipants}`
+                    const displayText = isAdminForThisRehearsal && stats.invited > 0
+                      ? `${stats.confirmed}/${stats.invited}`
                       : `${stats.confirmed}`;
 
                     return (
@@ -258,13 +238,24 @@ export default function TodayRehearsals({
         })}
       </View>
 
-      {/* Participants Modal (Admin only) */}
-      <ParticipantsModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        participants={modalParticipants}
-        totalCount={modalParticipants.length}
-        likedCount={modalParticipants.filter(p => p.hasLiked).length}
+      {/* Rehearsal Details Modal */}
+      <RehearsalDetailsModal
+        visible={detailsModalVisible}
+        onClose={() => setDetailsModalVisible(false)}
+        rehearsal={selectedRehearsal}
+        project={selectedRehearsal ? projects.find(p => p.id === selectedRehearsal.projectId) || null : null}
+        isAdmin={selectedRehearsal ? projects.find(p => p.id === selectedRehearsal.projectId)?.is_admin || false : false}
+        currentResponse={selectedRehearsal ? rsvpResponses[selectedRehearsal.id] : null}
+        onRSVP={onRSVP}
+        onRSVPSuccess={(id, status, serverStats) => {
+          setRsvpResponses(prev => ({ ...prev, [id]: status }));
+          if (serverStats && selectedRehearsal) {
+            const isAdminForThisRehearsal = projects.find(p => p.id === selectedRehearsal.projectId)?.is_admin || false;
+            if (isAdminForThisRehearsal) {
+              setAdminStats(prev => ({ ...prev, [id]: serverStats }));
+            }
+          }
+        }}
       />
     </View>
   );

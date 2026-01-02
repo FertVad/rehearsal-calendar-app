@@ -64,6 +64,11 @@ export interface SmartPlannerTranslations {
   allAvailable: string;
   allBusy: string;
   busyPrefix: string;
+  expand: string;
+  collapse: string;
+  of: string;
+  selected: string;
+  noMembers: string;
 }
 
 export const ru = {
@@ -111,7 +116,7 @@ export const ru = {
     week: 'Неделя',
     twoWeeks: 'Две недели',
     month: 'Месяц',
-    custom: 'Свой',
+    custom: 'Выбрать даты',
     customPeriod: 'Свой период',
     slots: 'слотов',
     allDay: 'Весь день',
@@ -132,6 +137,11 @@ export const ru = {
     allAvailable: 'Все свободны',
     allBusy: 'Все заняты',
     busyPrefix: 'Заняты',
+    expand: 'Развернуть',
+    collapse: 'Свернуть',
+    of: 'из',
+    selected: 'выбрано',
+    noMembers: 'Нет участников',
   },
 };
 
@@ -180,7 +190,7 @@ export const en = {
     week: 'Week',
     twoWeeks: 'Two Weeks',
     month: 'Month',
-    custom: 'Custom',
+    custom: 'Select Dates',
     customPeriod: 'Custom Period',
     slots: 'slots',
     allDay: 'All day',
@@ -201,5 +211,10 @@ export const en = {
     allAvailable: 'All available',
     allBusy: 'All busy',
     busyPrefix: 'Busy',
+    expand: 'Expand',
+    collapse: 'Collapse',
+    of: 'of',
+    selected: 'selected',
+    noMembers: 'No members',
   },
 };

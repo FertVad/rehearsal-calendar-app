@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
 import { Rehearsal } from '../../../shared/types';
 import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface MyRehearsalsModalProps {
   visible: boolean;
@@ -26,6 +27,7 @@ export default function MyRehearsalsModal({
   rehearsals,
   onSelectDate,
 }: MyRehearsalsModalProps) {
+  const { t, language } = useI18n();
   const [syncedRehearsals, setSyncedRehearsals] = useState<Record<string, boolean>>({});
 
   // Get upcoming rehearsals sorted by date
@@ -87,12 +89,13 @@ export default function MyRehearsalsModal({
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     if (d.getTime() === today.getTime()) {
-      return 'Сегодня';
+      return t.common.today;
     } else if (d.getTime() === tomorrow.getTime()) {
-      return 'Завтра';
+      return t.calendar.tomorrow;
     }
 
-    return d.toLocaleDateString('ru-RU', {
+    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    return d.toLocaleDateString(locale, {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
@@ -121,7 +124,7 @@ export default function MyRehearsalsModal({
           <View style={styles.header}>
             <View style={styles.headerHandle} />
             <View style={styles.headerContent}>
-              <Text style={styles.title}>Мои репетиции</Text>
+              <Text style={styles.title}>{t.calendar.myRehearsals}</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
@@ -133,15 +136,15 @@ export default function MyRehearsalsModal({
             {upcomingRehearsals.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={48} color={Colors.text.tertiary} />
-                <Text style={styles.emptyTitle}>Нет предстоящих репетиций</Text>
+                <Text style={styles.emptyTitle}>{t.rehearsals.noUpcoming}</Text>
                 <Text style={styles.emptyText}>
-                  Ваши репетиции появятся здесь, когда они будут запланированы
+                  {t.rehearsals.willAppear}
                 </Text>
               </View>
             ) : (
               <View style={styles.rehearsalsList}>
                 <Text style={styles.subtitle}>
-                  Предстоящие ({upcomingRehearsals.length})
+                  {t.calendar.upcomingCount(upcomingRehearsals.length)}
                 </Text>
 
                 {Object.entries(groupedRehearsals).map(([date, dateRehearsals]) => (

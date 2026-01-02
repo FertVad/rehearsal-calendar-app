@@ -1,5 +1,5 @@
-// Like system: 'yes' = liked, null = no response/unliked
-export type RSVPStatus = 'yes' | null;
+// RSVP system: 'yes' = accepted, 'no' = declined, null = no response yet
+export type RSVPStatus = 'yes' | 'no' | null;
 
 export interface UserResponse {
     status: RSVPStatus;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, createContext, useContext } from 'react';
+import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import { Platform, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -112,6 +112,7 @@ export type TabParamList = {
 export type AppStackParamList = {
   MainTabs: undefined;
   JoinProject: { code: string };
+  MarkBusy: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -225,7 +226,7 @@ function ProfileNavigator() {
 const EmptyCreateScreen = () => <View />;
 
 // Custom tab button component for the center "+" button
-const CreateTabButton = ({ onPress }: { onPress: () => void }) => {
+const CreateTabButton = React.memo(({ onPress }: { onPress: () => void }) => {
   return (
     <TouchableOpacity
       style={tabButtonStyles.container}
@@ -241,7 +242,9 @@ const CreateTabButton = ({ onPress }: { onPress: () => void }) => {
       </View>
     </TouchableOpacity>
   );
-};
+});
+
+CreateTabButton.displayName = 'CreateTabButton';
 
 const tabButtonStyles = StyleSheet.create({
   container: {
@@ -275,10 +278,7 @@ function ActionSheetWrapper() {
       }}
       onMarkBusy={() => {
         setShowActionSheet(false);
-        navigation.navigate('MainTabs', {
-          screen: 'Profile',
-          params: { screen: 'Availability' }
-        });
+        navigation.navigate('MarkBusy');
       }}
       onCreateProject={() => {
         setShowActionSheet(false);
@@ -293,7 +293,17 @@ function ActionSheetWrapper() {
 
 function TabNavigator() {
   const { t } = useI18n();
-  const { showActionSheet, setShowActionSheet } = useActionSheet();
+  const { setShowActionSheet } = useActionSheet();
+
+  // Мемоизируем функцию открытия ActionSheet
+  const handleCreatePress = useCallback(() => {
+    setShowActionSheet(true);
+  }, [setShowActionSheet]);
+
+  // Мемоизируем компонент кнопки создания
+  const renderCreateButton = useCallback(() => (
+    <CreateTabButton onPress={handleCreatePress} />
+  ), [handleCreatePress]);
 
   return (
     <>
@@ -344,9 +354,7 @@ function TabNavigator() {
           component={EmptyCreateScreen}
           options={{
             tabBarLabel: t.nav.addRehearsal,
-            tabBarButton: (props) => (
-              <CreateTabButton onPress={() => setShowActionSheet(true)} />
-            ),
+            tabBarButton: renderCreateButton,
           }}
         />
         <AppTabs.Screen
@@ -378,8 +386,14 @@ function TabNavigator() {
 function AppNavigator() {
   const [showActionSheet, setShowActionSheet] = useState(false);
 
+  // Мемоизируем значение контекста для избежания ненужных ре-рендеров
+  const contextValue = React.useMemo(
+    () => ({ showActionSheet, setShowActionSheet }),
+    [showActionSheet]
+  );
+
   return (
-    <ActionSheetContext.Provider value={{ showActionSheet, setShowActionSheet }}>
+    <ActionSheetContext.Provider value={contextValue}>
       <AppStack.Navigator
         screenOptions={{
           headerShown: false,
@@ -389,6 +403,13 @@ function AppNavigator() {
         <AppStack.Screen
           name="JoinProject"
           component={JoinProjectScreen}
+          options={{
+            presentation: 'modal',
+          }}
+        />
+        <AppStack.Screen
+          name="MarkBusy"
+          component={AvailabilityScreen as any}
           options={{
             presentation: 'modal',
           }}

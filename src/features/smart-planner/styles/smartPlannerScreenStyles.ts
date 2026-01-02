@@ -53,6 +53,52 @@ export const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
   },
+  projectSelectorContainer: {
+    marginBottom: Spacing.md,
+  },
+  projectSelectorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.glass.bg,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  projectSelectorText: {
+    flex: 1,
+    fontSize: FontSize.base,
+    color: Colors.text.primary,
+    fontWeight: FontWeight.medium,
+  },
+  projectDropdown: {
+    backgroundColor: Colors.glass.bg,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.sm,
+    overflow: 'hidden',
+  },
+  projectOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.glass.border,
+  },
+  projectOptionSelected: {
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+  },
+  projectOptionText: {
+    fontSize: FontSize.base,
+    color: Colors.text.primary,
+  },
+  projectOptionTextSelected: {
+    color: Colors.accent.purple,
+    fontWeight: FontWeight.semibold,
+  },
   section: {
     marginBottom: Spacing.xl,
   },

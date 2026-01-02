@@ -1,14 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  Modal,
-  ScrollView,
+  FlatList,
   StyleSheet,
-  Pressable,
 } from 'react-native';
-import { ChevronDown } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
 import type { Member } from '../types';
 import { useI18n } from '../../../contexts/I18nContext';
 
@@ -28,7 +27,7 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
   onClearAll,
 }) => {
   const { t } = useI18n();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const toggleMember = (memberId: string) => {
     if (selected.includes(memberId)) {
@@ -38,244 +37,204 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
     }
   };
 
-  const selectAll = () => {
-    onSelectionChange(members.map(m => m.id));
-  };
-
-  const clearAll = () => {
-    onSelectionChange([]);
-  };
-
-  const getButtonText = () => {
-    if (selected.length === 0) {
-      return t.smartPlanner.noneSelected;
-    }
+  const toggleAll = () => {
     if (selected.length === members.length) {
-      return t.smartPlanner.allMembers;
+      // Deselect all
+      if (onClearAll) {
+        onClearAll();
+      } else {
+        onSelectionChange([]);
+      }
+    } else {
+      // Select all
+      if (onSelectAll) {
+        onSelectAll();
+      } else {
+        onSelectionChange(members.map(m => m.id));
+      }
     }
-    return `${t.smartPlanner.selectedMembers}: ${selected.length}`;
   };
+
+  const allSelected = selected.length === members.length && members.length > 0;
+
+  if (members.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="people-outline" size={48} color={Colors.text.tertiary} />
+        <Text style={styles.emptyText}>{t.smartPlanner.noMembers || 'No members available'}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <View style={styles.filterRow}>
+      {/* Header with Select All and Expand/Collapse */}
+      <View style={styles.header}>
+        {members.length > 1 && (
+          <TouchableOpacity style={styles.selectAllButton} onPress={toggleAll}>
+            <View style={[styles.checkbox, allSelected && styles.checkboxChecked]}>
+              {allSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
+            </View>
+            <Text style={styles.selectAllText}>
+              {t.common.selectAll}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
-          style={styles.trigger}
-          onPress={() => setIsOpen(true)}
+          style={styles.expandButton}
+          onPress={() => setIsExpanded(!isExpanded)}
         >
-          <Text style={styles.triggerText}>{getButtonText()}</Text>
-          <ChevronDown size={16} stroke="#9ca3af" />
+          <Text style={styles.expandButtonText}>
+            {isExpanded ? (t.smartPlanner.collapse || 'Collapse') : (t.smartPlanner.expand || 'Expand')}
+          </Text>
+          <Ionicons
+            name={isExpanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={Colors.text.secondary}
+          />
         </TouchableOpacity>
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={onSelectAll || selectAll}
-          >
-            <Text style={styles.quickActionText}>{t.smartPlanner.selectAll}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={onClearAll || clearAll}
-          >
-            <Text style={styles.quickActionText}>{t.smartPlanner.clearAll}</Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
-      <Modal
-        visible={isOpen}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsOpen(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setIsOpen(false)}
-        >
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t.smartPlanner.selectMembers}</Text>
-              <TouchableOpacity onPress={() => setIsOpen(false)}>
-                <Text style={styles.closeButton}>✕</Text>
-              </TouchableOpacity>
-            </View>
+      {/* Selection Summary */}
+      {selected.length > 0 && (
+        <View style={styles.summary}>
+          <Text style={styles.summaryText}>
+            {`${selected.length} ${t.smartPlanner.of || 'of'} ${members.length} ${t.smartPlanner.selected || 'selected'}`}
+          </Text>
+        </View>
+      )}
 
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.actionBtn} onPress={selectAll}>
-                <Text style={styles.actionBtnText}>{t.common.selectAll}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn} onPress={clearAll}>
-                <Text style={styles.actionBtnText}>{t.common.clear}</Text>
-              </TouchableOpacity>
-            </View>
+      {/* Collapsible Members List */}
+      {isExpanded && (
+        <FlatList
+          data={members}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            const isSelected = selected.includes(item.id);
 
-            <ScrollView style={styles.list}>
-              {members.map(member => (
-                <TouchableOpacity
-                  key={member.id}
-                  style={styles.item}
-                  onPress={() => toggleMember(member.id)}
-                >
-                  <View style={styles.checkbox}>
-                    {selected.includes(member.id) && (
-                      <View style={styles.checkboxChecked} />
-                    )}
-                  </View>
-                  <Text style={styles.memberName}>{member.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.applyButton}
-              onPress={() => setIsOpen(false)}
-            >
-              <Text style={styles.applyButtonText}>{t.smartPlanner.applyFilter}</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+            return (
+              <TouchableOpacity
+                style={[styles.memberItem, isSelected && styles.memberItemSelected]}
+                onPress={() => toggleMember(item.id)}
+              >
+                <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+                  {isSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <Text style={[styles.memberName, isSelected && styles.memberNameSelected]}>
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+          style={styles.list}
+          scrollEnabled={false}
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    gap: Spacing.sm,
   },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  trigger: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  triggerText: {
-    fontSize: 14,
-    color: '#f9fafb',
-    flex: 1,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  quickActionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(147, 51, 234, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(147, 51, 234, 0.3)',
-    borderRadius: 8,
-  },
-  quickActionText: {
-    fontSize: 12,
-    color: '#9333ea',
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#1f2937',
-    borderRadius: 12,
-    width: '85%',
-    maxHeight: '70%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  modalHeader: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    gap: Spacing.sm,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#f9fafb',
+  emptyContainer: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+    gap: Spacing.md,
   },
-  closeButton: {
-    fontSize: 24,
-    color: '#9ca3af',
+  emptyText: {
+    fontSize: FontSize.base,
+    color: Colors.text.tertiary,
   },
-  actions: {
+  selectAllButton: {
+    flex: 1,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    gap: Spacing.sm,
+    backgroundColor: Colors.glass.bg,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
-  actionBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  expandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    gap: Spacing.xs,
+    backgroundColor: Colors.glass.bg,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
-  actionBtnText: {
-    fontSize: 14,
-    color: '#9333ea',
-    fontWeight: '600',
+  expandButtonText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.text.secondary,
+  },
+  selectAllText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.accent.purple,
   },
   list: {
     maxHeight: 300,
   },
-  item: {
+  memberItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    backgroundColor: Colors.glass.bg,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  memberItemSelected: {
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    borderColor: Colors.accent.purple,
   },
   checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
+    width: 24,
+    height: 24,
+    borderRadius: BorderRadius.sm,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    marginRight: 12,
-    justifyContent: 'center',
+    borderColor: Colors.glass.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   checkboxChecked: {
-    width: 12,
-    height: 12,
-    borderRadius: 2,
-    backgroundColor: '#9333ea',
+    backgroundColor: Colors.accent.purple,
+    borderColor: Colors.accent.purple,
   },
   memberName: {
-    fontSize: 15,
-    color: '#f9fafb',
+    fontSize: FontSize.base,
+    color: Colors.text.primary,
   },
-  applyButton: {
-    backgroundColor: '#9333ea',
-    marginHorizontal: 16,
-    marginVertical: 12,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+  memberNameSelected: {
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.purple,
   },
-  applyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  summary: {
+    padding: Spacing.sm,
+    backgroundColor: Colors.glass.bg,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  summaryText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.text.secondary,
+    textAlign: 'center',
   },
 });

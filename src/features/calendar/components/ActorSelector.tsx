@@ -4,7 +4,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  FlatList,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
@@ -132,10 +132,11 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
 
       {/* Collapsible Members List */}
       {isExpanded && (
-        <FlatList
-          data={members}
-          keyExtractor={(item) => item.userId}
-          renderItem={({ item }) => {
+        <ScrollView
+          style={styles.list}
+          nestedScrollEnabled={true}
+        >
+          {members.map((item) => {
             const isSelected = selectedMemberIds.includes(item.userId);
             const displayName = `${item.firstName}${item.lastName ? ' ' + item.lastName : ''}`;
             const isAdmin = item.role === 'owner' || item.role === 'admin';
@@ -144,6 +145,7 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
 
             return (
               <TouchableOpacity
+                key={item.userId}
                 style={[styles.actorItem, isSelected && styles.actorItemSelected]}
                 onPress={() => toggleMember(item.userId)}
               >
@@ -183,10 +185,8 @@ export const ActorSelector: React.FC<ActorSelectorProps> = ({
                 </View>
               </TouchableOpacity>
             );
-          }}
-          style={styles.list}
-          scrollEnabled={false}
-        />
+          })}
+        </ScrollView>
       )}
     </View>
   );

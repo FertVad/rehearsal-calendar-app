@@ -54,8 +54,8 @@ function isTimeBusy(time: string, busyRanges: Array<{ start: string; end: string
     const startMinutes = timeToMinutes(range.start);
     const endMinutes = timeToMinutes(range.end);
 
-    // Use <= for end time to include the end minute (e.g., 23:59 in range 00:00-23:59)
-    if (timeMinutes >= startMinutes && timeMinutes <= endMinutes) {
+    // Use < for end time - end time is exclusive (e.g., busy 10:00-11:00 means free from 11:00)
+    if (timeMinutes >= startMinutes && timeMinutes < endMinutes) {
       return true;
     }
   }

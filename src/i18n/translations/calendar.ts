@@ -15,6 +15,9 @@ export interface CalendarTranslations {
   tomorrow: string;
   todayButton: string;
   smartPlannerSubtitle: string;
+  rehearsalsCount: (count: number) => string;
+  rehearsal: string;
+  upcomingCount: (count: number) => string;
 }
 
 export interface RehearsalsTranslations {
@@ -73,6 +76,9 @@ export interface RehearsalsTranslations {
   availableStatus: string;
   busyAllDay: string;
   busyTime: string;
+  rehearsalDetails: string;
+  like: string;
+  unlike: string;
 }
 
 export const ru = {
@@ -93,6 +99,9 @@ export const ru = {
     tomorrow: 'Завтра',
     todayButton: 'Сегодня',
     smartPlannerSubtitle: 'Найти оптимальное время для репетиции',
+    rehearsalsCount: (count: number) => `Репетиции (${count})`,
+    rehearsal: 'Репетиция',
+    upcomingCount: (count: number) => `Предстоящие (${count})`,
   },
   rehearsals: {
     addRehearsal: 'Добавить репетицию',
@@ -150,6 +159,9 @@ export const ru = {
     availableStatus: 'Свободен',
     busyAllDay: 'Занят весь день',
     busyTime: 'Занят',
+    rehearsalDetails: 'Детали репетиции',
+    like: 'Иду',
+    unlike: 'Отменить',
   },
 };
 
@@ -171,6 +183,9 @@ export const en = {
     tomorrow: 'Tomorrow',
     todayButton: 'Today',
     smartPlannerSubtitle: 'Find the best time for rehearsal',
+    rehearsalsCount: (count: number) => `Rehearsals (${count})`,
+    rehearsal: 'Rehearsal',
+    upcomingCount: (count: number) => `Upcoming (${count})`,
   },
   rehearsals: {
     addRehearsal: 'Add Rehearsal',
@@ -228,5 +243,8 @@ export const en = {
     availableStatus: 'Available',
     busyAllDay: 'Busy all day',
     busyTime: 'Busy',
+    rehearsalDetails: 'Rehearsal Details',
+    like: 'Going',
+    unlike: 'Cancel',
   },
 };

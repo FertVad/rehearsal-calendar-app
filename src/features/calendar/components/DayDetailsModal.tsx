@@ -14,6 +14,7 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../sh
 import { Rehearsal, ResponseStats } from '../../../shared/types';
 import { formatDateLocalized } from '../../../shared/utils/time';
 import { rehearsalsAPI } from '../../../shared/services/api';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface DayDetailsModalProps {
   visible: boolean;
@@ -32,6 +33,7 @@ export default function DayDetailsModal({
   onDeleteRehearsal,
   isAdmin = false,
 }: DayDetailsModalProps) {
+  const { t, language } = useI18n();
   const [statsMap, setStatsMap] = useState<Record<string, ResponseStats>>({});
   const [loadingStats, setLoadingStats] = useState<Record<string, boolean>>({});
 
@@ -76,7 +78,7 @@ export default function DayDetailsModal({
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
-              })}</Text>
+              }, language === 'ru' ? 'ru-RU' : 'en-US')}</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
@@ -88,12 +90,12 @@ export default function DayDetailsModal({
             {rehearsals.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={48} color={Colors.text.tertiary} />
-                <Text style={styles.emptyText}>Нет репетиций на этот день</Text>
+                <Text style={styles.emptyText}>{t.calendar.noRehearsals}</Text>
               </View>
             ) : (
               <View style={styles.rehearsalsList}>
                 <Text style={styles.sectionTitle}>
-                  Репетиции ({rehearsals.length})
+                  {t.calendar.rehearsalsCount(rehearsals.length)}
                 </Text>
                 {rehearsals.map((rehearsal) => (
                   <View key={rehearsal.id} style={styles.rehearsalCard}>
@@ -112,7 +114,7 @@ export default function DayDetailsModal({
                     <View style={styles.rehearsalDetails}>
                       <View style={styles.rehearsalHeader}>
                         <Text style={styles.sceneText}>
-                          {rehearsal.location || 'Репетиция'}
+                          {rehearsal.location || t.calendar.rehearsal}
                         </Text>
                         {isAdmin && onDeleteRehearsal && (
                           <TouchableOpacity

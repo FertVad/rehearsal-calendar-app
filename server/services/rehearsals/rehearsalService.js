@@ -68,13 +68,13 @@ export async function getRehearsalsForProjects(projectIds, userId) {
     return [];
   }
 
-  // Fetch all rehearsals for accessible projects with user's RSVP data
+  // Fetch only rehearsals where user is invited (has a response record)
   const rehearsals = await db.all(
     `SELECT r.*, p.name as project_name,
             ur.response as user_response
      FROM native_rehearsals r
      JOIN native_projects p ON r.project_id = p.id
-     LEFT JOIN native_rehearsal_responses ur ON r.id = ur.rehearsal_id AND ur.user_id = ?
+     INNER JOIN native_rehearsal_responses ur ON r.id = ur.rehearsal_id AND ur.user_id = ?
      WHERE r.project_id IN (${accessibleProjectIds.map(() => '?').join(',')})
      ORDER BY r.starts_at DESC`,
     [userId, ...accessibleProjectIds]
@@ -139,8 +139,8 @@ export async function getRehearsalsForProjects(projectIds, userId) {
       if (adminRehearsalIds.includes(rehearsal.id)) {
         const responses = responsesByRehearsal[rehearsal.id] || [];
         const confirmed = responses.filter(r => r === 'yes').length;
-        const totalMembers = memberCountMap[rehearsal.project_id] || 0;
-        const invited = totalMembers - responses.length;
+        // invited = number of participants invited to THIS rehearsal (not all project members)
+        const invited = responses.length;
 
         statsMap[rehearsal.id] = { confirmed, invited };
       }
@@ -164,16 +164,19 @@ export async function getRehearsalsForProjects(projectIds, userId) {
 }
 
 /**
- * Get all rehearsals for a project
+ * Get rehearsals for a project where user is invited
  * @param {number} projectId - Project ID
+ * @param {number} userId - User ID (to filter only invited rehearsals)
  * @returns {Promise<Array>} - Array of rehearsals
  */
-export async function getProjectRehearsals(projectId) {
+export async function getProjectRehearsals(projectId, userId) {
   const rehearsals = await db.all(
-    `SELECT * FROM native_rehearsals
-     WHERE project_id = $1
-     ORDER BY starts_at DESC`,
-    [projectId]
+    `SELECT r.*, ur.response as user_response
+     FROM native_rehearsals r
+     INNER JOIN native_rehearsal_responses ur ON r.id = ur.rehearsal_id AND ur.user_id = $2
+     WHERE r.project_id = $1
+     ORDER BY r.starts_at DESC`,
+    [projectId, userId]
   );
 
   return rehearsals.map(r => ({
@@ -197,7 +200,7 @@ export async function getProjectRehearsals(projectId) {
  * @returns {Promise<object>} - Created rehearsal
  */
 export async function createRehearsal(projectId, userId, rehearsalData) {
-  const { title, description, date, startTime, endTime, startsAt, endsAt, location } = rehearsalData;
+  const { title, description, date, startTime, endTime, startsAt, endsAt, location, participant_ids } = rehearsalData;
 
   let startsAtISO, endsAtISO;
 
@@ -233,7 +236,17 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
     ]
   );
 
-  // Book slots in user availability for all project members
+  // Add participant invitations with 'no' status (invited but not responded)
+  if (participant_ids && participant_ids.length > 0) {
+    for (const participantId of participant_ids) {
+      await db.run(
+        'INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW())',
+        [newRehearsal.id, participantId, 'no']
+      );
+    }
+  }
+
+  // Book slots in user availability for selected participants
   await bookRehearsalSlots(
     newRehearsal.id,
     projectId,
@@ -342,12 +355,19 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
  * @returns {Promise<void>}
  */
 export async function deleteRehearsal(rehearsalId) {
+  console.log(`[deleteRehearsal] START - Deleting rehearsal ID: ${rehearsalId}`);
+
   // Delete booked slots first
+  console.log(`[deleteRehearsal] Step 1: Deleting availability slots...`);
   await deleteRehearsalSlots(rehearsalId);
 
   // Delete RSVP responses
+  console.log(`[deleteRehearsal] Step 2: Deleting RSVP responses...`);
   await db.run('DELETE FROM native_rehearsal_responses WHERE rehearsal_id = $1', [rehearsalId]);
 
   // Delete rehearsal
+  console.log(`[deleteRehearsal] Step 3: Deleting rehearsal record...`);
   await db.run('DELETE FROM native_rehearsals WHERE id = $1', [rehearsalId]);
+
+  console.log(`[deleteRehearsal] DONE - Successfully deleted rehearsal ${rehearsalId}`);
 }

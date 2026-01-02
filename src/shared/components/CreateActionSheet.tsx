@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ActionSheetIOS, Platform, Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useI18n } from '../../contexts/I18nContext';
 import { Colors } from '../constants/colors';
@@ -19,9 +19,15 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
   onCreateProject,
 }) => {
   const { t } = useI18n();
+  const isShowingRef = useRef(false);
 
   useEffect(() => {
-    if (Platform.OS === 'ios' && visible) {
+    if (Platform.OS === 'ios' && visible && !isShowingRef.current) {
+      isShowingRef.current = true;
+
+      // Сразу вызываем onClose, чтобы сбросить флаг visible
+      onClose();
+
       ActionSheetIOS.showActionSheetWithOptions(
         {
           options: [
@@ -34,6 +40,8 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
           userInterfaceStyle: 'dark',
         },
         (buttonIndex) => {
+          isShowingRef.current = false;
+
           if (buttonIndex === 1) {
             onCreateRehearsal();
           } else if (buttonIndex === 2) {
@@ -43,6 +51,8 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
           }
         }
       );
+    } else if (!visible) {
+      isShowingRef.current = false;
     }
   }, [visible, onClose, onCreateRehearsal, onMarkBusy, onCreateProject, t]);
 

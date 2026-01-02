@@ -45,7 +45,7 @@ router.get('/batch', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/native/projects/:projectId/rehearsals - Get all rehearsals for a project
+// GET /api/native/projects/:projectId/rehearsals - Get rehearsals where user is invited
 router.get('/:projectId/rehearsals', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
@@ -58,7 +58,7 @@ router.get('/:projectId/rehearsals', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const rehearsals = await getProjectRehearsals(projectId);
+    const rehearsals = await getProjectRehearsals(projectId, userId);
 
     res.json({ rehearsals });
   } catch (error) {
@@ -206,9 +206,9 @@ router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const responses = await getRehearsalResponses(rehearsalId);
+    const result = await getRehearsalResponses(rehearsalId);
 
-    res.json({ responses });
+    res.json(result);
   } catch (error) {
     console.error('Error fetching responses:', error);
     res.status(500).json({ error: 'Failed to fetch responses' });

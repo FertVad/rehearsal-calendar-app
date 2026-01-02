@@ -15,26 +15,31 @@ export async function getProjectTimezone(projectId) {
 }
 
 /**
- * Book availability slots for all project members when rehearsal is created
+ * Book availability slots for selected rehearsal participants
  * @param {number} rehearsalId - Rehearsal ID
- * @param {number} projectId - Project ID
+ * @param {number} projectId - Project ID (unused, kept for backward compatibility)
  * @param {string} startsAt - ISO 8601 timestamp
  * @param {string} endsAt - ISO 8601 timestamp
  */
 export async function bookRehearsalSlots(rehearsalId, projectId, startsAt, endsAt) {
-  // Get all project members
-  const members = await db.all(
-    "SELECT user_id FROM native_project_members WHERE project_id = $1 AND status = 'active'",
-    [projectId]
+  console.log(`[bookRehearsalSlots] START - Rehearsal ID: ${rehearsalId}, Time: ${startsAt} - ${endsAt}`);
+
+  // Get participants who have responses (i.e., were invited to this rehearsal)
+  const participants = await db.all(
+    "SELECT DISTINCT user_id FROM native_rehearsal_responses WHERE rehearsal_id = $1",
+    [rehearsalId]
   );
 
-  // For each member, insert a busy slot using TIMESTAMPTZ columns
-  for (const member of members) {
+  console.log(`[bookRehearsalSlots] Found ${participants.length} participants:`, participants.map(p => p.user_id));
+
+  // For each participant, insert a busy slot using TIMESTAMPTZ columns
+  for (const participant of participants) {
+    console.log(`[bookRehearsalSlots] Booking slot for user ${participant.user_id}`);
     await db.run(
       `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, source, external_event_id, title, is_all_day)
        VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, 'Rehearsal', FALSE)`,
       [
-        member.user_id,
+        participant.user_id,
         startsAt,
         endsAt,
         AVAILABILITY_TYPES.BUSY,
@@ -43,6 +48,8 @@ export async function bookRehearsalSlots(rehearsalId, projectId, startsAt, endsA
       ]
     );
   }
+
+  console.log(`[bookRehearsalSlots] DONE - Booked ${participants.length} slots for rehearsal ${rehearsalId}`);
 }
 
 /**
@@ -53,11 +60,15 @@ export async function bookRehearsalSlots(rehearsalId, projectId, startsAt, endsA
  * @param {string} endsAt - ISO 8601 timestamp
  */
 export async function updateRehearsalSlots(rehearsalId, projectId, startsAt, endsAt) {
+  console.log(`[updateRehearsalSlots] START - Rehearsal ID: ${rehearsalId}, New time: ${startsAt} - ${endsAt}`);
+
   // Delete existing booked slots
   await deleteRehearsalSlots(rehearsalId);
 
   // Book new slots
   await bookRehearsalSlots(rehearsalId, projectId, startsAt, endsAt);
+
+  console.log(`[updateRehearsalSlots] DONE - Updated slots for rehearsal ${rehearsalId}`);
 }
 
 /**
@@ -65,10 +76,15 @@ export async function updateRehearsalSlots(rehearsalId, projectId, startsAt, end
  * @param {number} rehearsalId - Rehearsal ID
  */
 export async function deleteRehearsalSlots(rehearsalId) {
-  await db.run(
+  console.log(`[deleteRehearsalSlots] START - Deleting slots for rehearsal ID: ${rehearsalId}`);
+  console.log(`[deleteRehearsalSlots] Query params - source: "${AVAILABILITY_SOURCES.REHEARSAL}", external_event_id: "${rehearsalId.toString()}"`);
+
+  const result = await db.run(
     "DELETE FROM native_user_availability WHERE source = $1 AND external_event_id = $2",
     [AVAILABILITY_SOURCES.REHEARSAL, rehearsalId.toString()]
   );
+
+  console.log(`[deleteRehearsalSlots] DONE - Delete result:`, result);
 }
 
 /**

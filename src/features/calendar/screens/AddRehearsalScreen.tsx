@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,10 @@ import {
   Platform,
   Modal,
   FlatList,
+  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { CalendarStackParamList } from '../../../navigation';
@@ -20,6 +21,7 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { ActorSelector } from '../components/ActorSelector';
 import { TimeRecommendations } from '../components/TimeRecommendations';
+import { PickerModal } from '../../../shared/components/PickerModal';
 import { addRehearsalScreenStyles as styles } from '../styles';
 import {
   useRehearsalMembers,
@@ -69,9 +71,29 @@ export default function AddRehearsalScreen() {
     rehearsalId: form.rehearsalId,
   });
 
+  // Auto-select all participants when members are loaded
+  useEffect(() => {
+    if (!form.isEditMode &&
+        members.length > 0 &&
+        form.selectedMemberIds.length === 0 &&
+        !loadingMembers) {
+      form.setSelectedMemberIds(members.map(m => m.userId));
+    }
+  }, [members, loadingMembers, form.isEditMode]);
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+        >
         {/* Loading indicator for edit mode */}
         {form.loadingRehearsal && (
           <View style={styles.loadingOverlay}>
@@ -119,36 +141,6 @@ export default function AddRehearsalScreen() {
               <Ionicons name="calendar-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.pickerButtonText}>{formatDisplayDate(form.date, language)}</Text>
             </TouchableOpacity>
-            {form.showDatePicker && Platform.OS === 'ios' && (
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => form.setShowDatePicker(false)}
-                style={styles.pickerOverlay}
-              >
-                <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-                  <DateTimePicker
-                    value={form.date}
-                    mode="date"
-                    display="spinner"
-                    onChange={form.handleDateChange}
-                    locale={language === 'ru' ? 'ru-RU' : 'en-US'}
-                    themeVariant="dark"
-                    textColor={Colors.text.primary}
-                  />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            )}
-            {form.showDatePicker && Platform.OS === 'android' && (
-              <DateTimePicker
-                value={form.date}
-                mode="date"
-                display="default"
-                onChange={form.handleDateChange}
-                locale={language === 'ru' ? 'ru-RU' : 'en-US'}
-                themeVariant="dark"
-                textColor={Colors.text.primary}
-              />
-            )}
           </View>
 
           {/* Participants */}
@@ -187,36 +179,6 @@ export default function AddRehearsalScreen() {
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.pickerButtonText}>{formatTime(form.startTime)}</Text>
             </TouchableOpacity>
-            {form.showStartTimePicker && Platform.OS === 'ios' && (
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => form.setShowStartTimePicker(false)}
-                style={styles.pickerOverlay}
-              >
-                <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-                  <DateTimePicker
-                    value={form.startTime}
-                    mode="time"
-                    display="spinner"
-                    onChange={form.handleStartTimeChange}
-                    is24Hour={true}
-                    themeVariant="dark"
-                    textColor={Colors.text.primary}
-                  />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            )}
-            {form.showStartTimePicker && Platform.OS === 'android' && (
-              <DateTimePicker
-                value={form.startTime}
-                mode="time"
-                display="default"
-                onChange={form.handleStartTimeChange}
-                is24Hour={true}
-                themeVariant="dark"
-                textColor={Colors.text.primary}
-              />
-            )}
           </View>
 
           {/* End Time */}
@@ -229,36 +191,6 @@ export default function AddRehearsalScreen() {
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.pickerButtonText}>{formatTime(form.endTime)}</Text>
             </TouchableOpacity>
-            {form.showEndTimePicker && Platform.OS === 'ios' && (
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => form.setShowEndTimePicker(false)}
-                style={styles.pickerOverlay}
-              >
-                <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-                  <DateTimePicker
-                    value={form.endTime}
-                    mode="time"
-                    display="spinner"
-                    onChange={form.handleEndTimeChange}
-                    is24Hour={true}
-                    themeVariant="dark"
-                    textColor={Colors.text.primary}
-                  />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            )}
-            {form.showEndTimePicker && Platform.OS === 'android' && (
-              <DateTimePicker
-                value={form.endTime}
-                mode="time"
-                display="default"
-                onChange={form.handleEndTimeChange}
-                is24Hour={true}
-                themeVariant="dark"
-                textColor={Colors.text.primary}
-              />
-            )}
           </View>
 
           {/* Location */}
@@ -272,6 +204,9 @@ export default function AddRehearsalScreen() {
                 onChangeText={form.setLocation}
                 placeholder={t.rehearsals.locationPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                blurOnSubmit={true}
               />
             </View>
           </View>
@@ -299,6 +234,40 @@ export default function AddRehearsalScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Date Picker Modal */}
+      <PickerModal
+        visible={form.showDatePicker}
+        onClose={() => form.setShowDatePicker(false)}
+        value={form.date}
+        onChange={form.handleDateChange}
+        mode="date"
+        title={t.rehearsals.selectDate}
+        language={language === 'ru' ? 'ru-RU' : 'en-US'}
+      />
+
+      {/* Start Time Picker Modal */}
+      <PickerModal
+        visible={form.showStartTimePicker}
+        onClose={() => form.setShowStartTimePicker(false)}
+        value={form.startTime}
+        onChange={form.handleStartTimeChange}
+        mode="time"
+        title={t.rehearsals.selectStartTime}
+        language={language === 'ru' ? 'ru-RU' : 'en-US'}
+      />
+
+      {/* End Time Picker Modal */}
+      <PickerModal
+        visible={form.showEndTimePicker}
+        onClose={() => form.setShowEndTimePicker(false)}
+        value={form.endTime}
+        onChange={form.handleEndTimeChange}
+        mode="time"
+        title={t.rehearsals.selectEndTime}
+        language={language === 'ru' ? 'ru-RU' : 'en-US'}
+      />
 
       {/* Project Picker Modal */}
       <Modal

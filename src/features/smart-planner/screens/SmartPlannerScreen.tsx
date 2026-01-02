@@ -1,12 +1,10 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -55,7 +53,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     'ok',
   ]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
-  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isProjectSelectorExpanded, setIsProjectSelectorExpanded] = useState(false);
 
   // Custom date range state
   const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
@@ -65,6 +63,9 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     return date;
   });
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
+
+  // Track if members have been initially loaded
+  const hasInitializedMembers = useRef(false);
 
   // Calculate date range based on selected period
   const { startDate, endDate } = useMemo(() => {
@@ -108,21 +109,27 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
 
   const projectName = project?.name || 'Loading...';
 
-  // Auto-select all members when they load
+  // Auto-select all members when they load (only on first load)
   useEffect(() => {
-    if (simpleMembers.length > 0 && selectedMemberIds.length === 0) {
+    if (simpleMembers.length > 0 && !hasInitializedMembers.current) {
       setSelectedMemberIds(simpleMembers.map(m => m.id));
+      hasInitializedMembers.current = true;
     }
-  }, [simpleMembers, selectedMemberIds.length]);
+  }, [simpleMembers]);
 
   const handleSelectProject = useCallback((newProjectId: string) => {
-    setIsProjectModalOpen(false);
+    setIsProjectSelectorExpanded(false);
     navigation.setParams({ projectId: newProjectId });
   }, [navigation]);
 
   const handleDateRangeConfirm = useCallback((start: Date, end: Date) => {
     setCustomStartDate(start);
     setCustomEndDate(end);
+  }, []);
+
+  const handleCustomPeriodClick = useCallback(() => {
+    setSelectedPeriod('custom');
+    setShowDateRangePicker(true);
   }, []);
 
   const renderHeader = () => (
@@ -135,65 +142,52 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {projectName}
-          </Text>
           <Text style={styles.headerSubtitle}>{t.smartPlanner.title}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.changeProjectButton}
-          onPress={() => setIsProjectModalOpen(true)}
-        >
-          <Text style={styles.changeProjectText}>{t.common.change}</Text>
-        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 
-  const renderProjectModal = () => (
-    <Modal
-      visible={isProjectModalOpen}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={() => setIsProjectModalOpen(false)}
-    >
-      <Pressable
-        style={styles.modalOverlay}
-        onPress={() => setIsProjectModalOpen(false)}
+  const renderProjectSelector = () => (
+    <View style={styles.projectSelectorContainer}>
+      <TouchableOpacity
+        style={styles.projectSelectorButton}
+        onPress={() => setIsProjectSelectorExpanded(!isProjectSelectorExpanded)}
       >
-        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t.projects.selectProject}</Text>
-            <TouchableOpacity onPress={() => setIsProjectModalOpen(false)}>
-              <Text style={styles.closeButton}>✕</Text>
-            </TouchableOpacity>
-          </View>
+        <Ionicons name="folder-outline" size={18} color={Colors.accent.purple} />
+        <Text style={styles.projectSelectorText}>{projectName}</Text>
+        <Ionicons
+          name={isProjectSelectorExpanded ? "chevron-up" : "chevron-down"}
+          size={18}
+          color={Colors.text.secondary}
+        />
+      </TouchableOpacity>
 
-          <ScrollView style={styles.projectList}>
-            {projects.filter(p => p.is_admin).map(proj => (
-              <TouchableOpacity
-                key={proj.id}
-                style={[
-                  styles.projectItem,
-                  proj.id === projectId && styles.projectItemSelected,
-                ]}
-                onPress={() => handleSelectProject(proj.id)}
-              >
-                <Text style={[
-                  styles.projectName,
-                  proj.id === projectId && styles.projectNameSelected,
-                ]}>
-                  {proj.name}
-                </Text>
-                {proj.id === projectId && (
-                  <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      {isProjectSelectorExpanded && (
+        <View style={styles.projectDropdown}>
+          {projects.filter(p => p.is_admin).map(proj => (
+            <TouchableOpacity
+              key={proj.id}
+              style={[
+                styles.projectOption,
+                proj.id === projectId && styles.projectOptionSelected
+              ]}
+              onPress={() => handleSelectProject(proj.id)}
+            >
+              <Text style={[
+                styles.projectOptionText,
+                proj.id === projectId && styles.projectOptionTextSelected
+              ]}>
+                {proj.name}
+              </Text>
+              {proj.id === projectId && (
+                <Ionicons name="checkmark" size={18} color={Colors.accent.purple} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
   );
 
   const renderPeriodSelector = () => (
@@ -237,7 +231,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
             styles.periodButton,
             selectedPeriod === 'custom' && styles.periodButtonActive,
           ]}
-          onPress={() => setSelectedPeriod('custom')}
+          onPress={handleCustomPeriodClick}
         >
           <Text
             style={[
@@ -318,7 +312,6 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   return (
     <View style={styles.container}>
       {renderHeader()}
-      {renderProjectModal()}
       <DateRangePicker
         visible={showDateRangePicker}
         onClose={() => setShowDateRangePicker(false)}
@@ -331,6 +324,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
+        {renderProjectSelector()}
         {renderPeriodSelector()}
         {renderMemberFilter()}
 

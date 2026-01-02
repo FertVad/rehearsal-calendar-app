@@ -12,7 +12,7 @@ import DayDetailsModal from '../components/DayDetailsModal';
 import MyRehearsalsModal from '../components/MyRehearsalsModal';
 import TodayRehearsals from '../components/TodayRehearsals';
 import SmartPlannerButton from '../components/SmartPlannerButton';
-import { ParticipantsModal } from '../components/ParticipantsModal';
+import { RehearsalDetailsModal } from '../components/RehearsalDetailsModal';
 import { Rehearsal } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -26,7 +26,7 @@ type CalendarScreenProps = NativeStackScreenProps<CalendarStackParamList, 'Calen
 
 export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   const { projects, selectedProject } = useProjects();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return formatDateToString(new Date());
   });
@@ -34,9 +34,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   const [modalDate, setModalDate] = useState<string>('');
   const [myRehearsalsVisible, setMyRehearsalsVisible] = useState(false);
   const [filterExpanded, setFilterExpanded] = useState(false);
-  const [participantsModalVisible, setParticipantsModalVisible] = useState(false);
-  const [participantsModalData, setParticipantsModalData] = useState<any[]>([]);
-  const [participantsModalRehearsalId, setParticipantsModalRehearsalId] = useState<string | null>(null);
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [selectedRehearsalForDetails, setSelectedRehearsalForDetails] = useState<Rehearsal | null>(null);
 
   // null means "All projects"
   const [filterProjectId, setFilterProjectId] = useState<string | null>(null);
@@ -100,28 +99,6 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
 
   const handleSelectDateFromModal = useCallback((date: string) => {
     setSelectedDate(date);
-  }, []);
-
-  // Load participants for modal (admin only)
-  const loadParticipants = useCallback(async (rehearsalId: string) => {
-    try {
-      const res = await rehearsalsAPI.getResponses(rehearsalId);
-      if (res.data.allParticipants) {
-        const participants = res.data.allParticipants.map((p: any) => ({
-          userId: p.userId,
-          firstName: p.firstName,
-          lastName: p.lastName,
-          email: p.email,
-          hasLiked: p.response === 'yes',
-          hasResponded: p.response !== null,
-        }));
-        setParticipantsModalData(participants);
-        setParticipantsModalRehearsalId(rehearsalId);
-        setParticipantsModalVisible(true);
-      }
-    } catch (err) {
-      console.error('Failed to load participants:', err);
-    }
   }, []);
 
   const modalRehearsals = rehearsals.filter(r => r.date === modalDate);
@@ -228,7 +205,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
 
     if (dateStr === today) return t.common.today;
     if (dateStr === tomorrowStr) return t.calendar.tomorrow || 'Tomorrow';
-    return formatDateLocalized(dateStr, { day: 'numeric', month: 'short', weekday: 'short' });
+    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    return formatDateLocalized(dateStr, { day: 'numeric', month: 'short', weekday: 'short' }, locale);
   };
 
   return (
@@ -372,11 +350,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                   <View key={rehearsal.id} style={styles.upcomingCard}>
                     <TouchableOpacity
                       onPress={() => {
-                        if (rehearsal.date) {
-                          setSelectedDate(rehearsal.date);
-                          setModalDate(rehearsal.date);
-                          setModalVisible(true);
-                        }
+                        setSelectedRehearsalForDetails(rehearsal);
+                        setDetailsModalVisible(true);
                       }}
                       activeOpacity={0.7}
                     >
@@ -443,14 +418,6 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                             }
                           });
                         }}
-                        onLongPress={() => {
-                          // Medium haptic feedback on long press
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          // Only admins can see participants list
-                          if (isAdminForThisRehearsal) {
-                            loadParticipants(rehearsal.id);
-                          }
-                        }}
                         disabled={isResponding}
                       >
                         <Ionicons
@@ -459,9 +426,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                           color={currentResponse === 'yes' ? Colors.accent.red : Colors.text.secondary}
                         />
                         {stats && (stats.confirmed > 0 || isAdminForThisRehearsal) && (() => {
-                          const totalParticipants = stats.confirmed + stats.invited;
-                          const displayText = isAdminForThisRehearsal && totalParticipants > 0
-                            ? `${stats.confirmed}/${totalParticipants}`
+                          const displayText = isAdminForThisRehearsal && stats.invited > 0
+                            ? `${stats.confirmed}/${stats.invited}`
                             : `${stats.confirmed}`;
 
                           return (
@@ -498,13 +464,24 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
         onSelectDate={handleSelectDateFromModal}
       />
 
-      {/* Participants Modal (Admin only) */}
-      <ParticipantsModal
-        visible={participantsModalVisible}
-        onClose={() => setParticipantsModalVisible(false)}
-        participants={participantsModalData}
-        totalCount={participantsModalData.length}
-        likedCount={participantsModalData.filter(p => p.hasLiked).length}
+      {/* Rehearsal Details Modal */}
+      <RehearsalDetailsModal
+        visible={detailsModalVisible}
+        onClose={() => setDetailsModalVisible(false)}
+        rehearsal={selectedRehearsalForDetails}
+        project={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId) || null : null}
+        isAdmin={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId)?.is_admin || false : false}
+        currentResponse={selectedRehearsalForDetails ? rsvpResponses[selectedRehearsalForDetails.id] : null}
+        onRSVP={toggleLike}
+        onRSVPSuccess={(id, status, serverStats) => {
+          setRsvpResponses(prev => ({ ...prev, [id]: status }));
+          if (serverStats && selectedRehearsalForDetails) {
+            const isAdminForThisRehearsal = projects.find(p => p.id === selectedRehearsalForDetails.projectId)?.is_admin || false;
+            if (isAdminForThisRehearsal) {
+              setAdminStats(prev => ({ ...prev, [id]: serverStats }));
+            }
+          }
+        }}
       />
     </SafeAreaView>
   );

@@ -8,7 +8,7 @@ export const useRSVP = () => {
 
   /**
    * Toggle like status for a rehearsal with optimistic UI update
-   * - If current status is 'yes' → toggle to null (unlike - deletes response)
+   * - If current status is 'yes' → toggle to 'no' (unlike)
    * - Otherwise → toggle to 'yes' (like)
    */
   const toggleLike = useCallback(async (
@@ -16,8 +16,8 @@ export const useRSVP = () => {
     currentStatus: RSVPStatus | null,
     onSuccess: (rehearsalId: string, newStatus: RSVPStatus, stats?: any) => void
   ) => {
-    // Toggle logic: 'yes' (liked) ↔ null (unliked/deleted)
-    const newStatus: RSVPStatus = currentStatus === 'yes' ? null : 'yes';
+    // Toggle logic: 'yes' (liked) ↔ 'no' (declined)
+    const newStatus: RSVPStatus = currentStatus === 'yes' ? 'no' : 'yes';
 
     // Optimistic update - update UI immediately
     onSuccess(rehearsalId, newStatus);
