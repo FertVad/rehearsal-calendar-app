@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../database/db.js';
 import { generateTokens, verifyToken, requireAuth } from '../middleware/jwtMiddleware.js';
+import { serializeUser } from '../utils/userSerializer.js';
 
 const router = Router();
 
@@ -44,17 +45,7 @@ router.post('/register', async (req, res) => {
     );
 
     res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        timezone: user.timezone,
-        locale: user.locale,
-        notificationsEnabled: user.notifications_enabled,
-        emailNotifications: user.email_notifications,
-        weekStartDay: user.week_start_day,
-      },
+      user: serializeUser(user),
       accessToken,
       refreshToken,
     });
@@ -98,17 +89,7 @@ router.post('/login', async (req, res) => {
     const { accessToken, refreshToken } = generateTokens(user.id);
 
     res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        timezone: user.timezone,
-        locale: user.locale,
-        notificationsEnabled: user.notifications_enabled,
-        emailNotifications: user.email_notifications,
-        weekStartDay: user.week_start_day,
-      },
+      user: serializeUser(user),
       accessToken,
       refreshToken,
     });
@@ -157,20 +138,7 @@ router.get('/me', requireAuth, async (req, res) => {
     }
 
     res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        phone: user.phone,
-        avatarUrl: user.avatar_url,
-        timezone: user.timezone,
-        locale: user.locale,
-        notificationsEnabled: user.notifications_enabled,
-        emailNotifications: user.email_notifications,
-        weekStartDay: user.week_start_day,
-        createdAt: user.created_at,
-      }
+      user: serializeUser(user)
     });
   } catch (err) {
     console.error('[Auth] Get me error:', err);
@@ -252,19 +220,7 @@ router.put('/me', requireAuth, async (req, res) => {
     );
 
     res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        phone: user.phone,
-        avatarUrl: user.avatar_url,
-        timezone: user.timezone,
-        locale: user.locale,
-        notificationsEnabled: user.notifications_enabled,
-        emailNotifications: user.email_notifications,
-        weekStartDay: user.week_start_day,
-      }
+      user: serializeUser(user)
     });
   } catch (err) {
     console.error('[Auth] Update me error:', err);

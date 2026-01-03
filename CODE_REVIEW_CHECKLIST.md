@@ -98,7 +98,7 @@ const loadUser = useCallback(async () => {
 
 ---
 
-### [ ] 3. Добавить useCallback в I18nContext
+### [x] 3. Добавить useCallback в I18nContext ✅
 
 **Приоритет:** 🟡 ВАЖНО
 **Файл:** `src/contexts/I18nContext.tsx`

@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback, Rea
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
+import { syncUserPreferences } from '../shared/utils/storage';
 
 interface User {
   id: number;
@@ -58,14 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user);
       // Cache user data for offline use
       await AsyncStorage.setItem('cachedUser', JSON.stringify(user));
-      // Sync language preference from database
-      if (user.locale) {
-        await AsyncStorage.setItem('userLanguage', user.locale);
-      }
-      // Sync week start preference from database
-      if (user.weekStartDay) {
-        await AsyncStorage.setItem('weekStartDay', user.weekStartDay);
-      }
+      // Sync user preferences (timezone, locale, weekStartDay)
+      await syncUserPreferences(user);
       setLoading(false);
     } catch (err: any) {
       // Only clear tokens if they are actually invalid (401/403)
@@ -112,14 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
-      // Sync language preference from database
-      if (user.locale) {
-        await AsyncStorage.setItem('userLanguage', user.locale);
-      }
-      // Sync week start preference from database
-      if (user.weekStartDay) {
-        await AsyncStorage.setItem('weekStartDay', user.weekStartDay);
-      }
+      // Sync user preferences (timezone, locale, weekStartDay)
+      await syncUserPreferences(user);
 
       setUser(user);
     } catch (err: any) {
@@ -146,14 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
-      // Sync language preference from database
-      if (user.locale) {
-        await AsyncStorage.setItem('userLanguage', user.locale);
-      }
-      // Sync week start preference from database
-      if (user.weekStartDay) {
-        await AsyncStorage.setItem('weekStartDay', user.weekStartDay);
-      }
+      // Sync user preferences (timezone, locale, weekStartDay)
+      await syncUserPreferences(user);
 
       setUser(user);
     } catch (err: any) {
@@ -218,16 +201,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authAPI.updateMe(data);
       const updatedUser = response.data.user;
       setUser(updatedUser);
-      // Sync language preference if locale was updated
-      if (data.locale) {
-        await AsyncStorage.setItem('userLanguage', data.locale);
-      }
-      // Sync week start preference if weekStartDay was updated
-      if (data.weekStartDay) {
-        await AsyncStorage.setItem('weekStartDay', data.weekStartDay);
-      }
       // Update cached user data
       await AsyncStorage.setItem('cachedUser', JSON.stringify(updatedUser));
+      // Sync user preferences (timezone, locale, weekStartDay)
+      await syncUserPreferences(updatedUser);
     } catch (err: any) {
       const message = err.response?.data?.error || 'Update failed';
       setError(message);
