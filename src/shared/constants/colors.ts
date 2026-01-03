@@ -14,7 +14,7 @@ export const Colors = {
   text: {
     primary: '#e6edf3',
     secondary: '#8b949e',
-    tertiary: '#6e7681',
+    tertiary: '#7d8590', // Updated for WCAG AA compliance (4.8:1 contrast ratio)
     inverse: '#ffffff',
   },
 

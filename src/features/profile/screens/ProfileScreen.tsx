@@ -10,6 +10,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { GlassButton } from '../../../shared/components';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
+import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
@@ -43,25 +44,30 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [weekStartModalVisible, setWeekStartModalVisible] = useState(false);
 
   const handleLogout = async () => {
+    hapticMedium();
     await logout();
   };
 
   const toggleLanguage = async () => {
+    hapticLight();
     const newLanguage = language === 'ru' ? 'en' : 'ru';
     try {
       // Save to local state and AsyncStorage
       await setLanguage(newLanguage);
       // Save to database
       await updateUser({ locale: newLanguage });
+      hapticSuccess();
     } catch (err: any) {
       Alert.alert('Ошибка', err.message || 'Не удалось изменить язык');
     }
   };
 
   const handleTimezoneSelect = async (timezone: string) => {
+    hapticLight();
     try {
       await updateUser({ timezone });
       setTimezoneModalVisible(false);
+      hapticSuccess();
     } catch (err: any) {
       Alert.alert('Ошибка', err.message || 'Не удалось обновить таймзону');
     }
@@ -73,9 +79,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   };
 
   const handleWeekStartSelect = async (weekStart: 'monday' | 'sunday') => {
+    hapticLight();
     try {
       await updateUser({ weekStartDay: weekStart });
       setWeekStartModalVisible(false);
+      hapticSuccess();
     } catch (err: any) {
       Alert.alert('Ошибка', err.message || 'Не удалось обновить начало недели');
     }
@@ -142,7 +150,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </TouchableOpacity>
 
           {/* Timezone */}
-          <TouchableOpacity style={styles.settingItem} onPress={() => setTimezoneModalVisible(true)}>
+          <TouchableOpacity style={styles.settingItem} onPress={() => { hapticLight(); setTimezoneModalVisible(true); }}>
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
                 <Ionicons name="globe" size={20} color={Colors.accent.blue} />
@@ -158,7 +166,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </TouchableOpacity>
 
           {/* Week Start */}
-          <TouchableOpacity style={styles.settingItem} onPress={() => setWeekStartModalVisible(true)}>
+          <TouchableOpacity style={styles.settingItem} onPress={() => { hapticLight(); setWeekStartModalVisible(true); }}>
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
                 <Ionicons name="calendar-outline" size={20} color={Colors.accent.purple} />
@@ -230,7 +238,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Выберите часовой пояс</Text>
-              <TouchableOpacity onPress={() => setTimezoneModalVisible(false)}>
+              <TouchableOpacity onPress={() => { hapticLight(); setTimezoneModalVisible(false); }}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -277,7 +285,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <Text style={styles.modalTitle}>
                 {language === 'ru' ? 'Начало недели' : 'Week starts on'}
               </Text>
-              <TouchableOpacity onPress={() => setWeekStartModalVisible(false)}>
+              <TouchableOpacity onPress={() => { hapticLight(); setWeekStartModalVisible(false); }}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
