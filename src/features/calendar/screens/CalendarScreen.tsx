@@ -6,6 +6,7 @@ import { useFocusEffect, CompositeScreenProps } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
+import { SkeletonLoader } from '../../../shared/components';
 import { CalendarStackParamList, TabParamList } from '../../../navigation';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import DayDetailsModal from '../components/DayDetailsModal';
@@ -319,9 +320,19 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
           <Text style={styles.sectionTitle}>{t.calendar.upcomingEvents}</Text>
 
           {loading ? (
-            <View style={styles.loadingState}>
-              <ActivityIndicator size="large" color={Colors.accent.purple} />
-              <Text style={styles.loadingText}>{t.common.loading}</Text>
+            <View style={styles.upcomingList}>
+              {[1, 2, 3].map((key) => (
+                <View key={key} style={styles.upcomingCard}>
+                  <View style={styles.upcomingCardHeader}>
+                    <SkeletonLoader width={120} height={24} borderRadius={12} />
+                  </View>
+                  <View style={styles.upcomingContent}>
+                    <SkeletonLoader width="60%" height={16} style={{ marginBottom: 8 }} />
+                    <SkeletonLoader width="80%" height={16} style={{ marginBottom: 8 }} />
+                    <SkeletonLoader width="70%" height={16} />
+                  </View>
+                </View>
+              ))}
             </View>
           ) : error ? (
             <View style={styles.errorState}>

@@ -5,6 +5,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { SkeletonLoader } from '../../../shared/components';
 import { ProjectsStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -34,9 +35,19 @@ export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
 
         {/* Projects List */}
         {loading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={Colors.accent.purple} />
-            <Text style={styles.loadingText}>{t.projects.loading}</Text>
+          <View style={styles.projectsList}>
+            {[1, 2, 3].map((key) => (
+              <View key={key} style={styles.projectCard}>
+                <View style={styles.projectHeader}>
+                  <View style={styles.projectInfo}>
+                    <SkeletonLoader width="60%" height={24} style={{ marginBottom: 8 }} />
+                    <SkeletonLoader width={80} height={20} borderRadius={12} />
+                  </View>
+                </View>
+                <SkeletonLoader width="90%" height={16} style={{ marginTop: 8, marginBottom: 4 }} />
+                <SkeletonLoader width="70%" height={16} />
+              </View>
+            ))}
           </View>
         ) : error ? (
           <View style={styles.errorState}>

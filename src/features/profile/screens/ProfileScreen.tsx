@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
-import { GlassButton } from '../../../shared/components';
+import { GlassButton, SkeletonLoader } from '../../../shared/components';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
@@ -37,7 +37,7 @@ const WEEK_START_OPTIONS = [
 ];
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
-  const { user, logout, updateUser } = useAuth();
+  const { user, logout, updateUser, loading } = useAuth();
   const { t, language, setLanguage } = useI18n();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [timezoneModalVisible, setTimezoneModalVisible] = useState(false);
@@ -102,8 +102,52 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <Text style={styles.title}>{t.profile.title}</Text>
         </View>
 
-        {/* User Info Card */}
-        <View style={styles.userCard}>
+        {loading ? (
+          <>
+            {/* User Info Card Skeleton */}
+            <View style={styles.userCard}>
+              <View style={styles.avatarContainer}>
+                <SkeletonLoader variant="circular" height={64} />
+              </View>
+              <SkeletonLoader width="40%" height={24} style={{ marginTop: 12, marginBottom: 8 }} />
+              <SkeletonLoader width="60%" height={16} />
+            </View>
+
+            {/* Settings Section Skeleton */}
+            <View style={styles.section}>
+              <SkeletonLoader width="30%" height={20} style={{ marginBottom: 16 }} />
+              {[1, 2, 3, 4, 5].map((key) => (
+                <View key={key} style={styles.settingItem}>
+                  <View style={styles.settingLeft}>
+                    <SkeletonLoader variant="circular" height={40} />
+                    <SkeletonLoader width={120} height={16} style={{ marginLeft: 12 }} />
+                  </View>
+                  <SkeletonLoader width={80} height={16} />
+                </View>
+              ))}
+            </View>
+
+            {/* About Section Skeleton */}
+            <View style={styles.section}>
+              <SkeletonLoader width="25%" height={20} style={{ marginBottom: 16 }} />
+              {[1, 2].map((key) => (
+                <View key={key} style={styles.settingItem}>
+                  <View style={styles.settingLeft}>
+                    <SkeletonLoader variant="circular" height={40} />
+                    <SkeletonLoader width={100} height={16} style={{ marginLeft: 12 }} />
+                  </View>
+                  <SkeletonLoader width={60} height={16} />
+                </View>
+              ))}
+            </View>
+
+            {/* Logout Button Skeleton */}
+            <SkeletonLoader width="100%" height={48} borderRadius={24} style={{ marginTop: 24 }} />
+          </>
+        ) : (
+          <>
+            {/* User Info Card */}
+            <View style={styles.userCard}>
           <View style={styles.avatarContainer}>
             <Ionicons name="person-circle" size={64} color={Colors.accent.purple} />
           </View>
@@ -218,13 +262,15 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </TouchableOpacity>
         </View>
 
-        {/* Logout Button */}
-        <GlassButton
-          title={t.profile.logout}
-          onPress={handleLogout}
-          variant="glass"
-          style={styles.logoutButton}
-        />
+            {/* Logout Button */}
+            <GlassButton
+              title={t.profile.logout}
+              onPress={handleLogout}
+              variant="glass"
+              style={styles.logoutButton}
+            />
+          </>
+        )}
       </ScrollView>
 
       {/* Timezone Selection Modal */}

@@ -228,7 +228,7 @@ function serializeUser(dbUser) {
 
 ---
 
-### [ ] 7. Исправить цветовой контраст text.tertiary
+### [x] 7. Исправить цветовой контраст text.tertiary ✅
 
 **Приоритет:** 🟢 УЛУЧШЕНИЕ
 **Файл:** `src/shared/constants/colors.ts:18`
@@ -251,7 +251,7 @@ export const Colors = {
 
 ---
 
-### [ ] 8. Добавить haptic feedback во все touch interactions
+### [x] 8. Добавить haptic feedback во все touch interactions ✅
 
 **Приоритет:** 🟢 УЛУЧШЕНИЕ
 **Файлы:** Все компоненты с TouchableOpacity/Pressable
@@ -296,7 +296,7 @@ import { hapticLight } from '../../shared/utils/haptics';
 
 ---
 
-### [ ] 9. Добавить skeleton screens для loading states
+### [x] 9. Добавить skeleton screens для loading states ✅
 
 **Приоритет:** 🟢 УЛУЧШЕНИЕ
 **Файлы:** CalendarScreen, ProjectsScreen, ProfileScreen
@@ -305,21 +305,18 @@ import { hapticLight } from '../../shared/utils/haptics';
 - Плохой perceived performance
 
 **Решение:**
-Создать компонент `src/shared/components/SkeletonLoader.tsx`:
-```typescript
-export const SkeletonCalendar = () => {
-  // Skeleton для календаря
-};
+Создан универсальный компонент `src/shared/components/loaders/SkeletonLoader.tsx`:
+- Поддерживает 3 варианта: rectangular, circular, text
+- Анимированный shimmer эффект
+- Настраиваемые размеры и стили
+- Использует DimensionValue для корректной типизации
 
-export const SkeletonProjectCard = () => {
-  // Skeleton для карточки проекта
-};
-```
+Интегрирован в:
+- ✅ CalendarScreen - skeleton для upcoming events (3 карточки)
+- ✅ ProjectsScreen - skeleton для project cards (3 карточки)
+- ✅ ProfileScreen - skeleton для user card и settings sections
 
-Использовать:
-```typescript
-{loading ? <SkeletonCalendar /> : <WeeklyCalendar />}
-```
+Улучшает perceived performance при загрузке данных.
 
 ---
 
@@ -486,14 +483,14 @@ CREATE TABLE rehearsal_notes (
 ## 📊 Прогресс
 
 **Всего задач:** 16
-**Выполнено:** 5
+**Выполнено:** 8
 **В процессе:** 0
-**Осталось:** 11
+**Осталось:** 8
 
 ### По приоритетам:
 - 🔴 Критичные: 1/1 ✅
 - 🟡 Важные: 4/4 ✅
-- 🟢 Улучшения: 0/6
+- 🟢 Улучшения: 3/6
 - 🔵 Фичи: 0/5
 
 ---
