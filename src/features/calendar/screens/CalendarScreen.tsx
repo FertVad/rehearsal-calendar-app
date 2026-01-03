@@ -9,7 +9,6 @@ import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
 import { CalendarStackParamList, TabParamList } from '../../../navigation';
 import WeeklyCalendar from '../components/WeeklyCalendar';
-import DayDetailsModal from '../components/DayDetailsModal';
 import MyRehearsalsModal from '../components/MyRehearsalsModal';
 import TodayRehearsals from '../components/TodayRehearsals';
 import SmartPlannerButton from '../components/SmartPlannerButton';
@@ -31,8 +30,6 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return formatDateToString(new Date());
   });
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalDate, setModalDate] = useState<string>('');
   const [myRehearsalsVisible, setMyRehearsalsVisible] = useState(false);
   const [filterExpanded, setFilterExpanded] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
@@ -86,13 +83,10 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   const { respondingId, toggleLike } = useRSVP();
 
   const handleDayLongPress = useCallback((date: string) => {
-    setModalDate(date);
-    setModalVisible(true);
-  }, []);
-
-  const handleModalClose = useCallback(() => {
-    setModalVisible(false);
-  }, []);
+    navigation.navigate('AddRehearsal', {
+      prefilledDate: date,
+    });
+  }, [navigation]);
 
   const handleMyRehearsalsClose = useCallback(() => {
     setMyRehearsalsVisible(false);
@@ -101,8 +95,6 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   const handleSelectDateFromModal = useCallback((date: string) => {
     setSelectedDate(date);
   }, []);
-
-  const modalRehearsals = rehearsals.filter(r => r.date === modalDate);
 
   // Fetch rehearsals when screen is focused (to get updates after creating new rehearsals)
   useFocusEffect(
@@ -456,16 +448,6 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
           )}
         </View>
       </ScrollView>
-
-      {/* Day Details Modal */}
-      <DayDetailsModal
-        visible={modalVisible}
-        onClose={handleModalClose}
-        date={modalDate}
-        rehearsals={modalRehearsals}
-        onDeleteRehearsal={handleDeleteRehearsal}
-        isAdmin={selectedProject?.is_admin}
-      />
 
       {/* My Rehearsals Modal */}
       <MyRehearsalsModal
