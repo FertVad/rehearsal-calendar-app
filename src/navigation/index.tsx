@@ -8,6 +8,7 @@ import * as Linking from 'expo-linking';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { Colors } from '../shared/constants/colors';
+import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
@@ -225,7 +226,10 @@ const CreateTabButton = React.memo(({ onPress }: { onPress: () => void }) => {
   return (
     <TouchableOpacity
       style={tabButtonStyles.container}
-      onPress={onPress}
+      onPress={() => {
+        hapticMedium();
+        onPress();
+      }}
       activeOpacity={0.7}
     >
       <View style={tabButtonStyles.iconContainer}>
@@ -321,6 +325,11 @@ function TabNavigator() {
           },
           tabBarItemStyle: {
             paddingHorizontal: 0,
+          },
+        }}
+        screenListeners={{
+          tabPress: () => {
+            hapticLight();
           },
         }}
       >

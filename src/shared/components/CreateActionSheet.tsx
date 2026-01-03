@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { ActionSheetIOS, Platform, Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useI18n } from '../../contexts/I18nContext';
 import { Colors } from '../constants/colors';
+import { hapticLight } from '../../shared/utils/haptics';
 
 interface CreateActionSheetProps {
   visible: boolean;
@@ -57,6 +58,7 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
   }, [visible, onClose, onCreateRehearsal, onMarkBusy, onCreateProject, t]);
 
   const handleAction = (action: 'rehearsal' | 'busy' | 'project') => {
+    hapticLight();
     switch (action) {
       case 'rehearsal':
         onCreateRehearsal();
@@ -114,7 +116,10 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
 
             <TouchableOpacity
               style={[styles.option, styles.cancelOption]}
-              onPress={onClose}
+              onPress={() => {
+                hapticLight();
+                onClose();
+              }}
             >
               <Text style={styles.cancelText}>{t.common.cancel}</Text>
             </TouchableOpacity>

@@ -16,6 +16,7 @@ import {
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { hapticLight, hapticSuccess } from '../../../shared/utils/haptics';
 import { CalendarStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -214,7 +215,10 @@ export default function AddRehearsalScreen() {
           {/* Submit Button */}
           <TouchableOpacity
             style={[styles.submitButton, (loading || form.loadingRehearsal) && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
+            onPress={() => {
+              hapticSuccess();
+              handleSubmit();
+            }}
             disabled={loading || form.loadingRehearsal}
           >
             {loading ? (
@@ -335,7 +339,10 @@ export default function AddRehearsalScreen() {
             {/* Create Project Button */}
             <TouchableOpacity
               style={styles.createProjectButton}
-              onPress={form.handleCreateProject}
+              onPress={() => {
+                hapticLight();
+                form.handleCreateProject();
+              }}
             >
               <Ionicons name="add-circle-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.createProjectButtonText}>{t.rehearsals.createNewProject}</Text>

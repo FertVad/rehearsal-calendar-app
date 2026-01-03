@@ -16,6 +16,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { hapticSuccess } from '../../../shared/utils/haptics';
 import { ProjectsStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -143,7 +144,10 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
           <TouchableOpacity
             style={[styles.createButton, creating && styles.buttonDisabled]}
-            onPress={handleCreateProject}
+            onPress={() => {
+              hapticSuccess();
+              handleCreateProject();
+            }}
             disabled={creating}
           >
             {creating ? (

@@ -15,6 +15,7 @@ import { Rehearsal, ResponseStats } from '../../../shared/types';
 import { formatDateLocalized } from '../../../shared/utils/time';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
+import { hapticLight, hapticMedium } from '../../../shared/utils/haptics';
 
 interface DayDetailsModalProps {
   visible: boolean;
@@ -67,7 +68,7 @@ export default function DayDetailsModal({
       transparent={true}
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <Pressable style={styles.overlay} onPress={() => { hapticLight(); onClose(); }}>
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           {/* Header */}
           <View style={styles.header}>
@@ -79,7 +80,7 @@ export default function DayDetailsModal({
                 month: 'long',
                 year: 'numeric',
               }, language === 'ru' ? 'ru-RU' : 'en-US')}</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <TouchableOpacity onPress={() => { hapticLight(); onClose(); }} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -118,7 +119,10 @@ export default function DayDetailsModal({
                         </Text>
                         {isAdmin && onDeleteRehearsal && (
                           <TouchableOpacity
-                            onPress={() => onDeleteRehearsal(rehearsal.id)}
+                            onPress={() => {
+                              hapticMedium();
+                              onDeleteRehearsal(rehearsal.id);
+                            }}
                             style={styles.deleteButton}
                           >
                             <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />

@@ -171,7 +171,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <Switch
               value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
+              onValueChange={(value) => {
+                hapticLight();
+                setNotificationsEnabled(value);
+              }}
               trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.purple }}
               thumbColor={Colors.text.inverse}
             />
