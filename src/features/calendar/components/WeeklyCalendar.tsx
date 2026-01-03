@@ -5,6 +5,7 @@ import { Rehearsal } from '../../../shared/types';
 import { formatDateToString } from '../../../shared/utils/time';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useWeekStart, getWeekStart as getWeekStartUtil } from '../../../hooks/useWeekStart';
+import { hapticLight } from '../../../shared/utils/haptics';
 
 interface WeeklyCalendarProps {
   rehearsals: Rehearsal[];
@@ -114,17 +115,19 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     return now.toLocaleDateString(locale, options);
   }, [weeks, currentWeekIndex, language]);
 
-  // Handle scroll end to update current week index
-  const handleScrollEnd = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+  // Handle scroll to update current week index and haptic feedback
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const newIndex = Math.round(offsetX / WEEK_WIDTH);
     if (newIndex !== currentWeekIndex && newIndex >= 0 && newIndex < weeks.length) {
+      hapticLight();
       setCurrentWeekIndex(newIndex);
     }
   }, [currentWeekIndex, weeks.length]);
 
   // Navigate to today's week
   const handleGoToToday = useCallback(() => {
+    hapticLight();
     flatListRef.current?.scrollToIndex({
       index: CENTER_INDEX,
       animated: true,
@@ -147,8 +150,14 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
                 day.isToday && styles.dayToday,
                 isSelected && styles.daySelected,
               ]}
-              onPress={() => onDaySelect(day.date)}
-              onLongPress={() => onDayLongPress?.(day.date)}
+              onPress={() => {
+                hapticLight();
+                onDaySelect(day.date);
+              }}
+              onLongPress={() => {
+                hapticLight();
+                onDayLongPress?.(day.date);
+              }}
               delayLongPress={400}
               activeOpacity={0.7}
             >
@@ -217,11 +226,9 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
         renderItem={renderWeek}
         keyExtractor={(item) => item.id}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
-        snapToInterval={WEEK_WIDTH}
-        decelerationRate="fast"
-        onMomentumScrollEnd={handleScrollEnd}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         getItemLayout={(_, index) => ({
           length: WEEK_WIDTH,
           offset: WEEK_WIDTH * index,
@@ -247,14 +254,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.glass.border,
     borderRadius: 16,
-    padding: Spacing.md,
+    padding: Spacing.sm,
     overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   monthYear: {
     fontSize: FontSize.lg,
@@ -285,13 +292,13 @@ const styles = StyleSheet.create({
   dayCell: {
     flex: 1,
     marginHorizontal: 2,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderRadius: 12,
     backgroundColor: Colors.bg.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    minHeight: 64,
+    minHeight: 56,
   },
   dayToday: {
     borderWidth: 2,
