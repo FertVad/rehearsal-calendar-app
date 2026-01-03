@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Language, Translations, translations } from '../i18n/translations';
 
@@ -20,12 +20,7 @@ export function I18nProvider({ children }: I18nProviderProps) {
   const [language, setLanguageState] = useState<Language>('ru');
   const [loading, setLoading] = useState(true);
 
-  // Load saved language on mount
-  useEffect(() => {
-    loadLanguage();
-  }, []);
-
-  const loadLanguage = async () => {
+  const loadLanguage = useCallback(async () => {
     try {
       const saved = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
       if (saved === 'en' || saved === 'ru') {
@@ -36,16 +31,21 @@ export function I18nProvider({ children }: I18nProviderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const setLanguage = async (lang: Language) => {
+  // Load saved language on mount
+  useEffect(() => {
+    loadLanguage();
+  }, [loadLanguage]);
+
+  const setLanguage = useCallback(async (lang: Language) => {
     try {
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
       setLanguageState(lang);
     } catch (error) {
       console.warn('Failed to save language preference:', error);
     }
-  };
+  }, []);
 
   const value: I18nContextType = {
     language,

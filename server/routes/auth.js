@@ -178,65 +178,57 @@ router.get('/me', requireAuth, async (req, res) => {
   }
 });
 
+// Whitelist of allowed fields for user updates (security)
+const ALLOWED_USER_FIELDS = {
+  firstName: { dbColumn: 'first_name', validate: null },
+  lastName: { dbColumn: 'last_name', validate: null },
+  phone: { dbColumn: 'phone', validate: null },
+  timezone: { dbColumn: 'timezone', validate: null },
+  locale: { dbColumn: 'locale', validate: null },
+  notificationsEnabled: { dbColumn: 'notifications_enabled', validate: null },
+  emailNotifications: { dbColumn: 'email_notifications', validate: null },
+  weekStartDay: {
+    dbColumn: 'week_start_day',
+    validate: (value) => {
+      if (value !== 'monday' && value !== 'sunday') {
+        throw new Error('weekStartDay must be either "monday" or "sunday"');
+      }
+    }
+  },
+  password: {
+    dbColumn: 'password_hash',
+    validate: null,
+    transform: async (value) => await bcrypt.hash(value, 10)
+  }
+};
+
 // Update current user info
 router.put('/me', requireAuth, async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      phone,
-      timezone,
-      locale,
-      notificationsEnabled,
-      emailNotifications,
-      password,
-      weekStartDay,
-    } = req.body;
-
     const updates = [];
     const values = [];
     let paramIndex = 1;
 
-    if (firstName !== undefined) {
-      updates.push(`first_name = $${paramIndex++}`);
-      values.push(firstName);
-    }
-    if (lastName !== undefined) {
-      updates.push(`last_name = $${paramIndex++}`);
-      values.push(lastName);
-    }
-    if (phone !== undefined) {
-      updates.push(`phone = $${paramIndex++}`);
-      values.push(phone);
-    }
-    if (timezone !== undefined) {
-      updates.push(`timezone = $${paramIndex++}`);
-      values.push(timezone);
-    }
-    if (locale !== undefined) {
-      updates.push(`locale = $${paramIndex++}`);
-      values.push(locale);
-    }
-    if (notificationsEnabled !== undefined) {
-      updates.push(`notifications_enabled = $${paramIndex++}`);
-      values.push(notificationsEnabled);
-    }
-    if (emailNotifications !== undefined) {
-      updates.push(`email_notifications = $${paramIndex++}`);
-      values.push(emailNotifications);
-    }
-    if (weekStartDay !== undefined) {
-      // Validate weekStartDay
-      if (weekStartDay !== 'monday' && weekStartDay !== 'sunday') {
-        return res.status(400).json({ error: 'weekStartDay must be either "monday" or "sunday"' });
+    // Process only whitelisted fields
+    for (const [apiField, config] of Object.entries(ALLOWED_USER_FIELDS)) {
+      const value = req.body[apiField];
+
+      if (value === undefined) continue;
+
+      // Run field-specific validation if exists
+      if (config.validate) {
+        try {
+          config.validate(value);
+        } catch (err) {
+          return res.status(400).json({ error: err.message });
+        }
       }
-      updates.push(`week_start_day = $${paramIndex++}`);
-      values.push(weekStartDay);
-    }
-    if (password !== undefined) {
-      const passwordHash = await bcrypt.hash(password, 10);
-      updates.push(`password_hash = $${paramIndex++}`);
-      values.push(passwordHash);
+
+      // Transform value if needed (e.g., hash password)
+      const finalValue = config.transform ? await config.transform(value) : value;
+
+      updates.push(`${config.dbColumn} = $${paramIndex++}`);
+      values.push(finalValue);
     }
 
     if (updates.length === 0) {

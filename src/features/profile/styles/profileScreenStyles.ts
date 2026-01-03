@@ -123,6 +123,9 @@ export const styles = StyleSheet.create({
   timezoneList: {
     paddingBottom: Spacing.xxl,
   },
+  weekStartOptions: {
+    paddingBottom: Spacing.xl,
+  },
   timezoneItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',

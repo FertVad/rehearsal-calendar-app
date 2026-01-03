@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
@@ -38,12 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load user from storage on mount
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       const accessToken = await AsyncStorage.getItem('accessToken');
       if (!accessToken) {
@@ -95,9 +90,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-  };
+  }, []);
 
-  const login = async (email: string, password: string) => {
+  // Load user from storage on mount
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
+
+  const login = useCallback(async (email: string, password: string) => {
     try {
       setError(null);
       setLoading(true);
@@ -129,9 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const register = async (email: string, password: string, firstName: string, lastName?: string) => {
+  const register = useCallback(async (email: string, password: string, firstName: string, lastName?: string) => {
     try {
       setError(null);
       setLoading(true);
@@ -163,9 +163,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loginWithTelegram = async (telegramData: any) => {
+  const loginWithTelegram = useCallback(async (telegramData: any) => {
     try {
       setError(null);
       setLoading(true);
@@ -189,9 +189,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -210,9 +210,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const updateUser = async (data: Partial<User>) => {
+  const updateUser = useCallback(async (data: Partial<User>) => {
     try {
       setError(null);
       const response = await authAPI.updateMe(data);
@@ -233,7 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(message);
       throw new Error(message);
     }
-  };
+  }, []);
 
   return (
     <AuthContext.Provider
