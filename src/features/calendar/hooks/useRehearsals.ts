@@ -1,7 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Rehearsal, Project, RSVPStatus } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDateToString, isoToDateString, isoToTimeString } from '../../../shared/utils/time';
+
+// Cache duration in milliseconds (15 seconds)
+const CACHE_DURATION = 15000;
 
 /**
  * Transform rehearsal from API format to UI format
@@ -30,17 +33,33 @@ const transformRehearsal = (r: Rehearsal): Rehearsal => {
 export const useRehearsals = (projects: Project[], filterProjectId: string | null) => {
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rsvpResponses, setRsvpResponses] = useState<Record<string, RSVPStatus>>({});
   const [adminStats, setAdminStats] = useState<Record<string, { confirmed: number; invited: number }>>({});
+  const lastFetchTime = useRef<number>(0);
 
-  const fetchRehearsals = useCallback(async () => {
+  const fetchRehearsals = useCallback(async (force = false) => {
     if (projects.length === 0) {
       setRehearsals([]);
       return;
     }
 
-    setLoading(true);
+    // Smart caching: skip fetch if last update was recent (unless forced)
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime.current;
+    if (!force && timeSinceLastFetch < CACHE_DURATION) {
+      console.log('[useRehearsals] Skipping fetch - cache is fresh');
+      return;
+    }
+
+    // Use loading for initial load (no data), refreshing for background updates
+    const isInitialLoad = rehearsals.length === 0;
+    if (isInitialLoad) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     setError(null);
 
     try {
@@ -121,13 +140,17 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
       setRehearsals(fetchedRehearsals);
       setRsvpResponses(responses);
       setAdminStats(stats);
+
+      // Update cache timestamp
+      lastFetchTime.current = Date.now();
     } catch (err: any) {
       console.error('Failed to fetch rehearsals:', err);
       setError(err.message || 'Failed to load rehearsals');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [projects, filterProjectId]);
+  }, [projects, filterProjectId, rehearsals.length]);
 
   const updateAdminStats = useCallback(async (rehearsalId: string) => {
     try {
@@ -151,6 +174,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
   return {
     rehearsals,
     loading,
+    refreshing,
     error,
     rsvpResponses,
     setRsvpResponses,

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, SafeAreaView, ScrollView, ActivityIndicator, TouchableOpacity, Alert, FlatList, Pressable } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Alert, FlatList, Pressable } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect, CompositeScreenProps } from '@react-navigation/native';
@@ -71,6 +71,7 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
   const {
     rehearsals,
     loading,
+    refreshing,
     error,
     rsvpResponses,
     setRsvpResponses,
@@ -96,7 +97,12 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
     setSelectedDate(date);
   }, []);
 
-  // Fetch rehearsals when screen is focused (to get updates after creating new rehearsals)
+  // Pull-to-refresh handler (forces update, ignores cache)
+  const handleRefresh = useCallback(() => {
+    fetchRehearsals(true);
+  }, [fetchRehearsals]);
+
+  // Fetch rehearsals when screen is focused (with smart caching)
   useFocusEffect(
     useCallback(() => {
       fetchRehearsals();
@@ -204,7 +210,18 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.accent.purple}
+            colors={[Colors.accent.purple]}
+          />
+        }
+      >
         {/* Project Filter */}
         <View style={styles.filterContainer}>
           <TouchableOpacity
