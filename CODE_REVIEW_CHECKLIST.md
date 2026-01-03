@@ -344,31 +344,23 @@ import { RefreshControl } from 'react-native';
 
 ---
 
-### [ ] 11. Реализовать полный glassmorphism с BlurView
+### [x] 11. Реализовать полный glassmorphism с BlurView ✅
 
 **Приоритет:** 🟢 УЛУЧШЕНИЕ
-**Файл:** `src/shared/components/GlassButton.tsx`
+**Файл:** `src/shared/components/buttons/GlassButton.tsx`
 **Проблема:**
 - Сейчас только transparency, нет blur эффекта
 - Не настоящий glassmorphism
 
 **Решение:**
-```typescript
-import { BlurView } from 'expo-blur';
+Внедрен полноценный glassmorphism эффект:
+- ✅ Установлен `expo-blur` пакет
+- ✅ Интегрирован `BlurView` с intensity 20 и tint "dark"
+- ✅ Обновлена структура компонента: TouchableOpacity > BlurView > Content
+- ✅ Добавлен glassContainer стиль для overflow: hidden и border
+- ✅ Использован Colors.glass.bgLight для полупрозрачного фона поверх blur
 
-const GlassButton = ({ title, onPress, variant = 'glass' }) => {
-  if (variant === 'glass') {
-    return (
-      <BlurView intensity={20} tint="dark" style={styles.glassContainer}>
-        <TouchableOpacity onPress={onPress}>
-          <Text>{title}</Text>
-        </TouchableOpacity>
-      </BlurView>
-    );
-  }
-  // ...
-};
-```
+Теперь GlassButton имеет настоящий blur эффект, как в спецификации дизайна.
 
 ---
 
@@ -483,14 +475,14 @@ CREATE TABLE rehearsal_notes (
 ## 📊 Прогресс
 
 **Всего задач:** 16
-**Выполнено:** 8
+**Выполнено:** 9
 **В процессе:** 0
-**Осталось:** 8
+**Осталось:** 7
 
 ### По приоритетам:
 - 🔴 Критичные: 1/1 ✅
 - 🟡 Важные: 4/4 ✅
-- 🟢 Улучшения: 3/6
+- 🟢 Улучшения: 4/6
 - 🔵 Фичи: 0/5
 
 ---

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Colors, BorderRadius, FontSize, FontWeight } from '../../constants/colors';
 
 interface GlassButtonProps {
@@ -55,31 +56,40 @@ export default function GlassButton({
 
   return (
     <TouchableOpacity
-      style={[styles.glassButton, disabled && styles.disabled, style]}
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.7}
+      style={[styles.glassContainer, disabled && styles.disabled, style]}
     >
-      {loading ? (
-        <ActivityIndicator color={Colors.text.primary} />
-      ) : (
-        <Text style={[styles.glassText, textStyle]}>{title}</Text>
-      )}
+      <BlurView
+        intensity={20}
+        tint="dark"
+        style={styles.glassButton}
+      >
+        {loading ? (
+          <ActivityIndicator color={Colors.text.primary} />
+        ) : (
+          <Text style={[styles.glassText, textStyle]}>{title}</Text>
+        )}
+      </BlurView>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  glassButton: {
-    backgroundColor: Colors.glass.bg,
+  glassContainer: {
     borderRadius: BorderRadius.md,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.glass.border,
+  },
+  glassButton: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 44,
+    backgroundColor: Colors.glass.bgLight,
   },
   glassText: {
     color: Colors.text.primary,
