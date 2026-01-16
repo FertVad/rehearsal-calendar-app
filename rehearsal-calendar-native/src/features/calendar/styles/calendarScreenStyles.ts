@@ -293,6 +293,7 @@ export const styles = StyleSheet.create({
   },
   // Today's rehearsals section
   todaySection: {
+    marginTop: Spacing.xl,
     marginBottom: Spacing.xl,
   },
   todayList: {
