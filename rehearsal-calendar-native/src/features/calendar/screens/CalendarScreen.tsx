@@ -107,6 +107,11 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
     }, [fetchRehearsals])
   );
 
+  // Refetch when filter changes (force refresh to bypass cache)
+  React.useEffect(() => {
+    fetchRehearsals(true);
+  }, [filterProjectId, fetchRehearsals]);
+
   const handleDeleteRehearsal = async (rehearsalId: string) => {
     // Find the rehearsal to get its projectId
     const rehearsal = rehearsals.find(r => r.id === rehearsalId);
