@@ -55,6 +55,11 @@ export default function TodayRehearsals({
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [selectedRehearsal, setSelectedRehearsal] = useState<Rehearsal | null>(null);
 
+  // Memoize project lookup to avoid repeated searches (MUST be before early returns!)
+  const projectsMap = useMemo(() => {
+    return new Map(projects.map(p => [p.id, p]));
+  }, [projects]);
+
   // Check which rehearsals are synced to calendar
   // Memoize rehearsal IDs to avoid re-running when rehearsal content changes
   const rehearsalIds = useMemo(() => rehearsals.map(r => r.id).join(','), [rehearsals]);
@@ -110,11 +115,6 @@ export default function TodayRehearsals({
       </View>
     );
   }
-
-  // Memoize project lookup to avoid repeated searches
-  const projectsMap = useMemo(() => {
-    return new Map(projects.map(p => [p.id, p]));
-  }, [projects]);
 
   return (
     <View style={styles.todaySection}>
