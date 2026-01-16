@@ -1,0 +1,66 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                     🚨 CRITICAL RULES - NEVER VIOLATE 🚨                  ║
+║                   (Paste this at the top of your screen)                  ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ ❌ WRONG                          ✅ CORRECT                             │
+├─────────────────────────────────────────────────────────────────────────┤
+│ req.user.id                       req.userId                             │
+│ WHERE id = ?                      WHERE id = $1                          │
+│ VALUES (NOW())                    VALUES ($1) + new Date().toISOString() │
+│ T23:59:00+02:00 (all-day)         T23:59:59.999Z (all-day)               │
+└─────────────────────────────────────────────────────────────────────────┘
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                           BEFORE EVERY CHANGE                             ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+☐ Read file before editing it
+☐ Check CHECKLIST.md for topic-specific rules
+☐ Use try-catch in all async routes
+☐ Validate required parameters
+☐ Use $N placeholders in SQL queries
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                           BEFORE COMMITTING                               ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+$ cd rehearsal-calendar-native/server && npm run check     ← RUN THIS!
+
+☐ 0 errors in consistency checker
+☐ Server restarts without errors
+☐ Tested affected endpoints
+☐ No TypeScript errors (if frontend changed)
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                          COMMON ERROR FIXES                               ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+🔴 "Cannot read properties of undefined (reading 'id')"
+   FIX: Change req.user.id → req.userId
+
+🔴 "violates check constraint chk_availability_time_order"
+   FIX: Use UTC (.000Z) for all-day events, not timezone offset
+
+🔴 "Invalid or expired token"
+   FIX: Login again to get fresh token
+
+🔴 "Calendar sync broken"
+   FIX: Check req.userId usage and $N placeholders
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                            DOCUMENTATION                                  ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+📄 Full Guide:      .claude/AI_INSTRUCTIONS.md
+📋 Checklist:       .claude/CHECKLIST.md
+💻 Examples:        .claude/CODE_EXAMPLES.md
+⚡ Quick Ref:       ../AI_QUICK_REFERENCE.md
+🗺️  Navigation:     ../DOCUMENTATION_MAP.md
+🏗️  Architecture:   ../rehearsal-calendar-native/PROJECT_INFO.md
+🔧 API Standards:   ../rehearsal-calendar-native/server/API_STANDARDS.md
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                       REMEMBER: READ FIRST, CODE SECOND                   ║
+╚═══════════════════════════════════════════════════════════════════════════╝
