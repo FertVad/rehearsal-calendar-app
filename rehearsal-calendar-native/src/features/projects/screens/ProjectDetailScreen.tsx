@@ -114,8 +114,8 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       const { inviteUrl } = response.data;
 
       await Share.share({
-        message: `Присоединяйся к проекту "${project.name}" в приложении Rehearsal:\n${inviteUrl}`,
-        title: `Приглашение в проект ${project.name}`,
+        message: `${t.projects.shareInviteMessage(project.name)}\n\n${inviteUrl}`,
+        title: t.projects.shareInviteTitle(project.name),
       });
     } catch (err: any) {
       Alert.alert(

@@ -29,6 +29,8 @@ export interface ProjectsTranslations {
   inviteLinkCopied: string;
   inviteLinkError: string;
   fetchError: string;
+  shareInviteMessage: (projectName: string) => string;
+  shareInviteTitle: (projectName: string) => string;
 }
 
 export const ru = {
@@ -63,6 +65,8 @@ export const ru = {
     inviteLinkCopied: 'Ссылка-приглашение скопирована в буфер обмена',
     inviteLinkError: 'Не удалось создать ссылку-приглашение',
     fetchError: 'Не удалось загрузить данные проекта',
+    shareInviteMessage: (projectName: string) => `Присоединяйся к проекту "${projectName}" в приложении Rehearsal:`,
+    shareInviteTitle: (projectName: string) => `Приглашение в проект ${projectName}`,
   },
 };
 
@@ -98,5 +102,7 @@ export const en = {
     inviteLinkCopied: 'Invite link copied to clipboard',
     inviteLinkError: 'Failed to create invite link',
     fetchError: 'Failed to load project data',
+    shareInviteMessage: (projectName: string) => `Join the project "${projectName}" in the Rehearsal app:`,
+    shareInviteTitle: (projectName: string) => `Invitation to project ${projectName}`,
   },
 };
