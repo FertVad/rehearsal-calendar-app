@@ -41,7 +41,7 @@ export const useRSVP = () => {
       console.error('Failed to toggle like:', err);
       // Revert optimistic update on error
       onSuccess(rehearsalId, currentStatus);
-      Alert.alert(t.common.error, err.message || t.rehearsals.rsvpError || 'Failed to update status');
+      Alert.alert(t.common.error, err.message || 'Failed to update status');
     } finally {
       setRespondingId(null);
     }

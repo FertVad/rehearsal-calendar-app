@@ -123,7 +123,7 @@ export default function TodayRehearsals({
         {rehearsals.map((rehearsal) => {
           const currentResponse = rsvpResponses[rehearsal.id];
           const isResponding = respondingId === rehearsal.id;
-          const project = projectsMap.get(rehearsal.projectId);
+          const project = rehearsal.projectId ? projectsMap.get(rehearsal.projectId) : undefined;
           const isAdminForThisRehearsal = project?.is_admin || false;
           const stats = adminStats[rehearsal.id];
 
@@ -253,13 +253,13 @@ export default function TodayRehearsals({
         visible={detailsModalVisible}
         onClose={() => setDetailsModalVisible(false)}
         rehearsal={selectedRehearsal}
-        project={selectedRehearsal ? projectsMap.get(selectedRehearsal.projectId) || null : null}
-        isAdmin={selectedRehearsal ? projectsMap.get(selectedRehearsal.projectId)?.is_admin || false : false}
+        project={selectedRehearsal && selectedRehearsal.projectId ? projectsMap.get(selectedRehearsal.projectId) || null : null}
+        isAdmin={selectedRehearsal && selectedRehearsal.projectId ? projectsMap.get(selectedRehearsal.projectId)?.is_admin || false : false}
         currentResponse={selectedRehearsal ? rsvpResponses[selectedRehearsal.id] : null}
         onRSVP={onRSVP}
         onRSVPSuccess={(id, status, serverStats) => {
           setRsvpResponses(prev => ({ ...prev, [id]: status }));
-          if (serverStats && selectedRehearsal) {
+          if (serverStats && selectedRehearsal && selectedRehearsal.projectId) {
             const isAdminForThisRehearsal = projectsMap.get(selectedRehearsal.projectId)?.is_admin || false;
             if (isAdminForThisRehearsal) {
               setAdminStats(prev => ({ ...prev, [id]: serverStats }));
