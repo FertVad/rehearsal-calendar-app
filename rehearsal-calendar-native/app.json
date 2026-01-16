@@ -1,0 +1,80 @@
+{
+  "expo": {
+    "name": "rehearsal-calendar-native",
+    "slug": "rehearsal-calendar-native",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "rehearsalapp",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rehearsal.app",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "rehearsalapp"
+            ]
+          }
+        ],
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCalendarsUsageDescription": "This app needs access to your calendar to sync rehearsals and show your availability.",
+        "NSCalendarsFullAccessUsageDescription": "This app needs full access to your calendar to sync rehearsals and import events as availability slots.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "This app needs write access to your calendar to export rehearsals.",
+        "NSRemindersUsageDescription": "This app may set reminders for your rehearsals.",
+        "NSRemindersFullAccessUsageDescription": "This app needs full access to reminders for rehearsal notifications."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.rehearsal.app",
+      "permissions": [
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "rehearsal-calendar-app.onrender.com",
+              "pathPrefix": "/invite"
+            },
+            {
+              "scheme": "rehearsalapp"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3151ccee-abfe-4f07-925e-00004d2fade8"
+      }
+    }
+  }
+}

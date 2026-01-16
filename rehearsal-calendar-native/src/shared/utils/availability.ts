@@ -1,0 +1,72 @@
+import { timeToMinutes, minutesToTime } from './time';
+
+export interface TimeRange {
+  start: string;
+  end: string;
+  type?: 'available' | 'busy' | 'tentative';
+  title?: string;
+  notes?: string;
+}
+
+export const WORKDAY_START = '09:00';
+export const WORKDAY_END = '23:00';
+
+const DAY_END = 23 * 60 + 59;
+
+// Re-export for backward compatibility
+export const toMinutes = timeToMinutes;
+export const toTimeString = minutesToTime;
+
+const minTime = (a: string, b: string): string =>
+  toMinutes(a) < toMinutes(b) ? a : b;
+
+const maxTime = (a: string, b: string): string =>
+  toMinutes(a) > toMinutes(b) ? a : b;
+
+const timeLt = (a: string, b: string): boolean => toMinutes(a) < toMinutes(b);
+
+export function clampToWorkday(range: { start: string; end: string }) {
+  const start = maxTime(range.start, WORKDAY_START);
+  const end = minTime(range.end, WORKDAY_END);
+  return timeLt(start, end) ? { start, end } : null;
+}
+
+export const mergeBusyRanges = (ranges: TimeRange[]): TimeRange[] => {
+  const cleaned = ranges
+    .filter(r => r && typeof r.start === 'string' && typeof r.end === 'string')
+    .map(r => ({ start: toMinutes(r.start), end: toMinutes(r.end) }))
+    .filter(r => !isNaN(r.start) && !isNaN(r.end) && r.start < r.end);
+  if (cleaned.length === 0) return [];
+  cleaned.sort((a, b) => a.start - b.start);
+  const merged = [cleaned[0]];
+  for (const cur of cleaned.slice(1)) {
+    const last = merged[merged.length - 1];
+    if (cur.start <= last.end + 1) {
+      last.end = Math.max(last.end, cur.end);
+    } else {
+      merged.push({ ...cur });
+    }
+  }
+  return merged.map(r => ({ start: toTimeString(r.start), end: toTimeString(r.end) }));
+};
+
+export const busyToFreeGaps = (ranges: TimeRange[]): TimeRange[] => {
+  const merged = mergeBusyRanges(ranges)
+    .map(clampToWorkday)
+    .filter((r): r is TimeRange => Boolean(r));
+  if (merged.length === 0) return [{ start: WORKDAY_START, end: WORKDAY_END }];
+  const result: TimeRange[] = [];
+  let prevEnd = toMinutes(WORKDAY_START);
+  merged.forEach(r => {
+    const start = toMinutes(r.start);
+    if (start > prevEnd) {
+      result.push({ start: toTimeString(prevEnd), end: toTimeString(start) });
+    }
+    prevEnd = Math.max(prevEnd, toMinutes(r.end));
+  });
+  const workdayEnd = toMinutes(WORKDAY_END);
+  if (prevEnd < workdayEnd) {
+    result.push({ start: toTimeString(prevEnd), end: toTimeString(workdayEnd) });
+  }
+  return result.filter(r => timeLt(r.start, r.end));
+};

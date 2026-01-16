@@ -1,0 +1,242 @@
+import { Router } from 'express';
+import bcrypt from 'bcrypt';
+import db from '../database/db.js';
+import { generateTokens, verifyToken, requireAuth } from '../middleware/jwtMiddleware.js';
+import { serializeUser } from '../utils/userSerializer.js';
+
+const router = Router();
+
+// Register new user
+router.post('/register', async (req, res) => {
+  try {
+    const { email, password, firstName, lastName } = req.body;
+
+    if (!email || !password || !firstName) {
+      return res.status(400).json({ error: 'Email, password and first name are required' });
+    }
+
+    // Check if user already exists
+    const existing = await db.get('SELECT id FROM native_users WHERE email = $1', [email]);
+    if (existing) {
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Insert user
+    const result = await db.run(
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, last_login_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [email, passwordHash, firstName, lastName || null]
+    );
+
+    const userId = result.lastInsertId;
+
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(userId);
+
+    // Get user data
+    const user = await db.get(
+      `SELECT id, email, first_name, last_name, timezone, locale,
+              notifications_enabled, email_notifications, week_start_day
+       FROM native_users WHERE id = $1`,
+      [userId]
+    );
+
+    res.json({
+      user: serializeUser(user),
+      accessToken,
+      refreshToken,
+    });
+  } catch (err) {
+    console.error('[Auth] Registration error:', err);
+    res.status(500).json({ error: 'Failed to register user' });
+  }
+});
+
+// Login
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Get user
+    const user = await db.get(
+      `SELECT id, email, password_hash, first_name, last_name, timezone, locale,
+              notifications_enabled, email_notifications, week_start_day
+       FROM native_users WHERE email = $1`,
+      [email]
+    );
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Verify password
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Update last login
+    await db.run('UPDATE native_users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user.id);
+
+    res.json({
+      user: serializeUser(user),
+      accessToken,
+      refreshToken,
+    });
+  } catch (err) {
+    console.error('[Auth] Login error:', err);
+    res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+// Refresh access token
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token is required' });
+    }
+
+    const decoded = verifyToken(refreshToken, 'refresh');
+    if (!decoded) {
+      return res.status(401).json({ error: 'Invalid or expired refresh token' });
+    }
+
+    // Generate new tokens
+    const tokens = generateTokens(decoded.userId);
+
+    res.json(tokens);
+  } catch (err) {
+    console.error('[Auth] Refresh error:', err);
+    res.status(500).json({ error: 'Failed to refresh token' });
+  }
+});
+
+// Get current user info
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    const user = await db.get(
+      `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
+              notifications_enabled, email_notifications, week_start_day, created_at
+       FROM native_users WHERE id = $1`,
+      [req.userId]
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      user: serializeUser(user)
+    });
+  } catch (err) {
+    console.error('[Auth] Get me error:', err);
+    res.status(500).json({ error: 'Failed to get user info' });
+  }
+});
+
+// Whitelist of allowed fields for user updates (security)
+const ALLOWED_USER_FIELDS = {
+  firstName: { dbColumn: 'first_name', validate: null },
+  lastName: { dbColumn: 'last_name', validate: null },
+  phone: { dbColumn: 'phone', validate: null },
+  timezone: { dbColumn: 'timezone', validate: null },
+  locale: { dbColumn: 'locale', validate: null },
+  notificationsEnabled: { dbColumn: 'notifications_enabled', validate: null },
+  emailNotifications: { dbColumn: 'email_notifications', validate: null },
+  weekStartDay: {
+    dbColumn: 'week_start_day',
+    validate: (value) => {
+      if (value !== 'monday' && value !== 'sunday') {
+        throw new Error('weekStartDay must be either "monday" or "sunday"');
+      }
+    }
+  },
+  password: {
+    dbColumn: 'password_hash',
+    validate: null,
+    transform: async (value) => await bcrypt.hash(value, 10)
+  }
+};
+
+// Update current user info
+router.put('/me', requireAuth, async (req, res) => {
+  try {
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    // Process only whitelisted fields
+    for (const [apiField, config] of Object.entries(ALLOWED_USER_FIELDS)) {
+      const value = req.body[apiField];
+
+      if (value === undefined) continue;
+
+      // Run field-specific validation if exists
+      if (config.validate) {
+        try {
+          config.validate(value);
+        } catch (err) {
+          return res.status(400).json({ error: err.message });
+        }
+      }
+
+      // Transform value if needed (e.g., hash password)
+      const finalValue = config.transform ? await config.transform(value) : value;
+
+      updates.push(`${config.dbColumn} = $${paramIndex++}`);
+      values.push(finalValue);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    updates.push(`updated_at = NOW()`);
+    values.push(req.userId);
+
+    await db.run(
+      `UPDATE native_users SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
+      values
+    );
+
+    // Get updated user
+    const user = await db.get(
+      `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
+              notifications_enabled, email_notifications, week_start_day
+       FROM native_users WHERE id = $1`,
+      [req.userId]
+    );
+
+    res.json({
+      user: serializeUser(user)
+    });
+  } catch (err) {
+    console.error('[Auth] Update me error:', err);
+    res.status(500).json({ error: 'Failed to update user info' });
+  }
+});
+
+// Delete account
+router.delete('/me', requireAuth, async (req, res) => {
+  try {
+    await db.run('DELETE FROM native_users WHERE id = $1', [req.userId]);
+    res.json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    console.error('[Auth] Delete account error:', err);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+export default router;
