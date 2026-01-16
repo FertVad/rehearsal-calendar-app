@@ -56,20 +56,25 @@ export default function TodayRehearsals({
   const [selectedRehearsal, setSelectedRehearsal] = useState<Rehearsal | null>(null);
 
   // Check which rehearsals are synced to calendar
+  // Memoize rehearsal IDs to avoid re-running when rehearsal content changes
+  const rehearsalIds = useMemo(() => rehearsals.map(r => r.id).join(','), [rehearsals]);
+
   useEffect(() => {
     const checkSyncStatus = async () => {
       const syncStatus: Record<string, boolean> = {};
-      for (const rehearsal of rehearsals) {
-        const isSynced = await isRehearsalSynced(rehearsal.id);
-        syncStatus[rehearsal.id] = isSynced;
-      }
+      await Promise.all(
+        rehearsals.map(async (rehearsal) => {
+          const isSynced = await isRehearsalSynced(rehearsal.id);
+          syncStatus[rehearsal.id] = isSynced;
+        })
+      );
       setSyncedRehearsals(syncStatus);
     };
 
     if (rehearsals.length > 0) {
       checkSyncStatus();
     }
-  }, [rehearsals]);
+  }, [rehearsalIds, rehearsals]);
 
   // Get date label (Сегодня, Завтра, or formatted date)
   const dateLabel = useMemo(() => {
@@ -106,6 +111,11 @@ export default function TodayRehearsals({
     );
   }
 
+  // Memoize project lookup to avoid repeated searches
+  const projectsMap = useMemo(() => {
+    return new Map(projects.map(p => [p.id, p]));
+  }, [projects]);
+
   return (
     <View style={styles.todaySection}>
       <Text style={styles.sectionTitle}>{dateLabel}</Text>
@@ -113,7 +123,7 @@ export default function TodayRehearsals({
         {rehearsals.map((rehearsal) => {
           const currentResponse = rsvpResponses[rehearsal.id];
           const isResponding = respondingId === rehearsal.id;
-          const project = projects.find(p => p.id === rehearsal.projectId);
+          const project = projectsMap.get(rehearsal.projectId);
           const isAdminForThisRehearsal = project?.is_admin || false;
           const stats = adminStats[rehearsal.id];
 
@@ -243,14 +253,14 @@ export default function TodayRehearsals({
         visible={detailsModalVisible}
         onClose={() => setDetailsModalVisible(false)}
         rehearsal={selectedRehearsal}
-        project={selectedRehearsal ? projects.find(p => p.id === selectedRehearsal.projectId) || null : null}
-        isAdmin={selectedRehearsal ? projects.find(p => p.id === selectedRehearsal.projectId)?.is_admin || false : false}
+        project={selectedRehearsal ? projectsMap.get(selectedRehearsal.projectId) || null : null}
+        isAdmin={selectedRehearsal ? projectsMap.get(selectedRehearsal.projectId)?.is_admin || false : false}
         currentResponse={selectedRehearsal ? rsvpResponses[selectedRehearsal.id] : null}
         onRSVP={onRSVP}
         onRSVPSuccess={(id, status, serverStats) => {
           setRsvpResponses(prev => ({ ...prev, [id]: status }));
           if (serverStats && selectedRehearsal) {
-            const isAdminForThisRehearsal = projects.find(p => p.id === selectedRehearsal.projectId)?.is_admin || false;
+            const isAdminForThisRehearsal = projectsMap.get(selectedRehearsal.projectId)?.is_admin || false;
             if (isAdminForThisRehearsal) {
               setAdminStats(prev => ({ ...prev, [id]: serverStats }));
             }

@@ -56,6 +56,17 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     return getWeekStartUtil(date, weekStartDay);
   }, [weekStartDay]);
 
+  // Memoize rehearsal count map to avoid re-filtering on every render
+  const rehearsalCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    rehearsals.forEach(r => {
+      if (r.date) {
+        map.set(r.date, (map.get(r.date) || 0) + 1);
+      }
+    });
+    return map;
+  }, [rehearsals]);
+
   // Generate week data
   const generateWeekData = useCallback((weekStart: Date): DayInfo[] => {
     const days: DayInfo[] = [];
@@ -67,7 +78,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
       date.setDate(weekStart.getDate() + i);
 
       const dateString = formatDateToString(date);
-      const rehearsalCount = rehearsals.filter(r => r.date === dateString).length;
+      const rehearsalCount = rehearsalCountMap.get(dateString) || 0;
 
       days.push({
         date: dateString,
@@ -79,7 +90,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     }
 
     return days;
-  }, [rehearsals]);
+  }, [rehearsalCountMap, DAYS_OF_WEEK]);
 
   // Generate all weeks
   const weeks = useMemo((): WeekData[] => {

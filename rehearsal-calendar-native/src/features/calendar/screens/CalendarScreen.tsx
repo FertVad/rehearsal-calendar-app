@@ -1,13 +1,12 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Alert, FlatList, Pressable } from 'react-native';
-import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useFocusEffect, CompositeScreenProps } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
-import { CalendarStackParamList, TabParamList } from '../../../navigation';
+import { CalendarStackParamList } from '../../../navigation';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import MyRehearsalsModal from '../components/MyRehearsalsModal';
 import TodayRehearsals from '../components/TodayRehearsals';
@@ -17,7 +16,7 @@ import { Rehearsal } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
-import { formatDateLocalized, formatDateToString, parseDateString } from '../../../shared/utils/time';
+import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
 import { useRehearsals, useRSVP } from '../hooks';
 import { calendarScreenStyles as styles } from '../styles';
 import { unsyncRehearsal } from '../../../shared/services/calendar';
@@ -25,7 +24,7 @@ import { unsyncRehearsal } from '../../../shared/services/calendar';
 type CalendarScreenProps = NativeStackScreenProps<CalendarStackParamList, 'CalendarMain'>;
 
 export default function CalendarScreen({ navigation }: CalendarScreenProps) {
-  const { projects, selectedProject } = useProjects();
+  const { projects } = useProjects();
   const { t, language } = useI18n();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return formatDateToString(new Date());
@@ -78,7 +77,6 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
     adminStats,
     setAdminStats,
     fetchRehearsals,
-    updateAdminStats,
   } = useRehearsals(projects, filterProjectId);
 
   const { respondingId, toggleLike } = useRSVP();
@@ -172,11 +170,6 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
     setFilterExpanded(false);
   };
 
-  // Check if user is admin for the filtered project
-  const isAdminForFilter = filterProjectId
-    ? projects.find(p => p.id === filterProjectId)?.is_admin
-    : false;
-
   // Get rehearsals for selected date (defaults to today)
   const selectedDateRehearsals = useMemo(() => {
     return rehearsals
@@ -191,7 +184,6 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
 
   const upcomingRehearsals = useMemo(() => {
     const today = formatDateToString(new Date());
-    const todayDate = parseDateString(today);
 
     // Filter rehearsals from today onwards, sorted by date and time
     return rehearsals

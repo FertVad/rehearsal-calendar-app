@@ -49,14 +49,16 @@ export default function MyRehearsalsModal({
       });
   }, [rehearsals]);
 
-  // Check which rehearsals are synced to calendar
+  // Check which rehearsals are synced to calendar (parallel check for performance)
   useEffect(() => {
     const checkSyncStatus = async () => {
       const syncStatus: Record<string, boolean> = {};
-      for (const rehearsal of upcomingRehearsals) {
-        const isSynced = await isRehearsalSynced(rehearsal.id);
-        syncStatus[rehearsal.id] = isSynced;
-      }
+      await Promise.all(
+        upcomingRehearsals.map(async (rehearsal) => {
+          const isSynced = await isRehearsalSynced(rehearsal.id);
+          syncStatus[rehearsal.id] = isSynced;
+        })
+      );
       setSyncedRehearsals(syncStatus);
     };
 

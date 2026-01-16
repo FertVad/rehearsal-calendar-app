@@ -63,9 +63,7 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(false);
-  const [responding, setResponding] = useState(false);
   const [respondingUserId, setRespondingUserId] = useState<string | null>(null);
-  const [localResponse, setLocalResponse] = useState<RSVPStatus | null>(currentResponse);
 
   // Load participants
   useEffect(() => {
@@ -109,11 +107,6 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
 
     loadParticipants();
   }, [visible, rehearsal]);
-
-  // Update local response when prop changes
-  useEffect(() => {
-    setLocalResponse(currentResponse);
-  }, [currentResponse]);
 
   if (!rehearsal) return null;
 

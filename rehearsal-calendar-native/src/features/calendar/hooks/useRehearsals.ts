@@ -38,6 +38,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
   const [rsvpResponses, setRsvpResponses] = useState<Record<string, RSVPStatus>>({});
   const [adminStats, setAdminStats] = useState<Record<string, { confirmed: number; invited: number }>>({});
   const lastFetchTime = useRef<number>(0);
+  const isInitialLoadRef = useRef(true);
 
   const fetchRehearsals = useCallback(async (force = false) => {
     if (projects.length === 0) {
@@ -54,8 +55,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
     }
 
     // Use loading for initial load (no data), refreshing for background updates
-    const isInitialLoad = rehearsals.length === 0;
-    if (isInitialLoad) {
+    if (isInitialLoadRef.current) {
       setLoading(true);
     } else {
       setRefreshing(true);
@@ -141,8 +141,9 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
       setRsvpResponses(responses);
       setAdminStats(stats);
 
-      // Update cache timestamp
+      // Update cache timestamp and mark initial load complete
       lastFetchTime.current = Date.now();
+      isInitialLoadRef.current = false;
     } catch (err: any) {
       console.error('Failed to fetch rehearsals:', err);
       setError(err.message || 'Failed to load rehearsals');
@@ -150,7 +151,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
       setLoading(false);
       setRefreshing(false);
     }
-  }, [projects, filterProjectId, rehearsals.length]);
+  }, [projects, filterProjectId]);
 
   const updateAdminStats = useCallback(async (rehearsalId: string) => {
     try {
@@ -160,8 +161,6 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
           ...prev,
           [rehearsalId]: {
             confirmed: res.data.stats.confirmed,
-            declined: res.data.stats.declined,
-            tentative: res.data.stats.tentative,
             invited: res.data.stats.invited,
           },
         }));
