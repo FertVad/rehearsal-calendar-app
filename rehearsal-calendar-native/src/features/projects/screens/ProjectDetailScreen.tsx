@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,13 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { ProjectsStackParamList } from '../../../navigation';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
 import { formatDateToString as formatDateToStringUtil } from '../../../shared/utils/time';
+import { useI18n } from '../../../contexts/I18nContext';
 
 type ProjectDetailScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'ProjectDetail'>;
 
@@ -63,6 +65,7 @@ const formatDateToString = formatDateToStringUtil;
 
 export default function ProjectDetailScreen({ route, navigation }: ProjectDetailScreenProps) {
   const { projectId } = route.params;
+  const { t } = useI18n();
 
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -84,12 +87,12 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       setRehearsals(rehearsalsRes.data.rehearsals || []);
     } catch (err) {
       console.error('Failed to fetch project data:', err);
-      Alert.alert('Ошибка', 'Не удалось загрузить данные проекта');
+      Alert.alert(t.common.error, t.projects.fetchError);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   useEffect(() => {
     fetchData();
@@ -103,6 +106,8 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   const handleInvite = async () => {
     if (!project) return;
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     try {
       setInviteLoading(true);
       const response = await invitesAPI.createInvite(projectId);
@@ -114,22 +119,26 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       });
     } catch (err: any) {
       Alert.alert(
-        'Ошибка',
-        err.response?.data?.error || 'Не удалось создать приглашение'
+        t.common.error,
+        err.response?.data?.error || t.projects.inviteLinkError
       );
     } finally {
       setInviteLoading(false);
     }
   };
 
-  // Split rehearsals into upcoming and past
-  const today = formatDateToString(new Date());
-  const upcomingRehearsals = rehearsals
-    .filter(r => r.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-  const pastRehearsals = rehearsals
-    .filter(r => r.date < today)
-    .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
+  // Memoize split rehearsals into upcoming and past to avoid re-sorting on every render
+  const { upcomingRehearsals, pastRehearsals } = useMemo(() => {
+    const today = formatDateToString(new Date());
+    const upcoming = rehearsals
+      .filter(r => r.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+    const past = rehearsals
+      .filter(r => r.date < today)
+      .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
+
+    return { upcomingRehearsals: upcoming, pastRehearsals: past };
+  }, [rehearsals]);
 
   if (loading) {
     return (
@@ -145,7 +154,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
-          <Text style={styles.errorText}>Проект не найден</Text>
+          <Text style={styles.errorText}>{t.projects.projectNotFound}</Text>
         </View>
       </SafeAreaView>
     );
@@ -153,9 +162,9 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'owner': return 'Владелец';
-      case 'admin': return 'Админ';
-      default: return 'Участник';
+      case 'owner': return t.projects.owner;
+      case 'admin': return t.projects.admin;
+      default: return t.projects.member;
     }
   };
 
@@ -205,7 +214,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
             ) : (
               <>
                 <Ionicons name="person-add" size={18} color={Colors.text.inverse} />
-                <Text style={styles.inviteButtonText}>Пригласить участников</Text>
+                <Text style={styles.inviteButtonText}>{t.projects.inviteMembers}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -215,12 +224,12 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="calendar" size={20} color={Colors.accent.purple} />
-            <Text style={styles.sectionTitle}>Ближайшие репетиции</Text>
+            <Text style={styles.sectionTitle}>{t.projects.upcomingRehearsals}</Text>
             <Text style={styles.sectionCount}>{upcomingRehearsals.length}</Text>
           </View>
 
           {upcomingRehearsals.length === 0 ? (
-            <Text style={styles.emptyText}>Нет запланированных репетиций</Text>
+            <Text style={styles.emptyText}>{t.projects.noUpcomingRehearsals}</Text>
           ) : (
             <View style={styles.rehearsalsList}>
               {upcomingRehearsals.slice(0, 5).map(rehearsal => (
@@ -257,7 +266,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="time" size={20} color={Colors.text.tertiary} />
-              <Text style={[styles.sectionTitle, styles.pastTitle]}>Прошедшие репетиции</Text>
+              <Text style={[styles.sectionTitle, styles.pastTitle]}>{t.projects.pastRehearsals}</Text>
               <Text style={styles.sectionCount}>{pastRehearsals.length}</Text>
             </View>
 
@@ -290,7 +299,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="people" size={20} color={Colors.accent.purple} />
-            <Text style={styles.sectionTitle}>Участники</Text>
+            <Text style={styles.sectionTitle}>{t.projects.members}</Text>
             <Text style={styles.sectionCount}>{members.length}</Text>
           </View>
 

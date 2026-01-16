@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
 import { ProjectsStackParamList } from '../../../navigation';
@@ -71,6 +72,7 @@ export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
                     isSelected && styles.projectCardSelected,
                   ]}
                   onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     setSelectedProject(project);
                     navigation.navigate('ProjectDetail', { projectId: project.id });
                   }}
@@ -100,6 +102,7 @@ export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
                       style={styles.inviteButton}
                       onPress={(e) => {
                         e.stopPropagation();
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                         generateInviteLink(project.id);
                       }}
                       disabled={generatingInvite}

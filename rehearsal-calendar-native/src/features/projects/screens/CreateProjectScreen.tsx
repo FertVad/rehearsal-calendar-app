@@ -116,7 +116,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
           {/* Timezone Selector */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Timezone</Text>
+            <Text style={styles.label}>{t.projects.timezone}</Text>
             <TouchableOpacity
               style={styles.timezoneSelector}
               activeOpacity={0.7}
@@ -173,7 +173,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
         >
           <View style={styles.timezoneModalContent}>
             <View style={styles.timezoneModalHeader}>
-              <Text style={styles.timezoneModalTitle}>Select Timezone</Text>
+              <Text style={styles.timezoneModalTitle}>{t.projects.selectTimezone}</Text>
               <TouchableOpacity onPress={() => setTimezonePickerVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>

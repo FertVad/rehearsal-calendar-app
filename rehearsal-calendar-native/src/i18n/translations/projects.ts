@@ -16,6 +16,19 @@ export interface ProjectsTranslations {
   descriptionPlaceholder: string;
   nameRequired: string;
   createError: string;
+  projectNotFound: string;
+  owner: string;
+  member: string;
+  upcomingRehearsals: string;
+  pastRehearsals: string;
+  noUpcomingRehearsals: string;
+  inviteMembers: string;
+  members: string;
+  timezone: string;
+  selectTimezone: string;
+  inviteLinkCopied: string;
+  inviteLinkError: string;
+  fetchError: string;
 }
 
 export const ru = {
@@ -37,6 +50,19 @@ export const ru = {
     descriptionPlaceholder: 'Введите описание',
     nameRequired: 'Название обязательно',
     createError: 'Ошибка создания проекта',
+    projectNotFound: 'Проект не найден',
+    owner: 'Владелец',
+    member: 'Участник',
+    upcomingRehearsals: 'Ближайшие репетиции',
+    pastRehearsals: 'Прошедшие репетиции',
+    noUpcomingRehearsals: 'Нет запланированных репетиций',
+    inviteMembers: 'Пригласить участников',
+    members: 'Участники',
+    timezone: 'Часовой пояс',
+    selectTimezone: 'Выберите часовой пояс',
+    inviteLinkCopied: 'Ссылка-приглашение скопирована в буфер обмена',
+    inviteLinkError: 'Не удалось создать ссылку-приглашение',
+    fetchError: 'Не удалось загрузить данные проекта',
   },
 };
 
@@ -59,5 +85,18 @@ export const en = {
     descriptionPlaceholder: 'Enter description',
     nameRequired: 'Name is required',
     createError: 'Error creating project',
+    projectNotFound: 'Project not found',
+    owner: 'Owner',
+    member: 'Member',
+    upcomingRehearsals: 'Upcoming Rehearsals',
+    pastRehearsals: 'Past Rehearsals',
+    noUpcomingRehearsals: 'No upcoming rehearsals',
+    inviteMembers: 'Invite Members',
+    members: 'Members',
+    timezone: 'Timezone',
+    selectTimezone: 'Select Timezone',
+    inviteLinkCopied: 'Invite link copied to clipboard',
+    inviteLinkError: 'Failed to create invite link',
+    fetchError: 'Failed to load project data',
   },
 };
