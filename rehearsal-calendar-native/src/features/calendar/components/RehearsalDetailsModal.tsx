@@ -117,7 +117,7 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
     }
 
     setRespondingUserId(participant.userId);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     await onRSVP(rehearsal.id, participant.hasLiked ? 'yes' : null, (id, status, serverStats) => {
       // Update participant list

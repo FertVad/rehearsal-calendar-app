@@ -5,7 +5,7 @@ import { Rehearsal } from '../../../shared/types';
 import { formatDateToString } from '../../../shared/utils/time';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useWeekStart, getWeekStart as getWeekStartUtil } from '../../../hooks/useWeekStart';
-import { hapticLight } from '../../../shared/utils/haptics';
+import { hapticMedium } from '../../../shared/utils/haptics';
 
 interface WeeklyCalendarProps {
   rehearsals: Rehearsal[];
@@ -131,14 +131,14 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     const offsetX = event.nativeEvent.contentOffset.x;
     const newIndex = Math.round(offsetX / WEEK_WIDTH);
     if (newIndex !== currentWeekIndex && newIndex >= 0 && newIndex < weeks.length) {
-      hapticLight();
+      hapticMedium();
       setCurrentWeekIndex(newIndex);
     }
   }, [currentWeekIndex, weeks.length]);
 
   // Navigate to today's week
   const handleGoToToday = useCallback(() => {
-    hapticLight();
+    hapticMedium();
     flatListRef.current?.scrollToIndex({
       index: CENTER_INDEX,
       animated: true,
@@ -162,11 +162,11 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
                 isSelected && styles.daySelected,
               ]}
               onPress={() => {
-                hapticLight();
+                hapticMedium();
                 onDaySelect(day.date);
               }}
               onLongPress={() => {
-                hapticLight();
+                hapticMedium();
                 onDayLongPress?.(day.date);
               }}
               delayLongPress={400}

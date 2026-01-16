@@ -433,8 +433,8 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                       <Pressable
                         style={styles.likeButton}
                         onPress={() => {
-                          // Light haptic feedback on tap
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          // Medium haptic feedback on tap
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
                           // Toggle logic is in the hook, just pass current status
                           toggleLike(rehearsal.id, currentResponse, (id, status, serverStats) => {

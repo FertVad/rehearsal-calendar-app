@@ -16,7 +16,7 @@ import {
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
-import { hapticLight, hapticSuccess } from '../../../shared/utils/haptics';
+import { hapticMedium, hapticSuccess } from '../../../shared/utils/haptics';
 import { CalendarStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -340,7 +340,7 @@ export default function AddRehearsalScreen() {
             <TouchableOpacity
               style={styles.createProjectButton}
               onPress={() => {
-                hapticLight();
+                hapticMedium();
                 form.handleCreateProject();
               }}
             >
