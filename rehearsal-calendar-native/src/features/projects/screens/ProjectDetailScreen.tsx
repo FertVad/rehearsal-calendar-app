@@ -46,6 +46,7 @@ interface Member {
 interface Rehearsal {
   id: string;
   title: string;
+  scene?: string;
   date: string;
   time: string;
   endTime?: string;
@@ -238,7 +239,9 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
                     <Text style={styles.rehearsalDateText}>{formatDate(rehearsal.date)}</Text>
                   </View>
                   <View style={styles.rehearsalInfo}>
-                    <Text style={styles.rehearsalTitle} numberOfLines={1}>{rehearsal.title}</Text>
+                    <Text style={styles.rehearsalTitle} numberOfLines={1}>
+                      {rehearsal.scene || t.calendar.rehearsal}
+                    </Text>
                     <View style={styles.rehearsalMeta}>
                       <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
                       <Text style={styles.rehearsalTime}>
@@ -280,7 +283,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
                   </View>
                   <View style={styles.rehearsalInfo}>
                     <Text style={[styles.rehearsalTitle, styles.pastText]} numberOfLines={1}>
-                      {rehearsal.title}
+                      {rehearsal.scene || t.calendar.rehearsal}
                     </Text>
                     <View style={styles.rehearsalMeta}>
                       <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
