@@ -235,4 +235,105 @@ router.get('/:projectId/members', requireAuth, async (req, res) => {
   }
 });
 
+// PUT /api/native/projects/:projectId/members/:userId/role - Update member role
+router.put('/:projectId/members/:userId/role', requireAuth, async (req, res) => {
+  try {
+    const requesterId = req.userId;
+    const { projectId, userId } = req.params;
+    const { role } = req.body;
+
+    // Validate role
+    if (!['admin', 'member'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be "admin" or "member"' });
+    }
+
+    // Check if requester is admin/owner
+    const requesterMembership = await db.get(
+      'SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND status = $3',
+      [projectId, requesterId, 'active']
+    );
+
+    if (!requesterMembership || (requesterMembership.role !== 'owner' && requesterMembership.role !== 'admin')) {
+      return res.status(403).json({ error: 'Only project admins can update member roles' });
+    }
+
+    // Check target member exists
+    const targetMembership = await db.get(
+      'SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND status = $3',
+      [projectId, userId, 'active']
+    );
+
+    if (!targetMembership) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    // Cannot change owner role
+    if (targetMembership.role === 'owner') {
+      return res.status(403).json({ error: 'Cannot change owner role' });
+    }
+
+    // Update role
+    await db.run(
+      'UPDATE native_project_members SET role = $1, updated_at = NOW() WHERE project_id = $2 AND user_id = $3',
+      [role, projectId, userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Member role updated successfully',
+      role
+    });
+  } catch (error) {
+    console.error('Error updating member role:', error);
+    res.status(500).json({ error: 'Failed to update member role' });
+  }
+});
+
+// DELETE /api/native/projects/:projectId/members/:userId - Remove member from project
+router.delete('/:projectId/members/:userId', requireAuth, async (req, res) => {
+  try {
+    const requesterId = req.userId;
+    const { projectId, userId } = req.params;
+
+    // Check if requester is admin/owner
+    const requesterMembership = await db.get(
+      'SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND status = $3',
+      [projectId, requesterId, 'active']
+    );
+
+    if (!requesterMembership || (requesterMembership.role !== 'owner' && requesterMembership.role !== 'admin')) {
+      return res.status(403).json({ error: 'Only project admins can remove members' });
+    }
+
+    // Check target member exists
+    const targetMembership = await db.get(
+      'SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND status = $3',
+      [projectId, userId, 'active']
+    );
+
+    if (!targetMembership) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    // Cannot remove owner
+    if (targetMembership.role === 'owner') {
+      return res.status(403).json({ error: 'Cannot remove project owner' });
+    }
+
+    // Remove member (soft delete by setting status to 'removed')
+    await db.run(
+      'UPDATE native_project_members SET status = $1, updated_at = NOW() WHERE project_id = $2 AND user_id = $3',
+      ['removed', projectId, userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Member removed successfully'
+    });
+  } catch (error) {
+    console.error('Error removing member:', error);
+    res.status(500).json({ error: 'Failed to remove member' });
+  }
+});
+
 export default router;
