@@ -8,6 +8,7 @@ export interface CommonTranslations {
   today: string;
   loading: string;
   error: string;
+  success: string;
   noData: string;
   apply: string;
   or: string;
@@ -66,6 +67,7 @@ export const ru = {
     today: 'Сегодня',
     loading: 'Загрузка...',
     error: 'Ошибка',
+    success: 'Успех',
     noData: 'Нет данных',
     apply: 'Применить',
     or: 'или',
@@ -126,6 +128,7 @@ export const en = {
     today: 'Today',
     loading: 'Loading...',
     error: 'Error',
+    success: 'Success',
     noData: 'No data',
     apply: 'Apply',
     or: 'or',

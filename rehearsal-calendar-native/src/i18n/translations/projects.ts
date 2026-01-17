@@ -31,6 +31,20 @@ export interface ProjectsTranslations {
   fetchError: string;
   shareInviteMessage: (projectName: string) => string;
   shareInviteTitle: (projectName: string) => string;
+  manageMember: string;
+  makeAdmin: string;
+  removeAdmin: string;
+  removeMember: string;
+  cancel: string;
+  removeMemberConfirm: string;
+  removeMemberMessage: (memberName: string) => string;
+  makeAdminConfirm: string;
+  makeAdminMessage: (memberName: string) => string;
+  removeAdminConfirm: string;
+  removeAdminMessage: (memberName: string) => string;
+  memberRemoved: string;
+  roleUpdated: string;
+  memberActionError: string;
 }
 
 export const ru = {
@@ -67,6 +81,20 @@ export const ru = {
     fetchError: 'Не удалось загрузить данные проекта',
     shareInviteMessage: (projectName: string) => `Присоединяйся к проекту "${projectName}" в приложении Rehearsal:`,
     shareInviteTitle: (projectName: string) => `Приглашение в проект ${projectName}`,
+    manageMember: 'Управление участником',
+    makeAdmin: 'Сделать администратором',
+    removeAdmin: 'Снять права администратора',
+    removeMember: 'Удалить из проекта',
+    cancel: 'Отмена',
+    removeMemberConfirm: 'Удалить участника?',
+    removeMemberMessage: (memberName: string) => `Вы уверены, что хотите удалить ${memberName} из проекта?`,
+    makeAdminConfirm: 'Назначить администратором?',
+    makeAdminMessage: (memberName: string) => `Вы уверены, что хотите назначить ${memberName} администратором проекта?`,
+    removeAdminConfirm: 'Снять права администратора?',
+    removeAdminMessage: (memberName: string) => `Вы уверены, что хотите снять права администратора у ${memberName}?`,
+    memberRemoved: 'Участник удален из проекта',
+    roleUpdated: 'Роль участника обновлена',
+    memberActionError: 'Не удалось выполнить действие',
   },
 };
 
@@ -104,5 +132,19 @@ export const en = {
     fetchError: 'Failed to load project data',
     shareInviteMessage: (projectName: string) => `Join the project "${projectName}" in the Rehearsal app:`,
     shareInviteTitle: (projectName: string) => `Invitation to project ${projectName}`,
+    manageMember: 'Manage Member',
+    makeAdmin: 'Make Admin',
+    removeAdmin: 'Remove Admin Rights',
+    removeMember: 'Remove from Project',
+    cancel: 'Cancel',
+    removeMemberConfirm: 'Remove Member?',
+    removeMemberMessage: (memberName: string) => `Are you sure you want to remove ${memberName} from the project?`,
+    makeAdminConfirm: 'Make Admin?',
+    makeAdminMessage: (memberName: string) => `Are you sure you want to make ${memberName} an admin of this project?`,
+    removeAdminConfirm: 'Remove Admin Rights?',
+    removeAdminMessage: (memberName: string) => `Are you sure you want to remove admin rights from ${memberName}?`,
+    memberRemoved: 'Member removed from project',
+    roleUpdated: 'Member role updated',
+    memberActionError: 'Failed to perform action',
   },
 };

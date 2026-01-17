@@ -200,6 +200,14 @@ export const projectsAPI = {
   // Create new project
   createProject: (data: { name: string; description?: string; timezone?: string }) =>
     api.post('/native/projects', data),
+
+  // Remove member from project
+  removeMember: (projectId: string, userId: string) =>
+    api.delete(`/native/projects/${projectId}/members/${userId}`),
+
+  // Update member role (admin/member)
+  updateMemberRole: (projectId: string, userId: string, role: 'admin' | 'member') =>
+    api.put(`/native/projects/${projectId}/members/${userId}/role`, { role }),
 };
 
 // Rehearsals API (Native App)

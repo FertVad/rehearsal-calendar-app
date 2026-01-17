@@ -10,6 +10,7 @@ import {
   Alert,
   FlatList,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -78,6 +79,8 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [memberActionLoading, setMemberActionLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -144,6 +147,95 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
 
     return { upcomingRehearsals: upcoming, pastRehearsals: past };
   }, [rehearsals]);
+
+  const handleMemberPress = useCallback((member: Member) => {
+    // Only allow admins to manage members, and can't manage owner
+    if (!project?.is_admin || member.role === 'owner') {
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSelectedMember(member);
+  }, [project?.is_admin]);
+
+  const handleRemoveMember = useCallback(async () => {
+    if (!selectedMember) return;
+
+    const memberName = `${selectedMember.firstName} ${selectedMember.lastName || ''}`.trim();
+
+    Alert.alert(
+      t.projects.removeMemberConfirm,
+      t.projects.removeMemberMessage(memberName),
+      [
+        {
+          text: t.projects.cancel,
+          style: 'cancel',
+        },
+        {
+          text: t.projects.removeMember,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setMemberActionLoading(true);
+              await projectsAPI.removeMember(projectId, selectedMember.userId);
+
+              // Remove member from local state
+              setMembers(prev => prev.filter(m => m.id !== selectedMember.id));
+              setSelectedMember(null);
+
+              Alert.alert(t.common.success, t.projects.memberRemoved);
+            } catch (err: any) {
+              Alert.alert(t.common.error, err.response?.data?.error || t.projects.memberActionError);
+            } finally {
+              setMemberActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [selectedMember, projectId, t]);
+
+  const handleToggleAdmin = useCallback(async () => {
+    if (!selectedMember) return;
+
+    const memberName = `${selectedMember.firstName} ${selectedMember.lastName || ''}`.trim();
+    const isCurrentlyAdmin = selectedMember.role === 'admin';
+    const newRole = isCurrentlyAdmin ? 'member' : 'admin';
+
+    Alert.alert(
+      isCurrentlyAdmin ? t.projects.removeAdminConfirm : t.projects.makeAdminConfirm,
+      isCurrentlyAdmin
+        ? t.projects.removeAdminMessage(memberName)
+        : t.projects.makeAdminMessage(memberName),
+      [
+        {
+          text: t.projects.cancel,
+          style: 'cancel',
+        },
+        {
+          text: isCurrentlyAdmin ? t.projects.removeAdmin : t.projects.makeAdmin,
+          onPress: async () => {
+            try {
+              setMemberActionLoading(true);
+              await projectsAPI.updateMemberRole(projectId, selectedMember.userId, newRole);
+
+              // Update member role in local state
+              setMembers(prev => prev.map(m =>
+                m.id === selectedMember.id ? { ...m, role: newRole } : m
+              ));
+              setSelectedMember(null);
+
+              Alert.alert(t.common.success, t.projects.roleUpdated);
+            } catch (err: any) {
+              Alert.alert(t.common.error, err.response?.data?.error || t.projects.memberActionError);
+            } finally {
+              setMemberActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [selectedMember, projectId, t]);
 
   if (loading) {
     return (
@@ -311,31 +403,114 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
           </View>
 
           <View style={styles.membersList}>
-            {members.map(member => (
-              <View key={member.id} style={styles.memberCard}>
-                <View style={styles.memberAvatar}>
-                  <Text style={styles.memberAvatarText}>
-                    {member.firstName[0]}{member.lastName?.[0] || ''}
-                  </Text>
-                </View>
-                <View style={styles.memberInfo}>
-                  <Text style={styles.memberName}>
-                    {member.firstName} {member.lastName || ''}
-                  </Text>
-                  {member.characterName && (
-                    <Text style={styles.memberCharacter}>{member.characterName}</Text>
+            {members.map(member => {
+              const canManage = project.is_admin && member.role !== 'owner';
+              return (
+                <TouchableOpacity
+                  key={member.id}
+                  style={styles.memberCard}
+                  onPress={() => handleMemberPress(member)}
+                  disabled={!canManage}
+                  activeOpacity={canManage ? 0.7 : 1}
+                >
+                  <View style={styles.memberAvatar}>
+                    <Text style={styles.memberAvatarText}>
+                      {member.firstName[0]}{member.lastName?.[0] || ''}
+                    </Text>
+                  </View>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>
+                      {member.firstName} {member.lastName || ''}
+                    </Text>
+                    {member.characterName && (
+                      <Text style={styles.memberCharacter}>{member.characterName}</Text>
+                    )}
+                  </View>
+                  <View style={[styles.roleBadge, { borderColor: getRoleColor(member.role) }]}>
+                    <Text style={[styles.roleText, { color: getRoleColor(member.role) }]}>
+                      {getRoleLabel(member.role)}
+                    </Text>
+                  </View>
+                  {canManage && (
+                    <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} style={{ marginLeft: 8 }} />
                   )}
-                </View>
-                <View style={[styles.roleBadge, { borderColor: getRoleColor(member.role) }]}>
-                  <Text style={[styles.roleText, { color: getRoleColor(member.role) }]}>
-                    {getRoleLabel(member.role)}
-                  </Text>
-                </View>
-              </View>
-            ))}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
+
+      {/* Member Management Modal */}
+      <Modal
+        visible={!!selectedMember}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedMember(null)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setSelectedMember(null)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t.projects.manageMember}</Text>
+              {selectedMember && (
+                <Text style={styles.modalSubtitle}>
+                  {selectedMember.firstName} {selectedMember.lastName || ''}
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.modalActions}>
+              {/* Toggle Admin */}
+              <TouchableOpacity
+                style={styles.modalAction}
+                onPress={() => {
+                  setSelectedMember(null);
+                  // Delay to let modal close before showing alert
+                  setTimeout(handleToggleAdmin, 300);
+                }}
+                disabled={memberActionLoading}
+              >
+                <Ionicons
+                  name={selectedMember?.role === 'admin' ? 'remove-circle-outline' : 'shield-checkmark-outline'}
+                  size={24}
+                  color={Colors.accent.blue}
+                />
+                <Text style={styles.modalActionText}>
+                  {selectedMember?.role === 'admin' ? t.projects.removeAdmin : t.projects.makeAdmin}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Remove Member */}
+              <TouchableOpacity
+                style={[styles.modalAction, styles.modalActionDanger]}
+                onPress={() => {
+                  setSelectedMember(null);
+                  // Delay to let modal close before showing alert
+                  setTimeout(handleRemoveMember, 300);
+                }}
+                disabled={memberActionLoading}
+              >
+                <Ionicons name="trash-outline" size={24} color={Colors.accent.red} />
+                <Text style={[styles.modalActionText, styles.modalActionTextDanger]}>
+                  {t.projects.removeMember}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Cancel */}
+              <TouchableOpacity
+                style={[styles.modalAction, styles.modalActionCancel]}
+                onPress={() => setSelectedMember(null)}
+              >
+                <Text style={styles.modalActionTextCancel}>{t.projects.cancel}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }

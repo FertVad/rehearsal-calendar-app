@@ -203,4 +203,63 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
   },
+  // Member Management Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.bg.primary,
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    paddingBottom: Spacing.xl,
+  },
+  modalHeader: {
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.glass.border,
+  },
+  modalTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+  },
+  modalSubtitle: {
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+  },
+  modalActions: {
+    paddingTop: Spacing.sm,
+  },
+  modalAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  modalActionText: {
+    fontSize: FontSize.base,
+    color: Colors.text.primary,
+    fontWeight: FontWeight.medium,
+  },
+  modalActionDanger: {
+    // Style for dangerous actions
+  },
+  modalActionTextDanger: {
+    color: Colors.accent.red,
+  },
+  modalActionCancel: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.glass.border,
+    marginTop: Spacing.sm,
+    justifyContent: 'center',
+  },
+  modalActionTextCancel: {
+    fontSize: FontSize.base,
+    color: Colors.accent.purple,
+    fontWeight: FontWeight.semibold,
+    textAlign: 'center',
+  },
 });
