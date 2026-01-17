@@ -54,11 +54,15 @@ interface Rehearsal {
   status: string;
 }
 
-// Helper to format date
-function formatDate(dateStr: string): string {
+// Helper to format date with locale support
+function formatDate(dateStr: string, locale: string): string {
   const date = new Date(dateStr);
-  const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-  return `${date.getDate()} ${months[date.getMonth()]}`;
+  const formatted = date.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', {
+    day: 'numeric',
+    month: 'short',
+  });
+  // Remove trailing period from Russian month abbreviations
+  return formatted.replace(/\.$/, '');
 }
 
 // Use shared utility
@@ -66,7 +70,7 @@ const formatDateToString = formatDateToStringUtil;
 
 export default function ProjectDetailScreen({ route, navigation }: ProjectDetailScreenProps) {
   const { projectId } = route.params;
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -236,7 +240,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
               {upcomingRehearsals.slice(0, 5).map(rehearsal => (
                 <View key={rehearsal.id} style={styles.rehearsalCard}>
                   <View style={styles.rehearsalDate}>
-                    <Text style={styles.rehearsalDateText}>{formatDate(rehearsal.date)}</Text>
+                    <Text style={styles.rehearsalDateText}>{formatDate(rehearsal.date, language)}</Text>
                   </View>
                   <View style={styles.rehearsalInfo}>
                     <Text style={styles.rehearsalTitle} numberOfLines={1}>
@@ -278,7 +282,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
                 <View key={rehearsal.id} style={[styles.rehearsalCard, styles.pastCard]}>
                   <View style={[styles.rehearsalDate, styles.pastDate]}>
                     <Text style={[styles.rehearsalDateText, styles.pastDateText]}>
-                      {formatDate(rehearsal.date)}
+                      {formatDate(rehearsal.date, language)}
                     </Text>
                   </View>
                   <View style={styles.rehearsalInfo}>
