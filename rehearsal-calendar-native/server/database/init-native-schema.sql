@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS native_users (
   week_start_day VARCHAR(10) DEFAULT 'monday',
   notifications_enabled BOOLEAN DEFAULT 1,
   email_notifications BOOLEAN DEFAULT 1,
+  onboarding_completed BOOLEAN DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

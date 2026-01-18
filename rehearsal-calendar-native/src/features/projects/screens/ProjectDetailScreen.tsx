@@ -21,6 +21,7 @@ import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services
 import { projectDetailScreenStyles as styles } from '../styles';
 import { formatDateToString as formatDateToStringUtil } from '../../../shared/utils/time';
 import { useI18n } from '../../../contexts/I18nContext';
+import { useProjects } from '../../../contexts/ProjectContext';
 
 type ProjectDetailScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'ProjectDetail'>;
 
@@ -29,6 +30,7 @@ interface Project {
   name: string;
   description: string;
   is_admin: boolean;
+  is_owner: boolean;
   created_at: string;
 }
 
@@ -72,6 +74,7 @@ const formatDateToString = formatDateToStringUtil;
 export default function ProjectDetailScreen({ route, navigation }: ProjectDetailScreenProps) {
   const { projectId } = route.params;
   const { t, language } = useI18n();
+  const { refreshProjects } = useProjects();
 
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -81,8 +84,13 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   const [inviteLoading, setInviteLoading] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberActionLoading, setMemberActionLoading] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
+    // Prevent fetching if project is being deleted
+    if (isDeleting) return;
+
     try {
       const [projectRes, membersRes, rehearsalsRes] = await Promise.all([
         projectsAPI.getProject(projectId),
@@ -90,9 +98,11 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
         rehearsalsAPI.getAll(projectId),
       ]);
 
-      setProject(projectRes.data.project);
+      const projectData = projectRes.data.project;
+      setProject(projectData);
       setMembers(membersRes.data.members);
       setRehearsals(rehearsalsRes.data.rehearsals || []);
+      setIsOwner(projectData.is_owner);
     } catch (err) {
       console.error('Failed to fetch project data:', err);
       Alert.alert(t.common.error, t.projects.fetchError);
@@ -100,16 +110,17 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       setLoading(false);
       setRefreshing(false);
     }
-  }, [projectId, t]);
+  }, [projectId, t, isDeleting]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const onRefresh = useCallback(() => {
+    if (isDeleting) return; // Don't refresh if deleting
     setRefreshing(true);
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, isDeleting]);
 
   const handleInvite = async () => {
     if (!project) return;
@@ -236,6 +247,47 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       ]
     );
   }, [selectedMember, projectId, t]);
+
+  const handleDeleteProject = useCallback(async () => {
+    if (!project) return;
+
+    Alert.alert(
+      t.projects.deleteProjectConfirm,
+      `${t.projects.deleteProjectMessage(project.name)}\n\n${t.projects.deleteProjectWarning}`,
+      [
+        {
+          text: t.common.cancel,
+          style: 'cancel',
+        },
+        {
+          text: t.projects.deleteProject,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Set flag to prevent any further data fetching
+              setIsDeleting(true);
+
+              await projectsAPI.deleteProject(projectId);
+
+              // Refresh projects context to remove deleted project from the list
+              await refreshProjects();
+
+              // Use replace instead of navigate to completely remove this screen from stack
+              navigation.replace('ProjectsMain');
+
+              // Show success message after navigation
+              setTimeout(() => {
+                Alert.alert(t.common.success, t.projects.projectDeleted);
+              }, 300);
+            } catch (err: any) {
+              setIsDeleting(false);
+              Alert.alert(t.common.error, err.response?.data?.error || t.projects.deleteProjectError);
+            }
+          },
+        },
+      ]
+    );
+  }, [project, projectId, navigation, t, refreshProjects]);
 
   if (loading) {
     return (
@@ -439,6 +491,20 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
             })}
           </View>
         </View>
+
+        {/* Delete Project Button (owner only) */}
+        {isOwner && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDeleteProject}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.accent.red} />
+              <Text style={styles.deleteButtonText}>{t.projects.deleteProject}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       {/* Member Management Modal */}

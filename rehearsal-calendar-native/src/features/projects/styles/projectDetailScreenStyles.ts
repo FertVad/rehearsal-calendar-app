@@ -262,4 +262,23 @@ export const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     textAlign: 'center',
   },
+  // Delete Project Button
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: Colors.accent.red,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.lg,
+  },
+  deleteButtonText: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.red,
+  },
 });

@@ -17,12 +17,12 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { hapticSuccess } from '../../../shared/utils/haptics';
-import { ProjectsStackParamList } from '../../../navigation';
+import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { createProjectScreenStyles as styles } from '../styles';
 
-type CreateProjectScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'CreateProject'>;
+type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
 
 // Common timezones for theatre/rehearsal apps
 const TIMEZONES = [
@@ -63,6 +63,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
     setCreating(true);
     try {
       await createProject(projectName.trim(), projectDescription.trim() || undefined, projectTimezone);
+      // Simply go back to close the modal
       navigation.goBack();
     } catch (err: any) {
       Alert.alert(t.common.error, err.message || t.projects.createError);
@@ -131,32 +132,32 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
               <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
             </TouchableOpacity>
           </View>
+
+          {/* Buttons */}
+          <View style={styles.bottomButtons}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.cancelButtonText}>{t.common.cancel}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.createButton, creating && styles.buttonDisabled]}
+              onPress={() => {
+                hapticSuccess();
+                handleCreateProject();
+              }}
+              disabled={creating}
+            >
+              {creating ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.createButtonText}>{t.projects.create}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </ScrollView>
-
-        {/* Bottom Buttons */}
-        <View style={styles.bottomButtons}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.cancelButtonText}>{t.common.cancel}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.createButton, creating && styles.buttonDisabled]}
-            onPress={() => {
-              hapticSuccess();
-              handleCreateProject();
-            }}
-            disabled={creating}
-          >
-            {creating ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.createButtonText}>{t.projects.create}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
       </KeyboardAvoidingView>
 
       {/* Timezone Picker Modal */}

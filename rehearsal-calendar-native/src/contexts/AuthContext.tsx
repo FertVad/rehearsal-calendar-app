@@ -17,6 +17,7 @@ interface User {
   weekStartDay?: 'monday' | 'sunday';
   notificationsEnabled?: boolean;
   emailNotifications?: boolean;
+  onboardingCompleted?: boolean;
   createdAt: string;
 }
 
@@ -29,6 +30,7 @@ interface AuthContextType {
   loginWithTelegram: (telegramData: any) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<void>;
+  deleteAccount: () => Promise<{ deletedProjects: number }>;
   error: string | null;
 }
 
@@ -212,6 +214,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    try {
+      setError(null);
+      setLoading(true);
+
+      // Call delete account API
+      const response = await authAPI.deleteMe();
+      const { deletedProjects } = response.data;
+
+      // Set flag to ignore stale deep links
+      await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
+
+      // Clear ALL AsyncStorage data
+      await AsyncStorage.clear();
+
+      // Restore the lastLogoutTime flag
+      await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
+
+      setUser(null);
+
+      return { deletedProjects: deletedProjects || 0 };
+    } catch (err: any) {
+      const message = err.response?.data?.error || 'Failed to delete account';
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -223,6 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginWithTelegram,
         logout,
         updateUser,
+        deleteAccount,
         error,
       }}
     >

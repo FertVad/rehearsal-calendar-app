@@ -8,7 +8,7 @@ interface SlotItemProps {
   onCreateRehearsal: (slot: TimeSlot) => void;
 }
 
-export const SlotItem: React.FC<SlotItemProps> = ({ slot, onCreateRehearsal }) => {
+export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateRehearsal }) => {
   const { t } = useI18n();
 
   const getCategoryColor = (): string => {
@@ -62,7 +62,7 @@ export const SlotItem: React.FC<SlotItemProps> = ({ slot, onCreateRehearsal }) =
       )}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   slot: {

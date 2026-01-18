@@ -1,12 +1,10 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert, Pressable } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
-import { CalendarStackParamList } from '../../../navigation';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import MyRehearsalsModal from '../components/MyRehearsalsModal';
 import TodayRehearsals from '../components/TodayRehearsals';
@@ -21,9 +19,8 @@ import { useRehearsals, useRSVP } from '../hooks';
 import { calendarScreenStyles as styles } from '../styles';
 import { unsyncRehearsal } from '../../../shared/services/calendar';
 
-type CalendarScreenProps = NativeStackScreenProps<CalendarStackParamList, 'CalendarMain'>;
-
-export default function CalendarScreen({ navigation }: CalendarScreenProps) {
+export default function CalendarScreen() {
+  const navigation = useNavigation<any>();
   const { projects } = useProjects();
   const { t, language } = useI18n();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -385,44 +382,72 @@ export default function CalendarScreen({ navigation }: CalendarScreenProps) {
                       }}
                       activeOpacity={0.7}
                     >
-                      <View style={styles.upcomingCardHeader}>
-                        <View style={styles.upcomingDateBadge}>
-                          <Text style={styles.upcomingDateText}>
-                            {getRelativeDateLabel(rehearsal.date || '')}
-                          </Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <View style={{ flex: 1 }}>
+                          <View style={styles.upcomingCardHeader}>
+                            <View style={styles.upcomingDateBadge}>
+                              <Text style={styles.upcomingDateText}>
+                                {getRelativeDateLabel(rehearsal.date || '')}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={styles.upcomingContent}>
+                            <View style={styles.upcomingTimeRow}>
+                              <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
+                              <Text style={styles.upcomingTime}>
+                                {rehearsal.time?.substring(0, 5) || ''}
+                                {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
+                              </Text>
+                            </View>
+
+                            {rehearsal.projectName && (
+                              <View style={styles.upcomingProjectRow}>
+                                <Ionicons name="folder-outline" size={14} color={Colors.accent.blue} />
+                                <Text style={styles.upcomingProject} numberOfLines={1}>
+                                  {rehearsal.projectName}
+                                </Text>
+                              </View>
+                            )}
+
+                            {rehearsal.location && (
+                              <View style={styles.upcomingLocationRow}>
+                                <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
+                                <Text style={styles.upcomingLocation} numberOfLines={1}>
+                                  {rehearsal.location}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
                         </View>
+
                         {isAdminForThisRehearsal && (
-                          <View style={styles.adminBadge}>
-                            <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
-                            <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
-                          </View>
-                        )}
-                      </View>
-
-                      <View style={styles.upcomingContent}>
-                        <View style={styles.upcomingTimeRow}>
-                          <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
-                          <Text style={styles.upcomingTime}>
-                            {rehearsal.time?.substring(0, 5) || ''}
-                            {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
-                          </Text>
-                        </View>
-
-                        {rehearsal.projectName && (
-                          <View style={styles.upcomingProjectRow}>
-                            <Ionicons name="folder-outline" size={14} color={Colors.accent.blue} />
-                            <Text style={styles.upcomingProject} numberOfLines={1}>
-                              {rehearsal.projectName}
-                            </Text>
-                          </View>
-                        )}
-
-                        {rehearsal.location && (
-                          <View style={styles.upcomingLocationRow}>
-                            <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
-                            <Text style={styles.upcomingLocation} numberOfLines={1}>
-                              {rehearsal.location}
-                            </Text>
+                          <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                            <View style={styles.adminBadge}>
+                              <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
+                              <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
+                            </View>
+                            <TouchableOpacity
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRehearsal(rehearsal.id);
+                              }}
+                              style={{ padding: 4 }}
+                            >
+                              <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                navigation.navigate('AddRehearsal', {
+                                  rehearsalId: rehearsal.id,
+                                  projectId: rehearsal.projectId,
+                                });
+                              }}
+                              style={{ padding: 4 }}
+                            >
+                              <Ionicons name="create-outline" size={18} color={Colors.text.secondary} />
+                            </TouchableOpacity>
                           </View>
                         )}
                       </View>

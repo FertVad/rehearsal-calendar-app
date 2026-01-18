@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ interface MemberFilterProps {
   onClearAll?: () => void;
 }
 
-export const MemberFilter: React.FC<MemberFilterProps> = ({
+export const MemberFilter: React.FC<MemberFilterProps> = React.memo(({
   members,
   selected,
   onSelectionChange,
@@ -29,15 +29,15 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
   const { t } = useI18n();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const toggleMember = (memberId: string) => {
+  const toggleMember = useCallback((memberId: string) => {
     if (selected.includes(memberId)) {
       onSelectionChange(selected.filter(id => id !== memberId));
     } else {
       onSelectionChange([...selected, memberId]);
     }
-  };
+  }, [selected, onSelectionChange]);
 
-  const toggleAll = () => {
+  const toggleAll = useCallback(() => {
     if (selected.length === members.length) {
       // Deselect all
       if (onClearAll) {
@@ -53,7 +53,7 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
         onSelectionChange(members.map(m => m.id));
       }
     }
-  };
+  }, [selected.length, members, onSelectAll, onClearAll, onSelectionChange]);
 
   const allSelected = selected.length === members.length && members.length > 0;
 
@@ -133,7 +133,7 @@ export const MemberFilter: React.FC<MemberFilterProps> = ({
       )}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

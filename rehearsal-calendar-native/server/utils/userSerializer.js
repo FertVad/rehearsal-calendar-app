@@ -23,6 +23,7 @@ function serializeUser(dbUser) {
     weekStartDay: dbUser.week_start_day,
     notificationsEnabled: dbUser.notifications_enabled,
     emailNotifications: dbUser.email_notifications,
+    onboardingCompleted: dbUser.onboarding_completed,
     createdAt: dbUser.created_at,
   };
 }

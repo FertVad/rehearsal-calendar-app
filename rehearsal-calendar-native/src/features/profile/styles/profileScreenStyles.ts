@@ -43,6 +43,23 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.text.secondary,
   },
+  editProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.accent.purple,
+  },
+  editProfileText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.accent.purple,
+  },
   section: {
     marginBottom: Spacing.xl,
   },

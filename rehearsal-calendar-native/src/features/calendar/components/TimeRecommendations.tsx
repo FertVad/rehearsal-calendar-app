@@ -4,6 +4,7 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../sh
 import { ProjectMember } from '../../../shared/types';
 import { useTimeRecommendations, TimeSlot } from '../hooks/useTimeRecommendations';
 import { TimeRange } from '../../../shared/utils/availability';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface TimeRecommendationsProps {
   selectedDate: string;
@@ -20,6 +21,7 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
   onTimeSelect,
   loading = false,
 }) => {
+  const { t } = useI18n();
   const recommendations = useTimeRecommendations(
     selectedDate,
     selectedMembers,
@@ -28,7 +30,7 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
 
   const formatRecommendation = (rec: TimeSlot) => {
     const duration = rec.duration % 1 === 0 ? rec.duration : rec.duration.toFixed(1);
-    return `${rec.startTime}-${rec.endTime} (${duration}ч)`;
+    return `${rec.startTime}-${rec.endTime} (${duration}${t.rehearsals.hoursShort})`;
   };
 
   if (!selectedDate || selectedMembers.length === 0) {
@@ -38,9 +40,9 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Рекомендованное время</Text>
+        <Text style={styles.title}>{t.rehearsals.recommendedTime}</Text>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Загрузка...</Text>
+          <Text style={styles.loadingText}>{t.calendar.loading}</Text>
         </View>
       </View>
     );
@@ -49,10 +51,10 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
   if (recommendations.length === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Рекомендованное время</Text>
+        <Text style={styles.title}>{t.rehearsals.recommendedTime}</Text>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
-            Нет свободного времени для всех выбранных участников
+            {t.rehearsals.noAvailableTime}
           </Text>
         </View>
       </View>
@@ -61,7 +63,7 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Рекомендованное время</Text>
+      <Text style={styles.title}>{t.rehearsals.recommendedTime}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

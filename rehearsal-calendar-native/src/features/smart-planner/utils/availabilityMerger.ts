@@ -84,12 +84,16 @@ export function mergeAvailabilityWithRehearsals(
       // Get manual availability for this date (busy and tentative ranges)
       const dateAvail = availData?.dates.find(d => d.date === date);
 
-      logger.debug(`[Availability Merger] Member ${member.id}, Date ${date}, Raw timeRanges:`, dateAvail?.timeRanges);
+      if (__DEV__) {
+        logger.debug(`[Availability Merger] Member ${member.id}, Date ${date}, Raw timeRanges:`, dateAvail?.timeRanges);
+      }
 
       const manualRanges =
         dateAvail?.timeRanges.filter(r => r.type === 'busy' || r.type === 'tentative') || [];
 
-      logger.debug(`[Availability Merger] Member ${member.id}, Date ${date}, Filtered busy ranges:`, manualRanges);
+      if (__DEV__) {
+        logger.debug(`[Availability Merger] Member ${member.id}, Date ${date}, Filtered busy ranges:`, manualRanges);
+      }
 
       // Get rehearsal ranges for this date (O(1) lookup)
       const rehearsalRanges = memberRehearsalDates?.get(date) || [];

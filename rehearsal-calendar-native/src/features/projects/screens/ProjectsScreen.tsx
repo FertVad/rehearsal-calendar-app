@@ -1,21 +1,17 @@
 import React, { useMemo } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { CompositeScreenProps } from '@react-navigation/native';
-import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
-import { SkeletonLoader } from '../../../shared/components';
-import { ProjectsStackParamList } from '../../../navigation';
+import { SkeletonLoader, FloatingActionButton } from '../../../shared/components';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useInviteLink } from '../hooks';
 import { projectsScreenStyles as styles } from '../styles';
 
-type ProjectsScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'ProjectsMain'>;
-
-export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
+export default function ProjectsScreen() {
+  const navigation = useNavigation<any>();
   const { projects, selectedProject, setSelectedProject, loading, error } = useProjects();
   const { generateInviteLink, generatingInvite } = useInviteLink();
   const { t } = useI18n();
@@ -123,6 +119,11 @@ export default function ProjectsScreen({ navigation }: ProjectsScreenProps) {
           </View>
         )}
       </ScrollView>
+
+      <FloatingActionButton
+        onPress={() => navigation.navigate('CreateProject')}
+        icon="add"
+      />
     </SafeAreaView>
   );
 }

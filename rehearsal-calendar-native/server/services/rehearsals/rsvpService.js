@@ -29,14 +29,15 @@ export async function respondToRehearsal(rehearsalId, userId, response, notes = 
     throw new Error('Invalid response value. Must be "yes" or "no".');
   }
 
-  // Get current stats: count responses and total members
+  // Get current stats: count responses only from active project members
   const responsesCount = await db.get(
     `SELECT
        COUNT(*) as total_responses,
-       COUNT(CASE WHEN response = 'yes' THEN 1 END) as confirmed
-     FROM native_rehearsal_responses
-     WHERE rehearsal_id = $1`,
-    [rehearsalId]
+       COUNT(CASE WHEN r.response = 'yes' THEN 1 END) as confirmed
+     FROM native_rehearsal_responses r
+     JOIN native_project_members pm ON pm.user_id = r.user_id AND pm.project_id = $2
+     WHERE r.rehearsal_id = $1 AND pm.status = 'active'`,
+    [rehearsalId, projectId]
   );
 
   const memberCount = await db.get(
@@ -72,7 +73,7 @@ export async function getRehearsalResponses(rehearsalId) {
     return { responses: [], allParticipants: [] };
   }
 
-  // Get only invited participants (those who have a response record)
+  // Get only invited participants who are still active members of the project
   const allParticipants = await db.all(
     `SELECT
       u.id as user_id,
@@ -85,9 +86,10 @@ export async function getRehearsalResponses(rehearsalId) {
       r.updated_at
      FROM native_rehearsal_responses r
      JOIN native_users u ON r.user_id = u.id
-     WHERE r.rehearsal_id = $1
+     JOIN native_project_members pm ON pm.user_id = u.id AND pm.project_id = $2
+     WHERE r.rehearsal_id = $1 AND pm.status = 'active'
      ORDER BY u.first_name, u.last_name`,
-    [rehearsalId]
+    [rehearsalId, rehearsal.project_id]
   );
 
   // Calculate stats

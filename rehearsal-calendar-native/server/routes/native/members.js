@@ -274,7 +274,7 @@ router.put('/:projectId/members/:userId/role', requireAuth, async (req, res) => 
 
     // Update role
     await db.run(
-      'UPDATE native_project_members SET role = $1, updated_at = NOW() WHERE project_id = $2 AND user_id = $3',
+      'UPDATE native_project_members SET role = $1 WHERE project_id = $2 AND user_id = $3',
       [role, projectId, userId]
     );
 
@@ -320,10 +320,10 @@ router.delete('/:projectId/members/:userId', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Cannot remove project owner' });
     }
 
-    // Remove member (soft delete by setting status to 'removed')
+    // Remove member from project
     await db.run(
-      'UPDATE native_project_members SET status = $1, updated_at = NOW() WHERE project_id = $2 AND user_id = $3',
-      ['removed', projectId, userId]
+      'DELETE FROM native_project_members WHERE project_id = $1 AND user_id = $2',
+      [projectId, userId]
     );
 
     res.json({

@@ -2,6 +2,7 @@ export interface ProjectsTranslations {
   title: string;
   noProjects: string;
   createFirst: string;
+  createToUsePlanner: string;
   admin: string;
   createProject: string;
   projectName: string;
@@ -45,6 +46,12 @@ export interface ProjectsTranslations {
   memberRemoved: string;
   roleUpdated: string;
   memberActionError: string;
+  deleteProject: string;
+  deleteProjectConfirm: string;
+  deleteProjectMessage: (projectName: string) => string;
+  deleteProjectWarning: string;
+  projectDeleted: string;
+  deleteProjectError: string;
 }
 
 export const ru = {
@@ -52,6 +59,7 @@ export const ru = {
     title: 'Мои проекты',
     noProjects: 'Нет проектов',
     createFirst: 'Создайте свой первый проект, чтобы начать работу',
+    createToUsePlanner: 'Сначала создайте проект, чтобы использовать планировщик',
     admin: 'Админ',
     createProject: 'Создать проект',
     projectName: 'Название проекта',
@@ -95,6 +103,12 @@ export const ru = {
     memberRemoved: 'Участник удален из проекта',
     roleUpdated: 'Роль участника обновлена',
     memberActionError: 'Не удалось выполнить действие',
+    deleteProject: 'Удалить проект',
+    deleteProjectConfirm: 'Удалить проект?',
+    deleteProjectMessage: (projectName: string) => `Вы уверены, что хотите удалить проект "${projectName}"?`,
+    deleteProjectWarning: 'Все репетиции, участники и данные проекта будут удалены без возможности восстановления.',
+    projectDeleted: 'Проект успешно удален',
+    deleteProjectError: 'Не удалось удалить проект',
   },
 };
 
@@ -103,6 +117,7 @@ export const en = {
     title: 'My Projects',
     noProjects: 'No projects',
     createFirst: 'Create your first project to get started',
+    createToUsePlanner: 'Create a project first to use the planner',
     admin: 'Admin',
     createProject: 'Create Project',
     projectName: 'Project Name',
@@ -146,5 +161,11 @@ export const en = {
     memberRemoved: 'Member removed from project',
     roleUpdated: 'Member role updated',
     memberActionError: 'Failed to perform action',
+    deleteProject: 'Delete Project',
+    deleteProjectConfirm: 'Delete Project?',
+    deleteProjectMessage: (projectName: string) => `Are you sure you want to delete the project "${projectName}"?`,
+    deleteProjectWarning: 'All rehearsals, members, and project data will be permanently deleted.',
+    projectDeleted: 'Project successfully deleted',
+    deleteProjectError: 'Failed to delete project',
   },
 };

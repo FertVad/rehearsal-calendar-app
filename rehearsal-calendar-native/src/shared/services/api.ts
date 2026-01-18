@@ -159,6 +159,7 @@ export const authAPI = {
     weekStartDay?: 'monday' | 'sunday';
     notificationsEnabled?: boolean;
     emailNotifications?: boolean;
+    onboardingCompleted?: boolean;
   }) => api.put('/auth/me', data),
 
   deleteMe: () => api.delete('/auth/me'),
@@ -200,6 +201,10 @@ export const projectsAPI = {
   // Create new project
   createProject: (data: { name: string; description?: string; timezone?: string }) =>
     api.post('/native/projects', data),
+
+  // Delete project
+  deleteProject: (projectId: string) =>
+    api.delete(`/native/projects/${projectId}`),
 
   // Remove member from project
   removeMember: (projectId: string, userId: string) =>

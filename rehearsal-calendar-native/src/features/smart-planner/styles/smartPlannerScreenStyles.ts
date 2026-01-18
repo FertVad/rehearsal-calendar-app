@@ -25,27 +25,10 @@ export const styles = StyleSheet.create({
   headerTextContainer: {
     flex: 1,
   },
-  headerTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
   headerSubtitle: {
     fontSize: FontSize.sm,
     color: Colors.text.secondary,
     marginTop: 2,
-  },
-  changeProjectButton: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border.default,
-  },
-  changeProjectText: {
-    fontSize: FontSize.sm,
-    color: Colors.accent.purple,
-    fontWeight: FontWeight.medium,
   },
   scrollView: {
     flex: 1,
@@ -158,38 +141,6 @@ export const styles = StyleSheet.create({
     color: Colors.accent.purple,
     fontWeight: FontWeight.semibold,
   },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  categoryButton: {
-    flex: 1,
-    minWidth: '47%',
-    maxWidth: '48%',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 2,
-    borderColor: Colors.border.default,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-  },
-  categoryEmoji: {
-    fontSize: 24,
-    marginBottom: Spacing.xs,
-  },
-  categoryLabel: {
-    fontSize: FontSize.sm,
-    color: Colors.text.secondary,
-    fontWeight: FontWeight.medium,
-    marginBottom: 2,
-  },
-  categoryCount: {
-    fontSize: FontSize.lg,
-    color: Colors.text.primary,
-    fontWeight: FontWeight.semibold,
-  },
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -220,71 +171,5 @@ export const styles = StyleSheet.create({
   },
   slotsContainer: {
     marginTop: Spacing.lg,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.lg,
-  },
-  modalContent: {
-    backgroundColor: Colors.bg.secondary,
-    borderRadius: BorderRadius.lg,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '70%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.default,
-  },
-  modalTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
-  closeButton: {
-    fontSize: 24,
-    color: Colors.text.secondary,
-    fontWeight: FontWeight.medium,
-    paddingHorizontal: Spacing.sm,
-  },
-  projectList: {
-    padding: Spacing.md,
-  },
-  projectItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.glass.bg,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.border.default,
-    marginBottom: Spacing.sm,
-  },
-  projectItemSelected: {
-    backgroundColor: Colors.glass.hover,
-    borderColor: Colors.accent.purple,
-  },
-  projectName: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.medium,
-    color: Colors.text.primary,
-    flex: 1,
-  },
-  projectNameSelected: {
-    color: Colors.accent.purple,
   },
 });

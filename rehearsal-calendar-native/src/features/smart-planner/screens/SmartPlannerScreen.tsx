@@ -27,7 +27,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const { projects } = useProjects();
   const { t, language } = useI18n();
 
-  const formatDateRange = (startDate: string, endDate: string): string => {
+  const formatDateRange = useCallback((startDate: string, endDate: string): string => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -44,7 +44,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     }
 
     return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
-  };
+  }, [language]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'custom'>('week');
   const [selectedCategories] = useState<SlotCategory[]>([
@@ -107,7 +107,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     selectedMemberIds,
   });
 
-  const projectName = project?.name || 'Loading...';
+  const projectName = project?.name || t.common.loading;
 
   // Auto-select all members when they load (only on first load)
   useEffect(() => {
@@ -346,16 +346,13 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
                 date={date}
                 slots={slots}
                 onCreateRehearsal={(slot) => {
-                  // Navigate to Calendar tab -> AddRehearsal with prefilled data
-                  // @ts-ignore - Navigate to parent tab navigator
-                  navigation.navigate('Calendar', {
-                    screen: 'AddRehearsal',
-                    params: {
-                      projectId,
-                      prefilledDate: slot.date,
-                      prefilledTime: slot.startTime,
-                      prefilledEndTime: slot.endTime,
-                    },
+                  // Navigate directly to AddRehearsal (now at AppStack level)
+                  // @ts-ignore - Navigate to parent app navigator
+                  navigation.navigate('AddRehearsal', {
+                    projectId,
+                    prefilledDate: slot.date,
+                    prefilledTime: slot.startTime,
+                    prefilledEndTime: slot.endTime,
                   });
                 }}
               />

@@ -15,7 +15,7 @@ interface CategoryGroup {
   slots: TimeSlot[];
 }
 
-export const DayCard: React.FC<DayCardProps> = ({ date, slots, onCreateRehearsal }) => {
+export const DayCard: React.FC<DayCardProps> = React.memo(({ date, slots, onCreateRehearsal }) => {
   const { t, language } = useI18n();
 
   // Format date for display
@@ -72,7 +72,7 @@ export const DayCard: React.FC<DayCardProps> = ({ date, slots, onCreateRehearsal
       ))}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {

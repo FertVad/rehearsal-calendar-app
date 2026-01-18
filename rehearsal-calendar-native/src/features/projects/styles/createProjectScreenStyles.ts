@@ -80,7 +80,9 @@ export const styles = StyleSheet.create({
   bottomButtons: {
     flexDirection: 'row',
     gap: Spacing.md,
-    padding: Spacing.xl,
+    marginTop: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xxl,
     borderTopWidth: 1,
     borderTopColor: Colors.glass.border,
   },

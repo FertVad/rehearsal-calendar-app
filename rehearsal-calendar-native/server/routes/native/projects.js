@@ -108,6 +108,7 @@ router.get('/:projectId', requireAuth, async (req, res) => {
         description: project.description || '',
         timezone: project.timezone || 'Asia/Jerusalem',
         is_admin: membership.role === 'owner' || membership.role === 'admin',
+        is_owner: membership.role === 'owner',
         created_at: project.created_at,
         updated_at: project.updated_at,
       },
@@ -115,6 +116,46 @@ router.get('/:projectId', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching project:', error);
     res.status(500).json({ error: 'Failed to fetch project' });
+  }
+});
+
+// DELETE /api/native/projects/:projectId - Delete project
+router.delete('/:projectId', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { projectId } = req.params;
+
+    // Check if user is the owner
+    const membership = await db.get(
+      'SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND status = $3',
+      [projectId, userId, 'active']
+    );
+
+    if (!membership) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (membership.role !== 'owner') {
+      return res.status(403).json({ error: 'Only the project owner can delete the project' });
+    }
+
+    // Check if project exists
+    const project = await db.get('SELECT * FROM native_projects WHERE id = $1', [projectId]);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Delete project (CASCADE will automatically delete all related data)
+    await db.run('DELETE FROM native_projects WHERE id = $1', [projectId]);
+
+    res.json({
+      success: true,
+      message: 'Project deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    res.status(500).json({ error: 'Failed to delete project' });
   }
 });
 

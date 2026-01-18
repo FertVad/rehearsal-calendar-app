@@ -103,11 +103,14 @@ export async function getRehearsalsForProjects(projectIds, userId) {
   // Fetch stats for admin rehearsals in batch
   const statsMap = {};
   if (adminRehearsalIds.length > 0) {
-    // Get all responses for admin rehearsals
+    // Get all responses for admin rehearsals - only from active project members
     const allResponses = await db.all(
-      `SELECT rehearsal_id, response
-       FROM native_rehearsal_responses
-       WHERE rehearsal_id IN (${adminRehearsalIds.map(() => '?').join(',')})`,
+      `SELECT r.rehearsal_id, r.response, reh.project_id
+       FROM native_rehearsal_responses r
+       JOIN native_rehearsals reh ON r.rehearsal_id = reh.id
+       JOIN native_project_members pm ON pm.user_id = r.user_id AND pm.project_id = reh.project_id
+       WHERE r.rehearsal_id IN (${adminRehearsalIds.map(() => '?').join(',')})
+       AND pm.status = 'active'`,
       adminRehearsalIds
     );
 

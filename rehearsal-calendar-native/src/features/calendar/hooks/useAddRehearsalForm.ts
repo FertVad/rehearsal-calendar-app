@@ -5,7 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../../navigation';
 import { Project } from '../../../shared/types';
 import { parseTimeString } from '../utils/rehearsalFormatters';
-import { rehearsalsAPI } from '../../../shared/services/api';
+import { rehearsalsAPI, projectsAPI } from '../../../shared/services/api';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
@@ -155,12 +155,20 @@ export function useAddRehearsalForm({
         setEndTime(endsAt);
         setLocation(rehearsal.location || '');
 
-        // Load participants
+        // Load participants - include all invited members regardless of response status
         const responsesResponse = await rehearsalsAPI.getResponses(rehearsalId);
         const responses = responsesResponse.data.responses || [];
+
+        // Get current project members to filter out removed members
+        const membersResponse = await projectsAPI.getMembers(projectId);
+        const currentMembers = membersResponse.data.members || [];
+        const currentMemberIds = new Set(currentMembers.map((m: any) => String(m.userId)));
+
+        // Filter participants to only include those still in the project
         const participantIds = responses
-          .filter((r: any) => r.response === 'yes')
-          .map((r: any) => String(r.userId));
+          .map((r: any) => String(r.userId))
+          .filter((userId: string) => currentMemberIds.has(userId));
+
         setSelectedMemberIds(participantIds);
 
       } catch (error) {

@@ -17,7 +17,7 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { hapticMedium, hapticSuccess } from '../../../shared/utils/haptics';
-import { CalendarStackParamList } from '../../../navigation';
+import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { ActorSelector } from '../components/ActorSelector';
@@ -32,7 +32,7 @@ import {
 } from '../hooks';
 import { formatDate, formatTime, formatDisplayDate } from '../utils/rehearsalFormatters';
 
-type RouteType = RouteProp<CalendarStackParamList, 'AddRehearsal'>;
+type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
 
 export default function AddRehearsalScreen() {
   const route = useRoute<RouteType>();

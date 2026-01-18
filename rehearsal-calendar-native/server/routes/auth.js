@@ -39,7 +39,8 @@ router.post('/register', async (req, res) => {
     // Get user data
     const user = await db.get(
       `SELECT id, email, first_name, last_name, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day
+              notifications_enabled, email_notifications, week_start_day,
+              onboarding_completed
        FROM native_users WHERE id = $1`,
       [userId]
     );
@@ -67,7 +68,8 @@ router.post('/login', async (req, res) => {
     // Get user
     const user = await db.get(
       `SELECT id, email, password_hash, first_name, last_name, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day
+              notifications_enabled, email_notifications, week_start_day,
+              onboarding_completed
        FROM native_users WHERE email = $1`,
       [email]
     );
@@ -128,7 +130,8 @@ router.get('/me', requireAuth, async (req, res) => {
   try {
     const user = await db.get(
       `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day, created_at
+              notifications_enabled, email_notifications, week_start_day,
+              onboarding_completed, created_at
        FROM native_users WHERE id = $1`,
       [req.userId]
     );
@@ -163,6 +166,7 @@ const ALLOWED_USER_FIELDS = {
       }
     }
   },
+  onboardingCompleted: { dbColumn: 'onboarding_completed', validate: null },
   password: {
     dbColumn: 'password_hash',
     validate: null,
@@ -173,6 +177,7 @@ const ALLOWED_USER_FIELDS = {
 // Update current user info
 router.put('/me', requireAuth, async (req, res) => {
   try {
+    console.log('[Auth] Update user request body:', req.body);
     const updates = [];
     const values = [];
     let paramIndex = 1;
@@ -214,7 +219,8 @@ router.put('/me', requireAuth, async (req, res) => {
     // Get updated user
     const user = await db.get(
       `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day
+              notifications_enabled, email_notifications, week_start_day,
+              onboarding_completed
        FROM native_users WHERE id = $1`,
       [req.userId]
     );
@@ -228,11 +234,56 @@ router.put('/me', requireAuth, async (req, res) => {
   }
 });
 
-// Delete account
+// Delete account with cascade cleanup
 router.delete('/me', requireAuth, async (req, res) => {
   try {
-    await db.run('DELETE FROM native_users WHERE id = $1', [req.userId]);
-    res.json({ message: 'Account deleted successfully' });
+    const userId = req.userId;
+
+    // Start transaction
+    await db.run('BEGIN TRANSACTION');
+
+    try {
+      // Find projects where user is the only admin/owner
+      const orphanedProjects = await db.all(
+        `SELECT p.id, p.name
+         FROM native_projects p
+         INNER JOIN native_project_members pm ON p.id = pm.project_id
+         WHERE pm.user_id = $1
+           AND pm.role IN ('owner', 'admin')
+           AND pm.status = 'active'
+           AND (
+             SELECT COUNT(*)
+             FROM native_project_members pm2
+             WHERE pm2.project_id = p.id
+               AND pm2.role IN ('owner', 'admin')
+               AND pm2.status = 'active'
+           ) = 1`,
+        [userId]
+      );
+
+      console.log(`[Auth] User ${userId} deletion: ${orphanedProjects.length} projects will be deleted (no other admins)`);
+
+      // Delete orphaned projects (CASCADE will handle rehearsals, members, etc.)
+      for (const project of orphanedProjects) {
+        await db.run('DELETE FROM native_projects WHERE id = $1', [project.id]);
+        console.log(`[Auth] Deleted orphaned project: ${project.name} (id: ${project.id})`);
+      }
+
+      // Delete user (CASCADE will handle remaining memberships, availability, calendar connections, etc.)
+      await db.run('DELETE FROM native_users WHERE id = $1', [userId]);
+
+      // Commit transaction
+      await db.run('COMMIT');
+
+      res.json({
+        message: 'Account deleted successfully',
+        deletedProjects: orphanedProjects.length
+      });
+    } catch (innerErr) {
+      // Rollback on any error
+      await db.run('ROLLBACK');
+      throw innerErr;
+    }
   } catch (err) {
     console.error('[Auth] Delete account error:', err);
     res.status(500).json({ error: 'Failed to delete account' });

@@ -5,6 +5,7 @@ import * as projects from './translations/projects';
 import * as profile from './translations/profile';
 import * as availability from './translations/availability';
 import * as calendarSync from './translations/calendarSync';
+import * as onboarding from './translations/onboarding';
 
 export type Language = 'ru' | 'en';
 
@@ -31,6 +32,8 @@ export interface Translations {
   smartPlanner: availability.SmartPlannerTranslations;
   // Calendar Sync
   calendarSync: calendarSync.CalendarSyncTranslations;
+  // Onboarding
+  onboarding: onboarding.OnboardingTranslations;
   // Days
   days: common.DaysTranslations;
   // Months
@@ -45,6 +48,7 @@ export const ru: Translations = {
   ...profile.ru,
   ...availability.ru,
   ...calendarSync.ru,
+  ...onboarding.ru,
 };
 
 export const en: Translations = {
@@ -55,6 +59,7 @@ export const en: Translations = {
   ...profile.en,
   ...availability.en,
   ...calendarSync.en,
+  ...onboarding.en,
 };
 
 export const translations: Record<Language, Translations> = { ru, en };

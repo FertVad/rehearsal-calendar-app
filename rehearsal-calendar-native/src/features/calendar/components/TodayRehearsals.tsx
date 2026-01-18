@@ -3,8 +3,6 @@ import { View, Text, ActivityIndicator, TouchableOpacity, Pressable } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { CalendarStackParamList } from '../../../navigation';
 import { Colors } from '../../../shared/constants/colors';
 import { Rehearsal, RSVPStatus, Project } from '../../../shared/types';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
@@ -50,7 +48,7 @@ export default function TodayRehearsals({
   setAdminStats,
 }: TodayRehearsalsProps) {
   const { t, language } = useI18n();
-  const navigation = useNavigation<NativeStackNavigationProp<CalendarStackParamList>>();
+  const navigation = useNavigation<any>();
   const [syncedRehearsals, setSyncedRehearsals] = useState<Record<string, boolean>>({});
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [selectedRehearsal, setSelectedRehearsal] = useState<Rehearsal | null>(null);
@@ -137,7 +135,7 @@ export default function TodayRehearsals({
                 activeOpacity={0.7}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.upcomingContent}>
                     <View style={styles.upcomingTimeRow}>
                       <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
                       <Text style={styles.upcomingTime}>

@@ -87,7 +87,9 @@ function findFreeSlots(
   for (const avail of availabilityData) {
     if (avail.date === date) {
       availabilityMap.set(avail.memberId, avail.busyRanges);
-      logger.debug(`[Slot Generator] Date ${date}, Member ${avail.memberId}, Busy ranges:`, avail.busyRanges);
+      if (__DEV__) {
+        logger.debug(`[Slot Generator] Date ${date}, Member ${avail.memberId}, Busy ranges:`, avail.busyRanges);
+      }
     }
   }
 

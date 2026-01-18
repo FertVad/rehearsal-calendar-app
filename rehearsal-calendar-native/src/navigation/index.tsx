@@ -10,6 +10,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { Colors } from '../shared/constants/colors';
 import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
+import { OnboardingNavigator } from '../features/onboarding';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
 import CalendarScreen from '../features/calendar/screens/CalendarScreen';
@@ -21,6 +22,7 @@ import ProjectDetailScreen from '../features/projects/screens/ProjectDetailScree
 import AvailabilityScreen from '../features/availability/screens/AvailabilityScreen';
 import ProfileScreen from '../features/profile/screens/ProfileScreen';
 import CalendarSyncSettingsScreen from '../features/profile/screens/CalendarSyncSettingsScreen';
+import EditProfileScreen from '../features/profile/screens/EditProfileScreen';
 import SmartPlannerScreen from '../features/smart-planner/screens/SmartPlannerScreen';
 import SmartPlannerTabScreen from '../features/smart-planner/screens/SmartPlannerTabScreen';
 
@@ -76,18 +78,10 @@ export type AuthStackParamList = {
 
 export type CalendarStackParamList = {
   CalendarMain: undefined;
-  AddRehearsal: {
-    projectId?: string;
-    rehearsalId?: string;
-    prefilledDate?: string;
-    prefilledTime?: string;
-    prefilledEndTime?: string;
-  };
 };
 
 export type ProjectsStackParamList = {
   ProjectsMain: undefined;
-  CreateProject: undefined;
   ProjectDetail: { projectId: string };
 };
 
@@ -99,6 +93,7 @@ export type PlannerStackParamList = {
 export type ProfileStackParamList = {
   ProfileMain: undefined;
   CalendarSyncSettings: undefined;
+  EditProfile: undefined;
 };
 
 export type TabParamList = {
@@ -113,6 +108,14 @@ export type AppStackParamList = {
   MainTabs: undefined;
   JoinProject: { code: string };
   MarkBusy: undefined;
+  CreateProject: undefined;
+  AddRehearsal: {
+    projectId?: string;
+    rehearsalId?: string;
+    prefilledDate?: string;
+    prefilledTime?: string;
+    prefilledEndTime?: string;
+  };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -146,13 +149,6 @@ function CalendarNavigator() {
       }}
     >
       <CalendarStack.Screen name="CalendarMain" component={CalendarScreen} />
-      <CalendarStack.Screen
-        name="AddRehearsal"
-        component={AddRehearsalScreen}
-        options={{
-          presentation: 'modal',
-        }}
-      />
     </CalendarStack.Navigator>
   );
 }
@@ -167,13 +163,6 @@ function ProjectsNavigator() {
       }}
     >
       <ProjectsStack.Screen name="ProjectsMain" component={ProjectsScreen} />
-      <ProjectsStack.Screen
-        name="CreateProject"
-        component={CreateProjectScreen}
-        options={{
-          presentation: 'modal',
-        }}
-      />
       <ProjectsStack.Screen
         name="ProjectDetail"
         component={ProjectDetailScreen}
@@ -213,6 +202,10 @@ function ProfileNavigator() {
       <ProfileStack.Screen
         name="CalendarSyncSettings"
         component={CalendarSyncSettingsScreen}
+      />
+      <ProfileStack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
       />
     </ProfileStack.Navigator>
   );
@@ -259,7 +252,6 @@ const tabButtonStyles = StyleSheet.create({
 });
 
 // Wrapper component to handle ActionSheet navigation
-// Must use double-nested navigation since this is outside TabNavigator
 function ActionSheetWrapper() {
   const navigation = useNavigation<any>();
   const { showActionSheet, setShowActionSheet } = useActionSheet();
@@ -270,10 +262,7 @@ function ActionSheetWrapper() {
       onClose={() => setShowActionSheet(false)}
       onCreateRehearsal={() => {
         setShowActionSheet(false);
-        navigation.navigate('MainTabs', {
-          screen: 'Calendar',
-          params: { screen: 'AddRehearsal', params: {} }
-        });
+        navigation.navigate('AddRehearsal', {});
       }}
       onMarkBusy={() => {
         setShowActionSheet(false);
@@ -281,10 +270,7 @@ function ActionSheetWrapper() {
       }}
       onCreateProject={() => {
         setShowActionSheet(false);
-        navigation.navigate('MainTabs', {
-          screen: 'Projects',
-          params: { screen: 'CreateProject' }
-        });
+        navigation.navigate('CreateProject');
       }}
     />
   );
@@ -418,15 +404,32 @@ function AppNavigator() {
             presentation: 'modal',
           }}
         />
+        <AppStack.Screen
+          name="CreateProject"
+          component={CreateProjectScreen}
+          options={{
+            presentation: 'modal',
+          }}
+        />
+        <AppStack.Screen
+          name="AddRehearsal"
+          component={AddRehearsalScreen}
+          options={{
+            presentation: 'modal',
+          }}
+        />
       </AppStack.Navigator>
     </ActionSheetContext.Provider>
   );
 }
 
 export default function Navigation() {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
   const navigationRef = React.useRef<any>(null);
+
+  // Determine if we should show onboarding
+  const shouldShowOnboarding = isAuthenticated && !user?.onboardingCompleted;
 
   // Handle deep links for unauthenticated users
   useEffect(() => {
@@ -482,9 +485,15 @@ export default function Navigation() {
   return (
     <NavigationContainer
       ref={navigationRef}
-      linking={isAuthenticated ? linking : undefined}
+      linking={isAuthenticated && !shouldShowOnboarding ? linking : undefined}
     >
-      {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
+      {!isAuthenticated ? (
+        <AuthNavigator />
+      ) : shouldShowOnboarding ? (
+        <OnboardingNavigator />
+      ) : (
+        <AppNavigator />
+      )}
     </NavigationContainer>
   );
 }

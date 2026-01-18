@@ -11,7 +11,7 @@ type NavigationProp = NativeStackNavigationProp<PlannerStackParamList, 'PlannerM
 
 export default function SmartPlannerTabScreen() {
   const { projects, loading } = useProjects();
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const navigation = useNavigation<NavigationProp>();
   const hasNavigated = useRef(false);
 
@@ -37,12 +37,10 @@ export default function SmartPlannerTabScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.emptyText}>
-          {language === 'ru' ? 'Нет доступных проектов' : 'No projects available'}
+          {t.projects.noProjects}
         </Text>
         <Text style={styles.hintText}>
-          {language === 'ru'
-            ? 'Сначала создайте проект, чтобы использовать планировщик'
-            : 'Create a project first to use the planner'}
+          {t.projects.createToUsePlanner}
         </Text>
       </View>
     );

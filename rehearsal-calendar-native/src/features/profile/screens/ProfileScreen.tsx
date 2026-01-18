@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
-import { GlassButton, SkeletonLoader } from '../../../shared/components';
+import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/components';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
@@ -37,11 +37,13 @@ const WEEK_START_OPTIONS = [
 ];
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
-  const { user, logout, updateUser, loading } = useAuth();
+  const { user, logout, updateUser, deleteAccount, loading } = useAuth();
   const { t, language, setLanguage } = useI18n();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [timezoneModalVisible, setTimezoneModalVisible] = useState(false);
   const [weekStartModalVisible, setWeekStartModalVisible] = useState(false);
+  const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const handleLogout = async () => {
     hapticMedium();
@@ -92,6 +94,24 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const getCurrentWeekStartLabel = () => {
     const weekStart = user?.weekStartDay || 'monday';
     return weekStart === 'monday' ? t.profile.weekStartMonday : t.profile.weekStartSunday;
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      hapticMedium();
+      setDeletingAccount(true);
+      const { deletedProjects } = await deleteAccount();
+      hapticSuccess();
+      Alert.alert(
+        t.profile.deleteAccountSuccess,
+        deletedProjects > 0 ? t.profile.deleteAccountProjectsWarning(deletedProjects) : undefined
+      );
+    } catch (err: any) {
+      Alert.alert(t.profile.deleteAccountError, err.message);
+    } finally {
+      setDeletingAccount(false);
+      setDeleteAccountModalVisible(false);
+    }
   };
 
   return (
@@ -149,12 +169,26 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             {/* User Info Card */}
             <View style={styles.userCard}>
           <View style={styles.avatarContainer}>
-            <Ionicons name="person-circle" size={64} color={Colors.accent.purple} />
+            <UserAvatar
+              firstName={user?.firstName || 'U'}
+              lastName={user?.lastName}
+              size={80}
+            />
           </View>
           <Text style={styles.userName}>
             {user?.firstName ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}` : 'User'}
           </Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
+          <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={() => {
+              hapticLight();
+              navigation.navigate('EditProfile');
+            }}
+          >
+            <Ionicons name="create-outline" size={16} color={Colors.accent.purple} />
+            <Text style={styles.editProfileText}>{t.profile.editProfile}</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Settings Section */}
@@ -263,6 +297,22 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => {
+              hapticLight();
+              setDeleteAccountModalVisible(true);
+            }}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                <Ionicons name="trash" size={20} color={Colors.accent.red} />
+              </View>
+              <Text style={[styles.settingLabel, { color: Colors.accent.red }]}>{t.profile.deleteAccount}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.accent.red} />
+          </TouchableOpacity>
         </View>
 
             {/* Logout Button */}
@@ -364,6 +414,66 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                   </TouchableOpacity>
                 );
               })}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        visible={deleteAccountModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteAccountModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: undefined }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t.profile.deleteAccountConfirm}</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  hapticLight();
+                  setDeleteAccountModalVisible(false);
+                }}
+                disabled={deletingAccount}
+              >
+                <Ionicons name="close" size={24} color={Colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 20 }}>
+              <View style={{ marginBottom: 20 }}>
+                <Ionicons
+                  name="warning"
+                  size={48}
+                  color={Colors.accent.red}
+                  style={{ alignSelf: 'center', marginBottom: 16 }}
+                />
+                <Text style={[styles.timezoneLabel, { textAlign: 'center', marginBottom: 12 }]}>
+                  {t.profile.deleteAccountWarning}
+                </Text>
+                <Text style={[styles.settingValue, { textAlign: 'center', color: Colors.text.secondary }]}>
+                  {t.profile.deleteAccountFinalWarning}
+                </Text>
+              </View>
+              <View style={{ gap: 12 }}>
+                <GlassButton
+                  title={deletingAccount ? t.common.loading : t.profile.confirmDelete}
+                  onPress={handleDeleteAccount}
+                  variant="glass"
+                  disabled={deletingAccount}
+                  style={{ borderColor: Colors.accent.red }}
+                  textStyle={{ color: Colors.accent.red }}
+                />
+                <GlassButton
+                  title={t.profile.cancel}
+                  onPress={() => {
+                    hapticLight();
+                    setDeleteAccountModalVisible(false);
+                  }}
+                  variant="glass"
+                  disabled={deletingAccount}
+                />
+              </View>
             </View>
           </View>
         </View>

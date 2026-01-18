@@ -79,6 +79,9 @@ export interface RehearsalsTranslations {
   rehearsalDetails: string;
   like: string;
   unlike: string;
+  recommendedTime: string;
+  noAvailableTime: string;
+  hoursShort: string;
 }
 
 export const ru = {
@@ -162,6 +165,9 @@ export const ru = {
     rehearsalDetails: 'Детали репетиции',
     like: 'Иду',
     unlike: 'Отменить',
+    recommendedTime: 'Рекомендованное время',
+    noAvailableTime: 'Нет свободного времени для всех выбранных участников',
+    hoursShort: 'ч',
   },
 };
 
@@ -246,5 +252,8 @@ export const en = {
     rehearsalDetails: 'Rehearsal Details',
     like: 'Going',
     unlike: 'Cancel',
+    recommendedTime: 'Recommended Time',
+    noAvailableTime: 'No available time for all selected participants',
+    hoursShort: 'h',
   },
 };
