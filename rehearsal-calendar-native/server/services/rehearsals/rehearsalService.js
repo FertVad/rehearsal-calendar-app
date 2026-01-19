@@ -1,5 +1,5 @@
 import db from '../../database/db.js';
-import { localToTimestamp, timestampToISO } from '../../utils/timezone.js';
+import { localToTimestamp, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
 
 /**
@@ -177,6 +177,14 @@ export async function getRehearsalsForProjects(projectIds, userId) {
 export async function getProjectRehearsals(projectId, userId) {
   console.log(`[getProjectRehearsals] START - projectId: ${projectId}, userId: ${userId}`);
 
+  // Get user's timezone for correct date/time conversion
+  const userResult = await db.get(
+    'SELECT timezone FROM native_users WHERE id = $1',
+    [userId]
+  );
+  const userTimezone = userResult?.timezone || 'Asia/Jerusalem';
+  console.log(`[getProjectRehearsals] User timezone: ${userTimezone}`);
+
   // Check if user is admin
   const isAdmin = await checkUserIsAdmin(projectId, userId);
   console.log(`[getProjectRehearsals] isAdmin: ${isAdmin}`);
@@ -211,16 +219,14 @@ export async function getProjectRehearsals(projectId, userId) {
     const startsAtISO = timestampToISO(r.starts_at);
     const endsAtISO = timestampToISO(r.ends_at);
 
-    // Parse ISO timestamps to extract date and time (legacy format for compatibility)
-    const startsAtDate = new Date(r.starts_at);
-    const endsAtDate = new Date(r.ends_at);
+    // Convert timestamps to user's local timezone
+    const startLocal = timestampToLocal(startsAtISO, userTimezone);
+    const endLocal = timestampToLocal(endsAtISO, userTimezone);
 
-    // Format: YYYY-MM-DD
-    const date = startsAtDate.toISOString().split('T')[0];
-
-    // Format: HH:mm:ss
-    const time = startsAtDate.toISOString().split('T')[1].substring(0, 8);
-    const endTime = endsAtDate.toISOString().split('T')[1].substring(0, 8);
+    // Legacy format fields (date, time, endTime) in user's timezone
+    const date = startLocal.date;
+    const time = `${startLocal.time}:00`; // Add seconds for HH:mm:ss format
+    const endTime = `${endLocal.time}:00`;
 
     return {
       id: String(r.id),
@@ -229,7 +235,7 @@ export async function getProjectRehearsals(projectId, userId) {
       description: r.description,
       startsAt: startsAtISO,
       endsAt: endsAtISO,
-      // Legacy format for backward compatibility
+      // Legacy format for backward compatibility - now in user's timezone
       date,
       time,
       endTime,

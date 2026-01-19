@@ -58,38 +58,119 @@ export const formatDateLocalized = (
   return date.toLocaleDateString(locale, options);
 };
 
+// =============================================================================
+// TIMEZONE-AWARE FUNCTIONS (using date-fns-tz)
+// =============================================================================
+
+import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
+
 /**
- * Convert ISO 8601 timestamp to local date string (YYYY-MM-DD)
- * @param isoTimestamp - ISO 8601 timestamp (e.g., "2025-12-10T19:00:00+02:00")
- * @returns Date string in YYYY-MM-DD format in local timezone
+ * Convert ISO 8601 timestamp (UTC) to date string in user's timezone
+ *
+ * @param isoTimestamp - ISO 8601 timestamp in UTC (e.g., "2026-01-20T15:00:00.000Z")
+ * @param timezone - User's IANA timezone (e.g., "Europe/Moscow", "America/New_York")
+ * @returns Date string in YYYY-MM-DD format in user's timezone
+ *
+ * @example
+ * isoToDateStringInTimezone("2026-01-20T21:00:00.000Z", "Europe/Moscow")
+ * // Returns: "2026-01-21" (21:00 UTC = 00:00 next day in Moscow, UTC+3)
+ *
+ * @example
+ * isoToDateStringInTimezone("2026-01-20T15:00:00.000Z", "Europe/Moscow")
+ * // Returns: "2026-01-20" (15:00 UTC = 18:00 in Moscow)
  */
-export const isoToDateString = (isoTimestamp: string): string => {
+export const isoToDateStringInTimezone = (
+  isoTimestamp: string,
+  timezone: string
+): string => {
   const date = new Date(isoTimestamp);
-  return formatDateToString(date);
+  const zonedDate = toZonedTime(date, timezone);
+  return format(zonedDate, 'yyyy-MM-dd', { timeZone: timezone });
 };
 
 /**
- * Convert ISO 8601 timestamp to local time string (HH:mm)
- * @param isoTimestamp - ISO 8601 timestamp (e.g., "2025-12-10T19:00:00+02:00")
- * @returns Time string in HH:mm format in local timezone
+ * Convert ISO 8601 timestamp (UTC) to time string in user's timezone
+ *
+ * @param isoTimestamp - ISO 8601 timestamp in UTC (e.g., "2026-01-20T15:00:00.000Z")
+ * @param timezone - User's IANA timezone (e.g., "Europe/Moscow", "America/New_York")
+ * @returns Time string in HH:mm format in user's timezone
+ *
+ * @example
+ * isoToTimeStringInTimezone("2026-01-20T15:00:00.000Z", "Europe/Moscow")
+ * // Returns: "18:00" (15:00 UTC = 18:00 Moscow time, UTC+3)
+ *
+ * @example
+ * isoToTimeStringInTimezone("2026-01-20T18:00:00.000Z", "Europe/Moscow")
+ * // Returns: "21:00" (18:00 UTC = 21:00 Moscow time)
  */
-export const isoToTimeString = (isoTimestamp: string): string => {
+export const isoToTimeStringInTimezone = (
+  isoTimestamp: string,
+  timezone: string
+): string => {
   const date = new Date(isoTimestamp);
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
+  const zonedDate = toZonedTime(date, timezone);
+  return format(zonedDate, 'HH:mm', { timeZone: timezone });
 };
 
 /**
- * Convert date and time strings to ISO 8601 timestamp
- * Assumes local timezone
+ * Convert local date/time in user's timezone to ISO 8601 timestamp (UTC)
+ *
  * @param dateStr - Date in YYYY-MM-DD format
  * @param timeStr - Time in HH:mm format
- * @returns ISO 8601 timestamp string
+ * @param timezone - User's IANA timezone (e.g., "Europe/Moscow")
+ * @returns ISO 8601 timestamp string in UTC
+ *
+ * @example
+ * dateTimeToISOInTimezone("2026-01-20", "18:00", "Europe/Moscow")
+ * // Returns: "2026-01-20T15:00:00.000Z" (18:00 Moscow = 15:00 UTC, Moscow is UTC+3)
+ *
+ * @example
+ * dateTimeToISOInTimezone("2026-01-20", "21:00", "Europe/Moscow")
+ * // Returns: "2026-01-20T18:00:00.000Z" (21:00 Moscow = 18:00 UTC)
  */
-export const dateTimeToISO = (dateStr: string, timeStr: string): string => {
-  const date = parseDateString(dateStr);
+export const dateTimeToISOInTimezone = (
+  dateStr: string,
+  timeStr: string,
+  timezone: string
+): string => {
+  const [year, month, day] = dateStr.split('-').map(Number);
   const [hours, minutes] = timeStr.split(':').map(Number);
-  date.setHours(hours, minutes, 0, 0);
-  return date.toISOString();
+
+  // Create a date object representing the local time (not UTC!)
+  const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+
+  // Convert from local time in specified timezone to UTC
+  const utcDate = fromZonedTime(localDate, timezone);
+
+  return utcDate.toISOString();
+};
+
+/**
+ * Check if a timestamp represents an all-day event based on time being 00:00
+ *
+ * @param isoTimestamp - ISO 8601 timestamp
+ * @param timezone - User's IANA timezone
+ * @returns True if the time is 00:00 in user's timezone
+ */
+export const isStartOfDayInTimezone = (
+  isoTimestamp: string,
+  timezone: string
+): boolean => {
+  const timeStr = isoToTimeStringInTimezone(isoTimestamp, timezone);
+  return timeStr === '00:00';
+};
+
+/**
+ * Check if a timestamp represents end of all-day event based on time being 23:59
+ *
+ * @param isoTimestamp - ISO 8601 timestamp
+ * @param timezone - User's IANA timezone
+ * @returns True if the time is 23:59 in user's timezone
+ */
+export const isEndOfDayInTimezone = (
+  isoTimestamp: string,
+  timezone: string
+): boolean => {
+  const timeStr = isoToTimeStringInTimezone(isoTimestamp, timezone);
+  return timeStr === '23:59';
 };

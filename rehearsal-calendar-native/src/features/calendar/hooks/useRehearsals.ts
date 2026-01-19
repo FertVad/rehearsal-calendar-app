@@ -1,7 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
 import { Rehearsal, Project, RSVPStatus } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
-import { formatDateToString, isoToDateString, isoToTimeString } from '../../../shared/utils/time';
+import {
+  formatDateToString,
+  isoToDateStringInTimezone,
+  isoToTimeStringInTimezone,
+} from '../../../shared/utils/time';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // Cache duration in milliseconds (15 seconds)
 const CACHE_DURATION = 15000;
@@ -9,20 +14,22 @@ const CACHE_DURATION = 15000;
 /**
  * Transform rehearsal from API format to UI format
  * Converts ISO timestamps to legacy date/time fields for backward compatibility
+ * Uses user's timezone from AuthContext
  */
-const transformRehearsal = (r: Rehearsal): Rehearsal => {
+const transformRehearsal = (r: Rehearsal, userTimezone: string): Rehearsal => {
   // If rehearsal already has legacy format, return as-is
   if (r.date && r.time) {
     return r;
   }
 
   // Convert from new format (startsAt/endsAt) to legacy format (date/time/endTime)
+  // ✅ FIXED: Using user's timezone instead of device timezone
   if (r.startsAt && r.endsAt) {
     return {
       ...r,
-      date: isoToDateString(r.startsAt),
-      time: isoToTimeString(r.startsAt),
-      endTime: isoToTimeString(r.endsAt),
+      date: isoToDateStringInTimezone(r.startsAt, userTimezone),
+      time: isoToTimeStringInTimezone(r.startsAt, userTimezone),
+      endTime: isoToTimeStringInTimezone(r.endsAt, userTimezone),
     };
   }
 
@@ -39,6 +46,10 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
   const [adminStats, setAdminStats] = useState<Record<string, { confirmed: number; invited: number }>>({});
   const lastFetchTime = useRef<number>(0);
   const isInitialLoadRef = useRef(true);
+
+  // ✅ Get user's timezone from AuthContext
+  const { user } = useAuth();
+  const userTimezone = user?.timezone || 'UTC';
 
   const fetchRehearsals = useCallback(async (force = false) => {
     if (projects.length === 0) {
@@ -81,7 +92,8 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
           if (r.adminStats) {
             stats[r.id] = r.adminStats;
           }
-          return transformRehearsal(r);
+          // ✅ Pass userTimezone to transformRehearsal
+          return transformRehearsal(r, userTimezone);
         });
         fetchedRehearsals = allRehearsals;
       } else {
@@ -89,11 +101,12 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
         const response = await rehearsalsAPI.getAll(filterProjectId);
         const project = projects.find(p => p.id === filterProjectId);
         const projectRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) =>
+          // ✅ Pass userTimezone to transformRehearsal
           transformRehearsal({
             ...r,
             projectName: project?.name,
             projectId: filterProjectId,
-          })
+          }, userTimezone)
         );
         fetchedRehearsals = projectRehearsals;
 
@@ -151,7 +164,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
       setLoading(false);
       setRefreshing(false);
     }
-  }, [projects, filterProjectId]);
+  }, [projects, filterProjectId, userTimezone]);
 
   const updateAdminStats = useCallback(async (rehearsalId: string) => {
     try {

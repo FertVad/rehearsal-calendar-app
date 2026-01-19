@@ -63,13 +63,24 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
     // Get availability for each user across all dates
     const availability = [];
 
-    // Batch fetch all users info
-    const usersQuery = `SELECT id, first_name, last_name, email, timezone FROM native_users WHERE id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})`;
+    // Get requester's timezone - ALL availability will be converted to this timezone
+    // This ensures that when viewing the planner, all members' busy slots appear
+    // in the requester's timezone, not each member's individual timezone
+    const requester = await db.get(
+      'SELECT timezone FROM native_users WHERE id = $1',
+      [userId]
+    );
+    const requesterTimezone = requester?.timezone || 'Asia/Jerusalem';
+
+    console.log(`[Availability API] User ID ${userId} requesting availability, timezone: ${requesterTimezone}`);
+
+    // Batch fetch all users info (no need for individual timezones anymore)
+    const usersQuery = `SELECT id, first_name, last_name, email FROM native_users WHERE id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})`;
     const users = await db.all(usersQuery, targetUserIds);
     const usersMap = new Map(users.map(u => [u.id, u]));
 
     // Build date range for TIMESTAMPTZ query
-    // We need to query starts_at timestamps that fall on these dates in each user's timezone
+    // We need to query starts_at timestamps that fall on these dates in requester's timezone
     // For safety, query the full day range expanded by 24 hours on both sides
     const startDateStr = dates[0];
     const endDateStr = dates[dates.length - 1];
@@ -101,7 +112,6 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
         continue;
       }
 
-      const userTimezone = user.timezone || 'Asia/Jerusalem';
       const userRecords = recordsByUser.get(targetUserId) || [];
 
       const userAvailability = {
@@ -112,12 +122,12 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
         dates: []
       };
 
-      // Group records by date in user's timezone
+      // Group records by date in requester's timezone
       const recordsByDate = new Map();
       for (const record of userRecords) {
-        // Convert timestamp to user's local date
+        // Convert timestamp to requester's local date
         const startsAtISO = timestampToISO(record.starts_at);
-        const { date: localDate } = timestampToLocal(startsAtISO, userTimezone);
+        const { date: localDate } = timestampToLocal(startsAtISO, requesterTimezone);
 
         if (!recordsByDate.has(localDate)) {
           recordsByDate.set(localDate, []);
@@ -130,7 +140,7 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
         const records = recordsByDate.get(currentDate) || [];
 
         if (records.length > 0) {
-          // Convert timestamps to time ranges in user's local timezone
+          // Convert timestamps to time ranges in requester's timezone
           const timeRanges = records.map(record => {
             // For all-day events, don't convert timezone - just return 00:00-23:59
             if (record.is_all_day) {
@@ -142,11 +152,11 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
               };
             }
 
-            // For regular events, convert to user's local timezone
+            // For regular events, convert to requester's timezone
             const startsAtISO = timestampToISO(record.starts_at);
             const endsAtISO = timestampToISO(record.ends_at);
-            const { time: startTime } = timestampToLocal(startsAtISO, userTimezone);
-            const { time: endTime } = timestampToLocal(endsAtISO, userTimezone);
+            const { time: startTime } = timestampToLocal(startsAtISO, requesterTimezone);
+            const { time: endTime } = timestampToLocal(endsAtISO, requesterTimezone);
 
             return {
               start: startTime,

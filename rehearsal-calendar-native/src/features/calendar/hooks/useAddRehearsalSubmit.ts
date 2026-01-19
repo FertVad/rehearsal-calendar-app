@@ -6,11 +6,12 @@ import { AppStackParamList } from '../../../navigation';
 import { Project, ProjectMember } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { checkSchedulingConflicts, formatConflictMessage } from '../../../shared/utils/conflictDetection';
-import { dateTimeToISO } from '../../../shared/utils/time';
+import { dateTimeToISOInTimezone } from '../../../shared/utils/time';
 import { getSyncSettings } from '../../../shared/utils/calendarStorage';
 import { syncRehearsalToCalendar } from '../../../shared/services/calendar';
 import { formatDate, formatTime } from '../utils/rehearsalFormatters';
 import { TimeRange } from '../../../shared/utils/availability';
+import { useAuth } from '../../../contexts/AuthContext';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
@@ -45,19 +46,21 @@ export function useAddRehearsalSubmit({
 }: UseAddRehearsalSubmitProps) {
   const navigation = useNavigation<NavigationType>();
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const userTimezone = user?.timezone || 'UTC';
 
   const saveRehearsal = async () => {
     setLoading(true);
 
     try {
-      // Convert date + time to ISO timestamps
+      // Convert date + time to ISO timestamps using user's timezone
       const dateString = formatDate(date);
       const startTimeString = formatTime(startTime);
       const endTimeString = formatTime(endTime);
 
       const rehearsalData = {
-        startsAt: dateTimeToISO(dateString, startTimeString),
-        endsAt: dateTimeToISO(dateString, endTimeString),
+        startsAt: dateTimeToISOInTimezone(dateString, startTimeString, userTimezone),
+        endsAt: dateTimeToISOInTimezone(dateString, endTimeString, userTimezone),
         location: location.trim() || undefined,
         participant_ids: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
       };

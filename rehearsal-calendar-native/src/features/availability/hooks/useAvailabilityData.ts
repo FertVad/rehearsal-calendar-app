@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayMode, DayState } from '../types';
+import {
+  isoToDateStringInTimezone,
+  isoToTimeStringInTimezone,
+} from '../../../shared/utils/time';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const DEFAULT_SLOT = { start: '10:00', end: '18:00' };
 
@@ -9,6 +14,10 @@ export const useAvailabilityData = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // ✅ Get user's timezone from AuthContext
+  const { user } = useAuth();
+  const userTimezone = user?.timezone || 'UTC';
 
   const loadAvailability = useCallback(async () => {
     try {
@@ -28,8 +37,11 @@ export const useAvailabilityData = () => {
         const dateSource = record.startsAt || record.date;
         if (!dateSource) continue;
 
-        // Extract date without timezone offset
-        const dateStr = dateSource.split('T')[0];
+        // ✅ FIXED: Extract date in user's timezone
+        const dateStr = record.startsAt
+          ? isoToDateStringInTimezone(record.startsAt, userTimezone)
+          : dateSource.split('T')[0];
+
         if (!serverData[dateStr]) {
           serverData[dateStr] = [];
         }
@@ -47,11 +59,9 @@ export const useAvailabilityData = () => {
             startTime = '00:00';
             endTime = '23:59';
           } else {
-            // Extract time from ISO timestamp (e.g., "2025-12-11T10:00:00.000Z" -> "10:00")
-            const startsAtDate = new Date(record.startsAt);
-            const endsAtDate = new Date(record.endsAt);
-            startTime = `${String(startsAtDate.getHours()).padStart(2, '0')}:${String(startsAtDate.getMinutes()).padStart(2, '0')}`;
-            endTime = `${String(endsAtDate.getHours()).padStart(2, '0')}:${String(endsAtDate.getMinutes()).padStart(2, '0')}`;
+            // ✅ FIXED: Extract time in user's timezone
+            startTime = isoToTimeStringInTimezone(record.startsAt, userTimezone);
+            endTime = isoToTimeStringInTimezone(record.endsAt, userTimezone);
           }
         } else {
           startTime = record.start || record.start_time;
@@ -158,7 +168,7 @@ export const useAvailabilityData = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userTimezone]);
 
   useEffect(() => {
     loadAvailability();

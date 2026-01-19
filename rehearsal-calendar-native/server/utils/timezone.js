@@ -1,6 +1,11 @@
 /**
  * Server-side timezone conversion utilities
+ *
+ * IMPORTANT: Uses date-fns-tz for reliable timezone conversion
+ * @see https://date-fns.org/docs/Time-Zones
  */
+
+import { fromZonedTime, toZonedTime, formatInTimeZone } from 'date-fns-tz';
 
 /**
  * @typedef {Object} DateTimeResult
@@ -75,64 +80,37 @@ export function timestampToLocal(isoTimestamp, timezone) {
 
 /**
  * Convert local date/time in user's timezone to ISO 8601 TIMESTAMPTZ string
+ *
+ * Uses date-fns-tz for reliable timezone conversion (fixes bugs in previous implementation)
+ *
  * @param {string} date - Date in YYYY-MM-DD format
  * @param {string} time - Time in HH:mm format
- * @param {string} timezone - IANA timezone (e.g., 'Asia/Jerusalem')
+ * @param {string} timezone - IANA timezone (e.g., 'Asia/Jerusalem', 'Europe/Moscow')
  * @returns {string} - ISO 8601 timestamp in UTC (Z format)
  *
  * @example
  * localToTimestamp("2025-12-10", "19:00", "Asia/Jerusalem")
  * // Returns: "2025-12-10T17:00:00.000Z" (19:00 Jerusalem = 17:00 UTC)
+ *
+ * @example
+ * localToTimestamp("2026-01-20", "21:00", "Europe/Moscow")
+ * // Returns: "2026-01-20T18:00:00.000Z" (21:00 Moscow = 18:00 UTC, MSK = UTC+3)
  */
 export function localToTimestamp(date, time, timezone) {
   // Parse date and time
   const [year, month, day] = date.split('-').map(Number);
   const [hours, minutes] = time.split(':').map(Number);
 
-  // Create date string for the target timezone
-  const dateTimeStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+  // Create a date object representing the local time (not UTC!)
+  // This date is "naive" - it doesn't have timezone info yet
+  const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
-  // Use Intl.DateTimeFormat to interpret this time in the target timezone
-  // and convert to UTC
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
+  // Convert from local time in specified timezone to UTC
+  // fromZonedTime treats the input date as being in the specified timezone
+  const utcDate = fromZonedTime(localDate, timezone);
 
-  // Create a UTC date and adjust for timezone
-  const testDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
-
-  // Format in target timezone to see what time it shows
-  const formatted = formatter.format(testDate);
-  const parts = formatted.match(/(\d{2})\/(\d{2})\/(\d{4}),\s*(\d{2}):(\d{2}):(\d{2})/);
-
-  if (!parts) {
-    throw new Error('Failed to parse formatted date');
-  }
-
-  const gotMonth = parseInt(parts[1]);
-  const gotDay = parseInt(parts[2]);
-  const gotYear = parseInt(parts[3]);
-  const gotHour = parseInt(parts[4]);
-  const gotMinute = parseInt(parts[5]);
-
-  // Calculate the difference between what we want and what we got
-  const wantedMs = Date.UTC(year, month - 1, day, hours, minutes);
-  const gotMs = Date.UTC(gotYear, gotMonth - 1, gotDay, gotHour, gotMinute);
-  const offsetMs = wantedMs - gotMs;
-
-  // Apply offset to get correct UTC time
-  const utcMs = testDate.getTime() + offsetMs;
-  const correctDate = new Date(utcMs);
-
-  // Return ISO string in UTC (Z format) - PostgreSQL handles this correctly
-  return correctDate.toISOString();
+  // Return ISO string in UTC (Z format)
+  return utcDate.toISOString();
 }
 
 /**
