@@ -35,8 +35,7 @@
         "NSCalendarsFullAccessUsageDescription": "This app needs full access to your calendar to sync rehearsals and import events as availability slots.",
         "NSCalendarsWriteOnlyAccessUsageDescription": "This app needs write access to your calendar to export rehearsals.",
         "NSRemindersUsageDescription": "This app may set reminders for your rehearsals.",
-        "NSRemindersFullAccessUsageDescription": "This app needs full access to reminders for rehearsal notifications.",
-        "NSUserNotificationsUsageDescription": "This app needs access to send you reminders and updates about rehearsals."
+        "NSRemindersFullAccessUsageDescription": "This app needs full access to reminders for rehearsal notifications."
       }
     },
     "android": {
@@ -47,10 +46,8 @@
       "package": "com.rehearsal.app",
       "permissions": [
         "READ_CALENDAR",
-        "WRITE_CALENDAR",
-        "POST_NOTIFICATIONS"
+        "WRITE_CALENDAR"
       ],
-      "useNextNotificationsApi": true,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -78,14 +75,17 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser",
-      [
-        "expo-notifications",
-        {
+      "expo-web-browser"
+    ],
+    "_disabled_plugins": [
+      {
+        "_comment": "Temporarily disabled for testing with Personal Team (requires paid Apple Developer account)",
+        "plugin": "expo-notifications",
+        "config": {
           "icon": "./assets/notification-icon.png",
           "color": "#A855F7"
         }
-      ]
+      }
     ],
     "extra": {
       "eas": {
