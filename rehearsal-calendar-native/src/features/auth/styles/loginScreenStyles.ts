@@ -88,4 +88,10 @@ export const styles = StyleSheet.create({
   registerButton: {
     marginTop: Spacing.md,
   },
+  oauthContainer: {
+    marginTop: Spacing.lg,
+  },
+  oauthButton: {
+    marginBottom: Spacing.sm,
+  },
 });

@@ -29,6 +29,15 @@ export interface AuthTranslations {
   confirmPasswordPlaceholder: string;
   required: string;
   optional: string;
+  // OAuth translations
+  orContinueWith: string;
+  signInWithGoogle: string;
+  signInWithApple: string;
+  googleSignInError: string;
+  appleSignInError: string;
+  accountLinked: string;
+  googleAccountLinkedToExisting: string;
+  appleAccountLinkedToExisting: string;
 }
 
 export const ru = {
@@ -63,6 +72,15 @@ export const ru = {
     confirmPasswordPlaceholder: 'Повторите пароль',
     required: '*',
     optional: '(опционально)',
+    // OAuth translations
+    orContinueWith: 'или войти через',
+    signInWithGoogle: 'Войти через Google',
+    signInWithApple: 'Войти через Apple',
+    googleSignInError: 'Ошибка входа через Google',
+    appleSignInError: 'Ошибка входа через Apple',
+    accountLinked: 'Аккаунты связаны',
+    googleAccountLinkedToExisting: 'Ваш аккаунт Google был связан с существующим аккаунтом.',
+    appleAccountLinkedToExisting: 'Ваш аккаунт Apple был связан с существующим аккаунтом.',
   },
 };
 
@@ -98,5 +116,14 @@ export const en = {
     confirmPasswordPlaceholder: 'Repeat password',
     required: '*',
     optional: '(optional)',
+    // OAuth translations
+    orContinueWith: 'or continue with',
+    signInWithGoogle: 'Sign in with Google',
+    signInWithApple: 'Sign in with Apple',
+    googleSignInError: 'Google Sign-In Error',
+    appleSignInError: 'Apple Sign-In Error',
+    accountLinked: 'Account Linked',
+    googleAccountLinkedToExisting: 'Your Google account has been linked to your existing account.',
+    appleAccountLinkedToExisting: 'Your Apple account has been linked to your existing account.',
   },
 };

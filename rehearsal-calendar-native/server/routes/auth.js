@@ -3,6 +3,8 @@ import bcrypt from 'bcrypt';
 import db from '../database/db.js';
 import { generateTokens, verifyToken, requireAuth } from '../middleware/jwtMiddleware.js';
 import { serializeUser } from '../utils/userSerializer.js';
+import { verifyGoogleToken, verifyAppleToken } from '../utils/oauthVerification.js';
+import { findOrCreateOAuthUser, getUserAuthProviders, unlinkAuthProvider } from '../utils/accountLinking.js';
 
 const router = Router();
 
@@ -98,6 +100,122 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error('[Auth] Login error:', err);
     res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+// Google OAuth Login/Register
+router.post('/google', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ error: 'ID token is required' });
+    }
+
+    // Verify token with Google
+    const googleUser = await verifyGoogleToken(idToken);
+
+    if (!googleUser.emailVerified) {
+      return res.status(400).json({ error: 'Email not verified by Google' });
+    }
+
+    // Find or create user, link accounts if email matches
+    const { userId, isNewUser, linked } = await findOrCreateOAuthUser({
+      provider: 'google',
+      providerUserId: googleUser.providerUserId,
+      email: googleUser.email,
+      emailVerified: googleUser.emailVerified,
+      firstName: googleUser.firstName,
+      lastName: googleUser.lastName,
+      avatarUrl: googleUser.avatarUrl,
+    });
+
+    // Update last login
+    await db.run(
+      'UPDATE native_users SET last_login_at = $1 WHERE id = $2',
+      [new Date().toISOString(), userId]
+    );
+
+    // Generate JWT tokens
+    const { accessToken, refreshToken } = generateTokens(userId);
+
+    // Get user data
+    const user = await db.get(
+      `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
+              notifications_enabled, email_notifications, week_start_day,
+              onboarding_completed, created_at
+       FROM native_users WHERE id = $1`,
+      [userId]
+    );
+
+    res.json({
+      user: serializeUser(user),
+      accessToken,
+      refreshToken,
+      isNewUser,
+      linked, // Indicates if account was linked to existing user
+    });
+  } catch (err) {
+    console.error('[Auth] Google OAuth error:', err);
+    res.status(500).json({ error: 'Google authentication failed' });
+  }
+});
+
+// Apple Sign-In Login/Register
+router.post('/apple', async (req, res) => {
+  try {
+    const { idToken, user } = req.body; // Apple sends user data only on first sign-in
+
+    if (!idToken) {
+      return res.status(400).json({ error: 'ID token is required' });
+    }
+
+    // Verify token with Apple
+    const appleUser = await verifyAppleToken(idToken);
+
+    // Apple provides name only on first sign-in, extract from request if available
+    const firstName = user?.givenName || user?.name?.givenName || user?.firstName || 'User';
+    const lastName = user?.familyName || user?.name?.familyName || user?.lastName || '';
+
+    // Find or create user, link accounts if email matches
+    const { userId, isNewUser, linked } = await findOrCreateOAuthUser({
+      provider: 'apple',
+      providerUserId: appleUser.providerUserId,
+      email: appleUser.email,
+      emailVerified: appleUser.emailVerified,
+      firstName,
+      lastName,
+      avatarUrl: null, // Apple doesn't provide avatars
+    });
+
+    // Update last login
+    await db.run(
+      'UPDATE native_users SET last_login_at = $1 WHERE id = $2',
+      [new Date().toISOString(), userId]
+    );
+
+    // Generate JWT tokens
+    const { accessToken, refreshToken } = generateTokens(userId);
+
+    // Get user data
+    const user_data = await db.get(
+      `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
+              notifications_enabled, email_notifications, week_start_day,
+              onboarding_completed, created_at
+       FROM native_users WHERE id = $1`,
+      [userId]
+    );
+
+    res.json({
+      user: serializeUser(user_data),
+      accessToken,
+      refreshToken,
+      isNewUser,
+      linked,
+    });
+  } catch (err) {
+    console.error('[Auth] Apple OAuth error:', err);
+    res.status(500).json({ error: 'Apple authentication failed' });
   }
 });
 
@@ -287,6 +405,56 @@ router.delete('/me', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[Auth] Delete account error:', err);
     res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// Get linked auth providers for current user
+router.get('/me/providers', requireAuth, async (req, res) => {
+  try {
+    const providers = await getUserAuthProviders(req.userId);
+
+    // Don't expose sensitive provider_user_id, just show type and email
+    const sanitizedProviders = providers.map(p => ({
+      providerType: p.provider_type,
+      providerEmail: p.provider_email,
+      createdAt: p.created_at,
+      lastUsedAt: p.last_used_at,
+    }));
+
+    res.json({ providers: sanitizedProviders });
+  } catch (err) {
+    console.error('[Auth] Get providers error:', err);
+    res.status(500).json({ error: 'Failed to get auth providers' });
+  }
+});
+
+// Unlink auth provider (only if user has another auth method)
+router.delete('/me/providers/:provider', requireAuth, async (req, res) => {
+  try {
+    const { provider } = req.params;
+
+    // Validate provider type
+    if (!['email', 'google', 'apple'].includes(provider)) {
+      return res.status(400).json({ error: 'Invalid provider type' });
+    }
+
+    await unlinkAuthProvider(req.userId, provider);
+
+    res.json({
+      message: `${provider} provider unlinked successfully`,
+    });
+  } catch (err) {
+    console.error('[Auth] Unlink provider error:', err);
+
+    if (err.message === 'Cannot unlink the last authentication method') {
+      return res.status(400).json({ error: err.message });
+    }
+
+    if (err.message === 'Auth provider not found') {
+      return res.status(404).json({ error: err.message });
+    }
+
+    res.status(500).json({ error: 'Failed to unlink provider' });
   }
 });
 

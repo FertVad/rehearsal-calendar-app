@@ -15,17 +15,36 @@ DROP TABLE IF EXISTS native_projects;
 CREATE TABLE IF NOT EXISTS native_users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email VARCHAR UNIQUE NOT NULL,
-  password_hash VARCHAR NOT NULL,
+  password_hash VARCHAR,                    -- Nullable for OAuth-only users
   first_name VARCHAR NOT NULL,
   last_name VARCHAR,
+  phone VARCHAR(50),                        -- User phone number
+  avatar_url TEXT,                          -- Profile avatar URL (from OAuth or manual)
   timezone VARCHAR DEFAULT 'UTC',
   locale VARCHAR DEFAULT 'en',
   week_start_day VARCHAR(10) DEFAULT 'monday',
   notifications_enabled BOOLEAN DEFAULT 1,
   email_notifications BOOLEAN DEFAULT 1,
   onboarding_completed BOOLEAN DEFAULT 0,
+  last_login_at DATETIME,                   -- Track last login timestamp
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create native_auth_providers table (OAuth support)
+CREATE TABLE IF NOT EXISTS native_auth_providers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  provider_type VARCHAR(20) NOT NULL,       -- 'email', 'google', 'apple'
+  provider_user_id VARCHAR(255),            -- External OAuth user ID (NULL for email provider)
+  provider_email VARCHAR(255),              -- Email from OAuth provider
+  provider_metadata TEXT,                   -- JSON metadata from provider (optional)
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  last_used_at DATETIME,                    -- Track when this provider was last used
+  FOREIGN KEY (user_id) REFERENCES native_users(id) ON DELETE CASCADE,
+  UNIQUE(provider_type, provider_user_id),  -- Prevent duplicate OAuth accounts
+  CHECK (provider_type IN ('email', 'google', 'apple'))
 );
 
 -- Create native_projects table
@@ -142,6 +161,9 @@ CREATE TABLE native_calendar_event_mappings (
 );
 
 -- Create indexes
+CREATE INDEX idx_auth_providers_user_id ON native_auth_providers(user_id);
+CREATE INDEX idx_auth_providers_provider ON native_auth_providers(provider_type, provider_user_id);
+CREATE INDEX idx_auth_providers_email ON native_auth_providers(provider_email);
 CREATE INDEX idx_project_members_user_id ON native_project_members(user_id);
 CREATE INDEX idx_project_members_project_id ON native_project_members(project_id);
 CREATE INDEX idx_rehearsals_project_id ON native_rehearsals(project_id);

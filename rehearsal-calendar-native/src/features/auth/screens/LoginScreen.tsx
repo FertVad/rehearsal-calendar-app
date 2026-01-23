@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors } from '../../../shared/constants/colors';
@@ -16,14 +17,26 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { loginScreenStyles as styles } from '../styles';
+import { useGoogleAuth, getGoogleIdToken } from '../../../shared/services/googleAuth';
 
 type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, loading, error } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const { login, loginWithGoogle, loading, error } = useAuth();
   const { t } = useI18n();
+
+  // Google OAuth
+  const { request, response, promptAsync } = useGoogleAuth();
+
+  // Handle Google OAuth response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      handleGoogleSignIn(response);
+    }
+  }, [response]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -36,6 +49,34 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       // Navigation handled by AuthProvider
     } catch (err: any) {
       Alert.alert(t.auth.loginError, err.message);
+    }
+  };
+
+  const handleGoogleSignIn = async (response: any) => {
+    try {
+      setGoogleLoading(true);
+      const idToken = getGoogleIdToken(response);
+
+      if (!idToken) {
+        throw new Error('Failed to get ID token from Google');
+      }
+
+      // Send to backend
+      const result = await loginWithGoogle(idToken);
+
+      // Show message if account was linked
+      if (result.linked) {
+        Alert.alert(
+          t.auth.accountLinked,
+          t.auth.googleAccountLinkedToExisting
+        );
+      }
+
+      // Navigation handled by AuthProvider
+    } catch (err: any) {
+      Alert.alert(t.auth.googleSignInError, err.message);
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -102,6 +143,24 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               variant="glass"
               style={styles.registerButton}
             />
+
+            {/* OAuth Buttons */}
+            <View style={styles.oauthContainer}>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>{t.auth.orContinueWith}</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <GlassButton
+                title={t.auth.signInWithGoogle}
+                onPress={() => promptAsync()}
+                variant="glass"
+                loading={googleLoading}
+                disabled={!request || loading || googleLoading}
+                style={styles.oauthButton}
+              />
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
