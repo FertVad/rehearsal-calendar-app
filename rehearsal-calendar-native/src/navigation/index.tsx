@@ -10,6 +10,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { Colors } from '../shared/constants/colors';
 import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
+import { useNotifications } from '../shared/hooks/useNotifications';
 import { OnboardingNavigator } from '../features/onboarding';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
@@ -276,6 +277,13 @@ function ActionSheetWrapper() {
   );
 }
 
+// Wrapper component to handle push notifications
+// Must be inside NavigationContainer to use navigation
+function NotificationsHandler() {
+  useNotifications();
+  return null;
+}
+
 function TabNavigator() {
   const { t } = useI18n();
   const { setShowActionSheet } = useActionSheet();
@@ -369,6 +377,7 @@ function TabNavigator() {
         />
       </AppTabs.Navigator>
       <ActionSheetWrapper />
+      <NotificationsHandler />
     </>
   );
 }
