@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
+import { notifyProjectDeleted } from '../../services/notifications/pushNotificationService.js';
 
 const router = Router();
 
@@ -146,8 +147,24 @@ router.delete('/:projectId', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
+    // Get all members BEFORE deletion (excluding owner)
+    const members = await db.all(
+      "SELECT user_id FROM native_project_members WHERE project_id = $1 AND status = 'active' AND user_id != $2",
+      [projectId, userId]
+    );
+
     // Delete project (CASCADE will automatically delete all related data)
     await db.run('DELETE FROM native_projects WHERE id = $1', [projectId]);
+
+    // Send push notifications to all members
+    if (members.length > 0) {
+      try {
+        const memberIds = members.map(m => m.user_id);
+        await notifyProjectDeleted(project.name, memberIds);
+      } catch (notifErr) {
+        console.error('Error sending project deleted notification:', notifErr);
+      }
+    }
 
     res.json({
       success: true,

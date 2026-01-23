@@ -16,6 +16,12 @@ import {
   getRehearsalResponses,
   getUserResponse,
 } from '../../services/rehearsals/rsvpService.js';
+import {
+  notifyRehearsalCreated,
+  notifyRehearsalUpdated,
+  notifyRehearsalDeleted,
+  notifyMemberResponse,
+} from '../../services/notifications/pushNotificationService.js';
 
 const router = Router();
 
@@ -87,6 +93,18 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
 
     const rehearsal = await createRehearsal(projectId, userId, req.body);
 
+    // Send push notifications to all project members
+    try {
+      const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
+      const members = await db.all(
+        "SELECT user_id FROM native_project_members WHERE project_id = ? AND status = 'active'",
+        [projectId]
+      );
+      await notifyRehearsalCreated(rehearsal, project.name, members);
+    } catch (notifErr) {
+      console.error('Error sending rehearsal created notification:', notifErr);
+    }
+
     res.status(201).json({ rehearsal });
   } catch (error) {
     console.error('Error creating rehearsal:', error);
@@ -119,6 +137,26 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
 
     const updatedRehearsal = await updateRehearsal(rehearsalId, projectId, req.body);
 
+    // Send push notifications to all project members
+    try {
+      const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
+      const members = await db.all(
+        "SELECT user_id FROM native_project_members WHERE project_id = ? AND status = 'active'",
+        [projectId]
+      );
+
+      // Determine what changed
+      const changes = [];
+      if (req.body.startsAt || req.body.endsAt) changes.push('дата/время');
+      if (req.body.location) changes.push('место');
+      if (req.body.title) changes.push('название');
+      const changesStr = changes.length > 0 ? changes.join(', ') : 'детали';
+
+      await notifyRehearsalUpdated(updatedRehearsal, project.name, members, changesStr);
+    } catch (notifErr) {
+      console.error('Error sending rehearsal updated notification:', notifErr);
+    }
+
     res.json({ rehearsal: updatedRehearsal });
   } catch (error) {
     console.error('Error updating rehearsal:', error);
@@ -149,7 +187,21 @@ router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, re
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
+    // Get project and members BEFORE deletion
+    const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
+    const members = await db.all(
+      "SELECT user_id FROM native_project_members WHERE project_id = ? AND status = 'active'",
+      [projectId]
+    );
+
     await deleteRehearsal(rehearsalId);
+
+    // Send push notifications after deletion
+    try {
+      await notifyRehearsalDeleted(rehearsal, project.name, members);
+    } catch (notifErr) {
+      console.error('Error sending rehearsal deleted notification:', notifErr);
+    }
 
     res.json({ success: true });
   } catch (error) {
@@ -180,6 +232,27 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
     }
 
     const stats = await respondToRehearsal(rehearsalId, userId, response, notes, rehearsal.project_id);
+
+    // Send push notifications to admins when member responds
+    if (response === 'yes') {
+      try {
+        const responder = await db.get('SELECT first_name, last_name FROM native_users WHERE id = ?', [userId]);
+        const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [rehearsal.project_id]);
+        const admins = await db.all(
+          `SELECT user_id FROM native_project_members
+           WHERE project_id = ? AND role IN ('owner', 'admin') AND status = 'active' AND user_id != ?`,
+          [rehearsal.project_id, userId]
+        );
+
+        if (admins.length > 0) {
+          const responderName = `${responder.first_name}${responder.last_name ? ' ' + responder.last_name : ''}`;
+          const adminIds = admins.map(a => a.user_id);
+          await notifyMemberResponse(rehearsal, project.name, responderName, adminIds);
+        }
+      } catch (notifErr) {
+        console.error('Error sending member response notification:', notifErr);
+      }
+    }
 
     res.json(stats);
   } catch (error) {

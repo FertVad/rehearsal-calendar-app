@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { timestampToLocal, timestampToISO } from '../../utils/timezone.js';
+import { notifyRoleChanged, notifyMemberRemoved } from '../../services/notifications/pushNotificationService.js';
 
 const router = Router();
 
@@ -288,6 +289,14 @@ router.put('/:projectId/members/:userId/role', requireAuth, async (req, res) => 
       [role, projectId, userId]
     );
 
+    // Send push notification to the user
+    try {
+      const project = await db.get('SELECT name FROM native_projects WHERE id = $1', [projectId]);
+      await notifyRoleChanged(project.name, parseInt(userId), role);
+    } catch (notifErr) {
+      console.error('Error sending role changed notification:', notifErr);
+    }
+
     res.json({
       success: true,
       message: 'Member role updated successfully',
@@ -330,11 +339,21 @@ router.delete('/:projectId/members/:userId', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Cannot remove project owner' });
     }
 
+    // Get project name BEFORE deletion
+    const project = await db.get('SELECT name FROM native_projects WHERE id = $1', [projectId]);
+
     // Remove member from project
     await db.run(
       'DELETE FROM native_project_members WHERE project_id = $1 AND user_id = $2',
       [projectId, userId]
     );
+
+    // Send push notification to the removed user
+    try {
+      await notifyMemberRemoved(project.name, parseInt(userId));
+    } catch (notifErr) {
+      console.error('Error sending member removed notification:', notifErr);
+    }
 
     res.json({
       success: true,

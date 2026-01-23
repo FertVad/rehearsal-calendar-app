@@ -11,6 +11,7 @@ import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/compone
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
+import { registerForPushNotifications, unregisterPushToken } from '../../../shared/services/notifications';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
@@ -39,7 +40,7 @@ const WEEK_START_OPTIONS = [
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { user, logout, updateUser, deleteAccount, loading } = useAuth();
   const { t, language, setLanguage } = useI18n();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(user?.notificationsEnabled ?? true);
   const [timezoneModalVisible, setTimezoneModalVisible] = useState(false);
   const [weekStartModalVisible, setWeekStartModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
@@ -48,6 +49,29 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const handleLogout = async () => {
     hapticMedium();
     await logout();
+  };
+
+  const handleNotificationsToggle = async (value: boolean) => {
+    hapticLight();
+    setNotificationsEnabled(value);
+
+    try {
+      // Update database
+      await updateUser({ notificationsEnabled: value });
+
+      // Register or unregister push token
+      if (value) {
+        await registerForPushNotifications();
+      } else {
+        await unregisterPushToken();
+      }
+
+      hapticSuccess();
+    } catch (err: any) {
+      Alert.alert('Ошибка', err.message || 'Не удалось изменить настройки уведомлений');
+      // Revert state on error
+      setNotificationsEnabled(!value);
+    }
   };
 
   const toggleLanguage = async () => {
@@ -205,10 +229,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <Switch
               value={notificationsEnabled}
-              onValueChange={(value) => {
-                hapticLight();
-                setNotificationsEnabled(value);
-              }}
+              onValueChange={handleNotificationsToggle}
               trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.purple }}
               thumbColor={Colors.text.inverse}
             />

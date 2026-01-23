@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "expo-device": "^8.0.10",
+    "expo-notifications": "^0.32.16"
+  }
+}

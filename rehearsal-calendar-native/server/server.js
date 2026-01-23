@@ -8,6 +8,8 @@ import authRoutes from './routes/auth.js';
 import nativeRoutes from './routes/native.js';
 import availabilityRoutes from './routes/native/availability.js';
 import calendarSyncRoutes from './routes/native/calendarSync.js';
+import pushTokensRouter from './routes/native/pushTokens.js';
+import { startReminderScheduler } from './services/notifications/reminderScheduler.js';
 import { logger } from './utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -72,6 +74,9 @@ app.use('/api/availability', availabilityRoutes);
 
 // Calendar sync routes
 app.use('/api/native/calendar-sync', calendarSyncRoutes);
+
+// Push notification token routes
+app.use('/api/native/push-tokens', pushTokensRouter);
 
 // Native app routes
 app.use('/api/native', nativeRoutes);
@@ -218,4 +223,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {
   logger.info(`Native App API server running on http://${HOST}:${PORT}`);
   logger.info(`Also accessible at http://localhost:${PORT}`);
+
+  // Start reminder scheduler for push notifications
+  startReminderScheduler();
 });

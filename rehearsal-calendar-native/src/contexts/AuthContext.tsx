@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
 import { syncUserPreferences } from '../shared/utils/storage';
+import { unregisterPushToken } from '../shared/services/notifications';
 
 interface User {
   id: number;
@@ -28,6 +29,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, firstName: string, lastName?: string) => Promise<void>;
   loginWithTelegram: (telegramData: any) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<{ linked: boolean }>;
+  loginWithApple: (idToken: string, user?: any) => Promise<{ linked: boolean }>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<void>;
   deleteAccount: () => Promise<{ deletedProjects: number }>;
@@ -176,9 +179,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    try {
+      setError(null);
+      setLoading(true);
+
+      const response = await authAPI.loginWithGoogle(idToken);
+      const { user, accessToken, refreshToken, linked } = response.data;
+
+      // Save tokens, cache user, and clear any stale logout timestamp
+      await AsyncStorage.multiSet([
+        ['accessToken', accessToken],
+        ['refreshToken', refreshToken],
+        ['cachedUser', JSON.stringify(user)],
+      ]);
+      await AsyncStorage.removeItem('lastLogoutTime');
+      // Sync user preferences (timezone, locale, weekStartDay)
+      await syncUserPreferences(user);
+
+      setUser(user);
+
+      return { linked: linked || false };
+    } catch (err: any) {
+      const message = err.response?.data?.error || 'Google sign-in failed';
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loginWithApple = useCallback(async (idToken: string, user?: any) => {
+    try {
+      setError(null);
+      setLoading(true);
+
+      const response = await authAPI.loginWithApple(idToken, user);
+      const { user: userData, accessToken, refreshToken, linked } = response.data;
+
+      // Save tokens, cache user, and clear any stale logout timestamp
+      await AsyncStorage.multiSet([
+        ['accessToken', accessToken],
+        ['refreshToken', refreshToken],
+        ['cachedUser', JSON.stringify(userData)],
+      ]);
+      await AsyncStorage.removeItem('lastLogoutTime');
+      // Sync user preferences (timezone, locale, weekStartDay)
+      await syncUserPreferences(userData);
+
+      setUser(userData);
+
+      return { linked: linked || false };
+    } catch (err: any) {
+      const message = err.response?.data?.error || 'Apple sign-in failed';
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       setLoading(true);
+
+      // Unregister push notifications
+      await unregisterPushToken();
 
       // Set flag to ignore stale deep links
       await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
@@ -253,6 +319,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         loginWithTelegram,
+        loginWithGoogle,
+        loginWithApple,
         logout,
         updateUser,
         deleteAccount,

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
+import { notifyProjectInvite } from '../../services/notifications/pushNotificationService.js';
 
 const router = Router();
 
@@ -229,6 +230,25 @@ router.post('/:code/join', requireAuth, async (req, res) => {
          VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
         [project.id, userId]
       );
+    }
+
+    // Send push notification to the user who just joined
+    try {
+      // Get the project owner/creator
+      const owner = await db.get(
+        `SELECT u.first_name, u.last_name
+         FROM native_users u
+         JOIN native_project_members pm ON u.id = pm.user_id
+         WHERE pm.project_id = $1 AND pm.role = 'owner'`,
+        [project.id]
+      );
+
+      if (owner) {
+        const inviterName = `${owner.first_name}${owner.last_name ? ' ' + owner.last_name : ''}`;
+        await notifyProjectInvite(project.name, userId, inviterName);
+      }
+    } catch (notifErr) {
+      console.error('Error sending project invite notification:', notifErr);
     }
 
     res.json({

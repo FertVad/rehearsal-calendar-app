@@ -163,6 +163,27 @@ export const authAPI = {
   }) => api.put('/auth/me', data),
 
   deleteMe: () => api.delete('/auth/me'),
+
+  // OAuth Authentication
+  loginWithGoogle: (idToken: string) =>
+    api.post('/auth/google', { idToken }),
+
+  loginWithApple: (idToken: string, user?: any) =>
+    api.post('/auth/apple', { idToken, user }),
+
+  // Auth Provider Management
+  getAuthProviders: () =>
+    api.get('/auth/me/providers'),
+
+  unlinkAuthProvider: (provider: 'google' | 'apple' | 'email') =>
+    api.delete(`/auth/me/providers/${provider}`),
+
+  // Push Notification Tokens
+  registerPushToken: (token: string, deviceType: string, deviceName: string) =>
+    api.post('/native/push-tokens', { deviceToken: token, deviceType, deviceName }),
+
+  unregisterPushToken: (token: string) =>
+    api.delete('/native/push-tokens', { data: { deviceToken: token } }),
 };
 
 // Projects API (Native App)
