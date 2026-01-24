@@ -95,7 +95,8 @@ router.post('/checkout', requireAuth, async (req, res) => {
     }
 
     // Get user email from database
-    const { db } = await import('../../database/db.js');
+    const dbModule = await import('../../database/db.js');
+    const db = dbModule.default;
     const user = await db.get(
       'SELECT email, first_name, last_name FROM native_users WHERE id = $1',
       [userId]
@@ -282,7 +283,8 @@ router.get('/status/:orderId', requireAuth, async (req, res) => {
     const { orderId } = req.params;
 
     // Verify order belongs to user
-    const { db } = await import('../../database/db.js');
+    const dbModule = await import('../../database/db.js');
+    const db = dbModule.default;
     const transaction = await db.get(
       'SELECT * FROM native_payment_transactions WHERE allpay_order_id = $1 AND user_id = $2',
       [orderId, userId]
