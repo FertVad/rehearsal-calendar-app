@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -8,13 +8,58 @@ import { SkeletonLoader, FloatingActionButton } from '../../../shared/components
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useInviteLink } from '../hooks';
+import { subscriptionsAPI } from '../../../shared/services/api';
 import { projectsScreenStyles as styles } from '../styles';
 
 export default function ProjectsScreen() {
   const navigation = useNavigation<any>();
   const { projects, selectedProject, setSelectedProject, loading, error } = useProjects();
   const { generateInviteLink, generatingInvite } = useInviteLink();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean>(false);
+  const [checkingSubscription, setCheckingSubscription] = useState<boolean>(true);
+
+  // Check subscription status on mount
+  useEffect(() => {
+    checkSubscription();
+  }, []);
+
+  const checkSubscription = async () => {
+    try {
+      setCheckingSubscription(true);
+      const response = await subscriptionsAPI.getCurrentSubscription();
+      setHasActiveSubscription(!!response.data.subscription);
+    } catch (error) {
+      console.error('Failed to check subscription:', error);
+      setHasActiveSubscription(false);
+    } finally {
+      setCheckingSubscription(false);
+    }
+  };
+
+  const handleCreateProject = () => {
+    if (!hasActiveSubscription) {
+      Alert.alert(
+        language === 'ru' ? 'Требуется подписка' : 'Subscription Required',
+        language === 'ru'
+          ? 'У вас нет активной подписки. Подписка нужна только для создания проектов. Все остальные функции бесплатны.'
+          : 'You don\'t have an active subscription. A subscription is only required to create projects. All other features are free.',
+        [
+          {
+            text: language === 'ru' ? 'Отмена' : 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: language === 'ru' ? 'Выбрать тариф' : 'View Plans',
+            onPress: () => navigation.navigate('Profile', { screen: 'Subscription' }),
+          },
+        ]
+      );
+      return;
+    }
+
+    navigation.navigate('CreateProject');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -24,7 +69,7 @@ export default function ProjectsScreen() {
           <Text style={styles.title}>{t.projects.title}</Text>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => navigation.navigate('CreateProject')}
+            onPress={handleCreateProject}
           >
             <Ionicons name="add-circle" size={28} color={Colors.accent.purple} />
           </TouchableOpacity>
@@ -121,7 +166,7 @@ export default function ProjectsScreen() {
       </ScrollView>
 
       <FloatingActionButton
-        onPress={() => navigation.navigate('CreateProject')}
+        onPress={handleCreateProject}
         icon="add"
       />
     </SafeAreaView>
