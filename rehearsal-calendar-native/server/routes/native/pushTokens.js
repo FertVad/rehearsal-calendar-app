@@ -6,7 +6,7 @@
 import express from 'express';
 import { Expo } from 'expo-server-sdk';
 import db from '../../database/db.js';
-import { requireAuth } from '../../middleware/auth.js';
+import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { logger } from '../../utils/logger.js';
 
 const router = express.Router();

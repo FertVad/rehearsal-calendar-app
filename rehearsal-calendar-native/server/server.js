@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cron from 'node-cron';
 import db, { initDatabase, testConnection, isPostgres } from './database/db.js';
 import authRoutes from './routes/auth.js';
 import nativeRoutes from './routes/native.js';
@@ -10,6 +11,7 @@ import availabilityRoutes from './routes/native/availability.js';
 import calendarSyncRoutes from './routes/native/calendarSync.js';
 import pushTokensRouter from './routes/native/pushTokens.js';
 import { startReminderScheduler } from './services/notifications/reminderScheduler.js';
+import { runRecurringBilling } from './jobs/recurringBilling.js';
 import { logger } from './utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -226,4 +228,15 @@ app.listen(PORT, HOST, () => {
 
   // Start reminder scheduler for push notifications
   startReminderScheduler();
+
+  // Start recurring billing cron job (runs daily at 2:00 AM)
+  cron.schedule('0 2 * * *', async () => {
+    logger.info('[Cron] Triggering recurring billing job');
+    try {
+      await runRecurringBilling();
+    } catch (error) {
+      logger.error('[Cron] Recurring billing job failed:', error);
+    }
+  });
+  logger.info('[Cron] Recurring billing scheduler initialized (runs daily at 2:00 AM)');
 });

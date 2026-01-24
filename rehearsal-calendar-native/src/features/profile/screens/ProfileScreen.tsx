@@ -293,6 +293,19 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
+
+          {/* Subscription */}
+          <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Subscription')}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                <Ionicons name="card" size={20} color={Colors.accent.purple} />
+              </View>
+              <Text style={styles.settingLabel}>
+                {language === 'ru' ? 'Подписка' : 'Subscription'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+          </TouchableOpacity>
         </View>
 
         {/* About Section */}

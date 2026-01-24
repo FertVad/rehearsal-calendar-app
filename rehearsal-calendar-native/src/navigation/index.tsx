@@ -24,6 +24,7 @@ import AvailabilityScreen from '../features/availability/screens/AvailabilityScr
 import ProfileScreen from '../features/profile/screens/ProfileScreen';
 import CalendarSyncSettingsScreen from '../features/profile/screens/CalendarSyncSettingsScreen';
 import EditProfileScreen from '../features/profile/screens/EditProfileScreen';
+import SubscriptionScreen from '../features/subscriptions/screens/SubscriptionScreen';
 import SmartPlannerScreen from '../features/smart-planner/screens/SmartPlannerScreen';
 import SmartPlannerTabScreen from '../features/smart-planner/screens/SmartPlannerTabScreen';
 
@@ -95,6 +96,7 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   CalendarSyncSettings: undefined;
   EditProfile: undefined;
+  Subscription: undefined;
 };
 
 export type TabParamList = {
@@ -207,6 +209,10 @@ function ProfileNavigator() {
       <ProfileStack.Screen
         name="EditProfile"
         component={EditProfileScreen}
+      />
+      <ProfileStack.Screen
+        name="Subscription"
+        component={SubscriptionScreen}
       />
     </ProfileStack.Navigator>
   );

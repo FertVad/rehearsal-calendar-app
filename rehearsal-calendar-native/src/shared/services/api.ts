@@ -377,4 +377,33 @@ export const calendarSyncAPI = {
     api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`),
 };
 
+// Subscriptions API (Native App)
+export const subscriptionsAPI = {
+  // Get all available subscription plans (no auth required)
+  getPlans: () =>
+    api.get('/native/subscriptions/plans'),
+
+  // Get current user's active subscription
+  getCurrentSubscription: () =>
+    api.get('/native/subscriptions/current'),
+
+  // Create checkout session for a plan
+  createCheckout: (planId: number) =>
+    api.post('/native/subscriptions/checkout', { planId }),
+
+  // Cancel current subscription
+  cancelSubscription: (reason?: string) =>
+    api.post('/native/subscriptions/cancel', { reason }),
+
+  // Get payment history
+  getPaymentHistory: (limit?: number) =>
+    api.get('/native/subscriptions/payments', {
+      params: limit ? { limit } : {},
+    }),
+
+  // Check payment status for an order
+  getPaymentStatus: (orderId: string) =>
+    api.get(`/native/subscriptions/status/${orderId}`),
+};
+
 export default api;

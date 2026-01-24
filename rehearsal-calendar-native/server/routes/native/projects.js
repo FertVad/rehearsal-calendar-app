@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
+import { requireSubscription } from '../../middleware/subscriptionMiddleware.js';
 import { notifyProjectDeleted } from '../../services/notifications/pushNotificationService.js';
 
 const router = Router();
@@ -38,8 +39,8 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/native/projects - Create new project
-router.post('/', requireAuth, async (req, res) => {
+// POST /api/native/projects - Create new project (requires active subscription)
+router.post('/', requireAuth, requireSubscription, async (req, res) => {
   try {
     const accountId = req.userId;
     const { name, description, timezone } = req.body;
