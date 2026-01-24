@@ -262,6 +262,43 @@ const tabButtonStyles = StyleSheet.create({
 function ActionSheetWrapper() {
   const navigation = useNavigation<any>();
   const { showActionSheet, setShowActionSheet } = useActionSheet();
+  const { language } = useI18n();
+
+  const handleCreateProject = async () => {
+    setShowActionSheet(false);
+
+    // Check subscription before creating project
+    try {
+      const { subscriptionsAPI } = await import('../shared/services/api');
+      const response = await subscriptionsAPI.getCurrentSubscription();
+      const hasActiveSubscription = !!response.data.subscription;
+
+      if (!hasActiveSubscription) {
+        const { Alert } = await import('react-native');
+        Alert.alert(
+          language === 'ru' ? 'Требуется подписка' : 'Subscription Required',
+          language === 'ru'
+            ? 'У вас нет активной подписки. Подписка нужна только для создания проектов. Все остальные функции бесплатны.'
+            : 'You don\'t have an active subscription. A subscription is only required to create projects. All other features are free.',
+          [
+            {
+              text: language === 'ru' ? 'Отмена' : 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: language === 'ru' ? 'Выбрать тариф' : 'View Plans',
+              onPress: () => navigation.navigate('Profile', { screen: 'Subscription' }),
+            },
+          ]
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to check subscription:', error);
+    }
+
+    navigation.navigate('CreateProject');
+  };
 
   return (
     <CreateActionSheet
@@ -275,10 +312,7 @@ function ActionSheetWrapper() {
         setShowActionSheet(false);
         navigation.navigate('MarkBusy');
       }}
-      onCreateProject={() => {
-        setShowActionSheet(false);
-        navigation.navigate('CreateProject');
-      }}
+      onCreateProject={handleCreateProject}
     />
   );
 }
