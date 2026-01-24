@@ -18,6 +18,16 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  navigationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.md,
+  },
+  backButton: {
+    padding: Spacing.xs,
+  },
   header: {
     marginBottom: Spacing.xl,
   },

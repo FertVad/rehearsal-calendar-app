@@ -12,13 +12,18 @@ import { authAPI } from './api';
 const PUSH_TOKEN_KEY = '@push_token';
 
 // Configure how notifications are displayed when app is foregrounded
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Wrapped in try-catch to prevent errors on iOS Simulator (notifications not supported)
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+} catch (error) {
+  console.log('[Notifications] Handler setup failed (expected on simulator):', error);
+}
 
 /**
  * Register for push notifications and save token to backend

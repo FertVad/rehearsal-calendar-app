@@ -235,6 +235,16 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Custom Navigation Header */}
+      <View style={styles.navigationHeader}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           <View style={styles.header}>

@@ -51,7 +51,10 @@ export default function ProjectsScreen() {
           },
           {
             text: language === 'ru' ? 'Выбрать тариф' : 'View Plans',
-            onPress: () => navigation.navigate('Profile', { screen: 'Subscription' }),
+            onPress: () => navigation.navigate('MainTabs', {
+              screen: 'Profile',
+              params: { screen: 'Subscription' }
+            }),
           },
         ]
       );

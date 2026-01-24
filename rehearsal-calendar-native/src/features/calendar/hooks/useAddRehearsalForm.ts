@@ -265,7 +265,10 @@ export function useAddRehearsalForm({
             {
               text: language === 'ru' ? 'Выбрать тариф' : 'View Plans',
               // @ts-ignore
-              onPress: () => navigation.navigate('Profile', { screen: 'Subscription' }),
+              onPress: () => navigation.navigate('MainTabs', {
+                screen: 'Profile',
+                params: { screen: 'Subscription' }
+              }),
             },
           ]
         );

@@ -40,36 +40,44 @@ export function useNotifications() {
     }
 
     // Listen for notifications received while app is foregrounded
-    notificationListener.current = addNotificationReceivedListener((notification) => {
-      console.log('[useNotifications] Notification received:', notification);
+    try {
+      notificationListener.current = addNotificationReceivedListener((notification) => {
+        console.log('[useNotifications] Notification received:', notification);
 
-      // Trigger haptic feedback
-      hapticMedium();
+        // Trigger haptic feedback
+        hapticMedium();
 
-      // Clear badge after viewing
-      clearBadgeCount();
-    });
+        // Clear badge after viewing
+        clearBadgeCount();
+      });
 
-    // Listen for user interaction with notification
-    responseListener.current = addNotificationResponseReceivedListener((response) => {
-      console.log('[useNotifications] Notification tapped:', response);
+      // Listen for user interaction with notification
+      responseListener.current = addNotificationResponseReceivedListener((response) => {
+        console.log('[useNotifications] Notification tapped:', response);
 
-      const data = response.notification.request.content.data;
+        const data = response.notification.request.content.data;
 
-      // Navigate based on notification type
-      handleNotificationNavigation(data);
+        // Navigate based on notification type
+        handleNotificationNavigation(data);
 
-      // Clear badge
-      clearBadgeCount();
-    });
+        // Clear badge
+        clearBadgeCount();
+      });
+    } catch (error) {
+      console.log('[useNotifications] Listener setup failed (expected on simulator):', error);
+    }
 
     // Cleanup
     return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+      try {
+        if (notificationListener.current) {
+          Notifications.removeNotificationSubscription(notificationListener.current);
+        }
+        if (responseListener.current) {
+          Notifications.removeNotificationSubscription(responseListener.current);
+        }
+      } catch (error) {
+        console.log('[useNotifications] Cleanup failed (expected on simulator):', error);
       }
     };
   }, [user]);

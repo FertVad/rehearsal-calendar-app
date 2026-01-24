@@ -1,5 +1,5 @@
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
-import { Platform, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Platform, View, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -11,6 +11,7 @@ import { Colors } from '../shared/constants/colors';
 import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
 import { useNotifications } from '../shared/hooks/useNotifications';
+import { subscriptionsAPI } from '../shared/services/api';
 import { OnboardingNavigator } from '../features/onboarding';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
@@ -169,6 +170,9 @@ function ProjectsNavigator() {
       <ProjectsStack.Screen
         name="ProjectDetail"
         component={ProjectDetailScreen}
+        options={{
+          headerShown: false,
+        }}
       />
     </ProjectsStack.Navigator>
   );
@@ -187,6 +191,9 @@ function PlannerNavigator() {
       <PlannerStack.Screen
         name="SmartPlanner"
         component={SmartPlannerScreen}
+        options={{
+          headerShown: false,
+        }}
       />
     </PlannerStack.Navigator>
   );
@@ -205,14 +212,23 @@ function ProfileNavigator() {
       <ProfileStack.Screen
         name="CalendarSyncSettings"
         component={CalendarSyncSettingsScreen}
+        options={{
+          headerShown: false,
+        }}
       />
       <ProfileStack.Screen
         name="EditProfile"
         component={EditProfileScreen}
+        options={{
+          headerShown: false,
+        }}
       />
       <ProfileStack.Screen
         name="Subscription"
         component={SubscriptionScreen}
+        options={{
+          headerShown: false,
+        }}
       />
     </ProfileStack.Navigator>
   );
@@ -269,12 +285,10 @@ function ActionSheetWrapper() {
 
     // Check subscription before creating project
     try {
-      const { subscriptionsAPI } = await import('../shared/services/api');
       const response = await subscriptionsAPI.getCurrentSubscription();
       const hasActiveSubscription = !!response.data.subscription;
 
       if (!hasActiveSubscription) {
-        const { Alert } = await import('react-native');
         Alert.alert(
           language === 'ru' ? 'Требуется подписка' : 'Subscription Required',
           language === 'ru'
@@ -287,7 +301,10 @@ function ActionSheetWrapper() {
             },
             {
               text: language === 'ru' ? 'Выбрать тариф' : 'View Plans',
-              onPress: () => navigation.navigate('Profile', { screen: 'Subscription' }),
+              onPress: () => navigation.navigate('MainTabs', {
+                screen: 'Profile',
+                params: { screen: 'Subscription' }
+              }),
             },
           ]
         );
