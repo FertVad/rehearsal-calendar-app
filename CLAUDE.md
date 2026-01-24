@@ -69,6 +69,7 @@ src/
 │   ├── calendar/         # Rehearsals, calendar display
 │   ├── projects/         # Project management
 │   ├── availability/     # User availability management
+│   ├── subscriptions/    # Subscription plans & payment (AllPay integration)
 │   └── profile/          # User profile & settings
 ├── navigation/           # React Navigation setup
 ├── contexts/             # React Context providers (Auth, I18n, Theme)
@@ -85,18 +86,21 @@ src/
 server/
 ├── routes/              # API routes
 │   ├── auth.js         # Authentication endpoints
-│   └── native/         # Native app endpoints (projects, rehearsals, availability)
+│   └── native/         # Native app endpoints (projects, rehearsals, availability, subscriptions)
+├── services/           # Business logic layer (subscriptions, notifications)
+├── jobs/               # Cron jobs (recurring billing)
 ├── database/           # Database setup & migrations
-├── middleware/         # Auth middleware, timezone conversion
-├── utils/              # Timezone utilities, helpers
+├── middleware/         # Auth middleware, subscription checks, timezone conversion
+├── utils/              # AllPay client, timezone utilities, helpers
 └── constants/          # Shared constants (availability types, etc.)
 ```
 
 ### Database
 - **Development**: SQLite (`native_database.db`)
 - **Production**: PostgreSQL (Neon.tech)
-- **Tables**: All prefixed with `native_*` (native_users, native_projects, native_rehearsals, native_user_availability, etc.)
+- **Tables**: All prefixed with `native_*` (native_users, native_projects, native_rehearsals, native_user_availability, native_subscription_plans, native_user_subscriptions, native_payment_transactions, native_allpay_webhook_events, etc.)
 - **Schema**: [rehearsal-calendar-native/server/database/init-native-schema.sql](rehearsal-calendar-native/server/database/init-native-schema.sql)
+- **Note**: SQLite uses `1`/`0` for booleans in dev, PostgreSQL uses `TRUE`/`FALSE` in production
 
 ## Critical Patterns & Conventions
 
@@ -203,6 +207,36 @@ const { t, language, changeLanguage } = useI18n();
 date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US')
 ```
 
+### 8. Subscription Middleware
+**Business Model**: All features are free, subscription only required for **creating projects**.
+
+```javascript
+import { requireSubscription } from '../middleware/subscriptionMiddleware.js';
+
+// ✅ CORRECT - Require subscription for project creation
+router.post('/projects', requireAuth, requireSubscription, async (req, res) => {
+  const userId = req.userId;        // Set by requireAuth
+  const subscription = req.subscription;  // Set by requireSubscription
+  // User can only reach here if they have active subscription
+});
+
+// ✅ CORRECT - Other features remain free (no requireSubscription)
+router.get('/projects', requireAuth, async (req, res) => {
+  // All users can view projects
+});
+```
+
+**Subscription Plans**:
+- Monthly: $9 USD (₪32 ILS)
+- 3 Months: $15 USD (₪54 ILS)
+- Lifetime: $49 USD (₪176 ILS)
+
+**Key Implementation Details**:
+- Recurring billing via cron job (daily at 2:00 AM)
+- AllPay tokenization for monthly/quarterly charges
+- Lifetime subscriptions: `next_billing_date = NULL` (excluded from recurring billing)
+- WebView checkout flow for payment
+
 ## Key Features & Implementation
 
 ### Smart Planner
@@ -221,6 +255,38 @@ Bi-directional sync with iOS/Google Calendar:
 - **Export**: Rehearsals → device calendar events (batch processing, 10 parallel)
 - **Import**: Calendar events → user availability (chunks of 50)
 - Tracks mappings in AsyncStorage (`@rehearsal_calendar_map`, `@imported_calendar_events`)
+
+### Payment & Subscription System
+**Location**: `server/services/subscriptionService.js`, `src/features/subscriptions/`
+
+AllPay (Israeli payment provider) integration for recurring subscriptions:
+
+**Architecture**:
+- **Backend**: `allpayClient.js` (API wrapper), `subscriptionService.js` (business logic), `subscriptionMiddleware.js` (access control)
+- **Frontend**: `SubscriptionScreen.tsx` (plan selection + WebView checkout)
+- **Database**: 4 tables (plans, user_subscriptions, payment_transactions, webhook_events)
+- **Cron Job**: `recurringBilling.js` (runs daily at 2:00 AM for monthly/quarterly renewals)
+
+**Payment Flow**:
+1. User selects plan → Backend creates AllPay checkout session
+2. WebView opens AllPay payment page
+3. User completes payment → AllPay webhook fires
+4. Webhook handler verifies signature, retrieves token, creates subscription
+5. For recurring plans: Cron charges token monthly/quarterly
+
+**Key Files**:
+- `server/utils/allpayClient.js` - AllPay API client (signatures, tokenization, charges)
+- `server/services/subscriptionService.js` - Subscription business logic
+- `server/middleware/subscriptionMiddleware.js` - `requireSubscription` middleware
+- `server/jobs/recurringBilling.js` - Automated monthly billing
+- `server/routes/native/subscriptions.js` - API endpoints (plans, checkout, webhook, cancel)
+
+**API Endpoints**:
+- `GET /api/native/subscriptions/plans` - List all plans (no auth)
+- `GET /api/native/subscriptions/current` - Get user subscription
+- `POST /api/native/subscriptions/checkout` - Create checkout session
+- `POST /api/native/subscriptions/webhook` - AllPay callback (signature verification)
+- `POST /api/native/subscriptions/cancel` - Cancel subscription
 
 ### Batch API Endpoints
 Optimize N+1 queries by loading data in batches:
@@ -244,7 +310,19 @@ for (const projectId of projectIds) {
 ❌ **Problem**: `violates check constraint chk_availability_time_order`
 ✅ **Fix**: Use UTC (`.000Z`) for all-day events, not `+02:00`
 
-### 3. API URL Configuration
+### 3. PostgreSQL Boolean Comparison
+❌ **Problem**: `operator does not exist: boolean = integer`
+✅ **Fix**: Use `TRUE`/`FALSE` for PostgreSQL boolean comparisons, not `1`/`0`
+
+```javascript
+// ❌ WRONG - Works in SQLite, fails in PostgreSQL
+await db.all('SELECT * FROM plans WHERE is_active = 1');
+
+// ✅ CORRECT - Works in both SQLite and PostgreSQL
+await db.all('SELECT * FROM plans WHERE is_active = TRUE');
+```
+
+### 4. API URL Configuration
 The app auto-detects API URL based on environment:
 - **iOS Simulator**: `http://localhost:3001/api`
 - **Android Emulator**: `http://10.0.2.2:3001/api`
@@ -253,13 +331,13 @@ The app auto-detects API URL based on environment:
 
 Server must listen on `0.0.0.0:3001` (not `127.0.0.1`) for physical device access.
 
-### 4. Xcode Build Configuration
+### 5. Xcode Build Configuration
 Ensure Xcode scheme uses **Debug** build configuration (not Release):
 - File: `ios/rehearsalcalendarnative.xcodeproj/xcshareddata/xcschemes/rehearsalcalendarnative.xcscheme`
 - Check: `LaunchAction` should have `buildConfiguration = "Debug"`
 - Symptom if wrong: `__DEV__` returns false, app connects to production server
 
-### 5. OAuth Implementation
+### 6. OAuth Implementation
 When adding OAuth providers (Google Sign-In, Apple Sign-In):
 - Check `native_auth_providers` table for account linking
 - Use `server/utils/accountLinking.js` for merging accounts
@@ -275,6 +353,11 @@ NODE_ENV=development
 PORT=3001
 DATABASE_URL=postgresql://...   # PostgreSQL connection string (production)
 JWT_SECRET=<generate-with-openssl-rand-base64-32>  # REQUIRED in production
+
+# AllPay Payment Configuration (Israeli Payment Provider)
+ALLPAY_API_LOGIN=your-allpay-api-login  # From AllPay dashboard
+ALLPAY_API_KEY=your-allpay-api-key      # From AllPay dashboard
+ALLPAY_TEST_MODE=true                    # Use false for production
 ```
 
 **.env** (Frontend - Optional)
