@@ -343,6 +343,36 @@ When adding OAuth providers (Google Sign-In, Apple Sign-In):
 - Use `server/utils/accountLinking.js` for merging accounts
 - Handle both new users and existing user linking
 
+### 7. Push Notifications on iOS Simulator
+❌ **Problem**: `Invariant Violation: new NativeEventEmitter() requires a non-null argument`
+✅ **Fix**: Wrap notification setup in try-catch blocks
+
+**Root Cause**: iOS Simulator doesn't support push notifications, causing crashes when initializing Expo Notifications module.
+
+**Solution**: All notification-related code is wrapped in try-catch blocks:
+```javascript
+// In notifications.ts
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({ ... }),
+  });
+} catch (error) {
+  console.log('[Notifications] Setup failed (expected on simulator):', error);
+}
+
+// In useNotifications.ts
+try {
+  notificationListener.current = addNotificationReceivedListener(...);
+  responseListener.current = addNotificationResponseReceivedListener(...);
+} catch (error) {
+  console.log('[useNotifications] Listener setup failed (expected on simulator):', error);
+}
+```
+
+**Files with try-catch protection**:
+- `src/shared/services/notifications.ts` - Handler setup
+- `src/shared/hooks/useNotifications.ts` - Listener registration and cleanup
+
 ## Environment Setup
 
 ### Required Environment Variables
