@@ -5,7 +5,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../../navigation';
 import { Project } from '../../../shared/types';
 import { parseTimeString } from '../utils/rehearsalFormatters';
-import { rehearsalsAPI, projectsAPI } from '../../../shared/services/api';
+import { rehearsalsAPI, projectsAPI, subscriptionsAPI } from '../../../shared/services/api';
+import { useI18n } from '../../../contexts/I18nContext';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
@@ -38,6 +39,7 @@ export function useAddRehearsalForm({
   routeParams,
 }: UseAddRehearsalFormProps) {
   const navigation = useNavigation<NavigationType>();
+  const { language } = useI18n();
 
   // Extract route params
   const { projectId: prefilledProjectId, prefilledDate, prefilledTime, prefilledEndTime } = routeParams || {};
@@ -241,8 +243,38 @@ export function useAddRehearsalForm({
     setShowProjectPicker(false);
   };
 
-  const handleCreateProject = () => {
+  const handleCreateProject = async () => {
     setShowProjectPicker(false);
+
+    // Check subscription before creating project
+    try {
+      const response = await subscriptionsAPI.getCurrentSubscription();
+      const hasActiveSubscription = !!response.data.subscription;
+
+      if (!hasActiveSubscription) {
+        Alert.alert(
+          language === 'ru' ? 'Требуется подписка' : 'Subscription Required',
+          language === 'ru'
+            ? 'У вас нет активной подписки. Подписка нужна только для создания проектов. Все остальные функции бесплатны.'
+            : 'You don\'t have an active subscription. A subscription is only required to create projects. All other features are free.',
+          [
+            {
+              text: language === 'ru' ? 'Отмена' : 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: language === 'ru' ? 'Выбрать тариф' : 'View Plans',
+              // @ts-ignore
+              onPress: () => navigation.navigate('Profile', { screen: 'Subscription' }),
+            },
+          ]
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to check subscription:', error);
+    }
+
     // @ts-ignore - Navigate to Projects tab -> CreateProject screen
     navigation.navigate('Projects', { screen: 'CreateProject' });
   };
