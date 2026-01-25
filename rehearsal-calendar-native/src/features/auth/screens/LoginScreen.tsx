@@ -17,27 +17,26 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { loginScreenStyles as styles } from '../styles';
-// Temporarily disabled Google Auth to test push notifications
-// import { useGoogleAuth, getGoogleIdToken } from '../../../shared/services/googleAuth';
+import { useGoogleAuth, getGoogleIdToken } from '../../../shared/services/googleAuth';
 
 type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // const [googleLoading, setGoogleLoading] = useState(false);
-  const { login, loading, error } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const { login, loginWithGoogle, loading, error } = useAuth();
   const { t } = useI18n();
 
-  // Google OAuth - Temporarily disabled to test push notifications
-  // const { request, response, promptAsync } = useGoogleAuth();
+  // Google OAuth
+  const { request, response, promptAsync } = useGoogleAuth();
 
   // Handle Google OAuth response
-  // useEffect(() => {
-  //   if (response?.type === 'success') {
-  //     handleGoogleSignIn(response);
-  //   }
-  // }, [response]);
+  useEffect(() => {
+    if (response?.type === 'success') {
+      handleGoogleSignIn(response);
+    }
+  }, [response]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -53,34 +52,33 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     }
   };
 
-  // Temporarily disabled to test push notifications
-  // const handleGoogleSignIn = async (response: any) => {
-  //   try {
-  //     setGoogleLoading(true);
-  //     const idToken = getGoogleIdToken(response);
+  const handleGoogleSignIn = async (response: any) => {
+    try {
+      setGoogleLoading(true);
+      const idToken = getGoogleIdToken(response);
 
-  //     if (!idToken) {
-  //       throw new Error('Failed to get ID token from Google');
-  //     }
+      if (!idToken) {
+        throw new Error('Failed to get ID token from Google');
+      }
 
-  //     // Send to backend
-  //     const result = await loginWithGoogle(idToken);
+      // Send to backend
+      const result = await loginWithGoogle(idToken);
 
-  //     // Show message if account was linked
-  //     if (result.linked) {
-  //       Alert.alert(
-  //         t.auth.accountLinked,
-  //         t.auth.googleAccountLinkedToExisting
-  //       );
-  //     }
+      // Show message if account was linked
+      if (result.linked) {
+        Alert.alert(
+          t.auth.accountLinked,
+          t.auth.googleAccountLinkedToExisting
+        );
+      }
 
-  //     // Navigation handled by AuthProvider
-  //   } catch (err: any) {
-  //     Alert.alert(t.auth.googleSignInError, err.message);
-  //   } finally {
-  //     setGoogleLoading(false);
-  //   }
-  // };
+      // Navigation handled by AuthProvider
+    } catch (err: any) {
+      Alert.alert(t.auth.googleSignInError, err.message);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -147,8 +145,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             />
 
             {/* OAuth Buttons */}
-            {/* Temporarily disabled Google OAuth to test push notifications */}
-            {/* <View style={styles.oauthContainer}>
+            <View style={styles.oauthContainer}>
               <View style={styles.divider}>
                 <View style={styles.dividerLine} />
                 <Text style={styles.dividerText}>{t.auth.orContinueWith}</Text>
@@ -163,7 +160,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 disabled={!request || loading || googleLoading}
                 style={styles.oauthButton}
               />
-            </View> */}
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

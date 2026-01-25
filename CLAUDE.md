@@ -337,11 +337,26 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
 - Check: `LaunchAction` should have `buildConfiguration = "Debug"`
 - Symptom if wrong: `__DEV__` returns false, app connects to production server
 
-### 6. OAuth Implementation
-When adding OAuth providers (Google Sign-In, Apple Sign-In):
-- Check `native_auth_providers` table for account linking
-- Use `server/utils/accountLinking.js` for merging accounts
-- Handle both new users and existing user linking
+### 6. OAuth Implementation (Google & Apple Sign-In)
+
+**Implemented OAuth Providers:**
+- ✅ **Google Sign-In** - Fully configured and working
+- ✅ **Apple Sign-In** - Implementation ready (requires paid Apple Developer account)
+
+**Architecture:**
+- **Frontend**: `src/shared/services/googleAuth.ts` - OAuth flow using `expo-auth-session`
+- **Backend**: `server/utils/oauthVerification.js` - Token verification using Google/Apple APIs
+- **Account Linking**: `server/utils/accountLinking.js` - Merges OAuth accounts with existing email accounts
+
+**Google OAuth Setup:**
+See [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for detailed setup instructions.
+
+**Key Points:**
+- OAuth tokens are verified server-side to prevent forgery
+- Accounts are automatically linked by email if user already exists
+- New users are created with OAuth provider details (name, avatar, email)
+- Check `native_auth_providers` table for account linking status
+- Supports multiple providers per user (can link both Google and Apple to same account)
 
 ### 7. Push Notifications on iOS Simulator
 ❌ **Problem**: `Invariant Violation: new NativeEventEmitter() requires a non-null argument`
@@ -383,6 +398,20 @@ NODE_ENV=development
 PORT=3001
 DATABASE_URL=postgresql://...   # PostgreSQL connection string (production)
 JWT_SECRET=<generate-with-openssl-rand-base64-32>  # REQUIRED in production
+
+# OAuth Configuration (Google Sign-In)
+# Get these from Google Cloud Console → APIs & Services → Credentials
+# See GOOGLE_OAUTH_SETUP.md for detailed setup instructions
+GOOGLE_CLIENT_ID_IOS=your-ios-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_ID_ANDROID=your-android-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_ID_WEB=your-web-client-id.apps.googleusercontent.com
+
+# OAuth Configuration (Apple Sign-In)
+# Get these from Apple Developer Portal → Certificates, Identifiers & Profiles
+APPLE_CLIENT_ID=com.rehearsal.app
+APPLE_TEAM_ID=YOUR_TEAM_ID
+APPLE_KEY_ID=YOUR_KEY_ID
+APPLE_PRIVATE_KEY=  # Contents of .p8 file or path to file
 
 # AllPay Payment Configuration (Israeli Payment Provider)
 ALLPAY_API_LOGIN=your-allpay-api-login  # From AllPay dashboard
@@ -431,6 +460,7 @@ Key documentation files:
 - [rehearsal-calendar-native/docs/quick-reference.md](rehearsal-calendar-native/docs/quick-reference.md) - Quick reference for common errors
 - [rehearsal-calendar-native/docs/api-documentation.md](rehearsal-calendar-native/docs/api-documentation.md) - Complete API reference
 - [rehearsal-calendar-native/docs/api-standards.md](rehearsal-calendar-native/docs/api-standards.md) - API conventions
+- [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) - Google OAuth setup guide (step-by-step)
 
 ## Tech Stack
 

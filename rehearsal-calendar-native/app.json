@@ -18,7 +18,7 @@
       "bundleIdentifier": "com.rehearsal.app",
       "config": {
         "googleSignIn": {
-          "reservedClientId": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID"
+          "reservedClientId": "com.googleusercontent.apps.187810235800-9pp30fhn7kekvcranjrij9fib5kl8od0"
         }
       },
       "infoPlist": {
@@ -26,7 +26,7 @@
           {
             "CFBundleURLSchemes": [
               "rehearsalapp",
-              "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID"
+              "com.googleusercontent.apps.187810235800-9pp30fhn7kekvcranjrij9fib5kl8od0"
             ]
           }
         ],
@@ -91,9 +91,9 @@
       "eas": {
         "projectId": "3151ccee-abfe-4f07-925e-00004d2fade8"
       },
-      "googleIosClientId": "YOUR_IOS_CLIENT_ID.apps.googleusercontent.com",
-      "googleAndroidClientId": "YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com",
-      "googleWebClientId": "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com"
+      "googleIosClientId": "187810235800-9pp30fhn7kekvcranjrij9fib5kl8od0.apps.googleusercontent.com",
+      "googleAndroidClientId": "187810235800-dqfk1of6ork5c4pqtff7pi4srmlgo6ej.apps.googleusercontent.com",
+      "googleWebClientId": "187810235800-q13jtdqimc8qeppacne0ma32i0anm14j.apps.googleusercontent.com"
     }
   }
 }
