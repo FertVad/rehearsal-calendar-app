@@ -26,7 +26,7 @@ export async function getUserPushTokens(userIds) {
      FROM native_push_tokens t
      JOIN native_users u ON t.user_id = u.id
      WHERE t.user_id IN (${placeholders})
-       AND u.notifications_enabled = 1
+       AND u.notifications_enabled = TRUE
      ORDER BY t.last_active_at DESC`,
     userIds
   );

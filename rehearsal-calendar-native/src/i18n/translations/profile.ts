@@ -33,6 +33,7 @@ export interface ProfileTranslations {
   profileUpdated: string;
   updateError: string;
   avatarHint: string;
+  premium: string;
 }
 
 export const ru = {
@@ -74,6 +75,7 @@ export const ru = {
     profileUpdated: 'Профиль обновлен',
     updateError: 'Ошибка обновления профиля',
     avatarHint: 'Аватар генерируется автоматически на основе вашего email',
+    premium: 'Premium',
   },
 };
 
@@ -116,5 +118,6 @@ export const en = {
     profileUpdated: 'Profile updated',
     updateError: 'Failed to update profile',
     avatarHint: 'Avatar is automatically generated based on your email',
+    premium: 'Premium',
   },
 };

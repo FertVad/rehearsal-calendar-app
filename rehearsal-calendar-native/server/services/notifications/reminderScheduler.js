@@ -41,7 +41,7 @@ async function check24hReminders(now) {
      FROM native_rehearsals r
      JOIN native_projects p ON r.project_id = p.id
      WHERE r.starts_at BETWEEN ? AND ?
-       AND r.is_all_day = 0
+       AND r.is_all_day = FALSE
        AND NOT EXISTS (
          SELECT 1 FROM native_push_reminders pr
          WHERE pr.rehearsal_id = r.id AND pr.reminder_type = '24h'
@@ -92,7 +92,7 @@ async function check1hReminders(now) {
      FROM native_rehearsals r
      JOIN native_projects p ON r.project_id = p.id
      WHERE r.starts_at BETWEEN ? AND ?
-       AND r.is_all_day = 0
+       AND r.is_all_day = FALSE
        AND NOT EXISTS (
          SELECT 1 FROM native_push_reminders pr
          WHERE pr.rehearsal_id = r.id AND pr.reminder_type = '1h'

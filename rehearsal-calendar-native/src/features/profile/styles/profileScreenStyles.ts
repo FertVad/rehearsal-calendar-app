@@ -33,11 +33,30 @@ export const styles = StyleSheet.create({
   avatarContainer: {
     marginBottom: Spacing.md,
   },
+  userNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
   userName: {
     fontSize: FontSize.xl,
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,
-    marginBottom: Spacing.xs,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.accent.purple,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  premiumText: {
+    fontSize: 10,
+    fontWeight: FontWeight.semibold,
+    color: '#fff',
   },
   userEmail: {
     fontSize: FontSize.sm,

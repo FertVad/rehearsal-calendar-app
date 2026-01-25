@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, Modal, FlatList, Alert } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -12,8 +13,20 @@ import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
 import { registerForPushNotifications, unregisterPushToken } from '../../../shared/services/notifications';
+import { subscriptionsAPI } from '../../../shared/services/api';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
+
+interface UserSubscription {
+  id: number;
+  plan_id: number;
+  plan_name: string;
+  display_name_en: string;
+  display_name_ru: string;
+  status: string;
+  current_period_end: string;
+  next_billing_date: string | null;
+}
 
 // Common timezones for theatre/rehearsal apps
 const TIMEZONES = [
@@ -45,6 +58,28 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [weekStartModalVisible, setWeekStartModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
+  const [loadingSubscription, setLoadingSubscription] = useState(true);
+
+  // Load subscription data whenever screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const loadSubscription = async () => {
+        try {
+          setLoadingSubscription(true);
+          const response = await subscriptionsAPI.getCurrentSubscription();
+          setSubscription(response.data.subscription);
+        } catch (error) {
+          // No active subscription or error - this is fine
+          setSubscription(null);
+        } finally {
+          setLoadingSubscription(false);
+        }
+      };
+
+      loadSubscription();
+    }, [])
+  );
 
   const handleLogout = async () => {
     hapticMedium();
@@ -199,9 +234,17 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               size={80}
             />
           </View>
-          <Text style={styles.userName}>
-            {user?.firstName ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}` : 'User'}
-          </Text>
+          <View style={styles.userNameContainer}>
+            <Text style={styles.userName}>
+              {user?.firstName ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}` : 'User'}
+            </Text>
+            {!loadingSubscription && subscription?.status === 'active' && (
+              <View style={styles.premiumBadge}>
+                <Ionicons name="star" size={12} color="#fff" />
+                <Text style={styles.premiumText}>{t.profile.premium}</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.userEmail}>{user?.email}</Text>
           <TouchableOpacity
             style={styles.editProfileButton}
