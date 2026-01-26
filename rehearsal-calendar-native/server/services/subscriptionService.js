@@ -189,16 +189,9 @@ export async function cancelSubscription(userId, reason = 'User requested cancel
     throw new Error('No active subscription found');
   }
 
-  // Cancel with AllPay if subscription ID exists
-  if (subscription.allpay_subscription_id) {
-    try {
-      await allpayAPI.cancelSubscription(subscription.allpay_subscription_id);
-      logger.info(`[Subscriptions] Cancelled AllPay subscription: ${subscription.allpay_subscription_id}`);
-    } catch (error) {
-      logger.error('[Subscriptions] Failed to cancel AllPay subscription:', error);
-      // Continue with local cancellation even if AllPay fails
-    }
-  }
+  // Token-based subscriptions: no need to call AllPay API for cancellation
+  // We simply stop charging the token by updating local status
+  // Note: allpay_subscription_id should be null for token-based subscriptions
 
   // Update subscription status
   const now = new Date();

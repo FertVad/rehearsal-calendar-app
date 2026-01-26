@@ -159,7 +159,7 @@ export const styles = StyleSheet.create({
   currentPlanText: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semibold,
-    color: Colors.text.onPrimary,
+    color: '#ffffff',
   },
 
   // WebView Modal
@@ -195,5 +195,142 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.bg.primary,
+  },
+
+  // Management View
+  managementContainer: {
+    flex: 1,
+  },
+  viewPlansButton: {
+    marginTop: Spacing.xl,
+  },
+
+  // Payment History Section
+  paymentHistorySection: {
+    marginTop: Spacing.xl,
+  },
+  paymentHistoryTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.lg,
+  },
+
+  // Payment Card
+  paymentCard: {
+    backgroundColor: Colors.glass.bg,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
+  paymentCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.md,
+  },
+  paymentAmount: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    color: Colors.text.primary,
+  },
+  paymentDate: {
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs / 2,
+  },
+
+  // Status Badges
+  statusBadge: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusCompleted: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  statusPending: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  statusFailed: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  statusRefunded: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
+
+  // Status Text
+  statusTextCompleted: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: 'rgb(34, 197, 94)',
+  },
+  statusTextPending: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: 'rgb(245, 158, 11)',
+  },
+  statusTextFailed: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: 'rgb(239, 68, 68)',
+  },
+  statusTextRefunded: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: 'rgb(59, 130, 246)',
+  },
+
+  // Payment Details
+  paymentDetails: {
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.glass.border,
+  },
+  paymentDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.sm,
+  },
+  paymentDetailLabel: {
+    fontSize: FontSize.base,
+    color: Colors.text.secondary,
+    marginRight: Spacing.md,
+  },
+  paymentDetailValue: {
+    fontSize: FontSize.base,
+    color: Colors.text.primary,
+    fontWeight: FontWeight.medium,
+    flex: 1,
+    textAlign: 'right',
+  },
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xxl,
+  },
+  emptyStateIcon: {
+    marginBottom: Spacing.md,
+  },
+  emptyStateText: {
+    fontSize: FontSize.base,
+    color: Colors.text.secondary,
+    textAlign: 'center',
   },
 });
