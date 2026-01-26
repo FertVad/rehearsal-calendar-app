@@ -29,6 +29,47 @@ const BASE_URL = process.env.NODE_ENV === 'production'
   : 'rehearsalapp://'; // Custom URL scheme for development
 
 /**
+ * GET /api/native/subscriptions/test-config
+ * Test AllPay API configuration (development only)
+ */
+router.get('/test-config', async (req, res) => {
+  try {
+    // Only allow in development/test mode
+    if (process.env.NODE_ENV === 'production' && process.env.ALLPAY_TEST_MODE !== 'true') {
+      return res.status(403).json({ error: 'Endpoint only available in development mode' });
+    }
+
+    const isConfigured = !!(process.env.ALLPAY_API_LOGIN && process.env.ALLPAY_API_KEY);
+
+    if (!isConfigured) {
+      return res.json({
+        configured: false,
+        message: 'AllPay credentials not configured. Add ALLPAY_API_LOGIN and ALLPAY_API_KEY to server/.env'
+      });
+    }
+
+    // Test API connection
+    const result = await allpayAPI.checkKeys();
+
+    res.json({
+      configured: true,
+      testMode: process.env.ALLPAY_TEST_MODE === 'true',
+      login: process.env.ALLPAY_API_LOGIN,
+      connectionTest: result,
+      message: 'AllPay configuration is valid'
+    });
+  } catch (error) {
+    logger.error('[Subscriptions API] Config test failed:', error);
+    res.status(500).json({
+      configured: true,
+      error: 'AllPay API test failed',
+      details: error.message,
+      message: 'Check your ALLPAY_API_LOGIN and ALLPAY_API_KEY'
+    });
+  }
+});
+
+/**
  * GET /api/native/subscriptions/plans
  * Get all available subscription plans (public endpoint)
  */
@@ -72,7 +113,7 @@ router.get('/current', requireAuth, async (req, res) => {
 router.post('/checkout', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
-    const { planId } = req.body;
+    const { planId, language = 'en' } = req.body; // Accept language from frontend
 
     if (!planId) {
       return res.status(400).json({ error: 'planId is required' });
@@ -114,20 +155,20 @@ router.post('/checkout', requireAuth, async (req, res) => {
     const successUrl = `${BASE_URL}/subscription/success?order_id=${orderId}`;
     const cancelUrl = `${BASE_URL}/subscription/cancel`;
 
+    // Create initial payment WITHOUT AllPay subscriptions API
+    // We manage subscription lifecycle ourselves using tokens
     const paymentResult = await allpayAPI.createSubscriptionPayment({
       orderId,
       email: user.email,
-      amount: plan.price_ils,
-      currency: 'ILS',
-      description: `${plan.display_name_en} - Monthly Subscription`,
+      amount: plan.price_usd, // Use USD price
+      currency: 'USD', // Bill in USD
+      description: `${plan.display_name_en} - Subscription`,
       successUrl,
       cancelUrl,
       webhookUrl,
-      subscriptionConfig: {
-        start_type: 'auto', // Start after first payment
-        end_type: 'manual', // User-controlled cancellation
-        period: 'monthly',
-      },
+      language: language, // User's preferred language
+      displayCurrency: 'USD', // Show price in USD
+      // NO subscriptionConfig - we manage subscriptions via tokens
       customData: {
         userId,
         planId,
@@ -142,7 +183,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
         user_id, allpay_order_id, amount, currency,
         transaction_type, status
       ) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [userId, orderId, plan.price_ils, 'ILS', 'initial', 'pending']
+      [userId, orderId, plan.price_usd, 'USD', 'initial', 'pending']
     );
 
     logger.info(`[Subscriptions API] Created checkout for user ${userId}, plan ${plan.name}`);
@@ -193,12 +234,12 @@ router.post('/webhook', async (req, res) => {
         // Get AllPay token for recurring payments
         const allpayToken = await allpayAPI.getToken(payload.order_id);
 
-        // Create subscription
+        // Create subscription (token-based, no AllPay subscription ID)
         await createSubscription({
           userId,
           planId,
           allpayToken,
-          allpaySubscriptionId: payload.subscription_id || null,
+          allpaySubscriptionId: null, // Not using AllPay subscriptions API
           allpayCustomerId: payload.customer_id || null,
           allpayOrderId: payload.order_id,
           metadata: customData,
@@ -274,8 +315,48 @@ router.get('/payments', requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/native/subscriptions/check-pending/:orderId
+ * Check if pending order has been completed (for polling)
+ * Returns subscription status without calling AllPay API
+ */
+router.get('/check-pending/:orderId', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { orderId } = req.params;
+
+    // Verify order belongs to user
+    const dbModule = await import('../../database/db.js');
+    const db = dbModule.default;
+    const transaction = await db.get(
+      'SELECT * FROM native_payment_transactions WHERE allpay_order_id = $1 AND user_id = $2',
+      [orderId, userId]
+    );
+
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // Check if subscription was created (webhook processed successfully)
+    const subscription = await getUserActiveSubscription(userId);
+
+    res.json({
+      orderId,
+      transactionStatus: transaction.status,
+      subscriptionCreated: !!subscription,
+      subscription: subscription || null,
+    });
+  } catch (error) {
+    logger.error('[Subscriptions API] Error checking pending order:', error);
+    res.status(500).json({
+      error: 'Failed to check order status',
+      details: error.message,
+    });
+  }
+});
+
+/**
  * GET /api/native/subscriptions/status/:orderId
- * Check payment status for a specific order
+ * Check payment status for a specific order (calls AllPay API)
  */
 router.get('/status/:orderId', requireAuth, async (req, res) => {
   try {

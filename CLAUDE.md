@@ -267,12 +267,18 @@ AllPay (Israeli payment provider) integration for recurring subscriptions:
 - **Database**: 4 tables (plans, user_subscriptions, payment_transactions, webhook_events)
 - **Cron Job**: `recurringBilling.js` (runs daily at 2:00 AM for monthly/quarterly renewals)
 
-**Payment Flow**:
-1. User selects plan → Backend creates AllPay checkout session
-2. WebView opens AllPay payment page
-3. User completes payment → AllPay webhook fires
-4. Webhook handler verifies signature, retrieves token, creates subscription
-5. For recurring plans: Cron charges token monthly/quarterly
+**Payment Flow (Token-Based, Self-Managed)**:
+1. **User selects plan** → Backend creates AllPay checkout (NO subscription parameter)
+2. **WebView opens** → AllPay payment page displayed
+3. **User completes payment** → AllPay webhook fires
+4. **Webhook handler**:
+   - Verifies signature
+   - Retrieves token via `gettoken` API
+   - Creates subscription in local DB with token
+5. **Frontend polling** → Checks every 2s if subscription created
+6. **WebView auto-closes** → Shows success message when detected
+7. **Recurring billing** → Cron job charges token monthly/quarterly via `getpayment` with `allpay_token`
+8. **Cancellation** → Local DB update only (no AllPay API call)
 
 **Key Files**:
 - `server/utils/allpayClient.js` - AllPay API client (signatures, tokenization, charges)
@@ -284,9 +290,11 @@ AllPay (Israeli payment provider) integration for recurring subscriptions:
 **API Endpoints**:
 - `GET /api/native/subscriptions/plans` - List all plans (no auth)
 - `GET /api/native/subscriptions/current` - Get user subscription
-- `POST /api/native/subscriptions/checkout` - Create checkout session
+- `POST /api/native/subscriptions/checkout` - Create checkout session (returns checkoutUrl + orderId)
 - `POST /api/native/subscriptions/webhook` - AllPay callback (signature verification)
-- `POST /api/native/subscriptions/cancel` - Cancel subscription
+- `GET /api/native/subscriptions/check-pending/:orderId` - Poll subscription status (for WebView auto-close)
+- `POST /api/native/subscriptions/cancel` - Cancel subscription (local DB only)
+- `GET /api/native/subscriptions/test-config` - Test AllPay credentials (dev only)
 
 ### Batch API Endpoints
 Optimize N+1 queries by loading data in batches:
@@ -414,9 +422,10 @@ APPLE_KEY_ID=YOUR_KEY_ID
 APPLE_PRIVATE_KEY=  # Contents of .p8 file or path to file
 
 # AllPay Payment Configuration (Israeli Payment Provider)
-ALLPAY_API_LOGIN=your-allpay-api-login  # From AllPay dashboard
-ALLPAY_API_KEY=your-allpay-api-key      # From AllPay dashboard
-ALLPAY_TEST_MODE=true                    # Use false for production
+# Get these from https://www.allpay.co.il → Settings → API Settings
+ALLPAY_API_LOGIN=pp1016273  # Your AllPay API login
+ALLPAY_API_KEY=E764DA37F6F96519B89A313DA80AEBBD  # Your AllPay API key
+ALLPAY_TEST_MODE=true  # Set to false for production payments
 ```
 
 **.env** (Frontend - Optional)

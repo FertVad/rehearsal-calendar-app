@@ -388,8 +388,8 @@ export const subscriptionsAPI = {
     api.get('/native/subscriptions/current'),
 
   // Create checkout session for a plan
-  createCheckout: (planId: number) =>
-    api.post('/native/subscriptions/checkout', { planId }),
+  createCheckout: (planId: number, language: string = 'en') =>
+    api.post('/native/subscriptions/checkout', { planId, language }),
 
   // Cancel current subscription
   cancelSubscription: (reason?: string) =>
@@ -401,9 +401,17 @@ export const subscriptionsAPI = {
       params: limit ? { limit } : {},
     }),
 
-  // Check payment status for an order
+  // Check payment status for an order (calls AllPay API)
   getPaymentStatus: (orderId: string) =>
     api.get(`/native/subscriptions/status/${orderId}`),
+
+  // Check if pending order was completed (for polling, no AllPay API call)
+  checkPendingOrder: (orderId: string) =>
+    api.get(`/native/subscriptions/check-pending/${orderId}`),
+
+  // Test AllPay configuration (development only)
+  testConfig: () =>
+    api.get('/native/subscriptions/test-config'),
 };
 
 export default api;

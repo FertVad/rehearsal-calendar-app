@@ -10,25 +10,26 @@
 import crypto from 'crypto';
 import { logger } from './logger.js';
 
-// Environment variables (fail-fast pattern)
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-const ALLPAY_API_LOGIN = process.env.ALLPAY_API_LOGIN;
-const ALLPAY_API_KEY = process.env.ALLPAY_API_KEY;
-const ALLPAY_TEST_MODE = process.env.ALLPAY_TEST_MODE === 'true';
+// Environment variables getter functions (to avoid loading before dotenv.config())
+const getApiLogin = () => process.env.ALLPAY_API_LOGIN;
+const getApiKey = () => process.env.ALLPAY_API_KEY;
+const isTestMode = () => process.env.ALLPAY_TEST_MODE === 'true';
+const isProduction = () => process.env.NODE_ENV === 'production';
 
-// Fail-fast validation (pattern from jwtMiddleware.js)
-if (!ALLPAY_API_LOGIN || !ALLPAY_API_KEY) {
-  if (IS_PRODUCTION) {
-    throw new Error(
-      'FATAL: ALLPAY_API_LOGIN and ALLPAY_API_KEY are required in production. ' +
-      'Add to server/.env from AllPay dashboard'
-    );
-  } else {
-    logger.warn(
-      '⚠️  WARNING: AllPay credentials not set. Payments will fail.\n' +
-      '   Add to server/.env: ALLPAY_API_LOGIN and ALLPAY_API_KEY from https://www.allpay.co.il'
-    );
+// Validate credentials (called at runtime, not at module load)
+function validateCredentials() {
+  const login = getApiLogin();
+  const key = getApiKey();
+
+  if (!login || !key) {
+    const error = 'AllPay credentials not configured. Add ALLPAY_API_LOGIN and ALLPAY_API_KEY to server/.env';
+    if (isProduction()) {
+      throw new Error(`FATAL: ${error}`);
+    }
+    throw new Error(error);
   }
+
+  return { login, key };
 }
 
 const ALLPAY_BASE_URL = 'https://allpay.to/app/';
@@ -48,41 +49,28 @@ const API_MODE = 'api10';
  * @returns {string} - Hex-encoded SHA256 signature
  */
 export function generateAllPaySignature(params) {
-  // Remove sign parameter and empty values
+  const { key } = validateCredentials();
+
+  // CRITICAL: Filter empty strings from top-level params only
+  // Items array values are NOT filtered (even if "0" or empty)
   const filteredParams = Object.entries(params)
     .filter(([key, value]) =>
       key !== 'sign' &&
-      value !== '' &&
+      value !== '' &&  // Filter empty strings at top level
       value !== null &&
       value !== undefined
     )
     .sort(([a], [b]) => a.localeCompare(b)); // Sort alphabetically
 
-  // Process values
-  const values = filteredParams.map(([_, value]) => {
-    if (Array.isArray(value)) {
-      // For items array - stringify each object and join
-      return value.map(item => {
-        if (typeof item === 'object' && item !== null) {
-          // Sort object keys alphabetically before stringifying
-          const sortedItem = Object.entries(item)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
-          return JSON.stringify(sortedItem);
-        }
-        return String(item);
-      }).join(':');
-    }
+  // Extract values - simple string conversion (works with indexed params like items[0][price])
+  const chunks = [];
 
-    if (typeof value === 'object' && value !== null) {
-      return JSON.stringify(value);
-    }
-
-    return String(value);
-  });
+  for (const [_, value] of filteredParams) {
+    chunks.push(String(value));
+  }
 
   // Join with ':' and append API key
-  const signatureBase = values.join(':') + ':' + ALLPAY_API_KEY;
+  const signatureBase = chunks.join(':') + ':' + key;
 
   // Generate SHA256 hash
   return crypto.createHash('sha256').update(signatureBase).digest('hex');
@@ -124,13 +112,15 @@ export function verifyWebhookSignature(payload, receivedSignature) {
  * @returns {Promise<Object>} - API response
  */
 export async function allpayRequest(endpoint, params) {
+  const { login } = validateCredentials();
+
   const requestParams = {
-    login: ALLPAY_API_LOGIN,
+    login,
     ...params,
   };
 
   // Add test mode flag if enabled
-  if (ALLPAY_TEST_MODE) {
+  if (isTestMode()) {
     requestParams.test = '1';
   }
 
@@ -143,12 +133,20 @@ export async function allpayRequest(endpoint, params) {
   logger.debug(`[AllPay] API request: ${endpoint}`, { params: requestParams });
 
   try {
+    // Serialize params for URLSearchParams (indexed params are already flat strings)
+    const serializedParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(requestParams)) {
+      serializedParams.append(key, String(value));
+    }
+
+    logger.debug(`[AllPay] Request body: ${decodeURIComponent(serializedParams.toString())}`);
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams(requestParams).toString(),
+      body: serializedParams.toString(),
     });
 
     const data = await response.json();
@@ -187,22 +185,29 @@ export const allpayAPI = {
     webhookUrl,
     subscriptionConfig, // { start_type, end_type, period, ... }
     customData = {},
+    language = 'en', // User's preferred language (en, ru, he, etc.)
+    displayCurrency = 'USD', // Currency to display to user
   }) {
+    // Use indexed params format for items (AllPay expects items[0][name], items[0][price], etc.)
     const params = {
       order_id: orderId,
       email: email,
-      currency: currency,
-      items: [{
-        name: description,
-        price: amount,
-        qty: 1,
-        vat: 17, // Israeli VAT
-      }],
+      currency: currency, // Billing currency (ILS, USD, EUR)
+      currency_display: displayCurrency, // Display currency (what user sees)
+      lang: language.toUpperCase(), // EN, RU, HE, etc.
+      'items[0][name]': description,
+      'items[0][price]': String(amount),
+      'items[0][qty]': '1',
+      'items[0][discount_val]': '0',
+      'items[0][discount_type]': 'fixed',
+      'items[0][vat]': '17',
       success_url: successUrl,
       cancel_url: cancelUrl,
       webhook_url: webhookUrl,
       custom_data: JSON.stringify(customData),
     };
+
+    logger.debug(`[AllPay] Creating payment: ${amount} ${displayCurrency} (billing in ${currency}), lang: ${language}`);
 
     // Add subscription configuration if provided
     if (subscriptionConfig) {
@@ -248,16 +253,17 @@ export const allpayAPI = {
     description,
     orderId,
   }) {
+    // Use indexed params format for items
     const params = {
       allpay_token: allpayToken,
       order_id: orderId,
       currency: currency,
-      items: [{
-        name: description,
-        price: amount,
-        qty: 1,
-        vat: 17,
-      }],
+      'items[0][name]': description,
+      'items[0][price]': String(amount),
+      'items[0][qty]': '1',
+      'items[0][discount_val]': '0',
+      'items[0][discount_type]': 'fixed',
+      'items[0][vat]': '17',
     };
 
     return await allpayRequest('getpayment', params);
