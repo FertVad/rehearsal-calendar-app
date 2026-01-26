@@ -24,9 +24,22 @@ import { logger } from '../../utils/logger.js';
 const router = Router();
 
 // Base URL for redirects (configurable per environment)
-const BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://rehearsal-calendar-app.onrender.com'
-  : 'rehearsalapp://'; // Custom URL scheme for development
+// Use VERCEL_URL if available (Vercel deployment), otherwise fallback
+const getBaseUrl = () => {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://rehearsal-calendar-app.onrender.com';
+  }
+  // For local development
+  return 'http://localhost:3001';
+};
+
+const BASE_URL = getBaseUrl();
 
 /**
  * GET /api/native/subscriptions/test-config
@@ -152,8 +165,8 @@ router.post('/checkout', requireAuth, async (req, res) => {
 
     // Create AllPay payment with subscription
     const webhookUrl = `${BASE_URL}/api/native/subscriptions/webhook`;
-    const successUrl = `${BASE_URL}/subscription/success?order_id=${orderId}`;
-    const cancelUrl = `${BASE_URL}/subscription/cancel`;
+    const successUrl = `${BASE_URL}/api/native/payment-success?order_id=${orderId}`;
+    const cancelUrl = `${BASE_URL}/api/native/payment-cancel`;
 
     // Create initial payment WITHOUT AllPay subscriptions API
     // We manage subscription lifecycle ourselves using tokens

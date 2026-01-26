@@ -26,12 +26,17 @@ export async function getUserActiveSubscription(userId) {
       p.display_name_en,
       p.display_name_ru,
       p.price_ils,
+      p.price_usd,
       p.max_projects,
       p.max_members_per_project,
       p.features_json
     FROM native_user_subscriptions s
     JOIN native_subscription_plans p ON s.plan_id = p.id
-    WHERE s.user_id = $1 AND s.status = 'active'
+    WHERE s.user_id = $1
+      AND (
+        s.status = 'active'
+        OR (s.status = 'cancelled' AND s.current_period_end > CURRENT_TIMESTAMP)
+      )
     ORDER BY s.created_at DESC
     LIMIT 1`,
     [userId]
@@ -212,6 +217,8 @@ export async function cancelSubscription(userId, reason = 'User requested cancel
     status: 'cancelled',
     cancelledAt: now,
     reason,
+    accessUntil: subscription.current_period_end, // Access continues until period end
+    message: 'Subscription cancelled. Access will continue until the end of the current billing period.',
   };
 }
 
@@ -227,11 +234,27 @@ export async function processRecurringBilling() {
     processed: 0,
     successful: 0,
     failed: 0,
+    expired: 0,
     errors: [],
   };
 
+  // First, expire cancelled subscriptions whose period has ended
+  const expiredResult = await db.run(
+    `UPDATE native_user_subscriptions
+     SET status = 'expired', updated_at = $1
+     WHERE status = 'cancelled'
+       AND current_period_end <= $2`,
+    [now.toISOString(), now.toISOString()]
+  );
+
+  results.expired = expiredResult.changes || 0;
+  if (results.expired > 0) {
+    logger.info(`[Recurring Billing] Expired ${results.expired} cancelled subscriptions`);
+  }
+
   // Find subscriptions due for renewal (next_billing_date <= now)
   // Excludes lifetime subscriptions (next_billing_date IS NULL)
+  // Only processes 'active' subscriptions (cancelled ones are not charged)
   const dueSubscriptions = await db.all(
     `SELECT s.*, p.price_ils, p.name as plan_name, p.billing_period
      FROM native_user_subscriptions s
@@ -364,7 +387,7 @@ export async function processRecurringBilling() {
 
   logger.info(
     `[Recurring Billing] Completed. Processed: ${results.processed}, ` +
-    `Successful: ${results.successful}, Failed: ${results.failed}`
+    `Successful: ${results.successful}, Failed: ${results.failed}, Expired: ${results.expired}`
   );
 
   return results;

@@ -1,0 +1,11 @@
+node_modules
+*.log
+.env
+.env.local
+native_database.db
+scripts/
+test-*.js
+check-*.js
+activate-*.js
+simulate-*.js
+manual-*.js

@@ -10,6 +10,7 @@ import nativeRoutes from './routes/native.js';
 import availabilityRoutes from './routes/native/availability.js';
 import calendarSyncRoutes from './routes/native/calendarSync.js';
 import pushTokensRouter from './routes/native/pushTokens.js';
+import paymentSuccessRoutes from './routes/native/payment-success.js';
 import { startReminderScheduler } from './services/notifications/reminderScheduler.js';
 import { runRecurringBilling } from './jobs/recurringBilling.js';
 import { logger } from './utils/logger.js';
@@ -79,6 +80,9 @@ app.use('/api/native/calendar-sync', calendarSyncRoutes);
 
 // Push notification token routes
 app.use('/api/native/push-tokens', pushTokensRouter);
+
+// Payment success/cancel pages
+app.use('/api/native', paymentSuccessRoutes);
 
 // Native app routes
 app.use('/api/native', nativeRoutes);
