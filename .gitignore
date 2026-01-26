@@ -1,0 +1,6 @@
+# AllPay test scripts
+test-allpay*.js
+test-real-request.js
+
+# Test documentation
+TEST_RESULTS.md
