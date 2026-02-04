@@ -157,7 +157,12 @@ router.post('/google', async (req, res) => {
     });
   } catch (err) {
     console.error('[Auth] Google OAuth error:', err);
-    res.status(500).json({ error: 'Google authentication failed' });
+    // TEMPORARY: Return detailed error for debugging
+    res.status(500).json({
+      error: 'Google authentication failed',
+      details: err.message,
+      name: err.name
+    });
   }
 });
 

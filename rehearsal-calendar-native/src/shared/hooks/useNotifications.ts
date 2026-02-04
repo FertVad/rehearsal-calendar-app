@@ -8,8 +8,6 @@ import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import {
   registerForPushNotifications,
-  addNotificationReceivedListener,
-  addNotificationResponseReceivedListener,
   clearBadgeCount,
 } from '../services/notifications';
 import { hapticMedium } from '../utils/haptics';
@@ -22,8 +20,8 @@ import { useAuth } from '../../contexts/AuthContext';
 export function useNotifications() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
+  const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
 
   useEffect(() => {
     // Only register if user is logged in and notifications are enabled
@@ -41,7 +39,7 @@ export function useNotifications() {
 
     // Listen for notifications received while app is foregrounded
     try {
-      notificationListener.current = addNotificationReceivedListener((notification) => {
+      notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
         console.log('[useNotifications] Notification received:', notification);
 
         // Trigger haptic feedback
@@ -52,7 +50,7 @@ export function useNotifications() {
       });
 
       // Listen for user interaction with notification
-      responseListener.current = addNotificationResponseReceivedListener((response) => {
+      responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
         console.log('[useNotifications] Notification tapped:', response);
 
         const data = response.notification.request.content.data;
@@ -71,10 +69,10 @@ export function useNotifications() {
     return () => {
       try {
         if (notificationListener.current) {
-          Notifications.removeNotificationSubscription(notificationListener.current);
+          notificationListener.current.remove();
         }
         if (responseListener.current) {
-          Notifications.removeNotificationSubscription(responseListener.current);
+          responseListener.current.remove();
         }
       } catch (error) {
         console.log('[useNotifications] Cleanup failed (expected on simulator):', error);

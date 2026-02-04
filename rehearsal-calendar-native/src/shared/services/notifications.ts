@@ -19,6 +19,8 @@ try {
       shouldShowAlert: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
     }),
   });
 } catch (error) {

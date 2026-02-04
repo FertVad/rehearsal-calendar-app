@@ -17,7 +17,7 @@ import { logger } from '../utils/logger';
  */
 
 // Production backend URL
-const PRODUCTION_API_URL = 'https://rehearsal-calendar-app.onrender.com/api';
+const PRODUCTION_API_URL = 'https://server-fertvads-projects.vercel.app/api';
 
 // Auto-detect local IP from Expo DevServer (for development on physical devices)
 const getLocalDevIP = (): string | null => {
@@ -96,9 +96,13 @@ api.interceptors.request.use(
 
 // Response interceptor - handle token refresh
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    logger.debug(`Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+    logger.error(`Response Error: ${error.response?.status || 'Network Error'} ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`, error.response?.data);
 
     // If 401 and not already retried
     if (error.response?.status === 401 && !originalRequest._retry) {

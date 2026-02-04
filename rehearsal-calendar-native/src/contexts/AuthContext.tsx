@@ -201,6 +201,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { linked: linked || false };
     } catch (err: any) {
+      console.error('[Auth] Google login error:', err);
+      console.error('[Auth] Error response:', err.response?.data);
+      console.error('[Auth] Error status:', err.response?.status);
       const message = err.response?.data?.error || 'Google sign-in failed';
       setError(message);
       throw new Error(message);
