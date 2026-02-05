@@ -30,18 +30,18 @@ interface UserSubscription {
 
 // Common timezones for theatre/rehearsal apps
 const TIMEZONES = [
-  { value: 'Europe/Moscow', label: 'Москва (UTC+3)' },
-  { value: 'Europe/Kaliningrad', label: 'Калининград (UTC+2)' },
-  { value: 'Europe/Samara', label: 'Самара (UTC+4)' },
-  { value: 'Asia/Yekaterinburg', label: 'Екатеринбург (UTC+5)' },
-  { value: 'Asia/Novosibirsk', label: 'Новосибирск (UTC+7)' },
-  { value: 'Asia/Vladivostok', label: 'Владивосток (UTC+10)' },
-  { value: 'Europe/Kiev', label: 'Киев (UTC+2)' },
-  { value: 'Asia/Jerusalem', label: 'Тель-Авив (UTC+2)' },
-  { value: 'Europe/Berlin', label: 'Берлин (UTC+1)' },
-  { value: 'Europe/London', label: 'Лондон (UTC+0)' },
-  { value: 'America/New_York', label: 'Нью-Йорк (UTC-5)' },
-  { value: 'America/Los_Angeles', label: 'Лос-Анджелес (UTC-8)' },
+  { value: 'Europe/Moscow', labelRu: 'Москва (UTC+3)', labelEn: 'Moscow (UTC+3)' },
+  { value: 'Europe/Kaliningrad', labelRu: 'Калининград (UTC+2)', labelEn: 'Kaliningrad (UTC+2)' },
+  { value: 'Europe/Samara', labelRu: 'Самара (UTC+4)', labelEn: 'Samara (UTC+4)' },
+  { value: 'Asia/Yekaterinburg', labelRu: 'Екатеринбург (UTC+5)', labelEn: 'Yekaterinburg (UTC+5)' },
+  { value: 'Asia/Novosibirsk', labelRu: 'Новосибирск (UTC+7)', labelEn: 'Novosibirsk (UTC+7)' },
+  { value: 'Asia/Vladivostok', labelRu: 'Владивосток (UTC+10)', labelEn: 'Vladivostok (UTC+10)' },
+  { value: 'Europe/Kiev', labelRu: 'Киев (UTC+2)', labelEn: 'Kyiv (UTC+2)' },
+  { value: 'Asia/Jerusalem', labelRu: 'Тель-Авив (UTC+2)', labelEn: 'Tel Aviv (UTC+2)' },
+  { value: 'Europe/Berlin', labelRu: 'Берлин (UTC+1)', labelEn: 'Berlin (UTC+1)' },
+  { value: 'Europe/London', labelRu: 'Лондон (UTC+0)', labelEn: 'London (UTC+0)' },
+  { value: 'America/New_York', labelRu: 'Нью-Йорк (UTC-5)', labelEn: 'New York (UTC-5)' },
+  { value: 'America/Los_Angeles', labelRu: 'Лос-Анджелес (UTC-8)', labelEn: 'Los Angeles (UTC-8)' },
 ];
 
 // Week start options
@@ -103,7 +103,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert('Ошибка', err.message || 'Не удалось изменить настройки уведомлений');
+      Alert.alert(t.profile.errorTitle, err.message || t.profile.notificationError);
       // Revert state on error
       setNotificationsEnabled(!value);
     }
@@ -119,7 +119,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       await updateUser({ locale: newLanguage });
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert('Ошибка', err.message || 'Не удалось изменить язык');
+      Alert.alert(t.profile.errorTitle, err.message || t.profile.languageError);
     }
   };
 
@@ -130,13 +130,16 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       setTimezoneModalVisible(false);
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert('Ошибка', err.message || 'Не удалось обновить таймзону');
+      Alert.alert(t.profile.errorTitle, err.message || t.profile.timezoneError);
     }
   };
 
   const getCurrentTimezoneLabel = () => {
     const tz = TIMEZONES.find(t => t.value === user?.timezone);
-    return tz?.label || user?.timezone || 'Не выбрана';
+    if (tz) {
+      return language === 'ru' ? tz.labelRu : tz.labelEn;
+    }
+    return user?.timezone || t.profile.timezoneNotSelected;
   };
 
   const handleWeekStartSelect = async (weekStart: 'monday' | 'sunday') => {
@@ -146,7 +149,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       setWeekStartModalVisible(false);
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert('Ошибка', err.message || 'Не удалось обновить начало недели');
+      Alert.alert(t.profile.errorTitle, err.message || t.profile.weekStartError);
     }
   };
 
@@ -300,7 +303,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
                 <Ionicons name="globe" size={20} color={Colors.accent.blue} />
               </View>
-              <Text style={styles.settingLabel}>Timezone</Text>
+              <Text style={styles.settingLabel}>{t.profile.timezone}</Text>
             </View>
             <View style={styles.settingRight}>
               <Text style={styles.settingValue} numberOfLines={1}>
@@ -413,7 +416,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Выберите часовой пояс</Text>
+              <Text style={styles.modalTitle}>{t.profile.timezoneModalTitle}</Text>
               <TouchableOpacity onPress={() => { hapticLight(); setTimezoneModalVisible(false); }}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
@@ -435,7 +438,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                       user?.timezone === item.value && styles.timezoneLabelSelected,
                     ]}
                   >
-                    {item.label}
+                    {language === 'ru' ? item.labelRu : item.labelEn}
                   </Text>
                   {user?.timezone === item.value && (
                     <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
@@ -458,9 +461,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {language === 'ru' ? 'Начало недели' : 'Week starts on'}
-              </Text>
+              <Text style={styles.modalTitle}>{t.profile.weekStart}</Text>
               <TouchableOpacity onPress={() => { hapticLight(); setWeekStartModalVisible(false); }}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>

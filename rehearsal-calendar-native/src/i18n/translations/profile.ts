@@ -3,6 +3,9 @@ export interface ProfileTranslations {
   settings: string;
   notifications: string;
   language: string;
+  timezone: string;
+  timezoneModalTitle: string;
+  timezoneNotSelected: string;
   weekStart: string;
   weekStartMonday: string;
   weekStartSunday: string;
@@ -34,6 +37,11 @@ export interface ProfileTranslations {
   updateError: string;
   avatarHint: string;
   premium: string;
+  errorTitle: string;
+  notificationError: string;
+  languageError: string;
+  timezoneError: string;
+  weekStartError: string;
 }
 
 export const ru = {
@@ -42,6 +50,9 @@ export const ru = {
     settings: 'Настройки',
     notifications: 'Уведомления',
     language: 'Язык',
+    timezone: 'Часовой пояс',
+    timezoneModalTitle: 'Выберите часовой пояс',
+    timezoneNotSelected: 'Не выбран',
     weekStart: 'Начало недели',
     weekStartMonday: 'Понедельник',
     weekStartSunday: 'Воскресенье',
@@ -76,6 +87,11 @@ export const ru = {
     updateError: 'Ошибка обновления профиля',
     avatarHint: 'Аватар генерируется автоматически на основе вашего email',
     premium: 'Premium',
+    errorTitle: 'Ошибка',
+    notificationError: 'Не удалось изменить настройки уведомлений',
+    languageError: 'Не удалось изменить язык',
+    timezoneError: 'Не удалось обновить часовой пояс',
+    weekStartError: 'Не удалось обновить начало недели',
   },
 };
 
@@ -85,6 +101,9 @@ export const en = {
     settings: 'Settings',
     notifications: 'Notifications',
     language: 'Language',
+    timezone: 'Timezone',
+    timezoneModalTitle: 'Select Timezone',
+    timezoneNotSelected: 'Not selected',
     weekStart: 'Week starts on',
     weekStartMonday: 'Monday',
     weekStartSunday: 'Sunday',
@@ -119,5 +138,10 @@ export const en = {
     updateError: 'Failed to update profile',
     avatarHint: 'Avatar is automatically generated based on your email',
     premium: 'Premium',
+    errorTitle: 'Error',
+    notificationError: 'Failed to update notification settings',
+    languageError: 'Failed to change language',
+    timezoneError: 'Failed to update timezone',
+    weekStartError: 'Failed to update week start day',
   },
 };
