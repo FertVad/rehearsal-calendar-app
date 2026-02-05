@@ -19,17 +19,22 @@ export async function verifyGoogleToken(idToken) {
   try {
     const client = new OAuth2Client();
 
+    // Log configured client IDs for debugging
+    const clientIds = [
+      process.env.GOOGLE_CLIENT_ID_IOS,
+      process.env.GOOGLE_CLIENT_ID_ANDROID,
+      process.env.GOOGLE_CLIENT_ID_WEB,
+    ].filter(Boolean);
+    console.log('[OAuth] Expected audiences (Client IDs):', clientIds);
+
     // Verify the ID token against our client IDs
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: [
-        process.env.GOOGLE_CLIENT_ID_IOS,
-        process.env.GOOGLE_CLIENT_ID_ANDROID,
-        process.env.GOOGLE_CLIENT_ID_WEB,
-      ].filter(Boolean), // Remove undefined values
+      audience: clientIds,
     });
 
     const payload = ticket.getPayload();
+    console.log('[OAuth] Token audience (aud):', payload.aud);
 
     if (!payload) {
       throw new Error('Invalid token payload');
