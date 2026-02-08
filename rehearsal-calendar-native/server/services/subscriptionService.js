@@ -109,24 +109,25 @@ export async function createSubscription({
   }
 
   // Calculate billing dates based on plan period
+  // IMPORTANT: Use UTC methods to avoid timezone issues
   const now = new Date();
   const currentPeriodStart = now;
   const currentPeriodEnd = new Date(now);
   let nextBillingDate = null;
 
   if (plan.billing_period === 'monthly') {
-    currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+    currentPeriodEnd.setUTCMonth(currentPeriodEnd.getUTCMonth() + 1);
     nextBillingDate = new Date(currentPeriodEnd);
   } else if (plan.billing_period === 'quarterly') {
-    currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 3);
+    currentPeriodEnd.setUTCMonth(currentPeriodEnd.getUTCMonth() + 3);
     nextBillingDate = new Date(currentPeriodEnd);
   } else if (plan.billing_period === 'test_1min') {
-    // TEST ONLY: Billing every 1 minute for testing recurring billing
-    currentPeriodEnd.setMinutes(currentPeriodEnd.getMinutes() + 1);
+    // TEST ONLY: Billing every 1 minute for testing recurring billing (using UTC)
+    currentPeriodEnd.setUTCMinutes(currentPeriodEnd.getUTCMinutes() + 1);
     nextBillingDate = new Date(currentPeriodEnd);
   } else if (plan.billing_period === 'lifetime') {
     // Lifetime: set far future date (100 years)
-    currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 100);
+    currentPeriodEnd.setUTCFullYear(currentPeriodEnd.getUTCFullYear() + 100);
     nextBillingDate = null; // No recurring billing for lifetime
   }
 
@@ -293,15 +294,16 @@ export async function processRecurringBilling() {
 
       if (isSuccessful) {
         // Update subscription billing dates based on plan period
+        // IMPORTANT: Use UTC methods to avoid timezone issues
         const newPeriodEnd = new Date(subscription.current_period_end);
 
         if (subscription.billing_period === 'monthly') {
-          newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1);
+          newPeriodEnd.setUTCMonth(newPeriodEnd.getUTCMonth() + 1);
         } else if (subscription.billing_period === 'quarterly') {
-          newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 3);
+          newPeriodEnd.setUTCMonth(newPeriodEnd.getUTCMonth() + 3);
         } else if (subscription.billing_period === 'test_1min') {
-          // TEST ONLY: Add 1 minute for testing
-          newPeriodEnd.setMinutes(newPeriodEnd.getMinutes() + 1);
+          // TEST ONLY: Add 1 minute for testing (using UTC to avoid timezone issues)
+          newPeriodEnd.setUTCMinutes(newPeriodEnd.getUTCMinutes() + 1);
         }
 
         const newNextBillingDate = new Date(newPeriodEnd);
