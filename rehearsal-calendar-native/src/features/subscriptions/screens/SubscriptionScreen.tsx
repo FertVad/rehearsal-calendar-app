@@ -267,6 +267,8 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
       const response = await subscriptionsAPI.createCheckout(planId, language);
       const { checkoutUrl: url, orderId } = response.data;
 
+      console.log('[DEBUG] Checkout created:', { checkoutUrl: url, orderId });
+
       setCheckoutUrl(url);
       setCurrentOrderId(orderId);
 
