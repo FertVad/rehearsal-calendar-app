@@ -223,12 +223,27 @@ router.post('/checkout', requireAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/native/subscriptions/webhook-test
+ * Test endpoint to verify AllPay can reach our server
+ */
+router.post('/webhook-test', async (req, res) => {
+  logger.info('[Webhook Test] Received request:', {
+    body: req.body,
+    headers: req.headers,
+  });
+  res.json({ success: true, message: 'Test endpoint reached', timestamp: new Date().toISOString() });
+});
+
+/**
  * POST /api/native/subscriptions/webhook
  * AllPay webhook callback (NO authentication - signature verified instead)
  *
  * This endpoint is called by AllPay after payment completion
  */
 router.post('/webhook', async (req, res) => {
+  logger.info('[Webhook] === START === Received webhook request');
+  logger.info('[Webhook] Body:', JSON.stringify(req.body));
+  logger.info('[Webhook] Headers:', JSON.stringify(req.headers));
   try {
     const payload = req.body;
     const signature = req.headers['x-allpay-signature'] || req.body.sign;
