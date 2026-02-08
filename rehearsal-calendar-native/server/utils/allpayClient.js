@@ -87,6 +87,12 @@ export function generateAllPaySignature(params) {
  * @returns {boolean} - Signature is valid
  */
 export function verifyWebhookSignature(payload, receivedSignature) {
+  // Skip verification in test mode if signature is placeholder
+  if (receivedSignature === 'test-mode-skip-signature' && isTestMode()) {
+    logger.warn('[AllPay] Skipping signature verification in test mode');
+    return true;
+  }
+
   if (!receivedSignature) {
     logger.warn('[AllPay] Webhook signature missing');
     return false;

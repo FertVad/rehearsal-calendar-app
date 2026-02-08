@@ -233,7 +233,10 @@ router.post('/webhook', async (req, res) => {
     const payload = req.body;
     const signature = req.headers['x-allpay-signature'] || req.body.sign;
 
-    if (!signature) {
+    // In test mode, AllPay might not send signature
+    const isTestMode = process.env.ALLPAY_TEST_MODE === 'true';
+
+    if (!signature && !isTestMode) {
       logger.warn('[Subscriptions Webhook] Missing signature');
       return res.status(400).json({ error: 'Missing signature' });
     }
@@ -241,10 +244,14 @@ router.post('/webhook', async (req, res) => {
     logger.info('[Subscriptions Webhook] Received webhook:', {
       orderId: payload.order_id,
       status: payload.status,
+      hasSignature: !!signature,
+      testMode: isTestMode,
     });
 
-    // Process webhook (includes signature verification)
-    const result = await processWebhookEvent(payload, signature);
+    // Process webhook (includes signature verification if signature present)
+    const result = signature
+      ? await processWebhookEvent(payload, signature)
+      : await processWebhookEvent(payload, 'test-mode-skip-signature');
 
     // If payment successful and we have custom_data, create subscription
     if (payload.status === 1 && payload.custom_data) {
