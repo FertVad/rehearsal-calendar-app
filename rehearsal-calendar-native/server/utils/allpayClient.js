@@ -156,6 +156,7 @@ export async function allpayRequest(endpoint, params) {
       throw new Error(data.error || 'AllPay API request failed');
     }
 
+    console.log('[AllPay] API response:', JSON.stringify({ endpoint, data }));
     logger.debug('[AllPay] API response:', { endpoint, data });
     return data;
   } catch (error) {
