@@ -27,6 +27,11 @@ export interface SubscriptionsTranslations {
   paymentPlan: string;
   paymentError: string;
 
+  // Hosted Fields (AllPay)
+  paymentSuccess: string;
+  paymentSuccessMessage: string;
+  paymentLoading: string;
+
   // Cancel subscription
   cancelTitle: string;
   cancelWarning: string;
@@ -70,6 +75,11 @@ export const ru = {
     paymentType: 'Тип',
     paymentPlan: 'План',
     paymentError: 'Ошибка',
+
+    // Hosted Fields (AllPay)
+    paymentSuccess: 'Успех!',
+    paymentSuccessMessage: 'Подписка успешно оформлена! Теперь вы можете создавать проекты.',
+    paymentLoading: 'Загрузка формы оплаты...',
 
     // Cancel subscription
     cancelTitle: 'Отменить подписку?',
@@ -115,6 +125,11 @@ export const en = {
     paymentType: 'Type',
     paymentPlan: 'Plan',
     paymentError: 'Error',
+
+    // Hosted Fields (AllPay)
+    paymentSuccess: 'Success!',
+    paymentSuccessMessage: 'Subscription created successfully! You can now create projects.',
+    paymentLoading: 'Loading payment form...',
 
     // Cancel subscription
     cancelTitle: 'Cancel Subscription?',

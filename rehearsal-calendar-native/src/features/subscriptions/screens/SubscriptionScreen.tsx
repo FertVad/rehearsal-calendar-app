@@ -23,6 +23,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { ProfileStackParamList } from '../../../navigation';
 import { styles } from '../styles/subscriptionScreenStyles';
 import { Colors } from '../../../shared/constants/colors';
+import { handleAllPayMessage, AllPayMessage } from '../utils/allpayWebViewHandler';
 
 type SubscriptionScreenProps = NativeStackScreenProps<ProfileStackParamList, 'Subscription'>;
 
@@ -307,6 +308,51 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
       setSelectedPlanId(null);
       setCurrentOrderId(null);
     }
+  };
+
+  const handleWebViewMessage = (event: any) => {
+    handleAllPayMessage(event.nativeEvent.data, {
+      onSuccess: () => {
+        console.log('[SubscriptionScreen] Payment success via postMessage!');
+
+        // Stop polling immediately
+        stopPolling();
+
+        // Close WebView
+        setCheckoutUrl(null);
+        setSelectedPlanId(null);
+        setCurrentOrderId(null);
+        setShowPlans(false);
+
+        // Show success alert
+        Alert.alert(
+          t.subscriptions.paymentSuccess,
+          t.subscriptions.paymentSuccessMessage,
+          [{ text: 'OK', onPress: () => loadData() }]
+        );
+      },
+
+      onError: (message: AllPayMessage) => {
+        console.error('[SubscriptionScreen] Payment error via postMessage:', message);
+
+        // Don't stop polling - webhook might still work
+        // Don't close WebView - user might retry
+
+        // Show error alert
+        Alert.alert(
+          t.subscriptions.paymentError,
+          message.data.errorMessage || t.common.error
+        );
+      },
+
+      onReady: () => {
+        console.log('[SubscriptionScreen] Payment form ready');
+      },
+
+      onLoaded: () => {
+        console.log('[SubscriptionScreen] iframe loaded');
+      },
+    });
   };
 
   const handleCancelSubscription = () => {
@@ -624,9 +670,15 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
 
           {checkoutUrl && (
             <WebView
-              source={{ uri: checkoutUrl }}
+              source={{
+                uri: `https://server-alpha-ten-55.vercel.app/api/native/subscriptions/hosted-fields?paymentUrl=${encodeURIComponent(checkoutUrl)}&language=${language}&orderId=${currentOrderId || 'unknown'}`,
+              }}
               style={styles.webView}
               onNavigationStateChange={handleWebViewNavigationStateChange}
+              onMessage={handleWebViewMessage}
+              javaScriptEnabled={true}
+              originWhitelist={['*']}
+              scalesPageToFit={false}
               startInLoadingState
               renderLoading={() => (
                 <View style={styles.webViewLoading}>

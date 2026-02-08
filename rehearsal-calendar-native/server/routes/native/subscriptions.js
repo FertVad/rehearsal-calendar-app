@@ -313,6 +313,157 @@ router.post('/cancel', requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/native/subscriptions/hosted-fields
+ * Serve Hosted Fields HTML page for AllPay
+ * This endpoint serves HTML from your Vercel domain which can be whitelisted in AllPay
+ *
+ * Query params: ?paymentUrl=XXX&language=ru|en&orderId=XXX
+ */
+router.get('/hosted-fields', async (req, res) => {
+  try {
+    const { paymentUrl, language = 'en', orderId = 'unknown' } = req.query;
+
+    if (!paymentUrl) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html><body>
+          <h1>Payment URL required</h1>
+          <p>Add ?paymentUrl=XXX to the URL</p>
+        </body></html>
+      `);
+    }
+
+    // Generate Hosted Fields HTML (same as frontend template)
+    const html = `
+<!DOCTYPE html>
+<html lang="${language}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>${language === 'ru' ? 'Оплата' : 'Payment'}</title>
+
+  <!-- AllPay Hosted Fields SDK -->
+  <script
+    src="https://allpay.to/js/allpay-hf.js"
+    onload="console.log('[AllPay HF] SDK script loaded successfully');"
+    onerror="console.error('[AllPay HF] SDK script FAILED to load - check network/CORS');"
+  ></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #0f0f0f;
+      color: #ffffff;
+      overflow: hidden;
+    }
+    #payment-container { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+    #payment-iframe { width: 100%; height: 100%; border: none; flex: 1; }
+    #loading {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      text-align: center; z-index: 10;
+    }
+    .spinner {
+      border: 4px solid rgba(168, 85, 247, 0.2);
+      border-top: 4px solid #a855f7;
+      border-radius: 50%; width: 50px; height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="payment-container">
+    <div id="loading">
+      <div class="spinner"></div>
+      <p>${language === 'ru' ? 'Загрузка...' : 'Loading...'}</p>
+    </div>
+    <iframe id="payment-iframe" src="${paymentUrl}" allow="payment"></iframe>
+  </div>
+
+  <script>
+    const config = {
+      paymentUrl: '${paymentUrl}',
+      language: '${language}',
+      orderId: '${orderId}',
+    };
+
+    console.log('[AllPay HF] Script loaded');
+    console.log('[AllPay HF] Config:', config);
+    console.log('[AllPay HF] Checking AllpayPayment:', typeof AllpayPayment);
+
+    function hideLoading() {
+      const loading = document.getElementById('loading');
+      if (loading) loading.style.display = 'none';
+    }
+
+    function sendMessageToApp(type, data) {
+      const message = { type, data, timestamp: new Date().toISOString(), orderId: config.orderId };
+      console.log('[AllPay HF] Sending message to app:', message);
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(message));
+      }
+    }
+
+    if (typeof AllpayPayment === 'undefined') {
+      console.warn('[AllPay HF] AllpayPayment SDK not loaded');
+      setTimeout(() => {
+        hideLoading();
+        sendMessageToApp('PAYMENT_LOADED', { orderId: config.orderId });
+      }, 2000);
+    } else {
+      try {
+        console.log('[AllPay HF] Initializing AllpayPayment...');
+        const Allpay = new AllpayPayment({
+          iframeId: 'payment-iframe',
+          onSuccess: function() {
+            console.log('[AllPay HF] Payment successful!');
+            hideLoading();
+            sendMessageToApp('PAYMENT_SUCCESS', {
+              orderId: config.orderId,
+              message: config.language === 'ru' ? 'Оплата успешно завершена' : 'Payment completed successfully',
+            });
+          },
+          onError: function(error_n, error_msg) {
+            console.error('[AllPay HF] Payment error:', error_n, error_msg);
+            sendMessageToApp('PAYMENT_ERROR', { orderId: config.orderId, errorCode: error_n, errorMessage: error_msg });
+          },
+          onLoad: function() {
+            console.log('[AllPay HF] iframe loaded');
+            hideLoading();
+            sendMessageToApp('PAYMENT_LOADED', { orderId: config.orderId });
+          },
+        });
+        console.log('[AllPay HF] AllpayPayment initialized');
+        Allpay.pay();
+      } catch (error) {
+        console.error('[AllPay HF] Initialization error:', error);
+        setTimeout(() => { hideLoading(); sendMessageToApp('PAYMENT_LOADED', { orderId: config.orderId }); }, 2000);
+      }
+    }
+    sendMessageToApp('PAYMENT_READY', { orderId: config.orderId });
+  </script>
+</body>
+</html>
+    `.trim();
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+
+  } catch (error) {
+    logger.error('[Subscriptions API] Error serving hosted fields:', error);
+    res.status(500).send(`
+      <!DOCTYPE html>
+      <html><body>
+        <h1>Error</h1>
+        <p>${error.message}</p>
+      </body></html>
+    `);
+  }
+});
+
+/**
  * GET /api/native/subscriptions/payments
  * Get user's payment history
  *
