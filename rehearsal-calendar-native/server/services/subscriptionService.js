@@ -120,6 +120,10 @@ export async function createSubscription({
   } else if (plan.billing_period === 'quarterly') {
     currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 3);
     nextBillingDate = new Date(currentPeriodEnd);
+  } else if (plan.billing_period === 'test_1min') {
+    // TEST ONLY: Billing every 1 minute for testing recurring billing
+    currentPeriodEnd.setMinutes(currentPeriodEnd.getMinutes() + 1);
+    nextBillingDate = new Date(currentPeriodEnd);
   } else if (plan.billing_period === 'lifetime') {
     // Lifetime: set far future date (100 years)
     currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 100);
@@ -295,6 +299,9 @@ export async function processRecurringBilling() {
           newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1);
         } else if (subscription.billing_period === 'quarterly') {
           newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 3);
+        } else if (subscription.billing_period === 'test_1min') {
+          // TEST ONLY: Add 1 minute for testing
+          newPeriodEnd.setMinutes(newPeriodEnd.getMinutes() + 1);
         }
 
         const newNextBillingDate = new Date(newPeriodEnd);
