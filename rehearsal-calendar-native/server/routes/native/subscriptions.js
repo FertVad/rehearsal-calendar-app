@@ -24,13 +24,13 @@ import { logger } from '../../utils/logger.js';
 const router = Router();
 
 // Base URL for redirects (configurable per environment)
-// Use VERCEL_URL if available (Vercel deployment), otherwise fallback
+// Check BASE_URL first (allows overriding VERCEL_URL)
 const getBaseUrl = () => {
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
   if (process.env.BASE_URL) {
     return process.env.BASE_URL;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
   }
   if (process.env.NODE_ENV === 'production') {
     return 'https://rehearsal-calendar-app.onrender.com';
@@ -170,9 +170,12 @@ router.post('/checkout', requireAuth, async (req, res) => {
 
     // Create initial payment WITHOUT AllPay subscriptions API
     // We manage subscription lifecycle ourselves using tokens
+    const clientName = `${user.first_name} ${user.last_name || ''}`.trim() || 'Customer';
+
     const paymentResult = await allpayAPI.createSubscriptionPayment({
       orderId,
       email: user.email,
+      clientName, // REQUIRED by AllPay
       amount: plan.price_usd, // Use USD price
       currency: 'USD', // Bill in USD
       description: `${plan.display_name_en} - Subscription`,
@@ -186,7 +189,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
         userId,
         planId,
         planName: plan.name,
-        userName: `${user.first_name} ${user.last_name || ''}`.trim(),
+        userName: clientName,
       },
     });
 
@@ -342,12 +345,8 @@ router.get('/hosted-fields', async (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>${language === 'ru' ? 'Оплата' : 'Payment'}</title>
 
-  <!-- AllPay Hosted Fields SDK -->
-  <script
-    src="https://allpay.to/js/allpay-hf.js"
-    onload="console.log('[AllPay HF] SDK script loaded successfully');"
-    onerror="console.error('[AllPay HF] SDK script FAILED to load - check network/CORS');"
-  ></script>
+  <!-- Note: We're NOT using AllPay Hosted Fields SDK -->
+  <!-- Just showing the iframe directly for better compatibility -->
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -406,42 +405,16 @@ router.get('/hosted-fields', async (req, res) => {
       }
     }
 
-    if (typeof AllpayPayment === 'undefined') {
-      console.warn('[AllPay HF] AllpayPayment SDK not loaded');
-      setTimeout(() => {
-        hideLoading();
-        sendMessageToApp('PAYMENT_LOADED', { orderId: config.orderId });
-      }, 2000);
-    } else {
-      try {
-        console.log('[AllPay HF] Initializing AllpayPayment...');
-        const Allpay = new AllpayPayment({
-          iframeId: 'payment-iframe',
-          onSuccess: function() {
-            console.log('[AllPay HF] Payment successful!');
-            hideLoading();
-            sendMessageToApp('PAYMENT_SUCCESS', {
-              orderId: config.orderId,
-              message: config.language === 'ru' ? 'Оплата успешно завершена' : 'Payment completed successfully',
-            });
-          },
-          onError: function(error_n, error_msg) {
-            console.error('[AllPay HF] Payment error:', error_n, error_msg);
-            sendMessageToApp('PAYMENT_ERROR', { orderId: config.orderId, errorCode: error_n, errorMessage: error_msg });
-          },
-          onLoad: function() {
-            console.log('[AllPay HF] iframe loaded');
-            hideLoading();
-            sendMessageToApp('PAYMENT_LOADED', { orderId: config.orderId });
-          },
-        });
-        console.log('[AllPay HF] AllpayPayment initialized');
-        Allpay.pay();
-      } catch (error) {
-        console.error('[AllPay HF] Initialization error:', error);
-        setTimeout(() => { hideLoading(); sendMessageToApp('PAYMENT_LOADED', { orderId: config.orderId }); }, 2000);
-      }
-    }
+    // Simple approach: Just show the iframe after 1 second
+    // No AllPay SDK needed - iframe handles everything
+    console.log('[AllPay] Loading payment iframe...');
+
+    setTimeout(() => {
+      console.log('[AllPay] Hiding loader, showing iframe');
+      hideLoading();
+      sendMessageToApp('PAYMENT_LOADED', { orderId: config.orderId });
+    }, 1000);
+
     sendMessageToApp('PAYMENT_READY', { orderId: config.orderId });
   </script>
 </body>
