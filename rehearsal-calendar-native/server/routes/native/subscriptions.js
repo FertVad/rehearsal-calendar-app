@@ -519,7 +519,8 @@ router.get('/payments', requireAuth, async (req, res) => {
 /**
  * GET /api/native/subscriptions/check-pending/:orderId
  * Check if pending order has been completed (for polling)
- * Returns subscription status without calling AllPay API
+ * Now also checks AllPay API status and creates subscription if payment successful
+ * This allows payments to work even without webhooks
  */
 router.get('/check-pending/:orderId', requireAuth, async (req, res) => {
   try {
@@ -538,8 +539,57 @@ router.get('/check-pending/:orderId', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    // Check if subscription was created (webhook processed successfully)
-    const subscription = await getUserActiveSubscription(userId);
+    // First check if subscription already exists (created by webhook)
+    let subscription = await getUserActiveSubscription(userId);
+
+    // If no subscription yet and transaction is pending, check AllPay API
+    if (!subscription && transaction.status === 'pending') {
+      try {
+        logger.info(`[Polling] Checking AllPay API for order: ${orderId}`);
+        const paymentStatus = await allpayAPI.getPaymentStatus(orderId);
+        logger.info(`[Polling] AllPay status: ${paymentStatus.status} for order: ${orderId}`);
+
+        // Status: 0=unpaid, 1=paid, 3=refunded, 4=partially_refunded
+        if (paymentStatus.status === 1) {
+          // Payment successful! Create subscription (fallback if webhook didn't arrive)
+          logger.info(`[Polling] Payment successful, creating subscription for order: ${orderId}`);
+
+          // Get plan from transaction
+          const plan = await db.get(
+            'SELECT p.* FROM native_subscription_plans p JOIN native_payment_transactions t ON p.id = t.plan_id WHERE t.allpay_order_id = $1',
+            [orderId]
+          );
+
+          if (!plan) {
+            throw new Error('Plan not found for transaction');
+          }
+
+          // Get AllPay token for recurring payments
+          let allpayToken = null;
+          try {
+            allpayToken = await allpayAPI.getToken(orderId);
+            logger.info(`[Polling] Token retrieved successfully`);
+          } catch (tokenError) {
+            logger.warn(`[Polling] Could not get token:`, tokenError.message);
+          }
+
+          // Create subscription
+          subscription = await createSubscription({
+            userId,
+            planId: plan.id,
+            allpayOrderId: orderId,
+            allpayToken,
+            amount: plan.price_usd,
+            currency: 'USD',
+          });
+
+          logger.info(`[Polling] Subscription created: ${subscription.id}`);
+        }
+      } catch (apiError) {
+        logger.error('[Polling] Error checking AllPay API:', apiError);
+        // Continue with local check if API fails
+      }
+    }
 
     res.json({
       orderId,
