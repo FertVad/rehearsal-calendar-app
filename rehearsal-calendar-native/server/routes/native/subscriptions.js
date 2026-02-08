@@ -190,6 +190,8 @@ router.post('/checkout', requireAuth, async (req, res) => {
       },
     });
 
+    logger.info(`[Subscriptions API] AllPay payment result:`, paymentResult);
+
     // Create pending transaction record
     await db.run(
       `INSERT INTO native_payment_transactions (
@@ -199,7 +201,10 @@ router.post('/checkout', requireAuth, async (req, res) => {
       [userId, orderId, plan.price_usd, 'USD', 'initial', 'pending']
     );
 
-    logger.info(`[Subscriptions API] Created checkout for user ${userId}, plan ${plan.name}`);
+    logger.info(`[Subscriptions API] Created checkout for user ${userId}, plan ${plan.name}`, {
+      paymentUrl: paymentResult.paymentUrl,
+      orderId: paymentResult.orderId,
+    });
 
     res.json({
       checkoutUrl: paymentResult.paymentUrl,
