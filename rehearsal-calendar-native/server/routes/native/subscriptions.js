@@ -83,6 +83,33 @@ router.get('/test-config', async (req, res) => {
 });
 
 /**
+ * GET /api/native/subscriptions/debug-urls
+ * Debug endpoint to check what URLs are being generated
+ */
+router.get('/debug-urls', async (req, res) => {
+  try {
+    const webhookUrl = `${BASE_URL}/api/native/subscriptions/webhook`;
+    const successUrl = `${BASE_URL}/api/native/payment-success?order_id=TEST`;
+    const cancelUrl = `${BASE_URL}/api/native/payment-cancel`;
+
+    res.json({
+      BASE_URL: BASE_URL,
+      webhookUrl: webhookUrl,
+      successUrl: successUrl,
+      cancelUrl: cancelUrl,
+      env: {
+        BASE_URL: process.env.BASE_URL || null,
+        VERCEL_URL: process.env.VERCEL_URL || null,
+        NODE_ENV: process.env.NODE_ENV || null,
+      }
+    });
+  } catch (error) {
+    logger.error('[Debug URLs] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/native/subscriptions/plans
  * Get all available subscription plans (public endpoint)
  */
