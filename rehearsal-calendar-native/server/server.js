@@ -11,6 +11,7 @@ import availabilityRoutes from './routes/native/availability.js';
 import calendarSyncRoutes from './routes/native/calendarSync.js';
 import pushTokensRouter from './routes/native/pushTokens.js';
 import paymentSuccessRoutes from './routes/native/payment-success.js';
+import cronRoutes from './routes/cron.js';
 import { startReminderScheduler } from './services/notifications/reminderScheduler.js';
 import { runRecurringBilling } from './jobs/recurringBilling.js';
 import { logger } from './utils/logger.js';
@@ -86,6 +87,9 @@ app.use('/api/native', paymentSuccessRoutes);
 
 // Native app routes
 app.use('/api/native', nativeRoutes);
+
+// Cron endpoints (for Vercel Cron Jobs)
+app.use('/api/cron', cronRoutes);
 
 // Apple App Site Association for Universal Links (iOS)
 app.get('/.well-known/apple-app-site-association', (req, res) => {
