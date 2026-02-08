@@ -13,6 +13,7 @@ import { logger } from './logger.js';
 // Environment variables getter functions (to avoid loading before dotenv.config())
 const getApiLogin = () => process.env.ALLPAY_API_LOGIN;
 const getApiKey = () => process.env.ALLPAY_API_KEY;
+const getWebhookSecret = () => process.env.ALLPAY_WEBHOOK_SECRET || process.env.ALLPAY_API_KEY;
 const isTestMode = () => process.env.ALLPAY_TEST_MODE === 'true';
 const isProduction = () => process.env.NODE_ENV === 'production';
 
@@ -79,6 +80,7 @@ export function generateAllPaySignature(params) {
 /**
  * Verify webhook signature from AllPay callback
  * Uses timing-safe comparison to prevent timing attacks
+ * Uses ALLPAY_WEBHOOK_SECRET (or API_KEY as fallback) for verification
  *
  * @param {Object} payload - Webhook payload
  * @param {string} receivedSignature - Signature from AllPay header
@@ -91,7 +93,21 @@ export function verifyWebhookSignature(payload, receivedSignature) {
   }
 
   try {
-    const expectedSignature = generateAllPaySignature(payload);
+    const webhookSecret = getWebhookSecret();
+
+    // Generate signature using webhook secret instead of API key
+    const filteredParams = Object.entries(payload)
+      .filter(([key, value]) =>
+        key !== 'sign' &&
+        value !== '' &&
+        value !== null &&
+        value !== undefined
+      )
+      .sort(([a], [b]) => a.localeCompare(b));
+
+    const chunks = filteredParams.map(([_, value]) => String(value));
+    const signatureBase = chunks.join(':') + ':' + webhookSecret;
+    const expectedSignature = crypto.createHash('sha256').update(signatureBase).digest('hex');
 
     // Timing-safe comparison
     return crypto.timingSafeEqual(
@@ -188,11 +204,14 @@ export const allpayAPI = {
     customData = {},
     language = 'en', // User's preferred language (en, ru, he, etc.)
     displayCurrency = 'USD', // Currency to display to user
+    clientName, // REQUIRED: Customer's full name
   }) {
     // Use indexed params format for items (AllPay expects items[0][name], items[0][price], etc.)
     const params = {
       order_id: orderId,
       email: email,
+      client_email: email, // AllPay requires this field
+      client_name: clientName || 'Customer', // REQUIRED field
       currency: currency, // Billing currency (ILS, USD, EUR)
       currency_display: displayCurrency, // Display currency (what user sees)
       lang: language.toUpperCase(), // EN, RU, HE, etc.
@@ -216,6 +235,14 @@ export const allpayAPI = {
     }
 
     const response = await allpayRequest('getpayment', params);
+
+    // Debug: Log full response to troubleshoot missing payment_url
+    logger.info('[AllPay] Full getpayment response:', JSON.stringify(response, null, 2));
+
+    if (!response.payment_url) {
+      logger.error('[AllPay] payment_url is missing from response:', response);
+      throw new Error('AllPay API did not return payment_url. Check API credentials and AllPay dashboard.');
+    }
 
     return {
       paymentUrl: response.payment_url,
