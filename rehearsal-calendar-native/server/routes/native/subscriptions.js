@@ -260,7 +260,18 @@ router.post('/webhook', async (req, res) => {
         const { userId, planId } = customData;
 
         // Get AllPay token for recurring payments
-        const allpayToken = await allpayAPI.getToken(payload.order_id);
+        // In test mode, token might not be available - that's OK for testing
+        let allpayToken = null;
+        try {
+          allpayToken = await allpayAPI.getToken(payload.order_id);
+          logger.info(`[Subscriptions Webhook] Got AllPay token for order ${payload.order_id}`);
+        } catch (tokenError) {
+          logger.warn(`[Subscriptions Webhook] Could not get token (test mode?):`, tokenError.message);
+          // Continue without token in test mode
+          if (!isTestMode) {
+            throw tokenError; // In production, token is required
+          }
+        }
 
         // Create subscription (token-based, no AllPay subscription ID)
         await createSubscription({
