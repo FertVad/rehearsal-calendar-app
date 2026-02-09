@@ -295,6 +295,47 @@ AllPay (Israeli payment provider) integration for recurring subscriptions:
 - `GET /api/native/subscriptions/check-pending/:orderId` - Poll subscription status (for WebView auto-close)
 - `POST /api/native/subscriptions/cancel` - Cancel subscription (local DB only)
 - `GET /api/native/subscriptions/test-config` - Test AllPay credentials (dev only)
+- `POST /api/cron/recurring-billing` - Vercel Cron endpoint (protected by CRON_SECRET)
+
+**Recurring Billing (Production Ready ✅)**:
+The system automatically charges active subscriptions using saved AllPay tokens. See [docs/recurring-billing.md](rehearsal-calendar-native/docs/recurring-billing.md) for full documentation.
+
+**Status:**
+- ✅ Tested with test_1min plan (14 successful recurring charges)
+- ✅ Timezone issues resolved (PostgreSQL UTC handling)
+- ✅ Cancellation stops billing correctly
+- ✅ Vercel Cron Jobs configured
+- ⏳ Ready for production (requires schedule change to `0 2 * * *`)
+
+**Key Implementation Details:**
+- **Cron Schedule**: Currently `* * * * *` (every minute for testing), change to `0 2 * * *` for production
+- **Timezone Fix**: Added `SET timezone = 'UTC'` and explicit `AT TIME ZONE 'UTC'` conversions
+- **Date Calculation**: Uses current time instead of old `current_period_end` to avoid timezone issues
+- **Test Plan**: `test_1min` ($13 USD, billing every minute) - disable in production
+
+**Configuration Files:**
+- `server/server.js` (lines 236-246) - Node-cron scheduler
+- `server/vercel.json` (line 25) - Vercel Cron Jobs config
+- `server/routes/cron.js` - Cron API endpoint with CRON_SECRET protection
+
+**Critical Timezone Fix (2026-02-08):**
+```javascript
+// In processRecurringBilling() and createSubscription()
+await db.run('SET timezone = \'UTC\'');
+
+// In UPDATE/INSERT queries
+await db.run(`
+  UPDATE native_user_subscriptions
+  SET next_billing_date = ($1::timestamptz AT TIME ZONE 'UTC')::timestamp
+  WHERE id = $2
+`, [nextBillingDate.toISOString(), id]);
+```
+
+**Production Checklist:**
+1. Change cron schedule from `* * * * *` to `0 2 * * *` in both `server.js` and `vercel.json`
+2. Add `CRON_SECRET` to Vercel environment variables
+3. Set `ALLPAY_TEST_MODE=false`
+4. Disable `test_1min` plan: `UPDATE native_subscription_plans SET is_active = FALSE WHERE name = 'test_1min'`
 
 ### Batch API Endpoints
 Optimize N+1 queries by loading data in batches:
@@ -396,6 +437,46 @@ try {
 - `src/shared/services/notifications.ts` - Handler setup
 - `src/shared/hooks/useNotifications.ts` - Listener registration and cleanup
 
+### 8. PostgreSQL Timezone Issues in Recurring Billing
+❌ **Problem**: Recurring billing finds 0 subscriptions even when `next_billing_date` should be in the past
+✅ **Fix**: Set timezone to UTC and use explicit conversions
+
+**Root Cause**: PostgreSQL `timestamp without time zone` column stores values without timezone info, but interprets them based on session timezone. When server runs in Jerusalem (UTC+2) but timestamps are stored as UTC, comparisons fail.
+
+**Solution (Already Implemented)**:
+```javascript
+// 1. Set session timezone to UTC before queries
+await db.run('SET timezone = \'UTC\'');
+
+// 2. Use explicit UTC conversion in SQL
+await db.run(`
+  UPDATE native_user_subscriptions
+  SET next_billing_date = ($1::timestamptz AT TIME ZONE 'UTC')::timestamp
+  WHERE id = $2
+`, [date.toISOString(), id]);
+
+// 3. Calculate dates from current time, not old values
+const newPeriodEnd = new Date(now);  // ✅ CORRECT
+// NOT: new Date(subscription.current_period_end)  // ❌ WRONG (timezone issues)
+newPeriodEnd.setUTCMinutes(newPeriodEnd.getUTCMinutes() + 1);
+```
+
+**Affected Files:**
+- `server/services/subscriptionService.js` - Lines 95, 241, 314, 330-340
+
+**How to Debug:**
+```sql
+-- Check subscription state with timezone info
+SET timezone = 'UTC';
+SELECT
+  id, status,
+  next_billing_date::text as stored_value,
+  CURRENT_TIMESTAMP::text as now,
+  (next_billing_date <= CURRENT_TIMESTAMP) as should_bill
+FROM native_user_subscriptions
+WHERE id = 5;
+```
+
 ## Environment Setup
 
 ### Required Environment Variables
@@ -425,7 +506,12 @@ APPLE_PRIVATE_KEY=  # Contents of .p8 file or path to file
 # Get these from https://www.allpay.co.il → Settings → API Settings
 ALLPAY_API_LOGIN=pp1016273  # Your AllPay API login
 ALLPAY_API_KEY=E764DA37F6F96519B89A313DA80AEBBD  # Your AllPay API key
+ALLPAY_WEBHOOK_SECRET=86859ED2BED01EDB0471C28DAD6B51F0  # For webhook signature verification
 ALLPAY_TEST_MODE=true  # Set to false for production payments
+
+# Cron Job Configuration (for Vercel Cron Jobs)
+# Generate with: openssl rand -base64 32
+CRON_SECRET=<generate-random-secret>  # REQUIRED for production recurring billing
 ```
 
 **.env** (Frontend - Optional)
@@ -469,6 +555,7 @@ Key documentation files:
 - [rehearsal-calendar-native/docs/quick-reference.md](rehearsal-calendar-native/docs/quick-reference.md) - Quick reference for common errors
 - [rehearsal-calendar-native/docs/api-documentation.md](rehearsal-calendar-native/docs/api-documentation.md) - Complete API reference
 - [rehearsal-calendar-native/docs/api-standards.md](rehearsal-calendar-native/docs/api-standards.md) - API conventions
+- [rehearsal-calendar-native/docs/recurring-billing.md](rehearsal-calendar-native/docs/recurring-billing.md) - **AllPay recurring billing guide** (complete implementation details, timezone fixes, testing, production checklist)
 - [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) - Google OAuth setup guide (step-by-step)
 
 ## Tech Stack
