@@ -1,6 +1,5 @@
-# AllPay test scripts
-test-allpay*.js
-test-real-request.js
+# AllPay test scripts and any test files in root
+test-*.js
 
 # Test documentation
 TEST_RESULTS.md
