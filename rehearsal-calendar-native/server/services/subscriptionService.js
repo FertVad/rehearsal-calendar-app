@@ -92,6 +92,9 @@ export async function createSubscription({
   allpayOrderId,
   metadata = {},
 }) {
+  // CRITICAL: Set timezone to UTC to ensure consistent timestamp storage
+  await db.run('SET timezone = \'UTC\'');
+
   // Check if user already has active subscription
   const existingSubscription = await getUserActiveSubscription(userId);
   if (existingSubscription) {
@@ -132,13 +135,21 @@ export async function createSubscription({
   }
 
   // Create subscription
+  // CRITICAL: Use explicit UTC conversion when storing timestamps
   const result = await db.run(
     `INSERT INTO native_user_subscriptions (
       user_id, plan_id, status,
       allpay_token, allpay_subscription_id, allpay_customer_id,
       current_period_start, current_period_end, next_billing_date,
       started_at, metadata_json
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6,
+      ($7::timestamptz AT TIME ZONE 'UTC')::timestamp,
+      ($8::timestamptz AT TIME ZONE 'UTC')::timestamp,
+      ($9::timestamptz AT TIME ZONE 'UTC')::timestamp,
+      ($10::timestamptz AT TIME ZONE 'UTC')::timestamp,
+      $11
+    )`,
     [
       userId,
       planId,
@@ -234,6 +245,11 @@ export async function cancelSubscription(userId, reason = 'User requested cancel
  * @returns {Promise<Object>} - Processing results
  */
 export async function processRecurringBilling() {
+  // CRITICAL: Set timezone to UTC to ensure consistent timestamp comparisons
+  // PostgreSQL timestamp columns are stored without timezone, so we need to ensure
+  // the session timezone is UTC when comparing next_billing_date with CURRENT_TIMESTAMP
+  await db.run('SET timezone = \'UTC\'');
+
   const now = new Date();
   const results = {
     processed: 0,
@@ -294,8 +310,9 @@ export async function processRecurringBilling() {
 
       if (isSuccessful) {
         // Update subscription billing dates based on plan period
-        // IMPORTANT: Use UTC methods to avoid timezone issues
-        const newPeriodEnd = new Date(subscription.current_period_end);
+        // CRITICAL: Calculate new period end from NOW, not from old current_period_end
+        // (old value may have timezone issues)
+        const newPeriodEnd = new Date(now);
 
         if (subscription.billing_period === 'monthly') {
           newPeriodEnd.setUTCMonth(newPeriodEnd.getUTCMonth() + 1);
@@ -308,14 +325,18 @@ export async function processRecurringBilling() {
 
         const newNextBillingDate = new Date(newPeriodEnd);
 
+        // CRITICAL: Use explicit UTC conversion when storing timestamps
+        // This ensures timestamps are stored correctly regardless of server timezone
+        // Note: current_period_start = now (billing time), not old current_period_end
         await db.run(
           `UPDATE native_user_subscriptions
-           SET current_period_start = current_period_end,
-               current_period_end = $1,
-               next_billing_date = $2,
-               updated_at = $3
-           WHERE id = $4`,
+           SET current_period_start = ($1::timestamptz AT TIME ZONE 'UTC')::timestamp,
+               current_period_end = ($2::timestamptz AT TIME ZONE 'UTC')::timestamp,
+               next_billing_date = ($3::timestamptz AT TIME ZONE 'UTC')::timestamp,
+               updated_at = ($4::timestamptz AT TIME ZONE 'UTC')::timestamp
+           WHERE id = $5`,
           [
+            now.toISOString(), // New period starts now (at billing time)
             newPeriodEnd.toISOString(),
             newNextBillingDate.toISOString(),
             now.toISOString(),
