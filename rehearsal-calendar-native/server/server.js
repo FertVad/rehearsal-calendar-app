@@ -51,6 +51,7 @@ try {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // Parse form-urlencoded (AllPay webhooks)
 
 logger.info('Starting API server for Native App');
 
