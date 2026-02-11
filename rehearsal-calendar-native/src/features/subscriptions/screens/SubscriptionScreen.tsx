@@ -284,8 +284,8 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
   const handleWebViewNavigationStateChange = (navState: any) => {
     const { url } = navState;
 
-    // Handle success redirect (fallback if polling doesn't work)
-    if (url.includes('/subscription/success') || url.includes('rehearsalapp://subscription/success')) {
+    // Handle success redirect (custom URL scheme)
+    if (url.includes('rehearsalapp://subscription/success')) {
       stopPolling();
       setCheckoutUrl(null);
       setSelectedPlanId(null);
@@ -300,8 +300,8 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
       );
     }
 
-    // Handle cancel redirect
-    if (url.includes('/subscription/cancel') || url.includes('rehearsalapp://subscription/cancel')) {
+    // Handle cancel redirect (custom URL scheme)
+    if (url.includes('rehearsalapp://subscription/cancel')) {
       stopPolling();
       setCheckoutUrl(null);
       setSelectedPlanId(null);

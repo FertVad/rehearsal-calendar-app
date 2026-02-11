@@ -19,10 +19,5 @@
   "env": {
     "NODE_ENV": "production"
   },
-  "crons": [
-    {
-      "path": "/api/cron/recurring-billing",
-      "schedule": "* * * * *"
-    }
-  ]
+  "crons": []
 }
