@@ -165,7 +165,7 @@ export async function createSubscription({
     ]
   );
 
-  // Record initial payment transaction
+  // Record initial payment transaction (uses ILS from checkout)
   await db.run(
     `INSERT INTO native_payment_transactions (
       user_id, subscription_id, allpay_order_id,
@@ -277,7 +277,7 @@ export async function processRecurringBilling() {
   // Excludes lifetime subscriptions (next_billing_date IS NULL)
   // Only processes 'active' subscriptions (cancelled ones are not charged)
   const dueSubscriptions = await db.all(
-    `SELECT s.*, p.price_ils, p.name as plan_name, p.billing_period
+    `SELECT s.*, p.price_ils, p.price_usd, p.name as plan_name, p.billing_period
      FROM native_user_subscriptions s
      JOIN native_subscription_plans p ON s.plan_id = p.id
      WHERE s.status = 'active'
@@ -299,8 +299,8 @@ export async function processRecurringBilling() {
       // Charge the token
       const chargeResult = await allpayAPI.chargeToken({
         allpayToken: subscription.allpay_token,
-        amount: subscription.price_ils,
-        currency: 'ILS',
+        amount: subscription.price_usd,
+        currency: 'USD',
         description: `Recurring payment - ${subscription.plan_name}`,
         orderId,
       });
@@ -358,8 +358,8 @@ export async function processRecurringBilling() {
             orderId,
             chargeResult.transaction_id || null,
             chargeResult.allpay_payment_status || 1,
-            subscription.price_ils,
-            'ILS',
+            subscription.price_usd,
+            'USD',
             'recurring',
             'completed',
             now.toISOString(),
@@ -402,8 +402,8 @@ export async function processRecurringBilling() {
           subscription.user_id,
           subscription.id,
           orderId,
-          subscription.price_ils,
-          'ILS',
+          subscription.price_usd,
+          'USD',
           'recurring',
           'failed',
           now.toISOString(),

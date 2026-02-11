@@ -203,14 +203,14 @@ router.post('/checkout', requireAuth, async (req, res) => {
       orderId,
       email: user.email,
       clientName, // REQUIRED by AllPay
-      amount: plan.price_usd, // Use USD price
-      currency: 'USD', // Bill in USD
+      amount: plan.price_ils, // Use ILS for checkout (AllPay requirement)
+      currency: 'ILS', // Bill in ILS for first payment
       description: `${plan.display_name_en} - Subscription`,
       successUrl,
       cancelUrl,
       webhookUrl,
       language: language, // User's preferred language
-      displayCurrency: 'USD', // Show price in USD
+      displayCurrency: 'ILS', // Show price in ILS
       // NO subscriptionConfig - we manage subscriptions via tokens
       customData: {
         userId,
@@ -228,7 +228,7 @@ router.post('/checkout', requireAuth, async (req, res) => {
         user_id, allpay_order_id, amount, currency,
         transaction_type, status
       ) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [userId, orderId, plan.price_usd, 'USD', 'initial', 'pending']
+      [userId, orderId, plan.price_ils, 'ILS', 'initial', 'pending']
     );
 
     logger.info(`[Subscriptions API] Created checkout for user ${userId}, plan ${plan.name}`, {
