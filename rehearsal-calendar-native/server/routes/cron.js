@@ -22,9 +22,21 @@ router.post('/recurring-billing', async (req, res) => {
     const authHeader = req.headers.authorization;
     const cronSecret = process.env.CRON_SECRET;
 
+    logger.info('[Cron API] Auth check:', {
+      hasAuthHeader: !!authHeader,
+      hasCronSecret: !!cronSecret,
+    });
+
+    // Verify CRON_SECRET for security
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       logger.warn('[Cron API] Unauthorized cron request');
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({
+        error: 'Unauthorized',
+        debug: {
+          hasSecret: !!cronSecret,
+          hasAuth: !!authHeader
+        }
+      });
     }
 
     logger.info('[Cron API] Running recurring billing...');
