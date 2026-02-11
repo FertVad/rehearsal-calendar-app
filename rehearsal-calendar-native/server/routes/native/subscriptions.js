@@ -41,73 +41,7 @@ const getBaseUrl = () => {
 
 const BASE_URL = getBaseUrl();
 
-/**
- * GET /api/native/subscriptions/test-config
- * Test AllPay API configuration (development only)
- */
-router.get('/test-config', async (req, res) => {
-  try {
-    // Only allow in development/test mode
-    if (process.env.NODE_ENV === 'production' && process.env.ALLPAY_TEST_MODE !== 'true') {
-      return res.status(403).json({ error: 'Endpoint only available in development mode' });
-    }
 
-    const isConfigured = !!(process.env.ALLPAY_API_LOGIN && process.env.ALLPAY_API_KEY);
-
-    if (!isConfigured) {
-      return res.json({
-        configured: false,
-        message: 'AllPay credentials not configured. Add ALLPAY_API_LOGIN and ALLPAY_API_KEY to server/.env'
-      });
-    }
-
-    // Test API connection
-    const result = await allpayAPI.checkKeys();
-
-    res.json({
-      configured: true,
-      testMode: process.env.ALLPAY_TEST_MODE === 'true',
-      login: process.env.ALLPAY_API_LOGIN,
-      connectionTest: result,
-      message: 'AllPay configuration is valid'
-    });
-  } catch (error) {
-    logger.error('[Subscriptions API] Config test failed:', error);
-    res.status(500).json({
-      configured: true,
-      error: 'AllPay API test failed',
-      details: error.message,
-      message: 'Check your ALLPAY_API_LOGIN and ALLPAY_API_KEY'
-    });
-  }
-});
-
-/**
- * GET /api/native/subscriptions/debug-urls
- * Debug endpoint to check what URLs are being generated
- */
-router.get('/debug-urls', async (req, res) => {
-  try {
-    const webhookUrl = `${BASE_URL}/api/native/subscriptions/webhook`;
-    const successUrl = `${BASE_URL}/api/native/payment-success?order_id=TEST`;
-    const cancelUrl = `${BASE_URL}/api/native/payment-cancel`;
-
-    res.json({
-      BASE_URL: BASE_URL,
-      webhookUrl: webhookUrl,
-      successUrl: successUrl,
-      cancelUrl: cancelUrl,
-      env: {
-        BASE_URL: process.env.BASE_URL || null,
-        VERCEL_URL: process.env.VERCEL_URL || null,
-        NODE_ENV: process.env.NODE_ENV || null,
-      }
-    });
-  } catch (error) {
-    logger.error('[Debug URLs] Error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 /**
  * GET /api/native/subscriptions/plans
@@ -250,17 +184,6 @@ router.post('/checkout', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * POST /api/native/subscriptions/webhook-test
- * Test endpoint to verify AllPay can reach our server
- */
-router.post('/webhook-test', async (req, res) => {
-  logger.info('[Webhook Test] Received request:', {
-    body: req.body,
-    headers: req.headers,
-  });
-  res.json({ success: true, message: 'Test endpoint reached', timestamp: new Date().toISOString() });
-});
 
 /**
  * POST /api/native/subscriptions/webhook
@@ -377,145 +300,7 @@ router.post('/cancel', requireAuth, async (req, res) => {
 });
 
 /**
- * GET /api/native/subscriptions/hosted-fields
- * Serve Hosted Fields HTML page for AllPay
- * This endpoint serves HTML from your Vercel domain which can be whitelisted in AllPay
- *
- * Query params: ?paymentUrl=XXX&language=ru|en&orderId=XXX
- */
-router.get('/hosted-fields', async (req, res) => {
-  try {
-    const { paymentUrl, language = 'en', orderId = 'unknown' } = req.query;
 
-    if (!paymentUrl) {
-      return res.status(400).send(`
-        <!DOCTYPE html>
-        <html><body>
-          <h1>Payment URL required</h1>
-          <p>Add ?paymentUrl=XXX to the URL</p>
-        </body></html>
-      `);
-    }
-
-    // Generate Hosted Fields HTML (same as frontend template)
-    const html = `
-<!DOCTYPE html>
-<html lang="${language}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>${language === 'ru' ? 'Оплата' : 'Payment'}</title>
-
-  <!-- Note: We're NOT using AllPay Hosted Fields SDK -->
-  <!-- Just showing the iframe directly for better compatibility -->
-
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: #0f0f0f;
-      color: #ffffff;
-      overflow: hidden;
-    }
-    #payment-container { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
-    #payment-iframe { width: 100%; height: 100%; border: none; flex: 1; }
-    #loading {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      text-align: center; z-index: 10;
-    }
-    .spinner {
-      border: 4px solid rgba(168, 85, 247, 0.2);
-      border-top: 4px solid #a855f7;
-      border-radius: 50%; width: 50px; height: 50px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 16px;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-  </style>
-</head>
-<body>
-  <div id="payment-container">
-    <div id="loading">
-      <div class="spinner"></div>
-      <p>${language === 'ru' ? 'Загрузка...' : 'Loading...'}</p>
-    </div>
-    <iframe id="payment-iframe" src="${paymentUrl}" allow="payment"></iframe>
-  </div>
-
-  <script>
-    const config = {
-      paymentUrl: '${paymentUrl}',
-      language: '${language}',
-      orderId: '${orderId}',
-    };
-
-    console.log('[AllPay HF] Script loaded');
-    console.log('[AllPay HF] Config:', config);
-    console.log('[AllPay HF] Checking AllpayPayment:', typeof AllpayPayment);
-
-    function hideLoading() {
-      const loading = document.getElementById('loading');
-      if (loading) loading.style.display = 'none';
-    }
-
-    function sendMessageToApp(type, data) {
-      const message = { type, data, timestamp: new Date().toISOString(), orderId: config.orderId };
-      console.log('[AllPay HF] Sending message to app:', message);
-      if (window.ReactNativeWebView) {
-        window.ReactNativeWebView.postMessage(JSON.stringify(message));
-      }
-    }
-
-    // Simple approach: Just show the iframe after 1 second
-    // No AllPay SDK needed - iframe handles everything
-    console.log('[AllPay] Loading payment iframe...');
-
-    setTimeout(() => {
-      console.log('[AllPay] Hiding loader, showing iframe');
-      hideLoading();
-      sendMessageToApp('PAYMENT_LOADED', { orderId: config.orderId });
-    }, 1000);
-
-    sendMessageToApp('PAYMENT_READY', { orderId: config.orderId });
-  </script>
-</body>
-</html>
-    `.trim();
-
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(html);
-
-  } catch (error) {
-    logger.error('[Subscriptions API] Error serving hosted fields:', error);
-    res.status(500).send(`
-      <!DOCTYPE html>
-      <html><body>
-        <h1>Error</h1>
-        <p>${error.message}</p>
-      </body></html>
-    `);
-  }
-});
-
-/**
- * GET /api/native/subscriptions/payments
- * Get user's payment history
- *
- * Query params: ?limit=50
- */
-router.get('/payments', requireAuth, async (req, res) => {
-  try {
-    const userId = req.userId;
-    const limit = parseInt(req.query.limit) || 50;
-
-    const payments = await getPaymentHistory(userId, limit);
-
-    res.json({ payments });
-  } catch (error) {
-    logger.error('[Subscriptions API] Error fetching payment history:', error);
-    res.status(500).json({ error: 'Failed to fetch payment history' });
-  }
-});
 
 /**
  * GET /api/native/subscriptions/check-pending/:orderId
@@ -607,44 +392,6 @@ router.get('/check-pending/:orderId', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/native/subscriptions/status/:orderId
- * Check payment status for a specific order (calls AllPay API)
- */
-router.get('/status/:orderId', requireAuth, async (req, res) => {
-  try {
-    const userId = req.userId;
-    const { orderId } = req.params;
-
-    // Verify order belongs to user
-    const dbModule = await import('../../database/db.js');
-    const db = dbModule.default;
-    const transaction = await db.get(
-      'SELECT * FROM native_payment_transactions WHERE allpay_order_id = $1 AND user_id = $2',
-      [orderId, userId]
-    );
-
-    if (!transaction) {
-      return res.status(404).json({ error: 'Transaction not found' });
-    }
-
-    // Get status from AllPay
-    const paymentStatus = await allpayAPI.getPaymentStatus(orderId);
-
-    res.json({
-      orderId,
-      status: paymentStatus.status,
-      localStatus: transaction.status,
-      allpayStatus: paymentStatus,
-    });
-  } catch (error) {
-    logger.error('[Subscriptions API] Error checking payment status:', error);
-    res.status(500).json({
-      error: 'Failed to check payment status',
-      details: error.message,
-    });
-  }
-});
 
 
 export default router;
