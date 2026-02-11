@@ -192,8 +192,9 @@ router.post('/checkout', requireAuth, async (req, res) => {
 
     // Create AllPay payment with subscription
     const webhookUrl = `${BASE_URL}/api/native/subscriptions/webhook`;
-    const successUrl = `${BASE_URL}/api/native/payment-success?order_id=${orderId}`;
-    const cancelUrl = `${BASE_URL}/api/native/payment-cancel`;
+    // Use custom URL scheme that WebView can intercept (no backend redirect needed)
+    const successUrl = `rehearsalapp://subscription/success?order_id=${orderId}`;
+    const cancelUrl = `rehearsalapp://subscription/cancel`;
 
     // Create initial payment WITHOUT AllPay subscriptions API
     // We manage subscription lifecycle ourselves using tokens
