@@ -281,28 +281,69 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
     }
   };
 
+  // Handle messages from Hosted Fields page (postMessage)
+  const handleWebViewMessage = async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      console.log('[WebView] Received message:', data);
+
+      if (data.type === 'payment_success') {
+        stopPolling();
+        setCheckoutUrl(null);
+        setSelectedPlanId(null);
+        setShowPlans(false);
+
+        const orderId = data.orderId || currentOrderId;
+        setCurrentOrderId(null);
+
+        // Verify/create subscription via check-pending
+        if (orderId) {
+          try {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const response = await subscriptionsAPI.checkPendingOrder(orderId);
+            if (!response.data.subscriptionCreated) {
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              await subscriptionsAPI.checkPendingOrder(orderId);
+            }
+          } catch (e) {
+            console.error('[HostedFields] Error verifying subscription:', e);
+          }
+        }
+
+        Alert.alert(
+          language === 'ru' ? 'Успех!' : 'Success!',
+          language === 'ru'
+            ? 'Подписка успешно оформлена! Теперь вы можете создавать проекты.'
+            : 'Subscription created successfully! You can now create projects.',
+          [{ text: 'OK', onPress: () => loadData() }]
+        );
+      } else if (data.type === 'payment_error') {
+        console.error('[HostedFields] Payment error:', data.error, data.message);
+        // Don't close WebView on error — user can retry
+      }
+    } catch (e) {
+      // Not a JSON message, ignore
+    }
+  };
+
   const handleWebViewNavigationStateChange = async (navState: any) => {
     const { url } = navState;
 
-    // Handle success redirect (custom URL scheme)
+    // Handle success redirect (fallback for non-hosted-fields flow)
     if (url.includes('rehearsalapp://subscription/success')) {
       stopPolling();
       setCheckoutUrl(null);
       setSelectedPlanId(null);
       setShowPlans(false);
 
-      // Don't show success immediately — verify/create subscription via check-pending
-      // The webhook may have failed, so polling endpoint creates subscription via AllPay API
       const orderId = currentOrderId;
       setCurrentOrderId(null);
 
       if (orderId) {
         try {
-          // Give AllPay a moment to process payment
           await new Promise(resolve => setTimeout(resolve, 2000));
           const response = await subscriptionsAPI.checkPendingOrder(orderId);
           if (!response.data.subscriptionCreated) {
-            // Try once more after a short delay
             await new Promise(resolve => setTimeout(resolve, 3000));
             await subscriptionsAPI.checkPendingOrder(orderId);
           }
@@ -647,6 +688,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
               source={{ uri: checkoutUrl }}
               style={styles.webView}
               onNavigationStateChange={handleWebViewNavigationStateChange}
+              onMessage={handleWebViewMessage}
               javaScriptEnabled={true}
               originWhitelist={['*']}
               scalesPageToFit={false}
