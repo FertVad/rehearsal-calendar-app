@@ -281,7 +281,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
     }
   };
 
-  const handleWebViewNavigationStateChange = (navState: any) => {
+  const handleWebViewNavigationStateChange = async (navState: any) => {
     const { url } = navState;
 
     // Handle success redirect (custom URL scheme)
@@ -289,8 +289,28 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
       stopPolling();
       setCheckoutUrl(null);
       setSelectedPlanId(null);
-      setCurrentOrderId(null);
       setShowPlans(false);
+
+      // Don't show success immediately — verify/create subscription via check-pending
+      // The webhook may have failed, so polling endpoint creates subscription via AllPay API
+      const orderId = currentOrderId;
+      setCurrentOrderId(null);
+
+      if (orderId) {
+        try {
+          // Give AllPay a moment to process payment
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          const response = await subscriptionsAPI.checkPendingOrder(orderId);
+          if (!response.data.subscriptionCreated) {
+            // Try once more after a short delay
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            await subscriptionsAPI.checkPendingOrder(orderId);
+          }
+        } catch (e) {
+          console.error('[Redirect] Error verifying subscription:', e);
+        }
+      }
+
       Alert.alert(
         language === 'ru' ? 'Успех!' : 'Success!',
         language === 'ru'

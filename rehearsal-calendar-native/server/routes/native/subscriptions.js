@@ -223,7 +223,8 @@ router.post('/webhook', async (req, res) => {
     });
 
     // Process webhook (includes signature verification if signature present)
-    const result = signature
+    // In test mode, always skip signature verification (AllPay test mode may sign differently)
+    const result = (signature && !isTestMode)
       ? await processWebhookEvent(payload, signature)
       : await processWebhookEvent(payload, 'test-mode-skip-signature');
 
