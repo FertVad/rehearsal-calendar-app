@@ -8,7 +8,7 @@
  * - Coordinates with AllPay API client
  */
 
-import db from '../database/db.js';
+import db, { isPostgres } from '../database/db.js';
 import { allpayAPI } from '../utils/allpayClient.js';
 import { logger } from '../utils/logger.js';
 
@@ -92,8 +92,10 @@ export async function createSubscription({
   allpayOrderId,
   metadata = {},
 }) {
-  // CRITICAL: Set timezone to UTC to ensure consistent timestamp storage
-  await db.run('SET timezone = \'UTC\'');
+  // Set timezone to UTC for PostgreSQL timestamp consistency
+  if (isPostgres) {
+    await db.run('SET timezone = \'UTC\'');
+  }
 
   // Check if user already has active subscription
   const existingSubscription = await getUserActiveSubscription(userId);
@@ -134,59 +136,58 @@ export async function createSubscription({
     nextBillingDate = null; // No recurring billing for lifetime
   }
 
-  // Create subscription
-  // CRITICAL: Use explicit UTC conversion when storing timestamps
-  const result = await db.run(
-    `INSERT INTO native_user_subscriptions (
-      user_id, plan_id, status,
-      allpay_token, allpay_subscription_id, allpay_customer_id,
-      current_period_start, current_period_end, next_billing_date,
-      started_at, metadata_json
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6,
-      ($7::timestamptz AT TIME ZONE 'UTC')::timestamp,
-      ($8::timestamptz AT TIME ZONE 'UTC')::timestamp,
-      ($9::timestamptz AT TIME ZONE 'UTC')::timestamp,
-      ($10::timestamptz AT TIME ZONE 'UTC')::timestamp,
-      $11
-    )`,
-    [
-      userId,
-      planId,
-      'active',
-      allpayToken,
-      allpaySubscriptionId,
-      allpayCustomerId,
-      currentPeriodStart.toISOString(),
-      currentPeriodEnd.toISOString(),
-      nextBillingDate ? nextBillingDate.toISOString() : null,
-      now.toISOString(),
-      JSON.stringify(metadata),
-    ]
-  );
+  // Create subscription record
+  const insertSQL = isPostgres
+    ? `INSERT INTO native_user_subscriptions (
+        user_id, plan_id, status,
+        allpay_token, allpay_subscription_id, allpay_customer_id,
+        current_period_start, current_period_end, next_billing_date,
+        started_at, metadata_json
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6,
+        ($7::timestamptz AT TIME ZONE 'UTC')::timestamp,
+        ($8::timestamptz AT TIME ZONE 'UTC')::timestamp,
+        ($9::timestamptz AT TIME ZONE 'UTC')::timestamp,
+        ($10::timestamptz AT TIME ZONE 'UTC')::timestamp,
+        $11
+      )`
+    : `INSERT INTO native_user_subscriptions (
+        user_id, plan_id, status,
+        allpay_token, allpay_subscription_id, allpay_customer_id,
+        current_period_start, current_period_end, next_billing_date,
+        started_at, metadata_json
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`;
 
-  // Record initial payment transaction (uses ILS from checkout)
-  await db.run(
-    `INSERT INTO native_payment_transactions (
-      user_id, subscription_id, allpay_order_id,
-      amount, currency, transaction_type, status, completed_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [
-      userId,
-      result.lastID,
-      allpayOrderId,
-      plan.price_ils,
-      'ILS',
-      'initial',
-      'completed',
-      now.toISOString(),
-    ]
-  );
+  const result = await db.run(insertSQL, [
+    userId,
+    planId,
+    'active',
+    allpayToken,
+    allpaySubscriptionId,
+    allpayCustomerId,
+    currentPeriodStart.toISOString(),
+    currentPeriodEnd.toISOString(),
+    nextBillingDate ? nextBillingDate.toISOString() : null,
+    now.toISOString(),
+    JSON.stringify(metadata),
+  ]);
 
-  logger.info(`[Subscriptions] Created subscription for user ${userId}, plan ${plan.name}`);
+  const subscriptionId = result.lastInsertId;
+
+  // Link existing pending transaction to this subscription (instead of creating a duplicate)
+  if (allpayOrderId) {
+    await db.run(
+      `UPDATE native_payment_transactions
+       SET subscription_id = $1, status = 'completed', completed_at = $2
+       WHERE allpay_order_id = $3`,
+      [subscriptionId, now.toISOString(), allpayOrderId]
+    );
+  }
+
+  logger.info(`[Subscriptions] Created subscription ${subscriptionId} for user ${userId}, plan ${plan.name}`);
 
   return {
-    id: result.lastID,
+    id: subscriptionId,
     userId,
     planId,
     status: 'active',
@@ -245,10 +246,10 @@ export async function cancelSubscription(userId, reason = 'User requested cancel
  * @returns {Promise<Object>} - Processing results
  */
 export async function processRecurringBilling() {
-  // CRITICAL: Set timezone to UTC to ensure consistent timestamp comparisons
-  // PostgreSQL timestamp columns are stored without timezone, so we need to ensure
-  // the session timezone is UTC when comparing next_billing_date with CURRENT_TIMESTAMP
-  await db.run('SET timezone = \'UTC\'');
+  // Set timezone to UTC for PostgreSQL timestamp consistency
+  if (isPostgres) {
+    await db.run('SET timezone = \'UTC\'');
+  }
 
   const now = new Date();
   const results = {
@@ -474,8 +475,12 @@ export async function processWebhookEvent(payload, signature) {
     throw new Error('Invalid webhook signature');
   }
 
+  // Normalize status to number (AllPay sends as string "1", not number 1)
+  const payloadStatus = Number(payload.status);
+
   // Create idempotency key to prevent duplicate processing
-  const idempotencyKey = `${payload.order_id}-${payload.status}-${Date.now()}`;
+  // Uses order_id + status (NOT Date.now() which would make every call unique)
+  const idempotencyKey = `${payload.order_id || 'unknown'}-${payloadStatus}`;
 
   // Check if event already processed
   const existingEvent = await db.get(
@@ -488,8 +493,8 @@ export async function processWebhookEvent(payload, signature) {
     return { success: true, message: 'Event already processed' };
   }
 
-  // Store webhook event
-  const eventType = payload.status === 1 ? 'payment_success' : 'payment_failed';
+  // Store webhook event (use normalized numeric status)
+  const eventType = payloadStatus === 1 ? 'payment_success' : 'payment_failed';
   const now = new Date();
 
   await db.run(
@@ -518,6 +523,15 @@ export async function processWebhookEvent(payload, signature) {
       );
 
       if (transaction) {
+        // Merge AllPay response with existing metadata (preserve planId from checkout)
+        let mergedJson = payload;
+        if (transaction.allpay_response_json) {
+          try {
+            const existing = JSON.parse(transaction.allpay_response_json);
+            mergedJson = { ...existing, ...payload };
+          } catch (e) { /* ignore parse errors */ }
+        }
+
         // Update existing transaction
         await db.run(
           `UPDATE native_payment_transactions
@@ -529,9 +543,9 @@ export async function processWebhookEvent(payload, signature) {
            WHERE allpay_order_id = $5`,
           [
             payload.transaction_id,
-            payload.status,
+            payloadStatus,
             now.toISOString(),
-            JSON.stringify(payload),
+            JSON.stringify(mergedJson),
             payload.order_id,
           ]
         );

@@ -157,13 +157,13 @@ router.post('/checkout', requireAuth, async (req, res) => {
 
     logger.info(`[Subscriptions API] AllPay payment result:`, paymentResult);
 
-    // Create pending transaction record
+    // Create pending transaction record (store planId in metadata for polling fallback)
     await db.run(
       `INSERT INTO native_payment_transactions (
         user_id, allpay_order_id, amount, currency,
-        transaction_type, status
-      ) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [userId, orderId, plan.price_ils, 'ILS', 'initial', 'pending']
+        transaction_type, status, allpay_response_json
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [userId, orderId, plan.price_ils, 'ILS', 'initial', 'pending', JSON.stringify({ planId })]
     );
 
     logger.info(`[Subscriptions API] Created checkout for user ${userId}, plan ${plan.name}`, {
@@ -193,13 +193,18 @@ router.post('/checkout', requireAuth, async (req, res) => {
  */
 router.post('/webhook', async (req, res) => {
   logger.info('[Webhook] === START === Received webhook request');
+  logger.info('[Webhook] Content-Type:', req.headers['content-type']);
   logger.info('[Webhook] Body:', JSON.stringify(req.body));
-  logger.info('[Webhook] Headers:', JSON.stringify(req.headers));
   try {
     const payload = req.body;
-    const signature = req.headers['x-allpay-signature'] || req.body.sign;
 
-    // In test mode, AllPay might not send signature
+    // Validate webhook has actual data (AllPay sometimes sends empty bodies)
+    if (!payload || !payload.order_id) {
+      logger.warn('[Webhook] Empty or invalid webhook body, ignoring');
+      return res.json({ success: true, message: 'Empty payload ignored' });
+    }
+
+    const signature = req.headers['x-allpay-signature'] || req.body.sign;
     const isTestMode = process.env.ALLPAY_TEST_MODE === 'true';
 
     if (!signature && !isTestMode) {
@@ -207,11 +212,14 @@ router.post('/webhook', async (req, res) => {
       return res.status(400).json({ error: 'Missing signature' });
     }
 
+    // Normalize status to number (AllPay sends as string "1", not number 1)
+    const paymentStatus = Number(payload.status);
+
     logger.info('[Subscriptions Webhook] Received webhook:', {
       orderId: payload.order_id,
-      status: payload.status,
+      status: paymentStatus,
       hasSignature: !!signature,
-      testMode: isTestMode,
+      hasCustomData: !!payload.custom_data,
     });
 
     // Process webhook (includes signature verification if signature present)
@@ -219,40 +227,67 @@ router.post('/webhook', async (req, res) => {
       ? await processWebhookEvent(payload, signature)
       : await processWebhookEvent(payload, 'test-mode-skip-signature');
 
-    // If payment successful and we have custom_data, create subscription
-    if (payload.status === 1 && payload.custom_data) {
+    // If payment successful, create subscription
+    if (paymentStatus === 1) {
       try {
-        const customData = JSON.parse(payload.custom_data);
-        const { userId, planId } = customData;
+        // Get userId and planId from custom_data or from stored transaction
+        let userId, planId;
 
-        // Get AllPay token for recurring payments
-        // In test mode, token might not be available - that's OK for testing
-        let allpayToken = null;
-        try {
-          allpayToken = await allpayAPI.getToken(payload.order_id);
-          logger.info(`[Subscriptions Webhook] Got AllPay token for order ${payload.order_id}`);
-        } catch (tokenError) {
-          logger.warn(`[Subscriptions Webhook] Could not get token (test mode?):`, tokenError.message);
-          // Continue without token in test mode
-          if (!isTestMode) {
-            throw tokenError; // In production, token is required
+        if (payload.custom_data) {
+          const customData = typeof payload.custom_data === 'string'
+            ? JSON.parse(payload.custom_data)
+            : payload.custom_data;
+          userId = customData.userId;
+          planId = customData.planId;
+        }
+
+        // Fallback: look up from stored transaction if custom_data is missing
+        if (!userId || !planId) {
+          const dbModule = await import('../../database/db.js');
+          const db = dbModule.default;
+          const transaction = await db.get(
+            'SELECT user_id, allpay_response_json FROM native_payment_transactions WHERE allpay_order_id = $1',
+            [payload.order_id]
+          );
+          if (transaction) {
+            userId = transaction.user_id;
+            if (transaction.allpay_response_json) {
+              const meta = JSON.parse(transaction.allpay_response_json);
+              planId = meta.planId || planId;
+            }
           }
         }
 
-        // Create subscription (token-based, no AllPay subscription ID)
+        if (!userId || !planId) {
+          logger.error(`[Webhook] Cannot determine userId/planId for order ${payload.order_id}`);
+          return res.json({ success: true, message: 'Webhook logged but subscription not created (missing data)' });
+        }
+
+        // Get AllPay token for recurring payments
+        let allpayToken = null;
+        try {
+          allpayToken = await allpayAPI.getToken(payload.order_id);
+          logger.info(`[Webhook] Got AllPay token for order ${payload.order_id}`);
+        } catch (tokenError) {
+          logger.warn(`[Webhook] Could not get token:`, tokenError.message);
+          if (!isTestMode) {
+            throw tokenError;
+          }
+        }
+
         await createSubscription({
           userId,
           planId,
           allpayToken,
-          allpaySubscriptionId: null, // Not using AllPay subscriptions API
+          allpaySubscriptionId: null,
           allpayCustomerId: payload.customer_id || null,
           allpayOrderId: payload.order_id,
-          metadata: customData,
+          metadata: { userId, planId },
         });
 
-        logger.info(`[Subscriptions Webhook] Created subscription for user ${userId}`);
+        logger.info(`[Webhook] Created subscription for user ${userId}, plan ${planId}`);
       } catch (subError) {
-        logger.error('[Subscriptions Webhook] Failed to create subscription:', subError);
+        logger.error('[Webhook] Failed to create subscription:', subError);
         // Don't return error to AllPay - we logged the webhook
       }
     }
@@ -300,12 +335,25 @@ router.post('/cancel', requireAuth, async (req, res) => {
 });
 
 /**
-
+ * GET /api/native/subscriptions/payments
+ * Get user's payment history
+ */
+router.get('/payments', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const limit = parseInt(req.query.limit) || 50;
+    const payments = await getPaymentHistory(userId, limit);
+    res.json({ payments });
+  } catch (error) {
+    logger.error('[Subscriptions API] Error fetching payment history:', error);
+    res.status(500).json({ error: 'Failed to fetch payment history' });
+  }
+});
 
 /**
  * GET /api/native/subscriptions/check-pending/:orderId
  * Check if pending order has been completed (for polling)
- * Now also checks AllPay API status and creates subscription if payment successful
+ * Also checks AllPay API status and creates subscription if payment successful
  * This allows payments to work even without webhooks
  */
 router.get('/check-pending/:orderId', requireAuth, async (req, res) => {
@@ -325,29 +373,52 @@ router.get('/check-pending/:orderId', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    // First check if subscription already exists (created by webhook)
+    // Check if subscription already exists (created by webhook)
     let subscription = await getUserActiveSubscription(userId);
 
-    // If no subscription yet and transaction is pending, check AllPay API
-    if (!subscription && transaction.status === 'pending') {
+    // If no subscription yet, try to create one (handles both cases:
+    // 1. Transaction still pending - check AllPay API
+    // 2. Transaction completed by webhook but subscription creation failed)
+    if (!subscription) {
       try {
-        logger.info(`[Polling] Checking AllPay API for order: ${orderId}`);
-        const paymentStatus = await allpayAPI.getPaymentStatus(orderId);
-        logger.info(`[Polling] AllPay status: ${paymentStatus.status} for order: ${orderId}`);
+        let paymentSuccessful = transaction.status === 'completed';
 
-        // Status: 0=unpaid, 1=paid, 3=refunded, 4=partially_refunded
-        if (paymentStatus.status === 1) {
-          // Payment successful! Create subscription (fallback if webhook didn't arrive)
+        // If not yet confirmed locally, check AllPay API
+        if (!paymentSuccessful) {
+          logger.info(`[Polling] Checking AllPay API for order: ${orderId}`);
+          const paymentStatusResp = await allpayAPI.getPaymentStatus(orderId);
+          // Normalize to number (AllPay may return string "1")
+          const apiStatus = Number(paymentStatusResp.status);
+          logger.info(`[Polling] AllPay status: ${apiStatus} for order: ${orderId}`);
+          paymentSuccessful = apiStatus === 1;
+        }
+
+        if (paymentSuccessful) {
           logger.info(`[Polling] Payment successful, creating subscription for order: ${orderId}`);
 
-          // Get plan from transaction
+          // Get planId from stored metadata in transaction
+          let planId = null;
+          if (transaction.allpay_response_json) {
+            try {
+              const meta = JSON.parse(transaction.allpay_response_json);
+              planId = meta.planId;
+            } catch (e) {
+              logger.warn(`[Polling] Could not parse allpay_response_json for planId`);
+            }
+          }
+
+          if (!planId) {
+            logger.error(`[Polling] No planId found for order ${orderId}`);
+            throw new Error('Plan ID not found for transaction');
+          }
+
           const plan = await db.get(
-            'SELECT p.* FROM native_subscription_plans p JOIN native_payment_transactions t ON p.id = t.plan_id WHERE t.allpay_order_id = $1',
-            [orderId]
+            'SELECT * FROM native_subscription_plans WHERE id = $1',
+            [planId]
           );
 
           if (!plan) {
-            throw new Error('Plan not found for transaction');
+            throw new Error(`Plan not found: ${planId}`);
           }
 
           // Get AllPay token for recurring payments
@@ -365,15 +436,14 @@ router.get('/check-pending/:orderId', requireAuth, async (req, res) => {
             planId: plan.id,
             allpayOrderId: orderId,
             allpayToken,
-            amount: plan.price_usd,
-            currency: 'USD',
+            allpaySubscriptionId: null,
+            allpayCustomerId: null,
           });
 
           logger.info(`[Polling] Subscription created: ${subscription.id}`);
         }
       } catch (apiError) {
-        logger.error('[Polling] Error checking AllPay API:', apiError);
-        // Continue with local check if API fails
+        logger.error('[Polling] Error creating subscription:', apiError);
       }
     }
 
