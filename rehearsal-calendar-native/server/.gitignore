@@ -1,5 +1,0 @@
-.vercel
-
-# Test files with credentials
-test-*.js
-!test-*.test.js

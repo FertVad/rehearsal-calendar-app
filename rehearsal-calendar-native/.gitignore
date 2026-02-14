@@ -1,6 +1,4 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Dependencies
 node_modules/
 
 # Expo
@@ -9,7 +7,7 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native build artifacts
 .kotlin/
 *.orig.*
 *.jks
@@ -21,37 +19,6 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# temporary test/debug scripts
-test-*.sh
-debug-*.sh
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-# generated native folders
-/ios
-/android
-
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-server/*.db
-server/*.sqlite
-server/*.sqlite3
-
 # Environment variables
 .env
 .env.*
@@ -60,11 +27,26 @@ server/.env
 server/.env.*
 !server/.env.example
 
-# Server uploads
-server/uploads/
+# Database files
+*.db
+*.sqlite
+*.sqlite3
 
 # Logs
 *.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Test/debug scripts
+test-*.sh
+debug-*.sh
+
+# Vercel
+.vercel
+
+# macOS
+.DS_Store
 
 # IDE
 .vscode/
@@ -72,6 +54,16 @@ server/uploads/
 *.swp
 *.swo
 *~
+
+# TypeScript
+*.tsbuildinfo
+
+# Generated native folders
+/ios
+/android
+
+# Server
+server/uploads/
 
 # Cache
 .cache/
