@@ -260,8 +260,7 @@ router.get('/checkout-page', (req, res) => {
     }
     .iframe-container iframe {
       width: 100%;
-      min-height: 500px;
-      height: calc(100vh - 200px);
+      height: 350px;
       border: none;
       background: #0d1117;
     }
