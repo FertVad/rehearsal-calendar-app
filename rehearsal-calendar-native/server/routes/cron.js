@@ -16,7 +16,7 @@ const router = Router();
  * This endpoint is called by Vercel Cron (configured in vercel.json)
  * Protected by CRON_SECRET environment variable
  */
-router.post('/recurring-billing', async (req, res) => {
+router.get('/recurring-billing', async (req, res) => {
   try {
     // Verify cron secret (Vercel automatically adds this header)
     const authHeader = req.headers.authorization;

@@ -234,9 +234,9 @@ app.listen(PORT, HOST, () => {
   // Start reminder scheduler for push notifications
   startReminderScheduler();
 
-  // Start recurring billing cron job
-  // TEST MODE: Runs every minute for testing (change to '0 2 * * *' for production - daily at 2:00 AM)
-  cron.schedule('* * * * *', async () => {
+  // Start recurring billing cron job (daily at 2:00 AM UTC)
+  // Note: On Vercel (serverless), this does NOT run - Vercel Cron Jobs handle it via GET /api/cron/recurring-billing
+  cron.schedule('0 2 * * *', async () => {
     logger.info('[Cron] Triggering recurring billing job');
     try {
       await runRecurringBilling();
@@ -244,5 +244,5 @@ app.listen(PORT, HOST, () => {
       logger.error('[Cron] Recurring billing job failed:', error);
     }
   });
-  logger.info('[Cron] Recurring billing scheduler initialized (TEST MODE: runs every minute)');
+  logger.info('[Cron] Recurring billing scheduler initialized (daily at 2:00 AM UTC)');
 });

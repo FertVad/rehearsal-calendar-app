@@ -1,6 +1,6 @@
 # AllPay Recurring Billing Documentation
 
-> **Status**: ✅ Production Ready (requires schedule change for production)
+> **Status**: ✅ Production Ready
 
 ## Overview
 
@@ -25,7 +25,7 @@ User subscribes → AllPay payment → Token saved → Cron runs → Auto-billin
 6. Backend retrieves AllPay token via `gettoken` API
 7. Subscription created in DB with `allpay_token`
 8. Frontend polling detects subscription → WebView closes
-9. **Cron job runs** (every minute for test / daily at 2 AM for prod)
+9. **Cron job runs** (daily at 2 AM UTC via Vercel Cron)
 10. For each active subscription with `next_billing_date <= NOW`:
     - Charge `allpay_token` via `getpayment` API
     - Update `next_billing_date` to +1 period
@@ -170,7 +170,7 @@ Response: { success: true }
 ### For Vercel Cron
 
 ```http
-POST /api/cron/recurring-billing
+GET /api/cron/recurring-billing
 Headers: Authorization: Bearer <CRON_SECRET>
 Response: {
   success: true,
@@ -232,11 +232,12 @@ newPeriodEnd.setUTCMinutes(newPeriodEnd.getUTCMinutes() + 1);
 
 ### Local Development (node-cron)
 
-**File:** `server/server.js` (lines 236-246)
+**File:** `server/server.js`
 
 ```javascript
-// TEST MODE: Runs every minute
-cron.schedule('* * * * *', async () => {
+// Daily at 2:00 AM UTC
+// Note: On Vercel (serverless), node-cron does NOT run — Vercel Cron Jobs handle it
+cron.schedule('0 2 * * *', async () => {
   logger.info('[Cron] Triggering recurring billing job');
   try {
     await runRecurringBilling();
@@ -245,8 +246,6 @@ cron.schedule('* * * * *', async () => {
   }
 });
 ```
-
-**For Production:** Change to `'0 2 * * *'` (daily at 2:00 AM UTC)
 
 ### Vercel Production (Vercel Cron Jobs)
 
@@ -257,14 +256,13 @@ cron.schedule('* * * * *', async () => {
   "crons": [
     {
       "path": "/api/cron/recurring-billing",
-      "schedule": "* * * * *"
+      "schedule": "0 2 * * *"
     }
   ]
 }
 ```
 
-**Current:** `* * * * *` (every minute for testing)
-**For Production:** `0 2 * * *` (daily at 2:00 AM UTC)
+**Important:** Vercel Cron Jobs send **GET** requests. The endpoint at `server/routes/cron.js` uses `router.get()` to match this.
 
 **Security:**
 ```env
@@ -506,26 +504,9 @@ Name: Test User
 
 ## Production Deployment Checklist
 
-### 1. Change Cron Schedule
+### 1. Cron Schedule (Already Set)
 
-**File:** `server/server.js` (line 238)
-```javascript
-// Change from:
-cron.schedule('* * * * *', async () => { ... });
-
-// To:
-cron.schedule('0 2 * * *', async () => { ... });
-```
-
-**File:** `server/vercel.json` (line 25)
-```json
-{
-  "crons": [{
-    "path": "/api/cron/recurring-billing",
-    "schedule": "0 2 * * *"
-  }]
-}
-```
+Both `server.js` and `vercel.json` are set to `0 2 * * *` (daily at 2:00 AM UTC).
 
 ### 2. Add CRON_SECRET
 
@@ -560,12 +541,12 @@ ALLPAY_TEST_MODE=false
 
 ### 5. Verify Production Settings
 
-- [ ] Cron schedule = `0 2 * * *`
+- [x] Cron schedule = `0 2 * * *`
+- [x] Cron endpoint uses GET (matches Vercel Cron)
 - [ ] CRON_SECRET configured in Vercel
 - [ ] ALLPAY_TEST_MODE = false
 - [ ] test_1min plan disabled
 - [ ] Database backups enabled
-- [ ] Monitoring/alerts configured
 
 ---
 
@@ -735,6 +716,11 @@ if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
 ---
 
 ## Change Log
+
+### 2026-02-14 - Production Cron Fix (v1.1)
+- Fixed cron endpoint from POST to GET (Vercel Cron sends GET requests)
+- Changed node-cron schedule from test mode (`* * * * *`) to production (`0 2 * * *`)
+- Added Hosted Fields checkout wrapper (dark theme, pay button, AllPay iframe)
 
 ### 2026-02-08 - Timezone Fixes (v1.0)
 - ✅ Added `SET timezone = 'UTC'` in billing functions

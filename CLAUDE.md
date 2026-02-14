@@ -269,7 +269,7 @@ AllPay (Israeli payment provider) integration for recurring subscriptions:
 
 **Payment Flow (Token-Based, Self-Managed)**:
 1. **User selects plan** → Backend creates AllPay checkout (NO subscription parameter)
-2. **WebView opens** → AllPay payment page displayed
+2. **WebView opens** → Hosted Fields checkout page (dark theme wrapper with AllPay iframe + pay button)
 3. **User completes payment** → AllPay webhook fires
 4. **Webhook handler**:
    - Verifies signature
@@ -277,7 +277,7 @@ AllPay (Israeli payment provider) integration for recurring subscriptions:
    - Creates subscription in local DB with token
 5. **Frontend polling** → Checks every 2s if subscription created
 6. **WebView auto-closes** → Shows success message when detected
-7. **Recurring billing** → Cron job charges token monthly/quarterly via `getpayment` with `allpay_token`
+7. **Recurring billing** → Vercel Cron (daily 2 AM UTC) charges token via `getpayment` with `allpay_token`
 8. **Cancellation** → Local DB update only (no AllPay API call)
 
 **Key Files**:
@@ -291,51 +291,25 @@ AllPay (Israeli payment provider) integration for recurring subscriptions:
 - `GET /api/native/subscriptions/plans` - List all plans (no auth)
 - `GET /api/native/subscriptions/current` - Get user subscription
 - `POST /api/native/subscriptions/checkout` - Create checkout session (returns checkoutUrl + orderId)
+- `GET /api/native/subscriptions/checkout-page` - Hosted Fields HTML page (dark theme wrapper with AllPay iframe)
 - `POST /api/native/subscriptions/webhook` - AllPay callback (signature verification)
 - `GET /api/native/subscriptions/check-pending/:orderId` - Poll subscription status (for WebView auto-close)
 - `POST /api/native/subscriptions/cancel` - Cancel subscription (local DB only)
-- `GET /api/native/subscriptions/test-config` - Test AllPay credentials (dev only)
-- `POST /api/cron/recurring-billing` - Vercel Cron endpoint (protected by CRON_SECRET)
+- `GET /api/cron/recurring-billing` - Vercel Cron endpoint (GET, protected by CRON_SECRET)
 
-**Recurring Billing (Production Ready ✅)**:
+**Recurring Billing (Production Ready)**:
 The system automatically charges active subscriptions using saved AllPay tokens. See [docs/recurring-billing.md](rehearsal-calendar-native/docs/recurring-billing.md) for full documentation.
 
-**Status:**
-- ✅ Tested with test_1min plan (14 successful recurring charges)
-- ✅ Timezone issues resolved (PostgreSQL UTC handling)
-- ✅ Cancellation stops billing correctly
-- ✅ Vercel Cron Jobs configured
-- ⏳ Ready for production (requires schedule change to `0 2 * * *`)
-
 **Key Implementation Details:**
-- **Cron Schedule**: Currently `* * * * *` (every minute for testing), change to `0 2 * * *` for production
-- **Timezone Fix**: Added `SET timezone = 'UTC'` and explicit `AT TIME ZONE 'UTC'` conversions
+- **Vercel Cron**: `GET /api/cron/recurring-billing` runs daily at 2:00 AM UTC (configured in `vercel.json`)
+- **node-cron**: `server/server.js` also has `0 2 * * *` schedule (only works locally, not on serverless Vercel)
+- **Timezone Fix**: `SET timezone = 'UTC'` + explicit `AT TIME ZONE 'UTC'` conversions in SQL
 - **Date Calculation**: Uses current time instead of old `current_period_end` to avoid timezone issues
-- **Test Plan**: `test_1min` ($13 USD, billing every minute) - disable in production
-
-**Configuration Files:**
-- `server/server.js` (lines 236-246) - Node-cron scheduler
-- `server/vercel.json` (line 25) - Vercel Cron Jobs config
-- `server/routes/cron.js` - Cron API endpoint with CRON_SECRET protection
-
-**Critical Timezone Fix (2026-02-08):**
-```javascript
-// In processRecurringBilling() and createSubscription()
-await db.run('SET timezone = \'UTC\'');
-
-// In UPDATE/INSERT queries
-await db.run(`
-  UPDATE native_user_subscriptions
-  SET next_billing_date = ($1::timestamptz AT TIME ZONE 'UTC')::timestamp
-  WHERE id = $2
-`, [nextBillingDate.toISOString(), id]);
-```
 
 **Production Checklist:**
-1. Change cron schedule from `* * * * *` to `0 2 * * *` in both `server.js` and `vercel.json`
-2. Add `CRON_SECRET` to Vercel environment variables
-3. Set `ALLPAY_TEST_MODE=false`
-4. Disable `test_1min` plan: `UPDATE native_subscription_plans SET is_active = FALSE WHERE name = 'test_1min'`
+1. Add `CRON_SECRET` to Vercel environment variables
+2. Set `ALLPAY_TEST_MODE=false`
+3. Disable `test_1min` plan: `UPDATE native_subscription_plans SET is_active = FALSE WHERE name = 'test_1min'`
 
 ### Batch API Endpoints
 Optimize N+1 queries by loading data in batches:
