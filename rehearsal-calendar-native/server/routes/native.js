@@ -4,7 +4,7 @@ import projectsRoutes from './native/projects.js';
 import membersRoutes from './native/members.js';
 import rehearsalsRoutes from './native/rehearsals.js';
 import invitesRoutes from './native/invites.js';
-import subscriptionsRoutes from './native/subscriptions.js';
+import subscriptionsRoutes from './native/subscriptions/index.js';
 
 /**
  * Router for React Native app endpoints (non-Telegram)

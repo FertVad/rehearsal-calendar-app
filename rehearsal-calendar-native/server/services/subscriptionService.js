@@ -11,6 +11,7 @@
 import db, { isPostgres } from '../database/db.js';
 import { allpayAPI } from '../utils/allpayClient.js';
 import { logger } from '../utils/logger.js';
+import { notifyPaymentFailed } from './notifications/pushNotificationService.js';
 
 /**
  * Get user's active subscription with plan details
@@ -412,7 +413,12 @@ export async function processRecurringBilling() {
         ]
       );
 
-      // TODO: Send notification to user about payment failure
+      // Notify user about payment failure via push notification
+      try {
+        await notifyPaymentFailed(subscription.user_id, error.message);
+      } catch (notifError) {
+        logger.warn(`[Recurring Billing] Failed to send payment failure notification:`, notifError.message);
+      }
     }
   }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
-import { Platform, View, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Platform, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -13,21 +13,29 @@ import { CreateActionSheet } from '../shared/components/CreateActionSheet';
 import { useNotifications } from '../shared/hooks/useNotifications';
 import { subscriptionsAPI } from '../shared/services/api';
 import { OnboardingNavigator } from '../features/onboarding';
-import LoginScreen from '../features/auth/screens/LoginScreen';
-import RegisterScreen from '../features/auth/screens/RegisterScreen';
-import CalendarScreen from '../features/calendar/screens/CalendarScreen';
-import AddRehearsalScreen from '../features/calendar/screens/AddRehearsalScreen';
-import ProjectsScreen from '../features/projects/screens/ProjectsScreen';
-import CreateProjectScreen from '../features/projects/screens/CreateProjectScreen';
 import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
-import ProjectDetailScreen from '../features/projects/screens/ProjectDetailScreen';
 import AvailabilityScreen from '../features/availability/screens/AvailabilityScreen';
-import ProfileScreen from '../features/profile/screens/ProfileScreen';
-import CalendarSyncSettingsScreen from '../features/profile/screens/CalendarSyncSettingsScreen';
-import EditProfileScreen from '../features/profile/screens/EditProfileScreen';
-import SubscriptionScreen from '../features/subscriptions/screens/SubscriptionScreen';
-import SmartPlannerScreen from '../features/smart-planner/screens/SmartPlannerScreen';
-import SmartPlannerTabScreen from '../features/smart-planner/screens/SmartPlannerTabScreen';
+import CreateProjectScreen from '../features/projects/screens/CreateProjectScreen';
+import AddRehearsalScreen from '../features/calendar/screens/AddRehearsalScreen';
+import {
+  AuthNavigator,
+  CalendarNavigator,
+  ProjectsNavigator,
+  PlannerNavigator,
+  ProfileNavigator,
+} from './stacks';
+import type { TabParamList, AppStackParamList } from './types';
+
+// Re-export types for consumers
+export type {
+  AuthStackParamList,
+  CalendarStackParamList,
+  ProjectsStackParamList,
+  PlannerStackParamList,
+  ProfileStackParamList,
+  TabParamList,
+  AppStackParamList,
+} from './types';
 
 // Context for ActionSheet state
 const ActionSheetContext = createContext<{
@@ -45,8 +53,6 @@ const useActionSheet = () => {
 
 const prefix = Linking.createURL('/');
 
-// Platform-specific localhost for deep links
-// Android emulator needs 10.0.2.2 to reach host machine
 const localhostPrefix = Platform.OS === 'android'
   ? 'http://10.0.2.2:3001'
   : 'http://localhost:3001';
@@ -74,165 +80,8 @@ const linking: any = {
   },
 };
 
-export type AuthStackParamList = {
-  Login: undefined;
-  Register: undefined;
-};
-
-export type CalendarStackParamList = {
-  CalendarMain: undefined;
-};
-
-export type ProjectsStackParamList = {
-  ProjectsMain: undefined;
-  ProjectDetail: { projectId: string };
-};
-
-export type PlannerStackParamList = {
-  PlannerMain: undefined;
-  SmartPlanner: { projectId: string };
-};
-
-export type ProfileStackParamList = {
-  ProfileMain: undefined;
-  CalendarSyncSettings: undefined;
-  EditProfile: undefined;
-  Subscription: undefined;
-};
-
-export type TabParamList = {
-  Calendar: undefined;
-  Projects: undefined;
-  Create: undefined;
-  Planner: undefined;
-  Profile: undefined;
-};
-
-export type AppStackParamList = {
-  MainTabs: undefined;
-  JoinProject: { code: string };
-  MarkBusy: undefined;
-  CreateProject: undefined;
-  AddRehearsal: {
-    projectId?: string;
-    rehearsalId?: string;
-    prefilledDate?: string;
-    prefilledTime?: string;
-    prefilledEndTime?: string;
-  };
-};
-
-const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 const AppTabs = createBottomTabNavigator<TabParamList>();
-const CalendarStack = createNativeStackNavigator<CalendarStackParamList>();
-const ProjectsStack = createNativeStackNavigator<ProjectsStackParamList>();
-const PlannerStack = createNativeStackNavigator<PlannerStackParamList>();
-const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
-
-function AuthNavigator() {
-  return (
-    <AuthStack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <AuthStack.Screen name="Login" component={LoginScreen} />
-      <AuthStack.Screen name="Register" component={RegisterScreen} />
-    </AuthStack.Navigator>
-  );
-}
-
-// Calendar Stack Navigator
-function CalendarNavigator() {
-  return (
-    <CalendarStack.Navigator
-      initialRouteName="CalendarMain"
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <CalendarStack.Screen name="CalendarMain" component={CalendarScreen} />
-    </CalendarStack.Navigator>
-  );
-}
-
-// Projects Stack Navigator
-function ProjectsNavigator() {
-  return (
-    <ProjectsStack.Navigator
-      initialRouteName="ProjectsMain"
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <ProjectsStack.Screen name="ProjectsMain" component={ProjectsScreen} />
-      <ProjectsStack.Screen
-        name="ProjectDetail"
-        component={ProjectDetailScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-    </ProjectsStack.Navigator>
-  );
-}
-
-// Planner Stack Navigator
-function PlannerNavigator() {
-  return (
-    <PlannerStack.Navigator
-      initialRouteName="PlannerMain"
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <PlannerStack.Screen name="PlannerMain" component={SmartPlannerTabScreen} />
-      <PlannerStack.Screen
-        name="SmartPlanner"
-        component={SmartPlannerScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-    </PlannerStack.Navigator>
-  );
-}
-
-// Profile Stack Navigator
-function ProfileNavigator() {
-  return (
-    <ProfileStack.Navigator
-      initialRouteName="ProfileMain"
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
-      <ProfileStack.Screen
-        name="CalendarSyncSettings"
-        component={CalendarSyncSettingsScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <ProfileStack.Screen
-        name="EditProfile"
-        component={EditProfileScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <ProfileStack.Screen
-        name="Subscription"
-        component={SubscriptionScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-    </ProfileStack.Navigator>
-  );
-}
 
 // Empty component for Create tab - never actually shown
 const EmptyCreateScreen = () => <View />;
@@ -270,7 +119,7 @@ const tabButtonStyles = StyleSheet.create({
   iconContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: -14, // Align bottom edge with text baseline
+    marginBottom: -14,
   },
 });
 
@@ -283,7 +132,6 @@ function ActionSheetWrapper() {
   const handleCreateProject = async () => {
     setShowActionSheet(false);
 
-    // Check subscription before creating project
     try {
       const response = await subscriptionsAPI.getCurrentSubscription();
       const hasActiveSubscription = !!response.data.subscription;
@@ -335,7 +183,6 @@ function ActionSheetWrapper() {
 }
 
 // Wrapper component to handle push notifications
-// Must be inside NavigationContainer to use navigation
 function NotificationsHandler() {
   useNotifications();
   return null;
@@ -345,12 +192,10 @@ function TabNavigator() {
   const { t } = useI18n();
   const { setShowActionSheet } = useActionSheet();
 
-  // Мемоизируем функцию открытия ActionSheet
   const handleCreatePress = useCallback(() => {
     setShowActionSheet(true);
   }, [setShowActionSheet]);
 
-  // Мемоизируем компонент кнопки создания
   const renderCreateButton = useCallback(() => (
     <CreateTabButton onPress={handleCreatePress} />
   ), [handleCreatePress]);
@@ -442,7 +287,6 @@ function TabNavigator() {
 function AppNavigator() {
   const [showActionSheet, setShowActionSheet] = useState(false);
 
-  // Мемоизируем значение контекста для избежания ненужных ре-рендеров
   const contextValue = React.useMemo(
     () => ({ showActionSheet, setShowActionSheet }),
     [showActionSheet]
@@ -450,39 +294,27 @@ function AppNavigator() {
 
   return (
     <ActionSheetContext.Provider value={contextValue}>
-      <AppStack.Navigator
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
+      <AppStack.Navigator screenOptions={{ headerShown: false }}>
         <AppStack.Screen name="MainTabs" component={TabNavigator} />
         <AppStack.Screen
           name="JoinProject"
           component={JoinProjectScreen}
-          options={{
-            presentation: 'modal',
-          }}
+          options={{ presentation: 'modal' }}
         />
         <AppStack.Screen
           name="MarkBusy"
           component={AvailabilityScreen as any}
-          options={{
-            presentation: 'modal',
-          }}
+          options={{ presentation: 'modal' }}
         />
         <AppStack.Screen
           name="CreateProject"
           component={CreateProjectScreen}
-          options={{
-            presentation: 'modal',
-          }}
+          options={{ presentation: 'modal' }}
         />
         <AppStack.Screen
           name="AddRehearsal"
           component={AddRehearsalScreen}
-          options={{
-            presentation: 'modal',
-          }}
+          options={{ presentation: 'modal' }}
         />
       </AppStack.Navigator>
     </ActionSheetContext.Provider>
@@ -494,35 +326,29 @@ export default function Navigation() {
   const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
   const navigationRef = React.useRef<any>(null);
 
-  // Determine if we should show onboarding
   const shouldShowOnboarding = isAuthenticated && !user?.onboardingCompleted;
 
   // Handle deep links for unauthenticated users
   useEffect(() => {
     const handleUrl = async (url: string) => {
-      // Extract invite code from URL
       const inviteMatch = url.match(/invite\/([a-f0-9]+)/);
       if (inviteMatch) {
         const code = inviteMatch[1];
 
         if (isAuthenticated && navigationRef.current) {
-          // User is authenticated, navigate directly
           navigationRef.current.navigate('JoinProject', { code });
         } else {
-          // User not authenticated, save for later
           setPendingInviteCode(code);
         }
       }
     };
 
-    // Handle initial URL (app opened from link)
     Linking.getInitialURL().then((url) => {
       if (url) {
         handleUrl(url);
       }
     });
 
-    // Handle URL when app is already open
     const subscription = Linking.addEventListener('url', (event) => {
       handleUrl(event.url);
     });
@@ -535,7 +361,6 @@ export default function Navigation() {
   // Navigate to invite when user logs in
   useEffect(() => {
     if (isAuthenticated && pendingInviteCode && navigationRef.current) {
-      // Small delay to ensure navigation is ready
       setTimeout(() => {
         navigationRef.current?.navigate('JoinProject', { code: pendingInviteCode });
         setPendingInviteCode(null);
@@ -544,8 +369,11 @@ export default function Navigation() {
   }, [isAuthenticated, pendingInviteCode]);
 
   if (loading) {
-    // TODO: Add proper loading screen later
-    return null;
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.bg.primary, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={Colors.accent.purple} />
+      </View>
+    );
   }
 
   return (

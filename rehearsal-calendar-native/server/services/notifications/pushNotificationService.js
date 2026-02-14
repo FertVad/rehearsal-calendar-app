@@ -333,3 +333,21 @@ export async function notifyRehearsal1h(rehearsal, projectName, memberIds) {
 
   await sendPushNotification(memberIds, notification);
 }
+
+/**
+ * Notify user that recurring payment has failed
+ * @param {number} userId - User ID
+ * @param {string} errorMessage - Error details
+ */
+export async function notifyPaymentFailed(userId, errorMessage) {
+  const notification = {
+    title: 'Payment Failed',
+    body: 'Your subscription payment could not be processed. Please update your payment method.',
+    data: {
+      type: 'payment_failed',
+      errorMessage,
+    },
+  };
+
+  await sendPushNotification([userId], notification);
+}

@@ -17,57 +17,16 @@ import {
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { GlassButton } from '../../../shared/components';
 import { subscriptionsAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
 import { ProfileStackParamList } from '../../../navigation';
 import { styles } from '../styles/subscriptionScreenStyles';
 import { Colors } from '../../../shared/constants/colors';
+import { PlanCard } from '../components/PlanCard';
+import { SubscriptionManagement } from '../components/SubscriptionManagement';
+import type { SubscriptionPlan, UserSubscription, PaymentTransaction } from '../types';
 
 type SubscriptionScreenProps = NativeStackScreenProps<ProfileStackParamList, 'Subscription'>;
-
-interface SubscriptionPlan {
-  id: number;
-  name: string;
-  display_name_en: string;
-  display_name_ru: string;
-  price_ils: number;
-  billing_period: string;
-  max_projects: number;
-  max_members_per_project: number;
-  features: string[];
-}
-
-interface UserSubscription {
-  id: number;
-  plan_id: number;
-  plan_name: string;
-  display_name_en: string;
-  display_name_ru: string;
-  status: string;
-  current_period_end: string;
-  next_billing_date: string;
-}
-
-interface PaymentTransaction {
-  id: number;
-  user_id: number;
-  subscription_id: number | null;
-  allpay_order_id: string;
-  allpay_transaction_id: string | null;
-  allpay_payment_status: number | null;
-  amount: number | string; // PostgreSQL returns NUMERIC as string
-  currency: string;
-  payment_method: string | null;
-  transaction_type: 'initial' | 'recurring' | 'refund';
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
-  error_message: string | null;
-  attempted_at: string;
-  completed_at: string | null;
-  plan_name: string | null;
-  display_name_en: string | null;
-  display_name_ru: string | null;
-}
 
 export default function SubscriptionScreen({ navigation }: SubscriptionScreenProps) {
   const { t, language } = useI18n();
@@ -108,7 +67,6 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
       const subscription = subscriptionResponse.data.subscription;
       setCurrentSubscription(subscription);
 
-      // Load payment history if subscription exists
       if (subscription) {
         loadPaymentHistory();
       }
@@ -127,100 +85,22 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
       setPaymentHistory(response.data.payments || []);
     } catch (error: any) {
       console.error('Failed to load payment history:', error);
-      // Don't show alert - payment history is optional
     } finally {
       setLoadingHistory(false);
     }
   };
 
-  // Helper functions
-  const formatCurrency = (amount: number | string, currency: string): string => {
-    // Handle null, undefined, or non-numeric values
-    const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount || 0));
-
-    // Check if conversion resulted in valid number
-    if (isNaN(numAmount)) {
-      return currency === 'ILS' ? '₪0.00' : `${currency} 0.00`;
-    }
-
-    if (currency === 'ILS') {
-      return `₪${numAmount.toFixed(2)}`;
-    }
-    return `${currency} ${numAmount.toFixed(2)}`;
-  };
-
-  const getTransactionTypeLabel = (type: string): string => {
-    switch (type) {
-      case 'initial':
-        return t.subscriptions.transactionTypeInitial;
-      case 'recurring':
-        return t.subscriptions.transactionTypeRecurring;
-      case 'refund':
-        return t.subscriptions.transactionTypeRefund;
-      default:
-        return type;
-    }
-  };
-
-  const getStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'pending':
-        return t.subscriptions.transactionStatusPending;
-      case 'completed':
-        return t.subscriptions.transactionStatusCompleted;
-      case 'failed':
-        return t.subscriptions.transactionStatusFailed;
-      case 'refunded':
-        return t.subscriptions.transactionStatusRefunded;
-      default:
-        return status;
-    }
-  };
-
-  const getStatusBadgeStyle = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return [styles.statusBadge, styles.statusCompleted];
-      case 'pending':
-        return [styles.statusBadge, styles.statusPending];
-      case 'failed':
-        return [styles.statusBadge, styles.statusFailed];
-      case 'refunded':
-        return [styles.statusBadge, styles.statusRefunded];
-      default:
-        return [styles.statusBadge];
-    }
-  };
-
-  const getStatusTextStyle = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return styles.statusTextCompleted;
-      case 'pending':
-        return styles.statusTextPending;
-      case 'failed':
-        return styles.statusTextFailed;
-      case 'refunded':
-        return styles.statusTextRefunded;
-      default:
-        return styles.statusTextCompleted;
-    }
-  };
-
   const startPolling = (orderId: string) => {
-    // Clear any existing polling
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
     }
 
-    // Poll every 2 seconds
     pollingIntervalRef.current = setInterval(async () => {
       try {
         const response = await subscriptionsAPI.checkPendingOrder(orderId);
         const { subscriptionCreated } = response.data;
 
         if (subscriptionCreated) {
-          // Success! Stop polling and close WebView
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);
           }
@@ -239,7 +119,6 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
         }
       } catch (error: any) {
         console.error('Polling error:', error);
-        // Don't show error to user, polling will continue
       }
     }, 2000);
   };
@@ -248,6 +127,29 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
+    }
+  };
+
+  const showSuccessAlert = () => {
+    Alert.alert(
+      language === 'ru' ? 'Успех!' : 'Success!',
+      language === 'ru'
+        ? 'Подписка успешно оформлена! Теперь вы можете создавать проекты.'
+        : 'Subscription created successfully! You can now create projects.',
+      [{ text: 'OK', onPress: () => loadData() }]
+    );
+  };
+
+  const verifySubscription = async (orderId: string) => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await subscriptionsAPI.checkPendingOrder(orderId);
+      if (!response.data.subscriptionCreated) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        await subscriptionsAPI.checkPendingOrder(orderId);
+      }
+    } catch (e) {
+      console.error('Error verifying subscription:', e);
     }
   };
 
@@ -271,8 +173,6 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
 
       setCheckoutUrl(url);
       setCurrentOrderId(orderId);
-
-      // Start polling for payment completion
       startPolling(orderId);
     } catch (error: any) {
       console.error('Failed to create checkout:', error);
@@ -281,7 +181,6 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
     }
   };
 
-  // Handle messages from Hosted Fields page (postMessage)
   const handleWebViewMessage = async (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
@@ -296,30 +195,13 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
         const orderId = data.orderId || currentOrderId;
         setCurrentOrderId(null);
 
-        // Verify/create subscription via check-pending
         if (orderId) {
-          try {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            const response = await subscriptionsAPI.checkPendingOrder(orderId);
-            if (!response.data.subscriptionCreated) {
-              await new Promise(resolve => setTimeout(resolve, 3000));
-              await subscriptionsAPI.checkPendingOrder(orderId);
-            }
-          } catch (e) {
-            console.error('[HostedFields] Error verifying subscription:', e);
-          }
+          await verifySubscription(orderId);
         }
 
-        Alert.alert(
-          language === 'ru' ? 'Успех!' : 'Success!',
-          language === 'ru'
-            ? 'Подписка успешно оформлена! Теперь вы можете создавать проекты.'
-            : 'Subscription created successfully! You can now create projects.',
-          [{ text: 'OK', onPress: () => loadData() }]
-        );
+        showSuccessAlert();
       } else if (data.type === 'payment_error') {
         console.error('[HostedFields] Payment error:', data.error, data.message);
-        // Don't close WebView on error — user can retry
       }
     } catch (e) {
       // Not a JSON message, ignore
@@ -329,7 +211,6 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
   const handleWebViewNavigationStateChange = async (navState: any) => {
     const { url } = navState;
 
-    // Handle success redirect (fallback for non-hosted-fields flow)
     if (url.includes('rehearsalapp://subscription/success')) {
       stopPolling();
       setCheckoutUrl(null);
@@ -340,28 +221,12 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
       setCurrentOrderId(null);
 
       if (orderId) {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          const response = await subscriptionsAPI.checkPendingOrder(orderId);
-          if (!response.data.subscriptionCreated) {
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            await subscriptionsAPI.checkPendingOrder(orderId);
-          }
-        } catch (e) {
-          console.error('[Redirect] Error verifying subscription:', e);
-        }
+        await verifySubscription(orderId);
       }
 
-      Alert.alert(
-        language === 'ru' ? 'Успех!' : 'Success!',
-        language === 'ru'
-          ? 'Подписка успешно оформлена! Теперь вы можете создавать проекты.'
-          : 'Subscription created successfully! You can now create projects.',
-        [{ text: 'OK', onPress: () => loadData() }]
-      );
+      showSuccessAlert();
     }
 
-    // Handle cancel redirect (custom URL scheme)
     if (url.includes('rehearsalapp://subscription/cancel')) {
       stopPolling();
       setCheckoutUrl(null);
@@ -371,7 +236,6 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
   };
 
   const handleCancelSubscription = () => {
-    // Check if it's a lifetime subscription
     const isLifetime = currentSubscription?.next_billing_date === null;
 
     Alert.alert(
@@ -382,228 +246,22 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
         {
           text: t.subscriptions.cancelConfirm,
           style: 'destructive',
-          onPress: confirmCancelSubscription,
+          onPress: async () => {
+            try {
+              setCancelLoading(true);
+              await subscriptionsAPI.cancelSubscription('User requested cancellation');
+              Alert.alert(t.subscriptions.cancelSuccess, t.subscriptions.cancelSuccessMessage);
+              setShowPlans(false);
+              loadData();
+            } catch (error: any) {
+              console.error('Failed to cancel subscription:', error);
+              Alert.alert(t.common.error, error.response?.data?.error || t.subscriptions.cancelError);
+            } finally {
+              setCancelLoading(false);
+            }
+          },
         },
       ]
-    );
-  };
-
-  const confirmCancelSubscription = async () => {
-    try {
-      setCancelLoading(true);
-      await subscriptionsAPI.cancelSubscription('User requested cancellation');
-      Alert.alert(
-        t.subscriptions.cancelSuccess,
-        t.subscriptions.cancelSuccessMessage
-      );
-      setShowPlans(false);
-      loadData();
-    } catch (error: any) {
-      console.error('Failed to cancel subscription:', error);
-      Alert.alert(t.common.error, error.response?.data?.error || t.subscriptions.cancelError);
-    } finally {
-      setCancelLoading(false);
-    }
-  };
-
-  const renderManagementView = () => {
-    if (!currentSubscription) return null;
-
-    return (
-      <View style={styles.managementContainer}>
-        {/* Current Subscription Card */}
-        <View style={styles.currentSubscriptionCard}>
-          <View style={styles.subscriptionHeader}>
-            <Ionicons name="shield-checkmark" size={24} color={Colors.accent.purple} />
-            <Text style={styles.subscriptionTitle}>
-              {language === 'ru'
-                ? currentSubscription.display_name_ru
-                : currentSubscription.display_name_en}
-            </Text>
-          </View>
-
-          <View style={styles.subscriptionInfo}>
-            <Text style={styles.subscriptionInfoLabel}>
-              {language === 'ru' ? 'Статус:' : 'Status:'}
-            </Text>
-            <Text style={styles.subscriptionInfoValue}>
-              {currentSubscription.status === 'active'
-                ? t.subscriptions.statusActive
-                : currentSubscription.status}
-            </Text>
-          </View>
-
-          {currentSubscription.next_billing_date && (
-            <View style={styles.subscriptionInfo}>
-              <Text style={styles.subscriptionInfoLabel}>
-                {language === 'ru' ? 'Следующий платёж:' : 'Next billing:'}
-              </Text>
-              <Text style={styles.subscriptionInfoValue}>
-                {new Date(currentSubscription.next_billing_date).toLocaleDateString(
-                  language === 'ru' ? 'ru-RU' : 'en-US',
-                  { year: 'numeric', month: 'long', day: 'numeric' }
-                )}
-              </Text>
-            </View>
-          )}
-
-          {!currentSubscription.next_billing_date && (
-            <View style={styles.subscriptionInfo}>
-              <Text style={styles.subscriptionInfoLabel}>
-                {language === 'ru' ? 'Тип:' : 'Type:'}
-              </Text>
-              <Text style={styles.subscriptionInfoValue}>
-                {language === 'ru' ? 'Навсегда' : 'Lifetime'}
-              </Text>
-            </View>
-          )}
-
-          <GlassButton
-            title={t.subscriptions.cancelButton}
-            onPress={handleCancelSubscription}
-            variant="glass"
-            loading={cancelLoading}
-            style={styles.cancelButton}
-          />
-        </View>
-
-        {/* Payment History */}
-        <View style={styles.paymentHistorySection}>
-          <Text style={styles.paymentHistoryTitle}>
-            {t.subscriptions.paymentHistory}
-          </Text>
-
-          {loadingHistory ? (
-            <ActivityIndicator size="large" color={Colors.accent.purple} />
-          ) : paymentHistory.length > 0 ? (
-            paymentHistory.map(payment => renderPaymentCard(payment))
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons
-                name="document-text-outline"
-                size={48}
-                color={Colors.text.secondary}
-                style={styles.emptyStateIcon}
-              />
-              <Text style={styles.emptyStateText}>{t.subscriptions.noPayments}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* View Plans Button */}
-        <GlassButton
-          title={t.subscriptions.viewPlans}
-          onPress={() => setShowPlans(true)}
-          variant="purple"
-          style={styles.viewPlansButton}
-        />
-      </View>
-    );
-  };
-
-  const renderPaymentCard = (payment: PaymentTransaction) => {
-    const displayName = payment.plan_name
-      ? (language === 'ru' ? payment.display_name_ru : payment.display_name_en)
-      : null;
-
-    return (
-      <View key={payment.id} style={styles.paymentCard}>
-        <View style={styles.paymentCardHeader}>
-          <View>
-            <Text style={styles.paymentAmount}>
-              {formatCurrency(payment.amount, payment.currency)}
-            </Text>
-            <Text style={styles.paymentDate}>
-              {new Date(payment.attempted_at).toLocaleDateString(
-                language === 'ru' ? 'ru-RU' : 'en-US',
-                { year: 'numeric', month: 'long', day: 'numeric' }
-              )}
-            </Text>
-          </View>
-          <View style={getStatusBadgeStyle(payment.status)}>
-            <Text style={getStatusTextStyle(payment.status)}>
-              {getStatusLabel(payment.status)}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.paymentDetails}>
-          <View style={styles.paymentDetailRow}>
-            <Text style={styles.paymentDetailLabel}>{t.subscriptions.paymentType}:</Text>
-            <Text style={styles.paymentDetailValue}>{getTransactionTypeLabel(payment.transaction_type)}</Text>
-          </View>
-
-          {displayName && (
-            <View style={styles.paymentDetailRow}>
-              <Text style={styles.paymentDetailLabel}>{t.subscriptions.paymentPlan}:</Text>
-              <Text style={styles.paymentDetailValue}>{displayName}</Text>
-            </View>
-          )}
-
-          {payment.error_message && (
-            <View style={styles.paymentDetailRow}>
-              <Text style={styles.paymentDetailLabel}>{t.subscriptions.paymentError}:</Text>
-              <Text style={styles.paymentDetailValue}>{payment.error_message}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  const renderPlanCard = (plan: SubscriptionPlan) => {
-    const displayName = language === 'ru' ? plan.display_name_ru : plan.display_name_en;
-    const isCurrentPlan = currentSubscription?.plan_id === plan.id;
-
-    // Convert ILS to USD (approximate: 1 USD ≈ 3.6 ILS)
-    const priceUSD = (plan.price_ils / 3.6).toFixed(0);
-
-    // Determine period text
-    let periodText = '';
-    if (plan.billing_period === 'monthly') {
-      periodText = language === 'ru' ? '1 месяц' : '1 Month';
-    } else if (plan.billing_period === 'quarterly') {
-      periodText = language === 'ru' ? '3 месяца' : '3 Months';
-    } else if (plan.billing_period === 'lifetime') {
-      periodText = language === 'ru' ? 'Навсегда' : 'Lifetime';
-    }
-
-    return (
-      <View key={plan.id} style={styles.planCard}>
-        <View style={styles.planHeader}>
-          <Text style={styles.planName}>{displayName}</Text>
-          <View>
-            <Text style={styles.planPrice}>${priceUSD}</Text>
-            <Text style={styles.planPeriod}>{periodText}</Text>
-          </View>
-        </View>
-
-        <View style={styles.planFeatures}>
-          {plan.features?.map((feature, index) => (
-            <View key={index} style={styles.featureItem}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={Colors.accent.purple} />
-              <Text style={styles.featureText}>{feature}</Text>
-            </View>
-          ))}
-        </View>
-
-        {isCurrentPlan ? (
-          <View style={styles.currentPlanBadge}>
-            <Text style={styles.currentPlanText}>
-              {language === 'ru' ? 'Текущий план' : 'Current Plan'}
-            </Text>
-          </View>
-        ) : (
-          <GlassButton
-            title={language === 'ru' ? 'Выбрать план' : 'Select Plan'}
-            onPress={() => handleSelectPlan(plan.id)}
-            variant="purple"
-            loading={selectedPlanId === plan.id}
-            disabled={!!currentSubscription || selectedPlanId !== null}
-            style={styles.selectPlanButton}
-          />
-        )}
-      </View>
     );
   };
 
@@ -643,13 +301,31 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
           </View>
 
           {currentSubscription && !showPlans ? (
-            renderManagementView()
+            <SubscriptionManagement
+              subscription={currentSubscription}
+              paymentHistory={paymentHistory}
+              loadingHistory={loadingHistory}
+              cancelLoading={cancelLoading}
+              language={language}
+              t={t}
+              onCancel={handleCancelSubscription}
+              onViewPlans={() => setShowPlans(true)}
+            />
           ) : (
             <View style={styles.plansSection}>
               <Text style={styles.sectionTitle}>
                 {language === 'ru' ? 'Доступные планы' : 'Available Plans'}
               </Text>
-              {plans.map(renderPlanCard)}
+              {plans.map(plan => (
+                <PlanCard
+                  key={plan.id}
+                  plan={plan}
+                  language={language}
+                  currentSubscription={currentSubscription}
+                  selectedPlanId={selectedPlanId}
+                  onSelectPlan={handleSelectPlan}
+                />
+              ))}
             </View>
           )}
         </View>
