@@ -330,13 +330,20 @@ export async function processRecurringBilling() {
         // CRITICAL: Use explicit UTC conversion when storing timestamps
         // This ensures timestamps are stored correctly regardless of server timezone
         // Note: current_period_start = now (billing time), not old current_period_end
-        await db.run(
-          `UPDATE native_user_subscriptions
-           SET current_period_start = ($1::timestamptz AT TIME ZONE 'UTC')::timestamp,
-               current_period_end = ($2::timestamptz AT TIME ZONE 'UTC')::timestamp,
-               next_billing_date = ($3::timestamptz AT TIME ZONE 'UTC')::timestamp,
-               updated_at = ($4::timestamptz AT TIME ZONE 'UTC')::timestamp
-           WHERE id = $5`,
+        const updateBillingSQL = isPostgres
+          ? `UPDATE native_user_subscriptions
+             SET current_period_start = ($1::timestamptz AT TIME ZONE 'UTC')::timestamp,
+                 current_period_end = ($2::timestamptz AT TIME ZONE 'UTC')::timestamp,
+                 next_billing_date = ($3::timestamptz AT TIME ZONE 'UTC')::timestamp,
+                 updated_at = ($4::timestamptz AT TIME ZONE 'UTC')::timestamp
+             WHERE id = $5`
+          : `UPDATE native_user_subscriptions
+             SET current_period_start = $1,
+                 current_period_end = $2,
+                 next_billing_date = $3,
+                 updated_at = $4
+             WHERE id = $5`;
+        await db.run(updateBillingSQL,
           [
             now.toISOString(), // New period starts now (at billing time)
             newPeriodEnd.toISOString(),

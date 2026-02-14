@@ -34,6 +34,9 @@
     "jest": "^30.2.0",
     "nodemon": "^3.0.1"
   },
+  "jest": {
+    "testMatch": ["**/__tests__/**/*.test.js"]
+  },
   "engines": {
     "node": ">=18.0.0"
   }
