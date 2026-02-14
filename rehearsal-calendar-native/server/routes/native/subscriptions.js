@@ -171,9 +171,17 @@ router.post('/checkout', requireAuth, async (req, res) => {
       orderId: paymentResult.orderId,
     });
 
-    // Return AllPay payment URL directly (dashboard CSS handles dark theme)
+    // Return hosted fields page URL (our wrapper with dark theme + pay button)
+    const hostedFieldsUrl = `${BASE_URL}/api/native/subscriptions/checkout-page`
+      + `?paymentUrl=${encodeURIComponent(paymentResult.paymentUrl)}`
+      + `&orderId=${encodeURIComponent(paymentResult.orderId)}`
+      + `&planName=${encodeURIComponent(plan.display_name_en)}`
+      + `&amount=${plan.price_usd}`
+      + `&currency=USD`
+      + `&lang=${language}`;
+
     res.json({
-      checkoutUrl: paymentResult.paymentUrl,
+      checkoutUrl: hostedFieldsUrl,
       orderId: paymentResult.orderId,
     });
   } catch (error) {
@@ -252,7 +260,8 @@ router.get('/checkout-page', (req, res) => {
     }
     .iframe-container iframe {
       width: 100%;
-      height: 380px;
+      min-height: 500px;
+      height: calc(100vh - 200px);
       border: none;
       background: #0d1117;
     }
