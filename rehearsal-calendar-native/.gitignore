@@ -26,6 +26,10 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 
+# temporary test/debug scripts
+test-*.sh
+debug-*.sh
+
 # macOS
 .DS_Store
 *.pem

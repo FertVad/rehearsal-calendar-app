@@ -1,6 +1,10 @@
-# AllPay test scripts and any test files in root
+# Test/debug scripts
 test-*.js
+test-*.sh
+debug-*.sh
 
 # Test documentation
 TEST_RESULTS.md
+
+# Vercel
 .vercel
