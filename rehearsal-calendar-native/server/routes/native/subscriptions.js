@@ -171,17 +171,9 @@ router.post('/checkout', requireAuth, async (req, res) => {
       orderId: paymentResult.orderId,
     });
 
-    // Return hosted fields page URL (served by our server) instead of raw AllPay URL
-    const hostedFieldsUrl = `${BASE_URL}/api/native/subscriptions/checkout-page`
-      + `?paymentUrl=${encodeURIComponent(paymentResult.paymentUrl)}`
-      + `&orderId=${encodeURIComponent(paymentResult.orderId)}`
-      + `&planName=${encodeURIComponent(plan.display_name_en)}`
-      + `&amount=${plan.price_usd}`
-      + `&currency=USD`
-      + `&lang=${language}`;
-
+    // Return AllPay payment URL directly (dashboard CSS handles dark theme)
     res.json({
-      checkoutUrl: hostedFieldsUrl,
+      checkoutUrl: paymentResult.paymentUrl,
       orderId: paymentResult.orderId,
     });
   } catch (error) {
