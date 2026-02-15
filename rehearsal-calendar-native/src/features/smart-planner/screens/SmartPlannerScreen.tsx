@@ -52,6 +52,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     'perfect',
     'good',
     'ok',
+    'bad',
   ]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isProjectSelectorExpanded, setIsProjectSelectorExpanded] = useState(false);
