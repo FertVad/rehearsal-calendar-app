@@ -22,7 +22,7 @@ function generateInviteUrl(inviteCode) {
     // In production, use HTTPS URL
     // Note: Universal Links require Associated Domains capability (paid Apple Developer account)
     // Without it, users will need to manually choose "Open in app"
-    return `https://rehearsal-calendar-app.onrender.com/invite/${inviteCode}`;
+    return `https://server-fertvads-projects.vercel.app/invite/${inviteCode}`;
   }
 }
 

@@ -55,7 +55,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "rehearsal-calendar-app.onrender.com",
+              "host": "server-fertvads-projects.vercel.app",
               "pathPrefix": "/invite"
             },
             {

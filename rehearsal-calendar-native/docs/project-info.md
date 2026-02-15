@@ -632,7 +632,7 @@ The app automatically configures the API URL based on environment with smart pla
    - **Android Emulator**: `http://10.0.2.2:3001/api` (special address to reach host machine)
 
 3. **Production** - Uses deployed backend
-   - `https://rehearsal-calendar-app.onrender.com/api`
+   - `https://server-fertvads-projects.vercel.app/api`
 
 **Platform-specific Localhost:**
 

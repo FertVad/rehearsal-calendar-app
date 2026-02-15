@@ -5,7 +5,7 @@
 The Rehearsal Calendar Native App API is a RESTful API built for managing theater rehearsal schedules. It provides comprehensive functionality for user authentication, project management, rehearsal scheduling, availability tracking, member management, and project invitations.
 
 **Base URL:**
-- Production: `https://rehearsal-calendar-app.onrender.com/api`
+- Production: `https://server-fertvads-projects.vercel.app/api`
 - Development: `http://localhost:3001/api`
 
 **API Version:** 1.0

@@ -61,7 +61,7 @@ const linking: any = {
   prefixes: [
     prefix,
     'rehearsalapp://',
-    'https://rehearsal-calendar-app.onrender.com',
+    'https://server-fertvads-projects.vercel.app',
     localhostPrefix
   ],
   config: {
