@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
 import { projectsAPI, rehearsalsAPI } from '../../../shared/services/api';
 import type { Project, Rehearsal, ProjectMember } from '../../../shared/types';
 import type { TimeSlot, SlotCategory, Member, AvailabilityData } from '../types';
@@ -26,6 +27,9 @@ export function useSmartPlanner({
   selectedCategories,
   selectedMemberIds,
 }: UseSmartPlannerProps) {
+  const { user } = useAuth();
+  const userTimezone = user?.timezone;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [project, setProject] = useState<Project | null>(null);
@@ -94,7 +98,7 @@ export function useSmartPlanner({
     return () => {
       mounted = false;
     };
-  }, [projectId, startDate, endDate, refreshKey]);
+  }, [projectId, startDate, endDate, refreshKey, userTimezone]);
 
   // Convert members to simple format for slot generator
   const simpleMembers: Member[] = useMemo(() => {
