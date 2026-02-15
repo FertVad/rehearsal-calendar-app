@@ -53,7 +53,8 @@ export default function AddRehearsalScreen() {
     form.localSelectedProject,
     form.date,
     form.selectedMemberIds,
-    t
+    t,
+    form.isEditMode ? form.rehearsalId : undefined
   );
 
   // Submit logic hook

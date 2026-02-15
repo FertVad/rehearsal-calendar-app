@@ -205,11 +205,12 @@ export const projectsAPI = {
     api.get(`/native/projects/${projectId}/members`),
 
   // Get members availability for a specific date
-  getMembersAvailability: (projectId: string, date: string, userIds?: string[]) =>
+  getMembersAvailability: (projectId: string, date: string, userIds?: string[], excludeRehearsalId?: string) =>
     api.get(`/native/projects/${projectId}/members/availability`, {
       params: {
         date,
         userIds: userIds?.join(','),
+        excludeRehearsalId,
       },
     }),
 

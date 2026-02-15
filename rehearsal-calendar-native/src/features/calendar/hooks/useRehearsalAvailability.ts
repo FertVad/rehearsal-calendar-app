@@ -12,7 +12,8 @@ export const useRehearsalAvailability = (
   project: Project | null,
   date: Date,
   selectedMemberIds: string[],
-  t: any
+  t: any,
+  excludeRehearsalId?: string
 ) => {
   const [memberAvailability, setMemberAvailability] = useState<Record<string, { timeRanges: TimeRange[] }>>({});
   const [loading, setLoading] = useState(false);
@@ -52,7 +53,8 @@ export const useRehearsalAvailability = (
         const response = await projectsAPI.getMembersAvailability(
           project.id,
           dateStr,
-          selectedMemberIds
+          selectedMemberIds,
+          excludeRehearsalId
         );
 
         logger.debug('[useRehearsalAvailability] API response', response.data);
@@ -88,7 +90,7 @@ export const useRehearsalAvailability = (
     };
 
     loadAvailability();
-  }, [project, date, selectedMemberIds]);
+  }, [project, date, selectedMemberIds, excludeRehearsalId]);
 
   return {
     memberAvailability,

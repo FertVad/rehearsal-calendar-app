@@ -13,7 +13,7 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
   try {
     const userId = req.userId;
     const { projectId } = req.params;
-    const { date, startDate, endDate, userIds } = req.query;
+    const { date, startDate, endDate, userIds, excludeRehearsalId } = req.query;
 
     // Support both single date and date range
     let dates = [];
@@ -86,14 +86,22 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
     const startDateStr = dates[0];
     const endDateStr = dates[dates.length - 1];
 
+    // Build query params
+    const queryParams = [...targetUserIds, startDateStr, endDateStr];
+    let excludeClause = '';
+    if (excludeRehearsalId) {
+      excludeClause = ` AND NOT (source = 'rehearsal' AND external_event_id = $${queryParams.length + 1})`;
+      queryParams.push(excludeRehearsalId);
+    }
+
     const availabilityRecords = await db.all(
       `SELECT user_id, starts_at, ends_at, type, is_all_day
        FROM native_user_availability
        WHERE user_id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})
          AND starts_at >= $${targetUserIds.length + 1}::date - interval '1 day'
-         AND starts_at < $${targetUserIds.length + 2}::date + interval '2 days'
+         AND starts_at < $${targetUserIds.length + 2}::date + interval '2 days'${excludeClause}
        ORDER BY user_id, starts_at ASC`,
-      [...targetUserIds, startDateStr, endDateStr]
+      queryParams
     );
 
 
