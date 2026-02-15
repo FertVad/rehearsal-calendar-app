@@ -149,16 +149,21 @@ function findFreeSlots(
 }
 
 /**
- * Categorizes slot based on number of busy members
+ * Categorizes slot based on percentage of busy members
+ * - perfect: 0% busy
+ * - good: up to 25% busy
+ * - ok: up to 50% busy
+ * - bad: more than 50% busy
  */
 function categorizeSlot(busyCount: number, totalMembers: number): SlotCategory {
   if (busyCount === 0) {
     return 'perfect';
   }
-  if (busyCount <= 2) {
+  const busyRatio = busyCount / totalMembers;
+  if (busyRatio <= 0.25) {
     return 'good';
   }
-  if (busyCount <= 4) {
+  if (busyRatio <= 0.5) {
     return 'ok';
   }
   return 'bad';

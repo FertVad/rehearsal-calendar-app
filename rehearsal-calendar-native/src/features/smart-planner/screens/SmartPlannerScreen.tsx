@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import type { PlannerStackParamList } from '../../../navigation';
 import { Colors } from '../../../shared/constants/colors';
 import type { SlotCategory } from '../types';
@@ -99,6 +100,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     simpleMembers,
     filteredSlots,
     slotsByDate,
+    refetch,
   } = useSmartPlanner({
     projectId,
     startDate,
@@ -106,6 +108,18 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     selectedCategories,
     selectedMemberIds,
   });
+
+  // Refresh data when returning from AddRehearsal
+  const isFirstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocus.current) {
+        isFirstFocus.current = false;
+        return;
+      }
+      refetch();
+    }, [refetch])
+  );
 
   const projectName = project?.name || t.common.loading;
 

@@ -32,6 +32,11 @@ export function useSmartPlanner({
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [memberAvailability, setMemberAvailability] = useState<MemberAvailability[]>([]);
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refetch = useCallback(() => {
+    setRefreshKey(k => k + 1);
+  }, []);
 
   // Load all data
   useEffect(() => {
@@ -89,7 +94,7 @@ export function useSmartPlanner({
     return () => {
       mounted = false;
     };
-  }, [projectId, startDate, endDate]);
+  }, [projectId, startDate, endDate, refreshKey]);
 
   // Convert members to simple format for slot generator
   const simpleMembers: Member[] = useMemo(() => {
@@ -181,5 +186,6 @@ export function useSmartPlanner({
     filteredSlots,
     categoryCounts,
     slotsByDate,
+    refetch,
   };
 }
