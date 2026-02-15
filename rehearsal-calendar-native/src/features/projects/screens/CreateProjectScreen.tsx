@@ -19,6 +19,7 @@ import { Colors } from '../../../shared/constants/colors';
 import { hapticSuccess } from '../../../shared/utils/haptics';
 import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { createProjectScreenStyles as styles } from '../styles';
 
@@ -42,10 +43,13 @@ const TIMEZONES = [
 
 export default function CreateProjectScreen({ navigation }: CreateProjectScreenProps) {
   const { createProject } = useProjects();
+  const { user } = useAuth();
   const { t } = useI18n();
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
-  const [projectTimezone, setProjectTimezone] = useState('Asia/Jerusalem');
+  const [projectTimezone, setProjectTimezone] = useState(
+    user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jerusalem'
+  );
   const [timezonePickerVisible, setTimezonePickerVisible] = useState(false);
   const [creating, setCreating] = useState(false);
 

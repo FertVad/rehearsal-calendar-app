@@ -1,9 +1,17 @@
-import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
 import { syncUserPreferences } from '../shared/utils/storage';
 import { unregisterPushToken } from '../shared/services/notifications';
+
+function getDeviceTimezone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return undefined;
+  }
+}
 
 interface User {
   id: number;
@@ -43,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasTimezoneSynced = useRef(false);
 
   const loadUser = useCallback(async () => {
     try {
@@ -97,6 +106,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadUser();
   }, [loadUser]);
 
+  // Auto-sync device timezone on login/restore
+  useEffect(() => {
+    if (!user) {
+      hasTimezoneSynced.current = false;
+      return;
+    }
+    if (hasTimezoneSynced.current) return;
+
+    hasTimezoneSynced.current = true;
+
+    const deviceTimezone = getDeviceTimezone();
+    if (!deviceTimezone || user.timezone === deviceTimezone) return;
+
+    // Silently sync timezone in background
+    authAPI.updateMe({ timezone: deviceTimezone })
+      .then(response => {
+        const updatedUser = response.data.user;
+        setUser(updatedUser);
+        AsyncStorage.setItem('cachedUser', JSON.stringify(updatedUser));
+        syncUserPreferences(updatedUser);
+        logger.info(`[Auth] Auto-synced timezone: ${user.timezone || 'none'} → ${deviceTimezone}`);
+      })
+      .catch(err => {
+        logger.warn('[Auth] Failed to auto-sync timezone:', err?.message);
+      });
+  }, [user]);
+
   const login = useCallback(async (email: string, password: string) => {
     try {
       setError(null);
@@ -130,7 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null);
       setLoading(true);
 
-      const response = await authAPI.register(email, password, firstName, lastName);
+      const deviceTimezone = getDeviceTimezone();
+      const response = await authAPI.register(email, password, firstName, lastName, deviceTimezone);
       const { user, accessToken, refreshToken } = response.data;
 
       // Save tokens, cache user, and clear any stale logout timestamp

@@ -11,7 +11,7 @@ const router = Router();
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, firstName, lastName, timezone } = req.body;
 
     if (!email || !password || !firstName) {
       return res.status(400).json({ error: 'Email, password and first name are required' });
@@ -26,11 +26,11 @@ router.post('/register', async (req, res) => {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Insert user
+    // Insert user with device timezone if provided
     const result = await db.run(
-      `INSERT INTO native_users (email, password_hash, first_name, last_name, last_login_at)
-       VALUES ($1, $2, $3, $4, NOW())`,
-      [email, passwordHash, firstName, lastName || null]
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, last_login_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [email, passwordHash, firstName, lastName || null, timezone || null]
     );
 
     const userId = result.lastInsertId;
