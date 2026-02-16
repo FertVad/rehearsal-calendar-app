@@ -129,39 +129,9 @@ function ActionSheetWrapper() {
   const { showActionSheet, setShowActionSheet } = useActionSheet();
   const { language } = useI18n();
 
-  const handleCreateProject = async () => {
+  // TEMPORARILY DISABLED FOR LAUNCH: subscription check removed, all users can create projects
+  const handleCreateProject = () => {
     setShowActionSheet(false);
-
-    try {
-      const response = await subscriptionsAPI.getCurrentSubscription();
-      const hasActiveSubscription = !!response.data.subscription;
-
-      if (!hasActiveSubscription) {
-        Alert.alert(
-          language === 'ru' ? 'Требуется подписка' : 'Subscription Required',
-          language === 'ru'
-            ? 'У вас нет активной подписки. Подписка нужна только для создания проектов. Все остальные функции бесплатны.'
-            : 'You don\'t have an active subscription. A subscription is only required to create projects. All other features are free.',
-          [
-            {
-              text: language === 'ru' ? 'Отмена' : 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: language === 'ru' ? 'Выбрать тариф' : 'View Plans',
-              onPress: () => navigation.navigate('MainTabs', {
-                screen: 'Profile',
-                params: { screen: 'Subscription' }
-              }),
-            },
-          ]
-        );
-        return;
-      }
-    } catch (error) {
-      console.error('Failed to check subscription:', error);
-    }
-
     navigation.navigate('CreateProject');
   };
 

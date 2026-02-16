@@ -16,51 +16,8 @@ export default function ProjectsScreen() {
   const { projects, selectedProject, setSelectedProject, loading, error } = useProjects();
   const { generateInviteLink, generatingInvite } = useInviteLink();
   const { t, language } = useI18n();
-  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean>(false);
-  const [checkingSubscription, setCheckingSubscription] = useState<boolean>(true);
-
-  // Check subscription status on mount
-  useEffect(() => {
-    checkSubscription();
-  }, []);
-
-  const checkSubscription = async () => {
-    try {
-      setCheckingSubscription(true);
-      const response = await subscriptionsAPI.getCurrentSubscription();
-      setHasActiveSubscription(!!response.data.subscription);
-    } catch (error) {
-      console.error('Failed to check subscription:', error);
-      setHasActiveSubscription(false);
-    } finally {
-      setCheckingSubscription(false);
-    }
-  };
-
+  // TEMPORARILY DISABLED FOR LAUNCH: subscription check removed, all users can create projects
   const handleCreateProject = () => {
-    if (!hasActiveSubscription) {
-      Alert.alert(
-        language === 'ru' ? 'Требуется подписка' : 'Subscription Required',
-        language === 'ru'
-          ? 'У вас нет активной подписки. Подписка нужна только для создания проектов. Все остальные функции бесплатны.'
-          : 'You don\'t have an active subscription. A subscription is only required to create projects. All other features are free.',
-        [
-          {
-            text: language === 'ru' ? 'Отмена' : 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: language === 'ru' ? 'Выбрать тариф' : 'View Plans',
-            onPress: () => navigation.navigate('MainTabs', {
-              screen: 'Profile',
-              params: { screen: 'Subscription' }
-            }),
-          },
-        ]
-      );
-      return;
-    }
-
     navigation.navigate('CreateProject');
   };
 

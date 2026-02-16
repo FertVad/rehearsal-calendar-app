@@ -208,6 +208,8 @@ date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US')
 ```
 
 ### 8. Subscription Middleware
+> **CURRENTLY DISABLED**: Payments are temporarily disabled for launch. All features are open for early users. See [Re-enabling Payments](#re-enabling-payments-after-launch) section below for how to turn it back on.
+
 **Business Model**: All features are free, subscription only required for **creating projects**.
 
 ```javascript
@@ -310,6 +312,30 @@ The system automatically charges active subscriptions using saved AllPay tokens.
 1. Add `CRON_SECRET` to Vercel environment variables
 2. Set `ALLPAY_TEST_MODE=false`
 3. Disable `test_1min` plan: `UPDATE native_subscription_plans SET is_active = FALSE WHERE name = 'test_1min'`
+
+### Re-enabling Payments After Launch
+
+Payments were temporarily disabled for launch (all features open for early users). Search for `TEMPORARILY DISABLED FOR LAUNCH` to find all changes. Here's the full checklist:
+
+**Backend (1 change):**
+1. `server/routes/native/projects.js` — restore `requireSubscription` middleware on POST route:
+   ```javascript
+   // Change this:
+   router.post('/', requireAuth, async (req, res) => {
+   // Back to:
+   router.post('/', requireAuth, requireSubscription, async (req, res) => {
+   ```
+
+**Frontend (4 changes):**
+2. `src/features/projects/screens/ProjectsScreen.tsx` — restore subscription check state, `useEffect`, `checkSubscription()`, and the `Alert` guard in `handleCreateProject`. (See git history for the full original code.)
+3. `src/navigation/index.tsx` — restore `async handleCreateProject` with `subscriptionsAPI.getCurrentSubscription()` check and Alert in `ActionSheetWrapper`.
+4. `src/features/calendar/hooks/useAddRehearsalForm.ts` — restore subscription check in `handleCreateProject` before `navigation.navigate('Projects', { screen: 'CreateProject' })`.
+5. `src/features/profile/screens/ProfileScreen.tsx` — uncomment the Subscription menu `<TouchableOpacity>` block in settings.
+
+**Verification after re-enabling:**
+- Creating a project without subscription should show "Subscription Required" alert
+- Profile settings should show "Подписка / Subscription" menu item
+- Backend POST `/api/native/projects` should return 403 with `SUBSCRIPTION_REQUIRED` for users without subscription
 
 ### Batch API Endpoints
 Optimize N+1 queries by loading data in batches:

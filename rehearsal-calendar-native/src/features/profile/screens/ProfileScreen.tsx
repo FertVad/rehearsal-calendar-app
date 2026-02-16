@@ -340,8 +340,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
 
-          {/* Subscription */}
-          <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Subscription')}>
+          {/* Subscription - TEMPORARILY DISABLED FOR LAUNCH */}
+          {/* <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Subscription')}>
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
                 <Ionicons name="card" size={20} color={Colors.accent.purple} />
@@ -351,7 +351,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* About Section */}

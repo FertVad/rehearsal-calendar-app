@@ -39,8 +39,9 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/native/projects - Create new project (requires active subscription)
-router.post('/', requireAuth, requireSubscription, async (req, res) => {
+// POST /api/native/projects - Create new project
+// TEMPORARILY DISABLED FOR LAUNCH: was requireAuth, requireSubscription
+router.post('/', requireAuth, async (req, res) => {
   try {
     const accountId = req.userId;
     const { name, description, timezone } = req.body;
