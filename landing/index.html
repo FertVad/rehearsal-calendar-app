@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rehearsly — Rehearsal Planning for Creative Teams</title>
+  <meta name="description" content="Stop managing rehearsals in group chats. Rehearsly is the scheduling app for freelance directors, choreographers, indie theatres and performers.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Rehearsly — Your call sheet shouldn't live in a group chat">
+  <meta property="og:description" content="Stop managing rehearsals in group chats. Scheduling app for freelance directors, choreographers, indie theatres and performers.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ru_RU">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎭</text></svg>">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- AOS - Animate On Scroll -->
+  <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Ambient glow -->
+  <div class="ambient-glow ambient-glow--hero"></div>
+  <div class="ambient-glow ambient-glow--mid"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <span class="logo">
+        <i data-lucide="drama" class="logo-icon"></i>
+        <span data-i18n="header.logo">Rehearsly</span>
+      </span>
+      <div class="header-right">
+        <div class="lang-toggle">
+          <button class="lang-btn" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="ru">RU</button>
+        </div>
+        <a href="#download" class="btn btn-primary btn-sm header-cta">
+          <i data-lucide="download" class="btn-icon-left"></i>
+          <span data-i18n="header.download">Download</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge" data-aos="fade-down" data-aos-delay="0">
+          <i data-lucide="sparkles" class="hero-badge-icon"></i>
+          <span data-i18n="hero.badge">Scheduling, reimagined</span>
+        </div>
+        <h1 class="hero-title" data-aos="fade-up" data-aos-delay="100">
+          <span class="hero-title-line" data-i18n="hero.title1">Rehearsals shouldn't</span>
+          <span class="hero-title-line hero-title-gradient" data-i18n="hero.title2">be chaos.</span>
+        </h1>
+        <p class="hero-subtitle" data-aos="fade-up" data-aos-delay="200" data-i18n="hero.subtitle">Missed calls. Endless chats. Double bookings.<br>Rehearsly brings order to the stage.</p>
+        <div class="hero-actions" data-aos="fade-up" data-aos-delay="300">
+          <a href="#download" class="btn btn-primary">
+            <span data-i18n="hero.cta">Start planning smarter</span>
+            <i data-lucide="arrow-right" class="btn-icon"></i>
+          </a>
+          <a href="#solution" class="btn btn-ghost">
+            <span data-i18n="hero.ctaSecondary">See how it works</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem -->
+  <section class="problem">
+    <div class="container">
+      <div class="problem-content">
+        <h2 class="section-title" data-aos="fade-right" data-i18n="problem.title">Stop managing rehearsals in chat.</h2>
+        <p class="problem-intro" data-aos="fade-right" data-aos-delay="100" data-i18n="problem.text">When schedules live in messages,<br>everything falls apart.</p>
+        <ul class="problem-list">
+          <li data-aos="fade-right" data-aos-delay="150">
+            <span class="problem-icon"><i data-lucide="message-circle-warning"></i></span>
+            <span data-i18n="problem.line1">Cast finds out about call times from each other.</span>
+          </li>
+          <li data-aos="fade-right" data-aos-delay="200">
+            <span class="problem-icon"><i data-lucide="smartphone"></i></span>
+            <span data-i18n="problem.line2">You spend more time texting than blocking.</span>
+          </li>
+          <li data-aos="fade-right" data-aos-delay="250">
+            <span class="problem-icon"><i data-lucide="calendar-x"></i></span>
+            <span data-i18n="problem.line3">Double bookings kill your run-through.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Solution -->
+  <section class="solution" id="solution">
+    <div class="container">
+      <div class="solution-content">
+        <h2 class="section-title" data-aos="fade-left" data-i18n="solution.title">Your rehearsal command center.</h2>
+        <ul class="solution-list">
+          <li data-aos="fade-left" data-aos-delay="100">
+            <span class="solution-icon"><i data-lucide="calendar-plus"></i></span>
+            <span data-i18n="solution.line1">Plan rehearsals.</span>
+          </li>
+          <li data-aos="fade-left" data-aos-delay="150">
+            <span class="solution-icon"><i data-lucide="refresh-cw"></i></span>
+            <span data-i18n="solution.line2">Sync availability in real time.</span>
+          </li>
+          <li data-aos="fade-left" data-aos-delay="200">
+            <span class="solution-icon"><i data-lucide="shield-check"></i></span>
+            <span data-i18n="solution.line3">Avoid conflicts.</span>
+          </li>
+          <li data-aos="fade-left" data-aos-delay="250">
+            <span class="solution-icon"><i data-lucide="circle-check-big"></i></span>
+            <span data-i18n="solution.line4">Confirm in one tap.</span>
+          </li>
+        </ul>
+        <p class="solution-tagline" data-aos="fade-up" data-aos-delay="350" data-i18n="solution.tagline">Your stage. On schedule.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases -->
+  <section class="use-cases">
+    <div class="container">
+      <h2 class="section-title section-title--center" data-aos="fade-up" data-i18n="useCases.title">Built for creative teams.</h2>
+      <div class="cards-grid">
+        <div class="card" data-aos="fade-up" data-aos-delay="0" data-i18n-card="0">
+          <span class="card-marker"></span>
+          <h3 class="card-title">Freelance directors</h3>
+          <p class="card-text">New cast every project. Everyone's availability, zero group chats.</p>
+        </div>
+        <div class="card" data-aos="fade-up" data-aos-delay="100" data-i18n-card="1">
+          <span class="card-marker"></span>
+          <h3 class="card-title">Choreographers</h3>
+          <p class="card-text">Tight studio slots, rotating dancers. Instant headcount.</p>
+        </div>
+        <div class="card" data-aos="fade-up" data-aos-delay="200" data-i18n-card="2">
+          <span class="card-marker"></span>
+          <h3 class="card-title">Indie companies</h3>
+          <p class="card-text">No admin team. No SM budget. Run your own schedule.</p>
+        </div>
+        <div class="card" data-aos="fade-up" data-aos-delay="300" data-i18n-card="3">
+          <span class="card-marker"></span>
+          <h3 class="card-title">Freelance performers</h3>
+          <p class="card-text">Three gigs at once? Set your availability once. Done.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="final" id="download">
+    <div class="container">
+      <div class="final-content" data-aos="zoom-in" data-aos-duration="800">
+        <h2 class="final-title" data-i18n="final.title">Focus on the work.</h2>
+        <p class="final-subtitle" data-i18n="final.subtitle">Not on the logistics.</p>
+        <div class="final-cta">
+          <a href="#" class="btn btn-primary btn-lg">
+            <i data-lucide="download" class="btn-icon-left"></i>
+            <span data-i18n="final.cta">Download Rehearsly</span>
+          </a>
+        </div>
+        <p class="final-platforms">
+          <i data-lucide="smartphone" class="platform-icon"></i>
+          <span data-i18n="final.platforms">Available on iOS & Android.</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <script src="i18n.js"></script>
+</body>
+</html>

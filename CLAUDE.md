@@ -95,6 +95,19 @@ server/
 └── constants/          # Shared constants (availability types, etc.)
 ```
 
+### Landing Page
+```
+landing/
+├── index.html           # Main HTML (semantic sections, AOS animations, Lucide icons)
+├── styles.css           # Design system (dark theme, glass morphism, responsive)
+└── i18n.js              # EN/RU translations + language toggle + scroll effects
+```
+- **Stack**: Pure HTML/CSS/JS, no build tools
+- **Libraries**: Lucide Icons (CDN), AOS - Animate On Scroll (CDN)
+- **i18n**: `data-i18n` attributes, `data-i18n-card` for use-case cards, `localStorage` persistence
+- **Design tokens**: Matches app exactly (`#0d1117`, `#A855F7`, glass morphism)
+- **To preview**: Open `landing/index.html` directly in browser
+
 ### Database
 - **Development**: SQLite (`native_database.db`)
 - **Production**: PostgreSQL (Neon.tech)
