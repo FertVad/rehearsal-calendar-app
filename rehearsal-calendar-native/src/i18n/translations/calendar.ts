@@ -48,6 +48,7 @@ export interface RehearsalsTranslations {
   deleteConfirm: string;
   deleteTitle: string;
   deleteMessage: string;
+  deleteSuccess: string;
   participants: string;
   createRehearsal: string;
   updateRehearsal: string;
@@ -134,6 +135,7 @@ export const ru = {
     deleteConfirm: 'Удалить',
     deleteTitle: 'Удалить репетицию?',
     deleteMessage: 'Это действие нельзя отменить',
+    deleteSuccess: 'Репетиция удалена',
     participants: 'Участники',
     createRehearsal: 'Создать репетицию',
     updateRehearsal: 'Сохранить изменения',
@@ -221,6 +223,7 @@ export const en = {
     deleteConfirm: 'Delete',
     deleteTitle: 'Delete Rehearsal?',
     deleteMessage: 'This action cannot be undone',
+    deleteSuccess: 'Rehearsal deleted',
     participants: 'Participants',
     createRehearsal: 'Create Rehearsal',
     updateRehearsal: 'Save Changes',

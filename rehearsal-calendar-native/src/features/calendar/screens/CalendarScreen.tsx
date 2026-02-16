@@ -148,8 +148,10 @@ export default function CalendarScreen() {
                 console.error('[CalendarScreen] Failed to unsync from calendar:', syncError);
               }
 
-              // Refetch rehearsals after deletion
-              await fetchRehearsals();
+              // Force refetch rehearsals after deletion (bypass cache)
+              await fetchRehearsals(true);
+
+              Alert.alert(t.common.success, t.rehearsals.deleteSuccess);
             } catch (err: any) {
               console.error('[CalendarScreen] Failed to delete rehearsal:', err);
               const errorMessage = err.response?.data?.error || err.message || t.rehearsals.createError;
