@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigationState } from '@react-navigation/native';
 import { useI18n } from '../../contexts/I18nContext';
 import { bugReportsAPI } from '../services/api';
 import { Colors } from '../constants/colors';
@@ -19,6 +20,15 @@ import { Colors } from '../constants/colors';
 export function BetaBanner() {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
+  const routeName = useNavigationState((state) => {
+    const route = state.routes[state.index];
+    const nested = route.state;
+    if (nested) {
+      const nestedRoute = nested.routes[nested.index ?? 0];
+      return `${route.name}/${nestedRoute.name}`;
+    }
+    return route.name;
+  });
   const [modalVisible, setModalVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -28,7 +38,7 @@ export function BetaBanner() {
 
     setSending(true);
     try {
-      await bugReportsAPI.create({ message: message.trim() });
+      await bugReportsAPI.create({ message: message.trim(), screen: routeName });
       setMessage('');
       setModalVisible(false);
       Alert.alert(t.common.success, t.betaBanner.bugReportSent);

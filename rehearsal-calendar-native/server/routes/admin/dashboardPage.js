@@ -146,6 +146,24 @@ export function generateAdminPageHTML() {
     .badge-red { background: rgba(248,81,73,0.15); color: #f85149; }
     .badge-yellow { background: rgba(210,153,34,0.15); color: #d29922; }
     .badge-gray { background: rgba(139,148,158,0.15); color: #8b949e; }
+    .badge-blue { background: rgba(56,139,253,0.15); color: #388bfd; }
+    .status-btn {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.15s;
+    }
+    .status-btn:hover { opacity: 1; }
+    .status-btn.active { opacity: 1; border-color: currentColor; }
+    .status-btn-new { background: rgba(210,153,34,0.15); color: #d29922; }
+    .status-btn-in_progress { background: rgba(56,139,253,0.15); color: #388bfd; }
+    .status-btn-fixed { background: rgba(63,185,80,0.15); color: #3fb950; }
+    .msg-cell { max-width: 350px; word-break: break-word; }
+    .screen-cell { color: #8b949e; font-size: 11px; }
     .pagination {
       display: flex;
       gap: 8px;
@@ -227,6 +245,26 @@ export function generateAdminPageHTML() {
         </tbody>
       </table>
       <div class="pagination" id="tx-pagination"></div>
+    </div>
+
+    <!-- Bug Reports Table -->
+    <div class="section">
+      <div class="section-title">Bug Reports</div>
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Message</th>
+            <th>Screen</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="bugs-body">
+          <tr><td colspan="5" class="loading">Loading...</td></tr>
+        </tbody>
+      </table>
+      <div class="pagination" id="bugs-pagination"></div>
     </div>
   </div>
 </div>
@@ -415,10 +453,62 @@ export function generateAdminPageHTML() {
     el.innerHTML = html;
   }
 
+  var bugsPage = 0;
+
+  function bugStatusBadge(status) {
+    var cls = 'badge-yellow';
+    if (status === 'in_progress') cls = 'badge-blue';
+    else if (status === 'fixed') cls = 'badge-green';
+    return '<span class="badge ' + cls + '">' + status.replace('_', ' ') + '</span>';
+  }
+
+  function statusButtons(id, current) {
+    var statuses = ['new', 'in_progress', 'fixed'];
+    var labels = { new: 'new', in_progress: 'in progress', fixed: 'fixed' };
+    return statuses.map(function(s) {
+      var active = s === current ? ' active' : '';
+      return '<button class="status-btn status-btn-' + s + active + '" onclick="setBugStatus(' + id + ',\\'' + s + '\\')">' + labels[s] + '</button>';
+    }).join(' ');
+  }
+
+  async function setBugStatus(id, status) {
+    try {
+      await fetch('/admin/api/bug-reports/' + id + '/status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+        body: JSON.stringify({ status: status })
+      });
+      loadBugReports(bugsPage);
+    } catch (e) { console.error(e); }
+  }
+
+  async function loadBugReports(page) {
+    bugsPage = page || 0;
+    var body = document.getElementById('bugs-body');
+    try {
+      var d = await api('/bug-reports?limit=' + PAGE_SIZE + '&offset=' + (bugsPage * PAGE_SIZE));
+      if (!d.reports.length) {
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b949e">No bug reports</td></tr>';
+        return;
+      }
+      body.innerHTML = d.reports.map(function(r) {
+        return '<tr>' +
+          '<td>' + r.name + '</td>' +
+          '<td class="msg-cell">' + r.message + '</td>' +
+          '<td class="screen-cell">' + (r.screen || '-') + '</td>' +
+          '<td>' + statusButtons(r.id, r.status) + '</td>' +
+          '<td>' + fmtDate(r.createdAt) + '</td>' +
+        '</tr>';
+      }).join('');
+      renderPagination('bugs-pagination', d.total, bugsPage, loadBugReports);
+    } catch (e) { /* handled by api() */ }
+  }
+
   function loadAll() {
     loadStats();
     loadUsers(0);
     loadTransactions(0);
+    loadBugReports(0);
   }
 
   // Init

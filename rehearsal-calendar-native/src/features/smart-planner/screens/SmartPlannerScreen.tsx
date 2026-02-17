@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -148,7 +147,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   }, []);
 
   const renderHeader = () => (
-    <SafeAreaView edges={['top']} style={styles.headerContainer}>
+    <View style={styles.headerContainer}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -160,7 +159,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
           <Text style={styles.headerSubtitle}>{t.smartPlanner.title}</Text>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 
   const renderProjectSelector = () => (
