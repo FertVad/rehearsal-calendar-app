@@ -207,6 +207,26 @@ export function generateAdminPageHTML() {
     <!-- Stats Cards -->
     <div id="stats-cards" class="cards hidden"></div>
 
+    <!-- Bug Reports Table -->
+    <div class="section">
+      <div class="section-title">Bug Reports</div>
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Message</th>
+            <th>Screen</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="bugs-body">
+          <tr><td colspan="5" class="loading">Loading...</td></tr>
+        </tbody>
+      </table>
+      <div class="pagination" id="bugs-pagination"></div>
+    </div>
+
     <!-- Users Table -->
     <div class="section">
       <div class="section-title">Recent Users</div>
@@ -245,26 +265,6 @@ export function generateAdminPageHTML() {
         </tbody>
       </table>
       <div class="pagination" id="tx-pagination"></div>
-    </div>
-
-    <!-- Bug Reports Table -->
-    <div class="section">
-      <div class="section-title">Bug Reports</div>
-      <table>
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Message</th>
-            <th>Screen</th>
-            <th>Status</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody id="bugs-body">
-          <tr><td colspan="5" class="loading">Loading...</td></tr>
-        </tbody>
-      </table>
-      <div class="pagination" id="bugs-pagination"></div>
     </div>
   </div>
 </div>
