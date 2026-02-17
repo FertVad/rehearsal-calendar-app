@@ -419,4 +419,10 @@ export const subscriptionsAPI = {
     api.get('/native/subscriptions/test-config'),
 };
 
+// Bug Reports API
+export const bugReportsAPI = {
+  create: (data: { message: string; screen?: string }) =>
+    api.post('/native/bug-reports', data),
+};
+
 export default api;

@@ -37,6 +37,8 @@ export interface Translations {
   onboarding: onboarding.OnboardingTranslations;
   // Subscriptions
   subscriptions: subscriptions.SubscriptionsTranslations;
+  // Beta Banner
+  betaBanner: common.BetaBannerTranslations;
   // Days
   days: common.DaysTranslations;
   // Months

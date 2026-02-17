@@ -5,6 +5,7 @@ import membersRoutes from './native/members.js';
 import rehearsalsRoutes from './native/rehearsals.js';
 import invitesRoutes from './native/invites.js';
 import subscriptionsRoutes from './native/subscriptions/index.js';
+import bugReportsRoutes from './native/bugReports.js';
 
 /**
  * Router for React Native app endpoints (non-Telegram)
@@ -29,5 +30,6 @@ router.use('/projects', invitesRoutes);
 router.use('/rehearsals', rehearsalsRoutes);
 router.use('/invite', invitesRoutes);
 router.use('/subscriptions', subscriptionsRoutes);
+router.use('/bug-reports', bugReportsRoutes);
 
 export default router;

@@ -37,6 +37,14 @@ export interface ActionSheetTranslations {
   createProject: string;
 }
 
+export interface BetaBannerTranslations {
+  title: string;
+  bugReport: string;
+  bugReportPlaceholder: string;
+  bugReportSent: string;
+  send: string;
+}
+
 export interface DaysTranslations {
   monday: string;
   tuesday: string;
@@ -92,6 +100,13 @@ export const ru = {
     createRehearsal: 'Создать репетицию',
     markBusy: 'Отметить занятость',
     createProject: 'Создать проект',
+  },
+  betaBanner: {
+    title: 'Тестовый полёт',
+    bugReport: 'Баг-репорт',
+    bugReportPlaceholder: 'Опишите проблему...',
+    bugReportSent: 'Спасибо! Отчёт отправлен',
+    send: 'Отправить',
   },
   days: {
     monday: 'Понедельник',
@@ -153,6 +168,13 @@ export const en = {
     createRehearsal: 'Create Rehearsal',
     markBusy: 'Mark Busy',
     createProject: 'Create Project',
+  },
+  betaBanner: {
+    title: 'Test Flight',
+    bugReport: 'Bug Report',
+    bugReportPlaceholder: 'Describe the issue...',
+    bugReportSent: 'Thanks! Report sent',
+    send: 'Send',
   },
   days: {
     monday: 'Monday',
