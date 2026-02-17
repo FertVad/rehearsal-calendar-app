@@ -30,6 +30,8 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
   } = useCalendarSync();
 
   const [selectedProvider, setSelectedProvider] = useState<'google' | 'apple' | null>(null);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
+  const [providerCalendarsList, setProviderCalendarsList] = useState<DeviceCalendar[]>([]);
   const [isSettingUp, setIsSettingUp] = useState(false);
 
   // Helper to determine calendar provider
@@ -96,36 +98,48 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
       return;
     }
 
+    hapticLight();
+
+    // Get all writable calendars from this provider
+    const providerCalendars = calendars.filter(
+      (c) =>
+        c.allowsModifications &&
+        getCalendarProvider(c) === provider &&
+        !shouldExcludeFromImport(c)
+    );
+
+    if (providerCalendars.length === 0) {
+      Alert.alert(
+        t.common.error,
+        `No writable ${provider === 'google' ? 'Google' : 'Apple'} calendar found`
+      );
+      return;
+    }
+
+    setSelectedProvider(provider);
+    setProviderCalendarsList(providerCalendars);
+
+    // If only 1 calendar, auto-select it
+    if (providerCalendars.length === 1) {
+      await handleSelectCalendar(providerCalendars[0].id, providerCalendars);
+    } else {
+      setSelectedCalendarId(null);
+    }
+  };
+
+  const handleSelectCalendar = async (calendarId: string, cals?: DeviceCalendar[]) => {
     try {
       setIsSettingUp(true);
       hapticLight();
 
-      // Get all writable calendars from this provider
-      const providerCalendars = calendars.filter(
-        (c) =>
-          c.allowsModifications &&
-          getCalendarProvider(c) === provider &&
-          !shouldExcludeFromImport(c)
-      );
+      const calList = cals || providerCalendarsList;
+      const importCalendarIds = calList.map((c) => c.id);
 
-      if (providerCalendars.length === 0) {
-        Alert.alert(
-          t.common.error,
-          `No writable ${provider === 'google' ? 'Google' : 'Apple'} calendar found`
-        );
-        return;
-      }
+      setSelectedCalendarId(calendarId);
 
-      // Use first calendar for export, all for import
-      const exportCalendar = providerCalendars[0];
-      const importCalendarIds = providerCalendars.map((c) => c.id);
-
-      setSelectedProvider(provider);
-
-      // Enable sync
       await updateSettings({
         exportEnabled: true,
-        exportCalendarId: exportCalendar.id,
+        exportCalendarId: calendarId,
         importEnabled: true,
         importCalendarIds: importCalendarIds,
         importInterval: 'always',
@@ -219,6 +233,32 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
                   <Ionicons name="checkmark-circle" size={24} color={Colors.accent.green} />
                 )}
               </TouchableOpacity>
+            )}
+
+            {/* Calendar picker (when provider has multiple calendars) */}
+            {selectedProvider && providerCalendarsList.length > 1 && (
+              <View style={styles.calendarListContainer}>
+                <Text style={styles.calendarListTitle}>{t.calendarSync.chooseCalendar}</Text>
+                {providerCalendarsList.map((cal) => (
+                  <TouchableOpacity
+                    key={cal.id}
+                    style={[
+                      styles.calendarItem,
+                      selectedCalendarId === cal.id && styles.calendarItemSelected,
+                    ]}
+                    onPress={() => handleSelectCalendar(cal.id)}
+                    disabled={isSettingUp}
+                  >
+                    <View style={styles.calendarItemLeft}>
+                      <View style={[styles.calendarDot, { backgroundColor: cal.color || Colors.accent.purple }]} />
+                      <Text style={styles.calendarItemLabel}>{cal.title}</Text>
+                    </View>
+                    {selectedCalendarId === cal.id && (
+                      <Ionicons name="checkmark-circle" size={20} color={Colors.accent.green} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             )}
 
             {!hasGoogleCalendar && !hasAppleCalendar && (
@@ -323,6 +363,44 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: FontSize.base,
     color: Colors.text.secondary,
+  },
+  calendarListContainer: {
+    gap: 8,
+  },
+  calendarListTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.text.secondary,
+    marginBottom: 4,
+  },
+  calendarItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.bg.secondary,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  calendarItemSelected: {
+    borderColor: Colors.accent.green,
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+  },
+  calendarItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  calendarDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  calendarItemLabel: {
+    fontSize: FontSize.base,
+    color: Colors.text.primary,
   },
   skipHint: {
     fontSize: FontSize.sm,

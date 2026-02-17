@@ -364,4 +364,38 @@ export const styles = StyleSheet.create({
   modalSaveButton: {
     width: '100%',
   },
+
+  // Inline calendar picker list
+  calendarPickerList: {
+    gap: Spacing.sm,
+  },
+  calendarPickerItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.glass.bg,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  calendarPickerItemSelected: {
+    borderColor: Colors.accent.green,
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+  },
+  calendarPickerItemLeft: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+  },
+  calendarPickerDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  calendarPickerItemLabel: {
+    fontSize: FontSize.base,
+    color: Colors.text.primary,
+  },
 });

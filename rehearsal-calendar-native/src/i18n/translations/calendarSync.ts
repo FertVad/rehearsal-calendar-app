@@ -108,6 +108,9 @@ export interface CalendarSyncTranslations {
   exportedRehearsals: string;
   lastExport: string;
   importedEvents: string;
+  // Calendar picker
+  chooseCalendar: string;
+  exportTo: string;
 }
 
 export const ru = {
@@ -222,6 +225,9 @@ export const ru = {
     exportedRehearsals: 'Экспортировано репетиций',
     lastExport: 'Последний экспорт',
     importedEvents: 'Импортировано событий',
+    // Calendar picker
+    chooseCalendar: 'Выберите календарь для экспорта',
+    exportTo: 'Экспорт в',
   },
 };
 
@@ -337,5 +343,8 @@ export const en = {
     exportedRehearsals: 'Exported rehearsals',
     lastExport: 'Last export',
     importedEvents: 'Imported events',
+    // Calendar picker
+    chooseCalendar: 'Choose export calendar',
+    exportTo: 'Export to',
   },
 };

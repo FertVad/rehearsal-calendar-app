@@ -42,15 +42,17 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
   } = useCalendarSync();
 
   const [selectedProvider, setSelectedProvider] = useState<CalendarProvider>(null);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
   const [syncEnabled, setSyncEnabled] = useState(false);
 
-  // Determine current provider from settings
+  // Determine current provider and calendar from settings
   useEffect(() => {
     if (settings && calendars.length > 0) {
       const isEnabled = settings.exportEnabled && settings.importEnabled;
       setSyncEnabled(isEnabled);
 
       if (settings.exportCalendarId) {
+        setSelectedCalendarId(settings.exportCalendarId);
         const selectedCal = calendars.find(c => c.id === settings.exportCalendarId);
         if (selectedCal) {
           const provider = getCalendarProvider(selectedCal);
@@ -178,19 +180,24 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       return;
     }
 
-    // Use first calendar for EXPORT
-    const exportCalendar = providerCalendars[0];
+    setSelectedProvider(provider);
+
+    // If only 1 calendar, auto-select it; otherwise let user pick
+    const exportCalendar = providerCalendars.length === 1 ? providerCalendars[0] : null;
+    const exportCalendarId = exportCalendar?.id || selectedCalendarId;
 
     // Use ALL calendars for IMPORT (to get events from all personal calendars)
     const importCalendarIds = providerCalendars.map(c => c.id);
 
-    setSelectedProvider(provider);
+    if (exportCalendar) {
+      setSelectedCalendarId(exportCalendar.id);
+    }
 
-    // Auto-enable sync with ALL provider calendars
+    // Auto-enable sync
     setSyncEnabled(true);
     await updateSettings({
       exportEnabled: true,
-      exportCalendarId: exportCalendar.id,
+      exportCalendarId: exportCalendarId || providerCalendars[0].id,
       importEnabled: true,
       importCalendarIds: importCalendarIds,
       importInterval: 'always',
@@ -199,8 +206,25 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     });
 
     console.log(`[CalendarSync] Enabled ${provider} calendar sync:`);
-    console.log(`  Export to: ${exportCalendar.title}`);
+    console.log(`  Export to: ${exportCalendar?.title || 'user will pick'}`);
     console.log(`  Import from ${importCalendarIds.length} calendars:`, providerCalendars.map(c => c.title));
+  };
+
+  const handleSelectCalendar = async (calendarId: string) => {
+    setSelectedCalendarId(calendarId);
+
+    await updateSettings({
+      exportEnabled: settings?.exportEnabled ?? true,
+      exportCalendarId: calendarId,
+      importEnabled: settings?.importEnabled ?? true,
+      importCalendarIds: settings?.importCalendarIds || [],
+      importInterval: settings?.importInterval || 'always',
+      lastExportTime: settings?.lastExportTime || null,
+      lastImportTime: settings?.lastImportTime || null,
+    });
+
+    const cal = calendars.find(c => c.id === calendarId);
+    console.log(`[CalendarSync] Export calendar changed to: ${cal?.title}`);
   };
 
   const handleToggleSync = async (enabled: boolean) => {
@@ -419,7 +443,9 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                     <View style={styles.calendarPickerText}>
                       <Text style={styles.calendarPickerLabel}>Google Calendar</Text>
                       <Text style={styles.calendarPickerSubtext}>
-                        {getProviderCalendar('google')?.title || 'Gmail'}
+                        {(selectedProvider === 'google' && selectedCalendarId
+                          ? calendars.find(c => c.id === selectedCalendarId)?.title
+                          : getProviderCalendar('google')?.title) || 'Gmail'}
                       </Text>
                     </View>
                   </View>
@@ -446,7 +472,9 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                     <View style={styles.calendarPickerText}>
                       <Text style={styles.calendarPickerLabel}>Apple Calendar</Text>
                       <Text style={styles.calendarPickerSubtext}>
-                        {getProviderCalendar('apple')?.title || 'iCloud'}
+                        {(selectedProvider === 'apple' && selectedCalendarId
+                          ? calendars.find(c => c.id === selectedCalendarId)?.title
+                          : getProviderCalendar('apple')?.title) || 'iCloud'}
                       </Text>
                     </View>
                   </View>
@@ -465,6 +493,34 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                 </View>
               )}
             </View>
+
+            {/* Calendar Picker (when provider has multiple calendars) */}
+            {selectedProvider && getProviderCalendars(selectedProvider).length > 1 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t.calendarSync.chooseCalendar}</Text>
+                <View style={styles.calendarPickerList}>
+                  {getProviderCalendars(selectedProvider).map((cal) => (
+                    <TouchableOpacity
+                      key={cal.id}
+                      style={[
+                        styles.calendarPickerItem,
+                        selectedCalendarId === cal.id && styles.calendarPickerItemSelected,
+                      ]}
+                      onPress={() => handleSelectCalendar(cal.id)}
+                      disabled={isSyncing || isImporting}
+                    >
+                      <View style={styles.calendarPickerItemLeft}>
+                        <View style={[styles.calendarPickerDot, { backgroundColor: cal.color || Colors.accent.purple }]} />
+                        <Text style={styles.calendarPickerItemLabel}>{cal.title}</Text>
+                      </View>
+                      {selectedCalendarId === cal.id && (
+                        <Ionicons name="checkmark-circle" size={20} color={Colors.accent.green} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
 
             {/* Sync Button */}
             {syncEnabled && selectedProvider && (
