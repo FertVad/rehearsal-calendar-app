@@ -86,11 +86,13 @@ src/
 server/
 ├── routes/              # API routes
 │   ├── auth.js         # Authentication endpoints
-│   └── native/         # Native app endpoints (projects, rehearsals, availability, subscriptions)
+│   ├── admin.js        # Admin dashboard API (stats, users, transactions, bug reports)
+│   ├── admin/          # Admin page HTML generator (dashboardPage.js)
+│   └── native/         # Native app endpoints (projects, rehearsals, availability, subscriptions, bug reports)
 ├── services/           # Business logic layer (subscriptions, notifications)
 ├── jobs/               # Cron jobs (recurring billing)
 ├── database/           # Database setup & migrations
-├── middleware/         # Auth middleware, subscription checks, timezone conversion
+├── middleware/         # Auth middleware, subscription checks, timezone conversion, admin auth
 ├── utils/              # AllPay client, timezone utilities, helpers
 └── constants/          # Shared constants (availability types, etc.)
 ```
@@ -111,7 +113,7 @@ landing/
 ### Database
 - **Development**: SQLite (`native_database.db`)
 - **Production**: PostgreSQL (Neon.tech)
-- **Tables**: All prefixed with `native_*` (native_users, native_projects, native_rehearsals, native_user_availability, native_subscription_plans, native_user_subscriptions, native_payment_transactions, native_allpay_webhook_events, etc.)
+- **Tables**: All prefixed with `native_*` (native_users, native_projects, native_rehearsals, native_user_availability, native_subscription_plans, native_user_subscriptions, native_payment_transactions, native_allpay_webhook_events, native_bug_reports, etc.)
 - **Schema**: [rehearsal-calendar-native/server/database/init-native-schema.sql](rehearsal-calendar-native/server/database/init-native-schema.sql)
 - **Note**: SQLite uses `1`/`0` for booleans in dev, PostgreSQL uses `TRUE`/`FALSE` in production
 
@@ -350,6 +352,49 @@ Payments were temporarily disabled for launch (all features open for early users
 - Profile settings should show "Подписка / Subscription" menu item
 - Backend POST `/api/native/projects` should return 403 with `SUBSCRIPTION_REQUIRED` for users without subscription
 
+### Admin Dashboard
+**Location**: `server/routes/admin.js`, `server/routes/admin/dashboardPage.js`
+
+Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWORD` env var.
+
+**Features**:
+- User stats (total, new this week/month, churn rates)
+- Active subscriptions breakdown by plan
+- Revenue totals
+- Users table with pagination
+- Transactions table with pagination
+- Bug reports table with inline status management
+
+**Auth**: `server/middleware/adminAuth.js` — password login → JWT token (24h expiry)
+
+**API Endpoints**:
+- `POST /admin/api/login` — authenticate with password
+- `GET /admin/api/stats` — aggregate stats (users, subs, revenue, churn, usage)
+- `GET /admin/api/users` — paginated user list with subscription info
+- `GET /admin/api/transactions` — paginated payment transactions
+- `GET /admin/api/bug-reports` — paginated bug reports (sorted: new → in_progress → fixed)
+- `PATCH /admin/api/bug-reports/:id/status` — update bug report status (new/in_progress/fixed)
+
+### Beta Testing: Bug Reports
+**Location**: `src/shared/components/BetaBanner.tsx`, `server/routes/native/bugReports.js`
+
+Global "Test Flight" banner visible on all tab screens during beta testing.
+
+**Frontend**:
+- `BetaBanner` component mounted in `TabNavigator` (navigation/index.tsx)
+- Shows rocket icon + "Тестовый полёт" / "Test Flight" with "Bug Report" button
+- Opens modal with text input, submits to backend
+- Automatically captures current screen name via `useNavigationState`
+
+**Backend**:
+- `POST /api/native/bug-reports` — create report (requireAuth, body: `{ message, screen }`)
+- Table: `native_bug_reports` (id, user_id, message, screen, status, created_at)
+- Status values: `new` (default), `in_progress`, `fixed`
+
+**Admin view**: Bug reports appear in admin dashboard at `/admin` with clickable status buttons.
+
+**Removing after beta**: Delete `<BetaBanner />` from `TabNavigator` in `src/navigation/index.tsx` and remove the import.
+
 ### Batch API Endpoints
 Optimize N+1 queries by loading data in batches:
 ```javascript
@@ -521,6 +566,9 @@ ALLPAY_API_LOGIN=pp1016273  # Your AllPay API login
 ALLPAY_API_KEY=E764DA37F6F96519B89A313DA80AEBBD  # Your AllPay API key
 ALLPAY_WEBHOOK_SECRET=86859ED2BED01EDB0471C28DAD6B51F0  # For webhook signature verification
 ALLPAY_TEST_MODE=true  # Set to false for production payments
+
+# Admin Dashboard
+ADMIN_PASSWORD=<your-admin-password>  # Password for /admin panel login
 
 # Cron Job Configuration (for Vercel Cron Jobs)
 # Generate with: openssl rand -base64 32
