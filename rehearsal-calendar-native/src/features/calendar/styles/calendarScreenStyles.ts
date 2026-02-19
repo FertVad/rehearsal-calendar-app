@@ -240,8 +240,8 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.text.secondary,
   },
-  // Like button styles (Telegram-style)
-  likeSection: {
+  // Seen button styles
+  seenSection: {
     marginTop: Spacing.md,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
@@ -249,19 +249,19 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  likeButton: {
+  seenButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
     padding: Spacing.xs,
   },
-  likeCount: {
+  seenCount: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
     color: Colors.text.secondary,
   },
-  likeCountActive: {
-    color: Colors.accent.red,
+  seenCountActive: {
+    color: Colors.accent.blue,
   },
   // Admin stats styles
   adminStatsSection: {

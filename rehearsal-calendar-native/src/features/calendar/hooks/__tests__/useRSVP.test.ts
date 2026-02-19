@@ -2,8 +2,8 @@
  * Unit Tests for useRSVP Hook
  *
  * Tests:
- * - toggleLike with optimistic updates
- * - Toggle yes ↔ null (like/unlike)
+ * - toggleSeen with optimistic updates
+ * - Toggle yes ↔ null (seen/unseen)
  * - Error handling with rollback
  * - Loading states
  */
@@ -24,8 +24,8 @@ describe('useRSVP Hook', () => {
     jest.clearAllMocks();
   });
 
-  describe('toggleLike - Basic Functionality', () => {
-    it('should toggle null → yes (like)', async () => {
+  describe('toggleSeen - Basic Functionality', () => {
+    it('should toggle null → yes (mark seen)', async () => {
       const mockResponse = { data: { confirmed: 5, invited: 10 } };
       (rehearsalsAPI.respond as jest.Mock).mockResolvedValue(mockResponse);
 
@@ -33,7 +33,7 @@ describe('useRSVP Hook', () => {
       const { result } = renderHook(() => useRSVP());
 
       await act(async () => {
-        await result.current.toggleLike('rehearsal-1', null, onSuccess);
+        await result.current.toggleSeen('rehearsal-1', null, onSuccess);
       });
 
       // Should call onSuccess twice: optimistic + final
@@ -53,7 +53,7 @@ describe('useRSVP Hook', () => {
       expect(rehearsalsAPI.respond).toHaveBeenCalledWith('rehearsal-1', 'yes');
     });
 
-    it('should toggle yes → null (unlike)', async () => {
+    it('should toggle yes → null (mark unseen)', async () => {
       const mockResponse = { data: { confirmed: 4, invited: 10 } };
       (rehearsalsAPI.respond as jest.Mock).mockResolvedValue(mockResponse);
 
@@ -61,13 +61,13 @@ describe('useRSVP Hook', () => {
       const { result } = renderHook(() => useRSVP());
 
       await act(async () => {
-        await result.current.toggleLike('rehearsal-1', 'yes', onSuccess);
+        await result.current.toggleSeen('rehearsal-1', 'yes', onSuccess);
       });
 
       // Should call onSuccess twice: optimistic + final
       expect(onSuccess).toHaveBeenCalledTimes(2);
 
-      // First call: optimistic update to null (unlike)
+      // First call: optimistic update to null (unseen)
       expect(onSuccess).toHaveBeenNthCalledWith(1, 'rehearsal-1', null);
 
       // Second call: final update with stats
@@ -82,7 +82,7 @@ describe('useRSVP Hook', () => {
     });
   });
 
-  describe('toggleLike - Loading States', () => {
+  describe('toggleSeen - Loading States', () => {
     it('should set respondingId during request', async () => {
       const mockResponse = { data: { confirmed: 5, invited: 10 } };
       let resolvePromise: (value: any) => void;
@@ -96,7 +96,7 @@ describe('useRSVP Hook', () => {
 
       // Start toggle
       act(() => {
-        result.current.toggleLike('rehearsal-1', null, onSuccess);
+        result.current.toggleSeen('rehearsal-1', null, onSuccess);
       });
 
       // Should be loading
@@ -113,7 +113,7 @@ describe('useRSVP Hook', () => {
     });
   });
 
-  describe('toggleLike - Error Handling', () => {
+  describe('toggleSeen - Error Handling', () => {
     it('should rollback optimistic update on error', async () => {
       const error = new Error('Network error');
       (rehearsalsAPI.respond as jest.Mock).mockRejectedValue(error);
@@ -122,7 +122,7 @@ describe('useRSVP Hook', () => {
       const { result } = renderHook(() => useRSVP());
 
       await act(async () => {
-        await result.current.toggleLike('rehearsal-1', 'yes', onSuccess);
+        await result.current.toggleSeen('rehearsal-1', 'yes', onSuccess);
       });
 
       // Should call onSuccess twice: optimistic + rollback
@@ -148,7 +148,7 @@ describe('useRSVP Hook', () => {
       const { result } = renderHook(() => useRSVP());
 
       await act(async () => {
-        await result.current.toggleLike('rehearsal-1', null, onSuccess);
+        await result.current.toggleSeen('rehearsal-1', null, onSuccess);
       });
 
       expect(Alert.alert).toHaveBeenCalledWith(
@@ -164,7 +164,7 @@ describe('useRSVP Hook', () => {
       const { result } = renderHook(() => useRSVP());
 
       await act(async () => {
-        await result.current.toggleLike('rehearsal-1', null, onSuccess);
+        await result.current.toggleSeen('rehearsal-1', null, onSuccess);
       });
 
       // Should clear loading state
@@ -172,7 +172,7 @@ describe('useRSVP Hook', () => {
     });
   });
 
-  describe('toggleLike - Concurrent Requests', () => {
+  describe('toggleSeen - Concurrent Requests', () => {
     it('should handle multiple rapid toggles', async () => {
       const mockResponse1 = { data: { confirmed: 5, invited: 10 } };
       const mockResponse2 = { data: { confirmed: 4, invited: 10 } };
@@ -186,11 +186,11 @@ describe('useRSVP Hook', () => {
 
       // Rapid toggle: null → yes → null
       await act(async () => {
-        await result.current.toggleLike('rehearsal-1', null, onSuccess);
+        await result.current.toggleSeen('rehearsal-1', null, onSuccess);
       });
 
       await act(async () => {
-        await result.current.toggleLike('rehearsal-1', 'yes', onSuccess);
+        await result.current.toggleSeen('rehearsal-1', 'yes', onSuccess);
       });
 
       // Should have called API twice
@@ -200,7 +200,7 @@ describe('useRSVP Hook', () => {
     });
   });
 
-  describe('toggleLike - Edge Cases', () => {
+  describe('toggleSeen - Edge Cases', () => {
     it('should handle response data without stats', async () => {
       const mockResponse = { data: {} };
       (rehearsalsAPI.respond as jest.Mock).mockResolvedValue(mockResponse);
@@ -209,7 +209,7 @@ describe('useRSVP Hook', () => {
       const { result } = renderHook(() => useRSVP());
 
       await act(async () => {
-        await result.current.toggleLike('rehearsal-1', null, onSuccess);
+        await result.current.toggleSeen('rehearsal-1', null, onSuccess);
       });
 
       // Should still call onSuccess with empty data
@@ -224,7 +224,7 @@ describe('useRSVP Hook', () => {
       const { result } = renderHook(() => useRSVP());
 
       await act(async () => {
-        await result.current.toggleLike('rehearsal-1', null, onSuccess);
+        await result.current.toggleSeen('rehearsal-1', null, onSuccess);
       });
 
       // Should call onSuccess only once (optimistic) if data is null

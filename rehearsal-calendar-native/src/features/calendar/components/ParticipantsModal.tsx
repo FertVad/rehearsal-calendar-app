@@ -16,7 +16,7 @@ interface Participant {
   firstName: string;
   lastName: string;
   email: string;
-  hasLiked: boolean;
+  hasSeen: boolean;
   hasResponded: boolean;
 }
 
@@ -25,7 +25,7 @@ interface ParticipantsModalProps {
   onClose: () => void;
   participants: Participant[];
   totalCount: number;
-  likedCount: number;
+  seenCount: number;
 }
 
 export const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
@@ -33,7 +33,7 @@ export const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
   onClose,
   participants,
   totalCount,
-  likedCount,
+  seenCount,
 }) => {
   const { t } = useI18n();
 
@@ -48,13 +48,13 @@ export const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
       // No response yet - show help icon
       iconName = 'help-circle-outline';
       iconColor = Colors.text.tertiary;
-    } else if (item.hasLiked) {
-      // Liked - show filled heart
-      iconName = 'heart';
-      iconColor = Colors.accent.red;
+    } else if (item.hasSeen) {
+      // Seen - show eye icon
+      iconName = 'eye';
+      iconColor = Colors.accent.blue;
     } else {
-      // Responded but didn't like - show heart outline
-      iconName = 'heart-outline';
+      // Responded but not seen - show eye off
+      iconName = 'eye-off-outline';
       iconColor = Colors.text.tertiary;
     }
 
@@ -102,9 +102,9 @@ export const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
           {/* Stats */}
           <View style={styles.stats}>
             <View style={styles.statItem}>
-              <Ionicons name="heart" size={16} color={Colors.accent.red} />
+              <Ionicons name="eye" size={16} color={Colors.accent.blue} />
               <Text style={styles.statText}>
-                {likedCount}/{totalCount}
+                {seenCount}/{totalCount}
               </Text>
             </View>
           </View>

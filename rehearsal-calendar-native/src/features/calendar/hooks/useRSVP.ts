@@ -9,17 +9,17 @@ export const useRSVP = () => {
   const [respondingId, setRespondingId] = useState<string | null>(null);
 
   /**
-   * Toggle like status for a rehearsal with optimistic UI update
-   * Binary like system:
-   * - If current status is 'yes' → toggle to null (unlike/remove response)
-   * - Otherwise → toggle to 'yes' (like)
+   * Toggle seen status for a rehearsal with optimistic UI update
+   * Binary seen system:
+   * - If current status is 'yes' → toggle to null (unseen/remove response)
+   * - Otherwise → toggle to 'yes' (seen)
    */
-  const toggleLike = useCallback(async (
+  const toggleSeen = useCallback(async (
     rehearsalId: string,
     currentStatus: RSVPStatus | null,
     onSuccess: (rehearsalId: string, newStatus: RSVPStatus, stats?: any) => void
   ) => {
-    // Toggle logic: 'yes' (liked) ↔ null (unliked)
+    // Toggle logic: 'yes' (seen) ↔ null (unseen)
     // We send 'no' to server to delete the response, but store null in state
     const newStatus: RSVPStatus = currentStatus === 'yes' ? null : 'yes';
     const serverStatus: RSVPStatus = currentStatus === 'yes' ? 'no' : 'yes';
@@ -38,7 +38,7 @@ export const useRSVP = () => {
         onSuccess(rehearsalId, newStatus, response.data);
       }
     } catch (err: any) {
-      console.error('Failed to toggle like:', err);
+      console.error('Failed to toggle seen:', err);
       // Revert optimistic update on error
       onSuccess(rehearsalId, currentStatus);
       Alert.alert(t.common.error, err.message || 'Failed to update status');
@@ -49,6 +49,6 @@ export const useRSVP = () => {
 
   return {
     respondingId,
-    toggleLike,
+    toggleSeen,
   };
 };

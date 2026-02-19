@@ -1,10 +1,10 @@
 import db from '../../database/db.js';
 
 /**
- * Respond to a rehearsal (like system: toggle between 'yes' and 'no')
+ * Respond to a rehearsal (seen system: toggle between 'yes' and 'no')
  * @param {number} rehearsalId - Rehearsal ID
  * @param {number} userId - User ID
- * @param {string} response - 'yes' (liked) or 'no' (not responded)
+ * @param {string} response - 'yes' (seen) or 'no' (unseen)
  * @param {string|null} notes - Optional notes
  * @param {number} projectId - Project ID for calculating stats
  * @returns {Promise<object>} - Updated rehearsal stats (confirmed, invited)

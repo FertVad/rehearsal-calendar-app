@@ -200,10 +200,10 @@ export default function TodayRehearsals({
                 </View>
               </TouchableOpacity>
 
-              {/* Like Button (Telegram-style) */}
-              <View style={styles.likeSection}>
+              {/* Seen Button */}
+              <View style={styles.seenSection}>
                 <Pressable
-                  style={styles.likeButton}
+                  style={styles.seenButton}
                   onPress={() => {
                     // Medium haptic feedback on tap
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -223,9 +223,9 @@ export default function TodayRehearsals({
                   disabled={isResponding}
                 >
                   <Ionicons
-                    name={currentResponse === 'yes' ? 'heart' : 'heart-outline'}
+                    name={currentResponse === 'yes' ? 'eye' : 'eye-off-outline'}
                     size={24}
-                    color={currentResponse === 'yes' ? Colors.accent.red : Colors.text.secondary}
+                    color={currentResponse === 'yes' ? Colors.accent.blue : Colors.text.secondary}
                   />
                   {stats && (stats.confirmed > 0 || isAdminForThisRehearsal) && (() => {
                     const displayText = isAdminForThisRehearsal && stats.invited > 0
@@ -233,7 +233,7 @@ export default function TodayRehearsals({
                       : `${stats.confirmed}`;
 
                     return (
-                      <Text style={styles.likeCount}>
+                      <Text style={styles.seenCount}>
                         {displayText}
                       </Text>
                     );

@@ -24,7 +24,7 @@ interface Participant {
   firstName: string;
   lastName: string;
   email: string;
-  hasLiked: boolean;
+  hasSeen: boolean;
   hasResponded: boolean;
 }
 
@@ -85,14 +85,14 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
             firstName: p.firstName,
             lastName: p.lastName,
             email: p.email,
-            hasLiked: p.response === 'yes',
+            hasSeen: p.response === 'yes',
             hasResponded: p.response === 'yes', // 'no' means invited but not responded (same UI as not responded)
           }));
           console.log('[RehearsalDetailsModal] Participants list:', participantsList);
           setParticipants(participantsList);
 
           // Calculate stats
-          const confirmed = participantsList.filter((p: Participant) => p.hasLiked).length;
+          const confirmed = participantsList.filter((p: Participant) => p.hasSeen).length;
           const invited = participantsList.length;
           setStats({ confirmed, invited });
         } else {
@@ -119,11 +119,11 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
     setRespondingUserId(participant.userId);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    await onRSVP(rehearsal.id, participant.hasLiked ? 'yes' : null, (id, status, serverStats) => {
+    await onRSVP(rehearsal.id, participant.hasSeen ? 'yes' : null, (id, status, serverStats) => {
       // Update participant list
       setParticipants(prev => prev.map(p =>
         p.userId === participant.userId
-          ? { ...p, hasLiked: status === 'yes', hasResponded: true }
+          ? { ...p, hasSeen: status === 'yes', hasResponded: true }
           : p
       ));
 
@@ -151,11 +151,11 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
     if (!item.hasResponded) {
       iconName = 'help-circle-outline';
       iconColor = Colors.text.tertiary;
-    } else if (item.hasLiked) {
-      iconName = 'heart';
-      iconColor = Colors.accent.red;
+    } else if (item.hasSeen) {
+      iconName = 'eye';
+      iconColor = Colors.accent.blue;
     } else {
-      iconName = 'heart-outline';
+      iconName = 'eye-off-outline';
       iconColor = Colors.text.tertiary;
     }
 
@@ -258,7 +258,7 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
               </Text>
               {isAdmin && stats && (
                 <View style={styles.statBadge}>
-                  <Ionicons name="heart" size={16} color={Colors.accent.red} />
+                  <Ionicons name="eye" size={16} color={Colors.accent.blue} />
                   <Text style={styles.statText}>
                     {stats.confirmed}/{stats.invited}
                   </Text>

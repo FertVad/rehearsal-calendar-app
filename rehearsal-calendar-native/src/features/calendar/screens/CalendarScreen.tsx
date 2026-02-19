@@ -76,7 +76,7 @@ export default function CalendarScreen() {
     fetchRehearsals,
   } = useRehearsals(projects, filterProjectId);
 
-  const { respondingId, toggleLike } = useRSVP();
+  const { respondingId, toggleSeen } = useRSVP();
 
   const handleDayLongPress = useCallback((date: string) => {
     navigation.navigate('AddRehearsal', {
@@ -327,7 +327,7 @@ export default function CalendarScreen() {
           rsvpResponses={rsvpResponses}
           respondingId={respondingId}
           adminStats={adminStats}
-          onRSVP={toggleLike}
+          onRSVP={toggleSeen}
           onDeleteRehearsal={handleDeleteRehearsal}
           setRsvpResponses={setRsvpResponses}
           setAdminStats={setAdminStats}
@@ -455,16 +455,16 @@ export default function CalendarScreen() {
                       </View>
                     </TouchableOpacity>
 
-                    {/* Like Button (Telegram-style) */}
-                    <View style={styles.likeSection}>
+                    {/* Seen Button */}
+                    <View style={styles.seenSection}>
                       <Pressable
-                        style={styles.likeButton}
+                        style={styles.seenButton}
                         onPress={() => {
                           // Medium haptic feedback on tap
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
                           // Toggle logic is in the hook, just pass current status
-                          toggleLike(rehearsal.id, currentResponse, (id, status, serverStats) => {
+                          toggleSeen(rehearsal.id, currentResponse, (id, status, serverStats) => {
                             setRsvpResponses(prev => ({ ...prev, [id]: status }));
                             // If server returned stats, use them immediately
                             if (serverStats && isAdminForThisRehearsal) {
@@ -478,9 +478,9 @@ export default function CalendarScreen() {
                         disabled={isResponding}
                       >
                         <Ionicons
-                          name={currentResponse === 'yes' ? 'heart' : 'heart-outline'}
+                          name={currentResponse === 'yes' ? 'eye' : 'eye-off-outline'}
                           size={24}
-                          color={currentResponse === 'yes' ? Colors.accent.red : Colors.text.secondary}
+                          color={currentResponse === 'yes' ? Colors.accent.blue : Colors.text.secondary}
                         />
                         {stats && (stats.confirmed > 0 || isAdminForThisRehearsal) && (() => {
                           const displayText = isAdminForThisRehearsal && stats.invited > 0
@@ -488,7 +488,7 @@ export default function CalendarScreen() {
                             : `${stats.confirmed}`;
 
                           return (
-                            <Text style={styles.likeCount}>
+                            <Text style={styles.seenCount}>
                               {displayText}
                             </Text>
                           );
@@ -519,7 +519,7 @@ export default function CalendarScreen() {
         project={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId) || null : null}
         isAdmin={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId)?.is_admin || false : false}
         currentResponse={selectedRehearsalForDetails ? rsvpResponses[selectedRehearsalForDetails.id] : null}
-        onRSVP={toggleLike}
+        onRSVP={toggleSeen}
         onRSVPSuccess={(id, status, serverStats) => {
           setRsvpResponses(prev => ({ ...prev, [id]: status }));
           if (serverStats && selectedRehearsalForDetails) {

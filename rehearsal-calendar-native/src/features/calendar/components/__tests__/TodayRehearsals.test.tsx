@@ -317,7 +317,7 @@ describe('TodayRehearsals Component', () => {
   });
 
   describe('RSVP Button', () => {
-    it('should call onRSVP when heart button pressed', () => {
+    it('should call onRSVP when seen button pressed', () => {
       const { UNSAFE_getAllByType } = render(
         <TodayRehearsals
           rehearsals={[mockRehearsals[0]]}
@@ -334,16 +334,16 @@ describe('TodayRehearsals Component', () => {
         />
       );
 
-      // Find the RSVP Pressable (like button)
+      // Find the RSVP Pressable (seen button)
       const pressables = UNSAFE_getAllByType(require('react-native').Pressable);
-      const likeButton = pressables.find(p => {
-        // Like button contains Ionicons with heart or heart-outline
+      const seenButton = pressables.find(p => {
+        // Seen button contains Ionicons with eye or eye-off-outline
         const icon = p.props.children?.[0]?.props?.name;
-        return icon === 'heart' || icon === 'heart-outline';
+        return icon === 'eye' || icon === 'eye-off-outline';
       });
 
-      if (likeButton) {
-        fireEvent.press(likeButton);
+      if (seenButton) {
+        fireEvent.press(seenButton);
         expect(mockOnRSVP).toHaveBeenCalledWith(
           'r1',
           'yes',
@@ -352,7 +352,7 @@ describe('TodayRehearsals Component', () => {
       }
     });
 
-    it('should show filled heart for yes response', () => {
+    it('should show eye icon for yes response', () => {
       const { UNSAFE_getAllByType } = render(
         <TodayRehearsals
           rehearsals={[mockRehearsals[0]]}
@@ -369,13 +369,13 @@ describe('TodayRehearsals Component', () => {
         />
       );
 
-      // Find Ionicons with name="heart" (filled)
+      // Find Ionicons with name="eye" (seen)
       const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
-      const heartIcon = icons.find(i => i.props.name === 'heart');
-      expect(heartIcon).toBeTruthy();
+      const eyeIcon = icons.find(i => i.props.name === 'eye');
+      expect(eyeIcon).toBeTruthy();
     });
 
-    it('should show outline heart for null response', () => {
+    it('should show eye-off icon for null response', () => {
       const { UNSAFE_getAllByType } = render(
         <TodayRehearsals
           rehearsals={[mockRehearsals[1]]}
@@ -392,10 +392,10 @@ describe('TodayRehearsals Component', () => {
         />
       );
 
-      // Find Ionicons with name="heart-outline"
+      // Find Ionicons with name="eye-off-outline"
       const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
-      const heartIcon = icons.find(i => i.props.name === 'heart-outline');
-      expect(heartIcon).toBeTruthy();
+      const eyeOffIcon = icons.find(i => i.props.name === 'eye-off-outline');
+      expect(eyeOffIcon).toBeTruthy();
     });
 
     it('should disable RSVP button when responding', () => {
