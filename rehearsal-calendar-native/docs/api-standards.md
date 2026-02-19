@@ -181,31 +181,15 @@ router.post('/endpoint', requireAuth, async (req, res) => {
 
 ---
 
-## Running Consistency Checks
-
-Run before committing:
-
-```bash
-node server/scripts/check-consistency.js
-```
-
-This will check for:
-- `req.user.id` usage (should be `req.userId`)
-- Mixing `?` and `$N` placeholders
-- Missing error handling in async routes
-- Other common issues
-
----
-
 ## Testing Changes
 
 After making changes to routes:
 
 1. ✅ Restart the server
 2. ✅ Test the affected endpoints
-3. ✅ Run consistency checker
+3. ✅ Run `npm run type-check` and `npm test`
 4. ✅ Check server logs for errors
 
 ---
 
-Last updated: December 25, 2025
+Last updated: 2026-02-19

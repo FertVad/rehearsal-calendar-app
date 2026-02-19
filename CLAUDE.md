@@ -182,14 +182,14 @@ AVAILABILITY_SOURCES = {
 }
 ```
 
-### 5. Like System (Rehearsal Responses)
-Binary system: `'yes'` (liked) or `NULL` (unliked/deleted). No 'no' or 'maybe' statuses.
+### 5. Seen System (Rehearsal Responses)
+Binary "I've seen this" toggle using eye icon. `'yes'` (seen) or `NULL` (unseen/deleted). No 'no' or 'maybe' statuses.
 
 ```javascript
 // API: POST /api/native/rehearsals/:id/respond
-{ response: 'yes' }  // Like rehearsal
+{ response: 'yes' }  // Mark as seen
 
-// To unlike: Send same endpoint with response: null (handled by backend as DELETE)
+// To mark unseen: Send same endpoint with response: null (handled by backend as DELETE)
 ```
 
 ### 6. API Response Format

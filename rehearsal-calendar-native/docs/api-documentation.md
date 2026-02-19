@@ -655,9 +655,9 @@ Delete a rehearsal.
 
 ---
 
-#### 5. Like/Unlike Rehearsal (Telegram-style Like System)
+#### 5. Mark Seen/Unseen Rehearsal
 
-Like or unlike a rehearsal. This is a binary system - you can either like (yes) or unlike (delete response).
+Mark a rehearsal as seen or unseen. This is a binary system - you can either mark as seen (yes) or unseen (delete response). Displayed as an eye icon toggle in the UI.
 
 **Endpoint:** `POST /native/rehearsals/:rehearsalId/respond`
 
@@ -674,9 +674,9 @@ Like or unlike a rehearsal. This is a binary system - you can either like (yes) 
 ```
 
 **Parameters:**
-- `status` (string | null, required): Like status:
-  - `"yes"` - User likes the rehearsal (will attend)
-  - `null` - Unlike (removes the response / deletes the like)
+- `status` (string | null, required): Seen status:
+  - `"yes"` - User has seen the rehearsal
+  - `null` - Mark as unseen (removes the response)
 
 **Success Response (200):**
 ```json
@@ -704,7 +704,7 @@ Like or unlike a rehearsal. This is a binary system - you can either like (yes) 
   ```
 - `403 Forbidden`: User is not a project member
   ```json
-  { "error": "You must be a project member to like rehearsals" }
+  { "error": "You must be a project member to respond to rehearsals" }
   ```
 - `404 Not Found`: Rehearsal not found
   ```json
@@ -712,12 +712,12 @@ Like or unlike a rehearsal. This is a binary system - you can either like (yes) 
   ```
 
 **Notes:**
-- **Binary system**: Only two states - liked ('yes') or unliked (NULL/deleted)
+- **Binary system**: Only two states - seen ('yes') or unseen (NULL/deleted)
 - If status is `null`, the response record is deleted from the database
-- If the user has already liked, sending `null` will unlike (delete the response)
-- If the user hasn't liked yet, sending `"yes"` will create a new like
+- If the user has already marked seen, sending `null` will mark unseen (delete the response)
+- If the user hasn't responded yet, sending `"yes"` will mark as seen
 - The response includes updated stats (confirmed count + invited count) for admins
-- Client implements optimistic updates with haptic feedback for instant UI response
+- Client implements optimistic updates with eye icon toggle (eye = seen, eye-off = unseen)
 
 ---
 
@@ -781,7 +781,7 @@ Retrieve all RSVP responses for a rehearsal.
 **Notes:**
 - Includes user information (name, email) for each response
 - Stats object provides a summary: `confirmed` (number of 'yes' responses) and `invited` (number of members without response)
-- The like system is binary - users either have 'yes' response or no response at all
+- The seen system is binary - users either have 'yes' response or no response at all
 
 ---
 
@@ -1432,14 +1432,14 @@ interface Rehearsal {
 }
 ```
 
-### Rehearsal Response (Like System)
+### Rehearsal Response (Seen System)
 
 ```typescript
 interface RehearsalResponse {
   id: string;
   rehearsalId: string;
   userId: string;
-  response: "yes" | null;        // Binary like system: 'yes' (liked) or null (unliked/deleted)
+  response: "yes" | null;        // Binary seen system: 'yes' (seen) or null (unseen/deleted)
   notes: string | null;
   createdAt: string;             // ISO 8601 timestamp
   updatedAt: string;             // ISO 8601 timestamp
@@ -1450,11 +1450,11 @@ interface RehearsalResponse {
 }
 ```
 
-**Like System Notes:**
-- Binary system: only 'yes' or null (deleted)
+**Seen System Notes:**
+- Binary system: only 'yes' (seen) or null (unseen/deleted)
 - No 'no' or 'maybe' statuses
 - Sending null deletes the response record
-- Client uses optimistic updates for instant feedback
+- Client uses optimistic updates with eye icon toggle
 
 ### Availability Slot
 
@@ -1757,10 +1757,11 @@ For issues, questions, or feature requests, please contact the development team.
 
 ---
 
-**Last Updated:** 2024-12-24
+**Last Updated:** 2026-02-19
 
-**API Version:** 1.1
+**API Version:** 1.2
 
 **Recent Changes:**
-- v1.1 (2024-12-24): Like system migration, token TTL increased, availability type fixes
+- v1.2 (2026-02-19): Renamed "like system" to "seen system" (eye icon toggle), i18n updates
+- v1.1 (2024-12-24): Like→seen system migration, token TTL increased, availability type fixes
 - v1.0 (2024-12-11): Initial API release
