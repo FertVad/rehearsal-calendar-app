@@ -182,14 +182,19 @@ app.get('/invite/:code', (req, res) => {
         <h1>🎭 Rehearsal App</h1>
         <div id="status">
           <div class="spinner"></div>
-          <p>Открываем приложение...</p>
+          <p id="statusText"></p>
         </div>
         <div id="manual" style="display: none;">
-          <p>Приложение не открылось автоматически?</p>
-          <a href="#" onclick="openApp(); return false;" class="button">Открыть приложение</a>
+          <p id="manualText"></p>
+          <a href="#" onclick="openApp(); return false;" class="button" id="openButton"></a>
         </div>
       </div>
       <script>
+        const isRu = navigator.language.startsWith('ru');
+        document.getElementById('statusText').textContent = isRu ? 'Открываем приложение...' : 'Opening the app...';
+        document.getElementById('manualText').textContent = isRu ? 'Приложение не открылось автоматически?' : "App didn't open automatically?";
+        document.getElementById('openButton').textContent = isRu ? 'Открыть приложение' : 'Open App';
+
         const code = '${code}';
         ${expoHost ? `const expoHost = '${expoHost}';` : 'const expoHost = null;'}
 

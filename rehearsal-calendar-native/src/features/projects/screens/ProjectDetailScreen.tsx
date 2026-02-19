@@ -86,6 +86,8 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   const [memberActionLoading, setMemberActionLoading] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [upcomingExpanded, setUpcomingExpanded] = useState(false);
+  const [pastExpanded, setPastExpanded] = useState(false);
 
   const fetchData = useCallback(async () => {
     // Prevent fetching if project is being deleted
@@ -371,17 +373,28 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
 
         {/* Upcoming Rehearsals */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <TouchableOpacity
+            style={styles.sectionHeader}
+            onPress={() => upcomingRehearsals.length > 0 && setUpcomingExpanded(prev => !prev)}
+            activeOpacity={upcomingRehearsals.length > 0 ? 0.7 : 1}
+          >
             <Ionicons name="calendar" size={20} color={Colors.accent.purple} />
             <Text style={styles.sectionTitle}>{t.projects.upcomingRehearsals}</Text>
             <Text style={styles.sectionCount}>{upcomingRehearsals.length}</Text>
-          </View>
+            {upcomingRehearsals.length > 0 && (
+              <Ionicons
+                name={upcomingExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={Colors.text.tertiary}
+              />
+            )}
+          </TouchableOpacity>
 
           {upcomingRehearsals.length === 0 ? (
             <Text style={styles.emptyText}>{t.projects.noUpcomingRehearsals}</Text>
-          ) : (
+          ) : upcomingExpanded ? (
             <View style={styles.rehearsalsList}>
-              {upcomingRehearsals.slice(0, 5).map(rehearsal => (
+              {upcomingRehearsals.map(rehearsal => (
                 <View key={rehearsal.id} style={styles.rehearsalCard}>
                   <View style={styles.rehearsalDate}>
                     <Text style={styles.rehearsalDateText}>{formatDate(rehearsal.date, language)}</Text>
@@ -409,40 +422,51 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
                 </View>
               ))}
             </View>
-          )}
+          ) : null}
         </View>
 
         {/* Past Rehearsals */}
         {pastRehearsals.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => setPastExpanded(prev => !prev)}
+              activeOpacity={0.7}
+            >
               <Ionicons name="time" size={20} color={Colors.text.tertiary} />
               <Text style={[styles.sectionTitle, styles.pastTitle]}>{t.projects.pastRehearsals}</Text>
               <Text style={styles.sectionCount}>{pastRehearsals.length}</Text>
-            </View>
+              <Ionicons
+                name={pastExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={Colors.text.tertiary}
+              />
+            </TouchableOpacity>
 
-            <View style={styles.rehearsalsList}>
-              {pastRehearsals.slice(0, 3).map(rehearsal => (
-                <View key={rehearsal.id} style={[styles.rehearsalCard, styles.pastCard]}>
-                  <View style={[styles.rehearsalDate, styles.pastDate]}>
-                    <Text style={[styles.rehearsalDateText, styles.pastDateText]}>
-                      {formatDate(rehearsal.date, language)}
-                    </Text>
-                  </View>
-                  <View style={styles.rehearsalInfo}>
-                    <Text style={[styles.rehearsalTitle, styles.pastText]} numberOfLines={1}>
-                      {rehearsal.scene || t.calendar.rehearsal}
-                    </Text>
-                    <View style={styles.rehearsalMeta}>
-                      <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
-                      <Text style={styles.rehearsalTime}>
-                        {rehearsal.time.substring(0, 5)}
+            {pastExpanded && (
+              <View style={styles.rehearsalsList}>
+                {pastRehearsals.map(rehearsal => (
+                  <View key={rehearsal.id} style={[styles.rehearsalCard, styles.pastCard]}>
+                    <View style={[styles.rehearsalDate, styles.pastDate]}>
+                      <Text style={[styles.rehearsalDateText, styles.pastDateText]}>
+                        {formatDate(rehearsal.date, language)}
                       </Text>
                     </View>
+                    <View style={styles.rehearsalInfo}>
+                      <Text style={[styles.rehearsalTitle, styles.pastText]} numberOfLines={1}>
+                        {rehearsal.scene || t.calendar.rehearsal}
+                      </Text>
+                      <View style={styles.rehearsalMeta}>
+                        <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
+                        <Text style={styles.rehearsalTime}>
+                          {rehearsal.time.substring(0, 5)}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              ))}
-            </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
 

@@ -17,7 +17,7 @@ interface I18nProviderProps {
 const LANGUAGE_STORAGE_KEY = 'userLanguage';
 
 export function I18nProvider({ children }: I18nProviderProps) {
-  const [language, setLanguageState] = useState<Language>('ru');
+  const [language, setLanguageState] = useState<Language>('en');
   const [loading, setLoading] = useState(true);
 
   const loadLanguage = useCallback(async () => {

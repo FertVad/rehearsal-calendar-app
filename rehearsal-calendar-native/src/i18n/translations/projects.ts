@@ -52,6 +52,16 @@ export interface ProjectsTranslations {
   deleteProjectWarning: string;
   projectDeleted: string;
   deleteProjectError: string;
+  inviteNotFound: string;
+  inviteExpired: string;
+  inviteLoadError: string;
+  joinError: string;
+  loadingInvite: string;
+  error: string;
+  close: string;
+  projectInvitation: string;
+  inviteSubtitle: string;
+  join: string;
 }
 
 export const ru = {
@@ -109,6 +119,16 @@ export const ru = {
     deleteProjectWarning: 'Все репетиции, участники и данные проекта будут удалены без возможности восстановления.',
     projectDeleted: 'Проект успешно удален',
     deleteProjectError: 'Не удалось удалить проект',
+    inviteNotFound: 'Приглашение не найдено',
+    inviteExpired: 'Срок действия приглашения истек',
+    inviteLoadError: 'Не удалось загрузить информацию о приглашении',
+    joinError: 'Не удалось присоединиться к проекту',
+    loadingInvite: 'Загрузка приглашения...',
+    error: 'Ошибка',
+    close: 'Закрыть',
+    projectInvitation: 'Приглашение в проект',
+    inviteSubtitle: 'Вас приглашают присоединиться к этому проекту',
+    join: 'Присоединиться',
   },
 };
 
@@ -167,5 +187,15 @@ export const en = {
     deleteProjectWarning: 'All rehearsals, members, and project data will be permanently deleted.',
     projectDeleted: 'Project successfully deleted',
     deleteProjectError: 'Failed to delete project',
+    inviteNotFound: 'Invitation not found',
+    inviteExpired: 'Invitation has expired',
+    inviteLoadError: 'Failed to load invitation info',
+    joinError: 'Failed to join project',
+    loadingInvite: 'Loading invitation...',
+    error: 'Error',
+    close: 'Close',
+    projectInvitation: 'Project Invitation',
+    inviteSubtitle: 'You are invited to join this project',
+    join: 'Join',
   },
 };

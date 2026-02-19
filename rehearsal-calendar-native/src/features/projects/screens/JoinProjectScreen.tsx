@@ -13,6 +13,7 @@ import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';
 import { invitesAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { joinProjectScreenStyles as styles } from '../styles';
 
 type JoinProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'JoinProject'>;
@@ -20,6 +21,7 @@ type JoinProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'JoinPro
 export default function JoinProjectScreen({ route, navigation }: JoinProjectScreenProps) {
   const { code } = route.params;
   const { refreshProjects } = useProjects();
+  const { t } = useI18n();
 
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
@@ -67,11 +69,11 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
       setProjectInfo(response.data);
     } catch (err: any) {
       if (err.response?.status === 404) {
-        setError('Приглашение не найдено');
+        setError(t.projects.inviteNotFound);
       } else if (err.response?.status === 410) {
-        setError('Срок действия приглашения истек');
+        setError(t.projects.inviteExpired);
       } else {
-        setError('Не удалось загрузить информацию о приглашении');
+        setError(t.projects.inviteLoadError);
       }
     } finally {
       setLoading(false);
@@ -101,7 +103,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
           routes: [{ name: 'MainTabs' }],
         });
       } else {
-        setError(err.response?.data?.error || 'Не удалось присоединиться к проекту');
+        setError(err.response?.data?.error || t.projects.joinError);
       }
     } finally {
       setJoining(false);
@@ -117,7 +119,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={Colors.accent.purple} />
-          <Text style={styles.loadingText}>Загрузка приглашения...</Text>
+          <Text style={styles.loadingText}>{t.projects.loadingInvite}</Text>
         </View>
       </SafeAreaView>
     );
@@ -128,10 +130,10 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
           <Ionicons name="alert-circle" size={64} color={Colors.accent.red} />
-          <Text style={styles.errorTitle}>Ошибка</Text>
+          <Text style={styles.errorTitle}>{t.projects.error}</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.button} onPress={handleCancel}>
-            <Text style={styles.buttonText}>Закрыть</Text>
+            <Text style={styles.buttonText}>{t.projects.close}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -145,7 +147,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
           <Ionicons name="people" size={64} color={Colors.accent.purple} />
         </View>
 
-        <Text style={styles.title}>Приглашение в проект</Text>
+        <Text style={styles.title}>{t.projects.projectInvitation}</Text>
 
         <View style={styles.projectCard}>
           <Text style={styles.projectName}>{projectInfo?.projectName}</Text>
@@ -157,7 +159,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
         </View>
 
         <Text style={styles.subtitle}>
-          Вас приглашают присоединиться к этому проекту
+          {t.projects.inviteSubtitle}
         </Text>
 
         <View style={styles.buttonContainer}>
@@ -172,7 +174,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
               <>
                 <Ionicons name="checkmark" size={20} color={Colors.text.inverse} />
                 <Text style={[styles.buttonText, styles.primaryButtonText]}>
-                  Присоединиться
+                  {t.projects.join}
                 </Text>
               </>
             )}
@@ -183,7 +185,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
             onPress={handleCancel}
             disabled={joining}
           >
-            <Text style={styles.secondaryButtonText}>Отмена</Text>
+            <Text style={styles.secondaryButtonText}>{t.projects.cancel}</Text>
           </TouchableOpacity>
         </View>
       </View>
