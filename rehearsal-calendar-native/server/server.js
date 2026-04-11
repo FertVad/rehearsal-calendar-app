@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -56,7 +57,29 @@ try {
 }
 
 const app = express();
-app.use(cors());
+
+// Security headers
+app.use(helmet({
+  // Relax CSP — AllPay checkout page loads iframe from allpay.co.il
+  contentSecurityPolicy: false,
+}));
+
+// CORS — React Native app doesn't use CORS (native HTTP client),
+// but browser-based admin panel and invite pages do
+const allowedOrigins = [
+  process.env.BASE_URL,
+  'http://localhost:3001',
+  'http://localhost:8081',
+].filter(Boolean);
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile app, curl, Vercel Cron)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Parse form-urlencoded (AllPay webhooks)
 
