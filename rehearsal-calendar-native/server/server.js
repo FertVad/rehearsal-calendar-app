@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -71,6 +72,22 @@ app.use((req, _res, next) => {
   if (LOG_REQUESTS) logger.debug(`Request: ${req.method} ${req.originalUrl}`);
   next();
 });
+
+// Rate limiting
+app.use('/api/auth', rateLimit({
+  windowMs: 60 * 1000,  // 1 minute
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+}));
+app.use('/admin/api/login', rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts, please try again later' },
+}));
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {
