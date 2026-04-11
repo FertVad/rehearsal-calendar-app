@@ -196,7 +196,7 @@ app.get('/invite/:code', (req, res) => {
         document.getElementById('openButton').textContent = isRu ? 'Открыть приложение' : 'Open App';
 
         const code = '${code}';
-        ${expoHost ? `const expoHost = '${expoHost}';` : 'const expoHost = null;'}
+        const expoHost = ${JSON.stringify(expoHost || null)};
 
         function openApp() {
           const schemes = [];
