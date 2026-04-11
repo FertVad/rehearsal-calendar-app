@@ -12,18 +12,11 @@ function generateInviteCode() {
 }
 
 function generateInviteUrl(inviteCode) {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-
-  if (isDevelopment) {
-    // In development, use custom URL scheme for direct app opening
-    // This works with both iPhone and simulators without needing Universal Links
+  if (process.env.NODE_ENV === 'development') {
     return `rehearsalapp://invite/${inviteCode}`;
-  } else {
-    // In production, use HTTPS URL
-    // Note: Universal Links require Associated Domains capability (paid Apple Developer account)
-    // Without it, users will need to manually choose "Open in app"
-    return `https://server-fertvads-projects.vercel.app/invite/${inviteCode}`;
   }
+  const baseUrl = process.env.BASE_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`;
+  return `${baseUrl}/invite/${inviteCode}`;
 }
 
 // POST /api/native/projects/:projectId/invite - Create invite link

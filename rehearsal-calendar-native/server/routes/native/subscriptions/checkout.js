@@ -19,7 +19,6 @@ const router = Router();
 const getBaseUrl = () => {
   if (process.env.BASE_URL) return process.env.BASE_URL;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  if (process.env.NODE_ENV === 'production') return 'https://server-fertvads-projects.vercel.app';
   return 'http://localhost:3001';
 };
 
