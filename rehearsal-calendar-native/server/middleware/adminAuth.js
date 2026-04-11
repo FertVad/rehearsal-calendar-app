@@ -1,35 +1,42 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
-function getSecret() {
-  const pw = process.env.ADMIN_PASSWORD;
-  return pw ? `admin-panel-${pw}` : null;
+// JWT secret is independent of the password — changing password doesn't invalidate tokens
+function getJwtSecret() {
+  return process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'admin-dev-secret';
 }
 
-export function adminLogin(req, res) {
-  const pw = process.env.ADMIN_PASSWORD;
-  if (!pw) {
+export async function adminLogin(req, res) {
+  const passwordHash = process.env.ADMIN_PASSWORD_HASH;
+  const passwordPlain = process.env.ADMIN_PASSWORD;
+
+  if (!passwordHash && !passwordPlain) {
     return res.status(503).json({ error: 'Admin panel not configured' });
   }
+
   const { password } = req.body;
-  if (password !== pw) {
+
+  // Prefer bcrypt hash; fall back to plaintext for backwards compatibility
+  const isValid = passwordHash
+    ? await bcrypt.compare(password, passwordHash)
+    : password === passwordPlain;
+
+  if (!isValid) {
     return res.status(401).json({ error: 'Invalid password' });
   }
-  const token = jwt.sign({ role: 'admin' }, getSecret(), { expiresIn: '24h' });
+
+  const token = jwt.sign({ role: 'admin' }, getJwtSecret(), { expiresIn: '24h' });
   res.json({ token });
 }
 
 export function requireAdmin(req, res, next) {
-  const secret = getSecret();
-  if (!secret) {
-    return res.status(503).json({ error: 'Admin panel not configured' });
-  }
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Admin token required' });
   }
   try {
-    const decoded = jwt.verify(token, secret);
+    const decoded = jwt.verify(token, getJwtSecret());
     if (decoded.role !== 'admin') throw new Error('Not admin');
     next();
   } catch {
