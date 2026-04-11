@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger.js';
 import db from '../../database/db.js';
 import { localToTimestamp, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
@@ -175,7 +176,7 @@ export async function getRehearsalsForProjects(projectIds, userId) {
  * @returns {Promise<Array>} - Array of rehearsals
  */
 export async function getProjectRehearsals(projectId, userId) {
-  console.log(`[getProjectRehearsals] START - projectId: ${projectId}, userId: ${userId}`);
+  logger.debug(`[getProjectRehearsals] START - projectId: ${projectId}, userId: ${userId}`);
 
   // Get user's timezone for correct date/time conversion
   const userResult = await db.get(
@@ -183,11 +184,11 @@ export async function getProjectRehearsals(projectId, userId) {
     [userId]
   );
   const userTimezone = userResult?.timezone || 'Asia/Jerusalem';
-  console.log(`[getProjectRehearsals] User timezone: ${userTimezone}`);
+  logger.debug(`[getProjectRehearsals] User timezone: ${userTimezone}`);
 
   // Check if user is admin
   const isAdmin = await checkUserIsAdmin(projectId, userId);
-  console.log(`[getProjectRehearsals] isAdmin: ${isAdmin}`);
+  logger.debug(`[getProjectRehearsals] isAdmin: ${isAdmin}`);
 
   let rehearsals;
 
@@ -201,7 +202,7 @@ export async function getProjectRehearsals(projectId, userId) {
        ORDER BY r.starts_at DESC`,
       [projectId, userId]
     );
-    console.log(`[getProjectRehearsals] Admin query returned ${rehearsals.length} rehearsals`);
+    logger.debug(`[getProjectRehearsals] Admin query returned ${rehearsals.length} rehearsals`);
   } else {
     // Regular member: only get rehearsals where user is invited
     rehearsals = await db.all(
@@ -212,7 +213,7 @@ export async function getProjectRehearsals(projectId, userId) {
        ORDER BY r.starts_at DESC`,
       [projectId, userId]
     );
-    console.log(`[getProjectRehearsals] Member query returned ${rehearsals.length} rehearsals`);
+    logger.debug(`[getProjectRehearsals] Member query returned ${rehearsals.length} rehearsals`);
   }
 
   const result = rehearsals.map(r => {
@@ -247,9 +248,9 @@ export async function getProjectRehearsals(projectId, userId) {
     };
   });
 
-  console.log(`[getProjectRehearsals] Returning ${result.length} formatted rehearsals`);
+  logger.debug(`[getProjectRehearsals] Returning ${result.length} formatted rehearsals`);
   if (result.length > 0) {
-    console.log(`[getProjectRehearsals] First rehearsal:`, JSON.stringify(result[0], null, 2));
+    logger.debug(`[getProjectRehearsals] First rehearsal:`, JSON.stringify(result[0], null, 2));
   }
 
   return result;
@@ -263,8 +264,8 @@ export async function getProjectRehearsals(projectId, userId) {
  * @returns {Promise<object>} - Created rehearsal
  */
 export async function createRehearsal(projectId, userId, rehearsalData) {
-  console.log(`[createRehearsal] START - projectId: ${projectId}, userId: ${userId}`);
-  console.log(`[createRehearsal] rehearsalData:`, JSON.stringify(rehearsalData, null, 2));
+  logger.debug(`[createRehearsal] START - projectId: ${projectId}, userId: ${userId}`);
+  logger.debug(`[createRehearsal] rehearsalData:`, JSON.stringify(rehearsalData, null, 2));
 
   const { title, description, date, startTime, endTime, startsAt, endsAt, location, participant_ids } = rehearsalData;
 
@@ -275,7 +276,7 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
     // New format: ISO timestamps
     startsAtISO = startsAt;
     endsAtISO = endsAt;
-    console.log(`[createRehearsal] Using new format - startsAt: ${startsAtISO}, endsAt: ${endsAtISO}`);
+    logger.debug(`[createRehearsal] Using new format - startsAt: ${startsAtISO}, endsAt: ${endsAtISO}`);
   } else if (date && startTime && endTime) {
     // Old format: convert to ISO timestamps
     const timezone = await getProjectTimezone(projectId);
@@ -285,14 +286,14 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
     }
     startsAtISO = localToTimestamp(formattedDate, startTime, timezone);
     endsAtISO = localToTimestamp(formattedDate, endTime, timezone);
-    console.log(`[createRehearsal] Using old format - startsAt: ${startsAtISO}, endsAt: ${endsAtISO}`);
+    logger.debug(`[createRehearsal] Using old format - startsAt: ${startsAtISO}, endsAt: ${endsAtISO}`);
   } else {
     console.error(`[createRehearsal] ERROR - Neither format provided!`);
     throw new Error('Either (startsAt, endsAt) or (date, startTime, endTime) are required');
   }
 
-  console.log(`[createRehearsal] Inserting into database...`);
-  console.log(`[createRehearsal] Parameters:`, {
+  logger.debug(`[createRehearsal] Inserting into database...`);
+  logger.debug(`[createRehearsal] Parameters:`, {
     projectId,
     title: title || null,
     description: description || null,
@@ -318,31 +319,31 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
     ]
   );
 
-  console.log(`[createRehearsal] Rehearsal created with ID: ${newRehearsal.id}`);
+  logger.debug(`[createRehearsal] Rehearsal created with ID: ${newRehearsal.id}`);
 
   // Add participant invitations with 'no' status (invited but not responded)
   if (participant_ids && participant_ids.length > 0) {
-    console.log(`[createRehearsal] Adding ${participant_ids.length} RSVP records...`);
+    logger.debug(`[createRehearsal] Adding ${participant_ids.length} RSVP records...`);
     for (const participantId of participant_ids) {
       await db.run(
         'INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW())',
         [newRehearsal.id, participantId, 'no']
       );
     }
-    console.log(`[createRehearsal] RSVP records added successfully`);
+    logger.debug(`[createRehearsal] RSVP records added successfully`);
   } else {
-    console.log(`[createRehearsal] No participant_ids provided - skipping RSVP records`);
+    logger.debug(`[createRehearsal] No participant_ids provided - skipping RSVP records`);
   }
 
   // Book slots in user availability for selected participants
-  console.log(`[createRehearsal] Booking rehearsal slots...`);
+  logger.debug(`[createRehearsal] Booking rehearsal slots...`);
   await bookRehearsalSlots(
     newRehearsal.id,
     projectId,
     startsAtISO,
     endsAtISO
   );
-  console.log(`[createRehearsal] Slots booked successfully`);
+  logger.debug(`[createRehearsal] Slots booked successfully`);
 
   const result = {
     id: String(newRehearsal.id),
@@ -356,7 +357,7 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
     updatedAt: newRehearsal.updated_at,
   };
 
-  console.log(`[createRehearsal] DONE - Returning:`, JSON.stringify(result, null, 2));
+  logger.debug(`[createRehearsal] DONE - Returning:`, JSON.stringify(result, null, 2));
   return result;
 }
 
@@ -450,19 +451,19 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
  * @returns {Promise<void>}
  */
 export async function deleteRehearsal(rehearsalId) {
-  console.log(`[deleteRehearsal] START - Deleting rehearsal ID: ${rehearsalId}`);
+  logger.debug(`[deleteRehearsal] START - Deleting rehearsal ID: ${rehearsalId}`);
 
   // Delete booked slots first
-  console.log(`[deleteRehearsal] Step 1: Deleting availability slots...`);
+  logger.debug(`[deleteRehearsal] Step 1: Deleting availability slots...`);
   await deleteRehearsalSlots(rehearsalId);
 
   // Delete RSVP responses
-  console.log(`[deleteRehearsal] Step 2: Deleting RSVP responses...`);
+  logger.debug(`[deleteRehearsal] Step 2: Deleting RSVP responses...`);
   await db.run('DELETE FROM native_rehearsal_responses WHERE rehearsal_id = $1', [rehearsalId]);
 
   // Delete rehearsal
-  console.log(`[deleteRehearsal] Step 3: Deleting rehearsal record...`);
+  logger.debug(`[deleteRehearsal] Step 3: Deleting rehearsal record...`);
   await db.run('DELETE FROM native_rehearsals WHERE id = $1', [rehearsalId]);
 
-  console.log(`[deleteRehearsal] DONE - Successfully deleted rehearsal ${rehearsalId}`);
+  logger.debug(`[deleteRehearsal] DONE - Successfully deleted rehearsal ${rehearsalId}`);
 }

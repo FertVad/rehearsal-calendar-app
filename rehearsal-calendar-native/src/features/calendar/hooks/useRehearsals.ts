@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState, useCallback, useRef } from 'react';
 import { Rehearsal, Project, RSVPStatus } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
@@ -61,7 +62,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchTime.current;
     if (!force && timeSinceLastFetch < CACHE_DURATION) {
-      console.log('[useRehearsals] Skipping fetch - cache is fresh');
+      logger.debug('[useRehearsals] Skipping fetch - cache is fresh');
       return;
     }
 

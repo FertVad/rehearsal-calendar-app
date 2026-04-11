@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
@@ -57,20 +58,20 @@ router.get('/:projectId/rehearsals', requireAuth, async (req, res) => {
     const userId = req.userId;
     const { projectId } = req.params;
 
-    console.log(`[ROUTE] GET /:projectId/rehearsals - projectId: ${projectId}, userId: ${userId}`);
+    logger.debug(`[ROUTE] GET /:projectId/rehearsals - projectId: ${projectId}, userId: ${userId}`);
 
     // Check if user is a member
     const membership = await checkUserMembership(projectId, userId);
 
     if (!membership) {
-      console.log(`[ROUTE] Access denied - user ${userId} not a member of project ${projectId}`);
+      logger.debug(`[ROUTE] Access denied - user ${userId} not a member of project ${projectId}`);
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    console.log(`[ROUTE] User is a member, calling getProjectRehearsals...`);
+    logger.debug(`[ROUTE] User is a member, calling getProjectRehearsals...`);
     const rehearsals = await getProjectRehearsals(projectId, userId);
 
-    console.log(`[ROUTE] Returning ${rehearsals.length} rehearsals`);
+    logger.debug(`[ROUTE] Returning ${rehearsals.length} rehearsals`);
     res.json({ rehearsals });
   } catch (error) {
     console.error('[ROUTE] Error fetching rehearsals:', error);

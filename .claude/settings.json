@@ -2,6 +2,13 @@
   "permissions": {
     "additionalDirectories": [
       "/Users/vadimfertik/Desktop/reh_app"
+    ],
+    "allow": [
+      "Bash(sed -i '' 's/console\\\\.log\\(\\\\[RehearsalDetailsModal\\\\]/logger.debug\\(\\\\[RehearsalDetailsModal\\\\]/g' /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/components/RehearsalDetailsModal.tsx)",
+      "Bash(sed -i '' \"s/console\\\\.log\\('/logger.debug\\('/g\" /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/useAddRehearsalSubmit.ts)",
+      "Bash(sed -i '' \"s/console\\\\.log\\('/logger.debug\\('/g\" /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/useRehearsals.ts)",
+      "Bash(sed -i '' \"s/console\\\\.log\\('/logger.debug\\('/g\" /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/useCalendarSync.ts)",
+      "Bash(sed -i '' \"s/console\\\\.log\\('/logger.debug\\('/g\" /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/subscriptions/screens/SubscriptionScreen.tsx)"
     ]
   }
 }

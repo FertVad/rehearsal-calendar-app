@@ -78,30 +78,30 @@ export async function createCalendarEvent(
   calendarId: string
 ): Promise<string | null> {
   try {
-    console.log('[CalendarSync] 📅 createCalendarEvent called:', {
+    logger.debug('[CalendarSync] 📅 createCalendarEvent called:', {
       rehearsalId: rehearsal.id,
       calendarId,
     });
 
     const hasPermission = await checkCalendarPermissions();
-    console.log('[CalendarSync] 🔐 Calendar permission:', hasPermission);
+    logger.debug('[CalendarSync] 🔐 Calendar permission:', hasPermission);
     if (!hasPermission) {
       throw new Error('Calendar permission not granted');
     }
 
     const startDate = new Date(rehearsal.startsAt);
     const endDate = new Date(rehearsal.endsAt);
-    console.log('[CalendarSync] 📆 Event times:', {
+    logger.debug('[CalendarSync] 📆 Event times:', {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     });
 
     // Check for duplicate events (prevents creating duplicates after AsyncStorage loss)
-    console.log('[CalendarSync] 🔍 Checking for duplicate events...');
+    logger.debug('[CalendarSync] 🔍 Checking for duplicate events...');
     const duplicateEventId = await findDuplicateEvent(rehearsal, calendarId, startDate, endDate);
     if (duplicateEventId) {
       logger.info(`[CalendarSync] Using existing event ${duplicateEventId} instead of creating duplicate`);
-      console.log('[CalendarSync] ♻️ Found duplicate, using existing event:', duplicateEventId);
+      logger.debug('[CalendarSync] ♻️ Found duplicate, using existing event:', duplicateEventId);
       // Save mapping to existing event
       await saveEventMapping(rehearsal.id, duplicateEventId, calendarId);
       return duplicateEventId;
@@ -123,7 +123,7 @@ export async function createCalendarEvent(
     };
 
     logger.info('[CalendarSync] Creating event:', eventDetails.title);
-    console.log('[CalendarSync] 📝 Event details:', {
+    logger.debug('[CalendarSync] 📝 Event details:', {
       title: eventDetails.title,
       startDate: eventDetails.startDate,
       endDate: eventDetails.endDate,
@@ -131,14 +131,14 @@ export async function createCalendarEvent(
       calendarId,
     });
 
-    console.log('[CalendarSync] 🚀 Calling Calendar.createEventAsync...');
+    logger.debug('[CalendarSync] 🚀 Calling Calendar.createEventAsync...');
     const eventId = await Calendar.createEventAsync(calendarId, eventDetails);
-    console.log('[CalendarSync] ✅ Event created with ID:', eventId);
+    logger.debug('[CalendarSync] ✅ Event created with ID:', eventId);
 
     // Save mapping to database + AsyncStorage
-    console.log('[CalendarSync] 💾 Saving event mapping...');
+    logger.debug('[CalendarSync] 💾 Saving event mapping...');
     await saveEventMapping(rehearsal.id, eventId, calendarId);
-    console.log('[CalendarSync] ✅ Mapping saved successfully');
+    logger.debug('[CalendarSync] ✅ Mapping saved successfully');
 
     logger.info(`[CalendarSync] Created event ${eventId} for rehearsal ${rehearsal.id}`);
     return eventId;
@@ -211,7 +211,7 @@ export async function syncRehearsalToCalendar(
   calendarId: string
 ): Promise<void> {
   try {
-    console.log('[CalendarSync] 🔄 syncRehearsalToCalendar called:', {
+    logger.debug('[CalendarSync] 🔄 syncRehearsalToCalendar called:', {
       rehearsalId: rehearsal.id,
       projectName: rehearsal.projectName,
       calendarId,
@@ -221,51 +221,51 @@ export async function syncRehearsalToCalendar(
 
     // Check if already synced
     const mapping = await getEventMapping(rehearsal.id);
-    console.log('[CalendarSync] 🔍 Event mapping check:', mapping ? 'Found existing mapping' : 'No mapping found');
+    logger.debug('[CalendarSync] 🔍 Event mapping check:', mapping ? 'Found existing mapping' : 'No mapping found');
 
     if (mapping) {
-      console.log('[CalendarSync] 📋 Existing mapping:', {
+      logger.debug('[CalendarSync] 📋 Existing mapping:', {
         eventId: mapping.eventId,
         calendarId: mapping.calendarId,
       });
 
       // Check if event still exists in calendar
       const eventExists = await checkEventExists(mapping.eventId);
-      console.log('[CalendarSync] 🔍 Event exists in calendar?', eventExists);
+      logger.debug('[CalendarSync] 🔍 Event exists in calendar?', eventExists);
 
       if (eventExists) {
         // Update existing event
         logger.info(`[CalendarSync] Rehearsal ${rehearsal.id} already synced, updating...`);
-        console.log('[CalendarSync] 📝 Updating existing event...');
+        logger.debug('[CalendarSync] 📝 Updating existing event...');
         try {
           await updateCalendarEvent(mapping.eventId, rehearsal);
           // Update lastSynced timestamp
           await saveEventMapping(rehearsal.id, mapping.eventId, mapping.calendarId);
-          console.log('[CalendarSync] ✅ Event updated successfully');
+          logger.debug('[CalendarSync] ✅ Event updated successfully');
         } catch (error) {
           // Update failed, event might be deleted - recreate
           logger.warn(`[CalendarSync] Update failed for event ${mapping.eventId}, recreating...`);
-          console.log('[CalendarSync] ⚠️ Update failed, recreating event...');
+          logger.debug('[CalendarSync] ⚠️ Update failed, recreating event...');
           await removeEventMapping(rehearsal.id);
           await createCalendarEvent(rehearsal, calendarId);
         }
       } else {
         // Event was deleted from calendar - recreate and update mapping
         logger.warn(`[CalendarSync] Event ${mapping.eventId} no longer exists, recreating...`);
-        console.log('[CalendarSync] ⚠️ Event no longer exists, recreating...');
+        logger.debug('[CalendarSync] ⚠️ Event no longer exists, recreating...');
         await removeEventMapping(rehearsal.id);
         await createCalendarEvent(rehearsal, calendarId);
       }
     } else {
       // Create new event
       logger.info(`[CalendarSync] Rehearsal ${rehearsal.id} not synced, creating...`);
-      console.log('[CalendarSync] ➕ Creating new event...');
+      logger.debug('[CalendarSync] ➕ Creating new event...');
       const eventId = await createCalendarEvent(rehearsal, calendarId);
-      console.log('[CalendarSync] ✅ New event created:', eventId);
+      logger.debug('[CalendarSync] ✅ New event created:', eventId);
     }
 
     await updateLastExportTime();
-    console.log('[CalendarSync] ✅ syncRehearsalToCalendar completed successfully');
+    logger.debug('[CalendarSync] ✅ syncRehearsalToCalendar completed successfully');
   } catch (error) {
     logger.error('[CalendarSync] Failed to sync rehearsal:', error);
     console.error('[CalendarSync] ❌ syncRehearsalToCalendar failed:', error);

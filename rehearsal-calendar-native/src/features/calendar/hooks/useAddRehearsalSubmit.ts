@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -83,14 +84,14 @@ export function useAddRehearsalSubmit({
       // Auto-sync to calendar if export is enabled
       try {
         const syncSettings = await getSyncSettings();
-        console.log('[AddRehearsal] 🔍 Checking calendar sync settings:', {
+        logger.debug('[AddRehearsal] 🔍 Checking calendar sync settings:', {
           exportEnabled: syncSettings.exportEnabled,
           exportCalendarId: syncSettings.exportCalendarId,
           savedRehearsalId: savedRehearsal?.id,
         });
 
         if (syncSettings.exportEnabled && syncSettings.exportCalendarId && savedRehearsal?.id) {
-          console.log('[AddRehearsal] ✅ All conditions met, syncing to calendar...');
+          logger.debug('[AddRehearsal] ✅ All conditions met, syncing to calendar...');
           const rehearsalWithProject = {
             id: savedRehearsal.id,
             projectId: localSelectedProject!.id,
@@ -100,16 +101,16 @@ export function useAddRehearsalSubmit({
             location: rehearsalData.location,
           };
 
-          console.log('[AddRehearsal] 📤 Calling syncRehearsalToCalendar with:', {
+          logger.debug('[AddRehearsal] 📤 Calling syncRehearsalToCalendar with:', {
             rehearsalId: rehearsalWithProject.id,
             projectName: rehearsalWithProject.projectName,
             calendarId: syncSettings.exportCalendarId,
           });
 
           await syncRehearsalToCalendar(rehearsalWithProject, syncSettings.exportCalendarId);
-          console.log('[AddRehearsal] ✅ Calendar sync successful!');
+          logger.debug('[AddRehearsal] ✅ Calendar sync successful!');
         } else {
-          console.log('[AddRehearsal] ⚠️ Calendar sync skipped. Reasons:', {
+          logger.debug('[AddRehearsal] ⚠️ Calendar sync skipped. Reasons:', {
             exportNotEnabled: !syncSettings.exportEnabled,
             noCalendarSelected: !syncSettings.exportCalendarId,
             noRehearsalId: !savedRehearsal?.id,

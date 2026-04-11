@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 /**
  * OAuth Token Verification Utilities
  *
@@ -25,7 +26,7 @@ export async function verifyGoogleToken(idToken) {
       process.env.GOOGLE_CLIENT_ID_ANDROID,
       process.env.GOOGLE_CLIENT_ID_WEB,
     ].filter(Boolean);
-    console.log('[OAuth] Expected audiences (Client IDs):', clientIds);
+    logger.debug('[OAuth] Expected audiences (Client IDs):', clientIds);
 
     // TEMPORARY FIX: Verify without strict audience check
     // expo-auth-session may generate tokens with different audience
@@ -36,8 +37,8 @@ export async function verifyGoogleToken(idToken) {
     });
 
     const payload = ticket.getPayload();
-    console.log('[OAuth] Token audience (aud):', payload.aud);
-    console.log('[OAuth] Token issuer (iss):', payload.iss);
+    logger.debug('[OAuth] Token audience (aud):', payload.aud);
+    logger.debug('[OAuth] Token issuer (iss):', payload.iss);
 
     if (!payload) {
       throw new Error('Invalid token payload');

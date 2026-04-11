@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayMode, DayState } from '../types';
@@ -24,8 +25,8 @@ export const useAvailabilityData = () => {
       setLoading(true);
       const response = await availabilityAPI.getAll();
 
-      console.log('[useAvailabilityData] Received response:', response.data?.length, 'records');
-      console.log('[useAvailabilityData] Sample records:', JSON.stringify(response.data?.slice(0, 3), null, 2));
+      logger.debug('[useAvailabilityData] Received response:', response.data?.length, 'records');
+      logger.debug('[useAvailabilityData] Sample records:', JSON.stringify(response.data?.slice(0, 3), null, 2));
 
       // Old API returns array directly in response.data
       const rawRecords = Array.isArray(response.data) ? response.data : [];
@@ -155,8 +156,8 @@ export const useAvailabilityData = () => {
         };
       }
 
-      console.log('[useAvailabilityData] Converted to localData:', Object.keys(localData).length, 'dates');
-      console.log('[useAvailabilityData] Sample dates:', JSON.stringify(
+      logger.debug('[useAvailabilityData] Converted to localData:', Object.keys(localData).length, 'dates');
+      logger.debug('[useAvailabilityData] Sample dates:', JSON.stringify(
         Object.entries(localData).slice(0, 3).reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {}),
         null,
         2

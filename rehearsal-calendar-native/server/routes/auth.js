@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../database/db.js';
@@ -378,12 +379,12 @@ router.delete('/me', requireAuth, async (req, res) => {
         [userId]
       );
 
-      console.log(`[Auth] User ${userId} deletion: ${orphanedProjects.length} projects will be deleted (no other admins)`);
+      logger.debug(`[Auth] User ${userId} deletion: ${orphanedProjects.length} projects will be deleted (no other admins)`);
 
       // Delete orphaned projects (CASCADE will handle rehearsals, members, etc.)
       for (const project of orphanedProjects) {
         await db.run('DELETE FROM native_projects WHERE id = $1', [project.id]);
-        console.log(`[Auth] Deleted orphaned project: ${project.name} (id: ${project.id})`);
+        logger.debug(`[Auth] Deleted orphaned project: ${project.name} (id: ${project.id})`);
       }
 
       // Delete user (CASCADE will handle remaining memberships, availability, calendar connections, etc.)

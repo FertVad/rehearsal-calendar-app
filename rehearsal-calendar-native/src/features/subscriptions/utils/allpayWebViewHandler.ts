@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 /**
  * AllPay WebView Handler
  * Handles postMessage events from AllPay Hosted Fields HTML
@@ -41,11 +42,11 @@ export const handleAllPayMessage = (
   try {
     const message: AllPayMessage = JSON.parse(event);
 
-    console.log('[AllPay Handler] Received message:', message);
+    logger.debug('[AllPay Handler] Received message:', message);
 
     switch (message.type) {
       case 'PAYMENT_SUCCESS':
-        console.log('[AllPay Handler] Payment successful!', message.data);
+        logger.debug('[AllPay Handler] Payment successful!', message.data);
         callbacks.onSuccess?.(message);
         break;
 
@@ -56,12 +57,12 @@ export const handleAllPayMessage = (
         break;
 
       case 'PAYMENT_READY':
-        console.log('[AllPay Handler] Payment form ready');
+        logger.debug('[AllPay Handler] Payment form ready');
         callbacks.onReady?.(message);
         break;
 
       case 'PAYMENT_LOADED':
-        console.log('[AllPay Handler] iframe loaded');
+        logger.debug('[AllPay Handler] iframe loaded');
         callbacks.onLoaded?.(message);
         break;
 

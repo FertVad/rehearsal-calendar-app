@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 /**
  * Subscription Screen
  * Displays subscription plans, current subscription status, and handles AllPay checkout
@@ -169,7 +170,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
       const response = await subscriptionsAPI.createCheckout(planId, language);
       const { checkoutUrl: url, orderId } = response.data;
 
-      console.log('[DEBUG] Checkout created:', { checkoutUrl: url, orderId });
+      logger.debug('[DEBUG] Checkout created:', { checkoutUrl: url, orderId });
 
       setCheckoutUrl(url);
       setCurrentOrderId(orderId);
@@ -184,7 +185,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
   const handleWebViewMessage = async (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      console.log('[WebView] Received message:', data);
+      logger.debug('[WebView] Received message:', data);
 
       if (data.type === 'payment_success') {
         stopPolling();
@@ -370,11 +371,11 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
               scalesPageToFit={false}
               onError={(syntheticEvent) => {
                 const { nativeEvent } = syntheticEvent;
-                console.log('[WebView] Error loading:', nativeEvent);
+                logger.debug('[WebView] Error loading:', nativeEvent);
               }}
               onHttpError={(syntheticEvent) => {
                 const { nativeEvent } = syntheticEvent;
-                console.log('[WebView] HTTP error:', nativeEvent.statusCode, nativeEvent.url);
+                logger.debug('[WebView] HTTP error:', nativeEvent.statusCode, nativeEvent.url);
               }}
             />
           )}

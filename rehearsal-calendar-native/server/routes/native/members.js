@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
@@ -73,7 +74,7 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
     );
     const requesterTimezone = requester?.timezone || 'Asia/Jerusalem';
 
-    console.log(`[Availability API] User ID ${userId} requesting availability, timezone: ${requesterTimezone}`);
+    logger.debug(`[Availability API] User ID ${userId} requesting availability, timezone: ${requesterTimezone}`);
 
     // Batch fetch all users info (no need for individual timezones anymore)
     const usersQuery = `SELECT id, first_name, last_name, email FROM native_users WHERE id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})`;
