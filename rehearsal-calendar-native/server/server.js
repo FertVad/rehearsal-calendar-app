@@ -31,6 +31,12 @@ logger.info(`DATABASE_URL: ${process.env.DATABASE_URL ? 'PROVIDED' : 'MISSING'}`
 logger.info(`PORT: ${process.env.PORT || '3001'}`);
 logger.info('================================');
 
+// Safety guard: test mode must never run in production (would allow webhook bypass)
+if (process.env.NODE_ENV === 'production' && process.env.ALLPAY_TEST_MODE === 'true') {
+  logger.error('FATAL: ALLPAY_TEST_MODE=true is not allowed in production. Shutting down.');
+  process.exit(1);
+}
+
 await initDatabase();
 
 try {
