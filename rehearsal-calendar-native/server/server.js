@@ -39,6 +39,16 @@ if (process.env.NODE_ENV === 'production' && process.env.ALLPAY_TEST_MODE === 't
   process.exit(1);
 }
 
+// Startup validation: warn about missing critical env variables
+if (process.env.NODE_ENV === 'production') {
+  const required = ['JWT_SECRET', 'ADMIN_PASSWORD', 'CRON_SECRET', 'ALLPAY_WEBHOOK_SECRET'];
+  const missing = required.filter(k => !process.env[k]);
+  if (missing.length > 0) {
+    logger.error(`FATAL: Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+}
+
 await initDatabase();
 
 try {
