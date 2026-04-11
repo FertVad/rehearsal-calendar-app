@@ -59,9 +59,6 @@ jest.mock('../../../../shared/services/api', () => ({
   },
 }));
 
-jest.mock('../ParticipantsModal', () => ({
-  ParticipantsModal: () => null,
-}));
 
 describe('TodayRehearsals Component', () => {
   const mockProjects: Project[] = [
