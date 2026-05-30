@@ -139,7 +139,7 @@ export const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   projectItemSelected: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: Colors.accent.purpleAlpha15,
   },
   projectItemLeft: {
     flex: 1,

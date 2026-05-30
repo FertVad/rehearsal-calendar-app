@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.glass.border,
   },
   memberItemSelected: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: Colors.accent.purpleAlpha15,
     borderColor: Colors.accent.purple,
   },
   checkbox: {

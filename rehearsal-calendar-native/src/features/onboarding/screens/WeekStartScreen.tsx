@@ -79,7 +79,7 @@ export default function WeekStartScreen({ navigation }: WeekStartScreenProps) {
                 <View
                   style={[
                     styles.optionIcon,
-                    { backgroundColor: isSelected ? 'rgba(168, 85, 247, 0.15)' : Colors.bg.tertiary },
+                    { backgroundColor: isSelected ? Colors.accent.purpleAlpha15 : Colors.bg.tertiary },
                   ]}
                 >
                   <Ionicons
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   },
   optionButtonSelected: {
     borderColor: Colors.accent.purple,
-    backgroundColor: 'rgba(168, 85, 247, 0.05)',
+    backgroundColor: Colors.accent.purpleAlpha05,
   },
   optionLeft: {
     flexDirection: 'row',

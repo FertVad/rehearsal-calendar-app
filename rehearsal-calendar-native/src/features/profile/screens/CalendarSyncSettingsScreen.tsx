@@ -408,7 +408,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
             <View style={styles.section}>
               <View style={styles.settingItem}>
                 <View style={styles.settingLeft}>
-                  <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                  <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                     <Ionicons name="sync" size={20} color={Colors.accent.purple} />
                   </View>
                   <Text style={styles.settingLabel}>{t.calendarSync.autoSync || 'Синхронизация'}</Text>

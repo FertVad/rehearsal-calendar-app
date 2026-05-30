@@ -34,7 +34,7 @@ export const styles = StyleSheet.create({
   adminBadge: {
     marginLeft: Spacing.sm,
     padding: Spacing.xs,
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    backgroundColor: Colors.accent.purpleDarkAlpha10,
     borderRadius: BorderRadius.sm,
   },
   description: {
@@ -111,7 +111,7 @@ export const styles = StyleSheet.create({
     opacity: 0.7,
   },
   rehearsalDate: {
-    backgroundColor: 'rgba(147, 51, 234, 0.15)',
+    backgroundColor: Colors.accent.purpleDarkAlpha15,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,

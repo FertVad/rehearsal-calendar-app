@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   slotHigh: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: Colors.accent.purpleAlpha15,
     borderColor: Colors.accent.purple,
   },
   slotMedium: {

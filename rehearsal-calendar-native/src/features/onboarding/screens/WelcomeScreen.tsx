@@ -58,7 +58,7 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
         {/* Feature list */}
         <View style={styles.featuresList}>
           <View style={styles.featureItem}>
-            <View style={[styles.featureIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+            <View style={[styles.featureIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
               <Ionicons name="calendar-outline" size={24} color={Colors.accent.purple} />
             </View>
             <Text style={styles.featureText}>Plan rehearsals efficiently</Text>

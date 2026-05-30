@@ -44,7 +44,7 @@ export const styles = StyleSheet.create({
 
   // Current Subscription Card
   currentSubscriptionCard: {
-    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+    backgroundColor: Colors.accent.purpleAlpha10,
     borderWidth: 1,
     borderColor: Colors.accent.purple,
     borderRadius: BorderRadius.xl,

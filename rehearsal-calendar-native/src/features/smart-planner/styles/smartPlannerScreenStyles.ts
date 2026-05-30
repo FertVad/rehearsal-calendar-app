@@ -72,7 +72,7 @@ export const styles = StyleSheet.create({
     borderBottomColor: Colors.glass.border,
   },
   projectOptionSelected: {
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    backgroundColor: Colors.accent.purpleDarkAlpha10,
   },
   projectOptionText: {
     fontSize: FontSize.base,

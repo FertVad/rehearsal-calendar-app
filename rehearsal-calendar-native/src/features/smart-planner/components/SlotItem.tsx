@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { TimeSlot } from '../types';
 import { useI18n } from '../../../contexts/I18nContext';
 import { WORKDAY_START, WORKDAY_END } from '../../../shared/utils/availability';
+import { Colors } from '../../../shared/constants/colors';
 
 interface SlotItemProps {
   slot: TimeSlot;
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
   },
   addButton: {
-    backgroundColor: '#9333ea',
+    backgroundColor: Colors.accent.purpleDark,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,

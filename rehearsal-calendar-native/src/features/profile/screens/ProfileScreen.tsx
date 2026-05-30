@@ -284,7 +284,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           {/* Language */}
           <TouchableOpacity style={styles.settingItem} onPress={toggleLanguage}>
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                 <Ionicons name="language" size={20} color={Colors.accent.purple} />
               </View>
               <Text style={styles.settingLabel}>{t.profile.language}</Text>
@@ -316,7 +316,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           {/* Week Start */}
           <TouchableOpacity style={styles.settingItem} onPress={() => { hapticLight(); setWeekStartModalVisible(true); }}>
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                 <Ionicons name="calendar-outline" size={20} color={Colors.accent.purple} />
               </View>
               <Text style={styles.settingLabel}>{t.profile.weekStart}</Text>
@@ -332,7 +332,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           {/* Calendar Sync */}
           <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('CalendarSyncSettings')}>
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                 <Ionicons name="sync" size={20} color={Colors.accent.purple} />
               </View>
               <Text style={styles.settingLabel}>{t.calendarSync.title}</Text>
@@ -343,7 +343,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           {/* Subscription - TEMPORARILY DISABLED FOR LAUNCH */}
           {/* <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Subscription')}>
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                 <Ionicons name="card" size={20} color={Colors.accent.purple} />
               </View>
               <Text style={styles.settingLabel}>
