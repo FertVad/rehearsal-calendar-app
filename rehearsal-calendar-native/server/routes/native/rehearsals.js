@@ -146,14 +146,13 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
         [projectId]
       );
 
-      // Determine what changed
-      const changes = [];
-      if (req.body.startsAt || req.body.endsAt) changes.push('дата/время');
-      if (req.body.location) changes.push('место');
-      if (req.body.title) changes.push('название');
-      const changesStr = changes.length > 0 ? changes.join(', ') : 'детали';
+      // Determine what changed — pass translation keys, service localizes per user
+      const changeKeys = [];
+      if (req.body.startsAt || req.body.endsAt) changeKeys.push('datetime');
+      if (req.body.location) changeKeys.push('location');
+      if (req.body.title) changeKeys.push('title');
 
-      await notifyRehearsalUpdated(updatedRehearsal, project.name, members, changesStr);
+      await notifyRehearsalUpdated(updatedRehearsal, project.name, members, changeKeys);
     } catch (notifErr) {
       console.error('Error sending rehearsal updated notification:', notifErr);
     }

@@ -233,7 +233,7 @@ export async function getProjectRehearsals(projectId, userId) {
     return {
       id: String(r.id),
       projectId: String(r.project_id),
-      title: r.title || 'Репетиция', // Fallback if title is NULL
+      title: r.title, // null/empty handled on frontend via i18n
       description: r.description,
       startsAt: startsAtISO,
       endsAt: endsAtISO,

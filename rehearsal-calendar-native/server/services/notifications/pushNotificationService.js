@@ -6,6 +6,7 @@
 import { Expo } from 'expo-server-sdk';
 import db from '../../database/db.js';
 import { logger } from '../../utils/logger.js';
+import { t } from '../../i18n/pushNotifications.js';
 
 // Initialize Expo SDK
 const expo = new Expo();
@@ -117,237 +118,203 @@ async function removeInvalidToken(token) {
  */
 
 /**
+ * Fetch locale preference for given user IDs.
+ * Returns a Map of userId → locale ('ru' | 'en'), falling back to 'en'.
+ */
+async function getUserLocales(userIds) {
+  if (userIds.length === 0) return new Map();
+  const placeholders = userIds.map(() => '?').join(',');
+  const rows = await db.all(
+    `SELECT id, locale FROM native_users WHERE id IN (${placeholders})`,
+    userIds
+  );
+  return new Map(rows.map(r => [r.id, r.locale || 'en']));
+}
+
+/**
+ * Group user IDs by their locale.
+ * Returns Map<locale, userIds[]>.
+ */
+function groupByLocale(userIds, localesMap) {
+  const groups = new Map();
+  for (const userId of userIds) {
+    const locale = localesMap.get(userId) || 'en';
+    if (!groups.has(locale)) groups.set(locale, []);
+    groups.get(locale).push(userId);
+  }
+  return groups;
+}
+
+/**
+ * Send a localized notification to a list of users.
+ * @param {number[]} userIds
+ * @param {string} key - Translation key in pushNotifications.js
+ * @param {Object} params - Params passed to the body template
+ * @param {Object} data - Notification data payload (same for all locales)
+ */
+async function sendLocalizedNotification(userIds, key, params, data) {
+  if (userIds.length === 0) return;
+  const locales = await getUserLocales(userIds);
+  const groups = groupByLocale(userIds, locales);
+
+  for (const [locale, ids] of groups.entries()) {
+    const tr = t(locale, key);
+    await sendPushNotification(ids, {
+      title: tr.title,
+      body: tr.body(params),
+      data,
+    });
+  }
+}
+
+/**
  * Notify members when a new rehearsal is created
- * @param {Object} rehearsal - Rehearsal object
- * @param {string} projectName - Project name
- * @param {Array} members - Array of {user_id} objects
  */
 export async function notifyRehearsalCreated(rehearsal, projectName, members) {
   const userIds = members.map(m => m.user_id).filter(id => id !== rehearsal.created_by);
-
-  if (userIds.length === 0) return;
-
-  const notification = {
-    title: 'Новая репетиция',
-    body: `${projectName}: ${rehearsal.title || 'Репетиция'} назначена`,
-    data: {
-      type: 'rehearsal_created',
-      rehearsalId: rehearsal.id,
-      projectId: rehearsal.project_id,
-    },
-  };
-
-  await sendPushNotification(userIds, notification);
+  await sendLocalizedNotification(
+    userIds,
+    'newRehearsal',
+    { projectName, rehearsalTitle: rehearsal.title },
+    { type: 'rehearsal_created', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }
+  );
 }
 
 /**
  * Notify members when a rehearsal is updated
- * @param {Object} rehearsal - Updated rehearsal object
- * @param {string} projectName - Project name
- * @param {Array} members - Array of {user_id} objects
- * @param {string} changes - Description of changes (e.g., "дата/время, место")
+ * @param {string[]} changeKeys - keys from translations.changes (e.g. ['datetime', 'location'])
  */
-export async function notifyRehearsalUpdated(rehearsal, projectName, members, changes) {
+export async function notifyRehearsalUpdated(rehearsal, projectName, members, changeKeys) {
   const userIds = members.map(m => m.user_id);
-
   if (userIds.length === 0) return;
 
-  const notification = {
-    title: 'Изменена репетиция',
-    body: `${projectName}: ${rehearsal.title || 'Репетиция'} — ${changes}`,
-    data: {
-      type: 'rehearsal_updated',
-      rehearsalId: rehearsal.id,
-      projectId: rehearsal.project_id,
-    },
-  };
+  const locales = await getUserLocales(userIds);
+  const groups = groupByLocale(userIds, locales);
 
-  await sendPushNotification(userIds, notification);
+  for (const [locale, ids] of groups.entries()) {
+    const tr = t(locale, 'rehearsalUpdated');
+    const changesDict = t(locale, 'changes');
+    const localizedChanges = changeKeys && changeKeys.length > 0
+      ? changeKeys.map(k => changesDict[k] || k).join(', ')
+      : changesDict.default;
+
+    await sendPushNotification(ids, {
+      title: tr.title,
+      body: tr.body({ projectName, rehearsalTitle: rehearsal.title, changes: localizedChanges }),
+      data: { type: 'rehearsal_updated', rehearsalId: rehearsal.id, projectId: rehearsal.project_id },
+    });
+  }
 }
 
 /**
  * Notify members when a rehearsal is deleted
- * @param {Object} rehearsal - Deleted rehearsal object
- * @param {string} projectName - Project name
- * @param {Array} members - Array of {user_id} objects
  */
 export async function notifyRehearsalDeleted(rehearsal, projectName, members) {
   const userIds = members.map(m => m.user_id);
-
-  if (userIds.length === 0) return;
-
-  const notification = {
-    title: 'Отменена репетиция',
-    body: `${projectName}: ${rehearsal.title || 'Репетиция'} отменена`,
-    data: {
-      type: 'rehearsal_deleted',
-      projectId: rehearsal.project_id,
-    },
-  };
-
-  await sendPushNotification(userIds, notification);
+  await sendLocalizedNotification(
+    userIds,
+    'rehearsalDeleted',
+    { projectName, rehearsalTitle: rehearsal.title },
+    { type: 'rehearsal_deleted', projectId: rehearsal.project_id }
+  );
 }
 
 /**
  * Notify admins when a member responds to a rehearsal
- * @param {Object} rehearsal - Rehearsal object
- * @param {string} projectName - Project name
- * @param {string} responderName - Name of user who responded
- * @param {number[]} adminIds - Array of admin user IDs
  */
 export async function notifyMemberResponse(rehearsal, projectName, responderName, adminIds) {
-  if (adminIds.length === 0) return;
-
-  const notification = {
-    title: 'Новый отклик',
-    body: `${responderName} откликнулся на репетицию в проекте ${projectName}`,
-    data: {
-      type: 'member_response',
-      rehearsalId: rehearsal.id,
-      projectId: rehearsal.project_id,
-    },
-  };
-
-  await sendPushNotification(adminIds, notification);
+  await sendLocalizedNotification(
+    adminIds,
+    'memberResponse',
+    { responderName, projectName },
+    { type: 'member_response', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }
+  );
 }
 
 /**
  * Notify user when invited to a project
- * @param {string} projectName - Project name
- * @param {number} userId - User ID to notify
- * @param {string} inviterName - Name of user who invited
  */
 export async function notifyProjectInvite(projectName, userId, inviterName) {
-  const notification = {
-    title: 'Приглашение в проект',
-    body: `${inviterName} пригласил вас в проект ${projectName}`,
-    data: {
-      type: 'project_invite',
-      projectName,
-    },
-  };
-
-  await sendPushNotification([userId], notification);
+  await sendLocalizedNotification(
+    [userId],
+    'projectInvite',
+    { inviterName, projectName },
+    { type: 'project_invite', projectName }
+  );
 }
 
 /**
  * Notify user when their role is changed
- * @param {string} projectName - Project name
- * @param {number} userId - User ID to notify
- * @param {string} newRole - New role (admin, member, owner)
  */
 export async function notifyRoleChanged(projectName, userId, newRole) {
-  const roleText = newRole === 'admin' ? 'администратором' : 'участником';
+  const locales = await getUserLocales([userId]);
+  const locale = locales.get(userId) || 'en';
+  const tr = t(locale, 'roleChanged');
+  const roleText = newRole === 'admin' ? tr.adminRole : tr.memberRole;
 
-  const notification = {
-    title: 'Изменение роли',
-    body: `Вы теперь ${roleText} проекта ${projectName}`,
-    data: {
-      type: 'role_changed',
-      projectName,
-      newRole,
-    },
-  };
-
-  await sendPushNotification([userId], notification);
+  await sendPushNotification([userId], {
+    title: tr.title,
+    body: tr.body({ roleText, projectName }),
+    data: { type: 'role_changed', projectName, newRole },
+  });
 }
 
 /**
  * Notify user when removed from a project
- * @param {string} projectName - Project name
- * @param {number} userId - User ID to notify
  */
 export async function notifyMemberRemoved(projectName, userId) {
-  const notification = {
-    title: 'Удаление из проекта',
-    body: `Вы были удалены из проекта ${projectName}`,
-    data: {
-      type: 'member_removed',
-      projectName,
-    },
-  };
-
-  await sendPushNotification([userId], notification);
+  await sendLocalizedNotification(
+    [userId],
+    'memberRemoved',
+    { projectName },
+    { type: 'member_removed', projectName }
+  );
 }
 
 /**
  * Notify all members when a project is deleted
- * @param {string} projectName - Project name
- * @param {number[]} memberIds - Array of member user IDs (excluding owner)
  */
 export async function notifyProjectDeleted(projectName, memberIds) {
-  if (memberIds.length === 0) return;
-
-  const notification = {
-    title: 'Проект удален',
-    body: `Проект ${projectName} был удален`,
-    data: {
-      type: 'project_deleted',
-      projectName,
-    },
-  };
-
-  await sendPushNotification(memberIds, notification);
+  await sendLocalizedNotification(
+    memberIds,
+    'projectDeleted',
+    { projectName },
+    { type: 'project_deleted', projectName }
+  );
 }
 
 /**
  * Send 24-hour reminder for upcoming rehearsal
- * @param {Object} rehearsal - Rehearsal object
- * @param {string} projectName - Project name
- * @param {number[]} memberIds - Array of member user IDs
  */
 export async function notifyRehearsal24h(rehearsal, projectName, memberIds) {
-  if (memberIds.length === 0) return;
-
-  const notification = {
-    title: 'Репетиция завтра',
-    body: `${projectName}: ${rehearsal.title || 'Репетиция'}`,
-    data: {
-      type: 'rehearsal_reminder_24h',
-      rehearsalId: rehearsal.id,
-      projectId: rehearsal.project_id,
-    },
-  };
-
-  await sendPushNotification(memberIds, notification);
+  await sendLocalizedNotification(
+    memberIds,
+    'rehearsal24h',
+    { projectName, rehearsalTitle: rehearsal.title },
+    { type: 'rehearsal_reminder_24h', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }
+  );
 }
 
 /**
  * Send 1-hour reminder for upcoming rehearsal
- * @param {Object} rehearsal - Rehearsal object
- * @param {string} projectName - Project name
- * @param {number[]} memberIds - Array of member user IDs
  */
 export async function notifyRehearsal1h(rehearsal, projectName, memberIds) {
-  if (memberIds.length === 0) return;
-
-  const notification = {
-    title: 'Репетиция через 1 час',
-    body: `${projectName}: ${rehearsal.title || 'Репетиция'}`,
-    data: {
-      type: 'rehearsal_reminder_1h',
-      rehearsalId: rehearsal.id,
-      projectId: rehearsal.project_id,
-    },
-  };
-
-  await sendPushNotification(memberIds, notification);
+  await sendLocalizedNotification(
+    memberIds,
+    'rehearsal1h',
+    { projectName, rehearsalTitle: rehearsal.title },
+    { type: 'rehearsal_reminder_1h', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }
+  );
 }
 
 /**
  * Notify user that recurring payment has failed
- * @param {number} userId - User ID
- * @param {string} errorMessage - Error details
  */
 export async function notifyPaymentFailed(userId, errorMessage) {
-  const notification = {
-    title: 'Payment Failed',
-    body: 'Your subscription payment could not be processed. Please update your payment method.',
-    data: {
-      type: 'payment_failed',
-      errorMessage,
-    },
-  };
-
-  await sendPushNotification([userId], notification);
+  await sendLocalizedNotification(
+    [userId],
+    'paymentFailed',
+    {},
+    { type: 'payment_failed', errorMessage }
+  );
 }
