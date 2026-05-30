@@ -3,6 +3,7 @@ import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { requireSubscription } from '../../middleware/subscriptionMiddleware.js';
 import { notifyProjectDeleted } from '../../services/notifications/pushNotificationService.js';
+import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 
 const router = Router();
 
@@ -27,7 +28,7 @@ router.get('/', requireAuth, async (req, res) => {
         id: String(p.id),
         name: p.name,
         description: p.description || '',
-        timezone: p.timezone || 'Asia/Jerusalem',
+        timezone: p.timezone || DEFAULT_TIMEZONE,
         is_admin: Boolean(p.is_admin),
         created_at: p.created_at,
         updated_at: p.updated_at,
@@ -51,7 +52,7 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     // Create project in native_projects table
-    const projectTimezone = timezone || 'Asia/Jerusalem';
+    const projectTimezone = timezone || DEFAULT_TIMEZONE;
     const newProject = await db.get(
       'INSERT INTO native_projects (name, description, timezone, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING *',
       [name, description || null, projectTimezone]
@@ -70,7 +71,7 @@ router.post('/', requireAuth, async (req, res) => {
         id: String(newProject.id),
         name: newProject.name,
         description: newProject.description || '',
-        timezone: newProject.timezone || 'Asia/Jerusalem',
+        timezone: newProject.timezone || DEFAULT_TIMEZONE,
         is_admin: true,
         created_at: newProject.created_at,
         updated_at: newProject.updated_at,
@@ -109,7 +110,7 @@ router.get('/:projectId', requireAuth, async (req, res) => {
         id: String(project.id),
         name: project.name,
         description: project.description || '',
-        timezone: project.timezone || 'Asia/Jerusalem',
+        timezone: project.timezone || DEFAULT_TIMEZONE,
         is_admin: membership.role === 'owner' || membership.role === 'admin',
         is_owner: membership.role === 'owner',
         created_at: project.created_at,

@@ -1,6 +1,7 @@
 import { logger } from '../../utils/logger.js';
 import db from '../../database/db.js';
 import { localToTimestamp, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
+import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
 
 /**
@@ -183,7 +184,7 @@ export async function getProjectRehearsals(projectId, userId) {
     'SELECT timezone FROM native_users WHERE id = $1',
     [userId]
   );
-  const userTimezone = userResult?.timezone || 'Asia/Jerusalem';
+  const userTimezone = userResult?.timezone || DEFAULT_TIMEZONE;
   logger.debug(`[getProjectRehearsals] User timezone: ${userTimezone}`);
 
   // Check if user is admin

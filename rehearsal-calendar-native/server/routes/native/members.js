@@ -3,6 +3,7 @@ import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { timestampToLocal, timestampToISO } from '../../utils/timezone.js';
+import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { notifyRoleChanged, notifyMemberRemoved } from '../../services/notifications/pushNotificationService.js';
 
 const router = Router();
@@ -72,7 +73,7 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
       'SELECT timezone FROM native_users WHERE id = $1',
       [userId]
     );
-    const requesterTimezone = requester?.timezone || 'Asia/Jerusalem';
+    const requesterTimezone = requester?.timezone || DEFAULT_TIMEZONE;
 
     logger.debug(`[Availability API] User ID ${userId} requesting availability, timezone: ${requesterTimezone}`);
 
