@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Animated, FlatList } from 'react-native';
 import { DayState, DayMode, TimeSlot } from '../types';
 import { validateSlots, calculateDateOffset } from '../utils';
-import { applyToSelectedDates, parseTimeToDate, formatDateToTime } from '../utils/slotHelpers';
+import { applyToSelectedDates } from '../utils/slotHelpers';
+import { parseTimeString, formatDateToTimeString } from '../../../shared/utils/time';
 import { SCREEN_HEIGHT, PANEL_HEIGHT } from '../constants';
 
 const DEFAULT_SLOT: TimeSlot = { start: '10:00', end: '18:00' };
@@ -102,7 +103,7 @@ export function useAvailabilityEditor({
 
     const state = getDayState(selectedDate);
     const timeStr = state.slots[slotIndex][field];
-    const date = parseTimeToDate(timeStr);
+    const date = parseTimeString(timeStr);
 
     setTempTime(date);
     setEditingSlot({ index: slotIndex, field });
@@ -115,7 +116,7 @@ export function useAvailabilityEditor({
     }
 
     if (date && editingSlot && selectedDates.length > 0) {
-      const timeStr = formatDateToTime(date);
+      const timeStr = formatDateToTimeString(date);
 
       setAvailability(prev =>
         applyToSelectedDates(prev, selectedDates, getDayState, (currentState) => ({
@@ -135,7 +136,7 @@ export function useAvailabilityEditor({
 
   const confirmTimePicker = () => {
     if (editingSlot && selectedDates.length > 0) {
-      const timeStr = formatDateToTime(tempTime);
+      const timeStr = formatDateToTimeString(tempTime);
 
       setAvailability(prev =>
         applyToSelectedDates(prev, selectedDates, getDayState, (currentState) => ({

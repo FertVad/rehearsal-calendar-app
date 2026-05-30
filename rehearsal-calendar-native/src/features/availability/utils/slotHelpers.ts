@@ -18,21 +18,3 @@ export function applyToSelectedDates(
   return updated;
 }
 
-/**
- * Parse time string (HH:MM) to Date object
- */
-export function parseTimeToDate(timeStr: string): Date {
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date;
-}
-
-/**
- * Format Date object to time string (HH:MM)
- */
-export function formatDateToTime(date: Date): string {
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-}

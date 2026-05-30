@@ -7,10 +7,9 @@ import { AppStackParamList } from '../../../navigation';
 import { Project, ProjectMember } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { checkSchedulingConflicts, formatConflictMessage } from '../../../shared/utils/conflictDetection';
-import { dateTimeToISOInTimezone } from '../../../shared/utils/time';
+import { dateTimeToISOInTimezone, formatDateToString, formatDateToTimeString } from '../../../shared/utils/time';
 import { getSyncSettings } from '../../../shared/utils/calendarStorage';
 import { syncRehearsalToCalendar } from '../../../shared/services/calendar';
-import { formatDate, formatTime } from '../utils/rehearsalFormatters';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -55,9 +54,9 @@ export function useAddRehearsalSubmit({
 
     try {
       // Convert date + time to ISO timestamps using user's timezone
-      const dateString = formatDate(date);
-      const startTimeString = formatTime(startTime);
-      const endTimeString = formatTime(endTime);
+      const dateString = formatDateToString(date);
+      const startTimeString = formatDateToTimeString(startTime);
+      const endTimeString = formatDateToTimeString(endTime);
 
       const rehearsalData = {
         startsAt: dateTimeToISOInTimezone(dateString, startTimeString, userTimezone),
@@ -169,8 +168,8 @@ export function useAddRehearsalSubmit({
     // Check for scheduling conflicts
     if (selectedMemberIds.length > 0) {
       const selectedMembers = members.filter(m => selectedMemberIds.includes(m.userId));
-      const rehearsalStart = formatTime(startTime);
-      const rehearsalEnd = formatTime(endTime);
+      const rehearsalStart = formatDateToTimeString(startTime);
+      const rehearsalEnd = formatDateToTimeString(endTime);
 
       const conflicts = checkSchedulingConflicts(
         selectedMembers,

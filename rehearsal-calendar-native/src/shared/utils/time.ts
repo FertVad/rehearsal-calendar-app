@@ -24,6 +24,27 @@ export const formatDateToString = (date: Date): string => {
 };
 
 /**
+ * Format Date object to time string (HH:mm).
+ */
+export const formatDateToTimeString = (date: Date): string => {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+/**
+ * Parse time string (HH:mm) into Date object.
+ * @param timeStr - Time string in HH:mm format
+ * @param baseDate - Optional base date to use (defaults to current date)
+ */
+export const parseTimeString = (timeStr: string, baseDate?: Date): Date => {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const date = baseDate ? new Date(baseDate) : new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+};
+
+/**
  * Convert time string (HH:mm) to minutes since midnight.
  * @example timeToMinutes('14:30') => 870
  */

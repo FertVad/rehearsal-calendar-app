@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../../navigation';
 import { Project } from '../../../shared/types';
-import { parseTimeString } from '../utils/rehearsalFormatters';
+import { parseTimeString } from '../../../shared/utils/time';
 import { rehearsalsAPI, projectsAPI, subscriptionsAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
 
