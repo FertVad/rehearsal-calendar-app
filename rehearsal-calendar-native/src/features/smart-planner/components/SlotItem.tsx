@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { TimeSlot } from '../types';
 import { useI18n } from '../../../contexts/I18nContext';
+import { WORKDAY_START, WORKDAY_END } from '../../../shared/utils/availability';
 
 interface SlotItemProps {
   slot: TimeSlot;
@@ -36,8 +37,8 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
   };
 
   const formatTimeRange = (): string => {
-    // Check if entire workday (9:00-23:00)
-    if (slot.startTime === '09:00' && slot.endTime === '23:00') {
+    // Check if entire workday
+    if (slot.startTime === WORKDAY_START && slot.endTime === WORKDAY_END) {
       return t.smartPlanner.allDay;
     }
     return `${slot.startTime}-${slot.endTime}`;
