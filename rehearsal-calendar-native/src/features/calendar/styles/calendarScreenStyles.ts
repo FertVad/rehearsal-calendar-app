@@ -87,6 +87,24 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.sm,
   },
+  upcomingCardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  upcomingCardLeftCol: {
+    flex: 1,
+  },
+  upcomingCardAdminCol: {
+    alignItems: 'flex-end',
+    gap: Spacing.sm,
+  },
+  iconButton: {
+    padding: Spacing.xs,
+  },
+  skeletonRow: {
+    marginBottom: Spacing.sm,
+  },
   upcomingDateBadge: {
     backgroundColor: Colors.accent.purpleDarkAlpha15,
     paddingHorizontal: Spacing.sm,

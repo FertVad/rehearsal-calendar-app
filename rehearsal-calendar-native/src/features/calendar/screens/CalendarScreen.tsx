@@ -345,8 +345,8 @@ export default function CalendarScreen() {
                     <SkeletonLoader width={120} height={24} borderRadius={12} />
                   </View>
                   <View style={styles.upcomingContent}>
-                    <SkeletonLoader width="60%" height={16} style={{ marginBottom: 8 }} />
-                    <SkeletonLoader width="80%" height={16} style={{ marginBottom: 8 }} />
+                    <SkeletonLoader width="60%" height={16} style={styles.skeletonRow} />
+                    <SkeletonLoader width="80%" height={16} style={styles.skeletonRow} />
                     <SkeletonLoader width="70%" height={16} />
                   </View>
                 </View>
@@ -384,8 +384,8 @@ export default function CalendarScreen() {
                       }}
                       activeOpacity={0.7}
                     >
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <View style={{ flex: 1 }}>
+                      <View style={styles.upcomingCardRow}>
+                        <View style={styles.upcomingCardLeftCol}>
                           <View style={styles.upcomingCardHeader}>
                             <View style={styles.upcomingDateBadge}>
                               <Text style={styles.upcomingDateText}>
@@ -424,7 +424,7 @@ export default function CalendarScreen() {
                         </View>
 
                         {isAdminForThisRehearsal && (
-                          <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                          <View style={styles.upcomingCardAdminCol}>
                             <View style={styles.adminBadge}>
                               <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
                               <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
@@ -434,7 +434,7 @@ export default function CalendarScreen() {
                                 e.stopPropagation();
                                 handleDeleteRehearsal(rehearsal.id);
                               }}
-                              style={{ padding: 4 }}
+                              style={styles.iconButton}
                             >
                               <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
                             </TouchableOpacity>
@@ -446,7 +446,7 @@ export default function CalendarScreen() {
                                   projectId: rehearsal.projectId,
                                 });
                               }}
-                              style={{ padding: 4 }}
+                              style={styles.iconButton}
                             >
                               <Ionicons name="create-outline" size={18} color={Colors.text.secondary} />
                             </TouchableOpacity>
