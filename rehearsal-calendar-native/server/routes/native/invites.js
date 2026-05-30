@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
+import { getActiveAdminMembership } from '../../utils/projectAuth.js';
 import { notifyProjectInvite } from '../../services/notifications/pushNotificationService.js';
 
 const router = Router();
@@ -27,10 +28,7 @@ router.post('/:projectId/invite', requireAuth, async (req, res) => {
     const { expiresInDays = 7 } = req.body;
 
     // Check if user is admin
-    const membership = await db.get(
-      "SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND role IN ('owner', 'admin') AND status = 'active'",
-      [projectId, userId]
-    );
+    const membership = await getActiveAdminMembership(projectId, userId);
 
     if (!membership) {
       return res.status(403).json({ error: 'Only admins can create invite links' });
@@ -82,10 +80,7 @@ router.get('/:projectId/invite', requireAuth, async (req, res) => {
     const { projectId } = req.params;
 
     // Check if user is admin
-    const membership = await db.get(
-      "SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND role IN ('owner', 'admin') AND status = 'active'",
-      [projectId, userId]
-    );
+    const membership = await getActiveAdminMembership(projectId, userId);
 
     if (!membership) {
       return res.status(403).json({ error: 'Only admins can view invite links' });
@@ -126,10 +121,7 @@ router.delete('/:projectId/invite', requireAuth, async (req, res) => {
     const { projectId } = req.params;
 
     // Check if user is admin
-    const membership = await db.get(
-      "SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND role IN ('owner', 'admin') AND status = 'active'",
-      [projectId, userId]
-    );
+    const membership = await getActiveAdminMembership(projectId, userId);
 
     if (!membership) {
       return res.status(403).json({ error: 'Only admins can revoke invite links' });
