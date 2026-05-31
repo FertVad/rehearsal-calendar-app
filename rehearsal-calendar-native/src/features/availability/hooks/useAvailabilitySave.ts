@@ -66,9 +66,25 @@ export const useAvailabilitySave = () => {
       } else if (state.mode === 'custom') {
         type = 'busy';
         for (const slot of state.slots) {
+          // Detect midnight crossing: if end <= start as HH:MM, end belongs to
+          // the next calendar day (e.g. 23:00–00:30 or 22:00–01:00).
+          const startMinutes = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
+          const endMinutes = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
+          const endsNextDay = endMinutes <= startMinutes;
+
+          let endDate = date;
+          if (endsNextDay) {
+            const next = new Date(`${date}T00:00:00`);
+            next.setDate(next.getDate() + 1);
+            const y = next.getFullYear();
+            const m = String(next.getMonth() + 1).padStart(2, '0');
+            const d = String(next.getDate()).padStart(2, '0');
+            endDate = `${y}-${m}-${d}`;
+          }
+
           entries.push({
             startsAt: createTimestamp(date, slot.start),
-            endsAt: createTimestamp(date, slot.end),
+            endsAt: createTimestamp(endDate, slot.end),
             type,
             isAllDay: false,
           });
