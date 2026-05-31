@@ -168,6 +168,8 @@ export const authAPI = {
 
   deleteMe: () => api.delete('/auth/me'),
 
+  logout: () => api.post('/auth/logout'),
+
   // OAuth Authentication
   loginWithGoogle: (idToken: string) =>
     api.post('/auth/google', { idToken }),
