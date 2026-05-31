@@ -132,16 +132,14 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
       setIsSettingUp(true);
       hapticLight();
 
-      const calList = cals || providerCalendarsList;
-      const importCalendarIds = calList.map((c) => c.id);
-
       setSelectedCalendarId(calendarId);
 
       await updateSettings({
         exportEnabled: true,
         exportCalendarId: calendarId,
         importEnabled: true,
-        importCalendarIds: importCalendarIds,
+        // Single-calendar mode: sync only the picked one
+        importCalendarIds: [calendarId],
         importInterval: 'always',
         lastExportTime: settings?.lastExportTime || null,
         lastImportTime: settings?.lastImportTime || null,

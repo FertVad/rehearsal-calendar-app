@@ -185,10 +185,11 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
 
     // If only 1 calendar, auto-select it; otherwise let user pick
     const exportCalendar = providerCalendars.length === 1 ? providerCalendars[0] : null;
-    const exportCalendarId = exportCalendar?.id || selectedCalendarId;
+    const exportCalendarId = exportCalendar?.id || selectedCalendarId || providerCalendars[0].id;
 
-    // Use ALL calendars for IMPORT (to get events from all personal calendars)
-    const importCalendarIds = providerCalendars.map(c => c.id);
+    // Import from the same single calendar — matches user expectation of
+    // "I picked one calendar to sync with"
+    const importCalendarIds = [exportCalendarId];
 
     if (exportCalendar) {
       setSelectedCalendarId(exportCalendar.id);
@@ -198,17 +199,16 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     setSyncEnabled(true);
     await updateSettings({
       exportEnabled: true,
-      exportCalendarId: exportCalendarId || providerCalendars[0].id,
+      exportCalendarId,
       importEnabled: true,
-      importCalendarIds: importCalendarIds,
+      importCalendarIds,
       importInterval: 'always',
       lastExportTime: settings?.lastExportTime || null,
       lastImportTime: settings?.lastImportTime || null,
     });
 
     logger.debug(`[CalendarSync] Enabled ${provider} calendar sync:`);
-    logger.debug(`  Export to: ${exportCalendar?.title || 'user will pick'}`);
-    logger.debug(`  Import from ${importCalendarIds.length} calendars:`, providerCalendars.map(c => c.title));
+    logger.debug(`  Calendar: ${exportCalendar?.title || 'user will pick'}`);
   };
 
   const handleSelectCalendar = async (calendarId: string) => {
@@ -218,14 +218,15 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       exportEnabled: settings?.exportEnabled ?? true,
       exportCalendarId: calendarId,
       importEnabled: settings?.importEnabled ?? true,
-      importCalendarIds: settings?.importCalendarIds || [],
+      // Import from the same calendar — single-calendar mode
+      importCalendarIds: [calendarId],
       importInterval: settings?.importInterval || 'always',
       lastExportTime: settings?.lastExportTime || null,
       lastImportTime: settings?.lastImportTime || null,
     });
 
     const cal = calendars.find(c => c.id === calendarId);
-    logger.debug(`[CalendarSync] Export calendar changed to: ${cal?.title}`);
+    logger.debug(`[CalendarSync] Calendar changed to: ${cal?.title}`);
   };
 
   const handleToggleSync = async (enabled: boolean) => {
@@ -246,17 +247,18 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     setSyncEnabled(enabled);
 
     if (enabled && selectedProvider) {
-      // Get ALL calendars from provider
+      // Re-enabling sync: keep previously selected calendar if any,
+      // otherwise default to first available from the provider.
       const providerCalendars = getProviderCalendars(selectedProvider);
-      const exportCalendar = providerCalendars[0];
-      const importCalendarIds = providerCalendars.map(c => c.id);
+      const previousId = settings?.exportCalendarId;
+      const calendar = providerCalendars.find(c => c.id === previousId) || providerCalendars[0];
 
-      if (exportCalendar) {
+      if (calendar) {
         await updateSettings({
           exportEnabled: true,
-          exportCalendarId: exportCalendar.id,
+          exportCalendarId: calendar.id,
           importEnabled: true,
-          importCalendarIds: importCalendarIds,
+          importCalendarIds: [calendar.id],
           importInterval: 'always',
           lastExportTime: settings?.lastExportTime || null,
           lastImportTime: settings?.lastImportTime || null,
