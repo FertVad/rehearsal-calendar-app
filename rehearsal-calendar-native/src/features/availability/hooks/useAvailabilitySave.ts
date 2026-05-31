@@ -28,10 +28,13 @@ export const useAvailabilitySave = () => {
   };
 
   /**
-   * Convert local availability format to API format
+   * Convert local availability format to API format.
+   * Skips past dates — they are immutable and re-sending them is what
+   * triggered the chk_availability_time_order bug for legacy bad data.
    */
   const prepareEntriesForAPI = (
-    availability: AvailabilityData
+    availability: AvailabilityData,
+    today?: string
   ): Array<{ startsAt: string; endsAt: string; type: 'available' | 'busy' | 'tentative'; isAllDay?: boolean }> => {
     const entries: Array<{
       startsAt: string;
@@ -41,6 +44,7 @@ export const useAvailabilitySave = () => {
     }> = [];
 
     for (const [date, state] of Object.entries(availability)) {
+      if (today && date < today) continue;
       let type: 'available' | 'busy' | 'tentative' = 'available';
 
       if (state.mode === 'free') {
@@ -172,8 +176,8 @@ export const useAvailabilitySave = () => {
 
       setSaving(true);
 
-      // Prepare and send
-      const entries = prepareEntriesForAPI(availability);
+      // Prepare and send (past dates excluded — they're immutable)
+      const entries = prepareEntriesForAPI(availability, today);
       await availabilityAPI.bulkSet(entries);
 
       setHasChanges(false);
