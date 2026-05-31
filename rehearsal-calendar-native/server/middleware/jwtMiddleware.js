@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import db from '../database/db.js';
 
 // Fail-fast: Require JWT_SECRET in production
 const isProduction = process.env.NODE_ENV === 'production';
@@ -24,12 +25,18 @@ const SECRET = JWT_SECRET || 'dev-only-insecure-secret-change-immediately';
 const JWT_EXPIRES_IN = '30d'; // Access token expires in 30 days (mobile app convenience)
 const REFRESH_TOKEN_EXPIRES_IN = '90d'; // Refresh token expires in 90 days
 
-export function generateTokens(userId) {
-  const accessToken = jwt.sign({ userId, type: 'access' }, SECRET, {
+/**
+ * Issue access + refresh tokens with the user's current token version embedded.
+ * The version is checked against DB on every request — incrementing it
+ * (logout, password change) invalidates all previously-issued tokens.
+ */
+export function generateTokens(userId, tokenVersion) {
+  const tv = tokenVersion ?? 1;
+  const accessToken = jwt.sign({ userId, tv, type: 'access' }, SECRET, {
     expiresIn: JWT_EXPIRES_IN,
   });
 
-  const refreshToken = jwt.sign({ userId, type: 'refresh' }, SECRET, {
+  const refreshToken = jwt.sign({ userId, tv, type: 'refresh' }, SECRET, {
     expiresIn: REFRESH_TOKEN_EXPIRES_IN,
   });
 
@@ -48,7 +55,7 @@ export function verifyToken(token, type = 'access') {
   }
 }
 
-export function authenticateToken(req, res, next) {
+export async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -59,6 +66,21 @@ export function authenticateToken(req, res, next) {
   const decoded = verifyToken(token, 'access');
   if (!decoded) {
     return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+
+  // Verify token_version matches current DB value (revocation check)
+  const user = await db.get(
+    'SELECT token_version FROM native_users WHERE id = $1',
+    [decoded.userId]
+  );
+  if (!user) {
+    return res.status(401).json({ error: 'User no longer exists' });
+  }
+  // Treat null token version as 1 (legacy users issued before this column existed)
+  const dbVersion = user.token_version ?? 1;
+  const tokenVer = decoded.tv ?? 1;
+  if (tokenVer < dbVersion) {
+    return res.status(401).json({ error: 'Session revoked' });
   }
 
   req.userId = decoded.userId;

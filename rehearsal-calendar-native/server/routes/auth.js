@@ -36,8 +36,8 @@ router.post('/register', async (req, res) => {
 
     const userId = result.lastInsertId;
 
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(userId);
+    // New users start with token_version = 1 (DB default)
+    const { accessToken, refreshToken } = generateTokens(userId, 1);
 
     // Get user data
     const user = await db.get(
@@ -72,7 +72,7 @@ router.post('/login', async (req, res) => {
     const user = await db.get(
       `SELECT id, email, password_hash, first_name, last_name, timezone, locale,
               notifications_enabled, email_notifications, week_start_day,
-              onboarding_completed
+              onboarding_completed, token_version
        FROM native_users WHERE email = $1`,
       [email]
     );
@@ -90,8 +90,8 @@ router.post('/login', async (req, res) => {
     // Update last login
     await db.run('UPDATE native_users SET last_login_at = NOW() WHERE id = $1', [user.id]);
 
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user.id);
+    // Generate tokens with user's current token version
+    const { accessToken, refreshToken } = generateTokens(user.id, user.token_version);
 
     res.json({
       user: serializeUser(user),
@@ -137,8 +137,9 @@ router.post('/google', async (req, res) => {
       [new Date().toISOString(), userId]
     );
 
-    // Generate JWT tokens
-    const { accessToken, refreshToken } = generateTokens(userId);
+    // Fetch token version and generate JWT tokens
+    const versionRow = await db.get('SELECT token_version FROM native_users WHERE id = $1', [userId]);
+    const { accessToken, refreshToken } = generateTokens(userId, versionRow?.token_version);
 
     // Get user data
     const user = await db.get(
@@ -195,8 +196,9 @@ router.post('/apple', async (req, res) => {
       [new Date().toISOString(), userId]
     );
 
-    // Generate JWT tokens
-    const { accessToken, refreshToken } = generateTokens(userId);
+    // Fetch token version and generate JWT tokens
+    const versionRow = await db.get('SELECT token_version FROM native_users WHERE id = $1', [userId]);
+    const { accessToken, refreshToken } = generateTokens(userId, versionRow?.token_version);
 
     // Get user data
     const user_data = await db.get(
@@ -234,8 +236,19 @@ router.post('/refresh', async (req, res) => {
       return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
 
-    // Generate new tokens
-    const tokens = generateTokens(decoded.userId);
+    // Verify token version is still current (revocation check)
+    const versionRow = await db.get('SELECT token_version FROM native_users WHERE id = $1', [decoded.userId]);
+    if (!versionRow) {
+      return res.status(401).json({ error: 'User no longer exists' });
+    }
+    const dbVersion = versionRow.token_version ?? 1;
+    const tokenVer = decoded.tv ?? 1;
+    if (tokenVer < dbVersion) {
+      return res.status(401).json({ error: 'Session revoked' });
+    }
+
+    // Generate new tokens with current version
+    const tokens = generateTokens(decoded.userId, dbVersion);
 
     res.json(tokens);
   } catch (err) {
@@ -299,6 +312,7 @@ router.put('/me', requireAuth, async (req, res) => {
     const updates = [];
     const values = [];
     let paramIndex = 1;
+    let passwordChanged = false;
 
     // Process only whitelisted fields
     for (const [apiField, config] of Object.entries(ALLOWED_USER_FIELDS)) {
@@ -320,10 +334,17 @@ router.put('/me', requireAuth, async (req, res) => {
 
       updates.push(`${config.dbColumn} = $${paramIndex++}`);
       values.push(finalValue);
+
+      if (apiField === 'password') passwordChanged = true;
     }
 
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    // Password change revokes all existing sessions
+    if (passwordChanged) {
+      updates.push('token_version = token_version + 1');
     }
 
     updates.push(`updated_at = NOW()`);
@@ -338,17 +359,37 @@ router.put('/me', requireAuth, async (req, res) => {
     const user = await db.get(
       `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
               notifications_enabled, email_notifications, week_start_day,
-              onboarding_completed
+              onboarding_completed, token_version
        FROM native_users WHERE id = $1`,
       [req.userId]
     );
 
-    res.json({
-      user: serializeUser(user)
-    });
+    // If password changed, issue fresh tokens so this device stays logged in
+    const response = { user: serializeUser(user) };
+    if (passwordChanged) {
+      const tokens = generateTokens(user.id, user.token_version);
+      response.accessToken = tokens.accessToken;
+      response.refreshToken = tokens.refreshToken;
+    }
+
+    res.json(response);
   } catch (err) {
     console.error('[Auth] Update me error:', err);
     res.status(500).json({ error: 'Failed to update user info' });
+  }
+});
+
+// Logout — revoke all sessions for this user
+router.post('/logout', requireAuth, async (req, res) => {
+  try {
+    await db.run(
+      'UPDATE native_users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1',
+      [req.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Auth] Logout error:', err);
+    res.status(500).json({ error: 'Failed to logout' });
   }
 });
 

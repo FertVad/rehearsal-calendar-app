@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS native_users (
   notifications_enabled BOOLEAN DEFAULT 1,
   email_notifications BOOLEAN DEFAULT 1,
   onboarding_completed BOOLEAN DEFAULT 0,
+  token_version INTEGER NOT NULL DEFAULT 1, -- Incremented to revoke all sessions
   last_login_at DATETIME,                   -- Track last login timestamp
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
