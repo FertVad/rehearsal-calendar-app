@@ -72,6 +72,10 @@ try {
 
 const app = express();
 
+// Trust one upstream proxy (Vercel) — required for express-rate-limit
+// to see the real client IP from X-Forwarded-For instead of Vercel's internal IP.
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet({
   // Relax CSP — AllPay checkout page loads iframe from allpay.co.il
