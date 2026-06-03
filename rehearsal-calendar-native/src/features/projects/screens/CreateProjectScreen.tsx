@@ -25,21 +25,7 @@ import { createProjectScreenStyles as styles } from '../styles';
 
 type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
 
-// Common timezones for theatre/rehearsal apps
-const TIMEZONES = [
-  { value: 'Asia/Jerusalem', labelRu: 'Тель-Авив (UTC+2)', labelEn: 'Tel Aviv (UTC+2)' },
-  { value: 'Europe/Moscow', labelRu: 'Москва (UTC+3)', labelEn: 'Moscow (UTC+3)' },
-  { value: 'Europe/Kiev', labelRu: 'Киев (UTC+2)', labelEn: 'Kyiv (UTC+2)' },
-  { value: 'Europe/Kaliningrad', labelRu: 'Калининград (UTC+2)', labelEn: 'Kaliningrad (UTC+2)' },
-  { value: 'Europe/Samara', labelRu: 'Самара (UTC+4)', labelEn: 'Samara (UTC+4)' },
-  { value: 'Asia/Yekaterinburg', labelRu: 'Екатеринбург (UTC+5)', labelEn: 'Yekaterinburg (UTC+5)' },
-  { value: 'Asia/Novosibirsk', labelRu: 'Новосибирск (UTC+7)', labelEn: 'Novosibirsk (UTC+7)' },
-  { value: 'Asia/Vladivostok', labelRu: 'Владивосток (UTC+10)', labelEn: 'Vladivostok (UTC+10)' },
-  { value: 'Europe/Berlin', labelRu: 'Берлин (UTC+1)', labelEn: 'Berlin (UTC+1)' },
-  { value: 'Europe/London', labelRu: 'Лондон (UTC+0)', labelEn: 'London (UTC+0)' },
-  { value: 'America/New_York', labelRu: 'Нью-Йорк (UTC-5)', labelEn: 'New York (UTC-5)' },
-  { value: 'America/Los_Angeles', labelRu: 'Лос-Анджелес (UTC-8)', labelEn: 'Los Angeles (UTC-8)' },
-];
+import { TIMEZONES, getTimezoneLabel as getTzLabel } from '../../../shared/constants/timezones';
 
 export default function CreateProjectScreen({ navigation }: CreateProjectScreenProps) {
   const { createProject } = useProjects();
@@ -53,11 +39,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
   const [timezonePickerVisible, setTimezonePickerVisible] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const getTimezoneLabel = (value: string) => {
-    const tz = TIMEZONES.find(t => t.value === value);
-    if (!tz) return value;
-    return language === 'ru' ? tz.labelRu : tz.labelEn;
-  };
+  const getTimezoneLabel = (value: string) => getTzLabel(value, language);
 
   const handleCreateProject = async () => {
     if (!projectName.trim()) {
