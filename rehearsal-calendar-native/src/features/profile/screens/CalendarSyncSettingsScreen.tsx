@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -65,15 +66,15 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
   // Log available calendars and which will be used for import
   useEffect(() => {
     if (calendars.length > 0) {
-      console.log('[CalendarSync] 📋 All available calendars:');
+      logger.debug('[CalendarSync] 📋 All available calendars:');
       calendars.forEach((cal, idx) => {
         const provider = getCalendarProvider(cal);
         const excluded = shouldExcludeFromImport(cal);
-        console.log(`  [${idx}] ${cal.title}`);
-        console.log(`      - Provider: ${provider}`);
-        console.log(`      - Source: ${cal.source?.name || 'Unknown'}`);
-        console.log(`      - Writable: ${cal.allowsModifications}`);
-        console.log(`      - Will import: ${!excluded && cal.allowsModifications ? 'YES' : 'NO'} ${excluded ? '(excluded: subscription/birthday/holiday)' : ''}`);
+        logger.debug(`  [${idx}] ${cal.title}`);
+        logger.debug(`      - Provider: ${provider}`);
+        logger.debug(`      - Source: ${cal.source?.name || 'Unknown'}`);
+        logger.debug(`      - Writable: ${cal.allowsModifications}`);
+        logger.debug(`      - Will import: ${!excluded && cal.allowsModifications ? 'YES' : 'NO'} ${excluded ? '(excluded: subscription/birthday/holiday)' : ''}`);
       });
     }
   }, [calendars]);
@@ -184,10 +185,11 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
 
     // If only 1 calendar, auto-select it; otherwise let user pick
     const exportCalendar = providerCalendars.length === 1 ? providerCalendars[0] : null;
-    const exportCalendarId = exportCalendar?.id || selectedCalendarId;
+    const exportCalendarId = exportCalendar?.id || selectedCalendarId || providerCalendars[0].id;
 
-    // Use ALL calendars for IMPORT (to get events from all personal calendars)
-    const importCalendarIds = providerCalendars.map(c => c.id);
+    // Import from the same single calendar — matches user expectation of
+    // "I picked one calendar to sync with"
+    const importCalendarIds = [exportCalendarId];
 
     if (exportCalendar) {
       setSelectedCalendarId(exportCalendar.id);
@@ -197,17 +199,16 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     setSyncEnabled(true);
     await updateSettings({
       exportEnabled: true,
-      exportCalendarId: exportCalendarId || providerCalendars[0].id,
+      exportCalendarId,
       importEnabled: true,
-      importCalendarIds: importCalendarIds,
+      importCalendarIds,
       importInterval: 'always',
       lastExportTime: settings?.lastExportTime || null,
       lastImportTime: settings?.lastImportTime || null,
     });
 
-    console.log(`[CalendarSync] Enabled ${provider} calendar sync:`);
-    console.log(`  Export to: ${exportCalendar?.title || 'user will pick'}`);
-    console.log(`  Import from ${importCalendarIds.length} calendars:`, providerCalendars.map(c => c.title));
+    logger.debug(`[CalendarSync] Enabled ${provider} calendar sync:`);
+    logger.debug(`  Calendar: ${exportCalendar?.title || 'user will pick'}`);
   };
 
   const handleSelectCalendar = async (calendarId: string) => {
@@ -217,14 +218,15 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       exportEnabled: settings?.exportEnabled ?? true,
       exportCalendarId: calendarId,
       importEnabled: settings?.importEnabled ?? true,
-      importCalendarIds: settings?.importCalendarIds || [],
+      // Import from the same calendar — single-calendar mode
+      importCalendarIds: [calendarId],
       importInterval: settings?.importInterval || 'always',
       lastExportTime: settings?.lastExportTime || null,
       lastImportTime: settings?.lastImportTime || null,
     });
 
     const cal = calendars.find(c => c.id === calendarId);
-    console.log(`[CalendarSync] Export calendar changed to: ${cal?.title}`);
+    logger.debug(`[CalendarSync] Calendar changed to: ${cal?.title}`);
   };
 
   const handleToggleSync = async (enabled: boolean) => {
@@ -245,17 +247,18 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     setSyncEnabled(enabled);
 
     if (enabled && selectedProvider) {
-      // Get ALL calendars from provider
+      // Re-enabling sync: keep previously selected calendar if any,
+      // otherwise default to first available from the provider.
       const providerCalendars = getProviderCalendars(selectedProvider);
-      const exportCalendar = providerCalendars[0];
-      const importCalendarIds = providerCalendars.map(c => c.id);
+      const previousId = settings?.exportCalendarId;
+      const calendar = providerCalendars.find(c => c.id === previousId) || providerCalendars[0];
 
-      if (exportCalendar) {
+      if (calendar) {
         await updateSettings({
           exportEnabled: true,
-          exportCalendarId: exportCalendar.id,
+          exportCalendarId: calendar.id,
           importEnabled: true,
-          importCalendarIds: importCalendarIds,
+          importCalendarIds: [calendar.id],
           importInterval: 'always',
           lastExportTime: settings?.lastExportTime || null,
           lastImportTime: settings?.lastImportTime || null,
@@ -275,16 +278,16 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
   };
 
   const handleSynchronize = async () => {
-    console.log('[Sync] 🔄 handleSynchronize called');
+    logger.debug('[Sync] 🔄 handleSynchronize called');
 
     if (!hasPermission) {
-      console.log('[Sync] ❌ No calendar permission');
+      logger.debug('[Sync] ❌ No calendar permission');
       Alert.alert(t.calendarSync.permissionDenied, t.calendarSync.permissionDeniedMessage);
       return;
     }
 
     if (!syncEnabled || !selectedProvider) {
-      console.log('[Sync] ❌ Sync not enabled or no provider selected:', {
+      logger.debug('[Sync] ❌ Sync not enabled or no provider selected:', {
         syncEnabled,
         selectedProvider,
       });
@@ -296,8 +299,8 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     }
 
     try {
-      console.log('[Sync] ✅ Starting synchronization...');
-      console.log('[Sync] 📊 Current settings:', {
+      logger.debug('[Sync] ✅ Starting synchronization...');
+      logger.debug('[Sync] 📊 Current settings:', {
         exportEnabled: settings?.exportEnabled,
         exportCalendarId: settings?.exportCalendarId,
         importEnabled: settings?.importEnabled,
@@ -305,18 +308,18 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       });
 
       // Import calendar events
-      console.log('[Sync] 📥 Starting import from calendar...');
+      logger.debug('[Sync] 📥 Starting import from calendar...');
       const importResult = await importNow();
-      console.log('[Sync] ✅ Import completed:', importResult);
+      logger.debug('[Sync] ✅ Import completed:', importResult);
 
       // Export rehearsals to calendar
-      console.log('[Sync] 📤 Starting export to calendar...');
-      console.log('[Sync] 📊 Projects available:', projects.length);
+      logger.debug('[Sync] 📤 Starting export to calendar...');
+      logger.debug('[Sync] 📊 Projects available:', projects.length);
       const projectIds = projects.map(p => p.id);
-      console.log('[Sync] 🔍 Fetching rehearsals for projects:', projectIds);
+      logger.debug('[Sync] 🔍 Fetching rehearsals for projects:', projectIds);
 
       const response = await rehearsalsAPI.getBatch(projectIds);
-      console.log('[Sync] 📋 API response:', {
+      logger.debug('[Sync] 📋 API response:', {
         hasData: !!response.data,
         rehearsalsCount: response.data?.rehearsals?.length || 0,
       });
@@ -330,10 +333,10 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
         location: r.location,
       }));
 
-      console.log('[Sync] 📊 Rehearsals to sync:', allRehearsals.length);
+      logger.debug('[Sync] 📊 Rehearsals to sync:', allRehearsals.length);
 
       if (allRehearsals.length === 0) {
-        console.log('[Sync] ⚠️ No rehearsals found to sync');
+        logger.debug('[Sync] ⚠️ No rehearsals found to sync');
         Alert.alert(
           t.calendarSync.syncSuccess || 'Sync Complete',
           'No rehearsals found to sync. Create some rehearsals first!'
@@ -341,9 +344,9 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
         return;
       }
 
-      console.log('[Sync] 🚀 Calling syncAll with', allRehearsals.length, 'rehearsals');
+      logger.debug('[Sync] 🚀 Calling syncAll with', allRehearsals.length, 'rehearsals');
       const syncResult = await syncAll(allRehearsals);
-      console.log('[Sync] ✅ Export completed:', syncResult);
+      logger.debug('[Sync] ✅ Export completed:', syncResult);
 
       // Show success message
       Alert.alert(
@@ -407,7 +410,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
             <View style={styles.section}>
               <View style={styles.settingItem}>
                 <View style={styles.settingLeft}>
-                  <View style={[styles.settingIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                  <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                     <Ionicons name="sync" size={20} color={Colors.accent.purple} />
                   </View>
                   <Text style={styles.settingLabel}>{t.calendarSync.autoSync || 'Синхронизация'}</Text>

@@ -30,7 +30,8 @@ import {
   useAddRehearsalForm,
   useAddRehearsalSubmit,
 } from '../hooks';
-import { formatDate, formatTime, formatDisplayDate } from '../utils/rehearsalFormatters';
+import { formatDisplayDate } from '../utils/rehearsalFormatters';
+import { formatDateToString, formatDateToTimeString } from '../../../shared/utils/time';
 
 type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
 
@@ -154,7 +155,7 @@ export default function AddRehearsalScreen() {
                 selectedMemberIds={form.selectedMemberIds}
                 onSelectionChange={form.setSelectedMemberIds}
                 loading={loadingMembers}
-                date={formatDate(form.date)}
+                date={formatDateToString(form.date)}
                 memberAvailability={memberAvailability}
               />
             </View>
@@ -163,7 +164,7 @@ export default function AddRehearsalScreen() {
           {/* Time Recommendations */}
           {form.localSelectedProject && form.selectedMemberIds.length > 0 && (
             <TimeRecommendations
-              selectedDate={formatDate(form.date)}
+              selectedDate={formatDateToString(form.date)}
               selectedMembers={members.filter(m => form.selectedMemberIds.includes(m.userId))}
               memberAvailability={memberAvailability}
               onTimeSelect={form.handleTimeSelect}
@@ -179,7 +180,7 @@ export default function AddRehearsalScreen() {
               onPress={form.openStartTimePicker}
             >
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
-              <Text style={styles.pickerButtonText}>{formatTime(form.startTime)}</Text>
+              <Text style={styles.pickerButtonText}>{formatDateToTimeString(form.startTime)}</Text>
             </TouchableOpacity>
           </View>
 
@@ -191,7 +192,7 @@ export default function AddRehearsalScreen() {
               onPress={form.openEndTimePicker}
             >
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
-              <Text style={styles.pickerButtonText}>{formatTime(form.endTime)}</Text>
+              <Text style={styles.pickerButtonText}>{formatDateToTimeString(form.endTime)}</Text>
             </TouchableOpacity>
           </View>
 

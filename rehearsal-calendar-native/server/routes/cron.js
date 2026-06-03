@@ -27,16 +27,15 @@ router.get('/recurring-billing', async (req, res) => {
       hasCronSecret: !!cronSecret,
     });
 
-    // Verify CRON_SECRET for security
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // Verify CRON_SECRET for security (fail-closed: if secret not configured, deny all)
+    if (!cronSecret) {
+      logger.error('[Cron API] CRON_SECRET is not configured');
+      return res.status(503).json({ error: 'Cron not configured' });
+    }
+
+    if (authHeader !== `Bearer ${cronSecret}`) {
       logger.warn('[Cron API] Unauthorized cron request');
-      return res.status(401).json({
-        error: 'Unauthorized',
-        debug: {
-          hasSecret: !!cronSecret,
-          hasAuth: !!authHeader
-        }
-      });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     logger.info('[Cron API] Running recurring billing...');

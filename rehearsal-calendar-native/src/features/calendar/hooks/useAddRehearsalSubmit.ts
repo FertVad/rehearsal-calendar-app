@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -6,10 +7,9 @@ import { AppStackParamList } from '../../../navigation';
 import { Project, ProjectMember } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { checkSchedulingConflicts, formatConflictMessage } from '../../../shared/utils/conflictDetection';
-import { dateTimeToISOInTimezone } from '../../../shared/utils/time';
+import { dateTimeToISOInTimezone, formatDateToString, formatDateToTimeString } from '../../../shared/utils/time';
 import { getSyncSettings } from '../../../shared/utils/calendarStorage';
 import { syncRehearsalToCalendar } from '../../../shared/services/calendar';
-import { formatDate, formatTime } from '../utils/rehearsalFormatters';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -54,9 +54,9 @@ export function useAddRehearsalSubmit({
 
     try {
       // Convert date + time to ISO timestamps using user's timezone
-      const dateString = formatDate(date);
-      const startTimeString = formatTime(startTime);
-      const endTimeString = formatTime(endTime);
+      const dateString = formatDateToString(date);
+      const startTimeString = formatDateToTimeString(startTime);
+      const endTimeString = formatDateToTimeString(endTime);
 
       const rehearsalData = {
         startsAt: dateTimeToISOInTimezone(dateString, startTimeString, userTimezone),
@@ -83,14 +83,14 @@ export function useAddRehearsalSubmit({
       // Auto-sync to calendar if export is enabled
       try {
         const syncSettings = await getSyncSettings();
-        console.log('[AddRehearsal] 🔍 Checking calendar sync settings:', {
+        logger.debug('[AddRehearsal] 🔍 Checking calendar sync settings:', {
           exportEnabled: syncSettings.exportEnabled,
           exportCalendarId: syncSettings.exportCalendarId,
           savedRehearsalId: savedRehearsal?.id,
         });
 
         if (syncSettings.exportEnabled && syncSettings.exportCalendarId && savedRehearsal?.id) {
-          console.log('[AddRehearsal] ✅ All conditions met, syncing to calendar...');
+          logger.debug('[AddRehearsal] ✅ All conditions met, syncing to calendar...');
           const rehearsalWithProject = {
             id: savedRehearsal.id,
             projectId: localSelectedProject!.id,
@@ -100,16 +100,16 @@ export function useAddRehearsalSubmit({
             location: rehearsalData.location,
           };
 
-          console.log('[AddRehearsal] 📤 Calling syncRehearsalToCalendar with:', {
+          logger.debug('[AddRehearsal] 📤 Calling syncRehearsalToCalendar with:', {
             rehearsalId: rehearsalWithProject.id,
             projectName: rehearsalWithProject.projectName,
             calendarId: syncSettings.exportCalendarId,
           });
 
           await syncRehearsalToCalendar(rehearsalWithProject, syncSettings.exportCalendarId);
-          console.log('[AddRehearsal] ✅ Calendar sync successful!');
+          logger.debug('[AddRehearsal] ✅ Calendar sync successful!');
         } else {
-          console.log('[AddRehearsal] ⚠️ Calendar sync skipped. Reasons:', {
+          logger.debug('[AddRehearsal] ⚠️ Calendar sync skipped. Reasons:', {
             exportNotEnabled: !syncSettings.exportEnabled,
             noCalendarSelected: !syncSettings.exportCalendarId,
             noRehearsalId: !savedRehearsal?.id,
@@ -168,8 +168,8 @@ export function useAddRehearsalSubmit({
     // Check for scheduling conflicts
     if (selectedMemberIds.length > 0) {
       const selectedMembers = members.filter(m => selectedMemberIds.includes(m.userId));
-      const rehearsalStart = formatTime(startTime);
-      const rehearsalEnd = formatTime(endTime);
+      const rehearsalStart = formatDateToTimeString(startTime);
+      const rehearsalEnd = formatDateToTimeString(endTime);
 
       const conflicts = checkSchedulingConflicts(
         selectedMembers,

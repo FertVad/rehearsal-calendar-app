@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -31,6 +33,26 @@ logger.info(`DATABASE_URL: ${process.env.DATABASE_URL ? 'PROVIDED' : 'MISSING'}`
 logger.info(`PORT: ${process.env.PORT || '3001'}`);
 logger.info('================================');
 
+// Safety guard: test mode must never run in production (would allow webhook bypass)
+if (process.env.NODE_ENV === 'production' && process.env.ALLPAY_TEST_MODE === 'true') {
+  logger.error('FATAL: ALLPAY_TEST_MODE=true is not allowed in production. Shutting down.');
+  process.exit(1);
+}
+
+// Startup validation: refuse to start if critical env vars are missing in production
+if (process.env.NODE_ENV === 'production') {
+  const required = ['JWT_SECRET', 'CRON_SECRET', 'ALLPAY_WEBHOOK_SECRET'];
+  const missing = required.filter(k => !process.env[k]);
+  // Admin can be configured via either bcrypt hash or plaintext password
+  if (!process.env.ADMIN_PASSWORD_HASH && !process.env.ADMIN_PASSWORD) {
+    missing.push('ADMIN_PASSWORD or ADMIN_PASSWORD_HASH');
+  }
+  if (missing.length > 0) {
+    logger.error(`FATAL: Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+}
+
 await initDatabase();
 
 try {
@@ -49,7 +71,29 @@ try {
 }
 
 const app = express();
-app.use(cors());
+
+// Security headers
+app.use(helmet({
+  // Relax CSP — AllPay checkout page loads iframe from allpay.co.il
+  contentSecurityPolicy: false,
+}));
+
+// CORS — React Native app doesn't use CORS (native HTTP client),
+// but browser-based admin panel and invite pages do
+const allowedOrigins = [
+  process.env.BASE_URL,
+  'http://localhost:3001',
+  'http://localhost:8081',
+].filter(Boolean);
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile app, curl, Vercel Cron)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Parse form-urlencoded (AllPay webhooks)
 
@@ -65,6 +109,22 @@ app.use((req, _res, next) => {
   if (LOG_REQUESTS) logger.debug(`Request: ${req.method} ${req.originalUrl}`);
   next();
 });
+
+// Rate limiting
+app.use('/api/auth', rateLimit({
+  windowMs: 60 * 1000,  // 1 minute
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+}));
+app.use('/admin/api/login', rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts, please try again later' },
+}));
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {
@@ -196,7 +256,7 @@ app.get('/invite/:code', (req, res) => {
         document.getElementById('openButton').textContent = isRu ? 'Открыть приложение' : 'Open App';
 
         const code = '${code}';
-        ${expoHost ? `const expoHost = '${expoHost}';` : 'const expoHost = null;'}
+        const expoHost = ${JSON.stringify(expoHost || null)};
 
         function openApp() {
           const schemes = [];

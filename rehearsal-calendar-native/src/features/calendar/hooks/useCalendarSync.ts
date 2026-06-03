@@ -1,3 +1,4 @@
+import { logger } from '../../../shared/utils/logger';
 /**
  * useCalendarSync Hook
  * React hook for calendar sync functionality
@@ -85,7 +86,7 @@ export function useCalendarSync() {
         const deviceCalendars = await getDeviceCalendars();
 
         // DEBUG: Log all calendars found
-        console.log('[DEBUG] 📅 Total calendars found:', deviceCalendars.length);
+        logger.debug('[DEBUG] 📅 Total calendars found:', deviceCalendars.length);
         deviceCalendars.forEach((cal, index) => {
           console.log(`[DEBUG] Calendar ${index + 1}:`, {
             title: cal.title,

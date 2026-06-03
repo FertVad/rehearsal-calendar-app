@@ -69,7 +69,7 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    backgroundColor: Colors.accent.purpleDarkAlpha10,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.accent.purple,
@@ -172,7 +172,7 @@ export const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   timezoneItemSelected: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: Colors.accent.purpleAlpha15,
   },
   timezoneLabel: {
     fontSize: FontSize.base,

@@ -324,9 +324,12 @@ The system automatically charges active subscriptions using saved AllPay tokens.
 - **Date Calculation**: Uses current time instead of old `current_period_end` to avoid timezone issues
 
 **Production Checklist:**
-1. Add `CRON_SECRET` to Vercel environment variables
-2. Set `ALLPAY_TEST_MODE=false`
-3. Disable `test_1min` plan: `UPDATE native_subscription_plans SET is_active = FALSE WHERE name = 'test_1min'`
+1. Set `CRON_SECRET` — endpoint is **fail-closed** (returns 503 if not set)
+2. Set `ALLPAY_TEST_MODE=false` — server **refuses to start** if `true` in production
+3. Set `ALLPAY_WEBHOOK_SECRET` — required for webhook signature verification
+4. Set `ADMIN_PASSWORD_HASH` (bcrypt) or `ADMIN_PASSWORD`
+5. Set `BASE_URL` — used for invite links and payment redirects
+6. Disable `test_1min` plan: `UPDATE native_subscription_plans SET is_active = FALSE WHERE name = 'test_1min'`
 
 ### Re-enabling Payments After Launch
 
@@ -365,7 +368,10 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 - Transactions table with pagination
 - Bug reports table with inline status management
 
-**Auth**: `server/middleware/adminAuth.js` — password login → JWT token (24h expiry)
+**Auth**: `server/middleware/adminAuth.js` — bcrypt password login → JWT token (24h expiry)
+- Set `ADMIN_PASSWORD_HASH` (bcrypt hash, recommended) or `ADMIN_PASSWORD` (plaintext, legacy)
+- Generate hash: `node -e "import('bcrypt').then(b => b.default.hash('yourpassword', 10).then(console.log))"`
+- JWT secret uses `ADMIN_JWT_SECRET` or falls back to `JWT_SECRET`
 
 **API Endpoints**:
 - `POST /admin/api/login` — authenticate with password
@@ -394,6 +400,34 @@ Global "Test Flight" banner visible on all tab screens during beta testing.
 **Admin view**: Bug reports appear in admin dashboard at `/admin` with clickable status buttons.
 
 **Removing after beta**: Delete `<BetaBanner />` from `TabNavigator` in `src/navigation/index.tsx` and remove the import.
+
+### Logging Convention
+Use `logger` utility instead of `console.log` — automatically suppressed in production:
+
+```typescript
+// Frontend: src/shared/utils/logger.ts
+import { logger } from '../../../shared/utils/logger';
+logger.debug('Loading data:', result);  // hidden in production
+logger.warn('Permission denied');       // always shown
+logger.error('Request failed:', err);   // always shown
+
+// Backend: server/utils/logger.js
+import { logger } from '../utils/logger.js';
+logger.debug(`[ServiceName] Step completed`);
+```
+
+❌ Never use `console.log` directly in production code — it leaks debug info and can expose sensitive data.
+
+### Security Architecture
+Key security measures in place (as of 2026-04-11):
+
+- **Rate limiting**: 20 req/min on `/api/auth/*`, 5 attempts/15 min on `/admin/api/login`
+- **Helmet**: Security headers (X-Frame-Options, HSTS, X-Content-Type-Options, etc.)
+- **CORS**: Whitelisted origins only (via `BASE_URL` env). Requests without origin (mobile app, Vercel Cron) are allowed through.
+- **Webhook**: AllPay signature verification required. `ALLPAY_TEST_MODE=true` causes server to refuse startup in production.
+- **Cron**: Fail-closed — returns 503 if `CRON_SECRET` not configured
+- **Admin password**: bcrypt hash (`ADMIN_PASSWORD_HASH`) with plaintext fallback (`ADMIN_PASSWORD`)
+- **Error responses**: Never expose `err.message` or stack traces to clients in production
 
 ### Batch API Endpoints
 Optimize N+1 queries by loading data in batches:
@@ -547,32 +581,34 @@ DATABASE_URL=postgresql://...   # PostgreSQL connection string (production)
 JWT_SECRET=<generate-with-openssl-rand-base64-32>  # REQUIRED in production
 
 # OAuth Configuration (Google Sign-In)
-# Get these from Google Cloud Console → APIs & Services → Credentials
-# See GOOGLE_OAUTH_SETUP.md for detailed setup instructions
 GOOGLE_CLIENT_ID_IOS=your-ios-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_ID_ANDROID=your-android-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_ID_WEB=your-web-client-id.apps.googleusercontent.com
 
 # OAuth Configuration (Apple Sign-In)
-# Get these from Apple Developer Portal → Certificates, Identifiers & Profiles
 APPLE_CLIENT_ID=com.rehearsal.app
 APPLE_TEAM_ID=YOUR_TEAM_ID
 APPLE_KEY_ID=YOUR_KEY_ID
 APPLE_PRIVATE_KEY=  # Contents of .p8 file or path to file
 
-# AllPay Payment Configuration (Israeli Payment Provider)
-# Get these from https://www.allpay.co.il → Settings → API Settings
-ALLPAY_API_LOGIN=pp1016273  # Your AllPay API login
-ALLPAY_API_KEY=E764DA37F6F96519B89A313DA80AEBBD  # Your AllPay API key
-ALLPAY_WEBHOOK_SECRET=86859ED2BED01EDB0471C28DAD6B51F0  # For webhook signature verification
-ALLPAY_TEST_MODE=true  # Set to false for production payments
+# AllPay Payment Configuration
+ALLPAY_API_LOGIN=your-allpay-api-login
+ALLPAY_API_KEY=your-allpay-api-key
+ALLPAY_WEBHOOK_SECRET=your-webhook-secret  # REQUIRED — webhook signature verification
+ALLPAY_TEST_MODE=true  # Set to false for production (server refuses to start if true in prod)
 
 # Admin Dashboard
-ADMIN_PASSWORD=<your-admin-password>  # Password for /admin panel login
+ADMIN_PASSWORD_HASH=  # bcrypt hash (recommended). Generate: see Admin Dashboard section above
+ADMIN_PASSWORD=       # plaintext fallback (legacy, avoid in production)
+ADMIN_JWT_SECRET=     # optional, falls back to JWT_SECRET
 
-# Cron Job Configuration (for Vercel Cron Jobs)
-# Generate with: openssl rand -base64 32
-CRON_SECRET=<generate-random-secret>  # REQUIRED for production recurring billing
+# Cron Job (Vercel Cron Jobs)
+# CRITICAL: endpoint returns 503 if not set (fail-closed)
+CRON_SECRET=<generate-with-openssl-rand-base64-32>
+
+# Server URL (invite links, payment redirects)
+BASE_URL=https://your-app.vercel.app  # required in production
+HOST=0.0.0.0  # required for physical device access
 ```
 
 **.env** (Frontend - Optional)
@@ -621,7 +657,7 @@ Key documentation files:
 
 ## Tech Stack
 
-**Frontend**: React Native 0.81.5, Expo SDK 54, TypeScript, React Navigation 7.x, i18next
+**Frontend**: React Native 0.81.5, Expo SDK 54, TypeScript, React Navigation 7.x
 **Backend**: Node.js 18+, Express.js 4.21.2, JWT authentication
 **Database**: PostgreSQL (production), SQLite (development)
 **Testing**: Jest, @testing-library/react-native

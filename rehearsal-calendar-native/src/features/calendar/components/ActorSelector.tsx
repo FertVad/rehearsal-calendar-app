@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.glass.border,
   },
   actorItemSelected: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: Colors.accent.purpleAlpha15,
     borderColor: Colors.accent.purple,
   },
   checkbox: {
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     color: Colors.accent.purple,
   },
   adminBadge: {
-    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+    backgroundColor: Colors.accent.purpleAlpha20,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: BorderRadius.sm,

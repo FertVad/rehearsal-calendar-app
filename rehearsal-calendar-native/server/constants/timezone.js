@@ -3,10 +3,10 @@
  */
 
 /**
- * Default timezone for the application
+ * Default timezone fallback — matches DB schema default
  * @type {string}
  */
-export const DEFAULT_TIMEZONE = 'Asia/Jerusalem';
+export const DEFAULT_TIMEZONE = 'UTC';
 
 /**
  * Availability slot types

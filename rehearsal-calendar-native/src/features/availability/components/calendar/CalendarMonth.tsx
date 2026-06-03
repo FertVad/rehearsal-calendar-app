@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   dayCellToday: {
-    backgroundColor: 'rgba(147, 51, 234, 0.2)',
+    backgroundColor: Colors.accent.purpleDarkAlpha20,
     borderRadius: DAY_SIZE / 2,
   },
   dayCellPast: {

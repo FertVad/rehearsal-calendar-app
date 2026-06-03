@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
@@ -57,20 +58,20 @@ router.get('/:projectId/rehearsals', requireAuth, async (req, res) => {
     const userId = req.userId;
     const { projectId } = req.params;
 
-    console.log(`[ROUTE] GET /:projectId/rehearsals - projectId: ${projectId}, userId: ${userId}`);
+    logger.debug(`[ROUTE] GET /:projectId/rehearsals - projectId: ${projectId}, userId: ${userId}`);
 
     // Check if user is a member
     const membership = await checkUserMembership(projectId, userId);
 
     if (!membership) {
-      console.log(`[ROUTE] Access denied - user ${userId} not a member of project ${projectId}`);
+      logger.debug(`[ROUTE] Access denied - user ${userId} not a member of project ${projectId}`);
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    console.log(`[ROUTE] User is a member, calling getProjectRehearsals...`);
+    logger.debug(`[ROUTE] User is a member, calling getProjectRehearsals...`);
     const rehearsals = await getProjectRehearsals(projectId, userId);
 
-    console.log(`[ROUTE] Returning ${rehearsals.length} rehearsals`);
+    logger.debug(`[ROUTE] Returning ${rehearsals.length} rehearsals`);
     res.json({ rehearsals });
   } catch (error) {
     console.error('[ROUTE] Error fetching rehearsals:', error);
@@ -145,14 +146,13 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
         [projectId]
       );
 
-      // Determine what changed
-      const changes = [];
-      if (req.body.startsAt || req.body.endsAt) changes.push('дата/время');
-      if (req.body.location) changes.push('место');
-      if (req.body.title) changes.push('название');
-      const changesStr = changes.length > 0 ? changes.join(', ') : 'детали';
+      // Determine what changed — pass translation keys, service localizes per user
+      const changeKeys = [];
+      if (req.body.startsAt || req.body.endsAt) changeKeys.push('datetime');
+      if (req.body.location) changeKeys.push('location');
+      if (req.body.title) changeKeys.push('title');
 
-      await notifyRehearsalUpdated(updatedRehearsal, project.name, members, changesStr);
+      await notifyRehearsalUpdated(updatedRehearsal, project.name, members, changeKeys);
     } catch (notifErr) {
       console.error('Error sending rehearsal updated notification:', notifErr);
     }

@@ -151,7 +151,7 @@ export const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   timezoneItemSelected: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: Colors.accent.purpleAlpha15,
   },
   timezoneLabel: {
     fontSize: FontSize.base,

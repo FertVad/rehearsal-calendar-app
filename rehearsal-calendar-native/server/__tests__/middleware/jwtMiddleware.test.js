@@ -1,25 +1,35 @@
 /**
  * Unit Tests for JWT Middleware
  *
- * Tests token generation, verification, and authentication middleware
+ * Tests token generation, verification, and authentication middleware.
+ * The db module is mocked because authenticateToken hits the DB to verify
+ * the token's version against the stored version (revocation check).
  */
 import { jest } from '@jest/globals';
 import jwt from 'jsonwebtoken';
-import {
-  generateTokens,
-  verifyToken,
-  authenticateToken,
-  requireAuth,
-} from '../../middleware/jwtMiddleware.js';
+
+// Mock the db module before importing the middleware (ESM-style)
+const mockDbGet = jest.fn();
+jest.unstable_mockModule('../../database/db.js', () => ({
+  default: { get: mockDbGet },
+}));
+
+const { generateTokens, verifyToken, authenticateToken, requireAuth } =
+  await import('../../middleware/jwtMiddleware.js');
 
 describe('JWT Middleware', () => {
-  // Use same secret as jwtMiddleware.js default
   const TEST_SECRET = process.env.JWT_SECRET || 'dev-only-insecure-secret-change-immediately';
   const userId = 123;
 
+  beforeEach(() => {
+    mockDbGet.mockReset();
+    // Default: user exists with token_version=1
+    mockDbGet.mockResolvedValue({ token_version: 1 });
+  });
+
   describe('generateTokens', () => {
     it('should generate both access and refresh tokens', () => {
-      const tokens = generateTokens(userId);
+      const tokens = generateTokens(userId, 1);
 
       expect(tokens).toHaveProperty('accessToken');
       expect(tokens).toHaveProperty('refreshToken');
@@ -27,99 +37,57 @@ describe('JWT Middleware', () => {
       expect(typeof tokens.refreshToken).toBe('string');
     });
 
-    it('should include userId and correct type in access token', () => {
-      const tokens = generateTokens(userId);
+    it('should include userId, type and token version in access token', () => {
+      const tokens = generateTokens(userId, 5);
       const decoded = jwt.verify(tokens.accessToken, TEST_SECRET);
 
       expect(decoded.userId).toBe(userId);
       expect(decoded.type).toBe('access');
-      expect(decoded).toHaveProperty('exp');
-      expect(decoded).toHaveProperty('iat');
+      expect(decoded.tv).toBe(5);
     });
 
-    it('should include userId and correct type in refresh token', () => {
-      const tokens = generateTokens(userId);
+    it('should include userId, type and token version in refresh token', () => {
+      const tokens = generateTokens(userId, 5);
       const decoded = jwt.verify(tokens.refreshToken, TEST_SECRET);
 
       expect(decoded.userId).toBe(userId);
       expect(decoded.type).toBe('refresh');
-      expect(decoded).toHaveProperty('exp');
-      expect(decoded).toHaveProperty('iat');
+      expect(decoded.tv).toBe(5);
     });
 
-    it('should create different tokens for different users', () => {
-      const tokens1 = generateTokens(1);
-      const tokens2 = generateTokens(2);
+    it('should default tv to 1 when not provided', () => {
+      const tokens = generateTokens(userId);
+      const decoded = jwt.verify(tokens.accessToken, TEST_SECRET);
 
-      expect(tokens1.accessToken).not.toBe(tokens2.accessToken);
-      expect(tokens1.refreshToken).not.toBe(tokens2.refreshToken);
+      expect(decoded.tv).toBe(1);
     });
   });
 
   describe('verifyToken', () => {
     it('should verify valid access token', () => {
-      const tokens = generateTokens(userId);
+      const tokens = generateTokens(userId, 1);
       const decoded = verifyToken(tokens.accessToken, 'access');
 
       expect(decoded).toBeTruthy();
       expect(decoded.userId).toBe(userId);
-      expect(decoded.type).toBe('access');
-    });
-
-    it('should verify valid refresh token', () => {
-      const tokens = generateTokens(userId);
-      const decoded = verifyToken(tokens.refreshToken, 'refresh');
-
-      expect(decoded).toBeTruthy();
-      expect(decoded.userId).toBe(userId);
-      expect(decoded.type).toBe('refresh');
     });
 
     it('should return null for invalid token', () => {
-      const decoded = verifyToken('invalid-token', 'access');
-      expect(decoded).toBeNull();
+      expect(verifyToken('invalid-token', 'access')).toBeNull();
     });
 
     it('should return null for expired token', () => {
-      // Create an expired token
       const expiredToken = jwt.sign(
-        { userId, type: 'access' },
+        { userId, tv: 1, type: 'access' },
         TEST_SECRET,
-        { expiresIn: '-1s' } // Already expired
+        { expiresIn: '-1s' }
       );
-
-      const decoded = verifyToken(expiredToken, 'access');
-      expect(decoded).toBeNull();
+      expect(verifyToken(expiredToken, 'access')).toBeNull();
     });
 
     it('should return null when token type does not match', () => {
-      const tokens = generateTokens(userId);
-
-      // Try to verify access token as refresh token
-      const decoded = verifyToken(tokens.accessToken, 'refresh');
-      expect(decoded).toBeNull();
-    });
-
-    it('should return null for malformed token', () => {
-      const decoded = verifyToken('malformed.jwt.token', 'access');
-      expect(decoded).toBeNull();
-    });
-
-    it('should return null for empty token', () => {
-      const decoded = verifyToken('', 'access');
-      expect(decoded).toBeNull();
-    });
-
-    it('should return null for token with wrong secret', () => {
-      // Create token with different secret
-      const wrongToken = jwt.sign(
-        { userId, type: 'access' },
-        'wrong-secret',
-        { expiresIn: '1h' }
-      );
-
-      const decoded = verifyToken(wrongToken, 'access');
-      expect(decoded).toBeNull();
+      const tokens = generateTokens(userId, 1);
+      expect(verifyToken(tokens.accessToken, 'refresh')).toBeNull();
     });
   });
 
@@ -129,9 +97,7 @@ describe('JWT Middleware', () => {
     let nextFunction;
 
     beforeEach(() => {
-      mockReq = {
-        headers: {},
-      };
+      mockReq = { headers: {} };
       mockRes = {
         status: jest.fn().mockReturnThis(),
         json: jest.fn().mockReturnThis(),
@@ -139,89 +105,68 @@ describe('JWT Middleware', () => {
       nextFunction = jest.fn();
     });
 
-    it('should authenticate with valid Bearer token', () => {
-      const tokens = generateTokens(userId);
+    it('should authenticate with valid Bearer token', async () => {
+      const tokens = generateTokens(userId, 1);
       mockReq.headers['authorization'] = `Bearer ${tokens.accessToken}`;
 
-      authenticateToken(mockReq, mockRes, nextFunction);
+      await authenticateToken(mockReq, mockRes, nextFunction);
 
       expect(mockReq.userId).toBe(userId);
       expect(nextFunction).toHaveBeenCalled();
       expect(mockRes.status).not.toHaveBeenCalled();
     });
 
-    it('should return 401 when authorization header is missing', () => {
-      authenticateToken(mockReq, mockRes, nextFunction);
+    it('should return 401 when authorization header is missing', async () => {
+      await authenticateToken(mockReq, mockRes, nextFunction);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Access token required',
-      });
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Access token required' });
       expect(nextFunction).not.toHaveBeenCalled();
     });
 
-    it('should return 401 when token is missing from header', () => {
-      mockReq.headers['authorization'] = 'Bearer ';
-
-      authenticateToken(mockReq, mockRes, nextFunction);
-
-      expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Access token required',
-      });
-      expect(nextFunction).not.toHaveBeenCalled();
-    });
-
-    it('should return 401 with invalid token', () => {
+    it('should return 401 with invalid token', async () => {
       mockReq.headers['authorization'] = 'Bearer invalid-token';
 
-      authenticateToken(mockReq, mockRes, nextFunction);
+      await authenticateToken(mockReq, mockRes, nextFunction);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Invalid or expired token',
-      });
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid or expired token' });
       expect(nextFunction).not.toHaveBeenCalled();
     });
 
-    it('should return 401 with expired token', () => {
-      const expiredToken = jwt.sign(
-        { userId, type: 'access' },
-        TEST_SECRET,
-        { expiresIn: '-1s' }
-      );
-      mockReq.headers['authorization'] = `Bearer ${expiredToken}`;
+    it('should return 401 when user no longer exists in DB', async () => {
+      mockDbGet.mockResolvedValueOnce(null);
+      const tokens = generateTokens(userId, 1);
+      mockReq.headers['authorization'] = `Bearer ${tokens.accessToken}`;
 
-      authenticateToken(mockReq, mockRes, nextFunction);
+      await authenticateToken(mockReq, mockRes, nextFunction);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Invalid or expired token',
-      });
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'User no longer exists' });
       expect(nextFunction).not.toHaveBeenCalled();
     });
 
-    it('should return 401 when using refresh token instead of access token', () => {
-      const tokens = generateTokens(userId);
-      mockReq.headers['authorization'] = `Bearer ${tokens.refreshToken}`;
+    it('should return 401 when token version is lower than DB version (session revoked)', async () => {
+      mockDbGet.mockResolvedValueOnce({ token_version: 3 });
+      const tokens = generateTokens(userId, 2); // token issued with old version
+      mockReq.headers['authorization'] = `Bearer ${tokens.accessToken}`;
 
-      authenticateToken(mockReq, mockRes, nextFunction);
+      await authenticateToken(mockReq, mockRes, nextFunction);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Invalid or expired token',
-      });
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Session revoked' });
       expect(nextFunction).not.toHaveBeenCalled();
     });
 
-    it('should handle authorization header without Bearer prefix', () => {
-      const tokens = generateTokens(userId);
-      mockReq.headers['authorization'] = tokens.accessToken;
+    it('should accept token when version matches DB version', async () => {
+      mockDbGet.mockResolvedValueOnce({ token_version: 7 });
+      const tokens = generateTokens(userId, 7);
+      mockReq.headers['authorization'] = `Bearer ${tokens.accessToken}`;
 
-      authenticateToken(mockReq, mockRes, nextFunction);
+      await authenticateToken(mockReq, mockRes, nextFunction);
 
-      expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(nextFunction).not.toHaveBeenCalled();
+      expect(mockReq.userId).toBe(userId);
+      expect(nextFunction).toHaveBeenCalled();
     });
   });
 

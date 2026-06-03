@@ -107,7 +107,7 @@ export const styles = StyleSheet.create({
   adminBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: Colors.accent.purpleAlpha15,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs / 2,
     borderRadius: BorderRadius.sm,
@@ -131,7 +131,7 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.md,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+    backgroundColor: Colors.accent.purpleAlpha10,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.accent.purple,

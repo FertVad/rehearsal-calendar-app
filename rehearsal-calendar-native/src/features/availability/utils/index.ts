@@ -22,6 +22,4 @@ export {
 // Slot helper utilities
 export {
   applyToSelectedDates,
-  parseTimeToDate,
-  formatDateToTime,
 } from './slotHelpers';

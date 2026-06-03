@@ -68,29 +68,29 @@ router.get('/', requireAuth, async (req, res) => {
  * Accepts slots with ISO 8601 timestamps
  */
 router.post('/bulk', requireAuth, async (req, res) => {
+  const userId = req.userId;
+  const { entries } = req.body;
+
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return res.status(400).json({ error: 'Entries array is required' });
+  }
+
+  // Get user's timezone for date extraction
+  const timezone = await getUserTimezone(userId);
+
+  // Compute affected dates (used for DELETE)
+  const affectedDates = new Set();
+  for (const entry of entries) {
+    if (entry.startsAt && entry.type) {
+      affectedDates.add(entry.startsAt.split('T')[0]);
+    }
+  }
+
+  // Run as a single transaction — partial success would leave the user with
+  // missing availability if any INSERT fails after some DELETEs ran.
   try {
-    const userId = req.userId;
-    const { entries } = req.body;
+    await db.run('BEGIN');
 
-    if (!Array.isArray(entries) || entries.length === 0) {
-      return res.status(400).json({ error: 'Entries array is required' });
-    }
-
-    // Get user's timezone for date extraction
-    const timezone = await getUserTimezone(userId);
-
-    // Delete all existing manual availability for the affected dates
-    const affectedDates = new Set();
-    for (const entry of entries) {
-      const { startsAt, type } = entry;
-      if (!startsAt || !type) continue;
-
-      // Extract date from ISO timestamp
-      const date = startsAt.split('T')[0];
-      affectedDates.add(date);
-    }
-
-    // Delete existing manual availability for these dates
     for (const date of affectedDates) {
       await db.run(
         `DELETE FROM native_user_availability
@@ -101,28 +101,19 @@ router.post('/bulk', requireAuth, async (req, res) => {
       );
     }
 
-    // Insert new slots
     for (const entry of entries) {
       const { startsAt, endsAt, type, title, notes, isAllDay, source, external_event_id } = entry;
+      if (!startsAt || !endsAt || !type) continue;
 
-      if (!startsAt || !endsAt || !type) {
-        continue;
-      }
-
-      // Use provided source or default to manual
       const entrySource = source || AVAILABILITY_SOURCES.MANUAL;
 
-      // For imported events (with external_event_id), check if already exists to avoid duplicates
       if (external_event_id && entrySource !== AVAILABILITY_SOURCES.MANUAL) {
         const existing = await db.get(
           `SELECT id FROM native_user_availability
            WHERE user_id = $1 AND external_event_id = $2 AND source = $3`,
           [userId, external_event_id, entrySource]
         );
-
-        if (existing) {
-          continue;
-        }
+        if (existing) continue;
       }
 
       await db.run(
@@ -142,10 +133,18 @@ router.post('/bulk', requireAuth, async (req, res) => {
       );
     }
 
+    await db.run('COMMIT');
     res.json({ success: true });
   } catch (error) {
+    try { await db.run('ROLLBACK'); } catch {}
     console.error('Error saving bulk availability:', error);
-    res.status(500).json({ error: 'Failed to save availability' });
+    res.status(500).json({
+      error: 'Failed to save availability',
+      details: error.message,
+      code: error.code,
+      hint: error.hint,
+      where: error.where,
+    });
   }
 });
 

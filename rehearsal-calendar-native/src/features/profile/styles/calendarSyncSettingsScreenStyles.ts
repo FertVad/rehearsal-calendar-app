@@ -126,7 +126,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   intervalButtonActive: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: Colors.accent.purpleAlpha15,
     borderColor: Colors.accent.purple,
   },
   intervalButtonText: {
@@ -201,7 +201,7 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   calendarPickerButtonSelected: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: Colors.accent.purpleAlpha15,
     borderColor: Colors.accent.purple,
   },
   calendarPickerLeft: {
@@ -277,7 +277,7 @@ export const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   calendarItemSelected: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: Colors.accent.purpleAlpha15,
     borderColor: Colors.accent.purple,
   },
   calendarItemLeft: {

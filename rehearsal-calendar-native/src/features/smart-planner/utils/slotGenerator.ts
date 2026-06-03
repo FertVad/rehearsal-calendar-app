@@ -1,5 +1,6 @@
 import type { TimeSlot, SlotCategory, BusyMember, Member, AvailabilityData } from '../types';
 import { timeToMinutes } from '../../../shared/utils/time';
+import { WORKDAY_START, WORKDAY_END } from '../../../shared/utils/availability';
 import { logger } from '../../../shared/utils/logger';
 
 const SLOT_INTERVAL_MINUTES = 30;
@@ -10,7 +11,7 @@ const SLOT_INTERVAL_MINUTES = 30;
  */
 const intervalCache = new Map<string, string[]>();
 
-function generateTimeIntervals(workHoursStart: string = '09:00', workHoursEnd: string = '23:00'): string[] {
+function generateTimeIntervals(workHoursStart: string = WORKDAY_START, workHoursEnd: string = WORKDAY_END): string[] {
   const cacheKey = `${workHoursStart}-${workHoursEnd}`;
 
   if (intervalCache.has(cacheKey)) {
@@ -178,8 +179,8 @@ export function generateTimeSlots(
   members: Member[],
   availabilityData: AvailabilityData[],
   selectedMemberIds: string[] = [],
-  workHoursStart: string = '09:00',
-  workHoursEnd: string = '23:00'
+  workHoursStart: string = WORKDAY_START,
+  workHoursEnd: string = WORKDAY_END
 ): TimeSlot[] {
   const slots: TimeSlot[] = [];
   const start = new Date(startDate);

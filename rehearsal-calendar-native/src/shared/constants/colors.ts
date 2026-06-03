@@ -34,6 +34,17 @@ export const Colors = {
     green: '#10b981',
     red: '#ef4444',
     yellow: '#f59e0b',
+
+    // Translucent variants for backgrounds, highlights, borders
+    purpleAlpha05: 'rgba(168, 85, 247, 0.05)',
+    purpleAlpha10: 'rgba(168, 85, 247, 0.1)',
+    purpleAlpha15: 'rgba(168, 85, 247, 0.15)',
+    purpleAlpha20: 'rgba(168, 85, 247, 0.2)',
+
+    purpleDarkAlpha10: 'rgba(147, 51, 234, 0.1)',
+    purpleDarkAlpha15: 'rgba(147, 51, 234, 0.15)',
+    purpleDarkAlpha20: 'rgba(147, 51, 234, 0.2)',
+    purpleDarkAlpha30: 'rgba(147, 51, 234, 0.3)',
   },
 
   // Borders & backgrounds

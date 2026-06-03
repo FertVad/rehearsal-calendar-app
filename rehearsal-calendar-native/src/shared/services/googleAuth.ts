@@ -69,29 +69,3 @@ export function getGoogleIdToken(response: any): string | null {
   return null;
 }
 
-/**
- * Check if Google OAuth is properly configured
- *
- * @returns {boolean} True if all required client IDs are set
- */
-export function isGoogleAuthConfigured(): boolean {
-  return !!(GOOGLE_WEB_CLIENT_ID && (GOOGLE_IOS_CLIENT_ID || GOOGLE_ANDROID_CLIENT_ID));
-}
-
-/**
- * Get human-readable error message from OAuth response
- *
- * @param {Object} response - The response from Google.useIdTokenAuthRequest
- * @returns {string} Error message
- */
-export function getGoogleAuthError(response: any): string {
-  if (response?.type === 'error') {
-    return response.error?.message || 'Google Sign-In failed';
-  }
-
-  if (response?.type === 'dismiss' || response?.type === 'cancel') {
-    return 'Google Sign-In was cancelled';
-  }
-
-  return 'Unknown Google Sign-In error';
-}

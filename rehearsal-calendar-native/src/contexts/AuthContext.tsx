@@ -283,6 +283,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
 
+      // Revoke all sessions server-side (best-effort; ignore if offline)
+      try {
+        await authAPI.logout();
+      } catch (err) {
+        logger.warn('Server logout failed (continuing with local cleanup):', err);
+      }
+
       // Unregister push notifications
       await unregisterPushToken();
 

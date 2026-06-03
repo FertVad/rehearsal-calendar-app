@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger.js';
 import db from '../../database/db.js';
 
 /**
@@ -126,7 +127,7 @@ export async function getRehearsalResponses(rehearsalId) {
     },
   };
 
-  console.log(`[getRehearsalResponses] Rehearsal ${rehearsalId}: returning ${result.allParticipants.length} participants, stats:`, result.stats);
+  logger.debug(`[getRehearsalResponses] Rehearsal ${rehearsalId}: returning ${result.allParticipants.length} participants, stats:`, result.stats);
   return result;
 }
 

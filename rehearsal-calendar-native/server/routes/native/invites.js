@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
+import { getActiveAdminMembership } from '../../utils/projectAuth.js';
 import { notifyProjectInvite } from '../../services/notifications/pushNotificationService.js';
 
 const router = Router();
@@ -12,18 +13,11 @@ function generateInviteCode() {
 }
 
 function generateInviteUrl(inviteCode) {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-
-  if (isDevelopment) {
-    // In development, use custom URL scheme for direct app opening
-    // This works with both iPhone and simulators without needing Universal Links
+  if (process.env.NODE_ENV === 'development') {
     return `rehearsalapp://invite/${inviteCode}`;
-  } else {
-    // In production, use HTTPS URL
-    // Note: Universal Links require Associated Domains capability (paid Apple Developer account)
-    // Without it, users will need to manually choose "Open in app"
-    return `https://server-fertvads-projects.vercel.app/invite/${inviteCode}`;
   }
+  const baseUrl = process.env.BASE_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`;
+  return `${baseUrl}/invite/${inviteCode}`;
 }
 
 // POST /api/native/projects/:projectId/invite - Create invite link
@@ -34,10 +28,7 @@ router.post('/:projectId/invite', requireAuth, async (req, res) => {
     const { expiresInDays = 7 } = req.body;
 
     // Check if user is admin
-    const membership = await db.get(
-      "SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND role IN ('owner', 'admin') AND status = 'active'",
-      [projectId, userId]
-    );
+    const membership = await getActiveAdminMembership(projectId, userId);
 
     if (!membership) {
       return res.status(403).json({ error: 'Only admins can create invite links' });
@@ -89,10 +80,7 @@ router.get('/:projectId/invite', requireAuth, async (req, res) => {
     const { projectId } = req.params;
 
     // Check if user is admin
-    const membership = await db.get(
-      "SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND role IN ('owner', 'admin') AND status = 'active'",
-      [projectId, userId]
-    );
+    const membership = await getActiveAdminMembership(projectId, userId);
 
     if (!membership) {
       return res.status(403).json({ error: 'Only admins can view invite links' });
@@ -133,10 +121,7 @@ router.delete('/:projectId/invite', requireAuth, async (req, res) => {
     const { projectId } = req.params;
 
     // Check if user is admin
-    const membership = await db.get(
-      "SELECT * FROM native_project_members WHERE project_id = $1 AND user_id = $2 AND role IN ('owner', 'admin') AND status = 'active'",
-      [projectId, userId]
-    );
+    const membership = await getActiveAdminMembership(projectId, userId);
 
     if (!membership) {
       return res.status(403).json({ error: 'Only admins can revoke invite links' });

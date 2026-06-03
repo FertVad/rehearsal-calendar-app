@@ -51,7 +51,7 @@ export const styles = StyleSheet.create({
     borderBottomColor: Colors.glass.border,
   },
   filterOptionSelected: {
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    backgroundColor: Colors.accent.purpleDarkAlpha10,
   },
   filterOptionText: {
     fontSize: FontSize.base,
@@ -87,8 +87,26 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.sm,
   },
+  upcomingCardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  upcomingCardLeftCol: {
+    flex: 1,
+  },
+  upcomingCardAdminCol: {
+    alignItems: 'flex-end',
+    gap: Spacing.sm,
+  },
+  iconButton: {
+    padding: Spacing.xs,
+  },
+  skeletonRow: {
+    marginBottom: Spacing.sm,
+  },
   upcomingDateBadge: {
-    backgroundColor: 'rgba(147, 51, 234, 0.15)',
+    backgroundColor: Colors.accent.purpleDarkAlpha15,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
@@ -102,7 +120,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    backgroundColor: Colors.accent.purpleDarkAlpha10,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
@@ -111,7 +129,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(147, 51, 234, 0.1)',
+    backgroundColor: Colors.accent.purpleDarkAlpha10,
     paddingHorizontal: Spacing.xs,
     paddingVertical: 4,
     borderRadius: BorderRadius.sm,
@@ -302,9 +320,9 @@ export const styles = StyleSheet.create({
   smartPlannerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(147, 51, 234, 0.15)',
+    backgroundColor: Colors.accent.purpleDarkAlpha15,
     borderWidth: 1,
-    borderColor: 'rgba(147, 51, 234, 0.3)',
+    borderColor: Colors.accent.purpleDarkAlpha30,
     borderRadius: BorderRadius.md,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
