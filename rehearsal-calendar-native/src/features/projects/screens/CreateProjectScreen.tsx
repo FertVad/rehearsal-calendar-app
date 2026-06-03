@@ -49,9 +49,21 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
     setCreating(true);
     try {
-      await createProject(projectName.trim(), projectDescription.trim() || undefined, projectTimezone);
-      // Simply go back to close the modal
-      navigation.goBack();
+      const newProject = await createProject(
+        projectName.trim(),
+        projectDescription.trim() || undefined,
+        projectTimezone,
+      );
+
+      // Close the modal and drop the user straight into the new project
+      // so they can invite members / set up rehearsals without an extra tap.
+      navigation.navigate('MainTabs' as any, {
+        screen: 'Projects',
+        params: {
+          screen: 'ProjectDetail',
+          params: { projectId: newProject.id },
+        },
+      });
     } catch (err: any) {
       Alert.alert(t.common.error, err.message || t.projects.createError);
     } finally {
