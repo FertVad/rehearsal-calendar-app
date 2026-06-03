@@ -39,10 +39,14 @@ if (process.env.NODE_ENV === 'production' && process.env.ALLPAY_TEST_MODE === 't
   process.exit(1);
 }
 
-// Startup validation: warn about missing critical env variables
+// Startup validation: refuse to start if critical env vars are missing in production
 if (process.env.NODE_ENV === 'production') {
-  const required = ['JWT_SECRET', 'ADMIN_PASSWORD', 'CRON_SECRET', 'ALLPAY_WEBHOOK_SECRET'];
+  const required = ['JWT_SECRET', 'CRON_SECRET', 'ALLPAY_WEBHOOK_SECRET'];
   const missing = required.filter(k => !process.env[k]);
+  // Admin can be configured via either bcrypt hash or plaintext password
+  if (!process.env.ADMIN_PASSWORD_HASH && !process.env.ADMIN_PASSWORD) {
+    missing.push('ADMIN_PASSWORD or ADMIN_PASSWORD_HASH');
+  }
   if (missing.length > 0) {
     logger.error(`FATAL: Missing required environment variables: ${missing.join(', ')}`);
     process.exit(1);
