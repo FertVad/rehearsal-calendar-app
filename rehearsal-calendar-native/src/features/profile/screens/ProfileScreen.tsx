@@ -28,7 +28,7 @@ interface UserSubscription {
   next_billing_date: string | null;
 }
 
-import { TIMEZONES } from '../../../shared/constants/timezones';
+import { getTimezonesWithDevice, getTimezoneLabel } from '../../../shared/constants/timezones';
 
 // Week start options
 const WEEK_START_OPTIONS = [
@@ -121,11 +121,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   };
 
   const getCurrentTimezoneLabel = () => {
-    const tz = TIMEZONES.find(t => t.value === user?.timezone);
-    if (tz) {
-      return language === 'ru' ? tz.labelRu : tz.labelEn;
-    }
-    return user?.timezone || t.profile.timezoneNotSelected;
+    if (!user?.timezone) return t.profile.timezoneNotSelected;
+    return getTimezoneLabel(user.timezone, language);
   };
 
   const handleWeekStartSelect = async (weekStart: 'monday' | 'sunday') => {
@@ -408,7 +405,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               </TouchableOpacity>
             </View>
             <FlatList
-              data={TIMEZONES}
+              data={getTimezonesWithDevice()}
               keyExtractor={(item) => item.value}
               renderItem={({ item }) => (
                 <TouchableOpacity

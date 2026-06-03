@@ -25,7 +25,7 @@ import { createProjectScreenStyles as styles } from '../styles';
 
 type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
 
-import { TIMEZONES, getTimezoneLabel as getTzLabel } from '../../../shared/constants/timezones';
+import { getTimezonesWithDevice, getTimezoneLabel as getTzLabel } from '../../../shared/constants/timezones';
 
 export default function CreateProjectScreen({ navigation }: CreateProjectScreenProps) {
   const { createProject } = useProjects();
@@ -167,7 +167,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
               </TouchableOpacity>
             </View>
             <FlatList
-              data={TIMEZONES}
+              data={getTimezonesWithDevice()}
               keyExtractor={(item) => item.value}
               renderItem={({ item }) => (
                 <TouchableOpacity

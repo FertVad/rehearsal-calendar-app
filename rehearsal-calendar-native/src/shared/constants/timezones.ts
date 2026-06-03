@@ -45,12 +45,67 @@ export const TIMEZONES: TimezoneOption[] = [
 ];
 
 /**
+ * Extract a human-readable city name from an IANA timezone identifier.
+ * e.g. 'America/New_York' → 'New York', 'Europe/Vienna' → 'Vienna'
+ */
+function getCityName(tz: string): string {
+  const last = tz.split('/').pop() || tz;
+  return last.replace(/_/g, ' ');
+}
+
+/**
+ * Compute the current UTC offset label for any IANA timezone, e.g. "UTC+2".
+ * Returns empty string if Intl can't resolve the timezone.
+ */
+function getOffsetLabel(tz: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en', {
+      timeZone: tz,
+      timeZoneName: 'shortOffset',
+    }).formatToParts(new Date());
+    const tzName = parts.find(p => p.type === 'timeZoneName')?.value || '';
+    return tzName.replace('GMT', 'UTC') || 'UTC';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Build a TimezoneOption on the fly from an IANA identifier. Used when the
+ * user's device reports a timezone outside the curated list — we still want
+ * a nice label like "Vienna (UTC+1)" instead of raw "Europe/Vienna".
+ */
+function buildDynamicOption(tz: string): TimezoneOption {
+  const city = getCityName(tz);
+  const offset = getOffsetLabel(tz);
+  const label = offset ? `${city} (${offset})` : city;
+  // No translated form available for arbitrary cities, so reuse for both locales.
+  return { value: tz, labelRu: label, labelEn: label };
+}
+
+/**
+ * Returns the curated list, prepended with the device's current timezone
+ * if it's not already present. Makes it discoverable in the picker.
+ */
+export function getTimezonesWithDevice(): TimezoneOption[] {
+  let deviceTz: string | null = null;
+  try {
+    deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    // Intl unavailable — fall through to curated list
+  }
+  if (!deviceTz || TIMEZONES.some(t => t.value === deviceTz)) return TIMEZONES;
+  return [buildDynamicOption(deviceTz), ...TIMEZONES];
+}
+
+/**
  * Resolve display label for an IANA timezone identifier.
- * Falls back to the raw value when the timezone isn't in the curated list
- * (e.g. user's device reports an obscure tz from Intl.DateTimeFormat).
+ * Falls back to a computed "City (UTC±N)" label when the timezone isn't in
+ * the curated list.
  */
 export function getTimezoneLabel(value: string, language: 'ru' | 'en'): string {
   const tz = TIMEZONES.find(t => t.value === value);
-  if (!tz) return value;
-  return language === 'ru' ? tz.labelRu : tz.labelEn;
+  if (tz) return language === 'ru' ? tz.labelRu : tz.labelEn;
+  const opt = buildDynamicOption(value);
+  return language === 'ru' ? opt.labelRu : opt.labelEn;
 }
