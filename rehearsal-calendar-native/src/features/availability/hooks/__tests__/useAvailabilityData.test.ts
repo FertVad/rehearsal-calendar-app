@@ -9,6 +9,20 @@ import { availabilityAPI } from '../../../../shared/services/api';
 
 // Mock dependencies
 jest.mock('../../../../shared/services/api');
+jest.mock('../../../../contexts/I18nContext', () => ({
+  useI18n: () => ({
+    language: 'ru',
+    setLanguage: jest.fn(),
+    t: jest.requireActual('../../../../i18n/translations').ru,
+  }),
+}));
+jest.mock('../../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', timezone: 'UTC' },
+    isAuthenticated: true,
+    loading: false,
+  }),
+}));
 
 describe('useAvailabilityData Hook', () => {
   beforeEach(() => {

@@ -28,6 +28,8 @@ module.exports = {
         '^expo-constants$': '<rootDir>/src/__tests__/__mocks__/expo-constants.js',
         '^expo-font$': '<rootDir>/src/__tests__/__mocks__/expo-font.js',
         '^expo-haptics$': '<rootDir>/src/__tests__/__mocks__/expo-haptics.js',
+        '^expo-notifications$': '<rootDir>/src/__tests__/__mocks__/expo-notifications.js',
+        '^expo-device$': '<rootDir>/src/__tests__/__mocks__/expo-device.js',
         '^@react-navigation/native$': '<rootDir>/src/__tests__/__mocks__/react-navigation-native.js',
         '^@react-native-async-storage/async-storage$': '<rootDir>/src/__tests__/__mocks__/async-storage.js',
       },
