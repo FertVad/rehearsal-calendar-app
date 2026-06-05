@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity } from 'reac
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
+import { getDateLocale } from '../../shared/utils/locale';
 
 interface DateRangePickerProps {
   visible: boolean;
@@ -135,7 +136,7 @@ export function DateRangePicker({
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
     const date = new Date(dateStr);
-    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    const locale = getDateLocale(language);
     return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
   };
 

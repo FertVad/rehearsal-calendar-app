@@ -17,6 +17,7 @@ import { DayCard } from '../components/DayCard';
 import { MemberFilter } from '../components/MemberFilter';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { getDateLocale } from '../../../shared/utils/locale';
 import { DateRangePicker } from '../../../shared/components/DateRangePicker';
 import { smartPlannerScreenStyles as styles } from '../styles';
 
@@ -31,7 +32,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    const locale = getDateLocale(language);
     const options: Intl.DateTimeFormatOptions = { month: 'short' };
 
     const startDay = start.getDate();

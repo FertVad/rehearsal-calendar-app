@@ -14,6 +14,7 @@ import { Rehearsal } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { getDateLocale } from '../../../shared/utils/locale';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
 import { useRehearsals, useRSVP } from '../hooks';
 import { calendarScreenStyles as styles } from '../styles';
@@ -213,7 +214,7 @@ export default function CalendarScreen() {
 
     if (dateStr === today) return t.common.today;
     if (dateStr === tomorrowStr) return t.calendar.tomorrow || 'Tomorrow';
-    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    const locale = getDateLocale(language);
     return formatDateLocalized(dateStr, { day: 'numeric', month: 'short', weekday: 'short' }, locale);
   };
 

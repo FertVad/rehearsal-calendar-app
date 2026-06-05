@@ -6,6 +6,7 @@ import { Colors } from '../../../shared/constants/colors';
 import { styles } from '../styles/subscriptionScreenStyles';
 import { PaymentCard } from './PaymentCard';
 import type { UserSubscription, PaymentTransaction } from '../types';
+import { getDateLocale } from '../../../shared/utils/locale';
 
 interface SubscriptionManagementProps {
   subscription: UserSubscription;
@@ -59,7 +60,7 @@ export function SubscriptionManagement({
             </Text>
             <Text style={styles.subscriptionInfoValue}>
               {new Date(subscription.next_billing_date).toLocaleDateString(
-                language === 'ru' ? 'ru-RU' : 'en-US',
+                getDateLocale(language),
                 { year: 'numeric', month: 'long', day: 'numeric' }
               )}
             </Text>

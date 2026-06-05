@@ -13,6 +13,7 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../sh
 import { Rehearsal } from '../../../shared/types';
 import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
 import { useI18n } from '../../../contexts/I18nContext';
+import { getDateLocale } from '../../../shared/utils/locale';
 
 interface MyRehearsalsModalProps {
   visible: boolean;
@@ -96,7 +97,7 @@ export default function MyRehearsalsModal({
       return t.calendar.tomorrow;
     }
 
-    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    const locale = getDateLocale(language);
     return d.toLocaleDateString(locale, {
       weekday: 'short',
       day: 'numeric',

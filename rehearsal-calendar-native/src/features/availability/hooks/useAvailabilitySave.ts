@@ -2,6 +2,7 @@ import { Alert } from 'react-native';
 import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayState } from '../types';
 import { validateSlot, slotsOverlap } from '../utils';
+import { getDateLocale } from '../../../shared/utils/locale';
 
 /**
  * Hook for saving availability data
@@ -124,7 +125,7 @@ export const useAvailabilitySave = () => {
 
           if (!slotValidation.isValid) {
             const dateObj = new Date(date);
-            const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+            const locale = getDateLocale(language);
             const formattedDate = dateObj.toLocaleDateString(locale, {
               day: 'numeric',
               month: 'long',
@@ -148,7 +149,7 @@ export const useAvailabilitySave = () => {
 
             if (overlaps) {
               const dateObj = new Date(date);
-              const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+              const locale = getDateLocale(language);
               const formattedDate = dateObj.toLocaleDateString(locale, {
                 day: 'numeric',
                 month: 'long',

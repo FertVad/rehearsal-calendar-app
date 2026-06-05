@@ -8,6 +8,7 @@ import { Rehearsal, RSVPStatus, Project } from '../../../shared/types';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
+import { getDateLocale } from '../../../shared/utils/locale';
 import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
 import { RehearsalDetailsModal } from './RehearsalDetailsModal';
 
@@ -88,7 +89,7 @@ export default function TodayRehearsals({
 
     if (selectedDate === today) return t.common.today;
     if (selectedDate === tomorrowStr) return t.calendar.tomorrow;
-    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    const locale = getDateLocale(language);
     return formatDateLocalized(selectedDate, { day: 'numeric', month: 'long', weekday: 'long' }, locale);
   }, [selectedDate, t, language]);
 

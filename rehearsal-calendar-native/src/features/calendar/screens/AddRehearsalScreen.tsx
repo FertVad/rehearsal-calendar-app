@@ -20,6 +20,7 @@ import { hapticMedium, hapticSuccess } from '../../../shared/utils/haptics';
 import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { getDateLocale } from '../../../shared/utils/locale';
 import { ActorSelector } from '../components/ActorSelector';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
@@ -250,7 +251,7 @@ export default function AddRehearsalScreen() {
         onChange={form.handleDateChange}
         mode="date"
         title={t.rehearsals.selectDate}
-        language={language === 'ru' ? 'ru-RU' : 'en-US'}
+        language={getDateLocale(language)}
       />
 
       {/* Start Time Picker Modal */}
@@ -261,7 +262,7 @@ export default function AddRehearsalScreen() {
         onChange={form.handleStartTimeChange}
         mode="time"
         title={t.rehearsals.selectStartTime}
-        language={language === 'ru' ? 'ru-RU' : 'en-US'}
+        language={getDateLocale(language)}
       />
 
       {/* End Time Picker Modal */}
@@ -272,7 +273,7 @@ export default function AddRehearsalScreen() {
         onChange={form.handleEndTimeChange}
         mode="time"
         title={t.rehearsals.selectEndTime}
-        language={language === 'ru' ? 'ru-RU' : 'en-US'}
+        language={getDateLocale(language)}
       />
 
       {/* Project Picker Modal */}
