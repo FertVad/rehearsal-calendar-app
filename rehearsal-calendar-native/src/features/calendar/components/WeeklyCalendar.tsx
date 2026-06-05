@@ -31,7 +31,7 @@ interface WeekData {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const WEEK_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md * 2; // Account for container padding
-const INITIAL_WEEKS = 13; // ~3 months on each side
+const INITIAL_WEEKS = 105; // ~1 year on each side
 const CENTER_INDEX = Math.floor(INITIAL_WEEKS / 2);
 
 export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
