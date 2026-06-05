@@ -281,8 +281,8 @@ describe('ModeSelector Component', () => {
       const timeIcon = icons.find(i => i.props.name === 'time');
       const closeIcon = icons.find(i => i.props.name === 'close-circle');
 
-      expect(timeIcon?.props.color).toBe('#6e7681'); // Colors.text.tertiary
-      expect(closeIcon?.props.color).toBe('#6e7681'); // Colors.text.tertiary
+      expect(timeIcon?.props.color).toBe('#7d8590'); // Colors.text.tertiary
+      expect(closeIcon?.props.color).toBe('#7d8590'); // Colors.text.tertiary
     });
   });
 
