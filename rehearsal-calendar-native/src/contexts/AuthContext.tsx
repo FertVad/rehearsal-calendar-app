@@ -53,6 +53,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const hasTimezoneSynced = useRef(false);
 
+  // Calendar sync state lives on the device (export/import mappings, picked
+  // calendars, last-sync timestamps). Wipe it only when a *different* user
+  // signs in on the same device — otherwise the same user logging back in
+  // would see their sync UI reset to defaults.
+  const reconcileDeviceState = useCallback(async (newUser: User) => {
+    const newUserId = String(newUser.id);
+    const lastOwner = await AsyncStorage.getItem('calendar-sync-owner');
+    if (lastOwner && lastOwner !== newUserId) {
+      await AsyncStorage.multiRemove([
+        'calendar-export-mappings',
+        'calendar-import-tracking',
+        'calendar-sync-settings',
+      ]);
+    }
+    await AsyncStorage.setItem('calendar-sync-owner', newUserId);
+  }, []);
+
   const loadUser = useCallback(async () => {
     try {
       const accessToken = await AsyncStorage.getItem('accessToken');
@@ -70,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('User data not found in response');
       }
 
+      await reconcileDeviceState(user);
       setUser(user);
       // Cache user data for offline use
       await AsyncStorage.setItem('cachedUser', JSON.stringify(user));
@@ -99,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [reconcileDeviceState]);
 
   // Load user from storage on mount
   useEffect(() => {
@@ -148,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
+      await reconcileDeviceState(user);
       // Sync user preferences (timezone, locale, weekStartDay)
       await syncUserPreferences(user);
 
@@ -177,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
+      await reconcileDeviceState(user);
       // Sync user preferences (timezone, locale, weekStartDay)
       await syncUserPreferences(user);
 
@@ -205,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
+      await reconcileDeviceState(user);
 
       setUser(user);
     } catch (err: any) {
@@ -231,6 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ['cachedUser', JSON.stringify(user)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
+      await reconcileDeviceState(user);
       // Sync user preferences (timezone, locale, weekStartDay)
       await syncUserPreferences(user);
 
@@ -264,6 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ['cachedUser', JSON.stringify(userData)],
       ]);
       await AsyncStorage.removeItem('lastLogoutTime');
+      await reconcileDeviceState(userData);
       // Sync user preferences (timezone, locale, weekStartDay)
       await syncUserPreferences(userData);
 
@@ -296,11 +319,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Set flag to ignore stale deep links
       await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
 
-      // Clear ALL AsyncStorage data to prevent cache leaking to new users
-      await AsyncStorage.clear();
-
-      // Restore the lastLogoutTime flag after clearing everything
-      await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
+      // Clear user-bound data but keep device-bound calendar sync state
+      // and the language preference. If a *different* user signs back in,
+      // reconcileDeviceState wipes the calendar state on the way in.
+      await AsyncStorage.multiRemove([
+        'accessToken',
+        'refreshToken',
+        'cachedUser',
+        'weekStartDay',
+        'timezone',
+      ]);
 
       setUser(null);
     } catch (err) {
