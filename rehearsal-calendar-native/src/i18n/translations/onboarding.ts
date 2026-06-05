@@ -100,3 +100,73 @@ export const en = {
     },
   },
 };
+
+export const es = {
+  onboarding: {
+    skipTitle: 'Ajustes disponibles en el perfil',
+    skipMessage: 'Puedes configurar el inicio de la semana y la sincronización del calendario en cualquier momento en Perfil → Ajustes',
+    welcome: {
+      title: '¡Bienvenido!',
+      subtitle: 'Rehearsal Calendar',
+      description: 'Planifica ensayos, gestiona horarios y sincroniza calendarios en un solo lugar',
+      next: 'Empezar',
+      skip: 'Omitir',
+    },
+    weekStart: {
+      title: 'Día de inicio de la semana',
+      description: '¿Qué día empieza tu semana?',
+      monday: 'Lunes',
+      sunday: 'Domingo',
+      next: 'Siguiente',
+      back: 'Atrás',
+      skip: 'Omitir',
+    },
+    calendarSync: {
+      title: 'Sincronización del calendario',
+      description: 'Sincroniza tus ensayos con tu calendario',
+      google: 'Google Calendar',
+      apple: 'Apple Calendar',
+      setupLater: 'Configurar más tarde',
+      finish: 'Finalizar',
+      finishWithoutSync: 'Continuar sin sincronizar',
+      back: 'Atrás',
+      permissionRequired: 'Permiso requerido',
+      grantPermission: 'Conceder acceso',
+    },
+  },
+};
+
+export const de = {
+  onboarding: {
+    skipTitle: 'Einstellungen im Profil verfügbar',
+    skipMessage: 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen konfigurieren',
+    welcome: {
+      title: 'Willkommen!',
+      subtitle: 'Rehearsal Calendar',
+      description: 'Plane Proben, verwalte Termine und synchronisiere Kalender an einem Ort',
+      next: 'Loslegen',
+      skip: 'Überspringen',
+    },
+    weekStart: {
+      title: 'Wochenbeginn',
+      description: 'An welchem Tag beginnt deine Woche?',
+      monday: 'Montag',
+      sunday: 'Sonntag',
+      next: 'Weiter',
+      back: 'Zurück',
+      skip: 'Überspringen',
+    },
+    calendarSync: {
+      title: 'Kalendersynchronisation',
+      description: 'Synchronisiere deine Proben mit deinem Kalender',
+      google: 'Google Calendar',
+      apple: 'Apple Calendar',
+      setupLater: 'Später einrichten',
+      finish: 'Fertigstellen',
+      finishWithoutSync: 'Ohne Synchronisation fortfahren',
+      back: 'Zurück',
+      permissionRequired: 'Berechtigung erforderlich',
+      grantPermission: 'Zugriff gewähren',
+    },
+  },
+};

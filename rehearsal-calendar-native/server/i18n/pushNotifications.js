@@ -1,6 +1,6 @@
 /**
  * Push notification translations
- * Supported locales: 'ru', 'en'. Falls back to 'en' on unknown locale.
+ * Supported locales: 'ru', 'en', 'es', 'de'. Falls back to 'en' on unknown locale.
  */
 
 const translations = {
@@ -130,6 +130,134 @@ const translations = {
       location: 'location',
       title: 'title',
       default: 'details',
+    },
+  },
+  es: {
+    newRehearsal: {
+      title: 'Nuevo ensayo',
+      body: ({ projectName, rehearsalTitle }) =>
+        `${projectName}: ${rehearsalTitle || 'Ensayo'} programado`,
+    },
+    rehearsalUpdated: {
+      title: 'Ensayo actualizado',
+      body: ({ projectName, rehearsalTitle, changes }) =>
+        `${projectName}: ${rehearsalTitle || 'Ensayo'} — ${changes}`,
+    },
+    rehearsalDeleted: {
+      title: 'Ensayo cancelado',
+      body: ({ projectName, rehearsalTitle }) =>
+        `${projectName}: ${rehearsalTitle || 'Ensayo'} cancelado`,
+    },
+    memberResponse: {
+      title: 'Nueva respuesta',
+      body: ({ responderName, projectName }) =>
+        `${responderName} ha respondido a un ensayo en ${projectName}`,
+    },
+    projectInvite: {
+      title: 'Invitación al proyecto',
+      body: ({ inviterName, projectName }) =>
+        `${inviterName} te invitó al proyecto ${projectName}`,
+    },
+    roleChanged: {
+      title: 'Cambio de rol',
+      body: ({ roleText, projectName }) =>
+        `Ahora eres ${roleText} en ${projectName}`,
+      adminRole: 'administrador',
+      memberRole: 'miembro',
+    },
+    memberRemoved: {
+      title: 'Eliminado del proyecto',
+      body: ({ projectName }) =>
+        `Has sido eliminado del proyecto ${projectName}`,
+    },
+    projectDeleted: {
+      title: 'Proyecto eliminado',
+      body: ({ projectName }) =>
+        `El proyecto ${projectName} ha sido eliminado`,
+    },
+    rehearsal24h: {
+      title: 'Ensayo mañana',
+      body: ({ projectName, rehearsalTitle }) =>
+        `${projectName}: ${rehearsalTitle || 'Ensayo'}`,
+    },
+    rehearsal1h: {
+      title: 'Ensayo en 1 hora',
+      body: ({ projectName, rehearsalTitle }) =>
+        `${projectName}: ${rehearsalTitle || 'Ensayo'}`,
+    },
+    paymentFailed: {
+      title: 'Pago fallido',
+      body: () => 'No se pudo procesar el pago de tu suscripción. Actualiza tu método de pago.',
+    },
+    changes: {
+      datetime: 'fecha/hora',
+      location: 'lugar',
+      title: 'título',
+      default: 'detalles',
+    },
+  },
+  de: {
+    newRehearsal: {
+      title: 'Neue Probe',
+      body: ({ projectName, rehearsalTitle }) =>
+        `${projectName}: ${rehearsalTitle || 'Probe'} angesetzt`,
+    },
+    rehearsalUpdated: {
+      title: 'Probe geändert',
+      body: ({ projectName, rehearsalTitle, changes }) =>
+        `${projectName}: ${rehearsalTitle || 'Probe'} — ${changes}`,
+    },
+    rehearsalDeleted: {
+      title: 'Probe abgesagt',
+      body: ({ projectName, rehearsalTitle }) =>
+        `${projectName}: ${rehearsalTitle || 'Probe'} abgesagt`,
+    },
+    memberResponse: {
+      title: 'Neue Antwort',
+      body: ({ responderName, projectName }) =>
+        `${responderName} hat auf eine Probe in ${projectName} reagiert`,
+    },
+    projectInvite: {
+      title: 'Projekteinladung',
+      body: ({ inviterName, projectName }) =>
+        `${inviterName} hat dich zum Projekt ${projectName} eingeladen`,
+    },
+    roleChanged: {
+      title: 'Rolle geändert',
+      body: ({ roleText, projectName }) =>
+        `Du bist jetzt ${roleText} in ${projectName}`,
+      adminRole: 'Administrator',
+      memberRole: 'Mitglied',
+    },
+    memberRemoved: {
+      title: 'Aus dem Projekt entfernt',
+      body: ({ projectName }) =>
+        `Du wurdest aus dem Projekt ${projectName} entfernt`,
+    },
+    projectDeleted: {
+      title: 'Projekt gelöscht',
+      body: ({ projectName }) =>
+        `Das Projekt ${projectName} wurde gelöscht`,
+    },
+    rehearsal24h: {
+      title: 'Probe morgen',
+      body: ({ projectName, rehearsalTitle }) =>
+        `${projectName}: ${rehearsalTitle || 'Probe'}`,
+    },
+    rehearsal1h: {
+      title: 'Probe in 1 Stunde',
+      body: ({ projectName, rehearsalTitle }) =>
+        `${projectName}: ${rehearsalTitle || 'Probe'}`,
+    },
+    paymentFailed: {
+      title: 'Zahlung fehlgeschlagen',
+      body: () => 'Die Zahlung deines Abonnements konnte nicht verarbeitet werden. Bitte aktualisiere deine Zahlungsmethode.',
+    },
+    changes: {
+      datetime: 'Datum/Zeit',
+      location: 'Ort',
+      title: 'Titel',
+      default: 'Details',
     },
   },
 };

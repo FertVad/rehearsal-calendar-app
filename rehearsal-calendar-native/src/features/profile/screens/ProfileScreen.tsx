@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import type { Language } from '../../../i18n/translations';
 import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/components';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
@@ -36,12 +37,22 @@ const WEEK_START_OPTIONS = [
   { value: 'sunday' as const, labelKey: 'weekStartSunday' as const },
 ];
 
+// Language options — labels are shown in their own language so users
+// can recognize their language without already speaking the current one.
+const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
+  { value: 'en', label: 'English' },
+  { value: 'ru', label: 'Русский' },
+  { value: 'es', label: 'Español' },
+  { value: 'de', label: 'Deutsch' },
+];
+
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { user, logout, updateUser, deleteAccount, loading } = useAuth();
   const { t, language, setLanguage } = useI18n();
   const [notificationsEnabled, setNotificationsEnabled] = useState(user?.notificationsEnabled ?? true);
   const [timezoneModalVisible, setTimezoneModalVisible] = useState(false);
   const [weekStartModalVisible, setWeekStartModalVisible] = useState(false);
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
@@ -95,9 +106,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     }
   };
 
-  const toggleLanguage = async () => {
+  const handleLanguageSelect = async (newLanguage: Language) => {
     hapticLight();
-    const newLanguage = language === 'ru' ? 'en' : 'ru';
+    setLanguageModalVisible(false);
+    if (newLanguage === language) return;
     try {
       // Save to local state and AsyncStorage
       await setLanguage(newLanguage);
@@ -108,6 +120,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       Alert.alert(t.profile.errorTitle, err.message || t.profile.languageError);
     }
   };
+
+  const getCurrentLanguageLabel = () =>
+    LANGUAGE_OPTIONS.find((opt) => opt.value === language)?.label ?? language;
 
   const handleTimezoneSelect = async (timezone: string) => {
     hapticLight();
@@ -265,7 +280,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </View>
 
           {/* Language */}
-          <TouchableOpacity style={styles.settingItem} onPress={toggleLanguage}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => { hapticLight(); setLanguageModalVisible(true); }}
+          >
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                 <Ionicons name="language" size={20} color={Colors.accent.purple} />
@@ -274,7 +292,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <View style={styles.settingRight}>
               <Text style={styles.settingValue}>
-                {language === 'ru' ? 'Русский' : 'English'}
+                {getCurrentLanguageLabel()}
               </Text>
               <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
             </View>
@@ -430,6 +448,52 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               )}
               style={styles.timezoneList}
             />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={languageModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setLanguageModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t.profile.language}</Text>
+              <TouchableOpacity onPress={() => { hapticLight(); setLanguageModalVisible(false); }}>
+                <Ionicons name="close" size={24} color={Colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.weekStartOptions}>
+              {LANGUAGE_OPTIONS.map((option) => {
+                const isSelected = language === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.timezoneItem,
+                      isSelected && styles.timezoneItemSelected,
+                    ]}
+                    onPress={() => handleLanguageSelect(option.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.timezoneLabel,
+                        isSelected && styles.timezoneLabelSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         </View>
       </Modal>

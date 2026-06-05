@@ -100,12 +100,14 @@ export function getTimezonesWithDevice(): TimezoneOption[] {
 
 /**
  * Resolve display label for an IANA timezone identifier.
- * Falls back to a computed "City (UTC±N)" label when the timezone isn't in
- * the curated list.
+ * Only Russian has fully curated translations; all other languages share
+ * the English label set. Falls back to a computed "City (UTC±N)" when the
+ * timezone isn't in the curated list.
  */
-export function getTimezoneLabel(value: string, language: 'ru' | 'en'): string {
+export function getTimezoneLabel(value: string, language: string): string {
+  const useRussian = language === 'ru';
   const tz = TIMEZONES.find(t => t.value === value);
-  if (tz) return language === 'ru' ? tz.labelRu : tz.labelEn;
+  if (tz) return useRussian ? tz.labelRu : tz.labelEn;
   const opt = buildDynamicOption(value);
-  return language === 'ru' ? opt.labelRu : opt.labelEn;
+  return useRussian ? opt.labelRu : opt.labelEn;
 }
