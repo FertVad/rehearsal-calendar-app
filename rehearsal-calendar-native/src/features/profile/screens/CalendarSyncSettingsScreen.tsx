@@ -183,17 +183,17 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
 
     setSelectedProvider(provider);
 
-    // If only 1 calendar, auto-select it; otherwise let user pick
-    const exportCalendar = providerCalendars.length === 1 ? providerCalendars[0] : null;
-    const exportCalendarId = exportCalendar?.id || selectedCalendarId || providerCalendars[0].id;
+    // Always start with the first calendar of the new provider — using
+    // selectedCalendarId here would carry over the previous provider's ID
+    // and the useEffect would snap selectedProvider back to that provider.
+    const exportCalendar = providerCalendars[0];
+    const exportCalendarId = exportCalendar.id;
 
     // Import from the same single calendar — matches user expectation of
     // "I picked one calendar to sync with"
     const importCalendarIds = [exportCalendarId];
 
-    if (exportCalendar) {
-      setSelectedCalendarId(exportCalendar.id);
-    }
+    setSelectedCalendarId(exportCalendarId);
 
     // Auto-enable sync
     setSyncEnabled(true);
@@ -207,8 +207,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       lastImportTime: settings?.lastImportTime || null,
     });
 
-    logger.debug(`[CalendarSync] Enabled ${provider} calendar sync:`);
-    logger.debug(`  Calendar: ${exportCalendar?.title || 'user will pick'}`);
+    logger.debug(`[CalendarSync] Enabled ${provider} calendar sync: ${exportCalendar.title}`);
   };
 
   const handleSelectCalendar = async (calendarId: string) => {

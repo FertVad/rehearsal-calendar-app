@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
+import { getDateLocale } from '../../../shared/utils/locale';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Rehearsal, RSVPStatus, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
@@ -190,7 +191,7 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
   };
 
   // Format date
-  const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+  const locale = getDateLocale(language);
   const formattedDate = rehearsal.date
     ? formatDateLocalized(rehearsal.date, { day: 'numeric', month: 'long', weekday: 'long' }, locale)
     : '';

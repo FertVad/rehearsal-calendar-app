@@ -20,6 +20,13 @@ jest.mock('@react-navigation/native', () => ({
 jest.mock('react-native/Libraries/Alert/Alert', () => ({
   alert: jest.fn(),
 }));
+jest.mock('../../../../contexts/I18nContext', () => ({
+  useI18n: () => ({
+    language: 'ru',
+    setLanguage: jest.fn(),
+    t: jest.requireActual('../../../../i18n/translations').ru,
+  }),
+}));
 
 describe('useAddRehearsalForm Hook', () => {
   const mockProjects: Project[] = [
@@ -381,7 +388,7 @@ describe('useAddRehearsalForm Hook', () => {
         result.current.handleCreateProject();
       });
 
-      expect(mockNavigate).toHaveBeenCalledWith('CreateProject');
+      expect(mockNavigate).toHaveBeenCalledWith('Projects', { screen: 'CreateProject' });
       expect(result.current.showProjectPicker).toBe(false);
     });
   });

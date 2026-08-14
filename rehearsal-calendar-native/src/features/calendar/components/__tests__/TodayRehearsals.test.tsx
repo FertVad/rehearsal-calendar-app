@@ -41,6 +41,14 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
+jest.mock('../../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', timezone: 'UTC' },
+    isAuthenticated: true,
+    loading: false,
+  }),
+}));
+
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   ImpactFeedbackStyle: {

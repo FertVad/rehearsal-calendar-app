@@ -23,8 +23,8 @@ export function I18nProvider({ children }: I18nProviderProps) {
   const loadLanguage = useCallback(async () => {
     try {
       const saved = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-      if (saved === 'en' || saved === 'ru') {
-        setLanguageState(saved);
+      if (saved && saved in translations) {
+        setLanguageState(saved as Language);
       }
     } catch (error) {
       console.warn('Failed to load language preference:', error);

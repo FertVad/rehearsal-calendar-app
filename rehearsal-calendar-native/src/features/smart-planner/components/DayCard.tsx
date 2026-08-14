@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import type { TimeSlot, SlotCategory } from '../types';
 import { SlotItem } from './SlotItem';
 import { useI18n } from '../../../contexts/I18nContext';
+import { getDateLocale } from '../../../shared/utils/locale';
 
 interface DayCardProps {
   date: string;
@@ -26,7 +27,7 @@ export const DayCard: React.FC<DayCardProps> = React.memo(({ date, slots, onCrea
       day: 'numeric',
       month: 'short',
     };
-    return d.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', options);
+    return d.toLocaleDateString(getDateLocale(language), options);
   };
 
   // Group slots by category

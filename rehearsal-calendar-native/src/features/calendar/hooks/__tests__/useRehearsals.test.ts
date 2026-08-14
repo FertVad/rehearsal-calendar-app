@@ -21,6 +21,20 @@ jest.mock('../../../../shared/utils/time', () => ({
   isoToDateString: (iso: string) => iso.split('T')[0],
   isoToTimeString: (iso: string) => iso.split('T')[1].substring(0, 5),
 }));
+jest.mock('../../../../contexts/I18nContext', () => ({
+  useI18n: () => ({
+    language: 'ru',
+    setLanguage: jest.fn(),
+    t: jest.requireActual('../../../../i18n/translations').ru,
+  }),
+}));
+jest.mock('../../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', timezone: 'UTC' },
+    isAuthenticated: true,
+    loading: false,
+  }),
+}));
 
 describe('useRehearsals Hook', () => {
   const mockProjects: Project[] = [

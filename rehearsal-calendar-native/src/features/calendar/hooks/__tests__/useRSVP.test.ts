@@ -18,6 +18,13 @@ jest.mock('../../../../shared/services/api');
 jest.mock('react-native/Libraries/Alert/Alert', () => ({
   alert: jest.fn(),
 }));
+jest.mock('../../../../contexts/I18nContext', () => ({
+  useI18n: () => ({
+    language: 'ru',
+    setLanguage: jest.fn(),
+    t: jest.requireActual('../../../../i18n/translations').ru,
+  }),
+}));
 
 describe('useRSVP Hook', () => {
   beforeEach(() => {

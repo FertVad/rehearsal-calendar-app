@@ -145,3 +145,103 @@ export const en = {
     cancelError: 'Failed to cancel subscription',
   },
 };
+
+export const es = {
+  subscriptions: {
+    // Management Screen
+    managementTitle: 'Gestionar suscripción',
+    paymentHistory: 'Historial de pagos',
+    noPayments: 'Aún no hay pagos',
+    viewPlans: 'Ver planes',
+
+    // Status labels
+    statusActive: 'Activa',
+    statusCancelled: 'Cancelada',
+    statusExpired: 'Caducada',
+    statusPaymentFailed: 'Pago fallido',
+
+    // Transaction types
+    transactionTypeInitial: 'Pago inicial',
+    transactionTypeRecurring: 'Pago recurrente',
+    transactionTypeRefund: 'Reembolso',
+
+    // Transaction status
+    transactionStatusPending: 'Pendiente',
+    transactionStatusCompleted: 'Completado',
+    transactionStatusFailed: 'Fallido',
+    transactionStatusRefunded: 'Reembolsado',
+
+    // Payment card labels
+    paymentType: 'Tipo',
+    paymentPlan: 'Plan',
+    paymentError: 'Error',
+
+    // Hosted Fields (AllPay)
+    paymentSuccess: '¡Éxito!',
+    paymentSuccessMessage: '¡Suscripción creada con éxito! Ahora puedes crear proyectos.',
+    paymentLoading: 'Cargando formulario de pago...',
+
+    // Cancel subscription
+    cancelTitle: '¿Cancelar suscripción?',
+    cancelWarning: '¿Seguro que quieres cancelar tu suscripción? Perderás la posibilidad de crear proyectos al final del período actual.',
+    cancelWarningLifetime: '¿Seguro que quieres cancelar tu suscripción? Ya no podrás crear nuevos proyectos.',
+    cancelButton: 'Cancelar suscripción',
+    cancelConfirm: 'Sí, cancelar',
+    cancelSuccess: 'Suscripción cancelada',
+    cancelSuccessMessage: 'Tu suscripción se ha cancelado correctamente.',
+
+    // Errors
+    loadError: 'No se pudieron cargar los datos de la suscripción',
+    cancelError: 'No se pudo cancelar la suscripción',
+  },
+};
+
+export const de = {
+  subscriptions: {
+    // Management Screen
+    managementTitle: 'Abonnement verwalten',
+    paymentHistory: 'Zahlungsverlauf',
+    noPayments: 'Noch keine Zahlungen',
+    viewPlans: 'Pläne ansehen',
+
+    // Status labels
+    statusActive: 'Aktiv',
+    statusCancelled: 'Gekündigt',
+    statusExpired: 'Abgelaufen',
+    statusPaymentFailed: 'Zahlung fehlgeschlagen',
+
+    // Transaction types
+    transactionTypeInitial: 'Erstzahlung',
+    transactionTypeRecurring: 'Wiederkehrende Zahlung',
+    transactionTypeRefund: 'Rückerstattung',
+
+    // Transaction status
+    transactionStatusPending: 'Ausstehend',
+    transactionStatusCompleted: 'Abgeschlossen',
+    transactionStatusFailed: 'Fehlgeschlagen',
+    transactionStatusRefunded: 'Erstattet',
+
+    // Payment card labels
+    paymentType: 'Typ',
+    paymentPlan: 'Plan',
+    paymentError: 'Fehler',
+
+    // Hosted Fields (AllPay)
+    paymentSuccess: 'Erfolg!',
+    paymentSuccessMessage: 'Abonnement erfolgreich erstellt! Du kannst jetzt Projekte erstellen.',
+    paymentLoading: 'Zahlungsformular wird geladen...',
+
+    // Cancel subscription
+    cancelTitle: 'Abonnement kündigen?',
+    cancelWarning: 'Möchtest du dein Abonnement wirklich kündigen? Am Ende der aktuellen Periode kannst du keine Projekte mehr erstellen.',
+    cancelWarningLifetime: 'Möchtest du dein Abonnement wirklich kündigen? Du kannst dann keine neuen Projekte mehr erstellen.',
+    cancelButton: 'Abonnement kündigen',
+    cancelConfirm: 'Ja, kündigen',
+    cancelSuccess: 'Abonnement gekündigt',
+    cancelSuccessMessage: 'Dein Abonnement wurde erfolgreich gekündigt.',
+
+    // Errors
+    loadError: 'Abonnementdaten konnten nicht geladen werden',
+    cancelError: 'Abonnement konnte nicht gekündigt werden',
+  },
+};

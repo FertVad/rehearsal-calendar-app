@@ -7,7 +7,7 @@
 
 export interface AllPayHostedFieldsParams {
   paymentUrl: string;      // checkoutUrl from AllPay API
-  language: 'ru' | 'en';   // User's preferred language
+  language: string;        // User's preferred language (any IETF-style code)
   orderId: string;         // Order ID for tracking
 }
 

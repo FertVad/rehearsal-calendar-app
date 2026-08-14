@@ -8,7 +8,7 @@ import * as calendarSync from './translations/calendarSync';
 import * as onboarding from './translations/onboarding';
 import * as subscriptions from './translations/subscriptions';
 
-export type Language = 'ru' | 'en';
+export type Language = 'ru' | 'en' | 'es' | 'de';
 
 export interface Translations {
   // Common
@@ -69,4 +69,28 @@ export const en: Translations = {
   ...subscriptions.en,
 };
 
-export const translations: Record<Language, Translations> = { ru, en };
+export const es: Translations = {
+  ...common.es,
+  ...auth.es,
+  ...calendar.es,
+  ...projects.es,
+  ...profile.es,
+  ...availability.es,
+  ...calendarSync.es,
+  ...onboarding.es,
+  ...subscriptions.es,
+};
+
+export const de: Translations = {
+  ...common.de,
+  ...auth.de,
+  ...calendar.de,
+  ...projects.de,
+  ...profile.de,
+  ...availability.de,
+  ...calendarSync.de,
+  ...onboarding.de,
+  ...subscriptions.de,
+};
+
+export const translations: Record<Language, Translations> = { ru, en, es, de };

@@ -25,26 +25,12 @@ import { createProjectScreenStyles as styles } from '../styles';
 
 type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
 
-// Common timezones for theatre/rehearsal apps
-const TIMEZONES = [
-  { value: 'Asia/Jerusalem', label: 'Тель-Авив (UTC+2)' },
-  { value: 'Europe/Moscow', label: 'Москва (UTC+3)' },
-  { value: 'Europe/Kiev', label: 'Киев (UTC+2)' },
-  { value: 'Europe/Kaliningrad', label: 'Калининград (UTC+2)' },
-  { value: 'Europe/Samara', label: 'Самара (UTC+4)' },
-  { value: 'Asia/Yekaterinburg', label: 'Екатеринбург (UTC+5)' },
-  { value: 'Asia/Novosibirsk', label: 'Новосибирск (UTC+7)' },
-  { value: 'Asia/Vladivostok', label: 'Владивосток (UTC+10)' },
-  { value: 'Europe/Berlin', label: 'Берлин (UTC+1)' },
-  { value: 'Europe/London', label: 'Лондон (UTC+0)' },
-  { value: 'America/New_York', label: 'Нью-Йорк (UTC-5)' },
-  { value: 'America/Los_Angeles', label: 'Лос-Анджелес (UTC-8)' },
-];
+import { getTimezonesWithDevice, getTimezoneLabel as getTzLabel } from '../../../shared/constants/timezones';
 
 export default function CreateProjectScreen({ navigation }: CreateProjectScreenProps) {
   const { createProject } = useProjects();
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
   const [projectTimezone, setProjectTimezone] = useState(
@@ -53,10 +39,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
   const [timezonePickerVisible, setTimezonePickerVisible] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const getTimezoneLabel = (value: string) => {
-    const tz = TIMEZONES.find(t => t.value === value);
-    return tz?.label || value;
-  };
+  const getTimezoneLabel = (value: string) => getTzLabel(value, language);
 
   const handleCreateProject = async () => {
     if (!projectName.trim()) {
@@ -66,9 +49,21 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
     setCreating(true);
     try {
-      await createProject(projectName.trim(), projectDescription.trim() || undefined, projectTimezone);
-      // Simply go back to close the modal
-      navigation.goBack();
+      const newProject = await createProject(
+        projectName.trim(),
+        projectDescription.trim() || undefined,
+        projectTimezone,
+      );
+
+      // Close the modal and drop the user straight into the new project
+      // so they can invite members / set up rehearsals without an extra tap.
+      navigation.navigate('MainTabs' as any, {
+        screen: 'Projects',
+        params: {
+          screen: 'ProjectDetail',
+          params: { projectId: newProject.id },
+        },
+      });
     } catch (err: any) {
       Alert.alert(t.common.error, err.message || t.projects.createError);
     } finally {
@@ -184,7 +179,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
               </TouchableOpacity>
             </View>
             <FlatList
-              data={TIMEZONES}
+              data={getTimezonesWithDevice()}
               keyExtractor={(item) => item.value}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -203,7 +198,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
                       projectTimezone === item.value && styles.timezoneLabelSelected,
                     ]}
                   >
-                    {item.label}
+                    {language === 'ru' ? item.labelRu : item.labelEn}
                   </Text>
                   {projectTimezone === item.value && (
                     <Ionicons name="checkmark" size={20} color={Colors.accent.purple} />

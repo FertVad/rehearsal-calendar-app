@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing } from '../../../../shared/constants/colors';
 import { useI18n } from '../../../../contexts/I18nContext';
+import { getDateLocale } from '../../../../shared/utils/locale';
 
 interface EditorHeaderProps {
   selectedCount: number;
@@ -22,7 +23,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
       <View style={styles.bottomSheetHeaderLeft}>
         <Text style={styles.bottomSheetTitle}>
           {selectedCount === 1 && selectedDate
-            ? new Date(selectedDate).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', {
+            ? new Date(selectedDate).toLocaleDateString(getDateLocale(language), {
                 day: 'numeric',
                 month: 'long',
               })

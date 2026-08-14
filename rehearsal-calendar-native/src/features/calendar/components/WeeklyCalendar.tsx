@@ -4,6 +4,7 @@ import { Colors, FontSize, FontWeight, Spacing } from '../../../shared/constants
 import { Rehearsal } from '../../../shared/types';
 import { formatDateToString } from '../../../shared/utils/time';
 import { useI18n } from '../../../contexts/I18nContext';
+import { getDateLocale } from '../../../shared/utils/locale';
 import { useWeekStart, getWeekStart as getWeekStartUtil } from '../../../hooks/useWeekStart';
 import { hapticMedium } from '../../../shared/utils/haptics';
 
@@ -30,7 +31,7 @@ interface WeekData {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const WEEK_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md * 2; // Account for container padding
-const INITIAL_WEEKS = 13; // ~3 months on each side
+const INITIAL_WEEKS = 105; // ~1 year on each side
 const CENTER_INDEX = Math.floor(INITIAL_WEEKS / 2);
 
 export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
@@ -40,16 +41,11 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
   const [currentWeekIndex, setCurrentWeekIndex] = useState(CENTER_INDEX);
 
   const DAYS_OF_WEEK = useMemo(() => {
-    const daysMonday = language === 'ru'
-      ? ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС']
-      : ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
-
-    const daysSunday = language === 'ru'
-      ? ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ']
-      : ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-
+    const s = t.days.short;
+    const daysMonday = [s.monday, s.tuesday, s.wednesday, s.thursday, s.friday, s.saturday, s.sunday];
+    const daysSunday = [s.sunday, s.monday, s.tuesday, s.wednesday, s.thursday, s.friday, s.saturday];
     return weekStartDay === 'monday' ? daysMonday : daysSunday;
-  }, [language, weekStartDay]);
+  }, [t, weekStartDay]);
 
   // Get the start of current week based on user preference
   const getWeekStart = useCallback((date: Date): Date => {
@@ -111,19 +107,16 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     return result;
   }, [getWeekStart, generateWeekData]);
 
-  // Get current week's month/year
+  // Show the month of the week's middle day so the header flips when the
+  // majority of visible days have crossed into a new month — not when the
+  // very first day of the week does.
   const monthYear = useMemo(() => {
-    if (weeks[currentWeekIndex]) {
-      const weekStart = weeks[currentWeekIndex].weekStart;
-      const locale = language === 'ru' ? 'ru-RU' : 'en-US';
-      const options: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
-      return weekStart.toLocaleDateString(locale, options);
-    }
-
-    const now = new Date();
-    const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+    const locale = getDateLocale(language);
     const options: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
-    return now.toLocaleDateString(locale, options);
+    const week = weeks[currentWeekIndex];
+    const reference = week ? new Date(week.weekStart) : new Date();
+    if (week) reference.setDate(reference.getDate() + 3);
+    return reference.toLocaleDateString(locale, options);
   }, [weeks, currentWeekIndex, language]);
 
   // Handle scroll to update current week index and haptic feedback

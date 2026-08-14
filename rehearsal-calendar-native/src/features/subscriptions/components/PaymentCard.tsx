@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { styles } from '../styles/subscriptionScreenStyles';
 import type { PaymentTransaction } from '../types';
+import { getDateLocale } from '../../../shared/utils/locale';
 
 interface PaymentCardProps {
   payment: PaymentTransaction;
@@ -73,7 +74,7 @@ export function PaymentCard({ payment, language, t }: PaymentCardProps) {
           </Text>
           <Text style={styles.paymentDate}>
             {new Date(payment.attempted_at).toLocaleDateString(
-              language === 'ru' ? 'ru-RU' : 'en-US',
+              getDateLocale(language),
               { year: 'numeric', month: 'long', day: 'numeric' }
             )}
           </Text>

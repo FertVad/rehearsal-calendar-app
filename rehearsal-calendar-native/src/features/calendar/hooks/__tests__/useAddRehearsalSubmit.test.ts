@@ -26,6 +26,20 @@ jest.mock('@react-navigation/native', () => ({
 jest.mock('react-native/Libraries/Alert/Alert', () => ({
   alert: jest.fn(),
 }));
+jest.mock('../../../../contexts/I18nContext', () => ({
+  useI18n: () => ({
+    language: 'ru',
+    setLanguage: jest.fn(),
+    t: jest.requireActual('../../../../i18n/translations').ru,
+  }),
+}));
+jest.mock('../../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', timezone: 'UTC' },
+    isAuthenticated: true,
+    loading: false,
+  }),
+}));
 
 describe('useAddRehearsalSubmit Hook', () => {
   const mockProject: Project = {
