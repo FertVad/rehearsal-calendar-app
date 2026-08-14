@@ -183,14 +183,29 @@ AVAILABILITY_SOURCES = {
 ```
 
 ### 5. Seen System (Rehearsal Responses)
-Binary "I've seen this" toggle using eye icon. `'yes'` (seen) or `NULL` (unseen/deleted). No 'no' or 'maybe' statuses.
+Binary "I've seen this" toggle using eye icon. No 'maybe' status.
+
+**Two different value sets — don't confuse them:**
 
 ```javascript
-// API: POST /api/native/rehearsals/:id/respond
+// ON THE WIRE: always 'yes' or 'no' — never null.
+// POST /api/native/rehearsals/:id/respond
 { response: 'yes' }  // Mark as seen
+{ response: 'no' }   // Mark as unseen
 
-// To mark unseen: Send same endpoint with response: null (handled by backend as DELETE)
+// IN FRONTEND STATE (RSVPStatus): 'yes' (seen) or null (unseen)
 ```
+
+`useRSVP` translates between the two — `null` in UI state maps to `'no'` on the wire:
+```typescript
+const newStatus = currentStatus === 'yes' ? null : 'yes';   // UI state
+const serverStatus = currentStatus === 'yes' ? 'no' : 'yes'; // wire value
+```
+
+The backend **upserts** the row (`ON CONFLICT ... DO UPDATE`); it never deletes.
+Sending anything other than `'yes'`/`'no'` throws. Stats count `confirmed` as
+rows with `response = 'yes'`, so an `'no'` row is stored but not counted.
+See [rsvpService.js](rehearsal-calendar-native/server/services/rehearsals/rsvpService.js).
 
 ### 6. API Response Format
 ```javascript
