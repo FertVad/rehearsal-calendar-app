@@ -13,7 +13,7 @@ EAS `projectId` прописан. Платежи намеренно выключ
 
 | # | Задача | Файл | Статус |
 |---|--------|------|--------|
-| 0.1 | Вернуть `expo-notifications` из `_disabled_plugins` в `plugins` | `app.json` | ❌ |
+| 0.1 | Вернуть `expo-notifications` из `_disabled_plugins` в `plugins` | `app.json` | ✅ сделано |
 | 0.2 | Убрать `<BetaBanner />` и его импорт | `src/navigation/index.tsx:14,176` | ❌ |
 | 0.3 | Добавить `ios.buildNumber: "1"` и `android.versionCode: 1` | `app.json` | ❌ |
 | 0.4 | Убрать лишний вызов `getCurrentSubscription()` при фокусе профиля | `ProfileScreen.tsx:64` | ⚠️ опционально |
@@ -53,18 +53,36 @@ premium-бейдж рендерится только при `status === 'active'
 
 ---
 
-## Фаза 2. Пуш-уведомления
+## Фаза 2. Пуш-уведомления — ✅ проверено
 
 **В Expo Go пуши не проверить** — Expo убрал их поддержку с SDK 53, у нас 54.
 Нужен development build на реальном устройстве.
 
-- [ ] Выполнить Фазу 0.1 (плагин + prebuild)
-- [ ] `eas credentials` → iOS → Push Notifications → дать EAS сгенерировать APNs-ключ
-      (логин в Apple Developer; ключ `.p8` создаётся один раз на весь аккаунт)
-- [ ] `eas build --profile development --platform ios` — или локально через Xcode
-- [ ] Поставить билд на iPhone, залогиниться
-- [ ] Проверить, что токен долетел: `SELECT * FROM native_push_tokens WHERE user_id = <твой id>`
-- [ ] Со второго аккаунта создать репетицию в общем проекте → должно прилететь уведомление
+- [x] Плагин `expo-notifications` включён, `prebuild --clean` прописал `aps-environment`
+- [x] APNs-ключ сгенерирован через `eas credentials` и назначен `com.rehearsal.app`
+- [x] Локальная сборка через Xcode на iPhone 15 Pro (iOS 26.5.2)
+- [x] Токен регистрируется при входе, удаляется при выходе
+- [x] Доставка проверена: в открытом приложении, системным баннером в свёрнутом, тап отрабатывает
+- [ ] Боевой сценарий: со второго аккаунта создать репетицию в общем проекте
+
+### Грабли, на которые наступили
+
+- **Xcode-проект называется `Rehearsly`**, а не `rehearsalcalendarnative` — `prebuild`
+  берёт имя из `app.json`. Открывать нужно `ios/Rehearsly.xcworkspace`.
+- **`DEVELOPMENT_TEAM` не проставляется автоматически** — после каждого
+  `prebuild --clean` нужно заново выбрать Team в Signing & Capabilities.
+- **`pod install` падает** с `Encoding::CompatibilityError`, если не задана
+  UTF-8 локаль. Лечится `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install`.
+- **Xcode просит «доверить сертификат» в VPN & Device Management**, хотя у платного
+  аккаунта раздел пустой и доверять нечего. Сообщение ложное — если приложение
+  установилось, его можно игнорировать.
+- **`No script URL provided`** — сборка Debug и требует запущенного Metro
+  (`npx expo start`). При запуске из Xcode он поднимается сам, при запуске
+  через `devicectl` — нет.
+- **Скрипты вне сервера должны звать `initDatabase()`** перед использованием `db` —
+  модуль экспортирует живой биндинг, до инициализации `db.all` не существует.
+- **Apple разрешает максимум 2 APNs-ключа на аккаунт** — оба слота заняты.
+  Для третьего придётся отзывать старый.
 
 **Что уже готово и трогать не надо:** `expo-notifications@0.32.16`, `expo-device`,
 серверный `expo-server-sdk@3.15.0`, `pushNotificationService.js` с рассылкой по
