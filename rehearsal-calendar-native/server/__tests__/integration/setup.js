@@ -32,6 +32,8 @@ export async function setupIntegrationDb() {
       locale TEXT DEFAULT 'en',
       notifications_enabled BOOLEAN DEFAULT 1,
       email_notifications BOOLEAN DEFAULT 1,
+      -- requireAuth reads this on every request to check for revoked sessions
+      token_version INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -211,9 +213,23 @@ export async function setupIntegrationDb() {
   // Execute schema
   testDb.exec(schema);
 
-  // Convert PostgreSQL-style $1,$2... placeholders to SQLite ? placeholders
+  // Translate the PostgreSQL dialect our routes are written in into something
+  // SQLite can parse. Only the constructs actually used in the codebase are
+  // handled — anything else will surface as a SqliteError, which is the honest
+  // signal that this helper needs extending.
   function toSqlite(sql) {
-    return sql.replace(/\$\d+/g, '?');
+    return (
+      sql
+        // $1, $2 ... → ?
+        .replace(/\$\d+/g, '?')
+        // ?::date ± interval 'N day(s)' → date(?, '±N days')
+        .replace(
+          /\?::date\s*([+-])\s*interval\s*'(\d+)\s*days?'/gi,
+          (_match, sign, amount) => `date(?, '${sign}${amount} days')`
+        )
+        // bare ?::date / ?::timestamptz → the value as-is
+        .replace(/\?::(date|timestamptz|timestamp)\b/gi, '?')
+    );
   }
 
   // Create mock db interface matching our db.js

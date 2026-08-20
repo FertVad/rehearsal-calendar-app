@@ -17,6 +17,7 @@ import adminRoutes from './routes/admin.js';
 import { startReminderScheduler } from './services/notifications/reminderScheduler.js';
 import { runRecurringBilling } from './jobs/recurringBilling.js';
 import { logger } from './utils/logger.js';
+import { jsonForScript } from './utils/htmlEscape.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -259,8 +260,8 @@ app.get('/invite/:code', (req, res) => {
         document.getElementById('manualText').textContent = isRu ? 'Приложение не открылось автоматически?' : "App didn't open automatically?";
         document.getElementById('openButton').textContent = isRu ? 'Открыть приложение' : 'Open App';
 
-        const code = '${code}';
-        const expoHost = ${JSON.stringify(expoHost || null)};
+        const code = ${jsonForScript(String(code || ''))};
+        const expoHost = ${jsonForScript(expoHost || null)};
 
         function openApp() {
           const schemes = [];

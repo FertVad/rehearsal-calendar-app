@@ -1,17 +1,27 @@
 /**
  * HTML template for the AllPay Hosted Fields checkout page
  * Rendered in WebView with dark theme and pay button
+ *
+ * Every value here arrives from the query string of a public, unauthenticated
+ * route, so nothing may be interpolated raw — see utils/htmlEscape.js for which
+ * helper belongs in which context.
  */
+
+import { escapeHtml, jsonForScript } from '../../../utils/htmlEscape.js';
 
 export function generateCheckoutPageHTML({ paymentUrl, orderId, planName, amount, currency, lang }) {
   const isRu = lang === 'ru';
-  const payBtnText = isRu ? `Оплатить $${amount}` : `Pay $${amount}`;
+  // Constrain to the two locales the page actually renders rather than echoing
+  // whatever arrived, which would land unescaped in the lang attribute.
+  const htmlLang = isRu ? 'ru' : 'en';
+  const safeAmount = escapeHtml(amount || '0');
+  const payBtnText = isRu ? `Оплатить $${safeAmount}` : `Pay $${safeAmount}`;
   const processingText = isRu ? 'Обработка платежа...' : 'Processing payment...';
   const secureText = isRu ? 'Безопасная оплата через AllPay' : 'Secure payment via AllPay';
   const title = isRu ? 'Оплата' : 'Payment';
 
   return `<!DOCTYPE html>
-<html lang="${lang || 'en'}">
+<html lang="${htmlLang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -112,11 +122,11 @@ export function generateCheckoutPageHTML({ paymentUrl, orderId, planName, amount
     <h1>${title}</h1>
   </div>
   <div class="plan-info">
-    <div class="plan-name">${planName || 'Subscription'}</div>
-    <div class="plan-price">$${amount || '0'} ${currency || 'USD'}</div>
+    <div class="plan-name">${escapeHtml(planName || 'Subscription')}</div>
+    <div class="plan-price">$${safeAmount} ${escapeHtml(currency || 'USD')}</div>
   </div>
   <div class="iframe-container">
-    <iframe id="allpay-iframe" src="${paymentUrl}" allow="payment *"></iframe>
+    <iframe id="allpay-iframe" src="${escapeHtml(paymentUrl)}" allow="payment *"></iframe>
   </div>
   <div class="footer">
     <div class="processing" id="processing">${processingText}</div>
@@ -140,7 +150,7 @@ export function generateCheckoutPageHTML({ paymentUrl, orderId, planName, amount
         if (window.ReactNativeWebView) {
           window.ReactNativeWebView.postMessage(JSON.stringify({
             type: 'payment_success',
-            orderId: '${orderId || ''}'
+            orderId: ${jsonForScript(String(orderId || ''))}
           }));
         }
       },
