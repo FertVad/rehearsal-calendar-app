@@ -37,7 +37,7 @@ export const ru = {
     skipMessage: 'Вы сможете настроить день начала недели и синхронизацию календаря в любое время в разделе Профиль → Настройки',
     welcome: {
       title: 'Добро пожаловать!',
-      subtitle: 'Rehearsal Calendar',
+      subtitle: 'Rehearsly',
       description: 'Планируйте репетиции, управляйте расписанием и синхронизируйте календари в одном месте',
       next: 'Начать',
       skip: 'Пропустить',
@@ -72,7 +72,7 @@ export const en = {
     skipMessage: 'You can set up week start day and calendar sync anytime in Profile → Settings',
     welcome: {
       title: 'Welcome!',
-      subtitle: 'Rehearsal Calendar',
+      subtitle: 'Rehearsly',
       description: 'Plan rehearsals, manage schedules, and sync calendars in one place',
       next: 'Get Started',
       skip: 'Skip',
@@ -107,7 +107,7 @@ export const es = {
     skipMessage: 'Puedes configurar el inicio de la semana y la sincronización del calendario en cualquier momento en Perfil → Ajustes',
     welcome: {
       title: '¡Bienvenido!',
-      subtitle: 'Rehearsal Calendar',
+      subtitle: 'Rehearsly',
       description: 'Planifica ensayos, gestiona horarios y sincroniza calendarios en un solo lugar',
       next: 'Empezar',
       skip: 'Omitir',
@@ -142,7 +142,7 @@ export const de = {
     skipMessage: 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen konfigurieren',
     welcome: {
       title: 'Willkommen!',
-      subtitle: 'Rehearsal Calendar',
+      subtitle: 'Rehearsly',
       description: 'Plane Proben, verwalte Termine und synchronisiere Kalender an einem Ort',
       next: 'Loslegen',
       skip: 'Überspringen',
