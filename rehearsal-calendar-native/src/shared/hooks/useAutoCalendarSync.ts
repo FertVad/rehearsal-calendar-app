@@ -7,6 +7,7 @@ import { logger } from '../../shared/utils/logger';
 
 import { useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSyncSettings } from '../utils/calendarStorage';
 import { importCalendarEventsToAvailability } from '../services/calendar';
 
@@ -48,6 +49,15 @@ export function useAutoCalendarSync() {
   const THROTTLE_MS = 5000; // Minimum 5 seconds between sync attempts
 
   const performAutoSync = useCallback(async () => {
+    // Signing in with Apple or Google backgrounds the app while the native
+    // sheet is up; dismissing it fires a foreground event and lands us here
+    // before the token is stored. Syncing then just produces a burst of 401s.
+    const accessToken = await AsyncStorage.getItem('accessToken');
+    if (!accessToken) {
+      logger.debug('[AutoSync] No session - skipping');
+      return;
+    }
+
     // Prevent concurrent syncs
     if (isSyncingRef.current) {
       logger.debug('[AutoSync] Already syncing - skipping');
