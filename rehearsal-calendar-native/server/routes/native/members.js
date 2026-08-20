@@ -46,17 +46,25 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
       return res.status(403).json({ error: 'You must be a project member to view availability' });
     }
 
-    // Parse user IDs if provided (comma-separated), otherwise get all project members
+    // The project's active members are the only people whose availability may
+    // be returned here. Fetch them up front: they are both the default target
+    // set and the allow-list for an explicit ?userIds= filter. Without that
+    // intersection, any member of any project could read arbitrary users'
+    // emails, names and schedules by enumerating IDs.
+    const members = await db.all(
+      "SELECT user_id FROM native_project_members WHERE project_id = $1 AND status = 'active'",
+      [projectId]
+    );
+    const memberIds = new Set(members.map(m => Number(m.user_id)));
+
     let targetUserIds = [];
     if (userIds) {
-      targetUserIds = userIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+      targetUserIds = userIds
+        .split(',')
+        .map(id => parseInt(id.trim(), 10))
+        .filter(id => !isNaN(id) && memberIds.has(id));
     } else {
-      // Get all active project members
-      const members = await db.all(
-        "SELECT user_id FROM native_project_members WHERE project_id = $1 AND status = 'active'",
-        [projectId]
-      );
-      targetUserIds = members.map(m => m.user_id);
+      targetUserIds = [...memberIds];
     }
 
     if (targetUserIds.length === 0) {
