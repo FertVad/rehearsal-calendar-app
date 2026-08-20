@@ -306,15 +306,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
 
+      // Order matters: dropping the push token needs a *valid* access token,
+      // and /auth/logout bumps token_version, which invalidates it. Revoking
+      // first would leave the token in the database and keep delivering this
+      // user's notifications to a signed-out device.
+      await unregisterPushToken();
+
       // Revoke all sessions server-side (best-effort; ignore if offline)
       try {
         await authAPI.logout();
       } catch (err) {
         logger.warn('Server logout failed (continuing with local cleanup):', err);
       }
-
-      // Unregister push notifications
-      await unregisterPushToken();
 
       // Set flag to ignore stale deep links
       await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
