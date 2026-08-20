@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors } from '../../../shared/constants/colors';
-import { GlassButton } from '../../../shared/components';
+import { GlassButton, GoogleSignInButton } from '../../../shared/components';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
@@ -183,10 +183,9 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 <View style={styles.dividerLine} />
               </View>
 
-              <GlassButton
+              <GoogleSignInButton
                 title={t.auth.signInWithGoogle}
                 onPress={() => promptAsync()}
-                variant="glass"
                 loading={googleLoading}
                 disabled={!request || loading || googleLoading}
                 style={styles.oauthButton}
