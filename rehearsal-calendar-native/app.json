@@ -75,17 +75,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
-    ],
-    "_disabled_plugins": [
-      {
-        "_comment": "Temporarily disabled for testing with Personal Team (requires paid Apple Developer account)",
-        "plugin": "expo-notifications",
-        "config": {
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
           "icon": "./assets/notification-icon.png",
           "color": "#A855F7"
         }
-      }
+      ]
     ],
     "extra": {
       "eas": {

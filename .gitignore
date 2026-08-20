@@ -6,3 +6,8 @@ TEST_RESULTS.md
 
 # Vercel
 .vercel
+
+# Apple private keys (APNs, App Store Connect API) — never commit
+*.p8
+*.mobileprovision
+*.p12

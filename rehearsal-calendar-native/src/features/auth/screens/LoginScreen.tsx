@@ -17,7 +17,9 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { loginScreenStyles as styles } from '../styles';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useGoogleAuth, getGoogleIdToken } from '../../../shared/services/googleAuth';
+import { signInWithApple, isAppleAuthAvailable } from '../../../shared/services/appleAuth';
 
 type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -25,11 +27,18 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
-  const { login, loginWithGoogle, loading, error } = useAuth();
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const { login, loginWithGoogle, loginWithApple, loading, error } = useAuth();
   const { t } = useI18n();
 
   // Google OAuth
   const { request, response, promptAsync } = useGoogleAuth();
+
+  // Sign in with Apple is iOS 13+ only — hide the button everywhere else
+  useEffect(() => {
+    isAppleAuthAvailable().then(setAppleAvailable);
+  }, []);
 
   // Handle Google OAuth response
   useEffect(() => {
@@ -77,6 +86,28 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       Alert.alert(t.auth.googleSignInError, err.message);
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      setAppleLoading(true);
+      const credential = await signInWithApple();
+
+      // User dismissed the Apple sheet — leave the screen untouched.
+      if (!credential) return;
+
+      const result = await loginWithApple(credential.identityToken, credential.user);
+
+      if (result.linked) {
+        Alert.alert(t.auth.accountLinked, t.auth.appleAccountLinkedToExisting);
+      }
+
+      // Navigation handled by AuthProvider
+    } catch (err: any) {
+      Alert.alert(t.auth.appleSignInError, err.message);
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -160,6 +191,20 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 disabled={!request || loading || googleLoading}
                 style={styles.oauthButton}
               />
+
+              {appleAvailable && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                  cornerRadius={12}
+                  style={styles.appleButton}
+                  onPress={handleAppleSignIn}
+                />
+              )}
+
+              {appleLoading && (
+                <ActivityIndicator color={Colors.accent.purple} style={styles.oauthButton} />
+              )}
             </View>
           </View>
         </ScrollView>
