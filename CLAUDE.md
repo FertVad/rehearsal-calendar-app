@@ -97,18 +97,32 @@ server/
 └── constants/          # Shared constants (availability types, etc.)
 ```
 
-### Landing Page
+### Public Web Pages
+Served by the Express server as static files, so that the landing page, the API
+and `/invite/*` all share one origin. That is a requirement, not a preference:
+`apple-app-site-association` must be hosted on the same domain the invite links
+use, or Universal Links will not work.
+
 ```
-landing/
-├── index.html           # Main HTML (semantic sections, AOS animations, Lucide icons)
-├── styles.css           # Design system (dark theme, glass morphism, responsive)
-└── i18n.js              # EN/RU translations + language toggle + scroll effects
+server/public/
+├── index.html           # Landing (semantic sections, AOS animations, Lucide icons)
+├── styles.css           # Landing design system (dark theme, glass morphism)
+├── i18n.js              # Landing EN/RU toggle + scroll effects
+├── privacy.html         # Privacy Policy — EN/RU/ES/DE
+├── support.html         # Support — EN/RU/ES/DE
+├── legal.css            # Shared styling for the two pages above
+└── legal.js             # Their language toggle (4 locales, shared storage key)
 ```
 - **Stack**: Pure HTML/CSS/JS, no build tools
-- **Libraries**: Lucide Icons (CDN), AOS - Animate On Scroll (CDN)
-- **i18n**: `data-i18n` attributes, `data-i18n-card` for use-case cards, `localStorage` persistence
-- **Design tokens**: Matches app exactly (`#0d1117`, `#A855F7`, glass morphism)
-- **To preview**: Open `landing/index.html` directly in browser
+- **Routes**: `/` → landing, `/privacy`, `/support` (the `extensions: ['html']`
+  option on `express.static` is what makes the extensionless paths work)
+- **i18n**: every language ships in the markup and one is shown, so the pages
+  stay readable without JavaScript. The landing is EN/RU; the legal pages carry
+  all four locales the app itself supports.
+- **To preview**: run the server and open `http://localhost:3001/`
+- **Deployment gotcha**: `vercel.json` needs `includeFiles: "public/**"` —
+  `express.static` resolves paths at runtime, so the bundler cannot infer the
+  folder is needed and would otherwise omit it.
 
 ### Database
 - **Development**: SQLite (`native_database.db`)
