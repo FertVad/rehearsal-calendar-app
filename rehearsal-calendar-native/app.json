@@ -76,6 +76,7 @@
     },
     "plugins": [
       "expo-web-browser",
+      "expo-apple-authentication",
       [
         "expo-notifications",
         {

@@ -94,4 +94,12 @@ export const styles = StyleSheet.create({
   oauthButton: {
     marginBottom: Spacing.sm,
   },
+  // Apple mandates its own button styling for Sign in with Apple, so this
+  // only controls the footprint — height matches GlassButton so the two
+  // OAuth buttons line up.
+  appleButton: {
+    width: '100%',
+    height: 52,
+    marginBottom: Spacing.sm,
+  },
 });
