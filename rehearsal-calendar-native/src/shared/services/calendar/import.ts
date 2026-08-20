@@ -1,6 +1,11 @@
 /**
  * Calendar Import Module
  * Handles importing calendar events as availability slots
+ *
+ * Only the time span of an event ever leaves the device. Titles stay on the
+ * phone: what the app needs is "this person is busy from X to Y", and the
+ * server has no use for "Dentist" or "Flight to Berlin". The stored title is a
+ * fixed placeholder — it is never displayed anywhere in the UI.
  */
 
 import * as Calendar from 'expo-calendar';
@@ -17,6 +22,12 @@ import {
 import { getAllMappings } from '../../utils/calendarMappings';
 import { availabilityAPI } from '../api';
 import { logger } from '../../utils/logger';
+
+/**
+ * Placeholder stored in place of the real event title. Constant on purpose —
+ * imported slots are rendered as plain busy blocks, so nothing reads it.
+ */
+const IMPORTED_SLOT_TITLE = 'Calendar Event';
 
 /**
  * Get calendar events from selected calendars
@@ -93,7 +104,7 @@ function convertEventToTimestamps(event: Calendar.Event): { startsAt: string; en
 /**
  * Full calendar sync: Import/Update/Delete calendar events as availability slots
  * - Adds new events
- * - Updates changed events (time, title)
+ * - Updates changed events (time only)
  * - Deletes events removed from calendar
  * Returns: { success, failed, skipped, errors }
  */
@@ -159,7 +170,6 @@ export async function importCalendarEventsToAvailability(
       logger.debug('[CalendarSync] Sample DB slots:', dbSlots.slice(0, 3).map((s: any) => ({
         id: s.id,
         extId: s.externalEventId || s.external_event_id,
-        title: s.title,
         source: s.source,
       })));
     }
@@ -194,7 +204,7 @@ export async function importCalendarEventsToAvailability(
       const isExported = exportedEventIds.has(id);
 
       if (!inCalendar && !isExported) {
-        logger.debug(`[CalendarSync] Marking for deletion: ${id} (${(dbSlot as any).title})`);
+        logger.debug(`[CalendarSync] Marking for deletion: ${id}`);
         toDelete.push(id);
       }
     }
@@ -217,13 +227,12 @@ export async function importCalendarEventsToAvailability(
         // New event
         toAdd.push(event);
       } else {
-        // Check if changed (time or title)
+        // Changed means the time span moved; the title is a constant now.
         const { startsAt: eventStart, endsAt: eventEnd } = convertEventToTimestamps(event);
 
         const hasChanged =
           (dbSlot.startsAt || dbSlot.starts_at) !== eventStart ||
           (dbSlot.endsAt || dbSlot.ends_at) !== eventEnd ||
-          dbSlot.title !== (event.title || 'Calendar Event') ||
           (dbSlot.isAllDay || dbSlot.is_all_day) !== (event.allDay || false);
 
         if (hasChanged) {
@@ -280,7 +289,7 @@ export async function importCalendarEventsToAvailability(
           externalEventId: event.id,
           startsAt,
           endsAt,
-          title: event.title || 'Calendar Event',
+          title: IMPORTED_SLOT_TITLE,
           isAllDay: event.allDay || false,
         };
       });
@@ -310,7 +319,7 @@ export async function importCalendarEventsToAvailability(
           isAllDay: event.allDay || false,
           source: Platform.OS === 'ios' ? 'apple_calendar' : 'google_calendar',
           external_event_id: event.id,
-          title: event.title || 'Calendar Event',
+          title: IMPORTED_SLOT_TITLE,
           eventId: event.id,
           calendarId: event.calendarId,
         };
