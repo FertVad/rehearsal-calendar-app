@@ -200,6 +200,17 @@ export async function unlinkAuthProvider(userId, providerType) {
     throw new Error('Auth provider not found');
   }
 
+  // POST /auth/login authenticates against native_users.password_hash and never
+  // consults this table, so dropping the row alone would leave password sign-in
+  // working while telling the user it had been unlinked. Clear the credential
+  // itself to make the removal real.
+  if (providerType === 'email') {
+    await db.run(
+      'UPDATE native_users SET password_hash = NULL, updated_at = NOW() WHERE id = $1',
+      [userId]
+    );
+  }
+
   logger.info(`[AccountLinking] Unlinked ${providerType} provider from user ${userId}`);
 
   return true;

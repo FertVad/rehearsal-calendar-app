@@ -81,6 +81,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    // OAuth-only accounts have no password_hash, and bcrypt.compare throws on a
+    // null hash — which surfaced as a 500 and made those accounts distinguishable
+    // from unregistered addresses. Answer exactly as for a wrong password.
+    if (!user.password_hash) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
     // Verify password
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) {
