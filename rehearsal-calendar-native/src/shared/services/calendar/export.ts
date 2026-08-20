@@ -112,7 +112,7 @@ export async function createCalendarEvent(
       startDate,
       endDate,
       location: rehearsal.location || undefined,
-      notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsal Calendar app`,
+      notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
       alarms: [
         {
           relativeOffset: -30, // 30 minutes before
@@ -167,7 +167,7 @@ export async function updateCalendarEvent(
       startDate: new Date(rehearsal.startsAt),
       endDate: new Date(rehearsal.endsAt),
       location: rehearsal.location || undefined,
-      notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsal Calendar app`,
+      notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
     };
 
     logger.info('[CalendarSync] Updating event:', eventId);

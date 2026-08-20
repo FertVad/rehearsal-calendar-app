@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../../shared/constants/colors';
 import { TimeSlot } from '../../types';
+import { useI18n } from '../../../../contexts/I18nContext';
 
 interface TimeSlotsEditorProps {
   slots: TimeSlot[];
@@ -21,9 +22,11 @@ export default function TimeSlotsEditor({
   onRemoveSlot,
   onTimePickerOpen,
 }: TimeSlotsEditorProps) {
+  const { t } = useI18n();
+
   return (
     <View style={styles.slotsSection}>
-      <Text style={styles.slotsTitle}>Время когда занят</Text>
+      <Text style={styles.slotsTitle}>{t.availability.busyTime}</Text>
 
       {/* Validation Error */}
       {validationError && (
@@ -37,7 +40,7 @@ export default function TimeSlotsEditor({
         <View key={index} style={styles.slotRow}>
           <View style={styles.slotInputs}>
             <View style={styles.timeInput}>
-              <Text style={styles.timeLabel}>С</Text>
+              <Text style={styles.timeLabel}>{t.availability.from}</Text>
               <TouchableOpacity
                 style={styles.timeButton}
                 onPress={() => onTimePickerOpen(index, 'start')}
@@ -50,7 +53,7 @@ export default function TimeSlotsEditor({
               <Ionicons name="arrow-forward" size={16} color={Colors.text.tertiary} />
             </View>
             <View style={styles.timeInput}>
-              <Text style={styles.timeLabel}>До</Text>
+              <Text style={styles.timeLabel}>{t.availability.to}</Text>
               <TouchableOpacity
                 style={styles.timeButton}
                 onPress={() => onTimePickerOpen(index, 'end')}
@@ -74,7 +77,7 @@ export default function TimeSlotsEditor({
 
       <TouchableOpacity style={styles.addSlotButton} onPress={onAddSlot}>
         <Ionicons name="add" size={20} color={Colors.accent.purple} />
-        <Text style={styles.addSlotText}>Добавить слот</Text>
+        <Text style={styles.addSlotText}>{t.availability.addSlot}</Text>
       </TouchableOpacity>
     </View>
   );
