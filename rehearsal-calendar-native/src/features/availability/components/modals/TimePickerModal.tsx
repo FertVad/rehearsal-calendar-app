@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../../shared/constants/colors';
+import { useI18n } from '../../../../contexts/I18nContext';
 
 interface TimePickerModalProps {
   visible: boolean;
@@ -28,6 +29,8 @@ export default function TimePickerModal({
   onConfirm,
   onCancel,
 }: TimePickerModalProps) {
+  const { t } = useI18n();
+
   return (
     <Modal
       visible={visible}
@@ -42,13 +45,13 @@ export default function TimePickerModal({
         <Pressable style={styles.timePickerContainer} onPress={e => e.stopPropagation()}>
           <View style={styles.timePickerHeader}>
             <TouchableOpacity onPress={onCancel}>
-              <Text style={styles.timePickerCancel}>Отмена</Text>
+              <Text style={styles.timePickerCancel}>{t.common.cancel}</Text>
             </TouchableOpacity>
             <Text style={styles.timePickerTitle}>
               {field === 'start' ? 'Время начала' : 'Время окончания'}
             </Text>
             <TouchableOpacity onPress={onConfirm}>
-              <Text style={styles.timePickerDone}>Готово</Text>
+              <Text style={styles.timePickerDone}>{t.common.done}</Text>
             </TouchableOpacity>
           </View>
           <DateTimePicker

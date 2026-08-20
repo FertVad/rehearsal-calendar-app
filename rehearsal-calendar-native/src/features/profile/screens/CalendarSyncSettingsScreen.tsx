@@ -412,7 +412,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                   <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                     <Ionicons name="sync" size={20} color={Colors.accent.purple} />
                   </View>
-                  <Text style={styles.settingLabel}>{t.calendarSync.autoSync || 'Синхронизация'}</Text>
+                  <Text style={styles.settingLabel}>{t.calendarSync.autoSync}</Text>
                 </View>
                 <Switch
                   value={syncEnabled}
@@ -426,7 +426,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
 
             {/* Calendar Provider Selection */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Выберите календарь</Text>
+              <Text style={styles.sectionTitle}>{t.calendarSync.selectCalendar}</Text>
 
               {/* Google Calendar Option */}
               {hasGoogleCalendar && (
@@ -528,7 +528,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
             {syncEnabled && selectedProvider && (
               <View style={styles.section}>
                 <GlassButton
-                  title={t.calendarSync.synchronize || 'Синхронизировать'}
+                  title={t.calendarSync.synchronize}
                   onPress={handleSynchronize}
                   variant="purple"
                   disabled={isImporting || isSyncing}

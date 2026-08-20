@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/colors';
+import { useI18n } from '../../contexts/I18nContext';
 
 interface PickerModalProps {
   visible: boolean;
@@ -29,6 +30,7 @@ export const PickerModal: React.FC<PickerModalProps> = ({
   title,
   language = 'en-US',
 }) => {
+  const { t } = useI18n();
   // For Android, close immediately after selection
   const handleChange = (event: any, selectedValue?: Date) => {
     if (Platform.OS === 'android') {
@@ -77,11 +79,11 @@ export const PickerModal: React.FC<PickerModalProps> = ({
               {/* Header with Cancel and Done buttons */}
               <View style={styles.header}>
                 <TouchableOpacity onPress={onClose}>
-                  <Text style={styles.cancelButton}>Отмена</Text>
+                  <Text style={styles.cancelButton}>{t.common.cancel}</Text>
                 </TouchableOpacity>
                 <Text style={styles.title}>{title}</Text>
                 <TouchableOpacity onPress={onClose}>
-                  <Text style={styles.doneButton}>Готово</Text>
+                  <Text style={styles.doneButton}>{t.common.done}</Text>
                 </TouchableOpacity>
               </View>
 

@@ -14,6 +14,14 @@ import { render, fireEvent } from '@testing-library/react-native';
 import TimeSlotsEditor from '../TimeSlotsEditor';
 import { TimeSlot } from '../../../types/availability';
 
+jest.mock('../../../../../contexts/I18nContext', () => ({
+  useI18n: () => ({
+    language: 'ru',
+    setLanguage: jest.fn(),
+    t: jest.requireActual('../../../../../i18n/translations').ru,
+  }),
+}));
+
 describe('TimeSlotsEditor Component', () => {
   const mockOnSlotChange = jest.fn();
   const mockOnAddSlot = jest.fn();
