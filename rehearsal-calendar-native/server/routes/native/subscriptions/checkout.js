@@ -13,8 +13,12 @@ import {
 import { allpayAPI } from '../../../utils/allpayClient.js';
 import { logger } from '../../../utils/logger.js';
 import { generateCheckoutPageHTML } from './checkoutPageTemplate.js';
+import { assertSafeUrl } from '../../../utils/htmlEscape.js';
 
 const router = Router();
+
+// The checkout iframe may only ever point at AllPay.
+const ALLOWED_PAYMENT_HOSTS = ['allpay.to', '.allpay.to', 'allpay.co.il', '.allpay.co.il'];
 
 const getBaseUrl = () => {
   if (process.env.BASE_URL) return process.env.BASE_URL;
@@ -135,7 +139,23 @@ router.get('/checkout-page', (req, res) => {
     return res.status(400).send('Missing paymentUrl parameter');
   }
 
-  const html = generateCheckoutPageHTML({ paymentUrl, orderId, planName, amount, currency, lang });
+  // This route is public and frames whatever URL it is handed, so the target
+  // has to be pinned to AllPay. Escaping is not enough here — a `javascript:`
+  // URL survives it and still executes in the iframe.
+  const safePaymentUrl = assertSafeUrl(paymentUrl, ALLOWED_PAYMENT_HOSTS);
+  if (!safePaymentUrl) {
+    logger.warn('[Checkout] Rejected checkout-page paymentUrl outside the allow-list');
+    return res.status(400).send('Invalid paymentUrl parameter');
+  }
+
+  const html = generateCheckoutPageHTML({
+    paymentUrl: safePaymentUrl,
+    orderId,
+    planName,
+    amount,
+    currency,
+    lang,
+  });
   res.setHeader('Content-Type', 'text/html');
   res.send(html);
 });

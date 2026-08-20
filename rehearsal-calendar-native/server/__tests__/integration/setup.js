@@ -25,13 +25,22 @@ export async function setupIntegrationDb() {
     CREATE TABLE native_users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
+      -- Nullable, matching production: OAuth-only users have no password.
+      -- Declaring it NOT NULL here made those accounts untestable.
+      password_hash TEXT,
       first_name TEXT NOT NULL,
       last_name TEXT,
+      phone TEXT,
+      avatar_url TEXT,
       timezone TEXT DEFAULT 'UTC',
       locale TEXT DEFAULT 'en',
       notifications_enabled BOOLEAN DEFAULT 1,
       email_notifications BOOLEAN DEFAULT 1,
+      week_start_day TEXT DEFAULT 'monday',
+      onboarding_completed BOOLEAN DEFAULT 0,
+      last_login_at DATETIME,
+      -- requireAuth reads this on every request to check for revoked sessions
+      token_version INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -211,9 +220,25 @@ export async function setupIntegrationDb() {
   // Execute schema
   testDb.exec(schema);
 
-  // Convert PostgreSQL-style $1,$2... placeholders to SQLite ? placeholders
+  // Translate the PostgreSQL dialect our routes are written in into something
+  // SQLite can parse. Only the constructs actually used in the codebase are
+  // handled — anything else will surface as a SqliteError, which is the honest
+  // signal that this helper needs extending.
   function toSqlite(sql) {
-    return sql.replace(/\$\d+/g, '?');
+    return (
+      sql
+        // $1, $2 ... → ?
+        .replace(/\$\d+/g, '?')
+        // ?::date ± interval 'N day(s)' → date(?, '±N days')
+        .replace(
+          /\?::date\s*([+-])\s*interval\s*'(\d+)\s*days?'/gi,
+          (_match, sign, amount) => `date(?, '${sign}${amount} days')`
+        )
+        // bare ?::date / ?::timestamptz → the value as-is
+        .replace(/\?::(date|timestamptz|timestamp)\b/gi, '?')
+        // NOW() → SQLite's equivalent
+        .replace(/\bNOW\(\)/gi, "CURRENT_TIMESTAMP")
+    );
   }
 
   // Create mock db interface matching our db.js
