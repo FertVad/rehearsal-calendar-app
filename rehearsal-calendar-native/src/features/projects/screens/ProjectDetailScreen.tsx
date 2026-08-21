@@ -400,8 +400,10 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
                     <Text style={styles.rehearsalDateText}>{formatDate(rehearsal.date, language)}</Text>
                   </View>
                   <View style={styles.rehearsalInfo}>
+                    {/* `scene` predates the title field and is never written
+                        to; keep reading it so any legacy row still renders. */}
                     <Text style={styles.rehearsalTitle} numberOfLines={1}>
-                      {rehearsal.scene || t.calendar.rehearsal}
+                      {rehearsal.title || rehearsal.scene || t.calendar.rehearsal}
                     </Text>
                     <View style={styles.rehearsalMeta}>
                       <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />

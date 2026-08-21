@@ -70,6 +70,7 @@ export function useAddRehearsalForm({
     end.setHours(end.getHours() + 2);
     return end;
   });
+  const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [localSelectedProject, setLocalSelectedProject] = useState<Project | null>(
     selectedProject?.is_admin ? selectedProject : null
@@ -155,6 +156,7 @@ export function useAddRehearsalForm({
         setDate(startsAt);
         setStartTime(startsAt);
         setEndTime(endsAt);
+        setTitle(rehearsal.title || '');
         setLocation(rehearsal.location || '');
 
         // Load participants - include all invited members regardless of response status
@@ -262,6 +264,8 @@ export function useAddRehearsalForm({
     setStartTime,
     endTime,
     setEndTime,
+    title,
+    setTitle,
     location,
     setLocation,
     localSelectedProject,

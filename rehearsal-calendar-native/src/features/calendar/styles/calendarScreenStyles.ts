@@ -157,6 +157,13 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
   },
+  upcomingTitle: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.primary,
+    marginTop: 6,
+    marginBottom: 2,
+  },
   upcomingProject: {
     fontSize: FontSize.sm,
     color: Colors.accent.blue,

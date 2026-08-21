@@ -77,7 +77,7 @@ describe('useAddRehearsalSubmit Hook', () => {
     date: new Date('2025-12-29'),
     startTime: new Date('2025-12-29T14:00:00'),
     endTime: new Date('2025-12-29T16:00:00'),
-    location: 'Studio A',
+    title: '', location: 'Studio A',
     selectedMemberIds: [],
     members: mockMembers,
     memberAvailability: {},
@@ -249,6 +249,8 @@ describe('useAddRehearsalSubmit Hook', () => {
         expect.objectContaining({
           startsAt: expect.any(String),
           endsAt: expect.any(String),
+          // An untitled rehearsal must not send an empty string.
+          title: undefined,
           location: 'Studio A',
         })
       );

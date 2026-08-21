@@ -65,6 +65,7 @@ export default function AddRehearsalScreen() {
     date: form.date,
     startTime: form.startTime,
     endTime: form.endTime,
+    title: form.title,
     location: form.location,
     selectedMemberIds: form.selectedMemberIds,
     members,
@@ -133,6 +134,25 @@ export default function AddRehearsalScreen() {
               </Text>
               <Ionicons name="chevron-down" size={20} color={Colors.text.tertiary} style={styles.chevronIcon} />
             </TouchableOpacity>
+          </View>
+
+          {/* Title — optional; a rehearsal identified by time and venue alone
+              is a perfectly normal entry, so this must never block submission. */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t.rehearsals.rehearsalTitle} {t.auth.optional}</Text>
+            <View style={styles.locationInputContainer}>
+              <Ionicons name="text-outline" size={20} color={Colors.accent.purple} style={styles.locationIcon} />
+              <TextInput
+                style={styles.locationInput}
+                value={form.title}
+                onChangeText={form.setTitle}
+                placeholder={t.rehearsals.rehearsalTitlePlaceholder}
+                placeholderTextColor={Colors.text.tertiary}
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                blurOnSubmit={true}
+              />
+            </View>
           </View>
 
           {/* Date */}

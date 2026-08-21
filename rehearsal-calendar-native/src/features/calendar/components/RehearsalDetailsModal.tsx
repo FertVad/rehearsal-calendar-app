@@ -219,6 +219,12 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
           </View>
 
           <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+            {/* Title, when there is one — it names the call, so it sits above
+                the schedule rather than among them. */}
+            {rehearsal.title ? (
+              <Text style={styles.rehearsalTitle}>{rehearsal.title}</Text>
+            ) : null}
+
             {/* Date */}
             <View style={styles.detailRow}>
               <Ionicons name="calendar-outline" size={20} color={Colors.accent.blue} />
@@ -333,6 +339,12 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: Spacing.lg,
+  },
+  rehearsalTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   detailRow: {
     flexDirection: 'row',
