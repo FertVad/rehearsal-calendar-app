@@ -80,7 +80,9 @@ export async function getRehearsalResponses(rehearsalId) {
       u.id as user_id,
       u.first_name,
       u.last_name,
-      u.email,
+      -- Email deliberately not selected: the participant list shows names
+      -- only, and there is no reason to hand every project member the
+      -- addresses of everyone else.
       r.response,
       r.notes,
       r.created_at,
@@ -111,14 +113,12 @@ export async function getRehearsalResponses(rehearsalId) {
         user: {
           id: String(p.user_id),
           name: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-          email: p.email,
         },
       })),
     allParticipants: allParticipants.map((p) => ({
       userId: String(p.user_id),
       firstName: p.first_name,
       lastName: p.last_name,
-      email: p.email,
       response: p.response,
     })),
     stats: {
