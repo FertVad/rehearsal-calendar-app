@@ -305,7 +305,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg.secondary,
     borderTopLeftRadius: BorderRadius.lg,
     borderTopRightRadius: BorderRadius.lg,
-    height: '70%',
+    // Grow to fit the roster instead of always claiming the same slice of
+    // screen: a two-person call stays compact, an eight-person one gets room
+    // before it has to scroll.
+    maxHeight: '90%',
     paddingBottom: Spacing.xl,
   },
   header: {
@@ -330,7 +333,10 @@ const styles = StyleSheet.create({
     padding: Spacing.xs,
   },
   content: {
-    flex: 1,
+    // No flex: 1 — the ScrollView should wrap its content so the sheet can
+    // size itself, and only start scrolling once maxHeight is reached.
+    flexGrow: 0,
+    flexShrink: 1,
   },
   contentContainer: {
     padding: Spacing.lg,
