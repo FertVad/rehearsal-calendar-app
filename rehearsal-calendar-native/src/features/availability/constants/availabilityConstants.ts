@@ -13,4 +13,14 @@ export const MONTH_TITLE_HEIGHT = FontSize.lg + Spacing.md; // Title + marginBot
 export const WEEKDAY_ROW_HEIGHT = FontSize.xs + Spacing.sm; // Labels + marginBottom
 export const DAY_ROW_HEIGHT = DAY_SIZE + Spacing.xs; // Day cell + marginBottom
 
-export const PANEL_HEIGHT = 320;
+/**
+ * Height of the editor sheet.
+ *
+ * A flat 320 was a third of the screen on a large phone while the slot list
+ * inside it was already scrolling. Scale with the device instead, clamped so
+ * small screens keep a usable calendar above and large ones do not turn the
+ * sheet into a full-screen takeover.
+ */
+export const PANEL_HEIGHT = Math.round(
+  Math.min(Math.max(SCREEN_HEIGHT * 0.55, 320), 620)
+);

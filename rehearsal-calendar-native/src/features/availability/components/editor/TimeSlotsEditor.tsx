@@ -2,12 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../../shared/constants/colors';
-import { TimeSlot } from '../../types';
+import { TimeSlot, SlotValidationError } from '../../types';
 import { useI18n } from '../../../../contexts/I18nContext';
 
 interface TimeSlotsEditorProps {
   slots: TimeSlot[];
-  validationError: string | null;
+  validationError: SlotValidationError | null;
   onSlotChange: (index: number, field: 'start' | 'end', value: string) => void;
   onAddSlot: () => void;
   onRemoveSlot: (index: number) => void;
@@ -32,7 +32,11 @@ export default function TimeSlotsEditor({
       {validationError && (
         <View style={styles.validationError}>
           <Ionicons name="warning" size={18} color={Colors.accent.red} />
-          <Text style={styles.validationErrorText}>{validationError}</Text>
+          <Text style={styles.validationErrorText}>
+            {validationError === 'overlap'
+              ? t.availability.slotsOverlap
+              : t.availability.slotEndBeforeStart}
+          </Text>
         </View>
       )}
 

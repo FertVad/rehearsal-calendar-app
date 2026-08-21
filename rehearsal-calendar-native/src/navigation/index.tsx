@@ -173,7 +173,9 @@ function TabNavigator() {
 
   return (
     <>
-      <BetaBanner />
+      {/* ВРЕМЕННО СКРЫТ на время съёмки скриншотов — вернуть до коммита!
+          Восстановление: git checkout src/navigation/index.tsx */}
+      {/* <BetaBanner /> */}
       <AppTabs.Navigator
         screenOptions={{
           headerShown: false,

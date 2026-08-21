@@ -3,6 +3,7 @@
  */
 import { StyleSheet } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { PANEL_HEIGHT } from '../constants';
 
 export const styles = StyleSheet.create({
   container: {
@@ -33,6 +34,31 @@ export const styles = StyleSheet.create({
     color: Colors.text.inverse,
   },
   saveHeaderButtonDisabled: {
+    opacity: 0.7,
+  },
+  // Sticky footer inside the editor sheet — sits below the scrolling slot
+  // list so it stays reachable however long that list gets.
+  sheetSaveBar: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.glass.border,
+    backgroundColor: Colors.bg.secondary,
+  },
+  sheetSaveButton: {
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.accent.purple,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetSaveButtonText: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.inverse,
+  },
+  sheetSaveButtonDisabled: {
     opacity: 0.7,
   },
   loadingContainer: {
@@ -86,7 +112,9 @@ export const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 320,
+    // Same source as the slide-in animation — hardcoding it here meant the
+    // panel stayed 320 tall while the animation moved it by a different amount.
+    height: PANEL_HEIGHT,
     backgroundColor: Colors.bg.primary,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -106,6 +134,10 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   bottomSheetContent: {
+    // Take the space between header and save bar so the slot list scrolls
+    // inside it; without this the list overflows the panel and the last row
+    // ends up behind the sticky button.
+    flex: 1,
     padding: Spacing.xl,
   },
   modeSelector: {

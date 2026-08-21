@@ -14,6 +14,8 @@ import { render, fireEvent } from '@testing-library/react-native';
 import TimeSlotsEditor from '../TimeSlotsEditor';
 import { TimeSlot } from '../../../types/availability';
 
+const { ru } = jest.requireActual('../../../../../i18n/translations');
+
 jest.mock('../../../../../contexts/I18nContext', () => ({
   useI18n: () => ({
     language: 'ru',
@@ -277,12 +279,14 @@ describe('TimeSlotsEditor Component', () => {
     });
 
     it('should show error message when validationError is provided', () => {
-      const errorMessage = 'End time must be after start time';
+      // The component receives a key and looks the wording up itself, so the
+      // message follows the user's language rather than the caller's.
+      const errorMessage = ru.availability.slotEndBeforeStart;
 
       const { getByText, UNSAFE_getAllByType } = render(
         <TimeSlotsEditor
           slots={singleSlot}
-          validationError={errorMessage}
+          validationError="endBeforeStart"
           onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
@@ -299,13 +303,13 @@ describe('TimeSlotsEditor Component', () => {
     });
 
     it('should show different error messages', () => {
-      const error1 = 'Time slots cannot overlap';
-      const error2 = 'Invalid time format';
+      const error1 = ru.availability.slotsOverlap;
+      const error2 = ru.availability.slotEndBeforeStart;
 
       const { getByText, rerender } = render(
         <TimeSlotsEditor
           slots={multipleSlots}
-          validationError={error1}
+          validationError="overlap"
           onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
@@ -319,7 +323,7 @@ describe('TimeSlotsEditor Component', () => {
       rerender(
         <TimeSlotsEditor
           slots={multipleSlots}
-          validationError={error2}
+          validationError="endBeforeStart"
           onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}

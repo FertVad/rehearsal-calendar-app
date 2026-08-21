@@ -95,6 +95,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   const handleSave = async () => {
     await saveAvailability(availability, today, language, t, setSaving, setHasChanges);
+    // Drop the selection so it is obvious the batch was committed; the sheet
+    // stays open because marking several days in a row is the common case.
+    editor.clearSelection();
   };
 
   // Pull-to-refresh: sync calendar + reload availability
@@ -128,19 +131,6 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>{t.availability.title}</Text>
-        {hasChanges && (
-          <TouchableOpacity
-            style={[styles.saveHeaderButton, saving && styles.saveHeaderButtonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color={Colors.text.inverse} />
-            ) : (
-              <Text style={styles.saveHeaderButtonText}>{t.common.save}</Text>
-            )}
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Legend */}
@@ -399,6 +389,29 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           </>
           )}
         </ScrollView>
+
+        {/* Save sits with the work rather than in the header. The count is
+            spelled out because one press commits every date touched so far,
+            not just the one the sheet is showing. */}
+        {hasChanges && (
+          <View style={styles.sheetSaveBar}>
+            <TouchableOpacity
+              style={[styles.sheetSaveButton, saving && styles.sheetSaveButtonDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={Colors.text.inverse} />
+              ) : (
+                <Text style={styles.sheetSaveButtonText}>
+                  {editor.selectedDates.length > 1
+                    ? `${t.common.save} · ${t.availability.selectedDates(editor.selectedDates.length)}`
+                    : t.common.save}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </Animated.View>
 
       {/* Time Picker Modal */}
