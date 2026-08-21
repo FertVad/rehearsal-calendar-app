@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.rehearsal.app",
       "buildNumber": "1",
+      "associatedDomains": ["applinks:rehearsly.me"],
       "config": {
         "googleSignIn": {
           "reservedClientId": "com.googleusercontent.apps.187810235800-9pp30fhn7kekvcranjrij9fib5kl8od0"
@@ -57,7 +58,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "server-fertvads-projects.vercel.app",
+              "host": "rehearsly.me",
               "pathPrefix": "/invite"
             },
             {

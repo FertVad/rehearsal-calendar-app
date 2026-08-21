@@ -136,6 +136,22 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Marketing site, privacy policy and support pages.
+// Mounted before the API routers but after them in specificity: express.static
+// only answers for files that exist, so /api/* and /invite/* still reach their
+// handlers. Serving these from the same origin as the API is what lets
+// Universal Links work — apple-app-site-association has to sit on the very
+// domain the invite links use.
+app.use(express.static(path.join(__dirname, 'public'), {
+  extensions: ['html'],
+  setHeaders: (res, filePath) => {
+    // index.html changes with every deploy; the assets are cheap to revalidate.
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    }
+  },
+}));
+
 // Auth routes
 app.use('/api/auth', authRoutes);
 
@@ -165,7 +181,7 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
       apps: [],
       details: [
         {
-          appID: 'TEAM_ID.com.rehearsal.app',
+          appID: '9N28BHP37Z.com.rehearsal.app',
           paths: ['/invite/*']
         }
       ]

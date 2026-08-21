@@ -3,7 +3,11 @@
   "builds": [
     {
       "src": "server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "//": "express.static reads public/ at runtime, which the bundler cannot infer from imports — without this the folder is left out of the deployment.",
+        "includeFiles": "public/**"
+      }
     }
   ],
   "routes": [
