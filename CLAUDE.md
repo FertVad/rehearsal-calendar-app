@@ -105,20 +105,30 @@ use, or Universal Links will not work.
 
 ```
 server/public/
-├── index.html           # Landing (semantic sections, AOS animations, Lucide icons)
+├── index.html           # Landing — all four locales in the markup
 ├── styles.css           # Landing design system (dark theme, glass morphism)
-├── i18n.js              # Landing EN/RU toggle + scroll effects
+├── i18n.js              # Language toggle, reveals, and the phone scroll
 ├── privacy.html         # Privacy Policy — EN/RU/ES/DE
 ├── support.html         # Support — EN/RU/ES/DE
 ├── legal.css            # Shared styling for the two pages above
-└── legal.js             # Their language toggle (4 locales, shared storage key)
+├── legal.js             # Their language toggle (4 locales, shared storage key)
+└── assets/              # Phone frames and screen strips (WebP), logo, favicons
 ```
-- **Stack**: Pure HTML/CSS/JS, no build tools
+- **Stack**: Pure HTML/CSS/JS, no build tools, no third-party scripts
 - **Routes**: `/` → landing, `/privacy`, `/support` (the `extensions: ['html']`
   option on `express.static` is what makes the extensionless paths work)
-- **i18n**: every language ships in the markup and one is shown, so the pages
-  stay readable without JavaScript. The landing is EN/RU; the legal pages carry
-  all four locales the app itself supports.
+- **i18n**: every language ships in the markup and one is hidden, so the pages
+  stay readable without JavaScript — all four on every page. Each language is
+  written on its own terms rather than translated slot by slot, which is why
+  there is no dictionary in `i18n.js`. The choice is stored under
+  `rehearsly-lang`, shared with `legal.js`; `?lang=de` overrides it for a link.
+- **Phone mock-ups**: a frame pins to the middle of the viewport (CSS `sticky`)
+  while its screenshot scrolls inside, so a whole app screen can be read
+  without leaving the section. `assets/` is generated from the raw simulator
+  shots by `screens/build-assets.py`, which lifts the status bar, tab bar and
+  the planner's own pinned header out of the images and stitches the frames of
+  one screen into a single strip by matching row signatures. Reshoot a screen
+  and rerun it.
 - **To preview**: run the server and open `http://localhost:3001/`
 - **Deployment gotcha**: `vercel.json` needs `includeFiles: "public/**"` —
   `express.static` resolves paths at runtime, so the bundler cannot infer the
@@ -217,8 +227,23 @@ const serverStatus = currentStatus === 'yes' ? 'no' : 'yes'; // wire value
 ```
 
 The backend **upserts** the row (`ON CONFLICT ... DO UPDATE`); it never deletes.
-Sending anything other than `'yes'`/`'no'` throws. Stats count `confirmed` as
-rows with `response = 'yes'`, so an `'no'` row is stored but not counted.
+Sending anything other than `'yes'`/`'no'` throws.
+
+**Having a row at all is what puts you on the rehearsal.** `'no'` means invited
+and not yet seen — not declined. So editing a rehearsal must keep existing
+answers and add newcomers as `'no'`; wiping the rows and reinserting everyone as
+`'yes'` marks the whole cast as having seen a rehearsal at the exact moment it
+changed, and dropping a `'no'` row removes that person from the call.
+
+**Order matters when updating.** `bookRehearsalSlots` reads the roster out of
+`native_rehearsal_responses`, so participants must be settled *before* the
+availability is rebuilt. The other way round books whoever was on the rehearsal
+before the edit.
+
+**`invited` is the people on that rehearsal**, not the size of the project.
+Three places report this counter — the list, the participants screen, and the
+response to tapping the eye — and they have to agree, or the number jumps on
+the tap and snaps back on the next refresh.
 See [rsvpService.js](rehearsal-calendar-native/server/services/rehearsals/rsvpService.js).
 
 ### 6. API Response Format
@@ -295,12 +320,33 @@ Analyzes member availability and recommends optimal rehearsal times:
 - Uses batch API endpoint for performance
 
 ### Calendar Sync
-**Location**: `src/shared/services/calendarSync.ts`
+**Location**: `src/shared/services/calendar/`, `src/shared/hooks/useAutoCalendarSync.ts`
 
 Bi-directional sync with iOS/Google Calendar:
 - **Export**: Rehearsals → device calendar events (batch processing, 10 parallel)
 - **Import**: Calendar events → user availability (chunks of 50)
-- Tracks mappings in AsyncStorage (`@rehearsal_calendar_map`, `@imported_calendar_events`)
+- Mappings live on the server (`/native/calendar-sync/mappings`), with
+  AsyncStorage as a local cache
+
+**Auto Sync runs both ways.** Saving a rehearsal exports that one immediately,
+but only on the device that saved it — so without the export half of the
+automatic sync, being added to someone else's rehearsal put it on nobody's
+calendar but the organiser's. The export runs on foreground alongside the
+import, on its own ten-minute timer because each rehearsal costs a mapping
+lookup; pull-to-refresh ignores that timer.
+
+**Import skips what we exported.** Rehearsal events are excluded by their
+mapping ids, otherwise a rehearsal would count as busy twice — once as itself
+and once as an imported event.
+
+**Deleting the event in the phone's calendar does not stick.** The next sync
+sees the mapping has no event and recreates it: the rehearsal is the source of
+truth, the calendar a mirror. The only ways out are deleting the rehearsal or
+"remove all exported" on the sync screen.
+
+**Only hours cross over, never what the events are.** Imported slots are titled
+generically on purpose — see `IMPORTED_SLOT_TITLE` in `calendar/import.ts`. The
+onboarding and the landing both promise this.
 
 ### Payment & Subscription System
 **Location**: `server/services/subscriptionService.js`, `src/features/subscriptions/`
@@ -657,6 +703,17 @@ npm run migrate:neon
 
 ## Testing
 
+**The frontend suite has 3 known failures**, all in `TodayRehearsals.test.tsx`
+and all describing an older version of the component — see
+[known-issues.md](rehearsal-calendar-native/docs/known-issues.md). Three is the
+number to watch: anything above it is new. The backend suite is green.
+
+Route-level and service-level tests are the ones that catch things. Several
+older suites drive SQL directly or assert against rows they wrote themselves,
+which is why bugs in the layer above them — the order of two calls inside a
+service, what a handler returns — stayed invisible for months. Prefer going
+through the function under test.
+
 ### Frontend Tests
 ```bash
 cd rehearsal-calendar-native
@@ -677,8 +734,8 @@ npm run test:coverage       # With coverage
 
 Key documentation files:
 - [rehearsal-calendar-native/docs/README.md](rehearsal-calendar-native/docs/README.md) - Documentation index
-- [rehearsal-calendar-native/docs/project-info.md](rehearsal-calendar-native/docs/project-info.md) - Full project overview
 - [rehearsal-calendar-native/docs/quick-reference.md](rehearsal-calendar-native/docs/quick-reference.md) - Quick reference for common errors
+- [rehearsal-calendar-native/docs/known-issues.md](rehearsal-calendar-native/docs/known-issues.md) - Defects found and deliberately left for later
 - [rehearsal-calendar-native/docs/api-documentation.md](rehearsal-calendar-native/docs/api-documentation.md) - Complete API reference
 - [rehearsal-calendar-native/docs/api-standards.md](rehearsal-calendar-native/docs/api-standards.md) - API conventions
 - [rehearsal-calendar-native/docs/recurring-billing.md](rehearsal-calendar-native/docs/recurring-billing.md) - **AllPay recurring billing guide** (complete implementation details, timezone fixes, testing, production checklist)

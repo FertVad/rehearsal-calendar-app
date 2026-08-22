@@ -39,4 +39,4 @@ Complete documentation for the Rehearsal Calendar Native App project.
 
 ---
 
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-08-22
