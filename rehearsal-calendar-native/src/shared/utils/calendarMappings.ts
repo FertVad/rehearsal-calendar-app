@@ -124,10 +124,9 @@ export async function getEventMapping(
       return result;
     }
   } catch (error: any) {
-    // If 404, no mapping exists - continue to AsyncStorage check
-    if (error.response?.status !== 404) {
-      console.error('[CalendarMappings] DB lookup failed, falling back to AsyncStorage:', error);
-    }
+    // A missing mapping comes back as null, so anything landing here is a real
+    // failure — the local cache is the fallback.
+    console.error('[CalendarMappings] DB lookup failed, falling back to AsyncStorage:', error);
   }
 
   // Fallback: check AsyncStorage (for offline or if DB failed)

@@ -211,11 +211,11 @@ router.get('/mappings/by-event/:eventType/:internalEventId', async (req, res) =>
       [userId, eventType, parseInt(internalEventId)]
     );
 
-    if (!mapping) {
-      return res.status(404).json({ error: 'Mapping not found' });
-    }
-
-    res.json({ mapping });
+    // Absence is the ordinary answer here, not an exception: every rehearsal
+    // that has not been exported yet asks this and gets nothing back. Saying
+    // so with 404 filled the logs with error-shaped lines for the commonest
+    // path, and buried the real ones.
+    res.json({ mapping: mapping || null });
   } catch (error) {
     console.error('[CalendarSync] Get mapping error:', error);
     res.status(500).json({ error: 'Failed to get mapping' });

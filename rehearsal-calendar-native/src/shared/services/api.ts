@@ -102,15 +102,9 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    // 404 on calendar-sync mapping lookup is expected ("no mapping yet"), not an error
     const status = error.response?.status;
     const url = originalRequest?.url || '';
-    const isExpected404 = status === 404 && url.includes('/calendar-sync/mappings/by-event/');
-    if (isExpected404) {
-      logger.debug(`Response: 404 ${originalRequest?.method?.toUpperCase()} ${url} (no mapping)`);
-    } else {
-      logger.error(`Response Error: ${status || 'Network Error'} ${originalRequest?.method?.toUpperCase()} ${url}`, error.response?.data);
-    }
+    logger.error(`Response Error: ${status || 'Network Error'} ${originalRequest?.method?.toUpperCase()} ${url}`, error.response?.data);
 
     // If 401 and not already retried
     if (error.response?.status === 401 && !originalRequest._retry) {
