@@ -225,11 +225,19 @@ export async function setupIntegrationDb() {
   // SQLite can parse. Only the constructs actually used in the codebase are
   // handled — anything else will surface as a SqliteError, which is the honest
   // signal that this helper needs extending.
-  function toSqlite(sql) {
-    return (
+  // Returns the rewritten SQL together with the parameters in the order the
+  // '?' placeholders now expect them. Postgres lets one $n appear several
+  // times — the RSVP upsert does exactly that — and a straight $n → ? swap
+  // silently loses the repeat, leaving the statement short of values.
+  function toSqlite(sql, params = []) {
+    const ordered = [];
+    const rewritten = (
       sql
-        // $1, $2 ... → ?
-        .replace(/\$\d+/g, '?')
+        // $1, $2 ... → ?, remembering which value each occurrence wants
+        .replace(/\$(\d+)/g, (_match, n) => {
+          ordered.push(params[Number(n) - 1]);
+          return '?';
+        })
         // ?::date ± interval 'N day(s)' → date(?, '±N days')
         .replace(
           /\?::date\s*([+-])\s*interval\s*'(\d+)\s*days?'/gi,
@@ -240,19 +248,24 @@ export async function setupIntegrationDb() {
         // NOW() → SQLite's equivalent
         .replace(/\bNOW\(\)/gi, "CURRENT_TIMESTAMP")
     );
+
+    return { sql: rewritten, params: ordered.length > 0 ? ordered : params };
   }
 
   // Create mock db interface matching our db.js
   const mockDb = {
     run(sql, params = []) {
-      const info = testDb.prepare(toSqlite(sql)).run(params);
+      const q = toSqlite(sql, params);
+      const info = testDb.prepare(q.sql).run(q.params);
       return { lastInsertId: info.lastInsertRowid, changes: info.changes };
     },
     get(sql, params = []) {
-      return testDb.prepare(toSqlite(sql)).get(params);
+      const q = toSqlite(sql, params);
+      return testDb.prepare(q.sql).get(q.params);
     },
     all(sql, params = []) {
-      return testDb.prepare(toSqlite(sql)).all(params);
+      const q = toSqlite(sql, params);
+      return testDb.prepare(q.sql).all(q.params);
     },
   };
 
