@@ -322,6 +322,7 @@ Retrieve all projects where the user is a member.
       "description": "Winter 2024 production of Hamlet",
       "timezone": "Asia/Jerusalem",
       "is_admin": true,
+      "inviteCode": "K7M3XQ2P",
       "created_at": "2024-01-15T10:30:00.000Z",
       "updated_at": "2024-01-15T10:30:00.000Z"
     },
@@ -331,6 +332,7 @@ Retrieve all projects where the user is a member.
       "description": "",
       "timezone": "America/New_York",
       "is_admin": false,
+      "inviteCode": null,
       "created_at": "2024-02-01T14:00:00.000Z",
       "updated_at": "2024-02-01T14:00:00.000Z"
     }
@@ -341,6 +343,10 @@ Retrieve all projects where the user is a member.
 **Notes:**
 - Only returns projects where the user has an active membership
 - `is_admin` indicates whether the user is an owner or admin of the project
+- `inviteCode` carries the live invite so a list of projects can offer it
+  without a request per card. It is `null` for anyone who is not an admin and
+  for invites that have expired — the code is a way into the project, and a
+  plain member handing it out is not something the owner agreed to
 - Projects are sorted by creation date (newest first)
 
 ---
@@ -780,7 +786,9 @@ Retrieve all RSVP responses for a rehearsal.
 
 **Notes:**
 - Includes user information (name, email) for each response
-- Stats object provides a summary: `confirmed` (number of 'yes' responses) and `invited` (number of members without response)
+- Stats: `confirmed` is how many said 'yes', `invited` is how many are on this
+  rehearsal — not how many are in the project. Every path that reports the
+  counter divides by the same thing
 - The seen system is binary - users either have 'yes' response or no response at all
 
 ---
@@ -1209,9 +1217,9 @@ Create an invite link for a project.
 **Success Response (200):**
 ```json
 {
-  "inviteCode": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-  "expiresAt": "2024-03-22T10:30:00.000Z",
-  "inviteUrl": "rehearsalapp://invite/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+  "inviteCode": "K7M3XQ2P",
+  "expiresAt": "2026-08-29T10:30:00.000Z",
+  "inviteUrl": "https://rehearsly.me/invite/K7M3XQ2P"
 }
 ```
 
@@ -1229,9 +1237,14 @@ Create an invite link for a project.
   ```
 
 **Notes:**
-- If an active invite already exists for the project, the existing invite is returned
+- If a live invite already exists it is reused, so the link stays stable —
+  unless it predates the short codes, in which case it is replaced
 - Only one active invite can exist per project at a time
-- Invite codes are 32-character hexadecimal strings
+- Codes are 8 characters of Crockford base32 with the misreadable ones removed
+  (no `I`, `L`, `O`, `U`, `0`, `1`), short enough to read aloud. Older codes are
+  32 hexadecimal characters and still resolve — lookup is an exact match
+- `/api/native/invite` is rate limited to 20 requests a minute: a code short
+  enough to dictate is short enough to guess at scale
 
 ---
 
@@ -1250,9 +1263,9 @@ Retrieve the current active invite link for a project.
 ```json
 {
   "invite": {
-    "inviteCode": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-    "expiresAt": "2024-03-22T10:30:00.000Z",
-    "inviteUrl": "rehearsalapp://invite/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+    "inviteCode": "K7M3XQ2P",
+    "expiresAt": "2026-08-29T10:30:00.000Z",
+    "inviteUrl": "https://rehearsly.me/invite/K7M3XQ2P"
   }
 }
 ```
@@ -1757,7 +1770,7 @@ For issues, questions, or feature requests, please contact the development team.
 
 ---
 
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-08-22
 
 **API Version:** 1.2
 
