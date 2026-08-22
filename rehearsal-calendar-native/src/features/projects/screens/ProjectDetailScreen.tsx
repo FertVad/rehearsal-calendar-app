@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Share,
   Alert,
   FlatList,
   RefreshControl,
@@ -17,11 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { ProjectsStackParamList } from '../../../navigation';
-import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
+import { projectsAPI, rehearsalsAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
 import { formatDateToString as formatDateToStringUtil } from '../../../shared/utils/time';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
+import { useInviteLink } from '../hooks';
 
 type ProjectDetailScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'ProjectDetail'>;
 
@@ -81,7 +81,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [inviteLoading, setInviteLoading] = useState(false);
+  const { generateInviteLink, generatingInvite } = useInviteLink();
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberActionLoading, setMemberActionLoading] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
@@ -124,28 +124,10 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
     fetchData();
   }, [fetchData, isDeleting]);
 
-  const handleInvite = async () => {
+  const handleInvite = () => {
     if (!project) return;
-
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    try {
-      setInviteLoading(true);
-      const response = await invitesAPI.createInvite(projectId);
-      const { inviteUrl } = response.data;
-
-      await Share.share({
-        message: `${t.projects.shareInviteMessage(project.name)}\n\n${inviteUrl}`,
-        title: t.projects.shareInviteTitle(project.name),
-      });
-    } catch (err: any) {
-      Alert.alert(
-        t.common.error,
-        err.response?.data?.error || t.projects.inviteLinkError
-      );
-    } finally {
-      setInviteLoading(false);
-    }
+    generateInviteLink(projectId, project.name);
   };
 
   // Memoize split rehearsals into upcoming and past to avoid re-sorting on every render
@@ -358,9 +340,9 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
           <TouchableOpacity
             style={styles.inviteButton}
             onPress={handleInvite}
-            disabled={inviteLoading}
+            disabled={generatingInvite}
           >
-            {inviteLoading ? (
+            {generatingInvite ? (
               <ActivityIndicator size="small" color={Colors.text.inverse} />
             ) : (
               <>

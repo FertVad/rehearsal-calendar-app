@@ -137,6 +137,10 @@ const Alert = {
   alert: jest.fn(),
 };
 
+const Share = {
+  share: jest.fn(),
+};
+
 const Platform = {
   OS: 'ios',
   Version: '14.0',
@@ -167,6 +171,7 @@ const NativeModules = {
 module.exports = {
   // Native modules
   Alert,
+  Share,
   Platform,
   Dimensions,
   StyleSheet,
