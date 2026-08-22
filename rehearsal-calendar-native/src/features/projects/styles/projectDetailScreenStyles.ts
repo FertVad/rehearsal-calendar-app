@@ -294,6 +294,12 @@ export const styles = StyleSheet.create({
     borderColor: Colors.glass.border,
     backgroundColor: Colors.bg.secondary,
   },
+  // Takes the room left over so the copy icon cannot be pushed off the edge
+  // by a long code — the ones issued before the short format are 32 characters.
+  inviteCodeText: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
   inviteCodeLabel: {
     fontSize: FontSize.xs,
     color: Colors.text.secondary,
