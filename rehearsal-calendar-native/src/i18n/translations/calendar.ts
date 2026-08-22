@@ -65,6 +65,7 @@ export interface RehearsalsTranslations {
   rehearsalCreated: string;
   rehearsalUpdated: string;
   updateError: string;
+  seenError: string;
   noProjects: string;
   noAdminProjects: string;
   createNewProject: string;
@@ -154,6 +155,7 @@ export const ru = {
     rehearsalCreated: 'Репетиция создана',
     rehearsalUpdated: 'Репетиция успешно обновлена',
     updateError: 'Не удалось обновить репетицию',
+    seenError: 'Не удалось отметить просмотр',
     noProjects: 'Нет проектов',
     noAdminProjects: 'Нет проектов, где вы являетесь администратором',
     createNewProject: 'Создать новый проект',
@@ -244,6 +246,7 @@ export const en = {
     rehearsalCreated: 'Rehearsal created',
     rehearsalUpdated: 'Rehearsal updated successfully',
     updateError: 'Failed to update rehearsal',
+    seenError: 'Could not mark it as seen',
     noProjects: 'No projects',
     noAdminProjects: 'No projects where you are an administrator',
     createNewProject: 'Create New Project',
@@ -334,6 +337,7 @@ export const es = {
     rehearsalCreated: 'Ensayo creado',
     rehearsalUpdated: 'Ensayo actualizado correctamente',
     updateError: 'No se pudo actualizar el ensayo',
+    seenError: 'No se pudo marcar como visto',
     noProjects: 'No hay proyectos',
     noAdminProjects: 'No hay proyectos en los que seas administrador',
     createNewProject: 'Crear nuevo proyecto',
@@ -424,6 +428,7 @@ export const de = {
     rehearsalCreated: 'Probe erstellt',
     rehearsalUpdated: 'Probe erfolgreich aktualisiert',
     updateError: 'Probe konnte nicht aktualisiert werden',
+    seenError: 'Konnte nicht als gesehen markiert werden',
     noProjects: 'Keine Projekte',
     noAdminProjects: 'Keine Projekte, in denen du Administrator bist',
     createNewProject: 'Neues Projekt erstellen',

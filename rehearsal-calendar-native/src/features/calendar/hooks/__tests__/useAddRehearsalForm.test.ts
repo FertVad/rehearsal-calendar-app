@@ -6,7 +6,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { useAddRehearsalForm } from '../useAddRehearsalForm';
-import { rehearsalsAPI } from '../../../../shared/services/api';
+import { rehearsalsAPI, projectsAPI } from '../../../../shared/services/api';
 import { Project } from '../../../../shared/types';
 
 // Mock dependencies
@@ -148,6 +148,13 @@ describe('useAddRehearsalForm Hook', () => {
         data: { responses: mockResponses },
       });
 
+      // The hook drops participants who have since left the project, so it
+      // asks for the current roster. Without this it sees an empty project
+      // and filters everyone out.
+      (projectsAPI.getMembers as jest.Mock).mockResolvedValue({
+        data: { members: [{ userId: 'user1' }, { userId: 'user2' }, { userId: 'user3' }] },
+      });
+
       const { result } = renderHook(() =>
         useAddRehearsalForm({
           projects: mockProjects,
@@ -172,7 +179,10 @@ describe('useAddRehearsalForm Hook', () => {
       // Should have loaded rehearsal data
       expect(result.current.loadingRehearsal).toBe(false);
       expect(result.current.location).toBe('Studio A');
-      expect(result.current.selectedMemberIds).toEqual(['user1', 'user2']);
+      // Everyone with a response row is on the rehearsal — 'no' means invited
+      // and not yet seen, not declined. Leaving them unselected would drop
+      // them from the rehearsal on the next save.
+      expect(result.current.selectedMemberIds).toEqual(['user1', 'user2', 'user3']);
     });
 
     it('should show alert and go back if rehearsal not found', async () => {

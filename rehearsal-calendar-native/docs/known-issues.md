@@ -146,14 +146,22 @@ feature rather than a break, and nothing depends on it before submission.
 
 ---
 
-## 8. Thirteen frontend tests are stale
+## 8. Three component tests assert markup that has moved on
 
-**Seen as:** `npm test` in `rehearsal-calendar-native` reports 13 failures that
-predate the current work.
+**Seen as:** `npm test` in `rehearsal-calendar-native` reports 3 failures, all
+in `TodayRehearsals.test.tsx`.
 
-**Fix:** update them against the screens as they now are, or delete the ones
-whose behaviour no longer exists.
+They look for a `disabled` prop on an element that no longer carries one, and
+for a seen count rendered as "5/15" when the component now formats it
+differently. Nothing is broken — the tests describe an older version of the
+component.
 
-**Deferred because:** they fail on assertions about old markup, not on real
-regressions, and rewriting them was never the task at hand. **Do not let this
-entry hide a new failure** — the count is the thing to watch.
+**Fix:** read the component as it stands and rewrite the three assertions, or
+drop them: what they cover (a disabled prop, a string format) is thin next to
+what they cost to keep.
+
+**Deferred because:** ten other failures in this suite were worth fixing —
+they were one-line rot, and two of them guarded behaviour we were changing.
+These three need the component read line by line for very little in return.
+
+**Do not let this entry hide a new failure** — three is the number to watch.

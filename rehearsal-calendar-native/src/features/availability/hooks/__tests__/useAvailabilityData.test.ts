@@ -62,10 +62,13 @@ describe('useAvailabilityData Hook', () => {
       // Times are converted from UTC to local timezone
       const slot = result.current.availability['2025-12-29'].slots[0];
       expect(slot.start).toBe(
+        // The mocked user sits in UTC, so the expectation must too — reading
+        // the machine's zone here made the test pass or fail by geography.
         new Date('2025-12-29T10:00:00Z').toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
+          timeZone: 'UTC',
         })
       );
       expect(slot.end).toBe(
@@ -73,6 +76,7 @@ describe('useAvailabilityData Hook', () => {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
+          timeZone: 'UTC',
         })
       );
     });
@@ -156,10 +160,13 @@ describe('useAvailabilityData Hook', () => {
       expect(result.current.availability['2025-12-29'].slots).toHaveLength(2);
       // Times are converted from UTC to local timezone
       expect(result.current.availability['2025-12-29'].slots[0].start).toBe(
+        // The mocked user sits in UTC, so the expectation must too — reading
+        // the machine's zone here made the test pass or fail by geography.
         new Date('2025-12-29T10:00:00Z').toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
+          timeZone: 'UTC',
         })
       );
       expect(result.current.availability['2025-12-29'].slots[0].end).toBe(
@@ -167,6 +174,7 @@ describe('useAvailabilityData Hook', () => {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
+          timeZone: 'UTC',
         })
       );
     });
