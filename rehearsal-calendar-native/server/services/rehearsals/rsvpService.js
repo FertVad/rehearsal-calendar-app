@@ -41,16 +41,12 @@ export async function respondToRehearsal(rehearsalId, userId, response, notes = 
     [rehearsalId, projectId]
   );
 
-  const memberCount = await db.get(
-    `SELECT COUNT(*) as total_members
-     FROM native_project_members
-     WHERE project_id = $1 AND status = 'active'`,
-    [projectId]
-  );
-
+  // `invited` is the people on THIS rehearsal, which is what the list endpoint
+  // and the participants screen both report. Counting the whole project here
+  // made the number jump the moment you tapped — 2 of 5 became 3 of 8 — and
+  // snap back on the next refresh.
   const confirmed = Number(responsesCount.confirmed) || 0;
-  const totalMembers = Number(memberCount.total_members) || 0;
-  const invited = totalMembers;
+  const invited = Number(responsesCount.total_responses) || 0;
 
   return {
     confirmed,
