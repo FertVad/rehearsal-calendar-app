@@ -141,4 +141,24 @@ export const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
     color: Colors.accent.purple,
   },
+
+  // Same dashed outline the availability editor uses for "add another one" —
+  // in this app that shape already reads as an optional extra action.
+  joinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.accent.purple,
+  },
+  joinButtonText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.accent.purple,
+  },
 });

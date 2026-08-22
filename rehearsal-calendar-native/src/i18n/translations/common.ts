@@ -35,7 +35,6 @@ export interface ActionSheetTranslations {
   createRehearsal: string;
   markBusy: string;
   createProject: string;
-  joinProject: string;
 }
 
 export interface BetaBannerTranslations {
@@ -101,7 +100,6 @@ export const ru = {
     createRehearsal: 'Создать репетицию',
     markBusy: 'Отметить занятость',
     createProject: 'Создать проект',
-    joinProject: 'Вступить по коду',
   },
   betaBanner: {
     title: 'Тестовый полёт',
@@ -170,7 +168,6 @@ export const en = {
     createRehearsal: 'Create Rehearsal',
     markBusy: 'Mark Busy',
     createProject: 'Create Project',
-    joinProject: 'Join by code',
   },
   betaBanner: {
     title: 'Test Flight',
@@ -239,7 +236,6 @@ export const es = {
     createRehearsal: 'Crear ensayo',
     markBusy: 'Marcar ocupado',
     createProject: 'Crear proyecto',
-    joinProject: 'Unirse con un código',
   },
   betaBanner: {
     title: 'Versión beta',
@@ -308,7 +304,6 @@ export const de = {
     createRehearsal: 'Probe erstellen',
     markBusy: 'Als beschäftigt markieren',
     createProject: 'Projekt erstellen',
-    joinProject: 'Mit Code beitreten',
   },
   betaBanner: {
     title: 'Testflug',

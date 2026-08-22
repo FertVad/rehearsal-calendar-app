@@ -17,6 +17,14 @@ export default function ProjectsScreen() {
   const { generateInviteLink, generatingFor } = useInviteLink();
   const { t, language } = useI18n();
   // TEMPORARILY DISABLED FOR LAUNCH: subscription check removed, all users can create projects
+  // Joining is not creating, so it lives here on the projects screen rather
+  // than in the create sheet — and above all in the empty state, which is
+  // exactly what an invited person sees when their link failed to open.
+  const handleJoinProject = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('JoinProject', {});
+  };
+
   const handleCreateProject = () => {
     navigation.navigate('CreateProject');
   };
@@ -60,6 +68,11 @@ export default function ProjectsScreen() {
             <Ionicons name="folder-open-outline" size={64} color={Colors.text.tertiary} />
             <Text style={styles.emptyTitle}>{t.projects.noProjects}</Text>
             <Text style={styles.emptyText}>{t.projects.createFirst}</Text>
+
+            <TouchableOpacity style={styles.joinButton} onPress={handleJoinProject}>
+              <Ionicons name="enter-outline" size={18} color={Colors.accent.purple} />
+              <Text style={styles.joinButtonText}>{t.projects.haveInvite}</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.projectsList}>
@@ -121,6 +134,11 @@ export default function ProjectsScreen() {
                 </TouchableOpacity>
               );
             })}
+
+            <TouchableOpacity style={styles.joinButton} onPress={handleJoinProject}>
+              <Ionicons name="enter-outline" size={18} color={Colors.accent.purple} />
+              <Text style={styles.joinButtonText}>{t.projects.haveInvite}</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>

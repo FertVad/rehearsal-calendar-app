@@ -10,7 +10,6 @@ interface CreateActionSheetProps {
   onCreateRehearsal: () => void;
   onMarkBusy: () => void;
   onCreateProject: () => void;
-  onJoinProject: () => void;
 }
 
 export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
@@ -19,7 +18,6 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
   onCreateRehearsal,
   onMarkBusy,
   onCreateProject,
-  onJoinProject,
 }) => {
   const { t } = useI18n();
   const isShowingRef = useRef(false);
@@ -38,7 +36,6 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
             t.actionSheet.createRehearsal,
             t.actionSheet.markBusy,
             t.actionSheet.createProject,
-            t.actionSheet.joinProject,
           ],
           cancelButtonIndex: 0,
           userInterfaceStyle: 'dark',
@@ -52,17 +49,15 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
             onMarkBusy();
           } else if (buttonIndex === 3) {
             onCreateProject();
-          } else if (buttonIndex === 4) {
-            onJoinProject();
           }
         }
       );
     } else if (!visible) {
       isShowingRef.current = false;
     }
-  }, [visible, onClose, onCreateRehearsal, onMarkBusy, onCreateProject, onJoinProject, t]);
+  }, [visible, onClose, onCreateRehearsal, onMarkBusy, onCreateProject, t]);
 
-  const handleAction = (action: 'rehearsal' | 'busy' | 'project' | 'join') => {
+  const handleAction = (action: 'rehearsal' | 'busy' | 'project') => {
     hapticLight();
     switch (action) {
       case 'rehearsal':
@@ -73,9 +68,6 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
         break;
       case 'project':
         onCreateProject();
-        break;
-      case 'join':
-        onJoinProject();
         break;
     }
   };
@@ -120,13 +112,6 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
               onPress={() => handleAction('project')}
             >
               <Text style={styles.optionText}>{t.actionSheet.createProject}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.option}
-              onPress={() => handleAction('join')}
-            >
-              <Text style={styles.optionText}>{t.actionSheet.joinProject}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
