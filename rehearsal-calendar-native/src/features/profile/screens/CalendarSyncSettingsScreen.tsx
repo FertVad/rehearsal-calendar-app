@@ -45,6 +45,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
   const [selectedProvider, setSelectedProvider] = useState<CalendarProvider>(null);
   const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
   const [syncEnabled, setSyncEnabled] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   // Determine current provider and calendar from settings
   useEffect(() => {
@@ -274,6 +275,33 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
         lastImportTime: settings?.lastImportTime || null,
       });
     }
+  };
+
+  const handleRemoveAll = () => {
+    Alert.alert(
+      t.calendarSync.removeAllConfirm,
+      '',
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.calendarSync.removeAll,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsRemoving(true);
+              const result = await removeAll();
+              logger.debug('[Sync] Removed exported events:', result);
+              Alert.alert(t.calendarSync.removeAllSuccess, '');
+            } catch (error: any) {
+              logger.error('[Sync] Failed to remove exported events:', error);
+              Alert.alert(t.common.error, error?.message || t.calendarSync.syncError);
+            } finally {
+              setIsRemoving(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleSynchronize = async () => {
@@ -535,6 +563,24 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                   loading={isImporting || isSyncing}
                   style={styles.actionButton}
                 />
+
+                {/* Turning sync off only stops new writes — everything already
+                    exported stays in the user's own calendar. This is the way
+                    to take it back. */}
+                <TouchableOpacity
+                  style={styles.removeAllButton}
+                  onPress={handleRemoveAll}
+                  disabled={isImporting || isSyncing || isRemoving}
+                >
+                  {isRemoving ? (
+                    <ActivityIndicator size="small" color={Colors.accent.red} />
+                  ) : (
+                    <>
+                      <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
+                      <Text style={styles.removeAllText}>{t.calendarSync.removeAll}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
             )}
           </>
