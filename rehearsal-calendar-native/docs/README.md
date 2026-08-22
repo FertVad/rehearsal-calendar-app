@@ -22,6 +22,7 @@ Complete documentation for the Rehearsal Calendar Native App project.
 | [Quick Reference](quick-reference.md) | Critical rules, common errors and fixes |
 | [Recurring Billing](recurring-billing.md) | AllPay recurring billing, cron jobs, timezone handling |
 | [App Store Release](app-store-release.md) | Пошаговый план релиза в App Store, настройка пушей, разбор вариантов оплаты (AllPay vs IAP) |
+| [Known Issues](known-issues.md) | Найденные, но пока не исправленные дефекты — что именно, где и почему отложено |
 
 ### API
 
