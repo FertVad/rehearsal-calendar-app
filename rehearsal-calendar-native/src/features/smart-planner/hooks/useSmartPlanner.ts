@@ -42,6 +42,17 @@ export function useSmartPlanner({
     setRefreshKey(k => k + 1);
   }, []);
 
+  // Drop the previous project's data the moment the project changes. Without
+  // this the roster of the old project stays on screen for the length of the
+  // request, and anything derived from it — the member filter, the slot
+  // recommendations — describes the wrong project.
+  useEffect(() => {
+    setProject(null);
+    setMembers([]);
+    setMemberAvailability([]);
+    setRehearsals([]);
+  }, [projectId]);
+
   // Load all data
   useEffect(() => {
     let mounted = true;
