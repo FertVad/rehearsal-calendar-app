@@ -281,4 +281,28 @@ export const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: Colors.accent.red,
   },
+
+  inviteCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    backgroundColor: Colors.bg.secondary,
+  },
+  inviteCodeLabel: {
+    fontSize: FontSize.xs,
+    color: Colors.text.secondary,
+  },
+  inviteCodeValue: {
+    marginTop: 2,
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
+    letterSpacing: 2,
+    color: Colors.text.primary,
+  },
 });

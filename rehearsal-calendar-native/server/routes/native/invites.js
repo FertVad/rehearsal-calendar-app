@@ -8,8 +8,25 @@ import { notifyProjectInvite } from '../../services/notifications/pushNotificati
 const router = Router();
 
 // Helper functions
+// Crockford's base32 without the letters that get misread when a code is
+// dictated or copied off a screen: no I, L, O, U, and no 0 or 1.
+const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+/**
+ * A code short enough to read aloud.
+ *
+ * Eight characters of this alphabet is about 6.5e11 combinations, which is
+ * only safe alongside the rate limit on the lookup route — brute force is the
+ * threat here, not guesswork. Codes also expire, and the old 32-character hex
+ * ones keep working: lookup is an exact match, so existing rows are unaffected.
+ */
 function generateInviteCode() {
-  return crypto.randomBytes(16).toString('hex');
+  const bytes = crypto.randomBytes(8);
+  let out = '';
+  for (let i = 0; i < 8; i++) {
+    out += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
+  }
+  return out;
 }
 
 function generateInviteUrl(inviteCode) {
