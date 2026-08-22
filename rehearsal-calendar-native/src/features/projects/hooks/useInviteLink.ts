@@ -13,11 +13,14 @@ import { useI18n } from '../../../contexts/I18nContext';
  */
 export const useInviteLink = () => {
   const { t } = useI18n();
-  const [generatingInvite, setGeneratingInvite] = useState(false);
+  // Which project is being invited to, not merely whether one is. A single
+  // boolean is shared by every card in a list, so one tap spun the spinner on
+  // all of them.
+  const [generatingFor, setGeneratingFor] = useState<string | null>(null);
 
   const generateInviteLink = async (projectId: string, projectName: string) => {
     try {
-      setGeneratingInvite(true);
+      setGeneratingFor(projectId);
       const response = await invitesAPI.createInvite(projectId);
       const { inviteUrl } = response.data;
 
@@ -31,12 +34,13 @@ export const useInviteLink = () => {
         err.response?.data?.error || err.message || t.projects.inviteLinkError
       );
     } finally {
-      setGeneratingInvite(false);
+      setGeneratingFor(null);
     }
   };
 
   return {
     generateInviteLink,
-    generatingInvite,
+    generatingFor,
+    generatingInvite: generatingFor !== null,
   };
 };

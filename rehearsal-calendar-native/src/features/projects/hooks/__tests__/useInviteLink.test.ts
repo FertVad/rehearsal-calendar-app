@@ -191,6 +191,32 @@ describe('useInviteLink Hook', () => {
     });
   });
 
+  describe('generateInviteLink - Loading is per project', () => {
+    it('marks only the project being invited to as busy', async () => {
+      let resolvePromise: (value: any) => void;
+      const promise = new Promise((resolve) => { resolvePromise = resolve; });
+      (invitesAPI.createInvite as jest.Mock).mockReturnValue(promise);
+
+      const { result } = renderHook(() => useInviteLink());
+
+      act(() => {
+        result.current.generateInviteLink('project-1', PROJECT);
+      });
+
+      // A list renders a spinner per card off this value; a plain boolean
+      // would have spun every one of them.
+      expect(result.current.generatingFor).toBe('project-1');
+      expect(result.current.generatingInvite).toBe(true);
+
+      await act(async () => {
+        resolvePromise!({ data: { inviteUrl: 'https://rehearsly.me/invite/abc123' } });
+        await promise;
+      });
+
+      expect(result.current.generatingFor).toBeNull();
+    });
+  });
+
   describe('generateInviteLink - Edge Cases', () => {
     it('should handle empty inviteUrl', async () => {
       (invitesAPI.createInvite as jest.Mock).mockResolvedValue({
