@@ -193,6 +193,9 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
           </View>
         ) : (
           <View style={styles.providersContainer}>
+            {/* Without this the screen is a list of calendars and no verb —
+                nothing said what picking one would do. */}
+            <Text style={styles.pickHint}>{t.onboarding.calendarSync.pickCalendar}</Text>
             {/* Google Calendar */}
             {hasGoogleCalendar && (
               <TouchableOpacity
@@ -300,6 +303,11 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
 }
 
 const styles = StyleSheet.create({
+  pickHint: {
+    fontSize: FontSize.sm,
+    color: Colors.text.primary,
+    marginBottom: 12,
+  },
   privacyNote: {
     flexDirection: 'row',
     gap: 10,

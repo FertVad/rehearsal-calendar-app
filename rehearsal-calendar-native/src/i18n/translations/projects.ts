@@ -77,7 +77,7 @@ export const ru = {
   projects: {
     title: 'Мои проекты',
     noProjects: 'Тут будут ваши проекты',
-    createFirst: 'Создайте свой или вступите в чужой',
+    createFirst: 'Создайте свой или присоединитесь к уже созданному',
     createToUsePlanner: 'Сначала создайте проект, чтобы использовать планировщик',
     admin: 'Админ',
     createProject: 'Создать проект',
@@ -154,7 +154,7 @@ export const en = {
   projects: {
     title: 'My Projects',
     noProjects: 'Your projects will be here',
-    createFirst: 'Create one, or join someone else\'s',
+    createFirst: 'Create one, or join one that already exists',
     createToUsePlanner: 'Create a project first to use the planner',
     admin: 'Admin',
     createProject: 'Create Project',
@@ -231,7 +231,7 @@ export const es = {
   projects: {
     title: 'Mis proyectos',
     noProjects: 'Aquí estarán sus proyectos',
-    createFirst: 'Creen uno, o únanse a otro',
+    createFirst: 'Creen uno, o únanse a uno que ya existe',
     createToUsePlanner: 'Primero crea un proyecto para usar el planificador',
     admin: 'Admin',
     createProject: 'Crear proyecto',
@@ -308,7 +308,7 @@ export const de = {
   projects: {
     title: 'Meine Projekte',
     noProjects: 'Hier stehen deine Projekte',
-    createFirst: 'Erstell eins, oder tritt einem bei',
+    createFirst: 'Erstell eins, oder tritt einem bestehenden bei',
     createToUsePlanner: 'Erstelle zuerst ein Projekt, um den Planer zu nutzen',
     admin: 'Admin',
     createProject: 'Projekt erstellen',

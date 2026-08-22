@@ -2,6 +2,9 @@ export interface OnboardingTranslations {
   skipTitle: string;
   skipMessage: string;
   welcome: {
+    feature1: string;
+    feature2: string;
+    feature3: string;
     title: string;
     subtitle: string;
     description: string;
@@ -29,6 +32,7 @@ export interface OnboardingTranslations {
     title: string;
     description: string;
     privacy: string;
+    pickCalendar: string;
     connectedTitle: string;
     connectedBody: string;
     manualBody: string;
@@ -49,6 +53,9 @@ export const ru = {
     skipTitle: 'Настройки доступны в профиле',
     skipMessage: 'Вы сможете настроить день начала недели и синхронизацию календаря в любое время в разделе Профиль → Настройки',
     welcome: {
+feature1: 'Все отмечают, когда заняты',
+feature2: 'Rehearsly находит время, когда свободны все',
+feature3: 'Репетиция уходит всем в календарь',
       title: 'Добро пожаловать!',
       subtitle: 'Rehearsly',
       description: 'Планируйте репетиции, управляйте расписанием и синхронизируйте календари в одном месте',
@@ -67,12 +74,13 @@ export const ru = {
     notifications: {
       title: 'Уведомления',
       description: 'Придёт сообщение, когда вас позовут на репетицию или когда её время изменится. Без них об изменении легко узнать последним.',
-      allow: 'Включить уведомления',
+      allow: 'Включить',
       later: 'Не сейчас',
       back: 'Назад',
       skip: 'Пропустить',
     },
     calendarSync: {
+pickCalendar: 'Выберите календарь — занятость перенесётся из него в приложение',
       privacy: 'Мы читаем только занятые временные слоты. Что это за события, приложение не видит и никому не показывает. Репетиции уходят обратно в ваш календарь.',
       connectedTitle: 'Календарь подключён',
       connectedBody: 'Занятые часы будут подтягиваться сами. Если календарь покрывает не всё — отметьте остальное в приложении, на экране «Занятость».',
@@ -97,6 +105,9 @@ export const en = {
     skipTitle: 'Settings available in profile',
     skipMessage: 'You can set up week start day and calendar sync anytime in Profile → Settings',
     welcome: {
+feature1: 'Everyone marks when they are busy',
+feature2: 'Rehearsly finds the hours that suit all of you',
+feature3: 'The rehearsal lands in everyone\'s calendar',
       title: 'Welcome!',
       subtitle: 'Rehearsly',
       description: 'Plan rehearsals, manage schedules, and sync calendars in one place',
@@ -115,12 +126,13 @@ export const en = {
     notifications: {
       title: 'Notifications',
       description: 'You will hear when someone puts you on a rehearsal, and when its time changes. Without them, you find out last.',
-      allow: 'Turn on notifications',
+      allow: 'Turn on',
       later: 'Not now',
       back: 'Back',
       skip: 'Skip',
     },
     calendarSync: {
+pickCalendar: 'Pick a calendar and your busy hours come across into the app',
       privacy: 'We read only the busy time slots. What the events are, the app never sees and never shows. Rehearsals go back out to your calendar.',
       connectedTitle: 'Calendar connected',
       connectedBody: 'Busy hours will come across on their own. Where the calendar does not cover everything, mark the rest in the app, on the Availability screen.',
@@ -145,6 +157,9 @@ export const es = {
     skipTitle: 'Ajustes disponibles en el perfil',
     skipMessage: 'Puedes configurar el inicio de la semana y la sincronización del calendario en cualquier momento en Perfil → Ajustes',
     welcome: {
+feature1: 'Cada quien marca cuándo está ocupado',
+feature2: 'Rehearsly encuentra las horas que les sirven a todos',
+feature3: 'El ensayo llega al calendario de cada uno',
       title: '¡Bienvenido!',
       subtitle: 'Rehearsly',
       description: 'Planifica ensayos, gestiona horarios y sincroniza calendarios en un solo lugar',
@@ -163,12 +178,13 @@ export const es = {
     notifications: {
       title: 'Notificaciones',
       description: 'Les avisamos cuando alguien los ponga en un ensayo y cuando cambie la hora. Sin ellas, se enteran los últimos.',
-      allow: 'Activar notificaciones',
+      allow: 'Activar',
       later: 'Ahora no',
       back: 'Atrás',
       skip: 'Omitir',
     },
     calendarSync: {
+pickCalendar: 'Elijan un calendario y sus horas ocupadas pasan a la app',
       privacy: 'Leemos solo las franjas ocupadas. Qué son esos eventos, la app no lo ve ni lo muestra. Los ensayos vuelven a su calendario.',
       connectedTitle: 'Calendario conectado',
       connectedBody: 'Las horas ocupadas llegarán solas. Donde el calendario no alcance, marquen el resto en la pantalla Disponibilidad.',
@@ -193,6 +209,9 @@ export const de = {
     skipTitle: 'Einstellungen im Profil verfügbar',
     skipMessage: 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen konfigurieren',
     welcome: {
+feature1: 'Jeder trägt ein, wann er beschäftigt ist',
+feature2: 'Rehearsly findet die Stunden, die allen passen',
+feature3: 'Die Probe landet in jedem Kalender',
       title: 'Willkommen!',
       subtitle: 'Rehearsly',
       description: 'Plane Proben, verwalte Termine und synchronisiere Kalender an einem Ort',
@@ -211,12 +230,13 @@ export const de = {
     notifications: {
       title: 'Mitteilungen',
       description: 'Du hörst es, wenn dich jemand zu einer Probe einträgt und wenn sich die Zeit ändert. Ohne sie erfährst du es zuletzt.',
-      allow: 'Mitteilungen einschalten',
+      allow: 'Einschalten',
       later: 'Jetzt nicht',
       back: 'Zurück',
       skip: 'Überspringen',
     },
     calendarSync: {
+pickCalendar: 'Wähl einen Kalender — deine belegten Stunden kommen in die App',
       privacy: 'Wir lesen nur die belegten Zeitfenster. Worum es bei den Terminen geht, sieht die App nicht und zeigt sie niemandem. Proben gehen zurück in deinen Kalender.',
       connectedTitle: 'Kalender verbunden',
       connectedBody: 'Belegte Stunden kommen von selbst herüber. Wo der Kalender nicht alles abdeckt, trag den Rest unter „Zeiten“ ein.',
