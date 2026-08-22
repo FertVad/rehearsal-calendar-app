@@ -9,18 +9,13 @@ import { OnboardingStep } from '../components';
 import { useCalendarSync } from '../../calendar/hooks/useCalendarSync';
 import { hapticLight, hapticSuccess } from '../../../shared/utils/haptics';
 import type { DeviceCalendar } from '../../../shared/types/calendar';
-
-type OnboardingStackParamList = {
-  Welcome: undefined;
-  WeekStart: undefined;
-  CalendarSync: undefined;
-};
+import type { OnboardingStackParamList } from '../navigation/OnboardingNavigator';
 
 type CalendarSyncScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'CalendarSync'>;
 
 export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenProps) {
   const { t } = useI18n();
-  const { completeOnboarding, skipOnboarding, isCompleting } = useOnboarding();
+  const { skipOnboarding } = useOnboarding();
   const {
     hasPermission,
     calendars,
@@ -154,24 +149,33 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
     }
   };
 
-  const handleFinish = async () => {
-    await completeOnboarding();
+  // No longer the last step: the reason to allow notifications is easier to
+  // make right after the person has just seen what the app does with time.
+  const handleNext = () => {
+    navigation.navigate('Notifications');
   };
 
   return (
     <OnboardingStep
       title={t.onboarding.calendarSync.title}
       description={t.onboarding.calendarSync.description}
-      currentStep={2}
-      totalSteps={3}
+      currentStep={1}
+      totalSteps={4}
       onBack={handleBack}
-      onNext={handleFinish}
+      onNext={handleNext}
       onSkip={skipOnboarding}
-      nextButtonTitle={t.onboarding.calendarSync.finish}
-      nextButtonDisabled={isCompleting || isSettingUp}
+      nextButtonTitle={t.onboarding.calendarSync.next}
+      nextButtonDisabled={isSettingUp}
       showBackButton={true}
     >
       <View style={styles.content}>
+        {/* What we take and what we never take. Asked for before the
+            permission prompt, because that is when it is worth knowing. */}
+        <View style={styles.privacyNote}>
+          <Ionicons name="lock-closed-outline" size={18} color={Colors.text.secondary} />
+          <Text style={styles.privacyText}>{t.onboarding.calendarSync.privacy}</Text>
+        </View>
+
         {!hasPermission ? (
           <View style={styles.permissionCard}>
             <Ionicons name="alert-circle" size={48} color={Colors.accent.yellow} />
@@ -276,12 +280,58 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
             <Text style={styles.skipHint}>{t.onboarding.calendarSync.setupLater}</Text>
           </View>
         )}
+        {/* The outcome, in the words that follow from the choice just made.
+            Either way it ends by naming what the person still has to do. */}
+        <View style={styles.outcome}>
+          <Ionicons
+            name={selectedCalendarId ? 'checkmark-circle-outline' : 'create-outline'}
+            size={18}
+            color={selectedCalendarId ? Colors.accent.green : Colors.accent.yellow}
+          />
+          <Text style={styles.outcomeText}>
+            {selectedCalendarId
+              ? t.onboarding.calendarSync.connectedBody
+              : t.onboarding.calendarSync.manualBody}
+          </Text>
+        </View>
       </View>
     </OnboardingStep>
   );
 }
 
 const styles = StyleSheet.create({
+  privacyNote: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 14,
+    marginBottom: 16,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    backgroundColor: Colors.bg.secondary,
+  },
+  privacyText: {
+    flex: 1,
+    fontSize: FontSize.xs,
+    lineHeight: 18,
+    color: Colors.text.secondary,
+  },
+  outcome: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    backgroundColor: Colors.bg.secondary,
+  },
+  outcomeText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    lineHeight: 20,
+    color: Colors.text.secondary,
+  },
   content: {
     paddingTop: 24,
   },

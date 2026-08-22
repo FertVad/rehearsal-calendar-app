@@ -76,8 +76,8 @@ export interface ProjectsTranslations {
 export const ru = {
   projects: {
     title: 'Мои проекты',
-    noProjects: 'Нет проектов',
-    createFirst: 'Создайте свой первый проект, чтобы начать работу',
+    noProjects: 'Тут будут ваши проекты',
+    createFirst: 'Создайте свой или вступите в чужой',
     createToUsePlanner: 'Сначала создайте проект, чтобы использовать планировщик',
     admin: 'Админ',
     createProject: 'Создать проект',
@@ -153,8 +153,8 @@ export const ru = {
 export const en = {
   projects: {
     title: 'My Projects',
-    noProjects: 'No projects',
-    createFirst: 'Create your first project to get started',
+    noProjects: 'Your projects will be here',
+    createFirst: 'Create one, or join someone else\'s',
     createToUsePlanner: 'Create a project first to use the planner',
     admin: 'Admin',
     createProject: 'Create Project',
@@ -230,8 +230,8 @@ export const en = {
 export const es = {
   projects: {
     title: 'Mis proyectos',
-    noProjects: 'No hay proyectos',
-    createFirst: 'Crea tu primer proyecto para empezar',
+    noProjects: 'Aquí estarán sus proyectos',
+    createFirst: 'Creen uno, o únanse a otro',
     createToUsePlanner: 'Primero crea un proyecto para usar el planificador',
     admin: 'Admin',
     createProject: 'Crear proyecto',
@@ -307,8 +307,8 @@ export const es = {
 export const de = {
   projects: {
     title: 'Meine Projekte',
-    noProjects: 'Keine Projekte',
-    createFirst: 'Erstelle dein erstes Projekt, um loszulegen',
+    noProjects: 'Hier stehen deine Projekte',
+    createFirst: 'Erstell eins, oder tritt einem bei',
     createToUsePlanner: 'Erstelle zuerst ein Projekt, um den Planer zu nutzen',
     admin: 'Admin',
     createProject: 'Projekt erstellen',

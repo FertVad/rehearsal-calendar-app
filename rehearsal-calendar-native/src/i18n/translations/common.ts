@@ -1,6 +1,7 @@
 export interface CommonTranslations {
   save: string;
   cancel: string;
+  back: string;
   delete: string;
   add: string;
   edit: string;
@@ -68,6 +69,7 @@ export const ru = {
   common: {
     save: 'Сохранить',
     cancel: 'Отмена',
+    back: 'Назад',
     delete: 'Удалить',
     add: 'Добавить',
     edit: 'Редактировать',
@@ -136,6 +138,7 @@ export const en = {
   common: {
     save: 'Save',
     cancel: 'Cancel',
+    back: 'Back',
     delete: 'Delete',
     add: 'Add',
     edit: 'Edit',
@@ -204,6 +207,7 @@ export const es = {
   common: {
     save: 'Guardar',
     cancel: 'Cancelar',
+    back: 'Atrás',
     delete: 'Eliminar',
     add: 'Añadir',
     edit: 'Editar',
@@ -272,6 +276,7 @@ export const de = {
   common: {
     save: 'Speichern',
     cancel: 'Abbrechen',
+    back: 'Zurück',
     delete: 'Löschen',
     add: 'Hinzufügen',
     edit: 'Bearbeiten',

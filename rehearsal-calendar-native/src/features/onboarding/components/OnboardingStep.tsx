@@ -4,6 +4,7 @@ import { Colors, FontSize, FontWeight, BorderRadius } from '../../../shared/cons
 import { GlassButton } from '../../../shared/components';
 import OnboardingProgress from './OnboardingProgress';
 import { hapticLight } from '../../../shared/utils/haptics';
+import { useI18n } from '../../../contexts/I18nContext';
 
 interface OnboardingStepProps {
   title: string;
@@ -17,6 +18,8 @@ interface OnboardingStepProps {
   nextButtonTitle?: string; // Default: "Next", last screen: "Finish"
   nextButtonDisabled?: boolean;
   showBackButton?: boolean;
+  /** A quieter way past this step — "not now" rather than a refusal. */
+  secondaryAction?: { title: string; onPress: () => void };
 }
 
 export default function OnboardingStep({
@@ -30,8 +33,10 @@ export default function OnboardingStep({
   onSkip,
   nextButtonTitle = 'Next',
   nextButtonDisabled = false,
+  secondaryAction,
   showBackButton = true,
 }: OnboardingStepProps) {
+  const { t } = useI18n();
   return (
     <SafeAreaView style={styles.container}>
       {/* Header with Skip button */}
@@ -70,7 +75,7 @@ export default function OnboardingStep({
           <View style={styles.buttonRow}>
             <View style={styles.buttonHalf}>
               <GlassButton
-                title="Back"
+                title={t.common.back}
                 onPress={() => {
                   hapticLight();
                   onBack();
@@ -100,6 +105,18 @@ export default function OnboardingStep({
             variant="purple"
             disabled={nextButtonDisabled}
           />
+        )}
+
+        {secondaryAction && (
+          <TouchableOpacity
+            style={styles.secondaryAction}
+            onPress={() => {
+              hapticLight();
+              secondaryAction.onPress();
+            }}
+          >
+            <Text style={styles.secondaryActionText}>{secondaryAction.title}</Text>
+          </TouchableOpacity>
         )}
       </View>
     </SafeAreaView>
@@ -165,5 +182,16 @@ const styles = StyleSheet.create({
   },
   buttonHalf: {
     flex: 1,
+  },
+
+  secondaryAction: {
+    alignSelf: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  secondaryActionText: {
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
   },
 });
