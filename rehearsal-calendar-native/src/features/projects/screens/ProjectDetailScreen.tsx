@@ -384,9 +384,11 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
                 it is shown outright rather than hidden behind sharing first. */}
             {inviteCode && (
               <TouchableOpacity style={styles.inviteCodeRow} onPress={handleCopyCode}>
-                <View>
+                <View style={styles.inviteCodeText}>
                   <Text style={styles.inviteCodeLabel}>{t.projects.inviteCodeLabel}</Text>
-                  <Text style={styles.inviteCodeValue}>{inviteCode}</Text>
+                  <Text style={styles.inviteCodeValue} numberOfLines={1} ellipsizeMode="middle">
+                    {inviteCode}
+                  </Text>
                 </View>
                 <Ionicons name="copy-outline" size={20} color={Colors.accent.purple} />
               </TouchableOpacity>

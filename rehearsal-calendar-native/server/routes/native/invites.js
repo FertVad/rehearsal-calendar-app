@@ -20,10 +20,17 @@ const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
  * threat here, not guesswork. Codes also expire, and the old 32-character hex
  * ones keep working: lookup is an exact match, so existing rows are unaffected.
  */
+const CODE_LENGTH = 8;
+
+/** Whether a stored code is one of the short, dictatable ones. */
+function isShortCode(code) {
+  return typeof code === 'string' && code.length === CODE_LENGTH;
+}
+
 function generateInviteCode() {
-  const bytes = crypto.randomBytes(8);
+  const bytes = crypto.randomBytes(CODE_LENGTH);
   let out = '';
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < CODE_LENGTH; i++) {
     out += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
   }
   return out;
@@ -64,7 +71,17 @@ router.post('/:projectId/invite', requireAuth, async (req, res) => {
       [projectId]
     );
 
-    if (project && project.invite_code && project.invite_expires_at && new Date(project.invite_expires_at) > new Date()) {
+    // A live invite is reused so the link stays stable — unless it predates
+    // the short codes, in which case it is replaced: a thirty-two character
+    // string is exactly what nobody can pass on by voice, which is the reason
+    // the short ones exist.
+    if (
+      project &&
+      project.invite_code &&
+      isShortCode(project.invite_code) &&
+      project.invite_expires_at &&
+      new Date(project.invite_expires_at) > new Date()
+    ) {
       // Return existing invite
       return res.json({
         inviteCode: project.invite_code,
