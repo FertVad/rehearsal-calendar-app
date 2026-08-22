@@ -1,15 +1,22 @@
 import { logger } from '../../shared/utils/logger';
 /**
  * Automatic Calendar Sync Hook
- * Handles automatic import sync based on settings
- * Note: Export is already handled automatically in AddRehearsalScreen
+ *
+ * Runs both directions when Auto Sync is on: events from the device become
+ * availability, and the rehearsals you are on become events.
+ *
+ * The export half matters most for people who did not create the rehearsal.
+ * Saving one exports it, but only on the device of whoever pressed save — so
+ * without this, being added to a rehearsal put it on nobody's calendar but the
+ * organiser's, however many pushes went out.
  */
 
 import { useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getSyncSettings } from '../utils/calendarStorage';
-import { importCalendarEventsToAvailability } from '../services/calendar';
+import { getSyncSettings, saveSyncSettings } from '../utils/calendarStorage';
+import { importCalendarEventsToAvailability, syncAllRehearsals } from '../services/calendar';
+import { projectsAPI, rehearsalsAPI } from '../services/api';
 
 /**
  * Check if should import now
@@ -35,12 +42,65 @@ async function shouldImportNow(): Promise<{ importCalendarIds: string[] } | null
 }
 
 /**
+ * Push every rehearsal the user is on into their calendar.
+ *
+ * Rate-limited on its own clock: each rehearsal costs a mapping lookup, so
+ * running this on every trip to the foreground would fire a burst of requests
+ * for a list that rarely changes.
+ */
+const EXPORT_EVERY_MS = 10 * 60 * 1000;
+
+async function exportRehearsalsIfDue(force = false): Promise<void> {
+  const settings = await getSyncSettings();
+  if (!settings.exportEnabled || !settings.exportCalendarId) {
+    logger.debug('[AutoSync] Export not enabled - skipping');
+    return;
+  }
+
+  if (!force && settings.lastExportTime) {
+    const since = Date.now() - new Date(settings.lastExportTime).getTime();
+    if (since < EXPORT_EVERY_MS) {
+      logger.debug('[AutoSync] Exported recently - skipping');
+      return;
+    }
+  }
+
+  const projectsRes = await projectsAPI.getUserProjects();
+  const projectIds = (projectsRes.data?.projects || []).map((p: any) => p.id);
+  if (projectIds.length === 0) {
+    logger.debug('[AutoSync] No projects - nothing to export');
+    return;
+  }
+
+  const res = await rehearsalsAPI.getBatch(projectIds);
+  const rehearsals = (res.data?.rehearsals || []).map((r: any) => ({
+    id: r.id,
+    projectId: r.projectId,
+    projectName: r.projectName,
+    startsAt: r.startsAt,
+    endsAt: r.endsAt,
+    location: r.location,
+  }));
+
+  if (rehearsals.length === 0) {
+    logger.debug('[AutoSync] No rehearsals to export');
+    return;
+  }
+
+  const result = await syncAllRehearsals(rehearsals, settings.exportCalendarId);
+  logger.debug('[AutoSync] Export completed:', result);
+
+  await saveSyncSettings({ ...settings, lastExportTime: new Date().toISOString() });
+}
+
+/**
  * Hook to manage automatic calendar import
  * UI has simple on/off toggle - when enabled, sync happens automatically:
  * - On app foreground (background → active)
  * - Throttled to prevent duplicate syncs (5 sec minimum between attempts)
  *
- * Note: Export happens automatically when rehearsals are created (see AddRehearsalScreen)
+ * Saving a rehearsal also exports that one straight away, on the device that
+ * saved it; this covers everybody else.
  */
 export function useAutoCalendarSync() {
   const appState = useRef(AppState.currentState);
@@ -82,6 +142,13 @@ export function useAutoCalendarSync() {
         logger.debug('[AutoSync] Auto-import completed:', result);
       } else {
         logger.debug('[AutoSync] No import needed at this time');
+      }
+
+      // A failed import should not stop the export, and the other way round.
+      try {
+        await exportRehearsalsIfDue();
+      } catch (error) {
+        console.error('[AutoSync] Error during auto-export:', error);
       }
     } catch (error) {
       console.error('[AutoSync] Error during auto-import:', error);
@@ -129,6 +196,13 @@ export function useAutoCalendarSync() {
         calendarsCount: settings.importCalendarIds.length,
         lastImportTime: settings.lastImportTime
       });
+
+      // Pull-to-refresh means "now", so the export ignores its own timer.
+      try {
+        await exportRehearsalsIfDue(true);
+      } catch (error) {
+        console.error('[AutoSync] Force sync - export failed:', error);
+      }
 
       // Only check if import is enabled
       if (!settings.importEnabled || settings.importCalendarIds.length === 0) {
