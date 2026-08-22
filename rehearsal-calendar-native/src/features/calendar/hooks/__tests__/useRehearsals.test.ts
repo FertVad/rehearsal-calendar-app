@@ -16,6 +16,19 @@ import { Project, Rehearsal } from '../../../../shared/types';
 
 // Mock dependencies
 jest.mock('../../../../shared/services/api');
+
+// Dates relative to today. The fixtures used to hardcode December 2025, which
+// was in the future when they were written; once it passed, the hook rightly
+// stopped fetching RSVPs for them and four tests went red on the calendar
+// rather than on any change to the code.
+const daysFromNow = (days: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+};
+const SOON = daysFromNow(7);
+const SOON_AFTER = daysFromNow(8);
+
 jest.mock('../../../../shared/utils/time', () => ({
   ...jest.requireActual('../../../../shared/utils/time'),
   isoToDateString: (iso: string) => iso.split('T')[0],
@@ -65,8 +78,8 @@ describe('useRehearsals Hook', () => {
           id: 'r1',
           projectId: '1',
           projectName: 'Band Project',
-          startsAt: '2025-12-29T10:00:00Z',
-          endsAt: '2025-12-29T12:00:00Z',
+          startsAt: `${SOON}T10:00:00Z`,
+          endsAt: `${SOON}T12:00:00Z`,
           location: 'Studio A',
           userResponse: 'yes',
           adminStats: { confirmed: 5, invited: 10 },
@@ -75,8 +88,8 @@ describe('useRehearsals Hook', () => {
           id: 'r2',
           projectId: '2',
           projectName: 'Theater Project',
-          startsAt: '2025-12-30T14:00:00Z',
-          endsAt: '2025-12-30T16:00:00Z',
+          startsAt: `${SOON_AFTER}T14:00:00Z`,
+          endsAt: `${SOON_AFTER}T16:00:00Z`,
           location: 'Hall',
         },
       ];
@@ -98,7 +111,7 @@ describe('useRehearsals Hook', () => {
       expect(result.current.rehearsals).toHaveLength(2);
       expect(result.current.rehearsals[0]).toMatchObject({
         id: 'r1',
-        date: '2025-12-29',
+        date: SOON,
         time: '10:00',
         endTime: '12:00',
       });
@@ -139,8 +152,8 @@ describe('useRehearsals Hook', () => {
       const mockRehearsals = [
         {
           id: 'r1',
-          startsAt: '2025-12-29T10:00:00Z',
-          endsAt: '2025-12-29T12:00:00Z',
+          startsAt: `${SOON}T10:00:00Z`,
+          endsAt: `${SOON}T12:00:00Z`,
           location: 'Studio A',
         },
       ];
@@ -171,7 +184,7 @@ describe('useRehearsals Hook', () => {
         id: 'r1',
         projectName: 'Band Project',
         projectId: '1',
-        date: '2025-12-29',
+        date: SOON,
       });
 
       // Should fetch RSVP for upcoming rehearsals
@@ -189,8 +202,8 @@ describe('useRehearsals Hook', () => {
       const mockRehearsals = [
         {
           id: 'r1',
-          startsAt: '2025-12-29T10:00:00Z',
-          endsAt: '2025-12-29T12:00:00Z',
+          startsAt: `${SOON}T10:00:00Z`,
+          endsAt: `${SOON}T12:00:00Z`,
         },
       ];
 
@@ -284,8 +297,8 @@ describe('useRehearsals Hook', () => {
       const mockRehearsals = [
         {
           id: 'r1',
-          startsAt: '2025-12-29T10:00:00Z',
-          endsAt: '2025-12-29T12:00:00Z',
+          startsAt: `${SOON}T10:00:00Z`,
+          endsAt: `${SOON}T12:00:00Z`,
         },
       ];
 
@@ -348,10 +361,10 @@ describe('useRehearsals Hook', () => {
 
   describe('updateAdminStats', () => {
     it('should update admin stats for specific rehearsal', async () => {
+      // Responses are binary — seen or not. 'declined' and 'tentative' went
+      // when the heart became an eye, and the hook keeps only what it is given.
       const mockStats = {
         confirmed: 8,
-        declined: 1,
-        tentative: 2,
         invited: 15,
       };
 

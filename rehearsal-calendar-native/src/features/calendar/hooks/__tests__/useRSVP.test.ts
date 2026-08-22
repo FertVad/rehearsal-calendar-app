@@ -85,7 +85,8 @@ describe('useRSVP Hook', () => {
         { confirmed: 4, invited: 10 }
       );
 
-      expect(rehearsalsAPI.respond).toHaveBeenCalledWith('rehearsal-1', null);
+      // null is the UI state for unseen; the wire only ever carries yes/no
+      expect(rehearsalsAPI.respond).toHaveBeenCalledWith('rehearsal-1', 'no');
     });
   });
 
@@ -160,7 +161,7 @@ describe('useRSVP Hook', () => {
 
       expect(Alert.alert).toHaveBeenCalledWith(
         'Ошибка',
-        'Не удалось обновить статус'
+        'Не удалось отметить просмотр'
       );
     });
 
@@ -203,7 +204,7 @@ describe('useRSVP Hook', () => {
       // Should have called API twice
       expect(rehearsalsAPI.respond).toHaveBeenCalledTimes(2);
       expect(rehearsalsAPI.respond).toHaveBeenNthCalledWith(1, 'rehearsal-1', 'yes');
-      expect(rehearsalsAPI.respond).toHaveBeenNthCalledWith(2, 'rehearsal-1', null);
+      expect(rehearsalsAPI.respond).toHaveBeenNthCalledWith(2, 'rehearsal-1', 'no');
     });
   });
 
