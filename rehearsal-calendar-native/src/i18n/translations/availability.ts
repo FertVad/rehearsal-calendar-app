@@ -7,6 +7,7 @@ export interface AvailabilityTranslations {
   from: string;
   to: string;
   free: string;
+  nothingMarked: string;
   busy: string;
   partial: string;
   legend: string;
@@ -81,6 +82,7 @@ export const ru = {
     addSlot: 'Добавить слот',
     from: 'С',
     to: 'До',
+nothingMarked: 'Отметьте, когда вы заняты. Пока вы этого не сделали, вас считают свободным.',
     free: 'Свободен',
     busy: 'Занят',
     partial: 'Частично',
@@ -163,6 +165,7 @@ export const en = {
     addSlot: 'Add slot',
     from: 'From',
     to: 'To',
+nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.',
     free: 'Free',
     busy: 'Busy',
     partial: 'Partial',
@@ -238,6 +241,7 @@ export const es = {
     addSlot: 'Añadir franja',
     from: 'Desde',
     to: 'Hasta',
+nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los ven libres.',
     free: 'Libre',
     busy: 'Ocupado',
     partial: 'Parcial',
@@ -313,6 +317,7 @@ export const de = {
     addSlot: 'Zeitfenster hinzufügen',
     from: 'Von',
     to: 'Bis',
+nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als frei.',
     free: 'Frei',
     busy: 'Beschäftigt',
     partial: 'Teilweise',

@@ -71,6 +71,23 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.base,
     color: Colors.text.secondary,
   },
+  nothingMarked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+  },
+  nothingMarkedText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+  },
   legend: {
     flexDirection: 'row',
     justifyContent: 'space-between',

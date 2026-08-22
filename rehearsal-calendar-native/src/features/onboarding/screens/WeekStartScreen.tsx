@@ -8,12 +8,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep, WeekPreview } from '../components';
 import { hapticLight } from '../../../shared/utils/haptics';
-
-type OnboardingStackParamList = {
-  Welcome: undefined;
-  WeekStart: undefined;
-  CalendarSync: undefined;
-};
+import type { OnboardingStackParamList } from '../navigation/OnboardingNavigator';
 
 type WeekStartScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'WeekStart'>;
 
@@ -25,7 +20,7 @@ const WEEK_START_OPTIONS = [
 export default function WeekStartScreen({ navigation }: WeekStartScreenProps) {
   const { t } = useI18n();
   const { updateUser } = useAuth();
-  const { skipOnboarding } = useOnboarding();
+  const { completeOnboarding, skipOnboarding, isCompleting } = useOnboarding();
   const [selectedWeekStart, setSelectedWeekStart] = useState<'monday' | 'sunday'>('monday');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -37,7 +32,7 @@ export default function WeekStartScreen({ navigation }: WeekStartScreenProps) {
     try {
       setIsSaving(true);
       await updateUser({ weekStartDay: selectedWeekStart });
-      navigation.navigate('CalendarSync');
+      await completeOnboarding();
     } catch (error: any) {
       Alert.alert(t.common.error, error.message || 'Failed to save week start preference');
     } finally {
@@ -49,13 +44,13 @@ export default function WeekStartScreen({ navigation }: WeekStartScreenProps) {
     <OnboardingStep
       title={t.onboarding.weekStart.title}
       description={t.onboarding.weekStart.description}
-      currentStep={1}
-      totalSteps={3}
+      currentStep={3}
+      totalSteps={4}
       onBack={handleBack}
       onNext={handleNext}
       onSkip={skipOnboarding}
       nextButtonTitle={t.onboarding.weekStart.next}
-      nextButtonDisabled={isSaving}
+      nextButtonDisabled={isSaving || isCompleting}
       showBackButton={true}
     >
       <View style={styles.content}>

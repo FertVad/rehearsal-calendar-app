@@ -146,6 +146,16 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         )}
       </View>
 
+      {/* Nothing marked yet — say what that costs, not just that it is empty.
+          Being treated as free is what actually happens, and it is the whole
+          reason to fill this in. */}
+      {Object.keys(availability).length === 0 && (
+        <View style={styles.nothingMarked}>
+          <Ionicons name="information-circle-outline" size={18} color={Colors.accent.yellow} />
+          <Text style={styles.nothingMarkedText}>{t.availability.nothingMarked}</Text>
+        </View>
+      )}
+
       {/* Legend */}
       <View style={[
         styles.legend,

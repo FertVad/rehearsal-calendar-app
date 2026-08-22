@@ -17,9 +17,22 @@ export interface OnboardingTranslations {
     back: string;
     skip: string;
   };
+  notifications: {
+    title: string;
+    description: string;
+    allow: string;
+    later: string;
+    back: string;
+    skip: string;
+  };
   calendarSync: {
     title: string;
     description: string;
+    privacy: string;
+    connectedTitle: string;
+    connectedBody: string;
+    manualBody: string;
+    next: string;
     google: string;
     apple: string;
     setupLater: string;
@@ -51,9 +64,22 @@ export const ru = {
       back: 'Назад',
       skip: 'Пропустить',
     },
+    notifications: {
+      title: 'Уведомления',
+      description: 'Придёт сообщение, когда вас позовут на репетицию или когда её время изменится. Без них об изменении легко узнать последним.',
+      allow: 'Включить уведомления',
+      later: 'Не сейчас',
+      back: 'Назад',
+      skip: 'Пропустить',
+    },
     calendarSync: {
-      title: 'Синхронизация календаря',
-      description: 'Синхронизируйте репетиции с вашим календарем',
+      privacy: 'Мы читаем только занятые временные слоты. Что это за события, приложение не видит и никому не показывает. Репетиции уходят обратно в ваш календарь.',
+      connectedTitle: 'Календарь подключён',
+      connectedBody: 'Занятые часы будут подтягиваться сами. Если календарь покрывает не всё — отметьте остальное в приложении, на экране «Занятость».',
+      manualBody: 'Отмечайте занятость на экране «Занятость». Пока вы этого не сделали, вас считают свободным.',
+      title: 'Ваша занятость',
+      description: 'Команда видит не ваши дела, а только часы, когда вас нет. Занятость можно подтянуть из календаря телефона — тогда отмечать руками почти не придётся.',
+      next: 'Далее',
       google: 'Google Calendar',
       apple: 'Apple Calendar',
       setupLater: 'Настроить позже',
@@ -86,9 +112,22 @@ export const en = {
       back: 'Back',
       skip: 'Skip',
     },
+    notifications: {
+      title: 'Notifications',
+      description: 'You will hear when someone puts you on a rehearsal, and when its time changes. Without them, you find out last.',
+      allow: 'Turn on notifications',
+      later: 'Not now',
+      back: 'Back',
+      skip: 'Skip',
+    },
     calendarSync: {
-      title: 'Calendar Sync',
-      description: 'Sync your rehearsals with your calendar',
+      privacy: 'We read only the busy time slots. What the events are, the app never sees and never shows. Rehearsals go back out to your calendar.',
+      connectedTitle: 'Calendar connected',
+      connectedBody: 'Busy hours will come across on their own. Where the calendar does not cover everything, mark the rest in the app, on the Availability screen.',
+      manualBody: 'Mark your time on the Availability screen. Until you do, everyone sees you as free.',
+      title: 'Your availability',
+      description: 'The company sees the hours you are taken, never what you are doing. Those hours can come from the calendar on your phone, which leaves you little to fill in by hand.',
+      next: 'Next',
       google: 'Google Calendar',
       apple: 'Apple Calendar',
       setupLater: 'Set up later',
@@ -121,9 +160,22 @@ export const es = {
       back: 'Atrás',
       skip: 'Omitir',
     },
+    notifications: {
+      title: 'Notificaciones',
+      description: 'Les avisamos cuando alguien los ponga en un ensayo y cuando cambie la hora. Sin ellas, se enteran los últimos.',
+      allow: 'Activar notificaciones',
+      later: 'Ahora no',
+      back: 'Atrás',
+      skip: 'Omitir',
+    },
     calendarSync: {
-      title: 'Sincronización del calendario',
-      description: 'Sincroniza tus ensayos con tu calendario',
+      privacy: 'Leemos solo las franjas ocupadas. Qué son esos eventos, la app no lo ve ni lo muestra. Los ensayos vuelven a su calendario.',
+      connectedTitle: 'Calendario conectado',
+      connectedBody: 'Las horas ocupadas llegarán solas. Donde el calendario no alcance, marquen el resto en la pantalla Disponibilidad.',
+      manualBody: 'Marquen su tiempo en la pantalla Disponibilidad. Hasta entonces, los demás los ven libres.',
+      title: 'Su disponibilidad',
+      description: 'El equipo ve las horas que están tomadas, nunca qué están haciendo. Esas horas pueden venir del calendario del teléfono, y así queda poco por marcar a mano.',
+      next: 'Siguiente',
       google: 'Google Calendar',
       apple: 'Apple Calendar',
       setupLater: 'Configurar más tarde',
@@ -156,9 +208,22 @@ export const de = {
       back: 'Zurück',
       skip: 'Überspringen',
     },
+    notifications: {
+      title: 'Mitteilungen',
+      description: 'Du hörst es, wenn dich jemand zu einer Probe einträgt und wenn sich die Zeit ändert. Ohne sie erfährst du es zuletzt.',
+      allow: 'Mitteilungen einschalten',
+      later: 'Jetzt nicht',
+      back: 'Zurück',
+      skip: 'Überspringen',
+    },
     calendarSync: {
-      title: 'Kalendersynchronisation',
-      description: 'Synchronisiere deine Proben mit deinem Kalender',
+      privacy: 'Wir lesen nur die belegten Zeitfenster. Worum es bei den Terminen geht, sieht die App nicht und zeigt sie niemandem. Proben gehen zurück in deinen Kalender.',
+      connectedTitle: 'Kalender verbunden',
+      connectedBody: 'Belegte Stunden kommen von selbst herüber. Wo der Kalender nicht alles abdeckt, trag den Rest unter „Zeiten“ ein.',
+      manualBody: 'Trag deine Zeiten unter „Zeiten“ ein. Bis dahin giltst du als frei.',
+      title: 'Deine Zeiten',
+      description: 'Das Ensemble sieht die Stunden, in denen du besetzt bist, nie womit. Diese Stunden können aus dem Kalender deines Telefons kommen — dann bleibt kaum etwas von Hand einzutragen.',
+      next: 'Weiter',
       google: 'Google Calendar',
       apple: 'Apple Calendar',
       setupLater: 'Später einrichten',
