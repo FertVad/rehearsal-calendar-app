@@ -17,12 +17,14 @@ export const useInviteLink = () => {
   // boolean is shared by every card in a list, so one tap spun the spinner on
   // all of them.
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+  const [lastCode, setLastCode] = useState<string | null>(null);
 
   const generateInviteLink = async (projectId: string, projectName: string) => {
     try {
       setGeneratingFor(projectId);
       const response = await invitesAPI.createInvite(projectId);
-      const { inviteUrl } = response.data;
+      const { inviteUrl, inviteCode } = response.data;
+      setLastCode(inviteCode ?? null);
 
       await Share.share({
         message: `${t.projects.shareInviteMessage(projectName)}\n\n${inviteUrl}`,
@@ -42,5 +44,6 @@ export const useInviteLink = () => {
     generateInviteLink,
     generatingFor,
     generatingInvite: generatingFor !== null,
+    lastCode,
   };
 };

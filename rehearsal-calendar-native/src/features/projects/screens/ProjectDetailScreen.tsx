@@ -16,11 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { ProjectsStackParamList } from '../../../navigation';
-import { projectsAPI, rehearsalsAPI } from '../../../shared/services/api';
+import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
 import { formatDateToString as formatDateToStringUtil } from '../../../shared/utils/time';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
+import * as Clipboard from 'expo-clipboard';
 import { useInviteLink } from '../hooks';
 
 type ProjectDetailScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'ProjectDetail'>;
@@ -81,7 +82,8 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { generateInviteLink, generatingInvite } = useInviteLink();
+  const { generateInviteLink, generatingInvite, lastCode } = useInviteLink();
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberActionLoading, setMemberActionLoading] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
@@ -123,6 +125,31 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
     setRefreshing(true);
     fetchData();
   }, [fetchData, isDeleting]);
+
+  // Admins get the code up front: dictating it is the fallback when the link
+  // does not arrive, and that is no use if you must share first to see it.
+  useEffect(() => {
+    if (!project?.is_admin) return;
+    let alive = true;
+    invitesAPI
+      .getInvite(projectId)
+      .then((res) => {
+        if (alive) setInviteCode(res.data?.inviteCode ?? null);
+      })
+      .catch(() => { /* no invite yet, or not allowed — the row stays hidden */ });
+    return () => { alive = false; };
+  }, [project?.is_admin, projectId]);
+
+  useEffect(() => {
+    if (lastCode) setInviteCode(lastCode);
+  }, [lastCode]);
+
+  const handleCopyCode = async () => {
+    if (!inviteCode) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Clipboard.setStringAsync(inviteCode);
+    Alert.alert(t.projects.codeCopied, '');
+  };
 
   const handleInvite = () => {
     if (!project) return;
@@ -337,20 +364,34 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
 
         {/* Invite Button (admin only) */}
         {project.is_admin && (
-          <TouchableOpacity
-            style={styles.inviteButton}
-            onPress={handleInvite}
-            disabled={generatingInvite}
-          >
-            {generatingInvite ? (
-              <ActivityIndicator size="small" color={Colors.text.inverse} />
-            ) : (
-              <>
-                <Ionicons name="person-add" size={18} color={Colors.text.inverse} />
-                <Text style={styles.inviteButtonText}>{t.projects.inviteMembers}</Text>
-              </>
+          <>
+            <TouchableOpacity
+              style={styles.inviteButton}
+              onPress={handleInvite}
+              disabled={generatingInvite}
+            >
+              {generatingInvite ? (
+                <ActivityIndicator size="small" color={Colors.text.inverse} />
+              ) : (
+                <>
+                  <Ionicons name="person-add" size={18} color={Colors.text.inverse} />
+                  <Text style={styles.inviteButtonText}>{t.projects.inviteMembers}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* The code is the fallback for when the link does not arrive, so
+                it is shown outright rather than hidden behind sharing first. */}
+            {inviteCode && (
+              <TouchableOpacity style={styles.inviteCodeRow} onPress={handleCopyCode}>
+                <View>
+                  <Text style={styles.inviteCodeLabel}>{t.projects.inviteCodeLabel}</Text>
+                  <Text style={styles.inviteCodeValue}>{inviteCode}</Text>
+                </View>
+                <Ionicons name="copy-outline" size={20} color={Colors.accent.purple} />
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </>
         )}
 
         {/* Upcoming Rehearsals */}
