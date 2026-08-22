@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   Keyboard,
 } from 'react-native';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { hapticMedium, hapticSuccess } from '../../../shared/utils/haptics';
@@ -38,6 +38,7 @@ type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
 
 export default function AddRehearsalScreen() {
   const route = useRoute<RouteType>();
+  const navigation = useNavigation();
   const { projects, selectedProject, setSelectedProject } = useProjects();
   const { t, language } = useI18n();
 
@@ -114,6 +115,21 @@ export default function AddRehearsalScreen() {
           <Text style={styles.title}>
             {form.isEditMode ? t.rehearsals.editRehearsal : t.rehearsals.addRehearsal}
           </Text>
+          {/* The screen is a modal whose body is a full-height ScrollView, so the
+              swipe-down dismiss gesture is swallowed by the list. Without this the
+              only way out is creating the rehearsal. */}
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => {
+              Keyboard.dismiss();
+              navigation.goBack();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t.common.cancel}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close" size={24} color={Colors.text.secondary} />
+          </TouchableOpacity>
         </View>
 
         {/* Form */}
