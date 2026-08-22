@@ -359,7 +359,7 @@ export default function CalendarScreen() {
             </View>
           ) : projects.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>{t.calendar.selectProject}</Text>
+              <Text style={styles.emptyText}>{t.calendar.needProject}</Text>
             </View>
           ) : upcomingRehearsals.length === 0 ? (
             <View style={styles.emptyState}>

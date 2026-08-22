@@ -3,6 +3,7 @@ export interface CalendarTranslations {
   rehearsalsFor: string;
   noRehearsals: string;
   selectProject: string;
+  needProject: string;
   myRehearsals: string;
   allProjects: string;
   filterByProject: string;
@@ -93,6 +94,7 @@ export const ru = {
     title: 'Календарь репетиций',
     rehearsalsFor: 'Репетиции на',
     noRehearsals: 'Сегодня репетиций нет',
+needProject: 'Репетиции появятся, когда вы окажетесь в проекте',
     selectProject: 'Выберите проект в разделе "Проекты"',
     myRehearsals: 'Мои репетиции',
     allProjects: 'Все проекты',
@@ -184,6 +186,7 @@ export const en = {
     title: 'Rehearsal Calendar',
     rehearsalsFor: 'Rehearsals for',
     noRehearsals: 'Nothing today',
+needProject: 'Rehearsals show up once you are in a project',
     selectProject: 'Select a project in "Projects" section',
     myRehearsals: 'My Rehearsals',
     allProjects: 'All Projects',
@@ -275,6 +278,7 @@ export const es = {
     title: 'Calendario de ensayos',
     rehearsalsFor: 'Ensayos para',
     noRehearsals: 'Nada hoy',
+needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     selectProject: 'Selecciona un proyecto en la sección "Proyectos"',
     myRehearsals: 'Mis ensayos',
     allProjects: 'Todos los proyectos',
@@ -366,6 +370,7 @@ export const de = {
     title: 'Probenkalender',
     rehearsalsFor: 'Proben für',
     noRehearsals: 'Heute nichts',
+needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     selectProject: 'Wähle ein Projekt im Bereich „Projekte" aus',
     myRehearsals: 'Meine Proben',
     allProjects: 'Alle Projekte',

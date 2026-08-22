@@ -37,7 +37,7 @@ export default function SmartPlannerTabScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.emptyText}>
-          {t.projects.noProjects}
+          {t.smartPlanner.title}
         </Text>
         <Text style={styles.hintText}>
           {t.projects.createToUsePlanner}
