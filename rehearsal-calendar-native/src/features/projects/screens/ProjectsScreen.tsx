@@ -14,7 +14,7 @@ import { projectsScreenStyles as styles } from '../styles';
 export default function ProjectsScreen() {
   const navigation = useNavigation<any>();
   const { projects, selectedProject, setSelectedProject, loading, error } = useProjects();
-  const { generateInviteLink, generatingInvite } = useInviteLink();
+  const { generateInviteLink, generatingFor } = useInviteLink();
   const { t, language } = useI18n();
   // TEMPORARILY DISABLED FOR LAUNCH: subscription check removed, all users can create projects
   const handleCreateProject = () => {
@@ -106,9 +106,9 @@ export default function ProjectsScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                         generateInviteLink(project.id, project.name);
                       }}
-                      disabled={generatingInvite}
+                      disabled={generatingFor !== null}
                     >
-                      {generatingInvite ? (
+                      {generatingFor === project.id ? (
                         <ActivityIndicator size="small" color={Colors.accent.purple} />
                       ) : (
                         <>
