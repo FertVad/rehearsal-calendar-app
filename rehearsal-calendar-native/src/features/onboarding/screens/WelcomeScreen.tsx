@@ -49,7 +49,7 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
 
         {/* Greeting */}
         <Text style={styles.greeting}>
-          {user?.firstName ? `${user.firstName}!` : 'User!'}
+          {user?.firstName ? `${user.firstName}!` : ''}
         </Text>
 
         {/* App subtitle */}
@@ -61,21 +61,21 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
             <View style={[styles.featureIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
               <Ionicons name="calendar-outline" size={24} color={Colors.accent.purple} />
             </View>
-            <Text style={styles.featureText}>Plan rehearsals efficiently</Text>
+            <Text style={styles.featureText}>{t.onboarding.welcome.feature1}</Text>
           </View>
 
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
               <Ionicons name="people-outline" size={24} color={Colors.accent.blue} />
             </View>
-            <Text style={styles.featureText}>Collaborate with your team</Text>
+            <Text style={styles.featureText}>{t.onboarding.welcome.feature2}</Text>
           </View>
 
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
               <Ionicons name="sync-outline" size={24} color={Colors.accent.green} />
             </View>
-            <Text style={styles.featureText}>Sync with your calendar</Text>
+            <Text style={styles.featureText}>{t.onboarding.welcome.feature3}</Text>
           </View>
         </View>
       </View>
