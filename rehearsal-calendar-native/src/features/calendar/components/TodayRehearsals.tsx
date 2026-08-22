@@ -150,6 +150,15 @@ export default function TodayRehearsals({
                       )}
                     </View>
 
+                    {/* The title is what distinguishes several rehearsals of the
+                        same production on the same day, so it leads the card.
+                        Optional — many entries legitimately have none. */}
+                    {rehearsal.title ? (
+                      <Text style={styles.upcomingTitle} numberOfLines={2}>
+                        {rehearsal.title}
+                      </Text>
+                    ) : null}
+
                     {project && (
                       <View style={styles.upcomingProjectRow}>
                         <Ionicons name="folder-outline" size={14} color={Colors.accent.blue} />

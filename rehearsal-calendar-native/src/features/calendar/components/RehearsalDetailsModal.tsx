@@ -25,7 +25,6 @@ interface Participant {
   userId: string;
   firstName: string;
   lastName: string;
-  email: string;
   hasSeen: boolean;
   hasResponded: boolean;
 }
@@ -79,18 +78,15 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
       setLoading(true);
       try {
         const res = await rehearsalsAPI.getResponses(rehearsal.id);
-        console.log('[RehearsalDetailsModal] API response:', JSON.stringify(res.data, null, 2));
 
         if (res.data.allParticipants) {
           const participantsList = res.data.allParticipants.map((p: any) => ({
             userId: p.userId,
             firstName: p.firstName,
             lastName: p.lastName,
-            email: p.email,
             hasSeen: p.response === 'yes',
             hasResponded: p.response === 'yes', // 'no' means invited but not responded (same UI as not responded)
           }));
-          console.log('[RehearsalDetailsModal] Participants list:', participantsList);
           setParticipants(participantsList);
 
           // Calculate stats
@@ -98,7 +94,7 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
           const invited = participantsList.length;
           setStats({ confirmed, invited });
         } else {
-          console.log('[RehearsalDetailsModal] No allParticipants in response');
+          logger.warn('[RehearsalDetailsModal] Response had no allParticipants');
         }
       } catch (err) {
         console.error('Failed to load participants:', err);
@@ -165,7 +161,6 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
       <View style={styles.participantItem}>
         <View style={styles.participantInfo}>
           <Text style={styles.participantName}>{displayName}</Text>
-          <Text style={styles.participantEmail}>{item.email}</Text>
         </View>
         {isThisParticipantResponding ? (
           <ActivityIndicator size="small" color={Colors.accent.purple} />
@@ -219,6 +214,12 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
           </View>
 
           <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+            {/* Title, when there is one — it names the call, so it sits above
+                the schedule rather than among them. */}
+            {rehearsal.title ? (
+              <Text style={styles.rehearsalTitle}>{rehearsal.title}</Text>
+            ) : null}
+
             {/* Date */}
             <View style={styles.detailRow}>
               <Ionicons name="calendar-outline" size={20} color={Colors.accent.blue} />
@@ -304,7 +305,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg.secondary,
     borderTopLeftRadius: BorderRadius.lg,
     borderTopRightRadius: BorderRadius.lg,
-    height: '70%',
+    // Grow to fit the roster instead of always claiming the same slice of
+    // screen: a two-person call stays compact, an eight-person one gets room
+    // before it has to scroll.
+    maxHeight: '90%',
     paddingBottom: Spacing.xl,
   },
   header: {
@@ -329,10 +333,19 @@ const styles = StyleSheet.create({
     padding: Spacing.xs,
   },
   content: {
-    flex: 1,
+    // No flex: 1 — the ScrollView should wrap its content so the sheet can
+    // size itself, and only start scrolling once maxHeight is reached.
+    flexGrow: 0,
+    flexShrink: 1,
   },
   contentContainer: {
     padding: Spacing.lg,
+  },
+  rehearsalTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   detailRow: {
     flexDirection: 'row',
@@ -405,10 +418,6 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
-  },
-  participantEmail: {
-    fontSize: FontSize.sm,
-    color: Colors.text.secondary,
   },
   loadingContainer: {
     padding: Spacing.xl,

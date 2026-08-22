@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   View,
   Text,
+  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -66,8 +67,8 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   });
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
 
-  // Track if members have been initially loaded
-  const hasInitializedMembers = useRef(false);
+  // Which project the current member selection was seeded for
+  const hasInitializedMembers = useRef<string | null>(null);
 
   // Calculate date range based on selected period
   const { startDate, endDate } = useMemo(() => {
@@ -124,13 +125,25 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
 
   const projectName = project?.name || t.common.loading;
 
-  // Auto-select all members when they load (only on first load)
+  // Select everyone by default, once per project.
+  //
+  // The project can change without this screen unmounting (handleSelectProject
+  // only calls setParams), so a plain "did this run yet" flag would keep the
+  // previous project's member ids: the counter reads "7 of 5" and, worse, the
+  // recommendations get filtered by people who are not in this project.
+  // Re-seeding is keyed on the project instead, and the ids are dropped while
+  // the new roster is in flight — an empty selection means "everyone".
   useEffect(() => {
-    if (simpleMembers.length > 0 && !hasInitializedMembers.current) {
-      setSelectedMemberIds(simpleMembers.map(m => m.id));
-      hasInitializedMembers.current = true;
+    if (hasInitializedMembers.current === projectId) return;
+
+    if (simpleMembers.length === 0) {
+      setSelectedMemberIds([]);
+      return;
     }
-  }, [simpleMembers]);
+
+    setSelectedMemberIds(simpleMembers.map(m => m.id));
+    hasInitializedMembers.current = projectId;
+  }, [simpleMembers, projectId]);
 
   const handleSelectProject = useCallback((newProjectId: string) => {
     setIsProjectSelectorExpanded(false);
@@ -325,7 +338,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {renderHeader()}
       <DateRangePicker
         visible={showDateRangePicker}
@@ -375,6 +388,6 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

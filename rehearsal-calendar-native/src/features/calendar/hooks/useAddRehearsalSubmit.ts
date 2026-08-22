@@ -20,6 +20,7 @@ interface UseAddRehearsalSubmitProps {
   date: Date;
   startTime: Date;
   endTime: Date;
+  title: string;
   location: string;
   selectedMemberIds: string[];
   members: ProjectMember[];
@@ -35,6 +36,7 @@ export function useAddRehearsalSubmit({
   date,
   startTime,
   endTime,
+  title,
   location,
   selectedMemberIds,
   members,
@@ -61,6 +63,9 @@ export function useAddRehearsalSubmit({
       const rehearsalData = {
         startsAt: dateTimeToISOInTimezone(dateString, startTimeString, userTimezone),
         endsAt: dateTimeToISOInTimezone(dateString, endTimeString, userTimezone),
+        // Optional: an untitled rehearsal is perfectly normal, so send
+        // undefined rather than an empty string.
+        title: title.trim() || undefined,
         location: location.trim() || undefined,
         participant_ids: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
       };

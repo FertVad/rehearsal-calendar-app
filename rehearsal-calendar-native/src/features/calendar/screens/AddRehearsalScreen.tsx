@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   Keyboard,
 } from 'react-native';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { hapticMedium, hapticSuccess } from '../../../shared/utils/haptics';
@@ -38,6 +38,7 @@ type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
 
 export default function AddRehearsalScreen() {
   const route = useRoute<RouteType>();
+  const navigation = useNavigation();
   const { projects, selectedProject, setSelectedProject } = useProjects();
   const { t, language } = useI18n();
 
@@ -65,6 +66,7 @@ export default function AddRehearsalScreen() {
     date: form.date,
     startTime: form.startTime,
     endTime: form.endTime,
+    title: form.title,
     location: form.location,
     selectedMemberIds: form.selectedMemberIds,
     members,
@@ -113,6 +115,21 @@ export default function AddRehearsalScreen() {
           <Text style={styles.title}>
             {form.isEditMode ? t.rehearsals.editRehearsal : t.rehearsals.addRehearsal}
           </Text>
+          {/* The screen is a modal whose body is a full-height ScrollView, so the
+              swipe-down dismiss gesture is swallowed by the list. Without this the
+              only way out is creating the rehearsal. */}
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => {
+              Keyboard.dismiss();
+              navigation.goBack();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t.common.cancel}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close" size={24} color={Colors.text.secondary} />
+          </TouchableOpacity>
         </View>
 
         {/* Form */}
@@ -133,6 +150,25 @@ export default function AddRehearsalScreen() {
               </Text>
               <Ionicons name="chevron-down" size={20} color={Colors.text.tertiary} style={styles.chevronIcon} />
             </TouchableOpacity>
+          </View>
+
+          {/* Title — optional; a rehearsal identified by time and venue alone
+              is a perfectly normal entry, so this must never block submission. */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t.rehearsals.rehearsalTitle} {t.auth.optional}</Text>
+            <View style={styles.locationInputContainer}>
+              <Ionicons name="text-outline" size={20} color={Colors.accent.purple} style={styles.locationIcon} />
+              <TextInput
+                style={styles.locationInput}
+                value={form.title}
+                onChangeText={form.setTitle}
+                placeholder={t.rehearsals.rehearsalTitlePlaceholder}
+                placeholderTextColor={Colors.text.tertiary}
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                blurOnSubmit={true}
+              />
+            </View>
           </View>
 
           {/* Date */}

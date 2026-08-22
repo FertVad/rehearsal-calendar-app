@@ -11,3 +11,9 @@ TEST_RESULTS.md
 *.p8
 *.mobileprovision
 *.p12
+
+# macOS
+.DS_Store
+
+# Ad-hoc screenshots dropped into screens/ by hand
+screens/Снимок*.png

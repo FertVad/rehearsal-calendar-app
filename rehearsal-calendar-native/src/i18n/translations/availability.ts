@@ -24,6 +24,7 @@ export interface AvailabilityTranslations {
   cannotSave: string;
   invalidSlot: string;
   slotsOverlap: string;
+  slotEndBeforeStart: string;
   fixSlots: string;
   understood: string;
   selectedDates: (count: number) => string;
@@ -98,6 +99,7 @@ export const ru = {
     cannotSave: 'Невозможно сохранить',
     invalidSlot: 'Пожалуйста, исправьте время слотов и попробуйте снова.',
     slotsOverlap: 'Слоты не должны пересекаться',
+    slotEndBeforeStart: 'Время окончания должно быть позже начала',
     fixSlots: 'Пожалуйста, исправьте время слотов и попробуйте снова.',
     understood: 'Понятно',
     selectedDates: (count: number) => `Выбрано дат: ${count}`,
@@ -172,6 +174,7 @@ export const en = {
     cannotSave: 'Cannot save',
     invalidSlot: 'Please fix the time slots and try again.',
     slotsOverlap: 'Slots must not overlap',
+    slotEndBeforeStart: 'End time must be after the start time',
     fixSlots: 'Please fix the time slots and try again.',
     understood: 'Understood',
     selectedDates: (count: number) => `Selected dates: ${count}`,
@@ -246,6 +249,7 @@ export const es = {
     cannotSave: 'No se puede guardar',
     invalidSlot: 'Por favor, corrige las horas de las franjas e inténtalo de nuevo.',
     slotsOverlap: 'Las franjas no deben solaparse',
+    slotEndBeforeStart: 'La hora de fin debe ser posterior a la de inicio',
     fixSlots: 'Por favor, corrige las horas de las franjas e inténtalo de nuevo.',
     understood: 'Entendido',
     selectedDates: (count: number) => `Fechas seleccionadas: ${count}`,
@@ -320,6 +324,7 @@ export const de = {
     cannotSave: 'Speichern nicht möglich',
     invalidSlot: 'Bitte korrigiere die Zeitfenster und versuche es erneut.',
     slotsOverlap: 'Zeitfenster dürfen sich nicht überschneiden',
+    slotEndBeforeStart: 'Die Endzeit muss nach der Startzeit liegen',
     fixSlots: 'Bitte korrigiere die Zeitfenster und versuche es erneut.',
     understood: 'Verstanden',
     selectedDates: (count: number) => `Ausgewählte Daten: ${count}`,

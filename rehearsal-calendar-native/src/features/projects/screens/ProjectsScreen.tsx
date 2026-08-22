@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
-import { SkeletonLoader, FloatingActionButton } from '../../../shared/components';
+import { SkeletonLoader } from '../../../shared/components';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useInviteLink } from '../hooks';
@@ -104,7 +104,7 @@ export default function ProjectsScreen() {
                       onPress={(e) => {
                         e.stopPropagation();
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        generateInviteLink(project.id);
+                        generateInviteLink(project.id, project.name);
                       }}
                       disabled={generatingInvite}
                     >
@@ -124,11 +124,6 @@ export default function ProjectsScreen() {
           </View>
         )}
       </ScrollView>
-
-      <FloatingActionButton
-        onPress={handleCreateProject}
-        icon="add"
-      />
     </SafeAreaView>
   );
 }

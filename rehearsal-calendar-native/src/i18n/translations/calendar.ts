@@ -27,6 +27,8 @@ export interface RehearsalsTranslations {
   upcoming: string;
   noUpcoming: string;
   willAppear: string;
+  rehearsalTitle: string;
+  rehearsalTitlePlaceholder: string;
   scene: string;
   date: string;
   time: string;
@@ -114,6 +116,8 @@ export const ru = {
     upcoming: 'Предстоящие',
     noUpcoming: 'Нет предстоящих репетиций',
     willAppear: 'Ваши репетиции появятся здесь, когда они будут запланированы',
+    rehearsalTitle: 'Название',
+    rehearsalTitlePlaceholder: 'Например: Прогон второго акта',
     scene: 'Сцена',
     date: 'Дата',
     time: 'Время',
@@ -202,6 +206,8 @@ export const en = {
     upcoming: 'Upcoming',
     noUpcoming: 'No upcoming rehearsals',
     willAppear: 'Your rehearsals will appear here when they are scheduled',
+    rehearsalTitle: 'Title',
+    rehearsalTitlePlaceholder: 'e.g. Act II run-through',
     scene: 'Scene',
     date: 'Date',
     time: 'Time',
@@ -290,6 +296,8 @@ export const es = {
     upcoming: 'Próximos',
     noUpcoming: 'No hay ensayos próximos',
     willAppear: 'Tus ensayos aparecerán aquí cuando estén programados',
+    rehearsalTitle: 'Título',
+    rehearsalTitlePlaceholder: 'Ej.: Pasada del segundo acto',
     scene: 'Escena',
     date: 'Fecha',
     time: 'Hora',
@@ -378,6 +386,8 @@ export const de = {
     upcoming: 'Bevorstehend',
     noUpcoming: 'Keine bevorstehenden Proben',
     willAppear: 'Deine Proben erscheinen hier, sobald sie geplant sind',
+    rehearsalTitle: 'Titel',
+    rehearsalTitlePlaceholder: 'z. B. Durchlauf zweiter Akt',
     scene: 'Szene',
     date: 'Datum',
     time: 'Zeit',

@@ -39,7 +39,7 @@ describe('Availability Validation Utils', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.error).toBeDefined();
-      expect(result.error).toContain('раньше');
+      expect(result.error).toBe('endBeforeStart');
     });
 
     it('should reject slot where start is after end', () => {
@@ -193,7 +193,7 @@ describe('Availability Validation Utils', () => {
       const result = validateSlots(slots);
 
       expect(result.isValid).toBe(false);
-      expect(result.error).toContain('раньше');
+      expect(result.error).toBe('endBeforeStart');
     });
 
     it('should reject when middle slot is invalid', () => {
@@ -216,7 +216,7 @@ describe('Availability Validation Utils', () => {
       const result = validateSlots(slots);
 
       expect(result.isValid).toBe(false);
-      expect(result.error).toContain('пересекаться');
+      expect(result.error).toBe('overlap');
     });
 
     it('should reject when slots overlap (last two)', () => {

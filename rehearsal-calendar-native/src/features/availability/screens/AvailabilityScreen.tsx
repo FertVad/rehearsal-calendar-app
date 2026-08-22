@@ -95,6 +95,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   const handleSave = async () => {
     await saveAvailability(availability, today, language, t, setSaving, setHasChanges);
+    // Drop the selection so it is obvious the batch was committed; the sheet
+    // stays open because marking several days in a row is the common case.
+    editor.clearSelection();
   };
 
   // Pull-to-refresh: sync calendar + reload availability
@@ -128,17 +131,17 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>{t.availability.title}</Text>
-        {hasChanges && (
+        {/* Only when pushed as the MarkBusy modal — the month list eats the
+            swipe-down dismiss, so without this there is no way back out. As a
+            tab root there is nothing to go back to and the button is hidden. */}
+        {navigation.canGoBack() && (
           <TouchableOpacity
-            style={[styles.saveHeaderButton, saving && styles.saveHeaderButtonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel={t.common.cancel}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            {saving ? (
-              <ActivityIndicator size="small" color={Colors.text.inverse} />
-            ) : (
-              <Text style={styles.saveHeaderButtonText}>{t.common.save}</Text>
-            )}
+            <Ionicons name="close" size={24} color={Colors.text.secondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -399,6 +402,29 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           </>
           )}
         </ScrollView>
+
+        {/* Save sits with the work rather than in the header. The count is
+            spelled out because one press commits every date touched so far,
+            not just the one the sheet is showing. */}
+        {hasChanges && (
+          <View style={styles.sheetSaveBar}>
+            <TouchableOpacity
+              style={[styles.sheetSaveButton, saving && styles.sheetSaveButtonDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={Colors.text.inverse} />
+              ) : (
+                <Text style={styles.sheetSaveButtonText}>
+                  {editor.selectedDates.length > 1
+                    ? `${t.common.save} · ${t.availability.selectedDates(editor.selectedDates.length)}`
+                    : t.common.save}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </Animated.View>
 
       {/* Time Picker Modal */}

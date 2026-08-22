@@ -28,6 +28,8 @@ export interface Rehearsal {
     time?: string;
     endTime?: string;
     duration?: string;
+    /** Optional name for the call, e.g. "Act II run-through". */
+    title?: string;
     location?: string;
     status?: string;
     projectId?: string;

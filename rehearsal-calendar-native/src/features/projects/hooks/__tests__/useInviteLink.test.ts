@@ -1,24 +1,23 @@
 /**
  * Unit Tests for useInviteLink Hook
  *
+ * The hook hands the invite to the system share sheet rather than the
+ * clipboard — see the note on the hook itself for why.
+ *
  * Tests:
- * - generateInviteLink successfully
- * - Copy to clipboard
- * - Error handling
+ * - generateInviteLink opens the share sheet with the link and project name
  * - Loading states
+ * - Error handling
+ * - Concurrent calls
+ * - Edge cases around a missing url
  */
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import { Alert, Share } from 'react-native';
 import { useInviteLink } from '../useInviteLink';
 import { invitesAPI } from '../../../../shared/services/api';
 
 // Mock dependencies
 jest.mock('../../../../shared/services/api');
-jest.mock('expo-clipboard');
-jest.mock('react-native/Libraries/Alert/Alert', () => ({
-  alert: jest.fn(),
-}));
 jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({
     language: 'ru',
@@ -27,48 +26,46 @@ jest.mock('../../../../contexts/I18nContext', () => ({
   }),
 }));
 
+const PROJECT = 'Гамлет';
+
 describe('useInviteLink Hook', () => {
+  const shareSpy = Share.share as jest.Mock;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    shareSpy.mockResolvedValue({ action: 'sharedAction' });
   });
 
   describe('generateInviteLink - Success', () => {
-    it('should generate invite link and copy to clipboard', async () => {
-      const mockInviteUrl = 'https://app.com/invite/abc123';
-      const mockResponse = {
+    it('should generate an invite link and open the share sheet', async () => {
+      const mockInviteUrl = 'https://rehearsly.me/invite/abc123';
+      (invitesAPI.createInvite as jest.Mock).mockResolvedValue({
         data: {
           inviteCode: 'abc123',
           inviteUrl: mockInviteUrl,
           expiresAt: '2025-12-31T23:59:59Z',
         },
-      };
-
-      (invitesAPI.createInvite as jest.Mock).mockResolvedValue(mockResponse);
-      (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
+      });
 
       const { result } = renderHook(() => useInviteLink());
 
-      // Initially not generating
       expect(result.current.generatingInvite).toBe(false);
 
       await act(async () => {
-        await result.current.generateInviteLink('project-1');
+        await result.current.generateInviteLink('project-1', PROJECT);
       });
 
-      // Should call API
       expect(invitesAPI.createInvite).toHaveBeenCalledWith('project-1');
 
-      // Should copy to clipboard
-      expect(Clipboard.setStringAsync).toHaveBeenCalledWith(mockInviteUrl);
+      // The sheet gets the localized message, the project name and the link
+      expect(shareSpy).toHaveBeenCalledWith({
+        message: `Присоединяйся к проекту "${PROJECT}" в приложении Rehearsly:\n\n${mockInviteUrl}`,
+        title: `Приглашение в проект ${PROJECT}`,
+      });
 
-      // Should show success alert
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Ссылка скопирована!',
-        'Ссылка-приглашение скопирована в буфер обмена',
-        [{ text: 'OK' }]
-      );
+      // No alert on the happy path — the sheet is the whole feedback
+      expect(Alert.alert).not.toHaveBeenCalled();
 
-      // Should clear loading state
       expect(result.current.generatingInvite).toBe(false);
     });
   });
@@ -81,52 +78,56 @@ describe('useInviteLink Hook', () => {
       });
 
       (invitesAPI.createInvite as jest.Mock).mockReturnValue(promise);
-      (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useInviteLink());
 
-      // Start generation
       act(() => {
-        result.current.generateInviteLink('project-1');
+        result.current.generateInviteLink('project-1', PROJECT);
       });
 
-      // Should be generating
       expect(result.current.generatingInvite).toBe(true);
 
-      // Resolve promise
       await act(async () => {
         resolvePromise!({
-          data: {
-            inviteUrl: 'https://app.com/invite/abc123',
-          },
+          data: { inviteUrl: 'https://rehearsly.me/invite/abc123' },
         });
         await promise;
       });
 
-      // Should clear loading state
       expect(result.current.generatingInvite).toBe(false);
     });
   });
 
   describe('generateInviteLink - Error Handling', () => {
     it('should show error alert on API failure', async () => {
-      const error = new Error('Failed to create invite');
-      (invitesAPI.createInvite as jest.Mock).mockRejectedValue(error);
+      (invitesAPI.createInvite as jest.Mock).mockRejectedValue(
+        new Error('Failed to create invite')
+      );
 
       const { result } = renderHook(() => useInviteLink());
 
       await act(async () => {
-        await result.current.generateInviteLink('project-1');
+        await result.current.generateInviteLink('project-1', PROJECT);
       });
 
-      // Should show error alert with error message
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Ошибка',
-        'Failed to create invite'
-      );
-
-      // Should clear loading state
+      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Failed to create invite');
+      expect(shareSpy).not.toHaveBeenCalled();
       expect(result.current.generatingInvite).toBe(false);
+    });
+
+    it('should prefer the server error over the generic message', async () => {
+      (invitesAPI.createInvite as jest.Mock).mockRejectedValue({
+        response: { data: { error: 'Only admins can invite' } },
+        message: 'Request failed with status code 403',
+      });
+
+      const { result } = renderHook(() => useInviteLink());
+
+      await act(async () => {
+        await result.current.generateInviteLink('project-1', PROJECT);
+      });
+
+      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Only admins can invite');
     });
 
     it('should show default error message when error has no message', async () => {
@@ -135,7 +136,7 @@ describe('useInviteLink Hook', () => {
       const { result } = renderHook(() => useInviteLink());
 
       await act(async () => {
-        await result.current.generateInviteLink('project-1');
+        await result.current.generateInviteLink('project-1', PROJECT);
       });
 
       expect(Alert.alert).toHaveBeenCalledWith(
@@ -144,105 +145,68 @@ describe('useInviteLink Hook', () => {
       );
     });
 
-    it('should handle clipboard failure gracefully', async () => {
-      const mockResponse = {
-        data: {
-          inviteUrl: 'https://app.com/invite/abc123',
-        },
-      };
-
-      (invitesAPI.createInvite as jest.Mock).mockResolvedValue(mockResponse);
-      (Clipboard.setStringAsync as jest.Mock).mockRejectedValue(
-        new Error('Clipboard permission denied')
-      );
+    it('should surface a share sheet failure', async () => {
+      (invitesAPI.createInvite as jest.Mock).mockResolvedValue({
+        data: { inviteUrl: 'https://rehearsly.me/invite/abc123' },
+      });
+      shareSpy.mockRejectedValue(new Error('Share unavailable'));
 
       const { result } = renderHook(() => useInviteLink());
 
-      // Should handle error and show Alert
       await act(async () => {
-        await result.current.generateInviteLink('project-1');
+        await result.current.generateInviteLink('project-1', PROJECT);
       });
 
-      // Should show error alert with clipboard error message
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Ошибка',
-        'Clipboard permission denied'
-      );
-
-      // Should still clear loading state
+      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Share unavailable');
       expect(result.current.generatingInvite).toBe(false);
     });
   });
 
   describe('generateInviteLink - Concurrent Requests', () => {
     it('should handle multiple rapid calls', async () => {
-      const mockResponse1 = { data: { inviteUrl: 'https://app.com/invite/abc123' } };
-      const mockResponse2 = { data: { inviteUrl: 'https://app.com/invite/def456' } };
-
       (invitesAPI.createInvite as jest.Mock)
-        .mockResolvedValueOnce(mockResponse1)
-        .mockResolvedValueOnce(mockResponse2);
-      (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
+        .mockResolvedValueOnce({ data: { inviteUrl: 'https://rehearsly.me/invite/abc123' } })
+        .mockResolvedValueOnce({ data: { inviteUrl: 'https://rehearsly.me/invite/def456' } });
 
       const { result } = renderHook(() => useInviteLink());
 
-      // Make two rapid calls
       await act(async () => {
-        await result.current.generateInviteLink('project-1');
+        await result.current.generateInviteLink('project-1', PROJECT);
       });
 
       await act(async () => {
-        await result.current.generateInviteLink('project-2');
+        await result.current.generateInviteLink('project-2', 'Лебединое озеро');
       });
 
-      // Should have called API twice
       expect(invitesAPI.createInvite).toHaveBeenCalledTimes(2);
       expect(invitesAPI.createInvite).toHaveBeenNthCalledWith(1, 'project-1');
       expect(invitesAPI.createInvite).toHaveBeenNthCalledWith(2, 'project-2');
 
-      // Should have copied both to clipboard
-      expect(Clipboard.setStringAsync).toHaveBeenCalledTimes(2);
-      expect(Clipboard.setStringAsync).toHaveBeenNthCalledWith(1, 'https://app.com/invite/abc123');
-      expect(Clipboard.setStringAsync).toHaveBeenNthCalledWith(2, 'https://app.com/invite/def456');
+      expect(shareSpy).toHaveBeenCalledTimes(2);
+      // Each call carries its own project name, not the first one's
+      expect(shareSpy).toHaveBeenNthCalledWith(2, {
+        message: `Присоединяйся к проекту "Лебединое озеро" в приложении Rehearsly:\n\nhttps://rehearsly.me/invite/def456`,
+        title: 'Приглашение в проект Лебединое озеро',
+      });
     });
   });
 
   describe('generateInviteLink - Edge Cases', () => {
     it('should handle empty inviteUrl', async () => {
-      const mockResponse = { data: { inviteUrl: '' } };
-      (invitesAPI.createInvite as jest.Mock).mockResolvedValue(mockResponse);
-      (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
+      (invitesAPI.createInvite as jest.Mock).mockResolvedValue({
+        data: { inviteUrl: '' },
+      });
 
       const { result } = renderHook(() => useInviteLink());
 
       await act(async () => {
-        await result.current.generateInviteLink('project-1');
+        await result.current.generateInviteLink('project-1', PROJECT);
       });
 
-      // Should still try to copy empty string
-      expect(Clipboard.setStringAsync).toHaveBeenCalledWith('');
-
-      // Should still show success alert
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Ссылка скопирована!',
-        'Ссылка-приглашение скопирована в буфер обмена',
-        [{ text: 'OK' }]
-      );
-    });
-
-    it('should handle response without inviteUrl', async () => {
-      const mockResponse = { data: {} };
-      (invitesAPI.createInvite as jest.Mock).mockResolvedValue(mockResponse);
-      (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
-
-      const { result } = renderHook(() => useInviteLink());
-
-      await act(async () => {
-        await result.current.generateInviteLink('project-1');
+      expect(shareSpy).toHaveBeenCalledWith({
+        message: `Присоединяйся к проекту "${PROJECT}" в приложении Rehearsly:\n\n`,
+        title: `Приглашение в проект ${PROJECT}`,
       });
-
-      // Should try to copy undefined
-      expect(Clipboard.setStringAsync).toHaveBeenCalledWith(undefined);
     });
   });
 });

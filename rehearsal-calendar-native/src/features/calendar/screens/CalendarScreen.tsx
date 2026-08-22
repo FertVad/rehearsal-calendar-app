@@ -404,6 +404,14 @@ export default function CalendarScreen() {
                               </Text>
                             </View>
 
+                            {/* Mirrors the card in TodayRehearsals — the two
+                                lists render separate markup for the same thing. */}
+                            {rehearsal.title ? (
+                              <Text style={styles.upcomingTitle} numberOfLines={2}>
+                                {rehearsal.title}
+                              </Text>
+                            ) : null}
+
                             {rehearsal.projectName && (
                               <View style={styles.upcomingProjectRow}>
                                 <Ionicons name="folder-outline" size={14} color={Colors.accent.blue} />

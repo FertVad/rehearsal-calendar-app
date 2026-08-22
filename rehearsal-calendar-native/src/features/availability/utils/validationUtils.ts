@@ -17,7 +17,7 @@ export const validateSlot = (slot: TimeSlot): SlotValidation => {
   if (startMinutes >= endMinutes) {
     return {
       isValid: false,
-      error: 'Время начала должно быть раньше времени окончания'
+      error: 'endBeforeStart'
     };
   }
 
@@ -59,7 +59,7 @@ export const validateSlots = (slots: TimeSlot[]): SlotValidation => {
       if (overlaps) {
         return {
           isValid: false,
-          error: 'Слоты не должны пересекаться'
+          error: 'overlap'
         };
       }
     }

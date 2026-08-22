@@ -47,12 +47,15 @@ body {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
   text-decoration: none;
 }
-.brand span { color: var(--accent); }
+.brand__mark { display: block; width: auto; height: 24px; }
 
 .lang {
   display: flex;
