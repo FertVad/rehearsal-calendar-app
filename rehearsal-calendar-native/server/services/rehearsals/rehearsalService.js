@@ -409,29 +409,45 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
     ]
   );
 
-  // Update booked slots
+  // Participants first, slots second. bookRehearsalSlots reads the roster out
+  // of native_rehearsal_responses, so doing it the other way round books the
+  // people who *were* on the rehearsal: someone added by this edit gets no
+  // busy slot at all, and someone removed keeps one.
+  if (participant_ids !== undefined) {
+    const ids = participant_ids.map(Number).filter((id) => Number.isInteger(id));
+
+    // Drop anyone no longer on the rehearsal, keep the rest as they are.
+    if (ids.length > 0) {
+      const placeholders = ids.map((_, i) => `$${i + 2}`).join(', ');
+      await db.run(
+        `DELETE FROM native_rehearsal_responses
+         WHERE rehearsal_id = $1 AND user_id NOT IN (${placeholders})`,
+        [rehearsalId, ...ids]
+      );
+    } else {
+      await db.run('DELETE FROM native_rehearsal_responses WHERE rehearsal_id = $1', [rehearsalId]);
+    }
+
+    // Newcomers are invited-but-unseen, exactly as on creation. Re-inserting
+    // everyone as 'yes' used to mark the whole cast as having seen a rehearsal
+    // the moment it changed, which is the one time they have not.
+    for (const userId of ids) {
+      await db.run(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+         VALUES ($1, $2, 'no', NOW(), NOW())
+         ON CONFLICT (rehearsal_id, user_id) DO NOTHING`,
+        [rehearsalId, userId]
+      );
+    }
+  }
+
+  // Rebuild the busy slots from the roster we just settled
   await updateRehearsalSlots(
     rehearsalId,
     projectId,
     startsAtISO,
     endsAtISO
   );
-
-  // Update participants if provided
-  if (participant_ids !== undefined) {
-    // Delete existing responses for this rehearsal
-    await db.run('DELETE FROM native_rehearsal_responses WHERE rehearsal_id = $1', [rehearsalId]);
-
-    // Insert new participant responses (if any selected)
-    if (participant_ids.length > 0) {
-      for (const userId of participant_ids) {
-        await db.run(
-          'INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW())',
-          [rehearsalId, userId, 'yes']
-        );
-      }
-    }
-  }
 
   return {
     id: String(updatedRehearsal.id),

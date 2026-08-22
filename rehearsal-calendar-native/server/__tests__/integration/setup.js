@@ -89,11 +89,12 @@ export async function setupIntegrationDb() {
     CREATE TABLE native_rehearsals (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL REFERENCES native_projects(id) ON DELETE CASCADE,
-      title TEXT NOT NULL,
+      title TEXT,
       location TEXT,
       description TEXT,
       starts_at DATETIME NOT NULL,
       ends_at DATETIME NOT NULL,
+      created_by INTEGER REFERENCES native_users(id) ON DELETE SET NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -103,7 +104,7 @@ export async function setupIntegrationDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       rehearsal_id INTEGER NOT NULL REFERENCES native_rehearsals(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
-      response TEXT CHECK(response IN ('yes')),
+      response TEXT NOT NULL CHECK(response IN ('yes', 'no')),
       notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
