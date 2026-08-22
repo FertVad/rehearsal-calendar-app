@@ -84,6 +84,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   const [refreshing, setRefreshing] = useState(false);
   const { generateInviteLink, generatingInvite, lastCode } = useInviteLink();
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [revealingCode, setRevealingCode] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberActionLoading, setMemberActionLoading] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
@@ -143,6 +144,21 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   useEffect(() => {
     if (lastCode) setInviteCode(lastCode);
   }, [lastCode]);
+
+  // Revealing the code and sharing the link are separate errands: one is for
+  // reading out loud, the other for sending. One tap, one outcome.
+  const handleShowCode = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      setRevealingCode(true);
+      const res = await invitesAPI.createInvite(projectId);
+      setInviteCode(res.data?.inviteCode ?? null);
+    } catch (err: any) {
+      Alert.alert(t.common.error, err.response?.data?.error || t.projects.inviteLinkError);
+    } finally {
+      setRevealingCode(false);
+    }
+  };
 
   const handleCopyCode = async () => {
     if (!inviteCode) return;
@@ -374,25 +390,35 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
                 <ActivityIndicator size="small" color={Colors.text.inverse} />
               ) : (
                 <>
-                  <Ionicons name="person-add" size={18} color={Colors.text.inverse} />
-                  <Text style={styles.inviteButtonText}>{t.projects.inviteMembers}</Text>
+                  <Ionicons name="share-outline" size={18} color={Colors.text.inverse} />
+                  <Text style={styles.inviteButtonText}>{t.projects.shareLink}</Text>
                 </>
               )}
             </TouchableOpacity>
 
             {/* The code is the fallback for when the link does not arrive, so
                 it is shown outright rather than hidden behind sharing first. */}
-            {inviteCode && (
-              <TouchableOpacity style={styles.inviteCodeRow} onPress={handleCopyCode}>
-                <View style={styles.inviteCodeText}>
-                  <Text style={styles.inviteCodeLabel}>{t.projects.inviteCodeLabel}</Text>
-                  <Text style={styles.inviteCodeValue} numberOfLines={1} ellipsizeMode="middle">
-                    {inviteCode}
-                  </Text>
-                </View>
-                <Ionicons name="copy-outline" size={20} color={Colors.accent.purple} />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.inviteCodeRow}
+              onPress={inviteCode ? handleCopyCode : handleShowCode}
+              disabled={revealingCode}
+            >
+              <View style={styles.inviteCodeText}>
+                <Text style={styles.inviteCodeLabel}>{t.projects.inviteCodeLabel}</Text>
+                <Text style={styles.inviteCodeValue} numberOfLines={1} ellipsizeMode="middle">
+                  {inviteCode ?? t.projects.showCode}
+                </Text>
+              </View>
+              {revealingCode ? (
+                <ActivityIndicator size="small" color={Colors.accent.purple} />
+              ) : (
+                <Ionicons
+                  name={inviteCode ? 'copy-outline' : 'eye-outline'}
+                  size={20}
+                  color={Colors.accent.purple}
+                />
+              )}
+            </TouchableOpacity>
           </>
         )}
 

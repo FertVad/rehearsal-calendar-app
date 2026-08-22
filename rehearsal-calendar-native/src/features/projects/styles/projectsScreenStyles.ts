@@ -144,6 +144,27 @@ export const styles = StyleSheet.create({
 
   // Same dashed outline the availability editor uses for "add another one" —
   // in this app that shape already reads as an optional extra action.
+  cardCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.bg.tertiary,
+  },
+  cardCodeLabel: {
+    fontSize: FontSize.xs,
+    color: Colors.text.secondary,
+  },
+  cardCodeValue: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    letterSpacing: 1.5,
+    color: Colors.text.primary,
+  },
   joinButton: {
     flexDirection: 'row',
     alignItems: 'center',

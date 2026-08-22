@@ -3,6 +3,7 @@ import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicat
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -20,6 +21,12 @@ export default function ProjectsScreen() {
   // Joining is not creating, so it lives here on the projects screen rather
   // than in the create sheet — and above all in the empty state, which is
   // exactly what an invited person sees when their link failed to open.
+  const handleCopyCode = async (code: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Clipboard.setStringAsync(code);
+    Alert.alert(t.projects.codeCopied, '');
+  };
+
   const handleJoinProject = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('JoinProject', {});
@@ -129,6 +136,22 @@ export default function ProjectsScreen() {
                           <Text style={styles.inviteButtonText}>{t.projects.inviteLink}</Text>
                         </>
                       )}
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Carried down with the project itself, so reading a code
+                      out no longer means opening the project first. */}
+                  {project.is_admin && project.inviteCode && (
+                    <TouchableOpacity
+                      style={styles.cardCodeRow}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleCopyCode(project.inviteCode!);
+                      }}
+                    >
+                      <Text style={styles.cardCodeLabel}>{t.projects.inviteCodeLabel}</Text>
+                      <Text style={styles.cardCodeValue}>{project.inviteCode}</Text>
+                      <Ionicons name="copy-outline" size={14} color={Colors.text.secondary} />
                     </TouchableOpacity>
                   )}
                 </TouchableOpacity>
