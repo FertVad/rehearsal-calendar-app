@@ -151,12 +151,6 @@ function ActionSheetWrapper() {
         navigation.navigate('MarkBusy');
       }}
       onCreateProject={handleCreateProject}
-      onJoinProject={() => {
-        setShowActionSheet(false);
-        // No code: the screen asks for one. Following an invite link goes to
-        // the same screen with the code already in hand.
-        navigation.navigate('JoinProject', {});
-      }}
     />
   );
 }
