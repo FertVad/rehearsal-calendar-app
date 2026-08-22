@@ -32,6 +32,8 @@ export interface ProjectsTranslations {
   fetchError: string;
   haveInvite: string;
   inviteCodeLabel: string;
+  shareLink: string;
+  showCode: string;
   codeCopied: string;
   joinByCode: string;
   joinByCodeSubtitle: string;
@@ -104,6 +106,8 @@ export const ru = {
     inviteLinkCopied: 'Ссылка-приглашение скопирована в буфер обмена',
     inviteLinkError: 'Не удалось создать ссылку-приглашение',
     fetchError: 'Не удалось загрузить данные проекта',
+    shareLink: 'Поделиться ссылкой',
+    showCode: 'Показать код',
     inviteCodeLabel: 'Код приглашения',
     codeCopied: 'Код скопирован',
     haveInvite: 'Присоединиться по коду',
@@ -179,6 +183,8 @@ export const en = {
     inviteLinkCopied: 'Invite link copied to clipboard',
     inviteLinkError: 'Failed to create invite link',
     fetchError: 'Failed to load project data',
+    shareLink: 'Share the link',
+    showCode: 'Show the code',
     inviteCodeLabel: 'Invite code',
     codeCopied: 'Code copied',
     haveInvite: 'Join with a code',
@@ -254,6 +260,8 @@ export const es = {
     inviteLinkCopied: 'Enlace de invitación copiado al portapapeles',
     inviteLinkError: 'No se pudo crear el enlace de invitación',
     fetchError: 'No se pudieron cargar los datos del proyecto',
+    shareLink: 'Compartir el enlace',
+    showCode: 'Mostrar el código',
     inviteCodeLabel: 'Código de invitación',
     codeCopied: 'Código copiado',
     haveInvite: 'Unirse con un código',
@@ -329,6 +337,8 @@ export const de = {
     inviteLinkCopied: 'Einladungslink in die Zwischenablage kopiert',
     inviteLinkError: 'Einladungslink konnte nicht erstellt werden',
     fetchError: 'Projektdaten konnten nicht geladen werden',
+    shareLink: 'Link teilen',
+    showCode: 'Code anzeigen',
     inviteCodeLabel: 'Einladungscode',
     codeCopied: 'Code kopiert',
     haveInvite: 'Mit einem Code beitreten',

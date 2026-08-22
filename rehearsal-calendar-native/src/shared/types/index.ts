@@ -63,6 +63,8 @@ export interface Project {
     description?: string;
     timezone?: string;
     is_admin?: boolean;
+    /** Live invite code, sent only to admins — null for everyone else */
+    inviteCode?: string | null;
     createdAt?: string | Date;
     updatedAt?: string | Date;
     created_at?: string;

@@ -23,16 +23,30 @@ router.get('/', requireAuth, async (req, res) => {
       [accountId]
     );
 
+    const now = new Date();
+
     res.json({
-      projects: projects.map(p => ({
-        id: String(p.id),
-        name: p.name,
-        description: p.description || '',
-        timezone: p.timezone || DEFAULT_TIMEZONE,
-        is_admin: Boolean(p.is_admin),
-        created_at: p.created_at,
-        updated_at: p.updated_at,
-      })),
+      projects: projects.map(p => {
+        const isAdmin = Boolean(p.is_admin);
+        const inviteLive =
+          Boolean(p.invite_code) &&
+          Boolean(p.invite_expires_at) &&
+          new Date(p.invite_expires_at) > now;
+
+        return {
+          id: String(p.id),
+          name: p.name,
+          description: p.description || '',
+          timezone: p.timezone || DEFAULT_TIMEZONE,
+          is_admin: isAdmin,
+          // Carried here so the list can offer the code without a request per
+          // card. Admins only, and only while it is still good — for everyone
+          // else this is a way into the project they were never given.
+          inviteCode: isAdmin && inviteLive ? p.invite_code : null,
+          created_at: p.created_at,
+          updated_at: p.updated_at,
+        };
+      }),
     });
   } catch (error) {
     console.error('Error fetching projects:', error);
