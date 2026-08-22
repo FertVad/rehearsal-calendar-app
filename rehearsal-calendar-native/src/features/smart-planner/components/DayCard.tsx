@@ -55,7 +55,7 @@ export const DayCard: React.FC<DayCardProps> = React.memo(({ date, slots, onCrea
     <View style={styles.card}>
       <View style={styles.dateHeader}>
         <Text style={styles.dateText}>{formatDate(date)}</Text>
-        <Text style={styles.slotCount}>{slots.length} {t.smartPlanner.slots}</Text>
+        <Text style={styles.slotCount}>{t.smartPlanner.slotsCount(slots.length)}</Text>
       </View>
 
       {categoryGroups.map(group => (

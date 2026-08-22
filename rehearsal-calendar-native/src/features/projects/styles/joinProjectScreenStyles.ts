@@ -104,4 +104,18 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Spacing.xl,
   },
+
+  codeInput: {
+    width: '100%',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    backgroundColor: Colors.bg.secondary,
+    color: Colors.text.primary,
+    fontSize: FontSize.base,
+  },
 });

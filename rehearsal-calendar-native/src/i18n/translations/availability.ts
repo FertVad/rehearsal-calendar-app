@@ -46,7 +46,7 @@ export interface SmartPlannerTranslations {
   month: string;
   custom: string;
   customPeriod: string;
-  slots: string;
+  slotsCount: (count: number) => string;
   allDay: string;
   addButton: string;
   selectAll: string;
@@ -120,7 +120,14 @@ export const ru = {
     month: 'Месяц',
     custom: 'Выбрать даты',
     customPeriod: 'Свой период',
-    slots: 'слотов',
+    slotsCount: (count: number) => {
+      // 1 слот, 2 слота, 5 слотов — и 11..14 идут по последней форме
+      const mod10 = count % 10;
+      const mod100 = count % 100;
+      if (mod10 === 1 && mod100 !== 11) return `${count} слот`;
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} слота`;
+      return `${count} слотов`;
+    },
     allDay: 'Весь день',
     addButton: '+ Добавить',
     selectAll: 'Все',
@@ -195,7 +202,7 @@ export const en = {
     month: 'Month',
     custom: 'Select Dates',
     customPeriod: 'Custom Period',
-    slots: 'slots',
+    slotsCount: (count: number) => `${count} ${count === 1 ? 'slot' : 'slots'}`,
     allDay: 'All day',
     addButton: '+ Add',
     selectAll: 'All',
@@ -270,7 +277,7 @@ export const es = {
     month: 'Mes',
     custom: 'Elegir fechas',
     customPeriod: 'Período personalizado',
-    slots: 'franjas',
+    slotsCount: (count: number) => `${count} ${count === 1 ? 'franja' : 'franjas'}`,
     allDay: 'Todo el día',
     addButton: '+ Añadir',
     selectAll: 'Todos',
@@ -345,7 +352,8 @@ export const de = {
     month: 'Monat',
     custom: 'Daten auswählen',
     customPeriod: 'Eigener Zeitraum',
-    slots: 'Zeitfenster',
+    // Zeitfenster is the same in the plural
+    slotsCount: (count: number) => `${count} Zeitfenster`,
     allDay: 'Ganztägig',
     addButton: '+ Hinzufügen',
     selectAll: 'Alle',
