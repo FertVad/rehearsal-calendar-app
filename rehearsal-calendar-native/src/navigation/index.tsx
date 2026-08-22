@@ -62,6 +62,8 @@ const linking: any = {
   prefixes: [
     prefix,
     'rehearsalapp://',
+    'https://rehearsly.me',
+    // Kept so links handed out before the domain move still resolve
     'https://server-fertvads-projects.vercel.app',
     localhostPrefix
   ],
@@ -149,6 +151,12 @@ function ActionSheetWrapper() {
         navigation.navigate('MarkBusy');
       }}
       onCreateProject={handleCreateProject}
+      onJoinProject={() => {
+        setShowActionSheet(false);
+        // No code: the screen asks for one. Following an invite link goes to
+        // the same screen with the code already in hand.
+        navigation.navigate('JoinProject', {});
+      }}
     />
   );
 }

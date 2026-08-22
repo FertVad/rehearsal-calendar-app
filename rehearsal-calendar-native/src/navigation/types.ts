@@ -34,7 +34,8 @@ export type TabParamList = {
 
 export type AppStackParamList = {
   MainTabs: undefined;
-  JoinProject: { code: string };
+  // No code when opened from the create sheet — the screen asks for one
+  JoinProject: { code?: string } | undefined;
   MarkBusy: undefined;
   CreateProject: undefined;
   AddRehearsal: {

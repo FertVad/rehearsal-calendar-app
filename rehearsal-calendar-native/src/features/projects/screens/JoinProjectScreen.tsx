@@ -5,6 +5,9 @@ import {
   SafeAreaView,
   ActivityIndicator,
   TouchableOpacity,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -19,11 +22,16 @@ import { joinProjectScreenStyles as styles } from '../styles';
 type JoinProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'JoinProject'>;
 
 export default function JoinProjectScreen({ route, navigation }: JoinProjectScreenProps) {
-  const { code } = route.params;
+  // Arriving from an invite link brings the code with it. Reached from the
+  // create sheet it does not, and the screen asks for one — otherwise a link
+  // that fails to open leaves a person with no way into the project at all.
+  const linkCode = route.params?.code;
   const { refreshProjects } = useProjects();
   const { t } = useI18n();
 
-  const [loading, setLoading] = useState(true);
+  const [code, setCode] = useState(linkCode ?? '');
+  const [typedCode, setTypedCode] = useState('');
+  const [loading, setLoading] = useState(Boolean(linkCode));
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [projectInfo, setProjectInfo] = useState<{
@@ -33,8 +41,20 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
   } | null>(null);
 
   useEffect(() => {
+    if (!code) return;
     checkAndFetchInviteInfo();
   }, [code]);
+
+  const handleSubmitCode = () => {
+    const entered = typedCode.trim();
+    if (!entered) return;
+    setError(null);
+    setLoading(true);
+    // Pasting the whole link is the likelier gesture than copying the code out
+    // of it, so take the last path segment when one is given.
+    const fromUrl = entered.match(/\/invite\/([^/?#\s]+)/i);
+    setCode(fromUrl ? fromUrl[1] : entered);
+  };
 
   const checkAndFetchInviteInfo = async () => {
     try {
@@ -114,6 +134,56 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
     navigation.goBack();
   };
 
+  // No code yet — ask for one
+  if (!code) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
+          style={styles.content}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.iconContainer}>
+            <Ionicons name="key-outline" size={64} color={Colors.accent.purple} />
+          </View>
+
+          <Text style={styles.title}>{t.projects.joinByCode}</Text>
+          <Text style={styles.subtitle}>{t.projects.joinByCodeSubtitle}</Text>
+
+          <TextInput
+            style={styles.codeInput}
+            value={typedCode}
+            onChangeText={setTypedCode}
+            placeholder={t.projects.joinByCodePlaceholder}
+            placeholderTextColor={Colors.text.tertiary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="go"
+            onSubmitEditing={handleSubmitCode}
+          />
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.primaryButton]}
+              onPress={handleSubmitCode}
+              disabled={!typedCode.trim()}
+            >
+              <Text style={[styles.buttonText, styles.primaryButtonText]}>
+                {t.projects.join}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.secondaryButton]}
+              onPress={handleCancel}
+            >
+              <Text style={styles.secondaryButtonText}>{t.projects.cancel}</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -132,8 +202,13 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
           <Ionicons name="alert-circle" size={64} color={Colors.accent.red} />
           <Text style={styles.errorTitle}>{t.projects.error}</Text>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.button} onPress={handleCancel}>
-            <Text style={styles.buttonText}>{t.projects.close}</Text>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={linkCode ? handleCancel : () => { setCode(''); setError(null); }}
+          >
+            <Text style={styles.buttonText}>
+              {linkCode ? t.projects.close : t.projects.tryAgain}
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

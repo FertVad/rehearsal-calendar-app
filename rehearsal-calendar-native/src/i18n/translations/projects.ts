@@ -30,6 +30,10 @@ export interface ProjectsTranslations {
   inviteLinkCopied: string;
   inviteLinkError: string;
   fetchError: string;
+  joinByCode: string;
+  joinByCodeSubtitle: string;
+  joinByCodePlaceholder: string;
+  tryAgain: string;
   shareInviteMessage: (projectName: string) => string;
   shareInviteTitle: (projectName: string) => string;
   manageMember: string;
@@ -97,6 +101,10 @@ export const ru = {
     inviteLinkCopied: 'Ссылка-приглашение скопирована в буфер обмена',
     inviteLinkError: 'Не удалось создать ссылку-приглашение',
     fetchError: 'Не удалось загрузить данные проекта',
+    joinByCode: 'Вступить по коду',
+    joinByCodeSubtitle: 'Вставьте код приглашения или ссылку целиком',
+    joinByCodePlaceholder: 'Код или ссылка',
+    tryAgain: 'Ввести другой код',
     shareInviteMessage: (projectName: string) => `Присоединяйся к проекту "${projectName}" в приложении Rehearsly:`,
     shareInviteTitle: (projectName: string) => `Приглашение в проект ${projectName}`,
     manageMember: 'Управление участником',
@@ -165,6 +173,10 @@ export const en = {
     inviteLinkCopied: 'Invite link copied to clipboard',
     inviteLinkError: 'Failed to create invite link',
     fetchError: 'Failed to load project data',
+    joinByCode: 'Join by code',
+    joinByCodeSubtitle: 'Paste the invite code, or the whole link',
+    joinByCodePlaceholder: 'Code or link',
+    tryAgain: 'Try another code',
     shareInviteMessage: (projectName: string) => `Join the project "${projectName}" in the Rehearsly app:`,
     shareInviteTitle: (projectName: string) => `Invitation to project ${projectName}`,
     manageMember: 'Manage Member',
@@ -233,6 +245,10 @@ export const es = {
     inviteLinkCopied: 'Enlace de invitación copiado al portapapeles',
     inviteLinkError: 'No se pudo crear el enlace de invitación',
     fetchError: 'No se pudieron cargar los datos del proyecto',
+    joinByCode: 'Unirse con un código',
+    joinByCodeSubtitle: 'Peguen el código de invitación o el enlace completo',
+    joinByCodePlaceholder: 'Código o enlace',
+    tryAgain: 'Probar otro código',
     shareInviteMessage: (projectName: string) => `Únete al proyecto "${projectName}" en la app Rehearsly:`,
     shareInviteTitle: (projectName: string) => `Invitación al proyecto ${projectName}`,
     manageMember: 'Gestionar miembro',
@@ -301,6 +317,10 @@ export const de = {
     inviteLinkCopied: 'Einladungslink in die Zwischenablage kopiert',
     inviteLinkError: 'Einladungslink konnte nicht erstellt werden',
     fetchError: 'Projektdaten konnten nicht geladen werden',
+    joinByCode: 'Mit Code beitreten',
+    joinByCodeSubtitle: 'Füg den Einladungscode ein, oder den ganzen Link',
+    joinByCodePlaceholder: 'Code oder Link',
+    tryAgain: 'Anderen Code versuchen',
     shareInviteMessage: (projectName: string) => `Tritt dem Projekt „${projectName}" in der Rehearsly-App bei:`,
     shareInviteTitle: (projectName: string) => `Einladung zum Projekt ${projectName}`,
     manageMember: 'Mitglied verwalten',
