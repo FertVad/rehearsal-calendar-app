@@ -8,6 +8,7 @@ import { SkeletonLoader } from '../../../shared/components';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import MyRehearsalsModal from '../components/MyRehearsalsModal';
 import TodayRehearsals from '../components/TodayRehearsals';
+import RehearsalCard from '../components/RehearsalCard';
 import SmartPlannerButton from '../components/SmartPlannerButton';
 import { RehearsalDetailsModal } from '../components/RehearsalDetailsModal';
 import { Rehearsal } from '../../../shared/types';
@@ -190,9 +191,10 @@ export default function CalendarScreen() {
   const upcomingRehearsals = useMemo(() => {
     const today = formatDateToString(new Date());
 
-    // Filter rehearsals from today onwards, sorted by date and time
+    // Strictly after today: the Today section directly above already lists
+    // today's, and showing the same card twice on one screen reads as a bug.
     return rehearsals
-      .filter(r => r.date && r.date >= today)
+      .filter(r => r.date && r.date > today)
       .sort((a, b) => {
         if (a.date && b.date) {
           const dateCompare = a.date.localeCompare(b.date);
@@ -377,134 +379,28 @@ export default function CalendarScreen() {
                 const stats = adminStats[rehearsal.id];
 
                 return (
-                  <View key={rehearsal.id} style={styles.upcomingCard}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setSelectedRehearsalForDetails(rehearsal);
-                        setDetailsModalVisible(true);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.upcomingCardRow}>
-                        <View style={styles.upcomingCardLeftCol}>
-                          <View style={styles.upcomingCardHeader}>
-                            <View style={styles.upcomingDateBadge}>
-                              <Text style={styles.upcomingDateText}>
-                                {getRelativeDateLabel(rehearsal.date || '')}
-                              </Text>
-                            </View>
-                          </View>
-
-                          <View style={styles.upcomingContent}>
-                            <View style={styles.upcomingTimeRow}>
-                              <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
-                              <Text style={styles.upcomingTime}>
-                                {rehearsal.time?.substring(0, 5) || ''}
-                                {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
-                              </Text>
-                            </View>
-
-                            {/* Mirrors the card in TodayRehearsals — the two
-                                lists render separate markup for the same thing. */}
-                            {rehearsal.title ? (
-                              <Text style={styles.upcomingTitle} numberOfLines={2}>
-                                {rehearsal.title}
-                              </Text>
-                            ) : null}
-
-                            {rehearsal.projectName && (
-                              <View style={styles.upcomingProjectRow}>
-                                <Ionicons name="folder-outline" size={14} color={Colors.accent.blue} />
-                                <Text style={styles.upcomingProject} numberOfLines={1}>
-                                  {rehearsal.projectName}
-                                </Text>
-                              </View>
-                            )}
-
-                            {rehearsal.location && (
-                              <View style={styles.upcomingLocationRow}>
-                                <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
-                                <Text style={styles.upcomingLocation} numberOfLines={1}>
-                                  {rehearsal.location}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                        </View>
-
-                        {isAdminForThisRehearsal && (
-                          <View style={styles.upcomingCardAdminCol}>
-                            <View style={styles.adminBadge}>
-                              <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
-                              <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
-                            </View>
-                            <TouchableOpacity
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                handleDeleteRehearsal(rehearsal.id);
-                              }}
-                              style={styles.iconButton}
-                            >
-                              <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                navigation.navigate('AddRehearsal', {
-                                  rehearsalId: rehearsal.id,
-                                  projectId: rehearsal.projectId,
-                                });
-                              }}
-                              style={styles.iconButton}
-                            >
-                              <Ionicons name="create-outline" size={18} color={Colors.text.secondary} />
-                            </TouchableOpacity>
-                          </View>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-
-                    {/* Seen Button */}
-                    <View style={styles.seenSection}>
-                      <Pressable
-                        style={styles.seenButton}
-                        onPress={() => {
-                          // Medium haptic feedback on tap
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-                          // Toggle logic is in the hook, just pass current status
-                          toggleSeen(rehearsal.id, currentResponse, (id, status, serverStats) => {
-                            setRsvpResponses(prev => ({ ...prev, [id]: status }));
-                            // If server returned stats, use them immediately
-                            if (serverStats && isAdminForThisRehearsal) {
-                              setAdminStats(prev => ({
-                                ...prev,
-                                [id]: serverStats,
-                              }));
-                            }
-                          });
-                        }}
-                        disabled={isResponding}
-                      >
-                        <Ionicons
-                          name={currentResponse === 'yes' ? 'eye' : 'eye-off-outline'}
-                          size={24}
-                          color={currentResponse === 'yes' ? Colors.accent.blue : Colors.text.secondary}
-                        />
-                        {stats && (stats.confirmed > 0 || isAdminForThisRehearsal) && (() => {
-                          const displayText = isAdminForThisRehearsal && stats.invited > 0
-                            ? `${stats.confirmed}/${stats.invited}`
-                            : `${stats.confirmed}`;
-
-                          return (
-                            <Text style={styles.seenCount}>
-                              {displayText}
-                            </Text>
-                          );
-                        })()}
-                      </Pressable>
-                    </View>
-                  </View>
+                  <RehearsalCard
+                    key={rehearsal.id}
+                    rehearsal={rehearsal}
+                    dateLabel={getRelativeDateLabel(rehearsal.date || '')}
+                    projectName={project?.name || rehearsal.projectName}
+                    isAdmin={isAdminForThisRehearsal}
+                    currentResponse={currentResponse}
+                    isResponding={isResponding}
+                    stats={stats}
+                    onPress={() => {
+                      setSelectedRehearsalForDetails(rehearsal);
+                      setDetailsModalVisible(true);
+                    }}
+                    onDelete={handleDeleteRehearsal}
+                    onToggleSeen={toggleSeen}
+                    onSeenChanged={(id, status, serverStats) => {
+                      setRsvpResponses(prev => ({ ...prev, [id]: status }));
+                      if (serverStats && isAdminForThisRehearsal) {
+                        setAdminStats(prev => ({ ...prev, [id]: serverStats }));
+                      }
+                    }}
+                  />
                 );
               })}
             </View>

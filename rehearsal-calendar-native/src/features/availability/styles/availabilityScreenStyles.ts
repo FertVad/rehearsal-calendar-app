@@ -129,9 +129,10 @@ export const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    // Same source as the slide-in animation — hardcoding it here meant the
-    // panel stayed 320 tall while the animation moved it by a different amount.
-    height: PANEL_HEIGHT,
+    // A cap, not a height: with one time slot the sheet used to be more than
+    // half empty. It now sizes to what is in it and stops growing here, which
+    // is also how far the slide-in animation travels.
+    maxHeight: PANEL_HEIGHT,
     backgroundColor: Colors.bg.primary,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -151,10 +152,9 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   bottomSheetContent: {
-    // Take the space between header and save bar so the slot list scrolls
-    // inside it; without this the list overflows the panel and the last row
-    // ends up behind the sticky button.
-    flex: 1,
+    // Deliberately not flex:1 — inside a sheet that sizes to its content that
+    // would collapse to nothing. Left to grow, it is bounded by the panel's
+    // maxHeight and starts scrolling only once there is more than fits.
     padding: Spacing.xl,
   },
   modeSelector: {
