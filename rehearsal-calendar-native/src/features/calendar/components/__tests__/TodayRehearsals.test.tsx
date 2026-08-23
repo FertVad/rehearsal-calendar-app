@@ -292,7 +292,9 @@ describe('TodayRehearsals Component', () => {
       });
 
       if (deleteButton) {
-        fireEvent.press(deleteButton);
+        // The handler stops the press from reaching the card behind it, so it
+        // needs an event — pressing with none is a thing only a test does.
+        fireEvent.press(deleteButton, { stopPropagation: jest.fn() });
         expect(mockOnDeleteRehearsal).toHaveBeenCalledWith('r1');
       }
     });
@@ -421,12 +423,13 @@ describe('TodayRehearsals Component', () => {
       );
 
       const pressables = UNSAFE_getAllByType(require('react-native').Pressable);
-      const likeButton = pressables.find(p => {
+      // The heart became an eye when "like" became "seen"
+      const seenButton = pressables.find(p => {
         const icon = p.props.children?.[0]?.props?.name;
-        return icon === 'heart' || icon === 'heart-outline';
+        return icon === 'eye' || icon === 'eye-off-outline';
       });
 
-      expect(likeButton?.props.disabled).toBe(true);
+      expect(seenButton?.props.disabled).toBe(true);
     });
   });
 
@@ -448,8 +451,9 @@ describe('TodayRehearsals Component', () => {
         />
       );
 
-      // Should show "5/15" for admin project (confirmed/total where total = confirmed + invited)
-      expect(getByText('5/15')).toBeTruthy();
+      // invited is how many are on the rehearsal, not how many still owe an
+      // answer, so it is the denominator rather than something to add to it
+      expect(getByText('5/10')).toBeTruthy();
     });
 
     it('should display only confirmed count for non-admin projects', () => {

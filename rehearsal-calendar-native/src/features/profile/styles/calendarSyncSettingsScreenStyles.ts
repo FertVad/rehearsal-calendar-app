@@ -399,6 +399,17 @@ export const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
 
+  syncStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  syncStatusText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+  },
   removeAllButton: {
     flexDirection: 'row',
     alignItems: 'center',

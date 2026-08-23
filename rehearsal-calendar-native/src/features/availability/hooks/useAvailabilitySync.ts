@@ -1,3 +1,4 @@
+import { formatLastSync as sharedFormatLastSync } from '../../../shared/utils/formatLastSync';
 import { useState, useCallback } from 'react';
 import { getSyncSettings } from '../../../shared/utils/calendarStorage';
 
@@ -53,26 +54,7 @@ export const useAvailabilitySync = () => {
    * Format last sync time for display
    */
   const formatLastSync = useCallback(
-    (lastSync: string | null, t: any): string => {
-      if (!lastSync) return '';
-
-      const now = Date.now();
-      const syncTime = new Date(lastSync).getTime();
-      const diffMs = now - syncTime;
-      const diffMinutes = Math.floor(diffMs / (60 * 1000));
-      const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
-      const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-
-      if (diffMinutes < 1) {
-        return t.calendarSync.justNow;
-      } else if (diffMinutes < 60) {
-        return t.calendarSync.minutesAgo(diffMinutes);
-      } else if (diffHours < 24) {
-        return t.calendarSync.hoursAgo(diffHours);
-      } else {
-        return t.calendarSync.daysAgo(diffDays);
-      }
-    },
+    (lastSync: string | null, t: any) => sharedFormatLastSync(lastSync, t),
     []
   );
 

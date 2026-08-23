@@ -18,6 +18,7 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { GlassButton } from '../../../shared/components';
 import { styles } from '../styles/calendarSyncSettingsScreenStyles';
 import { useCalendarSync } from '../../calendar/hooks/useCalendarSync';
+import { formatLastSync } from '../../../shared/utils/formatLastSync';
 import { DeviceCalendar, RehearsalWithProject } from '../../../shared/types/calendar';
 import { rehearsalsAPI } from '../../../shared/services/api';
 
@@ -40,6 +41,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     refresh,
     isImporting,
     importNow,
+    syncedCount,
   } = useCalendarSync();
 
   const [selectedProvider, setSelectedProvider] = useState<CalendarProvider>(null);
@@ -555,6 +557,18 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
             {/* Sync Button */}
             {syncEnabled && selectedProvider && (
               <View style={styles.section}>
+                {/* The result used to live in a one-shot alert and vanish, so
+                    the only way to know sync worked was to run it again. */}
+                {settings?.lastExportTime && (
+                  <View style={styles.syncStatus}>
+                    <Ionicons name="checkmark-circle-outline" size={16} color={Colors.accent.green} />
+                    <Text style={styles.syncStatusText}>
+                      {t.calendarSync.syncedAgo(formatLastSync(settings.lastExportTime, t))}
+                      {syncedCount > 0 ? ` · ${t.calendarSync.inCalendar(syncedCount)}` : ''}
+                    </Text>
+                  </View>
+                )}
+
                 <GlassButton
                   title={t.calendarSync.synchronize}
                   onPress={handleSynchronize}

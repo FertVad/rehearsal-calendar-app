@@ -23,6 +23,8 @@ export interface CalendarSyncTranslations {
   actions: string;
   exportAll: string;
   exportAllProgress: (current: number, total: number) => string;
+  syncedAgo: (when: string) => string;
+  inCalendar: (count: number) => string;
   removeAll: string;
   removeAllConfirm: string;
   // Status
@@ -139,6 +141,8 @@ export const ru = {
     actions: 'Действия',
     exportAll: 'Экспортировать все репетиции',
     exportAllProgress: (current: number, total: number) => `Экспорт ${current} из ${total}...`,
+syncedAgo: (when: string) => `Синхронизировано ${when}`,
+inCalendar: (count: number) => `В календаре: ${count}`,
     removeAll: 'Удалить все экспортированные',
     removeAllConfirm: 'Удалить все репетиции из календаря?',
     // Status
@@ -257,6 +261,8 @@ export const en = {
     actions: 'Actions',
     exportAll: 'Export All Rehearsals',
     exportAllProgress: (current: number, total: number) => `Exporting ${current} of ${total}...`,
+syncedAgo: (when: string) => `Synced ${when}`,
+inCalendar: (count: number) => `In the calendar: ${count}`,
     removeAll: 'Remove All Exported',
     removeAllConfirm: 'Remove all rehearsals from calendar?',
     // Status
@@ -375,6 +381,8 @@ export const es = {
     actions: 'Acciones',
     exportAll: 'Exportar todos los ensayos',
     exportAllProgress: (current: number, total: number) => `Exportando ${current} de ${total}...`,
+syncedAgo: (when: string) => `Sincronizado ${when}`,
+inCalendar: (count: number) => `En el calendario: ${count}`,
     removeAll: 'Eliminar todo lo exportado',
     removeAllConfirm: '¿Eliminar todos los ensayos del calendario?',
     // Status
@@ -493,6 +501,8 @@ export const de = {
     actions: 'Aktionen',
     exportAll: 'Alle Proben exportieren',
     exportAllProgress: (current: number, total: number) => `Export ${current} von ${total}...`,
+syncedAgo: (when: string) => `Synchronisiert ${when}`,
+inCalendar: (count: number) => `Im Kalender: ${count}`,
     removeAll: 'Alle exportierten entfernen',
     removeAllConfirm: 'Alle Proben aus dem Kalender entfernen?',
     // Status
