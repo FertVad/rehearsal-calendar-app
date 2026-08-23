@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -78,9 +79,36 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security headers
+//
+// CSP used to be off for the whole server because the AllPay checkout embeds
+// an iframe. That traded every page's second line of defence for one page's
+// requirement — the reflected-XSS fixes in the invite and checkout templates
+// had nothing behind them. The public pages carry no inline script or style at
+// all, so they get a strict policy; the two pages that need more are widened
+// where they are mounted, and nowhere else.
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
 app.use(helmet({
-  // Relax CSP — AllPay checkout page loads iframe from allpay.co.il
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      // The invite page carries one inline script; it is allowed by nonce
+      // rather than by opening the door to every inline script on the site.
+      scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.cspNonce}'`],
+      styleSrc: ["'self'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
 }));
 
 // CORS — React Native app doesn't use CORS (native HTTP client),
@@ -180,7 +208,30 @@ app.use('/api/native', nativeRoutes);
 app.use('/api/cron', cronRoutes);
 
 // Admin panel
-app.use('/admin', adminRoutes);
+// The admin dashboard is generated with inline handlers and styles, and the
+// checkout page embeds AllPay. Both are widened here rather than by weakening
+// the policy every other page gets.
+const relaxedCsp = (extra = {}) => helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-inline'"],
+    // helmet defaults script-src-attr to 'none', which blocks onclick= even
+    // when script-src allows inline. The dashboard is built from onclick
+    // handlers, so it has to be said explicitly.
+    scriptSrcAttr: ["'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", 'data:'],
+    connectSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    frameAncestors: ["'none'"],
+    ...extra,
+  },
+});
+
+app.use('/admin', relaxedCsp(), adminRoutes);
+app.use('/api/native/subscriptions/checkout-page', relaxedCsp({
+  frameSrc: ["'self'", 'https://allpay.to'],
+}));
 
 // Apple App Site Association for Universal Links (iOS)
 app.get('/.well-known/apple-app-site-association', (req, res) => {
@@ -218,6 +269,7 @@ app.get('/.well-known/assetlinks.json', (req, res) => {
 app.get('/invite/:code', (req, res) => {
   const { code } = req.params;
   const expoHost = req.query.expoHost;
+  const nonce = res.locals.cspNonce;
 
   const html = `
     <!DOCTYPE html>
@@ -279,7 +331,7 @@ app.get('/invite/:code', (req, res) => {
           <a href="#" onclick="openApp(); return false;" class="button" id="openButton"></a>
         </div>
       </div>
-      <script>
+      <script nonce="${nonce}">
         const isRu = navigator.language.startsWith('ru');
         document.getElementById('statusText').textContent = isRu ? 'Открываем приложение...' : 'Opening the app...';
         document.getElementById('manualText').textContent = isRu ? 'Приложение не открылось автоматически?' : "App didn't open automatically?";

@@ -58,26 +58,7 @@ regression risk right before submission.
 
 ---
 
-## 4. Content Security Policy is disabled for the whole server
-
-**Where:** [server.js](../server/server.js) — `contentSecurityPolicy: false`
-in the helmet options.
-
-**Why it matters:** it was switched off so the AllPay iframe on the checkout
-page would load, but it is off for every route, so the reflected-XSS fixes in
-the checkout and invite templates have no defence in depth behind them.
-
-**Fix:** enable helmet's CSP globally and relax `frame-src` only for the
-checkout page.
-
-**Deferred because:** enabling it can break the admin dashboard and the AllPay
-iframe, both of which need testing against the live payment flow. Escaping was
-shipped on its own rather than pairing it with a policy that only looks like
-protection.
-
----
-
-## 5. Calendar Sync screen keeps no record of having synced
+## 4. Calendar Sync screen keeps no record of having synced
 
 **Seen as:** the screen is a toggle, one calendar row and a button — two thirds
 of it is empty. After syncing, the counts appear in a one-shot alert and are
@@ -97,7 +78,7 @@ feature rather than a break, and nothing depends on it before submission.
 
 ---
 
-## 6. Three component tests assert markup that has moved on
+## 5. Three component tests assert markup that has moved on
 
 **Seen as:** `npm test` in `rehearsal-calendar-native` reports 3 failures, all
 in `TodayRehearsals.test.tsx`.
