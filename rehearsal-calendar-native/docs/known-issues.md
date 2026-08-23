@@ -7,32 +7,7 @@ Fix one → delete its entry. Anything urgent belongs in a branch, not here.
 
 ---
 
-## 1. Plural forms are wrong in every language
-
-**Seen as:** `1 slots` on a Smart Planner day card that has a single slot.
-
-**Where:** [DayCard.tsx:58](../src/features/smart-planner/components/DayCard.tsx#L58)
-renders `{slots.length} {t.smartPlanner.slots}`, and `slots` is a plain string
-per locale ([availability.ts](../src/i18n/translations/availability.ts) —
-`'слотов'`, `'slots'`, `'franjas'`, `'Slots'`).
-
-**Why it is wrong:** a fixed noun cannot agree with a count. English needs
-`1 slot` / `2 slots`; Russian needs three forms — `1 слот`, `2 слота`,
-`5 слотов`; Spanish and German need two each.
-
-**Fix:** replace the string with a function `slotsCount(n)` in all four locales,
-following the existing pattern of dynamic translations such as
-`t.rehearsals.selectedCount(a, b)`. The Russian rule is the only fiddly one
-(`n % 10 === 1 && n % 100 !== 11` → singular; `2–4` excluding `12–14` → few;
-otherwise many).
-
-**Deferred because:** found mid-screenshot-session; a four-locale change is
-worth doing on its own. Not visible in the captures — a date range where every
-day has several slots avoids it.
-
----
-
-## 2. Today's rehearsal appears twice on the Calendar screen
+## 1. Today's rehearsal appears twice on the Calendar screen
 
 **Seen as:** the same card under **Today** and again as the first entry of
 **Upcoming Events**.
@@ -48,7 +23,7 @@ the owner has not made the call yet.
 
 ---
 
-## 3. Availability editor sheet is a fixed height
+## 2. Availability editor sheet is a fixed height
 
 **Seen as:** with one time slot the sheet is over half empty; the month heading
 behind it is clipped mid-word.
@@ -66,7 +41,7 @@ that drives the same constant.
 
 ---
 
-## 4. Rehearsal card markup is duplicated
+## 3. Rehearsal card markup is duplicated
 
 **Where:** [TodayRehearsals.tsx](../src/features/calendar/components/TodayRehearsals.tsx)
 and an inlined copy inside
@@ -83,7 +58,7 @@ regression risk right before submission.
 
 ---
 
-## 5. Content Security Policy is disabled for the whole server
+## 4. Content Security Policy is disabled for the whole server
 
 **Where:** [server.js](../server/server.js) — `contentSecurityPolicy: false`
 in the helmet options.
@@ -102,31 +77,7 @@ protection.
 
 ---
 
-## 6. An invite can only be accepted by following the link
-
-**Seen as:** there is no way to join a project by entering a code. The Project
-Invitation screen is reachable only from a deep link — the `+` sheet offers
-rehearsal, availability and project, and nothing else leads there.
-
-**Where:** `JoinProject` is navigated to only from the link handlers in
-[navigation/index.tsx:313](../src/navigation/index.tsx#L313) and
-[:339](../src/navigation/index.tsx#L339).
-
-**Why it matters:** the link is the only path in, so anything that breaks it
-strands the invitee — Universal Links not yet verified on a device, an invite
-opened on a desktop, a link mangled by a messenger. The screen already accepts
-a code as a route param, so a "paste your invite code" entry point is small.
-
-**Fix:** add a "Join by code" item to the create sheet that opens `JoinProject`
-with an empty code and a text field.
-
-**Deferred because:** found while shooting screenshots; invite links do work
-once `BASE_URL` points at the real domain, so this is a fallback rather than
-the main path.
-
----
-
-## 7. Calendar Sync screen keeps no record of having synced
+## 5. Calendar Sync screen keeps no record of having synced
 
 **Seen as:** the screen is a toggle, one calendar row and a button — two thirds
 of it is empty. After syncing, the counts appear in a one-shot alert and are
@@ -146,7 +97,7 @@ feature rather than a break, and nothing depends on it before submission.
 
 ---
 
-## 8. Three component tests assert markup that has moved on
+## 6. Three component tests assert markup that has moved on
 
 **Seen as:** `npm test` in `rehearsal-calendar-native` reports 3 failures, all
 in `TodayRehearsals.test.tsx`.
