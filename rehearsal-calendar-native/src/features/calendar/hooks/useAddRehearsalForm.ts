@@ -5,7 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../../navigation';
 import { Project } from '../../../shared/types';
 import { parseTimeString } from '../../../shared/utils/time';
-import { rehearsalsAPI, projectsAPI, subscriptionsAPI } from '../../../shared/services/api';
+import { rehearsalsAPI, projectsAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
@@ -248,7 +248,8 @@ export function useAddRehearsalForm({
   const handleCreateProject = async () => {
     setShowProjectPicker(false);
 
-    // TEMPORARILY DISABLED FOR LAUNCH: subscription check removed, all users can create projects
+    // Anyone can create a project: the paid tier was taken out of the app for
+  // the App Store release — see docs/app-store-release.md
     // @ts-ignore - Navigate to Projects tab -> CreateProject screen
     navigation.navigate('Projects', { screen: 'CreateProject' });
   };

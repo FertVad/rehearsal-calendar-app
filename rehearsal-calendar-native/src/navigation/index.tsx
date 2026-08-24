@@ -12,7 +12,6 @@ import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
 import { useNotifications } from '../shared/hooks/useNotifications';
 import { BetaBanner } from '../shared/components/BetaBanner';
-import { subscriptionsAPI } from '../shared/services/api';
 import { OnboardingNavigator } from '../features/onboarding';
 import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
 import AvailabilityScreen from '../features/availability/screens/AvailabilityScreen';
@@ -132,7 +131,8 @@ function ActionSheetWrapper() {
   const { showActionSheet, setShowActionSheet } = useActionSheet();
   const { language } = useI18n();
 
-  // TEMPORARILY DISABLED FOR LAUNCH: subscription check removed, all users can create projects
+  // Anyone can create a project: the paid tier was taken out of the app for
+  // the App Store release — see docs/app-store-release.md
   const handleCreateProject = () => {
     setShowActionSheet(false);
     navigation.navigate('CreateProject');
