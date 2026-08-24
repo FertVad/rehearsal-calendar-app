@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
-import { requireSubscription } from '../../middleware/subscriptionMiddleware.js';
 import { notifyProjectDeleted } from '../../services/notifications/pushNotificationService.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 
@@ -55,7 +54,8 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 // POST /api/native/projects - Create new project
-// TEMPORARILY DISABLED FOR LAUNCH: was requireAuth, requireSubscription
+// Free for everyone: the paid tier is gone. If money is ever taken it goes
+// through App Store in-app purchase — see docs/app-store-release.md
 router.post('/', requireAuth, async (req, res) => {
   try {
     const accountId = req.userId;

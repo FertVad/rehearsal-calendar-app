@@ -69,7 +69,6 @@ src/
 │   ├── calendar/         # Rehearsals, calendar display
 │   ├── projects/         # Project management
 │   ├── availability/     # User availability management
-│   ├── subscriptions/    # Subscription plans & payment (AllPay integration)
 │   └── profile/          # User profile & settings
 ├── navigation/           # React Navigation setup
 ├── contexts/             # React Context providers (Auth, I18n, Theme)
@@ -86,14 +85,13 @@ src/
 server/
 ├── routes/              # API routes
 │   ├── auth.js         # Authentication endpoints
-│   ├── admin.js        # Admin dashboard API (stats, users, transactions, bug reports)
+│   ├── admin.js        # Admin dashboard API (stats, users, bug reports)
 │   ├── admin/          # Admin page HTML generator (dashboardPage.js)
-│   └── native/         # Native app endpoints (projects, rehearsals, availability, subscriptions, bug reports)
-├── services/           # Business logic layer (subscriptions, notifications)
-├── jobs/               # Cron jobs (recurring billing)
+│   └── native/         # Native app endpoints (projects, rehearsals, availability, bug reports)
+├── services/           # Business logic layer (rehearsals, notifications)
 ├── database/           # Database setup & migrations
-├── middleware/         # Auth middleware, subscription checks, timezone conversion, admin auth
-├── utils/              # AllPay client, timezone utilities, helpers
+├── middleware/         # Auth middleware, timezone conversion, admin auth
+├── utils/              # Timezone utilities, HTML escaping, helpers
 └── constants/          # Shared constants (availability types, etc.)
 ```
 
@@ -137,7 +135,7 @@ server/public/
 ### Database
 - **Development**: SQLite (`native_database.db`)
 - **Production**: PostgreSQL (Neon.tech)
-- **Tables**: All prefixed with `native_*` (native_users, native_projects, native_rehearsals, native_user_availability, native_subscription_plans, native_user_subscriptions, native_payment_transactions, native_allpay_webhook_events, native_bug_reports, etc.)
+- **Tables**: All prefixed with `native_*` (native_users, native_projects, native_rehearsals, native_user_availability, native_bug_reports, etc.). Four `native_subscription_*`/`native_payment_*`/`native_allpay_*` tables survive from the removed payment code — nothing reads them.
 - **Schema**: [rehearsal-calendar-native/server/database/init-native-schema.sql](rehearsal-calendar-native/server/database/init-native-schema.sql)
 - **Note**: SQLite uses `1`/`0` for booleans in dev, PostgreSQL uses `TRUE`/`FALSE` in production
 
@@ -276,38 +274,6 @@ const { t, language, changeLanguage } = useI18n();
 date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US')
 ```
 
-### 8. Subscription Middleware
-> **CURRENTLY DISABLED**: Payments are temporarily disabled for launch. All features are open for early users. See [Re-enabling Payments](#re-enabling-payments-after-launch) section below for how to turn it back on.
-
-**Business Model**: All features are free, subscription only required for **creating projects**.
-
-```javascript
-import { requireSubscription } from '../middleware/subscriptionMiddleware.js';
-
-// ✅ CORRECT - Require subscription for project creation
-router.post('/projects', requireAuth, requireSubscription, async (req, res) => {
-  const userId = req.userId;        // Set by requireAuth
-  const subscription = req.subscription;  // Set by requireSubscription
-  // User can only reach here if they have active subscription
-});
-
-// ✅ CORRECT - Other features remain free (no requireSubscription)
-router.get('/projects', requireAuth, async (req, res) => {
-  // All users can view projects
-});
-```
-
-**Subscription Plans**:
-- Monthly: $9 USD (₪32 ILS)
-- 3 Months: $15 USD (₪54 ILS)
-- Lifetime: $49 USD (₪176 ILS)
-
-**Key Implementation Details**:
-- Recurring billing via cron job (daily at 2:00 AM)
-- AllPay tokenization for monthly/quarterly charges
-- Lifetime subscriptions: `next_billing_date = NULL` (excluded from recurring billing)
-- WebView checkout flow for payment
-
 ## Key Features & Implementation
 
 ### Smart Planner
@@ -348,84 +314,45 @@ truth, the calendar a mirror. The only ways out are deleting the rehearsal or
 generically on purpose — see `IMPORTED_SLOT_TITLE` in `calendar/import.ts`. The
 onboarding and the landing both promise this.
 
-### Payment & Subscription System
-**Location**: `server/services/subscriptionService.js`, `src/features/subscriptions/`
-
-AllPay (Israeli payment provider) integration for recurring subscriptions:
-
-**Architecture**:
-- **Backend**: `allpayClient.js` (API wrapper), `subscriptionService.js` (business logic), `subscriptionMiddleware.js` (access control)
-- **Frontend**: `SubscriptionScreen.tsx` (plan selection + WebView checkout)
-- **Database**: 4 tables (plans, user_subscriptions, payment_transactions, webhook_events)
-- **Cron Job**: `recurringBilling.js` (runs daily at 2:00 AM for monthly/quarterly renewals)
-
-**Payment Flow (Token-Based, Self-Managed)**:
-1. **User selects plan** → Backend creates AllPay checkout (NO subscription parameter)
-2. **WebView opens** → Hosted Fields checkout page (dark theme wrapper with AllPay iframe + pay button)
-3. **User completes payment** → AllPay webhook fires
-4. **Webhook handler**:
-   - Verifies signature
-   - Retrieves token via `gettoken` API
-   - Creates subscription in local DB with token
-5. **Frontend polling** → Checks every 2s if subscription created
-6. **WebView auto-closes** → Shows success message when detected
-7. **Recurring billing** → Vercel Cron (daily 2 AM UTC) charges token via `getpayment` with `allpay_token`
-8. **Cancellation** → Local DB update only (no AllPay API call)
-
-**Key Files**:
-- `server/utils/allpayClient.js` - AllPay API client (signatures, tokenization, charges)
-- `server/services/subscriptionService.js` - Subscription business logic
-- `server/middleware/subscriptionMiddleware.js` - `requireSubscription` middleware
-- `server/jobs/recurringBilling.js` - Automated monthly billing
-- `server/routes/native/subscriptions.js` - API endpoints (plans, checkout, webhook, cancel)
-
-**API Endpoints**:
-- `GET /api/native/subscriptions/plans` - List all plans (no auth)
-- `GET /api/native/subscriptions/current` - Get user subscription
-- `POST /api/native/subscriptions/checkout` - Create checkout session (returns checkoutUrl + orderId)
-- `GET /api/native/subscriptions/checkout-page` - Hosted Fields HTML page (dark theme wrapper with AllPay iframe)
-- `POST /api/native/subscriptions/webhook` - AllPay callback (signature verification)
-- `GET /api/native/subscriptions/check-pending/:orderId` - Poll subscription status (for WebView auto-close)
-- `POST /api/native/subscriptions/cancel` - Cancel subscription (local DB only)
-- `GET /api/cron/recurring-billing` - Vercel Cron endpoint (GET, protected by CRON_SECRET)
-
-**Recurring Billing (Production Ready)**:
-The system automatically charges active subscriptions using saved AllPay tokens. See [docs/recurring-billing.md](rehearsal-calendar-native/docs/recurring-billing.md) for full documentation.
-
-**Key Implementation Details:**
-- **Vercel Cron**: `GET /api/cron/recurring-billing` runs daily at 2:00 AM UTC (configured in `vercel.json`)
-- **node-cron**: `server/server.js` also has `0 2 * * *` schedule (only works locally, not on serverless Vercel)
-- **Timezone Fix**: `SET timezone = 'UTC'` + explicit `AT TIME ZONE 'UTC'` conversions in SQL
-- **Date Calculation**: Uses current time instead of old `current_period_end` to avoid timezone issues
-
-**Production Checklist:**
-1. Set `CRON_SECRET` — endpoint is **fail-closed** (returns 503 if not set)
-2. Set `ALLPAY_TEST_MODE=false` — server **refuses to start** if `true` in production
-3. Set `ALLPAY_WEBHOOK_SECRET` — required for webhook signature verification
-4. Set `ADMIN_PASSWORD_HASH` (bcrypt) or `ADMIN_PASSWORD`
-5. Set `BASE_URL` — used for invite links and payment redirects
-6. Disable `test_1min` plan: `UPDATE native_subscription_plans SET is_active = FALSE WHERE name = 'test_1min'`
-
 ### Payments
 
-There is no paid tier in the app, and the payment screen is not merely hidden —
-it was taken out of the build before the App Store submission. Guideline 3.1.1
-forbids sending customers to any checkout but Apple's, and a WebView onto an
-external payment page is exactly that; guideline 2.3.1 covers dormant features
-a server flag could switch on, which is what a hidden subscription flow is.
-`src/features/subscriptions/` is gone from the app, along with its screen
-registration, the profile's subscription lookup, and the premium badge.
+There are none, on either side. The app never had a paid tier, and the AllPay
+integration that used to back one — client, subscription service, checkout
+page, webhook, `requireSubscription`, the recurring-billing cron and the
+frontend screen — has been deleted rather than disabled.
 
-The server side is untouched — tables, `requireSubscription`, the AllPay
-client, the recurring-billing cron. Apple does not audit it, and none of it is
-reachable from the app.
+Two App Store guidelines drove it. 3.1.1 forbids sending customers to any
+checkout but Apple's, and a WebView onto an external payment page is exactly
+that; 2.3.1 covers dormant features a server flag could switch on, which is
+what a merely hidden subscription flow would have been.
 
-If money is ever taken, it goes through App Store in-app purchase. What that
-requires — receipt verification on the server, App Store Server Notifications
-for cancellations, and which AllPay code becomes deletable — is written down in
+If money is ever taken it goes through App Store in-app purchase, which shares
+no code with what was removed — receipt verification on the server and App
+Store Server Notifications for cancellations. See
 [app-store-release.md](rehearsal-calendar-native/docs/app-store-release.md).
-Restoring the app-side screen is `git revert` of the commit that removed it,
-but it must not ship as-is: the WebView checkout is the part Apple rejects.
+The deleted code is in git history, but do not restore it: the WebView checkout
+is the part Apple rejects.
+
+The four `native_subscription_*` / `native_payment_*` / `native_allpay_*`
+tables still exist in the database. Nothing reads or writes them; they are left
+in place because dropping them is irreversible and buys nothing.
+
+### Rehearsal Reminders
+**Location**: `server/services/notifications/reminderScheduler.js`, `server/routes/cron.js`
+
+Push reminders for rehearsals starting soon. `checkUpcomingRehearsals()` finds
+them and sends via Expo; `GET /api/cron/reminders` is what actually calls it.
+
+**The endpoint is the only trigger that works in production.** The server also
+declares the schedule in-process, which runs fine locally and never once on
+Vercel — the function is not resident between requests, so the timer has no one
+to fire it. That is why reminders silently never arrived before
+[vercel.json](rehearsal-calendar-native/server/vercel.json) got a `crons` entry
+(`*/15 * * * *`). Any future scheduled work needs the same treatment: an HTTP
+endpoint plus a `crons` entry, not a `setInterval`.
+
+Auth is fail-closed — without `CRON_SECRET` the endpoint answers 503 rather than
+running unauthenticated.
 
 ### Admin Dashboard
 **Location**: `server/routes/admin.js`, `server/routes/admin/dashboardPage.js`
@@ -434,8 +361,6 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 
 **Features**:
 - User stats (total, new this week/month, churn rates)
-- Active subscriptions breakdown by plan
-- Revenue totals
 - Users table with pagination
 - Transactions table with pagination
 - Bug reports table with inline status management
@@ -448,8 +373,7 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 **API Endpoints**:
 - `POST /admin/api/login` — authenticate with password
 - `GET /admin/api/stats` — aggregate stats (users, subs, revenue, churn, usage)
-- `GET /admin/api/users` — paginated user list with subscription info
-- `GET /admin/api/transactions` — paginated payment transactions
+- `GET /admin/api/users` — paginated user list
 - `GET /admin/api/bug-reports` — paginated bug reports (sorted: new → in_progress → fixed)
 - `PATCH /admin/api/bug-reports/:id/status` — update bug report status (new/in_progress/fixed)
 
@@ -496,7 +420,6 @@ Key security measures in place (as of 2026-04-11):
 - **Rate limiting**: 20 req/min on `/api/auth/*`, 5 attempts/15 min on `/admin/api/login`
 - **Helmet**: Security headers (X-Frame-Options, HSTS, X-Content-Type-Options, etc.)
 - **CORS**: Whitelisted origins only (via `BASE_URL` env). Requests without origin (mobile app, Vercel Cron) are allowed through.
-- **Webhook**: AllPay signature verification required. `ALLPAY_TEST_MODE=true` causes server to refuse startup in production.
 - **Cron**: Fail-closed — returns 503 if `CRON_SECRET` not configured
 - **Admin password**: bcrypt hash (`ADMIN_PASSWORD_HASH`) with plaintext fallback (`ADMIN_PASSWORD`)
 - **Error responses**: Never expose `err.message` or stack traces to clients in production
@@ -601,45 +524,30 @@ try {
 - `src/shared/services/notifications.ts` - Handler setup
 - `src/shared/hooks/useNotifications.ts` - Listener registration and cleanup
 
-### 8. PostgreSQL Timezone Issues in Recurring Billing
-❌ **Problem**: Recurring billing finds 0 subscriptions even when `next_billing_date` should be in the past
-✅ **Fix**: Set timezone to UTC and use explicit conversions
+### 8. PostgreSQL Timezone Comparisons in Cron Jobs
+❌ **Problem**: A scheduled query finds 0 rows even though the timestamps are clearly in the past
+✅ **Fix**: Pin the session timezone to UTC and convert explicitly
 
-**Root Cause**: PostgreSQL `timestamp without time zone` column stores values without timezone info, but interprets them based on session timezone. When server runs in Jerusalem (UTC+2) but timestamps are stored as UTC, comparisons fail.
+**Root Cause**: a `timestamp without time zone` column stores no offset, so PostgreSQL
+reads it in the session's zone. A server running in Jerusalem (UTC+2) compares
+UTC-stored values against local `CURRENT_TIMESTAMP` and silently misses a two-hour band.
 
-**Solution (Already Implemented)**:
 ```javascript
-// 1. Set session timezone to UTC before queries
-await db.run('SET timezone = \'UTC\'');
+// 1. Set the session timezone before the query (guard with isPostgres — SQLite rejects it)
+if (isPostgres) await db.run("SET timezone = 'UTC'");
 
-// 2. Use explicit UTC conversion in SQL
-await db.run(`
-  UPDATE native_user_subscriptions
-  SET next_billing_date = ($1::timestamptz AT TIME ZONE 'UTC')::timestamp
-  WHERE id = $2
-`, [date.toISOString(), id]);
+// 2. Convert explicitly when writing
+await db.run(`UPDATE t SET due_at = ($1::timestamptz AT TIME ZONE 'UTC')::timestamp WHERE id = $2`,
+  [date.toISOString(), id]);
 
-// 3. Calculate dates from current time, not old values
-const newPeriodEnd = new Date(now);  // ✅ CORRECT
-// NOT: new Date(subscription.current_period_end)  // ❌ WRONG (timezone issues)
-newPeriodEnd.setUTCMinutes(newPeriodEnd.getUTCMinutes() + 1);
+// 3. Derive new times from the current instant, not from the stored value
+const next = new Date(now);          // ✅
+next.setUTCMinutes(next.getUTCMinutes() + 15);
 ```
 
-**Affected Files:**
-- `server/services/subscriptionService.js` - Lines 95, 241, 314, 330-340
-
-**How to Debug:**
-```sql
--- Check subscription state with timezone info
-SET timezone = 'UTC';
-SELECT
-  id, status,
-  next_billing_date::text as stored_value,
-  CURRENT_TIMESTAMP::text as now,
-  (next_billing_date <= CURRENT_TIMESTAMP) as should_bill
-FROM native_user_subscriptions
-WHERE id = 5;
-```
+**Where it matters now**: `GET /api/cron/reminders` (Vercel Cron, every 15 min) —
+it selects rehearsals due soon. An in-process `node-cron` schedule cannot replace
+it: Vercel functions do not stay resident, so the schedule never fires.
 
 ## Environment Setup
 
@@ -663,12 +571,6 @@ APPLE_TEAM_ID=YOUR_TEAM_ID
 APPLE_KEY_ID=YOUR_KEY_ID
 APPLE_PRIVATE_KEY=  # Contents of .p8 file or path to file
 
-# AllPay Payment Configuration
-ALLPAY_API_LOGIN=your-allpay-api-login
-ALLPAY_API_KEY=your-allpay-api-key
-ALLPAY_WEBHOOK_SECRET=your-webhook-secret  # REQUIRED — webhook signature verification
-ALLPAY_TEST_MODE=true  # Set to false for production (server refuses to start if true in prod)
-
 # Admin Dashboard
 ADMIN_PASSWORD_HASH=  # bcrypt hash (recommended). Generate: see Admin Dashboard section above
 ADMIN_PASSWORD=       # plaintext fallback (legacy, avoid in production)
@@ -678,7 +580,7 @@ ADMIN_JWT_SECRET=     # optional, falls back to JWT_SECRET
 # CRITICAL: endpoint returns 503 if not set (fail-closed)
 CRON_SECRET=<generate-with-openssl-rand-base64-32>
 
-# Server URL (invite links, payment redirects)
+# Server URL (invite links, universal links)
 BASE_URL=https://your-app.vercel.app  # required in production
 HOST=0.0.0.0  # required for physical device access
 ```
@@ -735,7 +637,6 @@ Key documentation files:
 - [rehearsal-calendar-native/docs/known-issues.md](rehearsal-calendar-native/docs/known-issues.md) - Defects found and deliberately left for later
 - [rehearsal-calendar-native/docs/api-documentation.md](rehearsal-calendar-native/docs/api-documentation.md) - Complete API reference
 - [rehearsal-calendar-native/docs/api-standards.md](rehearsal-calendar-native/docs/api-standards.md) - API conventions
-- [rehearsal-calendar-native/docs/recurring-billing.md](rehearsal-calendar-native/docs/recurring-billing.md) - **AllPay recurring billing guide** (complete implementation details, timezone fixes, testing, production checklist)
 - [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) - Google OAuth setup guide (step-by-step)
 
 ## Tech Stack

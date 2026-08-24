@@ -386,35 +386,6 @@ export const calendarSyncAPI = {
     api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`),
 };
 
-// Subscriptions API (Native App)
-export const subscriptionsAPI = {
-  // Get all available subscription plans (no auth required)
-  getPlans: () =>
-    api.get('/native/subscriptions/plans'),
-
-  // Get current user's active subscription
-  getCurrentSubscription: () =>
-    api.get('/native/subscriptions/current'),
-
-  // Create checkout session for a plan
-  createCheckout: (planId: number, language: string = 'en') =>
-    api.post('/native/subscriptions/checkout', { planId, language }),
-
-  // Cancel current subscription
-  cancelSubscription: (reason?: string) =>
-    api.post('/native/subscriptions/cancel', { reason }),
-
-  // Get payment history
-  getPaymentHistory: (limit?: number) =>
-    api.get('/native/subscriptions/payments', {
-      params: limit ? { limit } : {},
-    }),
-
-  // Check if pending order was completed (for polling, no AllPay API call)
-  checkPendingOrder: (orderId: string) =>
-    api.get(`/native/subscriptions/check-pending/${orderId}`),
-};
-
 // Bug Reports API
 export const bugReportsAPI = {
   create: (data: { message: string; screen?: string }) =>

@@ -6,7 +6,6 @@ import * as profile from './translations/profile';
 import * as availability from './translations/availability';
 import * as calendarSync from './translations/calendarSync';
 import * as onboarding from './translations/onboarding';
-import * as subscriptions from './translations/subscriptions';
 
 export type Language = 'ru' | 'en' | 'es' | 'de';
 
@@ -35,8 +34,6 @@ export interface Translations {
   calendarSync: calendarSync.CalendarSyncTranslations;
   // Onboarding
   onboarding: onboarding.OnboardingTranslations;
-  // Subscriptions
-  subscriptions: subscriptions.SubscriptionsTranslations;
   // Beta Banner
   betaBanner: common.BetaBannerTranslations;
   // Days
@@ -54,7 +51,6 @@ export const ru: Translations = {
   ...availability.ru,
   ...calendarSync.ru,
   ...onboarding.ru,
-  ...subscriptions.ru,
 };
 
 export const en: Translations = {
@@ -66,7 +62,6 @@ export const en: Translations = {
   ...availability.en,
   ...calendarSync.en,
   ...onboarding.en,
-  ...subscriptions.en,
 };
 
 export const es: Translations = {
@@ -78,7 +73,6 @@ export const es: Translations = {
   ...availability.es,
   ...calendarSync.es,
   ...onboarding.es,
-  ...subscriptions.es,
 };
 
 export const de: Translations = {
@@ -90,7 +84,6 @@ export const de: Translations = {
   ...availability.de,
   ...calendarSync.de,
   ...onboarding.de,
-  ...subscriptions.de,
 };
 
 export const translations: Record<Language, Translations> = { ru, en, es, de };

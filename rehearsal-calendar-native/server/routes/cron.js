@@ -4,19 +4,22 @@
  */
 
 import { Router } from 'express';
-import { runRecurringBilling } from '../jobs/recurringBilling.js';
+import { checkUpcomingRehearsals } from '../services/notifications/reminderScheduler.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
 
 /**
- * POST /api/cron/recurring-billing
- * Run recurring billing job
+ * GET /api/cron/reminders
+ * Send the rehearsal reminders that are due.
  *
- * This endpoint is called by Vercel Cron (configured in vercel.json)
- * Protected by CRON_SECRET environment variable
+ * Called by Vercel Cron (see vercel.json). The in-process scheduler in
+ * reminderScheduler.js only runs where the server is a long-lived process —
+ * on Vercel it never fires, which meant reminders were not being sent at all.
+ *
+ * Protected by CRON_SECRET, fail-closed.
  */
-router.get('/recurring-billing', async (req, res) => {
+router.get('/reminders', async (req, res) => {
   try {
     // Verify cron secret (Vercel automatically adds this header)
     const authHeader = req.headers.authorization;
@@ -38,16 +41,16 @@ router.get('/recurring-billing', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    logger.info('[Cron API] Running recurring billing...');
+    logger.info('[Cron API] Checking upcoming rehearsals...');
 
-    const result = await runRecurringBilling();
+    const result = await checkUpcomingRehearsals();
 
-    logger.info('[Cron API] Recurring billing completed:', result);
+    logger.info('[Cron API] Reminder check completed');
 
     res.json({
       success: true,
-      message: 'Recurring billing completed',
-      result
+      message: 'Reminder check completed',
+      result: result ?? null
     });
   } catch (error) {
     logger.error('[Cron API] Recurring billing failed:', error);

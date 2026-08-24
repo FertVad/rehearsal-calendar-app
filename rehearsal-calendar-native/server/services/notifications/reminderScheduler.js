@@ -11,7 +11,7 @@ import { notifyRehearsal24h, notifyRehearsal1h } from './pushNotificationService
 /**
  * Check for upcoming rehearsals and send reminders
  */
-async function checkUpcomingRehearsals() {
+export async function checkUpcomingRehearsals() {
   try {
     logger.info('[Reminder] Checking for upcoming rehearsals...');
 
@@ -132,8 +132,11 @@ async function check1hReminders(now) {
 }
 
 /**
- * Start the reminder scheduler
- * Runs every 10 minutes
+ * Start the in-process scheduler.
+ *
+ * Only useful when the server is a long-lived process. On Vercel nothing here
+ * runs — the function is torn down after each request — so production drives
+ * the same work through GET /api/cron/reminders instead.
  */
 export function startReminderScheduler() {
   // Run every 10 minutes

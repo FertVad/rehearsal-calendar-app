@@ -237,7 +237,6 @@ export function generateAdminPageHTML() {
             <th>Email</th>
             <th>Registered</th>
             <th>Last Login</th>
-            <th>Subscription</th>
           </tr>
         </thead>
         <tbody id="users-body">
@@ -247,32 +246,12 @@ export function generateAdminPageHTML() {
       <div class="pagination" id="users-pagination"></div>
     </div>
 
-    <!-- Transactions Table -->
-    <div class="section">
-      <div class="section-title">Recent Transactions</div>
-      <table>
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Amount</th>
-            <th>Type</th>
-            <th>Status</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody id="tx-body">
-          <tr><td colspan="5" class="loading">Loading...</td></tr>
-        </tbody>
-      </table>
-      <div class="pagination" id="tx-pagination"></div>
-    </div>
   </div>
 </div>
 
 <script>
   var TOKEN_KEY = 'admin_token';
   var usersPage = 0;
-  var txPage = 0;
   var PAGE_SIZE = 30;
 
   function getToken() { return localStorage.getItem(TOKEN_KEY); }
@@ -351,30 +330,12 @@ export function generateAdminPageHTML() {
     var loading = document.getElementById('stats-loading');
     try {
       var d = await api('/stats');
-      var subsList = (d.subscriptions.active || []).map(function(s) {
-        return s.plan + ': ' + s.count;
-      }).join(', ');
 
       el.innerHTML =
         '<div class="card">' +
           '<div class="card-label">Users</div>' +
           '<div class="card-value">' + d.users.total + '</div>' +
           '<div class="card-sub"><span>+' + d.users.newThisWeek + '</span> this week, <span>+' + d.users.newThisMonth + '</span> this month</div>' +
-        '</div>' +
-        '<div class="card">' +
-          '<div class="card-label">Active Subscriptions</div>' +
-          '<div class="card-value">' + d.subscriptions.totalActive + '</div>' +
-          '<div class="card-sub">' + (subsList || 'none') + '</div>' +
-        '</div>' +
-        '<div class="card">' +
-          '<div class="card-label">Revenue (ILS)</div>' +
-          '<div class="card-value">' + Number(d.revenue.total).toLocaleString() + '</div>' +
-          '<div class="card-sub">' + d.revenue.currency + '</div>' +
-        '</div>' +
-        '<div class="card card-churn">' +
-          '<div class="card-label">Churn (30 days)</div>' +
-          '<div class="card-value">' + d.churn.subscriptions.rate + '%</div>' +
-          '<div class="card-sub">Subs cancelled: ' + d.churn.subscriptions.cancelledLast30Days + '</div>' +
         '</div>' +
         '<div class="card card-churn">' +
           '<div class="card-label">User Churn (30 days)</div>' +
@@ -401,46 +362,21 @@ export function generateAdminPageHTML() {
     try {
       var d = await api('/users?limit=' + PAGE_SIZE + '&offset=' + (usersPage * PAGE_SIZE));
       if (!d.users.length) {
-        body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b949e">No users</td></tr>';
+        body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#8b949e">No users</td></tr>';
         return;
       }
       body.innerHTML = d.users.map(function(u) {
-        var subText = u.subscriptionStatus
-          ? statusBadge(u.subscriptionStatus) + ' <span style="color:#8b949e;font-size:11px">' + (u.planName || '') + '</span>'
-          : '<span class="badge badge-gray">free</span>';
         return '<tr>' +
           '<td>' + (u.firstName || '') + ' ' + (u.lastName || '') + '</td>' +
           '<td>' + u.email + '</td>' +
           '<td>' + fmtDate(u.createdAt) + '</td>' +
           '<td>' + fmtDate(u.lastLoginAt) + '</td>' +
-          '<td>' + subText + '</td>' +
         '</tr>';
       }).join('');
       renderPagination('users-pagination', d.total, usersPage, loadUsers);
     } catch (e) { /* handled by api() */ }
   }
 
-  async function loadTransactions(page) {
-    txPage = page || 0;
-    var body = document.getElementById('tx-body');
-    try {
-      var d = await api('/transactions?limit=' + PAGE_SIZE + '&offset=' + (txPage * PAGE_SIZE));
-      if (!d.transactions.length) {
-        body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b949e">No transactions</td></tr>';
-        return;
-      }
-      body.innerHTML = d.transactions.map(function(t) {
-        return '<tr>' +
-          '<td>' + t.email + '</td>' +
-          '<td>' + t.amount + ' ' + t.currency + '</td>' +
-          '<td>' + (t.type || '-') + '</td>' +
-          '<td>' + statusBadge(t.status) + '</td>' +
-          '<td>' + fmtDate(t.attemptedAt) + '</td>' +
-        '</tr>';
-      }).join('');
-      renderPagination('tx-pagination', d.total, txPage, loadTransactions);
-    } catch (e) { /* handled by api() */ }
-  }
 
   function renderPagination(elId, total, currentPage, loadFn) {
     var el = document.getElementById(elId);
@@ -507,7 +443,6 @@ export function generateAdminPageHTML() {
   function loadAll() {
     loadStats();
     loadUsers(0);
-    loadTransactions(0);
     loadBugReports(0);
   }
 
