@@ -343,13 +343,17 @@ in place because dropping them is irreversible and buys nothing.
 Push reminders for rehearsals starting soon. `checkUpcomingRehearsals()` finds
 them and sends via Expo; `GET /api/cron/reminders` is what actually calls it.
 
-**The endpoint is the only trigger that works in production.** The server also
-declares the schedule in-process, which runs fine locally and never once on
-Vercel — the function is not resident between requests, so the timer has no one
-to fire it. That is why reminders silently never arrived before
-[vercel.json](rehearsal-calendar-native/server/vercel.json) got a `crons` entry
-(`*/15 * * * *`). Any future scheduled work needs the same treatment: an HTTP
-endpoint plus a `crons` entry, not a `setInterval`.
+**Reminders do not currently fire in production, and the endpoint has no
+caller** — see [known-issues.md](rehearsal-calendar-native/docs/known-issues.md).
+The in-process `node-cron` schedule runs fine locally and never once on Vercel,
+because a function is not resident between requests. The `crons` entry that
+would have replaced it was rejected: Hobby allows one run per day and this needs
+about every 15 minutes, and an invalid `crons` block fails the whole deployment
+before it builds.
+
+The lesson generalises: scheduled work on Vercel needs an HTTP endpoint plus
+something outside the process calling it, never a `setInterval`. And check the
+plan's cron limits before adding a `crons` entry, or nothing deploys at all.
 
 Auth is fail-closed — without `CRON_SECRET` the endpoint answers 503 rather than
 running unauthenticated.
