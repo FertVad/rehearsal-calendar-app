@@ -14,20 +14,8 @@ import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
 import { registerForPushNotifications, unregisterPushToken } from '../../../shared/services/notifications';
-import { subscriptionsAPI } from '../../../shared/services/api';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
-
-interface UserSubscription {
-  id: number;
-  plan_id: number;
-  plan_name: string;
-  display_name_en: string;
-  display_name_ru: string;
-  status: string;
-  current_period_end: string;
-  next_billing_date: string | null;
-}
 
 import { getTimezonesWithDevice, getTimezoneLabel } from '../../../shared/constants/timezones';
 
@@ -55,29 +43,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
-  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
-  const [loadingSubscription, setLoadingSubscription] = useState(true);
-
-  // Load subscription data whenever screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      const loadSubscription = async () => {
-        try {
-          setLoadingSubscription(true);
-          const response = await subscriptionsAPI.getCurrentSubscription();
-          setSubscription(response.data.subscription);
-        } catch (error) {
-          // No active subscription or error - this is fine
-          setSubscription(null);
-        } finally {
-          setLoadingSubscription(false);
-        }
-      };
-
-      loadSubscription();
-    }, [])
-  );
-
   const handleLogout = async () => {
     hapticMedium();
     await logout();
@@ -239,12 +204,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             <Text style={styles.userName}>
               {user?.firstName ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}` : 'User'}
             </Text>
-            {!loadingSubscription && subscription?.status === 'active' && (
-              <View style={styles.premiumBadge}>
-                <Ionicons name="star" size={12} color="#fff" />
-                <Text style={styles.premiumText}>{t.profile.premium}</Text>
-              </View>
-            )}
           </View>
           <Text style={styles.userEmail}>{user?.email}</Text>
           <TouchableOpacity
@@ -341,18 +300,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
 
-          {/* Subscription - TEMPORARILY DISABLED FOR LAUNCH */}
-          {/* <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Subscription')}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
-                <Ionicons name="card" size={20} color={Colors.accent.purple} />
-              </View>
-              <Text style={styles.settingLabel}>
-                {language === 'ru' ? 'Подписка' : 'Subscription'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
-          </TouchableOpacity> */}
         </View>
 
         {/* About Section */}

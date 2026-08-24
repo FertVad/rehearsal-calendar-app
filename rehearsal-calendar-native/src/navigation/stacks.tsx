@@ -8,7 +8,6 @@ import ProjectDetailScreen from '../features/projects/screens/ProjectDetailScree
 import ProfileScreen from '../features/profile/screens/ProfileScreen';
 import CalendarSyncSettingsScreen from '../features/profile/screens/CalendarSyncSettingsScreen';
 import EditProfileScreen from '../features/profile/screens/EditProfileScreen';
-import SubscriptionScreen from '../features/subscriptions/screens/SubscriptionScreen';
 import SmartPlannerScreen from '../features/smart-planner/screens/SmartPlannerScreen';
 import SmartPlannerTabScreen from '../features/smart-planner/screens/SmartPlannerTabScreen';
 import type {
@@ -92,11 +91,6 @@ export function ProfileNavigator() {
       <ProfileStackNav.Screen
         name="EditProfile"
         component={EditProfileScreen}
-        options={{ headerShown: false }}
-      />
-      <ProfileStackNav.Screen
-        name="Subscription"
-        component={SubscriptionScreen}
         options={{ headerShown: false }}
       />
     </ProfileStackNav.Navigator>

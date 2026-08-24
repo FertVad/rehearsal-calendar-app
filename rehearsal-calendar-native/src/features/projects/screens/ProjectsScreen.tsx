@@ -9,7 +9,6 @@ import { SkeletonLoader } from '../../../shared/components';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useInviteLink } from '../hooks';
-import { subscriptionsAPI } from '../../../shared/services/api';
 import { projectsScreenStyles as styles } from '../styles';
 
 export default function ProjectsScreen() {
@@ -17,7 +16,8 @@ export default function ProjectsScreen() {
   const { projects, selectedProject, setSelectedProject, loading, error } = useProjects();
   const { generateInviteLink, generatingFor } = useInviteLink();
   const { t, language } = useI18n();
-  // TEMPORARILY DISABLED FOR LAUNCH: subscription check removed, all users can create projects
+  // Anyone can create a project: the paid tier was taken out of the app for
+  // the App Store release — see docs/app-store-release.md
   // Joining is not creating, so it lives here on the projects screen rather
   // than in the create sheet — and above all in the empty state, which is
   // exactly what an invited person sees when their link failed to open.
