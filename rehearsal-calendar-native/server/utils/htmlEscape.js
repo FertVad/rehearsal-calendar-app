@@ -1,15 +1,13 @@
 /**
  * HTML escaping for server-rendered pages.
  *
- * Only a handful of routes return HTML (the AllPay checkout wrapper and the
- * invite landing page), but both interpolate values straight from the request,
- * so anything reaching a template must go through here.
+ * The invite landing page is the only route that returns HTML built from
+ * request values, but it interpolates them straight into the markup, so
+ * anything reaching a template must go through here.
  *
  * Pick by context, not habit:
  *   - text and attribute values  → escapeHtml()
  *   - inside a <script> block    → jsonForScript()
- *   - a URL used as href/src     → assertSafeUrl(), because escaping does
- *                                  nothing about `javascript:`
  */
 
 const HTML_ENTITIES = {
@@ -53,38 +51,4 @@ export function jsonForScript(value) {
     .replace(/>/g, '\\u003e')
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029');
-}
-
-/**
- * Validate a URL destined for an iframe `src` or a link `href`.
- *
- * Escaping cannot make `javascript:alert(1)` safe — the scheme itself is the
- * problem — so untrusted URLs are checked against a scheme and host allow-list
- * instead.
- *
- * @param {unknown} value - candidate URL
- * @param {string[]} allowedHosts - exact hostnames, or ".example.com" to allow subdomains
- * @returns {string|null} the URL when acceptable, otherwise null
- */
-export function assertSafeUrl(value, allowedHosts = []) {
-  if (!value) return null;
-
-  let parsed;
-  try {
-    parsed = new URL(String(value));
-  } catch {
-    return null;
-  }
-
-  if (parsed.protocol !== 'https:') return null;
-
-  const host = parsed.hostname.toLowerCase();
-  const allowed = allowedHosts.some((entry) => {
-    const candidate = entry.toLowerCase();
-    return candidate.startsWith('.')
-      ? host === candidate.slice(1) || host.endsWith(candidate)
-      : host === candidate;
-  });
-
-  return allowed ? parsed.toString() : null;
 }

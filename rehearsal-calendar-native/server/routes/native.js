@@ -4,7 +4,6 @@ import projectsRoutes from './native/projects.js';
 import membersRoutes from './native/members.js';
 import rehearsalsRoutes from './native/rehearsals.js';
 import invitesRoutes from './native/invites.js';
-import subscriptionsRoutes from './native/subscriptions/index.js';
 import bugReportsRoutes from './native/bugReports.js';
 
 /**
@@ -17,7 +16,6 @@ import bugReportsRoutes from './native/bugReports.js';
  * - members.js: Project members and their availability (GET /projects/:id/members)
  * - rehearsals.js: Rehearsal management and RSVP (GET/POST/PUT/DELETE /projects/:id/rehearsals, /rehearsals/:id/respond)
  * - invites.js: Project invitation links (GET/POST/DELETE /projects/:id/invite, GET/POST /invite/:code)
- * - subscriptions.js: Subscription management and payments (GET/POST /subscriptions/*)
  */
 const router = Router();
 
@@ -29,7 +27,6 @@ router.use('/projects', rehearsalsRoutes);
 router.use('/projects', invitesRoutes);
 router.use('/rehearsals', rehearsalsRoutes);
 router.use('/invite', invitesRoutes);
-router.use('/subscriptions', subscriptionsRoutes);
 router.use('/bug-reports', bugReportsRoutes);
 
 export default router;

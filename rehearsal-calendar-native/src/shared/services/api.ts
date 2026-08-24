@@ -16,8 +16,11 @@ import { logger } from '../utils/logger';
  * - EXPO_PUBLIC_API_URL: Override API URL (e.g., "http://192.168.1.100:3001/api")
  */
 
-// Production backend URL — set EXPO_PUBLIC_API_URL in .env to override
-const PRODUCTION_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://server-fertvads-projects.vercel.app/api';
+// Production backend URL — set EXPO_PUBLIC_API_URL in .env to override.
+// The fallback must stay on rehearsly.me: invite links, the AASA file and the
+// app all have to share one origin for Universal Links to resolve, and the
+// project's vercel.app address changes if the project is ever renamed.
+const PRODUCTION_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://rehearsly.me/api';
 
 // Auto-detect local IP from Expo DevServer (for development on physical devices)
 const getLocalDevIP = (): string | null => {
@@ -384,35 +387,6 @@ export const calendarSyncAPI = {
 
   deleteMappingByEvent: (eventType: 'rehearsal' | 'availability', internalEventId: string) =>
     api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`),
-};
-
-// Subscriptions API (Native App)
-export const subscriptionsAPI = {
-  // Get all available subscription plans (no auth required)
-  getPlans: () =>
-    api.get('/native/subscriptions/plans'),
-
-  // Get current user's active subscription
-  getCurrentSubscription: () =>
-    api.get('/native/subscriptions/current'),
-
-  // Create checkout session for a plan
-  createCheckout: (planId: number, language: string = 'en') =>
-    api.post('/native/subscriptions/checkout', { planId, language }),
-
-  // Cancel current subscription
-  cancelSubscription: (reason?: string) =>
-    api.post('/native/subscriptions/cancel', { reason }),
-
-  // Get payment history
-  getPaymentHistory: (limit?: number) =>
-    api.get('/native/subscriptions/payments', {
-      params: limit ? { limit } : {},
-    }),
-
-  // Check if pending order was completed (for polling, no AllPay API call)
-  checkPendingOrder: (orderId: string) =>
-    api.get(`/native/subscriptions/check-pending/${orderId}`),
 };
 
 // Bug Reports API

@@ -6,7 +6,6 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import cron from 'node-cron';
 import db, { initDatabase, testConnection, isPostgres } from './database/db.js';
 import authRoutes from './routes/auth.js';
 import nativeRoutes from './routes/native.js';
@@ -16,7 +15,6 @@ import pushTokensRouter from './routes/native/pushTokens.js';
 import cronRoutes from './routes/cron.js';
 import adminRoutes from './routes/admin.js';
 import { startReminderScheduler } from './services/notifications/reminderScheduler.js';
-import { runRecurringBilling } from './jobs/recurringBilling.js';
 import { logger } from './utils/logger.js';
 import { jsonForScript } from './utils/htmlEscape.js';
 
@@ -35,15 +33,9 @@ logger.info(`DATABASE_URL: ${process.env.DATABASE_URL ? 'PROVIDED' : 'MISSING'}`
 logger.info(`PORT: ${process.env.PORT || '3001'}`);
 logger.info('================================');
 
-// Safety guard: test mode must never run in production (would allow webhook bypass)
-if (process.env.NODE_ENV === 'production' && process.env.ALLPAY_TEST_MODE === 'true') {
-  logger.error('FATAL: ALLPAY_TEST_MODE=true is not allowed in production. Shutting down.');
-  process.exit(1);
-}
-
 // Startup validation: refuse to start if critical env vars are missing in production
 if (process.env.NODE_ENV === 'production') {
-  const required = ['JWT_SECRET', 'CRON_SECRET', 'ALLPAY_WEBHOOK_SECRET'];
+  const required = ['JWT_SECRET', 'CRON_SECRET'];
   const missing = required.filter(k => !process.env[k]);
   // Admin can be configured via either bcrypt hash or plaintext password
   if (!process.env.ADMIN_PASSWORD_HASH && !process.env.ADMIN_PASSWORD) {
@@ -208,9 +200,9 @@ app.use('/api/native', nativeRoutes);
 app.use('/api/cron', cronRoutes);
 
 // Admin panel
-// The admin dashboard is generated with inline handlers and styles, and the
-// checkout page embeds AllPay. Both are widened here rather than by weakening
-// the policy every other page gets.
+// The admin dashboard is generated with inline handlers and style attributes,
+// so it is widened here rather than by weakening the policy every other page
+// gets.
 const relaxedCsp = (extra = {}) => helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
@@ -229,9 +221,6 @@ const relaxedCsp = (extra = {}) => helmet.contentSecurityPolicy({
 });
 
 app.use('/admin', relaxedCsp(), adminRoutes);
-app.use('/api/native/subscriptions/checkout-page', relaxedCsp({
-  frameSrc: ["'self'", 'https://allpay.to'],
-}));
 
 // Apple App Site Association for Universal Links (iOS)
 app.get('/.well-known/apple-app-site-association', (req, res) => {
@@ -385,15 +374,4 @@ app.listen(PORT, HOST, () => {
   // Start reminder scheduler for push notifications
   startReminderScheduler();
 
-  // Start recurring billing cron job (daily at 2:00 AM UTC)
-  // Note: On Vercel (serverless), this does NOT run - Vercel Cron Jobs handle it via GET /api/cron/recurring-billing
-  cron.schedule('0 2 * * *', async () => {
-    logger.info('[Cron] Triggering recurring billing job');
-    try {
-      await runRecurringBilling();
-    } catch (error) {
-      logger.error('[Cron] Recurring billing job failed:', error);
-    }
-  });
-  logger.info('[Cron] Recurring billing scheduler initialized (daily at 2:00 AM UTC)');
 });
