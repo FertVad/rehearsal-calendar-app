@@ -1,6 +1,10 @@
 /**
- * Reminder Scheduler
- * CRON job to send rehearsal reminders at 24h and 1h before start time
+ * Rehearsal reminders — the day before, and an hour before.
+ *
+ * Driven by GET /api/cron/reminders. Whatever calls that endpoint decides how
+ * often this runs, and nothing here assumes it is punctual: a run that arrives
+ * late, or not at all, must not cost anyone their reminder. See the window
+ * constants below for how that is arranged.
  */
 
 import cron from 'node-cron';
@@ -9,126 +13,136 @@ import { logger } from '../../utils/logger.js';
 import { notifyRehearsal24h, notifyRehearsal1h } from './pushNotificationService.js';
 
 /**
- * Check for upcoming rehearsals and send reminders
+ * Search windows, as offsets from "now".
+ *
+ * These used to be narrow bands — 23–24h ahead, and 50–70 minutes ahead — which
+ * only work under a metronome. Miss one run and the rehearsal has crossed the
+ * band by the next; it then gets no reminder at all, silently. Since no free
+ * scheduler promises punctuality, the windows are wide enough that any run
+ * within hours of the intended one still catches the same rehearsals.
+ *
+ * Sending twice is prevented by native_push_reminders, not by the window, so
+ * widening costs nothing. The 12-hour floor on the day-before reminder is what
+ * keeps its wording honest: "Rehearsal tomorrow" should not arrive for
+ * something starting this afternoon.
+ */
+const DAY_BEFORE_FLOOR_MS = 12 * 60 * 60 * 1000;
+const DAY_BEFORE_CEILING_MS = 24 * 60 * 60 * 1000;
+const HOUR_BEFORE_CEILING_MS = 60 * 60 * 1000;
+
+/**
+ * Check for upcoming rehearsals and send the reminders that are due.
+ *
+ * @returns {Promise<{sent: {'24h': number, '1h': number}, found: {'24h': number, '1h': number}}>}
  */
 export async function checkUpcomingRehearsals() {
+  logger.info('[Reminder] Checking for upcoming rehearsals...');
+
+  const now = new Date();
+
+  const dayBefore = await sendReminders({
+    type: '24h',
+    from: new Date(now.getTime() + DAY_BEFORE_FLOOR_MS),
+    to: new Date(now.getTime() + DAY_BEFORE_CEILING_MS),
+    notify: notifyRehearsal24h,
+    now,
+  });
+
+  const hourBefore = await sendReminders({
+    type: '1h',
+    from: now,
+    to: new Date(now.getTime() + HOUR_BEFORE_CEILING_MS),
+    notify: notifyRehearsal1h,
+    now,
+  });
+
+  const result = {
+    found: { '24h': dayBefore.found, '1h': hourBefore.found },
+    sent: { '24h': dayBefore.sent, '1h': hourBefore.sent },
+  };
+
+  logger.info(
+    `[Reminder] Check complete — sent ${result.sent['24h']} day-before, ${result.sent['1h']} hour-before`
+  );
+
+  return result;
+}
+
+/**
+ * Find the rehearsals starting inside one window that have not had this kind of
+ * reminder yet, and notify their project members.
+ */
+async function sendReminders({ type, from, to, notify, now }) {
+  let rehearsals;
   try {
-    logger.info('[Reminder] Checking for upcoming rehearsals...');
-
-    const now = new Date();
-
-    // Check 24-hour reminders (23-24 hours from now)
-    await check24hReminders(now);
-
-    // Check 1-hour reminders (50-60 minutes from now)
-    await check1hReminders(now);
-
-    logger.info('[Reminder] Check complete');
+    rehearsals = await db.all(
+      `SELECT r.*, p.name as project_name
+       FROM native_rehearsals r
+       JOIN native_projects p ON r.project_id = p.id
+       WHERE r.starts_at BETWEEN ? AND ?
+         AND r.is_all_day = FALSE
+         AND NOT EXISTS (
+           SELECT 1 FROM native_push_reminders pr
+           WHERE pr.rehearsal_id = r.id AND pr.reminder_type = ?
+         )`,
+      [from.toISOString(), to.toISOString(), type]
+    );
   } catch (err) {
-    logger.error('[Reminder] Error checking reminders:', err);
+    logger.error(`[Reminder] Could not load rehearsals for the ${type} reminder:`, err);
+    return { found: 0, sent: 0 };
   }
-}
 
-/**
- * Check and send 24-hour reminders
- */
-async function check24hReminders(now) {
-  const start24h = new Date(now.getTime() + 23 * 60 * 60 * 1000); // 23 hours from now
-  const end24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);   // 24 hours from now
+  logger.info(`[Reminder] Found ${rehearsals.length} rehearsals for the ${type} reminder`);
 
-  const rehearsals = await db.all(
-    `SELECT r.*, p.name as project_name
-     FROM native_rehearsals r
-     JOIN native_projects p ON r.project_id = p.id
-     WHERE r.starts_at BETWEEN ? AND ?
-       AND r.is_all_day = FALSE
-       AND NOT EXISTS (
-         SELECT 1 FROM native_push_reminders pr
-         WHERE pr.rehearsal_id = r.id AND pr.reminder_type = '24h'
-       )`,
-    [start24h.toISOString(), end24h.toISOString()]
-  );
-
-  logger.info(`[Reminder] Found ${rehearsals.length} rehearsals for 24h reminder`);
+  let sent = 0;
 
   for (const rehearsal of rehearsals) {
     try {
-      // Get all active project members
       const members = await db.all(
         `SELECT user_id FROM native_project_members
          WHERE project_id = ? AND status = 'active'`,
         [rehearsal.project_id]
       );
 
-      const memberIds = members.map(m => m.user_id);
+      const memberIds = members.map((m) => m.user_id);
+      if (memberIds.length === 0) continue;
 
-      if (memberIds.length > 0) {
-        await notifyRehearsal24h(rehearsal, rehearsal.project_name, memberIds);
-
-        // Mark reminder as sent
-        await db.run(
-          `INSERT INTO native_push_reminders (rehearsal_id, reminder_type, sent_at)
-           VALUES (?, '24h', ?)`,
-          [rehearsal.id, now.toISOString()]
-        );
-
-        logger.info(`[Reminder] Sent 24h reminder for rehearsal ${rehearsal.id}`);
-      }
-    } catch (err) {
-      logger.error(`[Reminder] Error sending 24h reminder for rehearsal ${rehearsal.id}:`, err);
-    }
-  }
-}
-
-/**
- * Check and send 1-hour reminders
- */
-async function check1hReminders(now) {
-  const start1h = new Date(now.getTime() + 50 * 60 * 1000); // 50 minutes from now
-  const end1h = new Date(now.getTime() + 70 * 60 * 1000);   // 70 minutes from now
-
-  const rehearsals = await db.all(
-    `SELECT r.*, p.name as project_name
-     FROM native_rehearsals r
-     JOIN native_projects p ON r.project_id = p.id
-     WHERE r.starts_at BETWEEN ? AND ?
-       AND r.is_all_day = FALSE
-       AND NOT EXISTS (
-         SELECT 1 FROM native_push_reminders pr
-         WHERE pr.rehearsal_id = r.id AND pr.reminder_type = '1h'
-       )`,
-    [start1h.toISOString(), end1h.toISOString()]
-  );
-
-  logger.info(`[Reminder] Found ${rehearsals.length} rehearsals for 1h reminder`);
-
-  for (const rehearsal of rehearsals) {
-    try {
-      // Get all active project members
-      const members = await db.all(
-        `SELECT user_id FROM native_project_members
-         WHERE project_id = ? AND status = 'active'`,
-        [rehearsal.project_id]
+      // Claim before sending, not after. Two schedulers may well overlap — a
+      // primary and a backup, or one run still going when the next starts — and
+      // the unique index on (rehearsal_id, reminder_type) means only one of them
+      // gets a row back. The loser skips instead of sending a second push.
+      const claim = await db.get(
+        `INSERT INTO native_push_reminders (rehearsal_id, reminder_type, sent_at)
+         VALUES (?, ?, ?)
+         ON CONFLICT (rehearsal_id, reminder_type) DO NOTHING
+         RETURNING id`,
+        [rehearsal.id, type, now.toISOString()]
       );
 
-      const memberIds = members.map(m => m.user_id);
+      if (!claim) {
+        logger.info(`[Reminder] ${type} reminder for rehearsal ${rehearsal.id} already claimed`);
+        continue;
+      }
 
-      if (memberIds.length > 0) {
-        await notifyRehearsal1h(rehearsal, rehearsal.project_name, memberIds);
-
-        // Mark reminder as sent
+      try {
+        await notify(rehearsal, rehearsal.project_name, memberIds);
+        sent += 1;
+        logger.info(`[Reminder] Sent ${type} reminder for rehearsal ${rehearsal.id}`);
+      } catch (err) {
+        // Release the claim so the next run tries again — the alternative is a
+        // rehearsal permanently marked as reminded that nobody was told about.
         await db.run(
-          `INSERT INTO native_push_reminders (rehearsal_id, reminder_type, sent_at)
-           VALUES (?, '1h', ?)`,
-          [rehearsal.id, now.toISOString()]
+          `DELETE FROM native_push_reminders WHERE rehearsal_id = ? AND reminder_type = ?`,
+          [rehearsal.id, type]
         );
-
-        logger.info(`[Reminder] Sent 1h reminder for rehearsal ${rehearsal.id}`);
+        throw err;
       }
     } catch (err) {
-      logger.error(`[Reminder] Error sending 1h reminder for rehearsal ${rehearsal.id}:`, err);
+      logger.error(`[Reminder] Error sending ${type} reminder for rehearsal ${rehearsal.id}:`, err);
     }
   }
+
+  return { found: rehearsals.length, sent };
 }
 
 /**

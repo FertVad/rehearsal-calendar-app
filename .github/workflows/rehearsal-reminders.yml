@@ -1,0 +1,50 @@
+name: Rehearsal reminders
+
+# Pings the endpoint that sends rehearsal reminders. The app runs on Vercel's
+# Hobby plan, where a `crons` entry may fire once a day at most — and an entry
+# asking for more fails the whole deployment — so the trigger has to live
+# outside Vercel.
+#
+# GitHub's scheduler is not punctual: runs drift by 5–20 minutes under load and
+# are skipped outright at busy times. That is survivable here because the
+# reminder windows are hours wide and every send is claimed in
+# native_push_reminders first, so a second scheduler running alongside this one
+# cannot produce a duplicate push. Treat this as the backup; something with
+# minute accuracy should be the primary.
+#
+# Requires one repository secret: CRON_SECRET, the same value as in Vercel.
+# Settings → Secrets and variables → Actions → New repository secret.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # so it can be fired by hand to check it works
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the reminder endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set — add it in Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+          # Body and status are captured separately so a failure shows what the
+          # server actually said, rather than just a number.
+          body=$(mktemp)
+          http_status=$(curl -sS --max-time 60 -o "$body" -w '%{http_code}' \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://rehearsly.me/api/cron/reminders)
+
+          echo "HTTP $http_status"
+          cat "$body"
+          echo
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::Reminder check failed with HTTP $http_status"
+            exit 1
+          fi

@@ -343,17 +343,22 @@ in place because dropping them is irreversible and buys nothing.
 Push reminders for rehearsals starting soon. `checkUpcomingRehearsals()` finds
 them and sends via Expo; `GET /api/cron/reminders` is what actually calls it.
 
-**Reminders do not currently fire in production, and the endpoint has no
-caller** — see [known-issues.md](rehearsal-calendar-native/docs/known-issues.md).
-The in-process `node-cron` schedule runs fine locally and never once on Vercel,
-because a function is not resident between requests. The `crons` entry that
-would have replaced it was rejected: Hobby allows one run per day and this needs
-about every 15 minutes, and an invalid `crons` block fails the whole deployment
-before it builds.
+**Nothing inside the deployment can drive it.** The in-process `node-cron`
+schedule runs fine locally and never once on Vercel, because a function is not
+resident between requests. A `crons` entry cannot replace it either: Hobby
+allows one run per day, and an entry asking for more fails the whole deployment
+before it builds. The trigger therefore lives outside — currently
+[.github/workflows/rehearsal-reminders.yml](.github/workflows/rehearsal-reminders.yml),
+every 15 minutes, needing a `CRON_SECRET` repository secret.
 
-The lesson generalises: scheduled work on Vercel needs an HTTP endpoint plus
-something outside the process calling it, never a `setInterval`. And check the
-plan's cron limits before adding a `crons` entry, or nothing deploys at all.
+**The windows are deliberately wide** — 12–24h ahead for the day-before
+reminder, 0–1h for the hour-before — because no free scheduler is punctual.
+They used to be narrow bands (23–24h, 50–70min) that only worked under a
+metronome: one missed run and a rehearsal crossed the band and was never
+announced. Widening is free because each send is *claimed* in
+`native_push_reminders` (unique on `rehearsal_id, reminder_type`) before the
+push goes out, so overlapping schedulers cannot double-send, and a failed push
+releases the claim so the next run retries.
 
 Auth is fail-closed — without `CRON_SECRET` the endpoint answers 503 rather than
 running unauthenticated.
