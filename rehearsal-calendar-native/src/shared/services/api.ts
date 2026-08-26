@@ -190,8 +190,17 @@ export const authAPI = {
     api.delete(`/auth/me/providers/${provider}`),
 
   // Push Notification Tokens
+  //
+  // Given longer than the 10s default because it runs unattended on app start,
+  // which is exactly when the serverless function is most likely to be cold. A
+  // timeout here costs the user their notifications until the next launch, and
+  // nobody is waiting on the response, so patience is free.
   registerPushToken: (token: string, deviceType: string, deviceName: string) =>
-    api.post('/native/push-tokens', { deviceToken: token, deviceType, deviceName }),
+    api.post(
+      '/native/push-tokens',
+      { deviceToken: token, deviceType, deviceName },
+      { timeout: 30000 }
+    ),
 
   unregisterPushToken: (token: string) =>
     api.delete('/native/push-tokens', { data: { deviceToken: token } }),
