@@ -6,11 +6,13 @@ name: Rehearsal reminders
 # outside Vercel.
 #
 # GitHub's scheduler is not punctual: runs drift by 5–20 minutes under load and
-# are skipped outright at busy times. That is survivable here because the
-# reminder windows are hours wide and every send is claimed in
-# native_push_reminders first, so a second scheduler running alongside this one
-# cannot produce a duplicate push. Treat this as the backup; something with
-# minute accuracy should be the primary.
+# are skipped outright at busy times, and scheduled workflows are disabled after
+# 60 days without repository activity. This is therefore the BACKUP — the
+# primary is a cron-job.org job on the same URL and the same 15 minutes.
+#
+# Both running at once is deliberate and safe: every send is claimed in
+# native_push_reminders (unique on rehearsal_id, reminder_type) before the push
+# goes out, so whichever scheduler arrives second sends nothing.
 #
 # Requires one repository secret: CRON_SECRET, the same value as in Vercel.
 # Settings → Secrets and variables → Actions → New repository secret.
