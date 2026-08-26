@@ -7,10 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "migrate": "node database/migrate.js",
-    "migrate:neon": "node scripts/migrate-neon.js",
-    "migrate:native": "node scripts/migrate-native-app.js",
-    "check": "node scripts/check-consistency.js",
+    "migrate": "node scripts/migrate.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
