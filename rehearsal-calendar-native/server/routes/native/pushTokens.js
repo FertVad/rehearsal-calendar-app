@@ -31,28 +31,25 @@ router.post('/', requireAuth, async (req, res) => {
 
     const now = new Date().toISOString();
 
-    // Check if token already exists for this user
-    const existing = await db.get(
-      'SELECT id FROM native_push_tokens WHERE user_id = ? AND device_token = ?',
-      [userId, deviceToken]
+    // One upsert rather than SELECT-then-INSERT.
+    //
+    // Registration is triggered from more than one place — app start, the
+    // profile toggle, the onboarding screen — and two of them can overlap. Both
+    // requests then found no row, both inserted, and the second hit the unique
+    // index on (user_id, device_token) and came back as a 500 to a user who had
+    // done nothing wrong. Which is exactly what happened on 2026-08-26.
+    await db.run(
+      `INSERT INTO native_push_tokens (user_id, device_token, device_type, device_name, last_active_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (user_id, device_token)
+       DO UPDATE SET last_active_at = EXCLUDED.last_active_at,
+                     updated_at = EXCLUDED.updated_at,
+                     device_type = EXCLUDED.device_type,
+                     device_name = EXCLUDED.device_name`,
+      [userId, deviceToken, deviceType, deviceName, now, now, now]
     );
 
-    if (existing) {
-      // Update last_active_at
-      await db.run(
-        'UPDATE native_push_tokens SET last_active_at = ?, updated_at = ? WHERE id = ?',
-        [now, now, existing.id]
-      );
-      logger.info(`[PushToken] Updated token for user ${userId}`);
-    } else {
-      // Insert new token
-      await db.run(
-        `INSERT INTO native_push_tokens (user_id, device_token, device_type, device_name, last_active_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [userId, deviceToken, deviceType, deviceName, now, now, now]
-      );
-      logger.info(`[PushToken] Registered new token for user ${userId}`);
-    }
+    logger.info(`[PushToken] Registered token for user ${userId}`);
 
     res.json({ success: true });
   } catch (err) {

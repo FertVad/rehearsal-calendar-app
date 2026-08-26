@@ -83,6 +83,27 @@ export function useNotifications() {
   /**
    * Handle navigation when notification is tapped
    */
+  /**
+   * ProjectDetail and the projects list both live two levels down — inside the
+   * Projects tab of MainTabs — so they have to be addressed through their
+   * parents. Naming them directly, as this did, throws "was not handled by any
+   * navigator" and the tap does nothing at all: every notification in the app
+   * was inert.
+   */
+  const openProject = (projectId: string | number) => {
+    navigation.navigate('MainTabs' as any, {
+      screen: 'Projects',
+      params: {
+        screen: 'ProjectDetail',
+        params: { projectId: String(projectId) },
+      },
+    });
+  };
+
+  const openProjectsList = () => {
+    navigation.navigate('MainTabs' as any, { screen: 'Projects' });
+  };
+
   const handleNotificationNavigation = (data: any) => {
     if (!data || !data.type) return;
 
@@ -95,30 +116,15 @@ export function useNotifications() {
         case 'rehearsal_reminder_24h':
         case 'rehearsal_reminder_1h':
         case 'member_response':
-          // Navigate to project detail with rehearsals tab
-          if (projectId) {
-            navigation.navigate('ProjectDetail', {
-              projectId: String(projectId),
-              initialTab: 'rehearsals',
-            });
-          }
-          break;
-
         case 'rehearsal_deleted':
-          // Navigate to project detail
-          if (projectId) {
-            navigation.navigate('ProjectDetail', {
-              projectId: String(projectId),
-            });
-          }
+          if (projectId) openProject(projectId);
           break;
 
         case 'project_invite':
         case 'role_changed':
         case 'member_removed':
         case 'project_deleted':
-          // Navigate to projects list
-          navigation.navigate('Projects');
+          openProjectsList();
           break;
 
         default:
