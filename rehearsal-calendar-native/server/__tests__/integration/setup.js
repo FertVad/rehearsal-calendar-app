@@ -94,6 +94,7 @@ export async function setupIntegrationDb() {
       description TEXT,
       starts_at DATETIME NOT NULL,
       ends_at DATETIME NOT NULL,
+      is_all_day BOOLEAN DEFAULT 0,
       created_by INTEGER REFERENCES native_users(id) ON DELETE SET NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -141,80 +142,14 @@ export async function setupIntegrationDb() {
     );
 
     -- Subscription plans
-    CREATE TABLE native_subscription_plans (
+    -- Push reminders already sent. The unique pair is what stops a rehearsal
+    -- being announced twice when two schedulers overlap.
+    CREATE TABLE native_push_reminders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name VARCHAR(50) NOT NULL UNIQUE,
-      display_name_en VARCHAR(100) NOT NULL,
-      display_name_ru VARCHAR(100) NOT NULL,
-      price_ils DECIMAL(10,2) NOT NULL,
-      price_usd DECIMAL(10,2),
-      price_currency VARCHAR(3) DEFAULT 'ILS',
-      billing_period VARCHAR(20) DEFAULT 'monthly',
-      features_json TEXT,
-      max_projects INTEGER,
-      max_members_per_project INTEGER,
-      is_active BOOLEAN DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    -- User subscriptions
-    CREATE TABLE native_user_subscriptions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      plan_id INTEGER NOT NULL,
-      status VARCHAR(20) NOT NULL DEFAULT 'pending',
-      allpay_token VARCHAR(255),
-      allpay_subscription_id VARCHAR(255),
-      allpay_customer_id VARCHAR(255),
-      current_period_start DATETIME,
-      current_period_end DATETIME,
-      next_billing_date DATETIME,
-      started_at DATETIME,
-      cancelled_at DATETIME,
-      cancellation_reason TEXT,
-      trial_ends_at DATETIME,
-      metadata_json TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES native_users(id) ON DELETE CASCADE,
-      FOREIGN KEY (plan_id) REFERENCES native_subscription_plans(id)
-    );
-
-    -- Payment transactions
-    CREATE TABLE native_payment_transactions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      subscription_id INTEGER,
-      allpay_order_id VARCHAR(255) UNIQUE NOT NULL,
-      allpay_transaction_id VARCHAR(255),
-      allpay_payment_status INTEGER,
-      amount DECIMAL(10,2) NOT NULL,
-      currency VARCHAR(3) DEFAULT 'ILS',
-      payment_method VARCHAR(50),
-      transaction_type VARCHAR(20) NOT NULL,
-      status VARCHAR(20) NOT NULL DEFAULT 'pending',
-      error_message TEXT,
-      attempted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      completed_at DATETIME,
-      allpay_response_json TEXT,
-      FOREIGN KEY (user_id) REFERENCES native_users(id) ON DELETE CASCADE,
-      FOREIGN KEY (subscription_id) REFERENCES native_user_subscriptions(id) ON DELETE SET NULL
-    );
-
-    -- Webhook events
-    CREATE TABLE native_allpay_webhook_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      event_type VARCHAR(100) NOT NULL,
-      allpay_order_id VARCHAR(255),
-      signature VARCHAR(255),
-      is_verified BOOLEAN DEFAULT 0,
-      processing_status VARCHAR(20) DEFAULT 'pending',
-      processing_error TEXT,
-      processed_at DATETIME,
-      payload_json TEXT NOT NULL,
-      idempotency_key VARCHAR(255) UNIQUE,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      rehearsal_id INTEGER NOT NULL REFERENCES native_rehearsals(id) ON DELETE CASCADE,
+      reminder_type VARCHAR(10) NOT NULL,
+      sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(rehearsal_id, reminder_type)
     );
   `;
 
@@ -277,18 +212,15 @@ export async function setupIntegrationDb() {
  */
 export function clearIntegrationDb() {
   if (testDb) {
-    testDb.exec('DELETE FROM native_allpay_webhook_events');
-    testDb.exec('DELETE FROM native_payment_transactions');
-    testDb.exec('DELETE FROM native_user_subscriptions');
     testDb.exec('DELETE FROM native_calendar_event_mappings');
     testDb.exec('DELETE FROM native_calendar_connections');
+    testDb.exec('DELETE FROM native_push_reminders');
     testDb.exec('DELETE FROM native_rehearsal_responses');
     testDb.exec('DELETE FROM native_rehearsals');
     testDb.exec('DELETE FROM native_user_availability');
     testDb.exec('DELETE FROM native_project_members');
     testDb.exec('DELETE FROM native_projects');
     testDb.exec('DELETE FROM native_users');
-    // Note: subscription plans are NOT cleared (seed data reused across tests)
   }
 }
 
@@ -346,38 +278,3 @@ export async function seedTestData(db) {
   };
 }
 
-/**
- * Seed subscription plans for payment tests
- */
-export function seedSubscriptionPlans(db) {
-  db.run(
-    `INSERT INTO native_subscription_plans
-     (name, display_name_en, display_name_ru, price_ils, price_usd, billing_period, max_projects, max_members_per_project, features_json, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['monthly', 'Monthly', 'Месяц', 32.00, 9.00, 'monthly', 999, 999, '["unlimited_projects"]', 1]
-  );
-  db.run(
-    `INSERT INTO native_subscription_plans
-     (name, display_name_en, display_name_ru, price_ils, price_usd, billing_period, max_projects, max_members_per_project, features_json, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['quarterly', '3 Months', '3 месяца', 54.00, 15.00, 'quarterly', 999, 999, '["unlimited_projects","save_40"]', 1]
-  );
-  db.run(
-    `INSERT INTO native_subscription_plans
-     (name, display_name_en, display_name_ru, price_ils, price_usd, billing_period, max_projects, max_members_per_project, features_json, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['lifetime', 'Lifetime', 'Навсегда', 176.00, 49.00, 'lifetime', 999, 999, '["lifetime_access"]', 1]
-  );
-  db.run(
-    `INSERT INTO native_subscription_plans
-     (name, display_name_en, display_name_ru, price_ils, price_usd, billing_period, max_projects, max_members_per_project, features_json, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['test_1min', 'Test (1 min)', 'Тест (1 мин)', 0.04, 0.01, 'test_1min', 999, 999, '["test_plan"]', 1]
-  );
-  db.run(
-    `INSERT INTO native_subscription_plans
-     (name, display_name_en, display_name_ru, price_ils, price_usd, billing_period, max_projects, max_members_per_project, features_json, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['deprecated', 'Old Plan', 'Старый', 10.00, 3.00, 'monthly', 1, 5, '[]', 0]
-  );
-}

@@ -7,36 +7,30 @@ Fix one → delete its entry. Anything urgent belongs in a branch, not here.
 
 ---
 
-## 1. Rehearsal reminders never fire in production
+## 1. Rehearsal reminders have no primary scheduler
 
-**Seen as:** nothing. No push arrives 24 hours or 1 hour before a rehearsal, and
-nothing anywhere reports a failure. This has been true since the feature shipped.
+**Seen as:** reminders arrive late or not at all, depending on how punctual
+GitHub's scheduler happens to be that hour.
 
-**Where:** [reminderScheduler.js](../server/services/notifications/reminderScheduler.js)
-declares the schedule with `node-cron` inside the server process. That works
-locally and never once on Vercel — a function is not resident between requests,
-so the timer has no one to fire it.
+**Where:** [rehearsal-reminders.yml](../../.github/workflows/rehearsal-reminders.yml)
+calls `GET /api/cron/reminders` every 15 minutes. GitHub documents drift of
+5–20 minutes under load and skips runs outright at busy times, and it disables
+scheduled workflows after 60 days without repository activity.
 
-`GET /api/cron/reminders` exists and does the work correctly when called; it is
-authenticated with `CRON_SECRET` and fail-closed. **It has no caller.** The
-`crons` entry that would have driven it was rejected: Vercel's Hobby plan allows
-one run per day, and the endpoint needs roughly every 15 minutes. The whole
-deployment failed config validation because of it, so the entry is out of
-[vercel.json](../server/vercel.json) and reminders are simply off.
+Vercel cannot do it: the Hobby plan allows one cron run per day, and an entry
+asking for more fails the whole deployment before it builds.
 
-**Fix:** two parts, and the second is worth doing whichever scheduler wins.
+**Why it is survivable meanwhile:** the search windows are hours wide, not the
+minutes they used to be, so a late run still finds the same rehearsals. Only the
+wording suffers — "Rehearsal in 1 hour" may arrive with forty minutes to go.
 
-1. Point something at the endpoint every ~15 minutes — GitHub Actions (free, the
-   repo is already there), an external cron service, or Vercel Pro.
-2. Widen the search windows. They are narrow bands — 23–24h ahead, and 50–70min
-   ahead — which only work under a metronome. Anything slower or uneven lets
-   rehearsals slip past the band and get nothing, silently. `native_push_reminders`
-   already records what was sent, so the windows can safely become "starting
-   within the next N hours and not yet reminded" and tolerate any schedule.
+**Fix:** add a scheduler with minute accuracy as the primary trigger —
+cron-job.org is free and does exactly this, or a Cloudflare Worker cron. Both can
+run *alongside* the workflow rather than replacing it: every send is claimed in
+`native_push_reminders` before the push goes out, so two schedulers firing at
+once cannot produce a duplicate.
 
-**Deferred because:** the choice of scheduler costs either money or a dependency,
-and the owner has not made the call yet. Note the app promises these reminders in
-onboarding.
+**Deferred because:** it needs an account somewhere, which is the owner's call.
 
 ---
 
