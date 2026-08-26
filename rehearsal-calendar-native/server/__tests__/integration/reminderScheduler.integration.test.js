@@ -46,17 +46,27 @@ const HOUR = 60 * 60 * 1000;
 
 describe('Rehearsal reminders', () => {
   let projectId;
+  let memberId;
+  let bystanderId;
 
-  const addRehearsal = (startsInMs, { allDay = false } = {}) => {
+  /** Adds a rehearsal and puts `roster` on it — an empty roster means nobody. */
+  const addRehearsal = (startsInMs, { allDay = false, roster = null } = {}) => {
     const startsAt = new Date(Date.now() + startsInMs);
     const endsAt = new Date(startsAt.getTime() + 2 * HOUR);
-    return Number(
+    const id = Number(
       testDb.run(
         `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, is_all_day)
          VALUES (?, ?, ?, ?, ?)`,
         [projectId, 'Прогон', startsAt.toISOString(), endsAt.toISOString(), allDay ? 1 : 0]
       ).lastInsertId
     );
+    for (const userId of roster ?? [memberId]) {
+      testDb.run(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response) VALUES (?, ?, 'no')`,
+        [id, userId]
+      );
+    }
+    return id;
   };
 
   const remindersFor = (rehearsalId) =>
@@ -72,10 +82,25 @@ describe('Rehearsal reminders', () => {
 
     const seeded = await seedTestData(testDb);
     projectId = Number(seeded.projectId);
+    memberId = Number(seeded.memberId);
+
+    // In the project, never on a rehearsal. Reminding this person would push
+    // them about something their calendar does not show.
+    bystanderId = Number(
+      testDb.run(
+        `INSERT INTO native_users (email, password_hash, first_name) VALUES (?, ?, ?)`,
+        ['bystander@test.com', 'hash', 'By']
+      ).lastInsertId
+    );
+    testDb.run(
+      `INSERT INTO native_project_members (project_id, user_id, role, status) VALUES (?, ?, 'member', 'active')`,
+      [projectId, bystanderId]
+    );
   });
 
   beforeEach(() => {
     testDb.run('DELETE FROM native_push_reminders', []);
+    testDb.run('DELETE FROM native_rehearsal_responses', []);
     testDb.run('DELETE FROM native_rehearsals', []);
     notify24h.mockReset();
     notify1h.mockReset();
@@ -194,6 +219,34 @@ describe('Rehearsal reminders', () => {
 
     expect(retried.sent['24h']).toBe(1);
     expect(remindersFor(id)).toEqual(['24h']);
+  });
+
+  describe('who gets told', () => {
+    it('tells the people on the rehearsal', async () => {
+      addRehearsal(20 * HOUR, { roster: [memberId] });
+
+      await checkUpcomingRehearsals();
+
+      expect(notify24h).toHaveBeenCalledTimes(1);
+      expect(notify24h.mock.calls[0][2]).toEqual([memberId]);
+    });
+
+    it('leaves out project members who are not on it', async () => {
+      addRehearsal(20 * HOUR, { roster: [memberId] });
+
+      await checkUpcomingRehearsals();
+
+      expect(notify24h.mock.calls[0][2]).not.toContain(bystanderId);
+    });
+
+    it('sends nothing for a rehearsal with nobody on it', async () => {
+      addRehearsal(20 * HOUR, { roster: [] });
+
+      const result = await checkUpcomingRehearsals();
+
+      expect(notify24h).not.toHaveBeenCalled();
+      expect(result.sent['24h']).toBe(0);
+    });
   });
 
   it('reports what it did, so a scheduler log can tell quiet from broken', async () => {

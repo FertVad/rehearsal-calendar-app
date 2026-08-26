@@ -97,13 +97,18 @@ async function sendReminders({ type, from, to, notify, now }) {
 
   for (const rehearsal of rehearsals) {
     try {
-      const members = await db.all(
-        `SELECT user_id FROM native_project_members
-         WHERE project_id = ? AND status = 'active'`,
-        [rehearsal.project_id]
+      // The people on this rehearsal, not everyone in the project.
+      //
+      // native_rehearsal_responses is the roster — having a row is what puts
+      // you on a rehearsal, and the app only ever shows you rehearsals you have
+      // a row for. Reminding the whole project therefore pushed people about
+      // rehearsals that do not appear anywhere in their calendar.
+      const roster = await db.all(
+        `SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?`,
+        [rehearsal.id]
       );
 
-      const memberIds = members.map((m) => m.user_id);
+      const memberIds = roster.map((m) => m.user_id);
       if (memberIds.length === 0) continue;
 
       // Claim before sending, not after. Two schedulers may well overlap — a
