@@ -36,7 +36,6 @@ export interface ProfileTranslations {
   profileUpdated: string;
   updateError: string;
   avatarHint: string;
-  premium: string;
   errorTitle: string;
   notificationError: string;
   languageError: string;
@@ -86,7 +85,6 @@ export const ru = {
     profileUpdated: 'Профиль обновлен',
     updateError: 'Ошибка обновления профиля',
     avatarHint: 'Аватар генерируется автоматически на основе вашего email',
-    premium: 'Premium',
     errorTitle: 'Ошибка',
     notificationError: 'Не удалось изменить настройки уведомлений',
     languageError: 'Не удалось изменить язык',
@@ -137,7 +135,6 @@ export const en = {
     profileUpdated: 'Profile updated',
     updateError: 'Failed to update profile',
     avatarHint: 'Avatar is automatically generated based on your email',
-    premium: 'Premium',
     errorTitle: 'Error',
     notificationError: 'Failed to update notification settings',
     languageError: 'Failed to change language',
@@ -188,7 +185,6 @@ export const es = {
     profileUpdated: 'Perfil actualizado',
     updateError: 'Error al actualizar el perfil',
     avatarHint: 'El avatar se genera automáticamente a partir de tu correo',
-    premium: 'Premium',
     errorTitle: 'Error',
     notificationError: 'No se pudieron actualizar los ajustes de notificaciones',
     languageError: 'No se pudo cambiar el idioma',
@@ -239,7 +235,6 @@ export const de = {
     profileUpdated: 'Profil aktualisiert',
     updateError: 'Profil konnte nicht aktualisiert werden',
     avatarHint: 'Der Avatar wird automatisch aus deiner E-Mail-Adresse erstellt',
-    premium: 'Premium',
     errorTitle: 'Fehler',
     notificationError: 'Benachrichtigungseinstellungen konnten nicht aktualisiert werden',
     languageError: 'Sprache konnte nicht geändert werden',

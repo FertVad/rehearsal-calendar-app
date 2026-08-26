@@ -94,12 +94,17 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
 
     const rehearsal = await createRehearsal(projectId, userId, req.body);
 
-    // Send push notifications to all project members
+    // Tell the people who are on this rehearsal, not the whole project.
+    //
+    // The roster is native_rehearsal_responses, and the app only ever shows a
+    // rehearsal to someone who has a row there. Notifying everyone announced
+    // rehearsals that never appeared in the recipient's calendar and could not
+    // be opened from the notification either.
     try {
       const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
       const members = await db.all(
-        "SELECT user_id FROM native_project_members WHERE project_id = ? AND status = 'active'",
-        [projectId]
+        'SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?',
+        [rehearsal.id]
       );
       await notifyRehearsalCreated(rehearsal, project.name, members);
     } catch (notifErr) {
@@ -138,12 +143,14 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
 
     const updatedRehearsal = await updateRehearsal(rehearsalId, projectId, req.body);
 
-    // Send push notifications to all project members
+    // The roster, not the project — see the note on creation. Participants are
+    // already settled by this point, so newcomers to the rehearsal are included
+    // and anyone dropped from it is not.
     try {
       const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
       const members = await db.all(
-        "SELECT user_id FROM native_project_members WHERE project_id = ? AND status = 'active'",
-        [projectId]
+        'SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?',
+        [updatedRehearsal.id]
       );
 
       // Determine what changed — pass translation keys, service localizes per user
@@ -187,11 +194,11 @@ router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, re
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    // Get project and members BEFORE deletion
+    // The roster, read BEFORE deletion — those rows go with the rehearsal.
     const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
     const members = await db.all(
-      "SELECT user_id FROM native_project_members WHERE project_id = ? AND status = 'active'",
-      [projectId]
+      'SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?',
+      [rehearsal.id]
     );
 
     await deleteRehearsal(rehearsalId);

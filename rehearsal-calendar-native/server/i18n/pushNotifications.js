@@ -57,10 +57,6 @@ const translations = {
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Репетиция'}`,
     },
-    paymentFailed: {
-      title: 'Ошибка оплаты',
-      body: () => 'Не удалось списать оплату подписки. Обновите способ оплаты.',
-    },
     changes: {
       datetime: 'дата/время',
       location: 'место',
@@ -120,10 +116,6 @@ const translations = {
       title: 'Rehearsal in 1 hour',
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Rehearsal'}`,
-    },
-    paymentFailed: {
-      title: 'Payment failed',
-      body: () => 'Your subscription payment could not be processed. Please update your payment method.',
     },
     changes: {
       datetime: 'date/time',
@@ -185,10 +177,6 @@ const translations = {
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Ensayo'}`,
     },
-    paymentFailed: {
-      title: 'Pago fallido',
-      body: () => 'No se pudo procesar el pago de tu suscripción. Actualiza tu método de pago.',
-    },
     changes: {
       datetime: 'fecha/hora',
       location: 'lugar',
@@ -248,10 +236,6 @@ const translations = {
       title: 'Probe in 1 Stunde',
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Probe'}`,
-    },
-    paymentFailed: {
-      title: 'Zahlung fehlgeschlagen',
-      body: () => 'Die Zahlung deines Abonnements konnte nicht verarbeitet werden. Bitte aktualisiere deine Zahlungsmethode.',
     },
     changes: {
       datetime: 'Datum/Zeit',

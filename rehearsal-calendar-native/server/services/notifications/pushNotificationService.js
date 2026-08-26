@@ -307,14 +307,3 @@ export async function notifyRehearsal1h(rehearsal, projectName, memberIds) {
   );
 }
 
-/**
- * Notify user that recurring payment has failed
- */
-export async function notifyPaymentFailed(userId, errorMessage) {
-  await sendLocalizedNotification(
-    [userId],
-    'paymentFailed',
-    {},
-    { type: 'payment_failed', errorMessage }
-  );
-}

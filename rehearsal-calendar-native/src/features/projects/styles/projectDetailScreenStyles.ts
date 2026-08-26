@@ -52,7 +52,9 @@ export const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     borderRadius: BorderRadius.md,
-    marginBottom: Spacing.xl,
+    // The code row below belongs to this button, so they sit close together.
+    // The gap to the next section is owned by the code row, not by this.
+    marginBottom: Spacing.sm,
   },
   inviteButtonText: {
     fontSize: FontSize.base,
@@ -286,7 +288,12 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: Spacing.sm,
+    // Closes the invite group off. Without this the code row butted straight
+    // into the rehearsals section, while a 28px gap opened between the button
+    // and the code — the two things that go together were the ones pushed
+    // apart. React Native does not collapse margins, so the old xl below the
+    // button and sm above this row added up.
+    marginBottom: Spacing.xl,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
