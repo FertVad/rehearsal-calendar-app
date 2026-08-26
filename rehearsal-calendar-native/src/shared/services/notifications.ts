@@ -8,8 +8,12 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from './api';
+import { logger } from '../utils/logger';
 
 const PUSH_TOKEN_KEY = '@push_token';
+
+// Shared by both registration paths so they cannot drift apart.
+const EXPO_PROJECT_ID = '3151ccee-abfe-4f07-925e-00004d2fade8';
 
 // Configure how notifications are displayed when app is foregrounded
 // Wrapped in try-catch to prevent errors on iOS Simulator (notifications not supported)
@@ -55,7 +59,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     // Get Expo push token
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: '3151ccee-abfe-4f07-925e-00004d2fade8',
+      projectId: EXPO_PROJECT_ID,
     });
 
     const token = tokenData.data;
@@ -86,6 +90,50 @@ export async function registerForPushNotifications(): Promise<string | null> {
     return token;
   } catch (error) {
     console.error('[Notifications] Registration error:', error);
+    return null;
+  }
+}
+
+/**
+ * Re-register the device with the backend, but only if permission is already
+ * granted — this never shows a prompt.
+ *
+ * Logging out deletes the token row on the server, and nothing used to put it
+ * back: registration happened only on the onboarding screen and the profile
+ * toggle. So signing out and back in stopped every notification, permanently
+ * and silently, while the profile still read "enabled" because that switch
+ * reflects a flag on the user rather than whether a device is registered.
+ *
+ * Call this whenever a user appears — login, or a restored session. It is
+ * cheap and idempotent: the endpoint upserts on (user, device).
+ */
+export async function syncPushTokenIfGranted(): Promise<string | null> {
+  try {
+    if (!Device.isDevice) return null;
+
+    // getPermissionsAsync, not requestPermissionsAsync: asking belongs to
+    // onboarding and the profile toggle, where the user is expecting it. iOS
+    // only shows the system prompt once, so spending it here would be worse
+    // than useless.
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return null;
+
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: EXPO_PROJECT_ID,
+    });
+    const token = tokenData.data;
+
+    const deviceType = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
+    const deviceName = Device.modelName || 'Unknown Device';
+
+    await authAPI.registerPushToken(token, deviceType, deviceName);
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
+
+    return token;
+  } catch (error) {
+    // Never surfaced: this runs in the background on every launch, and a
+    // failure here must not interrupt anything.
+    logger.warn('[Notifications] Could not re-register push token:', error);
     return null;
   }
 }

@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
 import { syncUserPreferences } from '../shared/utils/storage';
-import { unregisterPushToken } from '../shared/services/notifications';
+import { unregisterPushToken, syncPushTokenIfGranted } from '../shared/services/notifications';
 
 function getDeviceTimezone(): string | undefined {
   try {
@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const hasTimezoneSynced = useRef(false);
+  const hasPushSynced = useRef(false);
 
   // Calendar sync state lives on the device (export/import mappings, picked
   // calendars, last-sync timestamps). Wipe it only when a *different* user
@@ -123,6 +124,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  // Re-register this device for push on login/restore.
+  //
+  // Logging out deletes the token server-side, and until now nothing put it
+  // back — registration lived only on the onboarding screen and the profile
+  // toggle. Signing out and back in therefore killed notifications for good,
+  // without saying so and while the profile still showed them as on. That is
+  // how the owner's own account ended up with no device registered.
+  //
+  // It never prompts: if permission was refused, this does nothing and asking
+  // stays where the user expects to be asked.
+  useEffect(() => {
+    if (!user) {
+      hasPushSynced.current = false;
+      return;
+    }
+    if (hasPushSynced.current) return;
+    hasPushSynced.current = true;
+
+    syncPushTokenIfGranted()
+      .then((token) => {
+        if (token) logger.info('[Auth] Push token re-registered for this device');
+      })
+      .catch((err) => {
+        logger.warn('[Auth] Push token sync failed:', err?.message);
+      });
+  }, [user]);
 
   // Auto-sync device timezone on login/restore
   useEffect(() => {
