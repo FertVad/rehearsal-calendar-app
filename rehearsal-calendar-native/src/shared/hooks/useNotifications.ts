@@ -100,6 +100,24 @@ export function useNotifications() {
     });
   };
 
+  /**
+   * Open the rehearsal the notification is about.
+   *
+   * A notification names one rehearsal, so landing on the project list — or
+   * even the project — makes the reader hunt for what they were just told
+   * about. Its details are a modal on the calendar rather than a route, so the
+   * id goes across as a param and CalendarScreen opens it once its data is in.
+   */
+  const openRehearsal = (rehearsalId: string | number) => {
+    navigation.navigate('MainTabs' as any, {
+      screen: 'Calendar',
+      params: {
+        screen: 'CalendarMain',
+        params: { openRehearsalId: String(rehearsalId) },
+      },
+    });
+  };
+
   const openProjectsList = () => {
     navigation.navigate('MainTabs' as any, { screen: 'Projects' });
   };
@@ -116,7 +134,14 @@ export function useNotifications() {
         case 'rehearsal_reminder_24h':
         case 'rehearsal_reminder_1h':
         case 'member_response':
+          // The rehearsal itself, falling back to its project only when the
+          // notification did not carry an id.
+          if (rehearsalId) openRehearsal(rehearsalId);
+          else if (projectId) openProject(projectId);
+          break;
+
         case 'rehearsal_deleted':
+          // No rehearsal left to open — the project is the nearest thing.
           if (projectId) openProject(projectId);
           break;
 

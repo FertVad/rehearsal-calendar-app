@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert, Pressable } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
@@ -23,6 +23,7 @@ import { unsyncRehearsal } from '../../../shared/services/calendar';
 
 export default function CalendarScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { projects } = useProjects();
   const { t, language } = useI18n();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -32,6 +33,7 @@ export default function CalendarScreen() {
   const [filterExpanded, setFilterExpanded] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [selectedRehearsalForDetails, setSelectedRehearsalForDetails] = useState<Rehearsal | null>(null);
+
 
   // null means "All projects"
   const [filterProjectId, setFilterProjectId] = useState<string | null>(null);
@@ -77,6 +79,23 @@ export default function CalendarScreen() {
     setAdminStats,
     fetchRehearsals,
   } = useRehearsals(projects, filterProjectId);
+
+  // A tapped notification lands here carrying the rehearsal's id. Details are a
+  // modal rather than a screen, so opening one means finding it in the loaded
+  // list — which is why this waits on `rehearsals` instead of running once: the
+  // tap almost always arrives before the fetch has come back.
+  const openRehearsalId = route.params?.openRehearsalId;
+  useEffect(() => {
+    if (!openRehearsalId) return;
+
+    const target = rehearsals.find(r => String(r.id) === String(openRehearsalId));
+    if (!target) return;
+
+    setSelectedRehearsalForDetails(target);
+    setDetailsModalVisible(true);
+    // Consume it, or closing the modal and coming back would reopen it.
+    navigation.setParams({ openRehearsalId: undefined });
+  }, [openRehearsalId, rehearsals, navigation]);
 
   const { respondingId, toggleSeen } = useRSVP();
 

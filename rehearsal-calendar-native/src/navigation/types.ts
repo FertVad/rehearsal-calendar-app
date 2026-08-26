@@ -4,7 +4,10 @@ export type AuthStackParamList = {
 };
 
 export type CalendarStackParamList = {
-  CalendarMain: undefined;
+  // openRehearsalId arrives from a tapped notification: the rehearsal's details
+  // are a modal on this screen rather than a route of their own, so the id is
+  // handed over and the screen opens it once the data is in.
+  CalendarMain: { openRehearsalId?: string } | undefined;
 };
 
 export type ProjectsStackParamList = {
