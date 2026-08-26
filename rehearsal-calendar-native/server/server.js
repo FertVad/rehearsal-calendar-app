@@ -71,12 +71,10 @@ app.set('trust proxy', 1);
 
 // Security headers
 //
-// CSP used to be off for the whole server because the AllPay checkout embeds
-// an iframe. That traded every page's second line of defence for one page's
-// requirement — the reflected-XSS fixes in the invite and checkout templates
-// had nothing behind them. The public pages carry no inline script or style at
-// all, so they get a strict policy; the two pages that need more are widened
-// where they are mounted, and nowhere else.
+// CSP was once off for the whole server, to let a payment page embed an
+// iframe — one page's requirement paid for with every other page's second line
+// of defence. The public pages carry no inline script or style at all, so they
+// get a strict policy; only /admin is widened, where it is mounted.
 app.use((req, res, next) => {
   res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
   next();
@@ -119,7 +117,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // Parse form-urlencoded (AllPay webhooks)
+app.use(express.urlencoded({ extended: true }));
 
 logger.info('Starting API server for Native App');
 

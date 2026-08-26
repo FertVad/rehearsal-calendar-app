@@ -44,20 +44,6 @@ export const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,
   },
-  premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.accent.purple,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  premiumText: {
-    fontSize: 10,
-    fontWeight: FontWeight.semibold,
-    color: '#fff',
-  },
   userEmail: {
     fontSize: FontSize.sm,
     color: Colors.text.secondary,
