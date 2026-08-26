@@ -85,17 +85,36 @@ export default function CalendarScreen() {
   // list — which is why this waits on `rehearsals` instead of running once: the
   // tap almost always arrives before the fetch has come back.
   const openRehearsalId = route.params?.openRehearsalId;
+
+  // A notification means the list is out of date almost by definition — it is
+  // announcing something the cache predates. Ask for fresh data once, rather
+  // than waiting for whatever refresh happens to come next.
+  useEffect(() => {
+    if (openRehearsalId) fetchRehearsals(true);
+  }, [openRehearsalId, fetchRehearsals]);
+
   useEffect(() => {
     if (!openRehearsalId) return;
 
     const target = rehearsals.find(r => String(r.id) === String(openRehearsalId));
-    if (!target) return;
+    if (target) {
+      setSelectedRehearsalForDetails(target);
+      setDetailsModalVisible(true);
+      // Consume it, or closing the modal and coming back would reopen it.
+      navigation.setParams({ openRehearsalId: undefined });
+      return;
+    }
 
-    setSelectedRehearsalForDetails(target);
-    setDetailsModalVisible(true);
-    // Consume it, or closing the modal and coming back would reopen it.
-    navigation.setParams({ openRehearsalId: undefined });
-  }, [openRehearsalId, rehearsals, navigation]);
+    // Give up rather than wait forever. An unresolved id used to sit in the
+    // route until something made the rehearsal appear — a filter change, say —
+    // and then opened the modal minutes later, out of nowhere. If it has not
+    // turned up by now it is one the user cannot see: deleted, or a rehearsal
+    // they were taken off.
+    const giveUp = setTimeout(() => {
+      navigation.setParams({ openRehearsalId: undefined });
+    }, 10000);
+    return () => clearTimeout(giveUp);
+  }, [openRehearsalId, rehearsals, navigation, fetchRehearsals]);
 
   const { respondingId, toggleSeen } = useRSVP();
 
