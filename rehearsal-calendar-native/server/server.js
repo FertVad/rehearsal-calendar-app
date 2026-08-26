@@ -14,7 +14,6 @@ import calendarSyncRoutes from './routes/native/calendarSync.js';
 import pushTokensRouter from './routes/native/pushTokens.js';
 import cronRoutes from './routes/cron.js';
 import adminRoutes from './routes/admin.js';
-import { startReminderScheduler } from './services/notifications/reminderScheduler.js';
 import { logger } from './utils/logger.js';
 import { jsonForScript } from './utils/htmlEscape.js';
 
@@ -371,7 +370,14 @@ app.listen(PORT, HOST, () => {
   logger.info(`Native App API server running on http://${HOST}:${PORT}`);
   logger.info(`Also accessible at http://localhost:${PORT}`);
 
-  // Start reminder scheduler for push notifications
-  startReminderScheduler();
-
+  // The reminder scheduler is deliberately NOT started here.
+  //
+  // It never ran on Vercel anyway — functions are not resident between
+  // requests — so the only thing it did was fire on local boots, against
+  // whatever DATABASE_URL points at. That is the production database, so
+  // starting a dev server sent real push notifications to real people. It did,
+  // on 2026-08-25.
+  //
+  // Reminders are driven by GET /api/cron/reminders, called from outside. To
+  // exercise them locally, call that endpoint.
 });

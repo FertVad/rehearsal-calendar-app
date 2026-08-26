@@ -7,7 +7,6 @@
  * constants below for how that is arranged.
  */
 
-import cron from 'node-cron';
 import db from '../../database/db.js';
 import { logger } from '../../utils/logger.js';
 import { notifyRehearsal24h, notifyRehearsal1h } from './pushNotificationService.js';
@@ -143,23 +142,4 @@ async function sendReminders({ type, from, to, notify, now }) {
   }
 
   return { found: rehearsals.length, sent };
-}
-
-/**
- * Start the in-process scheduler.
- *
- * Only useful when the server is a long-lived process. On Vercel nothing here
- * runs — the function is torn down after each request — so production drives
- * the same work through GET /api/cron/reminders instead.
- */
-export function startReminderScheduler() {
-  // Run every 10 minutes
-  cron.schedule('*/10 * * * *', () => {
-    checkUpcomingRehearsals();
-  });
-
-  logger.info('[Reminder] Scheduler started (runs every 10 minutes)');
-
-  // Run immediately on startup
-  checkUpcomingRehearsals();
 }
