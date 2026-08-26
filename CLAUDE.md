@@ -343,13 +343,25 @@ in place because dropping them is irreversible and buys nothing.
 Push reminders for rehearsals starting soon. `checkUpcomingRehearsals()` finds
 them and sends via Expo; `GET /api/cron/reminders` is what actually calls it.
 
-**Nothing inside the deployment can drive it.** The in-process `node-cron`
-schedule runs fine locally and never once on Vercel, because a function is not
-resident between requests. A `crons` entry cannot replace it either: Hobby
-allows one run per day, and an entry asking for more fails the whole deployment
-before it builds. The trigger therefore lives outside — currently
-[.github/workflows/rehearsal-reminders.yml](.github/workflows/rehearsal-reminders.yml),
-every 15 minutes, needing a `CRON_SECRET` repository secret.
+**Nothing inside the deployment can drive it.** The in-process scheduler that
+used to exist never ran on Vercel — a function is not resident between requests
+— and worse, it fired on local boots against the production database, sending
+real pushes from a laptop. It is gone. A `crons` entry cannot replace it either:
+Hobby allows one run per day, and an entry asking for more fails the whole
+deployment before it builds.
+
+So the trigger lives outside, and there are **two of them**, both every 15
+minutes and both sending `Authorization: Bearer $CRON_SECRET`:
+
+- **cron-job.org** — the primary. Free, accurate to the minute. Note it does
+  not follow redirects, so the job URL must be exactly
+  `https://rehearsly.me/api/cron/reminders` — no `http://`, no `www.`
+- **[.github/workflows/rehearsal-reminders.yml](.github/workflows/rehearsal-reminders.yml)** —
+  the backup, using a `CRON_SECRET` repository secret. GitHub drifts 5–20
+  minutes and skips runs under load, and disables scheduled workflows after 60
+  days without repository activity. Free here only because the repo is public.
+
+Running both is safe, and that is by design — see the claim below.
 
 **The windows are deliberately wide** — 12–24h ahead for the day-before
 reminder, 0–1h for the hour-before — because no free scheduler is punctual.
