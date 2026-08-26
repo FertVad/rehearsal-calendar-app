@@ -38,8 +38,8 @@ npm start                    # Start server (production)
 npm run dev                  # Start server with --watch (auto-reload)
 
 # Database
-npm run migrate:native       # Initialize SQLite schema (development)
-npm run migrate:neon         # Run migrations on PostgreSQL (production)
+npm run migrate              # Apply pending migrations (see Database section)
+npm run migrate -- --dry     # Show what would be applied, change nothing
 
 # Testing
 npm test                     # Run Jest tests
@@ -612,14 +612,37 @@ EXPO_PUBLIC_API_URL=http://192.168.1.100:3001/api  # Override API URL if needed
 ```
 
 ### Database Initialization
-```bash
-# Development (SQLite)
-cd rehearsal-calendar-native/server
-npm run migrate:native
 
-# Production (PostgreSQL)
-npm run migrate:neon
+`scripts/migrate.js` applies each file in `server/migrations/` once, recording
+it in `native_migrations`. It picks `-postgres.sql` / `-sqlite.sql` variants by
+engine and otherwise runs everything, in filename order — **prefix new
+migrations with a number** so that order is explicit.
+
+```bash
+cd rehearsal-calendar-native/server
+npm run migrate -- --dry     # what is pending
+npm run migrate              # apply it
 ```
+
+**A new environment needs a baseline first.** The runner refuses to touch a
+database with no record of its own, because four of these migrations drop
+columns or rewrite data and were applied by hand long ago — re-running them
+would break a live database.
+
+```bash
+# Database that already has the schema (production, an existing dev copy)
+npm run migrate -- --baseline    # records every current file as done, runs none
+
+# Empty database
+psql "$DATABASE_URL" -f database/init-native-schema.sql
+npm run migrate -- --baseline
+```
+
+Production was baselined on 2026-08-26 with 17 files.
+
+**Deliberately not wired into deployment**: Vercel starts many instances at
+once and they would race each other. A schema change is something someone
+decides and then watches.
 
 ## Testing
 
