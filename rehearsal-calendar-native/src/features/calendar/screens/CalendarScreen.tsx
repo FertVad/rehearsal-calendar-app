@@ -12,6 +12,7 @@ import RehearsalCard from '../components/RehearsalCard';
 import SmartPlannerButton from '../components/SmartPlannerButton';
 import { RehearsalDetailsModal } from '../components/RehearsalDetailsModal';
 import { Rehearsal } from '../../../shared/types';
+import { notificationsAPI } from '../../../shared/services/api';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -84,6 +85,26 @@ export default function CalendarScreen() {
   // modal rather than a screen, so opening one means finding it in the loaded
   // list — which is why this waits on `rehearsals` instead of running once: the
   // tap almost always arrives before the fetch has come back.
+  // Refetched on focus rather than once: a push can land while this screen sits
+  // behind another, and the bell has to agree with the badge on the app icon.
+  const [unreadCount, setUnreadCount] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      notificationsAPI
+        .unreadCount()
+        .then((res) => {
+          if (alive) setUnreadCount(res.data.unreadCount ?? 0);
+        })
+        .catch(() => {
+          // Offline. The bell simply shows no count.
+        });
+      return () => {
+        alive = false;
+      };
+    }, [])
+  );
+
   const openRehearsalId = route.params?.openRehearsalId;
 
   // A notification means the list is out of date almost by definition — it is
@@ -272,7 +293,10 @@ export default function CalendarScreen() {
           />
         }
       >
-        {/* Project Filter */}
+        {/* Project filter, with the notification bell beside it.
+            Sharing this row rather than taking one of its own: the calendar is
+            the densest screen in the app and the bell needs no height of its
+            own. */}
         <View style={styles.filterContainer}>
           <TouchableOpacity
             style={styles.filterButton}
@@ -294,6 +318,23 @@ export default function CalendarScreen() {
               size={18}
               color={Colors.text.secondary}
             />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.bellButton}
+            onPress={() => navigation.navigate('Notifications')}
+            accessibilityLabel={t.notifications.title}
+          >
+            <Ionicons
+              name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
+              size={22}
+              color={unreadCount > 0 ? Colors.accent.purple : Colors.text.secondary}
+            />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 

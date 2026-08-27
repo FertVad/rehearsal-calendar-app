@@ -87,21 +87,6 @@ export const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.sm,
   },
-  // Same shape the OS puts on the app icon, so the two read as one number.
-  unreadBadge: {
-    minWidth: 22,
-    height: 22,
-    paddingHorizontal: 6,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.accent.purple,
-  },
-  unreadBadgeText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.inverse,
-  },
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
