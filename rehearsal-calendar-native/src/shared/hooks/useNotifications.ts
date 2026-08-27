@@ -22,6 +22,7 @@ export function useNotifications() {
   const { user } = useAuth();
   const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
   const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
+  const handledLaunchResponse = useRef(false);
 
   useEffect(() => {
     // Only register if user is logged in and notifications are enabled
@@ -61,6 +62,32 @@ export function useNotifications() {
         // Clear badge
         clearBadgeCount();
       });
+
+      // A tap that *launched* the app is not delivered to the listener above:
+      // iOS hands it over before React has mounted, let alone before `user` has
+      // loaded from the API, and the listener only ever sees events that arrive
+      // after it is registered. Without this, tapping a notification on a phone
+      // where the app was closed — the usual case for a morning reminder — just
+      // opened the app on its first tab, and the tap did nothing.
+      //
+      // The response persists for the session, so it is handled once — and only
+      // once `user` exists. On a cold start this effect first runs with nobody
+      // signed in, while the navigator is still showing the login stack, so
+      // navigating then would silently fail. It re-runs when the session is
+      // restored.
+      if (user) {
+        Notifications.getLastNotificationResponseAsync()
+          .then((response) => {
+            if (!response || handledLaunchResponse.current) return;
+            handledLaunchResponse.current = true;
+
+            handleNotificationNavigation(response.notification.request.content.data);
+            clearBadgeCount();
+          })
+          .catch((error) => {
+            console.log('[useNotifications] Could not read the launching notification:', error);
+          });
+      }
     } catch (error) {
       console.log('[useNotifications] Listener setup failed (expected on simulator):', error);
     }
@@ -80,9 +107,6 @@ export function useNotifications() {
     };
   }, [user]);
 
-  /**
-   * Handle navigation when notification is tapped
-   */
   /**
    * ProjectDetail and the projects list both live two levels down — inside the
    * Projects tab of MainTabs — so they have to be addressed through their
