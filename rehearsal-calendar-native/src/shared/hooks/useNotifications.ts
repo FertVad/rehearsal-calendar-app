@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import {
@@ -23,6 +24,7 @@ export function useNotifications() {
   const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
   const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
   const handledLaunchResponse = useRef(false);
+  const appStateListener = useRef<{ remove: () => void } | undefined>(undefined);
 
   useEffect(() => {
     // Only register if user is logged in and notifications are enabled
@@ -92,6 +94,21 @@ export function useNotifications() {
       console.log('[useNotifications] Listener setup failed (expected on simulator):', error);
     }
 
+    // Clearing the badge used to depend on a notification: one arriving while the
+    // app was open, or one being tapped. Opening the app from the home screen did
+    // nothing, so the red dot stayed until some later push happened to land while
+    // the app was in the foreground. There is no inbox to read the notification in
+    // either, so it just sat there.
+    //
+    // Opening the app is the acknowledgement. The tray entry is left alone — it is
+    // the only remaining record of what was sent.
+    if (user) {
+      clearBadgeCount();
+      appStateListener.current = AppState.addEventListener('change', (state) => {
+        if (state === 'active') clearBadgeCount();
+      });
+    }
+
     // Cleanup
     return () => {
       try {
@@ -100,6 +117,9 @@ export function useNotifications() {
         }
         if (responseListener.current) {
           responseListener.current.remove();
+        }
+        if (appStateListener.current) {
+          appStateListener.current.remove();
         }
       } catch (error) {
         console.log('[useNotifications] Cleanup failed (expected on simulator):', error);
