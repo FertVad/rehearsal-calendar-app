@@ -5,6 +5,7 @@ import * as projects from './translations/projects';
 import * as profile from './translations/profile';
 import * as availability from './translations/availability';
 import * as calendarSync from './translations/calendarSync';
+import * as notifications from './translations/notifications';
 import * as onboarding from './translations/onboarding';
 
 export type Language = 'ru' | 'en' | 'es' | 'de';
@@ -32,6 +33,7 @@ export interface Translations {
   smartPlanner: availability.SmartPlannerTranslations;
   // Calendar Sync
   calendarSync: calendarSync.CalendarSyncTranslations;
+  notifications: notifications.NotificationsTranslations;
   // Onboarding
   onboarding: onboarding.OnboardingTranslations;
   // Beta Banner
@@ -50,6 +52,7 @@ export const ru: Translations = {
   ...profile.ru,
   ...availability.ru,
   ...calendarSync.ru,
+  ...notifications.ru,
   ...onboarding.ru,
 };
 
@@ -61,6 +64,7 @@ export const en: Translations = {
   ...profile.en,
   ...availability.en,
   ...calendarSync.en,
+  ...notifications.en,
   ...onboarding.en,
 };
 
@@ -72,6 +76,7 @@ export const es: Translations = {
   ...profile.es,
   ...availability.es,
   ...calendarSync.es,
+  ...notifications.es,
   ...onboarding.es,
 };
 
@@ -83,6 +88,7 @@ export const de: Translations = {
   ...profile.de,
   ...availability.de,
   ...calendarSync.de,
+  ...notifications.de,
   ...onboarding.de,
 };
 

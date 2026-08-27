@@ -9,7 +9,8 @@ import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import {
   registerForPushNotifications,
-  clearBadgeCount,
+  syncBadgeWithUnread as syncBadge,
+  markNotificationRead,
 } from '../services/notifications';
 import { hapticMedium } from '../utils/haptics';
 import { useAuth } from '../../contexts/AuthContext';
@@ -48,8 +49,8 @@ export function useNotifications() {
         // Trigger haptic feedback
         hapticMedium();
 
-        // Clear badge after viewing
-        clearBadgeCount();
+        // Seeing the banner is not reading it — the badge follows the inbox.
+        syncBadge();
       });
 
       // Listen for user interaction with notification
@@ -61,8 +62,7 @@ export function useNotifications() {
         // Navigate based on notification type
         handleNotificationNavigation(data);
 
-        // Clear badge
-        clearBadgeCount();
+        markNotificationRead((data as any)?.notificationId);
       });
 
       // A tap that *launched* the app is not delivered to the listener above:
@@ -83,8 +83,9 @@ export function useNotifications() {
             if (!response || handledLaunchResponse.current) return;
             handledLaunchResponse.current = true;
 
-            handleNotificationNavigation(response.notification.request.content.data);
-            clearBadgeCount();
+            const data = response.notification.request.content.data as any;
+            handleNotificationNavigation(data);
+            markNotificationRead(data?.notificationId);
           })
           .catch((error) => {
             console.log('[useNotifications] Could not read the launching notification:', error);
@@ -94,18 +95,19 @@ export function useNotifications() {
       console.log('[useNotifications] Listener setup failed (expected on simulator):', error);
     }
 
-    // Clearing the badge used to depend on a notification: one arriving while the
-    // app was open, or one being tapped. Opening the app from the home screen did
-    // nothing, so the red dot stayed until some later push happened to land while
-    // the app was in the foreground. There is no inbox to read the notification in
-    // either, so it just sat there.
+    // The badge is the unread count from the server, refreshed whenever the app
+    // comes forward.
     //
-    // Opening the app is the acknowledgement. The tray entry is left alone — it is
-    // the only remaining record of what was sent.
+    // It briefly cleared the badge on open instead, which was the best available
+    // answer while there was nowhere in the app to read a notification: the count
+    // otherwise hung around forever, pointing at something unreachable. Now that
+    // the inbox exists, blanking it would be a lie in the other direction — the
+    // dot would vanish while the notifications behind it stayed unread. Reading
+    // them is what clears it.
     if (user) {
-      clearBadgeCount();
+      syncBadge();
       appStateListener.current = AppState.addEventListener('change', (state) => {
-        if (state === 'active') clearBadgeCount();
+        if (state === 'active') syncBadge();
       });
     }
 

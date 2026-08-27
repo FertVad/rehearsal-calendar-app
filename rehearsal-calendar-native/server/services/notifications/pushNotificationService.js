@@ -6,6 +6,7 @@
 import { Expo } from 'expo-server-sdk';
 import db from '../../database/db.js';
 import { logger } from '../../utils/logger.js';
+import { recordNotifications, getUnreadCounts } from './notificationStore.js';
 import { t } from '../../i18n/pushNotifications.js';
 
 // Initialize Expo SDK
@@ -44,6 +45,12 @@ export async function getUserPushTokens(userIds) {
  */
 export async function sendPushNotification(userIds, notification) {
   try {
+    // Recorded before anything is sent, and for every intended recipient —
+    // including those with no device registered. The inbox is what the user
+    // reads later; whether a phone was reachable at this instant is a separate
+    // question.
+    const recorded = await recordNotifications(userIds, notification);
+
     const tokenData = await getUserPushTokens(userIds);
 
     if (tokenData.length === 0) {
@@ -51,14 +58,24 @@ export async function sendPushNotification(userIds, notification) {
       return { sent: 0, failed: 0, errors: [] };
     }
 
-    // Build messages
-    const messages = tokenData.map(({ device_token }) => ({
+    // The badge is the recipient's unread count, not a constant 1. It used to
+    // be the latter, so two unread notifications still showed "1" and the
+    // number meant nothing beyond "something happened".
+    const unread = await getUnreadCounts([...new Set(tokenData.map((t) => t.user_id))]);
+
+    // Each message carries the id of that recipient's own inbox row, so tapping
+    // the push can mark exactly that notification read rather than guessing.
+    const messages = tokenData.map(({ device_token, user_id }) => ({
       to: device_token,
       sound: 'default',
-      badge: 1,
+      badge: unread.get(Number(user_id)) ?? 1,
       priority: 'high',
       channelId: 'rehearsal-notifications',
       ...notification,
+      data: {
+        ...(notification.data || {}),
+        notificationId: recorded.get(Number(user_id)) ?? null,
+      },
     }));
 
     // Send in chunks of 100 (Expo limit)

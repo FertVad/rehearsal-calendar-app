@@ -398,6 +398,19 @@ export const calendarSyncAPI = {
     api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`),
 };
 
+// Notifications API (the inbox — what was sent, and what is still unread)
+export const notificationsAPI = {
+  list: (limit = 50, offset = 0) =>
+    api.get('/native/notifications', { params: { limit, offset } }),
+
+  unreadCount: () => api.get('/native/notifications/unread-count'),
+
+  // No ids marks the whole inbox. Answers with the count that remains, so the
+  // badge can be set without asking again.
+  markRead: (ids?: number[]) =>
+    api.post('/native/notifications/read', ids ? { ids } : {}),
+};
+
 // Bug Reports API
 export const bugReportsAPI = {
   create: (data: { message: string; screen?: string }) =>
