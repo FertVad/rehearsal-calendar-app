@@ -34,7 +34,6 @@ Complete documentation for the Rehearsal Calendar Native App project.
 
 | Document | Description |
 |----------|-------------|
-| [GOOGLE_OAUTH_SETUP.md](../../GOOGLE_OAUTH_SETUP.md) | Google OAuth configuration steps |
 
 ---
 

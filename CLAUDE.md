@@ -506,8 +506,6 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
 - **Account Linking**: `server/utils/accountLinking.js` - Merges OAuth accounts with existing email accounts
 
 **Google OAuth Setup:**
-See [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for detailed setup instructions.
-
 **Key Points:**
 - OAuth tokens are verified server-side to prevent forgery
 - Accounts are automatically linked by email if user already exists
@@ -681,7 +679,6 @@ Key documentation files:
 - [rehearsal-calendar-native/docs/known-issues.md](rehearsal-calendar-native/docs/known-issues.md) - Defects found and deliberately left for later
 - [rehearsal-calendar-native/docs/api-documentation.md](rehearsal-calendar-native/docs/api-documentation.md) - Complete API reference
 - [rehearsal-calendar-native/docs/api-standards.md](rehearsal-calendar-native/docs/api-standards.md) - API conventions
-- [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) - Google OAuth setup guide (step-by-step)
 
 ## Tech Stack
 
