@@ -24,7 +24,6 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   CalendarSyncSettings: undefined;
   EditProfile: undefined;
-  Notifications: undefined;
 };
 
 export type TabParamList = {
@@ -37,6 +36,7 @@ export type TabParamList = {
 
 export type AppStackParamList = {
   MainTabs: undefined;
+  Notifications: undefined;
   // No code when opened from the create sheet — the screen asks for one
   JoinProject: { code?: string } | undefined;
   MarkBusy: undefined;

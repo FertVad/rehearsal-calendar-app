@@ -14,7 +14,6 @@ import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
 import { registerForPushNotifications, unregisterPushToken } from '../../../shared/services/notifications';
-import { notificationsAPI } from '../../../shared/services/api';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
@@ -39,32 +38,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { user, logout, updateUser, deleteAccount, loading } = useAuth();
   const { t, language, setLanguage } = useI18n();
   const [notificationsEnabled, setNotificationsEnabled] = useState(user?.notificationsEnabled ?? true);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [timezoneModalVisible, setTimezoneModalVisible] = useState(false);
   const [weekStartModalVisible, setWeekStartModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
-  // Refreshed on every visit rather than once: a push can land while this screen
-  // sits in the background, and the count beside the row has to agree with the
-  // badge on the app icon.
-  useFocusEffect(
-    useCallback(() => {
-      let alive = true;
-      notificationsAPI
-        .unreadCount()
-        .then((res) => {
-          if (alive) setUnreadCount(res.data.unreadCount ?? 0);
-        })
-        .catch(() => {
-          // A count is not worth an error message.
-        });
-      return () => {
-        alive = false;
-      };
-    }, [])
-  );
-
   const handleLogout = async () => {
     hapticMedium();
     await logout();
@@ -322,24 +300,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
 
-          {/* Notifications — the only place a push can be read after the fact.
-              The count is what the app badge shows, so the two agree. */}
-          <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Notifications')}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
-                <Ionicons name="notifications" size={20} color={Colors.accent.purple} />
-              </View>
-              <Text style={styles.settingLabel}>{t.notifications.title}</Text>
-            </View>
-            <View style={styles.settingRight}>
-              {unreadCount > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-                </View>
-              )}
-              <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
-            </View>
-          </TouchableOpacity>
 
         </View>
 

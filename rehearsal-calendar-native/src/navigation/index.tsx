@@ -17,6 +17,7 @@ import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
 import AvailabilityScreen from '../features/availability/screens/AvailabilityScreen';
 import CreateProjectScreen from '../features/projects/screens/CreateProjectScreen';
 import AddRehearsalScreen from '../features/calendar/screens/AddRehearsalScreen';
+import NotificationsScreen from '../features/notifications/screens/NotificationsScreen';
 import {
   AuthNavigator,
   CalendarNavigator,
@@ -288,6 +289,14 @@ function AppNavigator() {
         <AppStack.Screen
           name="AddRehearsal"
           component={AddRehearsalScreen}
+          options={{ presentation: 'modal' }}
+        />
+        {/* Root level, not inside a tab: the bell is on the calendar but the
+            inbox belongs to the whole app, and opening it should not drag the
+            user into another tab to get back out. */}
+        <AppStack.Screen
+          name="Notifications"
+          component={NotificationsScreen}
           options={{ presentation: 'modal' }}
         />
       </AppStack.Navigator>

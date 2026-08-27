@@ -16,9 +16,14 @@ export const styles = StyleSheet.create({
     padding: Spacing.xl,
   },
   filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
   filterButton: {
+    // Takes the row, leaving the bell its square at the end.
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.glass.bg,
@@ -27,6 +32,34 @@ export const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     gap: Spacing.sm,
+  },
+  bellButton: {
+    width: 46,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    backgroundColor: Colors.glass.bg,
+  },
+  // Sits on the bell's shoulder, the way the OS badge sits on the app icon.
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.accent.purple,
+  },
+  bellBadgeText: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    color: Colors.text.inverse,
   },
   filterButtonText: {
     flex: 1,
