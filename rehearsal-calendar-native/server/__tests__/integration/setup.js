@@ -142,6 +142,22 @@ export async function setupIntegrationDb() {
     );
 
     -- Subscription plans
+    -- The notification inbox. Mirrors production after 003-notifications-timestamptz:
+    -- one row per intended recipient, read_at NULL until they have seen it.
+    CREATE TABLE native_notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+      type VARCHAR(50),
+      title VARCHAR(255),
+      body TEXT,
+      data TEXT,
+      related_type VARCHAR(50),
+      related_id INTEGER,
+      read_at DATETIME,
+      sent_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Push reminders already sent. The unique pair is what stops a rehearsal
     -- being announced twice when two schedulers overlap.
     CREATE TABLE native_push_reminders (
@@ -214,6 +230,7 @@ export function clearIntegrationDb() {
   if (testDb) {
     testDb.exec('DELETE FROM native_calendar_event_mappings');
     testDb.exec('DELETE FROM native_calendar_connections');
+    testDb.exec('DELETE FROM native_notifications');
     testDb.exec('DELETE FROM native_push_reminders');
     testDb.exec('DELETE FROM native_rehearsal_responses');
     testDb.exec('DELETE FROM native_rehearsals');

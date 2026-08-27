@@ -1,9 +1,10 @@
+// FIRST, before anything that reads process.env at module scope — see config/env.js.
+import './config/env.js';
 import crypto from 'crypto';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db, { initDatabase, testConnection, isPostgres } from './database/db.js';
@@ -20,7 +21,6 @@ import { jsonForScript } from './utils/htmlEscape.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.join(__dirname, '.env') });
 const toBool = (v) => String(v || '').toLowerCase() === 'true' || String(v) === '1';
 const DEBUG = toBool(process.env.DEBUG);
 const LOG_REQUESTS = DEBUG || toBool(process.env.LOG_REQUESTS);

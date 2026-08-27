@@ -24,6 +24,7 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   CalendarSyncSettings: undefined;
   EditProfile: undefined;
+  Notifications: undefined;
 };
 
 export type TabParamList = {

@@ -5,6 +5,7 @@ import RegisterScreen from '../features/auth/screens/RegisterScreen';
 import CalendarScreen from '../features/calendar/screens/CalendarScreen';
 import ProjectsScreen from '../features/projects/screens/ProjectsScreen';
 import ProjectDetailScreen from '../features/projects/screens/ProjectDetailScreen';
+import NotificationsScreen from '../features/notifications/screens/NotificationsScreen';
 import ProfileScreen from '../features/profile/screens/ProfileScreen';
 import CalendarSyncSettingsScreen from '../features/profile/screens/CalendarSyncSettingsScreen';
 import EditProfileScreen from '../features/profile/screens/EditProfileScreen';
@@ -92,6 +93,10 @@ export function ProfileNavigator() {
         name="EditProfile"
         component={EditProfileScreen}
         options={{ headerShown: false }}
+      />
+      <ProfileStackNav.Screen
+        name="Notifications"
+        component={NotificationsScreen}
       />
     </ProfileStackNav.Navigator>
   );

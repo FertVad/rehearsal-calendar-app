@@ -7,7 +7,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authAPI } from './api';
+import { authAPI, notificationsAPI } from './api';
 import { logger } from '../utils/logger';
 
 const PUSH_TOKEN_KEY = '@push_token';
@@ -139,6 +139,41 @@ export async function syncPushTokenIfGranted(): Promise<string | null> {
 }
 
 /**
+ * Mark the notification behind a tapped push as read, then bring the badge in
+ * line. Tapping is reading — leaving it unread would keep a count pointing at
+ * something the user has already dealt with.
+ */
+export async function markNotificationRead(notificationId?: number | null): Promise<void> {
+  try {
+    if (notificationId) await notificationsAPI.markRead([Number(notificationId)]);
+  } catch (error) {
+    logger.warn('[Notifications] Could not mark as read:', error);
+  } finally {
+    await syncBadgeWithUnread();
+  }
+}
+
+/**
+ * Set the app icon badge to the number of unread notifications.
+ *
+ * The server is the only place that knows: notifications arrive while the app is
+ * closed, and are read on another device as easily as this one.
+ */
+export async function syncBadgeWithUnread(): Promise<number | null> {
+  try {
+    const res = await notificationsAPI.unreadCount();
+    const unread = res.data?.unreadCount ?? 0;
+    await Notifications.setBadgeCountAsync(unread);
+    return unread;
+  } catch (error) {
+    // Offline, most likely. Leaving the badge as it is beats zeroing it and
+    // hiding something the user has not seen.
+    logger.warn('[Notifications] Could not sync the badge:', error);
+    return null;
+  }
+}
+
+/**
  * Unregister push token (call on logout)
  */
 export async function unregisterPushToken(): Promise<void> {
@@ -180,13 +215,6 @@ export function addNotificationResponseReceivedListener(
   handler: (response: Notifications.NotificationResponse) => void
 ): Notifications.Subscription {
   return Notifications.addNotificationResponseReceivedListener(handler);
-}
-
-/**
- * Clear badge count
- */
-export async function clearBadgeCount(): Promise<void> {
-  await Notifications.setBadgeCountAsync(0);
 }
 
 /**
