@@ -125,22 +125,44 @@ export default function CalendarScreen() {
     if (wantedRehearsalId) fetchRehearsals(true);
   }, [wantedRehearsalId, fetchRehearsals]);
 
+  // Counts dismissals of the details sheet, so the effect below can wait for one.
+  const [detailsDismissals, setDetailsDismissals] = useState(0);
+
   useEffect(() => {
     if (!wantedRehearsalId) return;
 
     const target = rehearsals.find(r => String(r.id) === String(wantedRehearsalId));
-    if (target) {
-      setSelectedRehearsalForDetails(target);
-      setDetailsModalVisible(true);
-      setWantedRehearsalId(null);
-      return;
+    if (!target) {
+      // Give up rather than wait forever. If it has not turned up by now it is
+      // one this user cannot see: deleted, or a rehearsal they were taken off.
+      const giveUp = setTimeout(() => setWantedRehearsalId(null), 10000);
+      return () => clearTimeout(giveUp);
     }
 
-    // Give up rather than wait forever. If it has not turned up by now it is one
-    // this user cannot see: deleted, or a rehearsal they were taken off.
-    const giveUp = setTimeout(() => setWantedRehearsalId(null), 10000);
-    return () => clearTimeout(giveUp);
-  }, [wantedRehearsalId, rehearsals]);
+    if (detailsModalVisible) {
+      // Already showing the one asked for — nothing to do.
+      if (String(selectedRehearsalForDetails?.id) === String(target.id)) {
+        setWantedRehearsalId(null);
+        return;
+      }
+
+      // Close first and come back on the dismissal. Opening a sheet over one
+      // that is still on screen leaves iOS holding a layer it never removes:
+      // the rehearsal can still be swiped away, and the calendar underneath
+      // stays visible and completely dead to touch. That is what happens when a
+      // second notification is tapped from the tray with this sheet open.
+      setDetailsModalVisible(false);
+      // onDismiss is iOS-only. Elsewhere nothing would ever bring us back, so a
+      // timer stands in; on iOS the real event arrives first and this extra
+      // nudge finds the work already done.
+      const fallback = setTimeout(() => setDetailsDismissals(n => n + 1), 600);
+      return () => clearTimeout(fallback);
+    }
+
+    setSelectedRehearsalForDetails(target);
+    setDetailsModalVisible(true);
+    setWantedRehearsalId(null);
+  }, [wantedRehearsalId, rehearsals, detailsModalVisible, selectedRehearsalForDetails, detailsDismissals]);
 
   const { respondingId, toggleSeen } = useRSVP();
 
@@ -504,6 +526,7 @@ export default function CalendarScreen() {
       <RehearsalDetailsModal
         visible={detailsModalVisible}
         onClose={() => setDetailsModalVisible(false)}
+        onDismiss={() => setDetailsDismissals(n => n + 1)}
         rehearsal={selectedRehearsalForDetails}
         project={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId) || null : null}
         isAdmin={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId)?.is_admin || false : false}
