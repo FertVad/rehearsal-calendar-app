@@ -135,9 +135,13 @@ export function useNotifications() {
    * parents. Naming them directly, as this did, throws "was not handled by any
    * navigator" and the tap does nothing at all: every notification in the app
    * was inert.
+   *
+   * popTo rather than navigate: a tap can land while a modal is open, and
+   * navigate put a second MainTabs on top of it instead of returning to the one
+   * already underneath. popTo goes to the existing one and cannot duplicate it.
    */
   const openProject = (projectId: string | number) => {
-    navigation.navigate('MainTabs' as any, {
+    navigation.popTo('MainTabs' as any, {
       screen: 'Projects',
       params: {
         screen: 'ProjectDetail',
@@ -155,7 +159,7 @@ export function useNotifications() {
    * id goes across as a param and CalendarScreen opens it once its data is in.
    */
   const openRehearsal = (rehearsalId: string | number) => {
-    navigation.navigate('MainTabs' as any, {
+    navigation.popTo('MainTabs' as any, {
       screen: 'Calendar',
       params: {
         screen: 'CalendarMain',
@@ -165,7 +169,7 @@ export function useNotifications() {
   };
 
   const openProjectsList = () => {
-    navigation.navigate('MainTabs' as any, { screen: 'Projects' });
+    navigation.popTo('MainTabs' as any, { screen: 'Projects' });
   };
 
   const handleNotificationNavigation = (data: any) => {

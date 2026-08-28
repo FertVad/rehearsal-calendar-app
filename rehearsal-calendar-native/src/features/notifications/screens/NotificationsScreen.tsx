@@ -80,13 +80,29 @@ export default function NotificationsScreen() {
     }, [load])
   );
 
-  const openTarget = (item: NotificationItem) => {
+  const openTarget = async (item: NotificationItem) => {
+    // Opening it is reading it. Without this the count stayed lit after the user
+    // had plainly dealt with the thing.
+    if (!item.read) {
+      try {
+        const res = await notificationsAPI.markRead([item.id]);
+        await Notifications.setBadgeCountAsync(res.data.unreadCount ?? 0);
+        setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
+      } catch (err) {
+        logger.warn('[Notifications] Could not mark read on open:', err);
+      }
+    }
+
     const rehearsalId = item.relatedType === 'rehearsal' ? item.relatedId : null;
     const projectId = item.data?.projectId ?? (item.relatedType === 'project' ? item.relatedId : null);
 
-    // Deliberately the same destinations a tap on the push itself would reach.
+    // popTo, not navigate. This screen is a modal sitting on top of MainTabs, and
+    // navigate() put a *second* MainTabs above it — a calendar inside the modal,
+    // with its own bell, opening another inbox, forever. popTo returns to the
+    // MainTabs already underneath and hands it the params, dismissing this modal
+    // on the way. The destinations are the same ones a tap on the push reaches.
     if (rehearsalId && item.type !== 'rehearsal_deleted') {
-      navigation.navigate('MainTabs', {
+      navigation.popTo('MainTabs', {
         screen: 'Calendar',
         params: { screen: 'CalendarMain', params: { openRehearsalId: String(rehearsalId) } },
       });
@@ -94,7 +110,7 @@ export default function NotificationsScreen() {
     }
 
     if (projectId) {
-      navigation.navigate('MainTabs', {
+      navigation.popTo('MainTabs', {
         screen: 'Projects',
         params: { screen: 'ProjectDetail', params: { projectId: String(projectId) } },
       });
