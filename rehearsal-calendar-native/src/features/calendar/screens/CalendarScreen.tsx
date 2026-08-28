@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert, Pressable } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
@@ -13,6 +13,7 @@ import SmartPlannerButton from '../components/SmartPlannerButton';
 import { RehearsalDetailsModal } from '../components/RehearsalDetailsModal';
 import { Rehearsal } from '../../../shared/types';
 import { notificationsAPI } from '../../../shared/services/api';
+import { consumePendingRehearsal, subscribePendingRehearsal } from '../../../shared/services/pendingRehearsal';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -24,7 +25,6 @@ import { unsyncRehearsal } from '../../../shared/services/calendar';
 
 export default function CalendarScreen() {
   const navigation = useNavigation<any>();
-  const route = useRoute<any>();
   const { projects } = useProjects();
   const { t, language } = useI18n();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -81,10 +81,6 @@ export default function CalendarScreen() {
     fetchRehearsals,
   } = useRehearsals(projects, filterProjectId);
 
-  // A tapped notification lands here carrying the rehearsal's id. Details are a
-  // modal rather than a screen, so opening one means finding it in the loaded
-  // list — which is why this waits on `rehearsals` instead of running once: the
-  // tap almost always arrives before the fetch has come back.
   // Refetched on focus rather than once: a push can land while this screen sits
   // behind another, and the bell has to agree with the badge on the app icon.
   const [unreadCount, setUnreadCount] = useState(0);
@@ -105,37 +101,46 @@ export default function CalendarScreen() {
     }, [])
   );
 
-  const openRehearsalId = route.params?.openRehearsalId;
+  // A tapped notification leaves the rehearsal's id in pendingRehearsal rather
+  // than in route params — see that module for why the navigator turned out to
+  // be the wrong place to put it.
+  const [wantedRehearsalId, setWantedRehearsalId] = useState<string | null>(null);
 
-  // A notification means the list is out of date almost by definition — it is
-  // announcing something the cache predates. Ask for fresh data once, rather
-  // than waiting for whatever refresh happens to come next.
+  useFocusEffect(
+    useCallback(() => {
+      const take = () => {
+        const id = consumePendingRehearsal();
+        if (id) setWantedRehearsalId(id);
+      };
+      take();
+      // Also while already on screen: a push tapped with the calendar in front
+      // would otherwise never be focused again.
+      return subscribePendingRehearsal(take);
+    }, [])
+  );
+
+  // A notification announces something the cache predates almost by definition,
+  // so ask for fresh data rather than waiting for the next scheduled refresh.
   useEffect(() => {
-    if (openRehearsalId) fetchRehearsals(true);
-  }, [openRehearsalId, fetchRehearsals]);
+    if (wantedRehearsalId) fetchRehearsals(true);
+  }, [wantedRehearsalId, fetchRehearsals]);
 
   useEffect(() => {
-    if (!openRehearsalId) return;
+    if (!wantedRehearsalId) return;
 
-    const target = rehearsals.find(r => String(r.id) === String(openRehearsalId));
+    const target = rehearsals.find(r => String(r.id) === String(wantedRehearsalId));
     if (target) {
       setSelectedRehearsalForDetails(target);
       setDetailsModalVisible(true);
-      // Consume it, or closing the modal and coming back would reopen it.
-      navigation.setParams({ openRehearsalId: undefined });
+      setWantedRehearsalId(null);
       return;
     }
 
-    // Give up rather than wait forever. An unresolved id used to sit in the
-    // route until something made the rehearsal appear — a filter change, say —
-    // and then opened the modal minutes later, out of nowhere. If it has not
-    // turned up by now it is one the user cannot see: deleted, or a rehearsal
-    // they were taken off.
-    const giveUp = setTimeout(() => {
-      navigation.setParams({ openRehearsalId: undefined });
-    }, 10000);
+    // Give up rather than wait forever. If it has not turned up by now it is one
+    // this user cannot see: deleted, or a rehearsal they were taken off.
+    const giveUp = setTimeout(() => setWantedRehearsalId(null), 10000);
     return () => clearTimeout(giveUp);
-  }, [openRehearsalId, rehearsals, navigation, fetchRehearsals]);
+  }, [wantedRehearsalId, rehearsals]);
 
   const { respondingId, toggleSeen } = useRSVP();
 

@@ -15,7 +15,7 @@ import { Colors } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
 import { logger } from '../../../shared/utils/logger';
-import { openInTabs } from '../../../shared/utils/openInTabs';
+import { setPendingRehearsal } from '../../../shared/services/pendingRehearsal';
 import { styles } from '../styles/notificationsScreenStyles';
 
 interface NotificationItem {
@@ -97,19 +97,19 @@ export default function NotificationsScreen() {
     const rehearsalId = item.relatedType === 'rehearsal' ? item.relatedId : null;
     const projectId = item.data?.projectId ?? (item.relatedType === 'project' ? item.relatedId : null);
 
-    // This screen is a modal on top of MainTabs, so it goes through openInTabs —
-    // which dismisses it before navigating. The destinations are the same ones a
-    // tap on the push itself reaches.
+    // Hand the target over and simply close. This screen is a modal on top of
+    // the tabs, and every attempt to navigate *from* it ended badly — a second
+    // set of tabs inside the modal, or a dismissed modal left over the screen
+    // eating touches. Closing is the one thing a modal is good at.
     if (rehearsalId && item.type !== 'rehearsal_deleted') {
-      openInTabs(navigation, {
-        screen: 'Calendar',
-        params: { screen: 'CalendarMain', params: { openRehearsalId: String(rehearsalId) } },
-      });
+      setPendingRehearsal(rehearsalId);
+      navigation.goBack();
       return;
     }
 
     if (projectId) {
-      openInTabs(navigation, {
+      navigation.goBack();
+      navigation.navigate('MainTabs', {
         screen: 'Projects',
         params: { screen: 'ProjectDetail', params: { projectId: String(projectId) } },
       });

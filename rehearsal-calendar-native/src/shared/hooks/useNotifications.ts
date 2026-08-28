@@ -14,7 +14,7 @@ import {
 } from '../services/notifications';
 import { hapticMedium } from '../utils/haptics';
 import { useAuth } from '../../contexts/AuthContext';
-import { openInTabs } from '../utils/openInTabs';
+import { setPendingRehearsal } from '../services/pendingRehearsal';
 
 /**
  * Hook for managing push notifications
@@ -137,11 +137,9 @@ export function useNotifications() {
    * navigator" and the tap does nothing at all: every notification in the app
    * was inert.
    *
-   * A tap can land while a modal is open, which is why this goes through
-   * openInTabs rather than navigating directly — see the note there.
    */
   const openProject = (projectId: string | number) => {
-    openInTabs(navigation, {
+    navigation.navigate('MainTabs' as any, {
       screen: 'Projects',
       params: {
         screen: 'ProjectDetail',
@@ -159,17 +157,14 @@ export function useNotifications() {
    * id goes across as a param and CalendarScreen opens it once its data is in.
    */
   const openRehearsal = (rehearsalId: string | number) => {
-    openInTabs(navigation, {
-      screen: 'Calendar',
-      params: {
-        screen: 'CalendarMain',
-        params: { openRehearsalId: String(rehearsalId) },
-      },
-    });
+    // The id goes to pendingRehearsal, not into route params; the navigator only
+    // has to bring the Calendar tab forward. CalendarScreen does the rest.
+    setPendingRehearsal(rehearsalId);
+    navigation.navigate('MainTabs' as any, { screen: 'Calendar' });
   };
 
   const openProjectsList = () => {
-    openInTabs(navigation, { screen: 'Projects' });
+    navigation.navigate('MainTabs' as any, { screen: 'Projects' });
   };
 
   const handleNotificationNavigation = (data: any) => {
