@@ -14,6 +14,7 @@ import {
 } from '../services/notifications';
 import { hapticMedium } from '../utils/haptics';
 import { useAuth } from '../../contexts/AuthContext';
+import { openInTabs } from '../utils/openInTabs';
 
 /**
  * Hook for managing push notifications
@@ -136,12 +137,11 @@ export function useNotifications() {
    * navigator" and the tap does nothing at all: every notification in the app
    * was inert.
    *
-   * popTo rather than navigate: a tap can land while a modal is open, and
-   * navigate put a second MainTabs on top of it instead of returning to the one
-   * already underneath. popTo goes to the existing one and cannot duplicate it.
+   * A tap can land while a modal is open, which is why this goes through
+   * openInTabs rather than navigating directly — see the note there.
    */
   const openProject = (projectId: string | number) => {
-    navigation.popTo('MainTabs' as any, {
+    openInTabs(navigation, {
       screen: 'Projects',
       params: {
         screen: 'ProjectDetail',
@@ -159,7 +159,7 @@ export function useNotifications() {
    * id goes across as a param and CalendarScreen opens it once its data is in.
    */
   const openRehearsal = (rehearsalId: string | number) => {
-    navigation.popTo('MainTabs' as any, {
+    openInTabs(navigation, {
       screen: 'Calendar',
       params: {
         screen: 'CalendarMain',
@@ -169,7 +169,7 @@ export function useNotifications() {
   };
 
   const openProjectsList = () => {
-    navigation.popTo('MainTabs' as any, { screen: 'Projects' });
+    openInTabs(navigation, { screen: 'Projects' });
   };
 
   const handleNotificationNavigation = (data: any) => {

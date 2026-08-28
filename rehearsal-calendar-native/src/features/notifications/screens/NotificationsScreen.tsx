@@ -15,6 +15,7 @@ import { Colors } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
 import { logger } from '../../../shared/utils/logger';
+import { openInTabs } from '../../../shared/utils/openInTabs';
 import { styles } from '../styles/notificationsScreenStyles';
 
 interface NotificationItem {
@@ -96,13 +97,11 @@ export default function NotificationsScreen() {
     const rehearsalId = item.relatedType === 'rehearsal' ? item.relatedId : null;
     const projectId = item.data?.projectId ?? (item.relatedType === 'project' ? item.relatedId : null);
 
-    // popTo, not navigate. This screen is a modal sitting on top of MainTabs, and
-    // navigate() put a *second* MainTabs above it — a calendar inside the modal,
-    // with its own bell, opening another inbox, forever. popTo returns to the
-    // MainTabs already underneath and hands it the params, dismissing this modal
-    // on the way. The destinations are the same ones a tap on the push reaches.
+    // This screen is a modal on top of MainTabs, so it goes through openInTabs —
+    // which dismisses it before navigating. The destinations are the same ones a
+    // tap on the push itself reaches.
     if (rehearsalId && item.type !== 'rehearsal_deleted') {
-      navigation.popTo('MainTabs', {
+      openInTabs(navigation, {
         screen: 'Calendar',
         params: { screen: 'CalendarMain', params: { openRehearsalId: String(rehearsalId) } },
       });
@@ -110,7 +109,7 @@ export default function NotificationsScreen() {
     }
 
     if (projectId) {
-      navigation.popTo('MainTabs', {
+      openInTabs(navigation, {
         screen: 'Projects',
         params: { screen: 'ProjectDetail', params: { projectId: String(projectId) } },
       });
