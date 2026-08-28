@@ -37,6 +37,11 @@ interface AdminStats {
 interface RehearsalDetailsModalProps {
   visible: boolean;
   onClose: () => void;
+  /** Fires once the sheet has actually left the screen (iOS). Callers that want
+   *  to open it again on a different rehearsal must wait for this: presenting
+   *  over a modal that is still on screen leaves iOS with a layer it never
+   *  removes, and the screen underneath stops responding to touch. */
+  onDismiss?: () => void;
   rehearsal: Rehearsal | null;
   project: Project | null;
   isAdmin: boolean;
@@ -52,6 +57,7 @@ interface RehearsalDetailsModalProps {
 export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
   visible,
   onClose,
+  onDismiss,
   rehearsal,
   project,
   isAdmin,
@@ -197,6 +203,7 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
       transparent
       animationType="slide"
       onRequestClose={onClose}
+      onDismiss={onDismiss}
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
