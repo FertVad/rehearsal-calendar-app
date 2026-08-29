@@ -6,7 +6,6 @@ import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
 import WeeklyCalendar from '../components/WeeklyCalendar';
-import MyRehearsalsModal from '../components/MyRehearsalsModal';
 import TodayRehearsals from '../components/TodayRehearsals';
 import RehearsalCard from '../components/RehearsalCard';
 import SmartPlannerButton from '../components/SmartPlannerButton';
@@ -30,7 +29,6 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return formatDateToString(new Date());
   });
-  const [myRehearsalsVisible, setMyRehearsalsVisible] = useState(false);
   const [filterExpanded, setFilterExpanded] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [selectedRehearsalForDetails, setSelectedRehearsalForDetails] = useState<Rehearsal | null>(null);
@@ -159,20 +157,17 @@ export default function CalendarScreen() {
 
     setWantedRehearsalId(null);
 
-    // Any sheet, not just the details one. "My rehearsals" lives on this screen
-    // too, and presenting over it strands exactly the same layer.
-    if (!detailsModalVisible && !myRehearsalsVisible) {
+    if (!detailsModalVisible) {
       openDetails(target);
       return;
     }
 
     // Already showing the one asked for — leave it alone.
-    if (detailsModalVisible && String(selectedRehearsalForDetails?.id) === String(target.id)) return;
+    if (String(selectedRehearsalForDetails?.id) === String(target.id)) return;
 
     queuedRehearsal.current = target;
     setDetailsModalVisible(false);
-    setMyRehearsalsVisible(false);
-  }, [wantedRehearsalId, rehearsals, detailsModalVisible, myRehearsalsVisible, selectedRehearsalForDetails, openDetails]);
+  }, [wantedRehearsalId, rehearsals, detailsModalVisible, selectedRehearsalForDetails, openDetails]);
 
   const { respondingId, toggleSeen } = useRSVP();
 
@@ -181,14 +176,6 @@ export default function CalendarScreen() {
       prefilledDate: date,
     });
   }, [navigation]);
-
-  const handleMyRehearsalsClose = useCallback(() => {
-    setMyRehearsalsVisible(false);
-  }, []);
-
-  const handleSelectDateFromModal = useCallback((date: string) => {
-    setSelectedDate(date);
-  }, []);
 
   // Pull-to-refresh handler (forces update, ignores cache)
   const handleRefresh = useCallback(() => {
@@ -522,14 +509,6 @@ export default function CalendarScreen() {
         </View>
       </ScrollView>
 
-      {/* My Rehearsals Modal */}
-      <MyRehearsalsModal
-        visible={myRehearsalsVisible}
-        onDismiss={showQueuedRehearsal}
-        onClose={handleMyRehearsalsClose}
-        rehearsals={rehearsals}
-        onSelectDate={handleSelectDateFromModal}
-      />
 
       {/* Rehearsal Details Modal */}
       <RehearsalDetailsModal
