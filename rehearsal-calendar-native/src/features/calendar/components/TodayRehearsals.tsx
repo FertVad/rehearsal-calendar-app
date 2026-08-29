@@ -1,10 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../../shared/constants/colors';
-import { Rehearsal, RSVPStatus, Project } from '../../../shared/types';
+import { Rehearsal, Project } from '../../../shared/types';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';

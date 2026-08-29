@@ -69,17 +69,3 @@ export function getWeekStart(date: Date, weekStart: WeekStartDay): Date {
   return weekStartDate;
 }
 
-/**
- * Get the end of the week for a given date based on week start preference.
- * @param date - The date to get the week end for
- * @param weekStart - Week start preference ('monday' or 'sunday')
- * @returns Date object representing the end of the week
- */
-export function getWeekEnd(date: Date, weekStart: WeekStartDay): Date {
-  const weekStartDate = getWeekStart(date, weekStart);
-  const weekEndDate = new Date(weekStartDate);
-  weekEndDate.setDate(weekStartDate.getDate() + 6);
-  weekEndDate.setHours(23, 59, 59, 999);
-
-  return weekEndDate;
-}

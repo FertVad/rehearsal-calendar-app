@@ -99,24 +99,3 @@ export async function verifyAppleToken(idToken) {
   }
 }
 
-/**
- * Validate that required OAuth environment variables are set
- *
- * @param {string} provider - 'google' or 'apple'
- * @throws {Error} If required env vars are missing
- */
-export function validateOAuthConfig(provider) {
-  if (provider === 'google') {
-    if (!process.env.GOOGLE_CLIENT_ID_WEB) {
-      throw new Error('GOOGLE_CLIENT_ID_WEB is not configured');
-    }
-    // iOS and Android client IDs are optional (might only support web)
-    if (!process.env.GOOGLE_CLIENT_ID_IOS && !process.env.GOOGLE_CLIENT_ID_ANDROID) {
-      console.warn('[OAuth] Warning: No mobile Google client IDs configured');
-    }
-  } else if (provider === 'apple') {
-    if (!process.env.APPLE_CLIENT_ID) {
-      throw new Error('APPLE_CLIENT_ID is not configured');
-    }
-  }
-}

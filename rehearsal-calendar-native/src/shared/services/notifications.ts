@@ -195,36 +195,3 @@ export async function unregisterPushToken(): Promise<void> {
   }
 }
 
-/**
- * Add listener for when notification is received while app is foregrounded
- * @param handler Callback function
- * @returns Subscription object
- */
-export function addNotificationReceivedListener(
-  handler: (notification: Notifications.Notification) => void
-): Notifications.Subscription {
-  return Notifications.addNotificationReceivedListener(handler);
-}
-
-/**
- * Add listener for when user taps on notification
- * @param handler Callback function
- * @returns Subscription object
- */
-export function addNotificationResponseReceivedListener(
-  handler: (response: Notifications.NotificationResponse) => void
-): Notifications.Subscription {
-  return Notifications.addNotificationResponseReceivedListener(handler);
-}
-
-/**
- * Get saved push token from local storage
- */
-export async function getSavedPushToken(): Promise<string | null> {
-  try {
-    return await AsyncStorage.getItem(PUSH_TOKEN_KEY);
-  } catch (error) {
-    console.error('[Notifications] Error getting saved token:', error);
-    return null;
-  }
-}
