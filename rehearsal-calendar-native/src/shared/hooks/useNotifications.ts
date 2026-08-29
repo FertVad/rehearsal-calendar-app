@@ -14,7 +14,6 @@ import {
 } from '../services/notifications';
 import { hapticMedium } from '../utils/haptics';
 import { useAuth } from '../../contexts/AuthContext';
-import { setPendingRehearsal } from '../services/pendingRehearsal';
 
 /**
  * Hook for managing push notifications
@@ -157,10 +156,7 @@ export function useNotifications() {
    * id goes across as a param and CalendarScreen opens it once its data is in.
    */
   const openRehearsal = (rehearsalId: string | number) => {
-    // The id goes to pendingRehearsal, not into route params; the navigator only
-    // has to bring the Calendar tab forward. CalendarScreen does the rest.
-    setPendingRehearsal(rehearsalId);
-    navigation.navigate('MainTabs' as any, { screen: 'Calendar' });
+    navigation.navigate('RehearsalDetails' as any, { rehearsalId: String(rehearsalId) });
   };
 
   const openProjectsList = () => {

@@ -284,6 +284,11 @@ export const rehearsalsAPI = {
     api.delete(`/native/projects/${projectId}/rehearsals/${rehearsalId}`),
 
   // Get RSVP responses for rehearsal
+  // One rehearsal, for the details screen — which is reached by id and so
+  // cannot rely on the caller already holding the object.
+  getById: (rehearsalId: string) =>
+    api.get(`/native/rehearsals/${rehearsalId}`),
+
   getResponses: (rehearsalId: string) =>
     api.get(`/native/rehearsals/${rehearsalId}/responses`),
 

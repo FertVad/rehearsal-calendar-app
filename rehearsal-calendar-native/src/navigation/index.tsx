@@ -18,6 +18,7 @@ import AvailabilityScreen from '../features/availability/screens/AvailabilityScr
 import CreateProjectScreen from '../features/projects/screens/CreateProjectScreen';
 import AddRehearsalScreen from '../features/calendar/screens/AddRehearsalScreen';
 import NotificationsScreen from '../features/notifications/screens/NotificationsScreen';
+import RehearsalDetailsScreen from '../features/calendar/screens/RehearsalDetailsScreen';
 import {
   AuthNavigator,
   CalendarNavigator,
@@ -298,6 +299,15 @@ function AppNavigator() {
           name="Notifications"
           component={NotificationsScreen}
           options={{ presentation: 'modal' }}
+        />
+        {/* A route rather than a Modal rendered inside a screen. Mixing React
+            Native's Modal with the navigator's own left iOS holding a layer
+            over the calendar that swallowed every touch; here presentation and
+            dismissal belong to one system and cannot collide. */}
+        <AppStack.Screen
+          name="RehearsalDetails"
+          component={RehearsalDetailsScreen}
+          options={{ presentation: 'formSheet', sheetAllowedDetents: [0.75, 1] }}
         />
       </AppStack.Navigator>
     </ActionSheetContext.Provider>
