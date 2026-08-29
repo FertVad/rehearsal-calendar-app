@@ -18,6 +18,10 @@ import { getDateLocale } from '../../../shared/utils/locale';
 interface MyRehearsalsModalProps {
   visible: boolean;
   onClose: () => void;
+  /** Fires once the sheet has left the screen (iOS). The calendar waits for it
+   *  before presenting anything else — showing a sheet over one iOS still has
+   *  up strands a layer that swallows touches. */
+  onDismiss?: () => void;
   rehearsals: Rehearsal[];
   onSelectDate?: (date: string) => void;
 }
@@ -25,6 +29,7 @@ interface MyRehearsalsModalProps {
 export default function MyRehearsalsModal({
   visible,
   onClose,
+  onDismiss,
   rehearsals,
   onSelectDate,
 }: MyRehearsalsModalProps) {
@@ -120,6 +125,7 @@ export default function MyRehearsalsModal({
       animationType="slide"
       transparent={true}
       onRequestClose={onClose}
+      onDismiss={onDismiss}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>

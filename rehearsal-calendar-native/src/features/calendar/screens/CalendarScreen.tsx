@@ -159,17 +159,20 @@ export default function CalendarScreen() {
 
     setWantedRehearsalId(null);
 
-    if (!detailsModalVisible) {
+    // Any sheet, not just the details one. "My rehearsals" lives on this screen
+    // too, and presenting over it strands exactly the same layer.
+    if (!detailsModalVisible && !myRehearsalsVisible) {
       openDetails(target);
       return;
     }
 
     // Already showing the one asked for — leave it alone.
-    if (String(selectedRehearsalForDetails?.id) === String(target.id)) return;
+    if (detailsModalVisible && String(selectedRehearsalForDetails?.id) === String(target.id)) return;
 
     queuedRehearsal.current = target;
     setDetailsModalVisible(false);
-  }, [wantedRehearsalId, rehearsals, detailsModalVisible, selectedRehearsalForDetails, openDetails]);
+    setMyRehearsalsVisible(false);
+  }, [wantedRehearsalId, rehearsals, detailsModalVisible, myRehearsalsVisible, selectedRehearsalForDetails, openDetails]);
 
   const { respondingId, toggleSeen } = useRSVP();
 
@@ -522,6 +525,7 @@ export default function CalendarScreen() {
       {/* My Rehearsals Modal */}
       <MyRehearsalsModal
         visible={myRehearsalsVisible}
+        onDismiss={showQueuedRehearsal}
         onClose={handleMyRehearsalsClose}
         rehearsals={rehearsals}
         onSelectDate={handleSelectDateFromModal}
