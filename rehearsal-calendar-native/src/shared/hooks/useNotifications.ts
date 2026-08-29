@@ -7,13 +7,10 @@ import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
-import {
-  registerForPushNotifications,
-  syncBadgeWithUnread as syncBadge,
-  markNotificationRead,
-} from '../services/notifications';
+import { registerForPushNotifications } from '../services/notifications';
 import { hapticMedium } from '../utils/haptics';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUnread } from '../../contexts/UnreadContext';
 
 /**
  * Hook for managing push notifications
@@ -22,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 export function useNotifications() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const { refresh, markRead } = useUnread();
   const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
   const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
   const handledLaunchResponse = useRef(false);
@@ -49,8 +47,9 @@ export function useNotifications() {
         // Trigger haptic feedback
         hapticMedium();
 
-        // Seeing the banner is not reading it — the badge follows the inbox.
-        syncBadge();
+        // Seeing the banner is not reading it — the count simply catches up,
+        // and the bell moves with it.
+        refresh();
       });
 
       // Listen for user interaction with notification
@@ -62,7 +61,8 @@ export function useNotifications() {
         // Navigate based on notification type
         handleNotificationNavigation(data);
 
-        markNotificationRead((data as any)?.notificationId);
+        if ((data as any)?.notificationId) markRead([Number((data as any).notificationId)]);
+        else refresh();
       });
 
       // A tap that *launched* the app is not delivered to the listener above:
@@ -85,7 +85,8 @@ export function useNotifications() {
 
             const data = response.notification.request.content.data as any;
             handleNotificationNavigation(data);
-            markNotificationRead(data?.notificationId);
+            if (data?.notificationId) markRead([Number(data.notificationId)]);
+            else refresh();
           })
           .catch((error) => {
             console.log('[useNotifications] Could not read the launching notification:', error);
@@ -105,9 +106,9 @@ export function useNotifications() {
     // dot would vanish while the notifications behind it stayed unread. Reading
     // them is what clears it.
     if (user) {
-      syncBadge();
+      refresh();
       appStateListener.current = AppState.addEventListener('change', (state) => {
-        if (state === 'active') syncBadge();
+        if (state === 'active') refresh();
       });
     }
 
@@ -127,7 +128,7 @@ export function useNotifications() {
         console.log('[useNotifications] Cleanup failed (expected on simulator):', error);
       }
     };
-  }, [user]);
+  }, [user, refresh, markRead]);
 
   /**
    * ProjectDetail and the projects list both live two levels down — inside the

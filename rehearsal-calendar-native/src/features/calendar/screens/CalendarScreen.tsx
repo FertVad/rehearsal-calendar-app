@@ -9,10 +9,10 @@ import TodayRehearsals from '../components/TodayRehearsals';
 import RehearsalCard from '../components/RehearsalCard';
 import SmartPlannerButton from '../components/SmartPlannerButton';
 import { Rehearsal } from '../../../shared/types';
-import { notificationsAPI } from '../../../shared/services/api';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { useUnread } from '../../../contexts/UnreadContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
 import { useRehearsals } from '../hooks';
@@ -70,25 +70,10 @@ export default function CalendarScreen() {
     fetchRehearsals,
   } = useRehearsals(projects, filterProjectId);
 
-  // Refetched on focus rather than once: a push can land while this screen sits
-  // behind another, and the bell has to agree with the badge on the app icon.
-  const [unreadCount, setUnreadCount] = useState(0);
-  useFocusEffect(
-    useCallback(() => {
-      let alive = true;
-      notificationsAPI
-        .unreadCount()
-        .then((res) => {
-          if (alive) setUnreadCount(res.data.unreadCount ?? 0);
-        })
-        .catch(() => {
-          // Offline. The bell simply shows no count.
-        });
-      return () => {
-        alive = false;
-      };
-    }, [])
-  );
+  // Straight from the store, so a push landing while this screen is open moves
+  // the bell as well as the icon badge. It used to hold its own number and
+  // refresh it only when the screen regained focus.
+  const { unreadCount } = useUnread();
 
 
   // Opening the details is now a navigation, so there is nothing to hold here
