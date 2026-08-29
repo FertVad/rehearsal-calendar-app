@@ -24,14 +24,9 @@ export const styles = StyleSheet.create({
     color: Colors.text.primary,
     flex: 1,
   },
-  markAllButton: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-  },
-  clearAllText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    color: Colors.accent.red,
+  headerAction: {
+    padding: Spacing.sm,
+    marginLeft: Spacing.xs,
   },
   // The panel the row slides off to reveal. Its height comes from the card's,
   // and the bottom margin matches so the two edges line up mid-swipe.
@@ -52,11 +47,6 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
     color: Colors.text.inverse,
-  },
-  markAllText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    color: Colors.accent.purple,
   },
 
   list: {

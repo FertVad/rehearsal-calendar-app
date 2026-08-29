@@ -219,15 +219,27 @@ export default function NotificationsScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.title}>{t.notifications.title}</Text>
+        <Text style={styles.title} numberOfLines={1}>{t.notifications.title}</Text>
+
+        {/* Icons rather than words. Two text buttons beside a large title do not
+            fit in Russian and fit still less in German, so they overlapped. The
+            words survive as accessibility labels and in the confirmation. */}
         {hasUnread && (
-          <TouchableOpacity style={styles.markAllButton} onPress={markEverythingRead}>
-            <Text style={styles.markAllText}>{t.notifications.markAllRead}</Text>
+          <TouchableOpacity
+            style={styles.headerAction}
+            onPress={markEverythingRead}
+            accessibilityLabel={t.notifications.markAllRead}
+          >
+            <Ionicons name="checkmark-done" size={22} color={Colors.accent.purple} />
           </TouchableOpacity>
         )}
         {items.length > 0 && (
-          <TouchableOpacity style={styles.markAllButton} onPress={confirmClearAll}>
-            <Text style={styles.clearAllText}>{t.notifications.clearAll}</Text>
+          <TouchableOpacity
+            style={styles.headerAction}
+            onPress={confirmClearAll}
+            accessibilityLabel={t.notifications.clearAll}
+          >
+            <Ionicons name="trash-outline" size={22} color={Colors.accent.red} />
           </TouchableOpacity>
         )}
       </View>
