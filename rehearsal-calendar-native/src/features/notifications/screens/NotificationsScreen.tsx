@@ -7,9 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
-import { Alert } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
+// Rows live inside a Swipeable, and React Native's own touchables take no part
+// in gesture-handler's arbitration: swiping a row and letting it slide back
+// registered as a tap as well, so cancelling a swipe opened the notification.
+// This one loses to the pan, which is the whole point.
+import { TouchableOpacity as GestureTouchable } from 'react-native-gesture-handler';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
@@ -143,14 +148,14 @@ export default function NotificationsScreen() {
   };
 
   const renderDeleteAction = (item: NotificationItem) => (
-    <TouchableOpacity
+    <GestureTouchable
       style={styles.deleteAction}
       onPress={() => deleteOne(item)}
       accessibilityLabel={t.notifications.delete}
     >
       <Ionicons name="trash-outline" size={22} color={Colors.text.inverse} />
       <Text style={styles.deleteActionText}>{t.notifications.delete}</Text>
-    </TouchableOpacity>
+    </GestureTouchable>
   );
 
   const renderItem = ({ item }: { item: NotificationItem }) => (
@@ -159,7 +164,7 @@ export default function NotificationsScreen() {
       overshootRight={false}
       friction={2}
     >
-    <TouchableOpacity
+    <GestureTouchable
       style={[styles.card, !item.read && styles.cardUnread]}
       onPress={() => openTarget(item)}
       activeOpacity={0.7}
@@ -185,7 +190,7 @@ export default function NotificationsScreen() {
       </View>
 
       {!item.read && <View style={styles.unreadDot} />}
-    </TouchableOpacity>
+    </GestureTouchable>
     </Swipeable>
   );
 
