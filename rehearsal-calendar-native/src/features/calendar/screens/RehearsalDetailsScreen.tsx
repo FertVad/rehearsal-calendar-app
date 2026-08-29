@@ -204,7 +204,7 @@ export default function RehearsalDetailsScreen() {
 
   if (loadFailed) {
     return (
-      <View style={styles.sheet}>
+      <View style={styles.fill}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t.calendar.rehearsal}</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -220,7 +220,7 @@ export default function RehearsalDetailsScreen() {
 
   if (!rehearsal) {
     return (
-      <View style={styles.sheet}>
+      <View style={styles.fill}>
         <View style={styles.centred}>
           <ActivityIndicator size="large" color={Colors.accent.purple} />
         </View>
@@ -233,9 +233,16 @@ export default function RehearsalDetailsScreen() {
     ? formatDateLocalized(rehearsal.date, { day: 'numeric', month: 'long', weekday: 'long' }, locale)
     : '';
 
+  // One scroll view, one flow. Nesting flex: 1 containers inside a native sheet
+  // is what put the header and the list on top of each other: the sheet does not
+  // hand its children a resolved height, so both collapsed to zero and were laid
+  // from the same origin — the header behind, the rows over it.
   return (
-      <View style={styles.sheet}>
-        <View style={styles.sheetInner}>
+      <ScrollView
+        style={styles.sheet}
+        contentContainerStyle={styles.sheetContent}
+        showsVerticalScrollIndicator={false}
+      >
           {/* One heading, not two. There used to be a "Rehearsal details" bar
               above the rehearsal's own name, which said nothing the name did
               not and left two large texts fighting for the same band at the top
@@ -250,7 +257,7 @@ export default function RehearsalDetailsScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          <View style={styles.content}>
 
             {/* Date */}
             <View style={styles.detailRow}>
@@ -320,9 +327,8 @@ export default function RehearsalDetailsScreen() {
                 ))}
               </View>
             )}
-          </ScrollView>
-        </View>
-      </View>
+          </View>
+      </ScrollView>
   );
 }
 
@@ -330,12 +336,17 @@ const styles = StyleSheet.create({
   // The navigator presents this as a sheet, so there is no backdrop or rounded
   // top to draw here — only the surface itself.
   sheet: {
+    backgroundColor: Colors.bg.secondary,
+  },
+  // For the two states that have nothing to scroll.
+  fill: {
     flex: 1,
     backgroundColor: Colors.bg.secondary,
   },
-  sheetInner: {
-    flex: 1,
-    paddingBottom: Spacing.xl,
+  sheetContent: {
+    // Fills the sheet when the content is short, scrolls when it is not.
+    flexGrow: 1,
+    paddingBottom: Spacing.xxl,
   },
   centred: {
     flex: 1,
@@ -369,12 +380,6 @@ const styles = StyleSheet.create({
     padding: Spacing.xs,
   },
   content: {
-    // Fills what the header leaves. It used to wrap its content instead, so the
-    // sheet could size itself inside a Modal — as a screen that left the list
-    // with no height at all, and the rehearsal's name drew over the header.
-    flex: 1,
-  },
-  contentContainer: {
     padding: Spacing.lg,
   },
   detailRow: {
