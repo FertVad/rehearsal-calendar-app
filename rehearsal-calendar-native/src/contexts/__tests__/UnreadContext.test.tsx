@@ -22,6 +22,15 @@ jest.mock('../../shared/services/api', () => ({
   },
 }));
 
+const mockStorage: Record<string, string> = {};
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: (k: string) => Promise.resolve(mockStorage[k] ?? null),
+  setItem: (k: string, v: string) => {
+    mockStorage[k] = v;
+    return Promise.resolve();
+  },
+}));
+
 jest.mock('expo-notifications', () => ({
   setBadgeCountAsync: (...args: any[]) => {
     mockSetBadge(...args);
@@ -55,6 +64,7 @@ const renderProbe = () =>
   );
 
 beforeEach(() => {
+  for (const k of Object.keys(mockStorage)) delete mockStorage[k];
   mockUnreadCount.mockReset().mockResolvedValue({ data: { unreadCount: 3 } });
   mockMarkRead.mockReset().mockResolvedValue({ data: { unreadCount: 0 } });
   mockSetBadge.mockReset();
@@ -65,6 +75,50 @@ describe('Unread count', () => {
     const { getByTestId } = renderProbe();
     expect(getByTestId('count').props.children).toBe('0');
     expect(mockUnreadCount).not.toHaveBeenCalled();
+  });
+
+  it('leaves the app icon alone until it knows a real number', async () => {
+    // Writing the initial nought would clear the badge on every launch, before
+    // the server has said anything — and with no network that is not a flicker
+    // but the final answer.
+    renderProbe();
+
+    await act(async () => {});
+
+    expect(mockSetBadge).not.toHaveBeenCalled();
+  });
+
+  it('comes back with the last count it knew, before asking anyone', async () => {
+    mockStorage['unread-count'] = '5';
+
+    const { getByTestId } = renderProbe();
+
+    await waitFor(() => expect(getByTestId('count').props.children).toBe('5'));
+  });
+
+  it('shows the stored count when the server cannot be reached', async () => {
+    // The case that matters: a launch with no network. Nought here would hide
+    // notifications the reader has never seen.
+    mockStorage['unread-count'] = '4';
+    mockUnreadCount.mockRejectedValue(new Error('offline'));
+
+    const { getByTestId } = renderProbe();
+    await waitFor(() => expect(getByTestId('count').props.children).toBe('4'));
+
+    await act(async () => {
+      fireEvent.press(getByTestId('refresh'));
+    });
+
+    expect(getByTestId('count').props.children).toBe('4');
+  });
+
+  it('prefers the server to what it had stored', async () => {
+    mockStorage['unread-count'] = '9';
+
+    const { getByTestId } = renderProbe();
+    fireEvent.press(getByTestId('refresh'));
+
+    await waitFor(() => expect(getByTestId('count').props.children).toBe('3'));
   });
 
   it('takes the number the server reports', async () => {
