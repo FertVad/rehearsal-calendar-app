@@ -71,7 +71,7 @@ src/
 │   ├── availability/     # User availability management
 │   └── profile/          # User profile & settings
 ├── navigation/           # React Navigation setup
-├── contexts/             # React Context providers (Auth, I18n, Theme)
+├── contexts/             # React Context providers (Auth, I18n, Project, Seen, Unread)
 ├── shared/
 │   ├── components/       # Reusable UI components
 │   ├── services/         # API client, calendar sync
@@ -374,6 +374,84 @@ releases the claim so the next run retries.
 
 Auth is fail-closed — without `CRON_SECRET` the endpoint answers 503 rather than
 running unauthenticated.
+
+### The Notification Inbox
+
+**Location**: `server/services/notifications/notificationStore.js`,
+`server/routes/native/notifications.js`,
+`src/features/notifications/screens/NotificationsScreen.tsx`.
+
+Every notification is written to `native_notifications` before it is sent — one
+row per intended recipient, including recipients with no device registered, who
+would otherwise never learn what happened. Reached from the bell beside the
+project filter on the calendar.
+
+Before this a push was a single moment: only the two reminder types left any
+trace, in `native_push_reminders`, and that only records that a reminder was
+*issued*. Everything else vanished the moment Expo accepted it, and there was
+nowhere in the app to re-read what you were told.
+
+Each push carries the id of that recipient's own row, so tapping one marks
+exactly that notification read rather than guessing.
+
+**Delivery is still not tracked.** Expo's tickets say it accepted the message;
+the receipts that say whether a phone got it are never fetched. `sent` means
+accepted, not delivered.
+
+### The Rehearsal Details Sheet
+
+**Location**: `src/features/calendar/screens/RehearsalDetailsScreen.tsx`, registered
+in the root stack in `src/navigation/index.tsx`.
+
+A **route**, not a `Modal` rendered inside a screen, and reached by
+`navigate('RehearsalDetails', { rehearsalId })` from anywhere: the calendar, the
+list of today's rehearsals, the project screen, a tapped push, the inbox. It
+loads the rehearsal itself through `GET /api/native/rehearsals/:id`, so no caller
+needs to be holding one.
+
+Both of those were learned the hard way, over a day of chasing the same bug.
+
+**Mixing React Native's `Modal` with the navigator's own modal screens strands a
+layer.** Present a sheet over one iOS has not finished dismissing and the screen
+underneath stays visible and stops answering touch — force-quitting is the only
+way out. There were two `RehearsalDetailsModal`s on the calendar, one inside
+TodayRehearsals with its own state, so a sheet opened from the "today" list was
+invisible to the code opening one for a notification. As a route, presentation
+and dismissal belong to one system and cannot collide. **Do not add another
+`Modal` to a screen that can host this sheet.**
+
+**Do not nest `flex: 1` containers inside a `formSheet`.** The sheet does not
+hand its children a resolved height, so such a container collapses to nothing
+and its children are laid from the same origin — the header behind, the rows
+over it. This screen is a single `ScrollView` with `flexGrow: 1` on its content
+for that reason.
+
+### Shared State: Seen and Unread
+
+Two contexts exist because the same mistake was made twice with per-screen
+copies of the same number.
+
+**`SeenContext`** — who has marked which rehearsal seen, plus the toggle. It was
+threaded through props from `useRehearsals` to CalendarScreen to TodayRehearsals
+to each card, 39 references across three files, and any screen wanting to show a
+card had to be handed its own copy. Cards read it directly now.
+
+The wire and the UI disagree on purpose here: `'no'` means invited and not yet
+seen, and having a row at all is what puts you on a rehearsal, so unmarking
+sends `'no'` rather than deleting. In state that same thing is `null`.
+
+**`UnreadContext`** — how many notifications are unread, for the bell on the
+calendar, the app icon badge and the inbox alike. Four places used to keep their
+own answer, so a push arriving while the calendar was open lit the icon and left
+the bell at zero.
+
+Two rules it exists to enforce:
+- **The badge follows the count**; it is never set beside it. Six call sites used
+  to write it, which is six chances to disagree with the bell.
+- **A failed request keeps the last known count.** The count is stored on the
+  device and read back before the server is asked, and the badge is not written
+  until a real number is in hand — otherwise every launch clears it before the
+  server answers, which offline is not a flicker but the final answer.
 
 ### Admin Dashboard
 **Location**: `server/routes/admin.js`, `server/routes/admin/dashboardPage.js`
