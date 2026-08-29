@@ -414,6 +414,10 @@ export const notificationsAPI = {
   // badge can be set without asking again.
   markRead: (ids?: number[]) =>
     api.post('/native/notifications/read', ids ? { ids } : {}),
+
+  remove: (id: number) => api.delete(`/native/notifications/${id}`),
+
+  removeAll: () => api.delete('/native/notifications'),
 };
 
 // Bug Reports API

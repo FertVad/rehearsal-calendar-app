@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { Alert } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
@@ -43,7 +45,7 @@ function iconFor(type: string): keyof typeof Ionicons.glyphMap {
 export default function NotificationsScreen() {
   const navigation = useNavigation<any>();
   const { t } = useI18n();
-  const { markRead } = useUnread();
+  const { markRead, remove, removeAll } = useUnread();
 
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +116,49 @@ export default function NotificationsScreen() {
 
   const hasUnread = items.some((n) => !n.read);
 
+  const deleteOne = async (item: NotificationItem) => {
+    // Gone from the list first: the row has already slid away under the
+    // reader's thumb, and putting it back on success would be a stutter.
+    setItems((prev) => prev.filter((n) => n.id !== item.id));
+
+    const ok = await remove(item.id);
+    if (!ok) {
+      Alert.alert(t.common.error, t.notifications.deleteError);
+      load();
+    }
+  };
+
+  const confirmClearAll = () => {
+    Alert.alert(t.notifications.clearAllConfirm, t.notifications.clearAllConfirmBody, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.notifications.clearAll,
+        style: 'destructive',
+        onPress: async () => {
+          setItems([]);
+          await removeAll();
+        },
+      },
+    ]);
+  };
+
+  const renderDeleteAction = (item: NotificationItem) => (
+    <TouchableOpacity
+      style={styles.deleteAction}
+      onPress={() => deleteOne(item)}
+      accessibilityLabel={t.notifications.delete}
+    >
+      <Ionicons name="trash-outline" size={22} color={Colors.text.inverse} />
+      <Text style={styles.deleteActionText}>{t.notifications.delete}</Text>
+    </TouchableOpacity>
+  );
+
   const renderItem = ({ item }: { item: NotificationItem }) => (
+    <Swipeable
+      renderRightActions={() => renderDeleteAction(item)}
+      overshootRight={false}
+      friction={2}
+    >
     <TouchableOpacity
       style={[styles.card, !item.read && styles.cardUnread]}
       onPress={() => openTarget(item)}
@@ -142,6 +186,7 @@ export default function NotificationsScreen() {
 
       {!item.read && <View style={styles.unreadDot} />}
     </TouchableOpacity>
+    </Swipeable>
   );
 
   return (
@@ -154,6 +199,11 @@ export default function NotificationsScreen() {
         {hasUnread && (
           <TouchableOpacity style={styles.markAllButton} onPress={markEverythingRead}>
             <Text style={styles.markAllText}>{t.notifications.markAllRead}</Text>
+          </TouchableOpacity>
+        )}
+        {items.length > 0 && (
+          <TouchableOpacity style={styles.markAllButton} onPress={confirmClearAll}>
+            <Text style={styles.clearAllText}>{t.notifications.clearAll}</Text>
           </TouchableOpacity>
         )}
       </View>

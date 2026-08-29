@@ -173,6 +173,89 @@ describe('Notification inbox', () => {
     expect(res.status).toBe(400);
   });
 
+  describe('deleting', () => {
+    it('removes one and says what is left unread', async () => {
+      await send([testData.adminId]);
+      await send([testData.adminId]);
+      const list = await request(app).get('/api/native/notifications').set(...auth(testData.adminId));
+      const first = list.body.notifications[0].id;
+
+      const res = await request(app)
+        .delete(`/api/native/notifications/${first}`)
+        .set(...auth(testData.adminId));
+
+      expect(res.status).toBe(200);
+      expect(res.body.unreadCount).toBe(1);
+
+      const after = await request(app).get('/api/native/notifications').set(...auth(testData.adminId));
+      expect(after.body.notifications).toHaveLength(1);
+      expect(after.body.notifications[0].id).not.toBe(first);
+    });
+
+    it("will not delete someone else's, and says so", async () => {
+      await send([testData.adminId]);
+      const list = await request(app).get('/api/native/notifications').set(...auth(testData.adminId));
+      const victim = list.body.notifications[0].id;
+
+      // 404 rather than success: the stranger must not be told it worked, and
+      // the owner must still have it.
+      const res = await request(app)
+        .delete(`/api/native/notifications/${victim}`)
+        .set(...auth(strangerId));
+
+      expect(res.status).toBe(404);
+
+      const after = await request(app).get('/api/native/notifications').set(...auth(testData.adminId));
+      expect(after.body.notifications).toHaveLength(1);
+    });
+
+    it('answers 404 for one that never existed', async () => {
+      const res = await request(app)
+        .delete('/api/native/notifications/999999')
+        .set(...auth(testData.adminId));
+
+      expect(res.status).toBe(404);
+    });
+
+    it('refuses an id that is not a number', async () => {
+      const res = await request(app)
+        .delete('/api/native/notifications/abc')
+        .set(...auth(testData.adminId));
+
+      expect(res.status).toBe(400);
+    });
+
+    it('empties the inbox and leaves nothing unread', async () => {
+      await send([testData.adminId]);
+      await send([testData.adminId]);
+
+      const res = await request(app)
+        .delete('/api/native/notifications')
+        .set(...auth(testData.adminId));
+
+      expect(res.status).toBe(200);
+      expect(res.body.deleted).toBe(2);
+      expect(res.body.unreadCount).toBe(0);
+
+      const after = await request(app).get('/api/native/notifications').set(...auth(testData.adminId));
+      expect(after.body.notifications).toHaveLength(0);
+    });
+
+    it('empties only the caller\'s inbox', async () => {
+      await send([testData.adminId, strangerId]);
+
+      await request(app).delete('/api/native/notifications').set(...auth(testData.adminId));
+
+      const theirs = await request(app).get('/api/native/notifications').set(...auth(strangerId));
+      expect(theirs.body.notifications).toHaveLength(1);
+    });
+
+    it('rejects deletion with no token', async () => {
+      const res = await request(app).delete('/api/native/notifications');
+      expect(res.status).toBe(401);
+    });
+  });
+
   it('reports the unread count on its own', async () => {
     await send([testData.adminId]);
 

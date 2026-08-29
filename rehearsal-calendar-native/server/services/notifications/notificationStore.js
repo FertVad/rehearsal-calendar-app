@@ -134,6 +134,46 @@ export async function countUnread(userId) {
 }
 
 /**
+ * Delete notifications. Without ids, empties the user's whole inbox.
+ *
+ * Scoped to the user in the WHERE clause rather than checked first — the ids
+ * come from the client, and a check-then-delete would be one more place to
+ * forget the ownership test.
+ *
+ * Deleting an unread one lowers the count, which is why this answers with what
+ * remains: the client sets bell and badge from it without asking again.
+ *
+ * @returns {Promise<{deleted: number, unreadCount: number}>}
+ */
+export async function deleteNotifications(userId, ids = null) {
+  let deleted = 0;
+
+  if (Array.isArray(ids) && ids.length > 0) {
+    const numeric = ids.map(Number).filter((n) => Number.isInteger(n));
+    if (numeric.length === 0) {
+      return { deleted: 0, unreadCount: await countUnread(userId) };
+    }
+
+    const placeholders = numeric.map(() => '?').join(',');
+    const rows = await db.all(
+      `DELETE FROM native_notifications
+       WHERE user_id = ? AND id IN (${placeholders})
+       RETURNING id`,
+      [userId, ...numeric]
+    );
+    deleted = rows.length;
+  } else {
+    const rows = await db.all(
+      'DELETE FROM native_notifications WHERE user_id = ? RETURNING id',
+      [userId]
+    );
+    deleted = rows.length;
+  }
+
+  return { deleted, unreadCount: await countUnread(userId) };
+}
+
+/**
  * Mark notifications read. Without ids, marks the user's whole inbox.
  *
  * Scoped to the user in the WHERE clause rather than checked first — the id

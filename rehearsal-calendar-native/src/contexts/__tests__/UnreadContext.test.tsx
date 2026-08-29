@@ -13,12 +13,16 @@ import { UnreadProvider, useUnread } from '../UnreadContext';
 
 const mockUnreadCount = jest.fn();
 const mockMarkRead = jest.fn();
+const mockRemove = jest.fn();
+const mockRemoveAll = jest.fn();
 const mockSetBadge = jest.fn();
 
 jest.mock('../../shared/services/api', () => ({
   notificationsAPI: {
     unreadCount: (...args: any[]) => mockUnreadCount(...args),
     markRead: (...args: any[]) => mockMarkRead(...args),
+    remove: (...args: any[]) => mockRemove(...args),
+    removeAll: (...args: any[]) => mockRemoveAll(...args),
   },
 }));
 
@@ -39,7 +43,7 @@ jest.mock('expo-notifications', () => ({
 }));
 
 function Probe() {
-  const { unreadCount, refresh, markRead } = useUnread();
+  const { unreadCount, refresh, markRead, remove, removeAll } = useUnread();
   return (
     <>
       <Text testID="count">{String(unreadCount)}</Text>
@@ -51,6 +55,12 @@ function Probe() {
       </TouchableOpacity>
       <TouchableOpacity testID="read-one" onPress={() => markRead([7])}>
         <Text>one</Text>
+      </TouchableOpacity>
+      <TouchableOpacity testID="remove-one" onPress={() => remove(7)}>
+        <Text>remove</Text>
+      </TouchableOpacity>
+      <TouchableOpacity testID="remove-all" onPress={() => removeAll()}>
+        <Text>remove all</Text>
       </TouchableOpacity>
     </>
   );
@@ -67,6 +77,8 @@ beforeEach(() => {
   for (const k of Object.keys(mockStorage)) delete mockStorage[k];
   mockUnreadCount.mockReset().mockResolvedValue({ data: { unreadCount: 3 } });
   mockMarkRead.mockReset().mockResolvedValue({ data: { unreadCount: 0 } });
+  mockRemove.mockReset().mockResolvedValue({ data: { unreadCount: 2 } });
+  mockRemoveAll.mockReset().mockResolvedValue({ data: { unreadCount: 0 } });
   mockSetBadge.mockReset();
 });
 
@@ -174,6 +186,42 @@ describe('Unread count', () => {
     });
 
     expect(getByTestId('count').props.children).toBe('3');
+  });
+
+  it('lowers the count when an unread one is deleted', async () => {
+    const { getByTestId } = renderProbe();
+
+    fireEvent.press(getByTestId('refresh'));
+    await waitFor(() => expect(getByTestId('count').props.children).toBe('3'));
+
+    fireEvent.press(getByTestId('remove-one'));
+
+    await waitFor(() => expect(getByTestId('count').props.children).toBe('2'));
+    expect(mockRemove).toHaveBeenCalledWith(7);
+  });
+
+  it('reports whether the deletion actually happened', async () => {
+    // The screen removes the row before asking, so it needs to know when to put
+    // it back.
+    mockRemove.mockRejectedValueOnce(new Error('gone'));
+    const { getByTestId } = renderProbe();
+
+    await act(async () => {
+      fireEvent.press(getByTestId('remove-one'));
+    });
+
+    expect(getByTestId('count').props.children).toBe('0');
+  });
+
+  it('empties the count when the inbox is cleared', async () => {
+    const { getByTestId } = renderProbe();
+
+    fireEvent.press(getByTestId('refresh'));
+    await waitFor(() => expect(getByTestId('count').props.children).toBe('3'));
+
+    fireEvent.press(getByTestId('remove-all'));
+
+    await waitFor(() => expect(getByTestId('count').props.children).toBe('0'));
   });
 
   it('survives a server answer with no number in it', async () => {
