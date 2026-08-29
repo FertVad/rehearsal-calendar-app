@@ -124,13 +124,24 @@ export default function NotificationsScreen() {
   const deleteOne = async (item: NotificationItem) => {
     // Gone from the list first: the row has already slid away under the
     // reader's thumb, and putting it back on success would be a stutter.
+    const wasAt = items.findIndex((n) => n.id === item.id);
     setItems((prev) => prev.filter((n) => n.id !== item.id));
 
     const ok = await remove(item.id);
-    if (!ok) {
-      Alert.alert(t.common.error, t.notifications.deleteError);
-      load();
-    }
+    if (ok) return;
+
+    // Put it back where it was, from memory. Asking the server for the list
+    // instead was wrong in the one case this matters: with no connection that
+    // request fails too, so the row stayed gone and came back only once the
+    // network did — the app claiming a deletion it had not managed.
+    setItems((prev) => {
+      if (prev.some((n) => n.id === item.id)) return prev;
+      const restored = [...prev];
+      restored.splice(wasAt < 0 ? 0 : Math.min(wasAt, restored.length), 0, item);
+      return restored;
+    });
+
+    Alert.alert(t.common.error, t.notifications.deleteError);
   };
 
   const confirmClearAll = () => {
@@ -140,8 +151,16 @@ export default function NotificationsScreen() {
         text: t.notifications.clearAll,
         style: 'destructive',
         onPress: async () => {
+          // Same care as a single row: emptied on screen at once, and put back
+          // in full if the server never heard about it.
+          const before = items;
           setItems([]);
-          await removeAll();
+
+          const ok = await removeAll();
+          if (!ok) {
+            setItems(before);
+            Alert.alert(t.common.error, t.notifications.deleteError);
+          }
         },
       },
     ]);
