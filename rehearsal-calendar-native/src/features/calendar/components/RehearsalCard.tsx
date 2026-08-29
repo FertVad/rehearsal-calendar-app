@@ -7,11 +7,7 @@ import { Colors } from '../../../shared/constants/colors';
 import { Rehearsal, RSVPStatus } from '../../../shared/types';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
-
-export interface AdminStats {
-  confirmed: number;
-  invited: number;
-}
+import { useSeen } from '../../../contexts/SeenContext';
 
 interface RehearsalCardProps {
   rehearsal: Rehearsal;
@@ -24,17 +20,8 @@ interface RehearsalCardProps {
   projectName?: string;
   isAdmin: boolean;
   isSynced?: boolean;
-  currentResponse: RSVPStatus;
-  isResponding: boolean;
-  stats?: AdminStats;
   onPress: () => void;
   onDelete: (rehearsalId: string) => void;
-  onToggleSeen: (
-    rehearsalId: string,
-    currentStatus: RSVPStatus | null,
-    onSuccess: (rehearsalId: string, status: RSVPStatus, stats?: AdminStats) => void
-  ) => void | Promise<void>;
-  onSeenChanged: (rehearsalId: string, status: RSVPStatus, stats?: AdminStats) => void;
 }
 
 /**
@@ -50,16 +37,19 @@ export default function RehearsalCard({
   projectName,
   isAdmin,
   isSynced = false,
-  currentResponse,
-  isResponding,
-  stats,
   onPress,
   onDelete,
-  onToggleSeen,
-  onSeenChanged,
 }: RehearsalCardProps) {
   const { t } = useI18n();
   const navigation = useNavigation<any>();
+
+  // Read straight from the store. These used to arrive as five props threaded
+  // from the screen through every list in between, which is why a second list
+  // could only show this card by being handed its own copy of the state.
+  const { responseFor, statsFor, isResponding, toggleSeen } = useSeen();
+  const currentResponse = responseFor(rehearsal.id);
+  const stats = statsFor(rehearsal.id);
+  const responding = isResponding(rehearsal.id);
 
   const seenLabel =
     stats && (stats.confirmed > 0 || isAdmin)
@@ -156,9 +146,9 @@ export default function RehearsalCard({
           style={styles.seenButton}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            onToggleSeen(rehearsal.id, currentResponse, onSeenChanged);
+            toggleSeen(rehearsal.id);
           }}
-          disabled={isResponding}
+          disabled={responding}
         >
           <Ionicons
             name={currentResponse === 'yes' ? 'eye' : 'eye-off-outline'}

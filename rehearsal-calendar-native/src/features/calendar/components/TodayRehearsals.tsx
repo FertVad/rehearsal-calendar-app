@@ -12,24 +12,11 @@ import { getDateLocale } from '../../../shared/utils/locale';
 import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
 import RehearsalCard from './RehearsalCard';
 
-interface AdminStats {
-  confirmed: number;
-  invited: number;
-}
-
 interface TodayRehearsalsProps {
   rehearsals: Rehearsal[];
   selectedDate: string;
   loading: boolean;
   projects: Project[];
-  rsvpResponses: Record<string, RSVPStatus>;
-  respondingId: string | null;
-  adminStats: Record<string, AdminStats>;
-  onRSVP: (
-    rehearsalId: string,
-    currentStatus: RSVPStatus | null,
-    onSuccess: (rehearsalId: string, status: RSVPStatus, stats?: AdminStats) => void
-  ) => Promise<void>;
   onDeleteRehearsal: (rehearsalId: string) => void;
   /** Opening the details sheet belongs to the calendar. This component used to
    *  render its own, which meant two of them on one screen with separate state:
@@ -37,8 +24,6 @@ interface TodayRehearsalsProps {
    *  tapped notification, so the second was presented over the first and iOS
    *  kept a layer that ate every touch. */
   onOpenRehearsal: (rehearsal: Rehearsal) => void;
-  setRsvpResponses: React.Dispatch<React.SetStateAction<Record<string, RSVPStatus>>>;
-  setAdminStats: React.Dispatch<React.SetStateAction<Record<string, AdminStats>>>;
 }
 
 export default function TodayRehearsals({
@@ -46,13 +31,7 @@ export default function TodayRehearsals({
   selectedDate,
   loading,
   projects,
-  rsvpResponses,
-  respondingId,
-  adminStats,
-  onRSVP,
   onDeleteRehearsal,
-  setRsvpResponses,
-  setAdminStats,
   onOpenRehearsal,
 }: TodayRehearsalsProps) {
   const { t, language } = useI18n();
@@ -125,11 +104,8 @@ export default function TodayRehearsals({
       <Text style={styles.sectionTitle}>{dateLabel}</Text>
       <View style={styles.todayList}>
         {rehearsals.map((rehearsal) => {
-          const currentResponse = rsvpResponses[rehearsal.id];
-          const isResponding = respondingId === rehearsal.id;
           const project = rehearsal.projectId ? projectsMap.get(rehearsal.projectId) : undefined;
           const isAdminForThisRehearsal = project?.is_admin || false;
-          const stats = adminStats[rehearsal.id];
 
           return (
             <RehearsalCard
@@ -138,18 +114,8 @@ export default function TodayRehearsals({
               projectName={project?.name || rehearsal.projectName}
               isAdmin={isAdminForThisRehearsal}
               isSynced={syncedRehearsals[rehearsal.id]}
-              currentResponse={currentResponse}
-              isResponding={isResponding}
-              stats={stats}
               onPress={() => onOpenRehearsal(rehearsal)}
               onDelete={onDeleteRehearsal}
-              onToggleSeen={onRSVP}
-              onSeenChanged={(id, status, serverStats) => {
-                setRsvpResponses(prev => ({ ...prev, [id]: status }));
-                if (serverStats && isAdminForThisRehearsal) {
-                  setAdminStats(prev => ({ ...prev, [id]: serverStats }));
-                }
-              }}
             />
           );
         })}

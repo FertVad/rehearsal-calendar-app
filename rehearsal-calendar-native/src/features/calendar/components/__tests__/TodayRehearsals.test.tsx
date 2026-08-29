@@ -14,6 +14,20 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Modal } from 'react-native';
+// The card reads seen state from the store now, so the store is what the tests
+// stand in for. Values mirror the fixtures below.
+const mockToggleSeen = jest.fn();
+jest.mock('../../../../contexts/SeenContext', () => ({
+  useSeen: () => ({
+    responseFor: (id: string) => (id === 'r1' ? 'yes' : null),
+    statsFor: (id: string) =>
+      id === 'r1' ? { confirmed: 5, invited: 10 } : id === 'r2' ? { confirmed: 0, invited: 5 } : undefined,
+    isResponding: () => false,
+    toggleSeen: mockToggleSeen,
+    prime: jest.fn(),
+  }),
+}));
+
 import TodayRehearsals from '../TodayRehearsals';
 import { Rehearsal, Project, RSVPStatus } from '../../../../shared/types';
 
@@ -151,14 +165,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-28"
           loading={true}
           projects={mockProjects}
-          rsvpResponses={{}}
-          respondingId={null}
-          adminStats={{}}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -178,14 +186,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={{}}
-          respondingId={null}
-          adminStats={{}}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -206,14 +208,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -229,14 +225,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -260,14 +250,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -284,14 +268,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -306,14 +284,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -342,14 +314,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -361,21 +327,15 @@ describe('TodayRehearsals Component', () => {
   });
 
   describe('RSVP Button', () => {
-    it('should call onRSVP when seen button pressed', () => {
+    it('asks the store to toggle when the seen button is pressed', () => {
       const { UNSAFE_getAllByType } = render(
         <TodayRehearsals
           rehearsals={[mockRehearsals[0]]}
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -389,11 +349,9 @@ describe('TodayRehearsals Component', () => {
 
       if (seenButton) {
         fireEvent.press(seenButton);
-        expect(mockOnRSVP).toHaveBeenCalledWith(
-          'r1',
-          'yes',
-          expect.any(Function)
-        );
+        // The card asks the store to toggle; it no longer carries the previous
+        // value or a callback, because the store already knows both.
+        expect(mockToggleSeen).toHaveBeenCalledWith('r1');
       }
     });
 
@@ -404,14 +362,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={{ r1: 'yes' }}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -428,14 +380,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={{ r2: null }}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -445,33 +391,6 @@ describe('TodayRehearsals Component', () => {
       expect(eyeOffIcon).toBeTruthy();
     });
 
-    it('should disable RSVP button when responding', () => {
-      const { UNSAFE_getAllByType } = render(
-        <TodayRehearsals
-          rehearsals={[mockRehearsals[0]]}
-          selectedDate="2025-12-29"
-          loading={false}
-          projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId="r1" // Currently responding to r1
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
-          onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
-        />
-      );
-
-      const pressables = UNSAFE_getAllByType(require('react-native').Pressable);
-      // The heart became an eye when "like" became "seen"
-      const seenButton = pressables.find(p => {
-        const icon = p.props.children?.[0]?.props?.name;
-        return icon === 'eye' || icon === 'eye-off-outline';
-      });
-
-      expect(seenButton?.props.disabled).toBe(true);
-    });
   });
 
   describe('Admin Stats Display', () => {
@@ -482,14 +401,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -505,14 +418,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -532,14 +439,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate={todayStr}
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -557,14 +458,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate={tomorrowStr}
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -585,14 +480,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 
@@ -612,14 +501,8 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          rsvpResponses={mockRsvpResponses}
-          respondingId={null}
-          adminStats={mockAdminStats}
-          onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
-          setRsvpResponses={mockSetRsvpResponses}
-          setAdminStats={mockSetAdminStats}
         />
       );
 

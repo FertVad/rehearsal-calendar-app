@@ -5,7 +5,6 @@
  * - fetchRehearsals with all projects (batch endpoint)
  * - fetchRehearsals with single project
  * - transformRehearsal (ISO to legacy format)
- * - updateAdminStats
  * - Error handling
  * - Loading states
  */
@@ -40,6 +39,10 @@ jest.mock('../../../../contexts/I18nContext', () => ({
     setLanguage: jest.fn(),
     t: jest.requireActual('../../../../i18n/translations').ru,
   }),
+}));
+const mockPrime = jest.fn();
+jest.mock('../../../../contexts/SeenContext', () => ({
+  useSeen: () => ({ prime: mockPrime }),
 }));
 jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -116,15 +119,12 @@ describe('useRehearsals Hook', () => {
         endTime: '12:00',
       });
 
-      // Should extract RSVP responses
-      expect(result.current.rsvpResponses).toEqual({
-        r1: 'yes',
-      });
-
-      // Should extract admin stats
-      expect(result.current.adminStats).toEqual({
-        r1: { confirmed: 5, invited: 10 },
-      });
+      // Seen state now lives in the shared store, so what matters is what the
+      // hook handed over rather than what it kept.
+      expect(mockPrime).toHaveBeenCalledWith(
+        { r1: 'yes' },
+        { r1: { confirmed: 5, invited: 10 } }
+      );
 
       expect(result.current.loading).toBe(false);
       expect(result.current.error).toBeNull();
@@ -142,8 +142,7 @@ describe('useRehearsals Hook', () => {
       });
 
       expect(result.current.rehearsals).toEqual([]);
-      expect(result.current.rsvpResponses).toEqual({});
-      expect(result.current.adminStats).toEqual({});
+      expect(mockPrime).toHaveBeenCalledWith({}, {});
     });
   });
 
@@ -189,13 +188,11 @@ describe('useRehearsals Hook', () => {
 
       // Should fetch RSVP for upcoming rehearsals
       expect(rehearsalsAPI.getMyResponse).toHaveBeenCalledWith('r1');
-      expect(result.current.rsvpResponses).toEqual({ r1: 'yes' });
-
-      // Should fetch admin stats for admin projects
       expect(rehearsalsAPI.getResponses).toHaveBeenCalledWith('r1');
-      expect(result.current.adminStats).toEqual({
-        r1: { confirmed: 5, invited: 10 },
-      });
+      expect(mockPrime).toHaveBeenCalledWith(
+        { r1: 'yes' },
+        { r1: { confirmed: 5, invited: 10 } }
+      );
     });
 
     it('should not fetch admin stats for non-admin projects', async () => {
@@ -226,7 +223,7 @@ describe('useRehearsals Hook', () => {
 
       // Should NOT fetch admin stats
       expect(rehearsalsAPI.getResponses).not.toHaveBeenCalled();
-      expect(result.current.adminStats).toEqual({});
+      expect(mockPrime).toHaveBeenCalledWith(expect.anything(), {});
     });
 
     it('should only fetch RSVP for upcoming rehearsals', async () => {
@@ -359,75 +356,6 @@ describe('useRehearsals Hook', () => {
     });
   });
 
-  describe('updateAdminStats', () => {
-    it('should update admin stats for specific rehearsal', async () => {
-      // Responses are binary — seen or not. 'declined' and 'tentative' went
-      // when the heart became an eye, and the hook keeps only what it is given.
-      const mockStats = {
-        confirmed: 8,
-        invited: 15,
-      };
-
-      (rehearsalsAPI.getResponses as jest.Mock).mockResolvedValue({
-        data: { stats: mockStats },
-      });
-
-      const { result } = renderHook(() => useRehearsals(mockProjects, null));
-
-      await act(async () => {
-        await result.current.updateAdminStats('r1');
-      });
-
-      expect(rehearsalsAPI.getResponses).toHaveBeenCalledWith('r1');
-      expect(result.current.adminStats).toEqual({
-        r1: mockStats,
-      });
-    });
-
-    it('should handle errors gracefully', async () => {
-      const consoleError = jest.spyOn(console, 'error').mockImplementation();
-      (rehearsalsAPI.getResponses as jest.Mock).mockRejectedValue(
-        new Error('Stats fetch failed')
-      );
-
-      const { result } = renderHook(() => useRehearsals(mockProjects, null));
-
-      await act(async () => {
-        await result.current.updateAdminStats('r1');
-      });
-
-      expect(consoleError).toHaveBeenCalledWith(
-        'Failed to update admin stats for r1:',
-        expect.any(Error)
-      );
-
-      consoleError.mockRestore();
-    });
-
-    it('should merge stats with existing ones', async () => {
-      const mockStats1 = { confirmed: 5, invited: 10 };
-      const mockStats2 = { confirmed: 7, invited: 12 };
-
-      (rehearsalsAPI.getResponses as jest.Mock)
-        .mockResolvedValueOnce({ data: { stats: mockStats1 } })
-        .mockResolvedValueOnce({ data: { stats: mockStats2 } });
-
-      const { result } = renderHook(() => useRehearsals(mockProjects, null));
-
-      await act(async () => {
-        await result.current.updateAdminStats('r1');
-      });
-
-      await act(async () => {
-        await result.current.updateAdminStats('r2');
-      });
-
-      expect(result.current.adminStats).toEqual({
-        r1: mockStats1,
-        r2: mockStats2,
-      });
-    });
-  });
 
   describe('transformRehearsal', () => {
     it('should transform ISO timestamps to legacy format', async () => {
@@ -491,35 +419,4 @@ describe('useRehearsals Hook', () => {
     });
   });
 
-  describe('State Setters', () => {
-    it('should allow manual RSVP updates via setRsvpResponses', async () => {
-      const { result } = renderHook(() => useRehearsals(mockProjects, null));
-
-      act(() => {
-        result.current.setRsvpResponses({
-          r1: 'yes',
-          r2: null,
-        });
-      });
-
-      expect(result.current.rsvpResponses).toEqual({
-        r1: 'yes',
-        r2: null,
-      });
-    });
-
-    it('should allow manual admin stats updates via setAdminStats', async () => {
-      const { result } = renderHook(() => useRehearsals(mockProjects, null));
-
-      act(() => {
-        result.current.setAdminStats({
-          r1: { confirmed: 10, invited: 20 },
-        });
-      });
-
-      expect(result.current.adminStats).toEqual({
-        r1: { confirmed: 10, invited: 20 },
-      });
-    });
-  });
 });

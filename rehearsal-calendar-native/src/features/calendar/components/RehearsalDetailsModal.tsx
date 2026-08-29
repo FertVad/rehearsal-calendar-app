@@ -17,6 +17,7 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../sh
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useSeen } from '../../../contexts/SeenContext';
 import { Rehearsal, RSVPStatus, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDateLocalized } from '../../../shared/utils/time';
@@ -45,13 +46,7 @@ interface RehearsalDetailsModalProps {
   rehearsal: Rehearsal | null;
   project: Project | null;
   isAdmin: boolean;
-  currentResponse: RSVPStatus | null;
-  onRSVP: (
-    rehearsalId: string,
-    currentStatus: RSVPStatus | null,
-    onSuccess: (rehearsalId: string, status: RSVPStatus, stats?: AdminStats) => void
-  ) => Promise<void>;
-  onRSVPSuccess?: (rehearsalId: string, status: RSVPStatus, stats?: AdminStats) => void;
+  currentResponse?: RSVPStatus | null;
 }
 
 export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
@@ -61,12 +56,10 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
   rehearsal,
   project,
   isAdmin,
-  currentResponse,
-  onRSVP,
-  onRSVPSuccess,
 }) => {
   const { t, language } = useI18n();
   const { user } = useAuth();
+  const { toggleSeen, statsFor } = useSeen();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -123,23 +116,20 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
     setRespondingUserId(participant.userId);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    await onRSVP(rehearsal.id, participant.hasSeen ? 'yes' : null, (id, status, serverStats) => {
-      // Update participant list
-      setParticipants(prev => prev.map(p =>
-        p.userId === participant.userId
-          ? { ...p, hasSeen: status === 'yes', hasResponded: true }
-          : p
-      ));
+    // The store owns the toggle and every card in the app reads from it, so the
+    // list behind this sheet updates without being told.
+    const wasSeen = participant.hasSeen;
+    setParticipants(prev => prev.map(p =>
+      p.userId === participant.userId
+        ? { ...p, hasSeen: !wasSeen, hasResponded: true }
+        : p
+    ));
 
-      if (serverStats) {
-        setStats(serverStats);
-      }
+    await toggleSeen(rehearsal.id);
 
-      // Update parent component state
-      if (onRSVPSuccess) {
-        onRSVPSuccess(id, status, serverStats);
-      }
-    });
+    // The counts shown here come from the same place the cards read.
+    const fresh = statsFor(rehearsal.id);
+    if (fresh) setStats(fresh);
 
     setRespondingUserId(null);
   };

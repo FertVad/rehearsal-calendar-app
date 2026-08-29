@@ -18,7 +18,7 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
-import { useRehearsals, useRSVP } from '../hooks';
+import { useRehearsals } from '../hooks';
 import { calendarScreenStyles as styles } from '../styles';
 import { unsyncRehearsal } from '../../../shared/services/calendar';
 
@@ -72,10 +72,6 @@ export default function CalendarScreen() {
     loading,
     refreshing,
     error,
-    rsvpResponses,
-    setRsvpResponses,
-    adminStats,
-    setAdminStats,
     fetchRehearsals,
   } = useRehearsals(projects, filterProjectId);
 
@@ -169,7 +165,6 @@ export default function CalendarScreen() {
     setDetailsModalVisible(false);
   }, [wantedRehearsalId, rehearsals, detailsModalVisible, selectedRehearsalForDetails, openDetails]);
 
-  const { respondingId, toggleSeen } = useRSVP();
 
   const handleDayLongPress = useCallback((date: string) => {
     navigation.navigate('AddRehearsal', {
@@ -430,13 +425,7 @@ export default function CalendarScreen() {
           selectedDate={selectedDate}
           loading={loading}
           projects={projects}
-          rsvpResponses={rsvpResponses}
-          respondingId={respondingId}
-          adminStats={adminStats}
-          onRSVP={toggleSeen}
           onDeleteRehearsal={handleDeleteRehearsal}
-          setRsvpResponses={setRsvpResponses}
-          setAdminStats={setAdminStats}
           onOpenRehearsal={openDetails}
         />
 
@@ -475,12 +464,9 @@ export default function CalendarScreen() {
           ) : (
             <View style={styles.upcomingList}>
               {upcomingRehearsals.map((rehearsal) => {
-                const currentResponse = rsvpResponses[rehearsal.id];
-                const isResponding = respondingId === rehearsal.id;
                 const project = projects.find(p => p.id === rehearsal.projectId);
                 // Check if user is admin for THIS specific rehearsal's project
                 const isAdminForThisRehearsal = project?.is_admin || false;
-                const stats = adminStats[rehearsal.id];
 
                 return (
                   <RehearsalCard
@@ -489,18 +475,8 @@ export default function CalendarScreen() {
                     dateLabel={getRelativeDateLabel(rehearsal.date || '')}
                     projectName={project?.name || rehearsal.projectName}
                     isAdmin={isAdminForThisRehearsal}
-                    currentResponse={currentResponse}
-                    isResponding={isResponding}
-                    stats={stats}
                     onPress={() => openDetails(rehearsal)}
                     onDelete={handleDeleteRehearsal}
-                    onToggleSeen={toggleSeen}
-                    onSeenChanged={(id, status, serverStats) => {
-                      setRsvpResponses(prev => ({ ...prev, [id]: status }));
-                      if (serverStats && isAdminForThisRehearsal) {
-                        setAdminStats(prev => ({ ...prev, [id]: serverStats }));
-                      }
-                    }}
                   />
                 );
               })}
@@ -518,17 +494,6 @@ export default function CalendarScreen() {
         rehearsal={selectedRehearsalForDetails}
         project={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId) || null : null}
         isAdmin={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId)?.is_admin || false : false}
-        currentResponse={selectedRehearsalForDetails ? rsvpResponses[selectedRehearsalForDetails.id] : null}
-        onRSVP={toggleSeen}
-        onRSVPSuccess={(id, status, serverStats) => {
-          setRsvpResponses(prev => ({ ...prev, [id]: status }));
-          if (serverStats && selectedRehearsalForDetails) {
-            const isAdminForThisRehearsal = projects.find(p => p.id === selectedRehearsalForDetails.projectId)?.is_admin || false;
-            if (isAdminForThisRehearsal) {
-              setAdminStats(prev => ({ ...prev, [id]: serverStats }));
-            }
-          }
-        }}
       />
     </SafeAreaView>
   );
