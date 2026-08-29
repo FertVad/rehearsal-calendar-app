@@ -14,6 +14,9 @@ interface UnreadContextValue {
   refresh: () => Promise<void>;
   /** Without ids, marks the whole inbox. */
   markRead: (ids?: number[]) => Promise<void>;
+  /** Deleting an unread one lowers the count, so it goes through here too. */
+  remove: (id: number) => Promise<boolean>;
+  removeAll: () => Promise<void>;
 }
 
 const UnreadContext = createContext<UnreadContextValue | undefined>(undefined);
@@ -77,6 +80,26 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
     }
   }, [remember]);
 
+  const remove = useCallback(async (id: number) => {
+    try {
+      const res = await notificationsAPI.remove(id);
+      remember(res.data?.unreadCount ?? 0);
+      return true;
+    } catch (error) {
+      logger.warn('[Unread] Could not delete:', error);
+      return false;
+    }
+  }, [remember]);
+
+  const removeAll = useCallback(async () => {
+    try {
+      const res = await notificationsAPI.removeAll();
+      remember(res.data?.unreadCount ?? 0);
+    } catch (error) {
+      logger.warn('[Unread] Could not clear the inbox:', error);
+    }
+  }, [remember]);
+
   // The badge is not set at the call sites; it follows the count. Six places
   // used to set it, which is six chances for it to disagree with the bell.
   //
@@ -90,7 +113,10 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
     });
   }, [known, unreadCount]);
 
-  const value = useMemo(() => ({ unreadCount, refresh, markRead }), [unreadCount, refresh, markRead]);
+  const value = useMemo(
+    () => ({ unreadCount, refresh, markRead, remove, removeAll }),
+    [unreadCount, refresh, markRead, remove, removeAll]
+  );
 
   return <UnreadContext.Provider value={value}>{children}</UnreadContext.Provider>;
 }

@@ -28,6 +28,27 @@ export const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
   },
+  clearAllText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.accent.red,
+  },
+  // The panel the row slides off to reveal. Its height comes from the card's,
+  // and the bottom margin matches so the two edges line up mid-swipe.
+  deleteAction: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 2,
+    width: 88,
+    marginBottom: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.accent.red,
+  },
+  deleteActionText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.inverse,
+  },
   markAllText: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,

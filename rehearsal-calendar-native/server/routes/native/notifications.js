@@ -8,7 +8,12 @@
 
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
-import { listNotifications, countUnread, markRead } from '../../services/notifications/notificationStore.js';
+import {
+  listNotifications,
+  countUnread,
+  markRead,
+  deleteNotifications,
+} from '../../services/notifications/notificationStore.js';
 import { logger } from '../../utils/logger.js';
 
 const router = Router();
@@ -62,6 +67,46 @@ router.post('/read', requireAuth, async (req, res) => {
   } catch (err) {
     logger.error('[Notifications] Mark read failed:', err);
     res.status(500).json({ error: 'Failed to update notifications' });
+  }
+});
+
+/**
+ * DELETE /api/native/notifications/:id
+ * One notification, the caller's own.
+ */
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ error: 'Invalid notification id' });
+    }
+
+    const { deleted, unreadCount } = await deleteNotifications(req.userId, [id]);
+
+    // Someone else's id deletes nothing. Answering 404 rather than success
+    // keeps the client from believing it removed something it did not.
+    if (deleted === 0) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    res.json({ success: true, unreadCount });
+  } catch (err) {
+    logger.error('[Notifications] Delete failed:', err);
+    res.status(500).json({ error: 'Failed to delete notification' });
+  }
+});
+
+/**
+ * DELETE /api/native/notifications
+ * Empties the caller's inbox. Irreversible, and the app asks first.
+ */
+router.delete('/', requireAuth, async (req, res) => {
+  try {
+    const { deleted, unreadCount } = await deleteNotifications(req.userId);
+    res.json({ success: true, deleted, unreadCount });
+  } catch (err) {
+    logger.error('[Notifications] Delete all failed:', err);
+    res.status(500).json({ error: 'Failed to clear notifications' });
   }
 });
 
