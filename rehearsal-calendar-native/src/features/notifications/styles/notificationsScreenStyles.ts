@@ -36,6 +36,10 @@ export const styles = StyleSheet.create({
   // The panel the row slides off to reveal. Its height comes from the card's,
   // and the bottom margin matches so the two edges line up mid-swipe.
   deleteAction: {
+    // Fills the row's height rather than shrinking to the icon and the word.
+    // It used to be stretched by the gesture container; gesture-handler's own
+    // touchable does not inherit that, so the height is asked for here.
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 2,
