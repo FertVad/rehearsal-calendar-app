@@ -11,6 +11,7 @@ import {
   createRehearsal,
   updateRehearsal,
   deleteRehearsal,
+  getRehearsalById,
 } from '../../services/rehearsals/rehearsalService.js';
 import {
   respondToRehearsal,
@@ -297,6 +298,30 @@ router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching responses:', error);
     res.status(500).json({ error: 'Failed to fetch responses' });
+  }
+});
+
+// GET /api/native/rehearsals/:rehearsalId - One rehearsal, by id
+//
+// The details screen is reached by id — from a card, a tapped notification, and
+// in time a link from outside the app — so it cannot depend on the caller
+// already holding the object.
+//
+// A rehearsal the caller may not see answers 404, the same as one that does not
+// exist: telling the two apart would confirm that a given id belongs to someone
+// else's project.
+router.get('/:rehearsalId', requireAuth, async (req, res) => {
+  try {
+    const rehearsal = await getRehearsalById(req.params.rehearsalId, req.userId);
+
+    if (!rehearsal) {
+      return res.status(404).json({ error: 'Rehearsal not found' });
+    }
+
+    res.json({ rehearsal });
+  } catch (error) {
+    logger.error('[Rehearsals] Fetch by id failed:', error);
+    res.status(500).json({ error: 'Failed to fetch rehearsal' });
   }
 });
 

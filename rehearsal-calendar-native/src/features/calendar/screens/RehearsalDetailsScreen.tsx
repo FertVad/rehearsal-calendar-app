@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  Modal,
   TouchableOpacity,
   FlatList,
   StyleSheet,
@@ -14,9 +13,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useI18n } from '../../../contexts/I18nContext';
+import { useProjects } from '../../../contexts/ProjectContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useSeen } from '../../../contexts/SeenContext';
 import { Rehearsal, RSVPStatus, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDateLocalized } from '../../../shared/utils/time';
@@ -34,39 +36,54 @@ interface AdminStats {
   invited: number;
 }
 
-interface RehearsalDetailsModalProps {
-  visible: boolean;
-  onClose: () => void;
-  /** Fires once the sheet has actually left the screen (iOS). Callers that want
-   *  to open it again on a different rehearsal must wait for this: presenting
-   *  over a modal that is still on screen leaves iOS with a layer it never
-   *  removes, and the screen underneath stops responding to touch. */
-  onDismiss?: () => void;
-  rehearsal: Rehearsal | null;
-  project: Project | null;
-  isAdmin: boolean;
-  currentResponse: RSVPStatus | null;
-  onRSVP: (
-    rehearsalId: string,
-    currentStatus: RSVPStatus | null,
-    onSuccess: (rehearsalId: string, status: RSVPStatus, stats?: AdminStats) => void
-  ) => Promise<void>;
-  onRSVPSuccess?: (rehearsalId: string, status: RSVPStatus, stats?: AdminStats) => void;
-}
+/**
+ * One rehearsal, in full.
+ *
+ * A screen rather than a Modal, and reached by id rather than handed an object.
+ * Both of those are deliberate. Mixing React Native's Modal with the
+ * navigator's own modal screens is what stranded a layer over the calendar and
+ * left it visible but dead to touch; as a route, presentation, stacking and
+ * dismissal are the navigator's problem and cannot collide. And taking an id
+ * means any screen — a card, a tapped notification, the inbox, in time a link
+ * from outside the app — can open it without holding the rehearsal first.
+ */
 
-export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
-  visible,
-  onClose,
-  onDismiss,
-  rehearsal,
-  project,
-  isAdmin,
-  currentResponse,
-  onRSVP,
-  onRSVPSuccess,
-}) => {
+export default function RehearsalDetailsScreen() {
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const rehearsalId: string = String(route.params?.rehearsalId ?? '');
+
   const { t, language } = useI18n();
   const { user } = useAuth();
+  const { projects } = useProjects();
+  const { toggleSeen, statsFor } = useSeen();
+
+  const [rehearsal, setRehearsal] = useState<Rehearsal | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  // Loaded here rather than passed in — see the note above the component.
+  useEffect(() => {
+    let alive = true;
+    if (!rehearsalId) return;
+
+    rehearsalsAPI
+      .getById(rehearsalId)
+      .then((res: any) => {
+        if (alive) setRehearsal(res.data.rehearsal);
+      })
+      .catch((err: any) => {
+        logger.warn('[RehearsalDetails] Could not load:', err);
+        if (alive) setLoadFailed(true);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [rehearsalId]);
+
+  const project = rehearsal ? projects.find(p => p.id === rehearsal.projectId) || null : null;
+  const isAdmin = project?.is_admin || false;
+  const onClose = () => navigation.goBack();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -74,7 +91,7 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
 
   // Load participants
   useEffect(() => {
-    if (!visible || !rehearsal) {
+    if (!rehearsal) {
       setParticipants([]);
       setStats(null);
       return;
@@ -100,7 +117,7 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
           const invited = participantsList.length;
           setStats({ confirmed, invited });
         } else {
-          logger.warn('[RehearsalDetailsModal] Response had no allParticipants');
+          logger.warn('[RehearsalDetails] Response had no allParticipants');
         }
       } catch (err) {
         console.error('Failed to load participants:', err);
@@ -110,9 +127,7 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
     };
 
     loadParticipants();
-  }, [visible, rehearsal]);
-
-  if (!rehearsal) return null;
+  }, [rehearsal]);
 
   const handleParticipantToggle = async (participant: Participant) => {
     // Only allow users to toggle their own status
@@ -123,23 +138,20 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
     setRespondingUserId(participant.userId);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    await onRSVP(rehearsal.id, participant.hasSeen ? 'yes' : null, (id, status, serverStats) => {
-      // Update participant list
-      setParticipants(prev => prev.map(p =>
-        p.userId === participant.userId
-          ? { ...p, hasSeen: status === 'yes', hasResponded: true }
-          : p
-      ));
+    // The store owns the toggle and every card in the app reads from it, so the
+    // list behind this sheet updates without being told.
+    const wasSeen = participant.hasSeen;
+    setParticipants(prev => prev.map(p =>
+      p.userId === participant.userId
+        ? { ...p, hasSeen: !wasSeen, hasResponded: true }
+        : p
+    ));
 
-      if (serverStats) {
-        setStats(serverStats);
-      }
+    await toggleSeen(rehearsal!.id);
 
-      // Update parent component state
-      if (onRSVPSuccess) {
-        onRSVPSuccess(id, status, serverStats);
-      }
-    });
+    // The counts shown here come from the same place the cards read.
+    const fresh = statsFor(rehearsal!.id);
+    if (fresh) setStats(fresh);
 
     setRespondingUserId(null);
   };
@@ -191,22 +203,43 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
     return <View key={item.userId}>{content}</View>;
   };
 
-  // Format date
+  if (loadFailed) {
+    return (
+      <View style={styles.sheet}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Ionicons name="calendar" size={24} color={Colors.accent.purple} />
+            <Text style={styles.headerTitle}>{t.rehearsals.rehearsalDetails}</Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={Colors.text.secondary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.centred}>
+          <Text style={styles.missingText}>{t.rehearsals.notFound}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!rehearsal) {
+    return (
+      <View style={styles.sheet}>
+        <View style={styles.centred}>
+          <ActivityIndicator size="large" color={Colors.accent.purple} />
+        </View>
+      </View>
+    );
+  }
+
   const locale = getDateLocale(language);
   const formattedDate = rehearsal.date
     ? formatDateLocalized(rehearsal.date, { day: 'numeric', month: 'long', weekday: 'long' }, locale)
     : '';
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      onDismiss={onDismiss}
-    >
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
+      <View style={styles.sheet}>
+        <View style={styles.sheetInner}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerContent}>
@@ -298,25 +331,30 @@ export const RehearsalDetailsModal: React.FC<RehearsalDetailsModalProps> = ({
           </ScrollView>
         </View>
       </View>
-    </Modal>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  overlay: {
+  // The navigator presents this as a sheet, so there is no backdrop or rounded
+  // top to draw here — only the surface itself.
+  sheet: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
     backgroundColor: Colors.bg.secondary,
-    borderTopLeftRadius: BorderRadius.lg,
-    borderTopRightRadius: BorderRadius.lg,
-    // Grow to fit the roster instead of always claiming the same slice of
-    // screen: a two-person call stays compact, an eight-person one gets room
-    // before it has to scroll.
-    maxHeight: '90%',
+  },
+  sheetInner: {
+    flex: 1,
     paddingBottom: Spacing.xl,
+  },
+  centred: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
+  missingText: {
+    fontSize: FontSize.base,
+    color: Colors.text.secondary,
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',

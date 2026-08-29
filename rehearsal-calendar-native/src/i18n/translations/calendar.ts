@@ -82,6 +82,8 @@ export interface RehearsalsTranslations {
   busyAllDay: string;
   busyTime: string;
   rehearsalDetails: string;
+  /** Shown when a rehearsal cannot be opened — deleted, or the reader was taken off it. */
+  notFound: string;
   like: string;
   unlike: string;
   recommendedTime: string;
@@ -173,6 +175,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     busyAllDay: 'Занят весь день',
     busyTime: 'Занят',
     rehearsalDetails: 'Детали репетиции',
+    notFound: 'Репетиция не найдена. Возможно, её удалили или вас сняли с неё.',
     like: 'Иду',
     unlike: 'Отменить',
     recommendedTime: 'Рекомендованное время',
@@ -265,6 +268,7 @@ needProject: 'Rehearsals show up once you are in a project',
     busyAllDay: 'Busy all day',
     busyTime: 'Busy',
     rehearsalDetails: 'Rehearsal Details',
+    notFound: 'This rehearsal is not available. It may have been deleted, or you were taken off it.',
     like: 'Going',
     unlike: 'Cancel',
     recommendedTime: 'Recommended Time',
@@ -357,6 +361,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     busyAllDay: 'Ocupado todo el día',
     busyTime: 'Ocupado',
     rehearsalDetails: 'Detalles del ensayo',
+    notFound: 'Este ensayo no está disponible. Puede que se haya eliminado o que los hayan quitado de él.',
     like: 'Voy',
     unlike: 'Cancelar',
     recommendedTime: 'Hora recomendada',
@@ -449,6 +454,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     busyAllDay: 'Ganztägig beschäftigt',
     busyTime: 'Beschäftigt',
     rehearsalDetails: 'Probendetails',
+    notFound: 'Diese Probe ist nicht verfügbar. Vielleicht wurde sie gelöscht, oder du wurdest abgemeldet.',
     like: 'Ich komme',
     unlike: 'Abmelden',
     recommendedTime: 'Empfohlene Zeit',

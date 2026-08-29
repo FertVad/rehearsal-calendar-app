@@ -160,6 +160,12 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
     }
   };
 
+  // RehearsalDetails lives in the root stack rather than this one. navigate
+  // bubbles up to find it, which the types available here cannot express.
+  const openRehearsal = (rehearsalId: string) => {
+    (navigation as any).navigate('RehearsalDetails', { rehearsalId: String(rehearsalId) });
+  };
+
   const handleCopyCode = async () => {
     if (!inviteCode) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -446,7 +452,12 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
           ) : upcomingExpanded ? (
             <View style={styles.rehearsalsList}>
               {upcomingRehearsals.map(rehearsal => (
-                <View key={rehearsal.id} style={styles.rehearsalCard}>
+                <TouchableOpacity
+                  key={rehearsal.id}
+                  style={styles.rehearsalCard}
+                  onPress={() => openRehearsal(rehearsal.id)}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.rehearsalDate}>
                     <Text style={styles.rehearsalDateText}>{formatDate(rehearsal.date, language)}</Text>
                   </View>
@@ -472,7 +483,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
                       </View>
                     )}
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           ) : null}
@@ -499,7 +510,12 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
             {pastExpanded && (
               <View style={styles.rehearsalsList}>
                 {pastRehearsals.map(rehearsal => (
-                  <View key={rehearsal.id} style={[styles.rehearsalCard, styles.pastCard]}>
+                  <TouchableOpacity
+                    key={rehearsal.id}
+                    style={[styles.rehearsalCard, styles.pastCard]}
+                    onPress={() => openRehearsal(rehearsal.id)}
+                    activeOpacity={0.7}
+                  >
                     <View style={[styles.rehearsalDate, styles.pastDate]}>
                       <Text style={[styles.rehearsalDateText, styles.pastDateText]}>
                         {formatDate(rehearsal.date, language)}
@@ -516,7 +532,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
                         </Text>
                       </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}

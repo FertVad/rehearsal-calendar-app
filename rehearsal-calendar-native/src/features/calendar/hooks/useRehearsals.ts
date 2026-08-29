@@ -8,6 +8,7 @@ import {
   isoToTimeStringInTimezone,
 } from '../../../shared/utils/time';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useSeen } from '../../../contexts/SeenContext';
 
 // Cache duration in milliseconds (15 seconds)
 const CACHE_DURATION = 15000;
@@ -43,10 +44,12 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [rsvpResponses, setRsvpResponses] = useState<Record<string, RSVPStatus>>({});
-  const [adminStats, setAdminStats] = useState<Record<string, { confirmed: number; invited: number }>>({});
   const lastFetchTime = useRef<number>(0);
   const isInitialLoadRef = useRef(true);
+
+  // Seen state lives in one place for the whole app, so this hook hands what
+  // the server told it to the store rather than keeping a copy of its own.
+  const { prime } = useSeen();
 
   // ✅ Get user's timezone from AuthContext
   const { user } = useAuth();
@@ -152,8 +155,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
       }
 
       setRehearsals(fetchedRehearsals);
-      setRsvpResponses(responses);
-      setAdminStats(stats);
+      prime(responses, stats);
 
       // Update cache timestamp and mark initial load complete
       lastFetchTime.current = Date.now();
@@ -165,35 +167,13 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
       setLoading(false);
       setRefreshing(false);
     }
-  }, [projects, filterProjectId, userTimezone]);
-
-  const updateAdminStats = useCallback(async (rehearsalId: string) => {
-    try {
-      const res = await rehearsalsAPI.getResponses(rehearsalId);
-      if (res.data.stats) {
-        setAdminStats(prev => ({
-          ...prev,
-          [rehearsalId]: {
-            confirmed: res.data.stats.confirmed,
-            invited: res.data.stats.invited,
-          },
-        }));
-      }
-    } catch (err) {
-      console.error(`Failed to update admin stats for ${rehearsalId}:`, err);
-    }
-  }, []);
+  }, [projects, filterProjectId, userTimezone, prime]);
 
   return {
     rehearsals,
     loading,
     refreshing,
     error,
-    rsvpResponses,
-    setRsvpResponses,
-    adminStats,
-    setAdminStats,
     fetchRehearsals,
-    updateAdminStats,
   };
 };

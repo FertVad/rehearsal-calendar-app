@@ -9,16 +9,14 @@ import WeeklyCalendar from '../components/WeeklyCalendar';
 import TodayRehearsals from '../components/TodayRehearsals';
 import RehearsalCard from '../components/RehearsalCard';
 import SmartPlannerButton from '../components/SmartPlannerButton';
-import { RehearsalDetailsModal } from '../components/RehearsalDetailsModal';
 import { Rehearsal } from '../../../shared/types';
 import { notificationsAPI } from '../../../shared/services/api';
-import { consumePendingRehearsal, subscribePendingRehearsal } from '../../../shared/services/pendingRehearsal';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
-import { useRehearsals, useRSVP } from '../hooks';
+import { useRehearsals } from '../hooks';
 import { calendarScreenStyles as styles } from '../styles';
 import { unsyncRehearsal } from '../../../shared/services/calendar';
 
@@ -30,8 +28,6 @@ export default function CalendarScreen() {
     return formatDateToString(new Date());
   });
   const [filterExpanded, setFilterExpanded] = useState(false);
-  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
-  const [selectedRehearsalForDetails, setSelectedRehearsalForDetails] = useState<Rehearsal | null>(null);
 
 
   // null means "All projects"
@@ -72,10 +68,6 @@ export default function CalendarScreen() {
     loading,
     refreshing,
     error,
-    rsvpResponses,
-    setRsvpResponses,
-    adminStats,
-    setAdminStats,
     fetchRehearsals,
   } = useRehearsals(projects, filterProjectId);
 
@@ -99,77 +91,14 @@ export default function CalendarScreen() {
     }, [])
   );
 
-  // A tapped notification leaves the rehearsal's id in pendingRehearsal rather
-  // than in route params — see that module for why the navigator turned out to
-  // be the wrong place to put it.
-  const [wantedRehearsalId, setWantedRehearsalId] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      const take = () => {
-        const id = consumePendingRehearsal();
-        if (id) setWantedRehearsalId(id);
-      };
-      take();
-      // Also while already on screen: a push tapped with the calendar in front
-      // would otherwise never be focused again.
-      return subscribePendingRehearsal(take);
-    }, [])
-  );
-
-  // A notification announces something the cache predates almost by definition,
-  // so ask for fresh data rather than waiting for the next scheduled refresh.
-  useEffect(() => {
-    if (wantedRehearsalId) fetchRehearsals(true);
-  }, [wantedRehearsalId, fetchRehearsals]);
-
-  // The one place the details sheet is opened. There used to be a second sheet
-  // inside TodayRehearsals with its own state, so a rehearsal opened from the
-  // "today" list was invisible to this code — which then presented another over
-  // it, and iOS kept a layer that swallowed every touch on the calendar.
+  // Opening the details is now a navigation, so there is nothing to hold here
+  // and nothing to sequence: the navigator will not present two sheets over
+  // each other the way two React Native Modals could.
   const openDetails = useCallback((rehearsal: Rehearsal) => {
-    setSelectedRehearsalForDetails(rehearsal);
-    setDetailsModalVisible(true);
-  }, []);
+    navigation.navigate('RehearsalDetails', { rehearsalId: String(rehearsal.id) });
+  }, [navigation]);
 
-  // Waiting for the sheet to leave before showing the next one, without the
-  // waiting living in state the effect below depends on — that was the flaw in
-  // the previous attempt: setting visible=false re-ran the effect, which took
-  // the "nothing is open" branch and presented immediately anyway.
-  const queuedRehearsal = useRef<Rehearsal | null>(null);
-
-  const showQueuedRehearsal = useCallback(() => {
-    const next = queuedRehearsal.current;
-    queuedRehearsal.current = null;
-    if (next) openDetails(next);
-  }, [openDetails]);
-
-  useEffect(() => {
-    if (!wantedRehearsalId) return;
-
-    const target = rehearsals.find(r => String(r.id) === String(wantedRehearsalId));
-    if (!target) {
-      // Give up rather than wait forever. If it has not turned up by now it is
-      // one this user cannot see: deleted, or a rehearsal they were taken off.
-      const giveUp = setTimeout(() => setWantedRehearsalId(null), 10000);
-      return () => clearTimeout(giveUp);
-    }
-
-    setWantedRehearsalId(null);
-
-    if (!detailsModalVisible) {
-      openDetails(target);
-      return;
-    }
-
-    // Already showing the one asked for — leave it alone.
-    if (String(selectedRehearsalForDetails?.id) === String(target.id)) return;
-
-    queuedRehearsal.current = target;
-    setDetailsModalVisible(false);
-  }, [wantedRehearsalId, rehearsals, detailsModalVisible, selectedRehearsalForDetails, openDetails]);
-
-  const { respondingId, toggleSeen } = useRSVP();
 
   const handleDayLongPress = useCallback((date: string) => {
     navigation.navigate('AddRehearsal', {
@@ -430,13 +359,7 @@ export default function CalendarScreen() {
           selectedDate={selectedDate}
           loading={loading}
           projects={projects}
-          rsvpResponses={rsvpResponses}
-          respondingId={respondingId}
-          adminStats={adminStats}
-          onRSVP={toggleSeen}
           onDeleteRehearsal={handleDeleteRehearsal}
-          setRsvpResponses={setRsvpResponses}
-          setAdminStats={setAdminStats}
           onOpenRehearsal={openDetails}
         />
 
@@ -475,12 +398,9 @@ export default function CalendarScreen() {
           ) : (
             <View style={styles.upcomingList}>
               {upcomingRehearsals.map((rehearsal) => {
-                const currentResponse = rsvpResponses[rehearsal.id];
-                const isResponding = respondingId === rehearsal.id;
                 const project = projects.find(p => p.id === rehearsal.projectId);
                 // Check if user is admin for THIS specific rehearsal's project
                 const isAdminForThisRehearsal = project?.is_admin || false;
-                const stats = adminStats[rehearsal.id];
 
                 return (
                   <RehearsalCard
@@ -489,18 +409,8 @@ export default function CalendarScreen() {
                     dateLabel={getRelativeDateLabel(rehearsal.date || '')}
                     projectName={project?.name || rehearsal.projectName}
                     isAdmin={isAdminForThisRehearsal}
-                    currentResponse={currentResponse}
-                    isResponding={isResponding}
-                    stats={stats}
                     onPress={() => openDetails(rehearsal)}
                     onDelete={handleDeleteRehearsal}
-                    onToggleSeen={toggleSeen}
-                    onSeenChanged={(id, status, serverStats) => {
-                      setRsvpResponses(prev => ({ ...prev, [id]: status }));
-                      if (serverStats && isAdminForThisRehearsal) {
-                        setAdminStats(prev => ({ ...prev, [id]: serverStats }));
-                      }
-                    }}
                   />
                 );
               })}
@@ -510,26 +420,6 @@ export default function CalendarScreen() {
       </ScrollView>
 
 
-      {/* Rehearsal Details Modal */}
-      <RehearsalDetailsModal
-        visible={detailsModalVisible}
-        onClose={() => setDetailsModalVisible(false)}
-        onDismiss={showQueuedRehearsal}
-        rehearsal={selectedRehearsalForDetails}
-        project={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId) || null : null}
-        isAdmin={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId)?.is_admin || false : false}
-        currentResponse={selectedRehearsalForDetails ? rsvpResponses[selectedRehearsalForDetails.id] : null}
-        onRSVP={toggleSeen}
-        onRSVPSuccess={(id, status, serverStats) => {
-          setRsvpResponses(prev => ({ ...prev, [id]: status }));
-          if (serverStats && selectedRehearsalForDetails) {
-            const isAdminForThisRehearsal = projects.find(p => p.id === selectedRehearsalForDetails.projectId)?.is_admin || false;
-            if (isAdminForThisRehearsal) {
-              setAdminStats(prev => ({ ...prev, [id]: serverStats }));
-            }
-          }
-        }}
-      />
     </SafeAreaView>
   );
 }

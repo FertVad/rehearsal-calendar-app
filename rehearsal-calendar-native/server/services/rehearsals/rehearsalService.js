@@ -258,6 +258,74 @@ export async function getProjectRehearsals(projectId, userId) {
 }
 
 /**
+ * One rehearsal, shaped the way the list endpoints shape them.
+ *
+ * Added because the details screen is reached by id — from a card, a tapped
+ * notification, and in time a link from outside the app — and so cannot rely on
+ * whoever opened it having the object to hand.
+ *
+ * Visibility follows the same rule as the lists: an admin sees any rehearsal in
+ * their project, everyone else only the ones they are on. Returns null when the
+ * rehearsal does not exist or the caller may not see it — the caller turns that
+ * into a 404, so the two cases are indistinguishable from outside.
+ *
+ * @param {number|string} rehearsalId
+ * @param {number} userId
+ * @returns {Promise<object|null>}
+ */
+export async function getRehearsalById(rehearsalId, userId) {
+  const rehearsal = await db.get(
+    'SELECT * FROM native_rehearsals WHERE id = $1',
+    [rehearsalId]
+  );
+
+  if (!rehearsal) return null;
+
+  const isAdmin = await checkUserIsAdmin(rehearsal.project_id, userId);
+
+  if (!isAdmin) {
+    const onIt = await db.get(
+      'SELECT 1 AS ok FROM native_rehearsal_responses WHERE rehearsal_id = $1 AND user_id = $2',
+      [rehearsalId, userId]
+    );
+    if (!onIt) return null;
+  }
+
+  const userResult = await db.get(
+    'SELECT timezone FROM native_users WHERE id = $1',
+    [userId]
+  );
+  const userTimezone = userResult?.timezone || DEFAULT_TIMEZONE;
+
+  const own = await db.get(
+    'SELECT response FROM native_rehearsal_responses WHERE rehearsal_id = $1 AND user_id = $2',
+    [rehearsalId, userId]
+  );
+
+  const startsAtISO = timestampToISO(rehearsal.starts_at);
+  const endsAtISO = timestampToISO(rehearsal.ends_at);
+  const startLocal = timestampToLocal(startsAtISO, userTimezone);
+  const endLocal = timestampToLocal(endsAtISO, userTimezone);
+
+  return {
+    id: String(rehearsal.id),
+    projectId: String(rehearsal.project_id),
+    title: rehearsal.title,
+    description: rehearsal.description,
+    startsAt: startsAtISO,
+    endsAt: endsAtISO,
+    date: startLocal.date,
+    time: `${startLocal.time}:00`,
+    endTime: `${endLocal.time}:00`,
+    status: 'scheduled',
+    location: rehearsal.location,
+    createdAt: rehearsal.created_at,
+    updatedAt: rehearsal.updated_at,
+    userResponse: own?.response || null,
+  };
+}
+
+/**
  * Create a new rehearsal
  * @param {number} projectId - Project ID
  * @param {number} userId - User ID (creator)

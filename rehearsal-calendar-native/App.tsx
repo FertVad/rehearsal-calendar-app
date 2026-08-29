@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { ProjectProvider } from './src/contexts/ProjectContext';
 import { I18nProvider } from './src/contexts/I18nContext';
+import { SeenProvider } from './src/contexts/SeenContext';
 import Navigation from './src/navigation';
 import { useAutoCalendarSync } from './src/shared/hooks/useAutoCalendarSync';
 
@@ -25,7 +26,9 @@ export default function App() {
     <I18nProvider>
       <AuthProvider>
         <ProjectProvider>
-          <AppContent />
+          <SeenProvider>
+            <AppContent />
+          </SeenProvider>
         </ProjectProvider>
       </AuthProvider>
     </I18nProvider>

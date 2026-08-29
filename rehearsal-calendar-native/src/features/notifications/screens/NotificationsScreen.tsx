@@ -15,7 +15,6 @@ import { Colors } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
 import { logger } from '../../../shared/utils/logger';
-import { setPendingRehearsal } from '../../../shared/services/pendingRehearsal';
 import { styles } from '../styles/notificationsScreenStyles';
 
 interface NotificationItem {
@@ -97,13 +96,10 @@ export default function NotificationsScreen() {
     const rehearsalId = item.relatedType === 'rehearsal' ? item.relatedId : null;
     const projectId = item.data?.projectId ?? (item.relatedType === 'project' ? item.relatedId : null);
 
-    // Hand the target over and simply close. This screen is a modal on top of
-    // the tabs, and every attempt to navigate *from* it ended badly — a second
-    // set of tabs inside the modal, or a dismissed modal left over the screen
-    // eating touches. Closing is the one thing a modal is good at.
+    // The details are a route now, so this is an ordinary navigation: the sheet
+    // opens over the inbox and closing it comes straight back here.
     if (rehearsalId && item.type !== 'rehearsal_deleted') {
-      setPendingRehearsal(rehearsalId);
-      navigation.goBack();
+      navigation.navigate('RehearsalDetails', { rehearsalId: String(rehearsalId) });
       return;
     }
 
