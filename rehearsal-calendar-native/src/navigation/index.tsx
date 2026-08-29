@@ -307,7 +307,16 @@ function AppNavigator() {
         <AppStack.Screen
           name="RehearsalDetails"
           component={RehearsalDetailsScreen}
-          options={{ presentation: 'formSheet', sheetAllowedDetents: [0.75, 1] }}
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.75, 1],
+            sheetCornerRadius: 20,
+            // The grabber says "drag me" before anyone has to guess.
+            sheetGrabberVisible: true,
+            // Without this the navigator's own background shows through
+            // wherever the screen does not reach — a white band under the sheet.
+            contentStyle: { backgroundColor: Colors.bg.secondary },
+          }}
         />
       </AppStack.Navigator>
     </ActionSheetContext.Provider>
