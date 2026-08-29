@@ -206,10 +206,7 @@ export default function RehearsalDetailsScreen() {
     return (
       <View style={styles.sheet}>
         <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <Ionicons name="calendar" size={24} color={Colors.accent.purple} />
-            <Text style={styles.headerTitle}>{t.rehearsals.rehearsalDetails}</Text>
-          </View>
+          <Text style={styles.headerTitle}>{t.calendar.rehearsal}</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color={Colors.text.secondary} />
           </TouchableOpacity>
@@ -239,25 +236,21 @@ export default function RehearsalDetailsScreen() {
   return (
       <View style={styles.sheet}>
         <View style={styles.sheetInner}>
-          {/* Header */}
+          {/* One heading, not two. There used to be a "Rehearsal details" bar
+              above the rehearsal's own name, which said nothing the name did
+              not and left two large texts fighting for the same band at the top
+              of the sheet. The name is the heading; the grabber and a swipe
+              close the sheet, and the cross stays for those who look for one. */}
           <View style={styles.header}>
-            <View style={styles.headerContent}>
-              <Ionicons name="calendar" size={24} color={Colors.accent.purple} />
-              <Text style={styles.headerTitle}>
-                {t.rehearsals.rehearsalDetails}
-              </Text>
-            </View>
+            <Text style={styles.headerTitle} numberOfLines={2}>
+              {rehearsal.title || t.calendar.rehearsal}
+            </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={Colors.text.secondary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-            {/* Title, when there is one — it names the call, so it sits above
-                the schedule rather than among them. */}
-            {rehearsal.title ? (
-              <Text style={styles.rehearsalTitle}>{rehearsal.title}</Text>
-            ) : null}
 
             {/* Date */}
             <View style={styles.detailRow}>
@@ -357,20 +350,19 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.lg,
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    // Clears the sheet's grabber, which sits in the top few points.
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
   },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
   headerTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
+    flex: 1,
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
     color: Colors.text.primary,
   },
   closeButton: {
@@ -384,12 +376,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: Spacing.lg,
-  },
-  rehearsalTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xs,
   },
   detailRow: {
     flexDirection: 'row',
