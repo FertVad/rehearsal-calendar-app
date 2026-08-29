@@ -13,6 +13,7 @@
  */
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Modal } from 'react-native';
 import TodayRehearsals from '../TodayRehearsals';
 import { Rehearsal, Project, RSVPStatus } from '../../../../shared/types';
 
@@ -123,6 +124,7 @@ describe('TodayRehearsals Component', () => {
 
   const mockOnRSVP = jest.fn();
   const mockOnDeleteRehearsal = jest.fn();
+  const mockOnOpenRehearsal = jest.fn();
   const mockSetRsvpResponses = jest.fn();
   const mockSetAdminStats = jest.fn();
 
@@ -154,6 +156,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={{}}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -180,12 +183,41 @@ describe('TodayRehearsals Component', () => {
           adminStats={{}}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
       );
 
       expect(getByText('No rehearsals')).toBeTruthy();
+    });
+  });
+
+  describe('The details sheet belongs to the calendar', () => {
+    it('does not render a details sheet of its own', () => {
+      // There used to be one here as well as on the calendar, each with its own
+      // state. A sheet opened from this list was therefore invisible to the code
+      // that opens one for a tapped notification, which presented a second over
+      // it — and iOS kept a layer that swallowed every touch on the screen
+      // underneath. One sheet, one owner.
+      const { UNSAFE_queryAllByType } = render(
+        <TodayRehearsals
+          rehearsals={mockRehearsals}
+          selectedDate="2025-12-29"
+          loading={false}
+          projects={mockProjects}
+          rsvpResponses={mockRsvpResponses}
+          respondingId={null}
+          adminStats={mockAdminStats}
+          onRSVP={mockOnRSVP}
+          onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
+          setRsvpResponses={mockSetRsvpResponses}
+          setAdminStats={mockSetAdminStats}
+        />
+      );
+
+      expect(UNSAFE_queryAllByType(Modal)).toHaveLength(0);
     });
   });
 
@@ -202,6 +234,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -232,6 +265,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -255,6 +289,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -276,6 +311,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -311,6 +347,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -336,6 +373,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -371,6 +409,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -394,6 +433,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -417,6 +457,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -446,6 +487,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -468,6 +510,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -494,6 +537,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -518,6 +562,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -545,6 +590,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />
@@ -571,6 +617,7 @@ describe('TodayRehearsals Component', () => {
           adminStats={mockAdminStats}
           onRSVP={mockOnRSVP}
           onDeleteRehearsal={mockOnDeleteRehearsal}
+          onOpenRehearsal={mockOnOpenRehearsal}
           setRsvpResponses={mockSetRsvpResponses}
           setAdminStats={mockSetAdminStats}
         />

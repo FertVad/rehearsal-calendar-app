@@ -10,7 +10,6 @@ import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
-import { RehearsalDetailsModal } from './RehearsalDetailsModal';
 import RehearsalCard from './RehearsalCard';
 
 interface AdminStats {
@@ -32,6 +31,12 @@ interface TodayRehearsalsProps {
     onSuccess: (rehearsalId: string, status: RSVPStatus, stats?: AdminStats) => void
   ) => Promise<void>;
   onDeleteRehearsal: (rehearsalId: string) => void;
+  /** Opening the details sheet belongs to the calendar. This component used to
+   *  render its own, which meant two of them on one screen with separate state:
+   *  a sheet opened from here was invisible to the code that opens one for a
+   *  tapped notification, so the second was presented over the first and iOS
+   *  kept a layer that ate every touch. */
+  onOpenRehearsal: (rehearsal: Rehearsal) => void;
   setRsvpResponses: React.Dispatch<React.SetStateAction<Record<string, RSVPStatus>>>;
   setAdminStats: React.Dispatch<React.SetStateAction<Record<string, AdminStats>>>;
 }
@@ -48,12 +53,11 @@ export default function TodayRehearsals({
   onDeleteRehearsal,
   setRsvpResponses,
   setAdminStats,
+  onOpenRehearsal,
 }: TodayRehearsalsProps) {
   const { t, language } = useI18n();
   const navigation = useNavigation<any>();
   const [syncedRehearsals, setSyncedRehearsals] = useState<Record<string, boolean>>({});
-  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
-  const [selectedRehearsal, setSelectedRehearsal] = useState<Rehearsal | null>(null);
 
   // Memoize project lookup to avoid repeated searches (MUST be before early returns!)
   const projectsMap = useMemo(() => {
@@ -137,10 +141,7 @@ export default function TodayRehearsals({
               currentResponse={currentResponse}
               isResponding={isResponding}
               stats={stats}
-              onPress={() => {
-                setSelectedRehearsal(rehearsal);
-                setDetailsModalVisible(true);
-              }}
+              onPress={() => onOpenRehearsal(rehearsal)}
               onDelete={onDeleteRehearsal}
               onToggleSeen={onRSVP}
               onSeenChanged={(id, status, serverStats) => {
@@ -154,25 +155,6 @@ export default function TodayRehearsals({
         })}
       </View>
 
-      {/* Rehearsal Details Modal */}
-      <RehearsalDetailsModal
-        visible={detailsModalVisible}
-        onClose={() => setDetailsModalVisible(false)}
-        rehearsal={selectedRehearsal}
-        project={selectedRehearsal && selectedRehearsal.projectId ? projectsMap.get(selectedRehearsal.projectId) || null : null}
-        isAdmin={selectedRehearsal && selectedRehearsal.projectId ? projectsMap.get(selectedRehearsal.projectId)?.is_admin || false : false}
-        currentResponse={selectedRehearsal ? rsvpResponses[selectedRehearsal.id] : null}
-        onRSVP={onRSVP}
-        onRSVPSuccess={(id, status, serverStats) => {
-          setRsvpResponses(prev => ({ ...prev, [id]: status }));
-          if (serverStats && selectedRehearsal && selectedRehearsal.projectId) {
-            const isAdminForThisRehearsal = projectsMap.get(selectedRehearsal.projectId)?.is_admin || false;
-            if (isAdminForThisRehearsal) {
-              setAdminStats(prev => ({ ...prev, [id]: serverStats }));
-            }
-          }
-        }}
-      />
     </View>
   );
 }

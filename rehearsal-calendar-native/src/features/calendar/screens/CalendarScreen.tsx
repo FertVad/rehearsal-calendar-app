@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert, Pressable } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -125,8 +125,26 @@ export default function CalendarScreen() {
     if (wantedRehearsalId) fetchRehearsals(true);
   }, [wantedRehearsalId, fetchRehearsals]);
 
-  // Counts dismissals of the details sheet, so the effect below can wait for one.
-  const [detailsDismissals, setDetailsDismissals] = useState(0);
+  // The one place the details sheet is opened. There used to be a second sheet
+  // inside TodayRehearsals with its own state, so a rehearsal opened from the
+  // "today" list was invisible to this code — which then presented another over
+  // it, and iOS kept a layer that swallowed every touch on the calendar.
+  const openDetails = useCallback((rehearsal: Rehearsal) => {
+    setSelectedRehearsalForDetails(rehearsal);
+    setDetailsModalVisible(true);
+  }, []);
+
+  // Waiting for the sheet to leave before showing the next one, without the
+  // waiting living in state the effect below depends on — that was the flaw in
+  // the previous attempt: setting visible=false re-ran the effect, which took
+  // the "nothing is open" branch and presented immediately anyway.
+  const queuedRehearsal = useRef<Rehearsal | null>(null);
+
+  const showQueuedRehearsal = useCallback(() => {
+    const next = queuedRehearsal.current;
+    queuedRehearsal.current = null;
+    if (next) openDetails(next);
+  }, [openDetails]);
 
   useEffect(() => {
     if (!wantedRehearsalId) return;
@@ -139,30 +157,19 @@ export default function CalendarScreen() {
       return () => clearTimeout(giveUp);
     }
 
-    if (detailsModalVisible) {
-      // Already showing the one asked for — nothing to do.
-      if (String(selectedRehearsalForDetails?.id) === String(target.id)) {
-        setWantedRehearsalId(null);
-        return;
-      }
+    setWantedRehearsalId(null);
 
-      // Close first and come back on the dismissal. Opening a sheet over one
-      // that is still on screen leaves iOS holding a layer it never removes:
-      // the rehearsal can still be swiped away, and the calendar underneath
-      // stays visible and completely dead to touch. That is what happens when a
-      // second notification is tapped from the tray with this sheet open.
-      setDetailsModalVisible(false);
-      // onDismiss is iOS-only. Elsewhere nothing would ever bring us back, so a
-      // timer stands in; on iOS the real event arrives first and this extra
-      // nudge finds the work already done.
-      const fallback = setTimeout(() => setDetailsDismissals(n => n + 1), 600);
-      return () => clearTimeout(fallback);
+    if (!detailsModalVisible) {
+      openDetails(target);
+      return;
     }
 
-    setSelectedRehearsalForDetails(target);
-    setDetailsModalVisible(true);
-    setWantedRehearsalId(null);
-  }, [wantedRehearsalId, rehearsals, detailsModalVisible, selectedRehearsalForDetails, detailsDismissals]);
+    // Already showing the one asked for — leave it alone.
+    if (String(selectedRehearsalForDetails?.id) === String(target.id)) return;
+
+    queuedRehearsal.current = target;
+    setDetailsModalVisible(false);
+  }, [wantedRehearsalId, rehearsals, detailsModalVisible, selectedRehearsalForDetails, openDetails]);
 
   const { respondingId, toggleSeen } = useRSVP();
 
@@ -440,6 +447,7 @@ export default function CalendarScreen() {
           onDeleteRehearsal={handleDeleteRehearsal}
           setRsvpResponses={setRsvpResponses}
           setAdminStats={setAdminStats}
+          onOpenRehearsal={openDetails}
         />
 
         {/* Upcoming Events */}
@@ -494,10 +502,7 @@ export default function CalendarScreen() {
                     currentResponse={currentResponse}
                     isResponding={isResponding}
                     stats={stats}
-                    onPress={() => {
-                      setSelectedRehearsalForDetails(rehearsal);
-                      setDetailsModalVisible(true);
-                    }}
+                    onPress={() => openDetails(rehearsal)}
                     onDelete={handleDeleteRehearsal}
                     onToggleSeen={toggleSeen}
                     onSeenChanged={(id, status, serverStats) => {
@@ -526,7 +531,7 @@ export default function CalendarScreen() {
       <RehearsalDetailsModal
         visible={detailsModalVisible}
         onClose={() => setDetailsModalVisible(false)}
-        onDismiss={() => setDetailsDismissals(n => n + 1)}
+        onDismiss={showQueuedRehearsal}
         rehearsal={selectedRehearsalForDetails}
         project={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId) || null : null}
         isAdmin={selectedRehearsalForDetails ? projects.find(p => p.id === selectedRehearsalForDetails.projectId)?.is_admin || false : false}
