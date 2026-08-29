@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Notifications from 'expo-notifications';
 import { Colors } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
+import { useUnread } from '../../../contexts/UnreadContext';
 import { logger } from '../../../shared/utils/logger';
 import { styles } from '../styles/notificationsScreenStyles';
 
@@ -43,6 +43,7 @@ function iconFor(type: string): keyof typeof Ionicons.glyphMap {
 export default function NotificationsScreen() {
   const navigation = useNavigation<any>();
   const { t } = useI18n();
+  const { markRead } = useUnread();
 
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,14 +66,9 @@ export default function NotificationsScreen() {
   // notifications can be read at all, so arriving here is the acknowledgement.
   // The badge follows the count the server reports back.
   const markEverythingRead = useCallback(async () => {
-    try {
-      const res = await notificationsAPI.markRead();
-      await Notifications.setBadgeCountAsync(res.data.unreadCount ?? 0);
-      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-    } catch (err) {
-      logger.warn('[Notifications] Could not mark read:', err);
-    }
-  }, []);
+    await markRead();
+    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, [markRead]);
 
   useFocusEffect(
     useCallback(() => {
@@ -84,13 +80,8 @@ export default function NotificationsScreen() {
     // Opening it is reading it. Without this the count stayed lit after the user
     // had plainly dealt with the thing.
     if (!item.read) {
-      try {
-        const res = await notificationsAPI.markRead([item.id]);
-        await Notifications.setBadgeCountAsync(res.data.unreadCount ?? 0);
-        setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
-      } catch (err) {
-        logger.warn('[Notifications] Could not mark read on open:', err);
-      }
+      await markRead([item.id]);
+      setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
     }
 
     const rehearsalId = item.relatedType === 'rehearsal' ? item.relatedId : null;

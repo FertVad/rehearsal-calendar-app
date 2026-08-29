@@ -3,6 +3,7 @@ import { AuthProvider } from './src/contexts/AuthContext';
 import { ProjectProvider } from './src/contexts/ProjectContext';
 import { I18nProvider } from './src/contexts/I18nContext';
 import { SeenProvider } from './src/contexts/SeenContext';
+import { UnreadProvider } from './src/contexts/UnreadContext';
 import Navigation from './src/navigation';
 import { useAutoCalendarSync } from './src/shared/hooks/useAutoCalendarSync';
 
@@ -27,7 +28,9 @@ export default function App() {
       <AuthProvider>
         <ProjectProvider>
           <SeenProvider>
-            <AppContent />
+            <UnreadProvider>
+              <AppContent />
+            </UnreadProvider>
           </SeenProvider>
         </ProjectProvider>
       </AuthProvider>
