@@ -16,7 +16,7 @@ interface UnreadContextValue {
   markRead: (ids?: number[]) => Promise<void>;
   /** Deleting an unread one lowers the count, so it goes through here too. */
   remove: (id: number) => Promise<boolean>;
-  removeAll: () => Promise<void>;
+  removeAll: () => Promise<boolean>;
 }
 
 const UnreadContext = createContext<UnreadContextValue | undefined>(undefined);
@@ -95,8 +95,10 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
     try {
       const res = await notificationsAPI.removeAll();
       remember(res.data?.unreadCount ?? 0);
+      return true;
     } catch (error) {
       logger.warn('[Unread] Could not clear the inbox:', error);
+      return false;
     }
   }, [remember]);
 
