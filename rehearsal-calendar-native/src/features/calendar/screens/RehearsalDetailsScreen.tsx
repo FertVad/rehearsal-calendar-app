@@ -377,10 +377,10 @@ const styles = StyleSheet.create({
     padding: Spacing.xs,
   },
   content: {
-    // No flex: 1 — the ScrollView should wrap its content so the sheet can
-    // size itself, and only start scrolling once maxHeight is reached.
-    flexGrow: 0,
-    flexShrink: 1,
+    // Fills what the header leaves. It used to wrap its content instead, so the
+    // sheet could size itself inside a Modal — as a screen that left the list
+    // with no height at all, and the rehearsal's name drew over the header.
+    flex: 1,
   },
   contentContainer: {
     padding: Spacing.lg,
