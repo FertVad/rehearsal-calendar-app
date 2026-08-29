@@ -4,7 +4,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
   StyleSheet,
   ScrollView,
   Pressable,
@@ -19,7 +18,7 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSeen } from '../../../contexts/SeenContext';
-import { Rehearsal, RSVPStatus, Project } from '../../../shared/types';
+import { Rehearsal, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDateLocalized } from '../../../shared/utils/time';
 

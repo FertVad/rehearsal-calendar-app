@@ -212,9 +212,6 @@ export const styles = StyleSheet.create({
     color: Colors.text.secondary,
     flex: 1,
   },
-  rehearsalsSection: {
-    marginTop: Spacing.xxl,
-  },
   emptyState: {
     backgroundColor: Colors.glass.bg,
     borderWidth: 1,
@@ -252,52 +249,6 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.base,
     color: Colors.accent.red,
   },
-  rehearsalCard: {
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  rehearsalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.xs,
-  },
-  rehearsalInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  rehearsalTime: {
-    fontSize: FontSize.sm,
-    color: Colors.accent.purple,
-    fontWeight: FontWeight.semibold,
-  },
-  rehearsalDuration: {
-    fontSize: FontSize.xs,
-    color: Colors.text.tertiary,
-  },
-  deleteButton: {
-    padding: Spacing.xs,
-  },
-  rehearsalScene: {
-    fontSize: FontSize.base,
-    color: Colors.text.primary,
-    fontWeight: FontWeight.medium,
-    marginBottom: Spacing.xs,
-  },
-  rehearsalProject: {
-    fontSize: FontSize.xs,
-    color: Colors.accent.blue,
-    marginBottom: Spacing.xs,
-  },
-  rehearsalNotes: {
-    fontSize: FontSize.sm,
-    color: Colors.text.secondary,
-  },
   // Seen button styles
   seenSection: {
     marginTop: Spacing.md,
@@ -314,32 +265,6 @@ export const styles = StyleSheet.create({
     padding: Spacing.xs,
   },
   seenCount: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.secondary,
-  },
-  seenCountActive: {
-    color: Colors.accent.blue,
-  },
-  // Admin stats styles
-  adminStatsSection: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-    alignItems: 'center',
-  },
-  adminStatsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.lg,
-  },
-  adminStatItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  adminStatText: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
     color: Colors.text.secondary,

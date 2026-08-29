@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert, Pressable } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
 import WeeklyCalendar from '../components/WeeklyCalendar';
