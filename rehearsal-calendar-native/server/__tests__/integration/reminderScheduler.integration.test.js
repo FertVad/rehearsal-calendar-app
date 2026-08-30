@@ -33,11 +33,6 @@ jest.unstable_mockModule('../../services/notifications/pushNotificationService.j
   notifyRehearsal1h: notify1h,
 }));
 
-// node-cron would install a real timer at import time.
-jest.unstable_mockModule('node-cron', () => ({
-  default: { schedule: jest.fn() },
-}));
-
 const { checkUpcomingRehearsals } = await import(
   '../../services/notifications/reminderScheduler.js'
 );
