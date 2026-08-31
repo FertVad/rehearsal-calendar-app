@@ -218,6 +218,26 @@ export async function setupIntegrationDb() {
       const q = toSqlite(sql, params);
       return testDb.prepare(q.sql).all(q.params);
     },
+
+    // Stands in for the real thing in db.js, which checks one connection out of
+    // the pool for the whole callback. Here there is only ever one connection,
+    // so what this reproduces is the shape callers rely on: a handle passed in,
+    // a throw that undoes everything, a return that keeps it.
+    async transaction(fn) {
+      testDb.prepare('BEGIN').run();
+      try {
+        const result = await fn(mockDb);
+        testDb.prepare('COMMIT').run();
+        return result;
+      } catch (err) {
+        try {
+          testDb.prepare('ROLLBACK').run();
+        } catch {
+          // ignore
+        }
+        throw err;
+      }
+    },
   };
 
   return mockDb;

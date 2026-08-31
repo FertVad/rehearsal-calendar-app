@@ -413,12 +413,13 @@ router.delete('/me', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Start transaction
-    await db.run('BEGIN TRANSACTION');
-
-    try {
+    // One connection, through db.transaction: a bare BEGIN over the pool leaves
+    // the transaction open on a connection handed back for anyone to use, and
+    // the ROLLBACK below would then discard a bystander's write instead of this
+    // request's. Everything inside uses `tx`.
+    const orphanedProjects = await db.transaction(async (tx) => {
       // Find projects where user is the only admin/owner
-      const orphanedProjects = await db.all(
+      const orphaned = await tx.all(
         `SELECT p.id, p.name
          FROM native_projects p
          INNER JOIN native_project_members pm ON p.id = pm.project_id
@@ -435,29 +436,24 @@ router.delete('/me', requireAuth, async (req, res) => {
         [userId]
       );
 
-      logger.debug(`[Auth] User ${userId} deletion: ${orphanedProjects.length} projects will be deleted (no other admins)`);
+      logger.debug(`[Auth] User ${userId} deletion: ${orphaned.length} projects will be deleted (no other admins)`);
 
       // Delete orphaned projects (CASCADE will handle rehearsals, members, etc.)
-      for (const project of orphanedProjects) {
-        await db.run('DELETE FROM native_projects WHERE id = $1', [project.id]);
+      for (const project of orphaned) {
+        await tx.run('DELETE FROM native_projects WHERE id = $1', [project.id]);
         logger.debug(`[Auth] Deleted orphaned project: ${project.name} (id: ${project.id})`);
       }
 
       // Delete user (CASCADE will handle remaining memberships, availability, calendar connections, etc.)
-      await db.run('DELETE FROM native_users WHERE id = $1', [userId]);
+      await tx.run('DELETE FROM native_users WHERE id = $1', [userId]);
 
-      // Commit transaction
-      await db.run('COMMIT');
+      return orphaned;
+    });
 
-      res.json({
-        message: 'Account deleted successfully',
-        deletedProjects: orphanedProjects.length
-      });
-    } catch (innerErr) {
-      // Rollback on any error
-      await db.run('ROLLBACK');
-      throw innerErr;
-    }
+    res.json({
+      message: 'Account deleted successfully',
+      deletedProjects: orphanedProjects.length
+    });
   } catch (err) {
     console.error('[Auth] Delete account error:', err);
     res.status(500).json({ error: 'Failed to delete account' });
