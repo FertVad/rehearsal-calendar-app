@@ -188,7 +188,8 @@ async function sendLocalizedNotification(userIds, key, params, data) {
  * Notify members when a new rehearsal is created
  */
 export async function notifyRehearsalCreated(rehearsal, projectName, members) {
-  const userIds = members.map(m => m.user_id).filter(id => id !== rehearsal.created_by);
+  // The caller decides who is on the list — including leaving out the author.
+  const userIds = members.map(m => m.user_id);
   await sendLocalizedNotification(
     userIds,
     'newRehearsal',
