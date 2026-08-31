@@ -88,55 +88,57 @@ router.post('/bulk', requireAuth, async (req, res) => {
 
   // Run as a single transaction — partial success would leave the user with
   // missing availability if any INSERT fails after some DELETEs ran.
+  //
+  // Through db.transaction rather than a bare BEGIN: over a connection pool the
+  // statements of one BEGIN scatter across connections, and the ROLLBACK takes
+  // a bystander's write with it. Everything below uses `tx`, not `db`.
   try {
-    await db.run('BEGIN');
-
-    for (const date of affectedDates) {
-      await db.run(
-        `DELETE FROM native_user_availability
-         WHERE user_id = $1
-         AND DATE(starts_at AT TIME ZONE $2) = $3
-         AND source = $4`,
-        [userId, timezone, date, AVAILABILITY_SOURCES.MANUAL]
-      );
-    }
-
-    for (const entry of entries) {
-      const { startsAt, endsAt, type, title, notes, isAllDay, source, external_event_id } = entry;
-      if (!startsAt || !endsAt || !type) continue;
-
-      const entrySource = source || AVAILABILITY_SOURCES.MANUAL;
-
-      if (external_event_id && entrySource !== AVAILABILITY_SOURCES.MANUAL) {
-        const existing = await db.get(
-          `SELECT id FROM native_user_availability
-           WHERE user_id = $1 AND external_event_id = $2 AND source = $3`,
-          [userId, external_event_id, entrySource]
+    await db.transaction(async (tx) => {
+      for (const date of affectedDates) {
+        await tx.run(
+          `DELETE FROM native_user_availability
+           WHERE user_id = $1
+           AND DATE(starts_at AT TIME ZONE $2) = $3
+           AND source = $4`,
+          [userId, timezone, date, AVAILABILITY_SOURCES.MANUAL]
         );
-        if (existing) continue;
       }
 
-      await db.run(
-        `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, title, notes, is_all_day, source, external_event_id)
-         VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, $7, $8, $9)`,
-        [
-          userId,
-          startsAt,
-          endsAt,
-          type,
-          title || null,
-          notes || null,
-          isAllDay || false,
-          entrySource,
-          external_event_id || null
-        ]
-      );
-    }
+      for (const entry of entries) {
+        const { startsAt, endsAt, type, title, notes, isAllDay, source, external_event_id } = entry;
+        if (!startsAt || !endsAt || !type) continue;
 
-    await db.run('COMMIT');
+        const entrySource = source || AVAILABILITY_SOURCES.MANUAL;
+
+        if (external_event_id && entrySource !== AVAILABILITY_SOURCES.MANUAL) {
+          const existing = await tx.get(
+            `SELECT id FROM native_user_availability
+             WHERE user_id = $1 AND external_event_id = $2 AND source = $3`,
+            [userId, external_event_id, entrySource]
+          );
+          if (existing) continue;
+        }
+
+        await tx.run(
+          `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, title, notes, is_all_day, source, external_event_id)
+           VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, $7, $8, $9)`,
+          [
+            userId,
+            startsAt,
+            endsAt,
+            type,
+            title || null,
+            notes || null,
+            isAllDay || false,
+            entrySource,
+            external_event_id || null
+          ]
+        );
+      }
+    });
+
     res.json({ success: true });
   } catch (error) {
-    try { await db.run('ROLLBACK'); } catch {}
     console.error('Error saving bulk availability:', error);
     res.status(500).json({
       error: 'Failed to save availability',

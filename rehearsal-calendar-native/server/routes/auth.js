@@ -12,7 +12,9 @@ const router = Router();
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, timezone } = req.body;
+    const { email, password, timezone } = req.body;
+    const firstName = typeof req.body.firstName === 'string' ? req.body.firstName.trim() : req.body.firstName;
+    const lastName = typeof req.body.lastName === 'string' ? req.body.lastName.trim() : req.body.lastName;
 
     if (!email || !password || !firstName) {
       return res.status(400).json({ error: 'Email, password and first name are required' });
@@ -289,9 +291,15 @@ router.get('/me', requireAuth, async (req, res) => {
 });
 
 // Whitelist of allowed fields for user updates (security)
+// A name typed on a phone keyboard often carries a trailing space — the
+// autocomplete adds one. Stored as "Ginger " and "Rode " it reappears as
+// "Ginger  Rode " everywhere the two are joined, so it is cut off here rather
+// than worked around at each display.
+const trimName = (value) => (typeof value === 'string' ? value.trim() : value);
+
 const ALLOWED_USER_FIELDS = {
-  firstName: { dbColumn: 'first_name', validate: null },
-  lastName: { dbColumn: 'last_name', validate: null },
+  firstName: { dbColumn: 'first_name', validate: null, transform: trimName },
+  lastName: { dbColumn: 'last_name', validate: null, transform: trimName },
   phone: { dbColumn: 'phone', validate: null },
   timezone: { dbColumn: 'timezone', validate: null },
   locale: { dbColumn: 'locale', validate: null },
@@ -405,12 +413,13 @@ router.delete('/me', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Start transaction
-    await db.run('BEGIN TRANSACTION');
-
-    try {
+    // One connection, through db.transaction: a bare BEGIN over the pool leaves
+    // the transaction open on a connection handed back for anyone to use, and
+    // the ROLLBACK below would then discard a bystander's write instead of this
+    // request's. Everything inside uses `tx`.
+    const orphanedProjects = await db.transaction(async (tx) => {
       // Find projects where user is the only admin/owner
-      const orphanedProjects = await db.all(
+      const orphaned = await tx.all(
         `SELECT p.id, p.name
          FROM native_projects p
          INNER JOIN native_project_members pm ON p.id = pm.project_id
@@ -427,29 +436,24 @@ router.delete('/me', requireAuth, async (req, res) => {
         [userId]
       );
 
-      logger.debug(`[Auth] User ${userId} deletion: ${orphanedProjects.length} projects will be deleted (no other admins)`);
+      logger.debug(`[Auth] User ${userId} deletion: ${orphaned.length} projects will be deleted (no other admins)`);
 
       // Delete orphaned projects (CASCADE will handle rehearsals, members, etc.)
-      for (const project of orphanedProjects) {
-        await db.run('DELETE FROM native_projects WHERE id = $1', [project.id]);
+      for (const project of orphaned) {
+        await tx.run('DELETE FROM native_projects WHERE id = $1', [project.id]);
         logger.debug(`[Auth] Deleted orphaned project: ${project.name} (id: ${project.id})`);
       }
 
       // Delete user (CASCADE will handle remaining memberships, availability, calendar connections, etc.)
-      await db.run('DELETE FROM native_users WHERE id = $1', [userId]);
+      await tx.run('DELETE FROM native_users WHERE id = $1', [userId]);
 
-      // Commit transaction
-      await db.run('COMMIT');
+      return orphaned;
+    });
 
-      res.json({
-        message: 'Account deleted successfully',
-        deletedProjects: orphanedProjects.length
-      });
-    } catch (innerErr) {
-      // Rollback on any error
-      await db.run('ROLLBACK');
-      throw innerErr;
-    }
+    res.json({
+      message: 'Account deleted successfully',
+      deletedProjects: orphanedProjects.length
+    });
   } catch (err) {
     console.error('[Auth] Delete account error:', err);
     res.status(500).json({ error: 'Failed to delete account' });

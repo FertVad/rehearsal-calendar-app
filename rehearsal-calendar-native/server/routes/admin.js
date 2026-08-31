@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../database/db.js';
 import { adminLogin, requireAdmin } from '../middleware/adminAuth.js';
 import { generateAdminPageHTML } from './admin/dashboardPage.js';
+import { fullName } from './../utils/names.js';
 
 const router = Router();
 
@@ -141,7 +142,7 @@ router.get('/api/bug-reports', requireAdmin, async (req, res) => {
         status: r.status,
         createdAt: r.created_at,
         email: r.email,
-        name: [r.first_name, r.last_name].filter(Boolean).join(' ') || r.email,
+        name: fullName(r, r.email),
       })),
       total: Number(total.count),
     });

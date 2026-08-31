@@ -57,6 +57,58 @@ export async function initDatabase() {
         const res = await pool.query(transform(sql), params);
         return res.rows;
       },
+
+      /**
+       * Runs the callback inside a real transaction, on one connection.
+       *
+       * Issuing BEGIN through this module's ordinary run() does not do what it
+       * looks like. Every call goes through pool.query, which checks a client
+       * out and hands it straight back — so BEGIN returns a connection to the
+       * pool with a transaction still open on it. What follows is worse than a
+       * transaction that does not roll back: the next request to be given that
+       * connection joins the transaction it never opened, and the first
+       * request's ROLLBACK undoes its writes. Two writes landing together, one
+       * silently discarded, no error either side.
+       *
+       * The callback is handed a db-shaped object bound to the one connection.
+       * Use it for everything inside, or that statement is outside the
+       * transaction again.
+       */
+      async transaction(fn) {
+        const client = await pool.connect();
+        const scoped = {
+          async run(sql, params = []) {
+            let q = sql.trim();
+            if (/^insert\s+/i.test(q) && !/returning/i.test(q)) q += ' RETURNING id';
+            const res = await client.query(transform(q), params);
+            return { lastInsertId: res.rows[0]?.id };
+          },
+          async get(sql, params = []) {
+            return (await client.query(transform(sql), params)).rows[0];
+          },
+          async all(sql, params = []) {
+            return (await client.query(transform(sql), params)).rows;
+          },
+        };
+
+        try {
+          await client.query('BEGIN');
+          const result = await fn(scoped);
+          await client.query('COMMIT');
+          return result;
+        } catch (err) {
+          // Best effort: if the connection itself is what failed, there is
+          // nothing to roll back and the release below discards it.
+          try {
+            await client.query('ROLLBACK');
+          } catch {
+            // ignore
+          }
+          throw err;
+        } finally {
+          client.release();
+        }
+      },
     };
   } else {
     const dbPath = path.join(process.cwd(), 'server', 'database', 'data.sqlite');
@@ -72,6 +124,25 @@ export async function initDatabase() {
       },
       all(sql, params = []) {
         return sqlite.prepare(sql).all(params);
+      },
+
+      // One connection to begin with, so the statements cannot scatter the way
+      // they do over a pool. Written out rather than using better-sqlite3's own
+      // transaction(), which takes a synchronous function.
+      async transaction(fn) {
+        sqlite.prepare('BEGIN').run();
+        try {
+          const result = await fn(db);
+          sqlite.prepare('COMMIT').run();
+          return result;
+        } catch (err) {
+          try {
+            sqlite.prepare('ROLLBACK').run();
+          } catch {
+            // ignore
+          }
+          throw err;
+        }
       },
     };
   }

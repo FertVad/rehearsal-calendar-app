@@ -5,6 +5,7 @@ import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { timestampToLocal, timestampToISO } from '../../utils/timezone.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { notifyRoleChanged, notifyMemberRemoved, notifyAdminAppointed } from '../../services/notifications/pushNotificationService.js';
+import { fullName } from '../../utils/names.js';
 
 const router = Router();
 
@@ -329,7 +330,7 @@ router.put('/:projectId/members/:userId/role', requireAuth, async (req, res) => 
             'SELECT first_name, last_name FROM native_users WHERE id = $1',
             [parseInt(userId)]
           );
-          const memberName = `${member?.first_name || ''}${member?.last_name ? ' ' + member.last_name : ''}`.trim();
+          const memberName = fullName(member);
           await notifyAdminAppointed(project.name, memberName, others.map((o) => o.user_id));
         }
       }

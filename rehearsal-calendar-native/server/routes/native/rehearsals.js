@@ -18,6 +18,7 @@ import {
   getRehearsalResponses,
   getUserResponse,
 } from '../../services/rehearsals/rsvpService.js';
+import { fullName } from '../../utils/names.js';
 import {
   notifyRehearsalCreated,
   notifyRehearsalUpdated,
@@ -160,13 +161,25 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
         [updatedRehearsal.id]
       );
 
-      // Determine what changed — pass translation keys, service localizes per user
+      // What actually changed, not what the request happened to carry. The app
+      // sends the whole form on save, so listing every field that arrived meant
+      // every edit announced "date/time, location, title" whatever was touched.
       const changeKeys = [];
-      if (req.body.startsAt || req.body.endsAt) changeKeys.push('datetime');
-      if (req.body.location) changeKeys.push('location');
-      if (req.body.title) changeKeys.push('title');
+      const moved =
+        new Date(rehearsal.starts_at).getTime() !== new Date(updatedRehearsal.startsAt).getTime() ||
+        new Date(rehearsal.ends_at).getTime() !== new Date(updatedRehearsal.endsAt).getTime();
+      if (moved) changeKeys.push('datetime');
+      if ((rehearsal.location || '') !== (updatedRehearsal.location || '')) changeKeys.push('location');
+      if ((rehearsal.title || '') !== (updatedRehearsal.title || '')) changeKeys.push('title');
 
-      await notifyRehearsalUpdated(updatedRehearsal, project.name, members, changeKeys);
+      // Everyone on it except whoever made the change; they were there.
+      const toNotify = members.filter((m) => Number(m.user_id) !== Number(userId));
+
+      // Nothing worth announcing when nothing visible changed. The roster may
+      // still have, and those added or removed see it in their own lists.
+      if (changeKeys.length > 0 && toNotify.length > 0) {
+        await notifyRehearsalUpdated(updatedRehearsal, project.name, toNotify, changeKeys);
+      }
     } catch (notifErr) {
       console.error('Error sending rehearsal updated notification:', notifErr);
     }
@@ -212,7 +225,12 @@ router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, re
 
     // Send push notifications after deletion
     try {
-      await notifyRehearsalDeleted(rehearsal, project.name, members);
+      // Whoever cancelled it knows. Everyone else on it does not.
+      const toNotify = members.filter((m) => Number(m.user_id) !== Number(userId));
+
+      if (toNotify.length > 0) {
+        await notifyRehearsalDeleted(rehearsal, project.name, toNotify);
+      }
     } catch (notifErr) {
       console.error('Error sending rehearsal deleted notification:', notifErr);
     }
@@ -259,7 +277,7 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
         );
 
         if (admins.length > 0) {
-          const responderName = `${responder.first_name}${responder.last_name ? ' ' + responder.last_name : ''}`;
+          const responderName = fullName(responder);
           const adminIds = admins.map(a => a.user_id);
           await notifyMemberResponse(rehearsal, project.name, responderName, adminIds);
         }

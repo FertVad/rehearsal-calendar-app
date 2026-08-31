@@ -5,6 +5,7 @@ import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { getActiveAdminMembership } from '../../utils/projectAuth.js';
 import { notifyMemberJoined } from '../../services/notifications/pushNotificationService.js';
+import { fullName } from '../../utils/names.js';
 
 const router = Router();
 
@@ -270,7 +271,7 @@ router.post('/:code/join', requireAuth, async (req, res) => {
           'SELECT first_name, last_name FROM native_users WHERE id = $1',
           [userId]
         );
-        const joinerName = `${joiner?.first_name || ''}${joiner?.last_name ? ' ' + joiner.last_name : ''}`.trim();
+        const joinerName = fullName(joiner);
         await notifyMemberJoined(project.name, joinerName, runners.map((r) => r.user_id));
       }
     } catch (notifErr) {
