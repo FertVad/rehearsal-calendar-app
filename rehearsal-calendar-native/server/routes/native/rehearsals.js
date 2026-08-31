@@ -107,7 +107,13 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
         'SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?',
         [rehearsal.id]
       );
-      await notifyRehearsalCreated(rehearsal, project.name, members);
+
+      // Everyone on it except whoever scheduled it — they were there. This used
+      // to be done inside the notifier, against a created_by the service did
+      // not return, so it compared with undefined and excluded nobody: the
+      // author was told about their own rehearsal.
+      const toNotify = members.filter((m) => Number(m.user_id) !== Number(userId));
+      await notifyRehearsalCreated(rehearsal, project.name, toNotify);
     } catch (notifErr) {
       console.error('Error sending rehearsal created notification:', notifErr);
     }

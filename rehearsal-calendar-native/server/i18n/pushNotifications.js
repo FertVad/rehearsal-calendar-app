@@ -30,6 +30,16 @@ const translations = {
       body: ({ inviterName, projectName }) =>
         `${inviterName} пригласил вас в проект ${projectName}`,
     },
+    memberJoined: {
+      title: 'Новый участник',
+      body: ({ memberName, projectName }) =>
+        `${memberName} присоединился к проекту ${projectName}`,
+    },
+    adminAppointed: {
+      title: 'Новый администратор',
+      body: ({ memberName, projectName }) =>
+        `${memberName} теперь администратор проекта ${projectName}`,
+    },
     roleChanged: {
       title: 'Изменение роли',
       body: ({ roleText, projectName }) =>
@@ -89,6 +99,16 @@ const translations = {
       title: 'Project invitation',
       body: ({ inviterName, projectName }) =>
         `${inviterName} invited you to the project ${projectName}`,
+    },
+    memberJoined: {
+      title: 'New member',
+      body: ({ memberName, projectName }) =>
+        `${memberName} joined ${projectName}`,
+    },
+    adminAppointed: {
+      title: 'New administrator',
+      body: ({ memberName, projectName }) =>
+        `${memberName} is now an administrator of ${projectName}`,
     },
     roleChanged: {
       title: 'Role changed',
@@ -150,6 +170,16 @@ const translations = {
       body: ({ inviterName, projectName }) =>
         `${inviterName} te invitó al proyecto ${projectName}`,
     },
+    memberJoined: {
+      title: 'Nuevo integrante',
+      body: ({ memberName, projectName }) =>
+        `${memberName} se unió a ${projectName}`,
+    },
+    adminAppointed: {
+      title: 'Nueva administración',
+      body: ({ memberName, projectName }) =>
+        `${memberName} ahora administra ${projectName}`,
+    },
     roleChanged: {
       title: 'Cambio de rol',
       body: ({ roleText, projectName }) =>
@@ -209,6 +239,16 @@ const translations = {
       title: 'Projekteinladung',
       body: ({ inviterName, projectName }) =>
         `${inviterName} hat dich zum Projekt ${projectName} eingeladen`,
+    },
+    memberJoined: {
+      title: 'Neues Mitglied',
+      body: ({ memberName, projectName }) =>
+        `${memberName} ist ${projectName} beigetreten`,
+    },
+    adminAppointed: {
+      title: 'Neue Verwaltung',
+      body: ({ memberName, projectName }) =>
+        `${memberName} verwaltet jetzt ${projectName}`,
     },
     roleChanged: {
       title: 'Rolle geändert',

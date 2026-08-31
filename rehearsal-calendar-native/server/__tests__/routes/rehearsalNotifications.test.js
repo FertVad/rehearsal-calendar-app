@@ -56,7 +56,8 @@ beforeAll(async () => {
     notifyRehearsalUpdated: updated,
     notifyRehearsalDeleted: deleted,
     notifyMemberResponse: noop,
-    notifyProjectInvite: noop,
+    notifyMemberJoined: noop,
+    notifyAdminAppointed: noop,
     notifyRoleChanged: noop,
     notifyMemberRemoved: noop,
     notifyProjectDeleted: noop,
@@ -111,6 +112,17 @@ describe('Rehearsal notifications go to the roster', () => {
     expect(res.status).toBe(201);
 
     expect(created).toHaveBeenCalledTimes(1);
+    expect(recipients(created)).toContain(Number(testData.memberId));
+  });
+
+  it('does not tell the author about the rehearsal they just scheduled', async () => {
+    // The filter for this existed but compared against undefined: the service
+    // returned the rehearsal without created_by, so it excluded nobody and
+    // whoever scheduled a call was notified of it.
+    const res = await createRehearsal([testData.adminId, testData.memberId]);
+    expect(res.status).toBe(201);
+
+    expect(recipients(created)).not.toContain(Number(testData.adminId));
     expect(recipients(created)).toContain(Number(testData.memberId));
   });
 

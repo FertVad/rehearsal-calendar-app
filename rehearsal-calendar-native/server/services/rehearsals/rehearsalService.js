@@ -422,6 +422,10 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
     startsAt: timestampToISO(newRehearsal.starts_at),
     endsAt: timestampToISO(newRehearsal.ends_at),
     location: newRehearsal.location,
+    // Carried out so the notification can leave the author off their own
+    // rehearsal. Without it the filter downstream compared against undefined
+    // and excluded nobody, so whoever scheduled a call was told about it.
+    createdBy: newRehearsal.created_by,
     createdAt: newRehearsal.created_at,
     updatedAt: newRehearsal.updated_at,
   };
