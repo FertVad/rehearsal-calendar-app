@@ -4,7 +4,7 @@ import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { timestampToLocal, timestampToISO } from '../../utils/timezone.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
-import { notifyRoleChanged, notifyMemberRemoved } from '../../services/notifications/pushNotificationService.js';
+import { notifyRoleChanged, notifyMemberRemoved, notifyAdminAppointed } from '../../services/notifications/pushNotificationService.js';
 
 const router = Router();
 
@@ -307,12 +307,34 @@ router.put('/:projectId/members/:userId/role', requireAuth, async (req, res) => 
       [role, projectId, userId]
     );
 
-    // Send push notification to the user
     try {
       const project = await db.get('SELECT name FROM native_projects WHERE id = $1', [projectId]);
+
+      // The person themselves, in the second person.
       await notifyRoleChanged(project.name, parseInt(userId), role);
+
+      // And everyone else who runs the project, because administrators may
+      // appoint administrators here — so the owner cannot assume they did it.
+      // Whoever made the change is left out; they were there.
+      if (role === 'admin') {
+        const others = await db.all(
+          `SELECT user_id FROM native_project_members
+           WHERE project_id = $1 AND status = 'active' AND role IN ('owner', 'admin')
+             AND user_id <> $2 AND user_id <> $3`,
+          [projectId, parseInt(userId), requesterId]
+        );
+
+        if (others.length > 0) {
+          const member = await db.get(
+            'SELECT first_name, last_name FROM native_users WHERE id = $1',
+            [parseInt(userId)]
+          );
+          const memberName = `${member?.first_name || ''}${member?.last_name ? ' ' + member.last_name : ''}`.trim();
+          await notifyAdminAppointed(project.name, memberName, others.map((o) => o.user_id));
+        }
+      }
     } catch (notifErr) {
-      console.error('Error sending role changed notification:', notifErr);
+      logger.error('[Members] Could not announce the role change:', notifErr);
     }
 
     res.json({

@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import { logger } from '../../utils/logger.js';
 import crypto from 'crypto';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { getActiveAdminMembership } from '../../utils/projectAuth.js';
-import { notifyProjectInvite } from '../../services/notifications/pushNotificationService.js';
+import { notifyMemberJoined } from '../../services/notifications/pushNotificationService.js';
 
 const router = Router();
 
@@ -93,7 +94,9 @@ router.post('/:projectId/invite', requireAuth, async (req, res) => {
     // Update project with new invite code
     await db.run(
       `UPDATE native_projects SET invite_code = $1, invite_expires_at = $2, invite_created_by = $3 WHERE id = $4`,
-      [inviteCode, expiresAt, userId, projectId]
+      // An ISO string, not the Date itself — the convention everywhere else
+      // here, and the only form both engines accept.
+      [inviteCode, expiresAt.toISOString(), userId, projectId]
     );
 
     res.json({
@@ -253,21 +256,25 @@ router.post('/:code/join', requireAuth, async (req, res) => {
 
     // Send push notification to the user who just joined
     try {
-      // Get the project owner/creator
-      const owner = await db.get(
-        `SELECT u.first_name, u.last_name
-         FROM native_users u
-         JOIN native_project_members pm ON u.id = pm.user_id
-         WHERE pm.project_id = $1 AND pm.role = 'owner'`,
-        [project.id]
+      // Told to whoever runs the project, not to the person who just joined —
+      // they tapped Join a moment ago. On a shared invite link the owner would
+      // otherwise have no way to notice someone arriving.
+      const runners = await db.all(
+        `SELECT user_id FROM native_project_members
+         WHERE project_id = $1 AND status = 'active' AND role IN ('owner', 'admin') AND user_id <> $2`,
+        [project.id, userId]
       );
 
-      if (owner) {
-        const inviterName = `${owner.first_name}${owner.last_name ? ' ' + owner.last_name : ''}`;
-        await notifyProjectInvite(project.name, userId, inviterName);
+      if (runners.length > 0) {
+        const joiner = await db.get(
+          'SELECT first_name, last_name FROM native_users WHERE id = $1',
+          [userId]
+        );
+        const joinerName = `${joiner?.first_name || ''}${joiner?.last_name ? ' ' + joiner.last_name : ''}`.trim();
+        await notifyMemberJoined(project.name, joinerName, runners.map((r) => r.user_id));
       }
     } catch (notifErr) {
-      console.error('Error sending project invite notification:', notifErr);
+      logger.error('[Invites] Could not announce the new member:', notifErr);
     }
 
     res.json({

@@ -252,12 +252,34 @@ export async function notifyMemberResponse(rehearsal, projectName, responderName
 /**
  * Notify user when invited to a project
  */
-export async function notifyProjectInvite(projectName, userId, inviterName) {
+/**
+ * Tell the people responsible for a project that somebody has joined it.
+ *
+ * This used to tell the person who had just joined, who had tapped Join a
+ * moment earlier and knew. The owner — whose invite link it was, and who
+ * answers for who is in the room — was told nothing at all.
+ */
+export async function notifyMemberJoined(projectName, memberName, recipientIds) {
   await sendLocalizedNotification(
-    [userId],
-    'projectInvite',
-    { inviterName, projectName },
-    { type: 'project_invite', projectName }
+    recipientIds,
+    'memberJoined',
+    { memberName, projectName },
+    { type: 'member_joined', projectName }
+  );
+}
+
+/**
+ * Tell everyone who runs a project that it has another administrator.
+ *
+ * Administrators may appoint administrators here, so this is not something the
+ * owner can assume they did themselves.
+ */
+export async function notifyAdminAppointed(projectName, memberName, recipientIds) {
+  await sendLocalizedNotification(
+    recipientIds,
+    'adminAppointed',
+    { memberName, projectName },
+    { type: 'admin_appointed', projectName }
   );
 }
 
