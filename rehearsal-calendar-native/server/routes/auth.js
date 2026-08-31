@@ -12,7 +12,9 @@ const router = Router();
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, timezone } = req.body;
+    const { email, password, timezone } = req.body;
+    const firstName = typeof req.body.firstName === 'string' ? req.body.firstName.trim() : req.body.firstName;
+    const lastName = typeof req.body.lastName === 'string' ? req.body.lastName.trim() : req.body.lastName;
 
     if (!email || !password || !firstName) {
       return res.status(400).json({ error: 'Email, password and first name are required' });
@@ -289,9 +291,15 @@ router.get('/me', requireAuth, async (req, res) => {
 });
 
 // Whitelist of allowed fields for user updates (security)
+// A name typed on a phone keyboard often carries a trailing space — the
+// autocomplete adds one. Stored as "Ginger " and "Rode " it reappears as
+// "Ginger  Rode " everywhere the two are joined, so it is cut off here rather
+// than worked around at each display.
+const trimName = (value) => (typeof value === 'string' ? value.trim() : value);
+
 const ALLOWED_USER_FIELDS = {
-  firstName: { dbColumn: 'first_name', validate: null },
-  lastName: { dbColumn: 'last_name', validate: null },
+  firstName: { dbColumn: 'first_name', validate: null, transform: trimName },
+  lastName: { dbColumn: 'last_name', validate: null, transform: trimName },
   phone: { dbColumn: 'phone', validate: null },
   timezone: { dbColumn: 'timezone', validate: null },
   locale: { dbColumn: 'locale', validate: null },

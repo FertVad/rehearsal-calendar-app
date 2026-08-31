@@ -1,5 +1,6 @@
 import { logger } from '../../utils/logger.js';
 import db from '../../database/db.js';
+import { fullName } from '../../utils/names.js';
 
 /**
  * Respond to a rehearsal (seen system: toggle between 'yes' and 'no')
@@ -108,7 +109,7 @@ export async function getRehearsalResponses(rehearsalId) {
         updatedAt: p.updated_at,
         user: {
           id: String(p.user_id),
-          name: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+          name: fullName(p),
         },
       })),
     allParticipants: allParticipants.map((p) => ({

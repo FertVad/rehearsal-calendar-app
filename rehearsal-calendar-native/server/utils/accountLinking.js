@@ -37,6 +37,12 @@ export async function findOrCreateOAuthUser({
 }) {
   const now = new Date().toISOString();
 
+  // Apple in particular hands back names with padding. Trimmed here for the
+  // same reason as on the register and profile routes: stored with a trailing
+  // space, a first name reappears joined to a surname by two.
+  firstName = typeof firstName === 'string' ? firstName.trim() : firstName;
+  lastName = typeof lastName === 'string' ? lastName.trim() || null : lastName;
+
   // ============================================================================
   // Step 1: Check if this OAuth provider is already linked
   // ============================================================================
