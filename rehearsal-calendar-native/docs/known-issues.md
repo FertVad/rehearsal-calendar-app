@@ -7,6 +7,32 @@ Fix one → delete its entry. Anything urgent belongs in a branch, not here.
 
 ---
 
+## 1. Membership changes notify the wrong side
+
+**Seen as:** somebody joins your project through your invite link, or is made an
+administrator in it, and you — the owner — are told nothing. The person who
+joined, meanwhile, receives "You were invited to the project", having just
+tapped Join.
+
+**Where:** [invites.js:267](../server/routes/native/invites.js#L267) notifies the
+joiner rather than the owner. [members.js:313](../server/routes/native/members.js#L313)
+notifies only the member whose role changed, so nobody else learns the project
+now has another administrator.
+
+**Why it matters:** the owner is the one for whom this is news, and the one
+responsible for who is in the room. On a shared invite link they currently have
+no way to notice a stranger arriving except by opening the members list.
+
+**Fix:** decide the audience first, since this is a product question rather than
+a defect. Likely: tell the owner and administrators that somebody joined, tell
+the whole project when an administrator is appointed, and drop the message to
+the joiner — they were there.
+
+**Deferred because:** the wording and the audience are the owner's call, and no
+notification is better than one going to the wrong person.
+
+---
+
 **The register is empty.**
 
 The five entries that used to stand here — today's rehearsal listed twice, the

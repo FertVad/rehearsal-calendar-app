@@ -187,10 +187,17 @@ export default function CalendarScreen() {
   const upcomingRehearsals = useMemo(() => {
     const today = formatDateToString(new Date());
 
-    // Strictly after today: the Today section directly above already lists
-    // today's, and showing the same card twice on one screen reads as a bug.
+    // After the day being shown above, and never in the past.
+    //
+    // This compared against today alone, which is only the same thing while
+    // today is the day selected. Pick tomorrow in the strip and its rehearsals
+    // appeared both in the section above and here — the very duplication the
+    // rule was written to prevent. Selecting a past day keeps the floor at
+    // today, so nothing that has already happened is listed as upcoming.
+    const after = selectedDate > today ? selectedDate : today;
+
     return rehearsals
-      .filter(r => r.date && r.date > today)
+      .filter(r => r.date && r.date > after)
       .sort((a, b) => {
         if (a.date && b.date) {
           const dateCompare = a.date.localeCompare(b.date);
@@ -201,7 +208,7 @@ export default function CalendarScreen() {
         }
         return 0;
       });
-  }, [rehearsals]);
+  }, [rehearsals, selectedDate]);
 
   // Get relative date label (Today, Tomorrow, or formatted date)
   const getRelativeDateLabel = (dateStr: string) => {
