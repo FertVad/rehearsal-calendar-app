@@ -145,9 +145,17 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
       // Group records by date in requester's timezone
       const recordsByDate = new Map();
       for (const record of userRecords) {
-        // Convert timestamp to requester's local date
         const startsAtISO = timestampToISO(record.starts_at);
-        const { date: localDate } = timestampToLocal(startsAtISO, requesterTimezone);
+
+        // A whole-day entry is stored as UTC midnight standing for a calendar
+        // date, not for an instant — so take the date it says. Converting it
+        // into the requester's zone landed it on the wrong day whenever the two
+        // disagreed, and the planner then offered a slot on a day the person
+        // had marked themselves busy. The time branch below already treats
+        // all-day rows this way; only the grouping was missing it.
+        const localDate = record.is_all_day
+          ? startsAtISO.split('T')[0]
+          : timestampToLocal(startsAtISO, requesterTimezone).date;
 
         if (!recordsByDate.has(localDate)) {
           recordsByDate.set(localDate, []);
