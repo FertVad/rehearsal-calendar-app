@@ -1,4 +1,3 @@
-import { logger } from '../utils/logger.js';
 /**
  * OAuth Token Verification Utilities
  *
@@ -20,25 +19,29 @@ export async function verifyGoogleToken(idToken) {
   try {
     const client = new OAuth2Client();
 
-    // Log configured client IDs for debugging
     const clientIds = [
       process.env.GOOGLE_CLIENT_ID_IOS,
       process.env.GOOGLE_CLIENT_ID_ANDROID,
       process.env.GOOGLE_CLIENT_ID_WEB,
     ].filter(Boolean);
-    logger.debug('[OAuth] Expected audiences (Client IDs):', clientIds);
 
-    // TEMPORARY FIX: Verify without strict audience check
-    // expo-auth-session may generate tokens with different audience
-    // We still verify the token signature and issuer
+    // Fail closed. Handing verifyIdToken an undefined audience is not a laxer
+    // check, it is no check: google-auth-library guards the whole comparison
+    // with `if (typeof requiredAudience !== 'undefined')`. Signature and issuer
+    // alone say the token is a genuine Google token — not that it was issued
+    // for us. A Google `sub` is the same value for the same person across every
+    // OAuth client, so a token minted for any other app in the world would
+    // match our stored provider row and log an attacker in as that user.
+    if (clientIds.length === 0) {
+      throw new Error('No GOOGLE_CLIENT_ID_* configured; refusing to verify without an audience');
+    }
+
     const ticket = await client.verifyIdToken({
       idToken,
-      // audience: clientIds, // Temporarily disabled for debugging
+      audience: clientIds,
     });
 
     const payload = ticket.getPayload();
-    logger.debug('[OAuth] Token audience (aud):', payload.aud);
-    logger.debug('[OAuth] Token issuer (iss):', payload.iss);
 
     if (!payload) {
       throw new Error('Invalid token payload');
