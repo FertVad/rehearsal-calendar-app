@@ -184,6 +184,15 @@ export async function setupIntegrationDb() {
     const ordered = [];
     const rewritten = (
       sql
+        // DATE(col AT TIME ZONE $n) → date(col), dropping the zone argument.
+        //
+        // Done before the $n pass so the placeholder disappears with it and the
+        // numbering of the rest still lines up — $n indexes params by its own
+        // number, not by position. SQLite has no zone conversion, so a test
+        // that turns on this path must use timestamps whose UTC date and local
+        // date agree, or it is asserting against a translation rather than
+        // against the query.
+        .replace(/\bDATE\(([^()]*?)\s+AT\s+TIME\s+ZONE\s*\$\d+\)/gi, 'date($1)')
         // $1, $2 ... → ?, remembering which value each occurrence wants
         .replace(/\$(\d+)/g, (_match, n) => {
           ordered.push(params[Number(n) - 1]);
@@ -200,7 +209,14 @@ export async function setupIntegrationDb() {
         .replace(/\bNOW\(\)/gi, "CURRENT_TIMESTAMP")
     );
 
-    return { sql: rewritten, params: ordered.length > 0 ? ordered : params };
+    // better-sqlite3 binds only numbers, strings, bigints, buffers and null, so
+    // a boolean throws rather than being coerced. Postgres takes them, and dev
+    // SQLite stores 1/0 — this makes the two agree instead of failing.
+    const bound = (ordered.length > 0 ? ordered : params).map((v) =>
+      typeof v === 'boolean' ? (v ? 1 : 0) : v
+    );
+
+    return { sql: rewritten, params: bound };
   }
 
   // Create mock db interface matching our db.js
