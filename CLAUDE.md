@@ -722,16 +722,27 @@ decides and then watches.
 
 ## Testing
 
-**The frontend suite has 3 known failures**, all in `TodayRehearsals.test.tsx`
-and all describing an older version of the component — see
-[known-issues.md](rehearsal-calendar-native/docs/known-issues.md). Three is the
-number to watch: anything above it is new. The backend suite is green.
+**Both suites are green.** `npm test` from `rehearsal-calendar-native` runs the
+frontend and the server together: 650 tests across 47 suites, zero failures.
+Anything red is new. (The three long-standing failures in
+`TodayRehearsals.test.tsx` are gone as of 2026-09-01.)
 
 Route-level and service-level tests are the ones that catch things. Several
 older suites drive SQL directly or assert against rows they wrote themselves,
 which is why bugs in the layer above them — the order of two calls inside a
 service, what a handler returns — stayed invisible for months. Prefer going
 through the function under test.
+
+Two defects found in one week were invisible to every SQL-level test and
+obvious the moment a request went through the router: the calendar import
+deleting hand-entered availability, and a removed member keeping access to a
+project's rehearsals. Both live in what the handler *decides*, not in what the
+SQL does.
+
+The SQLite harness in `__tests__/integration/setup.js` translates the
+PostgreSQL dialect the routes are written in. It covers only the constructs
+actually used; anything else surfaces as a `SqliteError`, which is the signal to
+extend it rather than to work around it in the test.
 
 ### Frontend Tests
 ```bash
