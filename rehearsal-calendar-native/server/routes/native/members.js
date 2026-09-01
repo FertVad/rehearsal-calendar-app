@@ -389,6 +389,31 @@ router.delete('/:projectId/members/:userId', requireAuth, async (req, res) => {
       [projectId, userId]
     );
 
+    // And take them off the project's rehearsals.
+    //
+    // Membership is not what grants access to a rehearsal — a row in
+    // native_rehearsal_responses is, and nothing cascades it. So removing
+    // someone used to leave every one of those rows in place: they went on
+    // receiving the reminders and the edited/cancelled pushes, and could still
+    // read any of those rehearsals by id, including changes made after they
+    // were removed. Only an admin re-saving that rehearsal's participants ever
+    // cleared it.
+    await db.run(
+      `DELETE FROM native_rehearsal_responses
+       WHERE user_id = $1
+       AND rehearsal_id IN (SELECT id FROM native_rehearsals WHERE project_id = $2)`,
+      [userId, projectId]
+    );
+
+    // The busy slots those rehearsals put on their calendar go too, or they
+    // stay unavailable to their other projects at times nobody expects them.
+    await db.run(
+      `DELETE FROM native_user_availability
+       WHERE user_id = $1 AND source = 'rehearsal'
+       AND external_event_id IN (SELECT CAST(id AS TEXT) FROM native_rehearsals WHERE project_id = $2)`,
+      [userId, projectId]
+    );
+
     // Send push notification to the removed user
     try {
       await notifyMemberRemoved(project.name, parseInt(userId));
