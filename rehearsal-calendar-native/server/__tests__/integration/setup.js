@@ -85,6 +85,12 @@ export async function setupIntegrationDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- One row per imported calendar event (migration 005). Hand-entered rows
+    -- leave external_event_id NULL, and NULLs are distinct in a unique index on
+    -- both engines, so the editor is unaffected.
+    CREATE UNIQUE INDEX idx_availability_imported_event
+      ON native_user_availability (user_id, external_event_id, source);
+
     -- Rehearsals
     CREATE TABLE native_rehearsals (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
