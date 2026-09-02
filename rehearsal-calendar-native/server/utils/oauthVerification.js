@@ -7,6 +7,24 @@
 
 import { OAuth2Client } from 'google-auth-library';
 import appleSignin from 'apple-signin-auth';
+import { acceptedGoogleAudiences } from '../constants/googleClients.js';
+
+/**
+ * The `aud` a token claims, read without verifying anything — for the log line
+ * when verification fails, and for nothing else.
+ *
+ * google-auth-library throws "Wrong recipient, payload audience !=
+ * requiredAudience" without naming either side, which turns a one-line
+ * configuration mistake into a guessing game. Never use this for a decision.
+ */
+function claimedAudience(idToken) {
+  try {
+    const [, body] = String(idToken).split('.');
+    return JSON.parse(Buffer.from(body, 'base64url').toString()).aud;
+  } catch {
+    return '(unreadable)';
+  }
+}
 
 /**
  * Verify Google ID token and extract user information
@@ -19,12 +37,6 @@ export async function verifyGoogleToken(idToken) {
   try {
     const client = new OAuth2Client();
 
-    const clientIds = [
-      process.env.GOOGLE_CLIENT_ID_IOS,
-      process.env.GOOGLE_CLIENT_ID_ANDROID,
-      process.env.GOOGLE_CLIENT_ID_WEB,
-    ].filter(Boolean);
-
     // Fail closed. Handing verifyIdToken an undefined audience is not a laxer
     // check, it is no check: google-auth-library guards the whole comparison
     // with `if (typeof requiredAudience !== 'undefined')`. Signature and issuer
@@ -32,8 +44,9 @@ export async function verifyGoogleToken(idToken) {
     // for us. A Google `sub` is the same value for the same person across every
     // OAuth client, so a token minted for any other app in the world would
     // match our stored provider row and log an attacker in as that user.
+    const clientIds = acceptedGoogleAudiences();
     if (clientIds.length === 0) {
-      throw new Error('No GOOGLE_CLIENT_ID_* configured; refusing to verify without an audience');
+      throw new Error('No Google client ids configured; refusing to verify without an audience');
     }
 
     const ticket = await client.verifyIdToken({
@@ -63,7 +76,17 @@ export async function verifyGoogleToken(idToken) {
       locale: payload.locale || null,
     };
   } catch (error) {
-    console.error('[OAuth] Google token verification failed:', error.message);
+    // Name both sides. The library's own message says only that they differ.
+    if (/audience/i.test(error.message)) {
+      console.error(
+        '[OAuth] Google token rejected: token audience is',
+        claimedAudience(idToken),
+        '- we accept',
+        acceptedGoogleAudiences()
+      );
+    } else {
+      console.error('[OAuth] Google token verification failed:', error.message);
+    }
     throw new Error('Failed to verify Google token: ' + error.message);
   }
 }
