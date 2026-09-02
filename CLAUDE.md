@@ -775,4 +775,4 @@ Key documentation files:
 **Backend**: Node.js 18+, Express.js 4.21.2, JWT authentication
 **Database**: PostgreSQL (production), SQLite (development)
 **Testing**: Jest, @testing-library/react-native
-**Languages**: Russian, English (full i18n support)
+**Languages**: Russian, English, Spanish, German (full i18n support). A new key goes into the interface and all four locale blocks in `src/i18n/translations/` — the type will not compile otherwise.
