@@ -37,6 +37,21 @@ The config is in the old `.eslintrc` format and ESLint 9 refuses it, so
 `npm run lint`, `npm run lint:fix` and anything depending on them fail before
 linting a single file. Nobody has been linting for a while.
 
+### Two route suites fail intermittently in a full run
+
+Seen twice on 2026-09-02, on different tests:
+
+- `rehearsalById.test.js` → "gives it to an admin who is not on it"
+- `rehearsalNotifications.test.js` → "tells the roster when the rehearsal changes"
+
+Both pass on their own, repeatedly, and both passed on the next full run. So
+nothing is broken — but a suite that fails one run in five stops being read, and
+the next real failure gets waved through as "the flaky one".
+
+Both suites build their timestamps with `Date.now()` at call time and share the
+in-memory SQLite harness, so the likely candidates are a time-dependent
+assertion or cross-suite state in a worker. Not yet chased.
+
 ### `npm run check:secrets` always fails, on itself
 
 `scripts/check-secrets.sh` greps tracked files for its own pattern list, and the
