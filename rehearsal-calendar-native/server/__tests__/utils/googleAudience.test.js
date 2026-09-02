@@ -28,6 +28,7 @@ jest.unstable_mockModule('google-auth-library', () => ({
 }));
 
 const { verifyGoogleToken } = await import('../../utils/oauthVerification.js');
+const { GOOGLE_CLIENT_IDS } = await import('../../constants/googleClients.js');
 
 const payload = {
   sub: '1234567890',
@@ -57,11 +58,46 @@ describe('verifyGoogleToken', () => {
     await verifyGoogleToken('a-token');
 
     const [args] = verifyIdToken.mock.calls[0];
-    expect(args.audience).toEqual([
+    expect(args.audience).toEqual(expect.arrayContaining([
       'ios-client.apps.googleusercontent.com',
       'android-client.apps.googleusercontent.com',
       'web-client.apps.googleusercontent.com',
-    ]);
+    ]));
+  });
+
+  it('accepts the ids the app is actually built with, without any environment', async () => {
+    // The failure that sent this back for a second deploy: the audience check
+    // was switched on against a production environment holding stale values,
+    // and every sign-in answered "Wrong recipient". These ids ship inside the
+    // binary; the server has no business learning them from somewhere else.
+    delete process.env.GOOGLE_CLIENT_ID_IOS;
+    delete process.env.GOOGLE_CLIENT_ID_ANDROID;
+    delete process.env.GOOGLE_CLIENT_ID_WEB;
+
+    await verifyGoogleToken('a-token');
+
+    expect(verifyIdToken.mock.calls[0][0].audience).toEqual(GOOGLE_CLIENT_IDS);
+  });
+
+  it('adds what the environment names rather than replacing the list', async () => {
+    // So a rotated id can go out without a release, but cannot silently take
+    // the working ones away.
+    process.env.GOOGLE_CLIENT_ID_WEB = 'rotated.apps.googleusercontent.com';
+
+    await verifyGoogleToken('a-token');
+
+    const { audience } = verifyIdToken.mock.calls[0][0];
+    expect(audience).toEqual(expect.arrayContaining(GOOGLE_CLIENT_IDS));
+    expect(audience).toContain('rotated.apps.googleusercontent.com');
+  });
+
+  it('names each audience once', async () => {
+    process.env.GOOGLE_CLIENT_ID_IOS = GOOGLE_CLIENT_IDS[0];
+
+    await verifyGoogleToken('a-token');
+
+    const { audience } = verifyIdToken.mock.calls[0][0];
+    expect(new Set(audience).size).toBe(audience.length);
   });
 
   it('never passes an undefined audience', async () => {
@@ -75,26 +111,12 @@ describe('verifyGoogleToken', () => {
     expect(Object.prototype.hasOwnProperty.call(args, 'audience')).toBe(true);
   });
 
-  it('skips the client ids that are not configured', async () => {
+  it('skips an environment variable that is not set', async () => {
     delete process.env.GOOGLE_CLIENT_ID_ANDROID;
 
     await verifyGoogleToken('a-token');
 
-    expect(verifyIdToken.mock.calls[0][0].audience).toEqual([
-      'ios-client.apps.googleusercontent.com',
-      'web-client.apps.googleusercontent.com',
-    ]);
-  });
-
-  it('refuses to verify at all when none are configured', async () => {
-    // Fail closed: an empty list must not become "accept anything", which is
-    // where this started.
-    delete process.env.GOOGLE_CLIENT_ID_IOS;
-    delete process.env.GOOGLE_CLIENT_ID_ANDROID;
-    delete process.env.GOOGLE_CLIENT_ID_WEB;
-
-    await expect(verifyGoogleToken('a-token')).rejects.toThrow(/audience/i);
-    expect(verifyIdToken).not.toHaveBeenCalled();
+    expect(verifyIdToken.mock.calls[0][0].audience).not.toContain(undefined);
   });
 
   it('still rejects a token from another issuer', async () => {
