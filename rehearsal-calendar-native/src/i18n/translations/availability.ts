@@ -16,6 +16,11 @@ export interface AvailabilityTranslations {
   saveError: string;
   selectDates: string;
   busyTime: string;
+  /** Heading over the rows the user did not enter: phone-calendar events and rehearsals. */
+  fromCalendar: string;
+  fromDeviceCalendar: string;
+  fromRehearsal: string;
+  importedNote: string;
   startTime: string;
   endTime: string;
   deleteData: string;
@@ -92,6 +97,10 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     saveError: 'Не удалось сохранить занятость',
     selectDates: 'Выберите даты',
     busyTime: 'Время когда занят',
+    fromCalendar: 'Уже есть в этот день',
+    fromDeviceCalendar: 'из календаря',
+    fromRehearsal: 'репетиция',
+    importedNote: 'Эти часы видят остальные, когда подбирают время. Чтобы освободить их, удалите событие в календаре телефона.',
     startTime: 'Время начала',
     endTime: 'Время окончания',
     deleteData: 'Удалить данные этой даты',
@@ -175,6 +184,10 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     saveError: 'Failed to save availability',
     selectDates: 'Select dates',
     busyTime: 'Busy time',
+    fromCalendar: 'Already on this day',
+    fromDeviceCalendar: 'from calendar',
+    fromRehearsal: 'rehearsal',
+    importedNote: 'Everyone else sees these hours when looking for a time. To free them up, delete the event in your phone calendar.',
     startTime: 'Start time',
     endTime: 'End time',
     deleteData: 'Delete this date data',
@@ -251,6 +264,10 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     saveError: 'No se pudo guardar la disponibilidad',
     selectDates: 'Selecciona las fechas',
     busyTime: 'Hora en que estás ocupado',
+    fromCalendar: 'Ya hay algo ese día',
+    fromDeviceCalendar: 'del calendario',
+    fromRehearsal: 'ensayo',
+    importedNote: 'Los demás ven estas horas al buscar un hueco. Para liberarlas, elimina el evento en el calendario del teléfono.',
     startTime: 'Hora de inicio',
     endTime: 'Hora de fin',
     deleteData: 'Eliminar datos de esta fecha',
@@ -327,6 +344,10 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     saveError: 'Verfügbarkeit konnte nicht gespeichert werden',
     selectDates: 'Daten auswählen',
     busyTime: 'Beschäftigte Zeit',
+    fromCalendar: 'An diesem Tag schon vorhanden',
+    fromDeviceCalendar: 'aus dem Kalender',
+    fromRehearsal: 'Probe',
+    importedNote: 'Diese Zeiten sehen die anderen bei der Terminsuche. Zum Freigeben den Termin im Telefonkalender löschen.',
     startTime: 'Startzeit',
     endTime: 'Endzeit',
     deleteData: 'Daten für dieses Datum löschen',

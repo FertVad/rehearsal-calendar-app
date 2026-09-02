@@ -1,7 +1,7 @@
 import { logger } from '../../../shared/utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { availabilityAPI } from '../../../shared/services/api';
-import { AvailabilityData, DayMode, DayState } from '../types';
+import { AvailabilityData, DayMode, DayState, TimeSlot } from '../types';
 import {
   isoToDateStringInTimezone,
   isoToTimeStringInTimezone,
@@ -128,7 +128,7 @@ export const useAvailabilityData = () => {
       // Convert server format to local format
       const localData: AvailabilityData = {};
       for (const [dateKey, slots] of Object.entries(serverData)) {
-        const typedSlots = slots as Array<{ startTime: string; endTime: string; type: string; isAllDay?: boolean }>;
+        const typedSlots = slots as Array<{ startTime: string; endTime: string; type: string; isAllDay?: boolean; source?: string }>;
         if (typedSlots.length === 0) continue;
 
         // Ensure date is in YYYY-MM-DD format
@@ -141,29 +141,47 @@ export const useAvailabilityData = () => {
           formattedDate = `${year}-${month}-${day}`;
         }
 
-        // Determine mode based on type and isAllDay flag
-        const firstSlot = typedSlots[0];
-        let mode: DayMode = 'free';
-
         // Strip seconds from time (HH:MM:SS -> HH:MM)
         const formatTime = (time: string) => time?.substring(0, 5) || '00:00';
 
-        // Check if this is an all-day slot using the isAllDay flag
-        if (firstSlot.isAllDay) {
-          if (firstSlot.type === 'busy') {
-            mode = 'busy';
-          } else if (firstSlot.type === 'available') {
-            mode = 'free';
-          }
-        } else {
+        // Rows the user did not type: events read out of the phone's calendar,
+        // and the busy time a rehearsal books. They are shown but never edited
+        // here, and a save must not copy them into hand-entered rows.
+        const readOnly = typedSlots.filter(
+          (s) => s.source && s.source !== 'manual'
+        );
+        const own = typedSlots.filter((s) => !s.source || s.source === 'manual');
+
+        // The day's own declaration. The all-day row is searched for rather
+        // than assumed to be first: the deduplication above puts rehearsal rows
+        // in front, and a timed row can sort ahead of it anyway.
+        const allDay = own.find((s) => s.isAllDay);
+        let mode: DayMode = allDay ? (allDay.type === 'busy' ? 'busy' : 'free') : 'custom';
+
+        // Show the fact, not just the declaration. A day marked free while the
+        // phone's calendar has an event on it is not free — the endpoint that
+        // feeds everyone else's planner reports that event as busy, so the
+        // owner has to see it too. Hiding what others act on is the whole
+        // trouble this fixes. A day marked busy already covers it, so that
+        // declaration stands.
+        if (mode === 'free' && readOnly.length > 0) {
           mode = 'custom';
         }
 
         localData[formattedDate] = {
           mode,
-          slots: typedSlots.map(s => ({
+          // An all-day declaration is the mode, not a slot — carrying it here
+          // as 00:00–23:59 would show up as an editable row and be written back
+          // as a timed one. Only that row is left out; any timed rows the user
+          // entered stay, so switching the mode does not lose them.
+          slots: own.filter((s) => !s.isAllDay).map((s) => ({
             start: formatTime(s.startTime),
-            end: formatTime(s.endTime)
+            end: formatTime(s.endTime),
+          })),
+          importedSlots: readOnly.map((s) => ({
+            start: formatTime(s.startTime),
+            end: formatTime(s.endTime),
+            source: s.source as TimeSlot['source'],
           })),
         };
       }

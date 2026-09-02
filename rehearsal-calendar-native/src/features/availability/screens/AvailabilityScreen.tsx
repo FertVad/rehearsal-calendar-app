@@ -405,6 +405,38 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             </View>
           )}
 
+          {/* What is already on this day without the user putting it there:
+              events from the phone's calendar, and rehearsals. Shown in every
+              mode, because these are what everyone else's planner is told —
+              hiding them while acting on them is what made a day declared free
+              read as busy to the rest of the company. Read-only: a calendar
+              event is changed in the calendar, a rehearsal in its own screen. */}
+          {selectedDayState?.importedSlots && selectedDayState.importedSlots.length > 0 && (
+            <View style={styles.importedSection}>
+              <Text style={styles.importedTitle}>{t.availability.fromCalendar}</Text>
+
+              {selectedDayState.importedSlots.map((slot, index) => (
+                <View key={`imported-${index}`} style={styles.importedRow}>
+                  <Ionicons
+                    name={slot.source === 'rehearsal' ? 'people-outline' : 'calendar-outline'}
+                    size={16}
+                    color={Colors.text.tertiary}
+                  />
+                  <Text style={styles.importedTime}>
+                    {slot.start} – {slot.end}
+                  </Text>
+                  <Text style={styles.importedSource}>
+                    {slot.source === 'rehearsal'
+                      ? t.availability.fromRehearsal
+                      : t.availability.fromDeviceCalendar}
+                  </Text>
+                </View>
+              ))}
+
+              <Text style={styles.importedNote}>{t.availability.importedNote}</Text>
+            </View>
+          )}
+
           {/* Info for free/busy modes */}
           {selectedDayState?.mode && (
             <ModeInfo mode={selectedDayState.mode} />
