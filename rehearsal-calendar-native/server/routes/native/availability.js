@@ -78,10 +78,24 @@ router.post('/bulk', requireAuth, async (req, res) => {
   // Get user's timezone for date extraction
   const timezone = await getUserTimezone(userId);
 
-  // Compute affected dates (used for DELETE)
+  // Which dates the manual editor is replacing.
+  //
+  // Only manual entries count. This endpoint has replace-the-day semantics —
+  // below, every date named here has its hand-entered rows deleted before the
+  // new ones go in — and the calendar importer posts through the same door
+  // (src/shared/services/calendar/import.ts). Counting an imported event's date
+  // meant a dentist appointment appearing in the phone calendar deleted the
+  // whole day's hand-marked availability, silently and with no way back. Worst
+  // on the first sync after Auto Sync is switched on, which posts a year of
+  // events at once.
+  //
+  // The `|| MANUAL` default carries weight: the manual editor sends no source
+  // field at all, so testing entry.source directly would empty this set and
+  // turn every save into an append.
   const affectedDates = new Set();
   for (const entry of entries) {
-    if (entry.startsAt && entry.type) {
+    const entrySource = entry.source || AVAILABILITY_SOURCES.MANUAL;
+    if (entry.startsAt && entry.type && entrySource === AVAILABILITY_SOURCES.MANUAL) {
       affectedDates.add(entry.startsAt.split('T')[0]);
     }
   }
@@ -139,14 +153,11 @@ router.post('/bulk', requireAuth, async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
+    // The driver's message, code, hint and where used to go back to the client,
+    // which hands out column names and constraint names to anyone who can
+    // provoke an error. It belongs in the log, not the response.
     console.error('Error saving bulk availability:', error);
-    res.status(500).json({
-      error: 'Failed to save availability',
-      details: error.message,
-      code: error.code,
-      hint: error.hint,
-      where: error.where,
-    });
+    res.status(500).json({ error: 'Failed to save availability' });
   }
 });
 

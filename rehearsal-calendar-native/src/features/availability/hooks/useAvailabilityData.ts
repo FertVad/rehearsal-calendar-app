@@ -38,9 +38,23 @@ export const useAvailabilityData = () => {
         const dateSource = record.startsAt || record.date;
         if (!dateSource) continue;
 
-        // ✅ FIXED: Extract date in user's timezone
+        const isAllDay = record.isAllDay ?? record.is_all_day;
+
+        // A whole-day entry is written as `${localDate}T00:00:00.000Z` — UTC
+        // midnight standing for a calendar date, not for an instant. That is
+        // the app-wide convention and the server's delete keys on it too. So
+        // read it back as the date it says, and convert only the timed rows,
+        // which carry a real offset and do mean an instant.
+        //
+        // Converting an all-day row moved it a day earlier for anyone at a
+        // negative offset: a New York user marking 10 September saw 9 September
+        // marked and 10 September free, and each save after a reload walked it
+        // another day back. Nobody east of UTC ever saw it, which is why it
+        // survived — the current users are all in Berlin, Moscow and Jerusalem.
         const dateStr = record.startsAt
-          ? isoToDateStringInTimezone(record.startsAt, userTimezone)
+          ? isAllDay
+            ? record.startsAt.split('T')[0]
+            : isoToDateStringInTimezone(record.startsAt, userTimezone)
           : dateSource.split('T')[0];
 
         if (!serverData[dateStr]) {
@@ -51,8 +65,6 @@ export const useAvailabilityData = () => {
         // - New TIMESTAMPTZ: startsAt/endsAt (ISO 8601)
         // - Old format: start/end or start_time/end_time (HH:mm)
         let startTime, endTime;
-
-        const isAllDay = record.isAllDay ?? record.is_all_day;
 
         if (record.startsAt && record.endsAt) {
           // For all-day events, use standard 00:00 - 23:59 regardless of actual timestamps

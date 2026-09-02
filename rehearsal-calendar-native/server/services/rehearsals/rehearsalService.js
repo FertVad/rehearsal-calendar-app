@@ -281,7 +281,15 @@ export async function getRehearsalById(rehearsalId, userId) {
 
   if (!rehearsal) return null;
 
-  const isAdmin = await checkUserIsAdmin(rehearsal.project_id, userId);
+  // Membership first, then the roster. Asking only "is there a roster row"
+  // trusted a table that nothing cascades: someone removed from the project
+  // kept their rows and could go on reading the rehearsal by id, including
+  // edits made after they left. Removal prunes those rows now, and this is the
+  // second lock — any other way a stale row appears stops here.
+  const membership = await checkUserMembership(rehearsal.project_id, userId);
+  if (!membership) return null;
+
+  const isAdmin = membership.role === 'owner' || membership.role === 'admin';
 
   if (!isAdmin) {
     const onIt = await db.get(

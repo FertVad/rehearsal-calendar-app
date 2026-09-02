@@ -145,9 +145,17 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
       // Group records by date in requester's timezone
       const recordsByDate = new Map();
       for (const record of userRecords) {
-        // Convert timestamp to requester's local date
         const startsAtISO = timestampToISO(record.starts_at);
-        const { date: localDate } = timestampToLocal(startsAtISO, requesterTimezone);
+
+        // A whole-day entry is stored as UTC midnight standing for a calendar
+        // date, not for an instant — so take the date it says. Converting it
+        // into the requester's zone landed it on the wrong day whenever the two
+        // disagreed, and the planner then offered a slot on a day the person
+        // had marked themselves busy. The time branch below already treats
+        // all-day rows this way; only the grouping was missing it.
+        const localDate = record.is_all_day
+          ? startsAtISO.split('T')[0]
+          : timestampToLocal(startsAtISO, requesterTimezone).date;
 
         if (!recordsByDate.has(localDate)) {
           recordsByDate.set(localDate, []);
@@ -387,6 +395,31 @@ router.delete('/:projectId/members/:userId', requireAuth, async (req, res) => {
     await db.run(
       'DELETE FROM native_project_members WHERE project_id = $1 AND user_id = $2',
       [projectId, userId]
+    );
+
+    // And take them off the project's rehearsals.
+    //
+    // Membership is not what grants access to a rehearsal — a row in
+    // native_rehearsal_responses is, and nothing cascades it. So removing
+    // someone used to leave every one of those rows in place: they went on
+    // receiving the reminders and the edited/cancelled pushes, and could still
+    // read any of those rehearsals by id, including changes made after they
+    // were removed. Only an admin re-saving that rehearsal's participants ever
+    // cleared it.
+    await db.run(
+      `DELETE FROM native_rehearsal_responses
+       WHERE user_id = $1
+       AND rehearsal_id IN (SELECT id FROM native_rehearsals WHERE project_id = $2)`,
+      [userId, projectId]
+    );
+
+    // The busy slots those rehearsals put on their calendar go too, or they
+    // stay unavailable to their other projects at times nobody expects them.
+    await db.run(
+      `DELETE FROM native_user_availability
+       WHERE user_id = $1 AND source = 'rehearsal'
+       AND external_event_id IN (SELECT CAST(id AS TEXT) FROM native_rehearsals WHERE project_id = $2)`,
+      [userId, projectId]
     );
 
     // Send push notification to the removed user
