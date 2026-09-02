@@ -133,9 +133,14 @@ router.post('/bulk', requireAuth, async (req, res) => {
           if (existing) continue;
         }
 
+        // The lookup above settles it within one request; this settles it
+        // between two. Overlapping syncs both read "not there yet" and both
+        // inserted, which is how one Apple Calendar event came to be stored
+        // twice. Migration 005 adds the index this leans on.
         await tx.run(
           `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, title, notes, is_all_day, source, external_event_id)
-           VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, $7, $8, $9)`,
+           VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, $7, $8, $9)
+           ON CONFLICT (user_id, external_event_id, source) DO NOTHING`,
           [
             userId,
             startsAt,

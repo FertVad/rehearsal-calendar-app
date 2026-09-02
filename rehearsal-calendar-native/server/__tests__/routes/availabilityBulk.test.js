@@ -144,6 +144,44 @@ describe('An import arriving at the same door', () => {
     expect(rows()).toHaveLength(1);
   });
 
+  it('refuses it twice in one payload too', async () => {
+    const twice = imported('2026-09-15T14:00:00.000Z', '2026-09-15T15:00:00.000Z', 'evt-1');
+
+    await post([twice, twice]);
+
+    expect(rows()).toHaveLength(1);
+  });
+
+  it('refuses it when two syncs overlap', async () => {
+    // How it actually happened: a pull-to-refresh landed on a sync already in
+    // flight. Both requests asked whether the event was stored, both were told
+    // no, and both inserted it. A look-before-you-leap check cannot decide
+    // this — only the unique index from migration 005 can.
+    const event = () => imported('2026-09-15T14:00:00.000Z', '2026-09-15T15:00:00.000Z', 'evt-1');
+
+    await Promise.all([post([event()]), post([event()])]);
+
+    expect(rows()).toHaveLength(1);
+  });
+
+  it('leaves the same event on another calendar alone', async () => {
+    // Distinct sources are distinct rows: an event imported from Apple and the
+    // same id arriving from Google are two events as far as this is concerned.
+    await post([imported('2026-09-15T14:00:00.000Z', '2026-09-15T15:00:00.000Z', 'evt-1')]);
+
+    await post([
+      {
+        startsAt: '2026-09-15T14:00:00.000Z',
+        endsAt: '2026-09-15T15:00:00.000Z',
+        type: 'busy',
+        source: 'google_calendar',
+        external_event_id: 'evt-1',
+      },
+    ]);
+
+    expect(rows()).toHaveLength(2);
+  });
+
   it('leaves a mixed payload behaving as each half should', async () => {
     // The editor's own entries still replace their day; the imported ones still
     // do not.
