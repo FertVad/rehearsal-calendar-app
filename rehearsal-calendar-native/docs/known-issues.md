@@ -16,11 +16,39 @@ turns out wrong.
 Verifying in batches of three or four works; batches of seven run out of budget
 partway and report nothing.
 
-Five were fixed on 2026-09-03 and their entries deleted: the planner booking the
-whole company for every rehearsal, a push token staying with the account that no
-longer held it, the secret scanner reporting its own pattern list, a deleted
-project leaving its busy hours on everyone forever, and the planner's range
-being computed through UTC.
+Thirteen were fixed on 2026-09-03 and their entries deleted. Six from the
+register: the planner booking the whole company for every rehearsal, a push
+token staying with the account that no longer held it, the secret scanner
+reporting its own pattern list, a deleted project leaving its busy hours on
+everyone forever, an account deletion telling nobody, and a recurring calendar
+event blocking one occurrence.
+
+Seven more came out of a two-agent audit of the Smart Planner run the same day,
+all of them the same failure — **the planner saying free when the person is
+busy**, which is the one thing this feature cannot afford:
+
+- Busy time was sampled at :00 and :30 and asked "is anyone busy *at* this
+  instant", so a 10:05–10:25 call blocked nothing and the day read Perfect.
+- The last slot of the day was closed with the previous half-hour's busy set,
+  so anyone who became busy after 22:30 was dropped from it.
+- A span crossing local midnight came back as 22:00–02:00 and the client
+  discarded it outright, so the whole evening read free.
+- A multi-day span was filed under its start date only, leaving the rest Perfect,
+  and one that began before the requested window was never fetched at all.
+- A whole-day calendar event took both ends from its start, so a fortnight's
+  holiday blocked one day.
+- One calendar failing to open was read as "the user deleted these", wiping
+  every slot imported from it.
+- A tap on the eye put an admin on a rehearsal with no busy time booked.
+
+Plus two range bugs that hid days rather than busy time: the day walk lost the
+last day of any range containing an autumn clock change, and its first repair
+broke Santiago and Havana, where the clocks change at midnight. Both loops walk
+UTC now, verified under six timezones.
+
+The planner had **no tests at all** before this — it could not have had any,
+since Jest never defined `__DEV__` and any module guarding on it threw. It has
+28 now, and the availability endpoint has its first 8.
 
 ---
 
@@ -137,28 +165,6 @@ leaving `hasChanges` true.
 manual rows — the wiring was simply never done. Make `deletePastDates` async,
 await one call per selected date, and skip the local mutation if any fails.
 
-### A recurring calendar event blocks only one of its occurrences
-
-Verified 2026-09-03. All occurrences of a series share one id — expo-calendar
-says so outright: *"instances of recurring events do not have their own unique
-and stable IDs on either iOS or Android."* The import keys everything on that
-shared id ([import.ts:183-187](../src/shared/services/calendar/import.ts#L183)
-collapses N occurrences to one map entry), and every occurrence is sent with the
-same `external_event_id`, where the unique index from migration 005 keeps
-exactly one.
-
-A missing row reads as free rather than unknown, so a weekly class shows the
-person available for every occurrence but one — on their own screen and in
-everyone else's planner. Which occurrence is blocked also moves between syncs,
-because each occurrence whose times differ is pushed to `toUpdate` and the
-single row is rewritten, last one wins.
-
-**Smallest fix** (client, needs a rebuild): key the import on
-`` `${event.id}:${startsAt}` `` instead of `event.id` in the three maps and the
-payload. The exported-rehearsal exclusion must keep comparing the bare
-`event.id`. No migration: the unique index still holds, and rows keyed on the
-bare id are pruned by the existing delete pass and re-added on the first sync.
-
 ### A deleted rehearsal keeps its calendar event on every other device
 
 Verified 2026-09-03. The export is create-or-update only:
@@ -242,6 +248,33 @@ it.
 The test harness hardcodes the newer shape, so the green suite proves nothing
 here.
 
+### The planner cannot tell "free" from "nobody has said"
+
+Found 2026-09-03 during the planner audit; left alone because it is a UI
+decision, not a defect in the maths.
+
+A member with no availability rows produces no entry, and the generator defaults
+them to unblocked, so `categorizeSlot(0, n)` returns `perfect`. Someone who
+joined this morning and has never opened the availability screen is
+indistinguishable from someone who opened it and marked themselves wide open —
+and "Perfect, everyone free" is exactly what a brand-new project says about
+itself.
+
+Defensible as a default. The problem is that it is unlabelled.
+
+**Smallest fix** (server plus client): the endpoint already knows which
+`targetUserIds` returned no records — return a `hasData: false` per member and
+let the slot rows qualify the count, "5 free, 2 unknown".
+
+### "Clear All" in the member filter reads as "nobody" and means "everybody"
+
+Found the same day. Clearing the selection sets it to `[]`, which
+`useSmartPlanner` treats as every member, while `MemberFilter` hides the
+"N of M selected" line. So the planner goes on applying everyone's constraints
+with nothing on screen explaining why.
+
+Over-blocking and confusing rather than dangerous, which is why it is here.
+
 ### `npm run lint` does not run at all
 
 The config is in the old `.eslintrc` format and ESLint 9 refuses it, so
@@ -262,6 +295,9 @@ the next real failure gets waved through as "the flaky one".
 Both suites build their timestamps with `Date.now()` at call time and share the
 in-memory SQLite harness, so the likely candidates are a time-dependent
 assertion or cross-suite state in a worker. Not yet chased.
+
+Eight consecutive full runs on 2026-09-03 were clean, so it is rare rather than
+gone. Leave the entry until something explains it.
 
 ---
 
