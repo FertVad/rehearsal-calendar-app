@@ -1,5 +1,5 @@
 import type { TimeSlot, SlotCategory, BusyMember, Member, AvailabilityData } from '../types';
-import { timeToMinutes } from '../../../shared/utils/time';
+import { timeToMinutes, parseDateString, formatDateToString } from '../../../shared/utils/time';
 import { WORKDAY_START, WORKDAY_END } from '../../../shared/utils/availability';
 import { logger } from '../../../shared/utils/logger';
 
@@ -183,13 +183,19 @@ export function generateTimeSlots(
   workHoursEnd: string = WORKDAY_END
 ): TimeSlot[] {
   const slots: TimeSlot[] = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
 
-  let currentDate = new Date(start);
+  // Walked entirely in local days. It used to start from `new Date(startDate)`,
+  // which is UTC midnight, and read the day back out with toISOString() while
+  // advancing it with setDate(), which moves the *local* components. The two
+  // agree until a clock change: coming off summer time the step is 25 hours, so
+  // the cursor drifted an hour past midnight UTC and overshot the end a day
+  // early. A week containing the October change was planned as six days, with
+  // the last one silently absent — once a year, and invisible unless counted.
+  const end = parseDateString(endDate);
+  const currentDate = parseDateString(startDate);
 
   while (currentDate <= end) {
-    const dateStr = currentDate.toISOString().split('T')[0];
+    const dateStr = formatDateToString(currentDate);
     const dateSlots = findFreeSlots(dateStr, members, availabilityData, selectedMemberIds, workHoursStart, workHoursEnd);
     slots.push(...dateSlots);
 
