@@ -6,6 +6,7 @@ import { generateTokens, verifyToken, requireAuth } from '../middleware/jwtMiddl
 import { serializeUser } from '../utils/userSerializer.js';
 import { verifyGoogleToken, verifyAppleToken } from '../utils/oauthVerification.js';
 import { findOrCreateOAuthUser, getUserAuthProviders, unlinkAuthProvider } from '../utils/accountLinking.js';
+import { notifyProjectDeleted } from '../services/notifications/pushNotificationService.js';
 
 const router = Router();
 
@@ -440,6 +441,29 @@ router.delete('/me', requireAuth, async (req, res) => {
 
       // Delete orphaned projects (CASCADE will handle rehearsals, members, etc.)
       for (const project of orphaned) {
+        // Who is losing this project. Read before the delete takes the rows,
+        // and kept for the notification that goes out after the commit — these
+        // people are about to find a project missing with nothing to explain it.
+        const members = await tx.all(
+          `SELECT user_id FROM native_project_members
+           WHERE project_id = $1 AND status = 'active' AND user_id != $2`,
+          [project.id, userId]
+        );
+        project.memberIds = members.map((m) => m.user_id);
+
+        // The busy hours this project's rehearsals put on their calendars. The
+        // cascade cannot reach them — the link is source='rehearsal' plus an
+        // external_event_id holding the id as text, not a foreign key — and
+        // afterwards no endpoint can, since the project they name is gone. Left
+        // alone they would keep these people looking unavailable in every other
+        // project's planner, for rehearsals nobody can point at any more.
+        await tx.run(
+          `DELETE FROM native_user_availability
+           WHERE source = 'rehearsal'
+           AND external_event_id IN (SELECT CAST(id AS TEXT) FROM native_rehearsals WHERE project_id = $1)`,
+          [project.id]
+        );
+
         await tx.run('DELETE FROM native_projects WHERE id = $1', [project.id]);
         logger.debug(`[Auth] Deleted orphaned project: ${project.name} (id: ${project.id})`);
       }
@@ -449,6 +473,17 @@ router.delete('/me', requireAuth, async (req, res) => {
 
       return orphaned;
     });
+
+    // Outside the transaction, and each one on its own: the account is already
+    // gone, so a push that fails must not read as a deletion that failed.
+    for (const project of orphanedProjects) {
+      if (!project.memberIds?.length) continue;
+      try {
+        await notifyProjectDeleted(project.name, project.memberIds);
+      } catch (notifErr) {
+        logger.error(`[Auth] Project-deleted notification failed for ${project.name}:`, notifErr);
+      }
+    }
 
     res.json({
       message: 'Account deleted successfully',
