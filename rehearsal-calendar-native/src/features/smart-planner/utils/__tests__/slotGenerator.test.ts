@@ -89,3 +89,73 @@ describe('generateTimeSlots — who counts as busy', () => {
     expect(slots.every((s) => s.category === 'perfect')).toBe(true);
   });
 });
+
+/**
+ * Busy time used to be sampled at :00 and :30 and asked "is anyone busy at this
+ * instant". Anything living between two grid points was invisible, and the
+ * start of every range was in effect rounded up to the next point — both
+ * pointing the same way, free when the person was busy. The buckets overlap
+ * now, so busy time rounds outward instead.
+ */
+describe('generateTimeSlots — half-hour buckets', () => {
+  const DATE = '2026-09-01';
+  const slotAt = (slots: ReturnType<typeof generateTimeSlots>, time: string) =>
+    slots.find((s) => s.startTime <= time && time < s.endTime);
+
+  const withBusy = (start: string, end: string) =>
+    generateTimeSlots(DATE, DATE, members, [
+      { memberId: '1', date: DATE, busyRanges: [{ start, end }] },
+    ]);
+
+  it('sees a busy range that falls entirely between two grid points', () => {
+    const slots = withBusy('10:05', '10:25');
+
+    expect(slots.every((s) => s.category === 'perfect')).toBe(false);
+    expect(slotAt(slots, '10:10')!.freeMembers).toBe(1);
+  });
+
+  it('blocks from the start of the bucket a busy range begins in', () => {
+    const slots = withBusy('10:20', '11:00');
+
+    // 10:00–10:30 overlaps the busy time, so it may not be offered as free.
+    expect(slotAt(slots, '10:00')!.freeMembers).toBe(1);
+    expect(slotAt(slots, '11:00')!.freeMembers).toBe(2);
+  });
+
+  it('counts someone who becomes busy in the last half hour of the day', () => {
+    const slots = withBusy('22:45', '23:15');
+
+    expect(slotAt(slots, '22:45')!.freeMembers).toBe(1);
+    expect(slots[slots.length - 1].endTime).toBe('23:00');
+  });
+
+  it('leaves the moment a busy range ends free', () => {
+    const slots = withBusy('10:00', '11:00');
+
+    expect(slotAt(slots, '10:30')!.freeMembers).toBe(1);
+    expect(slotAt(slots, '11:00')!.freeMembers).toBe(2);
+  });
+
+  it('never runs a slot past the end of the working day', () => {
+    const slots = withBusy('14:00', '16:00');
+
+    expect(slots.every((s) => s.endTime <= '23:00')).toBe(true);
+    expect(slots[0].startTime).toBe('09:00');
+  });
+});
+
+describe('generateTimeSlots — member filter', () => {
+  const DATE = '2026-09-01';
+
+  it('measures against the selected members only, not the whole company (again)', () => {
+    const availability: AvailabilityData[] = [
+      { memberId: '1', date: DATE, busyRanges: [{ start: '14:00', end: '16:00' }] },
+    ];
+
+    // Only Boris is being planned for, and he is free all day.
+    const slots = generateTimeSlots(DATE, DATE, members, availability, ['2']);
+
+    expect(slots.every((s) => s.totalMembers === 1)).toBe(true);
+    expect(slots.every((s) => s.category === 'perfect')).toBe(true);
+  });
+});
