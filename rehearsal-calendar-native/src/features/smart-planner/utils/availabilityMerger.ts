@@ -1,4 +1,3 @@
-import type { Rehearsal } from '../../../shared/types';
 import type { TimeRange } from '../../../shared/utils/availability';
 import { mergeBusyRanges } from '../../../shared/utils/availability';
 import type { AvailabilityData, Member } from '../types';
@@ -15,99 +14,51 @@ export interface MemberAvailability {
 }
 
 /**
- * Merges manual availability and rehearsals for members
+ * Collapses each member's busy and tentative ranges into merged busy ranges —
+ * one entry per member per date.
+ *
+ * Rehearsals are deliberately not read here. `slotService` writes one
+ * `source='rehearsal'` busy row per participant, and the endpoint the planner
+ * calls returns `native_user_availability` with no source filter, so those
+ * hours already arrive as busy ranges for exactly the people who were called.
+ * This function used to push every rehearsal's time range onto every member of
+ * the project, on the assumption that the whole company attends everything —
+ * which stopped being true once rehearsals got their own rosters. A rehearsal
+ * for three then blocked that slot for everyone, so the planner refused times
+ * that were genuinely free.
  *
  * @param members - List of members with basic info
- * @param memberAvailability - Manual availability data from API
- * @param rehearsals - List of all rehearsals
- * @returns Array of merged availability entries (memberId, date, busyRanges)
+ * @param memberAvailability - Availability data from the API
+ * @returns One entry per member per date, with overlapping ranges merged
  */
-export function mergeAvailabilityWithRehearsals(
+export function mergeMemberAvailability(
   members: Member[],
-  memberAvailability: MemberAvailability[],
-  rehearsals: Rehearsal[]
+  memberAvailability: MemberAvailability[]
 ): AvailabilityData[] {
   const result: AvailabilityData[] = [];
 
-  // Build a map of rehearsals by member ID and date for O(1) lookup
-  // Map structure: memberId -> date -> TimeRange[]
-  const rehearsalMap = new Map<string, Map<string, TimeRange[]>>();
-
-  for (const rehearsal of rehearsals) {
-    if (!rehearsal.date || !rehearsal.time) continue;
-
-    // Parse time range
-    const timeRange: TimeRange = {
-      start: rehearsal.time,
-      end: rehearsal.endTime || rehearsal.time,
-    };
-
-    // In native app, all members of the project are assumed to be invited to the rehearsal
-    // Add to map for each member
-    for (const member of members) {
-      let dateMap = rehearsalMap.get(member.id);
-      if (!dateMap) {
-        dateMap = new Map();
-        rehearsalMap.set(member.id, dateMap);
-      }
-
-      let ranges = dateMap.get(rehearsal.date);
-      if (!ranges) {
-        ranges = [];
-        dateMap.set(rehearsal.date, ranges);
-      }
-
-      ranges.push(timeRange);
-    }
-  }
-
-  // Process each member
   for (const member of members) {
-    // Find this member's availability data
-    const availData = memberAvailability.find(
-      a => a.userId === member.id
-    );
+    const availData = memberAvailability.find(a => a.userId === member.id);
+    const dates = [...new Set(availData?.dates.map(d => d.date) || [])];
 
-    // Get all dates from member's manual availability
-    const manualDates = availData?.dates.map(d => d.date) || [];
-
-    // Get all dates from rehearsals for this member
-    const memberRehearsalDates = rehearsalMap.get(member.id);
-    const rehearsalDates = memberRehearsalDates
-      ? Array.from(memberRehearsalDates.keys())
-      : [];
-
-    // Combine all unique dates
-    const allDates = [...new Set([...manualDates, ...rehearsalDates])];
-
-    for (const date of allDates) {
-      // Get manual availability for this date (busy and tentative ranges)
+    for (const date of dates) {
       const dateAvail = availData?.dates.find(d => d.date === date);
 
       if (__DEV__) {
         logger.debug(`[Availability Merger] Member ${member.id}, Date ${date}, Raw timeRanges:`, dateAvail?.timeRanges);
       }
 
-      const manualRanges =
+      const busyRanges =
         dateAvail?.timeRanges.filter(r => r.type === 'busy' || r.type === 'tentative') || [];
 
       if (__DEV__) {
-        logger.debug(`[Availability Merger] Member ${member.id}, Date ${date}, Filtered busy ranges:`, manualRanges);
+        logger.debug(`[Availability Merger] Member ${member.id}, Date ${date}, Filtered busy ranges:`, busyRanges);
       }
-
-      // Get rehearsal ranges for this date (O(1) lookup)
-      const rehearsalRanges = memberRehearsalDates?.get(date) || [];
-
-      // Merge ranges
-      const mergedRanges = mergeBusyRanges([
-        ...manualRanges,
-        ...rehearsalRanges,
-      ]);
 
       result.push({
         memberId: member.id,
         date,
-        busyRanges: mergedRanges,
+        busyRanges: mergeBusyRanges(busyRanges),
       });
     }
   }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { projectsAPI, rehearsalsAPI } from '../../../shared/services/api';
-import type { Project, Rehearsal, ProjectMember } from '../../../shared/types';
+import { projectsAPI } from '../../../shared/services/api';
+import type { Project, ProjectMember } from '../../../shared/types';
 import type { TimeSlot, SlotCategory, Member, AvailabilityData } from '../types';
 import {
   generateTimeSlots,
@@ -9,7 +9,7 @@ import {
   countSlotsByCategory,
   groupSlotsByDate,
 } from '../utils/slotGenerator';
-import { mergeAvailabilityWithRehearsals, type MemberAvailability } from '../utils/availabilityMerger';
+import { mergeMemberAvailability, type MemberAvailability } from '../utils/availabilityMerger';
 import { logger } from '../../../shared/utils/logger';
 
 interface UseSmartPlannerProps {
@@ -35,7 +35,6 @@ export function useSmartPlanner({
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [memberAvailability, setMemberAvailability] = useState<MemberAvailability[]>([]);
-  const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const refetch = useCallback(() => {
@@ -50,7 +49,6 @@ export function useSmartPlanner({
     setProject(null);
     setMembers([]);
     setMemberAvailability([]);
-    setRehearsals([]);
   }, [projectId]);
 
   // Load all data
@@ -71,12 +69,14 @@ export function useSmartPlanner({
           logger.debug('[Smart Planner] Date range:', startDate, 'to', endDate);
         }
 
-        // Load project info, members, availability, and rehearsals in parallel
-        const [projectRes, membersRes, availabilityRes, rehearsalsRes] = await Promise.all([
+        // Load project info, members and availability in parallel. Rehearsals
+        // are not fetched: their hours already reach us as `source='rehearsal'`
+        // rows inside the availability response, for the participants who were
+        // actually called.
+        const [projectRes, membersRes, availabilityRes] = await Promise.all([
           projectsAPI.getProject(projectId),
           projectsAPI.getMembers(projectId),
           projectsAPI.getMembersAvailabilityRange(projectId, startDate, endDate),
-          rehearsalsAPI.getAll(projectId),
         ]);
 
         if (!mounted) return;
@@ -85,13 +85,11 @@ export function useSmartPlanner({
           logger.debug('[Smart Planner] Project:', projectRes.data);
           logger.debug('[Smart Planner] Members:', membersRes.data.members.length);
           logger.debug('[Smart Planner] Availability:', availabilityRes.data.availability.length);
-          logger.debug('[Smart Planner] Rehearsals:', rehearsalsRes.data.rehearsals.length);
         }
 
         setProject(projectRes.data.project);
         setMembers(membersRes.data.members);
         setMemberAvailability(availabilityRes.data.availability);
-        setRehearsals(rehearsalsRes.data.rehearsals);
       } catch (err: any) {
         logger.error('[Smart Planner] Error loading data:', err);
         if (mounted) {
@@ -119,28 +117,23 @@ export function useSmartPlanner({
     }));
   }, [members]);
 
-  // Merge availability with rehearsals
+  // Collapse each member's overlapping busy ranges
   const mergedAvailability: AvailabilityData[] = useMemo(() => {
     if (simpleMembers.length === 0) return [];
 
     if (__DEV__) {
-      logger.debug('[Smart Planner] Merging availability with rehearsals');
+      logger.debug('[Smart Planner] Merging member availability');
       logger.debug('[Smart Planner] Simple members:', simpleMembers.length);
       logger.debug('[Smart Planner] Member availability:', memberAvailability.length);
-      logger.debug('[Smart Planner] Rehearsals:', rehearsals.length);
     }
 
-    const merged = mergeAvailabilityWithRehearsals(
-      simpleMembers,
-      memberAvailability,
-      rehearsals
-    );
+    const merged = mergeMemberAvailability(simpleMembers, memberAvailability);
 
     if (__DEV__) {
       logger.debug('[Smart Planner] Merged availability entries:', merged.length);
     }
     return merged;
-  }, [simpleMembers, memberAvailability, rehearsals]);
+  }, [simpleMembers, memberAvailability]);
 
   // Generate time slots
   const allSlots: TimeSlot[] = useMemo(() => {
