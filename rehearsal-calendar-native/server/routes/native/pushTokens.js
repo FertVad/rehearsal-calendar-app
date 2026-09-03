@@ -31,6 +31,26 @@ router.post('/', requireAuth, async (req, res) => {
 
     const now = new Date().toISOString();
 
+    // A device token identifies a phone, and only one person is signed in on it.
+    //
+    // A clean Log out does take the token away, but a session can end without
+    // the client ever reaching DELETE /push-tokens: signing out on a second
+    // device bumps `token_version` for the whole account and silently
+    // invalidates this one, a refresh can fail, and signing out with no network
+    // swallows the error and proceeds. The old row survives all three.
+    //
+    // The unique key is (user_id, device_token), so without this the next
+    // person's login inserts a *second* row against the same token instead of
+    // moving it, and `getUserPushTokens` keeps handing it to the previous
+    // owner. Their lock screen then carries someone else's project names,
+    // rehearsal titles and members' names — unopenable, since the fetch by id
+    // 404s for a non-member, and invisible to the person whose notifications
+    // are going astray.
+    await db.run(
+      'DELETE FROM native_push_tokens WHERE device_token = ? AND user_id != ?',
+      [deviceToken, userId]
+    );
+
     // One upsert rather than SELECT-then-INSERT.
     //
     // Registration is triggered from more than one place — app start, the
