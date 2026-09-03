@@ -1,6 +1,7 @@
 import { logger } from '../../utils/logger.js';
 import db from '../../database/db.js';
 import { fullName } from '../../utils/names.js';
+import { ensureRehearsalSlot } from './slotService.js';
 
 /**
  * Respond to a rehearsal (seen system: toggle between 'yes' and 'no')
@@ -21,6 +22,14 @@ export async function respondToRehearsal(rehearsalId, userId, response, notes = 
        DO UPDATE SET response = $3, notes = $4, updated_at = NOW()`,
       [rehearsalId, userId, response, notes]
     );
+
+    // A row here is what puts someone on the rehearsal, and this endpoint
+    // writes one — an admin sees rehearsals they are not on, and the eye is
+    // live on every card, so a single tap adds them to the call. Slots are
+    // otherwise booked only on create and edit, so without this they would read
+    // free in the planner during their own rehearsal until somebody happened to
+    // edit it again.
+    await ensureRehearsalSlot(rehearsalId, userId);
 
     // Update rehearsal timestamp
     await db.run(
