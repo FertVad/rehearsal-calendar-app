@@ -170,6 +170,25 @@ router.delete('/:projectId', requireAuth, async (req, res) => {
       [projectId, userId]
     );
 
+    // The busy slots these rehearsals put on people's calendars go first.
+    //
+    // The cascade cannot reach them: native_user_availability is tied to a
+    // rehearsal only by source='rehearsal' and an external_event_id holding the
+    // id as text, which is no foreign key. Left behind they are permanent —
+    // read-only in the editor, untouched by marking a day free (that clears
+    // source='manual'), and reachable by no endpoint once the project they name
+    // is gone. And they are not confined to this project: the members endpoint
+    // returns availability with no source filter, so those hours would make
+    // someone look unavailable in every other project's planner, forever.
+    //
+    // Must run before the project, or the subselect has nothing left to find.
+    await db.run(
+      `DELETE FROM native_user_availability
+       WHERE source = 'rehearsal'
+       AND external_event_id IN (SELECT CAST(id AS TEXT) FROM native_rehearsals WHERE project_id = $1)`,
+      [projectId]
+    );
+
     // Delete project (CASCADE will automatically delete all related data)
     await db.run('DELETE FROM native_projects WHERE id = $1', [projectId]);
 
