@@ -100,6 +100,36 @@ const fetchRange = async (startDate, endDate) => {
 const on = (dates, date) => dates.find((d) => d.date === date)?.timeRanges ?? [];
 const spans = (ranges) => ranges.map((r) => `${r.start}-${r.end}`);
 
+const rawFor = async (startDate, endDate, userId) => {
+  const res = await request(app)
+    .get(`/api/native/projects/${testData.projectId}/members/availability`)
+    .query({ startDate, endDate })
+    .set(...auth(testData.adminId));
+  return res.body.availability.find((a) => Number(a.userId) === Number(userId));
+};
+
+describe('members availability range — what the planner is told about a member', () => {
+  it('says whether they have ever recorded anything', async () => {
+    // Nothing at all: the planner counts them free, and has to be able to say
+    // that this is an absence of data rather than a declaration of freedom.
+    expect((await rawFor('2026-12-01', '2026-12-03', testData.memberId)).hasData).toBe(false);
+
+    busy('2026-06-01T10:00:00.000Z', '2026-06-01T12:00:00.000Z');
+
+    // Outside the requested window, but they have used the feature.
+    const after = await rawFor('2026-12-01', '2026-12-03', testData.memberId);
+    expect(after.hasData).toBe(true);
+    expect(after.dates).toEqual([]);
+  });
+
+  it('does not hand out other members’ email addresses', async () => {
+    const row = await rawFor('2026-12-01', '2026-12-03', testData.memberId);
+
+    expect(row).toBeDefined();
+    expect(row.email).toBeUndefined();
+  });
+});
+
 describe('members availability range — cutting spans into days', () => {
   it('leaves a range inside one day alone', async () => {
     busy('2026-12-01T10:00:00.000Z', '2026-12-01T12:00:00.000Z');

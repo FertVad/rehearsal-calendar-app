@@ -7,6 +7,12 @@ export interface MemberAvailability {
   userId: string;
   firstName: string;
   lastName?: string;
+  /**
+   * Whether this member has ever recorded any availability. Absent rows are
+   * treated as free, so without this the planner cannot tell someone who has
+   * declared themselves open from someone who has never opened the screen.
+   */
+  hasData?: boolean;
   dates: Array<{
     date: string;
     timeRanges: TimeRange[];

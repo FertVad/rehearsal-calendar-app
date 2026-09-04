@@ -20,8 +20,12 @@ const members: Member[] = [
   { id: '2', name: 'Борис' },
 ];
 
+// Pinned so these do not quietly start failing once the dates they name have
+// passed — the generator drops days that are already over.
+const BEFORE_ALL = new Date(2026, 0, 1, 8, 0);
+
 const daysCovered = (startDate: string, endDate: string, availability: AvailabilityData[] = []) => {
-  const slots = generateTimeSlots(startDate, endDate, members, availability);
+  const slots = generateTimeSlots(startDate, endDate, members, availability, [], undefined, undefined, BEFORE_ALL);
   return [...new Set(slots.map((s) => s.date))].sort();
 };
 
@@ -47,7 +51,7 @@ describe('generateTimeSlots — day coverage', () => {
   });
 
   it('never repeats a day', () => {
-    const slots = generateTimeSlots('2026-10-22', '2026-10-28', members, []);
+    const slots = generateTimeSlots('2026-10-22', '2026-10-28', members, [], [], undefined, undefined, BEFORE_ALL);
     const days = slots.map((s) => s.date);
     expect(new Set(days).size).toBe(7);
   });
@@ -57,7 +61,7 @@ describe('generateTimeSlots — who counts as busy', () => {
   const DATE = '2026-09-01';
 
   it('calls a slot perfect when nobody is busy', () => {
-    const slots = generateTimeSlots(DATE, DATE, members, []);
+    const slots = generateTimeSlots(DATE, DATE, members, [], [], undefined, undefined, BEFORE_ALL);
 
     expect(slots.every((s) => s.category === 'perfect')).toBe(true);
     expect(slots[0].totalMembers).toBe(2);
@@ -69,7 +73,7 @@ describe('generateTimeSlots — who counts as busy', () => {
       { memberId: '1', date: DATE, busyRanges: [{ start: '14:00', end: '16:00' }] },
     ];
 
-    const slots = generateTimeSlots(DATE, DATE, members, availability);
+    const slots = generateTimeSlots(DATE, DATE, members, availability, [], undefined, undefined, BEFORE_ALL);
     const during = slots.find((s) => s.startTime >= '14:00' && s.startTime < '16:00');
 
     expect(during).toBeDefined();
@@ -83,7 +87,7 @@ describe('generateTimeSlots — who counts as busy', () => {
     ];
 
     // Only Boris is being planned for, and he is free all day.
-    const slots = generateTimeSlots(DATE, DATE, members, availability, ['2']);
+    const slots = generateTimeSlots(DATE, DATE, members, availability, ['2'], undefined, undefined, BEFORE_ALL);
 
     expect(slots.every((s) => s.totalMembers === 1)).toBe(true);
     expect(slots.every((s) => s.category === 'perfect')).toBe(true);
@@ -103,9 +107,11 @@ describe('generateTimeSlots — half-hour buckets', () => {
     slots.find((s) => s.startTime <= time && time < s.endTime);
 
   const withBusy = (start: string, end: string) =>
-    generateTimeSlots(DATE, DATE, members, [
-      { memberId: '1', date: DATE, busyRanges: [{ start, end }] },
-    ]);
+    generateTimeSlots(
+      DATE, DATE, members,
+      [{ memberId: '1', date: DATE, busyRanges: [{ start, end }] }],
+      [], undefined, undefined, BEFORE_ALL
+    );
 
   it('sees a busy range that falls entirely between two grid points', () => {
     const slots = withBusy('10:05', '10:25');
@@ -144,6 +150,51 @@ describe('generateTimeSlots — half-hour buckets', () => {
   });
 });
 
+/**
+ * Nothing filtered by the clock at all before this: opening the planner in the
+ * evening still offered the whole day from 09:00, and the slot was live — so a
+ * tap walked the user into scheduling a rehearsal in a time that had passed.
+ */
+describe('generateTimeSlots — time already gone', () => {
+  const DATE = '2026-09-01';
+  const at = (h: number, m = 0) => new Date(2026, 8, 1, h, m); // local, 1 Sep
+
+  const slotsNow = (now: Date, start = DATE, end = DATE) =>
+    generateTimeSlots(start, end, members, [], [], undefined, undefined, now);
+
+  it('starts today at the next half hour, not at the top of the day', () => {
+    const slots = slotsNow(at(18, 5));
+
+    expect(slots[0].startTime).toBe('18:30');
+    expect(slots[slots.length - 1].endTime).toBe('23:00');
+  });
+
+  it('keeps a half hour that is starting exactly now', () => {
+    expect(slotsNow(at(18, 0))[0].startTime).toBe('18:00');
+  });
+
+  it('offers the whole working day when the day has not started', () => {
+    expect(slotsNow(at(6, 0))[0].startTime).toBe('09:00');
+  });
+
+  it('offers nothing once the working day is over', () => {
+    expect(slotsNow(at(23, 30))).toHaveLength(0);
+  });
+
+  it('drops a day that is already past', () => {
+    // Asked for 31 August while it is 1 September.
+    expect(slotsNow(at(10, 0), '2026-08-31', '2026-08-31')).toHaveLength(0);
+  });
+
+  it('leaves later days whole', () => {
+    const slots = slotsNow(at(18, 5), DATE, '2026-09-02');
+    const tomorrow = slots.filter((s) => s.date === '2026-09-02');
+
+    expect(tomorrow[0].startTime).toBe('09:00');
+    expect(tomorrow[tomorrow.length - 1].endTime).toBe('23:00');
+  });
+});
+
 describe('generateTimeSlots — member filter', () => {
   const DATE = '2026-09-01';
 
@@ -153,7 +204,7 @@ describe('generateTimeSlots — member filter', () => {
     ];
 
     // Only Boris is being planned for, and he is free all day.
-    const slots = generateTimeSlots(DATE, DATE, members, availability, ['2']);
+    const slots = generateTimeSlots(DATE, DATE, members, availability, ['2'], undefined, undefined, BEFORE_ALL);
 
     expect(slots.every((s) => s.totalMembers === 1)).toBe(true);
     expect(slots.every((s) => s.category === 'perfect')).toBe(true);

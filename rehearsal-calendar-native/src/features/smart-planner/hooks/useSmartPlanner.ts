@@ -135,6 +135,20 @@ export function useSmartPlanner({
     return merged;
   }, [simpleMembers, memberAvailability]);
 
+  // Members being planned for who have never recorded any availability. They
+  // count as free in every slot, so "Perfect — everyone available" is also what
+  // a project where nobody has entered anything says about itself. The maths
+  // cannot distinguish the two; the screen says which is which.
+  const membersWithoutData: string[] = useMemo(() => {
+    if (memberAvailability.length === 0) return [];
+
+    const planningFor = selectedMemberIds.length > 0 ? new Set(selectedMemberIds) : null;
+    return simpleMembers
+      .filter(m => !planningFor || planningFor.has(m.id))
+      .filter(m => memberAvailability.find(a => a.userId === m.id)?.hasData !== true)
+      .map(m => m.name);
+  }, [simpleMembers, memberAvailability, selectedMemberIds]);
+
   // Generate time slots
   const allSlots: TimeSlot[] = useMemo(() => {
     if (!startDate || !endDate || simpleMembers.length === 0) {
@@ -190,6 +204,7 @@ export function useSmartPlanner({
     project,
     members,
     simpleMembers,
+    membersWithoutData,
     allSlots,
     filteredSlots,
     categoryCounts,

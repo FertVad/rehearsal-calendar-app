@@ -96,14 +96,18 @@ export const MemberFilter: React.FC<MemberFilterProps> = React.memo(({
         </TouchableOpacity>
       </View>
 
-      {/* Selection Summary */}
-      {selected.length > 0 && (
-        <View style={styles.summary}>
-          <Text style={styles.summaryText}>
-            {`${selected.length} ${t.smartPlanner.of || 'of'} ${members.length} ${t.smartPlanner.selected || 'selected'}`}
-          </Text>
-        </View>
-      )}
+      {/* Selection Summary.
+          Always shown. An empty selection means every member is counted — that
+          is how the planner reads it — but the line used to be hidden in exactly
+          that case, so after Clear All the screen showed nothing while still
+          applying everyone's constraints. */}
+      <View style={styles.summary}>
+        <Text style={styles.summaryText}>
+          {selected.length === 0
+            ? t.smartPlanner.allMembers
+            : `${selected.length} ${t.smartPlanner.of || 'of'} ${members.length} ${t.smartPlanner.selected || 'selected'}`}
+        </Text>
+      </View>
 
       {/* Collapsible Members List */}
       {isExpanded && (
