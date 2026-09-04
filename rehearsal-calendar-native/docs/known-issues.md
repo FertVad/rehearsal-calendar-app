@@ -248,32 +248,22 @@ it.
 The test harness hardcodes the newer shape, so the green suite proves nothing
 here.
 
-### The planner cannot tell "free" from "nobody has said"
+### The select-all checkbox never says it will clear
 
-Found 2026-09-03 during the planner audit; left alone because it is a UI
-decision, not a defect in the maths.
+There is no Clear All control — the register used to claim one. The header holds
+a single checkbox labelled **Select All** in every state
+([MemberFilter.tsx:74-81](../src/features/smart-planner/components/MemberFilter.tsx#L74)).
+Once everything is selected, tapping it deselects everything, while the label
+still reads Select All and the box shows a tick. Nothing tells you what the tap
+will do.
 
-A member with no availability rows produces no entry, and the generator defaults
-them to unblocked, so `categorizeSlot(0, n)` returns `perfect`. Someone who
-joined this morning and has never opened the availability screen is
-indistinguishable from someone who opened it and marked themselves wide open —
-and "Perfect, everyone free" is exactly what a brand-new project says about
-itself.
+An empty selection means every member is counted — that is how the generator
+reads it — and the summary line does say so. So the outcome is not wrong, only
+unannounced.
 
-Defensible as a default. The problem is that it is unlabelled.
-
-**Smallest fix** (server plus client): the endpoint already knows which
-`targetUserIds` returned no records — return a `hasData: false` per member and
-let the slot rows qualify the count, "5 free, 2 unknown".
-
-### "Clear All" in the member filter reads as "nobody" and means "everybody"
-
-Found the same day. Clearing the selection sets it to `[]`, which
-`useSmartPlanner` treats as every member, while `MemberFilter` hides the
-"N of M selected" line. So the planner goes on applying everyone's constraints
-with nothing on screen explaining why.
-
-Over-blocking and confusing rather than dangerous, which is why it is here.
+**Smallest fix** (client): swap the label when `allSelected` is true. There is
+no `clearAll` string yet — it needs adding to the interface and all four locale
+blocks in `src/i18n/translations/common.ts`, or the type will not compile.
 
 ### `npm run lint` does not run at all
 

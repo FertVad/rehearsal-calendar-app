@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -111,14 +110,13 @@ export const MemberFilter: React.FC<MemberFilterProps> = React.memo(({
 
       {/* Collapsible Members List */}
       {isExpanded && (
-        <FlatList
-          data={members}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
+        <View testID="member-list" style={styles.list}>
+          {members.map((item) => {
             const isSelected = selected.includes(item.id);
 
             return (
               <TouchableOpacity
+                key={item.id}
                 style={[styles.memberItem, isSelected && styles.memberItemSelected]}
                 onPress={() => toggleMember(item.id)}
               >
@@ -130,10 +128,8 @@ export const MemberFilter: React.FC<MemberFilterProps> = React.memo(({
                 </Text>
               </TouchableOpacity>
             );
-          }}
-          style={styles.list}
-          scrollEnabled={false}
-        />
+          })}
+        </View>
       )}
     </View>
   );
@@ -189,9 +185,12 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
     color: Colors.accent.purple,
   },
-  list: {
-    maxHeight: 300,
-  },
+  // No height cap and no scrolling of its own: this sits inside the screen's
+  // ScrollView, which is what scrolls. It used to be capped at 300 with
+  // scrollEnabled={false} — about six rows — so the seventh member and everyone
+  // after them was drawn off the end of the box and could not be tapped at all.
+  // A company of more than six is the ordinary case, not the edge one.
+  list: {},
   memberItem: {
     flexDirection: 'row',
     alignItems: 'center',
