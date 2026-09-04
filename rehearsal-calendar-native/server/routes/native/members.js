@@ -90,10 +90,25 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
 
     logger.debug(`[Availability API] User ID ${userId} requesting availability, timezone: ${requesterTimezone}`);
 
-    // Batch fetch all users info (no need for individual timezones anymore)
-    const usersQuery = `SELECT id, first_name, last_name, email FROM native_users WHERE id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})`;
+    // Batch fetch all users info (no need for individual timezones anymore).
+    // No email: the planner is the only reader and never used it, so sending it
+    // handed every member of a project every other member's address for nothing.
+    const usersQuery = `SELECT id, first_name, last_name FROM native_users WHERE id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})`;
     const users = await db.all(usersQuery, targetUserIds);
     const usersMap = new Map(users.map(u => [u.id, u]));
+
+    // Who has ever recorded any availability at all — not just inside the
+    // window. A member with no rows is treated as free by the planner, which
+    // makes someone who joined this morning indistinguishable from someone who
+    // looked at their calendar and declared themselves open. The maths cannot
+    // tell those apart; saying which is which is the screen's job, and this is
+    // what it needs to do it.
+    const withData = await db.all(
+      `SELECT DISTINCT user_id FROM native_user_availability
+       WHERE user_id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})`,
+      targetUserIds
+    );
+    const hasAnyData = new Set(withData.map((r) => Number(r.user_id)));
 
     // Build date range for TIMESTAMPTZ query
     // We need to query starts_at timestamps that fall on these dates in requester's timezone
@@ -150,7 +165,7 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
         userId: String(targetUserId),
         firstName: user.first_name,
         lastName: user.last_name,
-        email: user.email,
+        hasData: hasAnyData.has(Number(targetUserId)),
         dates: []
       };
 

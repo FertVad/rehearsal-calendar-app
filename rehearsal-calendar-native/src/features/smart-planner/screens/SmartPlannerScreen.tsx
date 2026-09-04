@@ -107,6 +107,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     error,
     project,
     simpleMembers,
+    membersWithoutData,
     filteredSlots,
     slotsByDate,
     refetch,
@@ -375,6 +376,16 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         ) : (
           <View style={styles.slotsContainer}>
             <Text style={styles.sectionTitle}>{t.smartPlanner.recommendations}</Text>
+
+            {/* Someone with no availability rows counts as free in every slot,
+                so a project where nobody has entered anything reports itself as
+                Perfect. Naming them is the difference between a recommendation
+                and a guess. */}
+            {membersWithoutData.length > 0 && (
+              <Text style={styles.unknownNote}>
+                {t.smartPlanner.unknownAvailability(membersWithoutData.join(', '))}
+              </Text>
+            )}
             {Array.from(slotsByDate.entries()).map(([date, slots]) => (
               <DayCard
                 key={date}

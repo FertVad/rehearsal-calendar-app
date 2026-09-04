@@ -91,6 +91,13 @@ export const styles = StyleSheet.create({
     color: Colors.text.primary,
     marginBottom: Spacing.md,
   },
+  unknownNote: {
+    fontSize: FontSize.sm,
+    color: Colors.text.tertiary,
+    marginTop: -Spacing.xs,
+    marginBottom: Spacing.md,
+    lineHeight: 18,
+  },
   periodButtons: {
     flexDirection: 'row',
     gap: Spacing.sm,

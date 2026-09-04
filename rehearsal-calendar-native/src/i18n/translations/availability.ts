@@ -56,6 +56,8 @@ export interface SmartPlannerTranslations {
   customPeriod: string;
   slotsCount: (count: number) => string;
   allDay: string;
+  /** Named members who have never recorded availability and so count as free. */
+  unknownAvailability: (names: string) => string;
   addButton: string;
   selectAll: string;
   clearAll: string;
@@ -143,6 +145,7 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
       return `${count} слотов`;
     },
     allDay: 'Весь день',
+    unknownAvailability: (names: string) => `Нет данных о занятости: ${names}. В расчёте они считаются свободными.`,
     addButton: '+ Добавить',
     selectAll: 'Все',
     clearAll: 'Очистить',
@@ -224,6 +227,7 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     customPeriod: 'Custom Period',
     slotsCount: (count: number) => `${count} ${count === 1 ? 'slot' : 'slots'}`,
     allDay: 'All day',
+    unknownAvailability: (names: string) => `No availability recorded: ${names}. They are counted as free.`,
     addButton: '+ Add',
     selectAll: 'All',
     clearAll: 'Clear',
@@ -305,6 +309,7 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     customPeriod: 'Período personalizado',
     slotsCount: (count: number) => `${count} ${count === 1 ? 'franja' : 'franjas'}`,
     allDay: 'Todo el día',
+    unknownAvailability: (names: string) => `Sin disponibilidad registrada: ${names}. Se cuentan como libres.`,
     addButton: '+ Añadir',
     selectAll: 'Todos',
     clearAll: 'Limpiar',
@@ -387,6 +392,7 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     // Zeitfenster is the same in the plural
     slotsCount: (count: number) => `${count} Zeitfenster`,
     allDay: 'Ganztägig',
+    unknownAvailability: (names: string) => `Keine Verfügbarkeit hinterlegt: ${names}. Sie zählen als frei.`,
     addButton: '+ Hinzufügen',
     selectAll: 'Alle',
     clearAll: 'Löschen',

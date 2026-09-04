@@ -1,5 +1,5 @@
 import type { TimeSlot, SlotCategory, BusyMember, Member, AvailabilityData } from '../types';
-import { timeToMinutes } from '../../../shared/utils/time';
+import { timeToMinutes, formatDateToString } from '../../../shared/utils/time';
 import { WORKDAY_START, WORKDAY_END } from '../../../shared/utils/availability';
 import { logger } from '../../../shared/utils/logger';
 
@@ -76,10 +76,21 @@ function findFreeSlots(
   availabilityData: AvailabilityData[],
   selectedMemberIds: string[],
   workHoursStart: string,
-  workHoursEnd: string
+  workHoursEnd: string,
+  notBefore: string | null = null
 ): TimeSlot[] {
-  const intervals = generateTimeIntervals(workHoursStart, workHoursEnd);
+  const allIntervals = generateTimeIntervals(workHoursStart, workHoursEnd);
   const slots: TimeSlot[] = [];
+
+  // On today's card, drop the half-hours that have already begun. Nothing
+  // filtered by the clock at all before this, so opening the planner in the
+  // evening still offered the whole day from 09:00 — and the slot was live, so
+  // tapping it walked you into scheduling a rehearsal in the past.
+  const intervals = notBefore
+    ? allIntervals.filter((t) => timeToMinutes(t) >= timeToMinutes(notBefore))
+    : allIntervals;
+
+  if (intervals.length === 0) return slots;
 
   // Filter members by selection - if empty array, use all members
   const relevantMembers = selectedMemberIds.length === 0
@@ -183,9 +194,16 @@ export function generateTimeSlots(
   availabilityData: AvailabilityData[],
   selectedMemberIds: string[] = [],
   workHoursStart: string = WORKDAY_START,
-  workHoursEnd: string = WORKDAY_END
+  workHoursEnd: string = WORKDAY_END,
+  now: Date = new Date()
 ): TimeSlot[] {
   const slots: TimeSlot[] = [];
+
+  // Today and the time of day, in the reader's own clock — the same clock the
+  // availability arrives in. A day already over contributes nothing, and today
+  // starts from the next half-hour rather than from the top of the working day.
+  const today = formatDateToString(now);
+  const timeNow = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   // Walked in UTC. These are calendar dates with no zone meaning, so UTC is
   // both correct and the only arithmetic that behaves the same everywhere.
@@ -203,8 +221,19 @@ export function generateTimeSlots(
 
   while (currentDate <= end) {
     const dateStr = currentDate.toISOString().split('T')[0];
-    const dateSlots = findFreeSlots(dateStr, members, availabilityData, selectedMemberIds, workHoursStart, workHoursEnd);
-    slots.push(...dateSlots);
+
+    if (dateStr >= today) {
+      const dateSlots = findFreeSlots(
+        dateStr,
+        members,
+        availabilityData,
+        selectedMemberIds,
+        workHoursStart,
+        workHoursEnd,
+        dateStr === today ? timeNow : null
+      );
+      slots.push(...dateSlots);
+    }
 
     currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   }
