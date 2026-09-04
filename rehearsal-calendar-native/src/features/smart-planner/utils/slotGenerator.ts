@@ -58,8 +58,25 @@ function isSlotBusy(time: string, busyRanges: Array<{ start: string; end: string
   const slotEnd = slotStart + SLOT_INTERVAL_MINUTES;
 
   for (const range of busyRanges) {
+    const rangeStart = timeToMinutes(range.start);
+    const rangeEnd = timeToMinutes(range.end);
+
+    // A range whose end is not after its start does not describe a slice of
+    // this day — it wrapped past midnight. The endpoint cuts every record into
+    // one range per day so this should not arrive, but the comparison below
+    // answers "free" for it, silently and in the dangerous direction. Treat it
+    // as busy from its start to the end of the day instead: over-blocking is
+    // recoverable, telling someone a busy evening is free is not.
+    //
+    // Strictly less-than: an empty range, start equal to end, describes no time
+    // at all and blocks nothing.
+    if (rangeEnd < rangeStart) {
+      if (rangeStart < slotEnd) return true;
+      continue;
+    }
+
     // Half-open on both sides: busy 10:00–11:00 leaves 11:00 free.
-    if (timeToMinutes(range.start) < slotEnd && timeToMinutes(range.end) > slotStart) {
+    if (rangeStart < slotEnd && rangeEnd > slotStart) {
       return true;
     }
   }
