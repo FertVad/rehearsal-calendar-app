@@ -54,6 +54,101 @@ since Jest never defined `__DEV__` and any module guarding on it threw. It has
 
 ## Confirmed, not yet fixed
 
+### Calendar sync — twenty findings, and no tests to hold any of them
+
+Reviewed 2026-09-04 by three agents, one per half plus the failure paths. This
+is the part of the app with **no tests at all** — there is no `__tests__`
+directory under `src/shared/services/calendar/`, and two fixes that landed there
+this week can be reverted without a single test going red.
+
+**The privacy promise holds.** Both halves were read for it specifically: no
+event title, notes, location, URL or attendee is read on the import path at all,
+both payloads hard-code `IMPORTED_SLOT_TITLE`, and the log lines that survive
+production carry only counts and ids. The one blemish is data minimisation, not
+a breach — see the last row.
+
+The two critical ones were re-verified by hand rather than taken on trust.
+
+| Severity | What | Where |
+|---|---|---|
+| critical | A deleted rehearsal keeps its calendar event and its 30-minute alarm on every device except the one that pressed delete | `src/shared/hooks/useAutoCalendarSync.ts:90` |
+| critical | Auto sync only exists while the Mark Busy modal is open — it never runs on app foreground | `src/navigation/index.tsx:282` |
+| high | Every timed imported event is diffed as "changed" on every sync, and the whole update batch is rejected once the calendar is ~500 events deep | `src/shared/services/calendar/import.ts:297` |
+| high | An imported slot that starts before today is invisible to the diff, so deleting or moving a still-running event never reaches the server | `src/shared/services/calendar/import.ts:208` |
+| high | A revoked calendar permission deletes every export mapping, because "cannot read the calendar" is read as "the event was deleted" | `src/shared/services/calendar/export.ts:233` |
+| high | Duplicate detection never matches a rehearsal without a location, so every mapping loss creates a second event with a second alarm | `src/shared/services/calendar/export.ts:55` |
+| high | One failed mappings request empties the import exclusion, and the phantom busy slots it creates can never be cleaned up | `src/shared/utils/calendarMappings.ts:181` |
+| high | Mappings are keyed per user but hold device-local event ids, so on a second device the exclusion, the deletes and the duplicate check all point at the wrong event | `server/routes/native/calendarSync.js:204` |
+| high | A stale in-memory connection id after a user switch stops every mapping reaching the server, silently | `src/shared/utils/calendarMappings.ts:22` |
+| high | "Last synced: just now" is written even when every write in the run failed | `src/shared/services/calendar/import.ts:417` |
+| high | Settings screen reports "Rehearsals exported: N" when zero were exported | `src/features/profile/screens/CalendarSyncSettingsScreen.tsx:383` |
+| medium | The delete pass permanently protects the one row that must never exist — a rehearsal double-booked as an imported busy slot | `src/shared/services/calendar/import.ts:266` |
+| medium | "Remove all exported" erases the record of events it did not delete, and reports success either way | `src/shared/services/calendar/export.ts:409` |
+| medium | Changing the export calendar leaves every exported rehearsal in the old calendar while the screen claims they are in the new one | `src/shared/services/calendar/export.ts:236` |
+| medium | Pull-to-refresh that fails is completely silent and skips the reload as well | `src/features/availability/hooks/useAvailabilitySync.ts:88` |
+| medium | Fifty parallel read-modify-writes on one AsyncStorage key lose forty-nine of them | `src/shared/services/calendar/import.ts:398` |
+| medium | getAllMappings discards the local cache instead of merging it, so a second device's exported rehearsals get re-imported as busy | `src/shared/utils/calendarMappings.ts:180` |
+| medium | A device clock that moves backwards locks both timers out until real time catches up | `src/shared/hooks/useAutoCalendarSync.ts:61` |
+| low | The device calendar identifier is uploaded with every imported slot and the server has no use for it | `src/shared/services/calendar/import.ts:385` |
+| low | performSmartSync has no finally: a rejection leaves the syncing spinner on forever and skips the reload | `src/features/availability/hooks/useAvailabilitySync.ts:72` |
+
+Full evidence, failure scenarios and proposed fixes are in the workflow
+transcript for run `wf_10bab5ff-ace`. The two confirmed by hand:
+
+- **Auto sync only exists while the Mark Busy sheet is open.** `useAutoCalendarSync`
+  is called from exactly one place, `AvailabilityScreen`, and that screen is not
+  a tab — it is mounted only as the `MarkBusy` modal (`src/navigation/index.tsx:281`).
+  The tabs are Calendar, Projects, Create, Planner, Profile. So a user who turns
+  Auto Sync on and never opens that sheet gets no import and no export, ever,
+  while the settings screen says it is on.
+- **A deleted rehearsal keeps its event and its 30-minute alarm on every other
+  device.** The automatic export iterates the rehearsals that exist
+  (`useAutoCalendarSync.ts:89`) and nothing ever walks the mappings looking for
+  one whose rehearsal is gone. The device that pressed delete removes its own
+  event; nobody else's is touched, and the next sync does not reconcile it.
+
+#### The tests this area should have
+
+Written by the agents that read it, most valuable first. This list is the point
+of the exercise — the findings above will be re-broken without it.
+
+- Idempotency: run importCalendarEventsToAvailability twice against an unchanged calendar and assert the second run posts nothing — no bulkSet, no batchUpdateImported, no batchDeleteImported — and returns success 0 with every event counted as skipped. This alone pins the isAllDay comparison.
+- Deleting a still-running event: a multi-day all-day slot already stored with startsAt three days in the past, absent from the calendar, must appear in batchDeleteImported. Same for a timed event that started yesterday and ends tomorrow.
+- All-day events west of UTC: with the device clock in America/New_York, an all-day event on today that is already stored must be recognised as unchanged (not re-added), and when removed from the calendar must be deleted.
+- A wrongly-imported exported rehearsal: seed an availability row whose external_event_id is a rehearsal's calendar event id, put that id in the mappings, and assert the delete pass removes it rather than protecting it.
+- getAllMappings failure isolation: make calendarSyncAPI.getMappings reject while availabilityAPI.getAll succeeds, and assert the import does NOT store exported rehearsal events as busy slots (either it aborts or it still excludes them).
+- Recurrence keying round-trip: a weekly series of 52 occurrences sharing one event.id produces 52 distinct `${id}:${startsAt}` rows on the first run and zero writes on the second; moving one occurrence produces exactly one delete of the old key and one add of the new.
+- All-day span conversion: a fortnight event, a single-day event, and one crossing a month boundary each yield startsAt `${firstDate}T00:00:00.000Z` / endsAt `${lastDate}T23:59:59.999Z`, under both the exclusive-next-midnight and inclusive-23:59:59 endDate conventions.
+- Update batch size: 600 changed timed events must be split into chunks the way the add path is, and a chunk failing must not be reported to the caller as a successful sync.
+- Privacy contract: assert the object handed to availabilityAPI.bulkSet and batchUpdateImported contains only the whitelisted keys and that title is always IMPORTED_SLOT_TITLE, given an event carrying a real title, notes, location, url and attendees.
+- Failed-calendar guard: with one of three calendars throwing from getEventsAsync, assert batchDeleteImported is never called while the adds from the two healthy calendars still go through.
+- Timezone fidelity: a timed event created in another zone, and one crossing local midnight, are sent as the exact ISO instants expo-calendar reported, with no date-shifting.
+- Window edges: an event that moves from day 300 to day 400 is deleted; one that moves from day 400 to day 300 is added; neither produces both.
+- exportRehearsalsIfDue reconciles deletions: mappings exist for rehearsals 1, 2 and 3, the batch endpoint returns only 1 and 3, and the run deletes event and mapping for 2 (fails today — this is the stale-alarm bug)
+- syncRehearsalToCalendar keeps the mapping when the calendar cannot be read: Calendar.getEventAsync rejects with a permission error and the test asserts removeEventMapping was NOT called and no event was created (fails today)
+- findDuplicateEvent matches a location-less rehearsal: an existing event with location null/'' and the same title and times is adopted rather than duplicated (fails today)
+- importCalendarEventsToAvailability excludes exported rehearsal events from both the add pass and the delete pass, given mappings returned by the server
+- importCalendarEventsToAvailability skips the whole run when the exported-mapping set cannot be established (mappings request rejects), instead of importing with an empty exclusion
+- removeAllExportedEvents deletes an event whose mapping exists only in AsyncStorage, and leaves the mapping in place for any event whose deletion failed
+- calendarMappings.getAllMappings surfaces every external_event_id when the same rehearsal has mapping rows under two connections, rather than collapsing to one
+- GET and DELETE /calendar-sync/mappings/by-event are scoped to a connection: device A's unsync does not remove device B's mapping row for the same rehearsal
+- getOrCreateConnection re-fetches after a user switch: reconcileDeviceState runs for a different user id and the next call does not return the previous user's connection id
+- POST /calendar-sync/mappings with another user's connectionId returns 403 and writes no row (passes today — pin it, it is the only thing stopping a cross-user write)
+- syncRehearsalToCalendar moves the event when settings.exportCalendarId differs from mapping.calendarId
+- handleRemoveAll does not show the success alert when result.failed > 0
+- Mounting the app without ever opening Mark Busy and firing an AppState background→active transition triggers an import and an export (the regression guard for finding 1; it fails today).
+- importCalendarEventsToAvailability leaves lastImportTime untouched when bulkSet rejects for one chunk, and updates it only when result.failed is 0.
+- handleSynchronize's alert prints 0 exported when syncAllRehearsals returns {success: 0, failed: N}, and reports failure rather than 'Sync Complete'.
+- performForceSync still calls loadAvailability and surfaces the error when forceSync rejects (permission revoked mid-session).
+- Fifty events in one chunk produce fifty entries in 'calendar-import-tracking', and ten rehearsals in one export batch produce ten entries in 'calendar-export-mappings'.
+- getAllMappings returns the union of the server's mappings and the AsyncStorage cache, so an event id known only locally is still excluded from import.
+- importCalendarEventsToAvailability excludes exported rehearsal events when GET /calendar-sync/mappings fails but GET /availability succeeds.
+- exportRehearsalsIfDue and shouldAutoSync both run when the stored last-sync timestamp is in the future.
+- A second import started while the first is in flight (settings-screen Synchronize plus a Mark Busy focus sync) results in one row per event on the server and one lastImportTime write.
+- performAutoSync returns without touching the network when there is no accessToken, and does not stamp lastImportTime.
+- Revoking calendar permission and re-granting it later resumes sync with no change to stored settings (no reinstall, no re-picking the calendar).
+
+
 ### The schema file has drifted from production
 
 `server/database/init-native-schema.sql` no longer describes the database. Read
