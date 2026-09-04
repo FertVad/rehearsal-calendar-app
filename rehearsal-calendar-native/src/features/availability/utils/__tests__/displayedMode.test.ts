@@ -37,6 +37,28 @@ describe('displayedMode', () => {
   it('says nothing about a day it was given nothing for', () => {
     expect(displayedMode(undefined)).toBeUndefined();
   });
+
+  // A day in the middle of a multi-day calendar event arrives as 00:00–23:59.
+  // Drawn as custom hours it read "partly busy, midnight to midnight" — true
+  // and useless. Nothing is free, so the day is busy.
+  const wholeDay = [{ start: '00:00', end: '23:59', source: 'apple_calendar' }];
+  const wholeDayFlagged = [{ start: '00:00', end: '23:59', isAllDay: true }];
+
+  it('calls a day busy when a calendar event takes all of it', () => {
+    expect(displayedMode({ mode: 'custom', importedSlots: wholeDay })).toBe('busy');
+    expect(displayedMode({ mode: 'custom', importedSlots: wholeDayFlagged })).toBe('busy');
+  });
+
+  it('calls it busy even where the user declared themselves free', () => {
+    expect(displayedMode({ mode: 'free', importedSlots: wholeDay })).toBe('busy');
+  });
+
+  it('still says partial when the event leaves part of the day open', () => {
+    expect(displayedMode({ mode: 'custom', importedSlots: event })).toBe('custom');
+    expect(
+      displayedMode({ mode: 'custom', importedSlots: [{ start: '00:00', end: '18:00' }] })
+    ).toBe('custom');
+  });
 });
 
 describe('the dot on the calendar grid', () => {
@@ -60,5 +82,16 @@ describe('the dot on the calendar grid', () => {
 
   it('says nothing for a day with no entry', () => {
     expect(getDayStatus('2026-09-08', {})).toBe('none');
+  });
+
+  it('shows busy for a day a multi-day event runs straight through', () => {
+    const availability = {
+      '2026-09-05': {
+        mode: 'custom',
+        importedSlots: [{ start: '00:00', end: '23:59', source: 'apple_calendar' as const }],
+      },
+    };
+
+    expect(getDayStatus('2026-09-05', availability)).toBe('busy');
   });
 });

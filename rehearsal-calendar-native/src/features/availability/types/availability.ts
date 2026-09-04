@@ -10,6 +10,14 @@ export interface TimeSlot {
   end: string;
   /** Set only on read-only rows, so the screen can say where they came from. */
   source?: SlotSource;
+  /**
+   * Set only on read-only rows that take the whole day: a whole-day calendar
+   * entry, or one day in the middle of an event spanning several. Such a row is
+   * shown as "all day" rather than as 00:00–23:59 hours, and the day it lands on
+   * reads busy rather than partly busy — there is nothing left to be partial
+   * about.
+   */
+  isAllDay?: boolean;
 }
 
 /** Which rule a slot broke. Validation stays free of i18n; the screen

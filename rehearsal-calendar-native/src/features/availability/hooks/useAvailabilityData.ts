@@ -199,11 +199,20 @@ export const useAvailabilityData = () => {
             start: formatTime(s.startTime),
             end: formatTime(s.endTime),
           })),
-          importedSlots: readOnly.map((s) => ({
-            start: formatTime(s.startTime),
-            end: formatTime(s.endTime),
-            source: s.source as TimeSlot['source'],
-          })),
+          importedSlots: readOnly.map((s) => {
+            const start = formatTime(s.startTime);
+            const end = formatTime(s.endTime);
+            return {
+              start,
+              end,
+              source: s.source as TimeSlot['source'],
+              // Either a whole-day entry, or one day in the middle of an event
+              // spanning several — both take the day entirely, and showing them
+              // as 00:00–23:59 hours reads as "partly busy" for a day that has
+              // nothing free left in it.
+              isAllDay: s.isAllDay || (start === '00:00' && end === '23:59'),
+            };
+          }),
         };
       }
 
