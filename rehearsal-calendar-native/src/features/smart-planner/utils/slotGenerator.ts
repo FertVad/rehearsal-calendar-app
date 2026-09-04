@@ -18,27 +18,22 @@ function generateTimeIntervals(workHoursStart: string = WORKDAY_START, workHours
     return intervalCache.get(cacheKey)!;
   }
 
-  const [startHour, startMin] = workHoursStart.split(':').map(Number);
-  const [endHour, endMin] = workHoursEnd.split(':').map(Number);
+  // The *start* of each half-hour bucket, so the last one is 22:30 rather than
+  // 23:00 — the end of the working day bounds the final bucket, it is not a
+  // bucket of its own.
+  //
+  // Stepped in plain minutes. Carrying hours and dropping the remainder gave an
+  // irregular grid for any start not on the hour (09:15 → 09:15, 09:45, 10:00),
+  // which is harmless at the current constants and a trap the day per-project
+  // working hours arrive.
+  const startMinutes = timeToMinutes(workHoursStart);
+  const endMinutes = timeToMinutes(workHoursEnd);
 
   const intervals: string[] = [];
-  let currentHour = startHour;
-  let currentMinute = startMin;
-
-  while (currentHour < endHour || (currentHour === endHour && currentMinute <= endMin)) {
-    const time = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
-    intervals.push(time);
-
-    currentMinute += SLOT_INTERVAL_MINUTES;
-    if (currentMinute >= 60) {
-      currentHour += 1;
-      currentMinute = 0;
-    }
-
-    // Break if we've exceeded end time
-    if (currentHour > endHour || (currentHour === endHour && currentMinute > endMin)) {
-      break;
-    }
+  for (let m = startMinutes; m < endMinutes; m += SLOT_INTERVAL_MINUTES) {
+    intervals.push(
+      `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+    );
   }
 
   intervalCache.set(cacheKey, intervals);
@@ -46,17 +41,25 @@ function generateTimeIntervals(workHoursStart: string = WORKDAY_START, workHours
 }
 
 /**
- * Checks if a time falls within a busy range
+ * Is anyone busy during the half hour that starts here?
+ *
+ * The question used to be "is anyone busy *at* this instant", asked only at
+ * :00 and :30. Anything between two grid points was therefore invisible —
+ * 10:05–10:25 blocked nothing at all and the whole day read Perfect — and the
+ * start of every busy range was in effect rounded up to the next grid point,
+ * under-blocking by as much as 29 minutes. Both errors pointed the same way:
+ * free when the person was busy.
+ *
+ * Overlapping the bucket rounds busy time outward instead, so the worst case
+ * is now under half an hour of over-blocking, which is the harmless direction.
  */
-function isTimeBusy(time: string, busyRanges: Array<{ start: string; end: string }>): boolean {
-  const timeMinutes = timeToMinutes(time);
+function isSlotBusy(time: string, busyRanges: Array<{ start: string; end: string }>): boolean {
+  const slotStart = timeToMinutes(time);
+  const slotEnd = slotStart + SLOT_INTERVAL_MINUTES;
 
   for (const range of busyRanges) {
-    const startMinutes = timeToMinutes(range.start);
-    const endMinutes = timeToMinutes(range.end);
-
-    // Use < for end time - end time is exclusive (e.g., busy 10:00-11:00 means free from 11:00)
-    if (timeMinutes >= startMinutes && timeMinutes < endMinutes) {
+    // Half-open on both sides: busy 10:00–11:00 leaves 11:00 free.
+    if (timeToMinutes(range.start) < slotEnd && timeToMinutes(range.end) > slotStart) {
       return true;
     }
   }
@@ -94,18 +97,36 @@ function findFreeSlots(
     }
   }
 
-  // Track current slot being built
+  // Walk the buckets, merging consecutive ones with the same busy set into one
+  // slot. A slot ends where the bucket that broke it begins, and the last runs
+  // to the end of the working day.
+  //
+  // The old loop closed the final slot with the *previous* bucket's busy set,
+  // so anyone who became busy in the last half hour was dropped from it — and
+  // the end of the day is exactly when a theatre rehearses.
   let slotStart: string | null = null;
   let slotBusyMembers: BusyMember[] = [];
 
-  for (let i = 0; i < intervals.length; i++) {
-    const time = intervals[i];
+  const closeSlot = (endTime: string) => {
+    if (slotStart === null) return;
+
+    slots.push({
+      date,
+      startTime: slotStart,
+      endTime,
+      category: categorizeSlot(slotBusyMembers.length, relevantMembers.length),
+      totalMembers: relevantMembers.length,
+      freeMembers: relevantMembers.length - slotBusyMembers.length,
+      busyMembers: slotBusyMembers,
+    });
+  };
+
+  for (const time of intervals) {
     const currentBusyMembers: BusyMember[] = [];
 
-    // Check which members are busy at this time
     for (const member of relevantMembers) {
       const busyRanges = availabilityMap.get(member.id) || [];
-      if (isTimeBusy(time, busyRanges)) {
+      if (isSlotBusy(time, busyRanges)) {
         currentBusyMembers.push({
           id: member.id,
           name: member.name,
@@ -114,37 +135,19 @@ function findFreeSlots(
       }
     }
 
-    // If we're starting a new slot
-    if (slotStart === null) {
-      slotStart = time;
-      slotBusyMembers = currentBusyMembers;
-      continue;
-    }
+    const unchanged =
+      slotStart !== null &&
+      currentBusyMembers.length === slotBusyMembers.length &&
+      currentBusyMembers.every(a => slotBusyMembers.some(b => b.id === a.id));
 
-    // Check if the busy members changed (slot boundary)
-    const busyMembersChanged =
-      currentBusyMembers.length !== slotBusyMembers.length ||
-      !currentBusyMembers.every(a => slotBusyMembers.some(b => b.id === a.id));
-
-    // If members changed or we reached the end, finalize the slot
-    if (busyMembersChanged || i === intervals.length - 1) {
-      const endTime = i === intervals.length - 1 ? workHoursEnd : time;
-
-      slots.push({
-        date,
-        startTime: slotStart,
-        endTime,
-        category: categorizeSlot(slotBusyMembers.length, relevantMembers.length),
-        totalMembers: relevantMembers.length,
-        freeMembers: relevantMembers.length - slotBusyMembers.length,
-        busyMembers: slotBusyMembers,
-      });
-
-      // Start new slot
+    if (!unchanged) {
+      closeSlot(time);
       slotStart = time;
       slotBusyMembers = currentBusyMembers;
     }
   }
+
+  closeSlot(workHoursEnd);
 
   return slots;
 }
@@ -183,17 +186,27 @@ export function generateTimeSlots(
   workHoursEnd: string = WORKDAY_END
 ): TimeSlot[] {
   const slots: TimeSlot[] = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
 
-  let currentDate = new Date(start);
+  // Walked in UTC. These are calendar dates with no zone meaning, so UTC is
+  // both correct and the only arithmetic that behaves the same everywhere.
+  //
+  // It used to anchor on `new Date(startDate)` — UTC midnight — read the day
+  // back with toISOString(), and advance with setDate(), which moves the local
+  // components. They agree until a clock change: coming off summer time the
+  // step is 25 hours, so the cursor drifted past midnight UTC and overshot the
+  // end a day early, planning a week as six days with the last silently absent.
+  // Walking local midnights instead fixed that but broke Santiago and Havana,
+  // where the clocks change *at* midnight, so that instant does not exist and
+  // the cursor lands at 01:00 and drifts the same way.
+  const end = new Date(`${endDate}T00:00:00Z`);
+  const currentDate = new Date(`${startDate}T00:00:00Z`);
 
   while (currentDate <= end) {
     const dateStr = currentDate.toISOString().split('T')[0];
     const dateSlots = findFreeSlots(dateStr, members, availabilityData, selectedMemberIds, workHoursStart, workHoursEnd);
     slots.push(...dateSlots);
 
-    currentDate.setDate(currentDate.getDate() + 1);
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   }
 
   // Slots are already added in chronological order

@@ -70,16 +70,44 @@ export const formatDate = (year: number, month: number, day: number): string => 
 };
 
 /**
+ * The mode to show, which is not always the mode that was tapped.
+ *
+ * `mode` is the user's declaration and stays exactly as they left it — that is
+ * what a save writes. But a day declared free with an event already on it from
+ * the phone's calendar is not free: everyone else's planner is told about that
+ * event, so showing its owner a clean "free" hides the one thing they would
+ * want to know.
+ *
+ * Derived rather than stored, because the declaration is written straight into
+ * state the moment a mode button is tapped. Computing this once at load time
+ * meant the screen told the truth until the first tap and then stopped.
+ *
+ * A day declared busy already covers the event, so it needs no adjusting.
+ */
+export const displayedMode = (state?: {
+  mode: string;
+  importedSlots?: unknown[];
+}): string | undefined => {
+  if (!state) return undefined;
+  if (state.mode === 'free' && state.importedSlots && state.importedSlots.length > 0) {
+    return 'custom';
+  }
+  return state.mode;
+};
+
+/**
  * Get day status based on availability data
  */
 export const getDayStatus = (
   date: string,
-  availability: { [date: string]: { mode: string } }
+  availability: { [date: string]: { mode: string; importedSlots?: unknown[] } }
 ): 'free' | 'busy' | 'partial' | 'none' => {
   const state = availability[date];
   if (!state) return 'none';
-  if (state.mode === 'free') return 'free';
-  if (state.mode === 'busy') return 'busy';
+
+  const mode = displayedMode(state);
+  if (mode === 'free') return 'free';
+  if (mode === 'busy') return 'busy';
   return 'partial';
 };
 

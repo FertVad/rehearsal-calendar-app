@@ -14,8 +14,12 @@ NC='\033[0m' # No Color
 
 FAILED=0
 
-# Get list of tracked files (excluding .gitignore'd files)
-TRACKED_FILES=$(git ls-files)
+# Get list of tracked files (excluding .gitignore'd files).
+#
+# This file is skipped: the patterns below are written here in plain text, so
+# scanning it matched four of its own source lines on every run. That kept
+# `npm run check` permanently red, which is the same as having no check at all.
+TRACKED_FILES=$(git ls-files | grep -v 'scripts/check-secrets\.sh$')
 
 # Patterns to search for (case-insensitive)
 declare -a PATTERNS=(

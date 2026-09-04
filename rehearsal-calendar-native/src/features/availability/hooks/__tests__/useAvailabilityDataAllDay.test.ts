@@ -58,7 +58,10 @@ describe('A whole-day entry, read from five hours behind UTC', () => {
     expect(Object.keys(result.current.availability)).not.toContain('2026-09-09');
   });
 
-  it('is still read as covering the whole day', async () => {
+  it('is read as covering the whole day', async () => {
+    // A whole-day marking is the day's MODE, not a slot. It used to be carried
+    // as a 00:00–23:59 row as well, which showed up as an editable line and was
+    // written back as timed hours.
     const result = await load([
       {
         startsAt: '2026-09-10T00:00:00.000Z',
@@ -69,8 +72,8 @@ describe('A whole-day entry, read from five hours behind UTC', () => {
     ]);
 
     const day = result.current.availability['2026-09-10'];
-    expect(day?.slots?.[0]).toMatchObject({ start: '00:00', end: '23:59' });
     expect(day?.mode).toBe('busy');
+    expect(day?.slots).toHaveLength(0);
   });
 
   it('accepts the snake_case spelling the server sometimes sends', async () => {
@@ -137,6 +140,89 @@ describe('A day holding both kinds', () => {
       },
     ]);
 
-    expect(result.current.availability['2026-09-10']?.slots).toHaveLength(2);
+    const day = result.current.availability['2026-09-10'];
+    expect(day?.mode).toBe('busy');
+    // The whole-day row became the mode; the timed one is kept rather than
+    // discarded, so switching the mode does not lose it.
+    expect(day?.slots).toHaveLength(1);
+    expect(day?.slots[0]).toMatchObject({ start: '14:00', end: '16:00' });
+  });
+});
+
+describe('What the day shows when the phone calendar disagrees', () => {
+  const free = {
+    startsAt: '2026-09-10T00:00:00.000Z',
+    endsAt: '2026-09-10T23:59:59.999Z',
+    type: 'available',
+    isAllDay: true,
+    source: 'manual',
+  };
+  const calendarEvent = {
+    startsAt: '2026-09-10T18:00:00.000Z',
+    endsAt: '2026-09-10T19:00:00.000Z',
+    type: 'busy',
+    isAllDay: false,
+    source: 'apple_calendar',
+  };
+
+  it('does not claim the day is free when the calendar says otherwise', async () => {
+    // The screen used to read "free all day" while the endpoint that feeds
+    // everyone else's planner reported the event as busy. The owner was the one
+    // person not shown it.
+    const result = await load([free, calendarEvent]);
+
+    expect(result.current.availability['2026-09-10']?.mode).toBe('custom');
+  });
+
+  it('shows the event, and says where it came from', async () => {
+    const result = await load([free, calendarEvent]);
+
+    const day = result.current.availability['2026-09-10'];
+    expect(day?.importedSlots).toHaveLength(1);
+    expect(day?.importedSlots?.[0]).toMatchObject({ source: 'apple_calendar' });
+  });
+
+  it('keeps it out of the slots a save would write', async () => {
+    // Everything in `slots` is written back as a hand-entered row, so an
+    // imported event sitting there would be copied into a manual one on every
+    // save, and multiply.
+    const result = await load([free, calendarEvent]);
+
+    expect(result.current.availability['2026-09-10']?.slots).toHaveLength(0);
+  });
+
+  it('leaves a day declared busy declared busy', async () => {
+    // Busy all day already covers the event. Nothing is being hidden, so the
+    // declaration stands rather than being rewritten as custom hours.
+    const busy = { ...free, type: 'busy' };
+
+    const result = await load([busy, calendarEvent]);
+
+    expect(result.current.availability['2026-09-10']?.mode).toBe('busy');
+    expect(result.current.availability['2026-09-10']?.importedSlots).toHaveLength(1);
+  });
+
+  it('separates a rehearsal from the hours the user typed', async () => {
+    const rehearsal = { ...calendarEvent, source: 'rehearsal' };
+    const own = {
+      startsAt: '2026-09-10T08:00:00.000Z',
+      endsAt: '2026-09-10T10:00:00.000Z',
+      type: 'busy',
+      isAllDay: false,
+      source: 'manual',
+    };
+
+    const result = await load([own, rehearsal]);
+
+    const day = result.current.availability['2026-09-10'];
+    expect(day?.slots).toHaveLength(1);
+    expect(day?.importedSlots?.[0]).toMatchObject({ source: 'rehearsal' });
+  });
+
+  it('leaves an ordinary free day alone', async () => {
+    const result = await load([free]);
+
+    expect(result.current.availability['2026-09-10']?.mode).toBe('free');
+    expect(result.current.availability['2026-09-10']?.importedSlots).toHaveLength(0);
   });
 });

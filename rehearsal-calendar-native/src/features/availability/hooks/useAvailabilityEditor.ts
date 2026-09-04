@@ -158,7 +158,17 @@ export function useAvailabilityEditor({
       applyToSelectedDates(prev, selectedDates, getDayState, (currentState) => ({
         ...currentState,
         mode,
-        slots: mode === 'custom' ? currentState.slots : [{ ...DEFAULT_SLOT }],
+        // Switching to custom hours needs something to edit; switching away
+        // leaves none. It used to leave a 10:00–18:00 placeholder behind
+        // instead, which was invisible while the slot list only appeared in
+        // custom mode — and became a slot the user never entered as soon as it
+        // did, on a day showing custom because of a calendar event.
+        slots:
+          mode === 'custom'
+            ? currentState.slots.length > 0
+              ? currentState.slots
+              : [{ ...DEFAULT_SLOT }]
+            : [],
       }))
     );
     setHasChanges(true);
@@ -170,6 +180,12 @@ export function useAvailabilityEditor({
     setAvailability(prev =>
       applyToSelectedDates(prev, selectedDates, getDayState, (currentState) => ({
         ...currentState,
+        // Adding hours to a day declared free or busy makes it a day of custom
+        // hours — otherwise the save, which reads the declared mode, would
+        // write the whole-day entry and throw the new slot away. Reachable
+        // because a day can show custom hours while still declared free, when
+        // the phone's calendar has an event on it.
+        mode: 'custom',
         slots: [...currentState.slots, { ...DEFAULT_SLOT }],
       }))
     );

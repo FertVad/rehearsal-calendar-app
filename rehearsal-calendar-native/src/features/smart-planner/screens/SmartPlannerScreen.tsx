@@ -20,6 +20,7 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { DateRangePicker } from '../../../shared/components/DateRangePicker';
+import { formatDateToString } from '../../../shared/utils/time';
 import { smartPlannerScreenStyles as styles } from '../styles';
 
 type Props = NativeStackScreenProps<PlannerStackParamList, 'SmartPlanner'>;
@@ -70,7 +71,13 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   // Which project the current member selection was seeded for
   const hasInitializedMembers = useRef<string | null>(null);
 
-  // Calculate date range based on selected period
+  // Calculate date range based on selected period.
+  //
+  // Formatted from the local components, not through toISOString(): these Dates
+  // carry a local wall clock, and in a zone ahead of UTC the UTC date is still
+  // yesterday for the first hours after midnight. The range then began a day
+  // early — offering slots on a day already past, tappable straight through to
+  // scheduling a rehearsal in it — and lost its last day at the far end.
   const { startDate, endDate } = useMemo(() => {
     const today = new Date();
     const start = new Date(today);
@@ -83,14 +90,14 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     } else {
       // custom period
       return {
-        startDate: customStartDate.toISOString().split('T')[0],
-        endDate: customEndDate.toISOString().split('T')[0],
+        startDate: formatDateToString(customStartDate),
+        endDate: formatDateToString(customEndDate),
       };
     }
 
     return {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
+      startDate: formatDateToString(start),
+      endDate: formatDateToString(end),
     };
   }, [selectedPeriod, customStartDate, customEndDate]);
 

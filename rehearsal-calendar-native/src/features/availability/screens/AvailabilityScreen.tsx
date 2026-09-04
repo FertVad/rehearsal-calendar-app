@@ -18,7 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Spacing } from '../../../shared/constants/colors';
 import { CalendarMonth, EditorHeader, ModeInfo } from '../components';
-import { getDayStatus, formatDate, generateMonths } from '../utils';
+import { DayMode } from '../types';
+import { getDayStatus, displayedMode, formatDate, generateMonths } from '../utils';
 import { styles } from '../styles';
 import { PANEL_HEIGHT } from '../constants';
 import {
@@ -111,6 +112,13 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   };
 
   const selectedDayState = editor.selectedDate ? getDayState(editor.selectedDate) : null;
+
+  // What the buttons show. Not always what was tapped: a day declared free with
+  // an event already on it from the phone's calendar reads as custom hours,
+  // because that event is what everyone else's planner is told about. The
+  // declaration itself is untouched — `selectedDayState.mode` is what a save
+  // writes, and this only decides what is drawn.
+  const shownMode = displayedMode(selectedDayState ?? undefined);
 
   const renderMonth = ({ item }: { item: { year: number; month: number; key: string } }) => {
     return (
@@ -285,19 +293,19 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             <TouchableOpacity
               style={[
                 styles.modeButton,
-                selectedDayState?.mode === 'free' && styles.modeButtonActive,
-                selectedDayState?.mode === 'free' && styles.modeButtonFree,
+                shownMode === 'free' && styles.modeButtonActive,
+                shownMode === 'free' && styles.modeButtonFree,
               ]}
               onPress={() => editor.handleModeChange('free')}
             >
               <Ionicons
                 name="checkmark-circle"
                 size={20}
-                color={selectedDayState?.mode === 'free' ? Colors.accent.green : Colors.text.tertiary}
+                color={shownMode === 'free' ? Colors.accent.green : Colors.text.tertiary}
               />
               <Text style={[
                 styles.modeButtonText,
-                selectedDayState?.mode === 'free' && styles.modeButtonTextActive,
+                shownMode === 'free' && styles.modeButtonTextActive,
               ]}>
                 {t.availability.free}
               </Text>
@@ -306,19 +314,19 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             <TouchableOpacity
               style={[
                 styles.modeButton,
-                selectedDayState?.mode === 'custom' && styles.modeButtonActive,
-                selectedDayState?.mode === 'custom' && styles.modeButtonCustom,
+                shownMode === 'custom' && styles.modeButtonActive,
+                shownMode === 'custom' && styles.modeButtonCustom,
               ]}
               onPress={() => editor.handleModeChange('custom')}
             >
               <Ionicons
                 name="time"
                 size={20}
-                color={selectedDayState?.mode === 'custom' ? Colors.accent.yellow : Colors.text.tertiary}
+                color={shownMode === 'custom' ? Colors.accent.yellow : Colors.text.tertiary}
               />
               <Text style={[
                 styles.modeButtonText,
-                selectedDayState?.mode === 'custom' && styles.modeButtonTextActive,
+                shownMode === 'custom' && styles.modeButtonTextActive,
               ]}>
                 {t.availability.partial}
               </Text>
@@ -327,19 +335,19 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             <TouchableOpacity
               style={[
                 styles.modeButton,
-                selectedDayState?.mode === 'busy' && styles.modeButtonActive,
-                selectedDayState?.mode === 'busy' && styles.modeButtonBusy,
+                shownMode === 'busy' && styles.modeButtonActive,
+                shownMode === 'busy' && styles.modeButtonBusy,
               ]}
               onPress={() => editor.handleModeChange('busy')}
             >
               <Ionicons
                 name="close-circle"
                 size={20}
-                color={selectedDayState?.mode === 'busy' ? Colors.accent.red : Colors.text.tertiary}
+                color={shownMode === 'busy' ? Colors.accent.red : Colors.text.tertiary}
               />
               <Text style={[
                 styles.modeButtonText,
-                selectedDayState?.mode === 'busy' && styles.modeButtonTextActive,
+                shownMode === 'busy' && styles.modeButtonTextActive,
               ]}>
                 {t.availability.busy}
               </Text>
@@ -347,7 +355,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           </View>
 
           {/* Time Slots (only for custom mode) */}
-          {selectedDayState?.mode === 'custom' && (
+          {shownMode === 'custom' && selectedDayState && (
             <View style={styles.slotsSection}>
               <Text style={styles.slotsTitle}>{t.availability.busyTime}</Text>
 
@@ -405,9 +413,41 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             </View>
           )}
 
+          {/* What is already on this day without the user putting it there:
+              events from the phone's calendar, and rehearsals. Shown in every
+              mode, because these are what everyone else's planner is told —
+              hiding them while acting on them is what made a day declared free
+              read as busy to the rest of the company. Read-only: a calendar
+              event is changed in the calendar, a rehearsal in its own screen. */}
+          {selectedDayState?.importedSlots && selectedDayState.importedSlots.length > 0 && (
+            <View style={styles.importedSection}>
+              <Text style={styles.importedTitle}>{t.availability.fromCalendar}</Text>
+
+              {selectedDayState.importedSlots.map((slot, index) => (
+                <View key={`imported-${index}`} style={styles.importedRow}>
+                  <Ionicons
+                    name={slot.source === 'rehearsal' ? 'people-outline' : 'calendar-outline'}
+                    size={16}
+                    color={Colors.text.tertiary}
+                  />
+                  <Text style={styles.importedTime}>
+                    {slot.start} – {slot.end}
+                  </Text>
+                  <Text style={styles.importedSource}>
+                    {slot.source === 'rehearsal'
+                      ? t.availability.fromRehearsal
+                      : t.availability.fromDeviceCalendar}
+                  </Text>
+                </View>
+              ))}
+
+              <Text style={styles.importedNote}>{t.availability.importedNote}</Text>
+            </View>
+          )}
+
           {/* Info for free/busy modes */}
-          {selectedDayState?.mode && (
-            <ModeInfo mode={selectedDayState.mode} />
+          {shownMode && (
+            <ModeInfo mode={shownMode as DayMode} />
           )}
           </>
           )}

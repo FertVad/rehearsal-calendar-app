@@ -4,6 +4,11 @@
  * This file runs before each test file and sets up the testing environment
  */
 
+// Metro defines this; Jest does not, so a bare `if (__DEV__)` threw a
+// ReferenceError and made every module carrying one untestable. False, to match
+// the shipped build — everything behind these guards is diagnostics.
+(global as any).__DEV__ = false;
+
 // Silence console errors in tests unless explicitly testing error handling
 const originalError = console.error;
 beforeAll(() => {

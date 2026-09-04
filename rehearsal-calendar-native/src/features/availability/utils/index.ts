@@ -8,6 +8,7 @@ export {
   getDaysInMonth,
   formatDate,
   getDayStatus,
+  displayedMode,
   calculateDateOffset,
 } from './calendarUtils';
 

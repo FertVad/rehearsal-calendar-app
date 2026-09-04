@@ -101,11 +101,11 @@ describe('useAvailabilityData Hook', () => {
         expect(result.current.loading).toBe(false);
       });
 
+      // A whole-day marking is the day's mode, not a slot. It used to be
+      // carried as a 00:00–23:59 row as well, which appeared as an editable
+      // line and was written back as timed hours on the next save.
       expect(result.current.availability['2025-12-29'].mode).toBe('busy');
-      expect(result.current.availability['2025-12-29'].slots[0]).toEqual({
-        start: '00:00',
-        end: '23:59',
-      });
+      expect(result.current.availability['2025-12-29'].slots).toHaveLength(0);
     });
 
     it('should handle all-day free/available slots', async () => {
@@ -245,8 +245,13 @@ describe('useAvailabilityData Hook', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Should only have one slot (duplicate removed)
-      expect(result.current.availability['2025-12-29'].slots).toHaveLength(1);
+      // One survives the deduplication, and it is the rehearsal's — which the
+      // user did not type, so it belongs with the read-only rows rather than
+      // among the hours a save writes back.
+      const day = result.current.availability['2025-12-29'];
+      expect(day.slots).toHaveLength(0);
+      expect(day.importedSlots).toHaveLength(1);
+      expect(day.importedSlots?.[0]).toMatchObject({ source: 'rehearsal' });
 
       // Should log the deduplication
       expect(consoleLog).toHaveBeenCalledWith(
@@ -282,8 +287,13 @@ describe('useAvailabilityData Hook', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Should have both slots (different times)
-      expect(result.current.availability['2025-12-29'].slots).toHaveLength(2);
+      // Both survive, but they are different kinds of thing: one the user
+      // typed, one booked by a rehearsal and shown read-only.
+      const day = result.current.availability['2025-12-29'];
+      expect(day.slots).toHaveLength(1);
+      expect(day.slots[0]).toMatchObject({ start: '08:00', end: '10:00' });
+      expect(day.importedSlots).toHaveLength(1);
+      expect(day.importedSlots?.[0]).toMatchObject({ source: 'rehearsal' });
     });
   });
 

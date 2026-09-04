@@ -163,6 +163,33 @@ describe('DateRangePicker Component', () => {
       expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
 
+    // The picker holds its selection as 'YYYY-MM-DD', so a Date has to survive
+    // the trip out to a string and back. Converting either way through UTC lost
+    // a day for part of every night — the calendar showed one date and the
+    // caller was handed its neighbour.
+    it('should hand back the same calendar day it was given, in local terms', () => {
+      const startDate = new Date(2025, 11, 25); // local midnight, 25 Dec
+      const endDate = new Date(2025, 11, 31);
+
+      const { getByText } = render(
+        <DateRangePicker
+          visible={true}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+          initialStartDate={startDate}
+          initialEndDate={endDate}
+        />
+      );
+
+      fireEvent.press(getByText('Готово'));
+
+      const [emittedStart, emittedEnd] = mockOnConfirm.mock.calls[0];
+      const localParts = (d: Date) => [d.getFullYear(), d.getMonth(), d.getDate()];
+
+      expect(localParts(emittedStart)).toEqual([2025, 11, 25]);
+      expect(localParts(emittedEnd)).toEqual([2025, 11, 31]);
+    });
+
     it('should not call onConfirm when no dates selected', () => {
       const { getByText, UNSAFE_getAllByType } = render(
         <DateRangePicker

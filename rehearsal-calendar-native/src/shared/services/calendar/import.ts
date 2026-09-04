@@ -39,34 +39,50 @@ export async function getCalendarEvents(
   endDate: Date
 ): Promise<Calendar.Event[]> {
   try {
-    const hasPermission = await checkCalendarPermissions();
-    if (!hasPermission) {
-      throw new Error('Calendar permission not granted');
-    }
-
-    let allEvents: Calendar.Event[] = [];
-
-    for (const calendarId of calendarIds) {
-      try {
-        const events = await Calendar.getEventsAsync(
-          [calendarId],
-          startDate,
-          endDate
-        );
-        allEvents = allEvents.concat(events);
-        logger.debug(`[CalendarSync] Fetched ${events.length} events from calendar ${calendarId}`);
-      } catch (error) {
-        logger.error(`[CalendarSync] Failed to fetch events from calendar ${calendarId}:`, error);
-        // Continue with other calendars
-      }
-    }
-
-    logger.debug(`[CalendarSync] Total events fetched: ${allEvents.length}`);
-    return allEvents;
+    const { events } = await fetchCalendarEvents(calendarIds, startDate, endDate);
+    logger.debug(`[CalendarSync] Total events fetched: ${events.length}`);
+    return events;
   } catch (error) {
     logger.error('[CalendarSync] Failed to get calendar events:', error);
     throw error;
   }
+}
+
+/**
+ * Reads the selected calendars, reporting which ones could not be read.
+ *
+ * Carrying on past a failed calendar is right — the others still sync — but the
+ * caller has to know, because the diff reads "absent from the calendar" as "the
+ * user deleted it". Without this, one calendar failing to open (a revoked
+ * permission, an account re-auth, a transient provider error) silently deleted
+ * every slot imported from it, and if the permission stayed revoked they never
+ * came back.
+ */
+async function fetchCalendarEvents(
+  calendarIds: string[],
+  startDate: Date,
+  endDate: Date
+): Promise<{ events: Calendar.Event[]; failedCalendarIds: string[] }> {
+  const hasPermission = await checkCalendarPermissions();
+  if (!hasPermission) {
+    throw new Error('Calendar permission not granted');
+  }
+
+  let events: Calendar.Event[] = [];
+  const failedCalendarIds: string[] = [];
+
+  for (const calendarId of calendarIds) {
+    try {
+      const calendarEvents = await Calendar.getEventsAsync([calendarId], startDate, endDate);
+      events = events.concat(calendarEvents);
+      logger.debug(`[CalendarSync] Fetched ${calendarEvents.length} events from calendar ${calendarId}`);
+    } catch (error) {
+      logger.error(`[CalendarSync] Failed to fetch events from calendar ${calendarId}:`, error);
+      failedCalendarIds.push(calendarId);
+    }
+  }
+
+  return { events, failedCalendarIds };
 }
 
 /**
@@ -75,18 +91,27 @@ export async function getCalendarEvents(
  */
 function convertEventToTimestamps(event: Calendar.Event): { startsAt: string; endsAt: string } {
   if (event.allDay) {
-    // For all-day events, use UTC midnight to avoid timezone issues
-    const eventStartDate = typeof event.startDate === 'string'
-      ? new Date(event.startDate)
-      : event.startDate;
+    // A whole-day event stands for calendar dates rather than instants, so both
+    // ends are written as UTC midnight of the local date — the form the server
+    // stores and the availability screen reads.
+    const localDate = (value: string | Date): string => {
+      const d = typeof value === 'string' ? new Date(value) : value;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
 
-    const year = eventStartDate.getFullYear();
-    const month = String(eventStartDate.getMonth() + 1).padStart(2, '0');
-    const day = String(eventStartDate.getDate()).padStart(2, '0');
+    const firstDate = localDate(event.startDate);
+
+    // endDate used to be ignored outright, both ends coming from startDate, so
+    // a fortnight's holiday blocked one day and left the other thirteen reading
+    // free. Backing off a millisecond lands on the last covered day under
+    // either convention — an exclusive end at the following midnight, or an
+    // inclusive one at 23:59:59.
+    const rawEnd = typeof event.endDate === 'string' ? new Date(event.endDate) : event.endDate;
+    const lastDate = rawEnd ? localDate(new Date(rawEnd.getTime() - 1)) : firstDate;
 
     return {
-      startsAt: `${year}-${month}-${day}T00:00:00.000Z`,
-      endsAt: `${year}-${month}-${day}T23:59:59.999Z`,
+      startsAt: `${firstDate}T00:00:00.000Z`,
+      endsAt: `${lastDate < firstDate ? firstDate : lastDate}T23:59:59.999Z`,
     };
   } else {
     // Regular events - use standard ISO conversion
@@ -99,6 +124,25 @@ function convertEventToTimestamps(event: Calendar.Event): { startsAt: string; en
 
     return { startsAt, endsAt };
   }
+}
+
+/**
+ * The key one imported slot is stored under.
+ *
+ * Occurrences of a recurring event all carry the *series* id — expo-calendar
+ * says so outright, on both platforms — and one row per key is permitted. So a
+ * weekly class pushed fifty-two occurrences at the server and left one row
+ * standing: every other week read free, and which week was blocked wandered
+ * between syncs as the surviving row was rewritten. Pinning the occurrence by
+ * the instant it starts gives each its own row.
+ *
+ * A one-off event keeps its plain id, so existing rows keep their keys and an
+ * edit still updates in place rather than churning through delete-and-add.
+ */
+function occurrenceKey(event: Calendar.Event): string {
+  if (!event.recurrenceRule) return event.id;
+  const { startsAt } = convertEventToTimestamps(event);
+  return `${event.id}:${startsAt}`;
 }
 
 /**
@@ -131,8 +175,8 @@ export async function importCalendarEventsToAvailability(
     logger.info(`[CalendarSync] Importing from ${calendarIds.length} calendars`);
 
     // 1. Fetch current state (parallel for performance)
-    const [events, dbResponse, exportedMappings] = await Promise.all([
-      getCalendarEvents(calendarIds, startDate, endDate),
+    const [{ events, failedCalendarIds }, dbResponse, exportedMappings] = await Promise.all([
+      fetchCalendarEvents(calendarIds, startDate, endDate),
       availabilityAPI.getAll(),
       getAllMappings(),
     ]);
@@ -179,11 +223,14 @@ export async function importCalendarEventsToAvailability(
       dbSlots.map((slot: any) => [slot.externalEventId || slot.external_event_id, slot])
     );
 
-    // Map: event.id -> calendar event
+    // Map: stored key -> calendar event. Keyed per occurrence, so a recurring
+    // series contributes one entry per date rather than collapsing to one.
+    // The exported-rehearsal exclusion still compares the bare id — those are
+    // one-off events we created ourselves.
     const calendarEventMap = new Map(
       events
         .filter(e => !exportedEventIds.has(e.id)) // Exclude exported rehearsals
-        .map(e => [e.id, e])
+        .map(e => [occurrenceKey(e), e])
     );
 
     // 3. Find changes
@@ -197,15 +244,29 @@ export async function importCalendarEventsToAvailability(
       exportedEventIdsSize: exportedEventIds.size,
     });
 
-    // Find deleted events (in DB but not in calendar)
-    for (const [eventId, dbSlot] of dbEventMap) {
-      const id = eventId as string;
-      const inCalendar = calendarEventMap.has(id);
-      const isExported = exportedEventIds.has(id);
+    // Find deleted events (in DB but not in calendar).
+    //
+    // Only when every selected calendar was actually read. "Absent from the
+    // calendar" is being taken to mean "the user deleted it", and a calendar
+    // that failed to open produces exactly the same absence — so one hiccup on
+    // the work calendar used to wipe the whole work schedule out of everyone's
+    // planner, permanently if the permission stayed revoked. Skipping the pass
+    // leaves stale rows until the next healthy sync, which is the harmless
+    // direction: too busy rather than too free.
+    if (failedCalendarIds.length > 0) {
+      logger.warn(
+        `[CalendarSync] ${failedCalendarIds.length} calendar(s) could not be read; skipping the delete pass this run`
+      );
+    } else {
+      for (const [eventId] of dbEventMap) {
+        const id = eventId as string;
+        const inCalendar = calendarEventMap.has(id);
+        const isExported = exportedEventIds.has(id);
 
-      if (!inCalendar && !isExported) {
-        logger.debug(`[CalendarSync] Marking for deletion: ${id}`);
-        toDelete.push(id);
+        if (!inCalendar && !isExported) {
+          logger.debug(`[CalendarSync] Marking for deletion: ${id}`);
+          toDelete.push(id);
+        }
       }
     }
 
@@ -221,7 +282,7 @@ export async function importCalendarEventsToAvailability(
         continue;
       }
 
-      const dbSlot = dbEventMap.get(event.id) as any;
+      const dbSlot = dbEventMap.get(occurrenceKey(event)) as any;
 
       if (!dbSlot) {
         // New event
@@ -286,7 +347,7 @@ export async function importCalendarEventsToAvailability(
       const updates = toUpdate.map(event => {
         const { startsAt, endsAt } = convertEventToTimestamps(event);
         return {
-          externalEventId: event.id,
+          externalEventId: occurrenceKey(event),
           startsAt,
           endsAt,
           title: IMPORTED_SLOT_TITLE,
@@ -318,9 +379,9 @@ export async function importCalendarEventsToAvailability(
           type: 'busy' as const,
           isAllDay: event.allDay || false,
           source: Platform.OS === 'ios' ? 'apple_calendar' : 'google_calendar',
-          external_event_id: event.id,
+          external_event_id: occurrenceKey(event),
           title: IMPORTED_SLOT_TITLE,
-          eventId: event.id,
+          eventId: occurrenceKey(event),
           calendarId: event.calendarId,
         };
       });

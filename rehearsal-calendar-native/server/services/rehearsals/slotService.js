@@ -22,11 +22,11 @@ export async function getProjectTimezone(projectId) {
  * @param {string} startsAt - ISO 8601 timestamp
  * @param {string} endsAt - ISO 8601 timestamp
  */
-export async function bookRehearsalSlots(rehearsalId, projectId, startsAt, endsAt) {
+export async function bookRehearsalSlots(rehearsalId, projectId, startsAt, endsAt, conn = db) {
   logger.debug(`[bookRehearsalSlots] START - Rehearsal ID: ${rehearsalId}, Time: ${startsAt} - ${endsAt}`);
 
   // Get participants who have responses (i.e., were invited to this rehearsal)
-  const participants = await db.all(
+  const participants = await conn.all(
     "SELECT DISTINCT user_id FROM native_rehearsal_responses WHERE rehearsal_id = $1",
     [rehearsalId]
   );
@@ -36,7 +36,7 @@ export async function bookRehearsalSlots(rehearsalId, projectId, startsAt, endsA
   // For each participant, insert a busy slot using TIMESTAMPTZ columns
   for (const participant of participants) {
     logger.debug(`[bookRehearsalSlots] Booking slot for user ${participant.user_id}`);
-    await db.run(
+    await conn.run(
       `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, source, external_event_id, title, is_all_day)
        VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, 'Rehearsal', FALSE)`,
       [
@@ -63,24 +63,72 @@ export async function bookRehearsalSlots(rehearsalId, projectId, startsAt, endsA
 export async function updateRehearsalSlots(rehearsalId, projectId, startsAt, endsAt) {
   logger.debug(`[updateRehearsalSlots] START - Rehearsal ID: ${rehearsalId}, New time: ${startsAt} - ${endsAt}`);
 
-  // Delete existing booked slots
-  await deleteRehearsalSlots(rehearsalId);
-
-  // Book new slots
-  await bookRehearsalSlots(rehearsalId, projectId, startsAt, endsAt);
+  // Both halves or neither. This is delete-then-reinsert, and a failure in
+  // between — a function timing out partway through a large cast, a connection
+  // dropping mid-loop — left the rehearsal standing with some or all of its
+  // participants carrying no busy row at all. Nothing retries, so they would
+  // have read free during their own rehearsal until somebody happened to edit
+  // it again.
+  await db.transaction(async (tx) => {
+    await deleteRehearsalSlots(rehearsalId, tx);
+    await bookRehearsalSlots(rehearsalId, projectId, startsAt, endsAt, tx);
+  });
 
   logger.debug(`[updateRehearsalSlots] DONE - Updated slots for rehearsal ${rehearsalId}`);
+}
+
+/**
+ * Make sure one participant has the busy slot their rehearsal implies.
+ *
+ * Slots are otherwise written only when a rehearsal is created or edited, but a
+ * roster row is what puts someone on a rehearsal — and `/respond` writes one.
+ * An admin sees rehearsals they are not on and the eye is live on every card,
+ * so one tap adds them to the call with no busy time booked, and they would
+ * read free in the planner during their own rehearsal.
+ *
+ * @param {number} rehearsalId - Rehearsal ID
+ * @param {number} userId - User ID
+ */
+export async function ensureRehearsalSlot(rehearsalId, userId) {
+  const existing = await db.get(
+    `SELECT id FROM native_user_availability
+     WHERE user_id = $1 AND source = $2 AND external_event_id = $3`,
+    [userId, AVAILABILITY_SOURCES.REHEARSAL, rehearsalId.toString()]
+  );
+
+  if (existing) return;
+
+  const rehearsal = await db.get(
+    'SELECT starts_at, ends_at FROM native_rehearsals WHERE id = $1',
+    [rehearsalId]
+  );
+
+  if (!rehearsal) return;
+
+  logger.debug(`[ensureRehearsalSlot] Booking missing slot for user ${userId} on rehearsal ${rehearsalId}`);
+  await db.run(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, source, external_event_id, title, is_all_day)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, 'Rehearsal', FALSE)`,
+    [
+      userId,
+      rehearsal.starts_at,
+      rehearsal.ends_at,
+      AVAILABILITY_TYPES.BUSY,
+      AVAILABILITY_SOURCES.REHEARSAL,
+      rehearsalId.toString(),
+    ]
+  );
 }
 
 /**
  * Delete all availability slots associated with a rehearsal
  * @param {number} rehearsalId - Rehearsal ID
  */
-export async function deleteRehearsalSlots(rehearsalId) {
+export async function deleteRehearsalSlots(rehearsalId, conn = db) {
   logger.debug(`[deleteRehearsalSlots] START - Deleting slots for rehearsal ID: ${rehearsalId}`);
   logger.debug(`[deleteRehearsalSlots] Query params - source: "${AVAILABILITY_SOURCES.REHEARSAL}", external_event_id: "${rehearsalId.toString()}"`);
 
-  const result = await db.run(
+  const result = await conn.run(
     "DELETE FROM native_user_availability WHERE source = $1 AND external_event_id = $2",
     [AVAILABILITY_SOURCES.REHEARSAL, rehearsalId.toString()]
   );

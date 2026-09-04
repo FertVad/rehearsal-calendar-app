@@ -20,8 +20,20 @@ const mockDbRun = jest.fn();
 const mockDbGet = jest.fn();
 const mockDbAll = jest.fn();
 
+// Mirrors db.transaction: a handle passed in, a throw that undoes everything.
+// There is one connection here, so the isolation it reproduces is the shape
+// callers rely on rather than the pooling.
+const mockDb = {
+  run: mockDbRun,
+  get: mockDbGet,
+  all: mockDbAll,
+  async transaction(fn) {
+    return fn(mockDb);
+  },
+};
+
 jest.unstable_mockModule('../../database/db.js', () => ({
-  default: { run: mockDbRun, get: mockDbGet, all: mockDbAll },
+  default: mockDb,
   isPostgres: false,
 }));
 

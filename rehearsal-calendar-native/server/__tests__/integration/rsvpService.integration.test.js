@@ -67,6 +67,7 @@ describe('Seen toggle', () => {
   });
 
   beforeEach(() => {
+    testDb.run('DELETE FROM native_user_availability', []);
     testDb.run('DELETE FROM native_rehearsal_responses', []);
     testDb.run('DELETE FROM native_rehearsals', []);
 
@@ -127,5 +128,44 @@ describe('Seen toggle', () => {
     await expect(
       respondToRehearsal(rehearsalId, owner, 'maybe', null, projectId)
     ).rejects.toThrow(/yes.*no/i);
+  });
+
+  // Slots are otherwise booked only when a rehearsal is created or edited, but
+  // a row here is what puts someone on it — and an admin sees rehearsals they
+  // are not on, with the eye live on every card. One tap used to add them to
+  // the call with no busy time booked, leaving them free in the planner during
+  // their own rehearsal until somebody happened to edit it again.
+  const busySlotsFor = (userId) =>
+    testDb.all(
+      `SELECT starts_at, ends_at FROM native_user_availability
+       WHERE user_id = ? AND source = 'rehearsal' AND external_event_id = ?`,
+      [userId, String(rehearsalId)]
+    );
+
+  it('books the busy time for someone the tap has just added', async () => {
+    expect(busySlotsFor(outsider)).toHaveLength(0);
+
+    await respondToRehearsal(rehearsalId, outsider, 'yes', null, projectId);
+
+    const slots = busySlotsFor(outsider);
+    expect(slots).toHaveLength(1);
+    expect(slots[0].starts_at).toBe('2026-09-14T10:00:00.000Z');
+    expect(slots[0].ends_at).toBe('2026-09-14T13:00:00.000Z');
+  });
+
+  it('does not book a second slot when the same person taps again', async () => {
+    await respondToRehearsal(rehearsalId, outsider, 'yes', null, projectId);
+    await respondToRehearsal(rehearsalId, outsider, 'no', null, projectId);
+    await respondToRehearsal(rehearsalId, outsider, 'yes', null, projectId);
+
+    expect(busySlotsFor(outsider)).toHaveLength(1);
+  });
+
+  it('leaves the busy time in place when the mark is taken back', async () => {
+    await respondToRehearsal(rehearsalId, outsider, 'yes', null, projectId);
+    await respondToRehearsal(rehearsalId, outsider, 'no', null, projectId);
+
+    // 'no' means invited and not yet seen, so they are still on the call.
+    expect(busySlotsFor(outsider)).toHaveLength(1);
   });
 });

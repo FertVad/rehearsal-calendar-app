@@ -4,6 +4,7 @@ import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { getDateLocale } from '../../shared/utils/locale';
+import { formatDateToString, parseDateString } from '../utils/time';
 
 interface DateRangePickerProps {
   visible: boolean;
@@ -43,14 +44,18 @@ export function DateRangePicker({
 
   // Set calendar locale
   LocaleConfig.defaultLocale = language;
+  // The calendar speaks 'YYYY-MM-DD' in the user's own days, so every crossing
+  // between a Date and one of these strings goes through the local-time helpers.
+  // toISOString() would answer in UTC, which for a date-only value is a
+  // different day for part of every night.
   const [startDate, setStartDate] = useState<string | null>(
-    initialStartDate ? initialStartDate.toISOString().split('T')[0] : null
+    initialStartDate ? formatDateToString(initialStartDate) : null
   );
   const [endDate, setEndDate] = useState<string | null>(
-    initialEndDate ? initialEndDate.toISOString().split('T')[0] : null
+    initialEndDate ? formatDateToString(initialEndDate) : null
   );
 
-  const minDateStr = minDate ? minDate.toISOString().split('T')[0] : undefined;
+  const minDateStr = minDate ? formatDateToString(minDate) : undefined;
 
   const markedDates = useMemo(() => {
     const marked: { [key: string]: any } = {};
@@ -73,13 +78,13 @@ export function DateRangePicker({
       };
 
       // Mark range between start and end
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      const start = parseDateString(startDate);
+      const end = parseDateString(endDate);
       const current = new Date(start);
       current.setDate(current.getDate() + 1);
 
       while (current < end) {
-        const dateStr = current.toISOString().split('T')[0];
+        const dateStr = formatDateToString(current);
         marked[dateStr] = {
           color: Colors.accent.purple + '40', // 25% opacity
           textColor: Colors.text.primary,
@@ -121,15 +126,15 @@ export function DateRangePicker({
 
   const handleConfirm = () => {
     if (startDate && endDate) {
-      onConfirm(new Date(startDate), new Date(endDate));
+      onConfirm(parseDateString(startDate), parseDateString(endDate));
       onClose();
     }
   };
 
   const handleCancel = () => {
     // Reset to initial values
-    setStartDate(initialStartDate ? initialStartDate.toISOString().split('T')[0] : null);
-    setEndDate(initialEndDate ? initialEndDate.toISOString().split('T')[0] : null);
+    setStartDate(initialStartDate ? formatDateToString(initialStartDate) : null);
+    setEndDate(initialEndDate ? formatDateToString(initialEndDate) : null);
     onClose();
   };
 

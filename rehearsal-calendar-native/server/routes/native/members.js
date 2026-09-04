@@ -24,14 +24,18 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
       // Single date mode (backward compatibility)
       dates = [date];
     } else if (startDate && endDate) {
-      // Date range mode (for Smart Planner)
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      let current = new Date(start);
+      // Date range mode (for Smart Planner).
+      //
+      // Walked with the UTC accessors throughout. Anchoring on UTC midnight and
+      // then stepping with setDate(), which moves the local components, agrees
+      // with itself only until a clock change — harmless on Vercel, which runs
+      // UTC, but wrong on a developer machine that observes one.
+      const current = new Date(`${startDate}T00:00:00Z`);
+      const last = new Date(`${endDate}T00:00:00Z`);
 
-      while (current <= end) {
+      while (current <= last) {
         dates.push(current.toISOString().split('T')[0]);
-        current.setDate(current.getDate() + 1);
+        current.setUTCDate(current.getUTCDate() + 1);
       }
     } else {
       return res.status(400).json({ error: 'Either date or both startDate and endDate are required' });
@@ -105,12 +109,20 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
       queryParams.push(excludeRehearsalId);
     }
 
+    // Overlap test, not a test on starts_at alone. A span that began before the
+    // window and runs into it — a tour, a trip, a night shift — was not merely
+    // put on the wrong day, it was never fetched at all, and the person read as
+    // free for the whole of it.
+    //
+    // The day of slack on each side covers every zone the requester can be in:
+    // one day back reaches UTC+14, two forward reach UTC-12, and all-day rows
+    // sit at UTC midnight of their own date, well inside both.
     const availabilityRecords = await db.all(
       `SELECT user_id, starts_at, ends_at, type, is_all_day
        FROM native_user_availability
        WHERE user_id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})
-         AND starts_at >= $${targetUserIds.length + 1}::date - interval '1 day'
-         AND starts_at < $${targetUserIds.length + 2}::date + interval '2 days'${excludeClause}
+         AND starts_at < $${targetUserIds.length + 2}::date + interval '2 days'
+         AND ends_at >= $${targetUserIds.length + 1}::date - interval '1 day'${excludeClause}
        ORDER BY user_id, starts_at ASC`,
       queryParams
     );
@@ -142,58 +154,87 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
         dates: []
       };
 
-      // Group records by date in requester's timezone
-      const recordsByDate = new Map();
+      // Lay each record across every day it actually covers, in the requester's
+      // timezone, clipped to that day.
+      //
+      // The wire format is (date → list of HH:mm–HH:mm), which cannot express a
+      // span, so a record has to be cut into one range per day. Bucketing it on
+      // its start date alone lost everything after the first: a tour Monday
+      // 10:00 to Wednesday 18:00 arrived as "Monday 10:00–18:00" and left
+      // Tuesday and Wednesday reading Perfect.
+      //
+      // Worse for the short ones. A span crossing local midnight came back as
+      // 22:00–02:00, and the client drops any range whose end is not after its
+      // start — silently, so the whole evening read free rather than busy. That
+      // needs no exotic input: the availability editor deliberately supports an
+      // overnight slot, an imported red-eye is one, and an ordinary 21:00–23:00
+      // rehearsal becomes one for any teammate a timezone or two east.
+      const rangesByDate = new Map();
+      const windowFirst = dates[0];
+      const windowLast = dates[dates.length - 1];
+
+      const nextDate = (dateStr) => {
+        const d = new Date(`${dateStr}T00:00:00Z`);
+        d.setUTCDate(d.getUTCDate() + 1);
+        return d.toISOString().split('T')[0];
+      };
+
+      const addRange = (dateStr, range) => {
+        if (dateStr < windowFirst || dateStr > windowLast) return;
+        if (!rangesByDate.has(dateStr)) rangesByDate.set(dateStr, []);
+        rangesByDate.get(dateStr).push(range);
+      };
+
       for (const record of userRecords) {
         const startsAtISO = timestampToISO(record.starts_at);
+        const endsAtISO = timestampToISO(record.ends_at);
 
         // A whole-day entry is stored as UTC midnight standing for a calendar
-        // date, not for an instant — so take the date it says. Converting it
-        // into the requester's zone landed it on the wrong day whenever the two
-        // disagreed, and the planner then offered a slot on a day the person
-        // had marked themselves busy. The time branch below already treats
-        // all-day rows this way; only the grouping was missing it.
-        const localDate = record.is_all_day
-          ? startsAtISO.split('T')[0]
-          : timestampToLocal(startsAtISO, requesterTimezone).date;
-
-        if (!recordsByDate.has(localDate)) {
-          recordsByDate.set(localDate, []);
+        // date, not for an instant — so take the dates it says, without
+        // converting into the requester's zone, which landed it on the wrong
+        // day whenever the two disagreed.
+        if (record.is_all_day) {
+          const firstDate = startsAtISO.split('T')[0];
+          const lastDate = endsAtISO.split('T')[0];
+          for (
+            let d = firstDate > windowFirst ? firstDate : windowFirst;
+            d <= lastDate && d <= windowLast;
+            d = nextDate(d)
+          ) {
+            addRange(d, { start: '00:00', end: '23:59', type: record.type, isAllDay: true });
+          }
+          continue;
         }
-        recordsByDate.get(localDate).push(record);
+
+        const from = timestampToLocal(startsAtISO, requesterTimezone);
+        const to = timestampToLocal(endsAtISO, requesterTimezone);
+        const range = (start, end) => ({ start, end, type: record.type, isAllDay: false });
+
+        if (from.date === to.date) {
+          addRange(from.date, range(from.time, to.time));
+          continue;
+        }
+
+        addRange(from.date, range(from.time, '23:59'));
+        for (
+          let d = nextDate(from.date) > windowFirst ? nextDate(from.date) : windowFirst;
+          d < to.date && d <= windowLast;
+          d = nextDate(d)
+        ) {
+          addRange(d, range('00:00', '23:59'));
+        }
+        // An end of exactly midnight belongs to the day before, not as a
+        // zero-length range on the next one.
+        if (to.time !== '00:00') {
+          addRange(to.date, range('00:00', to.time));
+        }
       }
 
       // Process each requested date
       for (const currentDate of dates) {
-        const records = recordsByDate.get(currentDate) || [];
+        const timeRanges = rangesByDate.get(currentDate);
 
-        if (records.length > 0) {
-          // Convert timestamps to time ranges in requester's timezone
-          const timeRanges = records.map(record => {
-            // For all-day events, don't convert timezone - just return 00:00-23:59
-            if (record.is_all_day) {
-              return {
-                start: '00:00',
-                end: '23:59',
-                type: record.type,
-                isAllDay: true
-              };
-            }
-
-            // For regular events, convert to requester's timezone
-            const startsAtISO = timestampToISO(record.starts_at);
-            const endsAtISO = timestampToISO(record.ends_at);
-            const { time: startTime } = timestampToLocal(startsAtISO, requesterTimezone);
-            const { time: endTime } = timestampToLocal(endsAtISO, requesterTimezone);
-
-            return {
-              start: startTime,
-              end: endTime,
-              type: record.type,
-              isAllDay: false
-            };
-          });
-
+        if (timeRanges?.length) {
           userAvailability.dates.push({
             date: currentDate,
             timeRanges

@@ -210,6 +210,44 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.sm,
   },
+  // Rows the user did not enter. Deliberately quieter than the editable ones
+  // and with no controls, so it reads as information rather than as something
+  // that failed to respond to a tap.
+  importedSection: {
+    marginBottom: Spacing.lg,
+  },
+  importedTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.md,
+  },
+  importedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.bg.tertiary,
+    marginBottom: Spacing.sm,
+  },
+  importedTime: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.text.secondary,
+  },
+  importedSource: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: FontSize.xs,
+    color: Colors.text.tertiary,
+  },
+  importedNote: {
+    fontSize: FontSize.xs,
+    color: Colors.text.tertiary,
+    lineHeight: 16,
+  },
   slotInputs: {
     flex: 1,
     flexDirection: 'row',
