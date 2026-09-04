@@ -5,6 +5,7 @@ import { AvailabilityData, DayMode, DayState, TimeSlot } from '../types';
 import {
   isoToDateStringInTimezone,
   isoToTimeStringInTimezone,
+  datesBetween,
 } from '../../../shared/utils/time';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -51,46 +52,66 @@ export const useAvailabilityData = () => {
         // marked and 10 September free, and each save after a reload walked it
         // another day back. Nobody east of UTC ever saw it, which is why it
         // survived — the current users are all in Berlin, Moscow and Jerusalem.
-        const dateStr = record.startsAt
-          ? isAllDay
-            ? record.startsAt.split('T')[0]
-            : isoToDateStringInTimezone(record.startsAt, userTimezone)
-          : dateSource.split('T')[0];
+        const push = (dateStr: string, startTime: string, endTime: string) => {
+          if (!startTime || !endTime) return;
+          if (!serverData[dateStr]) serverData[dateStr] = [];
+          serverData[dateStr].push({
+            startTime,
+            endTime,
+            type: record.type,
+            isAllDay,
+            source: record.source,
+          });
+        };
 
-        if (!serverData[dateStr]) {
-          serverData[dateStr] = [];
+        // Legacy shape: a bare date with HH:mm times, no span to speak of.
+        if (!record.startsAt || !record.endsAt) {
+          push(
+            dateSource.split('T')[0],
+            record.start || record.start_time,
+            record.end || record.end_time
+          );
+          continue;
         }
 
-        // Handle multiple formats:
-        // - New TIMESTAMPTZ: startsAt/endsAt (ISO 8601)
-        // - Old format: start/end or start_time/end_time (HH:mm)
-        let startTime, endTime;
+        // A record covers every day between its ends, and the grid holds one
+        // list of HH:mm ranges per day — so it has to be cut up, clipped to each
+        // day. Filing it under its start date alone lost everything after the
+        // first: a calendar event running 3 September 20:00 to 6 September 21:00
+        // showed up as "3 September, 20:00–21:00" and left the 4th, 5th and 6th
+        // looking free, which is how two imported periods could be in the
+        // database and invisible on the screen.
+        const firstDate = isAllDay
+          ? record.startsAt.split('T')[0]
+          : isoToDateStringInTimezone(record.startsAt, userTimezone);
+        const lastDate = isAllDay
+          ? record.endsAt.split('T')[0]
+          : isoToDateStringInTimezone(record.endsAt, userTimezone);
 
-        if (record.startsAt && record.endsAt) {
-          // For all-day events, use standard 00:00 - 23:59 regardless of actual timestamps
-          if (isAllDay) {
-            startTime = '00:00';
-            endTime = '23:59';
-          } else {
-            // ✅ FIXED: Extract time in user's timezone
-            startTime = isoToTimeStringInTimezone(record.startsAt, userTimezone);
-            endTime = isoToTimeStringInTimezone(record.endsAt, userTimezone);
+        if (isAllDay) {
+          for (const day of datesBetween(firstDate, lastDate)) {
+            push(day, '00:00', '23:59');
           }
-        } else {
-          startTime = record.start || record.start_time;
-          endTime = record.end || record.end_time;
+          continue;
         }
 
-        // Skip if we couldn't extract valid times
-        if (!startTime || !endTime) continue;
+        const startTime = isoToTimeStringInTimezone(record.startsAt, userTimezone);
+        const endTime = isoToTimeStringInTimezone(record.endsAt, userTimezone);
 
-        serverData[dateStr].push({
-          startTime,
-          endTime,
-          type: record.type,
-          isAllDay,
-          source: record.source
-        });
+        if (firstDate === lastDate) {
+          push(firstDate, startTime, endTime);
+          continue;
+        }
+
+        push(firstDate, startTime, '23:59');
+        for (const day of datesBetween(firstDate, lastDate).slice(1, -1)) {
+          push(day, '00:00', '23:59');
+        }
+        // An end of exactly midnight belongs to the day before, not as a
+        // zero-length sliver on the next one.
+        if (endTime !== '00:00') {
+          push(lastDate, '00:00', endTime);
+        }
       }
 
       // DEDUPLICATION: Remove duplicate time slots (prioritize rehearsal > manual)

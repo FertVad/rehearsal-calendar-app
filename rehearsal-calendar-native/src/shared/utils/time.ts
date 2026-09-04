@@ -24,6 +24,31 @@ export const formatDateToString = (date: Date): string => {
 };
 
 /**
+ * Every calendar date from `first` to `last` inclusive, as 'YYYY-MM-DD'.
+ *
+ * Walked in UTC on purpose: these strings are calendar dates with no zone
+ * meaning, and stepping local midnights breaks where the clocks change at
+ * midnight — Santiago and Havana, both of which the Spanish build reaches.
+ *
+ * `maxDays` is a guard against a malformed range, not a real limit.
+ */
+export const datesBetween = (first: string, last: string, maxDays = 400): string[] => {
+  if (!first) return [];
+  if (!last || last < first) return [first];
+
+  const out: string[] = [];
+  const cursor = new Date(`${first}T00:00:00Z`);
+  const end = new Date(`${last}T00:00:00Z`);
+
+  while (cursor <= end && out.length < maxDays) {
+    out.push(cursor.toISOString().split('T')[0]);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  return out;
+};
+
+/**
  * Format Date object to time string (HH:mm).
  */
 export const formatDateToTimeString = (date: Date): string => {
