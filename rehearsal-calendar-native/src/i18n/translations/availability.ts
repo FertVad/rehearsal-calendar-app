@@ -36,6 +36,8 @@ export interface AvailabilityTranslations {
   selectedDates: (count: number) => string;
   freeAllDay: string;
   busyAllDay: string;
+  /** Label for a read-only calendar row that takes the whole day. */
+  allDay: string;
 }
 
 export interface SmartPlannerTranslations {
@@ -116,6 +118,7 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     selectedDates: (count: number) => `Выбрано дат: ${count}`,
     freeAllDay: 'Вы доступны весь день для репетиций',
     busyAllDay: 'Вы недоступны в этот день',
+    allDay: 'Весь день',
   },
   smartPlanner: {
     title: 'Smart Planner',
@@ -203,6 +206,7 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     selectedDates: (count: number) => `Selected dates: ${count}`,
     freeAllDay: 'You are available all day for rehearsals',
     busyAllDay: 'You are unavailable on this day',
+    allDay: 'All day',
   },
   smartPlanner: {
     title: 'Smart Planner',
@@ -283,6 +287,7 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     selectedDates: (count: number) => `Fechas seleccionadas: ${count}`,
     freeAllDay: 'Estás disponible todo el día para ensayar',
     busyAllDay: 'No estás disponible este día',
+    allDay: 'Todo el día',
   },
   smartPlanner: {
     title: 'Smart Planner',
@@ -363,6 +368,7 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     selectedDates: (count: number) => `Ausgewählte Daten: ${count}`,
     freeAllDay: 'Du bist den ganzen Tag für Proben verfügbar',
     busyAllDay: 'Du bist an diesem Tag nicht verfügbar',
+    allDay: 'Ganztägig',
   },
   smartPlanner: {
     title: 'Smart Planner',

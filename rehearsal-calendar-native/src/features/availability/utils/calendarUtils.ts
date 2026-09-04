@@ -84,14 +84,28 @@ export const formatDate = (year: number, month: number, day: number): string => 
  *
  * A day declared busy already covers the event, so it needs no adjusting.
  */
+type ImportedSlot = { start?: string; end?: string; isAllDay?: boolean };
+
+/** A read-only row that leaves no part of the day free. */
+const takesWholeDay = (slot: ImportedSlot): boolean =>
+  slot?.isAllDay === true || (slot?.start === '00:00' && slot?.end === '23:59');
+
 export const displayedMode = (state?: {
   mode: string;
-  importedSlots?: unknown[];
+  importedSlots?: ImportedSlot[];
 }): string | undefined => {
   if (!state) return undefined;
-  if (state.mode === 'free' && state.importedSlots && state.importedSlots.length > 0) {
-    return 'custom';
-  }
+
+  const imported = state.importedSlots ?? [];
+  if (imported.length === 0) return state.mode;
+
+  // A calendar event covering the whole day leaves nothing to be partial about.
+  // Days in the middle of a multi-day event arrive here as 00:00–23:59, and
+  // drawing them as custom hours read as "partly busy, from midnight to
+  // midnight" — technically true and useless to look at.
+  if (imported.some(takesWholeDay)) return 'busy';
+
+  if (state.mode === 'free') return 'custom';
   return state.mode;
 };
 
@@ -100,7 +114,7 @@ export const displayedMode = (state?: {
  */
 export const getDayStatus = (
   date: string,
-  availability: { [date: string]: { mode: string; importedSlots?: unknown[] } }
+  availability: { [date: string]: { mode: string; importedSlots?: ImportedSlot[] } }
 ): 'free' | 'busy' | 'partial' | 'none' => {
   const state = availability[date];
   if (!state) return 'none';

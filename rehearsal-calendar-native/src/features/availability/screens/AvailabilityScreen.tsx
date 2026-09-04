@@ -431,7 +431,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                     color={Colors.text.tertiary}
                   />
                   <Text style={styles.importedTime}>
-                    {slot.start} – {slot.end}
+                    {slot.isAllDay ? t.availability.allDay : `${slot.start} – ${slot.end}`}
                   </Text>
                   <Text style={styles.importedSource}>
                     {slot.source === 'rehearsal'

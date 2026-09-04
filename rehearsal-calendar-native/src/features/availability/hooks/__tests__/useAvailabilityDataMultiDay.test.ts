@@ -69,6 +69,20 @@ describe('A multi-day calendar event, read in Jerusalem', () => {
     expect(imported(a['2026-09-06'])).toEqual(['00:00-21:00']);
   });
 
+  // A day the event runs straight through has nothing free left in it, so it is
+  // flagged whole-day: the screen says "all day" instead of 00:00–23:59, and the
+  // day reads busy rather than partly busy.
+  it('flags the days it covers entirely as whole-day', async () => {
+    const result = await load([THREE_NIGHTS]);
+    const flag = (d: string) =>
+      result.current.availability[d].importedSlots?.map((s: any) => s.isAllDay);
+
+    expect(flag('2026-09-03')).toEqual([false]);
+    expect(flag('2026-09-04')).toEqual([true]);
+    expect(flag('2026-09-05')).toEqual([true]);
+    expect(flag('2026-09-06')).toEqual([false]);
+  });
+
   it('stays read-only — it is not turned into hand-entered slots', async () => {
     const result = await load([THREE_NIGHTS]);
 
