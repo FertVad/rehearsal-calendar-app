@@ -120,32 +120,6 @@ Found while verifying the above. There is no leave endpoint at all.
 admin ([members.js:372](../server/routes/native/members.js#L372)), so an ordinary
 member has no way out of a project except asking someone to remove them.
 
-### "Delete data" on a past date deletes nothing
-
-Verified 2026-09-03. `deletePastDates`
-([useAvailabilityEditor.ts:207-216](../src/features/availability/hooks/useAvailabilityEditor.ts#L207))
-makes no network call at all — it drops the dates from local state and calls
-the completion, and its one call site passes an empty one
-([AvailabilityScreen.tsx:278](../src/features/availability/screens/AvailabilityScreen.tsx#L278)).
-
-A later Save cannot rescue it. `useAvailabilitySave` drops past dates from the
-payload (`if (today && date < today) continue;`), and the bulk endpoint only
-deletes dates that appear in that payload, so a past date is in neither set. The
-reload on focus is unconditional — `loadAvailability` runs outside the
-`if (shouldSync)` branch — and replaces state wholesale from the server.
-
-So the marks vanish, no error is shown, and they are all back on the next visit
-to the tab.
-
-Aggravating: `clearSelection()` inside the same function closes the panel that
-holds the Save bar, so the press hides its own confirmation affordance while
-leaving `hasChanges` true.
-
-**Smallest fix** (client, needs a rebuild): `availabilityAPI.delete(date)` and
-`DELETE /api/native/availability/:date` both already exist and are scoped to
-manual rows — the wiring was simply never done. Make `deletePastDates` async,
-await one call per selected date, and skip the local mutation if any fails.
-
 ### `npm run lint` does not run at all
 
 The config is in the old `.eslintrc` format and ESLint 9 refuses it, so

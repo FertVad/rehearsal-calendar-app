@@ -18,9 +18,14 @@ import { Animated } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
 import { useAvailabilityEditor } from '../useAvailabilityEditor';
 import { AvailabilityData, DayState } from '../../types';
+import { availabilityAPI } from '../../../../shared/services/api';
 
 // The hook animates the editor panel open on mount. Nothing here is about the
 // animation, and the test renderer hands back no driver for it.
+jest.mock('../../../../shared/services/api', () => ({
+  availabilityAPI: { delete: jest.fn() },
+}));
+
 jest.spyOn(Animated, 'spring').mockReturnValue({
   start: jest.fn(),
   stop: jest.fn(),
@@ -29,7 +34,7 @@ jest.spyOn(Animated, 'spring').mockReturnValue({
 
 const DATE = '2026-09-08';
 
-const setup = (initial: AvailabilityData = {}) => {
+const setup = (initial: AvailabilityData = {}, setHasChanges = jest.fn()) => {
   let availability: AvailabilityData = { ...initial };
 
   const setAvailability = jest.fn((updater: (prev: AvailabilityData) => AvailabilityData) => {
@@ -43,7 +48,7 @@ const setup = (initial: AvailabilityData = {}) => {
     useAvailabilityEditor({
       availability,
       setAvailability,
-      setHasChanges: jest.fn(),
+      setHasChanges,
       getDayState,
       months: [{ year: 2026, month: 8, key: '2026-8' }],
     })
@@ -150,5 +155,65 @@ describe('Adding hours', () => {
     act(() => hook.result.current.removeSlot(0));
 
     expect(day().slots).toEqual([{ start: '14:00', end: '16:00' }]);
+  });
+});
+
+describe('Deleting the marks on a past date', () => {
+  // It used to drop them from local state and stop. The save deliberately skips
+  // past dates and the bulk endpoint only clears dates the payload names, so a
+  // past date was in neither: the marks vanished, nothing was said, and they
+  // were all back on the next visit to the tab.
+  beforeEach(() => {
+    (availabilityAPI.delete as jest.Mock).mockReset().mockResolvedValue({});
+  });
+
+  it('asks the server to delete each selected date', async () => {
+    const { hook } = setup({ [DATE]: { mode: 'busy', slots: [] } });
+
+    await act(async () => {
+      await hook.result.current.deletePastDates(() => {});
+    });
+
+    expect(availabilityAPI.delete).toHaveBeenCalledWith(DATE);
+  });
+
+  it('removes them from the screen once the server agreed', async () => {
+    const { hook, day } = setup({ [DATE]: { mode: 'busy', slots: [] } });
+
+    await act(async () => {
+      await hook.result.current.deletePastDates(() => {});
+    });
+
+    expect(day()).toBeUndefined();
+  });
+
+  it('leaves the screen alone when the server refused', async () => {
+    // Better a mark that is still there than a screen quietly disagreeing with
+    // the server.
+    (availabilityAPI.delete as jest.Mock).mockRejectedValue(new Error('offline'));
+    const { hook, day } = setup({ [DATE]: { mode: 'busy', slots: [] } });
+
+    let reported: unknown;
+    await act(async () => {
+      await hook.result.current.deletePastDates((error) => {
+        reported = error;
+      });
+    });
+
+    expect(reported).toBeDefined();
+    expect(day()).toBeDefined();
+  });
+
+  it('leaves nothing unsaved behind', async () => {
+    // The deletion has already happened on the server, so there is nothing for
+    // a later Save to do — and the panel holding the Save bar has just closed.
+    const setHasChanges = jest.fn();
+    const { hook } = setup({ [DATE]: { mode: 'busy', slots: [] } }, setHasChanges);
+
+    await act(async () => {
+      await hook.result.current.deletePastDates(() => {});
+    });
+
+    expect(setHasChanges).toHaveBeenLastCalledWith(false);
   });
 });

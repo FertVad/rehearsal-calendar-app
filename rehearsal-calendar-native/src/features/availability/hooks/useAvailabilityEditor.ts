@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Animated, FlatList } from 'react-native';
 import { DayState, DayMode, TimeSlot } from '../types';
 import { validateSlots, calculateDateOffset } from '../utils';
+import { availabilityAPI } from '../../../shared/services/api';
 import { applyToSelectedDates } from '../utils/slotHelpers';
 import { parseTimeString, formatDateToTimeString } from '../../../shared/utils/time';
 import { SCREEN_HEIGHT, PANEL_HEIGHT } from '../constants';
@@ -204,13 +205,36 @@ export function useAvailabilityEditor({
     setHasChanges(true);
   };
 
-  const deletePastDates = (onComplete: () => void) => {
+  /**
+   * Delete the marks on the selected past dates, on the server as well as here.
+   *
+   * It used to drop them from local state and stop. Nothing else could rescue
+   * that: the save deliberately skips past dates, and the bulk endpoint only
+   * clears dates the payload names, so a past date was in neither. The marks
+   * vanished, no error was shown, and they were all back on the next visit to
+   * the tab.
+   *
+   * Nothing is removed locally unless the server agreed, so a failure leaves
+   * the screen telling the truth rather than a comfortable fiction.
+   */
+  const deletePastDates = async (onComplete: (error?: unknown) => void) => {
+    const dates = [...selectedDates];
+    if (dates.length === 0) return;
+
+    try {
+      await Promise.all(dates.map((date) => availabilityAPI.delete(date)));
+    } catch (error) {
+      onComplete(error);
+      return;
+    }
+
     setAvailability(prev => {
       const updated = { ...prev };
-      selectedDates.forEach(date => delete updated[date]);
+      dates.forEach(date => delete updated[date]);
       return updated;
     });
-    setHasChanges(true);
+    // Nothing is left unsaved: the deletion has already happened on the server.
+    setHasChanges(false);
     clearSelection();
     onComplete();
   };
