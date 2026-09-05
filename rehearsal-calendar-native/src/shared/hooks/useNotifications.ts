@@ -8,6 +8,7 @@ import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotifications } from '../services/notifications';
+import { runAutoSync } from './useAutoCalendarSync';
 import { hapticMedium } from '../utils/haptics';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnread } from '../../contexts/UnreadContext';
@@ -50,6 +51,15 @@ export function useNotifications() {
         // Seeing the banner is not reading it — the count simply catches up,
         // and the bell moves with it.
         refresh();
+
+        // And bring the calendar in line. A push telling someone their
+        // rehearsal was cancelled used to move the unread count and nothing
+        // else, so the event sat in their calendar — alarm and all — until the
+        // app happened to be sent away and brought back. The sync's own lock
+        // and throttle are shared, so this cannot cause an extra run.
+        runAutoSync().catch(() => {
+          // Nothing to tell the reader; the next foreground tries again.
+        });
       });
 
       // Listen for user interaction with notification

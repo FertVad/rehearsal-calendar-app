@@ -205,25 +205,20 @@ async function runExclusively(
   await run;
 }
 
-interface AutoSyncOptions {
-  /**
-   * Watch for the app returning from the background and sync then.
-   *
-   * Off by default and switched on in exactly one place, the tab bar, because
-   * the listener has to be registered once and live as long as the session.
-   * It used to be registered by this hook's only caller, the availability
-   * editor — which is not a tab but a modal reached from the "+" button, so
-   * automatic sync existed only while that sheet was open. Anyone who turned it
-   * on and never opened the sheet got nothing, while the settings screen said
-   * it was running.
-   */
-  syncOnForeground?: boolean;
-}
+/**
+ * One run of the automatic sync.
+ *
+ * At module scope rather than inside the hook so anything can ask for it — the
+ * notification handler does, because a push arriving while the app is open used
+ * to refresh the unread count and nothing else. Someone else cancelled a
+ * rehearsal, the banner said so, and the event stayed in the calendar until the
+ * app was sent away and brought back.
+ *
+ * The lock and the throttle are shared, so an extra caller cannot cause an
+ * extra run.
+ */
+export async function runAutoSync(): Promise<void> {
 
-export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOptions = {}) {
-  const appState = useRef(AppState.currentState);
-
-  const performAutoSync = useCallback(async () => {
     // Signing in with Apple or Google backgrounds the app while the native
     // sheet is up; dismissing it fires a foreground event and lands us here
     // before the token is stored. Syncing then just produces a burst of 401s.
@@ -263,7 +258,28 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
       console.error('[AutoSync] Error during auto-import:', error);
     }
     }, { waitForTurn: false });
-  }, []);
+}
+
+interface AutoSyncOptions {
+  /**
+   * Watch for the app returning from the background and sync then.
+   *
+   * Off by default and switched on in exactly one place, the tab bar, because
+   * the listener has to be registered once and live as long as the session.
+   * It used to be registered by this hook's only caller, the availability
+   * editor — which is not a tab but a modal reached from the "+" button, so
+   * automatic sync existed only while that sheet was open. Anyone who turned it
+   * on and never opened the sheet got nothing, while the settings screen said
+   * it was running.
+   */
+  syncOnForeground?: boolean;
+}
+
+export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOptions = {}) {
+  const appState = useRef(AppState.currentState);
+
+  const performAutoSync = useCallback(runAutoSync, []);
+
 
   const handleAppStateChange = useCallback(async (nextAppState: AppStateStatus) => {
     const previousState = appState.current;

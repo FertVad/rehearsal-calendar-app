@@ -15,7 +15,7 @@
  */
 import { AppState } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
-import { useAutoCalendarSync } from '../useAutoCalendarSync';
+import { useAutoCalendarSync, runAutoSync } from '../useAutoCalendarSync';
 import { importCalendarEventsToAvailability, unsyncRehearsal } from '../../services/calendar';
 import { getAllMappings } from '../../utils/calendarMappings';
 import { getSyncSettings } from '../../utils/calendarStorage';
@@ -280,5 +280,33 @@ describe('Exporting soon after the last export', () => {
     });
 
     expect((getAllMappings as jest.Mock).mock.calls).toHaveLength(1);
+  });
+});
+
+
+describe('A push arriving while the app is open', () => {
+  it('can bring the calendar in line without the hook', async () => {
+    // The notification handler calls this directly. Before it did, a push
+    // saying a rehearsal was cancelled moved the unread count and nothing else,
+    // so the event sat in the reader's calendar — alarm and all — until the app
+    // was sent away and brought back.
+    (getAllMappings as jest.Mock).mockResolvedValue({
+      '7': { eventId: 'evt-7', calendarId: 'c1', lastSynced: '' },
+    });
+    (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({ data: { rehearsals: [] } });
+
+    await act(async () => {
+      await runAutoSync();
+    });
+
+    expect(unsyncRehearsal).toHaveBeenCalledWith('7');
+  });
+
+  it('shares the lock, so an extra caller causes no extra run', async () => {
+    await act(async () => {
+      await Promise.all([runAutoSync(), runAutoSync()]);
+    });
+
+    expect((rehearsalsAPI.getBatch as jest.Mock).mock.calls.length).toBeLessThanOrEqual(1);
   });
 });
