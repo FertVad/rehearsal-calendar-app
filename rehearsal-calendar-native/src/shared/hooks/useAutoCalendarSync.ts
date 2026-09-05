@@ -52,7 +52,10 @@ async function shouldImportNow(): Promise<{ importCalendarIds: string[] } | null
  * the app is opened rather than whenever the reader happens to pull down.
  */
 
-async function exportRehearsalsIfDue(force = false): Promise<void> {
+async function exportRehearsalsIfDue(
+  force = false,
+  knownMappings?: Record<string, { eventId: string; calendarId: string }>
+): Promise<void> {
   const settings = await getSyncSettings();
   if (!settings.exportEnabled || !settings.exportCalendarId) {
     logger.debug('[AutoSync] Export not enabled - skipping');
@@ -99,7 +102,7 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
   // interval existed to keep that from happening constantly. Its cost was also
   // its consequence: somebody else's edit did not reach the calendar until the
   // reader thought to pull down. One request answers for all of them.
-  const mappings = await getAllMappings();
+  const mappings = knownMappings ?? (await getAllMappings());
 
   await reconcileDeletedRehearsals(
     rehearsals.map((r: { id: string }) => String(r.id)),
@@ -218,6 +221,9 @@ async function runExclusively(
  * extra run.
  */
 export async function runAutoSync(): Promise<void> {
+  // Fetched once per run and shared by the import and the export below.
+  let sharedMappings: Record<string, { eventId: string; calendarId: string }> | undefined;
+
 
     // Signing in with Apple or Google backgrounds the app while the native
     // sheet is up; dismissing it fires a foreground event and lands us here
@@ -242,7 +248,14 @@ export async function runAutoSync(): Promise<void> {
       const importSettings = await shouldImportNow();
       if (importSettings) {
         logger.debug('[AutoSync] Auto-importing calendar events');
-        const result = await importCalendarEventsToAvailability(importSettings.importCalendarIds);
+        // Fetched once for both halves — the import needs it to leave our own
+        // exported rehearsals alone, the export to match event to rehearsal.
+        sharedMappings = await getAllMappings();
+        const result = await importCalendarEventsToAvailability(
+          importSettings.importCalendarIds,
+          undefined,
+          sharedMappings
+        );
         logger.debug('[AutoSync] Auto-import completed:', result);
       } else {
         logger.debug('[AutoSync] No import needed at this time');
@@ -250,7 +263,7 @@ export async function runAutoSync(): Promise<void> {
 
       // A failed import should not stop the export, and the other way round.
       try {
-        await exportRehearsalsIfDue();
+        await exportRehearsalsIfDue(false, sharedMappings);
       } catch (error) {
         console.error('[AutoSync] Error during auto-export:', error);
       }
@@ -315,6 +328,8 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
    */
   const forceSync = useCallback(async () => {
     // A pull-to-refresh waits rather than being dropped — see runExclusively.
+    let sharedMappings: Record<string, { eventId: string; calendarId: string }> | undefined;
+
     await runExclusively(async () => {
     try {
       const settings = await getSyncSettings();
@@ -326,7 +341,8 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
 
       // Pull-to-refresh means "now", so the export ignores its own timer.
       try {
-        await exportRehearsalsIfDue(true);
+        sharedMappings = await getAllMappings();
+        await exportRehearsalsIfDue(true, sharedMappings);
       } catch (error) {
         console.error('[AutoSync] Force sync - export failed:', error);
       }
@@ -338,7 +354,11 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
       }
 
       logger.debug('[AutoSync] Force syncing calendar events from', settings.importCalendarIds.length, 'calendars');
-      const result = await importCalendarEventsToAvailability(settings.importCalendarIds);
+      const result = await importCalendarEventsToAvailability(
+        settings.importCalendarIds,
+        undefined,
+        sharedMappings
+      );
       logger.debug('[AutoSync] Force sync completed:', result);
     } catch (error) {
       console.error('[AutoSync] Error during force sync:', error);

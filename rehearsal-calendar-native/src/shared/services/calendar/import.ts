@@ -154,7 +154,17 @@ function occurrenceKey(event: Calendar.Event): string {
  */
 export async function importCalendarEventsToAvailability(
   calendarIds: string[],
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  /**
+   * The exported-rehearsal mappings, when the caller already holds them.
+   *
+   * The export needs the same list, so a sync fetched it twice — once here to
+   * know which events are our own rehearsals and must not be imported as busy
+   * time, once there to know which event belongs to which rehearsal. Sharing is
+   * safe because nothing on this path writes to them: the import records what
+   * it brought in under a different key entirely.
+   */
+  knownMappings?: Record<string, { eventId: string; calendarId: string }>
 ): Promise<ImportResult> {
   const result: ImportResult = {
     success: 0,
@@ -178,7 +188,7 @@ export async function importCalendarEventsToAvailability(
     const [{ events, failedCalendarIds }, dbResponse, exportedMappings] = await Promise.all([
       fetchCalendarEvents(calendarIds, startDate, endDate),
       availabilityAPI.getAll(),
-      getAllMappings(),
+      knownMappings ? Promise.resolve(knownMappings) : getAllMappings(),
     ]);
 
     logger.debug('[CalendarSync] API response structure check:', {
