@@ -352,6 +352,31 @@ export async function syncRehearsalToCalendar(
       const eventExists = existing !== null;
       logger.debug('[CalendarSync] 🔍 Event exists in calendar?', eventExists);
 
+      // The reader picked a different calendar in settings.
+      //
+      // The update below writes to whichever calendar the event already lives
+      // in, so changing the choice left every rehearsal exported so far in the
+      // old one — while the settings screen showed the new one selected and
+      // said everything was synced. Only rehearsals created afterwards ever
+      // appeared there.
+      //
+      // Created in the new calendar first and removed from the old one after,
+      // so a failure leaves the event where it was rather than nowhere. The
+      // duplicate search looks only in the calendar being written to, so the
+      // old copy cannot be adopted as the new one.
+      if (mapping.calendarId && mapping.calendarId !== calendarId) {
+        logger.info(`[CalendarSync] Moving rehearsal ${rehearsal.id} to calendar ${calendarId}`);
+        const movedId = await createCalendarEvent(rehearsal, calendarId);
+        if (movedId) {
+          try {
+            await deleteCalendarEvent(mapping.eventId);
+          } catch (error) {
+            logger.warn('[CalendarSync] Moved the event but could not remove the old copy:', error);
+          }
+        }
+        return;
+      }
+
       if (existing && eventMatchesRehearsal(existing, rehearsal)) {
         logger.debug('[CalendarSync] Event already matches - nothing to write');
         return;
