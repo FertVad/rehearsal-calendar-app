@@ -191,3 +191,56 @@ describe('An event the phone still has, unchanged', () => {
     expect(updated()).toHaveLength(1);
   });
 });
+
+
+describe('What leaves the device', () => {
+  // The promise this feature makes, on the landing page and in onboarding: only
+  // hours cross over, never what the events are. Worth a test rather than a
+  // careful habit.
+  it('sends the hours and nothing that identifies the event', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
+      {
+        id: 'evt-1',
+        calendarId: 'the-device-s-own-calendar-id',
+        title: 'Дантист, второй этаж',
+        notes: 'взять снимок',
+        location: 'ул. Пушкина, 3',
+        url: 'https://clinic.example/appointment/9',
+        startDate: iso(5, '09:00:00.000'),
+        endDate: iso(5, '10:00:00.000'),
+        allDay: false,
+      },
+    ]);
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    const [sent] = (availabilityAPI.bulkSet as jest.Mock).mock.calls[0];
+    const posted = JSON.stringify(sent);
+
+    for (const secret of ['Дантист', 'снимок', 'Пушкина', 'clinic.example']) {
+      expect(posted).not.toContain(secret);
+    }
+    expect(sent[0].title).toBe('Calendar Event');
+  });
+
+  it('does not send the device\'s calendar identifier either', async () => {
+    // Not event content, so not a broken promise — but the server has no use
+    // for it, and a narrower payload has less to be wrong about.
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
+      {
+        id: 'evt-1',
+        calendarId: 'the-device-s-own-calendar-id',
+        startDate: iso(5, '09:00:00.000'),
+        endDate: iso(5, '10:00:00.000'),
+        allDay: false,
+      },
+    ]);
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    const [sent] = (availabilityAPI.bulkSet as jest.Mock).mock.calls[0];
+    expect(JSON.stringify(sent)).not.toContain('the-device-s-own-calendar-id');
+  });
+});

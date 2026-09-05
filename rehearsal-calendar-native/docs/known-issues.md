@@ -151,9 +151,6 @@ matching quietly does nothing and falls back to the heuristic.
 | medium | Changing the export calendar leaves every exported rehearsal in the old calendar while the screen claims they are in the new one | `src/shared/services/calendar/export.ts:236` |
 | medium | Fifty parallel read-modify-writes on one AsyncStorage key lose forty-nine of them | `src/shared/services/calendar/import.ts:398` |
 | medium | getAllMappings discards the local cache instead of merging it, so a second device's exported rehearsals get re-imported as busy | `src/shared/utils/calendarMappings.ts:180` |
-| medium | A device clock that moves backwards locks both timers out until real time catches up | `src/shared/hooks/useAutoCalendarSync.ts:61` |
-| low | The device calendar identifier is uploaded with every imported slot and the server has no use for it | `src/shared/services/calendar/import.ts:385` |
-| low | performSmartSync has no finally: a rejection leaves the syncing spinner on forever and skips the reload | `src/features/availability/hooks/useAvailabilitySync.ts:72` |
 
 Full evidence, failure scenarios and proposed fixes are in the workflow
 transcript for run `wf_10bab5ff-ace`. The two confirmed by hand:

@@ -236,7 +236,12 @@ export async function runAutoSync(): Promise<void> {
 
     // Throttle: prevent syncs within 5 seconds of each other
     const now = Date.now();
-    if (now - lastSyncAttempt < THROTTLE_MS) {
+    const sinceLast = now - lastSyncAttempt;
+    // A clock that moved backwards makes this negative, and "less than five
+    // seconds ago" would then be true forever — the ten-minute export gate had
+    // the same shape and locked sync out until real time caught up. A time in
+    // the future is not recent; it is nonsense, and nonsense should not stop us.
+    if (sinceLast >= 0 && sinceLast < THROTTLE_MS) {
       logger.debug('[AutoSync] Throttled - too soon since last sync attempt');
       return;
     }

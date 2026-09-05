@@ -419,8 +419,15 @@ export async function importCalendarEventsToAvailability(
       for (let i = 0; i < slotsToAdd.length; i += chunkSize) {
         const chunk = slotsToAdd.slice(i, i + chunkSize);
 
+        // Only the fields the server stores. eventId and calendarId are for the
+        // local record of what was imported — the calendar identifier in
+        // particular is the device's own and the server has no use for it. The
+        // promise this feature makes is that hours cross over and nothing else,
+        // and the narrower the payload the less there is to be wrong about.
+        const wire = chunk.map(({ eventId: _eventId, calendarId: _calendarId, ...slot }) => slot);
+
         operations.push(
-          availabilityAPI.bulkSet(chunk as any)
+          availabilityAPI.bulkSet(wire as any)
             .then(async () => {
               // Save import tracking
               await Promise.all(chunk.map(slot =>
