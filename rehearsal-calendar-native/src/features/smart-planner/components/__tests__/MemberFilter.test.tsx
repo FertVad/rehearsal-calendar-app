@@ -94,11 +94,28 @@ describe('Selecting everyone', () => {
     expect(onSelectionChange.mock.calls[0][0]).toHaveLength(9);
   });
 
+  it('says it will clear, once everything is selected', () => {
+    // One control does both jobs. It read "Select All" in every state, so with
+    // everything selected the label and the tick together promised the opposite
+    // of what tapping would do.
+    const all = company(4).map((m) => m.id);
+    const { getByText, queryByText } = setup(company(4), all);
+
+    expect(getByText('Очистить')).toBeTruthy();
+    expect(queryByText('Выбрать всех')).toBeNull();
+  });
+
+  it('says it will select, while some are not', () => {
+    const { getByText } = setup(company(4), ['m1']);
+
+    expect(getByText('Выбрать всех')).toBeTruthy();
+  });
+
   it('clears the selection when everyone is already selected', () => {
     const all = company(4).map((m) => m.id);
     const { getByText, onSelectionChange } = setup(company(4), all);
 
-    fireEvent.press(getByText('Выбрать всех'));
+    fireEvent.press(getByText('Очистить'));
 
     expect(onSelectionChange).toHaveBeenCalledWith([]);
   });
