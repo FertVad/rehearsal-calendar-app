@@ -232,66 +232,6 @@ Repairing the file is safe (production never reads it) but must be done by
 comparing against a real dump, not by memory — and every other divergence found
 the same way should go in at once.
 
-### Deleting an account warns about it only afterwards
-
-Two thirds of this were **fixed on 2026-09-03**: the members of a project that
-goes with the account are now told, and the busy hours its rehearsals had booked
-are cleared instead of outliving them. What is left is the copy below — the app
-still does not say what is about to happen until it has happened.
-
-Verified 2026-09-02. The confirmation modal
-([ProfileScreen.tsx:505-529](../src/features/profile/screens/ProfileScreen.tsx#L505))
-shows only "This action is irreversible. All **your** data will be permanently
-deleted." The string that does mention other people's projects,
-`deleteAccountProjectsWarning`, exists in all four locales and has exactly one
-call site — [ProfileScreen.tsx:132](../src/features/profile/screens/ProfileScreen.tsx#L132),
-in the alert shown **after** `await deleteAccount()` on line 128. The truth
-arrives after the irreversible act.
-
-The server deletes every project where the departing user is the last active
-owner or admin ([auth.js](../server/routes/auth.js#L412)), cascading its
-rehearsals and responses. Two things used to make it worse than the claim, and
-both are now repaired — `notifyProjectDeleted` is sent to the surviving members
-after the transaction commits, and the orphaned `source='rehearsal'` rows are
-deleted before the project is, since no cascade and no endpoint could reach them
-afterwards. Covered by `__tests__/routes/accountDeletionCleanup.test.js`.
-
-**Still to do** (client, needs a rebuild): extend `deleteAccountWarning` in all
-four locales in [profile.ts](../src/i18n/translations/profile.ts) to say that
-projects where you are the only administrator will be deleted for everyone in
-them. An exact count would need a new server preview endpoint.
-
-### An owner deleting their account leaves the project ownerless
-
-Verified 2026-09-02. With another active admin present the project is not
-counted as orphaned and survives — with no owner row, and nothing ever sets one
-again. The only `INSERT` with `'owner'` is project creation, the role endpoint
-validates against `['admin','member']` only
-([members.js:284](../server/routes/native/members.js#L284)), and there is no
-project update route. Deletion requires `role === 'owner'` exactly
-([projects.js:156](../server/routes/native/projects.js#L156)), so the project can
-never be deleted or transferred. The client hides the button rather than
-erroring, so nobody sees a failure — they just cannot do it.
-
-Everything else keeps working: admins can still run rehearsals, invite, remove
-members and promote further admins.
-
-**One part of the original claim is refuted:** plain members could not leave
-before this either. There is no leave endpoint anywhere — see below.
-
-**Decided 2026-09-03: nobody inherits.** The project is deleted along with the
-account and its members are told, rather than an admin being promoted to owner.
-
-That is a **wider deletion than the code performs today** — currently a project
-survives whenever another active admin remains — so it destroys data belonging
-to other people, and is not something to apply as part of a bug-fix sweep. It
-needs its own change, deliberately made and watched: the confirmation copy has
-to name what is about to happen before the button is pressed, not after.
-
-The narrower repairs that follow from the same decision — telling the members,
-and clearing the busy hours the vanished rehearsals left on them — are safe and
-belong with the entry above.
-
 ### A member cannot leave a project
 
 Found while verifying the above. There is no leave endpoint at all.

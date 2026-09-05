@@ -30,6 +30,7 @@ let leavingUserId;
 let bystanderId;
 let doomedProjectId;
 let survivingProjectId;
+let ownedWithAnotherAdminId;
 let doomedRehearsalId;
 let survivingRehearsalId;
 
@@ -145,12 +146,25 @@ beforeEach(() => {
   addMember(doomedProjectId, leavingUserId, 'owner');
   addMember(doomedProjectId, bystanderId, 'member');
 
-  // This one keeps another admin, so it survives untouched.
-  survivingProjectId = Number(
-    testDb.run(`INSERT INTO native_projects (name) VALUES ('Второй театр')`).lastInsertId
+  // Owned by the leaving user and administered by someone else as well. It
+  // used to survive — and was then left with no owner at all, which nothing can
+  // set again, so it could never be deleted or handed on. It goes now: a
+  // decision rather than a technical necessity, and the reason that state
+  // cannot arise.
+  ownedWithAnotherAdminId = Number(
+    testDb.run(`INSERT INTO native_projects (name) VALUES ('Театр с совладельцем')`).lastInsertId
   );
-  addMember(survivingProjectId, leavingUserId, 'owner');
-  addMember(survivingProjectId, testData.adminId, 'admin');
+  addMember(ownedWithAnotherAdminId, leavingUserId, 'owner');
+  addMember(ownedWithAnotherAdminId, testData.adminId, 'admin');
+  addMember(ownedWithAnotherAdminId, bystanderId, 'member');
+
+  // This one belongs to somebody else; the leaving user is only a member, so it
+  // survives untouched.
+  survivingProjectId = Number(
+    testDb.run(`INSERT INTO native_projects (name) VALUES ('Чужой театр')`).lastInsertId
+  );
+  addMember(survivingProjectId, testData.adminId, 'owner');
+  addMember(survivingProjectId, leavingUserId, 'member');
   addMember(survivingProjectId, bystanderId, 'member');
 
   doomedRehearsalId = makeRehearsal(doomedProjectId, [leavingUserId, bystanderId]);
@@ -175,16 +189,36 @@ describe('Deleting an account', () => {
   it('succeeds', async () => {
     const res = await deleteAccount();
     expect(res.status).toBe(200);
-    expect(res.body.deletedProjects).toBe(1);
+    // Both of the ones they owned.
+    expect(res.body.deletedProjects).toBe(2);
   });
 
   it('tells the members of the project that went with it', async () => {
     await deleteAccount();
 
-    expect(notifyProjectDeleted).toHaveBeenCalledTimes(1);
-    const [projectName, memberIds] = notifyProjectDeleted.mock.calls[0];
+    // One call per project that went — two of them now.
+    expect(notifyProjectDeleted).toHaveBeenCalledTimes(2);
+    const call = notifyProjectDeleted.mock.calls.find((c) => c[0] === 'Театр под снос');
+    expect(call).toBeDefined();
+    const [projectName, memberIds] = call;
     expect(projectName).toBe('Театр под снос');
     expect(memberIds.map(Number)).toEqual([bystanderId]);
+  });
+
+  it('takes a project they owned even when somebody else administers it', async () => {
+    // Nobody inherits. Sparing it left the project ownerless — undeletable,
+    // untransferable — and nothing ever sets an owner again.
+    await deleteAccount();
+
+    const left = testDb.all(`SELECT id FROM native_projects WHERE id = ?`, [ownedWithAnotherAdminId]);
+    expect(left).toHaveLength(0);
+  });
+
+  it('leaves alone a project they were only a member of', async () => {
+    await deleteAccount();
+
+    const left = testDb.all(`SELECT id FROM native_projects WHERE id = ?`, [survivingProjectId]);
+    expect(left).toHaveLength(1);
   });
 
   it('does not tell them about a project that survived', async () => {
