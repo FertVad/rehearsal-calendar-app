@@ -17,6 +17,14 @@ export const useAvailabilityData = () => {
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Whether the last load actually answered.
+  //
+  // A failure used to leave the state empty and say nothing, and the screen
+  // reads an empty state as "you have marked nothing, so you are counted as
+  // free" — which offline is false twice over: the availability is safe on the
+  // server, and nobody is being told anything different.
+  const [loadFailed, setLoadFailed] = useState(false);
+
   // ✅ Get user's timezone from AuthContext
   const { user } = useAuth();
   const userTimezone = user?.timezone || 'UTC';
@@ -24,6 +32,7 @@ export const useAvailabilityData = () => {
   const loadAvailability = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadFailed(false);
       const response = await availabilityAPI.getAll();
 
       logger.debug('[useAvailabilityData] Received response:', response.data?.length, 'records');
@@ -226,6 +235,7 @@ export const useAvailabilityData = () => {
       setAvailability(localData);
     } catch (err) {
       console.error('Failed to load availability:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -243,6 +253,7 @@ export const useAvailabilityData = () => {
     availability,
     setAvailability,
     loading,
+    loadFailed,
     saving,
     setSaving,
     hasChanges,

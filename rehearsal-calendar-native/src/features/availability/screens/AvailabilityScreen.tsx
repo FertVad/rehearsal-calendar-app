@@ -49,6 +49,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     setHasChanges,
     getDayState,
     loadAvailability,
+    loadFailed,
   } = useAvailabilityData();
 
   // Save hook for validation and API submission
@@ -157,11 +158,18 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       {/* Nothing marked yet — say what that costs, not just that it is empty.
           Being treated as free is what actually happens, and it is the whole
           reason to fill this in. */}
-      {Object.keys(availability).length === 0 && (
+      {loadFailed ? (
         <View style={styles.nothingMarked}>
-          <Ionicons name="information-circle-outline" size={18} color={Colors.accent.yellow} />
-          <Text style={styles.nothingMarkedText}>{t.availability.nothingMarked}</Text>
+          <Ionicons name="cloud-offline-outline" size={18} color={Colors.accent.yellow} />
+          <Text style={styles.nothingMarkedText}>{t.availability.couldNotLoad}</Text>
         </View>
+      ) : (
+        Object.keys(availability).length === 0 && (
+          <View style={styles.nothingMarked}>
+            <Ionicons name="information-circle-outline" size={18} color={Colors.accent.yellow} />
+            <Text style={styles.nothingMarkedText}>{t.availability.nothingMarked}</Text>
+          </View>
+        )
       )}
 
       {/* Legend */}
