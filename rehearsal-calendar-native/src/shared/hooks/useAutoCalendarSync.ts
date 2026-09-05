@@ -58,13 +58,19 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
     return;
   }
 
-  if (!force && settings.lastExportTime) {
-    const since = Date.now() - new Date(settings.lastExportTime).getTime();
-    if (since < EXPORT_EVERY_MS) {
-      logger.debug('[AutoSync] Exported recently - skipping');
-      return;
-    }
-  }
+  // The interval below governs writing, not reconciling.
+  //
+  // It was written above the fetch, so a launch inside the window returned
+  // before the reconciliation could run and a cancelled rehearsal kept its
+  // event — with its alarm — for up to ten minutes more. The gate exists
+  // because writing is expensive: every rehearsal costs a mapping lookup.
+  // Reading the list costs two requests, and it is the half that takes wrong
+  // information away.
+  const exportedRecently = Boolean(
+    !force &&
+      settings.lastExportTime &&
+      Date.now() - new Date(settings.lastExportTime).getTime() < EXPORT_EVERY_MS
+  );
 
   const projectsRes = await projectsAPI.getUserProjects();
   const projectIds = (projectsRes.data?.projects || []).map((p: any) => p.id);
@@ -89,22 +95,24 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
   // The export only ever created and updated: it walks the rehearsals that are
   // there, and nothing walked the other way. So when a rehearsal was cancelled,
   // the organiser's own device removed its event at that moment and every other
-  // participant kept theirs — an entry saying "Rehearsal: Hamlet, 10:00" with an
-  // alarm half an hour before, for a call that does not exist. Nothing could
-  // reach it afterwards; it stayed until the calendar was cleared by hand.
+  // participant kept theirs — an entry with an alarm for a call that does not
+  // exist, which nothing could reach afterwards.
   //
   // Nobody can delete it remotely: the event lives in a calendar on that
-  // person's phone. It can only be noticed here, by the device that owns it,
-  // the next time it syncs.
+  // person's phone. It can only be noticed here, by the device that owns it.
   //
   // Safe against a bad answer because both requests above throw rather than
-  // returning nothing: reaching this line means the server really did say which
-  // rehearsals exist. An empty list is therefore an empty list — a user who has
-  // left every project should indeed keep no exported events.
+  // returning nothing, so an empty list really is empty — someone who has left
+  // every project should indeed keep no exported events.
   await reconcileDeletedRehearsals(rehearsals.map((r: { id: string }) => String(r.id)));
 
   if (rehearsals.length === 0) {
     logger.debug('[AutoSync] No rehearsals to export');
+    return;
+  }
+
+  if (exportedRecently) {
+    logger.debug('[AutoSync] Exported recently - skipping the write');
     return;
   }
 
@@ -168,9 +176,37 @@ async function reconcileDeletedRehearsals(liveRehearsalIds: string[]): Promise<v
 // single caller and would have become a race the moment it had two — which is
 // exactly what mounting it on the tab bar does. An overlapping import is how a
 // duplicate row reached the database once already.
-let syncInFlight = false;
+let currentSync: Promise<void> | null = null;
 let lastSyncAttempt = 0;
 const THROTTLE_MS = 5000; // Minimum 5 seconds between sync attempts
+
+/**
+ * One sync at a time — but a deliberate one waits its turn instead of being
+ * dropped.
+ *
+ * Both callers used to return the moment they found the lock held, which was
+ * invisible while each mount had its own. Sharing it made the collision real:
+ * the tab bar syncs on launch, and a pull-to-refresh in the availability sheet
+ * a second later found the lock taken and did nothing at all — spinner and no
+ * work. A person pulling down has asked for something and must get it.
+ *
+ * An automatic run is opportunistic and still drops: there will be another.
+ */
+async function runExclusively(
+  work: () => Promise<void>,
+  { waitForTurn }: { waitForTurn: boolean }
+): Promise<void> {
+  if (currentSync) {
+    if (!waitForTurn) return;
+    await currentSync.catch(() => {});
+  }
+
+  const run = work().finally(() => {
+    if (currentSync === run) currentSync = null;
+  });
+  currentSync = run;
+  await run;
+}
 
 interface AutoSyncOptions {
   /**
@@ -200,12 +236,6 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
       return;
     }
 
-    // Prevent concurrent syncs
-    if (syncInFlight) {
-      logger.debug('[AutoSync] Already syncing - skipping');
-      return;
-    }
-
     // Throttle: prevent syncs within 5 seconds of each other
     const now = Date.now();
     if (now - lastSyncAttempt < THROTTLE_MS) {
@@ -213,8 +243,8 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
       return;
     }
     lastSyncAttempt = now;
-    syncInFlight = true;
 
+    await runExclusively(async () => {
     try {
       // Check if we should import
       const importSettings = await shouldImportNow();
@@ -234,9 +264,8 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
       }
     } catch (error) {
       console.error('[AutoSync] Error during auto-import:', error);
-    } finally {
-      syncInFlight = false;
     }
+    }, { waitForTurn: false });
   }, []);
 
   const handleAppStateChange = useCallback(async (nextAppState: AppStateStatus) => {
@@ -272,14 +301,8 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
    * Used for manual triggers like pull-to-refresh
    */
   const forceSync = useCallback(async () => {
-    // Prevent concurrent syncs
-    if (syncInFlight) {
-      logger.debug('[AutoSync] Force sync - already syncing, skipping');
-      return;
-    }
-
-    syncInFlight = true;
-
+    // A pull-to-refresh waits rather than being dropped — see runExclusively.
+    await runExclusively(async () => {
     try {
       const settings = await getSyncSettings();
       logger.debug('[AutoSync] Force sync - current settings:', {
@@ -307,9 +330,8 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
     } catch (error) {
       console.error('[AutoSync] Error during force sync:', error);
       throw error;
-    } finally {
-      syncInFlight = false;
     }
+    }, { waitForTurn: true });
   }, []);
 
   return {

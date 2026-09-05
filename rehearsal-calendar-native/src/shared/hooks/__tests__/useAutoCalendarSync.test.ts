@@ -18,6 +18,7 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useAutoCalendarSync } from '../useAutoCalendarSync';
 import { importCalendarEventsToAvailability, unsyncRehearsal } from '../../services/calendar';
 import { getAllMappings } from '../../utils/calendarMappings';
+import { getSyncSettings } from '../../utils/calendarStorage';
 import { rehearsalsAPI } from '../../services/api';
 
 jest.mock('../../services/calendar', () => ({
@@ -206,5 +207,53 @@ describe('Taking back the events of rehearsals that no longer exist', () => {
     await runExport([], ['1', '2']);
 
     expect(unsyncRehearsal).toHaveBeenCalledTimes(2);
+  });
+});
+
+
+describe('A pull-to-refresh while something else is syncing', () => {
+  it('waits its turn instead of being dropped', async () => {
+    // Found on a device: the event of a cancelled rehearsal would not leave the
+    // calendar until the third or fourth pull. The tab bar syncs on launch, and
+    // a pull a second later found the shared lock held and returned — spinner,
+    // no work, no complaint. Making the lock shared is what exposed this; each
+    // mount used to have its own and could not collide.
+    const { result } = renderHook(() => useAutoCalendarSync());
+
+    await act(async () => {
+      await Promise.all([result.current.forceSync(), result.current.forceSync()]);
+    });
+
+    // Both did their own work. Before this the second returned having done none.
+    expect((rehearsalsAPI.getBatch as jest.Mock).mock.calls.length).toBe(2);
+  });
+});
+
+describe('Reconciling within the export interval', () => {
+  it('still takes back the event of a cancelled rehearsal', async () => {
+    // The ten-minute gate exists because writing is expensive — every rehearsal
+    // costs a mapping lookup. It used to sit above the fetch, so a launch
+    // inside the window returned before reconciling and the cancelled rehearsal
+    // kept its event, and its alarm, for ten minutes more.
+    (getSyncSettings as jest.Mock).mockResolvedValue({
+      importEnabled: true,
+      exportEnabled: true,
+      importCalendarIds: ['cal-1'],
+      exportCalendarId: 'cal-export',
+      lastImportTime: null,
+      lastExportTime: new Date(clock - 60_000).toISOString(),
+    });
+    (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({ data: { rehearsals: [] } });
+    (getAllMappings as jest.Mock).mockResolvedValue({
+      '7': { eventId: 'evt-7', calendarId: 'c1', lastSynced: '' },
+    });
+
+    const { result } = renderHook(() => useAutoCalendarSync());
+
+    await act(async () => {
+      await result.current.performAutoSync();
+    });
+
+    expect(unsyncRehearsal).toHaveBeenCalledWith('7');
   });
 });
