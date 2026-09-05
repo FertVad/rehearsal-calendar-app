@@ -429,9 +429,6 @@ range being built through UTC.
 
 ## Known and left alone on purpose — not defects
 
-- Four `native_subscription_*` / `native_payment_*` / `native_allpay_*` tables
-  survive in the database with nothing reading them — see the Payments section
-  of [CLAUDE.md](../../CLAUDE.md).
 - `/admin` runs under a relaxed CSP because its tables are built with inline
   `onclick` — see the tech-debt list in [app-store-release.md](app-store-release.md).
 - Push delivery is not verified: Expo's tickets say the message was accepted,
