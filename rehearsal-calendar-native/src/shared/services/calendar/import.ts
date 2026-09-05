@@ -154,7 +154,17 @@ function occurrenceKey(event: Calendar.Event): string {
  */
 export async function importCalendarEventsToAvailability(
   calendarIds: string[],
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  /**
+   * The exported-rehearsal mappings, when the caller already holds them.
+   *
+   * The export needs the same list, so a sync fetched it twice — once here to
+   * know which events are our own rehearsals and must not be imported as busy
+   * time, once there to know which event belongs to which rehearsal. Sharing is
+   * safe because nothing on this path writes to them: the import records what
+   * it brought in under a different key entirely.
+   */
+  knownMappings?: Record<string, { eventId: string; calendarId: string }>
 ): Promise<ImportResult> {
   const result: ImportResult = {
     success: 0,
@@ -178,7 +188,7 @@ export async function importCalendarEventsToAvailability(
     const [{ events, failedCalendarIds }, dbResponse, exportedMappings] = await Promise.all([
       fetchCalendarEvents(calendarIds, startDate, endDate),
       availabilityAPI.getAll(),
-      getAllMappings(),
+      knownMappings ? Promise.resolve(knownMappings) : getAllMappings(),
     ]);
 
     logger.debug('[CalendarSync] API response structure check:', {
@@ -205,7 +215,18 @@ export async function importCalendarEventsToAvailability(
       const extId = slot.externalEventId || slot.external_event_id;
       const hasExternalId = !!extId;
       const isImported = slot.source === 'apple_calendar' || slot.source === 'google_calendar';
-      const inRange = new Date(slot.startsAt) >= startDate && new Date(slot.startsAt) <= endDate;
+      // Overlap, not "starts inside" — the same question the device is asked.
+      //
+      // iOS returns every event that overlaps the window, so a holiday running
+      // 1–15 September still arrives on the 4th. Matching the stored row by its
+      // start alone left that row out of scope: it could no longer be compared,
+      // so it was never updated, and if the event was deleted from the phone it
+      // was never deleted here either. It simply stayed, marking the user busy
+      // for a trip they had cancelled, with nothing able to reach it again.
+      const slotEnd = slot.endsAt || slot.ends_at;
+      const inRange =
+        new Date(slotEnd || slot.startsAt) >= startDate &&
+        new Date(slot.startsAt) <= endDate;
 
       return hasExternalId && isImported && inRange;
     });
@@ -291,10 +312,17 @@ export async function importCalendarEventsToAvailability(
         // Changed means the time span moved; the title is a constant now.
         const { startsAt: eventStart, endsAt: eventEnd } = convertEventToTimestamps(event);
 
+        // `??`, not `||`. A stored timed event has isAllDay false, and
+        // `false || dbSlot.is_all_day` falls through to a field the API does
+        // not send — so the comparison was `undefined !== false`, true every
+        // time, and every timed event counted as changed on every sync. The
+        // update batch then grew to the whole calendar, and past a few hundred
+        // events the request outgrew the body limit and the update stopped
+        // going through at all.
         const hasChanged =
-          (dbSlot.startsAt || dbSlot.starts_at) !== eventStart ||
-          (dbSlot.endsAt || dbSlot.ends_at) !== eventEnd ||
-          (dbSlot.isAllDay || dbSlot.is_all_day) !== (event.allDay || false);
+          (dbSlot.startsAt ?? dbSlot.starts_at) !== eventStart ||
+          (dbSlot.endsAt ?? dbSlot.ends_at) !== eventEnd ||
+          (dbSlot.isAllDay ?? dbSlot.is_all_day ?? false) !== (event.allDay ?? false);
 
         if (hasChanged) {
           toUpdate.push(event);
@@ -413,8 +441,18 @@ export async function importCalendarEventsToAvailability(
     // Wait for all operations to complete
     await Promise.all(operations);
 
-    // Update last import time
-    await updateLastImportTime();
+    // Stamp the time only if nothing failed.
+    //
+    // Each chunk catches its own error into result.failed, so Promise.all above
+    // always resolves — and this ran regardless. A server answering 500 to
+    // every chunk, or a captive-portal wifi swallowing them, wrote nothing and
+    // reported "last synced: just now". A run with nothing to do is a success
+    // and still stamps; a run that failed does not.
+    if (result.failed === 0) {
+      await updateLastImportTime();
+    } else {
+      logger.warn(`[CalendarSync] ${result.failed} writes failed - not marking as synced`);
+    }
 
     logger.info(`[CalendarSync] Import complete: ${result.success} success, ${result.failed} failed, ${result.skipped} skipped`);
     return result;

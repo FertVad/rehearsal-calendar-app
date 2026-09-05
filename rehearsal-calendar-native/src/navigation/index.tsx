@@ -12,6 +12,7 @@ import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
 import { useNotifications } from '../shared/hooks/useNotifications';
 import { BetaBanner } from '../shared/components/BetaBanner';
+import { useAutoCalendarSync } from '../shared/hooks/useAutoCalendarSync';
 import { OnboardingNavigator } from '../features/onboarding';
 import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
 import AvailabilityScreen from '../features/availability/screens/AvailabilityScreen';
@@ -80,6 +81,11 @@ const linking: any = {
         },
       },
       JoinProject: 'invite/:code',
+      // What an exported calendar event points at. The event carries this URL
+      // so a second device can tell which rehearsal it is — the id has to live
+      // in a field iOS shows, since events have no hidden one, so it may as
+      // well take the reader somewhere.
+      RehearsalDetails: 'rehearsal/:rehearsalId',
     },
   },
 };
@@ -164,6 +170,16 @@ function NotificationsHandler() {
 }
 
 function TabNavigator() {
+  // The one place automatic calendar sync is watched for.
+  //
+  // It has to live somewhere mounted for the whole signed-in session, and the
+  // tab bar is that. It used to be the availability editor, which is a modal
+  // reached from the "+" button — so sync ran only while that sheet was open,
+  // and anyone who never opened it got none at all despite the setting saying
+  // otherwise. Nothing happens here when sync is switched off: the run reads
+  // the settings first and returns.
+  useAutoCalendarSync({ syncOnForeground: true });
+
   const { t } = useI18n();
   const { setShowActionSheet } = useActionSheet();
 

@@ -15,7 +15,8 @@ import { useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSyncSettings, saveSyncSettings } from '../utils/calendarStorage';
-import { importCalendarEventsToAvailability, syncAllRehearsals } from '../services/calendar';
+import { importCalendarEventsToAvailability, syncAllRehearsals, unsyncRehearsal } from '../services/calendar';
+import { getAllMappings } from '../utils/calendarMappings';
 import { projectsAPI, rehearsalsAPI } from '../services/api';
 
 /**
@@ -44,25 +45,21 @@ async function shouldImportNow(): Promise<{ importCalendarIds: string[] } | null
 /**
  * Push every rehearsal the user is on into their calendar.
  *
- * Rate-limited on its own clock: each rehearsal costs a mapping lookup, so
- * running this on every trip to the foreground would fire a burst of requests
- * for a list that rarely changes.
+ * This used to be rate-limited to once every ten minutes, because it asked the
+ * server which event belonged to each rehearsal one at a time. That cost is
+ * gone — the mappings come back in a single request now — and with it the
+ * reason to hold back. Somebody else's edit reaches the calendar the next time
+ * the app is opened rather than whenever the reader happens to pull down.
  */
-const EXPORT_EVERY_MS = 10 * 60 * 1000;
 
-async function exportRehearsalsIfDue(force = false): Promise<void> {
+async function exportRehearsalsIfDue(
+  force = false,
+  knownMappings?: Record<string, { eventId: string; calendarId: string }>
+): Promise<void> {
   const settings = await getSyncSettings();
   if (!settings.exportEnabled || !settings.exportCalendarId) {
     logger.debug('[AutoSync] Export not enabled - skipping');
     return;
-  }
-
-  if (!force && settings.lastExportTime) {
-    const since = Date.now() - new Date(settings.lastExportTime).getTime();
-    if (since < EXPORT_EVERY_MS) {
-      logger.debug('[AutoSync] Exported recently - skipping');
-      return;
-    }
   }
 
   const projectsRes = await projectsAPI.getUserProjects();
@@ -80,17 +77,87 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
     startsAt: r.startsAt,
     endsAt: r.endsAt,
     location: r.location,
+    title: r.title,
   }));
+
+  // Take back the events of rehearsals that no longer exist.
+  //
+  // The export only ever created and updated: it walks the rehearsals that are
+  // there, and nothing walked the other way. So when a rehearsal was cancelled,
+  // the organiser's own device removed its event at that moment and every other
+  // participant kept theirs — an entry with an alarm for a call that does not
+  // exist, which nothing could reach afterwards.
+  //
+  // Nobody can delete it remotely: the event lives in a calendar on that
+  // person's phone. It can only be noticed here, by the device that owns it.
+  //
+  // Safe against a bad answer because both requests above throw rather than
+  // returning nothing, so an empty list really is empty — someone who has left
+  // every project should indeed keep no exported events.
+  // Fetched once, for both halves of the work below.
+  //
+  // This is what let the ten-minute interval go. The export used to ask the
+  // server which event belonged to each rehearsal separately — twenty
+  // rehearsals, twenty requests, every trip to the foreground — and the
+  // interval existed to keep that from happening constantly. Its cost was also
+  // its consequence: somebody else's edit did not reach the calendar until the
+  // reader thought to pull down. One request answers for all of them.
+  const mappings = knownMappings ?? (await getAllMappings());
+
+  await reconcileDeletedRehearsals(
+    rehearsals.map((r: { id: string }) => String(r.id)),
+    mappings
+  );
 
   if (rehearsals.length === 0) {
     logger.debug('[AutoSync] No rehearsals to export');
     return;
   }
 
-  const result = await syncAllRehearsals(rehearsals, settings.exportCalendarId);
+  const result = await syncAllRehearsals(rehearsals, settings.exportCalendarId, undefined, mappings);
   logger.debug('[AutoSync] Export completed:', result);
 
-  await saveSyncSettings({ ...settings, lastExportTime: new Date().toISOString() });
+  // Only a run that wrote everything counts as done.
+  //
+  // syncAllRehearsals reports failures rather than throwing, and this stamp was
+  // written regardless — which is worse here than in the import, because the
+  // ten-minute interval above reads it. A wholly failed export therefore
+  // announced success and then refused to try again for ten minutes. Leaving
+  // the stamp alone makes the next trip to the foreground retry.
+  if (result.failed === 0) {
+    await saveSyncSettings({ ...settings, lastExportTime: new Date().toISOString() });
+  } else {
+    logger.warn(`[AutoSync] ${result.failed} rehearsals failed to export - will retry`);
+  }
+}
+
+/**
+ * Delete the calendar event of every rehearsal we hold a mapping for that is
+ * not in `liveRehearsalIds`.
+ *
+ * Failures are per-rehearsal on purpose: one event that cannot be removed —
+ * the calendar is gone, permission was revoked — must not stop the rest, and
+ * must not lose the mapping either, or the event becomes unreachable. So a
+ * failure leaves the mapping alone and the next sync tries again.
+ */
+async function reconcileDeletedRehearsals(
+  liveRehearsalIds: string[],
+  mappings: Record<string, { eventId: string; calendarId: string }>
+): Promise<void> {
+  const live = new Set(liveRehearsalIds);
+  const stale = Object.keys(mappings).filter((rehearsalId) => !live.has(String(rehearsalId)));
+
+  if (stale.length === 0) return;
+
+  logger.info(`[AutoSync] Removing ${stale.length} exported events for deleted rehearsals`);
+
+  for (const rehearsalId of stale) {
+    try {
+      await unsyncRehearsal(rehearsalId);
+    } catch (error) {
+      logger.error(`[AutoSync] Could not remove the event for rehearsal ${rehearsalId}:`, error);
+    }
+  }
 }
 
 /**
@@ -102,13 +169,62 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
  * Saving a rehearsal also exports that one straight away, on the device that
  * saved it; this covers everybody else.
  */
-export function useAutoCalendarSync() {
-  const appState = useRef(AppState.currentState);
-  const lastSyncAttempt = useRef<number>(0);
-  const isSyncingRef = useRef<boolean>(false);
-  const THROTTLE_MS = 5000; // Minimum 5 seconds between sync attempts
+// Shared by every caller of this hook, deliberately.
+//
+// These were useRef, so each mount had its own lock and its own throttle and
+// none of them could see the others. That was invisible while the hook had a
+// single caller and would have become a race the moment it had two — which is
+// exactly what mounting it on the tab bar does. An overlapping import is how a
+// duplicate row reached the database once already.
+let currentSync: Promise<void> | null = null;
+let lastSyncAttempt = 0;
+const THROTTLE_MS = 5000; // Minimum 5 seconds between sync attempts
 
-  const performAutoSync = useCallback(async () => {
+/**
+ * One sync at a time — but a deliberate one waits its turn instead of being
+ * dropped.
+ *
+ * Both callers used to return the moment they found the lock held, which was
+ * invisible while each mount had its own. Sharing it made the collision real:
+ * the tab bar syncs on launch, and a pull-to-refresh in the availability sheet
+ * a second later found the lock taken and did nothing at all — spinner and no
+ * work. A person pulling down has asked for something and must get it.
+ *
+ * An automatic run is opportunistic and still drops: there will be another.
+ */
+async function runExclusively(
+  work: () => Promise<void>,
+  { waitForTurn }: { waitForTurn: boolean }
+): Promise<void> {
+  if (currentSync) {
+    if (!waitForTurn) return;
+    await currentSync.catch(() => {});
+  }
+
+  const run = work().finally(() => {
+    if (currentSync === run) currentSync = null;
+  });
+  currentSync = run;
+  await run;
+}
+
+/**
+ * One run of the automatic sync.
+ *
+ * At module scope rather than inside the hook so anything can ask for it — the
+ * notification handler does, because a push arriving while the app is open used
+ * to refresh the unread count and nothing else. Someone else cancelled a
+ * rehearsal, the banner said so, and the event stayed in the calendar until the
+ * app was sent away and brought back.
+ *
+ * The lock and the throttle are shared, so an extra caller cannot cause an
+ * extra run.
+ */
+export async function runAutoSync(): Promise<void> {
+  // Fetched once per run and shared by the import and the export below.
+  let sharedMappings: Record<string, { eventId: string; calendarId: string }> | undefined;
+
+
     // Signing in with Apple or Google backgrounds the app while the native
     // sheet is up; dismissing it fires a foreground event and lands us here
     // before the token is stored. Syncing then just produces a burst of 401s.
@@ -118,27 +234,28 @@ export function useAutoCalendarSync() {
       return;
     }
 
-    // Prevent concurrent syncs
-    if (isSyncingRef.current) {
-      logger.debug('[AutoSync] Already syncing - skipping');
-      return;
-    }
-
     // Throttle: prevent syncs within 5 seconds of each other
     const now = Date.now();
-    if (now - lastSyncAttempt.current < THROTTLE_MS) {
+    if (now - lastSyncAttempt < THROTTLE_MS) {
       logger.debug('[AutoSync] Throttled - too soon since last sync attempt');
       return;
     }
-    lastSyncAttempt.current = now;
-    isSyncingRef.current = true;
+    lastSyncAttempt = now;
 
+    await runExclusively(async () => {
     try {
       // Check if we should import
       const importSettings = await shouldImportNow();
       if (importSettings) {
         logger.debug('[AutoSync] Auto-importing calendar events');
-        const result = await importCalendarEventsToAvailability(importSettings.importCalendarIds);
+        // Fetched once for both halves — the import needs it to leave our own
+        // exported rehearsals alone, the export to match event to rehearsal.
+        sharedMappings = await getAllMappings();
+        const result = await importCalendarEventsToAvailability(
+          importSettings.importCalendarIds,
+          undefined,
+          sharedMappings
+        );
         logger.debug('[AutoSync] Auto-import completed:', result);
       } else {
         logger.debug('[AutoSync] No import needed at this time');
@@ -146,16 +263,36 @@ export function useAutoCalendarSync() {
 
       // A failed import should not stop the export, and the other way round.
       try {
-        await exportRehearsalsIfDue();
+        await exportRehearsalsIfDue(false, sharedMappings);
       } catch (error) {
         console.error('[AutoSync] Error during auto-export:', error);
       }
     } catch (error) {
       console.error('[AutoSync] Error during auto-import:', error);
-    } finally {
-      isSyncingRef.current = false;
     }
-  }, []);
+    }, { waitForTurn: false });
+}
+
+interface AutoSyncOptions {
+  /**
+   * Watch for the app returning from the background and sync then.
+   *
+   * Off by default and switched on in exactly one place, the tab bar, because
+   * the listener has to be registered once and live as long as the session.
+   * It used to be registered by this hook's only caller, the availability
+   * editor — which is not a tab but a modal reached from the "+" button, so
+   * automatic sync existed only while that sheet was open. Anyone who turned it
+   * on and never opened the sheet got nothing, while the settings screen said
+   * it was running.
+   */
+  syncOnForeground?: boolean;
+}
+
+export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOptions = {}) {
+  const appState = useRef(AppState.currentState);
+
+  const performAutoSync = useCallback(runAutoSync, []);
+
 
   const handleAppStateChange = useCallback(async (nextAppState: AppStateStatus) => {
     const previousState = appState.current;
@@ -169,26 +306,31 @@ export function useAutoCalendarSync() {
   }, [performAutoSync]);
 
   useEffect(() => {
+    if (!syncOnForeground) return;
+
+    // A cold launch is not a transition. AppState.currentState is already
+    // 'active' when the app starts from nothing, so the listener below never
+    // fires for it — which left the commonest case uncovered: tapping a
+    // notification for an app that was not running. The throttle and the token
+    // check make this safe to call straight away.
+    performAutoSync();
+
     const subscription = AppState.addEventListener('change', handleAppStateChange);
 
     return () => {
       subscription.remove();
     };
-  }, [handleAppStateChange]);
+  }, [handleAppStateChange, performAutoSync, syncOnForeground]);
 
   /**
    * Force sync - ignores interval settings, always syncs if import is enabled
    * Used for manual triggers like pull-to-refresh
    */
   const forceSync = useCallback(async () => {
-    // Prevent concurrent syncs
-    if (isSyncingRef.current) {
-      logger.debug('[AutoSync] Force sync - already syncing, skipping');
-      return;
-    }
+    // A pull-to-refresh waits rather than being dropped — see runExclusively.
+    let sharedMappings: Record<string, { eventId: string; calendarId: string }> | undefined;
 
-    isSyncingRef.current = true;
-
+    await runExclusively(async () => {
     try {
       const settings = await getSyncSettings();
       logger.debug('[AutoSync] Force sync - current settings:', {
@@ -199,7 +341,8 @@ export function useAutoCalendarSync() {
 
       // Pull-to-refresh means "now", so the export ignores its own timer.
       try {
-        await exportRehearsalsIfDue(true);
+        sharedMappings = await getAllMappings();
+        await exportRehearsalsIfDue(true, sharedMappings);
       } catch (error) {
         console.error('[AutoSync] Force sync - export failed:', error);
       }
@@ -211,14 +354,17 @@ export function useAutoCalendarSync() {
       }
 
       logger.debug('[AutoSync] Force syncing calendar events from', settings.importCalendarIds.length, 'calendars');
-      const result = await importCalendarEventsToAvailability(settings.importCalendarIds);
+      const result = await importCalendarEventsToAvailability(
+        settings.importCalendarIds,
+        undefined,
+        sharedMappings
+      );
       logger.debug('[AutoSync] Force sync completed:', result);
     } catch (error) {
       console.error('[AutoSync] Error during force sync:', error);
       throw error;
-    } finally {
-      isSyncingRef.current = false;
     }
+    }, { waitForTurn: true });
   }, []);
 
   return {

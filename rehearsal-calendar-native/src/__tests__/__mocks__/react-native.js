@@ -190,6 +190,37 @@ module.exports = {
   ActivityIndicator,
   Modal,
 
+  // Whether the app is in the foreground.
+  //
+  // Added because automatic calendar sync hangs off this and had no test — the
+  // listener was registered inside a modal, so sync only ran while that sheet
+  // was open, and nothing in the code looked wrong. __emit lets a test move the
+  // app between states.
+  AppState: {
+    currentState: 'active',
+    __listeners: [],
+    addEventListener(_event, handler) {
+      module.exports.AppState.__listeners.push(handler);
+      return {
+        remove: () => {
+          const list = module.exports.AppState.__listeners;
+          const i = list.indexOf(handler);
+          if (i >= 0) list.splice(i, 1);
+        },
+      };
+    },
+    async __emit(state) {
+      module.exports.AppState.currentState = state;
+      for (const handler of [...module.exports.AppState.__listeners]) {
+        await handler(state);
+      }
+    },
+    __reset() {
+      module.exports.AppState.__listeners = [];
+      module.exports.AppState.currentState = 'active';
+    },
+  },
+
   // Additional utilities
   findNodeHandle: jest.fn(),
   Animated: {

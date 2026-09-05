@@ -7,7 +7,18 @@ import {
   isoToTimeStringInTimezone,
   datesBetween,
 } from '../../../shared/utils/time';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../../contexts/AuthContext';
+
+// The last availability that loaded, kept so a start with no network shows
+// something true rather than an empty screen.
+//
+// The same reasoning as the unread count, which is stored for the same reason:
+// a failed request must not be answered with "nothing", because offline that is
+// not a flicker but the final answer. Nothing is written from here — saving
+// needs the network — so the worst a stale copy can do is be a little old, and
+// the banner says so.
+const CACHED_AVAILABILITY_KEY = 'availability-cache';
 
 const DEFAULT_SLOT = { start: '10:00', end: '18:00' };
 
@@ -17,6 +28,14 @@ export const useAvailabilityData = () => {
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Whether the last load actually answered.
+  //
+  // A failure used to leave the state empty and say nothing, and the screen
+  // reads an empty state as "you have marked nothing, so you are counted as
+  // free" — which offline is false twice over: the availability is safe on the
+  // server, and nobody is being told anything different.
+  const [loadFailed, setLoadFailed] = useState(false);
+
   // ✅ Get user's timezone from AuthContext
   const { user } = useAuth();
   const userTimezone = user?.timezone || 'UTC';
@@ -24,6 +43,7 @@ export const useAvailabilityData = () => {
   const loadAvailability = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadFailed(false);
       const response = await availabilityAPI.getAll();
 
       logger.debug('[useAvailabilityData] Received response:', response.data?.length, 'records');
@@ -224,8 +244,22 @@ export const useAvailabilityData = () => {
       ));
 
       setAvailability(localData);
+      AsyncStorage.setItem(CACHED_AVAILABILITY_KEY, JSON.stringify(localData)).catch(() => {
+        // A cache is not worth an error.
+      });
     } catch (err) {
       console.error('Failed to load availability:', err);
+      setLoadFailed(true);
+
+      // Fall back to what was last seen, so the screen is not blank while the
+      // reader's real availability sits safely on the server.
+      try {
+        const cached = await AsyncStorage.getItem(CACHED_AVAILABILITY_KEY);
+        if (cached) setAvailability(JSON.parse(cached));
+      } catch {
+        // Nothing cached, or it will not parse. The banner already says the
+        // load failed; an empty screen beside it is at least not a lie.
+      }
     } finally {
       setLoading(false);
     }
@@ -243,6 +277,7 @@ export const useAvailabilityData = () => {
     availability,
     setAvailability,
     loading,
+    loadFailed,
     saving,
     setSaving,
     hasChanges,

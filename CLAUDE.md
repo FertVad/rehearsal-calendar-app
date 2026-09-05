@@ -135,7 +135,13 @@ server/public/
 ### Database
 - **Development**: SQLite (`native_database.db`)
 - **Production**: PostgreSQL (Neon.tech)
-- **Tables**: All prefixed with `native_*` (native_users, native_projects, native_rehearsals, native_user_availability, native_bug_reports, etc.). Four `native_subscription_*`/`native_payment_*`/`native_allpay_*` tables survive from the removed payment code — nothing reads them.
+- **Tables**: fourteen, all prefixed `native_*`. Six were dropped from
+  production on 2026-09-05 with nothing reading any of them: the four payment
+  leftovers (`native_subscription_plans`, `native_user_subscriptions`,
+  `native_payment_transactions`, `native_allpay_webhook_events`), and two dead
+  ones — `native_rehearsal_participants`, the predecessor of
+  `native_rehearsal_responses`, and `native_activity_log`, which was never
+  written to. Their rows were dumped before the drop.
 - **Schema**: [rehearsal-calendar-native/server/database/init-native-schema.sql](rehearsal-calendar-native/server/database/init-native-schema.sql)
 - **Note**: SQLite uses `1`/`0` for booleans in dev, PostgreSQL uses `TRUE`/`FALSE` in production
 
@@ -334,8 +340,8 @@ The deleted code is in git history, but do not restore it: the WebView checkout
 is the part Apple rejects.
 
 The four `native_subscription_*` / `native_payment_*` / `native_allpay_*`
-tables still exist in the database. Nothing reads or writes them; they are left
-in place because dropping them is irreversible and buys nothing.
+tables were dropped from production on 2026-09-05, along with two dead ones.
+Nothing read any of them; their rows were dumped first.
 
 ### Rehearsal Reminders
 **Location**: `server/services/notifications/reminderScheduler.js`, `server/routes/cron.js`

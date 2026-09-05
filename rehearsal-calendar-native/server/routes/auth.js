@@ -419,21 +419,36 @@ router.delete('/me', requireAuth, async (req, res) => {
     // the ROLLBACK below would then discard a bystander's write instead of this
     // request's. Everything inside uses `tx`.
     const orphanedProjects = await db.transaction(async (tx) => {
-      // Find projects where user is the only admin/owner
+      // The projects that go with the account.
+      //
+      // Everything this person owns, whoever else administers it, and nobody
+      // inherits. That is a decision rather than a technical necessity: the
+      // rule used to spare a project that had a second administrator, which
+      // left it with no owner at all — and nothing ever sets one again, so it
+      // could never be deleted or handed on. Making the project go is what
+      // stops that state existing.
+      //
+      // Plus any project where this person is the last active administrator,
+      // which covers the ownerless ones already out there.
       const orphaned = await tx.all(
         `SELECT p.id, p.name
          FROM native_projects p
          INNER JOIN native_project_members pm ON p.id = pm.project_id
          WHERE pm.user_id = $1
-           AND pm.role IN ('owner', 'admin')
            AND pm.status = 'active'
            AND (
-             SELECT COUNT(*)
-             FROM native_project_members pm2
-             WHERE pm2.project_id = p.id
-               AND pm2.role IN ('owner', 'admin')
-               AND pm2.status = 'active'
-           ) = 1`,
+             pm.role = 'owner'
+             OR (
+               pm.role = 'admin'
+               AND (
+                 SELECT COUNT(*)
+                 FROM native_project_members pm2
+                 WHERE pm2.project_id = p.id
+                   AND pm2.role IN ('owner', 'admin')
+                   AND pm2.status = 'active'
+               ) = 1
+             )
+           )`,
         [userId]
       );
 

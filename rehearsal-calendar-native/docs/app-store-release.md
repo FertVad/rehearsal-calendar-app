@@ -15,7 +15,7 @@ EAS `projectId` прописан. Платежи намеренно выключ
 |---|--------|------|--------|
 | 0.1 | Вернуть `expo-notifications` из `_disabled_plugins` в `plugins` | `app.json` | ✅ сделано |
 | 0.2 | Убрать `<BetaBanner />` и его импорт | `src/navigation/index.tsx:14,176` | ❌ |
-| 0.3 | Добавить `ios.buildNumber: "1"` и `android.versionCode: 1` | `app.json` | ❌ |
+| 0.3 | Добавить `ios.buildNumber: "1"` и `android.versionCode: 1` | `app.json` | ✅ сделано |
 | 0.5 | **Sign in with Apple** — обязателен по Guideline 4.8 | `LoginScreen.tsx`, `appleAuth.ts` | ✅ сделано |
 
 **0.5 — почему это было блокером.** Guideline 4.8 требует равнозначный
@@ -187,8 +187,8 @@ iframe AllPay.
 условие выполняется само собой.
 
 В обеих схемах доступ к функциям придётся заново решать на бэкенде: таблицы
-`native_subscription_*` / `native_payment_*` в базе остались, но ничего их
-не читает и схема IAP от них всё равно отличается.
+`native_subscription_*` / `native_payment_*` удалены из базы 2026-09-05 —
+ничего их не читало, строки выгружены перед удалением.
 
 ## Известный технический долг (не блокирует релиз)
 

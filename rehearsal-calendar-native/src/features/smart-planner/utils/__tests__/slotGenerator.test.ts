@@ -210,3 +210,46 @@ describe('generateTimeSlots — member filter', () => {
     expect(slots.every((s) => s.category === 'perfect')).toBe(true);
   });
 });
+
+describe('A busy range that wrapped past midnight', () => {
+  // The endpoint cuts every record into one range per day, so this should not
+  // arrive. But the overlap test answered "free" for it — silently, and in the
+  // one direction this feature cannot afford. Found by probing the comparison
+  // rather than by a failing screen: 22:00–02:00 blocked nothing at all.
+  const members = [{ id: 'm1', name: 'Нина' }];
+
+  const slotsFor = (busyRanges: Array<{ start: string; end: string }>) =>
+    generateTimeSlots(
+      '2026-09-10',
+      '2026-09-10',
+      members,
+      [{ memberId: 'm1', date: '2026-09-10', busyRanges }],
+      [],
+      '09:00',
+      '23:00',
+      new Date('2026-09-01T08:00:00Z')
+    );
+
+  it('blocks the evening rather than reporting it free', () => {
+    const evening = slotsFor([{ start: '22:00', end: '02:00' }]).filter(
+      (s) => s.startTime >= '22:00'
+    );
+
+    expect(evening.length).toBeGreaterThan(0);
+    expect(evening.every((s) => s.busyMembers.length === 1)).toBe(true);
+  });
+
+  it('leaves the rest of the day alone', () => {
+    const morning = slotsFor([{ start: '22:00', end: '02:00' }]).filter(
+      (s) => s.endTime <= '22:00'
+    );
+
+    expect(morning.every((s) => s.busyMembers.length === 0)).toBe(true);
+  });
+
+  it('treats a zero-length range as blocking nothing', () => {
+    const slots = slotsFor([{ start: '14:00', end: '14:00' }]);
+
+    expect(slots.every((s) => s.busyMembers.length === 0)).toBe(true);
+  });
+});

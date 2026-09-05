@@ -19,19 +19,94 @@ import { logger } from '../../utils/logger';
 /**
  * Check if event exists in calendar
  */
-async function checkEventExists(eventId: string): Promise<boolean> {
+/**
+ * Does this event already say what the rehearsal says?
+ *
+ * The export rewrote every event on every run, whether anything had changed or
+ * not. Harmless once every ten minutes; wasteful several times an hour, which
+ * is what removing that interval makes it. Comparing costs nothing extra — the
+ * event is being read anyway to check it still exists.
+ */
+function eventMatchesRehearsal(
+  event: { title?: string; startDate?: string | Date; endDate?: string | Date; location?: string | null },
+  rehearsal: RehearsalWithProject
+): boolean {
+  const sameMoment = (a?: string | Date, b?: string | Date) =>
+    a !== undefined && b !== undefined && new Date(a).getTime() === new Date(b).getTime();
+
+  return (
+    event.title === eventTitleFor(rehearsal) &&
+    sameMoment(event.startDate, rehearsal.startsAt) &&
+    sameMoment(event.endDate, rehearsal.endsAt) &&
+    locationKey(event.location) === locationKey(rehearsal.location)
+  );
+}
+
+async function readEvent(eventId: string): Promise<Calendar.Event | null> {
+  // The caller reads null as "the reader deleted this event" and responds by
+  // discarding the mapping and writing a fresh one. So this must answer the
+  // question it was asked and no other. It used to catch everything and say
+  // "gone" — its own comment said "doesn't exist or permission denied", and the
+  // two are not the same thing. With calendar access revoked in Settings every
+  // lookup failed, every mapping was destroyed, and the events themselves
+  // stayed where they were, now unreachable.
+  //
+  // Permission is checked before the lookup instead, and a refusal is raised
+  // rather than reported as absence. A genuine "no such event" still gives
+  // null, which is what the recreate path is for.
+  //
+  // Returns the event rather than a boolean so the caller can compare it
+  // against the rehearsal and skip a write that would change nothing.
+  const hasPermission = await checkCalendarPermissions();
+  if (!hasPermission) {
+    throw new Error('Calendar permission not granted');
+  }
+
   try {
     const event = await Calendar.getEventAsync(eventId);
-    return event !== null && event !== undefined;
-  } catch (error) {
-    // Event doesn't exist or permission denied
-    return false;
+    return event ?? null;
+  } catch {
+    return null;
   }
 }
 
 /**
  * Find duplicate event in calendar by matching properties
  */
+/**
+ * The rehearsal an exported event stands for, written into the event's URL.
+ *
+ * The event carried nothing identifying it: every rehearsal of a project got
+ * the same title and the same notes, so a second device — which sees the same
+ * iCloud calendar but addresses its events by a different local id — had to
+ * guess which event was which from the title, the start time and the location.
+ * Two rehearsals of one project starting in the same minute were
+ * indistinguishable, and one without a location matched nothing at all.
+ *
+ * The URL rather than the notes: an event has no hidden field on iOS, so the
+ * mark is visible either way, and a link at least takes the reader to the
+ * rehearsal instead of showing them an identifier for nothing. The scheme is
+ * the app's own — `rehearsalapp`, already registered and already routed — and
+ * navigation resolves it to the details screen. iOS only, which is what this
+ * ships on; where the URL is absent the heuristic below still answers.
+ */
+const eventUrlFor = (rehearsalId: string) => `rehearsalapp://rehearsal/${rehearsalId}`;
+
+const rehearsalIdFromUrl = (url?: string | null): string | null => {
+  const match = /^rehearsalapp:\/\/rehearsal\/(.+)$/.exec(url || '');
+  return match ? match[1] : null;
+};
+
+/**
+ * What to call the event. The rehearsal's own name when it has one — most do
+ * not, and then the project is the only useful thing to show.
+ */
+const eventTitleFor = (rehearsal: RehearsalWithProject) =>
+  rehearsal.title?.trim() || `Rehearsal: ${rehearsal.projectName}`;
+
+/** '' means "no location", whatever the platform or our own API called it. */
+const locationKey = (value?: string | null) => (value ?? '').trim();
+
 async function findDuplicateEvent(
   rehearsal: RehearsalWithProject,
   calendarId: string,
@@ -48,11 +123,30 @@ async function findDuplicateEvent(
     const events = await Calendar.getEventsAsync([calendarId], searchStart, searchEnd);
 
     // Find event with matching properties
+    // Exact first: an event we wrote carries the rehearsal it belongs to.
+    const byId = events.find(
+      (event) => rehearsalIdFromUrl((event as { url?: string }).url) === String(rehearsal.id)
+    );
+    if (byId) {
+      logger.debug(`[CalendarSync] Matched event ${byId.id} by rehearsal id`);
+      return byId.id;
+    }
+
+    // Events written before the id was recorded have nothing to match on but
+    // their contents. Kept for those, and for a reader who cleared the URL.
+    //
+    // An event that names a *different* rehearsal is excluded outright: the
+    // mark is proof of what it belongs to, and two rehearsals of one project
+    // starting in the same minute look identical to everything else here.
     const duplicateEvent = events.find(event => {
-      const titleMatch = event.title === `Rehearsal: ${rehearsal.projectName}`;
+      if (rehearsalIdFromUrl((event as { url?: string }).url)) return false;
+
+      const titleMatch =
+        event.title === eventTitleFor(rehearsal) ||
+        event.title === `Rehearsal: ${rehearsal.projectName}`;
       const startMatch = Math.abs(new Date(event.startDate).getTime() - startDate.getTime()) < 60000; // Within 1 minute
       const endMatch = Math.abs(new Date(event.endDate).getTime() - endDate.getTime()) < 60000;
-      const locationMatch = event.location === (rehearsal.location || undefined);
+      const locationMatch = locationKey(event.location) === locationKey(rehearsal.location);
 
       return titleMatch && startMatch && endMatch && locationMatch;
     });
@@ -108,11 +202,21 @@ export async function createCalendarEvent(
     }
 
     const eventDetails: Omit<Partial<Calendar.Event>, 'id' | 'organizer'> = {
-      title: `Rehearsal: ${rehearsal.projectName}`,
+      title: eventTitleFor(rehearsal),
       startDate,
       endDate,
       location: rehearsal.location || undefined,
       notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
+      url: eventUrlFor(rehearsal.id),
+      // Say which zone the times mean, on both paths.
+      //
+      // Left unset, iOS assigns the device's zone when the event is created and
+      // may reinterpret a later update against whatever it recorded — which is
+      // the likeliest reading of a device report that editing a rehearsal
+      // briefly showed a time that was neither the old one nor the new one.
+      // Unconfirmed, but stating the zone costs nothing and removes the
+      // question.
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       alarms: [
         {
           relativeOffset: -30, // 30 minutes before
@@ -163,11 +267,14 @@ export async function updateCalendarEvent(
     }
 
     const eventDetails: Partial<Calendar.Event> = {
-      title: `Rehearsal: ${rehearsal.projectName}`,
+      title: eventTitleFor(rehearsal),
       startDate: new Date(rehearsal.startsAt),
       endDate: new Date(rehearsal.endsAt),
       location: rehearsal.location || undefined,
       notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
+      // Also on update, so events written before this gain the mark.
+      url: eventUrlFor(rehearsal.id),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
 
     logger.info('[CalendarSync] Updating event:', eventId);
@@ -208,7 +315,18 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
  */
 export async function syncRehearsalToCalendar(
   rehearsal: RehearsalWithProject,
-  calendarId: string
+  calendarId: string,
+  /**
+   * The mapping for this rehearsal, when the caller already has it.
+   *
+   * Without it this asks the server one question per rehearsal — twenty
+   * rehearsals, twenty requests, on every trip to the foreground. That cost is
+   * the only reason the export was rate-limited to once every ten minutes, and
+   * the rate limit is why someone else's edit did not reach the calendar until
+   * the reader thought to pull down. getAllMappings answers for all of them at
+   * once, so the caller fetches once and hands the answer down.
+   */
+  knownMapping?: { eventId: string; calendarId: string } | null
 ): Promise<void> {
   try {
     logger.debug('[CalendarSync] 🔄 syncRehearsalToCalendar called:', {
@@ -220,7 +338,7 @@ export async function syncRehearsalToCalendar(
     });
 
     // Check if already synced
-    const mapping = await getEventMapping(rehearsal.id);
+    const mapping = knownMapping !== undefined ? knownMapping : await getEventMapping(rehearsal.id);
     logger.debug('[CalendarSync] 🔍 Event mapping check:', mapping ? 'Found existing mapping' : 'No mapping found');
 
     if (mapping) {
@@ -230,8 +348,14 @@ export async function syncRehearsalToCalendar(
       });
 
       // Check if event still exists in calendar
-      const eventExists = await checkEventExists(mapping.eventId);
+      const existing = await readEvent(mapping.eventId);
+      const eventExists = existing !== null;
       logger.debug('[CalendarSync] 🔍 Event exists in calendar?', eventExists);
+
+      if (existing && eventMatchesRehearsal(existing, rehearsal)) {
+        logger.debug('[CalendarSync] Event already matches - nothing to write');
+        return;
+      }
 
       if (eventExists) {
         // Update existing event
@@ -304,7 +428,9 @@ export async function unsyncRehearsal(rehearsalId: string): Promise<void> {
 export async function syncAllRehearsals(
   rehearsals: RehearsalWithProject[],
   calendarId: string,
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  /** All of this user's mappings, when the caller already holds them. */
+  knownMappings?: Record<string, { eventId: string; calendarId: string }>
 ): Promise<BatchSyncResult> {
   const result: BatchSyncResult = {
     success: 0,
@@ -321,7 +447,13 @@ export async function syncAllRehearsals(
 
     // Process batch in parallel
     const results = await Promise.allSettled(
-      batch.map(rehearsal => syncRehearsalToCalendar(rehearsal, calendarId))
+      batch.map(rehearsal =>
+        syncRehearsalToCalendar(
+          rehearsal,
+          calendarId,
+          knownMappings ? knownMappings[rehearsal.id] ?? null : undefined
+        )
+      )
     );
 
     // Collect results

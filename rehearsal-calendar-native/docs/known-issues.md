@@ -54,83 +54,164 @@ since Jest never defined `__DEV__` and any module guarding on it threw. It has
 
 ## Confirmed, not yet fixed
 
-### The schema file has drifted from production
+### Decided against: a silent push to update the calendar without opening the app
 
-`server/database/init-native-schema.sql` no longer describes the database. Read
-off production directly on 2026-09-02:
+Asked and answered on 2026-09-05, recorded so it is not re-litigated by
+accident.
 
-- `native_project_members` there has `expires_at`, `invite_code` and
-  `character_name`, none of which are in the file, and lacks the `created_at`
-  the file declares. `routes/native/members.js:234` selects `character_name`.
-- `native_notifications` is created by no schema file and no migration at all.
+The calendar is written by the app, running on that device. If the reader never
+opens it, nothing changes there — a rehearsal cancelled or moved by someone else
+stays wrong in their calendar indefinitely. That is a real gap for anyone who
+checks their calendar rather than the app, which is a normal habit.
 
-Production is fine — it grew these by hand. But a new environment provisioned by
-the procedure in CLAUDE.md comes up broken: the project members screen 500s and
-the whole notification inbox fails. So does any restore from scratch.
+A silent push (`content-available`) would wake the app in the background long
+enough to write. It costs a background mode in the config, a task handler, a
+justification at App Review, and it is throttled by iOS — usually prompt, never
+guaranteed.
 
-Repairing the file is safe (production never reads it) but must be done by
-comparing against a real dump, not by memory — and every other divergence found
-the same way should go in at once.
+**Not doing it**, on the owner's decision: the intent is for people to live in
+the app rather than in their calendar. Revisit only if that intent changes.
 
-### Deleting an account warns about it only afterwards
 
-Two thirds of this were **fixed on 2026-09-03**: the members of a project that
-goes with the account are now told, and the busy hours its rehearsals had booked
-are cleared instead of outliving them. What is left is the copy below — the app
-still does not say what is about to happen until it has happened.
+### A tapped notification opens a sheet over the availability screen, and back leads to the calendar as a modal
 
-Verified 2026-09-02. The confirmation modal
-([ProfileScreen.tsx:505-529](../src/features/profile/screens/ProfileScreen.tsx#L505))
-shows only "This action is irreversible. All **your** data will be permanently
-deleted." The string that does mention other people's projects,
-`deleteAccountProjectsWarning`, exists in all four locales and has exactly one
-call site — [ProfileScreen.tsx:132](../src/features/profile/screens/ProfileScreen.tsx#L132),
-in the alert shown **after** `await deleteAccount()` on line 128. The truth
-arrives after the irreversible act.
+Reported from the device on 2026-09-05, deliberately left for later.
 
-The server deletes every project where the departing user is the last active
-owner or admin ([auth.js](../server/routes/auth.js#L412)), cascading its
-rehearsals and responses. Two things used to make it worse than the claim, and
-both are now repaired — `notifyProjectDeleted` is sent to the surviving members
-after the transaction commits, and the orphaned `source='rehearsal'` rows are
-deleted before the project is, since no cascade and no endpoint could reach them
-afterwards. Covered by `__tests__/routes/accountDeletionCleanup.test.js`.
+With the app open on the availability screen, tapping a push opens the rehearsal
+sheet over it — and the back gesture then shows the **calendar** presented as a
+modal rather than returning where the reader was. So the stack after a
+notification is not the stack they left.
 
-**Still to do** (client, needs a rebuild): extend `deleteAccountWarning` in all
-four locales in [profile.ts](../src/i18n/translations/profile.ts) to say that
-projects where you are the only administrator will be deleted for everyone in
-them. An exact count would need a new server preview endpoint.
+Not investigated. It belongs to the same family as the stranded-layer bug in
+CLAUDE.md — the one that cost a day — so treat it as a navigation-stack question
+rather than a notification one, and start from what `RehearsalDetails` is pushed
+onto when the availability screen is itself a modal (`MarkBusy`).
 
-### An owner deleting their account leaves the project ownerless
+Nothing is lost and nothing is wrong in the data; it is the reader being put
+somewhere they did not ask to be.
 
-Verified 2026-09-02. With another active admin present the project is not
-counted as orphaned and survives — with no owner row, and nothing ever sets one
-again. The only `INSERT` with `'owner'` is project creation, the role endpoint
-validates against `['admin','member']` only
-([members.js:284](../server/routes/native/members.js#L284)), and there is no
-project update route. Deletion requires `role === 'owner'` exactly
-([projects.js:156](../server/routes/native/projects.js#L156)), so the project can
-never be deleted or transferred. The client hides the button rather than
-erroring, so nobody sees a failure — they just cannot do it.
+### Editing a rehearsal briefly showed a time that was neither the old nor the new one
 
-Everything else keeps working: admins can still run rehearsals, invite, remove
-members and promote further admins.
+Reported from the device on 2026-09-05. The event in the phone's calendar showed
+a third time entirely, and became correct after leaving the Calendar app and
+returning.
 
-**One part of the original claim is refuted:** plain members could not leave
-before this either. There is no leave endpoint anywhere — see below.
+Our own data was ruled out: the form builds the timestamps in the reader's
+timezone and hands the *same* value to the server and to the export, so both
+writes carry the same instant.
 
-**Decided 2026-09-03: nobody inherits.** The project is deleted along with the
-account and its members are told, rather than an admin being promoted to owner.
+The remaining suspect is that the event never said which timezone it meant. iOS
+assigns the device's zone at creation, and an update that sets only `startDate`
+can be reinterpreted against whatever was recorded. Both paths now state the
+zone explicitly — a cheap change that removes the question, **but this is a
+hypothesis and not a confirmed diagnosis**. If the wrong time appears again
+after the next build, the cause is elsewhere and this note should say so.
 
-That is a **wider deletion than the code performs today** — currently a project
-survives whenever another active admin remains — so it destroys data belonging
-to other people, and is not something to apply as part of a bug-fix sweep. It
-needs its own change, deliberately made and watched: the confirmation copy has
-to name what is about to happen before the button is pressed, not after.
 
-The narrower repairs that follow from the same decision — telling the members,
-and clearing the busy hours the vanished rehearsals left on them — are safe and
-belong with the entry above.
+### Calendar sync — eleven findings left, and eighteen tests now
+
+Reviewed 2026-09-04 by three agents, one per half plus the failure paths. This was
+the part of the app with no tests at all. It has eighteen now, and the reason
+there were none turned out to be mechanical rather than anyone's neglect: the
+module would not load under test. The shared mocks were missing `AppState`,
+`getEventAsync` and two expo-calendar enums, and the AsyncStorage mock lacked
+`__esModule`, so the interop handed back a wrapper and any module touching
+storage threw on import. Anyone who tried hit that wall and gave up.
+
+**The privacy promise holds.** Both halves were read for it specifically: no
+event title, notes, location, URL or attendee is read on the import path at all,
+both payloads hard-code `IMPORTED_SLOT_TITLE`, and the log lines that survive
+production carry only counts and ids. The one blemish is data minimisation, not
+a breach — see the last row.
+
+The two critical ones were re-verified by hand rather than taken on trust.
+
+**Nine were fixed on 2026-09-05 and their rows removed**, including both
+criticals: automatic sync now lives on the tab bar and runs on a cold launch;
+the export reconciles rehearsals that no longer exist; the diff reaches an event
+that began before today; an exported event records which rehearsal it is, in its
+URL, so a second device matches it exactly instead of guessing from title, time
+and location; a revoked permission no longer reads as "the reader deleted this";
+and a run that failed no longer stamps itself done — which for the export also
+stopped it refusing to retry for ten minutes.
+
+The eleven below remain. A fresh sweep of this area would mostly re-find them,
+so finish this list rather than hunting again.
+
+One thing here can only be settled on a device: whether `url` survives a
+round-trip through EventKit. The type says it does and is iOS-only, but reading
+a type is not seeing the value come back — and if it does not, the exact
+matching quietly does nothing and falls back to the heuristic.
+
+| Severity | What | Where |
+|---|---|---|
+| high | One failed mappings request empties the import exclusion, and the phantom busy slots it creates can never be cleaned up | `src/shared/utils/calendarMappings.ts:181` |
+| high | Mappings are keyed per user but hold device-local event ids, so on a second device the exclusion, the deletes and the duplicate check all point at the wrong event | `server/routes/native/calendarSync.js:204` |
+| high | A stale in-memory connection id after a user switch stops every mapping reaching the server, silently | `src/shared/utils/calendarMappings.ts:22` |
+| medium | "Remove all exported" erases the record of events it did not delete, and reports success either way | `src/shared/services/calendar/export.ts:409` |
+| medium | Changing the export calendar leaves every exported rehearsal in the old calendar while the screen claims they are in the new one | `src/shared/services/calendar/export.ts:236` |
+| medium | Fifty parallel read-modify-writes on one AsyncStorage key lose forty-nine of them | `src/shared/services/calendar/import.ts:398` |
+| medium | getAllMappings discards the local cache instead of merging it, so a second device's exported rehearsals get re-imported as busy | `src/shared/utils/calendarMappings.ts:180` |
+| medium | A device clock that moves backwards locks both timers out until real time catches up | `src/shared/hooks/useAutoCalendarSync.ts:61` |
+| low | The device calendar identifier is uploaded with every imported slot and the server has no use for it | `src/shared/services/calendar/import.ts:385` |
+| low | performSmartSync has no finally: a rejection leaves the syncing spinner on forever and skips the reload | `src/features/availability/hooks/useAvailabilitySync.ts:72` |
+
+Full evidence, failure scenarios and proposed fixes are in the workflow
+transcript for run `wf_10bab5ff-ace`. The two confirmed by hand:
+
+- **Auto sync only exists while the Mark Busy sheet is open.** `useAutoCalendarSync`
+  is called from exactly one place, `AvailabilityScreen`, and that screen is not
+  a tab — it is mounted only as the `MarkBusy` modal (`src/navigation/index.tsx:281`).
+  The tabs are Calendar, Projects, Create, Planner, Profile. So a user who turns
+  Auto Sync on and never opens that sheet gets no import and no export, ever,
+  while the settings screen says it is on.
+- **A deleted rehearsal keeps its event and its 30-minute alarm on every other
+  device.** The automatic export iterates the rehearsals that exist
+  (`useAutoCalendarSync.ts:89`) and nothing ever walks the mappings looking for
+  one whose rehearsal is gone. The device that pressed delete removes its own
+  event; nobody else's is touched, and the next sync does not reconcile it.
+
+#### The tests this area should have
+
+Written by the agents that read it, most valuable first. This list is the point
+of the exercise — the findings above will be re-broken without it.
+
+- Idempotency: run importCalendarEventsToAvailability twice against an unchanged calendar and assert the second run posts nothing — no bulkSet, no batchUpdateImported, no batchDeleteImported — and returns success 0 with every event counted as skipped. This alone pins the isAllDay comparison.
+- Deleting a still-running event: a multi-day all-day slot already stored with startsAt three days in the past, absent from the calendar, must appear in batchDeleteImported. Same for a timed event that started yesterday and ends tomorrow.
+- All-day events west of UTC: with the device clock in America/New_York, an all-day event on today that is already stored must be recognised as unchanged (not re-added), and when removed from the calendar must be deleted.
+- A wrongly-imported exported rehearsal: seed an availability row whose external_event_id is a rehearsal's calendar event id, put that id in the mappings, and assert the delete pass removes it rather than protecting it.
+- getAllMappings failure isolation: make calendarSyncAPI.getMappings reject while availabilityAPI.getAll succeeds, and assert the import does NOT store exported rehearsal events as busy slots (either it aborts or it still excludes them).
+- Recurrence keying round-trip: a weekly series of 52 occurrences sharing one event.id produces 52 distinct `${id}:${startsAt}` rows on the first run and zero writes on the second; moving one occurrence produces exactly one delete of the old key and one add of the new.
+- All-day span conversion: a fortnight event, a single-day event, and one crossing a month boundary each yield startsAt `${firstDate}T00:00:00.000Z` / endsAt `${lastDate}T23:59:59.999Z`, under both the exclusive-next-midnight and inclusive-23:59:59 endDate conventions.
+- Update batch size: 600 changed timed events must be split into chunks the way the add path is, and a chunk failing must not be reported to the caller as a successful sync.
+- Privacy contract: assert the object handed to availabilityAPI.bulkSet and batchUpdateImported contains only the whitelisted keys and that title is always IMPORTED_SLOT_TITLE, given an event carrying a real title, notes, location, url and attendees.
+- Failed-calendar guard: with one of three calendars throwing from getEventsAsync, assert batchDeleteImported is never called while the adds from the two healthy calendars still go through.
+- Timezone fidelity: a timed event created in another zone, and one crossing local midnight, are sent as the exact ISO instants expo-calendar reported, with no date-shifting.
+- Window edges: an event that moves from day 300 to day 400 is deleted; one that moves from day 400 to day 300 is added; neither produces both.
+- exportRehearsalsIfDue reconciles deletions: mappings exist for rehearsals 1, 2 and 3, the batch endpoint returns only 1 and 3, and the run deletes event and mapping for 2 (fails today — this is the stale-alarm bug)
+- syncRehearsalToCalendar keeps the mapping when the calendar cannot be read: Calendar.getEventAsync rejects with a permission error and the test asserts removeEventMapping was NOT called and no event was created (fails today)
+- findDuplicateEvent matches a location-less rehearsal: an existing event with location null/'' and the same title and times is adopted rather than duplicated (fails today)
+- importCalendarEventsToAvailability excludes exported rehearsal events from both the add pass and the delete pass, given mappings returned by the server
+- importCalendarEventsToAvailability skips the whole run when the exported-mapping set cannot be established (mappings request rejects), instead of importing with an empty exclusion
+- removeAllExportedEvents deletes an event whose mapping exists only in AsyncStorage, and leaves the mapping in place for any event whose deletion failed
+- calendarMappings.getAllMappings surfaces every external_event_id when the same rehearsal has mapping rows under two connections, rather than collapsing to one
+- GET and DELETE /calendar-sync/mappings/by-event are scoped to a connection: device A's unsync does not remove device B's mapping row for the same rehearsal
+- getOrCreateConnection re-fetches after a user switch: reconcileDeviceState runs for a different user id and the next call does not return the previous user's connection id
+- POST /calendar-sync/mappings with another user's connectionId returns 403 and writes no row (passes today — pin it, it is the only thing stopping a cross-user write)
+- syncRehearsalToCalendar moves the event when settings.exportCalendarId differs from mapping.calendarId
+- handleRemoveAll does not show the success alert when result.failed > 0
+- Mounting the app without ever opening Mark Busy and firing an AppState background→active transition triggers an import and an export (the regression guard for finding 1; it fails today).
+- importCalendarEventsToAvailability leaves lastImportTime untouched when bulkSet rejects for one chunk, and updates it only when result.failed is 0.
+- handleSynchronize's alert prints 0 exported when syncAllRehearsals returns {success: 0, failed: N}, and reports failure rather than 'Sync Complete'.
+- performForceSync still calls loadAvailability and surfaces the error when forceSync rejects (permission revoked mid-session).
+- Fifty events in one chunk produce fifty entries in 'calendar-import-tracking', and ten rehearsals in one export batch produce ten entries in 'calendar-export-mappings'.
+- getAllMappings returns the union of the server's mappings and the AsyncStorage cache, so an event id known only locally is still excluded from import.
+- importCalendarEventsToAvailability excludes exported rehearsal events when GET /calendar-sync/mappings fails but GET /availability succeeds.
+- exportRehearsalsIfDue and shouldAutoSync both run when the stored last-sync timestamp is in the future.
+- A second import started while the first is in flight (settings-screen Synchronize plus a Mark Busy focus sync) results in one row per event on the server and one lastImportTime write.
+- performAutoSync returns without touching the network when there is no accessToken, and does not stamp lastImportTime.
+- Revoking calendar permission and re-granting it later resumes sync with no change to stored settings (no reinstall, no re-picking the calendar).
+
 
 ### A member cannot leave a project
 
@@ -248,32 +329,22 @@ it.
 The test harness hardcodes the newer shape, so the green suite proves nothing
 here.
 
-### The planner cannot tell "free" from "nobody has said"
+### The select-all checkbox never says it will clear
 
-Found 2026-09-03 during the planner audit; left alone because it is a UI
-decision, not a defect in the maths.
+There is no Clear All control — the register used to claim one. The header holds
+a single checkbox labelled **Select All** in every state
+([MemberFilter.tsx:74-81](../src/features/smart-planner/components/MemberFilter.tsx#L74)).
+Once everything is selected, tapping it deselects everything, while the label
+still reads Select All and the box shows a tick. Nothing tells you what the tap
+will do.
 
-A member with no availability rows produces no entry, and the generator defaults
-them to unblocked, so `categorizeSlot(0, n)` returns `perfect`. Someone who
-joined this morning and has never opened the availability screen is
-indistinguishable from someone who opened it and marked themselves wide open —
-and "Perfect, everyone free" is exactly what a brand-new project says about
-itself.
+An empty selection means every member is counted — that is how the generator
+reads it — and the summary line does say so. So the outcome is not wrong, only
+unannounced.
 
-Defensible as a default. The problem is that it is unlabelled.
-
-**Smallest fix** (server plus client): the endpoint already knows which
-`targetUserIds` returned no records — return a `hasData: false` per member and
-let the slot rows qualify the count, "5 free, 2 unknown".
-
-### "Clear All" in the member filter reads as "nobody" and means "everybody"
-
-Found the same day. Clearing the selection sets it to `[]`, which
-`useSmartPlanner` treats as every member, while `MemberFilter` hides the
-"N of M selected" line. So the planner goes on applying everyone's constraints
-with nothing on screen explaining why.
-
-Over-blocking and confusing rather than dangerous, which is why it is here.
+**Smallest fix** (client): swap the label when `allSelected` is true. There is
+no `clearAll` string yet — it needs adding to the interface and all four locale
+blocks in `src/i18n/translations/common.ts`, or the type will not compile.
 
 ### `npm run lint` does not run at all
 
@@ -357,9 +428,6 @@ range being built through UTC.
 
 ## Known and left alone on purpose — not defects
 
-- Four `native_subscription_*` / `native_payment_*` / `native_allpay_*` tables
-  survive in the database with nothing reading them — see the Payments section
-  of [CLAUDE.md](../../CLAUDE.md).
 - `/admin` runs under a relaxed CSP because its tables are built with inline
   `onclick` — see the tech-debt list in [app-store-release.md](app-store-release.md).
 - Push delivery is not verified: Expo's tickets say the message was accepted,

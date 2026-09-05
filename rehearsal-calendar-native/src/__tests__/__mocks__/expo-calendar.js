@@ -4,6 +4,9 @@
 
 export const getCalendarsAsync = jest.fn();
 export const getEventsAsync = jest.fn();
+// Reading one event by id — used by the export to ask whether the event it
+// recorded is still there.
+export const getEventAsync = jest.fn();
 export const createEventAsync = jest.fn();
 export const updateEventAsync = jest.fn();
 export const deleteEventAsync = jest.fn();
@@ -38,3 +41,9 @@ export default {
   EntityTypes,
   CalendarAccessLevel,
 };
+
+// Enum constants the export path reads when building an event. Absent until now,
+// which is one reason nothing in this service had a test: the module threw on
+// AlarmMethod.ALERT before any assertion could run.
+export const AlarmMethod = { ALERT: 'alert', EMAIL: 'email', SOUND: 'sound' };
+export const Availability = { BUSY: 'busy', FREE: 'free', TENTATIVE: 'tentative' };

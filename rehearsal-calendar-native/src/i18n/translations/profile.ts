@@ -61,7 +61,7 @@ export const ru = {
     logout: 'Выйти из аккаунта',
     deleteAccount: 'Удалить аккаунт',
     deleteAccountConfirm: 'Удалить аккаунт?',
-    deleteAccountWarning: 'Это действие необратимо. Все ваши данные будут удалены навсегда.',
+    deleteAccountWarning: 'Это действие необратимо. Все ваши данные будут удалены навсегда — вместе с проектами, которыми вы владеете, и всеми их репетициями. Остальные участники потеряют их тоже.',
     deleteAccountProjectsWarning: (count: number) =>
       count === 1
         ? 'Будет удален 1 проект, где вы единственный администратор.'
@@ -111,7 +111,7 @@ export const en = {
     logout: 'Log out',
     deleteAccount: 'Delete Account',
     deleteAccountConfirm: 'Delete Account?',
-    deleteAccountWarning: 'This action is irreversible. All your data will be permanently deleted.',
+    deleteAccountWarning: 'This action is irreversible. All your data will be permanently deleted — along with the projects you own and all their rehearsals. Everyone else in them loses them too.',
     deleteAccountProjectsWarning: (count: number) =>
       count === 1
         ? '1 project where you are the only admin will be deleted.'
@@ -161,7 +161,7 @@ export const es = {
     logout: 'Cerrar sesión',
     deleteAccount: 'Eliminar cuenta',
     deleteAccountConfirm: '¿Eliminar cuenta?',
-    deleteAccountWarning: 'Esta acción es irreversible. Todos tus datos se eliminarán permanentemente.',
+    deleteAccountWarning: 'Esta acción es irreversible. Todos tus datos se eliminarán permanentemente, junto con los proyectos que posees y todos sus ensayos. Los demás integrantes también los pierden.',
     deleteAccountProjectsWarning: (count: number) =>
       count === 1
         ? 'Se eliminará 1 proyecto en el que eres el único administrador.'
@@ -211,7 +211,7 @@ export const de = {
     logout: 'Abmelden',
     deleteAccount: 'Konto löschen',
     deleteAccountConfirm: 'Konto löschen?',
-    deleteAccountWarning: 'Diese Aktion ist unumkehrbar. Alle deine Daten werden dauerhaft gelöscht.',
+    deleteAccountWarning: 'Diese Aktion ist unumkehrbar. Alle deine Daten werden dauerhaft gelöscht — samt den Projekten, die dir gehören, und all ihren Proben. Alle anderen darin verlieren sie ebenfalls.',
     deleteAccountProjectsWarning: (count: number) =>
       count === 1
         ? '1 Projekt, in dem du der einzige Administrator bist, wird gelöscht.'
