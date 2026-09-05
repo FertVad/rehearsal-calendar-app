@@ -81,6 +81,7 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
     startsAt: r.startsAt,
     endsAt: r.endsAt,
     location: r.location,
+    title: r.title,
   }));
 
   // Take back the events of rehearsals that no longer exist.

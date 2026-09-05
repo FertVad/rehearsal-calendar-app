@@ -38,3 +38,10 @@ export default {
   EntityTypes,
   CalendarAccessLevel,
 };
+
+// Enum constants the export path reads when building an event. Absent until now,
+// which is one reason nothing in this service had a test: the module threw on
+// AlarmMethod.ALERT before any assertion could run.
+export const AlarmMethod = { ALERT: 'alert', EMAIL: 'email', SOUND: 'sound' };
+export const Availability = { BUSY: 'busy', FREE: 'free', TENTATIVE: 'tentative' };
+export const EntityTypes = { EVENT: 'event', REMINDER: 'reminder' };

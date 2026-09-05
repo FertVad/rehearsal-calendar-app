@@ -32,6 +32,37 @@ async function checkEventExists(eventId: string): Promise<boolean> {
 /**
  * Find duplicate event in calendar by matching properties
  */
+/**
+ * The rehearsal an exported event stands for, written into the event's URL.
+ *
+ * The event carried nothing identifying it: every rehearsal of a project got
+ * the same title and the same notes, so a second device — which sees the same
+ * iCloud calendar but addresses its events by a different local id — had to
+ * guess which event was which from the title, the start time and the location.
+ * Two rehearsals of one project starting in the same minute were
+ * indistinguishable, and one without a location matched nothing at all.
+ *
+ * The URL rather than the notes because the notes are shown to the reader and
+ * an identifier is not theirs to look at. iOS only, which is what this app
+ * ships on; where it is absent the heuristic below still answers.
+ */
+const eventUrlFor = (rehearsalId: string) => `rehearsly://rehearsal/${rehearsalId}`;
+
+const rehearsalIdFromUrl = (url?: string | null): string | null => {
+  const match = /^rehearsly:\/\/rehearsal\/(.+)$/.exec(url || '');
+  return match ? match[1] : null;
+};
+
+/**
+ * What to call the event. The rehearsal's own name when it has one — most do
+ * not, and then the project is the only useful thing to show.
+ */
+const eventTitleFor = (rehearsal: RehearsalWithProject) =>
+  rehearsal.title?.trim() || `Rehearsal: ${rehearsal.projectName}`;
+
+/** '' means "no location", whatever the platform or our own API called it. */
+const locationKey = (value?: string | null) => (value ?? '').trim();
+
 async function findDuplicateEvent(
   rehearsal: RehearsalWithProject,
   calendarId: string,
@@ -48,11 +79,30 @@ async function findDuplicateEvent(
     const events = await Calendar.getEventsAsync([calendarId], searchStart, searchEnd);
 
     // Find event with matching properties
+    // Exact first: an event we wrote carries the rehearsal it belongs to.
+    const byId = events.find(
+      (event) => rehearsalIdFromUrl((event as { url?: string }).url) === String(rehearsal.id)
+    );
+    if (byId) {
+      logger.debug(`[CalendarSync] Matched event ${byId.id} by rehearsal id`);
+      return byId.id;
+    }
+
+    // Events written before the id was recorded have nothing to match on but
+    // their contents. Kept for those, and for a reader who cleared the URL.
+    //
+    // An event that names a *different* rehearsal is excluded outright: the
+    // mark is proof of what it belongs to, and two rehearsals of one project
+    // starting in the same minute look identical to everything else here.
     const duplicateEvent = events.find(event => {
-      const titleMatch = event.title === `Rehearsal: ${rehearsal.projectName}`;
+      if (rehearsalIdFromUrl((event as { url?: string }).url)) return false;
+
+      const titleMatch =
+        event.title === eventTitleFor(rehearsal) ||
+        event.title === `Rehearsal: ${rehearsal.projectName}`;
       const startMatch = Math.abs(new Date(event.startDate).getTime() - startDate.getTime()) < 60000; // Within 1 minute
       const endMatch = Math.abs(new Date(event.endDate).getTime() - endDate.getTime()) < 60000;
-      const locationMatch = event.location === (rehearsal.location || undefined);
+      const locationMatch = locationKey(event.location) === locationKey(rehearsal.location);
 
       return titleMatch && startMatch && endMatch && locationMatch;
     });
@@ -108,11 +158,12 @@ export async function createCalendarEvent(
     }
 
     const eventDetails: Omit<Partial<Calendar.Event>, 'id' | 'organizer'> = {
-      title: `Rehearsal: ${rehearsal.projectName}`,
+      title: eventTitleFor(rehearsal),
       startDate,
       endDate,
       location: rehearsal.location || undefined,
       notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
+      url: eventUrlFor(rehearsal.id),
       alarms: [
         {
           relativeOffset: -30, // 30 minutes before
@@ -163,11 +214,13 @@ export async function updateCalendarEvent(
     }
 
     const eventDetails: Partial<Calendar.Event> = {
-      title: `Rehearsal: ${rehearsal.projectName}`,
+      title: eventTitleFor(rehearsal),
       startDate: new Date(rehearsal.startsAt),
       endDate: new Date(rehearsal.endsAt),
       location: rehearsal.location || undefined,
       notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
+      // Also on update, so events written before this gain the mark.
+      url: eventUrlFor(rehearsal.id),
     };
 
     logger.info('[CalendarSync] Updating event:', eventId);
