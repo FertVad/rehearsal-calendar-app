@@ -19,11 +19,6 @@ import { getAllMappings } from '../../../utils/calendarMappings';
 import { checkCalendarPermissions } from '../permissions';
 
 jest.mock('../permissions', () => ({ checkCalendarPermissions: jest.fn() }));
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn().mockResolvedValue(null),
-  setItem: jest.fn().mockResolvedValue(undefined),
-  removeItem: jest.fn().mockResolvedValue(undefined),
-}));
 jest.mock('../../../utils/calendarMappings', () => ({ getAllMappings: jest.fn() }));
 jest.mock('../../api', () => ({
   availabilityAPI: {

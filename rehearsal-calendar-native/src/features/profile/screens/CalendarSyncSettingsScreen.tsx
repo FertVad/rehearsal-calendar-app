@@ -380,7 +380,10 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       // Show success message
       Alert.alert(
         t.calendarSync.syncSuccess || 'Sync Complete',
-        `${t.calendarSync.imported || 'Imported'}: ${importResult.success}\n${t.calendarSync.exportedRehearsals || 'Rehearsals exported'}: ${syncResult?.success || allRehearsals.length}`
+        // The real counts. `syncResult?.success || allRehearsals.length` read
+        // zero as "no answer" and fell back to the total, so the one run where
+        // nothing exported at all was reported as everything exporting.
+        `${t.calendarSync.imported || 'Imported'}: ${importResult.success}\n${t.calendarSync.exportedRehearsals || 'Rehearsals exported'}: ${syncResult?.success ?? 0}`
       );
     } catch (error: any) {
       console.error('[Sync] ❌ Error during synchronization:', error);

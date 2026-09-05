@@ -5,6 +5,11 @@
 const storage = {};
 
 module.exports = {
+  // Without this the TypeScript interop wraps the whole export as `default`,
+  // so `AsyncStorage.setItem` resolves to undefined and any module touching
+  // storage throws on import. That is why every test of the calendar service
+  // had to declare its own inline mock — and why, for a long time, none did.
+  __esModule: true,
   default: {
     getItem: jest.fn((key) => Promise.resolve(storage[key] || null)),
     setItem: jest.fn((key, value) => {

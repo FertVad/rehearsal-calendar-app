@@ -424,8 +424,18 @@ export async function importCalendarEventsToAvailability(
     // Wait for all operations to complete
     await Promise.all(operations);
 
-    // Update last import time
-    await updateLastImportTime();
+    // Stamp the time only if nothing failed.
+    //
+    // Each chunk catches its own error into result.failed, so Promise.all above
+    // always resolves — and this ran regardless. A server answering 500 to
+    // every chunk, or a captive-portal wifi swallowing them, wrote nothing and
+    // reported "last synced: just now". A run with nothing to do is a success
+    // and still stamps; a run that failed does not.
+    if (result.failed === 0) {
+      await updateLastImportTime();
+    } else {
+      logger.warn(`[CalendarSync] ${result.failed} writes failed - not marking as synced`);
+    }
 
     logger.info(`[CalendarSync] Import complete: ${result.success} success, ${result.failed} failed, ${result.skipped} skipped`);
     return result;

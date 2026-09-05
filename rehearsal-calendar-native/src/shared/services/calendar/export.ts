@@ -20,11 +20,26 @@ import { logger } from '../../utils/logger';
  * Check if event exists in calendar
  */
 async function checkEventExists(eventId: string): Promise<boolean> {
+  // The caller reads false as "the reader deleted this event" and responds by
+  // discarding the mapping and writing a fresh one. So this must answer the
+  // question it was asked and no other. It used to catch everything and return
+  // false — its own comment said "doesn't exist or permission denied" — and the
+  // two are not the same thing at all. With calendar access revoked in
+  // Settings, every lookup failed, every mapping was destroyed, and the events
+  // themselves stayed where they were, now unreachable.
+  //
+  // Permission is checked before the lookup instead, and a refusal is raised
+  // rather than reported as absence. A genuine "no such event" still returns
+  // false, which is what the recreate path is for.
+  const hasPermission = await checkCalendarPermissions();
+  if (!hasPermission) {
+    throw new Error('Calendar permission not granted');
+  }
+
   try {
     const event = await Calendar.getEventAsync(eventId);
     return event !== null && event !== undefined;
-  } catch (error) {
-    // Event doesn't exist or permission denied
+  } catch {
     return false;
   }
 }

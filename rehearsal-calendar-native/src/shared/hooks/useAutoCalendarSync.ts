@@ -111,7 +111,18 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
   const result = await syncAllRehearsals(rehearsals, settings.exportCalendarId);
   logger.debug('[AutoSync] Export completed:', result);
 
-  await saveSyncSettings({ ...settings, lastExportTime: new Date().toISOString() });
+  // Only a run that wrote everything counts as done.
+  //
+  // syncAllRehearsals reports failures rather than throwing, and this stamp was
+  // written regardless — which is worse here than in the import, because the
+  // ten-minute interval above reads it. A wholly failed export therefore
+  // announced success and then refused to try again for ten minutes. Leaving
+  // the stamp alone makes the next trip to the foreground retry.
+  if (result.failed === 0) {
+    await saveSyncSettings({ ...settings, lastExportTime: new Date().toISOString() });
+  } else {
+    logger.warn(`[AutoSync] ${result.failed} rehearsals failed to export - will retry`);
+  }
 }
 
 /**
