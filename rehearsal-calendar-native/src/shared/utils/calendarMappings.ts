@@ -19,7 +19,18 @@ import {
 } from './calendarStorage';
 
 // Connection cache
+//
+// Keyed by the calendar and nothing else, so it has to be cleared when a
+// different person signs in on the same device. Otherwise the second user's
+// mappings are posted against the first user's connection id, the server
+// rejects every one of them for not owning it, and saveEventMapping swallows
+// the failure — leaving their exported rehearsals recorded nowhere.
 let connectionCache: { id: number; deviceCalendarId: string } | null = null;
+
+/** Forget the connection. Called when the device changes hands. */
+export function resetConnectionCache(): void {
+  connectionCache = null;
+}
 
 /**
  * Get or create calendar connection for device calendar
