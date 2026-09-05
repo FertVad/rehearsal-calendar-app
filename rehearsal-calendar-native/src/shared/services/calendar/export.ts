@@ -182,6 +182,15 @@ export async function createCalendarEvent(
       location: rehearsal.location || undefined,
       notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
       url: eventUrlFor(rehearsal.id),
+      // Say which zone the times mean, on both paths.
+      //
+      // Left unset, iOS assigns the device's zone when the event is created and
+      // may reinterpret a later update against whatever it recorded — which is
+      // the likeliest reading of a device report that editing a rehearsal
+      // briefly showed a time that was neither the old one nor the new one.
+      // Unconfirmed, but stating the zone costs nothing and removes the
+      // question.
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       alarms: [
         {
           relativeOffset: -30, // 30 minutes before
@@ -239,6 +248,7 @@ export async function updateCalendarEvent(
       notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
       // Also on update, so events written before this gain the mark.
       url: eventUrlFor(rehearsal.id),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
 
     logger.info('[CalendarSync] Updating event:', eventId);

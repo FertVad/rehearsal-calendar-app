@@ -54,6 +54,41 @@ since Jest never defined `__DEV__` and any module guarding on it threw. It has
 
 ## Confirmed, not yet fixed
 
+### A tapped notification opens a sheet over the availability screen, and back leads to the calendar as a modal
+
+Reported from the device on 2026-09-05, deliberately left for later.
+
+With the app open on the availability screen, tapping a push opens the rehearsal
+sheet over it — and the back gesture then shows the **calendar** presented as a
+modal rather than returning where the reader was. So the stack after a
+notification is not the stack they left.
+
+Not investigated. It belongs to the same family as the stranded-layer bug in
+CLAUDE.md — the one that cost a day — so treat it as a navigation-stack question
+rather than a notification one, and start from what `RehearsalDetails` is pushed
+onto when the availability screen is itself a modal (`MarkBusy`).
+
+Nothing is lost and nothing is wrong in the data; it is the reader being put
+somewhere they did not ask to be.
+
+### Editing a rehearsal briefly showed a time that was neither the old nor the new one
+
+Reported from the device on 2026-09-05. The event in the phone's calendar showed
+a third time entirely, and became correct after leaving the Calendar app and
+returning.
+
+Our own data was ruled out: the form builds the timestamps in the reader's
+timezone and hands the *same* value to the server and to the export, so both
+writes carry the same instant.
+
+The remaining suspect is that the event never said which timezone it meant. iOS
+assigns the device's zone at creation, and an update that sets only `startDate`
+can be reinterpreted against whatever was recorded. Both paths now state the
+zone explicitly — a cheap change that removes the question, **but this is a
+hypothesis and not a confirmed diagnosis**. If the wrong time appears again
+after the next build, the cause is elsewhere and this note should say so.
+
+
 ### Calendar sync — eleven findings left, and eighteen tests now
 
 Reviewed 2026-09-04 by three agents, one per half plus the failure paths. This was
