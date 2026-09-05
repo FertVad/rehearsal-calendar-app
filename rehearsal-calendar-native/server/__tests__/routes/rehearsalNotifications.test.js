@@ -90,7 +90,15 @@ beforeEach(() => {
 
 const auth = (userId) => ['Authorization', `Bearer ${generateTokens(userId, 1).accessToken}`];
 
-const soon = (hoursFromNow) => new Date(Date.now() + hoursFromNow * 3600_000).toISOString();
+// Anchored once, not at each call.
+//
+// It used to be Date.now() per call, so two "the same" timestamps taken a
+// millisecond apart were different — which the change-diff rightly reports as a
+// move. That cost an afternoon in one describe block below and is the likeliest
+// remaining explanation for this suite failing about one run in ten while
+// passing on its own. Anchoring removes the question rather than answering it.
+const RUN_STARTED = Date.parse('2026-11-01T09:00:00.000Z');
+const soon = (hoursFromNow) => new Date(RUN_STARTED + hoursFromNow * 3600_000).toISOString();
 
 /** The user ids a notify* call was handed. */
 const recipients = (mock) => mock.mock.calls[0][2].map((m) => Number(m.user_id));

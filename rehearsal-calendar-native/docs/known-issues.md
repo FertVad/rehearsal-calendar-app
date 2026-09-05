@@ -159,12 +159,22 @@ Both pass on their own, repeatedly, and both passed on the next full run. So
 nothing is broken — but a suite that fails one run in five stops being read, and
 the next real failure gets waved through as "the flaky one".
 
-Both suites build their timestamps with `Date.now()` at call time and share the
-in-memory SQLite harness, so the likely candidates are a time-dependent
-assertion or cross-suite state in a worker. Not yet chased.
+One of the two candidates is gone. `rehearsalNotifications.test.js` built its
+timestamps with `Date.now()` at each call, so two "identical" times taken a
+millisecond apart differed — which the change-diff rightly reports as a move.
+The suite is anchored to a fixed instant now, which removes the question rather
+than answering it.
 
-Eight consecutive full runs on 2026-09-03 were clean, so it is rare rather than
-gone. Leave the entry until something explains it.
+What remains: cross-suite state inside a Jest worker, which would explain
+`rehearsalById.test.js` too and which nothing has yet demonstrated.
+
+Nineteen consecutive full runs across 2026-09-03 and 2026-09-05 were clean, so
+it is rare rather than gone. Leave the entry until something explains it, and do
+not chase it blind — that is how an afternoon disappears.
+
+Two of the fixed-since claims below were also settled by hand: the schema file
+now creates `native_notifications` and every other live table, and
+`character_name` is in it.
 
 ---
 
@@ -174,17 +184,6 @@ Six agents read the subsystems with no test coverage; a verification pass
 confirmed the four critical findings and six others, then ran out of budget. The
 rest are listed as found, in the reporter's words, with nothing checked. Roughly
 half of such claims usually fall over on inspection.
-
-Two are worth checking first because they are cheap to settle and would be
-serious if true:
-
-- **`native_notifications` may never be created by any schema file or
-  migration** ([003-notifications-timestamptz.sql:9](../server/migrations/003-notifications-timestamptz.sql)).
-  Production has the table, so this would only bite a freshly provisioned
-  environment — but that is the documented setup procedure.
-- **`GET /projects/:projectId/members` may select a column no schema creates**
-  ([members.js:228](../server/routes/native/members.js#L228)), which would 500
-  the project screen on such an environment.
 
 ### High
 
