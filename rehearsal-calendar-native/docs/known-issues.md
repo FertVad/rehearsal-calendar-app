@@ -145,7 +145,6 @@ matching quietly does nothing and falls back to the heuristic.
 
 | Severity | What | Where |
 |---|---|---|
-| high | Every timed imported event is diffed as "changed" on every sync, and the whole update batch is rejected once the calendar is ~500 events deep | `src/shared/services/calendar/import.ts:297` |
 | high | One failed mappings request empties the import exclusion, and the phantom busy slots it creates can never be cleaned up | `src/shared/utils/calendarMappings.ts:181` |
 | high | Mappings are keyed per user but hold device-local event ids, so on a second device the exclusion, the deletes and the duplicate check all point at the wrong event | `server/routes/native/calendarSync.js:204` |
 | high | A stale in-memory connection id after a user switch stops every mapping reaching the server, silently | `src/shared/utils/calendarMappings.ts:22` |

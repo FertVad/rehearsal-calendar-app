@@ -122,3 +122,72 @@ describe('A stored event the phone no longer has', () => {
     expect(deletedIds()).toContain('evt-snake');
   });
 });
+
+describe('An event the phone still has, unchanged', () => {
+  // The comparison read `(dbSlot.isAllDay || dbSlot.is_all_day) !== (event.allDay || false)`.
+  // A stored timed event has isAllDay false, so `||` fell through to a field the
+  // API does not send: undefined !== false, true every time. Every timed event
+  // counted as changed on every sync, the update batch grew to the whole
+  // calendar, and past a few hundred events the request outgrew the body limit
+  // and the update stopped going through at all.
+  const deviceEvent = (over: Record<string, unknown> = {}) => ({
+    id: 'evt-1',
+    calendarId: 'cal-1',
+    startDate: iso(5, '09:00:00.000'),
+    endDate: iso(5, '11:00:00.000'),
+    allDay: false,
+    ...over,
+  });
+
+  // A one-off event is stored under its plain id; only a recurring one gets the
+  // occurrence suffix, so that rows written before that keep their keys.
+  const storedFor = (event: { id: string; startDate: string; endDate: string }) => ({
+    id: 9,
+    source: 'apple_calendar',
+    externalEventId: event.id,
+    startsAt: event.startDate,
+    endsAt: event.endDate,
+    isAllDay: false,
+  });
+
+  const updated = () => {
+    const call = (availabilityAPI.batchUpdateImported as jest.Mock).mock.calls[0];
+    return call ? call[0] : [];
+  };
+
+  it('is left alone rather than rewritten', async () => {
+    const event = deviceEvent();
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([event]);
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [storedFor(event)] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    expect(updated()).toHaveLength(0);
+  });
+
+  it('writes nothing at all when the whole calendar is unchanged', async () => {
+    // The no-op run. Opening the app should cost no writes when nothing moved.
+    const events = [deviceEvent({ id: 'a' }), deviceEvent({ id: 'b' }), deviceEvent({ id: 'c' })];
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue(events);
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: events.map(storedFor) });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
+    expect(availabilityAPI.batchUpdateImported).not.toHaveBeenCalled();
+    expect(availabilityAPI.batchDeleteImported).not.toHaveBeenCalled();
+  });
+
+  it('still notices one that really moved', async () => {
+    const event = deviceEvent();
+    const stored = storedFor(event);
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([event]);
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
+      data: [{ ...stored, endsAt: iso(5, '12:00:00.000') }],
+    });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    expect(updated()).toHaveLength(1);
+  });
+});

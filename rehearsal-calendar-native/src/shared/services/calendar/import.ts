@@ -302,10 +302,17 @@ export async function importCalendarEventsToAvailability(
         // Changed means the time span moved; the title is a constant now.
         const { startsAt: eventStart, endsAt: eventEnd } = convertEventToTimestamps(event);
 
+        // `??`, not `||`. A stored timed event has isAllDay false, and
+        // `false || dbSlot.is_all_day` falls through to a field the API does
+        // not send — so the comparison was `undefined !== false`, true every
+        // time, and every timed event counted as changed on every sync. The
+        // update batch then grew to the whole calendar, and past a few hundred
+        // events the request outgrew the body limit and the update stopped
+        // going through at all.
         const hasChanged =
-          (dbSlot.startsAt || dbSlot.starts_at) !== eventStart ||
-          (dbSlot.endsAt || dbSlot.ends_at) !== eventEnd ||
-          (dbSlot.isAllDay || dbSlot.is_all_day) !== (event.allDay || false);
+          (dbSlot.startsAt ?? dbSlot.starts_at) !== eventStart ||
+          (dbSlot.endsAt ?? dbSlot.ends_at) !== eventEnd ||
+          (dbSlot.isAllDay ?? dbSlot.is_all_day ?? false) !== (event.allDay ?? false);
 
         if (hasChanged) {
           toUpdate.push(event);
