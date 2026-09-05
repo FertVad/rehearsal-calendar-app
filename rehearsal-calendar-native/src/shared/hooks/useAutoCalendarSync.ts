@@ -15,7 +15,8 @@ import { useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSyncSettings, saveSyncSettings } from '../utils/calendarStorage';
-import { importCalendarEventsToAvailability, syncAllRehearsals } from '../services/calendar';
+import { importCalendarEventsToAvailability, syncAllRehearsals, unsyncRehearsal } from '../services/calendar';
+import { getAllMappings } from '../utils/calendarMappings';
 import { projectsAPI, rehearsalsAPI } from '../services/api';
 
 /**
@@ -82,6 +83,25 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
     location: r.location,
   }));
 
+  // Take back the events of rehearsals that no longer exist.
+  //
+  // The export only ever created and updated: it walks the rehearsals that are
+  // there, and nothing walked the other way. So when a rehearsal was cancelled,
+  // the organiser's own device removed its event at that moment and every other
+  // participant kept theirs — an entry saying "Rehearsal: Hamlet, 10:00" with an
+  // alarm half an hour before, for a call that does not exist. Nothing could
+  // reach it afterwards; it stayed until the calendar was cleared by hand.
+  //
+  // Nobody can delete it remotely: the event lives in a calendar on that
+  // person's phone. It can only be noticed here, by the device that owns it,
+  // the next time it syncs.
+  //
+  // Safe against a bad answer because both requests above throw rather than
+  // returning nothing: reaching this line means the server really did say which
+  // rehearsals exist. An empty list is therefore an empty list — a user who has
+  // left every project should indeed keep no exported events.
+  await reconcileDeletedRehearsals(rehearsals.map((r: { id: string }) => String(r.id)));
+
   if (rehearsals.length === 0) {
     logger.debug('[AutoSync] No rehearsals to export');
     return;
@@ -91,6 +111,33 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
   logger.debug('[AutoSync] Export completed:', result);
 
   await saveSyncSettings({ ...settings, lastExportTime: new Date().toISOString() });
+}
+
+/**
+ * Delete the calendar event of every rehearsal we hold a mapping for that is
+ * not in `liveRehearsalIds`.
+ *
+ * Failures are per-rehearsal on purpose: one event that cannot be removed —
+ * the calendar is gone, permission was revoked — must not stop the rest, and
+ * must not lose the mapping either, or the event becomes unreachable. So a
+ * failure leaves the mapping alone and the next sync tries again.
+ */
+async function reconcileDeletedRehearsals(liveRehearsalIds: string[]): Promise<void> {
+  const live = new Set(liveRehearsalIds);
+  const mappings = await getAllMappings();
+  const stale = Object.keys(mappings).filter((rehearsalId) => !live.has(String(rehearsalId)));
+
+  if (stale.length === 0) return;
+
+  logger.info(`[AutoSync] Removing ${stale.length} exported events for deleted rehearsals`);
+
+  for (const rehearsalId of stale) {
+    try {
+      await unsyncRehearsal(rehearsalId);
+    } catch (error) {
+      logger.error(`[AutoSync] Could not remove the event for rehearsal ${rehearsalId}:`, error);
+    }
+  }
 }
 
 /**
@@ -194,12 +241,19 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
   useEffect(() => {
     if (!syncOnForeground) return;
 
+    // A cold launch is not a transition. AppState.currentState is already
+    // 'active' when the app starts from nothing, so the listener below never
+    // fires for it — which left the commonest case uncovered: tapping a
+    // notification for an app that was not running. The throttle and the token
+    // check make this safe to call straight away.
+    performAutoSync();
+
     const subscription = AppState.addEventListener('change', handleAppStateChange);
 
     return () => {
       subscription.remove();
     };
-  }, [handleAppStateChange, syncOnForeground]);
+  }, [handleAppStateChange, performAutoSync, syncOnForeground]);
 
   /**
    * Force sync - ignores interval settings, always syncs if import is enabled

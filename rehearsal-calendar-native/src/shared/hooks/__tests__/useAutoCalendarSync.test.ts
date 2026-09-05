@@ -16,18 +16,29 @@
 import { AppState } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
 import { useAutoCalendarSync } from '../useAutoCalendarSync';
-import { importCalendarEventsToAvailability } from '../../services/calendar';
+import { importCalendarEventsToAvailability, unsyncRehearsal } from '../../services/calendar';
+import { getAllMappings } from '../../utils/calendarMappings';
+import { rehearsalsAPI } from '../../services/api';
 
 jest.mock('../../services/calendar', () => ({
   importCalendarEventsToAvailability: jest.fn().mockResolvedValue({ success: 0, failed: 0 }),
   syncAllRehearsals: jest.fn().mockResolvedValue({ success: 0, failed: 0 }),
+  unsyncRehearsal: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('../../utils/calendarMappings', () => ({ getAllMappings: jest.fn().mockResolvedValue({}) }));
+
+jest.mock('../../services/api', () => ({
+  projectsAPI: { getUserProjects: jest.fn().mockResolvedValue({ data: { projects: [{ id: 'p1' }] } }) },
+  rehearsalsAPI: { getBatch: jest.fn().mockResolvedValue({ data: { rehearsals: [] } }) },
 }));
 
 jest.mock('../../utils/calendarStorage', () => ({
   getSyncSettings: jest.fn().mockResolvedValue({
     importEnabled: true,
+    exportEnabled: true,
     importCalendarIds: ['cal-1'],
-    exportCalendarId: null,
+    exportCalendarId: 'cal-export',
     lastImportTime: null,
     lastExportTime: null,
   }),
@@ -122,5 +133,78 @@ describe('The guard against overlapping runs', () => {
     });
 
     expect(importCalendarEventsToAvailability).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe('Opening the app from nothing', () => {
+  it('syncs on a cold launch, not only on a return from the background', async () => {
+    // AppState.currentState is already 'active' when the app starts from
+    // nothing, so the listener's background→active transition never fires. That
+    // left the commonest case uncovered: tapping a notification for an app that
+    // was not running, which is exactly when someone most wants the data fresh.
+    renderHook(() => useAutoCalendarSync({ syncOnForeground: true }));
+    await act(async () => {});
+
+    expect(importCalendarEventsToAvailability).toHaveBeenCalled();
+  });
+
+  it('does not sync on mount for a screen that only wants the manual functions', async () => {
+    renderHook(() => useAutoCalendarSync());
+    await act(async () => {});
+
+    expect(importCalendarEventsToAvailability).not.toHaveBeenCalled();
+  });
+});
+
+describe('Taking back the events of rehearsals that no longer exist', () => {
+  const mapped = (ids: string[]) =>
+    Object.fromEntries(ids.map((id) => [id, { eventId: `evt-${id}`, calendarId: 'c1', lastSynced: '' }]));
+
+  const runExport = async (liveIds: string[], mappedIds: string[]) => {
+    (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({
+      data: { rehearsals: liveIds.map((id) => ({ id, startsAt: '', endsAt: '' })) },
+    });
+    (getAllMappings as jest.Mock).mockResolvedValue(mapped(mappedIds));
+
+    const { result } = renderHook(() => useAutoCalendarSync());
+    await act(async () => {
+      await result.current.forceSync();
+    });
+  };
+
+  it('removes the event of a rehearsal that was cancelled', async () => {
+    // The organiser's own device deletes its event at the moment of deletion.
+    // Everyone else keeps theirs, with an alarm, for a call that does not exist
+    // — and nothing could reach it until this pass.
+    await runExport(['1', '3'], ['1', '2', '3']);
+
+    expect(unsyncRehearsal).toHaveBeenCalledTimes(1);
+    expect(unsyncRehearsal).toHaveBeenCalledWith('2');
+  });
+
+  it('leaves the events of rehearsals that still exist', async () => {
+    await runExport(['1', '2'], ['1', '2']);
+
+    expect(unsyncRehearsal).not.toHaveBeenCalled();
+  });
+
+  it('removes every event once the last rehearsal is gone', async () => {
+    // An empty list from a request that succeeded is an empty list. Both calls
+    // throw rather than returning nothing, so this cannot be a failed fetch.
+    await runExport([], ['1', '2']);
+
+    expect(unsyncRehearsal).toHaveBeenCalledTimes(2);
+  });
+
+  it('carries on when one event cannot be removed', async () => {
+    // A calendar deleted on the device, or permission revoked. The rest must
+    // still be cleaned, and the failed one keeps its mapping so the next sync
+    // can try again rather than leaving the event unreachable.
+    (unsyncRehearsal as jest.Mock).mockRejectedValueOnce(new Error('calendar gone'));
+
+    await runExport([], ['1', '2']);
+
+    expect(unsyncRehearsal).toHaveBeenCalledTimes(2);
   });
 });
