@@ -191,8 +191,20 @@ export async function getAllMappings(): Promise<Record<string, { eventId: string
     return result;
   } catch (error) {
     console.error('[CalendarMappings] Failed to get mappings from DB, falling back to AsyncStorage:', error);
-    // Fallback to AsyncStorage
-    return await getAllFromAsyncStorage();
+
+    const cached = await getAllFromAsyncStorage();
+    if (Object.keys(cached).length > 0) return cached;
+
+    // Neither the server nor the cache could answer, and "nothing exported" is
+    // not the same claim as "I could not find out". The import uses this list
+    // to leave our own exported rehearsals alone; handed an empty one it takes
+    // every rehearsal it put in the calendar and stores it back as somebody's
+    // busy time — for a rehearsal they are already on, counted twice. So say
+    // so, and let the caller give up on this run rather than guess.
+    //
+    // Reachable on a fresh install or straight after a user switch, when the
+    // cache is empty by design and one failed request is all it takes.
+    throw new Error('Calendar mappings unavailable: server failed and nothing is cached');
   }
 }
 

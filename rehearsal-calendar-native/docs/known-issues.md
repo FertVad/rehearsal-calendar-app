@@ -145,7 +145,6 @@ matching quietly does nothing and falls back to the heuristic.
 
 | Severity | What | Where |
 |---|---|---|
-| high | One failed mappings request empties the import exclusion, and the phantom busy slots it creates can never be cleaned up | `src/shared/utils/calendarMappings.ts:181` |
 | high | Mappings are keyed per user but hold device-local event ids, so on a second device the exclusion, the deletes and the duplicate check all point at the wrong event | `server/routes/native/calendarSync.js:204` |
 | medium | "Remove all exported" erases the record of events it did not delete, and reports success either way | `src/shared/services/calendar/export.ts:409` |
 | medium | Changing the export calendar leaves every exported rehearsal in the old calendar while the screen claims they are in the new one | `src/shared/services/calendar/export.ts:236` |
