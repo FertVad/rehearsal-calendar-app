@@ -126,11 +126,27 @@ did it themselves.
 Left because it needs a string and a decision about who hears it, not because it
 is hard.
 
-### `npm run lint` does not run at all
+### The lint has 322 warnings nobody has read
 
-The config is in the old `.eslintrc` format and ESLint 9 refuses it, so
-`npm run lint`, `npm run lint:fix` and anything depending on them fail before
-linting a single file. Nobody has been linting for a while.
+Turned back on 2026-09-05, after the config was migrated to ESLint 9. The one
+error is fixed; the warnings are untouched and unjudged, because clearing them
+in the same change would have buried the migration.
+
+| Rule | Count |
+|---|---|
+| `no-explicit-any` | 179 |
+| `no-unused-vars` | 61 |
+| `no-inline-styles` | 36 |
+| `no-non-null-assertion` | 27 |
+| `exhaustive-deps` | 16 |
+| `display-name` | 3 |
+
+The sixteen `exhaustive-deps` are the ones worth reading — a missing dependency
+is how a screen ends up showing something it fetched under different conditions,
+and this session has already spent time on two bugs of that shape. The rest is
+mostly noise from typing API responses as `any`.
+
+Nothing here blocks a release.
 
 ### Two route suites fail intermittently in a full run
 
