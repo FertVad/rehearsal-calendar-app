@@ -230,4 +230,56 @@ describe('What a removed member can still read', () => {
     expect(res.status).toBe(200);
     expect(res.body.rehearsal.title).toBe('Прогон');
   });
+
+describe('Leaving a project of your own accord', () => {
+  // There was no way out. Removing somebody needs a rank, and that check made
+  // no exception for removing yourself, so an ordinary member could only ask to
+  // be removed and wait for somebody to do it.
+  const leave = (userId) =>
+    request(app)
+      .delete(`/api/native/projects/${testData.projectId}/members/${userId}`)
+      .set(...auth(userId));
+
+  it('a member can', async () => {
+    const res = await leave(removedUser());
+
+    expect(res.status).toBe(200);
+    const left = testDb.all(
+      `SELECT id FROM native_project_members WHERE project_id = ? AND user_id = ?`,
+      [testData.projectId, removedUser()]
+    );
+    expect(left).toHaveLength(0);
+  });
+
+  it('and is taken off the project rehearsals like anyone else', async () => {
+    await leave(removedUser());
+
+    expect(rosterRows()).toHaveLength(0);
+  });
+
+  it('the owner cannot, because nobody would inherit the project', async () => {
+    // The same rule account deletion follows: nothing can set an owner again,
+    // so a project left without one could never be deleted or handed on.
+    const res = await leave(testData.adminId);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/owner/i);
+  });
+
+  it('and somebody outside the project still cannot remove anyone', async () => {
+    const outsider = Number(
+      testDb.run(`INSERT INTO native_users (email, password_hash, first_name) VALUES (?, ?, ?)`, [
+        'outsider-leave@test.com',
+        'hash',
+        'Out',
+      ]).lastInsertId
+    );
+
+    const res = await request(app)
+      .delete(`/api/native/projects/${testData.projectId}/members/${removedUser()}`)
+      .set(...auth(outsider));
+
+    expect(res.status).toBe(403);
+  });
+});
 });

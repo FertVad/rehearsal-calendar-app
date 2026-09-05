@@ -425,7 +425,15 @@ router.delete('/:projectId/members/:userId', requireAuth, async (req, res) => {
       [projectId, requesterId, 'active']
     );
 
-    if (!requesterMembership || (requesterMembership.role !== 'owner' && requesterMembership.role !== 'admin')) {
+    // Removing somebody else needs a rank. Removing yourself does not — this is
+    // also how a member leaves, and there was no other way out: an ordinary
+    // member could only ask to be removed and wait.
+    const leavingSelf = Number(requesterId) === Number(userId);
+    const runsTheProject =
+      requesterMembership &&
+      (requesterMembership.role === 'owner' || requesterMembership.role === 'admin');
+
+    if (!requesterMembership || (!leavingSelf && !runsTheProject)) {
       return res.status(403).json({ error: 'Only project admins can remove members' });
     }
 
@@ -439,9 +447,18 @@ router.delete('/:projectId/members/:userId', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Member not found' });
     }
 
-    // Cannot remove owner
+    // The owner cannot be removed, and cannot leave either.
+    //
+    // Nobody inherits a project — that is the rule account deletion follows too
+    // — so an owner walking out would leave it with no owner at all, which
+    // nothing can set again: it could never be deleted or handed on. An owner
+    // who wants out deletes the project.
     if (targetMembership.role === 'owner') {
-      return res.status(403).json({ error: 'Cannot remove project owner' });
+      return res.status(403).json({
+        error: leavingSelf
+          ? 'The owner cannot leave their own project; delete it instead'
+          : 'Cannot remove project owner',
+      });
     }
 
     // Get project name BEFORE deletion

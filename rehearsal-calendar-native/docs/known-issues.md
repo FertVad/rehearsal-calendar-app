@@ -113,12 +113,18 @@ pull-to-refresh that had to be repeated. And the last fix failed its own test at
 first, because the exclusion it changed existed in three copies and the one it
 touched only fed a log line.
 
-### A member cannot leave a project
+### Nobody is told when a member leaves or is removed
 
-Found while verifying the above. There is no leave endpoint at all.
-`DELETE /:projectId/members/:userId` requires the **requester** to be an owner or
-admin ([members.js:372](../server/routes/native/members.js#L372)), so an ordinary
-member has no way out of a project except asking someone to remove them.
+Found while adding the leave path on 2026-09-05. The person removed is told;
+the owner and the other administrators are not, so a cast quietly shrinks.
+
+The same reasoning that sends "somebody joined" and "somebody was made an
+administrator" to everyone who runs the project applies here — several people
+can remove members, and now anyone can leave, so the owner cannot assume they
+did it themselves.
+
+Left because it needs a string and a decision about who hears it, not because it
+is hard.
 
 ### `npm run lint` does not run at all
 
