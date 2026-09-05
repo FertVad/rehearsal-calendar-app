@@ -147,7 +147,6 @@ matching quietly does nothing and falls back to the heuristic.
 |---|---|---|
 | high | Mappings are keyed per user but hold device-local event ids, so on a second device the exclusion, the deletes and the duplicate check all point at the wrong event | `server/routes/native/calendarSync.js:204` |
 | medium | Changing the export calendar leaves every exported rehearsal in the old calendar while the screen claims they are in the new one | `src/shared/services/calendar/export.ts:236` |
-| medium | Fifty parallel read-modify-writes on one AsyncStorage key lose forty-nine of them | `src/shared/services/calendar/import.ts:398` |
 
 Full evidence, failure scenarios and proposed fixes are in the workflow
 transcript for run `wf_10bab5ff-ace`. The two confirmed by hand:

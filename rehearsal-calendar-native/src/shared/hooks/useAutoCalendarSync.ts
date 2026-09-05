@@ -125,7 +125,12 @@ async function exportRehearsalsIfDue(
   // announced success and then refused to try again for ten minutes. Leaving
   // the stamp alone makes the next trip to the foreground retry.
   if (result.failed === 0) {
-    await saveSyncSettings({ ...settings, lastExportTime: new Date().toISOString() });
+    // Re-read rather than reusing `settings`, which was fetched before the
+    // import ran and stamped its own timestamp into the same object.
+    await saveSyncSettings({
+      ...(await getSyncSettings()),
+      lastExportTime: new Date().toISOString(),
+    });
   } else {
     logger.warn(`[AutoSync] ${result.failed} rehearsals failed to export - will retry`);
   }
