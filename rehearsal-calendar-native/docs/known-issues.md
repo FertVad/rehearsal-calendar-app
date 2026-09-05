@@ -54,6 +54,25 @@ since Jest never defined `__DEV__` and any module guarding on it threw. It has
 
 ## Confirmed, not yet fixed
 
+### Decided against: a silent push to update the calendar without opening the app
+
+Asked and answered on 2026-09-05, recorded so it is not re-litigated by
+accident.
+
+The calendar is written by the app, running on that device. If the reader never
+opens it, nothing changes there — a rehearsal cancelled or moved by someone else
+stays wrong in their calendar indefinitely. That is a real gap for anyone who
+checks their calendar rather than the app, which is a normal habit.
+
+A silent push (`content-available`) would wake the app in the background long
+enough to write. It costs a background mode in the config, a task handler, a
+justification at App Review, and it is throttled by iOS — usually prompt, never
+guaranteed.
+
+**Not doing it**, on the owner's decision: the intent is for people to live in
+the app rather than in their calendar. Revisit only if that intent changes.
+
+
 ### A tapped notification opens a sheet over the availability screen, and back leads to the calendar as a modal
 
 Reported from the device on 2026-09-05, deliberately left for later.

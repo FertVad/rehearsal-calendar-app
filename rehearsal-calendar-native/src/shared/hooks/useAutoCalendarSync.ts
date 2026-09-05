@@ -45,11 +45,12 @@ async function shouldImportNow(): Promise<{ importCalendarIds: string[] } | null
 /**
  * Push every rehearsal the user is on into their calendar.
  *
- * Rate-limited on its own clock: each rehearsal costs a mapping lookup, so
- * running this on every trip to the foreground would fire a burst of requests
- * for a list that rarely changes.
+ * This used to be rate-limited to once every ten minutes, because it asked the
+ * server which event belonged to each rehearsal one at a time. That cost is
+ * gone — the mappings come back in a single request now — and with it the
+ * reason to hold back. Somebody else's edit reaches the calendar the next time
+ * the app is opened rather than whenever the reader happens to pull down.
  */
-const EXPORT_EVERY_MS = 10 * 60 * 1000;
 
 async function exportRehearsalsIfDue(force = false): Promise<void> {
   const settings = await getSyncSettings();
@@ -57,20 +58,6 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
     logger.debug('[AutoSync] Export not enabled - skipping');
     return;
   }
-
-  // The interval below governs writing, not reconciling.
-  //
-  // It was written above the fetch, so a launch inside the window returned
-  // before the reconciliation could run and a cancelled rehearsal kept its
-  // event — with its alarm — for up to ten minutes more. The gate exists
-  // because writing is expensive: every rehearsal costs a mapping lookup.
-  // Reading the list costs two requests, and it is the half that takes wrong
-  // information away.
-  const exportedRecently = Boolean(
-    !force &&
-      settings.lastExportTime &&
-      Date.now() - new Date(settings.lastExportTime).getTime() < EXPORT_EVERY_MS
-  );
 
   const projectsRes = await projectsAPI.getUserProjects();
   const projectIds = (projectsRes.data?.projects || []).map((p: any) => p.id);
@@ -104,19 +91,27 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
   // Safe against a bad answer because both requests above throw rather than
   // returning nothing, so an empty list really is empty — someone who has left
   // every project should indeed keep no exported events.
-  await reconcileDeletedRehearsals(rehearsals.map((r: { id: string }) => String(r.id)));
+  // Fetched once, for both halves of the work below.
+  //
+  // This is what let the ten-minute interval go. The export used to ask the
+  // server which event belonged to each rehearsal separately — twenty
+  // rehearsals, twenty requests, every trip to the foreground — and the
+  // interval existed to keep that from happening constantly. Its cost was also
+  // its consequence: somebody else's edit did not reach the calendar until the
+  // reader thought to pull down. One request answers for all of them.
+  const mappings = await getAllMappings();
+
+  await reconcileDeletedRehearsals(
+    rehearsals.map((r: { id: string }) => String(r.id)),
+    mappings
+  );
 
   if (rehearsals.length === 0) {
     logger.debug('[AutoSync] No rehearsals to export');
     return;
   }
 
-  if (exportedRecently) {
-    logger.debug('[AutoSync] Exported recently - skipping the write');
-    return;
-  }
-
-  const result = await syncAllRehearsals(rehearsals, settings.exportCalendarId);
+  const result = await syncAllRehearsals(rehearsals, settings.exportCalendarId, undefined, mappings);
   logger.debug('[AutoSync] Export completed:', result);
 
   // Only a run that wrote everything counts as done.
@@ -142,9 +137,11 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
  * must not lose the mapping either, or the event becomes unreachable. So a
  * failure leaves the mapping alone and the next sync tries again.
  */
-async function reconcileDeletedRehearsals(liveRehearsalIds: string[]): Promise<void> {
+async function reconcileDeletedRehearsals(
+  liveRehearsalIds: string[],
+  mappings: Record<string, { eventId: string; calendarId: string }>
+): Promise<void> {
   const live = new Set(liveRehearsalIds);
-  const mappings = await getAllMappings();
   const stale = Object.keys(mappings).filter((rehearsalId) => !live.has(String(rehearsalId)));
 
   if (stale.length === 0) return;

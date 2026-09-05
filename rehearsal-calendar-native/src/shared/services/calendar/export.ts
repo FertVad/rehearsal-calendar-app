@@ -19,18 +19,44 @@ import { logger } from '../../utils/logger';
 /**
  * Check if event exists in calendar
  */
-async function checkEventExists(eventId: string): Promise<boolean> {
-  // The caller reads false as "the reader deleted this event" and responds by
+/**
+ * Does this event already say what the rehearsal says?
+ *
+ * The export rewrote every event on every run, whether anything had changed or
+ * not. Harmless once every ten minutes; wasteful several times an hour, which
+ * is what removing that interval makes it. Comparing costs nothing extra — the
+ * event is being read anyway to check it still exists.
+ */
+function eventMatchesRehearsal(
+  event: { title?: string; startDate?: string | Date; endDate?: string | Date; location?: string | null },
+  rehearsal: RehearsalWithProject
+): boolean {
+  const sameMoment = (a?: string | Date, b?: string | Date) =>
+    a !== undefined && b !== undefined && new Date(a).getTime() === new Date(b).getTime();
+
+  return (
+    event.title === eventTitleFor(rehearsal) &&
+    sameMoment(event.startDate, rehearsal.startsAt) &&
+    sameMoment(event.endDate, rehearsal.endsAt) &&
+    locationKey(event.location) === locationKey(rehearsal.location)
+  );
+}
+
+async function readEvent(eventId: string): Promise<Calendar.Event | null> {
+  // The caller reads null as "the reader deleted this event" and responds by
   // discarding the mapping and writing a fresh one. So this must answer the
-  // question it was asked and no other. It used to catch everything and return
-  // false — its own comment said "doesn't exist or permission denied" — and the
-  // two are not the same thing at all. With calendar access revoked in
-  // Settings, every lookup failed, every mapping was destroyed, and the events
-  // themselves stayed where they were, now unreachable.
+  // question it was asked and no other. It used to catch everything and say
+  // "gone" — its own comment said "doesn't exist or permission denied", and the
+  // two are not the same thing. With calendar access revoked in Settings every
+  // lookup failed, every mapping was destroyed, and the events themselves
+  // stayed where they were, now unreachable.
   //
   // Permission is checked before the lookup instead, and a refusal is raised
-  // rather than reported as absence. A genuine "no such event" still returns
-  // false, which is what the recreate path is for.
+  // rather than reported as absence. A genuine "no such event" still gives
+  // null, which is what the recreate path is for.
+  //
+  // Returns the event rather than a boolean so the caller can compare it
+  // against the rehearsal and skip a write that would change nothing.
   const hasPermission = await checkCalendarPermissions();
   if (!hasPermission) {
     throw new Error('Calendar permission not granted');
@@ -38,9 +64,9 @@ async function checkEventExists(eventId: string): Promise<boolean> {
 
   try {
     const event = await Calendar.getEventAsync(eventId);
-    return event !== null && event !== undefined;
+    return event ?? null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -289,7 +315,18 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
  */
 export async function syncRehearsalToCalendar(
   rehearsal: RehearsalWithProject,
-  calendarId: string
+  calendarId: string,
+  /**
+   * The mapping for this rehearsal, when the caller already has it.
+   *
+   * Without it this asks the server one question per rehearsal — twenty
+   * rehearsals, twenty requests, on every trip to the foreground. That cost is
+   * the only reason the export was rate-limited to once every ten minutes, and
+   * the rate limit is why someone else's edit did not reach the calendar until
+   * the reader thought to pull down. getAllMappings answers for all of them at
+   * once, so the caller fetches once and hands the answer down.
+   */
+  knownMapping?: { eventId: string; calendarId: string } | null
 ): Promise<void> {
   try {
     logger.debug('[CalendarSync] 🔄 syncRehearsalToCalendar called:', {
@@ -301,7 +338,7 @@ export async function syncRehearsalToCalendar(
     });
 
     // Check if already synced
-    const mapping = await getEventMapping(rehearsal.id);
+    const mapping = knownMapping !== undefined ? knownMapping : await getEventMapping(rehearsal.id);
     logger.debug('[CalendarSync] 🔍 Event mapping check:', mapping ? 'Found existing mapping' : 'No mapping found');
 
     if (mapping) {
@@ -311,8 +348,14 @@ export async function syncRehearsalToCalendar(
       });
 
       // Check if event still exists in calendar
-      const eventExists = await checkEventExists(mapping.eventId);
+      const existing = await readEvent(mapping.eventId);
+      const eventExists = existing !== null;
       logger.debug('[CalendarSync] 🔍 Event exists in calendar?', eventExists);
+
+      if (existing && eventMatchesRehearsal(existing, rehearsal)) {
+        logger.debug('[CalendarSync] Event already matches - nothing to write');
+        return;
+      }
 
       if (eventExists) {
         // Update existing event
@@ -385,7 +428,9 @@ export async function unsyncRehearsal(rehearsalId: string): Promise<void> {
 export async function syncAllRehearsals(
   rehearsals: RehearsalWithProject[],
   calendarId: string,
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  /** All of this user's mappings, when the caller already holds them. */
+  knownMappings?: Record<string, { eventId: string; calendarId: string }>
 ): Promise<BatchSyncResult> {
   const result: BatchSyncResult = {
     success: 0,
@@ -402,7 +447,13 @@ export async function syncAllRehearsals(
 
     // Process batch in parallel
     const results = await Promise.allSettled(
-      batch.map(rehearsal => syncRehearsalToCalendar(rehearsal, calendarId))
+      batch.map(rehearsal =>
+        syncRehearsalToCalendar(
+          rehearsal,
+          calendarId,
+          knownMappings ? knownMappings[rehearsal.id] ?? null : undefined
+        )
+      )
     );
 
     // Collect results

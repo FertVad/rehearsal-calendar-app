@@ -229,12 +229,13 @@ describe('A pull-to-refresh while something else is syncing', () => {
   });
 });
 
-describe('Reconciling within the export interval', () => {
-  it('still takes back the event of a cancelled rehearsal', async () => {
-    // The ten-minute gate exists because writing is expensive — every rehearsal
-    // costs a mapping lookup. It used to sit above the fetch, so a launch
-    // inside the window returned before reconciling and the cancelled rehearsal
-    // kept its event, and its alarm, for ten minutes more.
+describe('Exporting soon after the last export', () => {
+  it('no longer holds back, so someone else\'s edit arrives on opening the app', async () => {
+    // The export was rate-limited to once every ten minutes because it asked
+    // the server which event belonged to each rehearsal one at a time. The
+    // mappings come back in a single request now, so the limit is gone — and
+    // with it the reason a rehearsal edited by someone else stayed wrong in the
+    // calendar until the reader happened to pull down.
     (getSyncSettings as jest.Mock).mockResolvedValue({
       importEnabled: true,
       exportEnabled: true,
@@ -255,5 +256,29 @@ describe('Reconciling within the export interval', () => {
     });
 
     expect(unsyncRehearsal).toHaveBeenCalledWith('7');
+  });
+
+  it('asks for the mappings once, not once per rehearsal', async () => {
+    // Twenty rehearsals used to mean twenty requests on every trip to the
+    // foreground, which is the cost the interval existed to avoid.
+    (getSyncSettings as jest.Mock).mockResolvedValue({
+      importEnabled: true,
+      exportEnabled: true,
+      importCalendarIds: ['cal-1'],
+      exportCalendarId: 'cal-export',
+      lastImportTime: null,
+      lastExportTime: null,
+    });
+    (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({
+      data: { rehearsals: Array.from({ length: 20 }, (_, i) => ({ id: String(i), startsAt: '', endsAt: '' })) },
+    });
+    (getAllMappings as jest.Mock).mockResolvedValue({});
+
+    const { result } = renderHook(() => useAutoCalendarSync());
+    await act(async () => {
+      await result.current.performAutoSync();
+    });
+
+    expect((getAllMappings as jest.Mock).mock.calls).toHaveLength(1);
   });
 });
