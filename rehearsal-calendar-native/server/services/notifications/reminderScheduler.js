@@ -78,11 +78,24 @@ async function sendReminders({ type, from, to, notify, now }) {
       `SELECT r.*, p.name as project_name
        FROM native_rehearsals r
        JOIN native_projects p ON r.project_id = p.id
+       -- Due, and with somebody on it who has not been told yet.
+       --
+       -- This used to exclude a rehearsal the moment any claim existed for it,
+       -- which with one claim per rehearsal was the same question. It is not
+       -- the same question now: a person added after the first send has no
+       -- claim of their own, and excluding the whole rehearsal is how they came
+       -- to be never reminded at all.
        WHERE r.starts_at BETWEEN ? AND ?
          AND r.is_all_day = FALSE
-         AND NOT EXISTS (
-           SELECT 1 FROM native_push_reminders pr
-           WHERE pr.rehearsal_id = r.id AND pr.reminder_type = ?
+         AND EXISTS (
+           SELECT 1 FROM native_rehearsal_responses rr
+           WHERE rr.rehearsal_id = r.id
+             AND NOT EXISTS (
+               SELECT 1 FROM native_push_reminders pr
+               WHERE pr.rehearsal_id = r.id
+                 AND pr.user_id = rr.user_id
+                 AND pr.reminder_type = ?
+             )
          )`,
       [from.toISOString(), to.toISOString(), type]
     );
@@ -111,34 +124,53 @@ async function sendReminders({ type, from, to, notify, now }) {
       const memberIds = roster.map((m) => m.user_id);
       if (memberIds.length === 0) continue;
 
-      // Claim before sending, not after. Two schedulers may well overlap — a
-      // primary and a backup, or one run still going when the next starts — and
-      // the unique index on (rehearsal_id, reminder_type) means only one of them
-      // gets a row back. The loser skips instead of sending a second push.
-      const claim = await db.get(
-        `INSERT INTO native_push_reminders (rehearsal_id, reminder_type, sent_at)
-         VALUES (?, ?, ?)
-         ON CONFLICT (rehearsal_id, reminder_type) DO NOTHING
-         RETURNING id`,
-        [rehearsal.id, type, now.toISOString()]
-      );
+      // Claim before sending, not after, and one claim per person.
+      //
+      // Two schedulers may well overlap — a primary and a backup, or one run
+      // still going when the next starts — and the unique key means only one of
+      // them gets a row back for a given recipient. The loser skips instead of
+      // sending a second push.
+      //
+      // Per person rather than per rehearsal because the claim used to retire
+      // the whole call on the first send: anyone added afterwards never got a
+      // reminder at all, and got no update push either, since a roster-only
+      // edit changes none of the fields the change list names. Now they simply
+      // have no row, so the next run sends to them and to nobody else.
+      const unclaimed = [];
+      for (const userId of memberIds) {
+        const claim = await db.get(
+          `INSERT INTO native_push_reminders (rehearsal_id, user_id, reminder_type, sent_at)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT (rehearsal_id, user_id, reminder_type) DO NOTHING
+           RETURNING id`,
+          [rehearsal.id, userId, type, now.toISOString()]
+        );
+        if (claim) unclaimed.push(userId);
+      }
 
-      if (!claim) {
+      if (unclaimed.length === 0) {
         logger.info(`[Reminder] ${type} reminder for rehearsal ${rehearsal.id} already claimed`);
         continue;
       }
 
       try {
-        await notify(rehearsal, rehearsal.project_name, memberIds);
+        await notify(rehearsal, rehearsal.project_name, unclaimed);
         sent += 1;
-        logger.info(`[Reminder] Sent ${type} reminder for rehearsal ${rehearsal.id}`);
-      } catch (err) {
-        // Release the claim so the next run tries again — the alternative is a
-        // rehearsal permanently marked as reminded that nobody was told about.
-        await db.run(
-          `DELETE FROM native_push_reminders WHERE rehearsal_id = ? AND reminder_type = ?`,
-          [rehearsal.id, type]
+        logger.info(
+          `[Reminder] Sent ${type} reminder for rehearsal ${rehearsal.id} to ${unclaimed.length}`
         );
+      } catch (err) {
+        // Release the claims so the next run tries again — the alternative is a
+        // rehearsal permanently marked as reminded that nobody was told about.
+        // Only the ones this run took: a claim from an earlier run belongs to a
+        // push that did go out.
+        for (const userId of unclaimed) {
+          await db.run(
+            `DELETE FROM native_push_reminders
+             WHERE rehearsal_id = ? AND user_id = ? AND reminder_type = ?`,
+            [rehearsal.id, userId, type]
+          );
+        }
         throw err;
       }
     } catch (err) {

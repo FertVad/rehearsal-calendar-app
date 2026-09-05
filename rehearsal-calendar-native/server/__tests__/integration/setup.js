@@ -169,9 +169,13 @@ export async function setupIntegrationDb() {
     CREATE TABLE native_push_reminders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       rehearsal_id INTEGER NOT NULL REFERENCES native_rehearsals(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
       reminder_type VARCHAR(10) NOT NULL,
       sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(rehearsal_id, reminder_type)
+      -- One claim per person, not per rehearsal: the claim used to retire the
+      -- whole call on the first send, so anyone added afterwards was never
+      -- reminded.
+      UNIQUE(rehearsal_id, user_id, reminder_type)
     );
   `;
 

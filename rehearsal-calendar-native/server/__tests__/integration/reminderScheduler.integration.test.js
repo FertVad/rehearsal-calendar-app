@@ -254,4 +254,44 @@ describe('Rehearsal reminders', () => {
       sent: { '24h': 1, '1h': 0 },
     });
   });
+
+  describe('somebody added after the reminder has gone out', () => {
+    it('is reminded on the next run, and nobody else is again', async () => {
+      // The claim used to retire the whole rehearsal on the first send, so a
+      // person added afterwards was never reminded at all — and got no update
+      // push either, since a roster-only edit changes none of the fields the
+      // change list names. They simply found the rehearsal if they opened the
+      // app.
+      const id = addRehearsal(20 * HOUR);
+      await checkUpcomingRehearsals();
+      notify24h.mockClear();
+
+      testDb.run(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response) VALUES (?, ?, 'no')`,
+        [id, bystanderId]
+      );
+
+      await checkUpcomingRehearsals();
+
+      expect(notify24h).toHaveBeenCalledTimes(1);
+      expect(notify24h.mock.calls[0][2]).toEqual([bystanderId]);
+    });
+
+    it('leaves the claim of everyone already told alone', async () => {
+      const id = addRehearsal(20 * HOUR);
+      await checkUpcomingRehearsals();
+
+      testDb.run(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response) VALUES (?, ?, 'no')`,
+        [id, bystanderId]
+      );
+      await checkUpcomingRehearsals();
+
+      const claims = testDb.all(
+        'SELECT user_id FROM native_push_reminders WHERE rehearsal_id = ? AND reminder_type = ?',
+        [id, '24h']
+      );
+      expect(claims).toHaveLength(2);
+    });
+  });
 });
