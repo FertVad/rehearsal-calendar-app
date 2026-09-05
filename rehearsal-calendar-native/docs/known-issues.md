@@ -146,45 +146,6 @@ leaving `hasChanges` true.
 manual rows — the wiring was simply never done. Make `deletePastDates` async,
 await one call per selected date, and skip the local mutation if any fails.
 
-### A rehearsal moved after its day-before reminder is never reminded again
-
-Verified 2026-09-03, and **narrower than first reported**: the move itself is
-announced. `notifyRehearsalUpdated` fires at edit time with `'datetime'` among
-the change keys, so participants do hear about it.
-
-What is lost is the day-before reminder for the new date. The claim row in
-`native_push_reminders` is written on the first send and released only inside
-the push-failure catch; `updateRehearsal` rewrites `starts_at` and never touches
-it. The suppressing predicate
-([reminderScheduler.js:83-86](../server/services/notifications/reminderScheduler.js#L83))
-keys on `rehearsal_id` and `reminder_type` alone, with no comparison against
-`starts_at` or `sent_at`, so once claimed a rehearsal can never re-enter the
-24h result set. Move a rehearsal from Tuesday to Friday and nothing arrives on
-Thursday. The hour-before reminder is a separate claim and still fires.
-
-**Smallest fix** (server, no rebuild): delete the rehearsal's claim rows in
-`updateRehearsal` when the start time changes. See the entry below — one change
-settles both.
-
-### Someone added to a rehearsal after its reminder went out never gets one
-
-Verified 2026-09-03. The claim is per rehearsal, not per recipient: the insert
-writes no `user_id` and conflicts on `(rehearsal_id, reminder_type)`, so one
-send retires the whole rehearsal for that type. The roster is read *before* the
-claim and only on the run that wins it, so a later run never looks again.
-
-They get no update push either — `changeKeys` only ever holds `'datetime'`,
-`'location'` and `'title'`, so a roster-only edit sends nothing at all. The
-rehearsal simply appears in their list if they happen to open the app.
-
-**Smallest fix** (server, no rebuild): restore the per-recipient claim the
-original migration already specifies. `create-push-reminders-table.sql` declares
-`user_id INTEGER NOT NULL` with `UNIQUE(rehearsal_id, user_id, reminder_type)`;
-`002-create-push-tokens-postgres.sql` narrowed it to the pair. Going back to the
-three-column key, inserting one row per recipient and notifying only the ids
-whose insert returned, settles this and the entry above together and keeps the
-double-send protection. Needs a migration.
-
 ### `npm run lint` does not run at all
 
 The config is in the old `.eslintrc` format and ESLint 9 refuses it, so
