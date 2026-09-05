@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotifications } from '../services/notifications';
 import { runAutoSync } from './useAutoCalendarSync';
+import { emitDataChanged } from '../utils/dataChanged';
 import { hapticMedium } from '../utils/haptics';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnread } from '../../contexts/UnreadContext';
@@ -60,6 +61,13 @@ export function useNotifications() {
         runAutoSync().catch(() => {
           // Nothing to tell the reader; the next foreground tries again.
         });
+
+        // And tell whatever is on screen to reload. Screens refresh when they
+        // gain focus, and one already in focus never gains it again — so a
+        // rehearsal announced by a push did not appear in the list until the
+        // app was restarted, even though its event had just been written to the
+        // calendar.
+        emitDataChanged('rehearsals');
       });
 
       // Listen for user interaction with notification

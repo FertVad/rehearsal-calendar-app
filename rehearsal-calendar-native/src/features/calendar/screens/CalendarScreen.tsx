@@ -16,6 +16,7 @@ import { useUnread } from '../../../contexts/UnreadContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
 import { useRehearsals } from '../hooks';
+import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { calendarScreenStyles as styles } from '../styles';
 import { unsyncRehearsal } from '../../../shared/services/calendar';
 
@@ -96,6 +97,12 @@ export default function CalendarScreen() {
   }, [fetchRehearsals]);
 
   // Fetch rehearsals when screen is focused (with smart caching)
+  // A push announcing a rehearsal arrives while this screen is already in
+  // focus, so the focus effect below will not fire again. Reload on the signal
+  // instead, bypassing the cache — the whole point is that the server has
+  // something we do not.
+  useEffect(() => onDataChanged('rehearsals', () => fetchRehearsals(true)), [fetchRehearsals]);
+
   useFocusEffect(
     useCallback(() => {
       fetchRehearsals();
