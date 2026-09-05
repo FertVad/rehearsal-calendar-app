@@ -15,7 +15,7 @@ EAS `projectId` прописан. Платежи намеренно выключ
 |---|--------|------|--------|
 | 0.1 | Вернуть `expo-notifications` из `_disabled_plugins` в `plugins` | `app.json` | ✅ сделано |
 | 0.2 | Убрать `<BetaBanner />` и его импорт | `src/navigation/index.tsx:14,176` | ❌ |
-| 0.3 | Добавить `ios.buildNumber: "1"` и `android.versionCode: 1` | `app.json` | ❌ |
+| 0.3 | Добавить `ios.buildNumber: "1"` и `android.versionCode: 1` | `app.json` | ✅ сделано |
 | 0.5 | **Sign in with Apple** — обязателен по Guideline 4.8 | `LoginScreen.tsx`, `appleAuth.ts` | ✅ сделано |
 
 **0.5 — почему это было блокером.** Guideline 4.8 требует равнозначный

@@ -214,24 +214,6 @@ of the exercise — the findings above will be re-broken without it.
 - Revoking calendar permission and re-granting it later resumes sync with no change to stored settings (no reinstall, no re-picking the calendar).
 
 
-### The schema file has drifted from production
-
-`server/database/init-native-schema.sql` no longer describes the database. Read
-off production directly on 2026-09-02:
-
-- `native_project_members` there has `expires_at`, `invite_code` and
-  `character_name`, none of which are in the file, and lacks the `created_at`
-  the file declares. `routes/native/members.js:234` selects `character_name`.
-- `native_notifications` is created by no schema file and no migration at all.
-
-Production is fine — it grew these by hand. But a new environment provisioned by
-the procedure in CLAUDE.md comes up broken: the project members screen 500s and
-the whole notification inbox fails. So does any restore from scratch.
-
-Repairing the file is safe (production never reads it) but must be done by
-comparing against a real dump, not by memory — and every other divergence found
-the same way should go in at once.
-
 ### A member cannot leave a project
 
 Found while verifying the above. There is no leave endpoint at all.
