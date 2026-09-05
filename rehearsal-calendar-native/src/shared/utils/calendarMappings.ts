@@ -186,9 +186,19 @@ export async function getAllMappings(): Promise<Record<string, { eventId: string
       };
     }
 
-    // Update AsyncStorage cache
-    // Note: This is a simplification, ideally we'd sync each one individually
-    return result;
+    // Merged with what is held locally, not substituted for it.
+    //
+    // A mapping reaches the server only if saveEventMapping got that far — one
+    // failed request, or a connection id that could not be established, and it
+    // exists on this device alone. Answering with the server's rows only made
+    // those invisible: "remove all exported" walked past their events and left
+    // them in the calendar while reporting success, and the import had nothing
+    // to exclude them by.
+    //
+    // The server wins where both know a rehearsal: it is the shared record, and
+    // a local entry can be left over from a device that has since been wiped.
+    const cached = await getAllFromAsyncStorage();
+    return { ...cached, ...result };
   } catch (error) {
     console.error('[CalendarMappings] Failed to get mappings from DB, falling back to AsyncStorage:', error);
 

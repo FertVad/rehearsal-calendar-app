@@ -129,6 +129,36 @@ describe('Asking for all the mappings', () => {
     expect(all['42'].eventId).toBe('evt-42');
   });
 
+  it('merges what is only on this device with what the server knows', async () => {
+    // A mapping reaches the server only if the request got that far. One that
+    // did not exists here alone — and answering with the server's rows only
+    // made it invisible, so "remove all exported" walked past its event and
+    // left it in the calendar while reporting success.
+    await AsyncStorage.setItem(
+      'calendar-export-mappings',
+      JSON.stringify({ '7': { eventId: 'evt-7', calendarId: 'personal', lastSynced: '' } })
+    );
+    (calendarSyncAPI.getMappings as jest.Mock).mockResolvedValue({ data: { mappings: [mappingRow] } });
+
+    const all = await getAllMappings();
+
+    expect(Object.keys(all).sort()).toEqual(['42', '7']);
+  });
+
+  it('lets the server win where both know a rehearsal', async () => {
+    // The shared record beats a local one, which can be left over from a device
+    // that has since been wiped.
+    await AsyncStorage.setItem(
+      'calendar-export-mappings',
+      JSON.stringify({ '42': { eventId: 'stale-event', calendarId: 'personal', lastSynced: '' } })
+    );
+    (calendarSyncAPI.getMappings as jest.Mock).mockResolvedValue({ data: { mappings: [mappingRow] } });
+
+    const all = await getAllMappings();
+
+    expect(all['42'].eventId).toBe('evt-42');
+  });
+
   it('refuses to answer when neither can tell it anything', async () => {
     // A fresh install, or straight after a user switch, when the cache is empty
     // by design. One failed request is all it takes.
