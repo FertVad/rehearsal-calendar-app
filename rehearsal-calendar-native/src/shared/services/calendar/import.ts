@@ -200,15 +200,34 @@ export async function importCalendarEventsToAvailability(
     const total = events.length;
     logger.info(`[CalendarSync] Found ${total} events in selected calendars`);
 
-    // 2. Build lookup maps for fast comparison
+    // 2. Leave our own rehearsals out of the import.
+    //
+    // Recognised two ways, and the first matters more. An event we exported
+    // carries the rehearsal it stands for in its URL, which means the same
+    // thing on every device — whereas a mapping holds the event id, and that id
+    // is local to the phone that made it. On a second device the stored ids
+    // match nothing, the exclusion came up empty, and every rehearsal the app
+    // had put in the calendar was read straight back in as busy time: counted
+    // twice, on a call the person is already on.
+    //
+    // The mapping is still consulted, for events written before the mark
+    // existed.
     const exportedEventIds = new Set(
       Object.values(exportedMappings).map(m => m.eventId)
     );
-    logger.info(`[CalendarSync] Excluding ${exportedEventIds.size} exported rehearsals`);
+    const isOurRehearsal = (event: Calendar.Event) =>
+      /^rehearsalapp:\/\/rehearsal\//.test((event as { url?: string }).url || '') ||
+      exportedEventIds.has(event.id);
 
-    // Count events to process
-    const eventsToProcess = events.filter(e => !exportedEventIds.has(e.id));
-    logger.info(`[CalendarSync] Events to process (non-rehearsal): ${eventsToProcess.length}`);
+    // Filtered once, here, and used everywhere below. The test that found this
+    // failed because the exclusion existed in three copies: this one, which
+    // only fed a log line, and two more further down that each repeated the
+    // id-only rule. Changing this one changed nothing that mattered.
+    const eventsToProcess = events.filter(e => !isOurRehearsal(e));
+    logger.info(
+      `[CalendarSync] Excluding ${events.length - eventsToProcess.length} exported rehearsals, ` +
+        `${eventsToProcess.length} to process`
+    );
 
     // Get only imported calendar events (not manual, not rehearsals) within date range
     const dbSlots = (dbResponse.data.availability || dbResponse.data || []).filter((slot: any) => {
@@ -248,11 +267,7 @@ export async function importCalendarEventsToAvailability(
     // series contributes one entry per date rather than collapsing to one.
     // The exported-rehearsal exclusion still compares the bare id — those are
     // one-off events we created ourselves.
-    const calendarEventMap = new Map(
-      events
-        .filter(e => !exportedEventIds.has(e.id)) // Exclude exported rehearsals
-        .map(e => [occurrenceKey(e), e])
-    );
+    const calendarEventMap = new Map(eventsToProcess.map(e => [occurrenceKey(e), e]));
 
     // 3. Find changes
     const toDelete: string[] = []; // Event IDs to delete
@@ -296,13 +311,9 @@ export async function importCalendarEventsToAvailability(
     }
 
     // Find new/updated events
-    for (const event of events) {
-      // Skip exported rehearsals
-      if (exportedEventIds.has(event.id)) {
-        result.skipped++;
-        continue;
-      }
+    result.skipped += events.length - eventsToProcess.length;
 
+    for (const event of eventsToProcess) {
       const dbSlot = dbEventMap.get(occurrenceKey(event)) as any;
 
       if (!dbSlot) {

@@ -244,3 +244,57 @@ describe('What leaves the device', () => {
     expect(JSON.stringify(sent)).not.toContain('the-device-s-own-calendar-id');
   });
 });
+
+
+describe('Our own rehearsals, seen from a second device', () => {
+  // A mapping holds the calendar event's id, and that id is local to the phone
+  // that made it. On another device the stored ids match nothing, so the
+  // exclusion came up empty and every rehearsal the app had put in the calendar
+  // was read straight back in as busy time — counted twice, on a call the
+  // person is already on, with nothing afterwards able to tell the two apart.
+  const ourEvent = {
+    id: 'this-device-would-call-it-something-else',
+    calendarId: 'cal-1',
+    url: 'rehearsalapp://rehearsal/42',
+    startDate: iso(5, '18:00:00.000'),
+    endDate: iso(5, '20:00:00.000'),
+    allDay: false,
+  };
+
+  it('are left out even when the stored id means nothing here', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([ourEvent]);
+    (getAllMappings as jest.Mock).mockResolvedValue({
+      '42': { eventId: 'the-other-phone-s-id', calendarId: 'cal-1', lastSynced: '' },
+    });
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
+  });
+
+  it('are still left out when written before the mark existed', async () => {
+    const { url: _url, ...unmarked } = ourEvent;
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([unmarked]);
+    (getAllMappings as jest.Mock).mockResolvedValue({
+      '42': { eventId: unmarked.id, calendarId: 'cal-1', lastSynced: '' },
+    });
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
+  });
+
+  it('still import an ordinary event that is nobody\'s rehearsal', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
+      { ...ourEvent, url: 'https://example.com/dentist', id: 'evt-dentist' },
+    ]);
+    (getAllMappings as jest.Mock).mockResolvedValue({});
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    expect(availabilityAPI.bulkSet).toHaveBeenCalled();
+  });
+});

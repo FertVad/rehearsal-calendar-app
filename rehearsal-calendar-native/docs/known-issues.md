@@ -145,7 +145,6 @@ matching quietly does nothing and falls back to the heuristic.
 
 | Severity | What | Where |
 |---|---|---|
-| high | Mappings are keyed per user but hold device-local event ids, so on a second device the exclusion, the deletes and the duplicate check all point at the wrong event | `server/routes/native/calendarSync.js:204` |
 
 Full evidence, failure scenarios and proposed fixes are in the workflow
 transcript for run `wf_10bab5ff-ace`. The two confirmed by hand:
