@@ -54,12 +54,15 @@ since Jest never defined `__DEV__` and any module guarding on it threw. It has
 
 ## Confirmed, not yet fixed
 
-### Calendar sync — twenty findings, and no tests to hold any of them
+### Calendar sync — eleven findings left, and eighteen tests now
 
-Reviewed 2026-09-04 by three agents, one per half plus the failure paths. This
-is the part of the app with **no tests at all** — there is no `__tests__`
-directory under `src/shared/services/calendar/`, and two fixes that landed there
-this week can be reverted without a single test going red.
+Reviewed 2026-09-04 by three agents, one per half plus the failure paths. This was
+the part of the app with no tests at all. It has eighteen now, and the reason
+there were none turned out to be mechanical rather than anyone's neglect: the
+module would not load under test. The shared mocks were missing `AppState`,
+`getEventAsync` and two expo-calendar enums, and the AsyncStorage mock lacked
+`__esModule`, so the interop handed back a wrapper and any module touching
+storage threw on import. Anyone who tried hit that wall and gave up.
 
 **The privacy promise holds.** Both halves were read for it specifically: no
 event title, notes, location, URL or attendee is read on the import path at all,
@@ -69,23 +72,31 @@ a breach — see the last row.
 
 The two critical ones were re-verified by hand rather than taken on trust.
 
+**Nine were fixed on 2026-09-05 and their rows removed**, including both
+criticals: automatic sync now lives on the tab bar and runs on a cold launch;
+the export reconciles rehearsals that no longer exist; the diff reaches an event
+that began before today; an exported event records which rehearsal it is, in its
+URL, so a second device matches it exactly instead of guessing from title, time
+and location; a revoked permission no longer reads as "the reader deleted this";
+and a run that failed no longer stamps itself done — which for the export also
+stopped it refusing to retry for ten minutes.
+
+The eleven below remain. A fresh sweep of this area would mostly re-find them,
+so finish this list rather than hunting again.
+
+One thing here can only be settled on a device: whether `url` survives a
+round-trip through EventKit. The type says it does and is iOS-only, but reading
+a type is not seeing the value come back — and if it does not, the exact
+matching quietly does nothing and falls back to the heuristic.
+
 | Severity | What | Where |
 |---|---|---|
-| critical | A deleted rehearsal keeps its calendar event and its 30-minute alarm on every device except the one that pressed delete | `src/shared/hooks/useAutoCalendarSync.ts:90` |
-| critical | Auto sync only exists while the Mark Busy modal is open — it never runs on app foreground | `src/navigation/index.tsx:282` |
 | high | Every timed imported event is diffed as "changed" on every sync, and the whole update batch is rejected once the calendar is ~500 events deep | `src/shared/services/calendar/import.ts:297` |
-| high | An imported slot that starts before today is invisible to the diff, so deleting or moving a still-running event never reaches the server | `src/shared/services/calendar/import.ts:208` |
-| high | A revoked calendar permission deletes every export mapping, because "cannot read the calendar" is read as "the event was deleted" | `src/shared/services/calendar/export.ts:233` |
-| high | Duplicate detection never matches a rehearsal without a location, so every mapping loss creates a second event with a second alarm | `src/shared/services/calendar/export.ts:55` |
 | high | One failed mappings request empties the import exclusion, and the phantom busy slots it creates can never be cleaned up | `src/shared/utils/calendarMappings.ts:181` |
 | high | Mappings are keyed per user but hold device-local event ids, so on a second device the exclusion, the deletes and the duplicate check all point at the wrong event | `server/routes/native/calendarSync.js:204` |
 | high | A stale in-memory connection id after a user switch stops every mapping reaching the server, silently | `src/shared/utils/calendarMappings.ts:22` |
-| high | "Last synced: just now" is written even when every write in the run failed | `src/shared/services/calendar/import.ts:417` |
-| high | Settings screen reports "Rehearsals exported: N" when zero were exported | `src/features/profile/screens/CalendarSyncSettingsScreen.tsx:383` |
-| medium | The delete pass permanently protects the one row that must never exist — a rehearsal double-booked as an imported busy slot | `src/shared/services/calendar/import.ts:266` |
 | medium | "Remove all exported" erases the record of events it did not delete, and reports success either way | `src/shared/services/calendar/export.ts:409` |
 | medium | Changing the export calendar leaves every exported rehearsal in the old calendar while the screen claims they are in the new one | `src/shared/services/calendar/export.ts:236` |
-| medium | Pull-to-refresh that fails is completely silent and skips the reload as well | `src/features/availability/hooks/useAvailabilitySync.ts:88` |
 | medium | Fifty parallel read-modify-writes on one AsyncStorage key lose forty-nine of them | `src/shared/services/calendar/import.ts:398` |
 | medium | getAllMappings discards the local cache instead of merging it, so a second device's exported rehearsals get re-imported as busy | `src/shared/utils/calendarMappings.ts:180` |
 | medium | A device clock that moves backwards locks both timers out until real time catches up | `src/shared/hooks/useAutoCalendarSync.ts:61` |
