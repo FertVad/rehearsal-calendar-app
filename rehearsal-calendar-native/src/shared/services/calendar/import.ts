@@ -205,7 +205,18 @@ export async function importCalendarEventsToAvailability(
       const extId = slot.externalEventId || slot.external_event_id;
       const hasExternalId = !!extId;
       const isImported = slot.source === 'apple_calendar' || slot.source === 'google_calendar';
-      const inRange = new Date(slot.startsAt) >= startDate && new Date(slot.startsAt) <= endDate;
+      // Overlap, not "starts inside" — the same question the device is asked.
+      //
+      // iOS returns every event that overlaps the window, so a holiday running
+      // 1–15 September still arrives on the 4th. Matching the stored row by its
+      // start alone left that row out of scope: it could no longer be compared,
+      // so it was never updated, and if the event was deleted from the phone it
+      // was never deleted here either. It simply stayed, marking the user busy
+      // for a trip they had cancelled, with nothing able to reach it again.
+      const slotEnd = slot.endsAt || slot.ends_at;
+      const inRange =
+        new Date(slotEnd || slot.startsAt) >= startDate &&
+        new Date(slot.startsAt) <= endDate;
 
       return hasExternalId && isImported && inRange;
     });
