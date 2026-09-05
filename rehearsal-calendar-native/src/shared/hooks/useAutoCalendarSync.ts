@@ -102,11 +102,34 @@ async function exportRehearsalsIfDue(force = false): Promise<void> {
  * Saving a rehearsal also exports that one straight away, on the device that
  * saved it; this covers everybody else.
  */
-export function useAutoCalendarSync() {
+// Shared by every caller of this hook, deliberately.
+//
+// These were useRef, so each mount had its own lock and its own throttle and
+// none of them could see the others. That was invisible while the hook had a
+// single caller and would have become a race the moment it had two — which is
+// exactly what mounting it on the tab bar does. An overlapping import is how a
+// duplicate row reached the database once already.
+let syncInFlight = false;
+let lastSyncAttempt = 0;
+const THROTTLE_MS = 5000; // Minimum 5 seconds between sync attempts
+
+interface AutoSyncOptions {
+  /**
+   * Watch for the app returning from the background and sync then.
+   *
+   * Off by default and switched on in exactly one place, the tab bar, because
+   * the listener has to be registered once and live as long as the session.
+   * It used to be registered by this hook's only caller, the availability
+   * editor — which is not a tab but a modal reached from the "+" button, so
+   * automatic sync existed only while that sheet was open. Anyone who turned it
+   * on and never opened the sheet got nothing, while the settings screen said
+   * it was running.
+   */
+  syncOnForeground?: boolean;
+}
+
+export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOptions = {}) {
   const appState = useRef(AppState.currentState);
-  const lastSyncAttempt = useRef<number>(0);
-  const isSyncingRef = useRef<boolean>(false);
-  const THROTTLE_MS = 5000; // Minimum 5 seconds between sync attempts
 
   const performAutoSync = useCallback(async () => {
     // Signing in with Apple or Google backgrounds the app while the native
@@ -119,19 +142,19 @@ export function useAutoCalendarSync() {
     }
 
     // Prevent concurrent syncs
-    if (isSyncingRef.current) {
+    if (syncInFlight) {
       logger.debug('[AutoSync] Already syncing - skipping');
       return;
     }
 
     // Throttle: prevent syncs within 5 seconds of each other
     const now = Date.now();
-    if (now - lastSyncAttempt.current < THROTTLE_MS) {
+    if (now - lastSyncAttempt < THROTTLE_MS) {
       logger.debug('[AutoSync] Throttled - too soon since last sync attempt');
       return;
     }
-    lastSyncAttempt.current = now;
-    isSyncingRef.current = true;
+    lastSyncAttempt = now;
+    syncInFlight = true;
 
     try {
       // Check if we should import
@@ -153,7 +176,7 @@ export function useAutoCalendarSync() {
     } catch (error) {
       console.error('[AutoSync] Error during auto-import:', error);
     } finally {
-      isSyncingRef.current = false;
+      syncInFlight = false;
     }
   }, []);
 
@@ -169,12 +192,14 @@ export function useAutoCalendarSync() {
   }, [performAutoSync]);
 
   useEffect(() => {
+    if (!syncOnForeground) return;
+
     const subscription = AppState.addEventListener('change', handleAppStateChange);
 
     return () => {
       subscription.remove();
     };
-  }, [handleAppStateChange]);
+  }, [handleAppStateChange, syncOnForeground]);
 
   /**
    * Force sync - ignores interval settings, always syncs if import is enabled
@@ -182,12 +207,12 @@ export function useAutoCalendarSync() {
    */
   const forceSync = useCallback(async () => {
     // Prevent concurrent syncs
-    if (isSyncingRef.current) {
+    if (syncInFlight) {
       logger.debug('[AutoSync] Force sync - already syncing, skipping');
       return;
     }
 
-    isSyncingRef.current = true;
+    syncInFlight = true;
 
     try {
       const settings = await getSyncSettings();
@@ -217,7 +242,7 @@ export function useAutoCalendarSync() {
       console.error('[AutoSync] Error during force sync:', error);
       throw error;
     } finally {
-      isSyncingRef.current = false;
+      syncInFlight = false;
     }
   }, []);
 

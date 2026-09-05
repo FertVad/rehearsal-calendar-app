@@ -12,6 +12,7 @@ import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
 import { useNotifications } from '../shared/hooks/useNotifications';
 import { BetaBanner } from '../shared/components/BetaBanner';
+import { useAutoCalendarSync } from '../shared/hooks/useAutoCalendarSync';
 import { OnboardingNavigator } from '../features/onboarding';
 import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
 import AvailabilityScreen from '../features/availability/screens/AvailabilityScreen';
@@ -164,6 +165,16 @@ function NotificationsHandler() {
 }
 
 function TabNavigator() {
+  // The one place automatic calendar sync is watched for.
+  //
+  // It has to live somewhere mounted for the whole signed-in session, and the
+  // tab bar is that. It used to be the availability editor, which is a modal
+  // reached from the "+" button — so sync ran only while that sheet was open,
+  // and anyone who never opened it got none at all despite the setting saying
+  // otherwise. Nothing happens here when sync is switched off: the run reads
+  // the settings first and returns.
+  useAutoCalendarSync({ syncOnForeground: true });
+
   const { t } = useI18n();
   const { setShowActionSheet } = useActionSheet();
 
