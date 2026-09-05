@@ -81,6 +81,11 @@ const linking: any = {
         },
       },
       JoinProject: 'invite/:code',
+      // What an exported calendar event points at. The event carries this URL
+      // so a second device can tell which rehearsal it is — the id has to live
+      // in a field iOS shows, since events have no hidden one, so it may as
+      // well take the reader somewhere.
+      RehearsalDetails: 'rehearsal/:rehearsalId',
     },
   },
 };

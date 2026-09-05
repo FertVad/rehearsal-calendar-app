@@ -57,14 +57,17 @@ async function checkEventExists(eventId: string): Promise<boolean> {
  * Two rehearsals of one project starting in the same minute were
  * indistinguishable, and one without a location matched nothing at all.
  *
- * The URL rather than the notes because the notes are shown to the reader and
- * an identifier is not theirs to look at. iOS only, which is what this app
- * ships on; where it is absent the heuristic below still answers.
+ * The URL rather than the notes: an event has no hidden field on iOS, so the
+ * mark is visible either way, and a link at least takes the reader to the
+ * rehearsal instead of showing them an identifier for nothing. The scheme is
+ * the app's own — `rehearsalapp`, already registered and already routed — and
+ * navigation resolves it to the details screen. iOS only, which is what this
+ * ships on; where the URL is absent the heuristic below still answers.
  */
-const eventUrlFor = (rehearsalId: string) => `rehearsly://rehearsal/${rehearsalId}`;
+const eventUrlFor = (rehearsalId: string) => `rehearsalapp://rehearsal/${rehearsalId}`;
 
 const rehearsalIdFromUrl = (url?: string | null): string | null => {
-  const match = /^rehearsly:\/\/rehearsal\/(.+)$/.exec(url || '');
+  const match = /^rehearsalapp:\/\/rehearsal\/(.+)$/.exec(url || '');
   return match ? match[1] : null;
 };
 

@@ -55,7 +55,7 @@ beforeEach(() => {
 describe('An event iCloud already delivered', () => {
   it('is adopted when it names the rehearsal, whatever else differs', async () => {
     (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
-      existing({ url: 'rehearsly://rehearsal/42', title: 'renamed by the reader', location: 'Foyer' }),
+      existing({ url: 'rehearsalapp://rehearsal/42', title: 'renamed by the reader', location: 'Foyer' }),
     ]);
 
     const id = await createCalendarEvent(rehearsal(), 'cal-1');
@@ -67,7 +67,7 @@ describe('An event iCloud already delivered', () => {
   it('is not adopted when it names a different rehearsal at the same moment', async () => {
     // Two rehearsals of one project in the same minute used to be one event.
     (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
-      existing({ url: 'rehearsly://rehearsal/99' }),
+      existing({ url: 'rehearsalapp://rehearsal/99' }),
     ]);
 
     await createCalendarEvent(rehearsal(), 'cal-1');
@@ -106,7 +106,7 @@ describe('What a new event carries', () => {
     await createCalendarEvent(rehearsal(), 'cal-1');
 
     const [, details] = (Calendar.createEventAsync as jest.Mock).mock.calls[0];
-    expect(details.url).toBe('rehearsly://rehearsal/42');
+    expect(details.url).toBe('rehearsalapp://rehearsal/42');
     expect(details.notes).not.toContain('42');
   });
 
