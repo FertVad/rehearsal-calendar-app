@@ -164,6 +164,23 @@ export async function setupIntegrationDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- Which external accounts a person can sign in with. Mirrors
+    -- init-native-schema.sql exactly: provider_user_id is NULL for the email
+    -- provider, and both timestamps are supplied by the caller.
+    CREATE TABLE native_auth_providers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+      provider_type VARCHAR(20) NOT NULL,
+      provider_user_id VARCHAR(255),
+      provider_email VARCHAR(255),
+      provider_metadata TEXT,
+      created_at DATETIME NOT NULL,
+      updated_at DATETIME NOT NULL,
+      last_used_at DATETIME,
+      UNIQUE(provider_type, provider_user_id),
+      CHECK (provider_type IN ('email', 'google', 'apple'))
+    );
+
     -- Push reminders already sent. The unique pair is what stops a rehearsal
     -- being announced twice when two schedulers overlap.
     CREATE TABLE native_push_reminders (

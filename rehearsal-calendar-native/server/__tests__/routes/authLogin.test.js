@@ -31,19 +31,7 @@ let bcrypt;
 beforeAll(async () => {
   testDb = await setupIntegrationDb();
 
-  testDb.run(
-    `CREATE TABLE IF NOT EXISTS native_auth_providers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      provider_type TEXT NOT NULL,
-      provider_user_id TEXT,
-      provider_email TEXT,
-      provider_metadata TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_used_at DATETIME
-    )`
-  );
+  // native_auth_providers comes from setupIntegrationDb, matching production.
 
   jest.unstable_mockModule('../../database/db.js', () => ({
     default: testDb,
@@ -89,15 +77,18 @@ beforeAll(async () => {
   ).lastInsertId;
 
   testDb.run(
-    `INSERT INTO native_auth_providers (user_id, provider_type, provider_email) VALUES (?, ?, ?)`,
+    `INSERT INTO native_auth_providers (user_id, provider_type, provider_email, created_at, updated_at)
+     VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
     [oauthUserId, 'google', 'oauth-user@test.com']
   );
   testDb.run(
-    `INSERT INTO native_auth_providers (user_id, provider_type, provider_email) VALUES (?, ?, ?)`,
+    `INSERT INTO native_auth_providers (user_id, provider_type, provider_email, created_at, updated_at)
+     VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
     [passwordUserId, 'email', 'password-user@test.com']
   );
   testDb.run(
-    `INSERT INTO native_auth_providers (user_id, provider_type, provider_email) VALUES (?, ?, ?)`,
+    `INSERT INTO native_auth_providers (user_id, provider_type, provider_email, created_at, updated_at)
+     VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
     [passwordUserId, 'google', 'password-user@test.com']
   );
 
