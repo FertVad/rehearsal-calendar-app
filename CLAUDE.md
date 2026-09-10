@@ -193,6 +193,15 @@ All dates/times use **ISO 8601 with timezone** (TIMESTAMPTZ in PostgreSQL):
 - ❌ Forgetting to convert between local and UTC
 - ❌ Using wrong Date format (must be ISO 8601)
 
+**A date-only value must never be given a timezone.** All-day rows store
+`T00:00:00.000Z` to mean a calendar date, not an instant, so
+`DATE(starts_at AT TIME ZONE $tz)` lands on the previous day at every negative
+offset — saving one day deletes its neighbour and leaves the original standing.
+Read all-day rows in UTC and timed rows in the user's zone, in the same query if
+it comes to that. The client version of the mistake is `new Date('2026-09-10')`,
+which prints as 9 September in New York; use `parseDateString` from
+`shared/utils/time.ts`.
+
 ### 4. Availability Types & Sources
 ```javascript
 // Use constants from server/constants/timezone.js
@@ -279,6 +288,100 @@ const { t, language, changeLanguage } = useI18n();
 // Localized dates
 date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US')
 ```
+
+### 8. Authorize the ids, not only the caller
+
+A membership check answers "may this person touch this project". It does not
+answer "may they touch *these* ids". Every id arriving in a body or a query —
+`participant_ids`, `userIds`, `memberIds` — is intersected with what the caller
+can actually reach, before it is used.
+
+```javascript
+// ❌ WRONG - membership checked, then the body is trusted
+await requireProjectAdmin(userId, projectId);
+for (const id of req.body.participant_ids) {
+  await db.run('INSERT INTO native_rehearsal_responses ...', [rehearsalId, id]);
+}
+
+// ✅ CORRECT - intersect first, refuse the difference
+const allowed = await activeMemberIds(projectId);
+const unknown = participantIds.filter((id) => !allowed.includes(id));
+if (unknown.length) return res.status(400).json({ error: 'Not project members' });
+```
+
+This is the shape of the `?userIds=` IDOR fixed in `d8b6660`, and it is still
+live in two more places: a project admin can write busy slots into a stranger's
+personal calendar, and an ordinary member can put themselves on a rehearsal they
+were never invited to by calling `respond`.
+
+**Authorize before the work, not after.** A range that comes from a request gets
+an explicit cap before anything is expanded from it. `GET
+/:projectId/members/availability` builds one row per day with no bound and the
+membership lookup behind it, so `0001-01-01..9999-12-31` blocks the event loop
+for about three seconds before the request is refused.
+
+### 9. More than one write means a transaction
+
+A handler that issues two or more writes goes through `db.transaction(fn)` and
+uses the `tx` it hands back for every statement inside. Never `db.run('BEGIN')`
+— the pool returns that connection to somebody else with the transaction still
+open, and the rollback fires on their write.
+
+Removing a member is three DELETEs; creating a project is the row and then its
+owner; saving a rehearsal is the row, the roster, then the busy slots. Every one
+of them can stop halfway, and halfway is the damaging state: a project with no
+owner, a rehearsal nobody can see, hours blocked for a call that no longer
+exists.
+
+### 10. An error is not an empty result
+
+A `catch` must not return a value that success could also return. `[]`, `false`,
+`0` and `null` leave the caller unable to tell *nothing* from *could not find
+out* — and the caller then acts on the difference, deleting what it failed to
+read or duplicating what it failed to find.
+
+```javascript
+// ❌ WRONG - "no events" and "the calendar refused us" become one value
+try { return await Calendar.getEventsAsync(...); } catch { return []; }
+```
+
+The same rule on the way out: a success flag or timestamp — `lastSyncAt`,
+`sent`, a read receipt — is written only on a path where nothing failed. Partial
+success is not success, and a screen that says "done" over a failed request
+teaches people to trust it.
+
+### 11. An async result belongs to the state that asked for it
+
+Capture what you are loading *for* before the `await` — the user id, the selected
+project, a request counter — and check it again before writing to state. If it
+changed, drop the result.
+
+```typescript
+// ❌ WRONG - nothing between the await and the write knows the world moved
+setRehearsals(await api.getRehearsals(projectId));
+
+// ✅ CORRECT
+const generation = ++loadGeneration.current;
+const data = await api.getRehearsals(projectId);
+if (generation !== loadGeneration.current) return;
+setRehearsals(data);
+```
+
+Switching accounts is the severe case, and it is not a display bug: a calendar
+sync that began under one account finishes its writes under the next one's
+token, so one person's private hours land in another person's availability.
+
+### 12. "Not in my list" is not a reason to delete
+
+A client sees one device, one page, one cached snapshot. The server holds all of
+them. Replacement and deletion are scoped by a key both sides name — the day,
+the device connection, an explicit set of ids — never by absence from whatever
+the client happens to be holding.
+
+Two live examples: Save posts the whole availability snapshot, so a day loaded an
+hour ago overwrites the edit somebody made since; and calendar import diffs the
+phone's events against *every* imported row of that user, so syncing on the
+second phone deletes what the first one imported.
 
 ## Key Features & Implementation
 
@@ -589,7 +692,6 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
 - **Backend**: `server/utils/oauthVerification.js` - Token verification using Google/Apple APIs
 - **Account Linking**: `server/utils/accountLinking.js` - Merges OAuth accounts with existing email accounts
 
-**Google OAuth Setup:**
 **Key Points:**
 - OAuth tokens are verified server-side to prevent forgery
 - Accounts are automatically linked by email if user already exists
