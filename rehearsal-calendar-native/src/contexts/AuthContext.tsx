@@ -4,6 +4,7 @@ import { authAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
 import { syncUserPreferences } from '../shared/utils/storage';
 import { unregisterPushToken, syncPushTokenIfGranted } from '../shared/services/notifications';
+import { resetConnectionCache } from '../shared/utils/calendarMappings';
 
 function getDeviceTimezone(): string | undefined {
   try {
@@ -66,7 +67,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         'calendar-export-mappings',
         'calendar-import-tracking',
         'calendar-sync-settings',
+        // The last availability that loaded, kept so a start with no network is
+        // not blank. It is the previous person's.
+        'availability-cache',
+        // And the bell's count, which is theirs too.
+        'unread-count',
       ]);
+
+      // Held in memory rather than in storage, so wiping the keys above does
+      // not reach it. Left alone, the next person's mappings are posted against
+      // this person's connection and silently rejected.
+      resetConnectionCache();
     }
     await AsyncStorage.setItem('calendar-sync-owner', newUserId);
   }, []);

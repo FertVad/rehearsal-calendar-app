@@ -293,7 +293,19 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
               setIsRemoving(true);
               const result = await removeAll();
               logger.debug('[Sync] Removed exported events:', result);
-              Alert.alert(t.calendarSync.removeAllSuccess, '');
+
+              // removeAll reports failures rather than throwing, and this said
+              // "done" whatever came back — including a run where every single
+              // deletion failed and every event was still sitting in the
+              // calendar.
+              if (result?.failed) {
+                Alert.alert(
+                  t.common.error,
+                  t.calendarSync.removeAllPartial(result.success ?? 0, result.failed)
+                );
+              } else {
+                Alert.alert(t.calendarSync.removeAllSuccess, '');
+              }
             } catch (error: any) {
               logger.error('[Sync] Failed to remove exported events:', error);
               Alert.alert(t.common.error, error?.message || t.calendarSync.syncError);

@@ -9,6 +9,7 @@ import * as Calendar from 'expo-calendar';
 import { syncAllRehearsals } from '../export';
 import { checkCalendarPermissions } from '../permissions';
 import { getEventMapping, removeEventMapping, saveEventMapping } from '../../../utils/calendarMappings';
+import { syncRehearsalToCalendar } from '../export';
 
 jest.mock('../permissions', () => ({ checkCalendarPermissions: jest.fn() }));
 jest.mock('../../../utils/calendarMappings', () => ({
@@ -85,5 +86,50 @@ describe('An ordinary run', () => {
     expect(Calendar.updateEventAsync).toHaveBeenCalled();
     expect(saveEventMapping).toHaveBeenCalled();
     expect(result.failed).toBe(0);
+  });
+});
+
+
+describe('When the reader picks a different export calendar', () => {
+  // The update writes to whichever calendar the event already lives in, so
+  // changing the choice left every rehearsal exported so far in the old one —
+  // while the settings screen showed the new one selected and said everything
+  // was synced. Only rehearsals created afterwards appeared there.
+  beforeEach(() => {
+    (checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
+    (getEventMapping as jest.Mock).mockResolvedValue({ eventId: 'old-event', calendarId: 'personal' });
+    (Calendar.getEventAsync as jest.Mock).mockResolvedValue({ id: 'old-event' });
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([]);
+    (Calendar.createEventAsync as jest.Mock).mockResolvedValue('new-event');
+    (Calendar.deleteEventAsync as jest.Mock).mockResolvedValue(undefined);
+  });
+
+  it('creates the event in the calendar that was chosen', async () => {
+    await syncRehearsalToCalendar(rehearsals[0], 'work');
+
+    const [calendarId] = (Calendar.createEventAsync as jest.Mock).mock.calls[0];
+    expect(calendarId).toBe('work');
+  });
+
+  it('removes the copy left in the old one', async () => {
+    await syncRehearsalToCalendar(rehearsals[0], 'work');
+
+    expect(Calendar.deleteEventAsync).toHaveBeenCalledWith('old-event');
+  });
+
+  it('leaves the old copy alone if the new one could not be made', async () => {
+    // Better one event in the wrong calendar than none at all.
+    (Calendar.createEventAsync as jest.Mock).mockResolvedValue(null);
+
+    await syncRehearsalToCalendar(rehearsals[0], 'work');
+
+    expect(Calendar.deleteEventAsync).not.toHaveBeenCalled();
+  });
+
+  it('moves nothing when the calendar has not changed', async () => {
+    await syncRehearsalToCalendar(rehearsals[0], 'personal');
+
+    expect(Calendar.createEventAsync).not.toHaveBeenCalled();
+    expect(Calendar.deleteEventAsync).not.toHaveBeenCalled();
   });
 });

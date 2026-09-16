@@ -472,6 +472,12 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
     throw new Error('Either (startsAt, endsAt) or (date, startTime, endTime) are required');
   }
 
+  // Read before writing, so the release below can tell a move from a rename.
+  const existing = await db.get(
+    `SELECT starts_at FROM native_rehearsals WHERE id = $1 AND project_id = $2`,
+    [rehearsalId, projectId]
+  );
+
   // Update rehearsal using new TIMESTAMPTZ columns
   const updatedRehearsal = await db.get(
     `UPDATE native_rehearsals
@@ -488,6 +494,21 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
       projectId,
     ]
   );
+
+  // A rehearsal that moved has to be announced again.
+  //
+  // The reminder claim says "this person has been told about this rehearsal",
+  // and once written nothing released it: the scheduler's predicate keys on the
+  // rehearsal and the type alone, with no comparison against the start time. So
+  // a call moved from Tuesday to Friday, after Monday's day-before reminder had
+  // gone out, was never mentioned again — the edit itself is announced, but
+  // nothing arrives on the Thursday.
+  //
+  // Released only when the start actually moves. Renaming a rehearsal or
+  // changing its room is not a reason to remind everyone a second time.
+  if (existing && new Date(existing.starts_at).getTime() !== new Date(updatedRehearsal.starts_at).getTime()) {
+    await db.run(`DELETE FROM native_push_reminders WHERE rehearsal_id = $1`, [rehearsalId]);
+  }
 
   // Participants first, slots second. bookRehearsalSlots reads the roster out
   // of native_rehearsal_responses, so doing it the other way round books the

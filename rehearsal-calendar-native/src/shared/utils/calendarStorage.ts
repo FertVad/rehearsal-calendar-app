@@ -13,6 +13,45 @@ const KEYS = {
   SYNC_SETTINGS: 'calendar-sync-settings',
 };
 
+
+/**
+ * Change one stored value without losing the change beside it.
+ *
+ * Every one of these keys holds a map, and every writer read it, changed one
+ * entry and wrote the whole thing back. Fine one at a time; the import saves
+ * fifty at once and the export ten, all reading the same starting state and
+ * each writing its own version over the last. Roughly one survived. The local
+ * record of what had been imported was therefore mostly fiction — which is what
+ * the sync screen counts, and what the import consults before deciding an event
+ * is new.
+ *
+ * Writes to a given key are queued behind each other, so each one sees what the
+ * one before it wrote. Different keys do not wait on each other.
+ */
+const writeQueues = new Map<string, Promise<unknown>>();
+
+async function updateStored<T>(key: string, change: (current: T) => T, empty: T): Promise<void> {
+  const previous = writeQueues.get(key) ?? Promise.resolve();
+
+  const run = previous
+    .catch(() => {
+      // A failure ahead of us in the queue is that caller's to report.
+    })
+    .then(async () => {
+      const json = await AsyncStorage.getItem(key);
+      const current: T = json ? JSON.parse(json) : empty;
+      await AsyncStorage.setItem(key, JSON.stringify(change(current)));
+    });
+
+  writeQueues.set(key, run);
+
+  try {
+    await run;
+  } finally {
+    if (writeQueues.get(key) === run) writeQueues.delete(key);
+  }
+}
+
 /**
  * ============================================================================
  * Export Mappings (rehearsalId → calendar eventId)
@@ -28,16 +67,14 @@ export async function saveEventMapping(
   calendarId: string
 ): Promise<void> {
   try {
-    const mappingsJson = await AsyncStorage.getItem(KEYS.EXPORT_MAPPINGS);
-    const mappings = mappingsJson ? JSON.parse(mappingsJson) : {};
-
-    mappings[rehearsalId] = {
-      eventId,
-      calendarId,
-      lastSynced: new Date().toISOString(),
-    };
-
-    await AsyncStorage.setItem(KEYS.EXPORT_MAPPINGS, JSON.stringify(mappings));
+    await updateStored<Record<string, unknown>>(
+      KEYS.EXPORT_MAPPINGS,
+      (mappings) => ({
+        ...mappings,
+        [rehearsalId]: { eventId, calendarId, lastSynced: new Date().toISOString() },
+      }),
+      {}
+    );
   } catch (error) {
     console.error('[CalendarStorage] Failed to save event mapping:', error);
     throw error;
@@ -67,13 +104,11 @@ export async function getEventMapping(
  */
 export async function removeEventMapping(rehearsalId: string): Promise<void> {
   try {
-    const mappingsJson = await AsyncStorage.getItem(KEYS.EXPORT_MAPPINGS);
-    if (!mappingsJson) return;
-
-    const mappings = JSON.parse(mappingsJson);
-    delete mappings[rehearsalId];
-
-    await AsyncStorage.setItem(KEYS.EXPORT_MAPPINGS, JSON.stringify(mappings));
+    await updateStored<Record<string, unknown>>(
+      KEYS.EXPORT_MAPPINGS,
+      ({ [rehearsalId]: _removed, ...rest }) => rest,
+      {}
+    );
   } catch (error) {
     console.error('[CalendarStorage] Failed to remove event mapping:', error);
     throw error;
@@ -220,16 +255,14 @@ export async function saveImportedEvent(
   calendarId: string
 ): Promise<void> {
   try {
-    const trackingJson = await AsyncStorage.getItem(KEYS.IMPORT_TRACKING);
-    const tracking: ImportedEventMap = trackingJson ? JSON.parse(trackingJson) : {};
-
-    tracking[eventId] = {
-      availabilitySlotId,
-      calendarId,
-      lastImported: new Date().toISOString(),
-    };
-
-    await AsyncStorage.setItem(KEYS.IMPORT_TRACKING, JSON.stringify(tracking));
+    await updateStored<ImportedEventMap>(
+      KEYS.IMPORT_TRACKING,
+      (tracking) => ({
+        ...tracking,
+        [eventId]: { availabilitySlotId, calendarId, lastImported: new Date().toISOString() },
+      }),
+      {}
+    );
   } catch (error) {
     console.error('[CalendarStorage] Failed to save imported event:', error);
     throw error;
@@ -254,13 +287,11 @@ export async function getImportedEvents(): Promise<ImportedEventMap> {
  */
 export async function removeImportedEvent(eventId: string): Promise<void> {
   try {
-    const trackingJson = await AsyncStorage.getItem(KEYS.IMPORT_TRACKING);
-    if (!trackingJson) return;
-
-    const tracking: ImportedEventMap = JSON.parse(trackingJson);
-    delete tracking[eventId];
-
-    await AsyncStorage.setItem(KEYS.IMPORT_TRACKING, JSON.stringify(tracking));
+    await updateStored<ImportedEventMap>(
+      KEYS.IMPORT_TRACKING,
+      ({ [eventId]: _removed, ...rest }) => rest,
+      {}
+    );
   } catch (error) {
     console.error('[CalendarStorage] Failed to remove imported event:', error);
     throw error;
@@ -292,9 +323,15 @@ export async function getImportedEventsCount(): Promise<number> {
  */
 export async function updateLastImportTime(): Promise<void> {
   try {
-    const settings = await getSyncSettings();
-    settings.lastImportTime = new Date().toISOString();
-    await saveSyncSettings(settings);
+    // Through the queue, because the export stamps its own timestamp into the
+    // same object in the same run. Read-change-write on both sides means one of
+    // the two timestamps is written from a copy taken before the other landed,
+    // and is lost.
+    await updateStored<CalendarSyncSettings>(
+      KEYS.SYNC_SETTINGS,
+      (settings) => ({ ...settings, lastImportTime: new Date().toISOString() }),
+      {} as CalendarSyncSettings
+    );
   } catch (error) {
     console.error('[CalendarStorage] Failed to update last import time:', error);
     throw error;

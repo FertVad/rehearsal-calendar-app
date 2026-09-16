@@ -75,7 +75,11 @@ export const MemberFilter: React.FC<MemberFilterProps> = React.memo(({
               {allSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
             </View>
             <Text style={styles.selectAllText}>
-              {t.common.selectAll}
+              {/* Says what the tap will do. One control did both jobs while
+                  always reading "Select All", so once everything was selected
+                  the label and the tick together promised the opposite of what
+                  tapping would deliver. */}
+              {allSelected ? t.smartPlanner.clearAll : t.common.selectAll}
             </Text>
           </TouchableOpacity>
         )}

@@ -243,10 +243,14 @@ CREATE TABLE native_push_tokens (
 CREATE TABLE native_push_reminders (
   id SERIAL PRIMARY KEY,
   rehearsal_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
   reminder_type VARCHAR(10) NOT NULL,
   sent_at TIMESTAMPTZ NOT NULL,
-  UNIQUE (rehearsal_id, reminder_type),
-  FOREIGN KEY (rehearsal_id) REFERENCES native_rehearsals(id) ON DELETE CASCADE
+  -- One claim per person, not per rehearsal. Per rehearsal retired the whole
+  -- call on the first send, so anyone added afterwards was never reminded.
+  UNIQUE (rehearsal_id, user_id, reminder_type),
+  FOREIGN KEY (rehearsal_id) REFERENCES native_rehearsals(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES native_users(id) ON DELETE CASCADE
 );
 
 -- The notification inbox. One row per intended recipient, written before the

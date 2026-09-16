@@ -40,6 +40,8 @@ export interface CalendarSyncTranslations {
   exportAllSuccess: string;
   removeSuccess: string;
   removeAllSuccess: string;
+  /** Some events could not be removed — say how many rather than claiming success. */
+  removeAllPartial: (removed: number, failed: number) => string;
   syncError: string;
   exportError: string;
   exportErrorMessage: string;
@@ -158,6 +160,7 @@ inCalendar: (count: number) => `В календаре: ${count}`,
     exportAllSuccess: 'Все репетиции экспортированы',
     removeSuccess: 'Успешно удалено',
     removeAllSuccess: 'Все репетиции удалены из календаря',
+    removeAllPartial: (removed: number, failed: number) => `Удалено: ${removed}. Не удалось удалить: ${failed} — эти события остались в календаре.`,
     syncError: 'Ошибка синхронизации',
     exportError: 'Ошибка экспорта',
     exportErrorMessage: 'Не удалось экспортировать репетиции',
@@ -278,6 +281,7 @@ inCalendar: (count: number) => `In the calendar: ${count}`,
     exportAllSuccess: 'All rehearsals exported',
     removeSuccess: 'Removed successfully',
     removeAllSuccess: 'All rehearsals removed from calendar',
+    removeAllPartial: (removed: number, failed: number) => `Removed: ${removed}. Could not remove: ${failed} — those events are still in the calendar.`,
     syncError: 'Sync error',
     exportError: 'Export Error',
     exportErrorMessage: 'Failed to export rehearsals',
@@ -398,6 +402,7 @@ inCalendar: (count: number) => `En el calendario: ${count}`,
     exportAllSuccess: 'Todos los ensayos exportados',
     removeSuccess: 'Eliminado correctamente',
     removeAllSuccess: 'Todos los ensayos eliminados del calendario',
+    removeAllPartial: (removed: number, failed: number) => `Eliminados: ${removed}. No se pudieron eliminar: ${failed} — esos eventos siguen en el calendario.`,
     syncError: 'Error de sincronización',
     exportError: 'Error de exportación',
     exportErrorMessage: 'No se pudieron exportar los ensayos',
@@ -518,6 +523,7 @@ inCalendar: (count: number) => `Im Kalender: ${count}`,
     exportAllSuccess: 'Alle Proben exportiert',
     removeSuccess: 'Erfolgreich entfernt',
     removeAllSuccess: 'Alle Proben aus dem Kalender entfernt',
+    removeAllPartial: (removed: number, failed: number) => `Entfernt: ${removed}. Nicht entfernt: ${failed} — diese Termine stehen noch im Kalender.`,
     syncError: 'Synchronisationsfehler',
     exportError: 'Exportfehler',
     exportErrorMessage: 'Proben konnten nicht exportiert werden',

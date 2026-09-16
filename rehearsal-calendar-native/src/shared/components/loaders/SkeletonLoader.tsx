@@ -52,13 +52,16 @@ export default function SkeletonLoader({
 
   const getVariantStyle = (): ViewStyle => {
     switch (variant) {
-      case 'circular':
+      case 'circular': {
+        // Braced because a `const` in a bare case is scoped to the whole
+        // switch, so it exists — uninitialised — in every other branch too.
         const circleSize = typeof height === 'number' ? height : 40;
         return {
           width: circleSize,
           height: circleSize,
           borderRadius: circleSize / 2,
         };
+      }
       case 'text':
         return {
           height: 16,

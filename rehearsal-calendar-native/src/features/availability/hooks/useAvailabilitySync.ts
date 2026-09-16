@@ -1,5 +1,6 @@
 import { formatLastSync as sharedFormatLastSync } from '../../../shared/utils/formatLastSync';
 import { useState, useCallback } from 'react';
+import { logger } from '../../../shared/utils/logger';
 import { getSyncSettings } from '../../../shared/utils/calendarStorage';
 
 /**
@@ -66,12 +67,20 @@ export const useAvailabilitySync = () => {
       performAutoSync: () => Promise<void>,
       loadAvailability: () => Promise<void>
     ) => {
-      const shouldSync = await shouldAutoSync();
-
-      if (shouldSync) {
-        setIsSyncing(true);
-        await performAutoSync();
-        await updateLastSyncTime();
+      // The spinner is turned off in a finally, and the reload happens whatever
+      // the sync did. Without either, a rejection anywhere in here left the
+      // spinner running for the life of the screen and skipped the reload — so
+      // the reader saw stale data under a spinner that never stopped, which
+      // reads as "still working" rather than "gave up".
+      try {
+        if (await shouldAutoSync()) {
+          setIsSyncing(true);
+          await performAutoSync();
+          await updateLastSyncTime();
+        }
+      } catch (error) {
+        logger.warn('[AvailabilitySync] Automatic sync failed:', error);
+      } finally {
         setIsSyncing(false);
       }
 

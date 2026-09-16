@@ -90,7 +90,15 @@ beforeEach(() => {
 
 const auth = (userId) => ['Authorization', `Bearer ${generateTokens(userId, 1).accessToken}`];
 
-const soon = (hoursFromNow) => new Date(Date.now() + hoursFromNow * 3600_000).toISOString();
+// Anchored once, not at each call.
+//
+// It used to be Date.now() per call, so two "the same" timestamps taken a
+// millisecond apart were different — which the change-diff rightly reports as a
+// move. That cost an afternoon in one describe block below and is the likeliest
+// remaining explanation for this suite failing about one run in ten while
+// passing on its own. Anchoring removes the question rather than answering it.
+const RUN_STARTED = Date.parse('2026-11-01T09:00:00.000Z');
+const soon = (hoursFromNow) => new Date(RUN_STARTED + hoursFromNow * 3600_000).toISOString();
 
 /** The user ids a notify* call was handed. */
 const recipients = (mock) => mock.mock.calls[0][2].map((m) => Number(m.user_id));
@@ -294,5 +302,71 @@ describe('What the change announcement names', () => {
 
     expect(put.status).toBe(200);
     expect(updated).not.toHaveBeenCalled();
+  });
+});
+
+describe('Moving a rehearsal after it has been announced', () => {
+  // The reminder claim says "this person has been told about this rehearsal",
+  // and nothing released it. So a call moved from Tuesday to Friday, after
+  // Monday's day-before reminder had gone out, was never mentioned again:
+  // the edit itself is announced, but nothing arrives on the Thursday.
+  const claimsFor = (rehearsalId) =>
+    testDb.all('SELECT reminder_type FROM native_push_reminders WHERE rehearsal_id = ?', [
+      rehearsalId,
+    ]);
+
+  const claim = (rehearsalId, userId, type) =>
+    testDb.run(
+      `INSERT INTO native_push_reminders (rehearsal_id, user_id, reminder_type, sent_at)
+       VALUES (?, ?, ?, ?)`,
+      [rehearsalId, userId, type, new Date().toISOString()]
+    );
+
+  const save = (rehearsalId, overrides) =>
+    request(app)
+      .put(`/api/native/projects/${testData.projectId}/rehearsals/${rehearsalId}`)
+      .set(...auth(testData.adminId))
+      .send({
+        title: 'Прогон',
+        location: 'Большая сцена',
+        startsAt: '2026-11-10T18:00:00.000Z',
+        endsAt: '2026-11-10T20:00:00.000Z',
+        ...overrides,
+      });
+
+  const create = () =>
+    request(app)
+      .post(`/api/native/projects/${testData.projectId}/rehearsals`)
+      .set(...auth(testData.adminId))
+      .send({
+        title: 'Прогон',
+        location: 'Большая сцена',
+        startsAt: '2026-11-10T18:00:00.000Z',
+        endsAt: '2026-11-10T20:00:00.000Z',
+        participant_ids: [testData.memberId],
+      });
+
+  it('lets it be announced again on the new date', async () => {
+    const res = await create();
+    const id = res.body.rehearsal.id;
+    claim(id, testData.memberId, '24h');
+
+    await save(id, {
+      startsAt: '2026-11-13T18:00:00.000Z',
+      endsAt: '2026-11-13T20:00:00.000Z',
+    });
+
+    expect(claimsFor(id)).toHaveLength(0);
+  });
+
+  it('does not re-announce one that was merely renamed', async () => {
+    // A new room or a new name is not a reason to remind everybody twice.
+    const res = await create();
+    const id = res.body.rehearsal.id;
+    claim(id, testData.memberId, '24h');
+
+    await save(id, { title: 'Сводный прогон', location: 'Фойе' });
+
+    expect(claimsFor(id)).toHaveLength(1);
   });
 });

@@ -19,7 +19,18 @@ import {
 } from './calendarStorage';
 
 // Connection cache
+//
+// Keyed by the calendar and nothing else, so it has to be cleared when a
+// different person signs in on the same device. Otherwise the second user's
+// mappings are posted against the first user's connection id, the server
+// rejects every one of them for not owning it, and saveEventMapping swallows
+// the failure — leaving their exported rehearsals recorded nowhere.
 let connectionCache: { id: number; deviceCalendarId: string } | null = null;
+
+/** Forget the connection. Called when the device changes hands. */
+export function resetConnectionCache(): void {
+  connectionCache = null;
+}
 
 /**
  * Get or create calendar connection for device calendar
@@ -175,13 +186,35 @@ export async function getAllMappings(): Promise<Record<string, { eventId: string
       };
     }
 
-    // Update AsyncStorage cache
-    // Note: This is a simplification, ideally we'd sync each one individually
-    return result;
+    // Merged with what is held locally, not substituted for it.
+    //
+    // A mapping reaches the server only if saveEventMapping got that far — one
+    // failed request, or a connection id that could not be established, and it
+    // exists on this device alone. Answering with the server's rows only made
+    // those invisible: "remove all exported" walked past their events and left
+    // them in the calendar while reporting success, and the import had nothing
+    // to exclude them by.
+    //
+    // The server wins where both know a rehearsal: it is the shared record, and
+    // a local entry can be left over from a device that has since been wiped.
+    const cached = await getAllFromAsyncStorage();
+    return { ...cached, ...result };
   } catch (error) {
     console.error('[CalendarMappings] Failed to get mappings from DB, falling back to AsyncStorage:', error);
-    // Fallback to AsyncStorage
-    return await getAllFromAsyncStorage();
+
+    const cached = await getAllFromAsyncStorage();
+    if (Object.keys(cached).length > 0) return cached;
+
+    // Neither the server nor the cache could answer, and "nothing exported" is
+    // not the same claim as "I could not find out". The import uses this list
+    // to leave our own exported rehearsals alone; handed an empty one it takes
+    // every rehearsal it put in the calendar and stores it back as somebody's
+    // busy time — for a rehearsal they are already on, counted twice. So say
+    // so, and let the caller give up on this run rather than guess.
+    //
+    // Reachable on a fresh install or straight after a user switch, when the
+    // cache is empty by design and one failed request is all it takes.
+    throw new Error('Calendar mappings unavailable: server failed and nothing is cached');
   }
 }
 

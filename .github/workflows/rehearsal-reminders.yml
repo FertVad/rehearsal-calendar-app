@@ -16,10 +16,28 @@ name: Rehearsal reminders
 #
 # Requires one repository secret: CRON_SECRET, the same value as in Vercel.
 # Settings → Secrets and variables → Actions → New repository secret.
+#
+# ---------------------------------------------------------------------------
+# SUSPENDED 2026-09-12. NO REMINDERS ARE BEING SENT BY ANYTHING RIGHT NOW.
+#
+# The Neon database is on the free plan, which bills the time its compute is
+# awake and puts it back to sleep after about five minutes idle. A ping every
+# fifteen minutes therefore kept it awake roughly a third of every day, and two
+# schedulers on that interval — this one and cron-job.org — consumed the whole
+# 100 CU-hour monthly allowance on their own, almost always to be told there is
+# nothing to send. The cron-job.org job was switched off the same day.
+#
+# To bring reminders back, uncomment the schedule below. Half-hourly is enough:
+# the hour-before window is 0–1h and the day-before window 12–24h, so a check
+# every thirty minutes still catches every rehearsal inside its window. Leave
+# this backup at a couple of hours if the primary is running again — the claim
+# in native_push_reminders is what makes overlapping schedulers safe, so the
+# backup does not need to match the primary's cadence to be useful.
+# ---------------------------------------------------------------------------
 
 on:
-  schedule:
-    - cron: '*/15 * * * *'
+  # schedule:
+  #   - cron: '*/30 * * * *'
   workflow_dispatch: # so it can be fired by hand to check it works
 
 jobs:

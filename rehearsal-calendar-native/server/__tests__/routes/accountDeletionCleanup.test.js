@@ -38,19 +38,8 @@ beforeAll(async () => {
   testDb = await setupIntegrationDb();
   testData = await seedTestData(testDb);
 
-  testDb.run(
-    `CREATE TABLE IF NOT EXISTS native_auth_providers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      provider_type TEXT NOT NULL,
-      provider_user_id TEXT,
-      provider_email TEXT,
-      provider_metadata TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_used_at DATETIME
-    )`
-  );
+  // native_auth_providers comes from setupIntegrationDb, matching production.
+
 
   jest.unstable_mockModule('../../database/db.js', () => ({
     default: testDb,

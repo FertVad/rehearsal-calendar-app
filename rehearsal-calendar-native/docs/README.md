@@ -22,6 +22,7 @@ Complete documentation for the Rehearsal Calendar Native App project.
 | [Quick Reference](quick-reference.md) | Critical rules, common errors and fixes |
 | [App Store Release](app-store-release.md) | Пошаговый план релиза в App Store, настройка пушей |
 | [Known Issues](known-issues.md) | Найденные, но пока не исправленные дефекты — что именно, где и почему отложено |
+| [Сервисы](services.md) | Все внешние сервисы: зачем каждый, какой переменной подключается, что сломается без него |
 
 ### API
 

@@ -283,7 +283,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                     {
                       text: t.common.delete,
                       style: 'destructive',
-                      onPress: () => editor.deletePastDates(() => {})
+                      onPress: () =>
+                        editor.deletePastDates((error) => {
+                          if (error) Alert.alert(t.common.error, t.availability.saveError);
+                        })
                     }
                   ]
                 );

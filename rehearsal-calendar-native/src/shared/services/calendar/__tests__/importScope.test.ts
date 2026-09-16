@@ -191,3 +191,110 @@ describe('An event the phone still has, unchanged', () => {
     expect(updated()).toHaveLength(1);
   });
 });
+
+
+describe('What leaves the device', () => {
+  // The promise this feature makes, on the landing page and in onboarding: only
+  // hours cross over, never what the events are. Worth a test rather than a
+  // careful habit.
+  it('sends the hours and nothing that identifies the event', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
+      {
+        id: 'evt-1',
+        calendarId: 'the-device-s-own-calendar-id',
+        title: 'Дантист, второй этаж',
+        notes: 'взять снимок',
+        location: 'ул. Пушкина, 3',
+        url: 'https://clinic.example/appointment/9',
+        startDate: iso(5, '09:00:00.000'),
+        endDate: iso(5, '10:00:00.000'),
+        allDay: false,
+      },
+    ]);
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    const [sent] = (availabilityAPI.bulkSet as jest.Mock).mock.calls[0];
+    const posted = JSON.stringify(sent);
+
+    for (const secret of ['Дантист', 'снимок', 'Пушкина', 'clinic.example']) {
+      expect(posted).not.toContain(secret);
+    }
+    expect(sent[0].title).toBe('Calendar Event');
+  });
+
+  it('does not send the device\'s calendar identifier either', async () => {
+    // Not event content, so not a broken promise — but the server has no use
+    // for it, and a narrower payload has less to be wrong about.
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
+      {
+        id: 'evt-1',
+        calendarId: 'the-device-s-own-calendar-id',
+        startDate: iso(5, '09:00:00.000'),
+        endDate: iso(5, '10:00:00.000'),
+        allDay: false,
+      },
+    ]);
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    const [sent] = (availabilityAPI.bulkSet as jest.Mock).mock.calls[0];
+    expect(JSON.stringify(sent)).not.toContain('the-device-s-own-calendar-id');
+  });
+});
+
+
+describe('Our own rehearsals, seen from a second device', () => {
+  // A mapping holds the calendar event's id, and that id is local to the phone
+  // that made it. On another device the stored ids match nothing, so the
+  // exclusion came up empty and every rehearsal the app had put in the calendar
+  // was read straight back in as busy time — counted twice, on a call the
+  // person is already on, with nothing afterwards able to tell the two apart.
+  const ourEvent = {
+    id: 'this-device-would-call-it-something-else',
+    calendarId: 'cal-1',
+    url: 'rehearsalapp://rehearsal/42',
+    startDate: iso(5, '18:00:00.000'),
+    endDate: iso(5, '20:00:00.000'),
+    allDay: false,
+  };
+
+  it('are left out even when the stored id means nothing here', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([ourEvent]);
+    (getAllMappings as jest.Mock).mockResolvedValue({
+      '42': { eventId: 'the-other-phone-s-id', calendarId: 'cal-1', lastSynced: '' },
+    });
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
+  });
+
+  it('are still left out when written before the mark existed', async () => {
+    const { url: _url, ...unmarked } = ourEvent;
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([unmarked]);
+    (getAllMappings as jest.Mock).mockResolvedValue({
+      '42': { eventId: unmarked.id, calendarId: 'cal-1', lastSynced: '' },
+    });
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
+  });
+
+  it('still import an ordinary event that is nobody\'s rehearsal', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
+      { ...ourEvent, url: 'https://example.com/dentist', id: 'evt-dentist' },
+    ]);
+    (getAllMappings as jest.Mock).mockResolvedValue({});
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+
+    await importCalendarEventsToAvailability(['cal-1']);
+
+    expect(availabilityAPI.bulkSet).toHaveBeenCalled();
+  });
+});
