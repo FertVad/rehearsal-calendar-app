@@ -171,6 +171,21 @@ describe('PostgreSQL service boundary and fail-closed behavior', () => {
     expect(get).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['DATABASE_URL', 'POSTGRES_URL'])(
+    'refuses an adapter SQLite fallback when %s configures PostgreSQL', async (variable) => {
+      const original = process.env[variable];
+      const fallbackConsume = await loadService({ get }, false);
+      process.env[variable] = 'postgresql://synthetic.invalid/never-connected';
+      try {
+        await expect(fallbackConsume(7)).rejects.toThrow(/Configured PostgreSQL is unavailable/);
+        expect(get).not.toHaveBeenCalled();
+      } finally {
+        if (original === undefined) delete process.env[variable];
+        else process.env[variable] = original;
+      }
+    }
+  );
+
   it.each([undefined, null, false, 0, -1, 1.5, '', '7/project/1', {}, Number.MAX_SAFE_INTEGER + 1])(
     'does not create caller-derived buckets for invalid identity %p', async (userId) => {
       await expect(consume(userId)).rejects.toThrow(/authenticated user ID/);

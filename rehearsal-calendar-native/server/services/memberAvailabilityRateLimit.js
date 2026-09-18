@@ -17,6 +17,12 @@ const rejectedCount = requestsPerMinute + 1;
  * caller as an error so it can fail closed before the availability query.
  */
 export async function consumeMemberAvailabilityBudget(userId) {
+  // The legacy adapter can fall back to a local SQLite file after a failed
+  // PostgreSQL connection. A configured shared store must never become a
+  // separate per-instance budget through that startup fallback.
+  if (!isPostgres && (process.env.DATABASE_URL || process.env.POSTGRES_URL)) {
+    throw new Error('Configured PostgreSQL is unavailable for member availability budget');
+  }
   if (
     (typeof userId !== 'number' &&
       !(typeof userId === 'string' && /^[1-9]\d*$/.test(userId))) ||
