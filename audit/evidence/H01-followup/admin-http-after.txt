@@ -1,0 +1,32 @@
+Running one project: backend
+  console.warn
+    ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+       Generate a secret: openssl rand -base64 32
+       Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at server/middleware/jwtMiddleware.js:15:13
+      at Object.<anonymous> (server/__tests__/adminHttp.test.js:15:25)
+
+(node:40567) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS backend rehearsal-calendar-native/server/__tests__/adminHttp.test.js
+  ✓ /admin serves the dashboard directly with strict CSP (33 ms)
+  ✓ /admin/ serves the dashboard directly with strict CSP (3 ms)
+  ✓ /admin/dashboard.js remains a static asset with its correct MIME type (4 ms)
+  ✓ /admin/dashboard.css remains a static asset with its correct MIME type (2 ms)
+  ✓ admin API still requires authorization before accessing data (2 ms)
+  ✓ extensionless public pages still resolve through static middleware (3 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        0.504 s, estimated 1 s
+Ran all test suites within paths "rehearsal-calendar-native/server/__tests__/adminHttp.test.js".

@@ -1,0 +1,2758 @@
+
+> rehearsal-calendar-backend@1.0.0 test
+> node scripts/test.mjs backend
+
+[browser] Preparing the Chromium version pinned by Playwright.
+[tests] Running Jest. Command-line filters apply only to this stage.
+(node:59015) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS __tests__/integration/calendarSync.integration.test.js
+PASS __tests__/integration/availability.integration.test.js
+PASS __tests__/integration/rehearsals.integration.test.js
+PASS __tests__/integration/projects.integration.test.js
+PASS __tests__/integration/invites.integration.test.js
+PASS __tests__/routes/rehearsalNotifications.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/rehearsalNotifications.test.js:70:25)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-11-02T15:00:00.000Z, endsAt: 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-11-02T15:00:00.000Z',
+        endsAtISO: '2026-11-02T17:00:00.000Z',
+        location: null,
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 1, Time: 2026-11-02T15:00:00.000Z - 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "1",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "location": null,
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "participant_ids": [
+          1,
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-11-02T15:00:00.000Z, endsAt: 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-11-02T15:00:00.000Z',
+        endsAtISO: '2026-11-02T17:00:00.000Z',
+        location: null,
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 2 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 2, Time: 2026-11-02T15:00:00.000Z - 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 2 participants: [ 1, 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 2 slots for rehearsal 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "2",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "location": null,
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-11-02T15:00:00.000Z, endsAt: 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-11-02T15:00:00.000Z',
+        endsAtISO: '2026-11-02T17:00:00.000Z',
+        location: null,
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 3
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 3, Time: 2026-11-02T15:00:00.000Z - 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 3
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "3",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "location": null,
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-11-02T15:00:00.000Z, endsAt: 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-11-02T15:00:00.000Z',
+        endsAtISO: '2026-11-02T17:00:00.000Z',
+        location: null,
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 4
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 4, Time: 2026-11-02T15:00:00.000Z - 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 4
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "4",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "location": null,
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] START - Rehearsal ID: 4, New time: 2026-11-02T16:00:00.000Z - 2026-11-02T18:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 4
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "4"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 5, changes: 1 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 4, Time: 2026-11-02T16:00:00.000Z - 2026-11-02T18:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 4
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] DONE - Updated slots for rehearsal 4
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-11-02T15:00:00.000Z, endsAt: 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-11-02T15:00:00.000Z',
+        endsAtISO: '2026-11-02T17:00:00.000Z',
+        location: null,
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 5
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 5, Time: 2026-11-02T15:00:00.000Z - 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 5
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "5",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "location": null,
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsal] START - Deleting rehearsal ID: 5
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsal] Step 1: Deleting availability slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 5
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "5"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 7, changes: 1 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsal] Step 2: Deleting RSVP responses...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsal] Step 3: Deleting rehearsal record...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsal] DONE - Successfully deleted rehearsal 5
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "participant_ids": [
+          1,
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-11-02T15:00:00.000Z, endsAt: 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-11-02T15:00:00.000Z',
+        endsAtISO: '2026-11-02T17:00:00.000Z',
+        location: null,
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 6
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 2 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 6, Time: 2026-11-02T15:00:00.000Z - 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 2 participants: [ 1, 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 2 slots for rehearsal 6
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "6",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "location": null,
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] START - Rehearsal ID: 6, New time: 2026-11-03T01:00:00.000Z - 2026-11-03T03:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 6
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "6"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 9, changes: 2 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 6, Time: 2026-11-03T01:00:00.000Z - 2026-11-03T03:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 2 participants: [ 1, 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 2 slots for rehearsal 6
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] DONE - Updated slots for rehearsal 6
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "participant_ids": [
+          1,
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-11-02T15:00:00.000Z, endsAt: 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-11-02T15:00:00.000Z',
+        endsAtISO: '2026-11-02T17:00:00.000Z',
+        location: null,
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 7
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 2 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 7, Time: 2026-11-02T15:00:00.000Z - 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 2 participants: [ 1, 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 2 slots for rehearsal 7
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "7",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "location": null,
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsal] START - Deleting rehearsal ID: 7
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsal] Step 1: Deleting availability slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 7
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "7"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 13, changes: 2 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsal] Step 2: Deleting RSVP responses...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsal] Step 3: Deleting rehearsal record...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsal] DONE - Successfully deleted rehearsal 7
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "participant_ids": [
+          1
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-11-02T15:00:00.000Z, endsAt: 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-11-02T15:00:00.000Z',
+        endsAtISO: '2026-11-02T17:00:00.000Z',
+        location: null,
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 8
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 8, Time: 2026-11-02T15:00:00.000Z - 2026-11-02T17:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 1 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 8
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "8",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-11-02T15:00:00.000Z",
+        "endsAt": "2026-11-02T17:00:00.000Z",
+        "location": null,
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] START - Rehearsal ID: 8, New time: 2026-11-03T01:00:00.000Z - 2026-11-03T03:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 8
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "8"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 14, changes: 1 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 8, Time: 2026-11-03T01:00:00.000Z - 2026-11-03T03:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 1 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 8
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] DONE - Updated slots for rehearsal 8
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "location": "Большая сцена",
+        "startsAt": "2026-09-20T18:00:00.000Z",
+        "endsAt": "2026-09-20T20:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-09-20T18:00:00.000Z, endsAt: 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-09-20T18:00:00.000Z',
+        endsAtISO: '2026-09-20T20:00:00.000Z',
+        location: 'Большая сцена',
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 9
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 9, Time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 9
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "9",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-09-20T18:00:00.000Z",
+        "endsAt": "2026-09-20T20:00:00.000Z",
+        "location": "Большая сцена",
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] START - Rehearsal ID: 9, New time: 2026-09-21T18:00:00.000Z - 2026-09-21T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 9
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "9"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 16, changes: 1 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 9, Time: 2026-09-21T18:00:00.000Z - 2026-09-21T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 9
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] DONE - Updated slots for rehearsal 9
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "location": "Большая сцена",
+        "startsAt": "2026-09-20T18:00:00.000Z",
+        "endsAt": "2026-09-20T20:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-09-20T18:00:00.000Z, endsAt: 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-09-20T18:00:00.000Z',
+        endsAtISO: '2026-09-20T20:00:00.000Z',
+        location: 'Большая сцена',
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 10
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 10, Time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 10
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "10",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-09-20T18:00:00.000Z",
+        "endsAt": "2026-09-20T20:00:00.000Z",
+        "location": "Большая сцена",
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] START - Rehearsal ID: 10, New time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 10
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "10"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 18, changes: 1 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 10, Time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 10
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] DONE - Updated slots for rehearsal 10
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "location": "Большая сцена",
+        "startsAt": "2026-09-20T18:00:00.000Z",
+        "endsAt": "2026-09-20T20:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-09-20T18:00:00.000Z, endsAt: 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-09-20T18:00:00.000Z',
+        endsAtISO: '2026-09-20T20:00:00.000Z',
+        location: 'Большая сцена',
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 11
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 11, Time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 11
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "11",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-09-20T18:00:00.000Z",
+        "endsAt": "2026-09-20T20:00:00.000Z",
+        "location": "Большая сцена",
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] START - Rehearsal ID: 11, New time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 11
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "11"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 20, changes: 1 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 11, Time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 11
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] DONE - Updated slots for rehearsal 11
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "location": "Большая сцена",
+        "startsAt": "2026-09-20T18:00:00.000Z",
+        "endsAt": "2026-09-20T20:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-09-20T18:00:00.000Z, endsAt: 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-09-20T18:00:00.000Z',
+        endsAtISO: '2026-09-20T20:00:00.000Z',
+        location: 'Большая сцена',
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 12
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 12, Time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 12
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "12",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-09-20T18:00:00.000Z",
+        "endsAt": "2026-09-20T20:00:00.000Z",
+        "location": "Большая сцена",
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] START - Rehearsal ID: 12, New time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 12
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "12"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 22, changes: 1 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 12, Time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 12
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] DONE - Updated slots for rehearsal 12
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "location": "Большая сцена",
+        "startsAt": "2026-09-20T18:00:00.000Z",
+        "endsAt": "2026-09-20T20:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-09-20T18:00:00.000Z, endsAt: 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-09-20T18:00:00.000Z',
+        endsAtISO: '2026-09-20T20:00:00.000Z',
+        location: 'Большая сцена',
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 13
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 13, Time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 13
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "13",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-09-20T18:00:00.000Z",
+        "endsAt": "2026-09-20T20:00:00.000Z",
+        "location": "Большая сцена",
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] START - Rehearsal ID: 13, New time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 13
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "13"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 18, changes: 1 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 13, Time: 2026-09-20T18:00:00.000Z - 2026-09-20T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 2 participants: [ 2, 3 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 3
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 2 slots for rehearsal 13
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] DONE - Updated slots for rehearsal 13
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "location": "Большая сцена",
+        "startsAt": "2026-11-10T18:00:00.000Z",
+        "endsAt": "2026-11-10T20:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-11-10T18:00:00.000Z, endsAt: 2026-11-10T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-11-10T18:00:00.000Z',
+        endsAtISO: '2026-11-10T20:00:00.000Z',
+        location: 'Большая сцена',
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 14
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 14, Time: 2026-11-10T18:00:00.000Z - 2026-11-10T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 14
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "14",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-11-10T18:00:00.000Z",
+        "endsAt": "2026-11-10T20:00:00.000Z",
+        "location": "Большая сцена",
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] START - Rehearsal ID: 14, New time: 2026-11-13T18:00:00.000Z - 2026-11-13T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 14
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "14"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 1, changes: 1 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 14, Time: 2026-11-13T18:00:00.000Z - 2026-11-13T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 14
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] DONE - Updated slots for rehearsal 14
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] START - projectId: 1, userId: 1
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] rehearsalData: {
+        "title": "Прогон",
+        "location": "Большая сцена",
+        "startsAt": "2026-11-10T18:00:00.000Z",
+        "endsAt": "2026-11-10T20:00:00.000Z",
+        "participant_ids": [
+          2
+        ]
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Using new format - startsAt: 2026-11-10T18:00:00.000Z, endsAt: 2026-11-10T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Inserting into database...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Parameters: {
+        projectId: '1',
+        title: 'Прогон',
+        description: null,
+        startsAtISO: '2026-11-10T18:00:00.000Z',
+        endsAtISO: '2026-11-10T20:00:00.000Z',
+        location: 'Большая сцена',
+        userId: 1
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Rehearsal created with ID: 15
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Adding 1 RSVP records...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] RSVP records added successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Booking rehearsal slots...
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 15, Time: 2026-11-10T18:00:00.000Z - 2026-11-10T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 15
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] Slots booked successfully
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [createRehearsal] DONE - Returning: {
+        "id": "15",
+        "projectId": "1",
+        "title": "Прогон",
+        "description": null,
+        "startsAt": "2026-11-10T18:00:00.000Z",
+        "endsAt": "2026-11-10T20:00:00.000Z",
+        "location": "Большая сцена",
+        "createdBy": 1,
+        "createdAt": "2026-09-18 15:35:53",
+        "updatedAt": "2026-09-18 15:35:53"
+      }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] START - Rehearsal ID: 15, New time: 2026-11-10T18:00:00.000Z - 2026-11-10T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] START - Deleting slots for rehearsal ID: 15
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] Query params - source: "rehearsal", external_event_id: "15"
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [deleteRehearsalSlots] DONE - Delete result: { lastInsertId: 2, changes: 1 }
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] START - Rehearsal ID: 15, Time: 2026-11-10T18:00:00.000Z - 2026-11-10T20:00:00.000Z
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Found 1 participants: [ 2 ]
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] Booking slot for user 2
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [bookRehearsalSlots] DONE - Booked 1 slots for rehearsal 15
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [updateRehearsalSlots] DONE - Updated slots for rehearsal 15
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+PASS __tests__/integration/rsvp.integration.test.js
+PASS __tests__/routes/memberRemoval.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/memberRemoval.test.js:61:25)
+
+PASS __tests__/routes/notifications.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/notifications.test.js:41:25)
+
+PASS __tests__/integration/reminderScheduler.integration.test.js
+PASS __tests__/timezone.test.js
+PASS __tests__/routes/accountDeletionCleanup.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/accountDeletionCleanup.test.js:71:25)
+
+    console.log
+      [DEBUG] [Auth] User 3 deletion: 2 projects will be deleted (no other admins)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр под снос (id: 2)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр с совладельцем (id: 3)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] User 5 deletion: 2 projects will be deleted (no other admins)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр под снос (id: 5)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр с совладельцем (id: 6)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] User 7 deletion: 2 projects will be deleted (no other admins)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр под снос (id: 8)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр с совладельцем (id: 9)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] User 9 deletion: 2 projects will be deleted (no other admins)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр под снос (id: 11)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр с совладельцем (id: 12)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] User 11 deletion: 2 projects will be deleted (no other admins)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр под снос (id: 14)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр с совладельцем (id: 15)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] User 13 deletion: 2 projects will be deleted (no other admins)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр под снос (id: 17)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр с совладельцем (id: 18)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] User 15 deletion: 2 projects will be deleted (no other admins)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр под снос (id: 20)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр с совладельцем (id: 21)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] User 17 deletion: 2 projects will be deleted (no other admins)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр под снос (id: 23)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Auth] Deleted orphaned project: Театр с совладельцем (id: 24)
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.error
+      [ERROR] [Auth] Project-deleted notification failed for Театр под снос: Expo is down
+
+      41 |   error: (message, error, ...args) => {
+      42 |     if (error instanceof Error) {
+    > 43 |       console.error(`[ERROR] ${message}`, error.message, ...args);
+         |               ^
+      44 |       if (!IS_PRODUCTION) {
+      45 |         console.error(error.stack);
+      46 |       }
+
+      at Object.error (utils/logger.js:43:15)
+      at error (routes/auth.js:499:16)
+
+    console.error
+      Error: Expo is down
+          at Object.<anonymous> (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/__tests__/routes/accountDeletionCleanup.test.js:236:48)
+          at Promise.finally.completed (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-circus/build/jestAdapterInit.js:1557:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-circus/build/jestAdapterInit.js:1497:10)
+          at _callCircusTest (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-circus/build/jestAdapterInit.js:1007:40)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+          at _runTest (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-circus/build/jestAdapterInit.js:947:3)
+          at /private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-circus/build/jestAdapterInit.js:849:7
+          at _runTestsForDescribeBlock (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-circus/build/jestAdapterInit.js:862:11)
+          at _runTestsForDescribeBlock (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-circus/build/jestAdapterInit.js:857:11)
+          at run (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-circus/build/jestAdapterInit.js:761:3)
+          at runAndTransformResultsToJestFormat (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-circus/build/jestAdapterInit.js:1918:21)
+          at jestAdapter (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-circus/build/runner.js:101:19)
+          at runTestInternal (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-runner/build/index.js:275:16)
+          at runTest (/private/tmp/reh-h01-clean.mBtJ2S/repo/rehearsal-calendar-native/server/node_modules/jest-runner/build/index.js:343:7)
+
+      43 |       console.error(`[ERROR] ${message}`, error.message, ...args);
+      44 |       if (!IS_PRODUCTION) {
+    > 45 |         console.error(error.stack);
+         |                 ^
+      46 |       }
+      47 |     } else {
+      48 |       console.error(`[ERROR] ${message}`, error, ...args);
+
+      at Object.error (utils/logger.js:45:17)
+      at error (routes/auth.js:499:16)
+
+PASS __tests__/routes/availabilityBulk.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/availabilityBulk.test.js:42:25)
+
+PASS __tests__/routes/membersAvailabilityRange.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/membersAvailabilityRange.test.js:62:25)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: Asia/Tokyo
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: Asia/Tokyo
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+PASS __tests__/routes/authorization.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/authorization.test.js:70:25)
+
+    console.log
+      [DEBUG] [Availability API] User ID 2 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 2 requesting availability, timezone: UTC
+
+      at Object.log [as debug] (utils/logger.js:18:15)
+
+PASS __tests__/integration/rsvpService.integration.test.js
+PASS __tests__/routes/membershipNotifications.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/membershipNotifications.test.js:78:25)
+
+PASS __tests__/routes/projectDeletionCleanup.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/projectDeletionCleanup.test.js:62:25)
+
+PASS __tests__/middleware/jwtMiddleware.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at __tests__/middleware/jwtMiddleware.test.js:18:3
+
+PASS __tests__/routes/rehearsalById.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/rehearsalById.test.js:75:25)
+
+PASS __tests__/routes/authLogin.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/authLogin.test.js:65:23)
+
+    console.info
+      [INFO] [AccountLinking] Unlinked email provider from user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+PASS __tests__/routes/pushTokenOwnership.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/routes/pushTokenOwnership.test.js:68:25)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 3
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 3
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 3
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 3
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 2
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 3
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [PushToken] Registered token for user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+PASS __tests__/integration/rehearsalParticipants.integration.test.js
+PASS __tests__/utils/googleAudience.test.js
+  ● Console
+
+    console.error
+      [OAuth] Google token verification failed: Invalid token issuer: https://accounts.example.com
+
+      86 |       );
+      87 |     } else {
+    > 88 |       console.error('[OAuth] Google token verification failed:', error.message);
+         |               ^
+      89 |     }
+      90 |     throw new Error('Failed to verify Google token: ' + error.message);
+      91 |   }
+
+      at error (utils/oauthVerification.js:88:15)
+      at Object.<anonymous> (__tests__/utils/googleAudience.test.js:127:5)
+
+PASS __tests__/database/transaction.test.js
+PASS __tests__/utils/mailTokens.test.js
+PASS __tests__/adminHttp.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/adminHttp.test.js:15:25)
+
+PASS __tests__/routes/projectsInviteCode.test.js
+PASS __tests__/routes/htmlEscaping.test.js
+PASS __tests__/routes/calendarMappingLookup.test.js
+PASS __tests__/utils/names.test.js
+PASS __tests__/appImport.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at warn (middleware/jwtMiddleware.js:15:13)
+      at Object.<anonymous> (__tests__/appImport.test.js:14:27)
+
+PASS __tests__/integration/adminStoredContent.test.js
+
+Test Suites: 33 passed, 33 total
+Tests:       351 passed, 351 total
+Snapshots:   0 total
+Time:        4.821 s
+Ran all test suites.
+[browser] Running mandatory admin DOM/CSP regression tests.
+TAP version 13
+# Subtest: untrusted admin API values remain literal text, even without CSP
+ok 1 - untrusted admin API values remain literal text, even without CSP
+  ---
+  duration_ms: 965.576
+  type: 'test'
+  ...
+# Subtest: production CSP loads admin assets, blocks inline execution and preserves per-response nonces
+ok 2 - production CSP loads admin assets, blocks inline execution and preserves per-response nonces
+  ---
+  duration_ms: 166.507958
+  type: 'test'
+  ...
+# Subtest: login, pagination, status, refresh, empty states and logout work under production CSP
+ok 3 - login, pagination, status, refresh, empty states and logout work under production CSP
+  ---
+  duration_ms: 1170.589125
+  type: 'test'
+  ...
+# Subtest: 401 returns to login and removes the stored credential
+ok 4 - 401 returns to login and removes the stored credential
+  ---
+  duration_ms: 226.152334
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2845.437667
+[browser] Running mandatory persisted-content DOM/CSP regression tests.
+(node:59076) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS __tests__/integration/adminStoredContent.test.js
+  Admin stored text through authenticated writes and real database reads
+    ✓ preserves image handler in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (297 ms)
+    ✓ preserves SVG handler in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (226 ms)
+    ✓ preserves table/script delimiters in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (236 ms)
+    ✓ preserves literal markup, entities and Unicode in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (277 ms)
+    ✓ returns legacy email text literally when a report author has no name [persisted data -> real API -> Chromium DOM/CSP] (324 ms)
+    ✓ requires user authentication for writes and admin authentication for reads (11 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        1.96 s
+Ran all test suites within paths "__tests__/integration/adminStoredContent.test.js".
