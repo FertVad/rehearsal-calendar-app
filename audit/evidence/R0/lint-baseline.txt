@@ -1,0 +1,493 @@
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/__tests__/__mocks__/react-native-calendars.js
+  10:5  warning  'onDayPress' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  11:5  warning  'onDayLongPress' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  12:5  warning  'onMonthChange' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  16:5  warning  'markingType' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  17:5  warning  'theme' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/__tests__/__mocks__/react-native.js
+   93:11  warning  'key' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  114:30  warning  'sectionIndex' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  119:13  warning  'key' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/__tests__/integration/authFlow.test.ts
+  23:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/__tests__/integration/availabilityFlow.test.ts
+   10:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  265:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  266:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/__tests__/integration/rehearsalFlow.test.ts
+  10:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/__tests__/setup.ts
+  10:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/contexts/AuthContext.tsx
+   40:37  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+   42:44  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  109:19  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  213:19  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  220:6   warning  React Hook useCallback has a missing dependency: 'reconcileDeviceState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  243:19  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  250:6   warning  React Hook useCallback has a missing dependency: 'reconcileDeviceState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  252:62  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  270:19  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  277:6   warning  React Hook useCallback has a missing dependency: 'reconcileDeviceState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  301:19  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  311:6   warning  React Hook useCallback has a missing dependency: 'reconcileDeviceState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  313:69  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  335:19  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  342:6   warning  React Hook useCallback has a missing dependency: 'reconcileDeviceState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  393:19  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  421:19  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/contexts/ProjectContext.tsx
+  41:19  warning  Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  70:6   warning  React Hook useEffect has a missing dependency: 'fetchProjects'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/contexts/SeenContext.tsx
+  78:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/contexts/__tests__/SeenContext.test.tsx
+  18:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  37:47  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  37:74  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/contexts/__tests__/UnreadContext.test.tsx
+  22:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  25:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  39:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/auth/screens/LoginScreen.tsx
+   48:6   warning  React Hook useEffect has a missing dependency: 'handleGoogleSignIn'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   59:19  warning  Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+   64:47  warning  Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+   85:19  warning  Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+  107:19  warning  Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/auth/screens/RegisterScreen.tsx
+  62:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/components/calendar/CalendarMonth.tsx
+  24:3  warning  'availability' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/components/editor/TimeSlotsEditor.tsx
+  20:3  warning  'onSlotChange' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/components/editor/__tests__/ModeSelector.test.tsx
+   14:10  warning  'DayMode' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  312:13  warning  'icons' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/components/editor/__tests__/TimeSlotsEditor.test.tsx
+  254:15  warning  'queryByText' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/components/modals/TimePickerModal.tsx
+   9:3   warning  'Platform' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  12:49  warning  'BorderRadius' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  19:25  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/hooks/__tests__/useAvailabilityDataMultiDay.test.ts
+  42:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  78:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/hooks/useAvailabilityEditor.ts
+   58:56  warning  Forbidden non-null assertion                                                                                                                                                                                                           @typescript-eslint/no-non-null-assertion
+   65:6   warning  React Hook useEffect has a missing dependency: 'getDayState'. Either include it or remove the dependency array. If 'getDayState' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+  114:36  warning  Unexpected any. Specify a different type                                                                                                                                                                                               @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/hooks/useAvailabilitySave.ts
+    3:28  warning  'DayState' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  107:8   warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+  180:8   warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+  188:21  warning  Forbidden non-null assertion                                                @typescript-eslint/no-non-null-assertion
+  188:45  warning  Forbidden non-null assertion                                                @typescript-eslint/no-non-null-assertion
+  203:19  warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/hooks/useAvailabilitySync.ts
+  58:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/screens/AvailabilityScreen.tsx
+   11:3   warning  'Platform' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   35:15  warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+  178:26  warning  Inline style: { justifyContent: 'center' }                                  react-native/no-inline-styles
+  180:22  warning  Inline style: { flexDirection: 'row', alignItems: 'center' }                react-native/no-inline-styles
+  197:24  warning  Inline style: { flexDirection: 'row', alignItems: 'center' }                react-native/no-inline-styles
+  199:83  warning  Inline style: { marginRight: 4 }                                            react-native/no-inline-styles
+  201:26  warning  Inline style: { fontSize: 11 }                                              react-native/no-inline-styles
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/availability/utils/slotHelpers.ts
+  1:10  warning  'DayMode' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  1:29  warning  'TimeSlot' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/components/RehearsalCard.tsx
+  44:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/components/SmartPlannerButton.tsx
+  27:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  27:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  28:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  28:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/components/TodayRehearsals.tsx
+  36:9   warning  'navigation' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  36:36  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/components/__tests__/ActorSelector.test.tsx
+  131:15  warning  'getByText' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/components/__tests__/TodayRehearsals.test.tsx
+   15:29  warning  'waitFor' is defined but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+  129:9   warning  'mockRsvpResponses' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  134:9   warning  'mockAdminStats' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  139:9   warning  'mockOnRSVP' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  142:9   warning  'mockSetRsvpResponses' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  143:9   warning  'mockSetAdminStats' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  153:64  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+  159:14  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+  160:13  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+  265:29  warning  'UNSAFE_getAllByType' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  324:13  warning  'adminTexts' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/__tests__/useAddRehearsalForm.test.ts
+   57:8   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  222:15  warning  'result' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  450:12  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts
+   49:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   54:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  293:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/__tests__/useCalendarSync.test.ts
+  188:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  212:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  244:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  275:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  278:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  361:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  364:70  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  405:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  428:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  529:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  647:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  677:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  738:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/__tests__/useRehearsals.test.ts
+   11:27  warning  'waitFor' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+   14:19  warning  'Rehearsal' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   71:8   warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  331:35  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  350:9   warning  Forbidden non-null assertion                                                 @typescript-eslint/no-non-null-assertion
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/useAddRehearsalForm.ts
+   42:11  warning  'language' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+  110:6   warning  React Hook useEffect has a missing dependency: 'setSelectedProject'. Either include it or remove the dependency array. If 'setSelectedProject' changes too often, find the parent component that defines it and wrap that definition in useCallback                               react-hooks/exhaustive-deps
+  128:6   warning  React Hook useEffect has missing dependencies: 'localSelectedProject' and 'setSelectedProject'. Either include them or remove the dependency array. If 'setSelectedProject' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+  144:47  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  169:65  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  173:20  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  187:6   warning  React Hook useEffect has missing dependencies: 'navigation' and 'routeParams'. Either include them or remove the dependency array                                                                                                                                                 react-hooks/exhaustive-deps
+  207:36  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  213:41  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  225:39  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/useAddRehearsalSubmit.ts
+   29:6   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   78:11  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+   84:53  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  101:24  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  102:26  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  150:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/useCalendarSync.ts
+   10:10  warning  'Alert' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  185:21  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  211:21  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  254:21  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  284:21  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  338:21  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+  369:21  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/useRehearsalAvailability.ts
+  15:6   warning  Unexpected any. Specify a different type                                                                                                                      @typescript-eslint/no-explicit-any
+  68:54  warning  Unexpected any. Specify a different type                                                                                                                      @typescript-eslint/no-explicit-any
+  78:23  warning  Unexpected any. Specify a different type                                                                                                                      @typescript-eslint/no-explicit-any
+  93:6   warning  React Hook useEffect has missing dependencies: 't.common.error' and 't.rehearsals.loadAvailabilityError'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/useRehearsalMembers.ts
+  11:6  warning  Unexpected any. Specify a different type                                                                                                                 @typescript-eslint/no-explicit-any
+  36:6  warning  React Hook useEffect has missing dependencies: 't.common.error' and 't.rehearsals.loadMembersError'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/hooks/useRehearsals.ts
+   91:72  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/screens/AddRehearsalScreen.tsx
+   88:6   warning  React Hook useEffect has a missing dependency: 'form'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   94:16  warning  Inline style: { flex: 1 }                                                                                react-native/no-inline-styles
+  107:26  warning  Inline style: { marginTop: 10 }                                                                          react-native/no-inline-styles
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/screens/CalendarScreen.tsx
+    1:60  warning  'useRef' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   24:36  warning  Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+  128:60  warning  Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+  160:27  warning  Unexpected any. Specify a different type                                  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/screens/RehearsalDetailsScreen.tsx
+   21:21  warning  'Project' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   51:36  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   52:26  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   70:19  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   73:20  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  105:69  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  149:22  warning  Forbidden non-null assertion                                               @typescript-eslint/no-non-null-assertion
+  152:28  warning  Forbidden non-null assertion                                               @typescript-eslint/no-non-null-assertion
+  163:19  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/calendar/styles/calendarScreenStyles.ts
+  5:7  warning  'UPCOMING_CARD_WIDTH' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/notifications/screens/NotificationsScreen.tsx
+  51:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/onboarding/components/OnboardingStep.tsx
+  3:40  warning  'BorderRadius' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/onboarding/screens/CalendarSyncScreen.tsx
+    1:27  warning  'useEffect' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  125:59  warning  'cals' is defined but never used. Allowed unused args must match /^_/u       @typescript-eslint/no-unused-vars
+  144:21  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  210:54  warning  Inline style: { backgroundColor: '#DB4437' }                                 react-native/no-inline-styles
+  232:54  warning  Inline style: { backgroundColor: '#000' }                                    react-native/no-inline-styles
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/onboarding/screens/WeekStartScreen.tsx
+  36:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/onboarding/screens/WelcomeScreen.tsx
+  68:47  warning  Inline style: { backgroundColor: 'rgba(59, 130, 246, 0.15)' }  react-native/no-inline-styles
+  75:47  warning  Inline style: { backgroundColor: 'rgba(16, 185, 129, 0.15)' }  react-native/no-inline-styles
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/profile/screens/CalendarSyncSettingsScreen.tsx
+   25:63  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+   41:5   warning  'refresh' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  309:29  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  368:94  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  400:21  warning  Unexpected any. Specify a different type                                            @typescript-eslint/no-explicit-any
+  487:56  warning  Inline style: { backgroundColor: '#DB4437' }                                        react-native/no-inline-styles
+  516:56  warning  Inline style: { backgroundColor: '#000' }                                           react-native/no-inline-styles
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/profile/screens/EditProfileScreen.tsx
+   79:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   95:16  warning  Inline style: { flex: 1 }                 react-native/no-inline-styles
+  108:24  warning  Inline style: { width: 24 }               react-native/no-inline-styles
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/profile/screens/ProfileScreen.tsx
+    1:27  warning  'useCallback' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+    3:10  warning  'BottomTabScreenProps' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    4:10  warning  'CompositeScreenProps' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    6:10  warning  'useFocusEffect' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+   67:19  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+   84:19  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+   98:19  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  114:19  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  134:19  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  157:62  warning  Inline style: { marginTop: 12, marginBottom: 8 }                                        react-native/no-inline-styles
+  163:62  warning  Inline style: { marginBottom: 16 }                                                      react-native/no-inline-styles
+  168:68  warning  Inline style: { marginLeft: 12 }                                                        react-native/no-inline-styles
+  177:62  warning  Inline style: { marginBottom: 16 }                                                      react-native/no-inline-styles
+  182:68  warning  Inline style: { marginLeft: 12 }                                                        react-native/no-inline-styles
+  190:79  warning  Inline style: { marginTop: 24 }                                                         react-native/no-inline-styles
+  228:49  warning  Inline style: { backgroundColor: 'rgba(59, 130, 246, 0.15)' }                           react-native/no-inline-styles
+  263:49  warning  Inline style: { backgroundColor: 'rgba(59, 130, 246, 0.15)' }                           react-native/no-inline-styles
+  312:49  warning  Inline style: { backgroundColor: 'rgba(245, 158, 11, 0.15)' }                           react-native/no-inline-styles
+  322:49  warning  Inline style: { backgroundColor: 'rgba(239, 68, 68, 0.15)' }                            react-native/no-inline-styles
+  338:49  warning  Inline style: { backgroundColor: 'rgba(239, 68, 68, 0.15)' }                            react-native/no-inline-styles
+  516:26  warning  Inline style: { padding: 20 }                                                           react-native/no-inline-styles
+  517:28  warning  Inline style: { marginBottom: 20 }                                                      react-native/no-inline-styles
+  522:26  warning  Inline style: { alignSelf: 'center', marginBottom: 16 }                                 react-native/no-inline-styles
+  524:53  warning  Inline style: { textAlign: 'center', marginBottom: 12 }                                 react-native/no-inline-styles
+  527:52  warning  Inline style: { textAlign: 'center' }                                                   react-native/no-inline-styles
+  531:28  warning  Inline style: { gap: 12 }                                                               react-native/no-inline-styles
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/projects/hooks/__tests__/useInviteLink.test.ts
+   75:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:9   warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  196:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  212:9   warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/projects/hooks/useInviteLink.ts
+  33:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/projects/screens/CreateProjectScreen.tsx
+  60:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  67:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/projects/screens/JoinProjectScreen.tsx
+   46:6   warning  React Hook useEffect has a missing dependency: 'checkAndFetchInviteInfo'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   90:19  warning  Unexpected any. Specify a different type                                                                                    @typescript-eslint/no-explicit-any
+  117:19  warning  Unexpected any. Specify a different type                                                                                    @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/projects/screens/ProjectDetailScreen.tsx
+   10:3    warning  'FlatList' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  156:19   warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+  166:20   warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+  231:27   warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+  273:27   warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+  315:27   warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+  580:100  warning  Inline style: { marginLeft: 8 }                                             react-native/no-inline-styles
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/projects/screens/ProjectsScreen.tsx
+    1:17  warning  'useState' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+    1:27  warning  'useEffect' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+   15:36  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+   18:14  warning  'language' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   60:68  warning  Inline style: { marginBottom: 8 }                                                    react-native/no-inline-styles
+   64:64  warning  Inline style: { marginTop: 8, marginBottom: 4 }                                      react-native/no-inline-styles
+  149:40  warning  Forbidden non-null assertion                                                         @typescript-eslint/no-non-null-assertion
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/smart-planner/components/DayCard.tsx
+  19:48  warning  Component definition is missing display name  react/display-name
+  41:7   warning  Forbidden non-null assertion                  @typescript-eslint/no-non-null-assertion
+  50:16  warning  Forbidden non-null assertion                  @typescript-eslint/no-non-null-assertion
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/smart-planner/components/MemberFilter.tsx
+  21:58  warning  Component definition is missing display name  react/display-name
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/smart-planner/components/SlotItem.tsx
+  13:50  warning  Component definition is missing display name  react/display-name
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/smart-planner/hooks/useSmartPlanner.ts
+  93:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/smart-planner/utils/__tests__/availabilityMerger.test.ts
+  30:72  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  63:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  84:70  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  85:70  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/smart-planner/utils/__tests__/slotGenerator.test.ts
+   80:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   81:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  120:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  127:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  128:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  134:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  141:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  142:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/features/smart-planner/utils/slotGenerator.ts
+  18:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/hooks/useWeekStart.ts
+  29:16  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/navigation/index.tsx
+    2:56  warning  'Alert' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+   63:16  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+  138:36  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+  140:11  warning  'language' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  298:44  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+  345:38  warning  Unexpected any. Specify a different type                                             @typescript-eslint/no-explicit-any
+  391:20  warning  Inline style: { flex: 1, justifyContent: 'center', alignItems: 'center' }            react-native/no-inline-styles
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/components/DateRangePicker.tsx
+  61:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/components/PickerModal.tsx
+  18:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  35:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/components/UserAvatar.tsx
+  3:10  warning  'Colors' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/components/__tests__/DateRangePicker.test.tsx
+   88:15  warning  'getByText' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  122:15  warning  'getByTestId' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  194:15  warning  'getByText' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  218:26  warning  'rerender' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/hooks/useAutoCalendarSync.ts
+  56:3   warning  'force' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  66:65  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  73:59  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/hooks/useNotifications.ts
+   22:36  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+   82:22  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+   82:70  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+  104:72  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+  149:6   warning  React Hook useEffect has a missing dependency: 'handleNotificationNavigation'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  160:39  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+  178:47  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+  182:39  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+  185:47  warning  Unexpected any. Specify a different type                                                                                         @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/services/api.ts
+   29:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   30:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  155:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  182:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  275:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  279:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/services/appleAuth.ts
+  68:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/services/calendar/__tests__/exportFailures.test.ts
+  24:6  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/services/calendar/__tests__/exportMatching.test.ts
+  36:7  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/services/calendar/export.ts
+  394:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/services/calendar/import.ts
+  233:91  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  254:83  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  263:26  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  274:21  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  275:18  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  317:62  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  369:26  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  403:26  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  441:43  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  450:28  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  477:19  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  488:3   warning  'onProgress' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  513:24  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+  526:19  warning  Unexpected any. Specify a different type                                      @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/services/googleAuth.ts
+  65:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/utils/availability.ts
+  14:7  warning  'DAY_END' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/utils/calendarMappings.ts
+   54:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  137:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  158:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/utils/formatLastSync.ts
+  8:72  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/utils/logger.ts
+  15:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  40:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/src/shared/utils/storage.ts
+  25:23  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+✖ 322 problems (0 errors, 322 warnings)
+

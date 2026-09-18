@@ -1,0 +1,28 @@
+✖ untrusted admin API values remain literal text, even without CSP (4131.546875ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5066.656625
+
+✖ failing tests:
+
+test at __tests__/browser/adminDashboard.browser.test.mjs:56:1
+✖ untrusted admin API values remain literal text, even without CSP (4131.546875ms)
+  AssertionError [ERR_ASSERTION]: API data created HTML elements
+  
+  13 !== 0
+  
+      at TestContext.<anonymous> (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/adminDashboard.browser.test.mjs:59:10)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 13,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

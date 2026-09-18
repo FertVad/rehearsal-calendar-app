@@ -1,0 +1,28 @@
+{
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    ".": {
+      "entry": [
+        "index.ts",
+        "App.tsx",
+        "jest.config.js",
+        "eslint.config.js",
+        "src/**/*.{test,spec}.{ts,tsx}",
+        "src/__tests__/setup.ts",
+        "src/__tests__/__mocks__/**/*.js"
+      ],
+      "project": ["src/**/*.{ts,tsx,js}", "*.{js,ts}"],
+      "jest": false
+    },
+    "server": {
+      "entry": [
+        "server.js",
+        "scripts/*.{js,mjs}",
+        "public/**/*.js",
+        "__tests__/**/*.{test,spec}.{js,mjs}"
+      ],
+      "project": ["**/*.{js,mjs,ts}"],
+      "jest": false
+    }
+  }
+}
