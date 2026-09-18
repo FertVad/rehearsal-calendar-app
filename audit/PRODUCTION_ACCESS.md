@@ -34,6 +34,23 @@
 или новой схемой обхода. Оплата Neon не означает автоматического разрешения
 на push, deploy, миграции или включение reminders: разрешённый scope подтверждается отдельно.
 
+### Разрешение на отправку ветки и CI — 18 сентября 2026
+
+После обсуждения локальной ветки Вадим разрешил отправить
+`codex/systematic-repair` в GitHub и запустить первый `Application checks`.
+Это разрешение не включает deployment, production smoke, доступ к Neon или
+переменным Vercel. Ограничения на reminders сохраняются.
+
+Read-only проверка метаданных GitHub показала предыдущие автоматические Preview
+deployments. Поэтому перед push в `server/vercel.json` задано
+`git.deploymentEnabled["codex/systematic-repair"] = false` — штатное
+[отключение Git deployments для конкретной ветки](https://vercel.com/docs/project-configuration/git-configuration).
+Изменение не отключает CI. Статическая проверка `Application checks` подтвердила
+использование fixtures/одноразового PostgreSQL и отсутствие production secrets
+или запуска `server.js`. Результат удалённого запуска следует смотреть в GitHub
+Actions по конкретному commit; историческое NOT_RUN в локальных отчётах не
+переписывается задним числом.
+
 ## OPS-IA01 — проверка APPLE_CLIENT_ID человеком
 
 **Статус:** NOT_RUN. **Finding:** IA01 остаётся TODO.
