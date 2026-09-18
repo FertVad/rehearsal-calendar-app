@@ -9,11 +9,13 @@
     "dev": "node --watch server.js",
     "migrate": "node scripts/migrate.js",
     "test:r0-postgres": "node scripts/r0-postgres.mjs",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "node scripts/test.mjs backend",
+    "test:unit": "ADMIN_BROWSER_CHECK=0 NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "test:admin-browser": "node --test __tests__/browser/adminDashboard.browser.test.mjs",
-    "test:admin-stored-browser": "ADMIN_BROWSER_CHECK=1 NODE_OPTIONS=--experimental-vm-modules jest --config ../jest.config.js --selectProjects backend --runInBand --runTestsByPath __tests__/integration/adminStoredContent.test.js"
+    "test:browser:install": "node scripts/test.mjs install",
+    "test:admin-browser": "node scripts/test.mjs dashboard",
+    "test:admin-stored-browser": "node scripts/test.mjs stored"
   },
   "dependencies": {
     "apple-signin-auth": "^1.7.6",

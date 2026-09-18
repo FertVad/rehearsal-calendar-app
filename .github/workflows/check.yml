@@ -1,0 +1,33 @@
+name: Application checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rehearsal-calendar-native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            rehearsal-calendar-native/package-lock.json
+            rehearsal-calendar-native/server/package-lock.json
+      - name: Install application dependencies
+        run: npm ci
+      - name: Install server and browser test dependencies
+        run: npm ci --prefix server
+      - name: Install Chromium and Linux system dependencies
+        run: npm --prefix server run test:browser:install -- --with-deps
+      - name: Run the same required check as local development
+        run: npm run check

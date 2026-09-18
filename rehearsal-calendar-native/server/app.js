@@ -97,6 +97,10 @@ export function createApp() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // Serve the admin document before static middleware can redirect /admin to
+  // the asset directory /admin/. Unhandled asset paths continue to express.static.
+  app.use('/admin', adminRoutes);
+
   // Marketing site, privacy policy and support pages.
   // Mounted before the API routers but after them in specificity: express.static
   // only answers for files that exist, so /api/* and /invite/* still reach their
@@ -130,9 +134,6 @@ export function createApp() {
 
   // Cron endpoints (for Vercel Cron Jobs)
   app.use('/api/cron', cronRoutes);
-
-  // Admin panel
-  app.use('/admin', adminRoutes);
 
   // Apple App Site Association for Universal Links (iOS)
   app.get('/.well-known/apple-app-site-association', (req, res) => {

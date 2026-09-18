@@ -1,26 +1,63 @@
 # Admin rendering regression (H01)
 
-Run from `rehearsal-calendar-native/server` with Node 20 or newer. These tests
-never import the application entry point or load `.env`. They use temporary
-loopback HTTP listeners, synthetic credentials and isolated browser profiles.
-Use the same Node major version for installing dependencies and running tests:
-`better-sqlite3` is a native module. This checkout was verified with Node
-20.19.2; an installation built for it cannot be loaded by a different Node ABI.
+The required `npm test` command in both application and server packages includes
+both browser suites. The application's `npm run check` runs secret scanning,
+TypeScript checking and that same full test command. Jest filename matching does
+not control the browser stage: `server/scripts/test.mjs` explicitly executes it.
 
-Install dev dependencies with `npm ci`, then install a test browser once:
+From a fresh checkout, use Node **22.16.0** (pinned in the repository `.nvmrc`
+and CI) for both dependency installation and test execution. `better-sqlite3`
+is a native module and cannot load a binding built for another Node ABI.
+The earlier H01 evidence used Node 20.19.2; that historical runtime is not the
+clean-install requirement. Locked React Native/Metro dependencies require at
+least Node 20.19.4, and Node 22.16.0 satisfies all declared Node engines in both
+lockfiles. Reinstall dependencies after switching Node major versions.
 
 ```sh
-npx playwright install chromium
+cd rehearsal-calendar-native
+nvm use
+npm ci
+npm ci --prefix server
+npm run check
+```
+
+The first run automatically installs the Chromium version required by the
+locked Playwright dependency. Later runs reuse it. The initial download needs
+network access; an installation error, absent executable or failed launch makes
+the command fail. Browser checks are never silently skipped. On a fresh Linux
+machine, install the OS libraries before running the check:
+
+```sh
+npm --prefix server run test:browser:install -- --with-deps
+```
+
+The `Application checks` GitHub Actions workflow runs on pushes and pull
+requests, installs both lockfiles plus Chromium/Linux libraries on Ubuntu 24.04,
+then executes the same `npm run check`. It does not require repository secrets.
+Making this job a required merge check is a repository branch-protection setting.
+
+For targeted diagnosis, run from `rehearsal-calendar-native/server`:
+
+```sh
 npm run test:admin-browser
 npm run test:admin-stored-browser
 ```
 
-An existing Chrome/Chromium can be used without downloading another browser:
+Both targeted commands also prepare Chromium automatically. An existing
+Chrome/Chromium can be selected explicitly without downloading a browser:
 
 ```sh
-PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' npm run test:admin-browser
-PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' npm run test:admin-stored-browser
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' npm test
 ```
+
+An invalid or empty override is an error; the runner does not silently switch
+to another browser. CI uses Playwright's pinned Chromium rather than an override.
+`npm test -- --selectProjects backend` at the application level forwards the
+selection only to the initial Jest stage; **both browser suites still run**.
+Jest runs serially by default to bound memory use; explicit Jest worker flags
+override that default. `npm run test:unit -- <Jest arguments>` is the explicit
+faster Jest-only command in either package and does not certify the browser
+regression. Existing watch/coverage commands are also development-only checks.
 
 `test:admin-browser` checks the actual page/assets using controlled API responses:
 literal rendering **without CSP**, then the production security middleware,
@@ -34,8 +71,11 @@ in Chrome under the production CSP. Its fixture replaces the database adapter
 with SQLite `:memory:` and fails on external OAuth/push calls. It does not test
 the production PostgreSQL adapter or a deployed server.
 
-The same persistence tests run during ordinary Jest runs without launching a
-browser; `ADMIN_BROWSER_CHECK=1` explicitly enables their browser assertions.
+The first Jest stage checks persistence without launching a browser. The
+required browser stage then reruns those cases with `ADMIN_BROWSER_CHECK=1`,
+set by the runner regardless of the caller's environment. Both suites use
+temporary loopback listeners, synthetic credentials and isolated browser
+profiles. They never import the application entry point or load `.env`.
 Neither suite needs a phone or real admin credentials. Before a release, also
 check the deployed admin page's CSP and that both assets return 200; a local
 fixture cannot verify deployment packaging, CDN headers or caches.
