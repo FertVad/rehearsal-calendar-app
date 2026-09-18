@@ -1,0 +1,38 @@
+
+> rehearsal-calendar-backend@1.0.0 test:r0-postgres
+> node scripts/r0-postgres.mjs
+
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:64349","database":"r0_test","schema":"diagnostic subset; production bootstrap is probed separately"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+{"scenario":"F01","outcome":"KNOWN_DEFECT_REPRODUCED","sqlState":"42601","expectation":"Production bootstrap must work on PostgreSQL; current file fails at AUTOINCREMENT"}
+{"scenario":"B02","outcome":"KNOWN_DEFECT_REPRODUCED","status":500,"orphanProjects":1,"expectation":"Failed project creation must roll back its first write"}
+Error creating project: error: R0_INJECTED_SECOND_WRITE
+    at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.run (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/database/db.js:49:21)
+    at async file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/routes/native/projects.js:79:5 {
+  length: 143,
+  severity: 'ERROR',
+  code: 'P0001',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'PL/pgSQL function reject_second_write() line 2 at RAISE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_exec.c',
+  line: '3905',
+  routine: 'exec_stmt_raise'
+}
+{"scenario":"D01","outcome":"KNOWN_DEFECT_REPRODUCED","status":201,"outsiderInvitations":1,"outsiderBusyRows":1,"expectation":"Reject a participant outside the project before any write"}
+{"scenario":"A02","outcome":"PASS","contracts":["auth DB rejection returns bounded generic 500 for GET/POST","health survives DB fault; authorized traffic recovers","no application row changes during failures","pre-try availability DB failure returns bounded generic 500; process alive","malformed availability entries400 through both public mounts","real bcrypt malformed passwords400/wrong401/correct200+usable admin token"],"externalConnections":0}
+[ERROR] Request failed: { status: 500, code: '42P01' }
+[ERROR] Request failed: { status: 500, code: '42P01' }
+[ERROR] Request failed: { status: 500, code: '42703' }
+R0 HARNESS PASS: controls and repaired A02 contracts passed; B02/D01/F01 remain known failing application contracts, NOT fixes.
+R0 cleanup: owned disposable container removed

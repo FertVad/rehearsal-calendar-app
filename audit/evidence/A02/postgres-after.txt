@@ -1,0 +1,12 @@
+
+> rehearsal-calendar-backend@1.0.0 test:r0-postgres
+> node scripts/r0-postgres.mjs --a02-only
+
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:63173","database":"r0_test","schema":"diagnostic subset; production bootstrap is probed separately"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+{"scenario":"A02","outcome":"PASS","contracts":["auth DB rejection returns bounded generic 500 for GET/POST","health survives DB fault; authorized traffic recovers","no application row changes during failures","pre-try availability DB failure returns bounded generic 500; process alive","malformed availability entries400 through both public mounts","real bcrypt malformed passwords400/wrong401/correct200+usable admin token"],"externalConnections":0}
+[ERROR] Request failed: { status: 500, code: '42P01' }
+[ERROR] Request failed: { status: 500, code: '42P01' }
+[ERROR] Request failed: { status: 500, code: '42703' }
+A02 REGRESSION PASS: controls and repaired A02 contracts passed on real PostgreSQL.
+R0 cleanup: owned disposable container removed

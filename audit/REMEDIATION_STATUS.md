@@ -1,6 +1,6 @@
 # Реестр системного исправления Rehearsly
 
-Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01 VERIFIED локально, остальные 101 пункт остаются TODO. Воспроизведение A02/B02/D01/F01 в R0 не является их исправлением. Это учёт локальной реализации, не повторная оценка текущего production.
+Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01 и [A02](REMEDIATION_A02.md) VERIFIED локально, остальные 100 пунктов остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`. Это учёт локальной реализации, не повторная оценка текущего production.
 
 [План R0–R9](/Users/vadimfertik/Desktop/reh_app/audit/REMEDIATION_PLAN.md) · [Аудит](/Users/vadimfertik/Desktop/reh_app/audit/AUDIT_REPORT.md) · [Серверные проверки](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-server.md) · [Устройства](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-device-tests.md).
 
@@ -22,7 +22,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | Пакет | Пунктов | Состояние |
 |---|---:|---|
 | R0 | — | COMPLETE — baseline, real PG/HTTP harness, исходные дефекты, первичная инвентаризация |
-| R1 | 10 | IN_PROGRESS — H01 VERIFIED, ещё 9 TODO |
+| R1 | 10 | IN_PROGRESS — H01/A02 VERIFIED, ещё 8 TODO |
 | R2 | 8 | TODO |
 | R3 | 6 | TODO |
 | R4 | 8 | TODO |
@@ -39,7 +39,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | ID | Важность | Условный | Пакет | Статус | Краткая суть | Evidence |
 |---|---|---|---|---|---|---|
 | A01 | High | Нет | R3 | TODO | предварительный захват аккаунта через email/OAuth | — |
-| A02 | High | Нет | R1 | TODO | необработанные async-исключения в auth middleware/admin login | — |
+| A02 | High | Нет | R1 | VERIFIED | необработанные async-исключения в auth middleware/admin login | [Исполнение и проверки — 7e1eefa](REMEDIATION_A02.md) |
 | A03 | Medium | Нет | R3 | TODO | backend не применяет правила пароля и профильные типы | — |
 | A04 | Medium | Нет | R3 | TODO | способы входа расходятся с реальными credentials | — |
 | AC01 | Medium | Нет | R5 | TODO | Кратковременный сбой refresh уничтожает сессию | — |

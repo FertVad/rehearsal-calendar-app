@@ -1,0 +1,15 @@
+Independent read-only review by agent a02_final_review, 2026-09-18.
+Source commit: 7e1eefa035443478a04257a8069df9a960e2f829
+Base: d92cfbb
+
+No blocking findings in the bounded review of 7e1eefa against d92cfbb.
+
+- The Express 4 wrapper captures synchronous throws and returned promise rejections, preserves explicit next() behavior, and converts non-Error rejections into real errors.
+- Auth DB and bcrypt failures reach the generic 500 boundary; deliberate 401 responses remain intact.
+- Admin password and availability structure checks return 400 before the relevant dependency calls or writes.
+- The terminal handler preserves valid error statuses, avoids exposing dependency details, and delegates correctly when headers are sent.
+- PostgreSQL runner and Ubuntu CI changes appear consistent with the pinned Node version and local Docker context.
+
+Read-only review only; the reviewer did not run tests or verify CI execution.
+Existing local route catches and broader availability validation remain outside
+this fix's scope, as documented.

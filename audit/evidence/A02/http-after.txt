@@ -1,0 +1,39 @@
+Running one project: backend
+  console.warn
+    ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+       Generate a secret: openssl rand -base64 32
+       Add to server/.env: JWT_SECRET=<your-secret>
+
+      14 |     );
+      15 |   } else {
+    > 16 |     console.warn(
+         |             ^
+      17 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      18 |       '   Generate a secret: openssl rand -base64 32\n' +
+      19 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at server/middleware/jwtMiddleware.js:16:13
+      at Object.<anonymous> (server/__tests__/errorHttp.test.js:13:25)
+
+(node:66323) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS backend rehearsal-calendar-native/server/__tests__/errorHttp.test.js
+  ✓ a failed auth read returns generic 500 without a write, and the next request recovers (39 ms)
+  ✓ malformed JSON keeps its parser status without echoing request data (8 ms)
+  ✓ oversized JSON keeps its parser status without echoing request data (5 ms)
+  /api/native/availability/bulk
+    ✓ rejects malformed entry null before slot lookup or writes (6 ms)
+    ✓ rejects malformed entry [] before slot lookup or writes (9 ms)
+    ✓ rejects malformed entry 17 before slot lookup or writes (5 ms)
+    ✓ rejects malformed entry {"startsAt": 17, "type": "busy"} before slot lookup or writes (3 ms)
+  /api/availability/bulk
+    ✓ rejects malformed entry null before slot lookup or writes (2 ms)
+    ✓ rejects malformed entry [] before slot lookup or writes (3 ms)
+    ✓ rejects malformed entry 17 before slot lookup or writes (3 ms)
+    ✓ rejects malformed entry {"startsAt": 17, "type": "busy"} before slot lookup or writes (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        0.644 s
+Ran all test suites within paths "rehearsal-calendar-native/server/__tests__/errorHttp.test.js".
