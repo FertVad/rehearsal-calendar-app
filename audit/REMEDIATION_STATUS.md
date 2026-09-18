@@ -2,7 +2,7 @@
 
 Операционный контекст: [известный отказ Neon и границы доступа](PRODUCTION_ACCESS.md), сообщённые Вадимом 18 сентября 2026. Production smoke остаётся NOT_RUN. Вадим отдельно разрешил push `codex/systematic-repair` и первый удалённый `Application checks`; deployment и доступ к production требуют отдельного решения. Локальные статусы ниже не утверждают работоспособность production.
 
-Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md) и [B03](REMEDIATION_B03.md) VERIFIED локально, остальные 99 пунктов остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. Это учёт локальной реализации, не повторная оценка текущего production.
+Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md), [B03](REMEDIATION_B03.md) и [B04](REMEDIATION_B04.md) VERIFIED локально, остальные 98 пунктов остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`, B04 — на `fd5f1eb`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. B04 требует additive migration008 до серверного deployment. Это учёт локальной реализации, не повторная оценка текущего production.
 
 [План R0–R9](/Users/vadimfertik/Desktop/reh_app/audit/REMEDIATION_PLAN.md) · [Аудит](/Users/vadimfertik/Desktop/reh_app/audit/AUDIT_REPORT.md) · [Серверные проверки](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-server.md) · [Устройства](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-device-tests.md).
 
@@ -24,7 +24,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | Пакет | Пунктов | Состояние |
 |---|---:|---|
 | R0 | — | COMPLETE — baseline, real PG/HTTP harness, исходные дефекты, первичная инвентаризация |
-| R1 | 10 | IN_PROGRESS — H01/A02/B03 VERIFIED, ещё 7 TODO |
+| R1 | 10 | IN_PROGRESS — H01/A02/B03/B04 VERIFIED, ещё 6 TODO |
 | R2 | 8 | TODO |
 | R3 | 6 | TODO |
 | R4 | 8 | TODO |
@@ -52,7 +52,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | B01 | Medium | Нет | R4 | TODO | удаление участника неатомарно, сбой оставляет связанные записи | — |
 | B02 | Medium | Нет | R4 | TODO | создание/удаление проекта частично фиксируются при ошибке | — |
 | B03 | High | Нет | R1 | VERIFIED | неограниченный диапазон дат блокирует event loop до проверки членства | [Исполнение, миграция и проверки — e0a0ede](REMEDIATION_B03.md) |
-| B04 | Medium | Нет | R1 | TODO | альтернативный join URL обходит rate limit приглашений | — |
+| B04 | Medium | Нет | R1 | VERIFIED | альтернативный join URL обходит rate limit приглашений | [Исполнение, миграция и проверки — fd5f1eb](REMEDIATION_B04.md) |
 | BC01 | Medium | Нет | R5 | TODO | проекты и выбранный проект переживают смену аккаунта | — |
 | BC02 | Medium | Нет | R5 | TODO | после удаления или изменения прав выбранный проект остаётся старым объектом | — |
 | BC03 | Low | Нет | R9 | TODO | прошедшие репетиции теряют название | — |

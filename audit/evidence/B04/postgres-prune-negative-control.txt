@@ -1,0 +1,52 @@
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:61591","database":"r0_test","schema":"diagnostic subset; production bootstrap is probed separately"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Pruning must preserve a candidate refreshed while DELETE waited; removing the outer expiry predicate loses it
++ actual - expected
+
++ undefined
+- {
+-   ip_key: '690a6041e687fbacb213d3c8e0c362dc666e6c6349ee8f631e29d52e6797ae4f',
+-   request_count: 7,
+-   window_start: '1789752180'
+- }
+
+    at file:///private/tmp/reh-b04-prune-negative-99syxnsv/server/__tests__/postgres/b04.mjs:321:16
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async withinMinute (file:///private/tmp/reh-b04-prune-negative-99syxnsv/server/__tests__/postgres/b04.mjs:66:25)
+    at async probeB04 (file:///private/tmp/reh-b04-prune-negative-99syxnsv/server/__tests__/postgres/b04.mjs:284:5)
+    at async file:///private/tmp/reh-b04-prune-negative-99syxnsv/server/__tests__/postgres/probe.mjs:177:12 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: {
+    ip_key: '690a6041e687fbacb213d3c8e0c362dc666e6c6349ee8f631e29d52e6797ae4f',
+    window_start: '1789752180',
+    request_count: 7
+  },
+  operator: 'deepStrictEqual'
+}
+
+Node.js v22.16.0
+R0 cleanup: owned disposable container removed
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: B04 probe failed unexpectedly
+
+1 !== 0
+
+    at file:///private/tmp/reh-b04-prune-negative-99syxnsv/server/scripts/r0-postgres.mjs:74:12
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual'
+}
+
+Node.js v22.16.0

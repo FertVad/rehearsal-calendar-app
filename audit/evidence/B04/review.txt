@@ -1,0 +1,30 @@
+B04 independent review, 2026-09-18
+Base: 45007c4e10cdbcb3d1171d8fe9b1d29a59fd253f
+Source: fd5f1eb6700e566d58cd818133e1ee867daa101d
+
+Independent read-only reviewer inspected operation routing/method aliases,
+authentication order, malformed codes, IPv4/IPv6 identity normalization,
+PostgreSQL atomic counters, allocation locking, pruning, and failure responses.
+No concrete blocker found. Denied requests precede invite/member/notification
+work; B03 implementation and shared database adapter are unchanged.
+
+Findings and disposition:
+1. IP identity depends on trust proxy = 1 and ingress handling of X-Forwarded-For.
+   Retained existing proxy policy; deployment verification is explicitly NOT_RUN
+   in B04-RELEASE. No claim about the actual Vercel ingress is made.
+2. The pruning DELETE outer expiry predicate protects a concurrent refresh,
+   but initial probe did not exercise this race. Added deterministic PG test:
+   refresh transaction holds row; pg_blocking_pids observes the actual DELETE
+   lock wait before COMMIT; refreshed row/budget and gate count must survive.
+   A separate temporary source copy without only this predicate fails exactly
+   at that assertion. See postgres-prune-negative-control.txt.
+3. Existing SQLite async transaction adapter does not queue concurrent callers.
+   Corrected source comment and documented limited SQLite concurrency support;
+   no new adapter claim or broad R2 rewrite.
+4. Fixed-minute boundaries, stable common JWT_SECRET, and application-owned gate
+   accounting remain stated assumptions. Global auth/admin MemoryStore (IS02),
+   startup/fallback, bootstrap and migration runner (R2) remain open.
+
+Root review also checked old/new route compatibility and removal of old router
+imports; public 429 headers are asserted for both IP and account exhaustion.
+This file records code review, not production access or device verification.

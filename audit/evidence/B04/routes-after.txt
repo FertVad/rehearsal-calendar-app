@@ -1,0 +1,12 @@
+Running one project: backend
+(node:88080) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS backend rehearsal-calendar-native/server/__tests__/routes/inviteLimits.test.js
+PASS backend rehearsal-calendar-native/server/__tests__/services/inviteRateLimit.test.js
+PASS backend rehearsal-calendar-native/server/__tests__/routes/membershipNotifications.test.js
+
+Test Suites: 3 passed, 3 total
+Tests:       79 passed, 79 total
+Snapshots:   0 total
+Time:        1.299 s
+Ran all test suites within paths "rehearsal-calendar-native/server/__tests__/routes/inviteLimits.test.js", "rehearsal-calendar-native/server/__tests__/routes/membershipNotifications.test.js", "rehearsal-calendar-native/server/__tests__/services/inviteRateLimit.test.js".
