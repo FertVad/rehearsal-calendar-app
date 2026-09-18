@@ -15,6 +15,7 @@
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:browser:install": "node scripts/test.mjs install",
     "test:admin-browser": "node scripts/test.mjs dashboard",
+    "test:invite-browser": "node scripts/test.mjs invite",
     "test:admin-stored-browser": "node scripts/test.mjs stored"
   },
   "dependencies": {

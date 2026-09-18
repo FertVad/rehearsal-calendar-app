@@ -12,7 +12,7 @@ import pushTokensRouter from './routes/native/pushTokens.js';
 import cronRoutes from './routes/cron.js';
 import adminRoutes from './routes/admin.js';
 import { logger } from './utils/logger.js';
-import { jsonForScript } from './utils/htmlEscape.js';
+import { generateInvitePageHTML } from './routes/invitePage.js';
 import { securityHeaders } from './middleware/securityHeaders.js';
 import { asyncHandler } from './middleware/asyncHandler.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -162,110 +162,9 @@ export function createApp() {
     ]);
   });
 
-  // Universal deep link route - smart redirect page
+  // Render the browser fallback without querying invitation/account data.
   app.get('/invite/:code', (req, res) => {
-    const { code } = req.params;
-    const expoHost = req.query.expoHost;
-    const nonce = res.locals.cspNonce;
-
-    const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Join Project - Rehearsal App</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 100vh;
-          margin: 0;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-        }
-        .container {
-          text-align: center;
-          padding: 2rem;
-          max-width: 500px;
-        }
-        h1 { margin-bottom: 1rem; font-size: 2rem; }
-        p { margin-bottom: 1rem; font-size: 1.1rem; opacity: 0.9; }
-        .button {
-          display: inline-block;
-          margin: 0.5rem;
-          padding: 1rem 2rem;
-          background: white;
-          color: #667eea;
-          text-decoration: none;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 1.1rem;
-          cursor: pointer;
-        }
-        .spinner {
-          margin: 2rem auto;
-          width: 50px; height: 50px;
-          border: 4px solid rgba(255,255,255,0.3);
-          border-top-color: white;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1>🎭 Rehearsal App</h1>
-        <div id="status">
-          <div class="spinner"></div>
-          <p id="statusText"></p>
-        </div>
-        <div id="manual" style="display: none;">
-          <p id="manualText"></p>
-          <a href="#" onclick="openApp(); return false;" class="button" id="openButton"></a>
-        </div>
-      </div>
-      <script nonce="${nonce}">
-        const isRu = navigator.language.startsWith('ru');
-        document.getElementById('statusText').textContent = isRu ? 'Открываем приложение...' : 'Opening the app...';
-        document.getElementById('manualText').textContent = isRu ? 'Приложение не открылось автоматически?' : "App didn't open automatically?";
-        document.getElementById('openButton').textContent = isRu ? 'Открыть приложение' : 'Open App';
-
-        const code = ${jsonForScript(String(code || ''))};
-        const expoHost = ${jsonForScript(expoHost || null)};
-
-        function openApp() {
-          const schemes = [];
-          if (expoHost) {
-            schemes.push('exp://' + expoHost + '/--/invite/' + code);
-          }
-          schemes.push('rehearsalapp://invite/' + code);
-
-          let tried = 0;
-          schemes.forEach((scheme, index) => {
-            setTimeout(() => {
-              window.location.href = scheme;
-              tried++;
-              if (tried === schemes.length) {
-                setTimeout(() => {
-                  document.getElementById('status').style.display = 'none';
-                  document.getElementById('manual').style.display = 'block';
-                }, 2000);
-              }
-            }, index * 500);
-          });
-        }
-
-        window.onload = () => { openApp(); };
-      </script>
-    </body>
-    </html>
-  `;
-
-    res.send(html);
+    res.type('html').send(generateInvitePageHTML(req.params.code, req.query.expoHost));
   });
 
   app.use(errorHandler);

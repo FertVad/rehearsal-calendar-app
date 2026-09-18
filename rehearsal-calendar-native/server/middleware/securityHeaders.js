@@ -12,8 +12,8 @@ export const securityHeaders = [
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        // The invite page's inline script uses a per-response nonce. Admin
-        // scripts/styles are same-origin assets and need no inline exceptions.
+        // Public/admin scripts and styles are same-origin assets. The nonce
+        // remains available for explicitly authorized script elements.
         scriptSrc: ["'self'", (_req, res) => `'nonce-${res.locals.cspNonce}'`],
         scriptSrcAttr: ["'none'"],
         styleSrc: ["'self'", 'https://fonts.googleapis.com'],
