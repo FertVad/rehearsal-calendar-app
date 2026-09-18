@@ -54,8 +54,8 @@ function runJest(cwd, jestArgs, browserCheck) {
 }
 
 try {
-  if (!['all', 'backend', 'dashboard', 'invite', 'stored', 'install'].includes(mode)) {
-    throw new Error('Expected test mode: all, backend, dashboard, invite, stored or install.');
+  if (!['all', 'backend', 'dashboard', 'admin-errors', 'invite', 'stored', 'install'].includes(mode)) {
+    throw new Error('Expected test mode: all, backend, dashboard, admin-errors, invite, stored or install.');
   }
   if (mode === 'install' ? args.some(arg => arg !== '--with-deps') :
       !['all', 'backend'].includes(mode) && args.length) {
@@ -69,6 +69,10 @@ try {
   if (['all', 'backend', 'dashboard'].includes(mode)) {
     console.log('[browser] Running mandatory admin DOM/CSP regression tests.');
     runNode(['--test', '__tests__/browser/adminDashboard.browser.test.mjs']);
+  }
+  if (['all', 'backend', 'dashboard', 'admin-errors'].includes(mode)) {
+    console.log('[browser] Running mandatory admin error/retry/session regression tests.');
+    runNode(['--test', '__tests__/browser/adminFailures.browser.test.mjs']);
   }
   if (['all', 'backend', 'invite'].includes(mode)) {
     console.log('[browser] Running mandatory invite fallback/CSP regression tests.');

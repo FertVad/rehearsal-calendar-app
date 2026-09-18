@@ -1,4 +1,4 @@
-# Public and admin rendering regressions (H01/H02)
+# Public and admin browser regressions (H01/H02/H04)
 
 The required `npm test` command in both application and server packages includes
 admin, invite and persisted-content browser suites. The application's `npm run check` runs secret scanning,
@@ -40,11 +40,12 @@ For targeted diagnosis, run from `rehearsal-calendar-native/server`:
 
 ```sh
 npm run test:admin-browser
+npm run test:admin-errors-browser
 npm run test:invite-browser
 npm run test:admin-stored-browser
 ```
 
-Both targeted commands also prepare Chromium automatically. An existing
+All targeted commands also prepare Chromium automatically. An existing
 Chrome/Chromium can be selected explicitly without downloading a browser:
 
 ```sh
@@ -65,6 +66,14 @@ literal rendering **without CSP**, then the production security middleware,
 asset MIME types, nonce behavior and normal login/pagination/status/logout flows.
 Outbound browser requests are blocked. A missing browser or launch failure fails
 the suite; it is not silently skipped.
+
+`test:admin-errors-browser` checks the real admin assets with controlled HTTP
+failures and delayed responses: visible errors/retry, stale confirmed data,
+pagination, pending/failed status updates, and session/request ordering.
+All actions go through the UI. A transport variant deliberately ignores abort
+signals so a late response reaches the code's generation checks. Tests do not
+equate cancellation with prevention of a server-side write. The admin target
+and full required checks always include this suite alongside the H01 suite.
 
 `test:invite-browser` serves the real `createApp` invite route and assets without
 initializing a database. It refuses inherited `DATABASE_URL`/`POSTGRES_URL`.

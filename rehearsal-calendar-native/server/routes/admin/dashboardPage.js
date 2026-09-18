@@ -15,8 +15,8 @@ export function generateAdminPageHTML() {
   <div class="login-wrap">
     <div class="login-box">
       <h2>Admin Panel</h2>
-      <div class="error hidden" id="login-error">Wrong password</div>
-      <input type="password" id="password-input" placeholder="Password" autofocus>
+      <div class="error hidden" id="login-error" role="alert"></div>
+      <input type="password" id="password-input" placeholder="Password" aria-label="Password" autocomplete="current-password" autofocus>
       <button class="btn btn-primary login-button" id="login-button">Log in</button>
     </div>
   </div>
@@ -32,14 +32,21 @@ export function generateAdminPageHTML() {
     </div>
   </div>
   <div class="container">
-    <div id="stats-loading" class="loading">Loading...</div>
-
     <!-- Stats Cards -->
-    <div id="stats-cards" class="cards hidden"></div>
+    <section id="stats-section" aria-label="Statistics" aria-busy="false">
+      <div id="stats-loading" class="loading hidden" role="status">Loading...</div>
+      <div id="stats-error" class="section-error hidden" role="alert"></div>
+      <div id="stats-stale" class="stale-note hidden" role="status"></div>
+      <div id="stats-cards" class="cards hidden"></div>
+    </section>
 
     <!-- Bug Reports Table -->
-    <div class="section">
-      <div class="section-title">Bug Reports</div>
+    <section class="section" id="bugs-section" aria-labelledby="bugs-title" aria-busy="false">
+      <h2 class="section-title" id="bugs-title">Bug Reports</h2>
+      <div id="bugs-loading" class="loading hidden" role="status">Loading...</div>
+      <div id="bugs-error" class="section-error hidden" role="alert"></div>
+      <div id="bugs-stale" class="stale-note hidden" role="status"></div>
+      <div id="bugs-mutation-status" class="mutation-status hidden" role="status"></div>
       <table>
         <thead>
           <tr>
@@ -50,16 +57,17 @@ export function generateAdminPageHTML() {
             <th>Date</th>
           </tr>
         </thead>
-        <tbody id="bugs-body">
-          <tr><td colspan="5" class="loading">Loading...</td></tr>
-        </tbody>
+        <tbody id="bugs-body"></tbody>
       </table>
       <div class="pagination" id="bugs-pagination"></div>
-    </div>
+    </section>
 
     <!-- Users Table -->
-    <div class="section">
-      <div class="section-title">Recent Users</div>
+    <section class="section" id="users-section" aria-labelledby="users-title" aria-busy="false">
+      <h2 class="section-title" id="users-title">Recent Users</h2>
+      <div id="users-loading" class="loading hidden" role="status">Loading...</div>
+      <div id="users-error" class="section-error hidden" role="alert"></div>
+      <div id="users-stale" class="stale-note hidden" role="status"></div>
       <table>
         <thead>
           <tr>
@@ -69,12 +77,10 @@ export function generateAdminPageHTML() {
             <th>Last Login</th>
           </tr>
         </thead>
-        <tbody id="users-body">
-          <tr><td colspan="4" class="loading">Loading...</td></tr>
-        </tbody>
+        <tbody id="users-body"></tbody>
       </table>
       <div class="pagination" id="users-pagination"></div>
-    </div>
+    </section>
 
   </div>
 </div>

@@ -25,6 +25,8 @@ body {
   font-size: 13px;
 }
 .btn:hover { background: rgba(139,148,158,0.1); }
+.btn:disabled, .status-btn:disabled { cursor: wait; opacity: 0.45; }
+.btn:focus-visible, .status-btn:focus-visible { outline: 2px solid #A855F7; outline-offset: 3px; }
 .btn-primary {
   background: linear-gradient(135deg, #A855F7, #9333EA);
   border: none;
@@ -97,6 +99,21 @@ body {
 
 /* Tables */
 .section { margin-bottom: 24px; }
+.section-error, .mutation-status {
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(139,148,158,0.3);
+  border-radius: 6px;
+  background: #161b22;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.section-error, .mutation-error { border-color: #d29922; color: #e3b341; }
+.section-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.section-error .btn { flex-shrink: 0; }
+.mutation-status .btn { margin-top: 8px; }
+.stale-note { color: #e3b341; font-size: 13px; margin-bottom: 12px; }
 .section-title {
   font-size: 15px;
   font-weight: 600;

@@ -7,12 +7,15 @@ dependencies with that same Node version. From `server/`:
 # Focused release regression: controls plus the repaired A02 contract.
 npm run test:r0-postgres -- --a02-only
 
-# Required CI regression: controls plus A02, B03 and B04.
+# Required CI regression: controls plus A02, B03, B04 and H04.
 npm run test:r0-postgres -- --security-only
 
 # Individual shared-budget contracts.
 npm run test:r0-postgres -- --b03-only
 npm run test:r0-postgres -- --b04-only
+
+# Admin bug-report status contract.
+npm run test:r0-postgres -- --h04-only
 
 # Full diagnostic run: repaired contracts and remaining original defects.
 npm run test:r0-postgres
@@ -87,7 +90,7 @@ The default diagnostic run also reproduces these **unfixed contracts**:
 - D01: an outsider participant is accepted and gets an invitation and busy slot.
 - F01: current mixed-dialect bootstrap is rejected by PostgreSQL.
 
-Exit 0 from the full run means controls/A02/B03/B04 passed **and** those three known
+Exit 0 from the full run means controls/A02/B03/B04/H04 passed **and** those three known
 failures were reproduced. It does not mean B02/D01/F01 are safe. These probes
 remain outside normal Jest discovery. When treating each remaining finding,
 write its desired behavior as a regression assertion and retire/update that
@@ -101,6 +104,15 @@ IP normalization, management compatibility, bounded storage, concurrent
 allocation/pruning, and fail-closed recovery. Both run the actual additive
 migration twice and assert business rows stay unchanged on denied requests.
 Neither probe applies migrations to an existing or production database.
+
+H04 uses a synthetic bug-report table and real admin login to check positive
+int4 IDs, enum statuses, authentication before SQL, missing/deleted-report 404,
+and successful/idempotent `UPDATE ... RETURNING`. An independent connection
+checks every business table after invalid requests and after real trigger/table
+failures. The failing trigger writes a side row before raising: both writes must
+roll back, the client receives a generic 500, health remains available, and
+valid updates recover once storage is restored. H04 adds no production schema
+or migration changes.
 
 The existing adapter has no public shutdown hook, so worker termination closes
 its pool. A temp cwd with no `server/database` directory prevents the existing

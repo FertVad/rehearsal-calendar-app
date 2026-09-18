@@ -157,14 +157,21 @@ router.get('/api/bug-reports', requireAdmin, asyncHandler(async (req, res) => {
 router.patch('/api/bug-reports/:id/status', requireAdmin, asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    if (!/^[1-9]\d*$/.test(id) || Number(id) > 2147483647) {
+      return res.status(400).json({ error: 'Invalid bug report ID' });
+    }
+    const status = req.body?.status;
 
     const validStatuses = ['new', 'in_progress', 'fixed'];
-    if (!validStatuses.includes(status)) {
+    if (typeof status !== 'string' || !validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status. Must be: new, in_progress, fixed' });
     }
 
-    await db.run('UPDATE native_bug_reports SET status = $1 WHERE id = $2', [status, id]);
+    const report = await db.get(
+      'UPDATE native_bug_reports SET status = $1 WHERE id = $2 RETURNING id',
+      [status, Number(id)],
+    );
+    if (!report) return res.status(404).json({ error: 'Bug report not found' });
     res.json({ success: true });
   } catch (err) {
     console.error('[Admin] Update bug report status error:', err);

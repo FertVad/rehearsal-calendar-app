@@ -6,7 +6,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'F01'].includes(scenario));
+assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'F01', 'H04'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -175,6 +175,10 @@ if (scenario === 'controls') {
 } else if (scenario === 'B04') {
   const { probeB04 } = await import('./b04.mjs');
   result = await probeB04({ control, db, http, listenApp, allowedPorts });
+  result.externalConnections = deniedConnections;
+} else if (scenario === 'H04') {
+  const { probeH04 } = await import('./h04.mjs');
+  result = await probeH04({ control, db, http });
   result.externalConnections = deniedConnections;
 } else if (scenario === 'A02') {
   const snapshot = async () => {
