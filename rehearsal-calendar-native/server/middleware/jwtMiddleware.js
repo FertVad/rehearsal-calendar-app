@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import db from '../database/db.js';
 import { asyncHandler } from './asyncHandler.js';
+import { readTokenTtls } from '../config/tokenTtl.js';
 
 // Fail-fast: Require JWT_SECRET in production
 const isProduction = process.env.NODE_ENV === 'production';
@@ -23,8 +24,9 @@ if (!JWT_SECRET) {
 
 // Use provided secret or insecure dev default (only in non-production)
 const SECRET = JWT_SECRET || 'dev-only-insecure-secret-change-immediately';
-const JWT_EXPIRES_IN = '30d'; // Access token expires in 30 days (mobile app convenience)
-const REFRESH_TOKEN_EXPIRES_IN = '90d'; // Refresh token expires in 90 days
+// Validate once before routes can perform writes and issue tokens. Passing
+// numeric seconds also avoids jsonwebtoken treating unitless strings as ms.
+const { accessSeconds, refreshSeconds } = readTokenTtls();
 
 /**
  * Issue access + refresh tokens with the user's current token version embedded.
@@ -34,11 +36,11 @@ const REFRESH_TOKEN_EXPIRES_IN = '90d'; // Refresh token expires in 90 days
 export function generateTokens(userId, tokenVersion) {
   const tv = tokenVersion ?? 1;
   const accessToken = jwt.sign({ userId, tv, type: 'access' }, SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
+    expiresIn: accessSeconds,
   });
 
   const refreshToken = jwt.sign({ userId, tv, type: 'refresh' }, SECRET, {
-    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+    expiresIn: refreshSeconds,
   });
 
   return { accessToken, refreshToken };

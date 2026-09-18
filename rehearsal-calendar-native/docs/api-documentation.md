@@ -18,8 +18,21 @@ The API uses JWT (JSON Web Token) based authentication with separate access and 
 
 ### Token Lifecycle
 
-- **Access Token**: Long-lived token (30 days) used for API requests - optimized for mobile app convenience
-- **Refresh Token**: Extended token (90 days) used to obtain new access tokens
+- **Access Token**: Used for API requests; default lifetime 30 days (`JWT_EXPIRES_IN`).
+- **Refresh Token**: Used to obtain a new pair; default lifetime 90 days (`REFRESH_TOKEN_EXPIRES_IN`).
+
+Each setting accepts a positive integer followed by `s`, `m`, `h` or `d`, such as
+`15m` or `7d`. Outer whitespace is trimmed. Defaults apply only to absent variables;
+blank values, bare numbers, fractional/negative durations and integer overflow are
+configuration errors. Refresh must outlive access because the current client
+renews after an expired access token receives 401. Invalid configuration stops
+application initialization before authentication handlers can write data.
+
+The process captures these settings at startup; a change requires a restart/new
+deployment. Every new pair, including a refresh response, uses the configured
+lifetimes. Previously issued tokens retain their own signed expiration and the
+existing token-version revocation checks. Changing TTL does not revoke sessions
+or impose an absolute session lifetime. Admin tokens keep their separate policy.
 
 ### How to Authenticate Requests
 
