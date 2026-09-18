@@ -33,6 +33,29 @@ Authorization: Bearer <access_token>
 
 When an access token expires (401 error), use the refresh token to obtain a new access token pair via the `/auth/refresh` endpoint.
 
+### Apple Sign-In
+
+`POST /auth/apple` accepts a nonempty string `idToken` and optional first-login
+`user` name data. The server verifies the token's RS256 signature, Apple issuer,
+expiration and exact intended audience before account lookup or token issuance.
+`APPLE_CLIENT_ID` must explicitly name the single native/service audience being
+offered. Outer whitespace is trimmed; an empty value or embedded whitespace/list
+syntax disables Apple login. No audience is inferred from the submitted token.
+
+| Response | Meaning |
+|---|---|
+| 200 | Verified Apple identity; existing user/accessToken/refreshToken/isNewUser/linked response |
+| 400 | Missing, blank or non-string idToken |
+| 401 | Token verification failed, including a different audience |
+| 503 | Apple sign-in is unavailable because provider configuration is missing or invalid |
+| 500 | Internal failure after verification, including account storage failure |
+
+Rejections do not return token claims or internal verifier details. An unavailable
+Apple provider does not stop the other application routes. Verify the expected
+audience against the **active deployment** before offering Apple login; successful
+server startup alone does not confirm it. This guard does not change the separate
+account-linking policy or revoke already issued application sessions.
+
 ---
 
 ## Endpoints

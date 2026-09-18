@@ -6,6 +6,7 @@ import db from '../database/db.js';
 import { generateTokens, verifyToken, requireAuth } from '../middleware/jwtMiddleware.js';
 import { serializeUser } from '../utils/userSerializer.js';
 import { verifyGoogleToken, verifyAppleToken } from '../utils/oauthVerification.js';
+import { AppleAuthUnavailableError, AppleTokenVerificationError } from '../config/appleAuth.js';
 import { findOrCreateOAuthUser, getUserAuthProviders, unlinkAuthProvider } from '../utils/accountLinking.js';
 import { notifyProjectDeleted } from '../services/notifications/pushNotificationService.js';
 
@@ -177,9 +178,9 @@ router.post('/google', asyncHandler(async (req, res) => {
 // Apple Sign-In Login/Register
 router.post('/apple', asyncHandler(async (req, res) => {
   try {
-    const { idToken, user } = req.body; // Apple sends user data only on first sign-in
+    const { idToken, user } = req.body || {}; // Apple sends user data only on first sign-in
 
-    if (!idToken) {
+    if (typeof idToken !== 'string' || !idToken.trim()) {
       return res.status(400).json({ error: 'ID token is required' });
     }
 
@@ -228,6 +229,12 @@ router.post('/apple', asyncHandler(async (req, res) => {
       linked,
     });
   } catch (err) {
+    if (err instanceof AppleAuthUnavailableError) {
+      return res.status(503).json({ error: 'Apple sign-in is unavailable' });
+    }
+    if (err instanceof AppleTokenVerificationError) {
+      return res.status(401).json({ error: 'Apple authentication failed' });
+    }
     console.error('[Auth] Apple OAuth error:', err);
     res.status(500).json({ error: 'Apple authentication failed' });
   }

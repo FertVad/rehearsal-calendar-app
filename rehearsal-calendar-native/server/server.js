@@ -3,6 +3,7 @@ import './config/env.js';
 import { initDatabase, testConnection, isPostgres } from './database/db.js';
 import { createApp } from './app.js';
 import { logger } from './utils/logger.js';
+import { readAppleAuthConfig } from './config/appleAuth.js';
 
 // Environment diagnostics
 logger.info('=== ENVIRONMENT DIAGNOSTICS ===');
@@ -23,6 +24,14 @@ if (process.env.NODE_ENV === 'production') {
     logger.error(`FATAL: Missing required environment variables: ${missing.join(', ')}`);
     process.exit(1);
   }
+}
+
+// Apple is optional, but an unconfigured provider must never verify without an
+// audience. Diagnose its availability without stopping unrelated application
+// routes or exposing configuration values. The request guard uses this same rule.
+const appleAuth = readAppleAuthConfig();
+if (!appleAuth.enabled) {
+  logger.warn('Apple sign-in is unavailable', { reason: appleAuth.reason });
 }
 
 await initDatabase();
