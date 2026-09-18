@@ -1,0 +1,60 @@
+B03 source review — 2026-09-18
+Source commit: e0a0edee44d438902fd35c501f81a89766566d5b
+Compared with: 67ae44da3f30946963da10dcb7a055ed5e2eb4fe
+Outcome: no remaining blocking finding in the reviewed B03 source.
+
+Scope: independent review of the route, query validation, timezone projection,
+schema integration and client bounds; compatibility review of the shared limiter.
+The reviewer contributed the limiter implementation and its unit tests, so that
+part is not an independent-author review. Final full-check and PostgreSQL results
+belong to their separate evidence files; this file does not claim those runs.
+
+Confirmed corrections:
+- Project/member/excluded-rehearsal IDs reject values outside positive int4
+  before SQL. Dates reject arrays, objects, normalization, ambiguity, reversal
+  and ranges above 90 days without expanding the range.
+- Authentication and active membership precede date expansion, roster reads and
+  availability reads. Shared-rate failure stops before the expensive reads.
+- SQL materialization uses 101-member and 5001-record sentinels. Accepted work
+  is bounded by 100 members, 3100 member-days, 5000 records and 20000 ranges.
+  Per-record date traversal is at most 90 iterations. JSON accounting includes
+  escaped UTF-8 bytes, conservatively counts separators, and verifies the final
+  serialized response against 1 MiB. Overflow returns an error, never partial
+  availability that could be mistaken for free time.
+- SQL projections cap names, availability type and requester timezone before
+  application use. Timezone length is checked before logging/Intl construction.
+  One formatter is reused per request without a process-wide timezone cache.
+- Numeric civil-day comparisons plus signed extended ISO years preserve spans
+  crossing year 10000; BC-era conversion handles the lower calendar boundary.
+  No loop walks a stored record's full historical/future duration.
+- Migration 007 is additive, portable and idempotent; the baseline schema also
+  contains its DDL. User PK/FK CASCADE bounds table cardinality/lifetime. There
+  is no per-request DDL, arbitrary-key growth or scheduled cleanup.
+- One atomic UPSERT shares a fixed DB-clock minute across PostgreSQL instances.
+  Counter 61 is a capped denial sentinel; only counts 1..60 admit requests.
+  Older statements cannot reopen newer windows. Retry-After is 1..60 seconds.
+  Missing/malformed storage and configured-PostgreSQL-to-SQLite fallback fail
+  closed. Both synthetic URL-variable guard cases passed in the 31-test targeted
+  suite using Node 22.16.0, env -i and the root backend Jest configuration.
+
+Limits to retain in the report:
+- These are per-request/application-materialization bounds, not a PostgreSQL
+  scan-cost/statement-timeout guarantee or a global concurrent-request ceiling.
+  Auth/membership queries still precede rate consumption. The limiter is per
+  account, not an infrastructure-wide denial-of-service control.
+- The fixed-minute contract permits bursts across a minute boundary; it is not
+  a rolling 60-second quota. SQLite support shares only an actual common file;
+  the cross-instance deployment guarantee requires configured PostgreSQL.
+- Migration 007 must precede deployment; a missing table intentionally gives
+  503. This review does not validate production schema, migration ledger,
+  environment settings, deployment or production availability.
+- Existing R2 bootstrap/dialect/migration-ledger findings remain open. SQLite
+  date arithmetic cannot model year-10000 boundary slack; use the real PostgreSQL
+  fixture for those route cases rather than treating SQLite as equivalent.
+- Smart Planner does not yet request a member subset for an oversized roster;
+  it must show the error and no derived slots. Its server subset contract does
+  not establish that client recovery path.
+
+No production, network, .env, deployment, push or remote workflow action was
+performed for this review. Only this review evidence file was written after
+the final source commit was supplied.

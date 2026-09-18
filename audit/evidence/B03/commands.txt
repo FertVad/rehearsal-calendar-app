@@ -1,0 +1,16 @@
+Source: e0a0edee44d438902fd35c501f81a89766566d5b
+Base: 67ae44da3f30946963da10dcb7a055ed5e2eb4fe
+
+Final full check; cwd rehearsal-calendar-native; exit 0:
+env -i PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin HOME=/Users/vadimfertik NODE_ENV=test JWT_SECRET=b03-isolated-test-secret PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-b03-browser.S1QqTG npm run check
+
+Final PostgreSQL; cwd repository root; exit 0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node rehearsal-calendar-native/server/scripts/r0-postgres.mjs
+Runner creates own database and strictly limited child environment, no .env/server.js.
+
+Earlier targeted regression; cwd repository root:
+env -i PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin HOME=/Users/vadimfertik NODE_ENV=test JWT_SECRET=b03-isolated-test-secret ADMIN_BROWSER_CHECK=0 NODE_OPTIONS=--experimental-vm-modules /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node rehearsal-calendar-native/node_modules/jest/bin/jest.js --config rehearsal-calendar-native/jest.config.js --selectProjects backend --runInBand --runTestsByPath rehearsal-calendar-native/server/__tests__/routes/membersAvailabilityBudget.test.js
+Before production route edits: exit1, ten expected failing cases; safe tripwire stops original range after100 ISO conversions.
+Focused after: same command adds membersAvailabilityRange.test.js and services/memberAvailabilityRateLimit.test.js; exit0,55tests. Final full check covers subsequent source changes.
+
+Sandbox initially disallowed loopback listeners; successful HTTP runs used explicit authorized local sandbox escalation. This infrastructure denial is not recorded as an application regression.
