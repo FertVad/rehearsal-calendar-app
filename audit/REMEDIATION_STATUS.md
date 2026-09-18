@@ -2,7 +2,7 @@
 
 Операционный контекст: [известный отказ Neon и границы доступа](PRODUCTION_ACCESS.md), сообщённые Вадимом 18 сентября 2026. Production smoke остаётся NOT_RUN. Вадим отдельно разрешил push `codex/systematic-repair` и первый удалённый `Application checks`; deployment и доступ к production требуют отдельного решения. Локальные статусы ниже не утверждают работоспособность production.
 
-Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md), [B03](REMEDIATION_B03.md) и [B04](REMEDIATION_B04.md) VERIFIED локально, H02 — [READY_FOR_CHECK](REMEDIATION_H02.md) на `df6fd01` до физической DEV-15; остальные 97 пунктов остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`, B04 — на `fd5f1eb`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. B04 требует additive migration008 до серверного deployment. Это учёт локальной реализации, не повторная оценка текущего production.
+Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md), [B03](REMEDIATION_B03.md) [B04](REMEDIATION_B04.md) и [H04](REMEDIATION_H04.md) VERIFIED локально, H02 — [READY_FOR_CHECK](REMEDIATION_H02.md) на `df6fd01` до физической DEV-15; остальные 96 пунктов остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`, B04 — на `fd5f1eb`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. B04 требует additive migration008 до серверного deployment. Это учёт локальной реализации, не повторная оценка текущего production.
 
 [План R0–R9](/Users/vadimfertik/Desktop/reh_app/audit/REMEDIATION_PLAN.md) · [Аудит](/Users/vadimfertik/Desktop/reh_app/audit/AUDIT_REPORT.md) · [Серверные проверки](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-server.md) · [Устройства](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-device-tests.md).
 
@@ -24,7 +24,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | Пакет | Пунктов | Состояние |
 |---|---:|---|
 | R0 | — | COMPLETE — baseline, real PG/HTTP harness, исходные дефекты, первичная инвентаризация |
-| R1 | 10 | IN_PROGRESS — 4 VERIFIED, H02 READY_FOR_CHECK (DEV-15), ещё 5 TODO |
+| R1 | 10 | IN_PROGRESS — 5 VERIFIED, H02 READY_FOR_CHECK (DEV-15), ещё 4 TODO |
 | R2 | 8 | TODO |
 | R3 | 6 | TODO |
 | R4 | 8 | TODO |
@@ -125,7 +125,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | H01 | High | Нет | R1 | VERIFIED | сохранённая XSS из обращения/профиля выполняется в admin origin | [Исправление](REMEDIATION_H01.md); [обязательные проверки и точный commit](REMEDIATION_H01_FOLLOWUP.md) |
 | H02 | Medium | Нет | R1 | READY_FOR_CHECK | резервная кнопка открытия приглашения блокируется CSP | [Локальные проверки — df6fd01; DEV-15 NOT_RUN](REMEDIATION_H02.md) |
 | H03 | Low | Нет | R9 | TODO | метрика неактивности принимает давний login за отсутствие использования | — |
-| H04 | Low | Нет | R1 | TODO | admin скрывает ошибки загрузки/смены статуса | — |
+| H04 | Low | Нет | R1 | VERIFIED | admin скрывает ошибки загрузки/смены статуса | [Исполнение и проверки — 7ab1e41](REMEDIATION_H04.md) |
 | HP01 | Medium | Нет | R3 | TODO | изменение email подтверждается, но сервер его игнорирует | — |
 | HP02 | Low | Нет | R3 | TODO | существующую фамилию нельзя очистить | — |
 | HP03 | Low | Нет | R9 | TODO | ошибка «пропустить онбординг» остаётся необработанным Promise | — |

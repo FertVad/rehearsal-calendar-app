@@ -1,0 +1,44 @@
+TAP version 13
+# Subtest: initial GET 500 stops loading and offers a visible section error and retry
+not ok 1 - initial GET 500 stops loading and offers a visible section error and retry
+  ---
+  duration_ms: 5853.949291
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/adminFailures.browser.test.mjs:147:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+      - waiting for locator('#stats-error') to be visible
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/adminFailures.browser.test.mjs:152:38)
+  ...
+# Subtest: failed PATCH reports an unconfirmed change and does not silently reload reports
+not ok 2 - failed PATCH reports an unconfirmed change and does not silently reload reports
+  ---
+  duration_ms: 5270.294084
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/adminFailures.browser.test.mjs:158:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+      - waiting for locator('#bugs-mutation-status') to be visible
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    TestContext.<anonymous> (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/adminFailures.browser.test.mjs:167:47)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11822.35625

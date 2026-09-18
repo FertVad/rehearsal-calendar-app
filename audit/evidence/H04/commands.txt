@@ -1,0 +1,31 @@
+Source: 7ab1e414c73374df9bbd6c3cafd5a4029f4cc293
+Base: 23510b07a5b95789a76d01553307e104477cd1b7
+Node: /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node
+
+Final full check, cwd rehearsal-calendar-native, actual exit0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin NODE_ENV=test JWT_SECRET=h04-isolated-test-secret PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-continuous-browser.s8CVco ADMIN_FAILURES_SCREENSHOT=/Users/vadimfertik/Desktop/reh_app/audit/evidence/H04/admin-stale-error.png ADMIN_UNCONFIRMED_SCREENSHOT=/Users/vadimfertik/Desktop/reh_app/audit/evidence/H04/admin-unconfirmed-write.png npm run check > ../audit/evidence/H04/check-final.txt 2>&1
+Note: ADMIN_UNCONFIRMED_SCREENSHOT is not a test option; the final run did not
+rewrite that PNG. It was captured in the pre-commit18/18 candidate run with
+ADMIN_MUTATION_SCREENSHOT, which is the actual option, against identical UI/test
+source. ADMIN_FAILURES_SCREENSHOT is valid and final check refreshed that PNG.
+
+Final full PostgreSQL, cwd repository root, actual exit0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin node rehearsal-calendar-native/server/scripts/r0-postgres.mjs > audit/evidence/H04/postgres-final.txt 2>&1
+Owned disposable PostgreSQL only; no .env/server.js/production startup.
+
+Focused browser, cwd repository root:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin NODE_ENV=test JWT_SECRET=h04-isolated-test-secret PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-continuous-browser.s8CVco node --test rehearsal-calendar-native/server/__tests__/browser/adminFailures.browser.test.mjs
+Before: actual exit1, two expected failures of the initial reproducer on base.
+After: actual exit0, expanded18tests after root review including real cross-tab.
+Final full check reruns these18tests on committed source.
+
+Focused API, cwd rehearsal-calendar-native/server, env-i Node22/test synthetic credentials:
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand __tests__/routes/adminStatus.test.js --testNamePattern 'missing report|malformed report ID'
+Before: actual exit1,2failed28filtered.
+Same command without --testNamePattern after repair: actual exit0,30passed.
+Final npm run check reruns all30 on committed source.
+Focused PG: same isolated runner as final with --h04-only, actual exit0.
+
+Browser cache owned by this continuous repair, installed at H02 and retained for
+following stages. Local listeners/Chromium/Docker ran under approved escalation.
+No remote DB, provider network, production site, Vercel env or deployment used.
