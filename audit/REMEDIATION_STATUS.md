@@ -2,7 +2,7 @@
 
 Операционный контекст: [известный отказ Neon и границы доступа](PRODUCTION_ACCESS.md), сообщённые Вадимом 18 сентября 2026. Production smoke остаётся NOT_RUN. Вадим отдельно разрешил push `codex/systematic-repair` и первый удалённый `Application checks`; deployment и доступ к production требуют отдельного решения. Локальные статусы ниже не утверждают работоспособность production.
 
-Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md), [B03](REMEDIATION_B03.md) [B04](REMEDIATION_B04.md) и [H04](REMEDIATION_H04.md) VERIFIED локально, H02 — [READY_FOR_CHECK](REMEDIATION_H02.md) на `df6fd01` до физической DEV-15; IA01 — [READY_FOR_CHECK](REMEDIATION_IA01.md) на `0dc7666` до OPS-IA01; остальные 95 пунктов остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`, B04 — на `fd5f1eb`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. B04 требует additive migration008 до серверного deployment. Это учёт локальной реализации, не повторная оценка текущего production.
+Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md), [B03](REMEDIATION_B03.md), [B04](REMEDIATION_B04.md), [H04](REMEDIATION_H04.md) и [ID01](REMEDIATION_ID01.md) VERIFIED локально, H02 — [READY_FOR_CHECK](REMEDIATION_H02.md) на `df6fd01` до физической DEV-15; IA01 — [READY_FOR_CHECK](REMEDIATION_IA01.md) на `0dc7666` до OPS-IA01; остальные 94 пункта остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`, B04 — на `fd5f1eb`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. B04 требует additive migration008 до серверного deployment. Это учёт локальной реализации, не повторная оценка текущего production.
 
 [План R0–R9](/Users/vadimfertik/Desktop/reh_app/audit/REMEDIATION_PLAN.md) · [Аудит](/Users/vadimfertik/Desktop/reh_app/audit/AUDIT_REPORT.md) · [Серверные проверки](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-server.md) · [Устройства](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-device-tests.md).
 
@@ -24,7 +24,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | Пакет | Пунктов | Состояние |
 |---|---:|---|
 | R0 | — | COMPLETE — baseline, real PG/HTTP harness, исходные дефекты, первичная инвентаризация |
-| R1 | 10 | IN_PROGRESS — 5 VERIFIED, H02/IA01 READY_FOR_CHECK (DEV-15/OPS-IA01), ещё 3 TODO |
+| R1 | 10 | IN_PROGRESS — 6 VERIFIED, H02/IA01 READY_FOR_CHECK (DEV-15/OPS-IA01), ещё 2 TODO |
 | R2 | 8 | TODO |
 | R3 | 6 | TODO |
 | R4 | 8 | TODO |
@@ -137,7 +137,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | HC01 | Low | Нет | R5 | TODO | язык аккаунта записывается в cache, но не обновляет уже работающий I18nContext | — |
 | HC02 | Medium | Нет | R9 | TODO | iOS PickerModal сохраняет изменения при нажатии «Отмена» | — |
 | IC01 | Medium | Нет | R9 | TODO | Android App Links не имеют действительной association подписи | — |
-| ID01 | Low | Нет | R1 | TODO | документированные переменные срока JWT не влияют на выдачу | — |
+| ID01 | Low | Нет | R1 | VERIFIED | документированные переменные срока JWT не влияют на выдачу | [Исполнение и проверки — e6b06b6](REMEDIATION_ID01.md) |
 | IDOC01 | Low | Нет | R9 | TODO | документ API содержит устаревшие и противоречащие контракту инструкции | — |
 | IS01 | Medium | Нет | R1 | TODO | secret scanner использует неверный диалект regex и пропускает секреты | — |
 | IS02 | Medium | Да | R1 | TODO | rate limits не общие для нескольких процессов | — |

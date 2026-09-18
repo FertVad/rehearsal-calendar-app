@@ -1,0 +1,22 @@
+ID01 independent review, 2026-09-18
+Source: e6b06b6e88da7f8db4a7e72e458b49190827e3ca
+
+Reviewer h02_contract did not implement ID01 code or its tests. No actionable
+blocker found. Reviewed pure parser/default-only-absence, trimmed explicit units,
+safe integer seconds/milliseconds, refresh > access against the actual client
+401/refresh flow, module-init capture before auth handlers can mount/write.
+All six issuance callers, verifyToken and token-version guards unchanged.
+Numeric expiresIn avoids the locked jsonwebtoken string/ms branch.
+
+Reviewed all final middleware and HTTP assertions plus before/after logs:
+59/59 across 2 suites, before expected 1 failure. Actual signatures and exp-iat,
+exact expiry, default/custom/independent lifetimes, invalid import/no SQL, capture
+once, old-token own exp and version revocation are covered. HTTP uses actual
+createApp/auth/SQLite: old 90d refresh 10 days old produces new 15m/7d pair and
+usable /me access; expired/type rejected before SQL; invalid fresh app import
+refuses before writes. Review itself did not rerun root's final checks.
+
+Root final checks on committed source: npm run check actual exit 0, 84 suites / 1201
+Jest + 4/18/11/6 browser; owned PG actual exit 0 with existing repaired contracts
+PASS and F01/B02/D01 still known defects. No production configuration read or
+changed. Future release must validate its own configured TTL values.
