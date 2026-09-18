@@ -14,10 +14,12 @@ const modes = {
   '--a02-only': ['controls', 'A02'],
   '--b03-only': ['controls', 'B03'],
   '--a02-b03-only': ['controls', 'A02', 'B03'],
+  '--b04-only': ['controls', 'B04'],
+  '--security-only': ['controls', 'A02', 'B03', 'B04'],
 };
 assert.ok(args.length === 0 || (args.length === 1 && Object.hasOwn(modes, args[0])),
-  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only]');
-const scenarios = modes[args[0]] || ['controls', 'F01', 'B02', 'D01', 'A02', 'B03'];
+  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only|--b04-only|--security-only]');
+const scenarios = modes[args[0]] || ['controls', 'F01', 'B02', 'D01', 'A02', 'B03', 'B04'];
 const docker = process.env.R0_DOCKER_BIN || '/usr/local/bin/docker';
 const context = process.env.R0_DOCKER_CONTEXT || 'desktop-linux';
 const cli = (...args) => execFileSync(docker, ['--context', context, ...args], { encoding: 'utf8', timeout: 20000 }).trim();
@@ -61,7 +63,7 @@ try {
   } finally { await control.end(); }
   for (const scenario of scenarios) {
     const result = spawnSync(process.execPath, ['--unhandled-rejections=strict', probe, scenario], {
-      cwd, encoding: 'utf8', timeout: scenario === 'B03' ? 45000 : 15000, maxBuffer: 2 * 1024 * 1024,
+      cwd, encoding: 'utf8', timeout: ['B03', 'B04'].includes(scenario) ? 45000 : 15000, maxBuffer: 2 * 1024 * 1024,
       env: { PATH: '/usr/bin:/bin', TZ: 'UTC', NODE_ENV: 'production',
         JWT_SECRET: 'r0-local-signing-secret', ADMIN_PASSWORD: 'r0-local-password', CRON_SECRET: 'r0-local-cron',
         DATABASE_URL: url, R0_NONCE: nonce },
@@ -73,7 +75,7 @@ try {
   }
   console.log(args.length
     ? `${scenarios.slice(1).join('+')} REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.`
-    : 'R0 HARNESS PASS: controls and repaired A02/B03 contracts passed; B02/D01/F01 remain known failing application contracts, NOT fixes.');
+    : 'R0 HARNESS PASS: controls and repaired A02/B03/B04 contracts passed; B02/D01/F01 remain known failing application contracts, NOT fixes.');
 } finally {
   if (container) {
     const label = cli('inspect', container, '--format', '{{index .Config.Labels "rehearsly.r0"}}');

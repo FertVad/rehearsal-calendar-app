@@ -6,7 +6,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B02', 'B03', 'D01', 'F01'].includes(scenario));
+assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'F01'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -72,6 +72,15 @@ if (scenario === 'B03') {
   await control.query(migration);
   await control.query(migration);
 }
+if (scenario === 'B04') {
+  await control.query("ALTER TABLE native_users ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC'");
+  await control.query('ALTER TABLE native_projects ADD COLUMN invite_created_by INTEGER REFERENCES native_users(id)');
+  // Only the checked-in B04 additive migration, on the owned synthetic
+  // fixture. No migration runner, production schema or ledger is consulted.
+  const migration = await readFile(new URL('../../migrations/008-invite-rate-limits.sql', import.meta.url), 'utf8');
+  await control.query(migration);
+  await control.query(migration);
+}
 target.searchParams.set('options', '-c search_path=r0_fixture');
 process.env.DATABASE_URL = target.href;
 const database = await import('../../database/db.js');
@@ -94,13 +103,19 @@ const server = await listenApp();
 const port = server.address().port;
 const base = `http://127.0.0.1:${port}`;
 const tokens = new Map([1, 2, 3].map(id => [id, generateTokens(id, 1).accessToken]));
-async function http(path, { user = 1, method = 'GET', body, token = tokens.get(user), baseUrl = base } = {}) {
+async function http(path, { user = 1, method = 'GET', body, token = tokens.get(user), baseUrl = base, ip } = {}) {
   const response = await fetch(baseUrl + path, {
-    method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    method, headers: { 'Content-Type': 'application/json',
+      ...(token == null ? {} : { Authorization: 'Bearer ' + token }),
+      ...(ip == null ? {} : { 'X-Forwarded-For': ip }),
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal: AbortSignal.timeout(3000),
   });
-  return { status: response.status, data: await response.json(), headers: response.headers };
+  const text = await response.text();
+  return { status: response.status,
+    data: text && response.headers.get('content-type')?.includes('application/json') ? JSON.parse(text) : text,
+    headers: response.headers };
 }
 const rehearsal = participant => ({ title: 'R0 rehearsal', startsAt: '2030-09-17T12:00:00Z',
   endsAt: '2030-09-17T13:00:00Z', participant_ids: [participant] });
@@ -156,6 +171,10 @@ if (scenario === 'controls') {
 } else if (scenario === 'B03') {
   const { probeB03 } = await import('./b03.mjs');
   result = await probeB03({ control, db, http, listenApp, allowedPorts });
+  result.externalConnections = deniedConnections;
+} else if (scenario === 'B04') {
+  const { probeB04 } = await import('./b04.mjs');
+  result = await probeB04({ control, db, http, listenApp, allowedPorts });
   result.externalConnections = deniedConnections;
 } else if (scenario === 'A02') {
   const snapshot = async () => {

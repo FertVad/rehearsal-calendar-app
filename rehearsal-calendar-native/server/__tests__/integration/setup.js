@@ -200,6 +200,7 @@ export async function setupIntegrationDb() {
   testDb.exec(schema);
   // Exercise the real portable migration rather than duplicating limiter DDL.
   testDb.exec(readFileSync(join(__dirname, '../../migrations/007-member-availability-rate-limit.sql'), 'utf8'));
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/008-invite-rate-limits.sql'), 'utf8'));
 
   // Translate the PostgreSQL dialect our routes are written in into something
   // SQLite can parse. Only the constructs actually used in the codebase are
@@ -293,6 +294,9 @@ export async function setupIntegrationDb() {
  */
 export function clearIntegrationDb() {
   if (testDb) {
+    testDb.exec('DELETE FROM native_invite_account_rate_limits');
+    testDb.exec('DELETE FROM native_invite_ip_rate_limits');
+    testDb.exec('UPDATE native_invite_ip_rate_limit_gate SET key_count = 0 WHERE id = 1');
     testDb.exec('DELETE FROM native_calendar_event_mappings');
     testDb.exec('DELETE FROM native_calendar_connections');
     testDb.exec('DELETE FROM native_notifications');

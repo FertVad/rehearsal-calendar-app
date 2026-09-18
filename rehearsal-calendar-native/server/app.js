@@ -77,15 +77,8 @@ export function createApp() {
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later' },
   })));
-  // An invite code is short enough to read out, which also makes it short
-  // enough to guess at scale. Looking one up and redeeming it are both capped.
-  app.use('/api/native/invite', asyncHandler(rateLimit({
-    windowMs: 60 * 1000,
-    max: 20,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later' },
-  })));
+  // Invite IP/account budgets live on the redemption handlers, so every
+  // mounting path shares the same database counters and failure behavior.
   app.use('/admin/api/login', asyncHandler(rateLimit({
     windowMs: 15 * 60 * 1000,  // 15 minutes
     max: 5,

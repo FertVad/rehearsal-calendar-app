@@ -7,7 +7,14 @@ dependencies with that same Node version. From `server/`:
 # Focused release regression: controls plus the repaired A02 contract.
 npm run test:r0-postgres -- --a02-only
 
-# Full diagnostic run: controls, A02, and the remaining original defects.
+# Required CI regression: controls plus A02, B03 and B04.
+npm run test:r0-postgres -- --security-only
+
+# Individual shared-budget contracts.
+npm run test:r0-postgres -- --b03-only
+npm run test:r0-postgres -- --b04-only
+
+# Full diagnostic run: repaired contracts and remaining original defects.
 npm run test:r0-postgres
 ```
 
@@ -28,8 +35,8 @@ If a context override was used, inspect that same context for cleanup.
 Every context, including overrides, must resolve to a local `unix://` socket;
 remote Docker endpoints are rejected before container creation.
 
-The separate `postgres-a02` job in `.github/workflows/check.yml` runs the focused
-regression on every push and pull request. It installs server dependencies with
+The separate `postgres-a02` job in `.github/workflows/check.yml` retains its ID
+and runs `--security-only` on every push and pull request. It installs server dependencies with
 the pinned Node version, explicitly pulls `postgres:15`, and uses GitHub's local
 Docker `default` context with the discovered Docker CLI path. Image acquisition
 is visible in the workflow; the runner itself still cannot pull an image.
@@ -80,12 +87,20 @@ The default diagnostic run also reproduces these **unfixed contracts**:
 - D01: an outsider participant is accepted and gets an invitation and busy slot.
 - F01: current mixed-dialect bootstrap is rejected by PostgreSQL.
 
-Exit 0 from the full run means controls/A02 passed **and** those three known
+Exit 0 from the full run means controls/A02/B03/B04 passed **and** those three known
 failures were reproduced. It does not mean B02/D01/F01 are safe. These probes
 remain outside normal Jest discovery. When treating each remaining finding,
 write its desired behavior as a regression assertion and retire/update that
 baseline probe; never keep asserting the defective outcome as the release gate.
 Historical R0 evidence retains the original A02 crash and source hashes.
+
+B03 verifies bounded availability work, real SQL/response sentinels and one
+account budget shared by two application instances. B04 verifies migration008,
+IP/account invite budgets shared by canonical and legacy join paths, HEAD and
+IP normalization, management compatibility, bounded storage, concurrent
+allocation/pruning, and fail-closed recovery. Both run the actual additive
+migration twice and assert business rows stay unchanged on denied requests.
+Neither probe applies migrations to an existing or production database.
 
 The existing adapter has no public shutdown hook, so worker termination closes
 its pool. A temp cwd with no `server/database` directory prevents the existing

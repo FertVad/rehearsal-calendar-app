@@ -1243,8 +1243,10 @@ Create an invite link for a project.
 - Codes are 8 characters of Crockford base32 with the misreadable ones removed
   (no `I`, `L`, `O`, `U`, `0`, `1`), short enough to read aloud. Older codes are
   32 hexadecimal characters and still resolve — lookup is an exact match
-- `/api/native/invite` is rate limited to 20 requests a minute: a code short
-  enough to dictate is short enough to guess at scale
+- Invite preview and redemption share 20 requests per database-clock minute
+  per IP (IPv6 uses a /56 subnet). Redemption also has a shared 20/minute
+  authenticated-account budget. The legacy `/native/projects/:code/join`
+  address consumes the same budgets; changing paths or codes does not reset them.
 
 ---
 
@@ -1751,7 +1753,23 @@ data.rehearsals.forEach(rehearsal => {
 
 ## Rate Limiting
 
-Currently, the API does not enforce rate limiting. This may be added in future versions.
+Invite preview (`GET`/`HEAD /native/invite/:code`) and redemption
+(`POST /native/invite/:code/join`, including the legacy
+`POST /native/projects/:code/join`) share a database-backed 20/minute IP budget.
+Authenticated redemption additionally consumes a 20/minute account budget across
+all source IPs. Responses use `429` with `Retry-After` in seconds; unavailable or
+full rate storage returns `503` before looking up a code or changing membership.
+These counters use fixed database-clock minutes, not a rolling window.
+
+Admin invite management (`GET`/`POST`/`DELETE /native/projects/:projectId/invite`)
+is a separate operation protected by the active admin/owner policy. The old
+`/native/invite/:projectId/invite` management aliases retain the same policy.
+The HTML `/invite/:code` app-opening page does not perform an invite lookup.
+
+Other existing limits: `/auth` is 20/minute/IP and admin login is 5/15 minutes/IP
+(these two still use process-local stores); member availability has a shared
+60/minute/account budget and request-size limits. Fixing invite counters does
+not make the remaining process-local limits shared.
 
 ---
 
@@ -1770,7 +1788,7 @@ For issues, questions, or feature requests, please contact the development team.
 
 ---
 
-**Last Updated:** 2026-08-22
+**Last Updated:** 2026-09-18
 
 **API Version:** 1.2
 
