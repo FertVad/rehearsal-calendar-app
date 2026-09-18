@@ -1,0 +1,72 @@
+(node:11487) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL __tests__/utils/appleAudience.test.js
+  Apple audience boundary through the real locked verifier
+    ✕ missing audience rejects a genuinely signed token issued to another app before verification (8 ms)
+    ✕ empty audience rejects a genuinely signed token issued to another app before verification (2 ms)
+    ○ skipped unusable configuration " " rejects before verification or JWKS fetch
+    ○ skipped unusable configuration "\t\n" rejects before verification or JWKS fetch
+    ○ skipped unusable configuration "com.example. app" rejects before verification or JWKS fetch
+    ○ skipped unusable configuration "com.example.one,com.example.two" rejects before verification or JWKS fetch
+    ○ skipped unusable configuration "com.example.one;com.example.two" rejects before verification or JWKS fetch
+    ○ skipped unusable configuration "[\"com.example.ia01\"]" rejects before verification or JWKS fetch
+    ○ skipped a valid intended audience passes real RSA/JWKS verification and maps the verified identity
+    ○ skipped surrounding configuration whitespace is normalized without broadening the exact audience
+    ○ skipped another app audience is rejected by actual cryptographic verification
+    ○ skipped missing token audience is rejected by actual cryptographic verification
+    ○ skipped case-changed audience is rejected by actual cryptographic verification
+    ○ skipped invalid issuer is rejected by actual cryptographic verification
+    ○ skipped expired token is rejected by actual cryptographic verification
+    ○ skipped token not yet active is rejected by actual cryptographic verification
+    ○ skipped unknown signing key is rejected by actual cryptographic verification
+    ○ skipped a wrong RSA signature is rejected
+    ○ skipped an RS384 token cannot change the required signing algorithm
+    ○ skipped retains verified Apple email_verified "true" mapping
+    ○ skipped retains verified Apple email_verified true mapping
+    ○ skipped retains verified Apple email_verified "false" mapping
+    ○ skipped retains verified Apple email_verified false mapping
+    ○ skipped optional email remains null after successful verification
+    ○ skipped errors expose neither token, claims, audience nor library verification details
+    ○ skipped restoring intended configuration after an unavailable attempt permits valid authentication
+
+  ● Apple audience boundary through the real locked verifier › missing audience rejects a genuinely signed token issued to another app before verification
+
+    expect(received).rejects.toMatchObject()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"email": "ia01@example.test", "emailVerified": true, "providerUserId": "ia01-synthetic-subject"}
+
+      69 |     if (configured === undefined) delete process.env.APPLE_CLIENT_ID;
+      70 |     else process.env.APPLE_CLIENT_ID = configured;
+    > 71 |     await expect(verifyAppleToken(token({ aud: otherAudience })))
+         |           ^
+      72 |       .rejects.toMatchObject({ code: 'APPLE_AUTH_UNAVAILABLE' });
+      73 |     expect(verifyIdToken).not.toHaveBeenCalled();
+      74 |     expect(jwksFetch).not.toHaveBeenCalled();
+
+      at expect (node_modules/expect/build/index.js:2116:15)
+      at expect (__tests__/utils/appleAudience.test.js:71:11)
+
+  ● Apple audience boundary through the real locked verifier › empty audience rejects a genuinely signed token issued to another app before verification
+
+    expect(received).rejects.toMatchObject()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"email": "ia01@example.test", "emailVerified": true, "providerUserId": "ia01-synthetic-subject"}
+
+      69 |     if (configured === undefined) delete process.env.APPLE_CLIENT_ID;
+      70 |     else process.env.APPLE_CLIENT_ID = configured;
+    > 71 |     await expect(verifyAppleToken(token({ aud: otherAudience })))
+         |           ^
+      72 |       .rejects.toMatchObject({ code: 'APPLE_AUTH_UNAVAILABLE' });
+      73 |     expect(verifyIdToken).not.toHaveBeenCalled();
+      74 |     expect(jwksFetch).not.toHaveBeenCalled();
+
+      at expect (node_modules/expect/build/index.js:2116:15)
+      at expect (__tests__/utils/appleAudience.test.js:71:11)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 24 skipped, 26 total
+Snapshots:   0 total
+Time:        0.597 s
+Ran all test suites matching __tests__/utils/appleAudience.test.js with tests matching "missing audience|empty audience".

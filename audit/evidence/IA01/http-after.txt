@@ -1,0 +1,177 @@
+(node:12653) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+  console.error
+    [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+  console.error
+    [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+  console.error
+    [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+  console.error
+    [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+  console.error
+    [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+  console.error
+    [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+  console.error
+    [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+  console.error
+    [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+  console.info
+    [INFO] [AccountLinking] OAuth provider apple already linked to user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+  console.info
+    [INFO] [AccountLinking] OAuth provider apple already linked to user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+  console.error
+    [Auth] Apple OAuth error: SqliteError { code: 'SQLITE_CONSTRAINT_TRIGGER' }
+
+      236 |       return res.status(401).json({ error: 'Apple authentication failed' });
+      237 |     }
+    > 238 |     console.error('[Auth] Apple OAuth error:', err);
+          |             ^
+      239 |     res.status(500).json({ error: 'Apple authentication failed' });
+      240 |   }
+      241 | }));
+
+      at error (routes/auth.js:238:13)
+
+  console.info
+    [INFO] [AccountLinking] OAuth provider apple already linked to user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+PASS __tests__/routes/appleAuth.test.js
+  ✓ Apple missing configuration rejects a valid wrong-app token before verification or SQL (52 ms)
+  ✓ Apple empty configuration rejects a valid wrong-app token before verification or SQL (6 ms)
+  ✓ Apple blank configuration rejects a valid wrong-app token before verification or SQL (4 ms)
+  ✓ Apple embedded whitespace configuration rejects a valid wrong-app token before verification or SQL (5 ms)
+  ✓ Apple comma-separated list configuration rejects a valid wrong-app token before verification or SQL (5 ms)
+  ✓ Apple JSON list configuration rejects a valid wrong-app token before verification or SQL (4 ms)
+  ✓ Apple HTTP rejects missing idToken before verification or SQL (3 ms)
+  ✓ Apple HTTP rejects null idToken before verification or SQL (3 ms)
+  ✓ Apple HTTP rejects empty idToken before verification or SQL (6 ms)
+  ✓ Apple HTTP rejects blank idToken before verification or SQL (4 ms)
+  ✓ Apple HTTP rejects number idToken before verification or SQL (4 ms)
+  ✓ Apple HTTP rejects boolean idToken before verification or SQL (3 ms)
+  ✓ Apple HTTP rejects object idToken before verification or SQL (3 ms)
+  ✓ Apple HTTP rejects array idToken before verification or SQL (3 ms)
+  ✓ Apple HTTP rejects array body before verification or SQL (2 ms)
+  ✓ an absent request body is a bounded 400 before verification or SQL (3 ms)
+  ✓ real Apple verification rejects wrong audience before account-linking SQL (17 ms)
+  ✓ real Apple verification rejects missing audience before account-linking SQL (5 ms)
+  ✓ real Apple verification rejects wrong issuer before account-linking SQL (6 ms)
+  ✓ real Apple verification rejects missing issuer before account-linking SQL (5 ms)
+  ✓ real Apple verification rejects expired credential before account-linking SQL (4 ms)
+  ✓ real Apple verification rejects future credential before account-linking SQL (4 ms)
+  ✓ real Apple verification rejects wrong RSA signature before account-linking SQL (4 ms)
+  ✓ malformed JWT text returns generic 401 without account SQL or a JWKS request (4 ms)
+  ✓ intended Apple credentials use the real linked account, persist timestamps and issue a usable application session (9 ms)
+  ✓ Apple configuration can recover locally without changing the app or bypassing real verification (8 ms)
+  ✓ a real SQL failure after successful verification remains generic 500 and can recover (9 ms)
+  ✓ createApp with Apple disabled preserves health, static pages, admin HTML and password sign-in (11 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       28 passed, 28 total
+Snapshots:   0 total
+Time:        1.351 s, estimated 2 s
+Ran all test suites within paths "__tests__/routes/appleAuth.test.js".

@@ -1,0 +1,53 @@
+(node:11947) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS __tests__/utils/appleAudience.test.js
+  Apple audience boundary through the real locked verifier
+    ✓ missing audience rejects a genuinely signed token issued to another app before verification (7 ms)
+    ✓ empty audience rejects a genuinely signed token issued to another app before verification (2 ms)
+    ✓ unusable configuration " " rejects before verification or JWKS fetch (3 ms)
+    ✓ unusable configuration "\t\n" rejects before verification or JWKS fetch (2 ms)
+    ✓ unusable configuration "com.example. app" rejects before verification or JWKS fetch (1 ms)
+    ✓ unusable configuration "com.example.one,com.example.two" rejects before verification or JWKS fetch (1 ms)
+    ✓ unusable configuration "com.example.one;com.example.two" rejects before verification or JWKS fetch (1 ms)
+    ✓ unusable configuration "[\"com.example.ia01\"]" rejects before verification or JWKS fetch (1 ms)
+    ✓ a valid intended audience passes real RSA/JWKS verification and maps the verified identity (5 ms)
+    ✓ the same genuinely signed token is accepted only while its audience is explicitly configured (2 ms)
+    ✓ surrounding configuration whitespace is normalized without broadening the exact audience (2 ms)
+    ✓ another app audience is rejected by actual cryptographic verification (1 ms)
+    ✓ missing token audience is rejected by actual cryptographic verification (1 ms)
+    ✓ case-changed audience is rejected by actual cryptographic verification (1 ms)
+    ✓ invalid issuer is rejected by actual cryptographic verification (2 ms)
+    ✓ expired token is rejected by actual cryptographic verification (1 ms)
+    ✓ token not yet active is rejected by actual cryptographic verification (2 ms)
+    ✓ unknown signing key is rejected by actual cryptographic verification (1 ms)
+    ✓ a wrong RSA signature is rejected (1 ms)
+    ✓ an RS384 token cannot change the required signing algorithm (3 ms)
+    ✓ a malformed token is rejected without exposing its contents (1 ms)
+    ✓ retains verified Apple email_verified "true" mapping (1 ms)
+    ✓ retains verified Apple email_verified true mapping (1 ms)
+    ✓ retains verified Apple email_verified "false" mapping (1 ms)
+    ✓ retains verified Apple email_verified false mapping (1 ms)
+    ✓ optional email remains null after successful verification (1 ms)
+    ✓ errors expose neither token, claims, audience nor library verification details (1 ms)
+    ✓ restoring intended configuration after an unavailable attempt permits valid authentication (2 ms)
+  pure Apple provider configuration
+    ✓ unusable configuration yields a stable disabled result {} (1 ms)
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":""}
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":" \n\t"}
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":null} (1 ms)
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":false}
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":42}
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":["com.example.ia01"]}
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":{}}
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":"com.example. ia01"} (1 ms)
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":"com.example.ia01,com.example.other"}
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":"com.example.ia01;com.example.other"}
+    ✓ unusable configuration yields a stable disabled result {"APPLE_CLIENT_ID":"[\"com.example.ia01\"]"} (1 ms)
+    ✓ one explicitly configured ID is trimmed, preserved exactly and immutable (7 ms)
+    ✓ unrelated provider configuration supplies no Apple audience fallback
+
+Test Suites: 1 passed, 1 total
+Tests:       42 passed, 42 total
+Snapshots:   0 total
+Time:        0.598 s, estimated 1 s
+Ran all test suites matching __tests__/utils/appleAudience.test.js.
