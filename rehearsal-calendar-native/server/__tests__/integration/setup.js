@@ -198,6 +198,8 @@ export async function setupIntegrationDb() {
 
   // Execute schema
   testDb.exec(schema);
+  // Exercise the real portable migration rather than duplicating limiter DDL.
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/007-member-availability-rate-limit.sql'), 'utf8'));
 
   // Translate the PostgreSQL dialect our routes are written in into something
   // SQLite can parse. Only the constructs actually used in the codebase are
@@ -357,4 +359,3 @@ export async function seedTestData(db) {
     projectId: project.lastInsertId,
   };
 }
-

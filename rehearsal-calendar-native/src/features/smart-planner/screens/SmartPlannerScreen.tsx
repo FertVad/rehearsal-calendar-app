@@ -21,6 +21,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { DateRangePicker } from '../../../shared/components/DateRangePicker';
 import { formatDateToString } from '../../../shared/utils/time';
+import { memberAvailabilityLimits } from '../../../shared/utils/memberAvailabilityLimits';
 import { smartPlannerScreenStyles as styles } from '../styles';
 
 type Props = NativeStackScreenProps<PlannerStackParamList, 'SmartPlanner'>;
@@ -355,6 +356,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         initialStartDate={customStartDate}
         initialEndDate={customEndDate}
         minDate={new Date()}
+        maxDays={memberAvailabilityLimits.maxDays}
       />
       <ScrollView
         style={styles.scrollView}

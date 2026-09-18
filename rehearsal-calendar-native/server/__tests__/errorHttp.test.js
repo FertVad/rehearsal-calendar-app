@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 
 const database = { get: jest.fn(), all: jest.fn(), run: jest.fn(), transaction: jest.fn() };
 const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
-jest.unstable_mockModule('../database/db.js', () => ({ default: database }));
+jest.unstable_mockModule('../database/db.js', () => ({ default: database, isPostgres: false }));
 jest.unstable_mockModule('../utils/logger.js', () => ({ logger }));
 jest.unstable_mockModule('../config/env.js', () => { throw new Error('Tests must not load .env'); });
 

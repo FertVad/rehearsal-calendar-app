@@ -3,7 +3,9 @@ import { logger } from '../../utils/logger.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
-import { timestampToLocal, timestampToISO } from '../../utils/timezone.js';
+import { createLocalTimestampConverter, timestampToISO } from '../../utils/timezone.js';
+import { consumeMemberAvailabilityBudget } from '../../services/memberAvailabilityRateLimit.js';
+import { limits, positiveId, parseMemberAvailabilityQuery, expandMemberAvailabilityDates, availabilityBudgetError } from '../../services/memberAvailabilityQuery.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { notifyRoleChanged, notifyMemberRemoved, notifyAdminAppointed } from '../../services/notifications/pushNotificationService.js';
 import { fullName } from '../../utils/names.js';
@@ -16,31 +18,8 @@ const router = Router();
 router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
-    const { projectId } = req.params;
-    const { date, startDate, endDate, userIds, excludeRehearsalId } = req.query;
-
-    // Support both single date and date range
-    let dates = [];
-    if (date) {
-      // Single date mode (backward compatibility)
-      dates = [date];
-    } else if (startDate && endDate) {
-      // Date range mode (for Smart Planner).
-      //
-      // Walked with the UTC accessors throughout. Anchoring on UTC midnight and
-      // then stepping with setDate(), which moves the local components, agrees
-      // with itself only until a clock change — harmless on Vercel, which runs
-      // UTC, but wrong on a developer machine that observes one.
-      const current = new Date(`${startDate}T00:00:00Z`);
-      const last = new Date(`${endDate}T00:00:00Z`);
-
-      while (current <= last) {
-        dates.push(current.toISOString().split('T')[0]);
-        current.setUTCDate(current.getUTCDate() + 1);
-      }
-    } else {
-      return res.status(400).json({ error: 'Either date or both startDate and endDate are required' });
-    }
+    const projectId = positiveId(req.params.projectId);
+    const window = parseMemberAvailabilityQuery(req.query);
 
     // Check if user is a member of the project
     const membership = await db.get(
@@ -52,31 +31,41 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
       return res.status(403).json({ error: 'You must be a project member to view availability' });
     }
 
-    // The project's active members are the only people whose availability may
-    // be returned here. Fetch them up front: they are both the default target
-    // set and the allow-list for an explicit ?userIds= filter. Without that
-    // intersection, any member of any project could read arbitrary users'
-    // emails, names and schedules by enumerating IDs.
+    // One shared per-account budget across projects, aliases and instances.
+    // A missing migration/storage failure never disables the limit silently.
+    let budget;
+    try {
+      budget = await consumeMemberAvailabilityBudget(userId);
+    } catch {
+      return res.status(503).json({ error: 'Availability is temporarily unavailable' });
+    }
+    if (!budget.allowed) {
+      res.set('Retry-After', String(budget.retryAfter));
+      return res.status(429).json({ error: 'Too many availability requests; try again later' });
+    }
+
+    const memberParams = [projectId, ...(window.requestedIds || [])];
+    const memberFilter = window.requestedIds
+      ? ` AND user_id IN (${window.requestedIds.map((_, i) => `$${i + 2}`).join(',')})`
+      : '';
+    // Fetch one extra row to detect overflow; never return a truncated roster.
+    // Filtering here also permits a bounded selection from a larger project.
     const members = await db.all(
-      "SELECT user_id FROM native_project_members WHERE project_id = $1 AND status = 'active'",
-      [projectId]
+      `SELECT DISTINCT user_id FROM native_project_members
+       WHERE project_id = $1 AND status = 'active'${memberFilter}
+       ORDER BY user_id LIMIT ${limits.maxMembers + 1}`,
+      memberParams
     );
-    const memberIds = new Set(members.map(m => Number(m.user_id)));
-
-    let targetUserIds = [];
-    if (userIds) {
-      targetUserIds = userIds
-        .split(',')
-        .map(id => parseInt(id.trim(), 10))
-        .filter(id => !isNaN(id) && memberIds.has(id));
-    } else {
-      targetUserIds = [...memberIds];
+    const targetUserIds = members.map(m => Number(m.user_id));
+    if (targetUserIds.length > limits.maxMembers || targetUserIds.length * window.dayCount > limits.maxMemberDays) {
+      throw availabilityBudgetError();
     }
+    if (targetUserIds.length === 0) return res.json({ availability: [] });
 
-    if (targetUserIds.length === 0) {
-      return res.json({ availability: [] });
-    }
-
+    // All authorization and cardinality budgets precede date expansion.
+    const dates = expandMemberAvailabilityDates(window);
+    const dateDays = dates.map(date => ({ date, day: Date.parse(`${date}T00:00:00Z`) }));
+    const requestedDates = new Set(dates);
     // Get availability for each user across all dates
     const availability = [];
 
@@ -84,32 +73,25 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
     // This ensures that when viewing the planner, all members' busy slots appear
     // in the requester's timezone, not each member's individual timezone
     const requester = await db.get(
-      'SELECT timezone FROM native_users WHERE id = $1',
+      'SELECT substr(timezone, 1, 129) AS timezone FROM native_users WHERE id = $1',
       [userId]
     );
     const requesterTimezone = requester?.timezone || DEFAULT_TIMEZONE;
+    if (requesterTimezone.length > 128) throw availabilityBudgetError();
 
     logger.debug(`[Availability API] User ID ${userId} requesting availability, timezone: ${requesterTimezone}`);
 
     // Batch fetch all users info (no need for individual timezones anymore).
     // No email: the planner is the only reader and never used it, so sending it
     // handed every member of a project every other member's address for nothing.
-    const usersQuery = `SELECT id, first_name, last_name FROM native_users WHERE id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})`;
+    const usersQuery = `SELECT u.id,
+      substr(u.first_name, 1, 4097) AS first_name, substr(u.last_name, 1, 4097) AS last_name,
+      EXISTS (SELECT 1 FROM native_user_availability a WHERE a.user_id = u.id) AS has_data
+      FROM native_users u WHERE u.id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})`;
     const users = await db.all(usersQuery, targetUserIds);
-    const usersMap = new Map(users.map(u => [u.id, u]));
-
-    // Who has ever recorded any availability at all — not just inside the
-    // window. A member with no rows is treated as free by the planner, which
-    // makes someone who joined this morning indistinguishable from someone who
-    // looked at their calendar and declared themselves open. The maths cannot
-    // tell those apart; saying which is which is the screen's job, and this is
-    // what it needs to do it.
-    const withData = await db.all(
-      `SELECT DISTINCT user_id FROM native_user_availability
-       WHERE user_id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})`,
-      targetUserIds
-    );
-    const hasAnyData = new Set(withData.map((r) => Number(r.user_id)));
+    if (users.some(u => u.first_name?.length > 4096 || u.last_name?.length > 4096)) throw availabilityBudgetError();
+    const usersMap = new Map(users.map(u => [Number(u.id), u]));
+    const toLocal = createLocalTimestampConverter(requesterTimezone);
 
     // Build date range for TIMESTAMPTZ query
     // We need to query starts_at timestamps that fall on these dates in requester's timezone
@@ -120,9 +102,9 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
     // Build query params
     const queryParams = [...targetUserIds, startDateStr, endDateStr];
     let excludeClause = '';
-    if (excludeRehearsalId) {
+    if (window.excludedId !== undefined) {
       excludeClause = ` AND NOT (source = 'rehearsal' AND external_event_id = $${queryParams.length + 1})`;
-      queryParams.push(excludeRehearsalId);
+      queryParams.push(String(window.excludedId));
     }
 
     // Overlap test, not a test on starts_at alone. A span that began before the
@@ -134,24 +116,36 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
     // one day back reaches UTC+14, two forward reach UTC-12, and all-day rows
     // sit at UTC midnight of their own date, well inside both.
     const availabilityRecords = await db.all(
-      `SELECT user_id, starts_at, ends_at, type, is_all_day
+      `SELECT user_id, starts_at, ends_at, substr(type, 1, 33) AS type, is_all_day
        FROM native_user_availability
        WHERE user_id IN (${targetUserIds.map((_, i) => `$${i + 1}`).join(',')})
          AND starts_at < $${targetUserIds.length + 2}::date + interval '2 days'
          AND ends_at >= $${targetUserIds.length + 1}::date - interval '1 day'${excludeClause}
-       ORDER BY user_id, starts_at ASC`,
+       ORDER BY user_id, starts_at ASC LIMIT ${limits.maxRecords + 1}`,
       queryParams
     );
 
+    if (availabilityRecords.length > limits.maxRecords || availabilityRecords.some(r => r.type?.length > 32)) {
+      throw availabilityBudgetError();
+    }
 
     // Group records by user
     const recordsByUser = new Map();
     for (const record of availabilityRecords) {
-      if (!recordsByUser.has(record.user_id)) {
-        recordsByUser.set(record.user_id, []);
+      if (!recordsByUser.has(Number(record.user_id))) {
+        recordsByUser.set(Number(record.user_id), []);
       }
-      recordsByUser.get(record.user_id).push(record);
+      recordsByUser.get(Number(record.user_id)).push(record);
     }
+
+    let rangeCount = 0;
+    // Account for actual escaped UTF-8 JSON while building, before allocation
+    // can grow beyond the response budget. Final serialization verifies it too.
+    let responseBytes = Buffer.byteLength('{"availability":[]}');
+    const charge = value => {
+      responseBytes += Buffer.byteLength(JSON.stringify(value)) + 1;
+      if (responseBytes > limits.maxResponseBytes) throw availabilityBudgetError();
+    };
 
     for (const targetUserId of targetUserIds) {
       const user = usersMap.get(targetUserId);
@@ -166,9 +160,11 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
         userId: String(targetUserId),
         firstName: user.first_name,
         lastName: user.last_name,
-        hasData: hasAnyData.has(Number(targetUserId)),
+        hasData: Boolean(user.has_data),
         dates: []
       };
+
+      charge(userAvailability);
 
       // Lay each record across every day it actually covers, in the requester's
       // timezone, clipped to that day.
@@ -186,18 +182,14 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
       // overnight slot, an imported red-eye is one, and an ordinary 21:00–23:00
       // rehearsal becomes one for any teammate a timezone or two east.
       const rangesByDate = new Map();
-      const windowFirst = dates[0];
-      const windowLast = dates[dates.length - 1];
-
-      const nextDate = (dateStr) => {
-        const d = new Date(`${dateStr}T00:00:00Z`);
-        d.setUTCDate(d.getUTCDate() + 1);
-        return d.toISOString().split('T')[0];
-      };
-
       const addRange = (dateStr, range) => {
-        if (dateStr < windowFirst || dateStr > windowLast) return;
-        if (!rangesByDate.has(dateStr)) rangesByDate.set(dateStr, []);
+        if (!requestedDates.has(dateStr)) return;
+        if (++rangeCount > limits.maxRanges) throw availabilityBudgetError();
+        if (!rangesByDate.has(dateStr)) {
+          charge({ date: dateStr, timeRanges: [] });
+          rangesByDate.set(dateStr, []);
+        }
+        charge(range);
         rangesByDate.get(dateStr).push(range);
       };
 
@@ -210,20 +202,20 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
         // converting into the requester's zone, which landed it on the wrong
         // day whenever the two disagreed.
         if (record.is_all_day) {
-          const firstDate = startsAtISO.split('T')[0];
-          const lastDate = endsAtISO.split('T')[0];
-          for (
-            let d = firstDate > windowFirst ? firstDate : windowFirst;
-            d <= lastDate && d <= windowLast;
-            d = nextDate(d)
-          ) {
-            addRange(d, { start: '00:00', end: '23:59', type: record.type, isAllDay: true });
+          const firstDay = Date.parse(`${startsAtISO.split('T')[0]}T00:00:00Z`);
+          const lastDay = Date.parse(`${endsAtISO.split('T')[0]}T00:00:00Z`);
+          for (const { date: d, day } of dateDays) {
+            if (day >= firstDay && day <= lastDay) {
+              addRange(d, { start: '00:00', end: '23:59', type: record.type, isAllDay: true });
+            }
           }
           continue;
         }
 
-        const from = timestampToLocal(startsAtISO, requesterTimezone);
-        const to = timestampToLocal(endsAtISO, requesterTimezone);
+        const from = toLocal(startsAtISO);
+        const to = toLocal(endsAtISO);
+        const fromDay = Date.parse(`${from.date}T00:00:00Z`);
+        const toDay = Date.parse(`${to.date}T00:00:00Z`);
         const range = (start, end) => ({ start, end, type: record.type, isAllDay: false });
 
         if (from.date === to.date) {
@@ -232,12 +224,8 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
         }
 
         addRange(from.date, range(from.time, '23:59'));
-        for (
-          let d = nextDate(from.date) > windowFirst ? nextDate(from.date) : windowFirst;
-          d < to.date && d <= windowLast;
-          d = nextDate(d)
-        ) {
-          addRange(d, range('00:00', '23:59'));
+        for (const { date: d, day } of dateDays) {
+          if (day > fromDay && day < toDay) addRange(d, range('00:00', '23:59'));
         }
         // An end of exactly midnight belongs to the day before, not as a
         // zero-length range on the next one.
@@ -261,8 +249,13 @@ router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (
       availability.push(userAvailability);
     }
 
-    res.json({ availability });
+    const body = JSON.stringify({ availability });
+    if (Buffer.byteLength(body) > limits.maxResponseBytes) throw availabilityBudgetError();
+    res.type('json').send(body);
   } catch (error) {
+    if (error.status === 400 || error.code === 'AVAILABILITY_BUDGET_EXCEEDED') {
+      return res.status(error.status).json({ error: error.message, ...(error.code ? { code: error.code } : {}) });
+    }
     console.error('[Availability] Error getting members availability:', error);
     res.status(500).json({ error: 'Failed to get members availability' });
   }

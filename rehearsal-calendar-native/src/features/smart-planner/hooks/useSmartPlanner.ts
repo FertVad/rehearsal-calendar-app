@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useI18n } from '../../../contexts/I18nContext';
 import { projectsAPI } from '../../../shared/services/api';
 import type { Project, ProjectMember } from '../../../shared/types';
 import type { TimeSlot, SlotCategory, Member, AvailabilityData } from '../types';
@@ -11,6 +12,7 @@ import {
 } from '../utils/slotGenerator';
 import { mergeMemberAvailability, type MemberAvailability } from '../utils/availabilityMerger';
 import { logger } from '../../../shared/utils/logger';
+import { calendarRangeDays, memberAvailabilityLimits } from '../../../shared/utils/memberAvailabilityLimits';
 
 interface UseSmartPlannerProps {
   projectId: string;
@@ -28,7 +30,15 @@ export function useSmartPlanner({
   selectedMemberIds,
 }: UseSmartPlannerProps) {
   const { user } = useAuth();
+  const { t } = useI18n();
   const userTimezone = user?.timezone;
+  const rangeDays = calendarRangeDays(startDate, endDate);
+  const rangeError = rangeDays === null
+    ? t.common.invalidDateRange
+    : rangeDays > memberAvailabilityLimits.maxDays
+      ? t.common.dateRangeTooLong(memberAvailabilityLimits.maxDays)
+      : null;
+  const rangeKey = JSON.stringify([projectId, startDate, endDate, userTimezone]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +46,7 @@ export function useSmartPlanner({
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [memberAvailability, setMemberAvailability] = useState<MemberAvailability[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [loadedRangeKey, setLoadedRangeKey] = useState<string | null>(null);
 
   const refetch = useCallback(() => {
     setRefreshKey(k => k + 1);
@@ -56,6 +67,13 @@ export function useSmartPlanner({
     let mounted = true;
 
     async function loadData() {
+      if (rangeError) {
+        setError(rangeError);
+        setMemberAvailability([]);
+        setLoadedRangeKey(null);
+        setLoading(false);
+        return;
+      }
       if (!projectId || !startDate || !endDate) {
         return;
       }
@@ -90,10 +108,13 @@ export function useSmartPlanner({
         setProject(projectRes.data.project);
         setMembers(membersRes.data.members);
         setMemberAvailability(availabilityRes.data.availability);
+        setLoadedRangeKey(rangeKey);
       } catch (err: any) {
         logger.error('[Smart Planner] Error loading data:', err);
         if (mounted) {
           setError(err.response?.data?.error || err.message || 'Failed to load data');
+          setMemberAvailability([]);
+          setLoadedRangeKey(null);
         }
       } finally {
         if (mounted) {
@@ -107,7 +128,7 @@ export function useSmartPlanner({
     return () => {
       mounted = false;
     };
-  }, [projectId, startDate, endDate, refreshKey, userTimezone]);
+  }, [projectId, startDate, endDate, refreshKey, userTimezone, rangeError, rangeKey]);
 
   // Convert members to simple format for slot generator
   const simpleMembers: Member[] = useMemo(() => {
@@ -151,7 +172,9 @@ export function useSmartPlanner({
 
   // Generate time slots
   const allSlots: TimeSlot[] = useMemo(() => {
-    if (!startDate || !endDate || simpleMembers.length === 0) {
+    // Check before generateTimeSlots walks the requested dates. A rejected or
+    // pending range must not generate free slots from the previous response.
+    if (rangeError || error || loading || loadedRangeKey !== rangeKey || simpleMembers.length === 0) {
       return [];
     }
 
@@ -177,7 +200,8 @@ export function useSmartPlanner({
       logger.debug('[Smart Planner] Generated slots:', slots.length);
     }
     return slots;
-  }, [startDate, endDate, simpleMembers, mergedAvailability, selectedMemberIds]);
+  }, [startDate, endDate, simpleMembers, mergedAvailability, selectedMemberIds,
+    rangeError, error, loading, loadedRangeKey, rangeKey]);
 
   // Filter slots by category
   const filteredSlots = useMemo(() => {
@@ -199,8 +223,8 @@ export function useSmartPlanner({
   }, [filteredSlots]);
 
   return {
-    loading,
-    error,
+    loading: loading && !rangeError,
+    error: rangeError || error,
     project,
     members,
     simpleMembers,

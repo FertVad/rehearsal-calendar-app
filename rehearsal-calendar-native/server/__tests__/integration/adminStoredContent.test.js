@@ -63,7 +63,7 @@ const externalCall = jest.fn(() => {
   throw new Error('External services must not be called by the admin text persistence tests');
 });
 
-jest.unstable_mockModule('../../database/db.js', () => ({ default: database }));
+jest.unstable_mockModule('../../database/db.js', () => ({ default: database, isPostgres: false }));
 jest.unstable_mockModule('../../utils/oauthVerification.js', () => ({
   verifyGoogleToken: externalCall,
   verifyAppleToken: externalCall,

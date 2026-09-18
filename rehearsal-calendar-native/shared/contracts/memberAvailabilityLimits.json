@@ -1,0 +1,9 @@
+{
+  "maxDays": 90,
+  "maxMembers": 100,
+  "maxMemberDays": 3100,
+  "maxRecords": 5000,
+  "maxRanges": 20000,
+  "maxResponseBytes": 1048576,
+  "requestsPerMinute": 60
+}

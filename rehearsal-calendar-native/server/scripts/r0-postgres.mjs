@@ -10,10 +10,14 @@ import pg from 'pg';
 // No user-supplied database URL is accepted. Only a newly created local Docker
 // container with this run's ownership label/DB marker can be modified/removed.
 const args = process.argv.slice(2);
-assert.ok(args.length === 0 || (args.length === 1 && args[0] === '--a02-only'),
-  'Usage: node scripts/r0-postgres.mjs [--a02-only]');
-const a02Only = args[0] === '--a02-only';
-const scenarios = a02Only ? ['controls', 'A02'] : ['controls', 'F01', 'B02', 'D01', 'A02'];
+const modes = {
+  '--a02-only': ['controls', 'A02'],
+  '--b03-only': ['controls', 'B03'],
+  '--a02-b03-only': ['controls', 'A02', 'B03'],
+};
+assert.ok(args.length === 0 || (args.length === 1 && Object.hasOwn(modes, args[0])),
+  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only]');
+const scenarios = modes[args[0]] || ['controls', 'F01', 'B02', 'D01', 'A02', 'B03'];
 const docker = process.env.R0_DOCKER_BIN || '/usr/local/bin/docker';
 const context = process.env.R0_DOCKER_CONTEXT || 'desktop-linux';
 const cli = (...args) => execFileSync(docker, ['--context', context, ...args], { encoding: 'utf8', timeout: 20000 }).trim();
@@ -57,7 +61,7 @@ try {
   } finally { await control.end(); }
   for (const scenario of scenarios) {
     const result = spawnSync(process.execPath, ['--unhandled-rejections=strict', probe, scenario], {
-      cwd, encoding: 'utf8', timeout: 15000, maxBuffer: 2 * 1024 * 1024,
+      cwd, encoding: 'utf8', timeout: scenario === 'B03' ? 45000 : 15000, maxBuffer: 2 * 1024 * 1024,
       env: { PATH: '/usr/bin:/bin', TZ: 'UTC', NODE_ENV: 'production',
         JWT_SECRET: 'r0-local-signing-secret', ADMIN_PASSWORD: 'r0-local-password', CRON_SECRET: 'r0-local-cron',
         DATABASE_URL: url, R0_NONCE: nonce },
@@ -67,9 +71,9 @@ try {
     if (result.stderr) process.stderr.write(result.stderr);
     assert.equal(result.status, 0, `${scenario} probe failed unexpectedly`);
   }
-  console.log(a02Only
-    ? 'A02 REGRESSION PASS: controls and repaired A02 contracts passed on real PostgreSQL.'
-    : 'R0 HARNESS PASS: controls and repaired A02 contracts passed; B02/D01/F01 remain known failing application contracts, NOT fixes.');
+  console.log(args.length
+    ? `${scenarios.slice(1).join('+')} REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.`
+    : 'R0 HARNESS PASS: controls and repaired A02/B03 contracts passed; B02/D01/F01 remain known failing application contracts, NOT fixes.');
 } finally {
   if (container) {
     const label = cli('inspect', container, '--format', '{{index .Config.Labels "rehearsly.r0"}}');

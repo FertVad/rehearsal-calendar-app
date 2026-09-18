@@ -1,4 +1,4 @@
-// Isolated worker: no server.js, dotenv, migrations or real credentials.
+// Isolated worker: no server.js, dotenv, migration runner or real credentials.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import net from 'node:net';
@@ -6,7 +6,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B02', 'D01', 'F01'].includes(scenario));
+assert.ok(['controls', 'A02', 'B02', 'B03', 'D01', 'F01'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -64,6 +64,14 @@ if (scenario === 'A02') {
     ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC',
     ADD COLUMN last_login_at TIMESTAMPTZ`);
 }
+if (scenario === 'B03') {
+  await control.query("ALTER TABLE native_users ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC'");
+  // Apply only B03's actual additive migration, twice, against this owned
+  // fixture. Never import the migration runner, its ledger or its environment.
+  const migration = await readFile(new URL('../../migrations/007-member-availability-rate-limit.sql', import.meta.url), 'utf8');
+  await control.query(migration);
+  await control.query(migration);
+}
 target.searchParams.set('options', '-c search_path=r0_fixture');
 process.env.DATABASE_URL = target.href;
 const database = await import('../../database/db.js');
@@ -92,7 +100,7 @@ async function http(path, { user = 1, method = 'GET', body, token = tokens.get(u
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal: AbortSignal.timeout(3000),
   });
-  return { status: response.status, data: await response.json() };
+  return { status: response.status, data: await response.json(), headers: response.headers };
 }
 const rehearsal = participant => ({ title: 'R0 rehearsal', startsAt: '2030-09-17T12:00:00Z',
   endsAt: '2030-09-17T13:00:00Z', participant_ids: [participant] });
@@ -145,6 +153,10 @@ if (scenario === 'controls') {
   assert.equal(await count('native_user_availability', 'user_id = 3'), 1);
   result = { outcome: 'KNOWN_DEFECT_REPRODUCED', status: response.status, outsiderInvitations: 1, outsiderBusyRows: 1,
     expectation: 'Reject a participant outside the project before any write' };
+} else if (scenario === 'B03') {
+  const { probeB03 } = await import('./b03.mjs');
+  result = await probeB03({ control, db, http, listenApp, allowedPorts });
+  result.externalConnections = deniedConnections;
 } else if (scenario === 'A02') {
   const snapshot = async () => {
     const tables = ['native_users', 'native_projects', 'native_project_members', 'native_rehearsals',

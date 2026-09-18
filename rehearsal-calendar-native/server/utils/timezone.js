@@ -47,12 +47,17 @@ import { fromZonedTime, toZonedTime, formatInTimeZone } from 'date-fns-tz';
  * // Returns: { date: "2025-12-10", time: "19:00" }
  */
 export function timestampToLocal(isoTimestamp, timezone) {
-  const date = new Date(isoTimestamp);
+  return createLocalTimestampConverter(timezone)(isoTimestamp);
+}
 
-  // Format in target timezone
+// A batch shares one formatter instead of allocating an Intl formatter for
+// every record. Its lifetime is the request, so arbitrary zones cannot grow a
+// process-wide cache.
+export function createLocalTimestampConverter(timezone) {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
     year: 'numeric',
+    era: 'short',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
@@ -60,21 +65,27 @@ export function timestampToLocal(isoTimestamp, timezone) {
     hour12: false,
   });
 
-  const parts = formatter.formatToParts(date);
-  const dateParts = {};
-  for (const part of parts) {
-    dateParts[part.type] = part.value;
-  }
+  return (isoTimestamp) => {
+    const parts = formatter.formatToParts(new Date(isoTimestamp));
+    const dateParts = {};
+    for (const part of parts) {
+      dateParts[part.type] = part.value;
+    }
 
-  // Fix hour=24 edge case (midnight can be formatted as 24:00 instead of 00:00)
-  let hour = dateParts.hour;
-  if (hour === '24') {
-    hour = '00';
-  }
+    // Fix hour=24 edge case (midnight can be formatted as 24:00 instead of 00:00)
+    let hour = dateParts.hour;
+    if (hour === '24') {
+      hour = '00';
+    }
 
-  return {
-    date: `${dateParts.year}-${dateParts.month}-${dateParts.day}`,
-    time: `${hour}:${dateParts.minute}`,
+    const year = dateParts.era === 'BC' ? 1 - Number(dateParts.year) : Number(dateParts.year);
+    const yearString = year >= 0 && year <= 9999
+      ? String(year).padStart(4, '0')
+      : `${year < 0 ? '-' : '+'}${String(Math.abs(year)).padStart(6, '0')}`;
+    return {
+      date: `${yearString}-${dateParts.month}-${dateParts.day}`,
+      time: `${hour}:${dateParts.minute}`,
+    };
   };
 }
 

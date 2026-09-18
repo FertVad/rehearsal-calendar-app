@@ -49,7 +49,7 @@ jobs:
         run: npm ci --prefix server
       - name: Prepare PostgreSQL image
         run: docker pull postgres:15
-      - name: Verify A02 against disposable PostgreSQL
+      - name: Verify A02 and B03 against disposable PostgreSQL
         env:
           R0_DOCKER_CONTEXT: default
-        run: R0_DOCKER_BIN="$(command -v docker)" npm --prefix server run test:r0-postgres -- --a02-only
+        run: R0_DOCKER_BIN="$(command -v docker)" npm --prefix server run test:r0-postgres -- --a02-b03-only
