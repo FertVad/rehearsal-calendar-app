@@ -1,5 +1,7 @@
 # Реестр системного исправления Rehearsly
 
+Операционный контекст: [известный отказ Neon и границы доступа](PRODUCTION_ACCESS.md), сообщённые Вадимом 18 сентября 2026. Production smoke остаётся NOT_RUN; до production/push/первого удалённого CI нужна остановка и отдельное сообщение Вадиму. Локальные статусы ниже не утверждают работоспособность production.
+
 Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01 и [A02](REMEDIATION_A02.md) VERIFIED локально, остальные 100 пунктов остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`. Это учёт локальной реализации, не повторная оценка текущего production.
 
 [План R0–R9](/Users/vadimfertik/Desktop/reh_app/audit/REMEDIATION_PLAN.md) · [Аудит](/Users/vadimfertik/Desktop/reh_app/audit/AUDIT_REPORT.md) · [Серверные проверки](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-server.md) · [Устройства](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-device-tests.md).
@@ -139,7 +141,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | IDOC01 | Low | Нет | R9 | TODO | документ API содержит устаревшие и противоречащие контракту инструкции | — |
 | IS01 | Medium | Нет | R1 | TODO | secret scanner использует неверный диалект regex и пропускает секреты | — |
 | IS02 | Medium | Да | R1 | TODO | rate limits не общие для нескольких процессов | — |
-| IA01 | High | Да | R1 | TODO | Apple ID token принимается без проверки приложения-получателя, если APPLE_CLIENT_ID отсутствует/пуст | — |
+| IA01 | High | Да | R1 | TODO | Apple ID token принимается без проверки приложения-получателя, если APPLE_CLIENT_ID отсутствует/пуст | [OPS-IA01: карточка человека, NOT_RUN](PRODUCTION_ACCESS.md#ops-ia01--проверка-apple_client_id-человеком) |
 
 ## Карточка исполнения пакета — шаблон
 
