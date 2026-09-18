@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 /**
  * The user's notification inbox.
  *
@@ -22,7 +23,7 @@ const router = Router();
  * GET /api/native/notifications
  * The caller's own inbox, newest first, with the unread count.
  */
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const { limit, offset } = req.query;
     const notifications = await listNotifications(req.userId, { limit, offset });
@@ -33,20 +34,20 @@ router.get('/', requireAuth, async (req, res) => {
     logger.error('[Notifications] List failed:', err);
     res.status(500).json({ error: 'Failed to load notifications' });
   }
-});
+}));
 
 /**
  * GET /api/native/notifications/unread-count
  * Just the number — what the badge is set from on app foreground.
  */
-router.get('/unread-count', requireAuth, async (req, res) => {
+router.get('/unread-count', requireAuth, asyncHandler(async (req, res) => {
   try {
     res.json({ unreadCount: await countUnread(req.userId) });
   } catch (err) {
     logger.error('[Notifications] Unread count failed:', err);
     res.status(500).json({ error: 'Failed to count notifications' });
   }
-});
+}));
 
 /**
  * POST /api/native/notifications/read
@@ -54,7 +55,7 @@ router.get('/unread-count', requireAuth, async (req, res) => {
  * Answers with the unread count that remains, so the client can set the badge
  * without a second round trip.
  */
-router.post('/read', requireAuth, async (req, res) => {
+router.post('/read', requireAuth, asyncHandler(async (req, res) => {
   try {
     const { ids } = req.body || {};
 
@@ -68,13 +69,13 @@ router.post('/read', requireAuth, async (req, res) => {
     logger.error('[Notifications] Mark read failed:', err);
     res.status(500).json({ error: 'Failed to update notifications' });
   }
-});
+}));
 
 /**
  * DELETE /api/native/notifications/:id
  * One notification, the caller's own.
  */
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuth, asyncHandler(async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {
@@ -94,13 +95,13 @@ router.delete('/:id', requireAuth, async (req, res) => {
     logger.error('[Notifications] Delete failed:', err);
     res.status(500).json({ error: 'Failed to delete notification' });
   }
-});
+}));
 
 /**
  * DELETE /api/native/notifications
  * Empties the caller's inbox. Irreversible, and the app asks first.
  */
-router.delete('/', requireAuth, async (req, res) => {
+router.delete('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const { deleted, unreadCount } = await deleteNotifications(req.userId);
     res.json({ success: true, deleted, unreadCount });
@@ -108,6 +109,6 @@ router.delete('/', requireAuth, async (req, res) => {
     logger.error('[Notifications] Delete all failed:', err);
     res.status(500).json({ error: 'Failed to clear notifications' });
   }
-});
+}));
 
 export default router;

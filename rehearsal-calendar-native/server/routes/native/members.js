@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { logger } from '../../utils/logger.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
@@ -12,7 +13,7 @@ const router = Router();
 // GET /api/native/projects/:projectId/members/availability - Get availability for project members
 // IMPORTANT: This route MUST come BEFORE /projects/:projectId/members to match correctly
 // Supports both single date (?date=2024-12-04) and date range (?startDate=2024-12-01&endDate=2024-12-07)
-router.get('/:projectId/members/availability', requireAuth, async (req, res) => {
+router.get('/:projectId/members/availability', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -265,10 +266,10 @@ router.get('/:projectId/members/availability', requireAuth, async (req, res) => 
     console.error('[Availability] Error getting members availability:', error);
     res.status(500).json({ error: 'Failed to get members availability' });
   }
-});
+}));
 
 // GET /api/native/projects/:projectId/members - Get project members
-router.get('/:projectId/members', requireAuth, async (req, res) => {
+router.get('/:projectId/members', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -327,10 +328,10 @@ router.get('/:projectId/members', requireAuth, async (req, res) => {
     console.error('Error fetching members:', error);
     res.status(500).json({ error: 'Failed to fetch members' });
   }
-});
+}));
 
 // PUT /api/native/projects/:projectId/members/:userId/role - Update member role
-router.put('/:projectId/members/:userId/role', requireAuth, async (req, res) => {
+router.put('/:projectId/members/:userId/role', requireAuth, asyncHandler(async (req, res) => {
   try {
     const requesterId = req.userId;
     const { projectId, userId } = req.params;
@@ -411,10 +412,10 @@ router.put('/:projectId/members/:userId/role', requireAuth, async (req, res) => 
     console.error('Error updating member role:', error);
     res.status(500).json({ error: 'Failed to update member role' });
   }
-});
+}));
 
 // DELETE /api/native/projects/:projectId/members/:userId - Remove member from project
-router.delete('/:projectId/members/:userId', requireAuth, async (req, res) => {
+router.delete('/:projectId/members/:userId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const requesterId = req.userId;
     const { projectId, userId } = req.params;
@@ -510,6 +511,6 @@ router.delete('/:projectId/members/:userId', requireAuth, async (req, res) => {
     console.error('Error removing member:', error);
     res.status(500).json({ error: 'Failed to remove member' });
   }
-});
+}));
 
 export default router;

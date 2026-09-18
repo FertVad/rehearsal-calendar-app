@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
@@ -7,7 +8,7 @@ import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 const router = Router();
 
 // GET /api/native/projects - Get user's projects
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const accountId = req.userId;
 
@@ -51,12 +52,12 @@ router.get('/', requireAuth, async (req, res) => {
     console.error('Error fetching projects:', error);
     res.status(500).json({ error: 'Failed to fetch projects' });
   }
-});
+}));
 
 // POST /api/native/projects - Create new project
 // Free for everyone: the paid tier is gone. If money is ever taken it goes
 // through App Store in-app purchase — see docs/app-store-release.md
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const accountId = req.userId;
     const { name, description, timezone } = req.body;
@@ -95,10 +96,10 @@ router.post('/', requireAuth, async (req, res) => {
     console.error('Error creating project:', error);
     res.status(500).json({ error: 'Failed to create project' });
   }
-});
+}));
 
 // GET /api/native/projects/:projectId - Get single project
-router.get('/:projectId', requireAuth, async (req, res) => {
+router.get('/:projectId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const accountId = req.userId;
     const projectId = req.params.projectId;
@@ -135,10 +136,10 @@ router.get('/:projectId', requireAuth, async (req, res) => {
     console.error('Error fetching project:', error);
     res.status(500).json({ error: 'Failed to fetch project' });
   }
-});
+}));
 
 // DELETE /api/native/projects/:projectId - Delete project
-router.delete('/:projectId', requireAuth, async (req, res) => {
+router.delete('/:projectId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -210,6 +211,6 @@ router.delete('/:projectId', requireAuth, async (req, res) => {
     console.error('Error deleting project:', error);
     res.status(500).json({ error: 'Failed to delete project' });
   }
-});
+}));
 
 export default router;

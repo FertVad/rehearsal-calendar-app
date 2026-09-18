@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { logger } from '../../utils/logger.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
@@ -29,7 +30,7 @@ import {
 const router = Router();
 
 // GET /api/native/rehearsals/batch?projectIds=1,2,3 - Get rehearsals for multiple projects (Performance optimization)
-router.get('/batch', requireAuth, async (req, res) => {
+router.get('/batch', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectIds } = req.query;
@@ -52,10 +53,10 @@ router.get('/batch', requireAuth, async (req, res) => {
     console.error('[Batch Rehearsals] Error:', error);
     res.status(500).json({ error: 'Failed to fetch rehearsals' });
   }
-});
+}));
 
 // GET /api/native/projects/:projectId/rehearsals - Get rehearsals where user is invited
-router.get('/:projectId/rehearsals', requireAuth, async (req, res) => {
+router.get('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -79,10 +80,10 @@ router.get('/:projectId/rehearsals', requireAuth, async (req, res) => {
     console.error('[ROUTE] Error fetching rehearsals:', error);
     res.status(500).json({ error: 'Failed to fetch rehearsals' });
   }
-});
+}));
 
 // POST /api/native/projects/:projectId/rehearsals - Create a new rehearsal
-router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
+router.post('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -127,10 +128,10 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
     }
     res.status(500).json({ error: 'Failed to create rehearsal' });
   }
-});
+}));
 
 // PUT /api/native/projects/:projectId/rehearsals/:rehearsalId - Update a rehearsal
-router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) => {
+router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId, rehearsalId } = req.params;
@@ -192,10 +193,10 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
     }
     res.status(500).json({ error: 'Failed to update rehearsal' });
   }
-});
+}));
 
 // DELETE /api/native/projects/:projectId/rehearsals/:rehearsalId - Delete a rehearsal
-router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) => {
+router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId, rehearsalId } = req.params;
@@ -240,10 +241,10 @@ router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, re
     console.error('Error deleting rehearsal:', error);
     res.status(500).json({ error: 'Failed to delete rehearsal' });
   }
-});
+}));
 
 // POST /api/native/rehearsals/:rehearsalId/respond - RSVP to a rehearsal
-router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
+router.post('/:rehearsalId/respond', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { rehearsalId } = req.params;
@@ -294,10 +295,10 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
     }
     res.status(500).json({ error: 'Failed to update response' });
   }
-});
+}));
 
 // GET /api/native/rehearsals/:rehearsalId/responses - Get all responses for a rehearsal
-router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
+router.get('/:rehearsalId/responses', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { rehearsalId } = req.params;
@@ -323,7 +324,7 @@ router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
     console.error('Error fetching responses:', error);
     res.status(500).json({ error: 'Failed to fetch responses' });
   }
-});
+}));
 
 // GET /api/native/rehearsals/:rehearsalId - One rehearsal, by id
 //
@@ -334,7 +335,7 @@ router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
 // A rehearsal the caller may not see answers 404, the same as one that does not
 // exist: telling the two apart would confirm that a given id belongs to someone
 // else's project.
-router.get('/:rehearsalId', requireAuth, async (req, res) => {
+router.get('/:rehearsalId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const rehearsal = await getRehearsalById(req.params.rehearsalId, req.userId);
 
@@ -347,10 +348,10 @@ router.get('/:rehearsalId', requireAuth, async (req, res) => {
     logger.error('[Rehearsals] Fetch by id failed:', error);
     res.status(500).json({ error: 'Failed to fetch rehearsal' });
   }
-});
+}));
 
 // GET /api/native/rehearsals/:rehearsalId/my-response - Get user's response
-router.get('/:rehearsalId/my-response', requireAuth, async (req, res) => {
+router.get('/:rehearsalId/my-response', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { rehearsalId } = req.params;
@@ -376,6 +377,6 @@ router.get('/:rehearsalId/my-response', requireAuth, async (req, res) => {
     console.error('Error fetching user response:', error);
     res.status(500).json({ error: 'Failed to fetch response' });
   }
-});
+}));
 
 export default router;

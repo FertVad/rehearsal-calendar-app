@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
@@ -5,7 +6,7 @@ import { requireAuth } from '../../middleware/jwtMiddleware.js';
 const router = Router();
 
 // POST /api/native/bug-reports
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { message, screen } = req.body;
@@ -25,6 +26,6 @@ router.post('/', requireAuth, async (req, res) => {
     console.error('Error creating bug report:', error);
     res.status(500).json({ error: 'Failed to create bug report' });
   }
-});
+}));
 
 export default router;

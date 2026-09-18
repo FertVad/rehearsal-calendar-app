@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 /**
  * Calendar Sync API Routes
  * Manages calendar connections and event mappings in database
@@ -22,7 +23,7 @@ router.use(requireAuth);
  * GET /api/native/calendar-sync/connections
  * Get user's calendar connections
  */
-router.get('/connections', async (req, res) => {
+router.get('/connections', asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -40,13 +41,13 @@ router.get('/connections', async (req, res) => {
     console.error('[CalendarSync] Get connections error:', error);
     res.status(500).json({ error: 'Failed to get calendar connections' });
   }
-});
+}));
 
 /**
  * POST /api/native/calendar-sync/connections
  * Create or update calendar connection
  */
-router.post('/connections', async (req, res) => {
+router.post('/connections', asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const {
@@ -110,13 +111,13 @@ router.post('/connections', async (req, res) => {
     console.error('[CalendarSync] Create connection error:', error);
     res.status(500).json({ error: 'Failed to create calendar connection' });
   }
-});
+}));
 
 /**
  * DELETE /api/native/calendar-sync/connections/:id
  * Delete calendar connection and all associated mappings
  */
-router.delete('/connections/:id', async (req, res) => {
+router.delete('/connections/:id', asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const connectionId = parseInt(req.params.id);
@@ -148,7 +149,7 @@ router.delete('/connections/:id', async (req, res) => {
     console.error('[CalendarSync] Delete connection error:', error);
     res.status(500).json({ error: 'Failed to delete connection' });
   }
-});
+}));
 
 /**
  * ============================================================================
@@ -160,7 +161,7 @@ router.delete('/connections/:id', async (req, res) => {
  * GET /api/native/calendar-sync/mappings
  * Get all event mappings for user's connections
  */
-router.get('/mappings', async (req, res) => {
+router.get('/mappings', asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { eventType } = req.query;
@@ -190,13 +191,13 @@ router.get('/mappings', async (req, res) => {
     console.error('[CalendarSync] Get mappings error:', error);
     res.status(500).json({ error: 'Failed to get event mappings' });
   }
-});
+}));
 
 /**
  * GET /api/native/calendar-sync/mappings/by-event/:eventType/:internalEventId
  * Get mapping for a specific internal event
  */
-router.get('/mappings/by-event/:eventType/:internalEventId', async (req, res) => {
+router.get('/mappings/by-event/:eventType/:internalEventId', asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { eventType, internalEventId } = req.params;
@@ -220,13 +221,13 @@ router.get('/mappings/by-event/:eventType/:internalEventId', async (req, res) =>
     console.error('[CalendarSync] Get mapping error:', error);
     res.status(500).json({ error: 'Failed to get mapping' });
   }
-});
+}));
 
 /**
  * POST /api/native/calendar-sync/mappings
  * Create or update event mapping
  */
-router.post('/mappings', async (req, res) => {
+router.post('/mappings', asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const {
@@ -300,13 +301,13 @@ router.post('/mappings', async (req, res) => {
     console.error('[CalendarSync] Create mapping error:', error);
     res.status(500).json({ error: 'Failed to create mapping' });
   }
-});
+}));
 
 /**
  * DELETE /api/native/calendar-sync/mappings/:id
  * Delete specific mapping
  */
-router.delete('/mappings/:id', async (req, res) => {
+router.delete('/mappings/:id', asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const mappingId = parseInt(req.params.id);
@@ -334,13 +335,13 @@ router.delete('/mappings/:id', async (req, res) => {
     console.error('[CalendarSync] Delete mapping error:', error);
     res.status(500).json({ error: 'Failed to delete mapping' });
   }
-});
+}));
 
 /**
  * DELETE /api/native/calendar-sync/mappings/by-event/:eventType/:internalEventId
  * Delete mapping by internal event
  */
-router.delete('/mappings/by-event/:eventType/:internalEventId', async (req, res) => {
+router.delete('/mappings/by-event/:eventType/:internalEventId', asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { eventType, internalEventId } = req.params;
@@ -362,13 +363,13 @@ router.delete('/mappings/by-event/:eventType/:internalEventId', async (req, res)
     console.error('[CalendarSync] Delete mapping error:', error);
     res.status(500).json({ error: 'Failed to delete mapping' });
   }
-});
+}));
 
 /**
  * POST /api/native/calendar-sync/connections/:id/update-sync-time
  * Update last sync time for a connection
  */
-router.post('/connections/:id/update-sync-time', async (req, res) => {
+router.post('/connections/:id/update-sync-time', asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const connectionId = parseInt(req.params.id);
@@ -393,6 +394,6 @@ router.post('/connections/:id/update-sync-time', async (req, res) => {
     console.error('[CalendarSync] Update sync time error:', error);
     res.status(500).json({ error: 'Failed to update sync time' });
   }
-});
+}));
 
 export default router;

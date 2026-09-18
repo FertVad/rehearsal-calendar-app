@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import net from 'node:net';
 import pg from 'pg';
+import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
 assert.ok(['controls', 'A02', 'B02', 'D01', 'F01'].includes(scenario));
@@ -56,6 +57,13 @@ if (scenario === 'F01') {
 }
 
 await control.query(await readFile(new URL('./fixture.sql', import.meta.url), 'utf8'));
+if (scenario === 'A02') {
+  // The diagnostic subset needs these real columns to reach availability's
+  // preprocessing and to authorize the admin users listing after bcrypt login.
+  await control.query(`ALTER TABLE native_users
+    ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC',
+    ADD COLUMN last_login_at TIMESTAMPTZ`);
+}
 target.searchParams.set('options', '-c search_path=r0_fixture');
 process.env.DATABASE_URL = target.href;
 const database = await import('../../database/db.js');
@@ -66,18 +74,21 @@ assert.equal(database.isPostgres, true, 'Never accept a SQLite fallback as a PG 
 const db = database.default;
 const { createApp } = await import('../../app.js');
 const { generateTokens } = await import('../../middleware/jwtMiddleware.js');
-const app = createApp();
-const server = await new Promise((resolve, reject) => {
-  const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
-  listener.once('error', reject);
-});
+async function listenApp() {
+  const server = await new Promise((resolve, reject) => {
+    const listener = createApp().listen(0, '127.0.0.1', () => resolve(listener));
+    listener.once('error', reject);
+  });
+  allowedPorts.add(server.address().port);
+  return server;
+}
+const server = await listenApp();
 const port = server.address().port;
-allowedPorts.add(port);
 const base = `http://127.0.0.1:${port}`;
 const tokens = new Map([1, 2, 3].map(id => [id, generateTokens(id, 1).accessToken]));
-async function http(path, { user = 1, method = 'GET', body } = {}) {
-  const response = await fetch(base + path, {
-    method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tokens.get(user) },
+async function http(path, { user = 1, method = 'GET', body, token = tokens.get(user), baseUrl = base } = {}) {
+  const response = await fetch(baseUrl + path, {
+    method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal: AbortSignal.timeout(3000),
   });
@@ -135,13 +146,98 @@ if (scenario === 'controls') {
   result = { outcome: 'KNOWN_DEFECT_REPRODUCED', status: response.status, outsiderInvitations: 1, outsiderBusyRows: 1,
     expectation: 'Reject a participant outside the project before any write' };
 } else if (scenario === 'A02') {
+  const snapshot = async () => {
+    const tables = ['native_users', 'native_projects', 'native_project_members', 'native_rehearsals',
+      'native_rehearsal_responses', 'native_user_availability', 'native_push_tokens',
+      'native_notifications', 'r0_transaction_probe'];
+    const rows = {};
+    for (const table of tables) rows[table] = (await control.query(`SELECT * FROM ${table} ORDER BY id`)).rows;
+    return rows;
+  };
+  const assertGenericFailure = response => {
+    assert.equal(response.status, 500);
+    assert.deepEqual(response.data, { error: 'Internal server error' }, 'No SQL, stack or details may reach the client');
+  };
+
   assert.equal((await http('/api/native/projects')).status, 200);
+  const beforeAuthFault = await snapshot();
   await control.query('ALTER TABLE native_users RENAME TO users_unavailable');
-  // Strict unhandled-rejection mode terminates THIS disposable worker. The
-  // parent requires both this marker and the real PG error before accepting it.
-  console.log('R0_A02_DISPATCH_AFTER_REAL_DB_FAULT');
-  await http('/api/native/projects');
-  throw new Error('A02 baseline did not terminate on the rejected auth DB read');
+  try {
+    // Both read and write routes must finish within http()'s timeout, without
+    // killing this strict-rejection worker or reaching the business handler.
+    assertGenericFailure(await http('/api/native/projects'));
+    assertGenericFailure(await http('/api/native/projects', {
+      method: 'POST', body: { name: 'A02 must never be written' },
+    }));
+    assert.equal((await http('/api/health')).status, 200, 'Process remains alive while the DB read is failing');
+  } finally {
+    await control.query('ALTER TABLE users_unavailable RENAME TO native_users');
+  }
+  assert.deepEqual(await snapshot(), beforeAuthFault, 'Failed auth must leave all application rows unchanged');
+  assert.equal((await http('/api/native/projects')).status, 200, 'Authorized traffic recovers after the DB is restored');
+
+  const beforeRouteFault = await snapshot();
+  await control.query('ALTER TABLE native_users RENAME COLUMN timezone TO timezone_unavailable');
+  try {
+    assertGenericFailure(await http('/api/native/availability/bulk', {
+      method: 'POST', body: { entries: [{ startsAt: '2030-09-17T12:00:00Z', type: 'busy' }] },
+    }));
+    assert.equal((await http('/api/health')).status, 200);
+  } finally {
+    await control.query('ALTER TABLE native_users RENAME COLUMN timezone_unavailable TO timezone');
+  }
+  assert.deepEqual(await snapshot(), beforeRouteFault, 'Pre-transaction route failure must leave all rows unchanged');
+  assert.equal((await http('/api/native/projects')).status, 200);
+  for (const path of ['/api/native/availability/bulk', '/api/availability/bulk']) {
+    for (const entries of [[null], [{ startsAt: 17, type: 'busy' }]]) {
+      const response = await http(path, { method: 'POST', body: { entries } });
+      assert.equal(response.status, 400, 'Malformed entries must be rejected before database work');
+      assert.deepEqual(Object.keys(response.data), ['error']);
+      assert.equal(typeof response.data.error, 'string');
+    }
+  }
+  assert.equal((await http('/api/health')).status, 200);
+
+  // Use bcrypt itself, with a synthetic password and generated hash; no mocks
+  // or deployment secrets. A malformed password must never reach bcrypt.
+  const password = 'a02-synthetic-admin-password';
+  process.env.ADMIN_PASSWORD_HASH = await bcrypt.hash(password, 4);
+  for (const body of [{}, { password: null }, { password: 17 }, { password: { value: password } }]) {
+    const response = await http('/admin/api/login', { method: 'POST', body });
+    assert.equal(response.status, 400, 'Missing/non-string admin password must be rejected as a bad request');
+    assert.deepEqual(Object.keys(response.data), ['error']);
+    assert.equal(typeof response.data.error, 'string');
+    assert.equal((await http('/api/health')).status, 200);
+  }
+  // The production limiter allows five attempts. A new app gets its own real
+  // limiter store for the wrong/correct pair; do not disable the limiter.
+  const adminServer = await listenApp();
+  const adminBase = `http://127.0.0.1:${adminServer.address().port}`;
+  try {
+    const wrong = await http('/admin/api/login', {
+      baseUrl: adminBase, method: 'POST', body: { password: 'wrong-a02-password' },
+    });
+    assert.equal(wrong.status, 401);
+    assert.deepEqual(wrong.data, { error: 'Invalid password' });
+    const login = await http('/admin/api/login', { baseUrl: adminBase, method: 'POST', body: { password } });
+    assert.equal(login.status, 200);
+    assert.equal(typeof login.data.token, 'string');
+    assert.ok(login.data.token.length > 0);
+    const authorized = await http('/admin/api/users', { baseUrl: adminBase, token: login.data.token });
+    assert.equal(authorized.status, 200, 'bcrypt-issued token must authorize a real admin route');
+    assert.equal(authorized.data.total, 3);
+  } finally {
+    const adminPort = adminServer.address().port;
+    await new Promise(resolve => adminServer.close(resolve));
+    allowedPorts.delete(adminPort);
+    delete process.env.ADMIN_PASSWORD_HASH;
+  }
+  assert.deepEqual(await snapshot(), beforeAuthFault, 'A02 read/login scenarios must not change application data');
+  result = { outcome: 'PASS', contracts: ['auth DB rejection returns bounded generic 500 for GET/POST',
+    'health survives DB fault; authorized traffic recovers', 'no application row changes during failures',
+    'pre-try availability DB failure returns bounded generic 500; process alive',
+    'malformed availability entries400 through both public mounts',
+    'real bcrypt malformed passwords400/wrong401/correct200+usable admin token'], externalConnections: deniedConnections };
 }
 
 assert.equal(deniedConnections, 0, 'A service attempted an external connection');

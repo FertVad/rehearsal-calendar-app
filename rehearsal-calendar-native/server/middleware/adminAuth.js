@@ -1,12 +1,13 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { asyncHandler } from './asyncHandler.js';
 
 // JWT secret is independent of the password — changing password doesn't invalidate tokens
 function getJwtSecret() {
   return process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'admin-dev-secret';
 }
 
-export async function adminLogin(req, res) {
+export const adminLogin = asyncHandler(async function adminLogin(req, res) {
   const passwordHash = process.env.ADMIN_PASSWORD_HASH;
   const passwordPlain = process.env.ADMIN_PASSWORD;
 
@@ -14,7 +15,10 @@ export async function adminLogin(req, res) {
     return res.status(503).json({ error: 'Admin panel not configured' });
   }
 
-  const { password } = req.body;
+  const password = req.body?.password;
+  if (typeof password !== 'string' || password.length === 0) {
+    return res.status(400).json({ error: 'Password must be a non-empty string' });
+  }
 
   // Prefer bcrypt hash; fall back to plaintext for backwards compatibility
   const isValid = passwordHash
@@ -27,7 +31,7 @@ export async function adminLogin(req, res) {
 
   const token = jwt.sign({ role: 'admin' }, getJwtSecret(), { expiresIn: '24h' });
   res.json({ token });
-}
+});
 
 export function requireAdmin(req, res, next) {
   const authHeader = req.headers['authorization'];

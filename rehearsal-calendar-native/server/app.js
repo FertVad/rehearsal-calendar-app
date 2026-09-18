@@ -14,6 +14,8 @@ import adminRoutes from './routes/admin.js';
 import { logger } from './utils/logger.js';
 import { jsonForScript } from './utils/htmlEscape.js';
 import { securityHeaders } from './middleware/securityHeaders.js';
+import { asyncHandler } from './middleware/asyncHandler.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,29 +70,29 @@ export function createApp() {
   });
 
   // Rate limiting
-  app.use('/api/auth', rateLimit({
+  app.use('/api/auth', asyncHandler(rateLimit({
     windowMs: 60 * 1000,  // 1 minute
     max: 20,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later' },
-  }));
+  })));
   // An invite code is short enough to read out, which also makes it short
   // enough to guess at scale. Looking one up and redeeming it are both capped.
-  app.use('/api/native/invite', rateLimit({
+  app.use('/api/native/invite', asyncHandler(rateLimit({
     windowMs: 60 * 1000,
     max: 20,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later' },
-  }));
-  app.use('/admin/api/login', rateLimit({
+  })));
+  app.use('/admin/api/login', asyncHandler(rateLimit({
     windowMs: 15 * 60 * 1000,  // 15 minutes
     max: 5,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many login attempts, please try again later' },
-  }));
+  })));
 
   // Health check endpoint
   app.get('/api/health', (_req, res) => {
@@ -273,10 +275,7 @@ export function createApp() {
     res.send(html);
   });
 
-  app.use((err, _req, res, _next) => {
-    logger.error('Unhandled error:', err);
-    res.status(500).json({ error: 'Internal server error', details: String(err) });
-  });
+  app.use(errorHandler);
 
   return app;
 }

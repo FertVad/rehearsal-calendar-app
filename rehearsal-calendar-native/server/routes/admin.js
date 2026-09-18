@@ -1,3 +1,4 @@
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import { Router } from 'express';
 import db from '../database/db.js';
 import { adminLogin, requireAdmin } from '../middleware/adminAuth.js';
@@ -15,7 +16,7 @@ router.get('/', (_req, res) => {
 router.post('/api/login', adminLogin);
 
 // Aggregate stats
-router.get('/api/stats', requireAdmin, async (_req, res) => {
+router.get('/api/stats', requireAdmin, asyncHandler(async (_req, res) => {
   try {
     const now = new Date();
     const weekAgo = new Date(now);
@@ -70,10 +71,10 @@ router.get('/api/stats', requireAdmin, async (_req, res) => {
     console.error('[Admin] Stats error:', err);
     res.status(500).json({ error: 'Failed to load stats' });
   }
-});
+}));
 
 // Users list
-router.get('/api/users', requireAdmin, async (req, res) => {
+router.get('/api/users', requireAdmin, asyncHandler(async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 30, 100);
     const offset = parseInt(req.query.offset) || 0;
@@ -105,12 +106,12 @@ router.get('/api/users', requireAdmin, async (req, res) => {
     console.error('[Admin] Users error:', err);
     res.status(500).json({ error: 'Failed to load users' });
   }
-});
+}));
 
 // Transactions list
 
 // Bug reports list
-router.get('/api/bug-reports', requireAdmin, async (req, res) => {
+router.get('/api/bug-reports', requireAdmin, asyncHandler(async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 30, 100);
     const offset = parseInt(req.query.offset) || 0;
@@ -150,10 +151,10 @@ router.get('/api/bug-reports', requireAdmin, async (req, res) => {
     console.error('[Admin] Bug reports error:', err);
     res.status(500).json({ error: 'Failed to load bug reports' });
   }
-});
+}));
 
 // Update bug report status
-router.patch('/api/bug-reports/:id/status', requireAdmin, async (req, res) => {
+router.patch('/api/bug-reports/:id/status', requireAdmin, asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -169,6 +170,6 @@ router.patch('/api/bug-reports/:id/status', requireAdmin, async (req, res) => {
     console.error('[Admin] Update bug report status error:', err);
     res.status(500).json({ error: 'Failed to update status' });
   }
-});
+}));
 
 export default router;

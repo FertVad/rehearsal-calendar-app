@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import db from '../database/db.js';
+import { asyncHandler } from './asyncHandler.js';
 
 // Fail-fast: Require JWT_SECRET in production
 const isProduction = process.env.NODE_ENV === 'production';
@@ -55,7 +56,7 @@ export function verifyToken(token, type = 'access') {
   }
 }
 
-export async function authenticateToken(req, res, next) {
+export const authenticateToken = asyncHandler(async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -85,7 +86,7 @@ export async function authenticateToken(req, res, next) {
 
   req.userId = decoded.userId;
   next();
-}
+});
 
 // Alias for backwards compatibility
 export const requireAuth = authenticateToken;

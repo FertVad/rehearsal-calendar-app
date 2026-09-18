@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
@@ -26,7 +27,7 @@ async function getUserTimezone(userId) {
  * GET /api/native/availability - Get all availability for current user
  * Returns availability slots with ISO 8601 timestamps
  */
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -61,18 +62,25 @@ router.get('/', requireAuth, async (req, res) => {
     console.error('Error fetching availability:', error);
     res.status(500).json({ error: 'Failed to fetch availability' });
   }
-});
+}));
 
 /**
  * POST /api/native/availability/bulk - Bulk set availability
  * Accepts slots with ISO 8601 timestamps
  */
-router.post('/bulk', requireAuth, async (req, res) => {
+router.post('/bulk', requireAuth, asyncHandler(async (req, res) => {
   const userId = req.userId;
-  const { entries } = req.body;
+  const entries = req.body?.entries;
 
   if (!Array.isArray(entries) || entries.length === 0) {
     return res.status(400).json({ error: 'Entries array is required' });
+  }
+
+  // Validate the structure before property access/date splitting or DB work.
+  // Full slot/date/source validation and replacement semantics belong to C02.
+  if (entries.some(entry => !entry || typeof entry !== 'object' || Array.isArray(entry) ||
+      (entry.startsAt !== undefined && typeof entry.startsAt !== 'string'))) {
+    return res.status(400).json({ error: 'Entries must be objects; startsAt must be a string when provided' });
   }
 
   // Get user's timezone for date extraction
@@ -164,13 +172,13 @@ router.post('/bulk', requireAuth, async (req, res) => {
     console.error('Error saving bulk availability:', error);
     res.status(500).json({ error: 'Failed to save availability' });
   }
-});
+}));
 
 /**
  * DELETE /api/native/availability/:date - Delete manually-created availability for a specific date
  * Only deletes slots created manually, preserves rehearsal and calendar sync slots
  */
-router.delete('/:date', requireAuth, async (req, res) => {
+router.delete('/:date', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { date } = req.params;
@@ -193,13 +201,13 @@ router.delete('/:date', requireAuth, async (req, res) => {
     console.error('Error deleting availability:', error);
     res.status(500).json({ error: 'Failed to delete availability' });
   }
-});
+}));
 
 /**
  * DELETE /api/native/availability/imported/all - Delete all imported calendar events
  * Removes all availability slots from calendar sync (apple_calendar, google_calendar)
  */
-router.delete('/imported/all', requireAuth, async (req, res) => {
+router.delete('/imported/all', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -216,13 +224,13 @@ router.delete('/imported/all', requireAuth, async (req, res) => {
     console.error('Error deleting imported calendar events:', error);
     res.status(500).json({ error: 'Failed to delete imported calendar events' });
   }
-});
+}));
 
 /**
  * DELETE /api/native/availability/imported/batch - Batch delete imported events by external_event_id
  * Body: { eventIds: string[] }
  */
-router.delete('/imported/batch', requireAuth, async (req, res) => {
+router.delete('/imported/batch', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { eventIds } = req.body;
@@ -254,13 +262,13 @@ router.delete('/imported/batch', requireAuth, async (req, res) => {
     console.error('Error batch deleting imported events:', error);
     res.status(500).json({ error: 'Failed to batch delete imported events' });
   }
-});
+}));
 
 /**
  * PUT /api/native/availability/imported/batch - Batch update imported events
  * Body: { updates: [{ externalEventId, startsAt, endsAt, title, isAllDay }] }
  */
-router.put('/imported/batch', requireAuth, async (req, res) => {
+router.put('/imported/batch', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { updates } = req.body;
@@ -298,6 +306,6 @@ router.put('/imported/batch', requireAuth, async (req, res) => {
     console.error('Error batch updating imported events:', error);
     res.status(500).json({ error: 'Failed to batch update imported events' });
   }
-});
+}));
 
 export default router;

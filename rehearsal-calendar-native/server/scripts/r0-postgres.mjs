@@ -9,8 +9,13 @@ import pg from 'pg';
 
 // No user-supplied database URL is accepted. Only a newly created local Docker
 // container with this run's ownership label/DB marker can be modified/removed.
+const args = process.argv.slice(2);
+assert.ok(args.length === 0 || (args.length === 1 && args[0] === '--a02-only'),
+  'Usage: node scripts/r0-postgres.mjs [--a02-only]');
+const a02Only = args[0] === '--a02-only';
+const scenarios = a02Only ? ['controls', 'A02'] : ['controls', 'F01', 'B02', 'D01', 'A02'];
 const docker = process.env.R0_DOCKER_BIN || '/usr/local/bin/docker';
-const context = 'desktop-linux';
+const context = process.env.R0_DOCKER_CONTEXT || 'desktop-linux';
 const cli = (...args) => execFileSync(docker, ['--context', context, ...args], { encoding: 'utf8', timeout: 20000 }).trim();
 const nonce = randomBytes(12).toString('hex');
 const password = randomBytes(20).toString('hex');
@@ -50,7 +55,7 @@ try {
     console.log(JSON.stringify({ harness: 'R0', node: process.version, postgres: (await control.query('SELECT version()')).rows[0].version,
       image, host: binding, database: 'r0_test', schema: 'diagnostic subset; production bootstrap is probed separately' }));
   } finally { await control.end(); }
-  for (const scenario of ['controls', 'F01', 'B02', 'D01', 'A02']) {
+  for (const scenario of scenarios) {
     const result = spawnSync(process.execPath, ['--unhandled-rejections=strict', probe, scenario], {
       cwd, encoding: 'utf8', timeout: 15000, maxBuffer: 2 * 1024 * 1024,
       env: { PATH: '/usr/bin:/bin', TZ: 'UTC', NODE_ENV: 'production',
@@ -60,16 +65,11 @@ try {
     assert.ifError(result.error);
     if (result.stdout) process.stdout.write(result.stdout);
     if (result.stderr) process.stderr.write(result.stderr);
-    if (scenario === 'A02') {
-      assert.equal(result.status, 1);
-      assert.match(result.stdout, /R0_A02_DISPATCH_AFTER_REAL_DB_FAULT/);
-      assert.match(result.stderr, /relation "native_users" does not exist/);
-      assert.match(result.stderr, /42P01/);
-      console.log(JSON.stringify({ scenario, outcome: 'KNOWN_DEFECT_REPRODUCED', workerExit: result.status,
-        expectation: 'DB failure in auth must complete HTTP 5xx and keep process alive' }));
-    } else assert.equal(result.status, 0, `${scenario} probe failed unexpectedly`);
+    assert.equal(result.status, 0, `${scenario} probe failed unexpectedly`);
   }
-  console.log('R0 HARNESS PASS: controls passed; A02/B02/D01/F01 remain known failing application contracts, NOT fixes.');
+  console.log(a02Only
+    ? 'A02 REGRESSION PASS: controls and repaired A02 contracts passed on real PostgreSQL.'
+    : 'R0 HARNESS PASS: controls and repaired A02 contracts passed; B02/D01/F01 remain known failing application contracts, NOT fixes.');
 } finally {
   if (container) {
     const label = cli('inspect', container, '--format', '{{index .Config.Labels "rehearsly.r0"}}');

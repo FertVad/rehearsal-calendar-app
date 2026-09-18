@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { Router } from 'express';
 import { logger } from '../../utils/logger.js';
 import crypto from 'crypto';
@@ -47,7 +48,7 @@ function generateInviteUrl(inviteCode) {
 }
 
 // POST /api/native/projects/:projectId/invite - Create invite link
-router.post('/:projectId/invite', requireAuth, async (req, res) => {
+router.post('/:projectId/invite', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -109,10 +110,10 @@ router.post('/:projectId/invite', requireAuth, async (req, res) => {
     console.error('Error creating invite:', error);
     res.status(500).json({ error: 'Failed to create invite' });
   }
-});
+}));
 
 // GET /api/native/projects/:projectId/invite - Get current invite link
-router.get('/:projectId/invite', requireAuth, async (req, res) => {
+router.get('/:projectId/invite', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -150,10 +151,10 @@ router.get('/:projectId/invite', requireAuth, async (req, res) => {
     console.error('Error getting invite:', error);
     res.status(500).json({ error: 'Failed to get invite' });
   }
-});
+}));
 
 // DELETE /api/native/projects/:projectId/invite - Revoke invite link
-router.delete('/:projectId/invite', requireAuth, async (req, res) => {
+router.delete('/:projectId/invite', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -176,10 +177,10 @@ router.delete('/:projectId/invite', requireAuth, async (req, res) => {
     console.error('Error revoking invite:', error);
     res.status(500).json({ error: 'Failed to revoke invite' });
   }
-});
+}));
 
 // GET /api/native/invite/:code - Get invite info (public, for preview before joining)
-router.get('/:code', async (req, res) => {
+router.get('/:code', asyncHandler(async (req, res) => {
   try {
     const { code } = req.params;
 
@@ -208,10 +209,10 @@ router.get('/:code', async (req, res) => {
     console.error('Error getting invite info:', error);
     res.status(500).json({ error: 'Failed to get invite info' });
   }
-});
+}));
 
 // POST /api/native/invite/:code/join - Join project using invite
-router.post('/:code/join', requireAuth, async (req, res) => {
+router.post('/:code/join', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { code } = req.params;
@@ -288,6 +289,6 @@ router.post('/:code/join', requireAuth, async (req, res) => {
     console.error('Error joining project:', error);
     res.status(500).json({ error: 'Failed to join project' });
   }
-});
+}));
 
 export default router;

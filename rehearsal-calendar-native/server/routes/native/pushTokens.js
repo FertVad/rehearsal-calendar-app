@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 /**
  * Push Tokens Routes
  * Endpoints for registering and managing push notification tokens
@@ -15,7 +16,7 @@ const router = express.Router();
  * POST /api/native/push-tokens
  * Register or update a push notification token
  */
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { deviceToken, deviceType, deviceName } = req.body;
@@ -76,13 +77,13 @@ router.post('/', requireAuth, async (req, res) => {
     logger.error('[PushToken] Registration error:', err);
     res.status(500).json({ error: 'Failed to register push token' });
   }
-});
+}));
 
 /**
  * DELETE /api/native/push-tokens
  * Unregister a push notification token (logout)
  */
-router.delete('/', requireAuth, async (req, res) => {
+router.delete('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { deviceToken } = req.body;
@@ -102,13 +103,13 @@ router.delete('/', requireAuth, async (req, res) => {
     logger.error('[PushToken] Unregister error:', err);
     res.status(500).json({ error: 'Failed to unregister push token' });
   }
-});
+}));
 
 /**
  * GET /api/native/push-tokens
  * Get all push tokens for current user (debug)
  */
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -122,6 +123,6 @@ router.get('/', requireAuth, async (req, res) => {
     logger.error('[PushToken] Get tokens error:', err);
     res.status(500).json({ error: 'Failed to get push tokens' });
   }
-});
+}));
 
 export default router;

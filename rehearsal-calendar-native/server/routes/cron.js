@@ -1,3 +1,4 @@
+import { asyncHandler } from '../middleware/asyncHandler.js';
 /**
  * Cron endpoints for Vercel Cron Jobs
  * These endpoints are called by Vercel's cron scheduler
@@ -19,7 +20,7 @@ const router = Router();
  *
  * Protected by CRON_SECRET, fail-closed.
  */
-router.get('/reminders', async (req, res) => {
+router.get('/reminders', asyncHandler(async (req, res) => {
   try {
     // Verify cron secret (Vercel automatically adds this header)
     const authHeader = req.headers.authorization;
@@ -62,6 +63,6 @@ router.get('/reminders', async (req, res) => {
       error: 'Reminder check failed'
     });
   }
-});
+}));
 
 export default router;

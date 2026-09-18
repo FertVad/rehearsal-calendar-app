@@ -31,3 +31,25 @@ jobs:
         run: npm --prefix server run test:browser:install -- --with-deps
       - name: Run the same required check as local development
         run: npm run check
+
+  postgres-a02:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: rehearsal-calendar-native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: rehearsal-calendar-native/server/package-lock.json
+      - name: Install server dependencies
+        run: npm ci --prefix server
+      - name: Prepare PostgreSQL image
+        run: docker pull postgres:15
+      - name: Verify A02 against disposable PostgreSQL
+        env:
+          R0_DOCKER_CONTEXT: default
+        run: R0_DOCKER_BIN="$(command -v docker)" npm --prefix server run test:r0-postgres -- --a02-only

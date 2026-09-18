@@ -1,3 +1,4 @@
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
@@ -11,7 +12,7 @@ import { notifyProjectDeleted } from '../services/notifications/pushNotification
 const router = Router();
 
 // Register new user
-router.post('/register', async (req, res) => {
+router.post('/register', asyncHandler(async (req, res) => {
   try {
     const { email, password, timezone } = req.body;
     const firstName = typeof req.body.firstName === 'string' ? req.body.firstName.trim() : req.body.firstName;
@@ -60,10 +61,10 @@ router.post('/register', async (req, res) => {
     console.error('[Auth] Registration error:', err);
     res.status(500).json({ error: 'Failed to register user' });
   }
-});
+}));
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', asyncHandler(async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -112,10 +113,10 @@ router.post('/login', async (req, res) => {
     console.error('[Auth] Login error:', err);
     res.status(500).json({ error: 'Failed to login' });
   }
-});
+}));
 
 // Google OAuth Login/Register
-router.post('/google', async (req, res) => {
+router.post('/google', asyncHandler(async (req, res) => {
   try {
     const { idToken } = req.body;
 
@@ -171,10 +172,10 @@ router.post('/google', async (req, res) => {
     console.error('[Auth] Google OAuth error:', err);
     res.status(500).json({ error: 'Google authentication failed' });
   }
-});
+}));
 
 // Apple Sign-In Login/Register
-router.post('/apple', async (req, res) => {
+router.post('/apple', asyncHandler(async (req, res) => {
   try {
     const { idToken, user } = req.body; // Apple sends user data only on first sign-in
 
@@ -230,10 +231,10 @@ router.post('/apple', async (req, res) => {
     console.error('[Auth] Apple OAuth error:', err);
     res.status(500).json({ error: 'Apple authentication failed' });
   }
-});
+}));
 
 // Refresh access token
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', asyncHandler(async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
@@ -265,10 +266,10 @@ router.post('/refresh', async (req, res) => {
     console.error('[Auth] Refresh error:', err);
     res.status(500).json({ error: 'Failed to refresh token' });
   }
-});
+}));
 
 // Get current user info
-router.get('/me', requireAuth, async (req, res) => {
+router.get('/me', requireAuth, asyncHandler(async (req, res) => {
   try {
     const user = await db.get(
       `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
@@ -289,7 +290,7 @@ router.get('/me', requireAuth, async (req, res) => {
     console.error('[Auth] Get me error:', err);
     res.status(500).json({ error: 'Failed to get user info' });
   }
-});
+}));
 
 // Whitelist of allowed fields for user updates (security)
 // A name typed on a phone keyboard often carries a trailing space — the
@@ -323,7 +324,7 @@ const ALLOWED_USER_FIELDS = {
 };
 
 // Update current user info
-router.put('/me', requireAuth, async (req, res) => {
+router.put('/me', requireAuth, asyncHandler(async (req, res) => {
   try {
     const updates = [];
     const values = [];
@@ -393,10 +394,10 @@ router.put('/me', requireAuth, async (req, res) => {
     console.error('[Auth] Update me error:', err);
     res.status(500).json({ error: 'Failed to update user info' });
   }
-});
+}));
 
 // Logout — revoke all sessions for this user
-router.post('/logout', requireAuth, async (req, res) => {
+router.post('/logout', requireAuth, asyncHandler(async (req, res) => {
   try {
     await db.run(
       'UPDATE native_users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1',
@@ -407,10 +408,10 @@ router.post('/logout', requireAuth, async (req, res) => {
     console.error('[Auth] Logout error:', err);
     res.status(500).json({ error: 'Failed to logout' });
   }
-});
+}));
 
 // Delete account with cascade cleanup
-router.delete('/me', requireAuth, async (req, res) => {
+router.delete('/me', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -508,10 +509,10 @@ router.delete('/me', requireAuth, async (req, res) => {
     console.error('[Auth] Delete account error:', err);
     res.status(500).json({ error: 'Failed to delete account' });
   }
-});
+}));
 
 // Get linked auth providers for current user
-router.get('/me/providers', requireAuth, async (req, res) => {
+router.get('/me/providers', requireAuth, asyncHandler(async (req, res) => {
   try {
     const providers = await getUserAuthProviders(req.userId);
 
@@ -528,10 +529,10 @@ router.get('/me/providers', requireAuth, async (req, res) => {
     console.error('[Auth] Get providers error:', err);
     res.status(500).json({ error: 'Failed to get auth providers' });
   }
-});
+}));
 
 // Unlink auth provider (only if user has another auth method)
-router.delete('/me/providers/:provider', requireAuth, async (req, res) => {
+router.delete('/me/providers/:provider', requireAuth, asyncHandler(async (req, res) => {
   try {
     const { provider } = req.params;
 
@@ -558,6 +559,6 @@ router.delete('/me/providers/:provider', requireAuth, async (req, res) => {
 
     res.status(500).json({ error: 'Failed to unlink provider' });
   }
-});
+}));
 
 export default router;
