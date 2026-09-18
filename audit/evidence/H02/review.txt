@@ -1,0 +1,16 @@
+H02 independent read-only review, 2026-09-18
+Source: df6fd0111111bd4f8b36a2e797cb0cccda563b25
+Base: 1d0142babc5e1b9f6f70d9440dc55942a8f07493
+No implementation blocker found. Reviewed real escaped custom-scheme href,
+external assets/progressive enhancement, unchanged CSP directives, exact code
+case, Expo authority validation, timers and browser lifecycle, zero DB work.
+Manual navigation uses a trusted default anchor action without timer/handler.
+Requested regression improvements were implemented: actual eight-character
+short code, RU localization, defaultPrevented=false before test suppression,
+and CDP observation of cancellation after visibilitychange/persisted pageshow.
+The existing script-serialization helper had no remaining application callers
+and was removed together with its four obsolete unit assertions; hostile input
+is now tested at the actual href/DOM boundary, including inline CSP rejection.
+Root inspected the rendered screenshot. No production or physical device used.
+READY_FOR_CHECK remains necessary because DEV-15 real Safari/messenger tap and
+installed-app delivery is mandatory and NOT_RUN. HN01 is not covered/closed.

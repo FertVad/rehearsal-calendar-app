@@ -1,0 +1,222 @@
+TAP version 13
+# Subtest: real invite route retains strict CSP, styling and the timed fallback
+not ok 1 - real invite route retains strict CSP, styling and the timed fallback
+  ---
+  duration_ms: 4927.456875
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:115:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    'block' !== 'flex'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'flex'
+  actual: 'block'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:118:10)
+    runNextTicks (node:internal/process/task_queues:65:5)
+    process.processImmediate (node:internal/timers:453:9)
+    process.callbackTrampoline (node:internal/async_hooks:130:17)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: manual mouse and keyboard activation preserve the short invite path under CSP
+not ok 2 - manual mouse and keyboard activation preserve the short invite path under CSP
+  ---
+  duration_ms: 102.859834
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:140:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + '#'
+    - 'rehearsalapp://invite/ABC123'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'rehearsalapp://invite/ABC123'
+  actual: '#'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:143:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: manual mouse and keyboard activation preserve the legacy 32-hex invite path under CSP
+not ok 3 - manual mouse and keyboard activation preserve the legacy 32-hex invite path under CSP
+  ---
+  duration_ms: 97.369083
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:140:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + '#'
+    - 'rehearsalapp://invite/0123456789abcdef0123456789abcdef'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'rehearsalapp://invite/0123456789abcdef0123456789abcdef'
+  actual: '#'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:143:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: manual native link remains usable when JavaScript is disabled
+not ok 4 - manual native link remains usable when JavaScript is disabled
+  ---
+  duration_ms: 102.584583
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:156:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:161:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: manual native link remains usable when JavaScript is unavailable
+not ok 5 - manual native link remains usable when JavaScript is unavailable
+  ---
+  duration_ms: 99.7675
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:156:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:162:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: Expo links preserve their encoded invite path and retain a native app link
+not ok 6 - Expo links preserve their encoded invite path and retain a native app link
+  ---
+  duration_ms: 95.372042
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:170:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + '#'
+    - 'exp://127.0.0.1:8081/--/invite/ABC123'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'exp://127.0.0.1:8081/--/invite/ABC123'
+  actual: '#'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:173:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: untrusted invite codes remain encoded data without creating or executing markup
+not ok 7 - untrusted invite codes remain encoded data without creating or executing markup
+  ---
+  duration_ms: 104.803875
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:185:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + '#'
+    - "rehearsalapp://invite/%3C%2Fscript%3E%3Cimg%20data-invite-xss%20src%3Dx%20onerror%3D%22window.__inviteXss%3D1%22%3E'%22%26%3F%23%2F%60"
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: "rehearsalapp://invite/%3C%2Fscript%3E%3Cimg%20data-invite-xss%20src%3Dx%20onerror%3D%22window.__inviteXss%3D1%22%3E'%22%26%3F%23%2F%60"
+  actual: '#'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:189:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: malformed or repeated Expo host parameters cannot change the native fallback
+not ok 8 - malformed or repeated Expo host parameters cannot change the native fallback
+  ---
+  duration_ms: 99.3825
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:199:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    ?expoHost=attacker.example%2Fpath
+    + actual - expected
+    
+    + '#'
+    - 'rehearsalapp://invite/ABC123'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'rehearsalapp://invite/ABC123'
+  actual: '#'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:209:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: the page policy still blocks injected inline scripts and event handlers
+not ok 9 - the page policy still blocks injected inline scripts and event handlers
+  ---
+  duration_ms: 104.644916
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:216:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    5 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 5
+  operator: 'strictEqual'
+  stack: |-
+    assertCleanDocument (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:111:10)
+    async TestContext.<anonymous> (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs:220:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 0
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6837.429333
