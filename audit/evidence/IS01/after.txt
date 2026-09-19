@@ -1,0 +1,208 @@
+TAP version 13
+# Subtest: JWT assignment with 20 characters is a finding
+ok 1 - JWT assignment with 20 characters is a finding
+  ---
+  duration_ms: 142.162041
+  type: 'test'
+  ...
+# Subtest: missing indexed regular file is an incomplete scan
+ok 2 - missing indexed regular file is an incomplete scan
+  ---
+  duration_ms: 114.120416
+  type: 'test'
+  ...
+# Subtest: empty index and ordinary text both pass
+ok 3 - empty index and ordinary text both pass
+  ---
+  duration_ms: 185.451625
+  type: 'test'
+  ...
+# Subtest: all existing credential families report rule, path and exact line without values
+ok 4 - all existing credential families report rule, path and exact line without values
+  ---
+  duration_ms: 112.603833
+  type: 'test'
+  ...
+# Subtest: length thresholds preserve 19/20 and 7/8 boundaries
+ok 5 - length thresholds preserve 19/20 and 7/8 boundaries
+  ---
+  duration_ms: 837.070417
+  type: 'test'
+  ...
+# Subtest: filenames survive spaces, tabs, newlines, colon, leading dash and Unicode
+ok 6 - filenames survive spaces, tabs, newlines, colon, leading dash and Unicode
+  ---
+  duration_ms: 119.458083
+  type: 'test'
+  ...
+# Subtest: root and subdirectory invocation scan the same complete tracked scope
+ok 7 - root and subdirectory invocation scan the same complete tracked scope
+  ---
+  duration_ms: 321.1075
+  type: 'test'
+  ...
+# Subtest: Markdown, arbitrary examples and scanner-looking source names remain in scope
+ok 8 - Markdown, arbitrary examples and scanner-looking source names remain in scope
+  ---
+  duration_ms: 114.756084
+  type: 'test'
+  ...
+# Subtest: forbidden environment and key filenames are detected before missing content is opened
+ok 9 - forbidden environment and key filenames are detected before missing content is opened
+  ---
+  duration_ms: 110.962084
+  type: 'test'
+  ...
+# Subtest: forbidden staged filename is reported without reading its corrupt object
+ok 10 - forbidden staged filename is reported without reading its corrupt object
+  ---
+  duration_ms: 124.933958
+  type: 'test'
+  ...
+# Subtest: ignored and untracked synthetic credentials are outside tracked scope
+ok 11 - ignored and untracked synthetic credentials are outside tracked scope
+  ---
+  duration_ms: 109.521708
+  type: 'test'
+  ...
+# Subtest: binary bytes do not hide ASCII credentials or disturb line numbers
+ok 12 - binary bytes do not hide ASCII credentials or disturb line numbers
+  ---
+  duration_ms: 107.370666
+  type: 'test'
+  ...
+# Subtest: staged and worktree snapshots are independent in both directions
+ok 13 - staged and worktree snapshots are independent in both directions
+  ---
+  duration_ms: 390.621625
+  type: 'test'
+  ...
+# Subtest: staged deletion is not read in either mode
+ok 14 - staged deletion is not read in either mode
+  ---
+  duration_ms: 191.756083
+  type: 'test'
+  ...
+# Subtest: staged object missing and corrupt content produce incomplete-scan errors
+ok 15 - staged object missing and corrupt content produce incomplete-scan errors
+  ---
+  duration_ms: 217.317417
+  type: 'test'
+  ...
+# Subtest: unreadable or replaced indexed regular files fail closed
+ok 16 - unreadable or replaced indexed regular files fail closed
+  ---
+  duration_ms: 174.961084
+  type: 'test'
+  ...
+# Subtest: oversized regular file fails closed while the small staged snapshot remains readable
+ok 17 - oversized regular file fails closed while the small staged snapshot remains readable
+  ---
+  duration_ms: 207.838584
+  type: 'test'
+  ...
+# Subtest: scan errors take precedence over findings
+ok 18 - scan errors take precedence over findings
+  ---
+  duration_ms: 236.061416
+  type: 'test'
+  ...
+# Subtest: unknown, conflicting and repeated arguments are errors
+ok 19 - unknown, conflicting and repeated arguments are errors
+  ---
+  duration_ms: 206.151833
+  type: 'test'
+  ...
+# Subtest: nonrepository and failed Git executable are errors
+ok 20 - nonrepository and failed Git executable are errors
+  ---
+  duration_ms: 650.82
+  type: 'test'
+  ...
+# Subtest: unmerged index stages are unsupported rather than partially scanned
+ok 21 - unmerged index stages are unsupported rather than partially scanned
+  ---
+  duration_ms: 245.258959
+  type: 'test'
+  ...
+# Subtest: tracked symlinks and gitlinks are unsupported in both modes
+ok 22 - tracked symlinks and gitlinks are unsupported in both modes
+  ---
+  duration_ms: 346.195709
+  type: 'test'
+  ...
+# Subtest: sensitive filenames still report unsupported and unmerged index errors without content reads
+ok 23 - sensitive filenames still report unsupported and unmerged index errors without content reads
+  ---
+  duration_ms: 387.943875
+  type: 'test'
+  ...
+# Subtest: worktree symlink replacement cannot escape the tracked regular path
+ok 24 - worktree symlink replacement cannot escape the tracked regular path
+  ---
+  duration_ms: 275.427667
+  type: 'test'
+  ...
+# Subtest: ancestor replacement during validation is rejected before any external inode read
+ok 25 - ancestor replacement during validation is rejected before any external inode read
+  ---
+  duration_ms: 108.4575
+  type: 'test'
+  ...
+# Subtest: exceptions require the exact path, rule and complete normalized line
+ok 26 - exceptions require the exact path, rule and complete normalized line
+  ---
+  duration_ms: 352.843541
+  type: 'test'
+  ...
+# Subtest: exception for one rule cannot silence another credential on the same line
+ok 27 - exception for one rule cannot silence another credential on the same line
+  ---
+  duration_ms: 105.170041
+  type: 'test'
+  ...
+# Subtest: staged scan uses indexed policy when the CLI is inside the scanned repository
+ok 28 - staged scan uses indexed policy when the CLI is inside the scanned repository
+  ---
+  duration_ms: 559.564208
+  type: 'test'
+  ...
+# Subtest: bare carriage return remains part of exception line identity
+ok 29 - bare carriage return remains part of exception line identity
+  ---
+  duration_ms: 241.655833
+  type: 'test'
+  ...
+# Subtest: exception hashes use raw line bytes including Unicode and invalid UTF-8
+ok 30 - exception hashes use raw line bytes including Unicode and invalid UTF-8
+  ---
+  duration_ms: 275.963375
+  type: 'test'
+  ...
+# Subtest: exception policy JSON is scanned when tracked
+ok 31 - exception policy JSON is scanned when tracked
+  ---
+  duration_ms: 109.760083
+  type: 'test'
+  ...
+# Subtest: oversized exception policies fail closed in external and staged tool bundles
+ok 32 - oversized exception policies fail closed in external and staged tool bundles
+  ---
+  duration_ms: 222.3315
+  type: 'test'
+  ...
+# Subtest: missing, malformed and ambiguous exception policies fail closed
+ok 33 - missing, malformed and ambiguous exception policies fail closed
+  ---
+  duration_ms: 914.337458
+  type: 'test'
+  ...
+1..33
+# tests 33
+# suites 0
+# pass 33
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8894.168916

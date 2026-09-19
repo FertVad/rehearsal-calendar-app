@@ -1,0 +1,53 @@
+{
+  "verifiedAt": "2026-09-19T06:07:00.092925+00:00",
+  "sourceCommit": "4044e3d86ea98e5c3ac92a8094b6940207eee365",
+  "sourceTree": "5b98d82d028185db15c084fe64e2bba07d4a0b4e",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "environment": "env -i; explicit Node22 PATH; synthetic JWT_SECRET; owned Chromium cache; synthetic Git repositories and loopback fixtures; .env not loaded",
+  "production": "NOT_RUN",
+  "physicalDevice": "N/A for development scanner; H02 DEV-15 remains NOT_RUN",
+  "findingStatus": "VERIFIED",
+  "ownedBrowserCacheAfterRun": "retained for continuing stages",
+  "results": {
+    "before": {
+      "exitCode": 1,
+      "failedTests": 2,
+      "sourceCommit": "41ee618b010f9ef94db5614c57b1c9af1542b77e",
+      "scope": "initial two-case CLI reproducer against unchanged shell scanner"
+    },
+    "after": {
+      "exitCode": 0,
+      "passedTests": 33
+    },
+    "checkFinal": {
+      "exitCode": 0,
+      "scannerTests": 33,
+      "jestSuites": 84,
+      "jestTests": 1201,
+      "adminBrowserTests": 4,
+      "adminFailureBrowserTests": 18,
+      "inviteBrowserTests": 11,
+      "persistedTests": 6
+    },
+    "worktreeScan": {
+      "exitCode": 0,
+      "files": 604,
+      "findings": 0,
+      "errors": 0,
+      "evidence": "check-final.txt"
+    },
+    "stagedScan": {
+      "exitCode": 0,
+      "files": 604,
+      "findings": 0,
+      "errors": 0
+    },
+    "postgresLocal": "NOT_RUN for IS01: no runtime/schema changes; previous ID01 PASS remains historical, unchanged; separate PG CI remains required"
+  }
+}

@@ -1,0 +1,22 @@
+Base: 41ee618b010f9ef94db5614c57b1c9af1542b77e
+Source: 4044e3d86ea98e5c3ac92a8094b6940207eee365
+Node: /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node
+
+Full check, cwd rehearsal-calendar-native, actual exit0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin NODE_ENV=test JWT_SECRET=is01-isolated-test-secret PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-continuous-browser.s8CVco npm run check > ../audit/evidence/IS01/check-final.txt 2>&1
+
+Focused synthetic CLI tests, cwd rehearsal-calendar-native, env-i Node22:
+node --test scripts/__tests__/check-secrets.test.mjs
+Before: unchanged old scanner; initial two-case reproducer, actual exit1, both fail.
+After: final synthetic CLI suite, actual exit code and count recorded in runtime.json.
+
+Real repository scans, cwd repository root, env-i Node22:
+node rehearsal-calendar-native/scripts/check-secrets.mjs
+node rehearsal-calendar-native/scripts/check-secrets.mjs --staged
+Commands use only indexed regular paths; metadata rejects sensitive filenames
+before reading. Production server/.env is ignored/untracked and is not opened.
+
+No .env, entrypoint, provider, production DB, Vercel configuration or deployment.
+Full PostgreSQL local rerun is not applicable to this development-tool-only
+change; historical ID01 PostgreSQL evidence is preserved. The existing separate
+PG CI job remains required on the branch.
