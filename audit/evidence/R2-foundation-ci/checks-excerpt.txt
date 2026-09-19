@@ -1,0 +1,26 @@
+Derived excerpt of gh run view 35429218754 --log.
+Raw full log SHA256: 3d404c939a41811663512ca6e2d053dcdb10cda61d7a84c105ba0695bf1ac7c6
+Extraction: retain original lines containing one of the exact strings below.
+Patterns: ["Test Suites:", "Tests:", "# tests ", "# pass ", "# fail ", "REGRESSION PASS:", "R0 cleanup:", "\"scenario\":\"R2_ADAPTER\"", "\"scenario\":\"R2_STARTUP\"", "\"scenario\":\"F05\""]
+
+check	Run the same required check as local development	2026-09-19T07:25:25.7715105Z # tests 33
+check	Run the same required check as local development	2026-09-19T07:25:25.7715792Z # pass 33
+check	Run the same required check as local development	2026-09-19T07:25:25.7716107Z # fail 0
+check	Run the same required check as local development	2026-09-19T07:26:25.7229644Z Test Suites: 88 passed, 88 total
+check	Run the same required check as local development	2026-09-19T07:26:25.7230075Z Tests:       1270 passed, 1270 total
+check	Run the same required check as local development	2026-09-19T07:26:28.5759992Z # tests 7
+check	Run the same required check as local development	2026-09-19T07:26:28.5760284Z # pass 7
+check	Run the same required check as local development	2026-09-19T07:26:28.5760424Z # fail 0
+check	Run the same required check as local development	2026-09-19T07:26:38.6131671Z # tests 18
+check	Run the same required check as local development	2026-09-19T07:26:38.6132060Z # pass 18
+check	Run the same required check as local development	2026-09-19T07:26:38.6132242Z # fail 0
+check	Run the same required check as local development	2026-09-19T07:26:42.1747406Z # tests 11
+check	Run the same required check as local development	2026-09-19T07:26:42.1748345Z # pass 11
+check	Run the same required check as local development	2026-09-19T07:26:42.1748522Z # fail 0
+check	Run the same required check as local development	2026-09-19T07:26:44.3581802Z Test Suites: 1 passed, 1 total
+check	Run the same required check as local development	2026-09-19T07:26:44.3582114Z Tests:       6 passed, 6 total
+postgres-a02	Verify security and R2 foundation against disposable PostgreSQL	2026-09-19T07:24:59.1437617Z {"scenario":"R2_ADAPTER","outcome":"PASS","contracts":["pure import, invalid config, no local file and inert state","configured PostgreSQL connection failure closes candidate without fallback","actual in-flight SELECT1 read timeout discards candidate and permits retry","simultaneous init shares actual candidate pool and published adapter","ordinary run reports affected rows for insert/update/delete0/conflict0","scoped run reports exact update/delete count on the real transaction","real socket failure during acquire handoff cannot be unhandled","rollback and expired handle; caught statement error never becomes success","failed rollback discards actual closed connection and recovers","leased idle backend failure is observed and releases once","real max10/queue100/acquisition2s removes waiters with no late write","close stops new calls, drains issued transaction, expires old handles, reinitializes","close waits for queued acquisition refusal after issued leases finish","close before init and during pre-probe lease never publishes stale state"],"externalConnections":0}
+postgres-a02	Verify security and R2 foundation against disposable PostgreSQL	2026-09-19T07:25:00.7407282Z {"scenario":"R2_STARTUP","outcome":"PASS","checks":7,"sourceEntryCopied":true,"publicRequestsBeforeDatabaseConnection":7,"explicitEnvironmentBeforeJwtCapture":true,"actualPasswordLogin":true,"actualAuthenticatedProfile":true,"actualReadinessQueryObserved":true,"externalConnections":0}
+postgres-a02	Verify security and R2 foundation against disposable PostgreSQL	2026-09-19T07:25:02.2290853Z {"scenario":"F05","outcome":"PASS","contracts":["real HTTP update/delete counts0/1/N match committed rows","repeat deletes report0; manual and other-user rows unchanged","missing provider404/no writes; existing provider200; last-method guard retained"],"externalConnections":0}
+postgres-a02	Verify security and R2 foundation against disposable PostgreSQL	2026-09-19T07:25:02.2301332Z A02+B03+B04+H04+IS02+R2_ADAPTER+R2_STARTUP+F05 REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+postgres-a02	Verify security and R2 foundation against disposable PostgreSQL	2026-09-19T07:25:02.4214437Z R0 cleanup: owned disposable container removed
