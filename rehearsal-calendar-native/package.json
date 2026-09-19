@@ -15,7 +15,8 @@
     "type-check": "tsc --noEmit",
     "check": "npm run check:secrets && npm run type-check && npm test",
     "check:secrets": "bash scripts/check-secrets.sh",
-    "precommit": "npm run check:secrets && npm run type-check"
+    "test:secret-scanner": "node --test scripts/__tests__/check-secrets.test.mjs",
+    "precommit": "npm run check:secrets -- --staged && npm run type-check"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

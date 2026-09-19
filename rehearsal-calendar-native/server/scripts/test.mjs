@@ -61,6 +61,10 @@ try {
       !['all', 'backend'].includes(mode) && args.length) {
     throw new Error('Only full test runs accept Jest arguments; install accepts --with-deps.');
   }
+  if (mode === 'all' || mode === 'backend') {
+    console.log('[tests] Running mandatory secret scanner CLI regressions with synthetic fixtures.');
+    runNode(['--test', 'scripts/__tests__/check-secrets.test.mjs'], appDirectory);
+  }
   await prepareBrowser({ withDeps: mode === 'install' && args.includes('--with-deps') });
   if (mode === 'all' || mode === 'backend') {
     console.log('[tests] Running Jest. Command-line filters apply only to this stage.');
