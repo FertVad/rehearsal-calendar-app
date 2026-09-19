@@ -1,0 +1,25 @@
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:50604","database":"r0_test","schema":"diagnostic subset; production bootstrap is probed separately"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+{"check":"pure import, invalid config, no local file and inert state","result":"PASS"}
+{"check":"configured PostgreSQL connection failure closes candidate without fallback","result":"PASS"}
+{"observation":"owned PG SELECT1 response withheld after execution","independentlyObserved":true,"elapsedMs":2010,"socketDestroyed":true}
+{"check":"actual in-flight SELECT1 read timeout discards candidate and permits retry","result":"PASS"}
+{"check":"simultaneous init shares actual candidate pool and published adapter","result":"PASS"}
+{"observation":"ordinary affected rows","independentUpdated":2,"reportedUpdated":2,"reportedAbsent":0}
+{"check":"ordinary run reports affected rows for insert/update/delete0/conflict0","result":"PASS"}
+{"observation":"transaction affected rows","independentUpdated":3,"reportedUpdated":3,"reportedDeleted":1}
+{"check":"scoped run reports exact update/delete count on the real transaction","result":"PASS"}
+{"observation":"actual socket handoff failure","permanentObserversAtHandoff":1}
+{"check":"real socket failure during acquire handoff cannot be unhandled","result":"PASS"}
+{"check":"rollback and expired handle; caught statement error never becomes success","result":"PASS"}
+{"check":"failed rollback discards actual closed connection and recovers","result":"PASS"}
+{"check":"leased idle backend failure is observed and releases once","result":"PASS"}
+{"observation":"actual pg-pool saturation","maxClients":10,"rejectedWaiters":100,"queueAfter":0,"elapsedMs":2006}
+{"check":"real max10/queue100/acquisition2s removes waiters with no late write","result":"PASS"}
+{"check":"close stops new calls, drains issued transaction, expires old handles, reinitializes","result":"PASS"}
+{"check":"close waits for queued acquisition refusal after issued leases finish","result":"PASS"}
+{"check":"close before init and during pre-probe lease never publishes stale state","result":"PASS"}
+{"scenario":"R2_ADAPTER","outcome":"PASS","contracts":["pure import, invalid config, no local file and inert state","configured PostgreSQL connection failure closes candidate without fallback","actual in-flight SELECT1 read timeout discards candidate and permits retry","simultaneous init shares actual candidate pool and published adapter","ordinary run reports affected rows for insert/update/delete0/conflict0","scoped run reports exact update/delete count on the real transaction","real socket failure during acquire handoff cannot be unhandled","rollback and expired handle; caught statement error never becomes success","failed rollback discards actual closed connection and recovers","leased idle backend failure is observed and releases once","real max10/queue100/acquisition2s removes waiters with no late write","close stops new calls, drains issued transaction, expires old handles, reinitializes","close waits for queued acquisition refusal after issued leases finish","close before init and during pre-probe lease never publishes stale state"],"externalConnections":0}
+{"scenario":"R2_STARTUP","outcome":"PASS","checks":7,"sourceEntryCopied":true,"publicRequestsBeforeDatabaseConnection":7,"explicitEnvironmentBeforeJwtCapture":true,"actualPasswordLogin":true,"actualAuthenticatedProfile":true,"actualReadinessQueryObserved":true,"externalConnections":0}
+R2_ADAPTER+R2_STARTUP REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+R0 cleanup: owned disposable container removed

@@ -2,7 +2,7 @@
 
 Операционный контекст: [известный отказ Neon и границы доступа](PRODUCTION_ACCESS.md), сообщённые Вадимом 18 сентября 2026. Production smoke остаётся NOT_RUN. Вадим отдельно разрешил push `codex/systematic-repair` и первый удалённый `Application checks`; deployment и доступ к production требуют отдельного решения. Локальные статусы ниже не утверждают работоспособность production.
 
-Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md), [B03](REMEDIATION_B03.md), [B04](REMEDIATION_B04.md), [H04](REMEDIATION_H04.md), [ID01](REMEDIATION_ID01.md) и [IS01](REMEDIATION_IS01.md) VERIFIED локально, H02 — [READY_FOR_CHECK](REMEDIATION_H02.md) на `df6fd01` до физической DEV-15; IA01 — [READY_FOR_CHECK](REMEDIATION_IA01.md) на `0dc7666` до OPS-IA01; [IS02](REMEDIATION_IS02.md) — READY_FOR_CHECK на `61ced139` до OPS-IS02; остальные 92 пункта остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`, B04 — на `fd5f1eb`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. B04 требует additive migration008 до серверного deployment. Это учёт локальной реализации, не повторная оценка текущего production.
+Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md), [B03](REMEDIATION_B03.md), [B04](REMEDIATION_B04.md), [H04](REMEDIATION_H04.md), [ID01](REMEDIATION_ID01.md) и [IS01](REMEDIATION_IS01.md) VERIFIED локально, H02 — [READY_FOR_CHECK](REMEDIATION_H02.md) на `df6fd01` до физической DEV-15; IA01 — [READY_FOR_CHECK](REMEDIATION_IA01.md) на `0dc7666` до OPS-IA01; [IS02](REMEDIATION_IS02.md) — READY_FOR_CHECK на `61ced139` до OPS-IS02; F03/F05 — [VERIFIED локально](REMEDIATION_R2_FOUNDATION.md) на `573608c`; остальные 90 пунктов остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`, B04 — на `fd5f1eb`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. B04 требует additive migration008 до серверного deployment. Это учёт локальной реализации, не повторная оценка текущего production.
 
 [План R0–R9](/Users/vadimfertik/Desktop/reh_app/audit/REMEDIATION_PLAN.md) · [Аудит](/Users/vadimfertik/Desktop/reh_app/audit/AUDIT_REPORT.md) · [Серверные проверки](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-server.md) · [Устройства](/Users/vadimfertik/Desktop/reh_app/audit/notes-remediation-device-tests.md).
 
@@ -25,7 +25,7 @@ R0 — baseline/harness, решения и первичная инвентари
 |---|---:|---|
 | R0 | — | COMPLETE — baseline, real PG/HTTP harness, исходные дефекты, первичная инвентаризация |
 | R1 | 10 | READY_FOR_CHECK — 7 VERIFIED, H02/IA01/IS02 READY_FOR_CHECK (DEV-15/OPS-IA01/OPS-IS02); release gates открыты |
-| R2 | 8 | DESIGN — PostgreSQL-only runtime согласован; независимая локальная работа продолжается |
+| R2 | 8 | IN_PROGRESS — F03/F05 VERIFIED; F01/F02/FT01/FT02 в работе, FM01/FM02 TODO |
 | R3 | 6 | TODO |
 | R4 | 8 | TODO |
 | R5 | 15 | TODO |
@@ -100,8 +100,8 @@ R0 — baseline/harness, решения и первичная инвентари
 | EO06 | Medium | Нет | R7 | TODO | неудачная синхронизация получает новую отметку успешного экспорта | — |
 | F01 | High | Нет | R2 | TODO | инструкция развёртывания новой БД использует несовместимую смесь SQL-диалектов | — |
 | F02 | High | Нет | R2 | TODO | baseline пропускает обязательный unique index доступности | — |
-| F03 | Medium | Нет | R2 | TODO | заявленный SQLite режим не запускается штатной командой и не поддерживает SQL приложения | — |
-| F05 | Low | Нет | R2 | TODO | adapter теряет число изменённых строк | — |
+| F03 | Medium | Нет | R2 | VERIFIED | заявленный SQLite режим не запускается штатной командой и не поддерживает SQL приложения | [Явный PostgreSQL runtime и startup — 573608c](REMEDIATION_R2_FOUNDATION.md) |
+| F05 | Low | Нет | R2 | VERIFIED | adapter теряет число изменённых строк | [Реальные row counts и HTTP — 573608c](REMEDIATION_R2_FOUNDATION.md) |
 | FT01 | Low | Нет | R2 | TODO | режим --dry делает записи в БД; с --baseline вообще меняет историю миграций | — |
 | FT02 | Medium | Нет | R2 | TODO | SQL миграции и её запись в журнал не атомарны | — |
 | FM01 | Medium | Да | R2 | TODO | Историческая конверсия UTC зависит от session timezone | — |
@@ -140,7 +140,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | ID01 | Low | Нет | R1 | VERIFIED | документированные переменные срока JWT не влияют на выдачу | [Исполнение и проверки — e6b06b6](REMEDIATION_ID01.md) |
 | IDOC01 | Low | Нет | R9 | TODO | документ API содержит устаревшие и противоречащие контракту инструкции | — |
 | IS01 | Medium | Нет | R1 | VERIFIED | secret scanner использует неверный диалект regex и пропускает секреты | [Fail-closed scanner и обязательные CLI проверки — 4044e3d](REMEDIATION_IS01.md) |
-| IS02 | Medium | Да | R1 | READY_FOR_CHECK | rate limits не общие для нескольких процессов | [Общие бюджеты и проверки — 61ced139; OPS-IS02 NOT_RUN](REMEDIATION_IS02.md) |
+| IS02 | Medium | Да | R1 | READY_FOR_CHECK | rate limits не общие для нескольких процессов | [Общие бюджеты и проверки — 61ced139; OPS-IS02 NOT_RUN](REMEDIATION_IS02.md); [CI cleanup follow-up — 573608c](REMEDIATION_IS02_CI_FOLLOWUP.md) |
 | IA01 | High | Да | R1 | READY_FOR_CHECK | Apple ID token принимается без проверки приложения-получателя, если APPLE_CLIENT_ID отсутствует/пуст | [Локальный guard и проверки — 0dc7666](REMEDIATION_IA01.md); OPS-IA01 NOT_RUN |
 
 ## Карточка исполнения пакета — шаблон

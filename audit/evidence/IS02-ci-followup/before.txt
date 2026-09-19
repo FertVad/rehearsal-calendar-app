@@ -1,0 +1,3 @@
+{"node":"v22.16.0","originalSourceSha256":"6f1e6339853ff861f397c144e8c6bb833ae98c9968621b6b68df4ac71415dec5","originalHookExecuted":true,"actualOwnedPreconnect":true,"contextReached":false,"cleanupSettledWithin250ms":false}
+{"desiredRegression":"FAIL","errorCode":"ERR_ASSERTION","expectedActualExit":1}
+Cleanup: owned loopback server and preconnect released

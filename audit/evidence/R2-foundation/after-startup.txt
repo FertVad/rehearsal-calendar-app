@@ -1,0 +1,20 @@
+(node:61493) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS __tests__/startup/runtimeStartup.test.js (11.393 s)
+  ✓ library import (VERCEL=false) exports the app without listeners or database attempts (1181 ms)
+  ✓ library import (VERCEL=true) exports the app without listeners or database attempts (783 ms)
+  ✓ direct Vercel execution also leaves listener ownership to the platform (805 ms)
+  ✓ direct standalone startup serves every public route without attempting an unavailable database (819 ms)
+  ✓ an owned standalone child exits when its parent IPC channel closes (824 ms)
+  ✓ failed initialization is shared, cached and cannot take public routes offline (847 ms)
+  ✓ an owned stalled PostgreSQL handshake is bounded and not retried by following requests (2862 ms)
+  ✓ default startup ignores a synthetic adjacent .env unless explicitly selected (851 ms)
+  ✓ an explicitly selected relative environment path is refused before database or listener startup (721 ms)
+  ✓ an explicitly selected missing absolute environment path is refused before database or listener startup (699 ms)
+  ✓ process database configuration takes precedence over the explicitly selected file (792 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        11.439 s
+Ran all test suites matching __tests__/startup/runtimeStartup.test.js.
