@@ -15,6 +15,7 @@ import { generateInvitePageHTML } from './routes/invitePage.js';
 import { securityHeaders } from './middleware/securityHeaders.js';
 import { limitOperationIp } from './middleware/operationIpRateLimit.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { asyncHandler } from './middleware/asyncHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,9 +24,14 @@ const toBool = (v) => String(v || '').toLowerCase() === 'true' || String(v) === 
 
 /**
  * Assemble the HTTP app without loading .env, connecting to a database or
- * opening a listener. The caller prepares its environment and database first.
+ * opening a listener. The runtime entrypoint supplies its explicit database
+ * lifecycle; isolated route fixtures may supply their already-prepared adapter.
  */
-export function createApp() {
+export function createApp({ databaseRuntime } = {}) {
+  if (databaseRuntime && (typeof databaseRuntime.ensureInitialized !== 'function'
+    || typeof databaseRuntime.checkReady !== 'function')) {
+    throw new TypeError('Database runtime lifecycle is required');
+  }
   const DEBUG = toBool(process.env.DEBUG);
   const LOG_REQUESTS = DEBUG || toBool(process.env.LOG_REQUESTS);
 
@@ -57,9 +63,10 @@ export function createApp() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Attach db instance to requests
+  // Resolve the live adapter after lazy initialization, including on the first
+  // DB-bound request. Merely reading the property never initiates a connection.
   app.use((req, _res, next) => {
-    Object.defineProperty(req, 'db', { value: db, enumerable: false, writable: false });
+    Object.defineProperty(req, 'db', { get: () => db, enumerable: false });
     next();
   });
 
@@ -68,6 +75,27 @@ export function createApp() {
     next();
   });
 
+  // Liveness and public documents do not initialize the database. Readiness is
+  // an explicit on-demand probe, never a timer or a background health poll.
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+  app.get('/api/ready', asyncHandler(async (_req, res) => {
+    const ready = databaseRuntime ? await databaseRuntime.checkReady() : false;
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'unavailable' });
+  }));
+
+  if (databaseRuntime) {
+    const requireDatabase = asyncHandler(async (_req, res, next) => {
+      if (await databaseRuntime.ensureInitialized()) return next();
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(503).json({ error: 'Service temporarily unavailable' });
+    });
+    app.use('/api', requireDatabase);
+    app.use('/admin/api', requireDatabase);
+  }
+
   // Every method under these existing mounts spends the same shared IP budget,
   // before account/crypto work. Store failures deny admission; there is no local
   // MemoryStore or test-only bypass. Public pages/health remain independent.
@@ -75,11 +103,6 @@ export function createApp() {
   // Invite IP/account budgets live on the redemption handlers, so every
   // mounting path shares the same database counters and failure behavior.
   app.use('/admin/api/login', limitOperationIp('admin_login'));
-
-  // Health check endpoint
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
 
   // Serve the admin document before static middleware can redirect /admin to
   // the asset directory /admin/. Unhandled asset paths continue to express.static.

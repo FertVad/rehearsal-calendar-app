@@ -33,9 +33,10 @@ npm run check:secrets        # Check for exposed secrets/API keys
 ```bash
 cd rehearsal-calendar-native/server
 
-# Development
-npm start                    # Start server (production)
-npm run dev                  # Start server with --watch (auto-reload)
+# Development: explicitly provide an isolated PostgreSQL target first.
+# server/.env is not loaded automatically; it contains production credentials.
+npm start                    # Start the HTTP listener; DB initializes on demand
+npm run dev                  # Same contract, with --watch
 
 # Database
 npm run migrate              # Apply pending migrations (see Database section)
@@ -133,8 +134,8 @@ server/public/
   folder is needed and would otherwise omit it.
 
 ### Database
-- **Development**: SQLite (`native_database.db`)
-- **Production**: PostgreSQL (Neon.tech)
+- **Server runtime, development and production**: PostgreSQL only. There is no SQLite fallback.
+- **SQLite**: isolated test fixtures only; they do not prove PostgreSQL behavior.
 - **Tables**: fourteen, all prefixed `native_*`. Six were dropped from
   production on 2026-09-05 with nothing reading any of them: the four payment
   leftovers (`native_subscription_plans`, `native_user_subscriptions`,
@@ -143,7 +144,9 @@ server/public/
   `native_rehearsal_responses`, and `native_activity_log`, which was never
   written to. Their rows were dumped before the drop.
 - **Schema**: [rehearsal-calendar-native/server/database/init-native-schema.sql](rehearsal-calendar-native/server/database/init-native-schema.sql)
-- **Note**: SQLite uses `1`/`0` for booleans in dev, PostgreSQL uses `TRUE`/`FALSE` in production
+- **Note**: runtime SQL uses PostgreSQL types and constraints; fixture SQL conversion is test-only.
+- **Runtime/lifecycle and safe local startup**: [server runtime contract](rehearsal-calendar-native/docs/server-runtime.md).
+- **Provisioning**: F01/F02 and migration tooling remain open until the later R2 steps; do not apply the existing runner to production.
 
 ## Critical Patterns & Conventions
 
@@ -163,7 +166,7 @@ const userId = req.user.id;  // req.user is undefined!
 // ✅ RECOMMENDED - PostgreSQL parameterized queries
 await db.all('SELECT * FROM users WHERE id = $1 AND status = $2', [userId, 'active']);
 
-// ⚠️ WORKS BUT AVOID - SQLite syntax (auto-converted but less clear)
+// Legacy question-mark placeholders are translated by the PostgreSQL adapter
 await db.all('SELECT * FROM users WHERE id = ? AND status = ?', [userId, 'active']);
 ```
 
@@ -758,11 +761,13 @@ it: Vercel functions do not stay resident, so the schedule never fires.
 
 ### Required Environment Variables
 
-**server/.env** (Backend)
+**Process environment** (Backend). Optional local files must be explicitly selected
+with an absolute `SERVER_ENV_FILE` path. Do not select this repository's
+`server/.env` for development: it contains the production database target.
 ```env
 NODE_ENV=development
 PORT=3001
-DATABASE_URL=postgresql://...   # PostgreSQL connection string (production)
+DATABASE_URL=postgresql://...   # Explicit target; use isolated PostgreSQL locally
 JWT_SECRET=<generate-with-openssl-rand-base64-32>  # REQUIRED in production
 
 # OAuth Configuration (Google Sign-In)
@@ -881,6 +886,6 @@ Key documentation files:
 
 **Frontend**: React Native 0.81.5, Expo SDK 54, TypeScript, React Navigation 7.x
 **Backend**: Node.js 18+, Express.js 4.21.2, JWT authentication
-**Database**: PostgreSQL (production), SQLite (development)
+**Database**: PostgreSQL server runtime; SQLite isolated test fixtures only
 **Testing**: Jest, @testing-library/react-native
 **Languages**: Russian, English, Spanish, German (full i18n support). A new key goes into the interface and all four locale blocks in `src/i18n/translations/` — the type will not compile otherwise.

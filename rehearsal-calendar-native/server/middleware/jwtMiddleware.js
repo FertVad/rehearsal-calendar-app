@@ -17,7 +17,7 @@ if (!JWT_SECRET) {
     console.warn(
       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
       '   Generate a secret: openssl rand -base64 32\n' +
-      '   Add to server/.env: JWT_SECRET=<your-secret>'
+      '   Set JWT_SECRET in the process environment or an explicit SERVER_ENV_FILE'
     );
   }
 }

@@ -1,23 +1,17 @@
 /**
- * Loads server/.env, and does it early enough to matter.
- *
- * server.js used to call dotenv.config() in its body, after its imports. In ESM
- * every imported module is evaluated before the importing module's first
- * statement runs, so anything reading process.env at module scope — jwtMiddleware
- * captures JWT_SECRET that way — saw an empty environment and fell back to its
- * development default. The .env value was inert locally, and the only sign was a
- * warning nobody connected to the cause.
- *
- * Production was never affected: Vercel puts its variables in process.env before
- * the function starts. That is precisely what made it easy to miss.
- *
- * Import this first, before anything else, in any entry point.
+ * Optional, explicitly selected local environment file. Import before modules
+ * that capture environment configuration. With no SERVER_ENV_FILE, only the
+ * process environment is used: server/.env is never discovered implicitly.
+ * Vercel provides process.env directly and needs no file.
  */
-
-import path from 'path';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
 import dotenv from 'dotenv';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+if (process.env.SERVER_ENV_FILE !== undefined) {
+  const file = process.env.SERVER_ENV_FILE;
+  if (!file || !path.isAbsolute(file)) {
+    throw new Error('SERVER_ENV_FILE must be an explicit absolute path');
+  }
+  const result = dotenv.config({ path: file, quiet: true });
+  if (result.error) throw new Error('Unable to load the explicitly selected server environment file');
+}

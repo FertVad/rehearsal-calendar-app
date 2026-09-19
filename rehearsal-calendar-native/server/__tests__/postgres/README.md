@@ -7,13 +7,19 @@ dependencies with that same Node version. From `server/`:
 # Focused release regression: controls plus the repaired A02 contract.
 npm run test:r0-postgres -- --a02-only
 
-# Required CI regression: controls plus A02, B03, B04, H04 and IS02.
+# Required CI regression: security contracts plus R2 foundation.
 npm run test:r0-postgres -- --security-only
 
 # Individual shared-budget contracts.
 npm run test:r0-postgres -- --b03-only
 npm run test:r0-postgres -- --b04-only
 npm run test:r0-postgres -- --is02-only
+
+# PostgreSQL-only adapter lifecycle and actual copied-entrypoint startup.
+npm run test:r0-postgres -- --r2-foundation-only
+
+# HTTP consumers of affected row counts, including provider-not-found404.
+npm run test:r0-postgres -- --f05-only
 
 # Admin bug-report status contract.
 npm run test:r0-postgres -- --h04-only
@@ -91,7 +97,7 @@ The default diagnostic run also reproduces these **unfixed contracts**:
 - D01: an outsider participant is accepted and gets an invitation and busy slot.
 - F01: current mixed-dialect bootstrap is rejected by PostgreSQL.
 
-Exit 0 from the full run means controls/A02/B03/B04/H04/IS02 passed **and** those three known
+Exit 0 from the full run means controls/A02/B03/B04/H04/IS02/R2 foundation passed **and** those three known
 failures were reproduced. It does not mean B02/D01/F01 are safe. These probes
 remain outside normal Jest discovery. When treating each remaining finding,
 write its desired behavior as a regression assertion and retire/update that
@@ -124,7 +130,24 @@ deadline. Its scenario worker has a 120-second total bound; other scenario bound
 remain unchanged. This does not establish production proxy/secret/database
 configuration or apply migration009 to a real deployment.
 
-The existing adapter has no public shutdown hook, so worker termination closes
-its pool. A temp cwd with no `server/database` directory prevents the existing
-SQLite fallback from touching repository data; `isPostgres === true` is required.
-Fail-closed adapter configuration and an explicit lifecycle remain R2 work.
+R2_ADAPTER runs the actual PostgreSQL adapter before ordinary application
+initialization. It verifies lifecycle publication/close, exact affected counts,
+real transaction rollback and expired handles, recovery after connection failure,
+and bounded acquisition queues without late writes. Normal probes now explicitly
+close the adapter through `closeDatabase()`; SQLite fallback is absent.
+
+R2_STARTUP executes a temporary copy of the actual server entrypoint with a
+synthetic environment and real owned PostgreSQL. This is separate from ordinary
+createApp tests. The fixture never reads/copies checkout `.env` and limits
+outbound access to owned loopback targets. Healthy readiness/login and startup
+isolation are tested here; Jest separately exercises unavailable/stalled transport
+and explicit environment-file behavior. Neither test is a Vercel deployment.
+
+F05 exercises all four existing affected-count consumers through real HTTP:
+availability update/delete reports match committed rows, repeat deletion reports0,
+and unlink of a missing provider returns404 without changing credentials. Existing
+provider unlink and last-method guard remain covered. Calendar import ownership
+and concurrent unlink are separate R7/R3 contracts, not claims of this count fix.
+
+R2 foundation cases have a45-second worker limit. Canonical fresh schema,
+verified baseline and migration tooling remain separate R2 work.

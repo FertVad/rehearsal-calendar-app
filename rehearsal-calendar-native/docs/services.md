@@ -6,7 +6,8 @@
 Секретов здесь нет и быть не должно: только **имена** переменных. Значения — в
 Vercel → Settings → Environment Variables и в локальном `server/.env`.
 
-Обновлено 2026-09-12.
+Runtime-раздел обновлён 2026-09-19 для ветки исправлений; это не подтверждение
+состояния production. Остальные сервисные сведения исходно от 2026-09-12.
 
 ---
 
@@ -15,7 +16,7 @@ Vercel → Settings → Environment Variables и в локальном `server/.
 | Сервис | План | Цена |
 |---|---|---|
 | Apple Developer Program | обязателен для App Store | **$99 / год** |
-| Neon | Free — **лимит выбран 2026-09-12** | $0, Launch $19/мес |
+| Neon | Free — исчерпан по сообщению владельца | Launch: $0.106/CU-час, $0.35/GB-месяц, без месячного минимума; [расчёт](../../audit/NEON_COST_ESTIMATE_2026-09-19.md) |
 | Vercel | Hobby | $0 |
 | Expo / EAS | Free | $0 |
 | Google Cloud (OAuth) | — | $0 |
@@ -39,8 +40,8 @@ Vercel → Settings → Environment Variables и в локальном `server/.
 | | |
 |---|---|
 | Переменная | `DATABASE_URL` (принимается и `POSTGRES_URL`) |
-| Читается в | [server/database/db.js:24](../server/database/db.js#L24), `server/server.js` |
-| Если отвалится | **всё**: вход, календарь, занятость, уведомления |
+| Читается в | [PostgreSQL adapter](../server/database/db.js), [runtime](../server/runtime.js) |
+| Если недоступна при инициализации | Зависимые API и `/api/ready` отвечают503; public HTML и `/api/health` продолжают работать при корректной security configuration. Исправление ещё не задеплоено. |
 
 **Состояние на 2026-09-12: бесплатный лимит 100 CU-часов выбран полностью.**
 Neon считает время, пока compute бодрствует, и усыпляет его примерно через пять
@@ -48,11 +49,14 @@ Neon считает время, пока compute бодрствует, и усы
 планировщика на этом интервале съедали весь месячный лимит — почти всегда чтобы
 услышать «отправлять нечего». Оба выключены, см. раздел про напоминания.
 
-**Грабли:** локальный `server/.env` содержит **тот же боевой `DATABASE_URL`**,
-что и Vercel. `db.js` берёт SQLite, только если переменная пуста, — значит
-`npm run dev` на ноутбуке работает по боевой базе и держит её compute
-бодрствующим всё время работы. Для разработки нужна отдельная ветка Neon или
-локальный PostgreSQL.
+**Локальное окружение:** `server/.env` содержит **боевой `DATABASE_URL`**.
+Сервер ветки исправлений больше не читает этот файл автоматически: он использует
+process environment либо явно выбранный абсолютный `SERVER_ENV_FILE`.
+Для разработки нужен изолированный PostgreSQL; SQLite runtime и fallback удалены.
+Публичные страницы не инициализируют БД. Первый зависимый запрос делает одну
+общую попытку подключения; после отказа требуется restart или явное восстановление
+adapter, автоматического повторения по трафику нет. Подробнее: [runtime](server-runtime.md).
+Это изменение ещё не означает восстановления текущего production.
 
 ---
 
@@ -213,11 +217,12 @@ MX-записи для входящей почты (ImprovMX), SPF и DKIM дл�
 
 | Переменная | Сервис | Без неё |
 |---|---|---|
-| `DATABASE_URL` | Neon | падает на SQLite, то есть в пустую локальную базу |
+| `DATABASE_URL` / `POSTGRES_URL` | PostgreSQL | DB API503; SQLite fallback отсутствует |
+| `SERVER_ENV_FILE` | необязательный локальный файл | используется только process environment; автоматического поиска `.env` нет |
 | `JWT_SECRET` | — | обязателен в production, сервер не стартует |
 | `CRON_SECRET` | триггеры напоминаний | эндпоинт отвечает 503 |
 | `BASE_URL` | Vercel | ломаются инвайт-ссылки и CORS |
-| `APPLE_CLIENT_ID` | Apple | не проверяется вход через Apple |
+| `APPLE_CLIENT_ID` | Apple | Apple login отключён guard; OPS-IA01 production-проверка остаётся NOT_RUN |
 | `GOOGLE_CLIENT_ID_IOS` / `_ANDROID` / `_WEB` | Google | ничего: список есть в коде |
 | `RESEND_API_KEY`, `MAIL_FROM` | Resend | письма молча не уходят |
 | `ADMIN_PASSWORD_HASH` / `ADMIN_PASSWORD` | админка | не войти в `/admin` |

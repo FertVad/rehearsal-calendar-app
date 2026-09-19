@@ -1815,8 +1815,8 @@ and `RateLimit-Policy`, `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Res
 Unavailable/full storage or an invalid IP returns generic `503` before account
 lookup, password/OAuth verification or token issuance. Responses through these
 budgets use `Cache-Control: no-store`. Public HTML/health and authenticated admin
-dashboard reads are outside these two budgets; this does not change database
-initialization/startup behavior.
+dashboard reads are outside these two budgets. Runtime initialization and
+readiness are described in the [server runtime contract](server-runtime.md).
 
 Each namespace retains at most 10,000 HMAC IP identities, with at most 64 expired
 rows pruned during allocation and no scheduled cleanup. Active identities are
@@ -1831,9 +1831,10 @@ admission requires PostgreSQL and cannot silently fall back to SQLite. Local
 SQLite fixtures are supported for sequential contracts; exact distributed
 concurrency is tested with disposable PostgreSQL. A three-second HTTP admission
 deadline and transaction-scoped SQL/lock timeouts deny access on stalled work.
-The current adapter cannot cancel a queued pool acquisition: a late operation
+The PostgreSQL adapter bounds pool acquisition to two seconds and removes timed-out
+waiters. The HTTP deadline does not cancel already-acquired SQL: a late operation
 may conservatively spend budget after `503`, but never invokes the handler or
-retries/refunds the mutation. Adapter resource lifecycle remains R2 work.
+retries/refunds the mutation.
 
 Member availability retains its separate shared 60/minute/account budget and
 request-size limits. These operation budgets are not a general ingress limit.

@@ -1,4 +1,5 @@
-// Isolated worker: no server.js, dotenv, migration runner or real credentials.
+// Isolated worker: no checkout server.js/.env, migration runner or real credentials.
+// R2_STARTUP executes only an owned source copy with a synthetic environment.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import net from 'node:net';
@@ -6,7 +7,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'F01', 'H04', 'IS02'].includes(scenario));
+assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'F01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -89,9 +90,22 @@ if (scenario === 'B04') {
 }
 target.searchParams.set('options', '-c search_path=r0_fixture');
 process.env.DATABASE_URL = target.href;
+// Lifecycle and actual copied-entrypoint contracts need an uninitialized
+// adapter. They run in the same owned database/process/network boundary before
+// the ordinary route fixture below acquires its own adapter or HTTP listener.
+if (scenario === 'R2_ADAPTER' || scenario === 'R2_STARTUP') {
+  try {
+    const result = scenario === 'R2_ADAPTER'
+      ? await (await import('./adapterContract.mjs')).runAdapterContracts({ connectionString: target.href, control })
+      : await (await import('./r2Startup.mjs')).probeR2Startup({ connectionString: target.href, control, allowedPorts });
+    assert.equal(deniedConnections, 0, 'A foundation contract attempted an external connection');
+    console.log(JSON.stringify({ scenario, ...result, externalConnections: deniedConnections }));
+  } finally {
+    await control.end();
+  }
+  process.exit(0);
+}
 const database = await import('../../database/db.js');
-// The current adapter can fall back to SQLite (F03/R2). The runner uses a fresh
-// temp cwd with no server/database directory, so fallback cannot touch the repo.
 await database.initDatabase();
 assert.equal(database.isPostgres, true, 'Never accept a SQLite fallback as a PG test');
 const db = database.default;
@@ -189,6 +203,10 @@ if (scenario === 'controls') {
 } else if (scenario === 'IS02') {
   const { probeIS02 } = await import('./is02.mjs');
   result = await probeIS02({ control, db, http, allowedPorts });
+  result.externalConnections = deniedConnections;
+} else if (scenario === 'F05') {
+  const { probeF05 } = await import('./f05.mjs');
+  result = await probeF05({ control, http });
   result.externalConnections = deniedConnections;
 } else if (scenario === 'A02') {
   const snapshot = async () => {
@@ -291,7 +309,6 @@ if (scenario === 'controls') {
 assert.equal(deniedConnections, 0, 'A service attempted an external connection');
 console.log(JSON.stringify({ scenario, ...result }));
 await new Promise(resolve => server.close(resolve));
+await database.closeDatabase();
 await control.end();
-// db.js currently exposes no close hook. Each probe lives in its own process;
-// terminating it closes the production adapter pool without altering R2 code.
 process.exit(0);
