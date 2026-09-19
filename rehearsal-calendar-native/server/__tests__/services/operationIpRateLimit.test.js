@@ -153,7 +153,12 @@ describe('operation IP budgets with real SQLite storage and independent connecti
     sessions[0].exec(`CREATE TRIGGER operation_insert_failure AFTER INSERT ON native_operation_ip_rate_limits
       BEGIN SELECT RAISE(ABORT, 'synthetic allocation failure'); END;`);
     try {
-      await expect(a.consumeOperationIpBudget('auth', '192.0.2.13')).rejects.toThrow();
+      // The native driver can retain a constructor from a previous Jest VM.
+      // Check the actual trigger rejection rather than realm-sensitive Error
+      // identity; rollback and recovery remain independently asserted below.
+      await expect(a.consumeOperationIpBudget('auth', '192.0.2.13')).rejects.toMatchObject({
+        code: 'SQLITE_CONSTRAINT_TRIGGER', message: 'synthetic allocation failure',
+      });
       expect(rows()).toEqual(before);
       expect(gate('auth')).toBe(3);
     } finally { sessions[0].exec('DROP TRIGGER operation_insert_failure'); }
