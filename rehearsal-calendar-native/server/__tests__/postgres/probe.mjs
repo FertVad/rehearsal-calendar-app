@@ -6,7 +6,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'F01', 'H04'].includes(scenario));
+assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'F01', 'H04', 'IS02'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -57,6 +57,12 @@ if (scenario === 'F01') {
 }
 
 await control.query(await readFile(new URL('./fixture.sql', import.meta.url), 'utf8'));
+// Auth/admin admission uses its actual shared schema in every normal fixture.
+// This never changes the explicit F01 mixed-dialect bootstrap probe above.
+const operationBudgetMigration = await readFile(
+  new URL('../../migrations/009-operation-ip-rate-limits.sql', import.meta.url), 'utf8');
+await control.query(operationBudgetMigration);
+await control.query(operationBudgetMigration);
 if (scenario === 'A02') {
   // The diagnostic subset needs these real columns to reach availability's
   // preprocessing and to authorize the admin users listing after bcrypt login.
@@ -110,7 +116,7 @@ async function http(path, { user = 1, method = 'GET', body, token = tokens.get(u
       ...(ip == null ? {} : { 'X-Forwarded-For': ip }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(3000),
+    signal: AbortSignal.timeout(scenario === 'IS02' ? 6000 : 3000),
   });
   const text = await response.text();
   return { status: response.status,
@@ -180,6 +186,10 @@ if (scenario === 'controls') {
   const { probeH04 } = await import('./h04.mjs');
   result = await probeH04({ control, db, http });
   result.externalConnections = deniedConnections;
+} else if (scenario === 'IS02') {
+  const { probeIS02 } = await import('./is02.mjs');
+  result = await probeIS02({ control, db, http, allowedPorts });
+  result.externalConnections = deniedConnections;
 } else if (scenario === 'A02') {
   const snapshot = async () => {
     const tables = ['native_users', 'native_projects', 'native_project_members', 'native_rehearsals',
@@ -244,17 +254,20 @@ if (scenario === 'controls') {
     assert.equal(typeof response.data.error, 'string');
     assert.equal((await http('/api/health')).status, 200);
   }
-  // The production limiter allows five attempts. A new app gets its own real
-  // limiter store for the wrong/correct pair; do not disable the limiter.
+  // A second app now shares the first one's quota. This independent bcrypt
+  // scenario uses another synthetic client IP; IS02 verifies that a new app
+  // cannot reset the same IP's allowance. The actual limiter remains enabled.
   const adminServer = await listenApp();
   const adminBase = `http://127.0.0.1:${adminServer.address().port}`;
   try {
     const wrong = await http('/admin/api/login', {
-      baseUrl: adminBase, method: 'POST', body: { password: 'wrong-a02-password' },
+      baseUrl: adminBase, ip: '198.51.100.202', method: 'POST', body: { password: 'wrong-a02-password' },
     });
     assert.equal(wrong.status, 401);
     assert.deepEqual(wrong.data, { error: 'Invalid password' });
-    const login = await http('/admin/api/login', { baseUrl: adminBase, method: 'POST', body: { password } });
+    const login = await http('/admin/api/login', {
+      baseUrl: adminBase, ip: '198.51.100.202', method: 'POST', body: { password },
+    });
     assert.equal(login.status, 200);
     assert.equal(typeof login.data.token, 'string');
     assert.ok(login.data.token.length > 0);

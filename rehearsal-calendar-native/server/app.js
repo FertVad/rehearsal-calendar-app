@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './database/db.js';
@@ -14,7 +13,7 @@ import adminRoutes from './routes/admin.js';
 import { logger } from './utils/logger.js';
 import { generateInvitePageHTML } from './routes/invitePage.js';
 import { securityHeaders } from './middleware/securityHeaders.js';
-import { asyncHandler } from './middleware/asyncHandler.js';
+import { limitOperationIp } from './middleware/operationIpRateLimit.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,8 +31,8 @@ export function createApp() {
 
   const app = express();
 
-  // Trust one upstream proxy (Vercel) — required for express-rate-limit
-  // to see the real client IP from X-Forwarded-For instead of Vercel's internal IP.
+  // Deployment must provide one trusted ingress with no direct bypass. Shared
+  // budgets use Express req.ip; they do not choose a forwarded address themselves.
   app.set('trust proxy', 1);
 
   // One strict policy for public pages and the admin dashboard.
@@ -69,23 +68,13 @@ export function createApp() {
     next();
   });
 
-  // Rate limiting
-  app.use('/api/auth', asyncHandler(rateLimit({
-    windowMs: 60 * 1000,  // 1 minute
-    max: 20,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later' },
-  })));
+  // Every method under these existing mounts spends the same shared IP budget,
+  // before account/crypto work. Store failures deny admission; there is no local
+  // MemoryStore or test-only bypass. Public pages/health remain independent.
+  app.use('/api/auth', limitOperationIp('auth'));
   // Invite IP/account budgets live on the redemption handlers, so every
   // mounting path shares the same database counters and failure behavior.
-  app.use('/admin/api/login', asyncHandler(rateLimit({
-    windowMs: 15 * 60 * 1000,  // 15 minutes
-    max: 5,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many login attempts, please try again later' },
-  })));
+  app.use('/admin/api/login', limitOperationIp('admin_login'));
 
   // Health check endpoint
   app.get('/api/health', (_req, res) => {

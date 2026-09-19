@@ -7,6 +7,7 @@ import request from 'supertest';
 import bcrypt from 'bcrypt';
 import nodeFetch from 'node-fetch';
 import { setupIntegrationDb, closeIntegrationDb } from '../integration/setup.js';
+import { observeDatabase, isOperationBudgetSql, operationBudgetTables } from '../integration/observeDatabase.js';
 
 // Real auth route -> application verifier -> locked Apple/jsonwebtoken crypto
 // -> real account-linking SQL in isolated SQLite. Only the JWKS transport and
@@ -36,8 +37,8 @@ let passwordHash;
 let linkedUserId;
 let passwordUserId;
 const blockedConnections = [];
-const database = Object.fromEntries(['get', 'all', 'run', 'transaction'].map(method =>
-  [method, jest.fn((...args) => sqlite[method](...args))]));
+const observer = observeDatabase(() => sqlite);
+const { database } = observer;
 const forbidden = jest.fn(() => { throw new Error('IA01 tests must not initialize runtime resources'); });
 jest.unstable_mockModule('../../database/db.js', () => ({
   default: database, isPostgres: false, initDatabase: forbidden, testConnection: forbidden,
@@ -54,7 +55,8 @@ function token(claims = {}, signingKey = privateKey) {
 
 function snapshot() {
   const tables = sqlite.all("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
-  return Object.fromEntries(tables.map(({ name }) => [name, sqlite.all(`SELECT * FROM "${name}" ORDER BY rowid`)]));
+  return Object.fromEntries(tables.filter(({ name }) => !operationBudgetTables.has(name))
+    .map(({ name }) => [name, sqlite.all(`SELECT * FROM "${name}" ORDER BY rowid`)]));
 }
 
 beforeAll(async () => {
@@ -101,7 +103,7 @@ beforeEach(async () => {
   await appleSignin._getApplePublicKeys({ disableCaching: true });
   jwksTransport.mockClear();
   verifyCall.mockClear();
-  Object.values(database).forEach(fn => fn.mockClear());
+  observer.clear();
   blockedConnections.length = 0;
   server = await new Promise((resolve, reject) => {
     const listener = createApp().listen(0, '127.0.0.1', () => resolve(listener));
@@ -127,8 +129,13 @@ afterAll(() => {
   else process.env.JWT_SECRET = savedJwtSecret;
 });
 
-function expectNoDatabaseCalls() {
-  Object.values(database).forEach(fn => expect(fn).not.toHaveBeenCalled());
+function expectOnlyAdmissionSql() {
+  expect(observer.statements.length).toBeGreaterThan(0);
+  expect(observer.statements.filter(statement => !isOperationBudgetSql(statement))).toEqual([]);
+  expect(observer.statements.every(statement => statement.scope !== null)).toBe(true);
+  expect(observer.transactions.every(transaction => transaction.state === 'committed')).toBe(true);
+  expect(sqlite.all('SELECT operation, request_count FROM native_operation_ip_rate_limits'))
+    .toEqual([{ operation: 'auth', request_count: 1 }]);
 }
 
 async function expectUsableAppSession(response, userId) {
@@ -147,7 +154,7 @@ test.each([
   ['embedded whitespace', 'com.example.ia01 intended'],
   ['comma-separated list', 'com.example.ia01-intended,com.example.other-app'],
   ['JSON list', '["com.example.ia01-intended"]'],
-])('Apple %s configuration rejects a valid wrong-app token before verification or SQL', async (_label, value) => {
+])('Apple %s configuration rejects a valid wrong-app token before verification or account SQL', async (_label, value) => {
   if (value === undefined) delete process.env.APPLE_CLIENT_ID;
   else process.env.APPLE_CLIENT_ID = value;
   const before = snapshot();
@@ -156,7 +163,7 @@ test.each([
   expect(response.body).toEqual({ error: 'Apple sign-in is unavailable' });
   expect(verifyCall).not.toHaveBeenCalled();
   expect(jwksTransport).not.toHaveBeenCalled();
-  expectNoDatabaseCalls();
+  expectOnlyAdmissionSql();
   expect(snapshot()).toEqual(before);
 });
 
@@ -166,25 +173,25 @@ test.each([
   ['number idToken', { idToken: 123 }], ['boolean idToken', { idToken: true }],
   ['object idToken', { idToken: { value: 'token' } }], ['array idToken', { idToken: ['token'] }],
   ['array body', []],
-])('Apple HTTP rejects %s before verification or SQL', async (_label, body) => {
+])('Apple HTTP rejects %s before verification or account SQL', async (_label, body) => {
   const before = snapshot();
   const response = await request(server).post('/api/auth/apple').send(body);
   expect(response.status).toBe(400);
   expect(response.body).toEqual({ error: 'ID token is required' });
   expect(verifyCall).not.toHaveBeenCalled();
   expect(jwksTransport).not.toHaveBeenCalled();
-  expectNoDatabaseCalls();
+  expectOnlyAdmissionSql();
   expect(snapshot()).toEqual(before);
 });
 
-test('an absent request body is a bounded 400 before verification or SQL', async () => {
+test('an absent request body is a bounded 400 before verification or account SQL', async () => {
   const before = snapshot();
   const response = await request(server).post('/api/auth/apple');
   expect(response.status).toBe(400);
   expect(response.body).toEqual({ error: 'ID token is required' });
   expect(verifyCall).not.toHaveBeenCalled();
   expect(jwksTransport).not.toHaveBeenCalled();
-  expectNoDatabaseCalls();
+  expectOnlyAdmissionSql();
   expect(snapshot()).toEqual(before);
 });
 
@@ -203,7 +210,7 @@ test.each([
   expect(response.body).toEqual({ error: 'Apple authentication failed' });
   expect(verifyCall).toHaveBeenCalledTimes(1);
   expect(jwksTransport).toHaveBeenCalledTimes(1);
-  expectNoDatabaseCalls();
+  expectOnlyAdmissionSql();
   expect(snapshot()).toEqual(before);
 });
 
@@ -214,7 +221,7 @@ test('malformed JWT text returns generic 401 without account SQL or a JWKS reque
   expect(response.body).toEqual({ error: 'Apple authentication failed' });
   expect(verifyCall).toHaveBeenCalledTimes(1);
   expect(jwksTransport).not.toHaveBeenCalled();
-  expectNoDatabaseCalls();
+  expectOnlyAdmissionSql();
   expect(snapshot()).toEqual(before);
 });
 
@@ -242,7 +249,7 @@ test('Apple configuration can recover locally without changing the app or bypass
   const intended = token();
   const unavailable = await request(server).post('/api/auth/apple').send({ idToken: intended });
   expect(unavailable.status).toBe(503);
-  expectNoDatabaseCalls();
+  expectOnlyAdmissionSql();
   expect(verifyCall).not.toHaveBeenCalled();
   process.env.APPLE_CLIENT_ID = `  ${AUDIENCE}  `;
   const accepted = await request(server).post('/api/auth/apple').send({ idToken: intended });
@@ -285,10 +292,12 @@ test('createApp with Apple disabled preserves health, static pages, admin HTML a
   const admin = await request(server).get('/admin');
   expect(admin.status).toBe(200);
   expect(admin.text).toContain('Admin Panel');
-  expectNoDatabaseCalls();
+  expect(observer.statements).toEqual([]);
+  expect(observer.transactions).toEqual([]);
+  Object.values(database).forEach(fn => expect(fn).not.toHaveBeenCalled());
   const apple = await request(server).post('/api/auth/apple').send({ idToken: token() });
   expect(apple.status).toBe(503);
-  expectNoDatabaseCalls();
+  expectOnlyAdmissionSql();
   const password = await request(server).post('/api/auth/login').send({ email: 'ia01-password@example.test', password: PASSWORD });
   await expectUsableAppSession(password, passwordUserId);
   expect(verifyCall).not.toHaveBeenCalled();

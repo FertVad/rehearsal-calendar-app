@@ -3,6 +3,7 @@ import net from 'node:net';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import { setupIntegrationDb, closeIntegrationDb } from '../integration/setup.js';
+import { observeDatabase, isOperationBudgetSql } from '../integration/observeDatabase.js';
 
 // Real createApp/auth route, JWT signing and SQL against an in-memory database.
 // The production DB adapter/environment loader must never initialize here.
@@ -16,8 +17,8 @@ let userId;
 let connectGuard;
 const blockedConnections = [];
 const forbidden = jest.fn(() => { throw new Error('ID01 tests must not initialize runtime resources'); });
-const database = Object.fromEntries(['get', 'all', 'run', 'transaction'].map(method =>
-  [method, jest.fn((...args) => sqlite[method](...args))]));
+const observer = observeDatabase(() => sqlite);
+const { database } = observer;
 jest.unstable_mockModule('../../database/db.js', () => ({
   default: database, isPostgres: false, initDatabase: forbidden, testConnection: forbidden,
 }));
@@ -48,7 +49,7 @@ beforeEach(async () => {
     'INSERT INTO native_users (email, first_name, token_version) VALUES (?, ?, ?)',
     ['id01-refresh@example.test', 'ID01', 4],
   ).lastInsertId;
-  Object.values(database).forEach(fn => fn.mockClear());
+  observer.clear();
   blockedConnections.length = 0;
   server = await new Promise((resolve, reject) => {
     const listener = createApp().listen(0, '127.0.0.1', () => resolve(listener));
@@ -83,6 +84,14 @@ function usersSnapshot() {
   return sqlite.all('SELECT * FROM native_users ORDER BY id');
 }
 
+function expectAdmissionAndNoBusinessWrites(count = 1) {
+  expect(observer.statements.some(isOperationBudgetSql)).toBe(true);
+  expect(observer.statements.filter(statement => !isOperationBudgetSql(statement))
+    .filter(({ sql }) => /\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/i.test(sql))).toEqual([]);
+  expect(sqlite.all('SELECT operation, request_count FROM native_operation_ip_rate_limits'))
+    .toEqual([{ operation: 'auth', request_count: count }]);
+}
+
 test('an old valid refresh token yields the unchanged response shape with newly configured lifetimes', async () => {
   const before = usersSnapshot();
   const response = await request(server).post('/api/auth/refresh').send({ refreshToken: oldRefresh() });
@@ -98,8 +107,7 @@ test('an old valid refresh token yields the unchanged response shape with newly 
   expect(profile.status).toBe(200);
   expect(profile.body.user.id).toBe(userId);
   expect(usersSnapshot()).toEqual(before);
-  expect(database.run).not.toHaveBeenCalled();
-  expect(database.transaction).not.toHaveBeenCalled();
+  expectAdmissionAndNoBusinessWrites(2);
 });
 
 test('an otherwise valid old refresh token remains revoked when its version predates the database', async () => {
@@ -108,18 +116,19 @@ test('an otherwise valid old refresh token remains revoked when its version pred
   expect(response.status).toBe(401);
   expect(response.body).toEqual({ error: 'Session revoked' });
   expect(usersSnapshot()).toEqual(before);
-  expect(database.run).not.toHaveBeenCalled();
+  expectAdmissionAndNoBusinessWrites();
 });
 
 test.each([
   ['expired', () => jwt.sign({ userId, tv: 4, type: 'refresh' }, SECRET, { expiresIn: -1 })],
   ['access type', () => jwt.sign({ userId, tv: 4, type: 'access' }, SECRET, { expiresIn: '1h' })],
-])('%s token cannot renew and is rejected before database work', async (_label, makeToken) => {
+])('%s token cannot renew and is rejected before account database work', async (_label, makeToken) => {
   const before = usersSnapshot();
   const response = await request(server).post('/api/auth/refresh').send({ refreshToken: makeToken() });
   expect(response.status).toBe(401);
   expect(response.body).toEqual({ error: 'Invalid or expired refresh token' });
-  Object.values(database).forEach(fn => expect(fn).not.toHaveBeenCalled());
+  expectAdmissionAndNoBusinessWrites();
+  expect(observer.statements.filter(statement => !isOperationBudgetSql(statement))).toEqual([]);
   expect(usersSnapshot()).toEqual(before);
 });
 
@@ -129,5 +138,6 @@ test('invalid lifetime configuration prevents fresh app initialization before au
   jest.resetModules();
   await expect(import('../../app.js')).rejects.toThrow(/JWT_EXPIRES_IN/);
   Object.values(database).forEach(fn => expect(fn).not.toHaveBeenCalled());
+  expect(observer.statements).toEqual([]);
   expect(usersSnapshot()).toEqual(before);
 });

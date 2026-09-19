@@ -1802,10 +1802,41 @@ is a separate operation protected by the active admin/owner policy. The old
 `/native/invite/:projectId/invite` management aliases retain the same policy.
 The HTML `/invite/:code` app-opening page does not perform an invite lookup.
 
-Other existing limits: `/auth` is 20/minute/IP and admin login is 5/15 minutes/IP
-(these two still use process-local stores); member availability has a shared
-60/minute/account budget and request-size limits. Fixing invite counters does
-not make the remaining process-local limits shared.
+All methods under `/api/auth` share 20 requests per IP per 60 seconds; all
+methods under `/admin/api/login` share 5 per IP per 900 seconds. These two
+budgets persist in PostgreSQL across application instances and restarts. Their
+windows are anchored to the first admission using database time at whole-second
+precision, unlike the calendar-minute invite budgets above. Successful and
+unsuccessful requests both count. Parser/CORS rejections before these mounts
+retain their existing behavior and do not spend these budgets.
+
+Exhaustion returns the existing JSON `429` messages, `Retry-After` in seconds,
+and `RateLimit-Policy`, `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`.
+Unavailable/full storage or an invalid IP returns generic `503` before account
+lookup, password/OAuth verification or token issuance. Responses through these
+budgets use `Cache-Control: no-store`. Public HTML/health and authenticated admin
+dashboard reads are outside these two budgets; this does not change database
+initialization/startup behavior.
+
+Each namespace retains at most 10,000 HMAC IP identities, with at most 64 expired
+rows pruned during allocation and no scheduled cleanup. Active identities are
+never evicted to admit a new one; existing identities can still spend their
+own quota at capacity. IPv4-mapped aliases share an IPv4 identity; IPv6 uses a
+canonical /56. Instances must use the same stable signing secret and shared
+database, behind the configured single trusted ingress. Rotating the secret
+changes IP identities. Raw IPs are not persisted in these budget tables.
+
+Migration009 must precede any separately approved server deployment. Production
+admission requires PostgreSQL and cannot silently fall back to SQLite. Local
+SQLite fixtures are supported for sequential contracts; exact distributed
+concurrency is tested with disposable PostgreSQL. A three-second HTTP admission
+deadline and transaction-scoped SQL/lock timeouts deny access on stalled work.
+The current adapter cannot cancel a queued pool acquisition: a late operation
+may conservatively spend budget after `503`, but never invokes the handler or
+retries/refunds the mutation. Adapter resource lifecycle remains R2 work.
+
+Member availability retains its separate shared 60/minute/account budget and
+request-size limits. These operation budgets are not a general ingress limit.
 
 ---
 
@@ -1824,7 +1855,7 @@ For issues, questions, or feature requests, please contact the development team.
 
 ---
 
-**Last Updated:** 2026-09-18
+**Last Updated:** 2026-09-19
 
 **API Version:** 1.2
 

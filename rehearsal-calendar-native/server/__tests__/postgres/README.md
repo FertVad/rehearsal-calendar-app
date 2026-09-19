@@ -7,12 +7,13 @@ dependencies with that same Node version. From `server/`:
 # Focused release regression: controls plus the repaired A02 contract.
 npm run test:r0-postgres -- --a02-only
 
-# Required CI regression: controls plus A02, B03, B04 and H04.
+# Required CI regression: controls plus A02, B03, B04, H04 and IS02.
 npm run test:r0-postgres -- --security-only
 
 # Individual shared-budget contracts.
 npm run test:r0-postgres -- --b03-only
 npm run test:r0-postgres -- --b04-only
+npm run test:r0-postgres -- --is02-only
 
 # Admin bug-report status contract.
 npm run test:r0-postgres -- --h04-only
@@ -76,8 +77,8 @@ A02 now asserts the **desired application contract**, not the original crash:
 - Use real bcrypt with a generated synthetic hash: missing/null/number/object
   passwords receive 400, a wrong string receives 401, and the correct password
   yields a 200 and a token that can read the real admin users endpoint. A fresh
-  app/listener for the wrong/correct pair preserves the production five-attempt
-  rate limiter without exhausting it with the malformed-input cases.
+  app/listener uses a separate synthetic client IP for the wrong/correct pair.
+  IS02 verifies that the same IP cannot reset its shared quota via another app.
 
 The worker runs with `--unhandled-rejections=strict`; timeout, crash or an
 incorrect status/body is a test failure. Exit 0 from `--a02-only` means controls
@@ -90,7 +91,7 @@ The default diagnostic run also reproduces these **unfixed contracts**:
 - D01: an outsider participant is accepted and gets an invitation and busy slot.
 - F01: current mixed-dialect bootstrap is rejected by PostgreSQL.
 
-Exit 0 from the full run means controls/A02/B03/B04/H04 passed **and** those three known
+Exit 0 from the full run means controls/A02/B03/B04/H04/IS02 passed **and** those three known
 failures were reproduced. It does not mean B02/D01/F01 are safe. These probes
 remain outside normal Jest discovery. When treating each remaining finding,
 write its desired behavior as a regression assertion and retire/update that
@@ -113,6 +114,15 @@ failures. The failing trigger writes a side row before raising: both writes must
 roll back, the client receives a generic 500, health remains available, and
 valid updates recover once storage is restored. H04 adds no production schema
 or migration changes.
+
+IS02 applies the actual migration009 to owned fixtures, including the A02/H04
+login controls. Its contract checks shared auth/admin budgets across independent
+app processes and restart, first-admission database-clock deadlines, bounded
+allocation/pruning, lock-observed refresh races, rollback and timeout recovery.
+The IS02 HTTP helper waits longer than the server's three-second admission
+deadline. Its scenario worker has a 120-second total bound; other scenario bounds
+remain unchanged. This does not establish production proxy/secret/database
+configuration or apply migration009 to a real deployment.
 
 The existing adapter has no public shutdown hook, so worker termination closes
 its pool. A temp cwd with no `server/database` directory prevents the existing

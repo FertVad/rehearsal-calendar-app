@@ -1,6 +1,5 @@
 import { createHmac } from 'node:crypto';
-import { isIP } from 'node:net';
-import { ipKeyGenerator } from 'express-rate-limit';
+import { canonicalIpKey } from '../utils/canonicalIpKey.js';
 import db, { isPostgres } from '../database/db.js';
 
 const windowSeconds = 60;
@@ -62,23 +61,7 @@ function gateCount(row) {
 }
 
 function ipDigest(ip) {
-  // Validate before using the helper: it intentionally passes invalid strings
-  // through, while a request budget must not admit arbitrary caller keys.
-  if (typeof ip !== 'string' || !isIP(ip) || ip.includes('%')) {
-    throw new Error('Invite IP budget requires a valid IP address');
-  }
-  let canonical = ip;
-  if (isIP(ip) === 6) {
-    canonical = new URL(`http://[${ip}]/`).hostname.slice(1, -1);
-    // ipKeyGenerator handles dotted IPv4-mapped input, but its dependency does
-    // not identify the equivalent hexadecimal spelling as mapped IPv4.
-    const mapped = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(canonical);
-    if (mapped) {
-      const high = Number.parseInt(mapped[1], 16);
-      const low = Number.parseInt(mapped[2], 16);
-      canonical = [high >>> 8, high & 255, low >>> 8, low & 255].join('.');
-    }
-  }
+  const canonical = canonicalIpKey(ip);
   const secret = process.env.JWT_SECRET;
   if (process.env.NODE_ENV === 'production' && (!secret || !secret.trim())) {
     throw new Error('JWT_SECRET is required for production invite IP budgets');
@@ -86,7 +69,7 @@ function ipDigest(ip) {
   // Same development fallback as jwtMiddleware; no new deployment secret.
   // Neither the normalized address nor the raw address reaches SQL or logs.
   return createHmac('sha256', secret || 'dev-only-insecure-secret-change-immediately')
-    .update(ipKeyGenerator(canonical, 56)).digest('hex');
+    .update(canonical).digest('hex');
 }
 
 /** One persistent row per authenticated native user, across all join aliases. */
