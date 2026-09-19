@@ -72,7 +72,8 @@ try {
   }
   if (['all', 'backend', 'dashboard'].includes(mode)) {
     console.log('[browser] Running mandatory admin DOM/CSP regression tests.');
-    runNode(['--test', '__tests__/browser/adminDashboard.browser.test.mjs']);
+    runNode(['--test', '__tests__/browser/ownedFixture.test.mjs',
+      '__tests__/browser/adminDashboard.browser.test.mjs']);
   }
   if (['all', 'backend', 'dashboard', 'admin-errors'].includes(mode)) {
     console.log('[browser] Running mandatory admin error/retry/session regression tests.');

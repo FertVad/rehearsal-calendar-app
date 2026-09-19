@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { createServer } from 'node:http';
 import express from 'express';
 import { chromium } from 'playwright';
 import { generateAdminPageHTML } from '../../routes/admin/dashboardPage.js';
 import { securityHeaders } from '../../middleware/securityHeaders.js';
+import { closeOwnedBrowserFixture, trackOwnedHttpServer } from './ownedFixture.mjs';
 
 // This fixture never imports server.js, .env or the database. It serves the real
 // admin document/assets with synthetic API responses in an isolated browser.
@@ -23,10 +25,12 @@ before(async () => {
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
     headless: true,
   });
-});
-after(async () => { await browser?.close(); });
+}, { timeout: 30000 });
+after(async () => { await browser?.close(); }, { timeout: 10000 });
 
 async function fixture(t, { csp = true, payload = false, signedIn = true } = {}) {
+  const diagnostic = stage => console.log(`[admin-browser] ${t.name}: ${stage}`);
+  diagnostic('fixture: starting');
   const state = { empty: false, unauthorized: false, requests: [], statuses: new Map() };
   const stats = payload ? {
     users: { total: html, newThisWeek: svg, newThisMonth: link },
@@ -82,13 +86,15 @@ async function fixture(t, { csp = true, payload = false, signedIn = true } = {})
     state.statuses.set(req.params.id, req.body.status);
     res.json({ success: true });
   });
-  const server = await new Promise((resolve, reject) => {
-    const instance = app.listen(0, '127.0.0.1', () => resolve(instance));
-    instance.on('error', reject);
+  const server = createServer(app);
+  const owned = trackOwnedHttpServer(server);
+  let context;
+  t.after(() => closeOwnedBrowserFixture({ context, owned, diagnostic }), { timeout: 12000 });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
   });
-  t.after(() => new Promise((resolve, reject) => server.close(err => err ? reject(err) : resolve())));
-  const context = await browser.newContext();
-  t.after(() => context.close());
+  context = await browser.newContext();
   const base = `http://127.0.0.1:${server.address().port}`;
   const unexpectedRequests = [];
   await context.route('**/*', route => {
@@ -112,6 +118,7 @@ async function fixture(t, { csp = true, payload = false, signedIn = true } = {})
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const response = await page.goto(base + '/admin');
+  diagnostic('fixture: document loaded');
   t.after(() => assert.deepEqual(unexpectedRequests, [], 'No requests may leave the test origin'));
   return { page, state, response, base, errors };
 }
@@ -123,7 +130,7 @@ async function waitForDashboard(page) {
   await page.locator('#bugs-body .status-btn').first().waitFor();
 }
 
-test('untrusted admin API values remain literal text, even without CSP', async t => {
+test('untrusted admin API values remain literal text, even without CSP', { timeout: 30000 }, async t => {
   const { page, state, errors } = await fixture(t, { csp: false, payload: true });
   await waitForDashboard(page);
   // Checking only execution is insufficient: CSP could mask an unsafe HTML sink.
@@ -145,7 +152,7 @@ test('untrusted admin API values remain literal text, even without CSP', async t
   assert.deepEqual(errors, []);
 });
 
-test('production CSP loads admin assets, blocks inline execution and preserves per-response nonces', async t => {
+test('production CSP loads admin assets, blocks inline execution and preserves per-response nonces', { timeout: 30000 }, async t => {
   const { page, response, base, errors } = await fixture(t, { payload: true });
   await waitForDashboard(page);
   const policy = response.headers()['content-security-policy'];
@@ -183,7 +190,7 @@ test('production CSP loads admin assets, blocks inline execution and preserves p
   assert.notEqual(nonce(nonceResponse.headers()['content-security-policy']), nonce(policy));
 });
 
-test('login, pagination, status, refresh, empty states and logout work under production CSP', async t => {
+test('login, pagination, status, refresh, empty states and logout work under production CSP', { timeout: 30000 }, async t => {
   const { page, state, errors } = await fixture(t, { signedIn: false });
   await page.locator('#login-screen').waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'Log in', exact: true }).click();
@@ -262,7 +269,7 @@ test('login, pagination, status, refresh, empty states and logout work under pro
   assert.deepEqual(errors, []);
 });
 
-test('401 returns to login and removes the stored credential', async t => {
+test('401 returns to login and removes the stored credential', { timeout: 30000 }, async t => {
   const { page, state, errors } = await fixture(t);
   await waitForDashboard(page);
   state.unauthorized = true;

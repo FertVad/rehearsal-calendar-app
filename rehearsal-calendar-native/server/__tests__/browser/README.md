@@ -67,6 +67,10 @@ asset MIME types, nonce behavior and normal login/pagination/status/logout flows
 Outbound browser requests are blocked. A missing browser or launch failure fails
 the suite; it is not silently skipped.
 
+The mandatory dashboard stage also runs three cleanup regressions. Its bounded
+cleanup closes the browser context before the fixture server, destroys only
+sockets accepted by that server, and reports context failures or timeouts.
+
 `test:admin-errors-browser` checks the real admin assets with controlled HTTP
 failures and delayed responses: visible errors/retry, stale confirmed data,
 pagination, pending/failed status updates, and session/request ordering.
