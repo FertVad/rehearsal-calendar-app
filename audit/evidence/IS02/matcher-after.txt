@@ -1,0 +1,76 @@
+Running one project: backend
+(node:49872) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS backend server/__tests__/routes/operationIpLimits.test.js
+  ● Console
+
+    console.info
+      IS02 synthetic auth admissions by app: [ 20, 0 ]
+
+      at Object.<anonymous> (server/__tests__/routes/operationIpLimits.test.js:131:11)
+
+    console.info
+      IS02 synthetic admin admissions by app: [ 5, 0 ]
+
+      at Object.<anonymous> (server/__tests__/routes/operationIpLimits.test.js:153:11)
+
+    console.error
+      [ERROR] Request failed: { status: 400 }
+
+      46 |       }
+      47 |     } else {
+    > 48 |       console.error(`[ERROR] ${message}`, error, ...args);
+         |               ^
+      49 |     }
+      50 |   },
+      51 | };
+
+      at Object.error (server/utils/logger.js:48:15)
+      at errorHandler (server/middleware/errorHandler.js:14:10)
+      at Layer.handle_error (server/node_modules/express/lib/router/layer.js:71:5)
+      at trim_prefix (server/node_modules/express/lib/router/index.js:326:13)
+      at server/node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (server/node_modules/express/lib/router/index.js:346:12)
+      at next (server/node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (server/node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (server/node_modules/express/lib/router/index.js:326:13)
+      at server/node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (server/node_modules/express/lib/router/index.js:346:12)
+      at next (server/node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (server/node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (server/node_modules/express/lib/router/index.js:326:13)
+      at server/node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (server/node_modules/express/lib/router/index.js:346:12)
+      at next (server/node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (server/node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (server/node_modules/express/lib/router/index.js:326:13)
+      at server/node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (server/node_modules/express/lib/router/index.js:346:12)
+      at next (server/node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (server/node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (server/node_modules/express/lib/router/index.js:326:13)
+      at server/node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (server/node_modules/express/lib/router/index.js:346:12)
+      at next (server/node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (server/node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (server/node_modules/express/lib/router/index.js:326:13)
+      at server/node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (server/node_modules/express/lib/router/index.js:346:12)
+      at next (server/node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (server/node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (server/node_modules/express/lib/router/index.js:326:13)
+      at server/node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (server/node_modules/express/lib/router/index.js:346:12)
+      at next (server/node_modules/express/lib/router/index.js:280:10)
+      at server/node_modules/body-parser/lib/read.js:130:7
+      at invokeCallback (server/node_modules/raw-body/index.js:238:16)
+      at done (server/node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (server/node_modules/raw-body/index.js:287:7)
+
+PASS backend server/__tests__/services/operationIpRateLimit.test.js
+
+Test Suites: 2 passed, 2 total
+Tests:       50 passed, 50 total
+Snapshots:   0 total
+Time:        1.221 s
+Ran all test suites within paths "server/__tests__/routes/operationIpLimits.test.js", "server/__tests__/services/operationIpRateLimit.test.js".

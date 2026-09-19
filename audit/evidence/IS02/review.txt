@@ -1,0 +1,162 @@
+Independent IS02 review — 2026-09-19
+
+Result: no remaining blockers within the documented IS02 scope.
+
+This reviewer independently inspected the frozen application service/middleware,
+canonical-IP extraction and B04 caller, migration009/bootstrap declaration,
+createApp mounts, root PostgreSQL/CI wiring and API/PG documentation. After the
+HTTP agent froze its work, this reviewer also inspected all final assertions,
+the scoped SQL observer, and the IA01/ID01 fixture adaptations. Root separately
+reviewed the PostgreSQL modules authored by this reviewer; its findings and the
+subsequent cleanup follow-up were resolved and exercised as described below.
+
+No production environment file, production entrypoint, provider, database,
+deployment, proxy or real migration ledger was accessed. Executed PostgreSQL
+checks used only the owned disposable local Docker fixture. The reviewer did
+not rerun the real repository secret scanner during this review.
+
+Evidence checked:
+- Final HTTP/service/middleware/adaptation log after.txt: five suites, 91/91 PASS.
+- Final complete npm check on source 61ced139: exit 0 in runtime.json and matching
+  check-final.txt results: 33 scanner regressions, 87 Jest suites / 1259 tests,
+  and mandatory browser stages 4 admin, 18 admin-errors, 11 invite, 6 persisted.
+- Final full PostgreSQL log: controls/A02/B03/B04/H04/IS02 PASS with cleanup;
+  F01/B02/D01 remain explicitly KNOWN_DEFECT_REPRODUCED, not repaired contracts.
+- Final focused actual PostgreSQL run: controls + IS02 PASS, exit 0; Node 22.16.0,
+  PostgreSQL 15.13, real 11.71 seconds measured by /usr/bin/time -p. The log records
+  zero external connections and removal of the owned disposable container.
+- Worker cleanup, including deliberate cold-worker IPC disconnect, passed in
+  that final run. Final log is postgres-after.txt; both PG modules are frozen.
+- git diff --check completed without whitespace errors.
+
+Application correctness:
+- Only fixed, immutable auth (20/60s) and admin_login (5/900s) policies are accepted.
+  Route/body/email/user values cannot select a budget namespace. HMAC input is
+  domain-separated by operation plus validated canonical address. B04 retains
+  its previous canonical-IP-only HMAC input and persisted digest namespace.
+- Store checks are lazy at admission. Construction/import/createApp perform no
+  database initialization, schema work or network/listener setup. Production
+  requires PostgreSQL even with no URL; an explicit PG URL falling back to
+  SQLite also rejects outside production. There is no test-only limiter bypass.
+- Every admission uses one owned transaction. Atomic established-key UPDATE
+  serializes increments, saturates at 21/6 and keeps the first-request DB-clock
+  deadline until expiry. An older statement cannot reopen a newer deadline.
+- Missing-key allocation locks its operation gate, rechecks the key, prunes at
+  most 64 expired rows, validates the actual returned deletions, updates the gate,
+  enforces 10,000 keys, inserts and increments in the same transaction. The outer
+  DELETE expiry predicate protects a row refreshed while the pruner waits.
+  Existing keys avoid allocation-gate contention; namespaces have separate caps.
+- SET LOCAL applies 1s lock and 2s statement limits to every PG admission path.
+  The 3s HTTP Promise.race suppresses handler admission on timeout and observes
+  late rejection. A late successful charge cannot invoke next, retry or refund.
+  Disconnected/completed responses also cannot proceed to authentication.
+- The budget transaction completes before account/crypto work. Denials preserve
+  the existing 429 messages and draft-6 rate headers; generic 503 exposes no SQL,
+  driver detail, token or password. Reset/retry values come from DB time.
+- Existing prefix/method coverage, CORS/parser ordering, trust-proxy setting and
+  downstream mounts remain intact. Public HTML/health and authenticated admin
+  reads remain independent. Migration 009 is additive/idempotent, constrains the
+  new schema, matches bootstrap declarations and does not rewrite old migrations.
+  F01 remains explicitly unfixed; reminders and schedules remain disabled.
+- IS02 is included in the existing required PG security job without renaming the
+  job. A02's independent bcrypt pair now uses a distinct documented synthetic IP
+  instead of assuming a new app can reset the same client's budget.
+
+HTTP and adaptation review:
+- observeDatabase calls through to real SQLite and wraps scoped transaction
+  handles. The admission allowance classifier accepts only the two new budget
+  tables plus their db_clock CTE/timeout statements; mentioning a budget table
+  does not exempt an account/business query.
+- IA01 snapshots exclude exactly those two new tables. Input/config/token guards
+  still require the appropriate zero verifier/JWKS/account work and unchanged
+  business data, with positive evidence of one committed admission. Public app
+  routes retain strict zero-SQL assertions.
+- ID01 keeps real JWT/profile, revocation/type/expiry and unchanged-user checks.
+  Rejected expired/wrong-type tokens permit only admission SQL. Invalid TTL at
+  fresh import still asserts zero SQL and zero initialization; no request exists
+  at that stage.
+- Actual createApp HTTP tests retain real SQLite admission and real bcrypt/JWT.
+  Valid credentials are used in denial cases. Namespace/method/prefix boundaries,
+  headers, aliases/proxy-hop identity, app-clock skew, missing/uninitialized store,
+  production/fallback rejection, public continuity and no business effects are
+  asserted. Transaction completion is observed before business/crypto calls.
+- SQLite service tests use actual migration SQL and independent connections.
+  Their controlled clock is clearly identified as a fixture seam. Distribution
+  and lock claims rely on actual PostgreSQL. Mocked rows are limited to malformed
+  adapter-result checks. Middleware fake timers are limited to late completion;
+  both resolve/reject after deadline must cause no handler, no retry, one generic
+  response and no unhandled rejection.
+
+Final full-check failure, diagnosis and matcher repair:
+- The first complete npm check on bc0184e did fail: 1258 tests passed and one
+  SQLite trigger assertion failed. Browser stages did not run after that Jest
+  failure. Earlier focused passes were not treated as a replacement for this
+  failed complete check; review remained conditional until the cause and full
+  rerun were resolved. check-first-source-failure.txt and the first-source PG log
+  are preserved rather than rewritten as final evidence.
+- matcher-diagnostic.txt reproduces the failure with the actual root Jest
+  HTTP-then-service pair. The operation really rejects with native driver code
+  SQLITE_CONSTRAINT_TRIGGER; its tag is [object Object] and instanceof Error in
+  the current realm is false. The installed Jest promise-toThrow path first
+  requires isError(received), explaining its misleading "did not throw" result.
+  The result is consistent with the native error constructor retained across
+  Jest VMs; it is not evidence that the database accepted the failed insertion.
+- The reviewed fix changes only that rejection matcher to .rejects.toMatchObject
+  with exact SQLITE_CONSTRAINT_TRIGGER code and the synthetic trigger message.
+  It still requires rejection, now also verifies the specific intended fault,
+  and does not weaken or remove row-snapshot, gate rollback or recovery checks.
+  No fake rejection, runtime workaround, skipped case or limiter bypass was added.
+- matcher-after.txt confirms the same root HTTP/service pair passes 50/50.
+  The final complete check on 61ced139 then passes all 1259 Jest tests and every
+  mandatory browser stage. The final full PG run passes its repaired contracts.
+  The reviewed bc0184e..61ced139 diff contains only this test matcher/comment and
+  the user's PostgreSQL-only runtime decision in AGENTS.md; runtime code is
+  unchanged between those commits. This follow-up is resolved, not pending.
+
+PG review findings resolved and verified:
+- Corrected the call-through business observer to cover native_auth_providers.
+- Cleanup failure, including an attempted non-fixture connection, can no longer
+  be swallowed on an otherwise successful scenario. Failed children are killed
+  and their exit awaited; a scenario cannot report PASS over cleanup failure.
+- Timeout tests now observe actual PostgreSQL SQLSTATE 55P03 and 57014, rather
+  than accepting an HTTP fallback as evidence of SQL cancellation. They require
+  no active slow UPDATE after 503 and unchanged counters after trigger removal
+  and SQL settlement. Fault cleanup can cancel only the still-running owned
+  fixture statements; it cannot turn a failed assertion into PASS.
+- Workers exit 1 when their parent IPC connection disappears. A dedicated owned
+  cold-worker test disconnects IPC and requires bounded unsuccessful exit before
+  continuing. This covers parent failure outside the parent's normal finally.
+- The final run also passed exact 20/5 across independent processes and restart,
+  established-key contention, DB deadlines, observed older-statement and
+  prune/refresh locks, final-capacity-slot concurrency, exactly 64 of 65 cleanup,
+  trigger rollback, post-failure recovery, unchanged business rows and usable
+  real auth/admin tokens.
+
+Boundaries retained:
+The gate invariant assumes correct initialization and conforming writers;
+arbitrary external in-range corruption is not detected by an O(1) range check.
+Whole-second windows are documented. HTTP timeout does not cancel pool queues or
+bound all adapter resources; a late budget charge remains conservative. These
+are not general ingress/DDoS limits. Production migration, single trusted ingress
+without bypass, shared database and stable secret consistency require separate
+human-approved verification; local results do not establish deployment state.
+
+The two new exact scanner exceptions were independently checked against their
+full-line SHA256: one response-redaction regex contains detector syntax without
+a password value, and one IS02 env-i/NODE_ENV=test full-check command explicitly
+uses a synthetic fixture signing secret. Each hash matched exactly one declared
+line. Neither introduces a blanket exclusion; no unknown value was baselined.
+
+The final REMEDIATION_IS02.md assertions were checked against the implementation,
+the reviewed test fix, logs and status/gate records. Counts and source tree agree.
+READY_FOR_CHECK correctly preserves OPS-IS02 as NOT_RUN; the report does not
+claim production startup, the remaining F01/B02/D01 defects, device checks or
+deployment are fixed. The R2 PostgreSQL-only decision is future scope, not an
+unimplemented runtime change attributed to IS02. No report contract correction
+was required.
+
+Final verified source: 61ced139d1055150298b204c20a4ddd807967d77.
+Verified source tree: 5226fbd653f9d563c38d5c02d7b3e36dd39d6dec.
+These values were checked using Git and agree with runtime.json and the report.
+The final root-run logs were inspected; this final review did not duplicate the
+complete test runs or change runtime source. Review is frozen for the manifest.
