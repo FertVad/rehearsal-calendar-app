@@ -1,5 +1,11 @@
 # Реестр системного исправления Rehearsly
 
+> **С 24.09.2026 исправления ведёт Claude на ветке `claude/systematic-repair`**
+> (от `aa00ffd`); незаконченный R2 агента сохранён там первым коммитом без
+> изменений (`dd886ea`). Codex — независимый ревьюер: ревьюит в отдельном
+> `git worktree`, замечания пишет в `audit/REVIEW_<пакет>.md`, код и реестр не
+> правит. Ветка `codex/systematic-repair` остаётся на `aa00ffd`.
+
 Операционный контекст: [известный отказ Neon и границы доступа](PRODUCTION_ACCESS.md), сообщённые Вадимом 18 сентября 2026. Production smoke остаётся NOT_RUN. Вадим отдельно разрешил push `codex/systematic-repair` и первый удалённый `Application checks`; deployment и доступ к production требуют отдельного решения. Локальные статусы ниже не утверждают работоспособность production.
 
 Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md), [B03](REMEDIATION_B03.md), [B04](REMEDIATION_B04.md), [H04](REMEDIATION_H04.md), [ID01](REMEDIATION_ID01.md) и [IS01](REMEDIATION_IS01.md) VERIFIED локально, H02 — [READY_FOR_CHECK](REMEDIATION_H02.md) на `df6fd01` до физической DEV-15; IA01 — [READY_FOR_CHECK](REMEDIATION_IA01.md) на `0dc7666` до OPS-IA01; [IS02](REMEDIATION_IS02.md) — READY_FOR_CHECK на `61ced139` до OPS-IS02; F03/F05 — [VERIFIED локально](REMEDIATION_R2_FOUNDATION.md) на `573608c`; остальные 90 пунктов остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`, B04 — на `fd5f1eb`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. B04 требует additive migration008 до серверного deployment. Это учёт локальной реализации, не повторная оценка текущего production.
