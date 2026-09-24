@@ -58,25 +58,35 @@ advisory lock). Недостаток был в покрытии приложен
 
 ## Карточки владельцу
 
-**OPS-R2-DATA** — FM01/FM02, только чтение, только счётчики. Выполнить в консоли
-Neon и прислать три числа:
+**OPS-R2-DATA** — FM01/FM02, только чтение, только счётчики, одна строка ответа.
+
+24.09 первый вариант карточки дал `old_all_day = 0` при отсечке `2025-12-11`:
+свидетелей нет. Отсечка была узкой: 2025-12-10 — дата написания SQL, а история
+git начинается 2026-01-16 и уже содержит конвертацию, новый код и drop-old.
+Применить её могли в любой день до этого. Уточнённый запрос:
 
 ```sql
-SELECT count(*) AS old_all_day,
-       count(*) FILTER (WHERE (starts_at AT TIME ZONE 'UTC')::time <> '00:00') AS old_all_day_off_utc_midnight
-FROM native_user_availability
-WHERE is_all_day AND created_at < '2025-12-11';
-SELECT count(*) AS users_with_duplicate_email_provider FROM (
-  SELECT user_id FROM native_auth_providers WHERE provider_type = 'email'
-  GROUP BY user_id HAVING count(*) > 1) d;
+SELECT
+  (SELECT count(*) FROM native_rehearsals
+     WHERE created_at < '2026-01-17' OR created_at IS NULL) AS rehearsals_old,
+  (SELECT count(*) FROM native_user_availability
+     WHERE created_at < '2026-01-17' OR created_at IS NULL) AS availability_old,
+  (SELECT count(*) FROM native_user_availability
+     WHERE is_all_day AND (starts_at AT TIME ZONE 'UTC')::time <> '00:00') AS all_day_off_utc_midnight,
+  (SELECT count(*) FROM (SELECT user_id FROM native_auth_providers
+     WHERE provider_type = 'email' GROUP BY user_id HAVING count(*) > 1) d) AS users_with_duplicate_email_provider;
 ```
 
-Свидетели FM01 — только all-day строки, пережившие конвертацию: без сдвига они
-начинаются ровно в полночь UTC. `old_all_day > 0` и второй счётчик 0 — конвертация шла в UTC, FM01
-VERIFIED. `old_all_day = 0` — свидетелей нет, условие не установить по данным,
-решает владелец. Второй счётчик больше 0 — сдвиг был. Третий 0 — FM02 VERIFIED.
-Любой сдвиг или дубль исправляется отдельным проверяемым шагом данных, не
-прибавлением часов и не удалением «лишних» строк.
+- Первые три — 0: ни одна строка, прошедшая конвертацию, не дожила, и ни одна
+  all-day строка сейчас не сдвинута. FM01 VERIFIED.
+- `all_day_off_utc_midnight > 0`: сдвинутые all-day строки есть (FM01 или
+  клиентская ошибка) — нужен отдельный проверяемый шаг данных.
+- Старые строки есть, сдвинутых all-day нет: сдвиг timed-строк по данным не
+  установить. Это прошлые записи (до 2026-01-17), решает владелец.
+- `users_with_duplicate_email_provider = 0` — FM02 VERIFIED; иначе дедупликация
+  в A04/R3.
+
+Ничего не исправлять прибавлением часов или удалением «лишних» строк.
 
 **OPS-R2-ADOPT** — до деплоя сервера, которому нужны 007/008 (B03/B04): с
 разрешения владельца выполнить `npm run migrate -- --dry` против production
