@@ -1,4 +1,4 @@
-// Isolated worker: no checkout server.js/.env, migration runner or real credentials.
+// Isolated worker: no checkout server.js/.env, retired migration runner or real credentials.
 // R2_STARTUP executes only an owned source copy with a synthetic environment.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -7,7 +7,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'F01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05'].includes(scenario));
+assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -42,24 +42,24 @@ await control.query('DROP SCHEMA IF EXISTS r0_fixture CASCADE');
 await control.query('CREATE SCHEMA r0_fixture');
 await control.query('SET search_path TO r0_fixture');
 
-if (scenario === 'F01') {
-  await control.query('BEGIN');
-  let failure;
+// Schema/migration suites start with the empty owned application schema; they
+// never mistake the diagnostic subset below for canonical provisioning.
+if (scenario === 'R2_SCHEMA' || scenario === 'R2_MIGRATIONS') {
+  target.searchParams.set('options', '-c search_path=r0_fixture');
+  process.env.DATABASE_URL = target.href;
   try {
-    await control.query(await readFile(new URL('../../database/init-native-schema.sql', import.meta.url), 'utf8'));
-  } catch (error) { failure = error; }
-  await control.query('ROLLBACK');
-  assert.equal(failure?.code, '42601', 'F01 baseline should reject the current mixed SQL dialect');
-  assert.match(failure.message, /AUTOINCREMENT/);
-  console.log(JSON.stringify({ scenario, outcome: 'KNOWN_DEFECT_REPRODUCED', sqlState: failure.code,
-    expectation: 'Production bootstrap must work on PostgreSQL; current file fails at AUTOINCREMENT' }));
-  await control.end();
+    const result = scenario === 'R2_SCHEMA'
+      ? await (await import('./r2Schema.mjs')).probeR2Schema({ connectionString: target.href, control, allowedPorts })
+      : await (await import('./r2Migrations.mjs')).probeR2Migrations({ connectionString: target.href, control, allowedPorts });
+    assert.equal(deniedConnections, 0, 'A schema/migration contract attempted an external connection');
+    console.log(JSON.stringify({ scenario, ...result, externalConnections: deniedConnections }));
+  } finally { await control.end(); }
   process.exit(0);
 }
 
 await control.query(await readFile(new URL('./fixture.sql', import.meta.url), 'utf8'));
 // Auth/admin admission uses its actual shared schema in every normal fixture.
-// This never changes the explicit F01 mixed-dialect bootstrap probe above.
+// Canonical fresh/upgrade scenarios above own their complete schema separately.
 const operationBudgetMigration = await readFile(
   new URL('../../migrations/009-operation-ip-rate-limits.sql', import.meta.url), 'utf8');
 await control.query(operationBudgetMigration);

@@ -19,11 +19,14 @@ const modes = {
   '--is02-only': ['controls', 'IS02'],
   '--f05-only': ['controls', 'F05'],
   '--r2-foundation-only': ['controls', 'R2_ADAPTER', 'R2_STARTUP', 'F05'],
-  '--security-only': ['controls', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05'],
+  '--r2-schema-only': ['controls', 'R2_SCHEMA'],
+  '--r2-migrations-only': ['controls', 'R2_MIGRATIONS'],
+  '--r2-migrations-schema-only': ['controls', 'R2_SCHEMA', 'R2_MIGRATIONS'],
+  '--security-only': ['controls', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS'],
 };
 assert.ok(args.length === 0 || (args.length === 1 && Object.hasOwn(modes, args[0])),
-  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only|--b04-only|--h04-only|--is02-only|--f05-only|--r2-foundation-only|--security-only]');
-const scenarios = modes[args[0]] || ['controls', 'F01', 'B02', 'D01', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05'];
+  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only|--b04-only|--h04-only|--is02-only|--f05-only|--r2-foundation-only|--r2-schema-only|--r2-migrations-only|--r2-migrations-schema-only|--security-only]');
+const scenarios = modes[args[0]] || ['controls', 'B02', 'D01', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS'];
 const docker = process.env.R0_DOCKER_BIN || '/usr/local/bin/docker';
 const context = process.env.R0_DOCKER_CONTEXT || 'desktop-linux';
 const cli = (...args) => execFileSync(docker, ['--context', context, ...args], { encoding: 'utf8', timeout: 20000 }).trim();
@@ -63,11 +66,11 @@ try {
     await control.query('CREATE TABLE public.r0_owned_database (nonce TEXT NOT NULL)');
     await control.query('INSERT INTO public.r0_owned_database VALUES ($1)', [nonce]);
     console.log(JSON.stringify({ harness: 'R0', node: process.version, postgres: (await control.query('SELECT version()')).rows[0].version,
-      image, host: binding, database: 'r0_test', schema: 'diagnostic subset; production bootstrap is probed separately' }));
+      image, host: binding, database: 'r0_test', schema: 'diagnostic subset plus separately provisioned canonical fresh/upgrade fixtures' }));
   } finally { await control.end(); }
   for (const scenario of scenarios) {
     const result = spawnSync(process.execPath, ['--unhandled-rejections=strict', probe, scenario], {
-      cwd, encoding: 'utf8', timeout: scenario === 'IS02' ? 120000
+      cwd, encoding: 'utf8', timeout: ['IS02', 'R2_SCHEMA', 'R2_MIGRATIONS'].includes(scenario) ? 120000
         : ['B03', 'B04', 'R2_ADAPTER', 'R2_STARTUP', 'F05'].includes(scenario) ? 45000 : 15000,
       maxBuffer: 2 * 1024 * 1024,
       env: { PATH: '/usr/bin:/bin', TZ: 'UTC', NODE_ENV: 'production',
@@ -81,7 +84,7 @@ try {
   }
   console.log(args.length
     ? `${scenarios.slice(1).join('+')} REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.`
-    : 'R0 HARNESS PASS: controls and repaired A02/B03/B04/H04/IS02/R2 foundation contracts passed; B02/D01/F01 remain known failing application contracts, NOT fixes.');
+    : 'R0 HARNESS PASS: controls and repaired A02/B03/B04/H04/IS02/R2 contracts passed; B02/D01 remain known failing application contracts, NOT fixes.');
 } finally {
   if (container) {
     const label = cli('inspect', container, '--format', '{{index .Config.Labels "rehearsly.r0"}}');

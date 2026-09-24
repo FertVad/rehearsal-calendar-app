@@ -1,0 +1,21 @@
+{
+  "kind": "tmp-draft-proof",
+  "repositoryIntegration": false,
+  "historicalCaptureCommit": "aa00ffd5874b3b5e4c402b42b120ceb876e637e2",
+  "files": {
+    "runner.mjs": "fede599f54bd458d5e59d92d8897d6623c4ab1614d4037c5cb99422c50c79969",
+    "README.md": "d6e3df7667aff015f5f0a6fad8ce407b83b386e871daf3d3fe41f6d3ad569792",
+    "commands.txt": "8d47b496c863f24dfc60256eae9dc24a1f56698bcac56ec7c71b5bc664a27459",
+    "before.txt": "a52d6d98f6a4b6dde80d726f03ffa8206c2d07431b3ca5398d7ccb76825a06d6",
+    "after.txt": "a98e7fe74c0c0c3ed81b6602a7db2b909ffa98196f453bf213151603714ea92a",
+    "historical/001-add-oauth-providers.sql": "32cd36a97d571a757c16177dce46fa395cc77d25b2412379a3d734673971e010",
+    "historical/migrate-availability-to-timestamptz.sql": "d3831869791c531bb5f25da753d4447213968914e01f68e0348b2f0f7d7a249f",
+    "historical/migrate-rehearsals-to-timestamptz.sql": "abead4aa9db43253e2168243ea5f6d6f3a95289aa5fe403f33ce66fba9a15325",
+    "forward/draftTransition.mjs": "be716327656195d5ee8d384e56fd8b991a87a6e2ceed781475b681e8a36a78b1",
+    "forward/fm01-utc-instants-v1.sql": "cc629e939d06dc2d0df2e595b13da906c0d603c62dee6cd356b5ceea5eb52a18",
+    "forward/fm02-email-backfill-v1.sql": "f2456fbdb56f5323daa68a5a1b94ade6b8f5796442d91bf8bd94d188cff1d816",
+    "tests/after.mjs": "3046a064e816a5b41cca5bf9c721520392664aa3c8fae56758f4d398712dd2c7",
+    "tests/before.mjs": "dd80a9dbaf85caeed871ce7bf2b0fc31038021596a19ecf0e0cc416f49e54591",
+    "tests/fixture.mjs": "8d01f96be5b526156b6d1af4fc2826b96231e54b36083cca08e7ce792a72b864"
+  }
+}

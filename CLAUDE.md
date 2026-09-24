@@ -136,17 +136,14 @@ server/public/
 ### Database
 - **Server runtime, development and production**: PostgreSQL only. There is no SQLite fallback.
 - **SQLite**: isolated test fixtures only; they do not prove PostgreSQL behavior.
-- **Tables**: fourteen, all prefixed `native_*`. Six were dropped from
-  production on 2026-09-05 with nothing reading any of them: the four payment
-  leftovers (`native_subscription_plans`, `native_user_subscriptions`,
-  `native_payment_transactions`, `native_allpay_webhook_events`), and two dead
-  ones — `native_rehearsal_participants`, the predecessor of
-  `native_rehearsal_responses`, and `native_activity_log`, which was never
-  written to. Their rows were dumped before the drop.
+- **Canonical schema**: nineteen `native_*` application tables: thirteen domain
+  tables and six shared-budget tables. Migration history is separate. Retired
+  payment/activity/participant tables are not created by fresh provisioning.
+  Actual production catalog and migration history have not been inspected here.
 - **Schema**: [rehearsal-calendar-native/server/database/init-native-schema.sql](rehearsal-calendar-native/server/database/init-native-schema.sql)
 - **Note**: runtime SQL uses PostgreSQL types and constraints; fixture SQL conversion is test-only.
 - **Runtime/lifecycle and safe local startup**: [server runtime contract](rehearsal-calendar-native/docs/server-runtime.md).
-- **Provisioning**: F01/F02 and migration tooling remain open until the later R2 steps; do not apply the existing runner to production.
+- **Provisioning**: [explicit schema/migration contract](rehearsal-calendar-native/docs/server-migrations.md); no automatic startup/deployment migrations.
 
 ## Critical Patterns & Conventions
 
@@ -802,36 +799,39 @@ EXPO_PUBLIC_API_URL=http://192.168.1.100:3001/api  # Override API URL if needed
 
 ### Database Initialization
 
-`scripts/migrate.js` applies each file in `server/migrations/` once, recording
-it in `native_migrations`. It picks `-postgres.sql` / `-sqlite.sql` variants by
-engine and otherwise runs everything, in filename order — **prefix new
-migrations with a number** so that order is explicit.
+PostgreSQL is the only server database. Use the explicit migration CLI described
+in [server migrations](rehearsal-calendar-native/docs/server-migrations.md).
+It does not discover `.env`; supply process settings or an explicitly selected
+absolute `SERVER_ENV_FILE`. `DATABASE_URL` / `POSTGRES_URL` must target the
+intended database; `MIGRATION_SCHEMA` selects an existing application schema
+(default `public`). The local `server/.env` is production and is not a test input.
 
 ```bash
 cd rehearsal-calendar-native/server
-npm run migrate -- --dry     # what is pending
-npm run migrate              # apply it
+npm run migrate -- --help       # no environment loading or database access
+npm run migrate -- --dry        # read-only inspection, including absent history
+npm run migrate -- --fresh      # reviewed canonical snapshot, EMPTY schema only
+npm run migrate -- --adopt rehearsly-pg-domain13-v1
+npm run migrate -- --apply      # only approved steps from verified history
 ```
 
-**A new environment needs a baseline first.** The runner refuses to touch a
-database with no record of its own, because four of these migrations drop
-columns or rewrite data and were applied by hand long ago — re-running them
-would break a live database.
+Choose the applicable operation after reviewing dry output. `--adopt` records a
+checked existing schema; it does not run business SQL. `--apply` is a separate
+operation. `--baseline` is rejected: marking every historical file as executed
+would hide missing constraints. Historical SQL files are not auto-discovered or
+executed in filename order. Their old ledger remains untouched evidence.
 
-```bash
-# Database that already has the schema (production, an existing dev copy)
-npm run migrate -- --baseline    # records every current file as done, runs none
+Every write invocation uses one PostgreSQL transaction for schema changes,
+postconditions and the new `native_schema_history`, a transaction advisory lock
+and bounded target-table locks. A failure before COMMIT rolls back that batch;
+an uncertain COMMIT outcome requires inspection, not automatic replay.
+Unsupported legacy shapes and duplicate imported keys fail without deleting data.
+Fresh and supported upgrades are verified on disposable PostgreSQL by required CI.
 
-# Empty database
-psql "$DATABASE_URL" -f database/init-native-schema.sql
-npm run migrate -- --baseline
-```
-
-Production was baselined on 2026-08-26 with 17 files.
-
-**Deliberately not wired into deployment**: Vercel starts many instances at
-once and they would race each other. A schema change is something someone
-decides and then watches.
+Migrations are **not wired into startup or deployment**. Production inspection,
+adoption, migration and deployment require the owner's separate decision under
+[the access rules](audit/PRODUCTION_ACCESS.md). Actual production schema/history
+cannot be inferred from a local fixture or an old claim that baseline ran.
 
 ## Testing
 

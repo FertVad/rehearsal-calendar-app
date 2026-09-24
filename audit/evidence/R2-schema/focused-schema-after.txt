@@ -1,0 +1,41 @@
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:60525","database":"r0_test","schema":"diagnostic subset plus separately provisioned canonical fresh/upgrade fixtures"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+{"check":"actual fresh catalog","outcome":"PASS"}
+{"check":"missing conflict target","outcome":"PASS"}
+{"check":"same-name wrong key","outcome":"PASS"}
+{"check":"reserved nonunique name refuses repair preflight","outcome":"PASS"}
+{"check":"reserved name on wrong table refuses repair preflight","outcome":"PASS"}
+{"check":"reserved relation name refuses repair preflight","outcome":"PASS"}
+{"check":"partial conflict target","outcome":"PASS"}
+{"check":"deferrable conflict target","outcome":"PASS"}
+{"check":"NULLS NOT DISTINCT is not the manual-row contract","outcome":"PASS"}
+{"check":"old reminder unique still restrictive","outcome":"PASS"}
+{"check":"extra unique on a lookup key","outcome":"PASS"}
+{"check":"required check not validated","outcome":"PASS"}
+{"check":"foreign key wrong action","outcome":"PASS"}
+{"check":"notification index wrong ordering","outcome":"PASS"}
+{"check":"notification index wrong predicate","outcome":"PASS"}
+{"check":"RLS is rejected","outcome":"PASS"}
+{"check":"unknown CHECK is rejected","outcome":"PASS"}
+{"check":"unknown expression index is rejected","outcome":"PASS"}
+{"check":"unknown trigger is rejected","outcome":"PASS"}
+{"check":"disabled internal FK triggers permit an orphan despite validated metadata and are refused","outcome":"PASS"}
+{"check":"different timestamp type is rejected","outcome":"PASS"}
+{"check":"nullable auth password must remain nullable","outcome":"PASS"}
+{"check":"missing identity ownership is rejected","outcome":"PASS"}
+{"check":"owned int4 serial generator and renamed equivalent index retain the same contract","outcome":"PASS"}
+{"check":"immediate equivalent UNIQUE constraint provides the same conflict target","outcome":"PASS"}
+{"check":"partial budget group is rejected","outcome":"PASS"}
+{"check":"gate count mismatch is rejected","outcome":"PASS"}
+{"check":"unknown incoming FK refuses adoption without touching external sentinel","outcome":"PASS"}
+{"check":"actual failed concurrent unique build leaves an unusable index and is refused","outcome":"PASS"}
+{"check":"deliberate missing-key fixture reproduces the actual PostgreSQL 42P10 failure without row changes","outcome":"PASS"}
+{"check":"real runner adoption and repair-first batch preserve rows and legacy ledger and match runner fresh catalog","outcome":"PASS"}
+{"check":"duplicates refuse adoption and do not delete any row","outcome":"PASS"}
+{"check":"consistent nonzero budget state is accepted without counter fingerprint drift","outcome":"PASS"}
+{"check":"modern adoption applies only the missing whole budget group","outcome":"PASS"}
+{"check":"actual HTTP contracts on r0_fixture","outcome":"PASS"}
+{"check":"actual HTTP contracts on r2_schema_modern","outcome":"PASS"}
+{"scenario":"R2_SCHEMA","outcome":"PASS","checks":36,"catalogTables":19,"http":[{"schema":"r0_fixture","actualHttp":["password register/login/profile","project/member/rehearsal","manual and imported availability bulk","notification inbox/read","calendar connection/mapping","bug report/admin read","push token upsert"],"actualSql":["two distinct reminder recipients"],"nonUtcInstants":true},{"schema":"r2_schema_modern","actualHttp":["password register/login/profile","project/member/rehearsal","manual and imported availability bulk","notification inbox/read","calendar connection/mapping","bug report/admin read","push token upsert"],"actualSql":["two distinct reminder recipients"],"nonUtcInstants":true}],"externalConnections":0}
+R2_SCHEMA REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+R0 cleanup: owned disposable container removed

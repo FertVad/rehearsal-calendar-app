@@ -7,7 +7,7 @@ dependencies with that same Node version. From `server/`:
 # Focused release regression: controls plus the repaired A02 contract.
 npm run test:r0-postgres -- --a02-only
 
-# Required CI regression: security contracts plus R2 foundation.
+# Required CI regression: security, R2 runtime and schema/migration contracts.
 npm run test:r0-postgres -- --security-only
 
 # Individual shared-budget contracts.
@@ -17,6 +17,11 @@ npm run test:r0-postgres -- --is02-only
 
 # PostgreSQL-only adapter lifecycle and actual copied-entrypoint startup.
 npm run test:r0-postgres -- --r2-foundation-only
+
+# Canonical fresh/upgrade schema and atomic/read-only migration contracts.
+npm run test:r0-postgres -- --r2-migrations-schema-only
+npm run test:r0-postgres -- --r2-schema-only
+npm run test:r0-postgres -- --r2-migrations-only
 
 # HTTP consumers of affected row counts, including provider-not-found404.
 npm run test:r0-postgres -- --f05-only
@@ -60,9 +65,10 @@ inbox is real SQL, with zero registered devices and no external sends.
 `fixture.sql` is a deliberately small PostgreSQL diagnostic schema, **not** a
 replacement bootstrap/migration. A02 adds `timezone` and `last_login_at` columns
 inside its disposable fixture so availability preprocessing and a real admin
-users listing can execute. The production bootstrap file is executed separately
-in a transaction and currently fails with SQLSTATE 42601 (F01).
-Fresh-install/upgrade correctness remains an R2 gate.
+users listing can execute. R2_SCHEMA and R2_MIGRATIONS start before this subset
+is installed: they own empty schemas and provision the actual canonical snapshot
+or explicit supported upgrade fixtures. The historical F01 mixed-dialect failure
+is retained in audit evidence; it is no longer asserted as the desired outcome.
 
 The controls verify successful project+owner creation, a non-admin 403 without
 writes, a valid rehearsal roster/availability/inbox, the real adapter rollback
@@ -95,10 +101,9 @@ The default diagnostic run also reproduces these **unfixed contracts**:
 
 - B02: a trigger rejects membership insertion; project creation returns 500 but leaves the project row.
 - D01: an outsider participant is accepted and gets an invitation and busy slot.
-- F01: current mixed-dialect bootstrap is rejected by PostgreSQL.
 
-Exit 0 from the full run means controls/A02/B03/B04/H04/IS02/R2 foundation passed **and** those three known
-failures were reproduced. It does not mean B02/D01/F01 are safe. These probes
+Exit 0 from the full run means controls/A02/B03/B04/H04/IS02/R2 passed **and** those two known
+failures were reproduced. It does not mean B02/D01 are safe. These probes
 remain outside normal Jest discovery. When treating each remaining finding,
 write its desired behavior as a regression assertion and retire/update that
 baseline probe; never keep asserting the defective outcome as the release gate.
@@ -149,5 +154,20 @@ and unlink of a missing provider returns404 without changing credentials. Existi
 provider unlink and last-method guard remain covered. Calendar import ownership
 and concurrent unlink are separate R7/R3 contracts, not claims of this count fix.
 
-R2 foundation cases have a45-second worker limit. Canonical fresh schema,
-verified baseline and migration tooling remain separate R2 work.
+R2 foundation cases have a45-second worker limit. Canonical provisioning and
+migration tooling use the separate120-second scenarios below.
+
+
+R2_SCHEMA checks the actual canonical PostgreSQL catalog and supported modern
+upgrade paths, rather than treating the diagnostic subset as a bootstrap. Its
+mutation controls must reject missing or unusable constraints/indexes and partial
+budget groups; actual HTTP/SQL consumers verify the resulting application contract.
+R2_MIGRATIONS uses the new pure migration core on owned schemas, with explicit
+connection strings and schema names. Dry must leave logical state unchanged;
+write/ledger failures, two competing executors and history/checksum drift are
+real PostgreSQL cases. CLI subprocesses receive only synthetic settings and
+must reject invalid arguments before environment loading or connection.
+Both scenario workers have a120-second process bound. Neither invokes the old
+checkout migrator, reads its environment or targets production. See the separate
+[operator contract](../../../docs/server-migrations.md) for supported profiles
+and the boundary of legacy upgrades.

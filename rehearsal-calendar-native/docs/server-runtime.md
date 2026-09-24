@@ -94,11 +94,13 @@ shutdown deadline or forced callback cancellation is promised.
 it becomes false after close finishes. New admissions are already closed during
 that interval, even though active transactions can still select their SQL dialect.
 
-## Remaining R2 work and production
+## Schema changes and production
 
-This foundation does not fix canonical fresh schema/baseline, migration
-atomicity/dry mode or legacy conversions. Those are separate F01/F02/FT01/FT02/
-FM01/FM02 steps. Do not run the existing migration tool against production.
+Runtime initialization never provisions schema or runs migrations. Use the
+separate [migration contract](server-migrations.md) for canonical fresh targets,
+verified adoption and atomic forward changes. Legacy time conversions and
+credential backfills require their own reviewed profiles; a successful startup
+or readiness probe does not prove schema or historical data correctness.
 
 Production access, migration, deployment and actual deployment smoke require
 the owner's separate decision under [the access rules](../../audit/PRODUCTION_ACCESS.md).
