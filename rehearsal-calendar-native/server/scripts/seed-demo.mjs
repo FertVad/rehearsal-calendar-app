@@ -11,17 +11,26 @@
  * Idempotent: re-running wipes the demo users and their data first, so the
  * screenshots can be re-cut without piling up duplicates. Nothing outside the
  * demo accounts is touched.
+ *
+ * The demo account lives in production, where Apple's reviewer signs in, so a
+ * run is a production write. The target comes from the process environment or
+ * an explicitly selected absolute SERVER_ENV_FILE, as for the server itself;
+ * no .env is discovered from the working directory:
+ *
+ *   SERVER_ENV_FILE=/absolute/path/to/server/.env node scripts/seed-demo.mjs
+ *
+ * DEMO_PASSWORD is read only when the demo account does not exist yet. An
+ * existing account keeps its password. It is never written here or printed:
+ * this repository is public, and the one committed before was.
  */
-import dotenv from 'dotenv';
-dotenv.config();
-
+import '../config/env.js';
 import bcrypt from 'bcrypt';
+import { allDay, at } from './demoDates.mjs';
 
 const { initDatabase } = await import('../database/db.js');
 const db = await initDatabase();
 
 const DEMO_EMAIL = 'demo@rehearsly.me';
-const DEMO_PASSWORD = 'RehearslyDemo2026';
 
 /** Everyone here is disposable; the domain keeps them easy to find and purge. */
 const CAST = [
@@ -36,16 +45,6 @@ const CAST = [
   { email: 'nina@demo.rehearsly.me', first: 'Nina', last: 'Larsen' },
   { email: 'omar@demo.rehearsly.me', first: 'Omar', last: 'Haddad' },
 ];
-
-const iso = (d) => d.toISOString();
-
-/** A date N days from today at a given local hour, returned as UTC ISO. */
-function at(dayOffset, hour, minute = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() + dayOffset);
-  d.setHours(hour, minute, 0, 0);
-  return iso(d);
-}
 
 async function wipeDemo() {
   const rows = await db.all(
@@ -166,6 +165,15 @@ async function addBusy({ userId, startsAt, endsAt, source = 'manual', isAllDay =
 
 // ---------------------------------------------------------------------------
 
+// Checked before the wipe, so a missing password stops the run with nothing
+// deleted.
+const demoExists = await db.get('SELECT id FROM native_users WHERE email = $1', [DEMO_EMAIL]);
+const demoPassword = process.env.DEMO_PASSWORD;
+if (!demoExists && (typeof demoPassword !== 'string' || demoPassword.length < 12)) {
+  console.error('Демо-аккаунта ещё нет: задайте DEMO_PASSWORD (не короче 12 символов).');
+  process.exit(1);
+}
+
 const wiped = await wipeDemo();
 if (wiped) console.log(`Убрано прежних демо-пользователей: ${wiped}`);
 
@@ -173,7 +181,7 @@ const demoId = await createUser({
   email: DEMO_EMAIL,
   first: 'Alex',
   last: 'Moreau',
-  password: DEMO_PASSWORD,
+  password: demoExists ? null : demoPassword,
 });
 
 const cast = {};
@@ -303,20 +311,19 @@ await createRehearsal({
 // 'apple_calendar' to show what an imported busy block looks like.
 
 await addBusy({ userId: cast.Maria, startsAt: at(2, 9, 0), endsAt: at(2, 13, 0) });
-await addBusy({ userId: cast.Maria, startsAt: at(6, 0, 0), endsAt: at(6, 23, 59), isAllDay: true, source: 'apple_calendar' });
+await addBusy({ userId: cast.Maria, ...allDay(6), source: 'apple_calendar' });
 await addBusy({ userId: cast.Daniel, startsAt: at(2, 12, 0), endsAt: at(2, 18, 0), source: 'apple_calendar' });
 await addBusy({ userId: cast.Daniel, startsAt: at(3, 9, 0), endsAt: at(3, 12, 0) });
 await addBusy({ userId: cast.Sofía, startsAt: at(2, 15, 0), endsAt: at(2, 20, 0) });
 await addBusy({ userId: cast.Lukas, startsAt: at(3, 14, 0), endsAt: at(3, 19, 0), source: 'google_calendar' });
 await addBusy({ userId: cast.Yuki, startsAt: at(2, 8, 0), endsAt: at(2, 11, 0) });
-await addBusy({ userId: cast.Yuki, startsAt: at(4, 0, 0), endsAt: at(4, 23, 59), isAllDay: true });
+await addBusy({ userId: cast.Yuki, ...allDay(4) });
 await addBusy({ userId: cast.Amara, startsAt: at(3, 16, 0), endsAt: at(3, 20, 0) });
 await addBusy({ userId: demoId, startsAt: at(2, 19, 0), endsAt: at(2, 22, 0), source: 'apple_calendar' });
 
 console.log('');
 console.log('Демо-аккаунт готов');
 console.log('  email:    ', DEMO_EMAIL);
-console.log('  пароль:   ', DEMO_PASSWORD);
 console.log('  проектов: 4 (Hamlet, Grammy Awards 2027, Swan Lake, Nocturne)');
 console.log('  репетиций: 7, участников:', CAST.length + 1);
 process.exit(0);
