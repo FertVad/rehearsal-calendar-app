@@ -184,6 +184,56 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
   assert.deepEqual(oneGroup.stepIds,['008-invite-rate-limits']);
   assert.equal((await check('r2_schema_partial')).evidenceSha256,baseline.evidenceSha256);
   pass('modern adoption applies only the missing whole budget group');
+  // FM01: the historical DATE+TIME→TIMESTAMPTZ files cast in the session zone.
+  // No supported path may run them: the legacy layout is refused by every mode,
+  // under a non-UTC session, and left exactly as it was.
+  await create('r2_schema_legacy_time');
+  await query(`ALTER TABLE native_rehearsals DROP COLUMN starts_at, DROP COLUMN ends_at,
+      ADD COLUMN date DATE NOT NULL, ADD COLUMN start_time TIME NOT NULL, ADD COLUMN end_time TIME NOT NULL;
+    ALTER TABLE native_user_availability DROP COLUMN starts_at, DROP COLUMN ends_at,
+      ADD COLUMN date DATE NOT NULL, ADD COLUMN start_time TIME, ADD COLUMN end_time TIME;
+    INSERT INTO native_users(email,first_name) VALUES('legacy-time@fixture.invalid','Legacy');
+    INSERT INTO native_projects(name) VALUES('Legacy');
+    INSERT INTO native_rehearsals(project_id,date,start_time,end_time) VALUES(1,'2025-09-10','10:00','12:00');
+    INSERT INTO native_user_availability(user_id,date,is_all_day) VALUES(1,'2025-09-11',true);
+    CREATE TABLE native_migrations(filename TEXT PRIMARY KEY,applied_at TIMESTAMPTZ NOT NULL);
+    INSERT INTO native_migrations VALUES('add-is-all-day-flag.sql','2025-12-01T00:00:00Z')`);
+  const legacyState=async()=>(await query(`SELECT
+    (SELECT json_agg(r ORDER BY id) FROM r2_schema_legacy_time.native_rehearsals r) AS rehearsals,
+    (SELECT json_agg(a ORDER BY id) FROM r2_schema_legacy_time.native_user_availability a) AS availability,
+    (SELECT json_agg(c.relname ORDER BY c.relname) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n
+      ON n.oid=c.relnamespace WHERE n.nspname='r2_schema_legacy_time') AS relations`)).rows[0];
+  const legacyTimeBefore=await legacyState();
+  const jerusalem=new URL(connectionString);
+  jerusalem.searchParams.set('options','-c TimeZone=Asia/Jerusalem');
+  const legacyRun=request=>runMigrations({connectionString:jerusalem.href,schema:'r2_schema_legacy_time',request,artifacts,inspectSchema});
+  const legacyDry=await legacyRun({mode:'dry'});
+  assert.equal(legacyDry.state,'unmanaged-unrecognized');
+  assert.deepEqual(legacyDry.eligibleActions,[]);
+  const legacyIssues=new Set(legacyDry.diagnostics.flatMap(item=>item.issues.map(issue=>`${issue.code}:${issue.objectId}`)));
+  for (const issue of ['COLUMN_UNEXPECTED:native_rehearsals.date','COLUMN_MISSING:native_rehearsals.starts_at',
+    'COLUMN_UNEXPECTED:native_user_availability.start_time','COLUMN_MISSING:native_user_availability.ends_at']) assert.ok(legacyIssues.has(issue),issue);
+  for (const profile of manifest.profiles.filter(item=>item.adopt)) {
+    await assert.rejects(legacyRun({mode:'adopt',profileId:profile.id}),{code:'PRECONDITION_FAILED'});
+  }
+  await assert.rejects(legacyRun({mode:'apply'}),{code:'LEGACY_HISTORY_UNVERIFIED'});
+  await assert.rejects(legacyRun({mode:'fresh'}),{code:'SCHEMA_UNRECOGNIZED'});
+  assert.deepEqual(await legacyState(),legacyTimeBefore);
+  pass('legacy DATE/TIME layout is refused by every mode in a non-UTC session and left unchanged');
+  // FM01/FM02: historical files are ledger names only. The runnable set is the
+  // reviewed forward steps; 001's SQLite backfill cannot even parse on PostgreSQL,
+  // and the runner accepts no non-PostgreSQL target.
+  assert.deepEqual(manifest.steps.map(step=>step.sql.file).sort(),['database/schema/availability-conflict-key-v1.sql',
+    'migrations/007-member-availability-rate-limit.sql','migrations/008-invite-rate-limits.sql','migrations/009-operation-ip-rate-limits.sql']);
+  await query('BEGIN');
+  try {
+    await query('SET LOCAL search_path TO r2_schema_legacy_time,pg_catalog');
+    await assert.rejects(query(readFileSync(new URL('../../migrations/001-add-oauth-providers.sql',import.meta.url),'utf8')),{code:'42601'});
+  } finally {await query('ROLLBACK');}
+  for (const url of ['file:/private/tmp/r2-no-sqlite.sqlite','sqlite:///private/tmp/r2-no-sqlite.sqlite']) {
+    await assert.rejects(runMigrations({connectionString:url,schema:'public',request:{mode:'dry'},artifacts,inspectSchema}),{code:'CONFIG_INVALID'});
+  }
+  pass('no historical conversion or backfill is runnable; non-PostgreSQL targets are refused');
   const http=[];
   for (const schema of ['r0_fixture','r2_schema_modern']) {
     http.push(await checkSchemaHttp({connectionString,control,allowedPorts,schema}));

@@ -819,7 +819,9 @@ Choose the applicable operation after reviewing dry output. `--adopt` records a
 checked existing schema; it does not run business SQL. `--apply` is a separate
 operation. `--baseline` is rejected: marking every historical file as executed
 would hide missing constraints. Historical SQL files are not auto-discovered or
-executed in filename order. Their old ledger remains untouched evidence.
+executed in filename order. Their old ledger remains untouched evidence. Never
+run those files by hand: the date conversions cast in the session zone and the
+OAuth backfill duplicates on rerun (see `server/migrations/README.md`).
 
 Every write invocation uses one PostgreSQL transaction for schema changes,
 postconditions and the new `native_schema_history`, a transaction advisory lock

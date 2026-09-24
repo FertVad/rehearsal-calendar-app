@@ -104,6 +104,31 @@ nontransactional steps are rejected; there is no generic escape hatch that
 pretends those steps are atomic. CLI output uses stable codes and reviewed IDs,
 without credentials, raw SQL errors or business row values.
 
+## Historical files are names, not steps
+
+`server/migrations/` is the record of what older databases ran by hand. The
+runner reads those filenames only to verify an existing `native_migrations`
+ledger; the only files it executes are the reviewed forward steps named in
+`database/schema/manifest.mjs` (007, 008, 009 and the availability key). Do not
+run the others with `psql` either. Two of them are known to corrupt data:
+
+- **FM01.** `migrate-*-to-timestamptz.sql` cast `date + time` with a bare
+  `::TIMESTAMPTZ`, which reads the wall clock in the *session* zone. In an
+  `Asia/Jerusalem` session a documented 10:00 UTC rehearsal becomes 07:00Z and an
+  all-day date lands on the previous day. A database still in that DATE + TIME
+  layout is refused by every mode here; converting one needs a new reviewed
+  profile with an explicit UTC source, not these files.
+- **FM02.** `001-add-oauth-providers.sql` is SQLite dialect and fails on
+  PostgreSQL. Its backfill inserts a second email-provider row per user on every
+  rerun, because the NULL subject never conflicts. There is no SQLite path left
+  to rerun it on. Keeping one email method per user is credential work (A04/R3),
+  not this file's.
+
+Neither fix says anything about data those files already converted. Production
+ran them by hand (the conversions are dated 2025-12-10) and was baselined by the
+old runner on 2026-08-26 with 17 filenames; that ledger records what was
+claimed, not what the catalog or the historical instants actually are.
+
 ## Local verification and remaining legacy work
 
 The harness creates and deletes its own loopback Docker PostgreSQL. It accepts
