@@ -4,12 +4,14 @@
 R2 предыдущего агента сохранён без изменений в **`dd886ea`** — это граница
 первого ревью. Проверенный исходник **`eb24c624cc5a3f8a1d1fea9698d50f8641524ec1`**,
 tree `00c2e731552293462204ec39e48c218fb4535253`. Node 22.16.0, PostgreSQL 15.13
-(одноразовый Docker на loopback). Production не затрагивался.
+(одноразовый Docker на loopback). Claude к production не обращался; владелец
+выполнил read-only счётчики OPS-R2-DATA.
 
-**Итог:** F01, F02, FT01, FT02 — VERIFIED локально. FM01, FM02 — READY_FOR_CHECK:
-отказ по умолчанию доказан, условие в production (исторические данные) — NOT_RUN,
-карточка OPS-R2-DATA. Вместе с F03/F05 из [R2 foundation](REMEDIATION_R2_FOUNDATION.md)
-пакет закрыт, кроме этой карточки.
+**Итог:** F01, F02, FT01, FT02 — VERIFIED локально. FM01, FM02 — VERIFIED: отказ
+по умолчанию доказан локально, условие в production закрыто read-only счётчиками
+владельца 24.09 (OPS-R2-DATA). Вместе с F03/F05 из
+[R2 foundation](REMEDIATION_R2_FOUNDATION.md) **R2 COMPLETE**. Побочно найдены две
+all-day строки не в полночь UTC — это не FM01, см. «Наблюдение вне R2».
 
 | ID | Коммит | До: старый инструмент `aa00ffd` | После / регресс | Мутация | Статус |
 |---|---|---|---|---|---|
@@ -17,8 +19,8 @@ tree `00c2e731552293462204ec39e48c218fb4535253`. Node 22.16.0, PostgreSQL 15.13
 | F02 High | `dd886ea`, `f4a7eeb` | `--baseline` пишет `005` в журнал без индекса → маршрут bulk: `42P10`, HTTP 500 | в fresh ключ есть; `--baseline` отклонён; база без ключа отклонена профилем по умолчанию; явный `pre-import-key` + `--apply` создаёт ключ, строки целы, дубли запрещают | bootstrap без ключа → `POSTCONDITION_FAILED`; чекер без требования ключа → падает «missing conflict target» | VERIFIED |
 | FT01 Low | `dd886ea` | `--dry` создаёт `native_migrations`; `--dry --baseline` пишет 24 файла | dry в `READ ONLY`, ничего не создаёт; `--dry --baseline` → `BASELINE_UNSUPPORTED` | dry с записью журнала → падает «dry absent history» | VERIFIED |
 | FT02 Medium | `dd886ea` | отказ записи в журнал: SQL уже закоммичен, файл не записан, «resume» падает на `already exists` | отказ записи откатывает шаг вместе с историей; повтор применяет один раз; потерянный ответ на COMMIT → `COMMIT_OUTCOME_UNKNOWN` | COMMIT после каждого шага → падает «real ledger INSERT failure» | VERIFIED |
-| FM01 Medium, усл. | `eb24c62` | старый раннер в сессии `Asia/Jerusalem`: 10:00Z → 07:00Z, all-day → 21:00Z предыдущего дня; контроль в UTC верен | DATE+TIME-раскладка отклонена dry/adopt×3/apply/fresh в не-UTC сессии, строки и объекты не изменились | не требуется (Medium) | READY_FOR_CHECK |
-| FM02 Low, усл. | `eb24c62` | SQLite-путь: запись журнала потеряна → «resume» повторяет бэкфилл, email-провайдеров 2 → 4 | SQLite-пути нет (не-PG цели → `CONFIG_INVALID`); `001` не исполняемый шаг и на PG не парсится (`42601`) | не требуется (Low) | READY_FOR_CHECK |
+| FM01 Medium, усл. | `eb24c62` | старый раннер в сессии `Asia/Jerusalem`: 10:00Z → 07:00Z, all-day → 21:00Z предыдущего дня; контроль в UTC верен | DATE+TIME-раскладка отклонена dry/adopt×3/apply/fresh в не-UTC сессии, строки и объекты не изменились | не требуется (Medium) | VERIFIED |
+| FM02 Low, усл. | `eb24c62` | SQLite-путь: запись журнала потеряна → «resume» повторяет бэкфилл, email-провайдеров 2 → 4 | SQLite-пути нет (не-PG цели → `CONFIG_INVALID`); `001` не исполняемый шаг и на PG не парсится (`42601`) | не требуется (Low) | VERIFIED |
 
 ## Что сделано
 
@@ -54,44 +56,42 @@ advisory lock). Недостаток был в покрытии приложен
 **Что не доказано:** каталог, версия и TLS production; адаптация production
 профилем `domain13` (при первом контакте вероятны расхождения — это отказ, не
 порча); только PostgreSQL 15.13 — вывод `pg_get_expr` другой мажорной версии не
-сверялся; исторические данные production (FM01/FM02).
+сверялся.
 
 ## Карточки владельцу
 
-**OPS-R2-DATA** — FM01/FM02, только чтение, только счётчики, одна строка ответа.
+**OPS-R2-DATA** — выполнено владельцем 24.09 в консоли Neon, только чтение,
+только счётчики; запросы и ответы — [ops-r2-data.json](evidence/R2/ops-r2-data.json).
 
-24.09 первый вариант карточки дал `old_all_day = 0` при отсечке `2025-12-11`:
-свидетелей нет. Отсечка была узкой: 2025-12-10 — дата написания SQL, а история
-git начинается 2026-01-16 и уже содержит конвертацию, новый код и drop-old.
-Применить её могли в любой день до этого. Уточнённый запрос:
+Первый вариант (отсечка `2025-12-11`) дал `old_all_day = 0`: свидетелей нет, а
+отсечка была узкой — 2025-12-10 это дата написания SQL, история git начинается
+2026-01-16 уже с конвертацией, новым кодом и drop-old. Уточнённый запрос:
 
-```sql
-SELECT
-  (SELECT count(*) FROM native_rehearsals
-     WHERE created_at < '2026-01-17' OR created_at IS NULL) AS rehearsals_old,
-  (SELECT count(*) FROM native_user_availability
-     WHERE created_at < '2026-01-17' OR created_at IS NULL) AS availability_old,
-  (SELECT count(*) FROM native_user_availability
-     WHERE is_all_day AND (starts_at AT TIME ZONE 'UTC')::time <> '00:00') AS all_day_off_utc_midnight,
-  (SELECT count(*) FROM (SELECT user_id FROM native_auth_providers
-     WHERE provider_type = 'email' GROUP BY user_id HAVING count(*) > 1) d) AS users_with_duplicate_email_provider;
-```
+| rehearsals_old | availability_old | all_day_off_utc_midnight | users_with_duplicate_email_provider |
+|---:|---:|---:|---:|
+| 0 | 0 | 2 | 0 |
 
-- Первые три — 0: ни одна строка, прошедшая конвертацию, не дожила, и ни одна
-  all-day строка сейчас не сдвинута. FM01 VERIFIED.
-- `all_day_off_utc_midnight > 0`: сдвинутые all-day строки есть (FM01 или
-  клиентская ошибка) — нужен отдельный проверяемый шаг данных.
-- Старые строки есть, сдвинутых all-day нет: сдвиг timed-строк по данным не
-  установить. Это прошлые записи (до 2026-01-17), решает владелец.
-- `users_with_duplicate_email_provider = 0` — FM02 VERIFIED; иначе дедупликация
-  в A04/R3.
-
-Ничего не исправлять прибавлением часов или удалением «лишних» строк.
+- **FM01.** Ни одной репетиции и ни одной строки доступности, созданных до
+  2026-01-17 или без `created_at`, не осталось: строк, которые конвертация могла
+  сдвинуть на месте, в production нет. Предел проверки: копию, пересохранённую
+  клиентом после 17.01, по счётчикам не отличить.
+- **FM02.** Дублей email-провайдера нет.
 
 **OPS-R2-ADOPT** — до деплоя сервера, которому нужны 007/008 (B03/B04): с
 разрешения владельца выполнить `npm run migrate -- --dry` против production
 (read-only, в выводе только коды и имена объектов) и по результату решить,
 подходит ли `rehearsly-pg-domain13-v1` или нужен новый именованный профиль.
+
+## Наблюдение вне R2
+
+Две all-day строки доступности начинаются не в полночь UTC. Все строки доступности
+созданы 17.01.2026 или позже, значит их записал клиент уже после конвертации, а не
+FM01. Сервер форму all-day не проверяет (в маршруте: полная валидация — C02), а
+all-day читается как дата в UTC — такая строка показывается днём раньше. Текущий
+импорт и сохранение пишут `T00:00:00.000Z`; кто записал эти две — не установлено.
+Запрос для владельца, без пользователей и названий: источник, тип, часы UTC, месяц
+создания — в [ops-r2-data.json](evidence/R2/ops-r2-data.json) (`nextQuery`).
+Относится к C01/C02 (R6).
 
 ## Доказательства
 

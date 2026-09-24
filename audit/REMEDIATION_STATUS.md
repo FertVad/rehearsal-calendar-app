@@ -8,7 +8,7 @@
 
 Операционный контекст: [известный отказ Neon и границы доступа](PRODUCTION_ACCESS.md), сообщённые Вадимом 18 сентября 2026. Production smoke остаётся NOT_RUN. Вадим отдельно разрешил push `codex/systematic-repair` и первый удалённый `Application checks`; deployment и доступ к production требуют отдельного решения. Локальные статусы ниже не утверждают работоспособность production.
 
-Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md), [B03](REMEDIATION_B03.md), [B04](REMEDIATION_B04.md), [H04](REMEDIATION_H04.md), [ID01](REMEDIATION_ID01.md) и [IS01](REMEDIATION_IS01.md) VERIFIED локально, H02 — [READY_FOR_CHECK](REMEDIATION_H02.md) на `df6fd01` до физической DEV-15; IA01 — [READY_FOR_CHECK](REMEDIATION_IA01.md) на `0dc7666` до OPS-IA01; [IS02](REMEDIATION_IS02.md) — READY_FOR_CHECK на `61ced139` до OPS-IS02; F03/F05 — [VERIFIED локально](REMEDIATION_R2_FOUNDATION.md) на `573608c`; F01/F02/FT01/FT02 — [VERIFIED локально](REMEDIATION_R2.md) на `eb24c62`, FM01/FM02 — READY_FOR_CHECK до OPS-R2-DATA; остальные 84 пункта остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`, B04 — на `fd5f1eb`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. B04 требует additive migration008 до серверного deployment. Это учёт локальной реализации, не повторная оценка текущего production.
+Дата подготовки: 16 сентября 2026; начало реализации: 17 сентября 2026. Ветка `codex/systematic-repair`, база `0f655e2`. [R0 COMPLETE](REMEDIATION_R0.md); H01, [A02](REMEDIATION_A02.md), [B03](REMEDIATION_B03.md), [B04](REMEDIATION_B04.md), [H04](REMEDIATION_H04.md), [ID01](REMEDIATION_ID01.md) и [IS01](REMEDIATION_IS01.md) VERIFIED локально, H02 — [READY_FOR_CHECK](REMEDIATION_H02.md) на `df6fd01` до физической DEV-15; IA01 — [READY_FOR_CHECK](REMEDIATION_IA01.md) на `0dc7666` до OPS-IA01; [IS02](REMEDIATION_IS02.md) — READY_FOR_CHECK на `61ced139` до OPS-IS02; F03/F05 — [VERIFIED локально](REMEDIATION_R2_FOUNDATION.md) на `573608c`; F01/F02/FT01/FT02 — [VERIFIED локально](REMEDIATION_R2.md) на `eb24c62`, FM01/FM02 — VERIFIED с read-only проверкой данных production 24.09; остальные 84 пункта остаются TODO. Первоначальное воспроизведение A02/B02/D01/F01 в R0 не было исправлением; A02 закрыт отдельным этапом на `7e1eefa`, B03 — на `e0a0ede`, B04 — на `fd5f1eb`. B03 требует additive migration007 до будущего серверного deployment и отдельного выпуска клиентских изменений. B04 требует additive migration008 до серверного deployment. Это учёт локальной реализации, не повторная оценка текущего production.
 
 Удалённый [Application checks на8e206b2 — PASS](REMEDIATION_R2_FOUNDATION_CI.md): оба jobs, включая browser cleanup и R2 foundation. Production по сообщению Вадима19сентября доступен; агент к нему не обращался.
 
@@ -33,7 +33,7 @@ R0 — baseline/harness, решения и первичная инвентари
 |---|---:|---|
 | R0 | — | COMPLETE — baseline, real PG/HTTP harness, исходные дефекты, первичная инвентаризация |
 | R1 | 10 | READY_FOR_CHECK — 7 VERIFIED, H02/IA01/IS02 READY_FOR_CHECK (DEV-15/OPS-IA01/OPS-IS02); release gates открыты |
-| R2 | 8 | READY_FOR_CHECK — 6 VERIFIED (F01/F02/F03/F05/FT01/FT02), FM01/FM02 READY_FOR_CHECK (OPS-R2-DATA) |
+| R2 | 8 | COMPLETE — 8 VERIFIED; FM01/FM02 с read-only проверкой данных production (OPS-R2-DATA); OPS-R2-ADOPT до деплоя 007/008 |
 | R3 | 6 | TODO |
 | R4 | 8 | TODO |
 | R5 | 15 | TODO |
@@ -112,8 +112,8 @@ R0 — baseline/harness, решения и первичная инвентари
 | F05 | Low | Нет | R2 | VERIFIED | adapter теряет число изменённых строк | [Реальные row counts и HTTP — 573608c](REMEDIATION_R2_FOUNDATION.md) |
 | FT01 | Low | Нет | R2 | VERIFIED | режим --dry делает записи в БД; с --baseline вообще меняет историю миграций | [Dry в READ ONLY, --baseline отклонён — eb24c62](REMEDIATION_R2.md) |
 | FT02 | Medium | Нет | R2 | VERIFIED | SQL миграции и её запись в журнал не атомарны | [Одна транзакция на вызов, отказ журнала откатывает шаг — eb24c62](REMEDIATION_R2.md) |
-| FM01 | Medium | Да | R2 | READY_FOR_CHECK | Историческая конверсия UTC зависит от session timezone | [Legacy-раскладка отклоняется всеми режимами — eb24c62; данные production NOT_RUN (OPS-R2-DATA)](REMEDIATION_R2.md) |
-| FM02 | Low | Да | R2 | READY_FOR_CHECK | Повторный OAuth backfill создаёт дубли email-provider | [SQLite-пути нет, 001 не исполним — eb24c62; данные production NOT_RUN (OPS-R2-DATA)](REMEDIATION_R2.md) |
+| FM01 | Medium | Да | R2 | VERIFIED | Историческая конверсия UTC зависит от session timezone | [Legacy-раскладка отклоняется всеми режимами — eb24c62; в production нет строк старше конвертации (OPS-R2-DATA 24.09)](REMEDIATION_R2.md) |
+| FM02 | Low | Да | R2 | VERIFIED | Повторный OAuth backfill создаёт дубли email-provider | [SQLite-пути нет, 001 не исполним — eb24c62; дублей в production нет (OPS-R2-DATA 24.09)](REMEDIATION_R2.md) |
 | G01 | High | Нет | R4 | TODO | конкурентная регистрация оставляет двух владельцев одного push-токена | — |
 | G02 | Medium | Нет | R8 | TODO | ticket Expo принят за окончательный результат; receipts не обрабатываются | — |
 | GC01 | Medium | Нет | R8 | TODO | «Позже» в onboarding не откладывает системный запрос уведомлений | — |

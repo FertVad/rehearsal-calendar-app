@@ -1,0 +1,34 @@
+{
+  "card": "OPS-R2-DATA",
+  "date": "2026-09-24",
+  "runBy": "owner, Neon SQL console, read-only; aggregate counts only; Claude had no production access",
+  "runs": [
+    {
+      "sql": "SELECT count(*) AS old_all_day, count(*) FILTER (WHERE (starts_at AT TIME ZONE 'UTC')::time <> '00:00') AS old_all_day_off_utc_midnight FROM native_user_availability WHERE is_all_day AND created_at < '2025-12-11';",
+      "result": {
+        "old_all_day": 0,
+        "old_all_day_off_utc_midnight": 0
+      },
+      "reading": "no all-day witness before the cutoff; the 2025-12-11 cutoff was too narrow (SQL written 2025-12-10, git history from 2026-01-16 already contains the conversion)"
+    },
+    {
+      "sql": "SELECT (SELECT count(*) FROM native_rehearsals WHERE created_at < '2026-01-17' OR created_at IS NULL) AS rehearsals_old, (SELECT count(*) FROM native_user_availability WHERE created_at < '2026-01-17' OR created_at IS NULL) AS availability_old, (SELECT count(*) FROM native_user_availability WHERE is_all_day AND (starts_at AT TIME ZONE 'UTC')::time <> '00:00') AS all_day_off_utc_midnight, (SELECT count(*) FROM (SELECT user_id FROM native_auth_providers WHERE provider_type = 'email' GROUP BY user_id HAVING count(*) > 1) d) AS users_with_duplicate_email_provider;",
+      "firstAttempt": "42601 syntax error at or near AS: the leading SELECT line was lost in the console; reproduced locally by running the text without its first line",
+      "result": {
+        "rehearsals_old": 0,
+        "availability_old": 0,
+        "all_day_off_utc_midnight": 2,
+        "users_with_duplicate_email_provider": 0
+      }
+    }
+  ],
+  "conclusions": {
+    "FM01": "No rehearsal or availability row created before 2026-01-17 (or with NULL created_at) survives, so no row that the historical conversion could have shifted remains in place. Limit: a copy re-saved by a client after 2026-01-17 cannot be told apart by these counts.",
+    "FM02": "No user has more than one email-provider row.",
+    "observation": "Two all-day availability rows start off UTC midnight. Every availability row is created on or after 2026-01-17, so these were written by a client after the conversion, not by it. The server does not validate the all-day form (route comment: full slot validation belongs to C02). Writer not yet identified."
+  },
+  "nextQuery": {
+    "purpose": "identify the writer of the two rows without personal data",
+    "sql": "SELECT source, type, external_event_id IS NOT NULL AS imported, to_char(starts_at AT TIME ZONE 'UTC', 'HH24:MI') AS start_utc, to_char(ends_at AT TIME ZONE 'UTC', 'HH24:MI:SS.MS') AS end_utc, to_char(created_at, 'YYYY-MM') AS created_month, count(*) AS n FROM native_user_availability WHERE is_all_day AND (starts_at AT TIME ZONE 'UTC')::time <> '00:00' GROUP BY 1, 2, 3, 4, 5, 6 ORDER BY 6;"
+  }
+}
