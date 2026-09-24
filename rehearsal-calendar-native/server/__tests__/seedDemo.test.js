@@ -50,7 +50,7 @@ describe('demo seed target', () => {
     const cwd = mkdtempSync(path.join(tmpdir(), 'seed-demo-cwd-'));
     try {
       const url = `postgresql://seed:seed@127.0.0.1:${listener.address().port}/seed`;
-      writeFileSync(path.join(cwd, '.env'), `DATABASE_URL=${url}\nDEMO_PASSWORD=synthetic-demo-password\n`);
+      writeFileSync(path.join(cwd, '.env'), `DATABASE_URL=${url}\n`);
       const exitCode = await new Promise((resolve, reject) => {
         const child = spawn(process.execPath, [path.join(scripts, 'seed-demo.mjs')], {
           cwd, env: { PATH: process.env.PATH, HOME: cwd }, stdio: 'ignore',
