@@ -181,6 +181,33 @@ export async function setupIntegrationDb() {
       CHECK (provider_type IN ('email', 'google', 'apple'))
     );
 
+    -- Group 010 (R3): proof of an address and one-time email codes. Mirrors
+    -- migrations/010-email-verification.sql; times are ISO strings here.
+    CREATE TABLE native_email_identities (
+      user_id INTEGER PRIMARY KEY REFERENCES native_users(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending', 'verified')),
+      verified_at DATETIME,
+      verified_by TEXT CHECK (verified_by IN ('code', 'google', 'apple')),
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CHECK ((status = 'verified') = (verified_at IS NOT NULL AND verified_by IS NOT NULL))
+    );
+    CREATE TABLE native_email_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+      purpose TEXT NOT NULL CHECK (purpose IN ('verify', 'reset', 'change', 'confirm')),
+      email TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+      expires_at DATETIME NOT NULL,
+      consumed_at DATETIME,
+      sent_at DATETIME,
+      failed_at DATETIME,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE UNIQUE INDEX idx_email_codes_live ON native_email_codes (user_id, purpose) WHERE consumed_at IS NULL;
+
     -- Push reminders already sent. The unique pair is what stops a rehearsal
     -- being announced twice when two schedulers overlap.
     CREATE TABLE native_push_reminders (
