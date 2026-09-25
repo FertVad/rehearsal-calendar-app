@@ -32,14 +32,15 @@ const TEST_ADMIN_PASSWORD = 'h01-admin-fixture-only';
 const environmentKeys = ['JWT_SECRET', 'ADMIN_JWT_SECRET', 'ADMIN_PASSWORD', 'ADMIN_PASSWORD_HASH'];
 const originalEnvironment = Object.fromEntries(environmentKeys.map((key) => [key, process.env[key]]));
 
-// Only the positional parameters and NOW() used by these routes need adapting.
-// All reads/writes still execute actual SQL against a fresh in-memory database.
+// Only the positional parameters, NOW() and row locks used by these routes need
+// adapting (SQLite has one writer, so FOR UPDATE has nothing to lock). All
+// reads/writes still execute actual SQL against a fresh in-memory database.
 function query(sql, params = []) {
   const bindings = [];
   const translated = sql.replace(/\$(\d+)/g, (_match, index) => {
     bindings.push(params[Number(index) - 1]);
     return '?';
-  }).replace(/\bNOW\(\)/gi, 'CURRENT_TIMESTAMP');
+  }).replace(/\bNOW\(\)/gi, 'CURRENT_TIMESTAMP').replace(/\s+FOR\s+UPDATE\b/gi, '');
   return { statement: sqlite.prepare(translated), bindings };
 }
 
@@ -56,6 +57,19 @@ const database = {
     const { statement, bindings } = query(sql, params);
     const result = statement.run(...bindings);
     return { lastInsertId: Number(result.lastInsertRowid), changes: result.changes };
+  },
+  // The profile route writes through db.transaction: same connection, a throw
+  // undoes everything, a return keeps it.
+  async transaction(callback) {
+    sqlite.prepare('BEGIN').run();
+    try {
+      const result = await callback(database);
+      sqlite.prepare('COMMIT').run();
+      return result;
+    } catch (error) {
+      sqlite.prepare('ROLLBACK').run();
+      throw error;
+    }
   },
 };
 
