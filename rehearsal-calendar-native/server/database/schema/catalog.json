@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "schemaId": "rehearsly-pg-current-v1",
   "postgresCatalogMajor": 15,
-  "bootstrapSha256": "b4dde9984810a81362b509f5414aa1ee09760467808b7ba907406f04c8f86c79",
+  "bootstrapSha256": "01ff4ad26a8e83e9d92b0da2445d1135c5c9002296fd10aef2a86567a658d43b",
   "tables": [
     {
       "name": "native_auth_providers",
@@ -163,7 +163,7 @@
         {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["attempts"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((attempts >= 0) AND (attempts <= 5))"},
         {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["code_hash"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(code_hash ~ '^[0-9a-f]{64}$'::text)"},
         {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null},
-        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["purpose"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(purpose = ANY (ARRAY['verify'::text, 'reset'::text, 'change'::text]))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["purpose"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(purpose = ANY (ARRAY['verify'::text, 'reset'::text, 'change'::text, 'confirm'::text]))"},
         {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null}
       ],
       "indexes": [

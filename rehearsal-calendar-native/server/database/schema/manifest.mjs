@@ -17,13 +17,13 @@ export const manifest = freeze({
       "id": "rehearsly-pg-current-v1",
       "descriptor": {
         "file": "database/schema/catalog.json",
-        "sha256": "c39f22b3f7c84d53dae2b769cdf98944e3f7277c935cfaf84e596ad3c25ea6e9"
+        "sha256": "d1f7201f2e73f328a135421e7f9cb3e38604e0e43720e9e3a6b5c99cc7bf2284"
       },
       "fresh": true,
       "adopt": true,
       "bootstrap": {
         "file": "database/init-native-schema.sql",
-        "sha256": "b4dde9984810a81362b509f5414aa1ee09760467808b7ba907406f04c8f86c79"
+        "sha256": "01ff4ad26a8e83e9d92b0da2445d1135c5c9002296fd10aef2a86567a658d43b"
       },
       "inspector": {
         "file": "database/schema/inspect.mjs",
@@ -35,7 +35,7 @@ export const manifest = freeze({
       "id": "rehearsly-pg-domain13-v1",
       "descriptor": {
         "file": "database/schema/catalog.json",
-        "sha256": "c39f22b3f7c84d53dae2b769cdf98944e3f7277c935cfaf84e596ad3c25ea6e9"
+        "sha256": "d1f7201f2e73f328a135421e7f9cb3e38604e0e43720e9e3a6b5c99cc7bf2284"
       },
       "fresh": false,
       "adopt": true,
@@ -49,7 +49,7 @@ export const manifest = freeze({
       "id": "rehearsly-pg-domain13-pre-import-key-v1",
       "descriptor": {
         "file": "database/schema/catalog.json",
-        "sha256": "c39f22b3f7c84d53dae2b769cdf98944e3f7277c935cfaf84e596ad3c25ea6e9"
+        "sha256": "d1f7201f2e73f328a135421e7f9cb3e38604e0e43720e9e3a6b5c99cc7bf2284"
       },
       "fresh": false,
       "adopt": true,
@@ -129,7 +129,7 @@ export const manifest = freeze({
       "id": "010-email-verification",
       "sql": {
         "file": "migrations/010-email-verification.sql",
-        "sha256": "aca4b232c5d4607c009fa364be500670cc1bb5c7aa7fbe288637ea24654e4a91"
+        "sha256": "0306e3c33c39edc892388dedabd4aed5909b0b0b81d53244b52c8a8032dfea6d"
       },
       "when": {
         "missingBudget": "010"
