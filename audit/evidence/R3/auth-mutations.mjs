@@ -1,8 +1,11 @@
 // R3 A01 routes: put each weakening of registration and address confirmation
 // back into a copy of the server and require the tests that guard it to fail.
 // The unmutated copy must pass the same commands. The "before-*" variants put
-// back one file as it was before a fix: auth.js before the A01 routes, and
-// both files that signed a session with a version read after COMMIT (R3-06).
+// back what a fix changed: auth.js before the A01 routes and
+// emailVerification.js before R3-06 as whole files, and PUT /me's read of the
+// version after COMMIT (the other half of R3-06) as an edit.
+// A Jest expectation names a failed test ("●"), so a passing title in the
+// output cannot match.
 //
 //   node audit/evidence/R3/auth-mutations.mjs
 //
@@ -32,37 +35,45 @@ function edit(root, file, from, to) {
 
 const mutations = [
   { id: 'control', description: 'unmutated copy', runs: [jest, pgAuth], expect: 'pass' },
+  // Whole files from before a fix load only while the code around them keeps
+  // their imports: auth.js from c4c5a14 still names findOrCreateOAuthUser,
+  // gone since R3-01. Jest's module linker tolerates the missing export and
+  // runs the route test; Node refuses to start the app, so that variant has no
+  // PostgreSQL run, and the PUT /me half of R3-06 is put back as an edit.
   { id: 'before-A01', description: `routes/auth.js as at ${BEFORE}: register signs in at once, login and refresh ignore pending`,
     apply: (root) => historical(root, 'routes/auth.js', BEFORE),
-    runs: [jest, pgAuth], expect: /tells an app from before R3 to update/ },
+    runs: [jest], expect: /● .*tells an app from before R3 to update/ },
   { id: 'before-R3-06-confirm', description: `routes/emailVerification.js as at ${BEFORE_R3_06}: the version is read after COMMIT`,
     apply: (root) => historical(root, 'routes/emailVerification.js', BEFORE_R3_06),
     runs: [pgAuth], expect: /a session signed from the old password must not outlive the password change/ },
-  { id: 'before-R3-06-password', description: `routes/auth.js as at ${BEFORE_R3_06}: PUT /me reads the version after COMMIT`,
-    apply: (root) => historical(root, 'routes/auth.js', BEFORE_R3_06),
+  { id: 'before-R3-06-password', description: 'PUT /me signs the new pair with a version read after COMMIT, as before R3-06',
+    apply: (root) => edit(root, 'routes/auth.js', '    const { user } = saved;\n',
+      '    const user = await db.get(`SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,\n'
+      + '      notifications_enabled, email_notifications, week_start_day, onboarding_completed, token_version\n'
+      + '      FROM native_users WHERE id = $1`, [req.userId]);\n'),
     runs: [pgAuth], expect: /a session from a password change must not outlive a logout after it/ },
   { id: 'no-upgrade-gate', description: 'register accepts an app that cannot enter a code',
     apply: (root) => edit(root, 'routes/auth.js', "if (req.body?.verification !== 'code') {", 'if (false) {'),
-    runs: [jest, pgAuth], expect: /tells an app from before R3 to update/ },
+    runs: [jest, pgAuth], expect: /● .*tells an app from before R3 to update/ },
   { id: 'no-transport-check', description: 'register creates the account with no way to send the code',
     apply: (root) => edit(root, 'routes/auth.js', 'if (!transport.available) {', 'if (false) {'),
-    runs: [jest, pgAuth], expect: /refuses before writing anything when no email can be sent/ },
+    runs: [jest, pgAuth], expect: /● .*refuses before writing anything when no email can be sent/ },
   { id: 'login-ignores-pending', description: 'login signs in a registration whose code was never entered',
     apply: (root) => edit(root, 'routes/auth.js', "if ((await identityOf(db, user.id))?.status === 'pending') {", 'if (false) {'),
-    runs: [jest, pgAuth], expect: /answers a pending account with 403/ },
+    runs: [jest, pgAuth], expect: /● .*answers a pending account with 403/ },
   { id: 'refresh-ignores-pending', description: 'refresh renews a token of a pending account',
     apply: (root) => edit(root, 'routes/auth.js', "if ((await identityOf(db, decoded.userId))?.status === 'pending') {", 'if (false) {'),
-    runs: [jest], expect: /does not renew a token of a pending account/ },
+    runs: [jest], expect: /● .*does not renew a token of a pending account/ },
   { id: 'unique-race-500', description: 'the loser of two registrations of one address gets a 500',
     apply: (root) => edit(root, 'routes/auth.js', "if (error?.code !== '23505') throw error;", 'throw error;'),
     runs: [pgAuth], expect: /two concurrent registrations of one address must give one account/ },
   { id: 'case-sensitive-email', description: 'addresses are compared as typed, so one mailbox can hold two accounts',
     apply: (root) => edit(root, 'utils/accountInput.js', 'value.trim().toLowerCase()', 'value.trim()'),
-    runs: [jest, pgAuth], expect: /refuses an address that is taken, whatever its case/ },
+    runs: [jest, pgAuth], expect: /● .*refuses an address that is taken, whatever its case/ },
   { id: 'code-without-password', description: 'confirming needs the code only, not the password of the registration',
     apply: (root) => edit(root, 'routes/emailVerification.js',
       'if (!user?.password_hash || !(await bcrypt.compare(password, user.password_hash))) return null;', 'if (!user) return null;'),
-    runs: [jest], expect: /refuses a wrong password without spending an attempt/ },
+    runs: [jest], expect: /● .*refuses a wrong password without spending an attempt/ },
   { id: 'confirm-twice', description: 'verify-email does not see that the address is already confirmed',
     apply: (root) => edit(root, 'routes/emailVerification.js',
       `    if (isVerified(await identityOf(tx, holder.id), holder.email)) return { status: 409, body: ALREADY_VERIFIED };
