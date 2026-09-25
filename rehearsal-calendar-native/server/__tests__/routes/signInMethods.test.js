@@ -8,8 +8,8 @@
  * Duplicate rows the other way counted one password twice and let the last
  * real way in be removed.
  *
- * The concurrent-unlink half of A04 needs two real connections and row locks;
- * it is proven on PostgreSQL (r3Auth.mjs), not here.
+ * The concurrent-unlink half of A04 needs two real connections and row locks,
+ * so it belongs to a PostgreSQL scenario; that scenario is not written yet.
  */
 import { jest } from '@jest/globals';
 import { setupIntegrationDb, closeIntegrationDb } from '../integration/setup.js';

@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
+import bcrypt from 'bcrypt';
 
 // Exercise the four existing consumers of adapter.changes through real HTTP;
 // counts alone must agree with independently observed committed PostgreSQL rows.
 export async function probeF05({ control, http }) {
+  // Sign-in methods are counted from real credentials (A04): the email method
+  // of user 1 is a working password, not only a registry row.
   await control.query('ALTER TABLE native_users ADD COLUMN password_hash TEXT');
+  await control.query('UPDATE native_users SET password_hash = $1 WHERE id = 1',
+    [await bcrypt.hash('f05-fixture-password', 4)]);
   await control.query(`CREATE TABLE native_auth_providers (
     id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES native_users(id),
-    provider_type TEXT NOT NULL, UNIQUE(user_id, provider_type))`);
+    provider_type TEXT NOT NULL, provider_email TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), last_used_at TIMESTAMPTZ,
+    UNIQUE(user_id, provider_type))`);
   await control.query(`INSERT INTO native_auth_providers(user_id,provider_type)
     VALUES(1,'email'),(1,'google'),(2,'apple')`);
   for (const [user, source, event] of [[1, 'apple_calendar', 'a'], [1, 'google_calendar', 'b'],
@@ -62,6 +69,7 @@ export async function probeF05({ control, http }) {
   const beforeLast = await providers();
   assert.equal((await http('/api/auth/me/providers/email', { method: 'DELETE' })).status, 400);
   assert.deepEqual(await providers(), beforeLast);
+  assert.notEqual((await control.query('SELECT password_hash FROM native_users WHERE id = 1')).rows[0].password_hash, null);
   return { outcome: 'PASS', contracts: ['real HTTP update/delete counts0/1/N match committed rows',
     'repeat deletes report0; manual and other-user rows unchanged',
     'missing provider404/no writes; existing provider200; last-method guard retained'] };
