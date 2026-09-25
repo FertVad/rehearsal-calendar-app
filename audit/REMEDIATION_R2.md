@@ -7,11 +7,14 @@ tree `00c2e731552293462204ec39e48c218fb4535253`. Node 22.16.0, PostgreSQL 15.13
 (одноразовый Docker на loopback). Claude к production не обращался; владелец
 выполнил read-only счётчики OPS-R2-DATA.
 
-**Итог:** F01, F02, FT01, FT02 — VERIFIED локально. FM01, FM02 — VERIFIED: отказ
-по умолчанию доказан локально, условие в production закрыто read-only счётчиками
-владельца 24.09 (OPS-R2-DATA). Вместе с F03/F05 из
-[R2 foundation](REMEDIATION_R2_FOUNDATION.md) **R2 COMPLETE**. Побочно найдены две
-all-day строки не в полночь UTC — это не FM01, см. «Наблюдение вне R2».
+**Итог:** F01, F02, FT01, FT02 — VERIFIED локально. FM02 — VERIFIED: отказ по
+умолчанию доказан локально, дублей в production нет (OPS-R2-DATA). **FM01 —
+READY_FOR_CHECK:** отказ доказан, но вывод «в production нет строк, которые
+конвертация могла сдвинуть» опирался на отсечку 17.01.2026, а дата фактической
+конвертации не установлена ([ревью R2-01](REVIEW_R2.md)); нужна карточка
+OPS-FM01-DATE. Вместе с F03/F05 из [R2 foundation](REMEDIATION_R2_FOUNDATION.md):
+7 из 8 VERIFIED, R2 — READY_FOR_CHECK. Побочно найдены две all-day строки не в
+полночь UTC — это не FM01, см. «Находка вне аудита».
 
 | ID | Коммит | До: старый инструмент `aa00ffd` | После / регресс | Мутация | Статус |
 |---|---|---|---|---|---|
@@ -19,7 +22,7 @@ all-day строки не в полночь UTC — это не FM01, см. «Н
 | F02 High | `dd886ea`, `f4a7eeb` | `--baseline` пишет `005` в журнал без индекса → маршрут bulk: `42P10`, HTTP 500 | в fresh ключ есть; `--baseline` отклонён; база без ключа отклонена профилем по умолчанию; явный `pre-import-key` + `--apply` создаёт ключ, строки целы, дубли запрещают | bootstrap без ключа → `POSTCONDITION_FAILED`; чекер без требования ключа → падает «missing conflict target» | VERIFIED |
 | FT01 Low | `dd886ea` | `--dry` создаёт `native_migrations`; `--dry --baseline` пишет 24 файла | dry в `READ ONLY`, ничего не создаёт; `--dry --baseline` → `BASELINE_UNSUPPORTED` | dry с записью журнала → падает «dry absent history» | VERIFIED |
 | FT02 Medium | `dd886ea` | отказ записи в журнал: SQL уже закоммичен, файл не записан, «resume» падает на `already exists` | отказ записи откатывает шаг вместе с историей; повтор применяет один раз; потерянный ответ на COMMIT → `COMMIT_OUTCOME_UNKNOWN` | COMMIT после каждого шага → падает «real ledger INSERT failure» | VERIFIED |
-| FM01 Medium, усл. | `eb24c62` | старый раннер в сессии `Asia/Jerusalem`: 10:00Z → 07:00Z, all-day → 21:00Z предыдущего дня; контроль в UTC верен | DATE+TIME-раскладка отклонена dry/adopt×3/apply/fresh в не-UTC сессии, строки и объекты не изменились | не требуется (Medium) | VERIFIED |
+| FM01 Medium, усл. | `eb24c62` | старый раннер в сессии `Asia/Jerusalem`: 10:00Z → 07:00Z, all-day → 21:00Z предыдущего дня; контроль в UTC верен | DATE+TIME-раскладка отклонена dry/adopt×3/apply/fresh в не-UTC сессии, строки и объекты не изменились | не требуется (Medium) | READY_FOR_CHECK |
 | FM02 Low, усл. | `eb24c62` | SQLite-путь: запись журнала потеряна → «resume» повторяет бэкфилл, email-провайдеров 2 → 4 | SQLite-пути нет (не-PG цели → `CONFIG_INVALID`); `001` не исполняемый шаг и на PG не парсится (`42601`) | не требуется (Low) | VERIFIED |
 
 ## Что сделано
@@ -72,10 +75,20 @@ advisory lock). Недостаток был в покрытии приложен
 | 0 | 0 | 2 | 0 |
 
 - **FM01.** Ни одной репетиции и ни одной строки доступности, созданных до
-  2026-01-17 или без `created_at`, не осталось: строк, которые конвертация могла
-  сдвинуть на месте, в production нет. Предел проверки: копию, пересохранённую
-  клиентом после 17.01, по счётчикам не отличить.
+  2026-01-17 или без `created_at`, не осталось. Этого мало ([ревью R2-01](REVIEW_R2.md)):
+  17.01 — дата первого git-коммита с новым кодом, а не дата конвертации
+  production. Строка, созданная позже в ещё старой схеме, могла попасть под
+  более позднюю конвертацию; ревьюер воспроизвёл это на PostgreSQL. Ещё один
+  предел: копию, пересохранённую клиентом после конвертации, по счётчикам не
+  отличить.
 - **FM02.** Дублей email-провайдера нет.
+
+**OPS-FM01-DATE** — верхняя граница конвертации production. Новый код пишет
+`starts_at` сам и без сконвертированной схемы не работает, поэтому дата первого
+production-деплоя этого кода (Vercel → Deployments) или известная дата ручного
+запуска `migrate-*-to-timestamptz.sql` — граница D. С ней повторить счётчик с
+`created_at < D`; ноль закрывает FM01. Без даты вопрос остаётся открытым: код
+исправлен, исторические данные не проверяемы.
 
 **OPS-R2-ADOPT** — до деплоя сервера, которому нужны 007/008 (B03/B04): с
 разрешения владельца выполнить `npm run migrate -- --dry` против production
@@ -116,6 +129,12 @@ production; пароль аккаунта App Review был литералом �
 Исправит эти две строки; это запись в production.
 
 ## Доказательства
+
+Записанные логи получены на исходнике `eb24c62` скриптами из `4d08e1f`. Точный
+повтор: `git worktree add --detach ../r2-evidence 4d08e1f`, затем в нём
+`node audit/evidence/R2/before-after.mjs` и `node audit/evidence/R2/mutations.mjs`.
+Скрипт в текущем дереве (`c4bb7c5`) сверяет число таблиц с дескриптором и
+проходит и на новых исходниках.
 
 [before-after.mjs](evidence/R2/before-after.mjs) → [before-after.txt](evidence/R2/before-after.txt)
 (59/59), [mutations.mjs](evidence/R2/mutations.mjs) → [mutations.txt](evidence/R2/mutations.txt)
