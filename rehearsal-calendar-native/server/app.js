@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './database/db.js';
 import authRoutes from './routes/auth.js';
+import emailVerificationRoutes from './routes/emailVerification.js';
 import nativeRoutes from './routes/native.js';
 import availabilityRoutes from './routes/native/availability.js';
 import calendarSyncRoutes from './routes/native/calendarSync.js';
@@ -126,6 +127,7 @@ export function createApp({ databaseRuntime } = {}) {
 
   // Auth routes
   app.use('/api/auth', authRoutes);
+  app.use('/api/auth', emailVerificationRoutes);
 
   // Availability routes (at root /api level for backward compatibility)
   app.use('/api/availability', availabilityRoutes);

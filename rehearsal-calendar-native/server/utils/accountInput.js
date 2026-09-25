@@ -45,8 +45,15 @@ export function checkPassword(value, field = 'password') {
   return value;
 }
 
+// Addresses are stored trimmed and lower-cased. Every stored address already
+// was, with no two differing only by case (OPS-R3-DATA, 25.09), so an exact
+// match on the normalized form finds every account.
+export function normalizeEmail(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : value;
+}
+
 export function checkEmail(value) {
-  const email = typeof value === 'string' ? value.trim() : value;
+  const email = normalizeEmail(value);
   if (typeof email !== 'string' || email.length > EMAIL_MAX || hasNul(email) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new InputError('email', 'EMAIL_INVALID', 'Email address is invalid');
   }
@@ -101,6 +108,11 @@ function checkBoolean(field) {
   };
 }
 
+function checkLocale(value) {
+  if (!LOCALES.includes(value)) throw new InputError('locale', 'LOCALE_INVALID', `locale must be one of ${LOCALES.join(', ')}`);
+  return value;
+}
+
 /** Registration fields: email, password and first name are required. */
 export function registrationInput(body) {
   if (!body || typeof body !== 'object') throw new InputError('body', 'BODY_INVALID', 'Request body is invalid');
@@ -110,6 +122,8 @@ export function registrationInput(body) {
     firstName: requiredName(body.firstName, 'firstName'),
     lastName: body.lastName === undefined ? null : optionalText(body.lastName, 'lastName', NAME_MAX),
     timezone: body.timezone === undefined || body.timezone === null ? null : checkTimeZone(body.timezone),
+    // The language of the confirmation email; stored as the profile locale.
+    locale: body.locale === undefined || body.locale === null ? 'en' : checkLocale(body.locale),
   };
 }
 
@@ -120,10 +134,7 @@ const PROFILE_FIELDS = {
   lastName: ['last_name', (value) => optionalText(value, 'lastName', NAME_MAX)],
   phone: ['phone', (value) => optionalText(value, 'phone', PHONE_MAX)],
   timezone: ['timezone', checkTimeZone],
-  locale: ['locale', (value) => {
-    if (!LOCALES.includes(value)) throw new InputError('locale', 'LOCALE_INVALID', `locale must be one of ${LOCALES.join(', ')}`);
-    return value;
-  }],
+  locale: ['locale', checkLocale],
   notificationsEnabled: ['notifications_enabled', checkBoolean('notificationsEnabled')],
   emailNotifications: ['email_notifications', checkBoolean('emailNotifications')],
   weekStartDay: ['week_start_day', (value) => {

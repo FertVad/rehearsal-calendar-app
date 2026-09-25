@@ -13,6 +13,9 @@
  *  - Replacing a password needs the current one; a stolen session is not
  *    enough. An account without a password may set its first one.
  */
+process.env.EMAIL_CODE_SECRET = 'account-input-test-secret';
+process.env.EMAIL_TRANSPORT = 'capture-for-tests';
+
 import { jest } from '@jest/globals';
 import { setupIntegrationDb, closeIntegrationDb } from '../integration/setup.js';
 
@@ -62,7 +65,9 @@ beforeEach(async () => {
 const row = (id) => testDb.get('SELECT * FROM native_users WHERE id = ?', [id]);
 
 describe('POST /auth/register', () => {
-  const valid = { email: 'new@example.com', password: 'long-enough-1', firstName: 'New', timezone: 'Europe/Berlin' };
+  // Registration now leaves a pending account and emails a code (A01); these
+  // cases are about what it accepts, so success is the 201 that follows.
+  const valid = { email: 'new@example.com', password: 'long-enough-1', firstName: 'New', timezone: 'Europe/Berlin', verification: 'code' };
   const count = () => testDb.get("SELECT count(*) AS n FROM native_users WHERE email LIKE '%new%'").n;
 
   it.each([
@@ -89,13 +94,13 @@ describe('POST /auth/register', () => {
 
   it('accepts 36 Cyrillic letters, which is exactly 72 bytes', async () => {
     const response = await request(app).post('/api/auth/register').send({ ...valid, password: 'я'.repeat(36) });
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
   });
 
-  it('stores trimmed values', async () => {
+  it('stores trimmed values and a lower-case address', async () => {
     const response = await request(app).post('/api/auth/register')
-      .send({ ...valid, email: '  new@example.com ', firstName: '  New ', lastName: ' Person  ' });
-    expect(response.status).toBe(200);
+      .send({ ...valid, email: '  New@Example.com ', firstName: '  New ', lastName: ' Person  ' });
+    expect(response.status).toBe(201);
     const stored = testDb.get("SELECT email, first_name, last_name, timezone FROM native_users WHERE email = 'new@example.com'");
     expect(stored).toEqual({ email: 'new@example.com', first_name: 'New', last_name: 'Person', timezone: 'Europe/Berlin' });
   });

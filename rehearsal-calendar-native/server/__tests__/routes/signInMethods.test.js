@@ -11,6 +11,9 @@
  * The concurrent-unlink half of A04 needs two real connections and row locks,
  * so it belongs to a PostgreSQL scenario; that scenario is not written yet.
  */
+process.env.EMAIL_CODE_SECRET = 'sign-in-methods-test-secret';
+process.env.EMAIL_TRANSPORT = 'capture-for-tests';
+
 import { jest } from '@jest/globals';
 import { setupIntegrationDb, closeIntegrationDb } from '../integration/setup.js';
 
@@ -53,9 +56,10 @@ const user = async (password) => testDb.run(
 
 it('lists the password of a new registration', async () => {
   const response = await request(app).post('/api/auth/register')
-    .send({ email: 'fresh@example.com', password: 'long-enough-1', firstName: 'Fresh' });
-  expect(response.status).toBe(200);
-  expect(await methods(response.body.user.id)).toEqual(['email']);
+    .send({ email: 'fresh@example.com', password: 'long-enough-1', firstName: 'Fresh', verification: 'code' });
+  expect(response.status).toBe(201);
+  const id = testDb.get("SELECT id FROM native_users WHERE email = 'fresh@example.com'").id;
+  expect(await methods(id)).toEqual(['email']);
 });
 
 it('counts a password with no registry row, so Google can be unlinked', async () => {

@@ -40,13 +40,23 @@ export async function checkSchemaHttp({ connectionString, control, allowedPorts,
       req.end(bytes);
     });
     const password = 'schema-fixture-' + 'p'.repeat(18);
-    const owner = await request('/api/auth/register', { method: 'POST', body: {
-      email: `${schema}-owner@fixture.invalid`, password, firstName: 'Schema owner', timezone: 'UTC',
-    } });
-    const member = await request('/api/auth/register', { method: 'POST', body: {
-      email: `${schema}-member@fixture.invalid`, password, firstName: 'Schema member', timezone: 'UTC',
-    } });
-    assert.equal(owner.status, 200); assert.equal(member.status, 200);
+    // Registration is pending until the emailed code is entered (R3: A01).
+    // The in-memory transport stands in for the provider; nothing leaves.
+    process.env.EMAIL_TRANSPORT = 'capture-for-tests';
+    const { capturedEmails } = await import('../../services/email/transport.js');
+    const signUp = async (email, firstName) => {
+      const created = await request('/api/auth/register', { method: 'POST', body: {
+        email, password, firstName, timezone: 'UTC', verification: 'code',
+      } });
+      assert.equal(created.status, 201);
+      assert.equal(created.body.accessToken, undefined);
+      const code = capturedEmails.filter(mail => mail.to === email).at(-1).text.match(/\b(\d{6})\b/)[1];
+      const verified = await request('/api/auth/verify-email', { method: 'POST', body: { email, password, code } });
+      assert.equal(verified.status, 200);
+      return { body: verified.body };
+    };
+    const owner = await signUp(`${schema}-owner@fixture.invalid`, 'Schema owner');
+    const member = await signUp(`${schema}-member@fixture.invalid`, 'Schema member');
     const login = await request('/api/auth/login', { method: 'POST', body: {
       email: `${schema}-owner@fixture.invalid`, password,
     } });
@@ -130,10 +140,7 @@ export async function checkSchemaHttp({ connectionString, control, allowedPorts,
       [{ week_start_day: 'sunday', last_name: 'Owner' }]);
     const invite = await request(`/api/native/projects/${projectId}/invite`, { method: 'POST', token, body: {} });
     assert.equal(invite.status, 200);
-    const joiner = await request('/api/auth/register', { method: 'POST', body: {
-      email: `${schema}-joiner@fixture.invalid`, password, firstName: 'Schema joiner', timezone: 'UTC',
-    } });
-    assert.equal(joiner.status, 200);
+    const joiner = await signUp(`${schema}-joiner@fixture.invalid`, 'Schema joiner');
     const joinerId = joiner.body.user.id;
     assert.equal((await request(`/api/native/invite/${invite.body.inviteCode}/join`, { method: 'POST',
       token: joiner.body.accessToken, body: {} })).status, 200);
@@ -176,7 +183,7 @@ export async function checkSchemaHttp({ connectionString, control, allowedPorts,
     for (let n = 0; n < 2; n++) assert.equal((await request('/api/native/push-tokens', { method: 'POST', token,
       body: { deviceToken, deviceType: 'ios', deviceName: 'Owned fixture' } })).status, 200);
     assert.equal(Number((await control.query(`SELECT count(*) FROM ${schema}.native_push_tokens WHERE user_id=$1`, [ownerId])).rows[0].count), 1);
-    return { schema, actualHttp: ['password register/login/profile', 'project/member/rehearsal',
+    return { schema, actualHttp: ['register/confirm by emailed code/login/profile', 'project/member/rehearsal',
       'manual and imported availability bulk', 'notification inbox/read', 'calendar connection/mapping',
       'bug report/admin read', 'profile week-start update', 'invite create/join', 'rehearsal respond',
       'member availability planner', 'rehearsal update keeps answers', 'admin stats/users', 'member removal',

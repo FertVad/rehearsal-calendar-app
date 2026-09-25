@@ -23,11 +23,13 @@ const modes = {
   '--r2-migrations-only': ['controls', 'R2_MIGRATIONS'],
   '--r2-migrations-schema-only': ['controls', 'R2_SCHEMA', 'R2_MIGRATIONS'],
   '--r3-email-only': ['controls', 'R3_EMAIL'],
-  '--security-only': ['controls', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL'],
+  '--r3-auth-only': ['controls', 'R3_AUTH'],
+  '--r3-only': ['controls', 'R3_EMAIL', 'R3_AUTH'],
+  '--security-only': ['controls', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH'],
 };
 assert.ok(args.length === 0 || (args.length === 1 && Object.hasOwn(modes, args[0])),
-  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only|--b04-only|--h04-only|--is02-only|--f05-only|--r2-foundation-only|--r2-schema-only|--r2-migrations-only|--r2-migrations-schema-only|--r3-email-only|--security-only]');
-const scenarios = modes[args[0]] || ['controls', 'B02', 'D01', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL'];
+  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only|--b04-only|--h04-only|--is02-only|--f05-only|--r2-foundation-only|--r2-schema-only|--r2-migrations-only|--r2-migrations-schema-only|--r3-email-only|--r3-auth-only|--r3-only|--security-only]');
+const scenarios = modes[args[0]] || ['controls', 'B02', 'D01', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH'];
 const docker = process.env.R0_DOCKER_BIN || '/usr/local/bin/docker';
 const context = process.env.R0_DOCKER_CONTEXT || 'desktop-linux';
 const cli = (...args) => execFileSync(docker, ['--context', context, ...args], { encoding: 'utf8', timeout: 20000 }).trim();
@@ -77,7 +79,7 @@ try {
   for (const scenario of scenarios) {
     const result = spawnSync(process.execPath, ['--unhandled-rejections=strict', probe, scenario], {
       cwd, encoding: 'utf8', timeout: ['IS02', 'R2_SCHEMA', 'R2_MIGRATIONS'].includes(scenario) ? 120000
-        : ['B03', 'B04', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R3_EMAIL'].includes(scenario) ? 45000 : 15000,
+        : ['B03', 'B04', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R3_EMAIL', 'R3_AUTH'].includes(scenario) ? 45000 : 15000,
       maxBuffer: 2 * 1024 * 1024,
       env: { PATH: '/usr/bin:/bin', TZ: 'UTC', NODE_ENV: 'production',
         JWT_SECRET: 'r0-local-signing-secret', ADMIN_PASSWORD: 'r0-local-password', CRON_SECRET: 'r0-local-cron',

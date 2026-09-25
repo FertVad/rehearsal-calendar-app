@@ -77,7 +77,9 @@ account-linking policy or revoke already issued application sessions.
 
 #### 1. Register New User
 
-Create a new user account.
+Create an account whose address is not yet confirmed. No session is issued:
+the emailed six-digit code, entered with the same password through
+`POST /auth/verify-email`, is what signs the person in.
 
 **Endpoint:** `POST /auth/register`
 
@@ -89,47 +91,88 @@ Create a new user account.
   "email": "user@example.com",
   "password": "securePassword123",
   "firstName": "John",
-  "lastName": "Doe"
+  "lastName": "Doe",
+  "timezone": "Europe/Berlin",
+  "locale": "de",
+  "verification": "code"
 }
 ```
 
 **Parameters:**
-- `email` (string, required): User's email address (must be unique)
-- `password` (string, required): User's password (will be hashed)
-- `firstName` (string, required): User's first name
-- `lastName` (string, optional): User's last name
+- `email` (string, required): trimmed and lower-cased before it is stored or compared
+- `password` (string, required): at least 8 characters, at most 72 bytes
+- `firstName` (string, required), `lastName` (string, optional): up to 100 characters
+- `timezone` (string, optional): a named IANA zone; offsets such as `+02:00` are refused
+- `locale` (string, optional): `en`, `ru`, `es` or `de` — the language of the code email; default `en`
+- `verification` (string, required): `"code"`. An app from before email confirmation does not send it and is told to update.
 
-**Success Response (200):**
+**Success Response (201):**
 ```json
-{
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "firstName": "John",
-    "lastName": "Doe",
-    "timezone": "Asia/Jerusalem",
-    "locale": "en",
-    "notificationsEnabled": true,
-    "emailNotifications": true
-  },
-  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
-}
+{ "status": "verification_required", "email": "user@example.com", "delivery": "sent" }
+```
+`delivery` is `sent` (the provider accepted the email), `failed` (it refused)
+or `unknown` (no answer — the email may still arrive). The account exists in
+every case; the app offers to resend.
+
+**Error Responses:**
+- `400 Bad Request`: `{ "error": "...", "code": "CLIENT_UPGRADE_REQUIRED" }` without `verification`,
+  before anything is written; otherwise a field error `{ "error", "code", "field" }` —
+  `EMAIL_INVALID`, `PASSWORD_POLICY`, `NAME_INVALID`, `TEXT_INVALID`, `TIMEZONE_INVALID`, `LOCALE_INVALID`
+- `409 Conflict`: `{ "error": "An account with this email already exists", "code": "EMAIL_TAKEN" }`, whatever the case typed
+- `503 Service Unavailable`: `{ "error": "Email is not available right now", "code": "EMAIL_UNAVAILABLE" }` —
+  no email can be sent, so no account is created
+- `500 Internal Server Error`: `{ "error": "Failed to register user" }`
+
+---
+
+#### 1a. Confirm Email Address
+
+Enter the emailed code. Works for a pending registration and for an account from
+before email confirmation, whose address was never proven.
+
+**Endpoint:** `POST /auth/verify-email`
+
+**Authentication Required:** No (the password is part of the request)
+
+**Request Body:**
+```json
+{ "email": "user@example.com", "password": "securePassword123", "code": "123456" }
+```
+
+**Success Response (200):** the same body as login — `user`, `accessToken`, `refreshToken`.
+
+**Error Responses:**
+- `401 Unauthorized`: `{ "error": "Invalid email or password" }` — the code is not looked at, and no attempt is spent
+- `400 Bad Request`: `{ "error": "The code is not valid", "code": "CODE_INVALID" }` — a wrong code, one of five attempts;
+  `CODE_LOCKED` on the fifth, `CODE_EXPIRED` after 15 minutes, `CODE_MISSING` when there is no live code
+- `409 Conflict`: `{ "error": "This address is already confirmed", "code": "ALREADY_VERIFIED" }`
+
+---
+
+#### 1b. Resend Confirmation Code
+
+Replace the code with a new one; the previous code stops working.
+
+**Endpoint:** `POST /auth/verify-email/resend`
+
+**Authentication Required:** No (the password is part of the request)
+
+**Request Body:**
+```json
+{ "email": "user@example.com", "password": "securePassword123" }
+```
+
+**Success Response (202):**
+```json
+{ "status": "code_sent", "delivery": "sent" }
 ```
 
 **Error Responses:**
-- `400 Bad Request`: Missing required fields
-  ```json
-  { "error": "Email, password and first name are required" }
-  ```
-- `409 Conflict`: Email already exists
-  ```json
-  { "error": "User with this email already exists" }
-  ```
-- `500 Internal Server Error`: Server error
-  ```json
-  { "error": "Failed to register user" }
-  ```
+- `401 Unauthorized`: `{ "error": "Invalid email or password" }`
+- `409 Conflict`: `ALREADY_VERIFIED`
+- `429 Too Many Requests`: `{ "error": "Wait before asking for another code", "code": "RATE_LIMITED", "retryAfter": 42 }` —
+  one code a minute, five an hour
+- `503 Service Unavailable`: `EMAIL_UNAVAILABLE`
 
 ---
 
@@ -180,10 +223,17 @@ Authenticate an existing user.
   ```json
   { "error": "Invalid email or password" }
   ```
+- `403 Forbidden`: the password is right but the address was never confirmed; no tokens.
+  Answered only after the right password, so it tells a stranger nothing.
+  ```json
+  { "error": "Confirm your email address first", "code": "EMAIL_NOT_VERIFIED", "email": "user@example.com" }
+  ```
 - `500 Internal Server Error`: Server error
   ```json
   { "error": "Failed to login" }
   ```
+
+The email is trimmed and lower-cased before it is looked up.
 
 ---
 
@@ -219,6 +269,8 @@ Obtain new access and refresh tokens using a valid refresh token.
   ```json
   { "error": "Invalid or expired refresh token" }
   ```
+- `403 Forbidden`: `{ "error": "Confirm your email address first", "code": "EMAIL_NOT_VERIFIED" }` —
+  a token of an account whose address is pending is not renewed
 
 ---
 

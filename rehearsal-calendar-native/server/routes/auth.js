@@ -8,14 +8,28 @@ import { serializeUser } from '../utils/userSerializer.js';
 import { verifyGoogleToken, verifyAppleToken } from '../utils/oauthVerification.js';
 import { AppleAuthUnavailableError, AppleTokenVerificationError } from '../config/appleAuth.js';
 import { findOrCreateOAuthUser, getUserAuthProviders, unlinkAuthProvider, recordPasswordMethod } from '../utils/accountLinking.js';
-import { InputError, inputErrorBody, registrationInput, profileUpdates, checkPassword } from '../utils/accountInput.js';
+import { InputError, inputErrorBody, registrationInput, profileUpdates, checkPassword, normalizeEmail } from '../utils/accountInput.js';
+import { emailTransport } from '../services/email/transport.js';
+import { issueCode, deliverCode } from '../services/email/codes.js';
+import { identityOf, markPending } from '../services/email/identity.js';
 import { notifyProjectDeleted } from '../services/notifications/pushNotificationService.js';
 
 const router = Router();
 
-// Register new user
+// Register new user.
+//
+// A registration proves nothing about the address, so it creates a pending
+// account and sends a code; the session comes from POST /verify-email with the
+// code and the same password (A01). Without that, whoever registered someone
+// else's address first shared the account once its owner signed in with
+// Google or Apple.
 router.post('/register', asyncHandler(async (req, res) => {
   try {
+    // An app from before R3 cannot enter a code. It gets a message it shows as
+    // is, instead of "Registration failed" over an account it had created.
+    if (req.body?.verification !== 'code') {
+      return res.status(400).json({ error: 'Update Rehearsly to create an account', code: 'CLIENT_UPGRADE_REQUIRED' });
+    }
     let input;
     try {
       input = registrationInput(req.body);
@@ -23,47 +37,44 @@ router.post('/register', asyncHandler(async (req, res) => {
       if (error instanceof InputError) return res.status(400).json(inputErrorBody(error));
       throw error;
     }
-    const { email, password, firstName, lastName, timezone } = input;
+    const { email, password, firstName, lastName, timezone, locale } = input;
 
-    // Check if user already exists
-    const existing = await db.get('SELECT id FROM native_users WHERE email = $1', [email]);
-    if (existing) {
-      return res.status(409).json({ error: 'User with this email already exists' });
+    // No way to send the code: refuse before creating an account nobody can confirm.
+    const transport = emailTransport();
+    if (!transport.available) {
+      return res.status(503).json({ error: 'Email is not available right now', code: 'EMAIL_UNAVAILABLE' });
     }
 
-    // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
+    const now = new Date();
+    let created;
+    try {
+      // The user, their password method (A04), the pending address and the
+      // code commit together, or none of them do.
+      created = await db.transaction(async (tx) => {
+        if (await tx.get('SELECT id FROM native_users WHERE email = $1', [email])) return null;
+        const result = await tx.run(
+          `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [email, passwordHash, firstName, lastName, timezone, locale]
+        );
+        const userId = result.lastInsertId;
+        await recordPasswordMethod(tx, userId);
+        await markPending(tx, { userId, email, now });
+        return issueCode(tx, { userId, purpose: 'verify', email, now });
+      });
+    } catch (error) {
+      // Two registrations of one address at once: the loser meets the unique key.
+      if (error?.code !== '23505') throw error;
+      created = null;
+    }
+    if (!created) {
+      return res.status(409).json({ error: 'An account with this email already exists', code: 'EMAIL_TAKEN' });
+    }
 
-    // The user and their password method in one go: register used to leave
-    // the provider list empty, so the app showed no way in for a working
-    // password (A04).
-    const userId = await db.transaction(async (tx) => {
-      const result = await tx.run(
-        `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, last_login_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())`,
-        [email, passwordHash, firstName, lastName, timezone]
-      );
-      await recordPasswordMethod(tx, result.lastInsertId);
-      return result.lastInsertId;
-    });
-
-    // New users start with token_version = 1 (DB default)
-    const { accessToken, refreshToken } = generateTokens(userId, 1);
-
-    // Get user data
-    const user = await db.get(
-      `SELECT id, email, first_name, last_name, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day,
-              onboarding_completed
-       FROM native_users WHERE id = $1`,
-      [userId]
-    );
-
-    res.json({
-      user: serializeUser(user),
-      accessToken,
-      refreshToken,
-    });
+    const delivery = await deliverCode({ db, transport, codeId: created.id, to: email, code: created.code,
+      purpose: 'verify', locale });
+    res.status(201).json({ status: 'verification_required', email, delivery });
   } catch (err) {
     console.error('[Auth] Registration error:', err);
     res.status(500).json({ error: 'Failed to register user' });
@@ -73,7 +84,8 @@ router.post('/register', asyncHandler(async (req, res) => {
 // Login
 router.post('/login', asyncHandler(async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = normalizeEmail(req.body.email);
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -103,6 +115,12 @@ router.post('/login', asyncHandler(async (req, res) => {
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // A registration whose code was never entered gets no session. Said only
+    // after the right password, so it tells a stranger nothing.
+    if ((await identityOf(db, user.id))?.status === 'pending') {
+      return res.status(403).json({ error: 'Confirm your email address first', code: 'EMAIL_NOT_VERIFIED', email: user.email });
     }
 
     // Update last login
@@ -269,6 +287,10 @@ router.post('/refresh', asyncHandler(async (req, res) => {
     const tokenVer = decoded.tv ?? 1;
     if (tokenVer < dbVersion) {
       return res.status(401).json({ error: 'Session revoked' });
+    }
+    // A pending account is never issued tokens; if one appears, it is not renewed.
+    if ((await identityOf(db, decoded.userId))?.status === 'pending') {
+      return res.status(403).json({ error: 'Confirm your email address first', code: 'EMAIL_NOT_VERIFIED' });
     }
 
     // Generate new tokens with current version
