@@ -1,7 +1,8 @@
 // R3 A01 routes: put each weakening of registration and address confirmation
 // back into a copy of the server and require the tests that guard it to fail.
-// The unmutated copy must pass the same commands; "before-A01" is the
-// registration, login and refresh as they were before this item.
+// The unmutated copy must pass the same commands. The "before-*" variants put
+// back one file as it was before a fix: auth.js before the A01 routes, and
+// both files that signed a session with a version read after COMMIT (R3-06).
 //
 //   node audit/evidence/R3/auth-mutations.mjs
 //
@@ -15,6 +16,9 @@ import { fileURLToPath } from 'node:url';
 
 const server = path.resolve(fileURLToPath(new URL('../../../rehearsal-calendar-native/server', import.meta.url)));
 const BEFORE = 'c4c5a14';
+const BEFORE_R3_06 = 'e039ccf';
+const historical = (root, file, commit) => writeFileSync(path.join(root, file),
+  execFileSync('git', ['show', `${commit}:rehearsal-calendar-native/server/${file}`], { cwd: server }));
 const jest = ['--experimental-vm-modules', 'node_modules/jest/bin/jest.js', '--runInBand', '--silent',
   '__tests__/routes/emailVerification.test.js'];
 const pgAuth = ['scripts/r0-postgres.mjs', '--r3-auth-only'];
@@ -29,9 +33,14 @@ function edit(root, file, from, to) {
 const mutations = [
   { id: 'control', description: 'unmutated copy', runs: [jest, pgAuth], expect: 'pass' },
   { id: 'before-A01', description: `routes/auth.js as at ${BEFORE}: register signs in at once, login and refresh ignore pending`,
-    apply: (root) => writeFileSync(path.join(root, 'routes/auth.js'),
-      execFileSync('git', ['show', `${BEFORE}:rehearsal-calendar-native/server/routes/auth.js`], { cwd: server })),
+    apply: (root) => historical(root, 'routes/auth.js', BEFORE),
     runs: [jest, pgAuth], expect: /tells an app from before R3 to update/ },
+  { id: 'before-R3-06-confirm', description: `routes/emailVerification.js as at ${BEFORE_R3_06}: the version is read after COMMIT`,
+    apply: (root) => historical(root, 'routes/emailVerification.js', BEFORE_R3_06),
+    runs: [pgAuth], expect: /a session signed from the old password must not outlive the password change/ },
+  { id: 'before-R3-06-password', description: `routes/auth.js as at ${BEFORE_R3_06}: PUT /me reads the version after COMMIT`,
+    apply: (root) => historical(root, 'routes/auth.js', BEFORE_R3_06),
+    runs: [pgAuth], expect: /a session from a password change must not outlive a logout after it/ },
   { id: 'no-upgrade-gate', description: 'register accepts an app that cannot enter a code',
     apply: (root) => edit(root, 'routes/auth.js', "if (req.body?.verification !== 'code') {", 'if (false) {'),
     runs: [jest, pgAuth], expect: /tells an app from before R3 to update/ },

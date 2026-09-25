@@ -65,7 +65,7 @@ OPS-R3-DATA (25.09).
 
 | ID | Важность | Условный | Пакет | Статус | Краткая суть | Evidence |
 |---|---|---|---|---|---|---|
-| A01 | High | Нет | R3 | IN_PROGRESS | предварительный захват аккаунта через email/OAuth | [Регистрация ждёт кода, pending без сессии — d5564ee (route-тест, PG R3_AUTH, 11 мутаций); OAuth-правило R3-01 и клиент не сделаны](REMEDIATION_R3.md) |
+| A01 | High | Нет | R3 | IN_PROGRESS | предварительный захват аккаунта через email/OAuth | [Регистрация ждёт кода, pending без сессии — d5564ee, версия сессии под блокировкой — 3859ece (route-тест, PG R3_AUTH, 12 отрицательных вариантов); OAuth-правило R3-01 и клиент не сделаны](REMEDIATION_R3.md) |
 | A02 | High | Нет | R1 | VERIFIED | необработанные async-исключения в auth middleware/admin login | [Исполнение и проверки — 7e1eefa](REMEDIATION_A02.md) |
 | A03 | Medium | Нет | R3 | IN_PROGRESS | backend не применяет правила пароля и профильные типы | [Код и route-тест (красный до: 16/22) — 9a702ba; PG не проводился](REMEDIATION_R3.md) |
 | A04 | Medium | Нет | R3 | IN_PROGRESS | способы входа расходятся с реальными credentials | [Код и route-тест (красный до: 5/5) — 6320743; гонка на PG не проверена](REMEDIATION_R3.md) |
