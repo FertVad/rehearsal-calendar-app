@@ -9,6 +9,7 @@ const budgetGroups = {
   '007': ['native_member_availability_rate_limits'],
   '008': ['native_invite_account_rate_limits', 'native_invite_ip_rate_limits', 'native_invite_ip_rate_limit_gate'],
   '009': ['native_operation_ip_rate_limits', 'native_operation_ip_rate_limit_gates'],
+  '010': ['native_email_identities', 'native_email_codes'],
 };
 export const schemaTableNames = Object.freeze(descriptor.tables?.map(table => table.name) || []);
 const retiredTables = new Set(['native_subscription_plans', 'native_user_subscriptions',

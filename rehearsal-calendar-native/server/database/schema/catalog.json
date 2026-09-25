@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "schemaId": "rehearsly-pg-current-v1",
   "postgresCatalogMajor": 15,
-  "bootstrapSha256": "5274f742fe74ff7ea4b8fdfedec604d9efb5f8c5ab0d5b048617d16177272324",
+  "bootstrapSha256": "b4dde9984810a81362b509f5414aa1ee09760467808b7ba907406f04c8f86c79",
   "tables": [
     {
       "name": "native_auth_providers",
@@ -134,6 +134,72 @@
         {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["event_type","internal_event_id"],"options":[0,0],"operatorClasses":["pg_catalog.text_ops","pg_catalog.int4_ops"],"collations":["pg_catalog.default",null],"included":[]},
         {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["external_event_id"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
         {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_email_codes",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"attempts","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"0","collationSchema":null,"collation":null},
+        {"name":"code_hash","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"consumed_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"email","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"expires_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"failed_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"purpose","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"sent_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["attempts"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((attempts >= 0) AND (attempts <= 5))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["code_hash"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(code_hash ~ '^[0-9a-f]{64}$'::text)"},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["purpose"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(purpose = ANY (ARRAY['verify'::text, 'reset'::text, 'change'::text]))"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id","purpose","created_at"],"options":[0,0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.text_ops","pg_catalog.timestamptz_ops"],"collations":[null,"pg_catalog.default",null],"included":[]},
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":"(consumed_at IS NULL)","keys":["user_id","purpose"],"options":[0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.text_ops"],"collations":[null,"pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_email_identities",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"email","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"status","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"verified_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"verified_by","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["status","verified_at","verified_by"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((status = 'verified'::text) = ((verified_at IS NOT NULL) AND (verified_by IS NOT NULL)))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["status"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(status = ANY (ARRAY['pending'::text, 'verified'::text]))"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["verified_by"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(verified_by = ANY (ARRAY['code'::text, 'google'::text, 'apple'::text]))"}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
       ]
     },
     {

@@ -1,6 +1,6 @@
 import pg from 'pg';
 import { MigrationError, fail } from './errors.mjs';
-import { canonical, sha256, assertValidatedArtifacts, validateFrontier, needsStep, advance, stepsForRoot } from './artifacts.mjs';
+import { canonical, sha256, assertValidatedArtifacts, validateFrontier, needsStep, advance, stepsForRoot, tableGroups } from './artifacts.mjs';
 import { quote, inspectLegacy, inspectHistory, isEmpty, createHistory, record } from './history.mjs';
 
 export { MigrationError } from './errors.mjs';
@@ -91,7 +91,7 @@ export function buildPlan({ request, observations, artifacts }) {
     for (const step of stepsForRoot(artifacts, history.root.id)) {
       if (needsStep(step, frontier)) { pending.push(step.id); frontier = advance(step, frontier); }
     }
-    if (!frontier.availabilityConflictKey || canonical(frontier.budgets) !== canonical(['007', '008', '009'])) fail('ARTIFACT_INVALID', 2);
+    if (!frontier.availabilityConflictKey || canonical(frontier.budgets) !== canonical(tableGroups)) fail('ARTIFACT_INVALID', 2);
     return { state: 'managed', rootId: history.root.id, stepIds: pending, frontier, eligibleActions: ['apply'] };
   }
   const profiles = artifacts.profiles.filter(profile => profile.adopt && inspections[profile.id]?.compatible).map(profile => profile.id);
@@ -147,7 +147,7 @@ export async function runMigrations({ connectionString, schema = 'public', reque
       await query(profile.bootstrap.sql);
       const actual = await checkedInspection(inspectSchema, query, schema, profile.id);
       if (!actual.compatible || !actual.frontier.availabilityConflictKey
-        || canonical(actual.frontier.budgets) !== canonical(['007', '008', '009'])) fail('POSTCONDITION_FAILED');
+        || canonical(actual.frontier.budgets) !== canonical(tableGroups)) fail('POSTCONDITION_FAILED');
       await createHistory(query, schema);
       await record(query, schema, { ordinal: 0, id: profile.id, kind: 'fresh',
         artifactSha256: profile.bootstrap.sha256, descriptorSha256: profile.definitionSha256, frontier: actual.frontier });

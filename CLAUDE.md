@@ -136,8 +136,9 @@ server/public/
 ### Database
 - **Server runtime, development and production**: PostgreSQL only. There is no SQLite fallback.
 - **SQLite**: isolated test fixtures only; they do not prove PostgreSQL behavior.
-- **Canonical schema**: nineteen `native_*` application tables: thirteen domain
-  tables and six shared-budget tables. Migration history is separate. Retired
+- **Canonical schema**: twenty-one `native_*` application tables: thirteen domain
+  tables, six shared-budget tables and two for email address proof (group 010).
+  Migration history is separate. Retired
   payment/activity/participant tables are not created by fresh provisioning.
   Actual production catalog and migration history have not been inspected here.
 - **Schema**: [rehearsal-calendar-native/server/database/init-native-schema.sql](rehearsal-calendar-native/server/database/init-native-schema.sql)

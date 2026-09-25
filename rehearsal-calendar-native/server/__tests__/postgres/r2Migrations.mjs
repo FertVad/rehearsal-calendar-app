@@ -6,13 +6,13 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import pg from 'pg';
 import { runMigrations, validateArtifacts } from '../../database/migrations/core.mjs';
-import { sha256, canonical } from '../../database/migrations/artifacts.mjs';
+import { sha256, canonical, tableGroups } from '../../database/migrations/artifacts.mjs';
 
 const quote = value => `"${value.replaceAll('"', '""')}"`;
 const current = 'rehearsly-pg-current-v1';
 const domain = 'rehearsly-pg-domain13-v1';
 const predecessor = 'rehearsly-pg-domain13-pre-import-key-v1';
-const groups = ['007', '008', '009'];
+const groups = [...tableGroups];
 const tableNames = ['native_fixture', ...groups.map(group => `native_budget_${group}`)];
 const baseSQL = 'CREATE TABLE native_fixture(id INTEGER PRIMARY KEY,payload TEXT NOT NULL); INSERT INTO native_fixture VALUES(1,\'preserved\');';
 const keySQL = 'CREATE UNIQUE INDEX native_fixture_key ON native_fixture(payload);';
@@ -40,7 +40,7 @@ async function inspectFixture(query, { schema, profile }) {
   const base = names.has('native_fixture') && canonical(columns) === canonical([
     { attname: 'id', typname: 'int4', attnotnull: true }, { attname: 'payload', typname: 'text', attnotnull: true }]);
   const compatible = base && (profile === predecessor ? !frontier.availabilityConflictKey
-    : frontier.availabilityConflictKey && (profile !== current || frontier.budgets.length === 3));
+    : frontier.availabilityConflictKey && (profile !== current || frontier.budgets.length === groups.length));
   return { compatible, issues: [], frontier, evidenceSha256: sha256(canonical({ objects, columns })) };
 }
 
@@ -175,7 +175,7 @@ export async function probeR2Migrations({ connectionString, control }) {
       } }), { code: 'MIGRATION_FAILED' });
       assert.deepEqual(await snapshot(schema), before);
       assert.equal((await control.query(`SELECT to_regclass($1) AS relation`, [`${schema}.native_budget_007`])).rows[0].relation, null);
-      const success = await run(schema, 'apply'); assert.deepEqual(success.stepIds, ['budget-007', 'budget-008', 'budget-009']);
+      const success = await run(schema, 'apply'); assert.deepEqual(success.stepIds, groups.map(group => `budget-${group}`));
       const after = await snapshot(schema); assert.equal((await run(schema, 'apply')).outcome, 'unchanged'); assert.deepEqual(await snapshot(schema), after);
       const altered = await fixtureArtifacts({ changed: true });
       await assert.rejects(run(schema, 'apply', { artifacts: altered.artifacts }), { code: 'HISTORY_INVALID' });
@@ -242,7 +242,7 @@ export async function probeR2Migrations({ connectionString, control }) {
       try { await assert.rejects(run(schema, 'apply'), { code: 'MIGRATION_BUSY' }); }
       finally { release(); }
       await first; assert.equal((await run(schema, 'apply')).outcome, 'unchanged');
-      assert.equal((await control.query(`SELECT count(*) FROM ${quote(schema)}.native_schema_history`)).rows[0].count, '4');
+      assert.equal((await control.query(`SELECT count(*) FROM ${quote(schema)}.native_schema_history`)).rows[0].count, String(groups.length + 1));
     });
     await check('write inspection holds real table locks against app writes; lock wait is bounded', async () => {
       const schema = await make();
@@ -335,7 +335,7 @@ export async function probeR2Migrations({ connectionString, control }) {
       const versionedInspector = (query, options) => options.profile === futureId
         ? Promise.resolve({ compatible: false, issues: [{ code: 'FUTURE_PROFILE_NOT_CURRENT', objectId: 'future-v2' }] })
         : inspectFixture(query, options);
-      assert.deepEqual((await run(schema, 'apply', { artifacts: extended, inspectSchema: versionedInspector })).stepIds, ['budget-007','budget-008','budget-009']);
+      assert.deepEqual((await run(schema, 'apply', { artifacts: extended, inspectSchema: versionedInspector })).stepIds, groups.map(group => `budget-${group}`));
       assert.equal((await run(schema, 'apply', { artifacts: extended, inspectSchema: versionedInspector })).outcome,'unchanged');
       assert.equal((await run(schema, 'apply')).outcome, 'unchanged');
       const freshSchema = `${prefix}_${schemas.length}`;
@@ -350,12 +350,13 @@ export async function probeR2Migrations({ connectionString, control }) {
       const sourceRoot = fileURLToPath(new URL('../../', import.meta.url));
       const fixture = await mkdtemp('/private/tmp/reh-migration-cli-');
       try {
-        const copied = ['scripts/migrate.js', 'database/migrations/cli.mjs', 'database/migrations/core.mjs',
+        // The runner's code, plus every artifact the real manifest names.
+        const { manifest: realManifest } = await import('../../database/schema/manifest.mjs');
+        const copied = [...new Set(['scripts/migrate.js', 'database/migrations/cli.mjs', 'database/migrations/core.mjs',
           'database/migrations/artifacts.mjs', 'database/migrations/errors.mjs', 'database/migrations/history.mjs',
-          'database/migrations/sql.mjs', 'database/schema/manifest.mjs', 'database/schema/inspect.mjs',
-          'database/schema/catalog.json', 'database/schema/availability-conflict-key-v1.sql',
-          'database/init-native-schema.sql', 'migrations/007-member-availability-rate-limit.sql',
-          'migrations/008-invite-rate-limits.sql', 'migrations/009-operation-ip-rate-limits.sql'];
+          'database/migrations/sql.mjs', 'database/schema/manifest.mjs',
+          ...realManifest.profiles.flatMap(profile => [profile.descriptor, profile.inspector, profile.bootstrap]).filter(Boolean).map(ref => ref.file),
+          ...realManifest.steps.map(step => step.sql.file)])];
         for (const file of copied) {
           await mkdir(path.dirname(path.join(fixture,file)), { recursive: true });
           await copyFile(path.join(sourceRoot,file),path.join(fixture,file));

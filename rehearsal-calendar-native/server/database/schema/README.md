@@ -6,8 +6,9 @@ an empty, explicitly selected application schema and commits DDL, verified
 postconditions and the new history record in one transaction. The snapshot has
 no table drops, historical data conversion or implicit environment loading.
 
-The snapshot defines 19 application tables: 13 domain tables and the six tables
-from the approved 007/008/009 budget groups. It supplies the availability conflict
+The snapshot defines 21 application tables: 13 domain tables, the six tables
+of the approved 007/008/009 budget groups and the two of group 010 (email
+address proof, R3). It supplies the availability conflict
 key, notification indexes and other historical structural postconditions that
 the old mixed-dialect bootstrap omitted. Fresh `provider_metadata` is TEXT;
 `native_bug_reports.created_at` and other instant columns are TIMESTAMPTZ.
@@ -15,11 +16,11 @@ No existing column is silently cast to those types.
 
 ## Named profiles
 
-- `rehearsly-pg-current-v1`: all 19 tables, required constraints/indexes, and
+- `rehearsly-pg-current-v1`: all 21 tables, required constraints/indexes, and
   consistent budget gate rows. Fresh and adoption are both allowed.
 - `rehearsly-pg-domain13-v1`: the complete modern domain schema, with each budget
   group either wholly absent or fully compatible. After adoption, an explicit
-  `--apply` installs the missing approved groups in 007, 008, 009 order.
+  `--apply` installs the missing approved groups in 007, 008, 009, 010 order.
 - `rehearsly-pg-domain13-pre-import-key-v1`: the same modern predecessor, except
   that the availability imported-event unique key is absent and the aggregate
   duplicate count is zero. Adoption requires this explicit profile. Apply first
@@ -96,6 +97,13 @@ profile uses new versioned checker, descriptor, bootstrap and forward-artifact
 paths. The exported dispatcher/manifest may add those profiles while retaining
 the original v1 hashes and definitions. Do not replace the old bootstrap path or
 recompute old expected hashes to make previously recorded history appear valid.
+
+One exception, taken before this rule could bite: on 2026-09-25 R3 extended v1
+with group 010 (the 010 step, its tables in the snapshot and the descriptor, the
+inspector's group list) and re-pinned the hashes. No persistent database had
+recorded a v1 history then — production was not adopted and every test schema
+is disposable — so no recorded root changed meaning. From the first production
+adoption on, changes take new versioned paths as described above.
 
 `r2Schema.mjs` checks actual fresh and adopted schemas through the real migration
 runner and application HTTP/adapter code, plus independent catalog drift and

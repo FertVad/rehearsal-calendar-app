@@ -17,6 +17,10 @@ const freeze = value => {
   }
   return value;
 };
+// Optional table groups, each installed whole by one forward step and
+// recorded in the frontier as present. 007-009 are the rate-limit budgets
+// (hence the frontier key "budgets"); 010 is email address proof (R3).
+export const tableGroups = Object.freeze(['007', '008', '009', '010']);
 const idValid = value => typeof value === 'string' && /^[a-z0-9][a-z0-9-]{0,99}$/.test(value);
 const artifactValid = value => value && typeof value.file === 'string'
   && /^[a-zA-Z0-9_./-]+$/.test(value.file) && !path.posix.isAbsolute(value.file)
@@ -80,7 +84,7 @@ export function validateArtifacts(manifest, filesByPath) {
       && step.roots.every(id => profiles.some(profile => profile.id === id)));
     const when = step.when;
     assertArtifact(when && Object.keys(when).length === 1
-      && (when.missingAvailabilityKey === true || ['007', '008', '009'].includes(when.missingBudget)));
+      && (when.missingAvailabilityKey === true || tableGroups.includes(when.missingBudget)));
     const sql = snapshot(step.sql, true);
     const profile = profiles.find(profile => profile.id === step.verifyProfile);
     return { id: step.id, sql, when: { ...when }, roots: [...step.roots], verifyProfile: step.verifyProfile,
@@ -90,7 +94,7 @@ export function validateArtifacts(manifest, filesByPath) {
   assertArtifact(new Set(steps.map(step => step.id)).size === steps.length);
   for (const profile of profiles) {
     const stepKeys = steps.filter(step => step.roots.includes(profile.id)).map(step => step.when.missingBudget ?? 'availability');
-    const ordered = ['availability', '007', '008', '009'].filter(key => stepKeys.includes(key));
+    const ordered = ['availability', ...tableGroups].filter(key => stepKeys.includes(key));
     assertArtifact(new Set(stepKeys).size === stepKeys.length && canonical(stepKeys) === canonical(ordered));
   }
   assertArtifact(manifest.legacyFilenames.every(file => typeof file === 'string'
@@ -118,7 +122,7 @@ export async function loadArtifacts(manifest, root) {
 
 export function validateFrontier(value) {
   if (!value || value.domain !== 'v1' || typeof value.availabilityConflictKey !== 'boolean'
-    || !Array.isArray(value.budgets) || value.budgets.some(key => !['007', '008', '009'].includes(key))
+    || !Array.isArray(value.budgets) || value.budgets.some(key => !tableGroups.includes(key))
     || new Set(value.budgets).size !== value.budgets.length
     || Object.keys(value).sort().join(',') !== 'availabilityConflictKey,budgets,domain') fail('HISTORY_INVALID');
   return { domain: 'v1', availabilityConflictKey: value.availabilityConflictKey, budgets: [...value.budgets].sort() };
