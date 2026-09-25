@@ -28,7 +28,7 @@ const mutations = [
   { id: 'control', description: 'unmutated copy', runs: [jest, pgEmail], expect: 'pass' },
   { id: 'no-row-lock', description: 'checkCode reads the live code without FOR UPDATE',
     apply: (root) => edit(root, 'consumed_at IS NULL FOR UPDATE`', 'consumed_at IS NULL`'),
-    runs: [pgEmail], expect: /R3_EMAIL probe failed/ },
+    runs: [pgEmail], expect: /second concurrent check of one code must not succeed/ },
   { id: 'no-address-check', description: 'a code for another address is checked anyway',
     apply: (root) => edit(root, "if (live.email !== email) return { ok: false, reason: 'CODE_MISSING' };", ''),
     runs: [jest], expect: /refuses a code sent to another address/ },
