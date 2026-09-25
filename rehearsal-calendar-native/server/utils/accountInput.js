@@ -31,9 +31,14 @@ export function inputErrorBody(error) {
   return { error: error.message, code: error.code, field: error.field };
 }
 
+// PostgreSQL text cannot hold U+0000, so a name with one failed in the
+// INSERT as a 500 (review R3-03). bcrypt stops reading a password at it, which
+// would make "abc\0anything" the same password as "abc".
+const hasNul = (value) => value.includes('\u0000');
+
 export function checkPassword(value, field = 'password') {
   if (typeof value !== 'string' || [...value].length < PASSWORD_MIN_LENGTH
-      || Buffer.byteLength(value, 'utf8') > PASSWORD_MAX_BYTES || !value.trim()) {
+      || Buffer.byteLength(value, 'utf8') > PASSWORD_MAX_BYTES || !value.trim() || hasNul(value)) {
     throw new InputError(field, 'PASSWORD_POLICY',
       `Password must be at least ${PASSWORD_MIN_LENGTH} characters and at most ${PASSWORD_MAX_BYTES} bytes`);
   }
@@ -42,24 +47,32 @@ export function checkPassword(value, field = 'password') {
 
 export function checkEmail(value) {
   const email = typeof value === 'string' ? value.trim() : value;
-  if (typeof email !== 'string' || email.length > EMAIL_MAX || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (typeof email !== 'string' || email.length > EMAIL_MAX || hasNul(email) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new InputError('email', 'EMAIL_INVALID', 'Email address is invalid');
   }
   return email;
 }
 
+const NAMED_ZONES = new Set(Intl.supportedValuesOf('timeZone'));
+
+// A named IANA zone, as the JS date helpers and PostgreSQL's AT TIME ZONE both
+// read it. Intl also accepts UTC offsets such as "+03:00" or "-0330", which
+// PostgreSQL reads with the POSIX sign (west positive) or rejects outright, so
+// one stored value put the same instant on different days in JS and in SQL
+// (review R3-02). The name is kept as sent: "Europe/Kyiv" stays "Europe/Kyiv".
 export function isTimeZone(value) {
   if (typeof value !== 'string' || !value || value.length > TIMEZONE_MAX) return false;
+  let resolved;
   try {
-    new Intl.DateTimeFormat('en-US', { timeZone: value });
-    return true;
+    resolved = new Intl.DateTimeFormat('en-US', { timeZone: value }).resolvedOptions().timeZone;
   } catch {
     return false;
   }
+  return resolved === 'UTC' || resolved.startsWith('Etc/') || NAMED_ZONES.has(resolved);
 }
 
 function requiredName(value, field) {
-  if (typeof value !== 'string' || !value.trim() || value.trim().length > NAME_MAX) {
+  if (typeof value !== 'string' || !value.trim() || value.trim().length > NAME_MAX || hasNul(value)) {
     throw new InputError(field, 'NAME_INVALID', `${field} must be 1 to ${NAME_MAX} characters`);
   }
   return value.trim();
@@ -70,7 +83,7 @@ function requiredName(value, field) {
 // other two — which used to be read as "no change" (HP02).
 function optionalText(value, field, max) {
   if (value === null) return null;
-  if (typeof value !== 'string' || value.trim().length > max) {
+  if (typeof value !== 'string' || value.trim().length > max || hasNul(value)) {
     throw new InputError(field, 'TEXT_INVALID', `${field} must be text of at most ${max} characters`);
   }
   return value.trim() || null;

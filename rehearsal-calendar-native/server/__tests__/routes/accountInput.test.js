@@ -72,6 +72,14 @@ describe('POST /auth/register', () => {
     ['a malformed email', { email: 'not-an-address' }, 'EMAIL_INVALID'],
     ['a number for a name', { firstName: 42 }, 'NAME_INVALID'],
     ['a timezone that does not exist', { timezone: 'Mars/Olympus_Mons' }, 'TIMEZONE_INVALID'],
+    // Review R3-02: Intl takes these, PostgreSQL reads them differently or not at all.
+    ['a UTC offset for a timezone', { timezone: '+03:00' }, 'TIMEZONE_INVALID'],
+    ['a compact negative offset', { timezone: '-0330' }, 'TIMEZONE_INVALID'],
+    // Review R3-03: PostgreSQL text cannot hold U+0000; bcrypt stops at it.
+    ['a NUL in the first name', { firstName: 'A\u0000B' }, 'NAME_INVALID'],
+    ['a NUL in the last name', { lastName: 'A\u0000B' }, 'TEXT_INVALID'],
+    ['a NUL in the email', { email: 'a\u0000b@example.com' }, 'EMAIL_INVALID'],
+    ['a NUL in the password', { password: 'long-enough\u0000tail' }, 'PASSWORD_POLICY'],
   ])('refuses %s with 400 and creates nothing', async (_label, change, code) => {
     const response = await request(app).post('/api/auth/register').send({ ...valid, ...change });
     expect(response.status).toBe(400);
@@ -100,6 +108,8 @@ describe('PUT /auth/me profile fields', () => {
     ['a string for a flag', { notificationsEnabled: 'yes' }, 'BOOLEAN_REQUIRED'],
     ['an empty first name', { firstName: '   ' }, 'NAME_INVALID'],
     ['an overlong phone', { phone: '1'.repeat(51) }, 'TEXT_INVALID'],
+    ['a UTC offset for a timezone', { timezone: '+0300' }, 'TIMEZONE_INVALID'],
+    ['a NUL in the last name', { lastName: 'A\u0000B' }, 'TEXT_INVALID'],
   ])('refuses %s with 400 and changes nothing', async (_label, body, code) => {
     const before = row(userId);
     const response = await request(app).put('/api/auth/me').set('Authorization', `Bearer ${tokenFor(userId)}`).send(body);
@@ -117,6 +127,12 @@ describe('PUT /auth/me profile fields', () => {
     expect(response.status).toBe(200);
     expect(row(userId)).toMatchObject({ last_name: null, phone: null });
     expect(response.body.user.lastName).toBeNull();
+  });
+
+  it.each(['UTC', 'Asia/Jerusalem', 'Etc/GMT+3', 'Europe/Kyiv'])('accepts the named zone %s as sent', async (zone) => {
+    const response = await request(app).put('/api/auth/me').set('Authorization', `Bearer ${tokenFor(userId)}`).send({ timezone: zone });
+    expect(response.status).toBe(200);
+    expect(row(userId).timezone).toBe(zone);
   });
 
   it('leaves a field alone when it is not sent', async () => {
