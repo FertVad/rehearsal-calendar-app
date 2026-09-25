@@ -179,11 +179,15 @@ try {
         body: JSON.stringify(body) });
       return { status: response.status, body: await response.json() };
     };
-    const account = await call('/api/auth/register', { email: 'f02-http@fixture.invalid', password: 'f02-fixture-' + 'x'.repeat(16),
-      firstName: 'F02', timezone: 'UTC' });
-    report('F02', 'before', 'register on the old-procedure database', 200, account.status);
+    // The session is signed for an account written directly. Registration went
+    // through /api/auth/register until R3 made it wait for an emailed code in
+    // tables (group 010) the old procedure never created; F02 is about the
+    // bulk route, and a refused session would show as 401, not 500.
+    const account = (await q(`INSERT INTO before_f02.native_users(email,first_name)
+      VALUES('f02-http@fixture.invalid','F02') RETURNING id, token_version`)).rows[0];
+    const { generateTokens } = await load('middleware/jwtMiddleware.js');
     const bulk = await call('/api/native/availability/bulk', { entries: [{ startsAt: '2031-03-29T10:00:00Z',
-      endsAt: '2031-03-29T11:00:00Z', type: 'busy' }] }, account.body.accessToken);
+      endsAt: '2031-03-29T11:00:00Z', type: 'busy' }] }, generateTokens(account.id, account.token_version).accessToken);
     report('F02', 'before', 'POST /api/native/availability/bulk on the old-procedure database', 500, bulk.status);
   } finally {
     await new Promise(resolve => listener.close(resolve));
