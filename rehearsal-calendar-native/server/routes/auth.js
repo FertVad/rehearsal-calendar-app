@@ -3,7 +3,7 @@ import { logger } from '../utils/logger.js';
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../database/db.js';
-import { generateTokens, verifyToken, requireAuth } from '../middleware/jwtMiddleware.js';
+import { generateTokens, verifyToken, requireAuth, lockSession, SESSION_REVOKED } from '../middleware/jwtMiddleware.js';
 import { serializeUser } from '../utils/userSerializer.js';
 import { verifyGoogleToken, verifyAppleToken } from '../utils/oauthVerification.js';
 import { AppleAuthUnavailableError, AppleTokenVerificationError } from '../config/appleAuth.js';
@@ -11,7 +11,7 @@ import { signInWithProvider, ProviderSignInRefused, getUserAuthProviders, unlink
 import { InputError, inputErrorBody, registrationInput, profileUpdates, checkPassword, normalizeEmail } from '../utils/accountInput.js';
 import { emailTransport } from '../services/email/transport.js';
 import { issueCode, deliverCode } from '../services/email/codes.js';
-import { identityOf, markPending } from '../services/email/identity.js';
+import { identityOf, isVerified, markPending } from '../services/email/identity.js';
 import { notifyProjectDeleted } from '../services/notifications/pushNotificationService.js';
 
 const router = Router();
@@ -326,13 +326,18 @@ router.put('/me', requireAuth, asyncHandler(async (req, res) => {
     // The password is checked and replaced under the user row lock, with its
     // sign-in method recorded in the same transaction.
     const saved = await db.transaction(async (tx) => {
-      const locked = await tx.get('SELECT password_hash FROM native_users WHERE id = $1 FOR UPDATE', [req.userId]);
+      const locked = await lockSession(tx, req, 'email, password_hash');
+      if (!locked) return { revoked: true };
       if (passwordChange) {
         // A stolen session must not be enough to replace the password and keep
-        // the account. An account without one (OAuth only) may set its first.
+        // the account. An account without one (OAuth only) may set its first,
+        // but only on an address someone has proven: a first password is the
+        // one thing that outlasts every session.
         if (locked.password_hash) {
           const proof = req.body.currentPassword;
           if (typeof proof !== 'string' || !(await bcrypt.compare(proof, locked.password_hash))) return { refused: true };
+        } else if (!isVerified(await identityOf(tx, req.userId), locked.email)) {
+          return { unverified: true };
         }
         updates.push(['password_hash', await bcrypt.hash(req.body.password, 10)]);
       }
@@ -356,9 +361,14 @@ router.put('/me', requireAuth, asyncHandler(async (req, res) => {
         [req.userId]
       ) };
     });
+    if (saved.revoked) return res.status(401).json(SESSION_REVOKED);
     if (saved.refused) {
       return res.status(403).json({ error: 'Current password is incorrect', code: 'CURRENT_PASSWORD_INVALID',
         field: 'currentPassword' });
+    }
+    if (saved.unverified) {
+      return res.status(403).json({ error: 'Confirm your email address before setting a password',
+        code: 'EMAIL_NOT_VERIFIED', field: 'password' });
     }
     const { user } = saved;
 
@@ -380,9 +390,12 @@ router.put('/me', requireAuth, asyncHandler(async (req, res) => {
 // Logout — revoke all sessions for this user
 router.post('/logout', requireAuth, asyncHandler(async (req, res) => {
   try {
+    // Only a session that is still current bumps the version. One revoked
+    // while this request waited is gone already, and bumping again would sign
+    // out whoever revoked it (review R3-09).
     await db.run(
-      'UPDATE native_users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1',
-      [req.userId]
+      'UPDATE native_users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1 AND token_version <= $2',
+      [req.userId, req.tokenVersion]
     );
     res.json({ success: true });
   } catch (err) {
@@ -401,6 +414,9 @@ router.delete('/me', requireAuth, asyncHandler(async (req, res) => {
     // the ROLLBACK below would then discard a bystander's write instead of this
     // request's. Everything inside uses `tx`.
     const orphanedProjects = await db.transaction(async (tx) => {
+      // A session revoked while this request waited deletes nothing (R3-09).
+      if (!(await lockSession(tx, req))) return null;
+
       // The projects that go with the account.
       //
       // Everything this person owns, whoever else administers it, and nobody
@@ -470,6 +486,7 @@ router.delete('/me', requireAuth, asyncHandler(async (req, res) => {
 
       return orphaned;
     });
+    if (orphanedProjects === null) return res.status(401).json(SESSION_REVOKED);
 
     // Outside the transaction, and each one on its own: the account is already
     // gone, so a push that fails must not read as a deletion that failed.
@@ -522,13 +539,15 @@ router.delete('/me/providers/:provider', requireAuth, asyncHandler(async (req, r
       return res.status(400).json({ error: 'Invalid provider type' });
     }
 
-    await unlinkAuthProvider(req.userId, provider);
+    await unlinkAuthProvider(req.userId, provider, req.tokenVersion);
 
     res.json({
       message: `${provider} provider unlinked successfully`,
     });
   } catch (err) {
     console.error('[Auth] Unlink provider error:', err);
+
+    if (err.message === 'Session revoked') return res.status(401).json(SESSION_REVOKED);
 
     if (err.message === 'Cannot unlink the last authentication method') {
       return res.status(400).json({ error: err.message });

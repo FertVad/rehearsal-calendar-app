@@ -192,9 +192,19 @@ describe('PUT /auth/me password', () => {
     expect(response.body.code).toBe('PASSWORD_POLICY');
   });
 
-  it('lets an account without a password set its first one', async () => {
+  it('lets an account without a password set its first one once its address is proven', async () => {
+    testDb.run(`INSERT INTO native_email_identities (user_id, email, status, verified_at, verified_by, created_at, updated_at)
+      VALUES (?, ?, 'verified', CURRENT_TIMESTAMP, 'google', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+    [oauthUserId, row(oauthUserId).email]);
     const response = await change(oauthUserId, { password: 'first-password' });
     expect(response.status).toBe(200);
     expect(await bcrypt.compare('first-password', row(oauthUserId).password_hash)).toBe(true);
+  });
+
+  it('refuses a first password while nobody has proven the address', async () => {
+    const response = await change(oauthUserId, { password: 'first-password' });
+    expect(response.status).toBe(403);
+    expect(response.body).toMatchObject({ code: 'EMAIL_NOT_VERIFIED', field: 'password' });
+    expect(row(oauthUserId).password_hash).toBeNull();
   });
 });

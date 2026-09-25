@@ -46,6 +46,11 @@ A token whose version was revoked answers `401`. A token of an account whose
 address is still pending answers `403 { "code": "EMAIL_NOT_VERIFIED" }` on every
 route: no route issues one, and should one exist it reaches nothing.
 
+The version is checked before the handler runs. Handlers that change credentials
+or the account itself — `PUT /auth/me`, `DELETE /auth/me`, `POST /auth/logout`,
+unlinking a provider — check it again under the account's row lock, so a request
+admitted just before a revocation changes nothing after it.
+
 ### Token Refresh Flow
 
 When an access token expires (401 error), use the refresh token to obtain a new access token pair via the `/auth/refresh` endpoint.
@@ -79,7 +84,9 @@ server startup alone does not confirm it.
 transaction. The provider's address counts as proof only when the provider says
 it is verified; it is trimmed and lower-cased like every other address.
 
-- **Already linked provider**: signs in to that account.
+- **Already linked provider**: signs in to that account — for Apple even when the
+  token carries no address. Google refuses a token whose address it has not
+  verified, linked or not (`400 PROVIDER_EMAIL_UNVERIFIED`), as it did before.
 - **Not linked**: a proven address joins the account that has it (`linked: true`)
   or creates one (`isNewUser: true`). Without an address, or with one the provider
   did not verify, nothing is joined or created: `400 PROVIDER_EMAIL_REQUIRED` /
@@ -89,7 +96,9 @@ it is verified; it is trimmed and lower-cased like every other address.
   ago: the address becomes verified by the provider. A password on that account
   was never proven to be the owner's, so it is removed together with every
   session and live code, and the response says `passwordRevoked: true`. The app
-  tells the person and offers a password reset. A confirmed account is only linked.
+  is to tell the person and offer a password reset; both the client part and the
+  reset flow are later items. Until then the person can set a first password in
+  the profile, the address being verified now. A confirmed account is only linked.
 - **Pending account without proof** (a linked provider whose token carries no
   address): `403 EMAIL_NOT_VERIFIED`, no tokens.
 
@@ -337,7 +346,7 @@ Retrieve the authenticated user's profile information.
 
 #### 5. Update Current User Info
 
-Update the authenticated user's profile information.
+Update the authenticated user's profile, or their password.
 
 **Endpoint:** `PUT /auth/me`
 
@@ -353,42 +362,45 @@ Update the authenticated user's profile information.
   "locale": "en",
   "notificationsEnabled": true,
   "emailNotifications": false,
+  "weekStartDay": "monday",
+  "onboardingCompleted": true,
+  "currentPassword": "oldSecurePassword123",
   "password": "newSecurePassword123"
 }
 ```
 
 **Parameters (all optional):**
-- `firstName` (string): User's first name
-- `lastName` (string): User's last name
-- `phone` (string): User's phone number
-- `timezone` (string): IANA timezone identifier (e.g., "America/New_York")
-- `locale` (string): Locale code (e.g., "en", "es")
-- `notificationsEnabled` (boolean): Enable/disable notifications
-- `emailNotifications` (boolean): Enable/disable email notifications
-- `password` (string): New password (will be hashed)
+- `firstName` (string): 1–100 characters
+- `lastName` (string or null): up to 100 characters; `""` or `null` clears it
+- `phone` (string or null): up to 50 characters
+- `timezone` (string): a named IANA zone (e.g. "America/New_York"); offsets are refused
+- `locale` (string): `en`, `ru`, `es` or `de`
+- `notificationsEnabled`, `emailNotifications`, `onboardingCompleted` (boolean)
+- `weekStartDay` (string): `monday` or `sunday`
+- `password` (string): 8 characters to 72 bytes. When the account has a password,
+  `currentPassword` must prove it. An account without one (Google/Apple only) may
+  set its first only once its address is verified.
+- `email`: only the current address is accepted; changing it needs a confirmed
+  new address and is refused here.
 
 **Success Response (200):**
 ```json
-{
-  "id": 1,
-  "email": "user@example.com",
-  "firstName": "Jane",
-  "lastName": "Smith",
-  "phone": "+1234567890",
-  "avatarUrl": "https://example.com/avatar.jpg",
-  "timezone": "America/New_York",
-  "locale": "en",
-  "notificationsEnabled": true,
-  "emailNotifications": false
-}
+{ "user": { "id": 1, "email": "user@example.com", "firstName": "Jane", "lastName": "Smith" } }
 ```
+After a password change the response also carries `accessToken` and
+`refreshToken`: every other session of the account is revoked, this device keeps
+signing in.
 
 **Error Responses:**
-- `400 Bad Request`: No fields to update
-  ```json
-  { "error": "No fields to update" }
-  ```
-- `401 Unauthorized`: Invalid or missing token
+- `400 Bad Request`: a field error `{ "error", "code", "field" }` (`NAME_INVALID`,
+  `TEXT_INVALID`, `TIMEZONE_INVALID`, `LOCALE_INVALID`, `BOOLEAN_REQUIRED`,
+  `WEEK_START_INVALID`, `PASSWORD_POLICY`); `EMAIL_CHANGE_REQUIRES_VERIFICATION`;
+  `{ "error": "No fields to update" }`
+- `401 Unauthorized`: invalid or missing token, or `Session revoked` — also when the
+  revocation committed while this request was already under way; nothing is written
+- `403 Forbidden`: `CURRENT_PASSWORD_INVALID` (`field: currentPassword`);
+  `EMAIL_NOT_VERIFIED` (`field: password`) for a first password on an address
+  nobody has proven
 
 ---
 
@@ -403,17 +415,24 @@ Permanently delete the authenticated user's account.
 **Success Response (200):**
 ```json
 {
-  "message": "Account deleted successfully"
+  "message": "Account deleted successfully",
+  "deletedProjects": 0
 }
 ```
 
 **Error Responses:**
-- `401 Unauthorized`: Invalid or missing token
+- `401 Unauthorized`: invalid or missing token, or `Session revoked` — also when the
+  revocation committed while this request was already under way; nothing is deleted
 - `500 Internal Server Error`: Server error
 
 **Notes:**
 - This action is irreversible
 - All user data and project memberships will be deleted
+
+`POST /auth/logout` revokes every session of the account. A session revoked while
+its logout was under way changes nothing more: bumping the version again would
+sign out whoever revoked it. `DELETE /auth/me/providers/:provider` answers `401
+Session revoked` in the same case and leaves the link.
 
 ---
 

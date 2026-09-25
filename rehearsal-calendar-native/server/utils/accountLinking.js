@@ -252,15 +252,18 @@ export async function recordPasswordMethod(tx, userId) {
  *
  * @param {number} userId - User ID
  * @param {string} providerType - Provider to unlink ('google', 'apple', 'email')
+ * @param {number} tokenVersion - Version of the session asking; one revoked
+ *   meanwhile unlinks nothing (review R3-09)
  * @returns {Promise<boolean>} True if unlinked successfully
- * @throws {Error} If trying to unlink the last auth method
+ * @throws {Error} If trying to unlink the last auth method, or the session was revoked
  */
-export async function unlinkAuthProvider(userId, providerType) {
+export async function unlinkAuthProvider(userId, providerType, tokenVersion) {
   await db.transaction(async (tx) => {
     // Two unlinks at once used to each count two methods and each delete one,
     // leaving none (A04). The row lock makes the second wait for the first to
     // commit, then count again.
-    const locked = await tx.get('SELECT id FROM native_users WHERE id = $1 FOR UPDATE', [userId]);
+    const locked = await tx.get('SELECT id, token_version FROM native_users WHERE id = $1 FOR UPDATE', [userId]);
+    if (locked && !(locked.token_version <= tokenVersion)) throw new Error('Session revoked');
     const methods = locked ? await signInMethods(tx, userId) : null;
     if (!methods?.some((method) => method.provider_type === providerType)) {
       throw new Error('Auth provider not found');

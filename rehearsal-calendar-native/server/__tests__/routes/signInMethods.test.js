@@ -101,6 +101,9 @@ it('counts two email rows as one way in and keeps the last one', async () => {
 it('lists the first password an OAuth account sets', async () => {
   const id = await user(null);
   provider(id, 'google', 'google-subject');
+  // A first password needs a proven address; Google proved this one.
+  testDb.run(`INSERT INTO native_email_identities (user_id, email, status, verified_at, verified_by, created_at, updated_at)
+    SELECT id, email, 'verified', CURRENT_TIMESTAMP, 'google', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM native_users WHERE id = ?`, [id]);
   const set = await request(app).put('/api/auth/me').set('Authorization', bearer(id)).send({ password: 'first-password' });
   expect(set.status).toBe(200);
   expect(await methods(id)).toEqual(['email', 'google']);

@@ -704,6 +704,10 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
   else's address first keeps a way into the owner's account
 - A pending account gets no session: login, refresh, Google/Apple and the auth
   middleware all refuse it
+- The middleware checks the session version before the handler, outside any
+  lock. A handler that changes credentials or the account (`PUT /me`,
+  `DELETE /me`, logout, unlink) checks again with `lockSession` under the user
+  row lock, or a request admitted just before a revocation acts after it
 - Check `native_auth_providers` table for account linking status
 - Supports multiple providers per user (can link both Google and Apple to same account)
 

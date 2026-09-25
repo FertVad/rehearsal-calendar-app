@@ -273,8 +273,10 @@ test('a real SQL failure after successful verification remains generic 500 and c
   expect(failed.body).toEqual({ error: 'Apple authentication failed' });
   expect(verifyCall).toHaveBeenCalledTimes(1);
   expect(jwksTransport).toHaveBeenCalledTimes(1);
-  // The linking SQL really ran, in one transaction, and was rolled back whole.
-  expect(observer.statements.some(({ scope, sql }) => scope && /native_auth_providers/.test(sql))).toBe(true);
+  // The linking SQL really ran — the very UPDATE the trigger refuses — in one
+  // transaction, and was rolled back whole.
+  expect(observer.statements.some(({ scope, method, sql }) => scope && method === 'run'
+    && /UPDATE native_auth_providers SET last_used_at/.test(sql))).toBe(true);
   expect(observer.transactions.at(-1).state).toBe('rolled-back');
   expect(snapshot()).toEqual(before);
   sqlite.run('DROP TRIGGER ia01_fail_provider_update');

@@ -362,6 +362,81 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
     assert.equal(relinked.value.linked, true, 'a sign-in through a link removed meanwhile must link afresh');
     assert.equal(await count("SELECT count(*) FROM r0_fixture.native_auth_providers WHERE provider_user_id = 'google-unlinked'"), 1);
     contracts.push('link removed while a Google sign-in waited on its lock: the sign-in starts over and links afresh');
+
+    // R3-09. A request of the stranger's session is admitted by the middleware
+    // before the owner's Google sign-in revokes it, and waits for the account's
+    // row behind that sign-in. Under the lock it must find itself revoked.
+    const strangerAccount = async (email, subject, { apple = false } = {}) => {
+      const id = (await control.query(`INSERT INTO r0_fixture.native_users (email, password_hash, first_name)
+        VALUES ($1, $2, 'Stranger') RETURNING id`, [email, await bcrypt.hash(PASSWORD, 4)])).rows[0].id;
+      await control.query(`INSERT INTO r0_fixture.native_auth_providers (user_id, provider_type, provider_user_id,
+        provider_email, created_at, updated_at) VALUES ($1, 'google', $2, $3, NOW(), NOW())`, [id, subject, email]);
+      if (apple) {
+        await control.query(`INSERT INTO r0_fixture.native_auth_providers (user_id, provider_type, provider_user_id,
+          provider_email, created_at, updated_at) VALUES ($1, 'apple', $2, $3, NOW(), NOW())`, [id, `${subject}-apple`, email]);
+      }
+      const session = await post('/api/auth/login', { email, password: PASSWORD });
+      assert.equal(session.status, 200);
+      return { id, session: session.body };
+    };
+    const behindSignIn = async (id, subject, email, request) => {
+      await control.query('BEGIN');
+      await control.query('SELECT id FROM r0_fixture.native_users WHERE id = $1 FOR UPDATE', [id]);
+      const [owner, response] = await inOrder([() => google(subject, email), request]);
+      assert.equal(owner.passwordRevoked, true);
+      const ownerToken = generateTokens(owner.user.id, owner.user.token_version).accessToken;
+      return { owner, ownerToken, response };
+    };
+    const ownerStillIn = async (token) => (await call('GET', '/api/auth/me', undefined, token)).status;
+
+    const first = await strangerAccount('first-password@fixture.invalid', 'google-first-password');
+    const setting = await behindSignIn(first.id, 'google-first-password', 'first-password@fixture.invalid',
+      () => call('PUT', '/api/auth/me', { password: CHANGED_PASSWORD }, first.session.accessToken));
+    assert.equal(setting.response.status, 401, 'a request admitted before the revocation must not set a password');
+    assert.equal((await control.query('SELECT password_hash FROM r0_fixture.native_users WHERE id = $1', [first.id])).rows[0].password_hash, null);
+    assert.equal(await version(first.id), 2);
+    assert.equal(await ownerStillIn(setting.ownerToken), 200);
+    assert.equal((await post('/api/auth/login', { email: 'first-password@fixture.invalid', password: CHANGED_PASSWORD })).status, 401);
+    contracts.push("stranger's PUT /me queued behind the owner's Google sign-in: 401, no password, the owner stays signed in");
+
+    const doomed = await strangerAccount('delete-me@fixture.invalid', 'google-delete-me');
+    const deleting = await behindSignIn(doomed.id, 'google-delete-me', 'delete-me@fixture.invalid',
+      () => call('DELETE', '/api/auth/me', undefined, doomed.session.accessToken));
+    assert.equal(deleting.response.status, 401, 'a request admitted before the revocation must not delete the account');
+    assert.equal(await count('SELECT count(*) FROM r0_fixture.native_users WHERE id = $1', [doomed.id]), 1);
+    assert.equal(await ownerStillIn(deleting.ownerToken), 200);
+    contracts.push("stranger's DELETE /me queued behind the owner's Google sign-in: 401, the account stays");
+
+    const leaving = await strangerAccount('logout@fixture.invalid', 'google-logout');
+    const loggingOut = await behindSignIn(leaving.id, 'google-logout', 'logout@fixture.invalid',
+      () => call('POST', '/api/auth/logout', {}, leaving.session.accessToken));
+    assert.equal(loggingOut.response.status, 200);
+    assert.equal(await version(leaving.id), 2, 'a logout admitted before the revocation must not bump the version again');
+    assert.equal(await ownerStillIn(loggingOut.ownerToken), 200, 'a logout admitted before the revocation must not sign the owner out');
+    contracts.push("stranger's logout queued behind the owner's Google sign-in: no second bump, the owner stays signed in");
+
+    const linkedTwice = await strangerAccount('unlink@fixture.invalid', 'google-unlink', { apple: true });
+    const unlinking = await behindSignIn(linkedTwice.id, 'google-unlink', 'unlink@fixture.invalid',
+      () => call('DELETE', '/api/auth/me/providers/apple', undefined, linkedTwice.session.accessToken));
+    assert.equal(unlinking.response.status, 401, 'an unlink admitted before the revocation must not remove a link');
+    assert.equal(await count(`SELECT count(*) FROM r0_fixture.native_auth_providers
+      WHERE user_id = $1 AND provider_type = 'apple'`, [linkedTwice.id]), 1);
+    contracts.push("stranger's unlink queued behind the owner's Google sign-in: 401, the link stays");
+
+    // The other order: the stranger's password change goes first and wins its
+    // new pair; the owner's sign-in right behind it revokes that pair as well.
+    const changing = await strangerAccount('change-first@fixture.invalid', 'google-change-first');
+    await control.query('BEGIN');
+    await control.query('SELECT id FROM r0_fixture.native_users WHERE id = $1 FOR UPDATE', [changing.id]);
+    const [changed2, reclaimed] = await inOrder([
+      () => call('PUT', '/api/auth/me', { currentPassword: PASSWORD, password: CHANGED_PASSWORD }, changing.session.accessToken),
+      () => google('google-change-first', 'change-first@fixture.invalid')]);
+    assert.equal(changed2.status, 200);
+    assert.equal(reclaimed.passwordRevoked, true, 'a password changed just before the sign-in must be revoked too');
+    assert.equal((await call('GET', '/api/auth/me', undefined, changed2.body.accessToken)).status, 401);
+    assert.equal((await post('/api/auth/refresh', { refreshToken: changed2.body.refreshToken })).status, 401);
+    assert.equal((await post('/api/auth/login', { email: 'change-first@fixture.invalid', password: CHANGED_PASSWORD })).status, 401);
+    contracts.push("stranger's password change just before the owner's Google sign-in: the new pair and password are revoked");
   } finally {
     adapter.transaction = transaction;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });

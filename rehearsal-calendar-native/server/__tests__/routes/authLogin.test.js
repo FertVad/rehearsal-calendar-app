@@ -149,7 +149,7 @@ describe('unlinking the email provider', () => {
       .send({ email: 'password-user@test.com', password: PASSWORD });
     expect(before.status).toBe(200);
 
-    await unlinkAuthProvider(passwordUserId, 'email');
+    await unlinkAuthProvider(passwordUserId, 'email', 1);
 
     const after = await request(app)
       .post('/api/auth/login')
@@ -163,7 +163,7 @@ describe('unlinking the email provider', () => {
   });
 
   it('refuses to unlink the last remaining method', async () => {
-    await expect(unlinkAuthProvider(oauthUserId, 'google')).rejects.toThrow(
+    await expect(unlinkAuthProvider(oauthUserId, 'google', 1)).rejects.toThrow(
       'Cannot unlink the last authentication method'
     );
   });

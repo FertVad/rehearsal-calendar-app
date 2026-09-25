@@ -95,8 +95,30 @@ export const authenticateToken = asyncHandler(async function authenticateToken(r
   }
 
   req.userId = decoded.userId;
+  req.tokenVersion = tokenVer;
   next();
 });
+
+export const SESSION_REVOKED = Object.freeze({ error: 'Session revoked' });
+
+/**
+ * Lock the signed-in user's row and confirm the session is still current.
+ *
+ * authenticateToken checks the version before the handler runs, outside any
+ * lock. A revocation committed in between — a password removed because
+ * Google or Apple proved the address (R3-01), a logout elsewhere — shows only
+ * under the row lock. So a handler that changes credentials or the account
+ * itself checks again here, or a request admitted just before the revocation
+ * would act after it: set a first password on the account the rule had just
+ * cleared, and keep it (review R3-09).
+ *
+ * @returns the locked row with the requested columns, or null when the
+ *   session was revoked meanwhile
+ */
+export async function lockSession(tx, req, columns = 'id') {
+  const row = await tx.get(`SELECT ${columns}, token_version FROM native_users WHERE id = $1 FOR UPDATE`, [req.userId]);
+  return row && (row.token_version ?? 1) <= req.tokenVersion ? row : null;
+}
 
 // Alias for backwards compatibility
 export const requireAuth = authenticateToken;
