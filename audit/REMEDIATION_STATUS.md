@@ -34,7 +34,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R0 | — | COMPLETE — baseline, real PG/HTTP harness, исходные дефекты, первичная инвентаризация |
 | R1 | 10 | READY_FOR_CHECK — 7 VERIFIED, H02/IA01/IS02 READY_FOR_CHECK (DEV-15/OPS-IA01/OPS-IS02); release gates открыты |
 | R2 | 8 | READY_FOR_CHECK — 7 VERIFIED; FM01 ждёт даты конвертации production (OPS-FM01-DATE, ревью R2-01); OPS-R2-ADOPT до деплоя 007/008 |
-| R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 и серверная часть HP01 в коде без PG-проверки; маршруты A01 `d5564ee`, `3859ece` (почтой — после OPS-EMAIL); правило Google/Apple `d964417`, `56d11e9`, `43cbdac`; сброс пароля `ec292ee`; смена email, клиент, AC05 не сделаны |
+| R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 и серверная часть HP01 в коде без PG-проверки; маршруты A01 `d5564ee`, `3859ece` (почтой — после OPS-EMAIL); правило Google/Apple `d964417`, `56d11e9`, `43cbdac`; сброс пароля `ec292ee`; смена email `50ba23d`; клиент, AC05 не сделаны |
 | R4 | 8 | TODO |
 | R5 | 15 | TODO |
 | R6 | 14 | TODO |
@@ -152,7 +152,7 @@ OPS-R3-DATA (25.09).
 | H02 | Medium | Нет | R1 | READY_FOR_CHECK | резервная кнопка открытия приглашения блокируется CSP | [Локальные проверки — df6fd01; DEV-15 NOT_RUN](REMEDIATION_H02.md) |
 | H03 | Low | Нет | R9 | TODO | метрика неактивности принимает давний login за отсутствие использования | — |
 | H04 | Low | Нет | R1 | VERIFIED | admin скрывает ошибки загрузки/смены статуса | [Исполнение и проверки — 7ab1e41](REMEDIATION_H04.md) |
-| HP01 | Medium | Нет | R3 | IN_PROGRESS | изменение email подтверждается, но сервер его игнорирует | [Сервер отказывает вместо молчаливого сброса — 9a702ba; подтверждённая смена и клиент не сделаны](REMEDIATION_R3.md) |
+| HP01 | Medium | Нет | R3 | IN_PROGRESS | изменение email подтверждается, но сервер его игнорирует | [Сервер отказывает вместо молчаливого сброса — 9a702ba; подтверждённая смена кодом на новый адрес — 50ba23d (route-тест, PG R3_AUTH, мутации); клиент не сделан](REMEDIATION_R3.md) |
 | HP02 | Low | Нет | R3 | IN_PROGRESS | существующую фамилию нельзя очистить | [Сервер очищает по `''`/`null` — 9a702ba; клиент ещё шлёт undefined](REMEDIATION_R3.md) |
 | HP03 | Low | Нет | R9 | TODO | ошибка «пропустить онбординг» остаётся необработанным Promise | — |
 | HP04 | Medium | Нет | R5 | TODO | ручная настройка timezone сбрасывается при следующем запуске/входе | — |
