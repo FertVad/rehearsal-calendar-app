@@ -116,7 +116,13 @@ export const SESSION_REVOKED = Object.freeze({ error: 'Session revoked' });
  *   session was revoked meanwhile
  */
 export async function lockSession(tx, req, columns = 'id') {
-  const row = await tx.get(`SELECT ${columns}, token_version FROM native_users WHERE id = $1 FOR UPDATE`, [req.userId]);
+  // FOR NO KEY UPDATE, not FOR UPDATE: it still waits for every writer of a
+  // revocation (their FOR UPDATE, an UPDATE of the version), but not for the
+  // FOR KEY SHARE a foreign key takes. With FOR UPDATE at the start of
+  // DELETE /me, a rehearsal rebuild inserting this person's busy slot waited
+  // for the user row while DELETE /me waited for the slots the rebuild had
+  // deleted: a deadlock, and the account stayed (review R3-14).
+  const row = await tx.get(`SELECT ${columns}, token_version FROM native_users WHERE id = $1 FOR NO KEY UPDATE`, [req.userId]);
   return row && (row.token_version ?? 1) <= req.tokenVersion ? row : null;
 }
 

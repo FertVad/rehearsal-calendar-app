@@ -40,7 +40,7 @@ function query(sql, params = []) {
   const translated = sql.replace(/\$(\d+)/g, (_match, index) => {
     bindings.push(params[Number(index) - 1]);
     return '?';
-  }).replace(/\bNOW\(\)/gi, 'CURRENT_TIMESTAMP').replace(/\s+FOR\s+UPDATE\b/gi, '');
+  }).replace(/\bNOW\(\)/gi, 'CURRENT_TIMESTAMP').replace(/\s+FOR\s+(?:NO\s+KEY\s+)?UPDATE\b/gi, '');
   return { statement: sqlite.prepare(translated), bindings };
 }
 

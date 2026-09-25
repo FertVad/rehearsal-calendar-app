@@ -437,6 +437,68 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
     assert.equal((await post('/api/auth/refresh', { refreshToken: changed2.body.refreshToken })).status, 401);
     assert.equal((await post('/api/auth/login', { email: 'change-first@fixture.invalid', password: CHANGED_PASSWORD })).status, 401);
     contracts.push("stranger's password change just before the owner's Google sign-in: the new pair and password are revoked");
+
+    // The stranger removes their own password first (Codex, on b8a86fc): the
+    // proof still revokes every session, with no password left to take.
+    const unlinkedFirst = await strangerAccount('no-password@fixture.invalid', 'google-no-password');
+    await control.query(`INSERT INTO r0_fixture.native_auth_providers (user_id, provider_type, provider_email, created_at, updated_at)
+      VALUES ($1, 'email', 'no-password@fixture.invalid', NOW(), NOW())`, [unlinkedFirst.id]);
+    assert.equal((await call('DELETE', '/api/auth/me/providers/email', undefined, unlinkedFirst.session.accessToken)).status, 200);
+    const cleared = await google('google-no-password', 'no-password@fixture.invalid');
+    assert.equal(cleared.passwordRevoked, false);
+    assert.equal((await call('GET', '/api/auth/me', undefined, unlinkedFirst.session.accessToken)).status, 401,
+      'a session must not outlive the proof because its password was removed first');
+    assert.equal((await post('/api/auth/refresh', { refreshToken: unlinkedFirst.session.refreshToken })).status, 401);
+    contracts.push("stranger unlinks their password, then the owner's Google proof: the stranger's access and refresh are refused");
+
+    // R3-12. The stranger's phone registered on the account, and one queued
+    // behind the owner's sign-in: after the proof neither receives its pushes.
+    const phone = (name) => ({ deviceToken: `ExponentPushToken[r3-${name}]`, deviceType: 'ios' });
+    const devices = async (id) => count('SELECT count(*) FROM r0_fixture.native_push_tokens WHERE user_id = $1', [id]);
+    const withPhone = await strangerAccount('phone@fixture.invalid', 'google-phone');
+    assert.equal((await call('POST', '/api/native/push-tokens', phone('before'), withPhone.session.accessToken)).status, 200);
+    assert.equal(await devices(withPhone.id), 1);
+    await google('google-phone', 'phone@fixture.invalid');
+    assert.equal(await devices(withPhone.id), 0, "the proof must take the stranger's devices off the account");
+    const queuedPhone = await strangerAccount('queued-phone@fixture.invalid', 'google-queued-phone');
+    const registering = await behindSignIn(queuedPhone.id, 'google-queued-phone', 'queued-phone@fixture.invalid',
+      () => call('POST', '/api/native/push-tokens', phone('queued'), queuedPhone.session.accessToken));
+    assert.equal(registering.response.status, 401, 'a device registration admitted before the revocation must not add a device');
+    assert.equal(await devices(queuedPhone.id), 0);
+    contracts.push("stranger's device registered before, or queued behind, the owner's Google sign-in: no device left on the account");
+
+    // R3-14. DELETE /me holds its user row while it waits for busy slots a
+    // rehearsal rebuild has deleted; the rebuild then inserts a slot for the
+    // same person, whose foreign key needs a share lock on that row. With
+    // FOR UPDATE that was a deadlock and the account stayed.
+    const leaverId = (await control.query(`INSERT INTO r0_fixture.native_users (email, password_hash, first_name)
+      VALUES ('leaver@fixture.invalid', $1, 'Leaver') RETURNING id`, [await bcrypt.hash(PASSWORD, 4)])).rows[0].id;
+    const projectId = (await control.query("INSERT INTO r0_fixture.native_projects (name) VALUES ('Leaving') RETURNING id")).rows[0].id;
+    await control.query(`INSERT INTO r0_fixture.native_project_members (user_id, project_id, role, status)
+      VALUES ($1, $2, 'owner', 'active')`, [leaverId, projectId]);
+    const rehearsalId = (await control.query(`INSERT INTO r0_fixture.native_rehearsals (project_id, starts_at, ends_at)
+      VALUES ($1, '2031-04-01T10:00:00Z', '2031-04-01T12:00:00Z') RETURNING id`, [projectId])).rows[0].id;
+    const slot = `INSERT INTO r0_fixture.native_user_availability (user_id, starts_at, ends_at, type, source, external_event_id)
+      VALUES ($1, '2031-04-01T10:00:00Z', '2031-04-01T12:00:00Z', 'busy', 'rehearsal', $2)`;
+    await control.query(slot, [leaverId, String(rehearsalId)]);
+    const leaver = await post('/api/auth/login', { email: 'leaver@fixture.invalid', password: PASSWORD });
+    assert.equal(leaver.status, 200);
+    await control.query('BEGIN');
+    await control.query(`DELETE FROM r0_fixture.native_user_availability WHERE source = 'rehearsal' AND external_event_id = $1`,
+      [String(rehearsalId)]);
+    const deletion = Promise.allSettled([call('DELETE', '/api/auth/me', undefined, leaver.body.accessToken)]);
+    let rebuilt;
+    try {
+      await eventually(async () => (await waitingOnLocks()) === 1);
+      rebuilt = await control.query(slot, [leaverId, String(rehearsalId)]).then(() => 'inserted', (error) => error.code);
+      await control.query(rebuilt === 'inserted' ? 'COMMIT' : 'ROLLBACK');
+    } catch (error) { await control.query('ROLLBACK').catch(() => {}); await deletion; throw error; }
+    const [left] = await deletion;
+    assert.equal(rebuilt, 'inserted', 'a rehearsal rebuild and DELETE /me must not deadlock');
+    assert.equal(left.status, 'fulfilled');
+    assert.equal(left.value.status, 200, 'DELETE /me must go through once the rebuild commits');
+    assert.equal(await count('SELECT count(*) FROM r0_fixture.native_users WHERE id = $1', [leaverId]), 0);
+    contracts.push('DELETE /me waiting on slots a rehearsal rebuild deleted, the rebuild inserting a slot for the same person: no deadlock, account deleted');
   } finally {
     adapter.transaction = transaction;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });

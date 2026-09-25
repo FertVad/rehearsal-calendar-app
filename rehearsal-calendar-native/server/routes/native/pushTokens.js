@@ -7,7 +7,7 @@ import { asyncHandler } from '../../middleware/asyncHandler.js';
 import express from 'express';
 import { Expo } from 'expo-server-sdk';
 import db from '../../database/db.js';
-import { requireAuth } from '../../middleware/jwtMiddleware.js';
+import { requireAuth, lockSession, SESSION_REVOKED } from '../../middleware/jwtMiddleware.js';
 import { logger } from '../../utils/logger.js';
 
 const router = express.Router();
@@ -47,28 +47,38 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     // rehearsal titles and members' names — unopenable, since the fetch by id
     // 404s for a non-member, and invisible to the person whose notifications
     // are going astray.
-    await db.run(
-      'DELETE FROM native_push_tokens WHERE device_token = ? AND user_id != ?',
-      [deviceToken, userId]
-    );
-
-    // One upsert rather than SELECT-then-INSERT.
     //
-    // Registration is triggered from more than one place — app start, the
-    // profile toggle, the onboarding screen — and two of them can overlap. Both
-    // requests then found no row, both inserted, and the second hit the unique
-    // index on (user_id, device_token) and came back as a 500 to a user who had
-    // done nothing wrong. Which is exactly what happened on 2026-08-26.
-    await db.run(
-      `INSERT INTO native_push_tokens (user_id, device_token, device_type, device_name, last_active_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (user_id, device_token)
-       DO UPDATE SET last_active_at = EXCLUDED.last_active_at,
-                     updated_at = EXCLUDED.updated_at,
-                     device_type = EXCLUDED.device_type,
-                     device_name = EXCLUDED.device_name`,
-      [userId, deviceToken, deviceType, deviceName, now, now, now]
-    );
+    // Both writes and the session check share one transaction. A session
+    // revoked while this request waited — the owner's Google or Apple sign-in
+    // taking the account back — registers nothing: the device would keep
+    // receiving the account's notifications (review R3-12).
+    const registered = await db.transaction(async (tx) => {
+      if (!(await lockSession(tx, req))) return false;
+      await tx.run(
+        'DELETE FROM native_push_tokens WHERE device_token = ? AND user_id != ?',
+        [deviceToken, userId]
+      );
+
+      // One upsert rather than SELECT-then-INSERT.
+      //
+      // Registration is triggered from more than one place — app start, the
+      // profile toggle, the onboarding screen — and two of them can overlap. Both
+      // requests then found no row, both inserted, and the second hit the unique
+      // index on (user_id, device_token) and came back as a 500 to a user who had
+      // done nothing wrong. Which is exactly what happened on 2026-08-26.
+      await tx.run(
+        `INSERT INTO native_push_tokens (user_id, device_token, device_type, device_name, last_active_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (user_id, device_token)
+         DO UPDATE SET last_active_at = EXCLUDED.last_active_at,
+                       updated_at = EXCLUDED.updated_at,
+                       device_type = EXCLUDED.device_type,
+                       device_name = EXCLUDED.device_name`,
+        [userId, deviceToken, deviceType, deviceName, now, now, now]
+      );
+      return true;
+    });
+    if (!registered) return res.status(401).json(SESSION_REVOKED);
 
     logger.info(`[PushToken] Registered token for user ${userId}`);
 

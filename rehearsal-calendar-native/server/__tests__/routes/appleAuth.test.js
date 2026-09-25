@@ -138,12 +138,16 @@ function expectOnlyAdmissionSql() {
     .toEqual([{ operation: 'auth', request_count: 1 }]);
 }
 
-async function expectUsableAppSession(response, userId) {
+// tv: the account's version the pair must carry. Apple's first proof of the
+// linked account's address revokes the sessions from before it (R3-01), so a
+// session through Apple carries 2; the password account keeps 1.
+async function expectUsableAppSession(response, userId, tv) {
   expect(response.status).toBe(200);
   expect(typeof response.body.accessToken).toBe('string');
   expect(typeof response.body.refreshToken).toBe('string');
-  expect(jwt.verify(response.body.accessToken, APP_SECRET)).toMatchObject({ userId, tv: 1, type: 'access' });
-  expect(jwt.verify(response.body.refreshToken, APP_SECRET)).toMatchObject({ userId, tv: 1, type: 'refresh' });
+  expect(sqlite.get('SELECT token_version FROM native_users WHERE id = ?', [userId]).token_version).toBe(tv);
+  expect(jwt.verify(response.body.accessToken, APP_SECRET)).toMatchObject({ userId, tv, type: 'access' });
+  expect(jwt.verify(response.body.refreshToken, APP_SECRET)).toMatchObject({ userId, tv, type: 'refresh' });
   const profile = await request(server).get('/api/auth/me').set('Authorization', `Bearer ${response.body.accessToken}`);
   expect(profile.status).toBe(200);
   expect(profile.body.user.id).toBe(userId);
@@ -228,7 +232,7 @@ test('malformed JWT text returns generic 401 without account SQL or a JWKS reque
 test('intended Apple credentials use the real linked account, persist timestamps and issue a usable application session', async () => {
   const before = snapshot();
   const response = await request(server).post('/api/auth/apple').send({ idToken: token() });
-  await expectUsableAppSession(response, linkedUserId);
+  await expectUsableAppSession(response, linkedUserId, 2);
   expect(response.body.isNewUser).toBe(false);
   expect(response.body.linked).toBe(false);
   expect(response.body.passwordRevoked).toBe(false);
@@ -240,9 +244,13 @@ test('intended Apple credentials use the real linked account, persist timestamps
   const updatedProvider = after.native_auth_providers.find(provider => provider.provider_user_id === SUBJECT);
   expect(updatedUser.last_login_at).not.toBe(OLD_TIME);
   expect(updatedProvider.last_used_at).not.toBe(OLD_TIME);
-  // Apple verified the account's own address, which nobody had proven (R3).
+  // Apple verified the account's own address, which nobody had proven (R3),
+  // and the sessions from before that proof are revoked.
   expect(after.native_email_identities).toEqual([expect.objectContaining({
     user_id: linkedUserId, email: EMAIL, status: 'verified', verified_by: 'apple' })]);
+  expect(updatedUser.token_version).toBe(2);
+  Object.assign(before.native_users.find(user => user.id === linkedUserId),
+    { token_version: updatedUser.token_version, updated_at: updatedUser.updated_at });
   before.native_users.find(user => user.id === linkedUserId).last_login_at = updatedUser.last_login_at;
   before.native_auth_providers.find(provider => provider.provider_user_id === SUBJECT).last_used_at = updatedProvider.last_used_at;
   before.native_email_identities = after.native_email_identities;
@@ -258,7 +266,7 @@ test('Apple configuration can recover locally without changing the app or bypass
   expect(verifyCall).not.toHaveBeenCalled();
   process.env.APPLE_CLIENT_ID = `  ${AUDIENCE}  `;
   const accepted = await request(server).post('/api/auth/apple').send({ idToken: intended });
-  await expectUsableAppSession(accepted, linkedUserId);
+  await expectUsableAppSession(accepted, linkedUserId, 2);
   expect(verifyCall).toHaveBeenCalledTimes(1);
   expect(jwksTransport).toHaveBeenCalledTimes(1);
 });
@@ -281,7 +289,7 @@ test('a real SQL failure after successful verification remains generic 500 and c
   expect(snapshot()).toEqual(before);
   sqlite.run('DROP TRIGGER ia01_fail_provider_update');
   const recovered = await request(server).post('/api/auth/apple').send({ idToken: signedToken });
-  await expectUsableAppSession(recovered, linkedUserId);
+  await expectUsableAppSession(recovered, linkedUserId, 2);
 });
 
 test('createApp with Apple disabled preserves health, static pages, admin HTML and password sign-in', async () => {
@@ -307,7 +315,7 @@ test('createApp with Apple disabled preserves health, static pages, admin HTML a
   expect(apple.status).toBe(503);
   expectOnlyAdmissionSql();
   const password = await request(server).post('/api/auth/login').send({ email: 'ia01-password@example.test', password: PASSWORD });
-  await expectUsableAppSession(password, passwordUserId);
+  await expectUsableAppSession(password, passwordUserId, 1);
   expect(verifyCall).not.toHaveBeenCalled();
   expect(jwksTransport).not.toHaveBeenCalled();
   expect(sqlite.get('SELECT last_login_at FROM native_users WHERE id = ?', [passwordUserId]).last_login_at).not.toBe(OLD_TIME);

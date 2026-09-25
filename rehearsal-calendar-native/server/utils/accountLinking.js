@@ -146,13 +146,20 @@ async function providerSignIn(tx, claim, now) {
   let passwordRevoked = false;
   const identity = await identityOf(tx, user.id);
   if (proof && proof === user.email && !isVerified(identity, user.email)) {
+    // Everything that got in before the address was proven goes: sessions,
+    // live codes and push devices always — a password removed beforehand
+    // leaves its sessions behind (review R3-09, Codex), and a device keeps
+    // receiving the account's project and rehearsal names (R3-12). The
+    // owner's own devices register again on the next launch.
+    await tx.run(
+      'UPDATE native_users SET token_version = token_version + 1, updated_at = $2::timestamptz WHERE id = $1',
+      [user.id, now.toISOString()]
+    );
+    await voidCodes(tx, { userId: user.id, now });
+    await tx.run('DELETE FROM native_push_tokens WHERE user_id = $1', [user.id]);
     if (user.password_hash) {
-      await tx.run(
-        'UPDATE native_users SET password_hash = NULL, token_version = token_version + 1, updated_at = $2::timestamptz WHERE id = $1',
-        [user.id, now.toISOString()]
-      );
+      await tx.run('UPDATE native_users SET password_hash = NULL WHERE id = $1', [user.id]);
       await tx.run("DELETE FROM native_auth_providers WHERE user_id = $1 AND provider_type = 'email'", [user.id]);
-      await voidCodes(tx, { userId: user.id, now });
       logger.warn(`[AccountLinking] ${provider} proved the address of user ${user.id}; its unproven password is revoked`);
       passwordRevoked = true;
     }

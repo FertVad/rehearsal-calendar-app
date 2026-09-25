@@ -699,15 +699,19 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
   verified, trimmed and lower-cased (`signInWithProvider` in `accountLinking.js`)
 - That proof for an account whose address nobody had proven — a pending
   registration, or one from before email confirmation, linked now or long ago —
-  confirms the address and removes the password on it with every session and
-  live code (`passwordRevoked: true`): otherwise whoever registered someone
-  else's address first keeps a way into the owner's account
+  confirms the address and revokes every session, live code and push device,
+  password or not, and removes a password if there is one (`passwordRevoked:
+  true`): otherwise whoever registered someone else's address first keeps a way
+  into the owner's account
 - A pending account gets no session: login, refresh, Google/Apple and the auth
   middleware all refuse it
 - The middleware checks the session version before the handler, outside any
   lock. A handler that changes credentials or the account (`PUT /me`,
-  `DELETE /me`, logout, unlink) checks again with `lockSession` under the user
-  row lock, or a request admitted just before a revocation acts after it
+  `DELETE /me`, logout, unlink, push-device registration) checks again with
+  `lockSession` under the user row lock, or a request admitted just before a
+  revocation acts after it. `lockSession` takes `FOR NO KEY UPDATE`, so foreign
+  keys pointing at the user do not wait for it — `FOR UPDATE` deadlocked
+  account deletion against rehearsal slot rebuilds
 - Check `native_auth_providers` table for account linking status
 - Supports multiple providers per user (can link both Google and Apple to same account)
 

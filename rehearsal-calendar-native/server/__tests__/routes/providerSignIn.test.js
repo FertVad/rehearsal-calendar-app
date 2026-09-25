@@ -116,6 +116,31 @@ describe('a provider proving an address nobody had proven', () => {
     expect((await me(response.body.accessToken)).status).toBe(200);
   });
 
+  it('revokes the sessions even when the password was removed beforehand', async () => {
+    const id = await legacy();
+    db.run("INSERT INTO native_auth_providers (user_id, provider_type, provider_email, created_at, updated_at) VALUES (?, 'email', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", [id, VICTIM]);
+    link(id, 'google', 'google-victim');
+    const stranger = await login();
+    expect(stranger.status).toBe(200);
+    const unlinked = await request(app).delete('/api/auth/me/providers/email').set('Authorization', `Bearer ${stranger.body.accessToken}`);
+    expect(unlinked.status).toBe(200);
+    const response = await google();
+    expect(response.status).toBe(200);
+    expect(response.body.passwordRevoked).toBe(false);
+    expect((await me(stranger.body.accessToken)).status).toBe(401);
+    expect((await refresh(stranger.body.refreshToken)).status).toBe(401);
+    expect((await me(response.body.accessToken)).status).toBe(200);
+  });
+
+  it("takes the stranger's phones off the account", async () => {
+    const id = await legacy();
+    link(id, 'google', 'google-victim');
+    db.run(`INSERT INTO native_push_tokens (user_id, device_token, created_at, updated_at)
+      VALUES (?, 'ExponentPushToken[stranger-phone]', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`, [id]);
+    expect((await google()).body.passwordRevoked).toBe(true);
+    expect(db.get('SELECT count(*) AS n FROM native_push_tokens WHERE user_id = ?', [id]).n).toBe(0);
+  });
+
   it('confirms an account from before R3 without a password, and takes nothing', async () => {
     const id = await legacy({ password: null });
     link(id, 'apple', 'apple-victim');

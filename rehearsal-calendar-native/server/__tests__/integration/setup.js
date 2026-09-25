@@ -208,6 +208,20 @@ export async function setupIntegrationDb() {
     );
     CREATE UNIQUE INDEX idx_email_codes_live ON native_email_codes (user_id, purpose) WHERE consumed_at IS NULL;
 
+    -- Devices that receive this person's pushes. A Google/Apple sign-in that
+    -- proves an unproven address removes them with the sessions (R3-12).
+    CREATE TABLE native_push_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+      device_token VARCHAR(255) NOT NULL,
+      device_type VARCHAR(20),
+      device_name VARCHAR(100),
+      last_active_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (user_id, device_token)
+    );
+
     -- Push reminders already sent. The unique pair is what stops a rehearsal
     -- being announced twice when two schedulers overlap.
     CREATE TABLE native_push_reminders (
@@ -267,7 +281,7 @@ export async function setupIntegrationDb() {
         .replace(/\bNOW\(\)/gi, "CURRENT_TIMESTAMP")
         // Row locks: SQLite has one writer, so there is nothing to lock. What
         // FOR UPDATE buys against a second connection is proven on PostgreSQL.
-        .replace(/\s+FOR\s+UPDATE\b/gi, '')
+        .replace(/\s+FOR\s+(?:NO\s+KEY\s+)?UPDATE\b/gi, '')
     );
 
     // better-sqlite3 binds only numbers, strings, bigints, buffers and null, so

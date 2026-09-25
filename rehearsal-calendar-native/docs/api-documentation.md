@@ -48,8 +48,9 @@ route: no route issues one, and should one exist it reaches nothing.
 
 The version is checked before the handler runs. Handlers that change credentials
 or the account itself — `PUT /auth/me`, `DELETE /auth/me`, `POST /auth/logout`,
-unlinking a provider — check it again under the account's row lock, so a request
-admitted just before a revocation changes nothing after it.
+unlinking a provider, registering a push device — check it again under the
+account's row lock, so a request admitted just before a revocation changes
+nothing after it.
 
 ### Token Refresh Flow
 
@@ -93,9 +94,10 @@ it is verified; it is trimmed and lower-cased like every other address.
   `PROVIDER_EMAIL_UNVERIFIED` (Google answers the latter before any lookup).
 - **Proof for an account whose address nobody had proven** — a pending
   registration, or an account from before email confirmation, linked now or long
-  ago: the address becomes verified by the provider. A password on that account
-  was never proven to be the owner's, so it is removed together with every
-  session and live code, and the response says `passwordRevoked: true`. The app
+  ago: the address becomes verified by the provider, and whatever got in before
+  it goes — every session, live code and registered push device (they register
+  again on the next launch). A password on that account was never proven to be
+  the owner's, so it is removed too, and the response says `passwordRevoked: true`. The app
   is to tell the person and offer a password reset; both the client part and the
   reset flow are later items. Until then the person can set a first password in
   the profile, the address being verified now. A confirmed account is only linked.
