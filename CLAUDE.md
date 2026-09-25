@@ -695,8 +695,15 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
 
 **Key Points:**
 - OAuth tokens are verified server-side to prevent forgery
-- Accounts are automatically linked by email if user already exists
-- New users are created with OAuth provider details (name, avatar, email)
+- An account is joined or created only through an address the provider says it
+  verified, trimmed and lower-cased (`signInWithProvider` in `accountLinking.js`)
+- That proof for an account whose address nobody had proven — a pending
+  registration, or one from before email confirmation, linked now or long ago —
+  confirms the address and removes the password on it with every session and
+  live code (`passwordRevoked: true`): otherwise whoever registered someone
+  else's address first keeps a way into the owner's account
+- A pending account gets no session: login, refresh, Google/Apple and the auth
+  middleware all refuse it
 - Check `native_auth_providers` table for account linking status
 - Supports multiple providers per user (can link both Google and Apple to same account)
 

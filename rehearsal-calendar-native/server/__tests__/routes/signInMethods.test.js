@@ -22,6 +22,7 @@ let app;
 let request;
 let bcrypt;
 let generateTokens;
+let capturedEmails;
 
 beforeAll(async () => {
   testDb = await setupIntegrationDb();
@@ -35,10 +36,12 @@ beforeAll(async () => {
   request = (await import('supertest')).default;
   bcrypt = (await import('bcrypt')).default;
   ({ generateTokens } = await import('../../middleware/jwtMiddleware.js'));
+  ({ capturedEmails } = await import('../../services/email/transport.js'));
   const authRouter = (await import('../../routes/auth.js')).default;
   app = express();
   app.use(express.json());
   app.use('/api/auth', authRouter);
+  app.use('/api/auth', (await import('../../routes/emailVerification.js')).default);
 });
 
 afterAll(() => closeIntegrationDb());
@@ -58,8 +61,12 @@ it('lists the password of a new registration', async () => {
   const response = await request(app).post('/api/auth/register')
     .send({ email: 'fresh@example.com', password: 'long-enough-1', firstName: 'Fresh', verification: 'code' });
   expect(response.status).toBe(201);
-  const id = testDb.get("SELECT id FROM native_users WHERE email = 'fresh@example.com'").id;
-  expect(await methods(id)).toEqual(['email']);
+  // A pending account has no session to ask with; the code gives it one.
+  const code = capturedEmails.filter((mail) => mail.to === 'fresh@example.com').at(-1).text.match(/\b(\d{6})\b/)[1];
+  const confirmed = await request(app).post('/api/auth/verify-email')
+    .send({ email: 'fresh@example.com', password: 'long-enough-1', code });
+  expect(confirmed.status).toBe(200);
+  expect(await methods(confirmed.body.user.id)).toEqual(['email']);
 });
 
 it('counts a password with no registry row, so Google can be unlinked', async () => {

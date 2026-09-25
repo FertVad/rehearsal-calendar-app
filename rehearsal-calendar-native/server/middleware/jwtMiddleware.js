@@ -71,9 +71,11 @@ export const authenticateToken = asyncHandler(async function authenticateToken(r
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 
-  // Verify token_version matches current DB value (revocation check)
+  // Verify token_version matches current DB value (revocation check), and
+  // read whether the address is pending with it.
   const user = await db.get(
-    'SELECT token_version FROM native_users WHERE id = $1',
+    `SELECT u.token_version, i.status AS email_status FROM native_users u
+     LEFT JOIN native_email_identities i ON i.user_id = u.id WHERE u.id = $1`,
     [decoded.userId]
   );
   if (!user) {
@@ -84,6 +86,12 @@ export const authenticateToken = asyncHandler(async function authenticateToken(r
   const tokenVer = decoded.tv ?? 1;
   if (tokenVer < dbVersion) {
     return res.status(401).json({ error: 'Session revoked' });
+  }
+  // No route issues a session to a pending account (R3: A01). Should one
+  // exist anyway, it reaches nothing — PUT /me included, which would hand out
+  // a fresh pair.
+  if (user.email_status === 'pending') {
+    return res.status(403).json({ error: 'Confirm your email address first', code: 'EMAIL_NOT_VERIFIED' });
   }
 
   req.userId = decoded.userId;

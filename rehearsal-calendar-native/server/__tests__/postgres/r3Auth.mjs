@@ -29,6 +29,8 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
   const database = await import('../../database/db.js');
   const { createApp } = await import('../../app.js');
   const { capturedEmails } = await import('../../services/email/transport.js');
+  const { signInWithProvider } = await import('../../utils/accountLinking.js');
+  const { generateTokens } = await import('../../middleware/jwtMiddleware.js');
   await database.initDatabase({ connectionString });
   const server = await new Promise((resolve, reject) => {
     const listener = createApp().listen(0, '127.0.0.1', () => resolve(listener));
@@ -114,6 +116,38 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
       return outcome.value;
     });
   };
+  // The same, but each operation starts only once the one before it is seen
+  // blocked, so which of them holds the contested row is decided, not raced.
+  const inOrder = async (starters) => {
+    const operations = [];
+    let settled = Promise.allSettled(operations);
+    try {
+      for (const start of starters) {
+        operations.push(start());
+        settled = Promise.allSettled(operations);
+        await eventually(async () => (await waitingOnLocks()) === operations.length);
+      }
+    } catch (error) {
+      await control.query('ROLLBACK');
+      await settled;
+      throw error;
+    }
+    await control.query('COMMIT');
+    return (await settled).map((outcome) => {
+      if (outcome.status === 'rejected') throw outcome.reason;
+      return outcome.value;
+    });
+  };
+  const holdIdentities = async () => {
+    await control.query('BEGIN');
+    await control.query('LOCK TABLE r0_fixture.native_email_identities IN ACCESS EXCLUSIVE MODE');
+  };
+  const google = (subject, email, extra = {}) => signInWithProvider({ provider: 'google', providerUserId: subject,
+    email, emailVerified: true, firstName: 'Owner', ...extra });
+  const accounts = async (email) => (await control.query(`SELECT u.id, u.password_hash, i.status, i.verified_by,
+      (SELECT count(*) FROM r0_fixture.native_email_codes c WHERE c.user_id = u.id AND c.consumed_at IS NULL)::int AS live_codes
+    FROM r0_fixture.native_users u LEFT JOIN r0_fixture.native_email_identities i ON i.user_id = u.id
+    WHERE u.email = $1`, [email])).rows;
   const count = async (sql, values = []) => Number((await control.query(sql, values)).rows[0].count);
   const register = (email, extra = {}) => post('/api/auth/register',
     { email, password: PASSWORD, firstName: 'Race', verification: 'code', ...extra });
@@ -240,6 +274,94 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
     assert.equal((await post('/api/auth/refresh', { refreshToken: saved.value.body.refreshToken })).status, 401,
       'a refresh token from a password change must not outlive a logout after it');
     contracts.push('password change paused after COMMIT while another device signed everyone out: its tokens are refused');
+
+    // R3-01. A takeover from before R3: a stranger's password on the owner's
+    // address, the owner's Google linked to it, the stranger signed in. The
+    // owner's next Google sign-in proves the address and takes it back.
+    const takenId = (await control.query(`INSERT INTO r0_fixture.native_users (email, password_hash, first_name)
+      VALUES ('owner@fixture.invalid', $1, 'Stranger') RETURNING id`, [await bcrypt.hash(PASSWORD, 4)])).rows[0].id;
+    await control.query(`INSERT INTO r0_fixture.native_auth_providers (user_id, provider_type, provider_user_id, provider_email,
+      created_at, updated_at) VALUES ($1, 'google', 'google-owner', 'owner@fixture.invalid', NOW(), NOW())`, [takenId]);
+    const stranger = await post('/api/auth/login', { email: 'owner@fixture.invalid', password: PASSWORD });
+    assert.equal(stranger.status, 200);
+    const owner = await google('google-owner', 'Owner@Fixture.invalid');
+    assert.equal(owner.user.id, takenId);
+    assert.equal(owner.passwordRevoked, true, 'the provider proving the address must revoke the unproven password');
+    assert.equal((await call('GET', '/api/auth/me', undefined, stranger.body.accessToken)).status, 401,
+      "the stranger's access token must be revoked");
+    assert.equal((await post('/api/auth/refresh', { refreshToken: stranger.body.refreshToken })).status, 401,
+      "the stranger's refresh token must be revoked");
+    assert.equal((await post('/api/auth/login', { email: 'owner@fixture.invalid', password: PASSWORD })).status, 401);
+    assert.equal((await call('GET', '/api/auth/me', undefined,
+      generateTokens(owner.user.id, owner.user.token_version).accessToken)).status, 200);
+    assert.deepEqual(await accounts('owner@fixture.invalid'),
+      [{ id: takenId, password_hash: null, status: 'verified', verified_by: 'google', live_codes: 0 }]);
+    contracts.push("Google linked before R3 proves the address: the stranger's password, access and refresh are refused");
+
+    // Two first sign-ins of one Google account at once. The first waits at
+    // the held identity table, the second at the first's new user; released,
+    // the second meets the unique key, starts over and finds the first.
+    await holdIdentities();
+    const firsts = await barrier([google('google-new', 'new@fixture.invalid'), google('google-new', 'new@fixture.invalid')])
+      .catch((error) => assert.fail(`two first sign-ins of one person must both sign in: ${error.message}`));
+    assert.equal(firsts[0].user.id, firsts[1].user.id, 'two first sign-ins of one person must end in one account');
+    assert.equal(await count("SELECT count(*) FROM r0_fixture.native_users WHERE email = 'new@fixture.invalid'"), 1);
+    assert.equal(await count("SELECT count(*) FROM r0_fixture.native_auth_providers WHERE provider_user_id = 'google-new'"), 1);
+    contracts.push('two first Google sign-ins of one person, both seen waiting: one account, one link, both signed in');
+
+    // A registration and a Google sign-in of one address, in both orders.
+    // Registration first: its pending account is taken back by the proof.
+    await holdIdentities();
+    const [registered, proven] = await inOrder([() => register('first@fixture.invalid'),
+      () => google('google-first', 'first@fixture.invalid')]);
+    assert.equal(registered.status, 201);
+    assert.equal(proven.passwordRevoked, true, 'Google after a pending registration must revoke its password');
+    assert.deepEqual((await accounts('first@fixture.invalid')).map(({ id, ...rest }) => rest),
+      [{ password_hash: null, status: 'verified', verified_by: 'google', live_codes: 0 }]);
+    // Google first: the registration finds the address taken.
+    await holdIdentities();
+    const [created, refused] = await inOrder([() => google('google-second', 'second@fixture.invalid'),
+      () => register('second@fixture.invalid')]);
+    assert.equal(created.isNewUser, true);
+    assert.equal(refused.status, 409, 'a registration after a Google sign-in of the address must be refused');
+    assert.deepEqual((await accounts('second@fixture.invalid')).map(({ id, ...rest }) => rest),
+      [{ password_hash: null, status: 'verified', verified_by: 'google', live_codes: 0 }]);
+    contracts.push('registration against a Google sign-in of one address, each order forced: one verified account, no password');
+
+    // The address moves while the sign-in waits for the account's lock: the
+    // proof no longer names that account, so it is not joined.
+    const movingId = (await control.query(`INSERT INTO r0_fixture.native_users (email, password_hash, first_name)
+      VALUES ('moving@fixture.invalid', NULL, 'Moving') RETURNING id`)).rows[0].id;
+    await control.query('BEGIN');
+    await control.query('SELECT id FROM r0_fixture.native_users WHERE id = $1 FOR UPDATE', [movingId]);
+    const moving = Promise.allSettled([google('google-moving', 'moving@fixture.invalid')]);
+    try { await eventually(async () => (await waitingOnLocks()) === 1); }
+    catch (error) { await control.query('ROLLBACK'); await moving; throw error; }
+    await control.query("UPDATE r0_fixture.native_users SET email = 'relocated@fixture.invalid' WHERE id = $1", [movingId]);
+    await control.query('COMMIT');
+    const [arrived] = await moving;
+    assert.equal(arrived.status, 'fulfilled');
+    assert.notEqual(arrived.value.user.id, movingId, 'an account whose address moved must not be joined');
+    assert.equal(await count(`SELECT count(*) FROM r0_fixture.native_auth_providers WHERE user_id = $1`, [movingId]), 0);
+    contracts.push('address changed while a Google sign-in waited on its lock: the moved account is not joined');
+
+    // A link removed while the sign-in waits for the account's lock: under the
+    // lock the link is read again, the attempt starts over and links afresh,
+    // as a sign-in after the unlink would — not through a link that is gone.
+    const unlinked = await google('google-unlinked', 'unlinked@fixture.invalid');
+    await control.query('BEGIN');
+    await control.query('SELECT id FROM r0_fixture.native_users WHERE id = $1 FOR UPDATE', [unlinked.user.id]);
+    const relinking = Promise.allSettled([google('google-unlinked', 'unlinked@fixture.invalid')]);
+    try { await eventually(async () => (await waitingOnLocks()) === 1); }
+    catch (error) { await control.query('ROLLBACK'); await relinking; throw error; }
+    await control.query("DELETE FROM r0_fixture.native_auth_providers WHERE provider_user_id = 'google-unlinked'");
+    await control.query('COMMIT');
+    const [relinked] = await relinking;
+    assert.equal(relinked.status, 'fulfilled');
+    assert.equal(relinked.value.user.id, unlinked.user.id);
+    assert.equal(relinked.value.linked, true, 'a sign-in through a link removed meanwhile must link afresh');
+    assert.equal(await count("SELECT count(*) FROM r0_fixture.native_auth_providers WHERE provider_user_id = 'google-unlinked'"), 1);
+    contracts.push('link removed while a Google sign-in waited on its lock: the sign-in starts over and links afresh');
   } finally {
     adapter.transaction = transaction;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });

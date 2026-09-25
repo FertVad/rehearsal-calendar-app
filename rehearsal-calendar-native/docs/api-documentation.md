@@ -42,6 +42,10 @@ Include the access token in the `Authorization` header:
 Authorization: Bearer <access_token>
 ```
 
+A token whose version was revoked answers `401`. A token of an account whose
+address is still pending answers `403 { "code": "EMAIL_NOT_VERIFIED" }` on every
+route: no route issues one, and should one exist it reaches nothing.
+
 ### Token Refresh Flow
 
 When an access token expires (401 error), use the refresh token to obtain a new access token pair via the `/auth/refresh` endpoint.
@@ -57,17 +61,37 @@ syntax disables Apple login. No audience is inferred from the submitted token.
 
 | Response | Meaning |
 |---|---|
-| 200 | Verified Apple identity; existing user/accessToken/refreshToken/isNewUser/linked response |
-| 400 | Missing, blank or non-string idToken |
+| 200 | Verified Apple identity; user/accessToken/refreshToken/isNewUser/linked/passwordRevoked response |
+| 400 | Missing, blank or non-string idToken; `PROVIDER_EMAIL_REQUIRED` or `PROVIDER_EMAIL_UNVERIFIED` (below) |
 | 401 | Token verification failed, including a different audience |
+| 403 | `EMAIL_NOT_VERIFIED`: the linked account is a pending registration and Apple proved nothing |
 | 503 | Apple sign-in is unavailable because provider configuration is missing or invalid |
 | 500 | Internal failure after verification, including account storage failure |
 
 Rejections do not return token claims or internal verifier details. An unavailable
 Apple provider does not stop the other application routes. Verify the expected
 audience against the **active deployment** before offering Apple login; successful
-server startup alone does not confirm it. This guard does not change the separate
-account-linking policy or revoke already issued application sessions.
+server startup alone does not confirm it.
+
+### Google and Apple: what the provider's address settles
+
+`POST /auth/google` and `POST /auth/apple` decide the account in one locked
+transaction. The provider's address counts as proof only when the provider says
+it is verified; it is trimmed and lower-cased like every other address.
+
+- **Already linked provider**: signs in to that account.
+- **Not linked**: a proven address joins the account that has it (`linked: true`)
+  or creates one (`isNewUser: true`). Without an address, or with one the provider
+  did not verify, nothing is joined or created: `400 PROVIDER_EMAIL_REQUIRED` /
+  `PROVIDER_EMAIL_UNVERIFIED` (Google answers the latter before any lookup).
+- **Proof for an account whose address nobody had proven** — a pending
+  registration, or an account from before email confirmation, linked now or long
+  ago: the address becomes verified by the provider. A password on that account
+  was never proven to be the owner's, so it is removed together with every
+  session and live code, and the response says `passwordRevoked: true`. The app
+  tells the person and offers a password reset. A confirmed account is only linked.
+- **Pending account without proof** (a linked provider whose token carries no
+  address): `403 EMAIL_NOT_VERIFIED`, no tokens.
 
 ---
 

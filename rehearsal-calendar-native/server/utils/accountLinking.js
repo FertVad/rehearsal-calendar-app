@@ -1,158 +1,186 @@
 /**
  * Account Linking Utilities
  *
- * This module handles the logic for linking OAuth providers to user accounts.
- * Supports automatic account linking based on email addresses.
+ * Google/Apple sign-in, linking by a proven address, and the sign-in methods
+ * an account actually has.
  */
 
 import db from '../database/db.js';
 import { logger } from './logger.js';
+import { normalizeEmail } from './accountInput.js';
+import { SESSION_USER_COLUMNS } from './userSerializer.js';
+import { identityOf, isVerified, markVerified } from '../services/email/identity.js';
+import { voidCodes } from '../services/email/codes.js';
 
 /**
- * Find or create a user account for OAuth login
- *
- * This function implements the following logic:
- * 1. Check if this OAuth provider is already linked → return existing user
- * 2. Check if email matches an existing user → link OAuth to that account
- * 3. Otherwise → create a new user account with this OAuth provider
- *
- * @param {Object} params - OAuth user parameters
- * @param {string} params.provider - Provider type: 'google', 'apple', 'email'
- * @param {string} params.providerUserId - Unique user ID from OAuth provider
- * @param {string} params.email - User's email address
- * @param {boolean} params.emailVerified - Whether email is verified by provider
- * @param {string} params.firstName - User's first name
- * @param {string} params.lastName - User's last name (optional)
- * @param {string} params.avatarUrl - Profile avatar URL (optional)
- * @returns {Promise<Object>} { userId, isNewUser, linked }
+ * Why a Google/Apple sign-in gets no session. Thrown inside the transaction,
+ * so nothing it began is kept.
  */
-export async function findOrCreateOAuthUser({
-  provider,
-  providerUserId,
-  email,
-  emailVerified,
-  firstName,
-  lastName,
-  avatarUrl,
+export class ProviderSignInRefused extends Error {
+  constructor(status, body) {
+    super(body.error);
+    this.name = 'ProviderSignInRefused';
+    this.status = status;
+    this.body = body;
+  }
+}
+
+// The account moved under us — a link removed, an address changed, a row
+// deleted — between the unlocked read and the lock. The attempt starts over.
+class SignInMoved extends Error {}
+
+const ATTEMPTS = 3;
+
+/**
+ * Sign in with Google or Apple (R3: A01, review R3-01).
+ *
+ * The provider's word is proof of an address only when it says the address is
+ * verified, and only for that exact address. Proof for an account whose
+ * address nobody proved yet — a pending registration, or an account from
+ * before R3 — settles who owns it: a password on it was never proven to be
+ * the owner's, so it is removed with every session and live code, and the
+ * address becomes verified by the provider. That holds for a provider linked
+ * long ago as well, or a takeover from before R3 — the attacker's password
+ * beside the owner's Google — would survive the fix. A verified account is
+ * only linked; nothing is taken from it.
+ *
+ * Without proof there is no linking and no new account: an unproven address
+ * must not claim a mailbox. An already linked provider still signs in, unless
+ * the account is pending — a pending account gets no session by any path.
+ *
+ * Everything happens under the user row lock, and the session row — the token
+ * version with it — is read before COMMIT, so a later revocation reaches the
+ * tokens signed from it.
+ *
+ * @returns {Promise<{ user: Object, isNewUser: boolean, linked: boolean, passwordRevoked: boolean }>}
+ * @throws {ProviderSignInRefused}
+ */
+export async function signInWithProvider({
+  provider, providerUserId, email, emailVerified, firstName, lastName, avatarUrl,
 }) {
-  const now = new Date().toISOString();
+  const address = normalizeEmail(email) || null;
+  const claim = {
+    provider,
+    providerUserId,
+    address,
+    // Only a verified address proves anything; a missing one proves nothing.
+    proof: emailVerified === true && address ? address : null,
+    // Apple in particular hands back names with padding. Trimmed here for the
+    // same reason as on the register and profile routes: stored with a trailing
+    // space, a first name reappears joined to a surname by two.
+    firstName: typeof firstName === 'string' ? firstName.trim() : firstName,
+    lastName: typeof lastName === 'string' ? lastName.trim() || null : lastName,
+    avatarUrl,
+  };
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await db.transaction((tx) => providerSignIn(tx, claim, new Date()));
+    } catch (error) {
+      // Two first sign-ins of one person, or one racing a registration of the
+      // same address, meet a unique key; the next attempt finds the winner.
+      const retry = error instanceof SignInMoved || error?.code === '23505';
+      if (!retry || attempt >= ATTEMPTS) throw error;
+    }
+  }
+}
 
-  // Apple in particular hands back names with padding. Trimmed here for the
-  // same reason as on the register and profile routes: stored with a trailing
-  // space, a first name reappears joined to a surname by two.
-  firstName = typeof firstName === 'string' ? firstName.trim() : firstName;
-  lastName = typeof lastName === 'string' ? lastName.trim() || null : lastName;
+async function providerSignIn(tx, claim, now) {
+  const { provider, providerUserId, address, proof } = claim;
+  const lockUser = (id) => tx.get('SELECT id, email, password_hash FROM native_users WHERE id = $1 FOR UPDATE', [id]);
+  let user;
+  let isNewUser = false;
+  let linked = false;
 
-  // ============================================================================
-  // Step 1: Check if this OAuth provider is already linked
-  // ============================================================================
-  const existingProvider = await db.get(
+  const link = await tx.get(
     'SELECT user_id FROM native_auth_providers WHERE provider_type = $1 AND provider_user_id = $2',
     [provider, providerUserId]
   );
-
-  if (existingProvider) {
-    // OAuth provider already linked - just update last_used_at
-    await db.run(
-      'UPDATE native_auth_providers SET last_used_at = $1 WHERE provider_type = $2 AND provider_user_id = $3',
-      [now, provider, providerUserId]
+  if (link) {
+    user = await lockUser(link.user_id);
+    // Unlinking takes the same lock first, so under it the link is settled.
+    const still = user && await tx.get(
+      'SELECT user_id FROM native_auth_providers WHERE provider_type = $1 AND provider_user_id = $2 AND user_id = $3',
+      [provider, providerUserId, user.id]
     );
-
-    logger.info(`[AccountLinking] OAuth provider ${provider} already linked to user ${existingProvider.user_id}`);
-
-    return {
-      userId: existingProvider.user_id,
-      isNewUser: false,
-      linked: false, // Not newly linked, already existed
-    };
-  }
-
-  // ============================================================================
-  // Step 2: Check if email matches an existing user (automatic linking)
-  // ============================================================================
-  // Only link if the OAuth provider verified the email
-  if (email && emailVerified) {
-    const existingUser = await db.get(
-      'SELECT id FROM native_users WHERE email = $1',
-      [email]
+    if (!still) throw new SignInMoved();
+    await tx.run(
+      'UPDATE native_auth_providers SET last_used_at = $1::timestamptz WHERE provider_type = $2 AND provider_user_id = $3',
+      [now.toISOString(), provider, providerUserId]
     );
-
-    if (existingUser) {
-      // Email matches an existing account → link OAuth provider to it
-      logger.info(`[AccountLinking] Linking ${provider} account to existing user ${existingUser.id} via email ${email}`);
-
-      // Create auth provider entry
-      await db.run(
-        `INSERT INTO native_auth_providers (
-          user_id, provider_type, provider_user_id, provider_email,
-          created_at, updated_at, last_used_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [existingUser.id, provider, providerUserId, email, now, now, now]
-      );
-
-      // Update user's avatar if they don't have one and OAuth provides one
-      if (avatarUrl) {
-        const user = await db.get('SELECT avatar_url FROM native_users WHERE id = $1', [existingUser.id]);
-        if (!user.avatar_url) {
-          await db.run(
-            'UPDATE native_users SET avatar_url = $1, updated_at = $2 WHERE id = $3',
-            [avatarUrl, now, existingUser.id]
-          );
-          logger.info(`[AccountLinking] Updated avatar for user ${existingUser.id} from ${provider}`);
-        }
-      }
-
-      return {
-        userId: existingUser.id,
-        isNewUser: false,
-        linked: true, // Newly linked to existing account
-      };
+  } else {
+    if (!address) {
+      throw new ProviderSignInRefused(400, { error: `${providerName(provider)} did not share an email address`,
+        code: 'PROVIDER_EMAIL_REQUIRED' });
     }
-  } else if (email && !emailVerified) {
-    logger.warn(`[AccountLinking] OAuth email ${email} not verified by ${provider}, skipping auto-linking`);
+    if (!proof) {
+      throw new ProviderSignInRefused(400, { error: `Email not verified by ${providerName(provider)}`,
+        code: 'PROVIDER_EMAIL_UNVERIFIED' });
+    }
+    const holder = await tx.get('SELECT id FROM native_users WHERE email = $1', [proof]);
+    if (holder) {
+      user = await lockUser(holder.id);
+      if (!user || user.email !== proof) throw new SignInMoved();
+      logger.info(`[AccountLinking] Linking ${provider} to existing user ${user.id}`);
+      await insertProvider(tx, user.id, claim, now);
+      if (claim.avatarUrl) {
+        await tx.run(
+          'UPDATE native_users SET avatar_url = $1, updated_at = $2::timestamptz WHERE id = $3 AND avatar_url IS NULL',
+          [claim.avatarUrl, now.toISOString(), user.id]
+        );
+      }
+      linked = true;
+    } else {
+      const created = await tx.run(
+        `INSERT INTO native_users (email, password_hash, first_name, last_name, avatar_url, created_at, updated_at)
+         VALUES ($1, NULL, $2, $3, $4, $5::timestamptz, $5::timestamptz)`,
+        [proof, claim.firstName || 'User', claim.lastName || null, claim.avatarUrl || null, now.toISOString()]
+      );
+      user = await lockUser(created.lastInsertId);
+      await insertProvider(tx, user.id, claim, now);
+      logger.info(`[AccountLinking] Created user ${user.id} via ${provider}`);
+      isNewUser = true;
+    }
   }
 
-  // ============================================================================
-  // Step 3: Create a new user account
-  // ============================================================================
-  logger.info(`[AccountLinking] Creating new user via ${provider} OAuth (email: ${email || 'none'})`);
+  // What the proof settles about this account's address.
+  let passwordRevoked = false;
+  const identity = await identityOf(tx, user.id);
+  if (proof && proof === user.email && !isVerified(identity, user.email)) {
+    if (user.password_hash) {
+      await tx.run(
+        'UPDATE native_users SET password_hash = NULL, token_version = token_version + 1, updated_at = $2::timestamptz WHERE id = $1',
+        [user.id, now.toISOString()]
+      );
+      await tx.run("DELETE FROM native_auth_providers WHERE user_id = $1 AND provider_type = 'email'", [user.id]);
+      await voidCodes(tx, { userId: user.id, now });
+      logger.warn(`[AccountLinking] ${provider} proved the address of user ${user.id}; its unproven password is revoked`);
+      passwordRevoked = true;
+    }
+    await markVerified(tx, { userId: user.id, email: user.email, by: provider, now });
+  } else if (identity?.status === 'pending') {
+    throw new ProviderSignInRefused(403, { error: 'Confirm your email address first', code: 'EMAIL_NOT_VERIFIED' });
+  }
 
-  // Insert new user (password_hash is NULL for OAuth-only users)
-  const result = await db.run(
-    `INSERT INTO native_users (
-      email, password_hash, first_name, last_name, avatar_url,
-      created_at, updated_at, last_login_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [
-      email || null,
-      null, // No password for OAuth-only users
-      firstName || 'User',
-      lastName || null,
-      avatarUrl || null,
-      now,
-      now,
-      now,
-    ]
-  );
-
-  const userId = result.lastInsertId;
-
-  // Create auth provider entry
-  await db.run(
-    `INSERT INTO native_auth_providers (
-      user_id, provider_type, provider_user_id, provider_email,
-      created_at, updated_at, last_used_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [userId, provider, providerUserId, email || null, now, now, now]
-  );
-
-  logger.info(`[AccountLinking] Created new user ${userId} via ${provider} OAuth`);
-
+  await tx.run('UPDATE native_users SET last_login_at = $1::timestamptz WHERE id = $2', [now.toISOString(), user.id]);
   return {
-    userId,
-    isNewUser: true,
-    linked: false, // New user, not linked to existing
+    user: await tx.get(`SELECT ${SESSION_USER_COLUMNS} FROM native_users WHERE id = $1`, [user.id]),
+    isNewUser,
+    linked,
+    passwordRevoked,
   };
+}
+
+function providerName(provider) {
+  return provider === 'apple' ? 'Apple' : 'Google';
+}
+
+async function insertProvider(tx, userId, claim, now) {
+  await tx.run(
+    `INSERT INTO native_auth_providers (user_id, provider_type, provider_user_id, provider_email,
+       created_at, updated_at, last_used_at)
+     VALUES ($1, $2, $3, $4, $5::timestamptz, $5::timestamptz, $5::timestamptz)`,
+    [userId, claim.provider, claim.providerUserId, claim.address, now.toISOString()]
+  );
 }
 
 /**

@@ -7,7 +7,7 @@ import { generateTokens, verifyToken, requireAuth } from '../middleware/jwtMiddl
 import { serializeUser } from '../utils/userSerializer.js';
 import { verifyGoogleToken, verifyAppleToken } from '../utils/oauthVerification.js';
 import { AppleAuthUnavailableError, AppleTokenVerificationError } from '../config/appleAuth.js';
-import { findOrCreateOAuthUser, getUserAuthProviders, unlinkAuthProvider, recordPasswordMethod } from '../utils/accountLinking.js';
+import { signInWithProvider, ProviderSignInRefused, getUserAuthProviders, unlinkAuthProvider, recordPasswordMethod } from '../utils/accountLinking.js';
 import { InputError, inputErrorBody, registrationInput, profileUpdates, checkPassword, normalizeEmail } from '../utils/accountInput.js';
 import { emailTransport } from '../services/email/transport.js';
 import { issueCode, deliverCode } from '../services/email/codes.js';
@@ -140,6 +140,23 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 }));
 
+// Google and Apple sign-in. Linking, the rule for an unproven password and
+// the session row are decided in one locked transaction (accountLinking.js);
+// the tokens are signed after it commits.
+function providerSession(res, signedIn) {
+  const { accessToken, refreshToken } = generateTokens(signedIn.user.id, signedIn.user.token_version);
+  res.json({
+    user: serializeUser(signedIn.user),
+    accessToken,
+    refreshToken,
+    isNewUser: signedIn.isNewUser,
+    linked: signedIn.linked, // Indicates if account was linked to existing user
+    // The password on this account was never proven to be the owner's and is
+    // gone, with every other session: the app says so and offers a reset.
+    passwordRevoked: signedIn.passwordRevoked,
+  });
+}
+
 // Google OAuth Login/Register
 router.post('/google', asyncHandler(async (req, res) => {
   try {
@@ -153,11 +170,10 @@ router.post('/google', asyncHandler(async (req, res) => {
     const googleUser = await verifyGoogleToken(idToken);
 
     if (!googleUser.emailVerified) {
-      return res.status(400).json({ error: 'Email not verified by Google' });
+      return res.status(400).json({ error: 'Email not verified by Google', code: 'PROVIDER_EMAIL_UNVERIFIED' });
     }
 
-    // Find or create user, link accounts if email matches
-    const { userId, isNewUser, linked } = await findOrCreateOAuthUser({
+    providerSession(res, await signInWithProvider({
       provider: 'google',
       providerUserId: googleUser.providerUserId,
       email: googleUser.email,
@@ -165,35 +181,9 @@ router.post('/google', asyncHandler(async (req, res) => {
       firstName: googleUser.firstName,
       lastName: googleUser.lastName,
       avatarUrl: googleUser.avatarUrl,
-    });
-
-    // Update last login
-    await db.run(
-      'UPDATE native_users SET last_login_at = $1 WHERE id = $2',
-      [new Date().toISOString(), userId]
-    );
-
-    // Fetch token version and generate JWT tokens
-    const versionRow = await db.get('SELECT token_version FROM native_users WHERE id = $1', [userId]);
-    const { accessToken, refreshToken } = generateTokens(userId, versionRow?.token_version);
-
-    // Get user data
-    const user = await db.get(
-      `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day,
-              onboarding_completed, created_at
-       FROM native_users WHERE id = $1`,
-      [userId]
-    );
-
-    res.json({
-      user: serializeUser(user),
-      accessToken,
-      refreshToken,
-      isNewUser,
-      linked, // Indicates if account was linked to existing user
-    });
+    }));
   } catch (err) {
+    if (err instanceof ProviderSignInRefused) return res.status(err.status).json(err.body);
     console.error('[Auth] Google OAuth error:', err);
     res.status(500).json({ error: 'Google authentication failed' });
   }
@@ -215,8 +205,7 @@ router.post('/apple', asyncHandler(async (req, res) => {
     const firstName = user?.givenName || user?.name?.givenName || user?.firstName || 'User';
     const lastName = user?.familyName || user?.name?.familyName || user?.lastName || '';
 
-    // Find or create user, link accounts if email matches
-    const { userId, isNewUser, linked } = await findOrCreateOAuthUser({
+    providerSession(res, await signInWithProvider({
       provider: 'apple',
       providerUserId: appleUser.providerUserId,
       email: appleUser.email,
@@ -224,34 +213,7 @@ router.post('/apple', asyncHandler(async (req, res) => {
       firstName,
       lastName,
       avatarUrl: null, // Apple doesn't provide avatars
-    });
-
-    // Update last login
-    await db.run(
-      'UPDATE native_users SET last_login_at = $1 WHERE id = $2',
-      [new Date().toISOString(), userId]
-    );
-
-    // Fetch token version and generate JWT tokens
-    const versionRow = await db.get('SELECT token_version FROM native_users WHERE id = $1', [userId]);
-    const { accessToken, refreshToken } = generateTokens(userId, versionRow?.token_version);
-
-    // Get user data
-    const user_data = await db.get(
-      `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day,
-              onboarding_completed, created_at
-       FROM native_users WHERE id = $1`,
-      [userId]
-    );
-
-    res.json({
-      user: serializeUser(user_data),
-      accessToken,
-      refreshToken,
-      isNewUser,
-      linked,
-    });
+    }));
   } catch (err) {
     if (err instanceof AppleAuthUnavailableError) {
       return res.status(503).json({ error: 'Apple sign-in is unavailable' });
@@ -259,6 +221,7 @@ router.post('/apple', asyncHandler(async (req, res) => {
     if (err instanceof AppleTokenVerificationError) {
       return res.status(401).json({ error: 'Apple authentication failed' });
     }
+    if (err instanceof ProviderSignInRefused) return res.status(err.status).json(err.body);
     console.error('[Auth] Apple OAuth error:', err);
     res.status(500).json({ error: 'Apple authentication failed' });
   }

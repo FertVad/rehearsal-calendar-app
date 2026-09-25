@@ -143,6 +143,12 @@ beforeEach(async () => {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+    -- Authentication reads whether the address is still pending (R3).
+    CREATE TABLE native_email_identities (
+      user_id INTEGER PRIMARY KEY REFERENCES native_users(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending', 'verified'))
+    );
     CREATE TABLE native_bug_reports (
       id INTEGER PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES native_users(id),

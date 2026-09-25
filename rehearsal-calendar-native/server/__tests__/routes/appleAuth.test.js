@@ -231,6 +231,7 @@ test('intended Apple credentials use the real linked account, persist timestamps
   await expectUsableAppSession(response, linkedUserId);
   expect(response.body.isNewUser).toBe(false);
   expect(response.body.linked).toBe(false);
+  expect(response.body.passwordRevoked).toBe(false);
   expect(response.body.user.email).toBe(EMAIL);
   expect(verifyCall).toHaveBeenCalledTimes(1);
   expect(jwksTransport).toHaveBeenCalledTimes(1);
@@ -239,8 +240,12 @@ test('intended Apple credentials use the real linked account, persist timestamps
   const updatedProvider = after.native_auth_providers.find(provider => provider.provider_user_id === SUBJECT);
   expect(updatedUser.last_login_at).not.toBe(OLD_TIME);
   expect(updatedProvider.last_used_at).not.toBe(OLD_TIME);
+  // Apple verified the account's own address, which nobody had proven (R3).
+  expect(after.native_email_identities).toEqual([expect.objectContaining({
+    user_id: linkedUserId, email: EMAIL, status: 'verified', verified_by: 'apple' })]);
   before.native_users.find(user => user.id === linkedUserId).last_login_at = updatedUser.last_login_at;
   before.native_auth_providers.find(provider => provider.provider_user_id === SUBJECT).last_used_at = updatedProvider.last_used_at;
+  before.native_email_identities = after.native_email_identities;
   expect(after).toEqual(before); // Every unrelated fixture row remains unchanged.
 });
 
@@ -268,8 +273,9 @@ test('a real SQL failure after successful verification remains generic 500 and c
   expect(failed.body).toEqual({ error: 'Apple authentication failed' });
   expect(verifyCall).toHaveBeenCalledTimes(1);
   expect(jwksTransport).toHaveBeenCalledTimes(1);
-  expect(database.get).toHaveBeenCalled();
-  expect(database.run).toHaveBeenCalled();
+  // The linking SQL really ran, in one transaction, and was rolled back whole.
+  expect(observer.statements.some(({ scope, sql }) => scope && /native_auth_providers/.test(sql))).toBe(true);
+  expect(observer.transactions.at(-1).state).toBe('rolled-back');
   expect(snapshot()).toEqual(before);
   sqlite.run('DROP TRIGGER ia01_fail_provider_update');
   const recovered = await request(server).post('/api/auth/apple').send({ idToken: signedToken });
