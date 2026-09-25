@@ -102,8 +102,10 @@ One exception, taken before this rule could bite: on 2026-09-25 R3 extended v1
 with group 010 (the 010 step, its tables in the snapshot and the descriptor, the
 inspector's group list) and re-pinned the hashes. No persistent database had
 recorded a v1 history then — production was not adopted and every test schema
-is disposable — so no recorded root changed meaning. From the first production
-adoption on, changes take new versioned paths as described above.
+is disposable — so no recorded root changed meaning. The owner confirmed on
+2026-09-25 that the new migrator has never run against a database anyone kept.
+From the first production adoption on, changes take new versioned paths as
+described above.
 
 `r2Schema.mjs` checks actual fresh and adopted schemas through the real migration
 runner and application HTTP/adapter code, plus independent catalog drift and
