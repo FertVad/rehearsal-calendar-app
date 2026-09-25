@@ -22,6 +22,8 @@ import { identityOf, isVerified, markVerified } from '../services/email/identity
 
 const router = Router();
 const INVALID_LOGIN = { error: 'Invalid email or password' };
+const SESSION_USER = `id, email, first_name, last_name, phone, avatar_url, timezone, locale,
+  notifications_enabled, email_notifications, week_start_day, onboarding_completed, created_at, token_version`;
 const ALREADY_VERIFIED = { error: 'This address is already confirmed', code: 'ALREADY_VERIFIED' };
 
 // The account whose password this is, or null. The hash is returned so the
@@ -52,17 +54,15 @@ router.post('/verify-email', asyncHandler(async (req, res) => {
     if (!checked.ok) return { status: 400, body: { error: 'The code is not valid', code: checked.reason } };
     await markVerified(tx, { userId: holder.id, email: holder.email, by: 'code', now });
     await tx.run('UPDATE native_users SET last_login_at = NOW() WHERE id = $1', [holder.id]);
-    return { status: 200 };
+    // The session version is the one the password was checked against, read
+    // under the same lock (R3-06). Read after COMMIT, it would take the bump of
+    // a password change made meanwhile, and the old password's session would
+    // outlive the revocation.
+    return { status: 200, user: await tx.get(`SELECT ${SESSION_USER} FROM native_users WHERE id = $1`, [holder.id]) };
   });
   if (outcome.status !== 200) return res.status(outcome.status).json(outcome.body);
 
-  const user = await db.get(
-    `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-            notifications_enabled, email_notifications, week_start_day,
-            onboarding_completed, created_at, token_version
-     FROM native_users WHERE id = $1`,
-    [holder.id]
-  );
+  const { user } = outcome;
   const { accessToken, refreshToken } = generateTokens(user.id, user.token_version);
   res.json({ user: serializeUser(user), accessToken, refreshToken });
 }));

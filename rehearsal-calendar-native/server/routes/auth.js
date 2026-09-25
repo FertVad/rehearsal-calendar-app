@@ -362,14 +362,14 @@ router.put('/me', requireAuth, asyncHandler(async (req, res) => {
 
     // The password is checked and replaced under the user row lock, with its
     // sign-in method recorded in the same transaction.
-    const refused = await db.transaction(async (tx) => {
+    const saved = await db.transaction(async (tx) => {
       const locked = await tx.get('SELECT password_hash FROM native_users WHERE id = $1 FOR UPDATE', [req.userId]);
       if (passwordChange) {
         // A stolen session must not be enough to replace the password and keep
         // the account. An account without one (OAuth only) may set its first.
         if (locked.password_hash) {
           const proof = req.body.currentPassword;
-          if (typeof proof !== 'string' || !(await bcrypt.compare(proof, locked.password_hash))) return true;
+          if (typeof proof !== 'string' || !(await bcrypt.compare(proof, locked.password_hash))) return { refused: true };
         }
         updates.push(['password_hash', await bcrypt.hash(req.body.password, 10)]);
       }
@@ -383,21 +383,21 @@ router.put('/me', requireAuth, asyncHandler(async (req, res) => {
         [...updates.map(([, value]) => value), req.userId]
       );
       if (passwordChange) await recordPasswordMethod(tx, req.userId);
-      return false;
+      // Read under the lock, so a new session carries the version this change
+      // set, not one a later revocation set after COMMIT (R3-06).
+      return { user: await tx.get(
+        `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
+                notifications_enabled, email_notifications, week_start_day,
+                onboarding_completed, token_version
+         FROM native_users WHERE id = $1`,
+        [req.userId]
+      ) };
     });
-    if (refused) {
+    if (saved.refused) {
       return res.status(403).json({ error: 'Current password is incorrect', code: 'CURRENT_PASSWORD_INVALID',
         field: 'currentPassword' });
     }
-
-    // Get updated user
-    const user = await db.get(
-      `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day,
-              onboarding_completed, token_version
-       FROM native_users WHERE id = $1`,
-      [req.userId]
-    );
+    const { user } = saved;
 
     // If password changed, issue fresh tokens so this device stays logged in
     const response = { user: serializeUser(user) };

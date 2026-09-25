@@ -118,7 +118,8 @@ every case; the app offers to resend.
 - `400 Bad Request`: `{ "error": "...", "code": "CLIENT_UPGRADE_REQUIRED" }` without `verification`,
   before anything is written; otherwise a field error `{ "error", "code", "field" }` —
   `EMAIL_INVALID`, `PASSWORD_POLICY`, `NAME_INVALID`, `TEXT_INVALID`, `TIMEZONE_INVALID`, `LOCALE_INVALID`
-- `409 Conflict`: `{ "error": "An account with this email already exists", "code": "EMAIL_TAKEN" }`, whatever the case typed
+- `409 Conflict`: `{ "error": "An account with this email already exists", "code": "EMAIL_TAKEN" }`, whatever the case typed.
+  The app turns the code into its own "sign in or reset the password" in the person's language.
 - `503 Service Unavailable`: `{ "error": "Email is not available right now", "code": "EMAIL_UNAVAILABLE" }` —
   no email can be sent, so no account is created
 - `500 Internal Server Error`: `{ "error": "Failed to register user" }`
@@ -223,8 +224,10 @@ Authenticate an existing user.
   ```json
   { "error": "Invalid email or password" }
   ```
-- `403 Forbidden`: the password is right but the address was never confirmed; no tokens.
-  Answered only after the right password, so it tells a stranger nothing.
+- `403 Forbidden`: the password is right but the account is a registration whose code
+  was never entered (pending); no tokens. Answered only after the right password, so
+  it tells a stranger nothing. An account from before email confirmation has no
+  pending state and signs in as it always did, though its address was never proven.
   ```json
   { "error": "Confirm your email address first", "code": "EMAIL_NOT_VERIFIED", "email": "user@example.com" }
   ```
