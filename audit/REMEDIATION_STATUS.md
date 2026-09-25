@@ -34,7 +34,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R0 | — | COMPLETE — baseline, real PG/HTTP harness, исходные дефекты, первичная инвентаризация |
 | R1 | 10 | READY_FOR_CHECK — 7 VERIFIED, H02/IA01/IS02 READY_FOR_CHECK (DEV-15/OPS-IA01/OPS-IS02); release gates открыты |
 | R2 | 8 | READY_FOR_CHECK — 7 VERIFIED; FM01 ждёт даты конвертации production (OPS-FM01-DATE, ревью R2-01); OPS-R2-ADOPT до деплоя 007/008 |
-| R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 и серверная часть HP01 в коде без PG-проверки; маршруты A01 `d5564ee` (почтой — после OPS-EMAIL); OAuth-правило, сброс, смена email, клиент, AC05 не сделаны |
+| R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 и серверная часть HP01 в коде без PG-проверки; маршруты A01 `d5564ee`, `3859ece` (почтой — после OPS-EMAIL); правило Google/Apple `d964417`; сброс, смена email, клиент, AC05 не сделаны |
 | R4 | 8 | TODO |
 | R5 | 15 | TODO |
 | R6 | 14 | TODO |
@@ -65,7 +65,7 @@ OPS-R3-DATA (25.09).
 
 | ID | Важность | Условный | Пакет | Статус | Краткая суть | Evidence |
 |---|---|---|---|---|---|---|
-| A01 | High | Нет | R3 | IN_PROGRESS | предварительный захват аккаунта через email/OAuth | [Регистрация ждёт кода, pending без сессии — d5564ee, версия сессии под блокировкой — 3859ece (route-тест, PG R3_AUTH, 12 отрицательных вариантов); OAuth-правило R3-01 и клиент не сделаны](REMEDIATION_R3.md) |
+| A01 | High | Нет | R3 | IN_PROGRESS | предварительный захват аккаунта через email/OAuth | [Регистрация ждёт кода, pending без сессии — d5564ee; версия сессии под блокировкой — 3859ece; правило Google/Apple и все пути выдачи сессии — d964417 (route-тесты, PG R3_AUTH, мутации); сброс пароля и клиент не сделаны](REMEDIATION_R3.md) |
 | A02 | High | Нет | R1 | VERIFIED | необработанные async-исключения в auth middleware/admin login | [Исполнение и проверки — 7e1eefa](REMEDIATION_A02.md) |
 | A03 | Medium | Нет | R3 | IN_PROGRESS | backend не применяет правила пароля и профильные типы | [Код и route-тест (красный до: 16/22) — 9a702ba; PG не проводился](REMEDIATION_R3.md) |
 | A04 | Medium | Нет | R3 | IN_PROGRESS | способы входа расходятся с реальными credentials | [Код и route-тест (красный до: 5/5) — 6320743; гонка на PG не проверена](REMEDIATION_R3.md) |
