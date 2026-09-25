@@ -1,0 +1,18 @@
+{
+  "card": "OPS-R3-DATA",
+  "date": "2026-09-25",
+  "runBy": "owner, Neon SQL console, read-only; aggregate counts only; Claude had no production access",
+  "sql": "SELECT (SELECT count(*) FROM (SELECT lower(trim(email)) FROM native_users GROUP BY 1 HAVING count(*) > 1) d) AS case_duplicate_emails, (SELECT count(*) FROM native_users WHERE email <> lower(trim(email))) AS non_normalized_emails, (SELECT count(*) FROM native_users WHERE password_hash IS NOT NULL) AS password_accounts, (SELECT count(*) FROM native_users u WHERE u.password_hash IS NOT NULL AND EXISTS (SELECT 1 FROM native_auth_providers p WHERE p.user_id = u.id AND p.provider_type IN ('google', 'apple'))) AS password_with_oauth, (SELECT count(*) FROM native_users) AS users;",
+  "result": {
+    "case_duplicate_emails": 0,
+    "non_normalized_emails": 0,
+    "password_accounts": 10,
+    "password_with_oauth": 0,
+    "users": 27
+  },
+  "conclusions": {
+    "normalization": "Every stored address is already lower-case and trimmed and no two differ only by case, so input can be trimmed and lower-cased at every entry point and old accounts are still found by exact match.",
+    "decision3": "No account has both a password and a Google/Apple link, so revoking an unproven password on an OAuth sign-in (R3-01) affects nobody today and no pre-R3 takeover of that shape exists in the data.",
+    "legacyPasswords": "10 password accounts (the demo account among them) have unproven addresses; they keep working and can confirm later."
+  }
+}
