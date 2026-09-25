@@ -156,25 +156,67 @@ export async function findOrCreateOAuthUser({
 }
 
 /**
+ * The ways this person can actually sign in, each once.
+ *
+ * A password is a column on the user, not a provider row: register never
+ * wrote the row and the one backfill that did ran once, so the rows cannot
+ * say whether a password exists (A04). Google and Apple are rows. Two rows of
+ * one type are still one way in.
+ *
+ * @param {Object} conn - db or a transaction handle
+ * @param {number} userId - User ID
+ * @returns {Promise<Array|null>} methods, or null when the user does not exist
+ */
+async function signInMethods(conn, userId) {
+  const user = await conn.get('SELECT password_hash FROM native_users WHERE id = $1', [userId]);
+  if (!user) return null;
+  const rows = await conn.all(
+    `SELECT provider_type, provider_email, created_at, last_used_at
+     FROM native_auth_providers WHERE user_id = $1 ORDER BY created_at ASC`,
+    [userId]
+  );
+  const methods = [];
+  if (user.password_hash) {
+    const row = rows.find((r) => r.provider_type === 'email');
+    methods.push({
+      provider_type: 'email',
+      provider_email: row?.provider_email ?? null,
+      created_at: row?.created_at ?? null,
+      last_used_at: row?.last_used_at ?? null,
+    });
+  }
+  for (const type of ['google', 'apple']) {
+    const row = rows.find((r) => r.provider_type === type);
+    if (row) methods.push(row);
+  }
+  return methods;
+}
+
+/**
  * Get all auth providers linked to a user account
  *
  * @param {number} userId - User ID
  * @returns {Promise<Array>} Array of auth provider objects
  */
 export async function getUserAuthProviders(userId) {
-  const providers = await db.all(
-    `SELECT
-      provider_type,
-      provider_email,
-      created_at,
-      last_used_at
-     FROM native_auth_providers
-     WHERE user_id = $1
-     ORDER BY created_at ASC`,
+  return (await signInMethods(db, userId)) ?? [];
+}
+
+/**
+ * Record the password as a sign-in method when it is not already listed.
+ * Callers hold the user row lock, so two of these cannot both insert.
+ *
+ * @param {Object} tx - Transaction handle
+ * @param {number} userId - User ID
+ */
+export async function recordPasswordMethod(tx, userId) {
+  await tx.run(
+    `INSERT INTO native_auth_providers (user_id, provider_type, provider_email, created_at, updated_at, last_used_at)
+     SELECT u.id, 'email', u.email, NOW(), NOW(), NULL FROM native_users u
+     WHERE u.id = $1 AND NOT EXISTS (
+       SELECT 1 FROM native_auth_providers p WHERE p.user_id = $1 AND p.provider_type = 'email')`,
     [userId]
   );
-
-  return providers;
 }
 
 /**
@@ -186,39 +228,35 @@ export async function getUserAuthProviders(userId) {
  * @throws {Error} If trying to unlink the last auth method
  */
 export async function unlinkAuthProvider(userId, providerType) {
-  // Check how many auth methods the user has
-  const providers = await db.all(
-    'SELECT provider_type FROM native_auth_providers WHERE user_id = $1',
-    [userId]
-  );
+  await db.transaction(async (tx) => {
+    // Two unlinks at once used to each count two methods and each delete one,
+    // leaving none (A04). The row lock makes the second wait for the first to
+    // commit, then count again.
+    const locked = await tx.get('SELECT id FROM native_users WHERE id = $1 FOR UPDATE', [userId]);
+    const methods = locked ? await signInMethods(tx, userId) : null;
+    if (!methods?.some((method) => method.provider_type === providerType)) {
+      throw new Error('Auth provider not found');
+    }
+    if (methods.length <= 1) {
+      throw new Error('Cannot unlink the last authentication method');
+    }
 
-  if (providers.length <= 1) {
-    throw new Error('Cannot unlink the last authentication method');
-  }
-
-  // Delete the provider
-  const result = await db.run(
-    'DELETE FROM native_auth_providers WHERE user_id = $1 AND provider_type = $2',
-    [userId, providerType]
-  );
-
-  if (result.changes === 0) {
-    throw new Error('Auth provider not found');
-  }
-
-  // POST /auth/login authenticates against native_users.password_hash and never
-  // consults this table, so dropping the row alone would leave password sign-in
-  // working while telling the user it had been unlinked. Clear the credential
-  // itself to make the removal real.
-  if (providerType === 'email') {
-    await db.run(
-      'UPDATE native_users SET password_hash = NULL, updated_at = NOW() WHERE id = $1',
-      [userId]
+    await tx.run(
+      'DELETE FROM native_auth_providers WHERE user_id = $1 AND provider_type = $2',
+      [userId, providerType]
     );
-  }
+
+    // POST /auth/login authenticates against native_users.password_hash and
+    // never consults the provider rows, so removing the password method means
+    // clearing the credential itself.
+    if (providerType === 'email') {
+      await tx.run(
+        'UPDATE native_users SET password_hash = NULL, updated_at = NOW() WHERE id = $1',
+        [userId]
+      );
+    }
+  });
 
   logger.info(`[AccountLinking] Unlinked ${providerType} provider from user ${userId}`);
-
   return true;
 }
-

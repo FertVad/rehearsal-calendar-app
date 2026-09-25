@@ -7,7 +7,7 @@ import { generateTokens, verifyToken, requireAuth } from '../middleware/jwtMiddl
 import { serializeUser } from '../utils/userSerializer.js';
 import { verifyGoogleToken, verifyAppleToken } from '../utils/oauthVerification.js';
 import { AppleAuthUnavailableError, AppleTokenVerificationError } from '../config/appleAuth.js';
-import { findOrCreateOAuthUser, getUserAuthProviders, unlinkAuthProvider } from '../utils/accountLinking.js';
+import { findOrCreateOAuthUser, getUserAuthProviders, unlinkAuthProvider, recordPasswordMethod } from '../utils/accountLinking.js';
 import { InputError, inputErrorBody, registrationInput, profileUpdates, checkPassword } from '../utils/accountInput.js';
 import { notifyProjectDeleted } from '../services/notifications/pushNotificationService.js';
 
@@ -34,14 +34,18 @@ router.post('/register', asyncHandler(async (req, res) => {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Insert user with device timezone if provided
-    const result = await db.run(
-      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, last_login_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [email, passwordHash, firstName, lastName, timezone]
-    );
-
-    const userId = result.lastInsertId;
+    // The user and their password method in one go: register used to leave
+    // the provider list empty, so the app showed no way in for a working
+    // password (A04).
+    const userId = await db.transaction(async (tx) => {
+      const result = await tx.run(
+        `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, last_login_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
+        [email, passwordHash, firstName, lastName, timezone]
+      );
+      await recordPasswordMethod(tx, result.lastInsertId);
+      return result.lastInsertId;
+    });
 
     // New users start with token_version = 1 (DB default)
     const { accessToken, refreshToken } = generateTokens(userId, 1);
@@ -321,7 +325,7 @@ router.put('/me', requireAuth, asyncHandler(async (req, res) => {
     }
     const passwordChange = req.body.password !== undefined;
 
-    const current = await db.get('SELECT email, password_hash FROM native_users WHERE id = $1', [req.userId]);
+    const current = await db.get('SELECT email FROM native_users WHERE id = $1', [req.userId]);
     if (!current) return res.status(404).json({ error: 'User not found' });
 
     if (req.body.email !== undefined && (typeof req.body.email !== 'string'
@@ -330,32 +334,39 @@ router.put('/me', requireAuth, asyncHandler(async (req, res) => {
         code: 'EMAIL_CHANGE_REQUIRES_VERIFICATION', field: 'email' });
     }
 
-    if (passwordChange) {
-      // A stolen session must not be enough to replace the password and keep
-      // the account. An account without one (OAuth only) may set its first.
-      if (current.password_hash) {
-        const proof = req.body.currentPassword;
-        if (typeof proof !== 'string' || !(await bcrypt.compare(proof, current.password_hash))) {
-          return res.status(403).json({ error: 'Current password is incorrect', code: 'CURRENT_PASSWORD_INVALID',
-            field: 'currentPassword' });
-        }
-      }
-      updates.push(['password_hash', await bcrypt.hash(req.body.password, 10)]);
-    }
-
-    if (updates.length === 0) {
+    if (updates.length === 0 && !passwordChange) {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    const assignments = updates.map(([column], index) => `${column} = $${index + 1}`);
-    // Password change revokes all existing sessions
-    if (passwordChange) assignments.push('token_version = token_version + 1');
-    assignments.push('updated_at = NOW()');
+    // The password is checked and replaced under the user row lock, with its
+    // sign-in method recorded in the same transaction.
+    const refused = await db.transaction(async (tx) => {
+      const locked = await tx.get('SELECT password_hash FROM native_users WHERE id = $1 FOR UPDATE', [req.userId]);
+      if (passwordChange) {
+        // A stolen session must not be enough to replace the password and keep
+        // the account. An account without one (OAuth only) may set its first.
+        if (locked.password_hash) {
+          const proof = req.body.currentPassword;
+          if (typeof proof !== 'string' || !(await bcrypt.compare(proof, locked.password_hash))) return true;
+        }
+        updates.push(['password_hash', await bcrypt.hash(req.body.password, 10)]);
+      }
 
-    await db.run(
-      `UPDATE native_users SET ${assignments.join(', ')} WHERE id = $${updates.length + 1}`,
-      [...updates.map(([, value]) => value), req.userId]
-    );
+      const assignments = updates.map(([column], index) => `${column} = $${index + 1}`);
+      // Password change revokes all existing sessions
+      if (passwordChange) assignments.push('token_version = token_version + 1');
+      assignments.push('updated_at = NOW()');
+      await tx.run(
+        `UPDATE native_users SET ${assignments.join(', ')} WHERE id = $${updates.length + 1}`,
+        [...updates.map(([, value]) => value), req.userId]
+      );
+      if (passwordChange) await recordPasswordMethod(tx, req.userId);
+      return false;
+    });
+    if (refused) {
+      return res.status(403).json({ error: 'Current password is incorrect', code: 'CURRENT_PASSWORD_INVALID',
+        field: 'currentPassword' });
+    }
 
     // Get updated user
     const user = await db.get(
