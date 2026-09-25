@@ -530,6 +530,54 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
     assert.equal(await count(`SELECT count(*) FROM r0_fixture.native_auth_providers
       WHERE user_id = $1 AND provider_type = 'email'`, [forgotten.id]), 1);
     contracts.push("password reset: request alike with and without an account; two confirmations with one code at once, one succeeds; the stranger's sessions, password and devices are gone, the address verified");
+
+    // Email change (HP01). Two confirmations of one change at once: the first
+    // moves the account and revokes the other sessions, the second — its
+    // session among them — finds that under the lock.
+    const moverId = (await control.query(`INSERT INTO r0_fixture.native_users (email, password_hash, first_name)
+      VALUES ('mover@fixture.invalid', $1, 'Mover') RETURNING id`, [await bcrypt.hash(PASSWORD, 4)])).rows[0].id;
+    const mover = await post('/api/auth/login', { email: 'mover@fixture.invalid', password: PASSWORD });
+    assert.equal(mover.status, 200);
+    const moveAsked = await call('POST', '/api/auth/me/email/change',
+      { newEmail: 'moved-to@fixture.invalid', currentPassword: PASSWORD }, mover.body.accessToken);
+    assert.equal(moveAsked.status, 202);
+    const moveCode = codeFor('moved-to@fixture.invalid');
+    await control.query('BEGIN');
+    await control.query('SELECT id FROM r0_fixture.native_users WHERE id = $1 FOR UPDATE', [moverId]);
+    const moves = await barrier([0, 1].map(() =>
+      call('POST', '/api/auth/me/email/change/confirm', { code: moveCode }, mover.body.accessToken)));
+    assert.deepEqual(moves.map((response) => response.status).sort(), [200, 401], 'one change must move the account once');
+    assert.equal((await control.query('SELECT email FROM r0_fixture.native_users WHERE id = $1', [moverId])).rows[0].email,
+      'moved-to@fixture.invalid');
+    const moved = moves.find((response) => response.status === 200);
+    assert.equal((await call('GET', '/api/auth/me', undefined, moved.body.accessToken)).status, 200);
+    assert.equal((await call('GET', '/api/auth/me', undefined, mover.body.accessToken)).status, 401);
+    assert.deepEqual((await accounts('moved-to@fixture.invalid')).map(({ id, password_hash: hash, ...rest }) => rest),
+      [{ status: 'verified', verified_by: 'code', live_codes: 0 }]);
+    contracts.push('two confirmations of one email change at once: one moves the account, the other is refused as a revoked session');
+
+    // A registration of the new address while the change waits for it: the
+    // registration holds the address first, the change meets the unique key.
+    // The registration is held at its sign-in method row (a share lock on that
+    // table), which the change does not touch before it moves the address — not
+    // at the identity table, which the auth middleware reads, or the change
+    // would wait in the middleware and find the address by its explicit check.
+    const racerId = (await control.query(`INSERT INTO r0_fixture.native_users (email, password_hash, first_name)
+      VALUES ('racer@fixture.invalid', $1, 'Racer') RETURNING id`, [await bcrypt.hash(PASSWORD, 4)])).rows[0].id;
+    const racer = await post('/api/auth/login', { email: 'racer@fixture.invalid', password: PASSWORD });
+    assert.equal((await call('POST', '/api/auth/me/email/change',
+      { newEmail: 'contested-address@fixture.invalid', currentPassword: PASSWORD }, racer.body.accessToken)).status, 202);
+    const raceCode = codeFor('contested-address@fixture.invalid');
+    await control.query('BEGIN');
+    await control.query('LOCK TABLE r0_fixture.native_auth_providers IN SHARE MODE');
+    const [taken, lost] = await inOrder([() => register('contested-address@fixture.invalid'),
+      () => call('POST', '/api/auth/me/email/change/confirm', { code: raceCode }, racer.body.accessToken)]);
+    assert.equal(taken.status, 201);
+    assert.equal(lost.status, 409, 'a change to an address registered meanwhile must be refused');
+    assert.equal(lost.body.code, 'EMAIL_TAKEN');
+    assert.equal((await control.query('SELECT email FROM r0_fixture.native_users WHERE id = $1', [racerId])).rows[0].email,
+      'racer@fixture.invalid');
+    contracts.push('registration of the new address while the change waited on it: 409, the old address kept');
   } finally {
     adapter.transaction = transaction;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });

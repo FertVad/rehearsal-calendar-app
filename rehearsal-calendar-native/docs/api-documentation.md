@@ -439,7 +439,7 @@ Update the authenticated user's profile, or their password.
   `currentPassword` must prove it. An account without one (Google/Apple only) may
   set its first only once its address is verified.
 - `email`: only the current address is accepted; changing it needs a confirmed
-  new address and is refused here.
+  new address — `POST /auth/me/email/change` — and is refused here.
 
 **Success Response (200):**
 ```json
@@ -459,6 +459,64 @@ signing in.
 - `403 Forbidden`: `CURRENT_PASSWORD_INVALID` (`field: currentPassword`);
   `EMAIL_NOT_VERIFIED` (`field: password`) for a first password on an address
   nobody has proven
+
+---
+
+#### 5a. Change the Sign-in Address
+
+Two steps. The first proves the account holder and sends a code to the new
+address; the second moves the account with that code.
+
+**Endpoint:** `POST /auth/me/email/change`
+
+**Authentication Required:** Yes
+
+**Request Body:**
+```json
+{ "newEmail": "new@example.com", "currentPassword": "securePassword123" }
+```
+A session alone does not move an account. With a password, `currentPassword`
+must prove it. An account without one (Google/Apple only) gets a second code, at
+its **current** address, to send back at confirmation.
+
+**Response (202):**
+```json
+{ "status": "codes_sent", "currentCodeRequired": false, "delivery": { "newAddress": "sent" } }
+```
+With `currentCodeRequired: true`, `delivery.currentAddress` is present too.
+`delivery` values are `sent`, `failed`, `unknown` (see registration).
+
+**Error Responses:**
+- `400 Bad Request`: `EMAIL_INVALID`, `EMAIL_UNCHANGED` (`field: newEmail`)
+- `401 Unauthorized`: invalid token, or `Session revoked`
+- `403 Forbidden`: `CURRENT_PASSWORD_INVALID` (`field: currentPassword`)
+- `409 Conflict`: `EMAIL_TAKEN`
+- `429 Too Many Requests`: `RATE_LIMITED` with `retryAfter` — one code a minute, five an hour
+- `503 Service Unavailable`: `EMAIL_UNAVAILABLE`, before anything is written
+
+**Endpoint:** `POST /auth/me/email/change/confirm`
+
+**Request Body:**
+```json
+{ "code": "123456", "currentCode": "654321" }
+```
+`currentCode` only for an account without a password. The new address is the one
+the latest request named.
+
+**Success Response (200):** `user` with the new address, `accessToken`,
+`refreshToken`. The address, its verification and the password sign-in method
+change together; every other session and every live code of the account is
+revoked, and the old address gets a notice. Push devices stay: the change was
+made by the proven holder.
+
+**Error Responses:**
+- `400 Bad Request`: `CODE_INVALID`, `CODE_LOCKED`, `CODE_EXPIRED`, `CODE_MISSING`,
+  with `field: code` or `field: currentCode`. Without a password the current-address
+  code is checked first, so a wrong one leaves the other code unspent
+- `401 Unauthorized`: `Session revoked` — also when another confirmation moved the
+  account while this one waited
+- `409 Conflict`: `EMAIL_TAKEN` — the address was registered meanwhile; the account
+  keeps its old one
 
 ---
 

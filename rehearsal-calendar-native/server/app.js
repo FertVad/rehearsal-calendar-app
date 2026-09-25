@@ -6,6 +6,7 @@ import db from './database/db.js';
 import authRoutes from './routes/auth.js';
 import emailVerificationRoutes from './routes/emailVerification.js';
 import passwordResetRoutes from './routes/passwordReset.js';
+import emailChangeRoutes from './routes/emailChange.js';
 import nativeRoutes from './routes/native.js';
 import availabilityRoutes from './routes/native/availability.js';
 import calendarSyncRoutes from './routes/native/calendarSync.js';
@@ -130,6 +131,7 @@ export function createApp({ databaseRuntime } = {}) {
   app.use('/api/auth', authRoutes);
   app.use('/api/auth', emailVerificationRoutes);
   app.use('/api/auth', passwordResetRoutes);
+  app.use('/api/auth', emailChangeRoutes);
 
   // Availability routes (at root /api level for backward compatibility)
   app.use('/api/availability', availabilityRoutes);
