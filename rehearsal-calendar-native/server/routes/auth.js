@@ -8,6 +8,7 @@ import { serializeUser } from '../utils/userSerializer.js';
 import { verifyGoogleToken, verifyAppleToken } from '../utils/oauthVerification.js';
 import { AppleAuthUnavailableError, AppleTokenVerificationError } from '../config/appleAuth.js';
 import { findOrCreateOAuthUser, getUserAuthProviders, unlinkAuthProvider } from '../utils/accountLinking.js';
+import { InputError, inputErrorBody, registrationInput, profileUpdates, checkPassword } from '../utils/accountInput.js';
 import { notifyProjectDeleted } from '../services/notifications/pushNotificationService.js';
 
 const router = Router();
@@ -15,13 +16,14 @@ const router = Router();
 // Register new user
 router.post('/register', asyncHandler(async (req, res) => {
   try {
-    const { email, password, timezone } = req.body;
-    const firstName = typeof req.body.firstName === 'string' ? req.body.firstName.trim() : req.body.firstName;
-    const lastName = typeof req.body.lastName === 'string' ? req.body.lastName.trim() : req.body.lastName;
-
-    if (!email || !password || !firstName) {
-      return res.status(400).json({ error: 'Email, password and first name are required' });
+    let input;
+    try {
+      input = registrationInput(req.body);
+    } catch (error) {
+      if (error instanceof InputError) return res.status(400).json(inputErrorBody(error));
+      throw error;
     }
+    const { email, password, firstName, lastName, timezone } = input;
 
     // Check if user already exists
     const existing = await db.get('SELECT id FROM native_users WHERE email = $1', [email]);
@@ -36,7 +38,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     const result = await db.run(
       `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, last_login_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [email, passwordHash, firstName, lastName || null, timezone || null]
+      [email, passwordHash, firstName, lastName, timezone]
     );
 
     const userId = result.lastInsertId;
@@ -299,84 +301,60 @@ router.get('/me', requireAuth, asyncHandler(async (req, res) => {
   }
 }));
 
-// Whitelist of allowed fields for user updates (security)
-// A name typed on a phone keyboard often carries a trailing space — the
-// autocomplete adds one. Stored as "Ginger " and "Rode " it reappears as
-// "Ginger  Rode " everywhere the two are joined, so it is cut off here rather
-// than worked around at each display.
-const trimName = (value) => (typeof value === 'string' ? value.trim() : value);
-
-const ALLOWED_USER_FIELDS = {
-  firstName: { dbColumn: 'first_name', validate: null, transform: trimName },
-  lastName: { dbColumn: 'last_name', validate: null, transform: trimName },
-  phone: { dbColumn: 'phone', validate: null },
-  timezone: { dbColumn: 'timezone', validate: null },
-  locale: { dbColumn: 'locale', validate: null },
-  notificationsEnabled: { dbColumn: 'notifications_enabled', validate: null },
-  emailNotifications: { dbColumn: 'email_notifications', validate: null },
-  weekStartDay: {
-    dbColumn: 'week_start_day',
-    validate: (value) => {
-      if (value !== 'monday' && value !== 'sunday') {
-        throw new Error('weekStartDay must be either "monday" or "sunday"');
-      }
-    }
-  },
-  onboardingCompleted: { dbColumn: 'onboarding_completed', validate: null },
-  password: {
-    dbColumn: 'password_hash',
-    validate: null,
-    transform: async (value) => await bcrypt.hash(value, 10)
-  }
-};
-
-// Update current user info
+// Update current user info.
+//
+// Profile fields are checked by accountInput.js. Two fields need more than a
+// column write: a password change must prove the current password when there
+// is one, and an email change needs the address confirmed — so a different
+// email is refused here instead of being dropped while the app reports it
+// saved (HP01). The app sends the unchanged address with every save, which is
+// fine.
 router.put('/me', requireAuth, asyncHandler(async (req, res) => {
   try {
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
-    let passwordChanged = false;
+    let updates;
+    try {
+      updates = profileUpdates(req.body);
+      if (req.body.password !== undefined) checkPassword(req.body.password);
+    } catch (error) {
+      if (error instanceof InputError) return res.status(400).json(inputErrorBody(error));
+      throw error;
+    }
+    const passwordChange = req.body.password !== undefined;
 
-    // Process only whitelisted fields
-    for (const [apiField, config] of Object.entries(ALLOWED_USER_FIELDS)) {
-      const value = req.body[apiField];
+    const current = await db.get('SELECT email, password_hash FROM native_users WHERE id = $1', [req.userId]);
+    if (!current) return res.status(404).json({ error: 'User not found' });
 
-      if (value === undefined) continue;
+    if (req.body.email !== undefined && (typeof req.body.email !== 'string'
+        || req.body.email.trim().toLowerCase() !== String(current.email).trim().toLowerCase())) {
+      return res.status(400).json({ error: 'Changing the email address needs confirmation of the new address',
+        code: 'EMAIL_CHANGE_REQUIRES_VERIFICATION', field: 'email' });
+    }
 
-      // Run field-specific validation if exists
-      if (config.validate) {
-        try {
-          config.validate(value);
-        } catch (err) {
-          return res.status(400).json({ error: err.message });
+    if (passwordChange) {
+      // A stolen session must not be enough to replace the password and keep
+      // the account. An account without one (OAuth only) may set its first.
+      if (current.password_hash) {
+        const proof = req.body.currentPassword;
+        if (typeof proof !== 'string' || !(await bcrypt.compare(proof, current.password_hash))) {
+          return res.status(403).json({ error: 'Current password is incorrect', code: 'CURRENT_PASSWORD_INVALID',
+            field: 'currentPassword' });
         }
       }
-
-      // Transform value if needed (e.g., hash password)
-      const finalValue = config.transform ? await config.transform(value) : value;
-
-      updates.push(`${config.dbColumn} = $${paramIndex++}`);
-      values.push(finalValue);
-
-      if (apiField === 'password') passwordChanged = true;
+      updates.push(['password_hash', await bcrypt.hash(req.body.password, 10)]);
     }
 
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
+    const assignments = updates.map(([column], index) => `${column} = $${index + 1}`);
     // Password change revokes all existing sessions
-    if (passwordChanged) {
-      updates.push('token_version = token_version + 1');
-    }
-
-    updates.push(`updated_at = NOW()`);
-    values.push(req.userId);
+    if (passwordChange) assignments.push('token_version = token_version + 1');
+    assignments.push('updated_at = NOW()');
 
     await db.run(
-      `UPDATE native_users SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
-      values
+      `UPDATE native_users SET ${assignments.join(', ')} WHERE id = $${updates.length + 1}`,
+      [...updates.map(([, value]) => value), req.userId]
     );
 
     // Get updated user
@@ -390,7 +368,7 @@ router.put('/me', requireAuth, asyncHandler(async (req, res) => {
 
     // If password changed, issue fresh tokens so this device stays logged in
     const response = { user: serializeUser(user) };
-    if (passwordChanged) {
+    if (passwordChange) {
       const tokens = generateTokens(user.id, user.token_version);
       response.accessToken = tokens.accessToken;
       response.refreshToken = tokens.refreshToken;

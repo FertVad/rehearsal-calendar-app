@@ -238,6 +238,9 @@ export async function setupIntegrationDb() {
         .replace(/\?::(date|timestamptz|timestamp)\b/gi, '?')
         // NOW() → SQLite's equivalent
         .replace(/\bNOW\(\)/gi, "CURRENT_TIMESTAMP")
+        // Row locks: SQLite has one writer, so there is nothing to lock. What
+        // FOR UPDATE buys against a second connection is proven on PostgreSQL.
+        .replace(/\s+FOR\s+UPDATE\b/gi, '')
     );
 
     // better-sqlite3 binds only numbers, strings, bigints, buffers and null, so

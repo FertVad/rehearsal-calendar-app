@@ -312,14 +312,11 @@ describe('Admin stored text through authenticated writes and real database reads
 
   it(`returns legacy email text literally when a report author has no name${browserSuffix}`, async () => {
     // Explicit legacy fixture boundary: this is not an email registration or
-    // email-edit validation test. Profile PUT and report POST remain real.
+    // email-edit validation test. A blank name can no longer be saved through
+    // the profile API (A03), but rows from before it can hold one, so both
+    // legacy values are set directly. Report POST remains real.
     const legacyEmail = '<b data-h01="email">author@example.test</b>';
-    sqlite.prepare('UPDATE native_users SET email = ? WHERE id = ?').run(legacyEmail, userId);
-    await request(server)
-      .put('/api/auth/me')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .send({ firstName: '', lastName: '' })
-      .expect(200);
+    sqlite.prepare("UPDATE native_users SET email = ?, first_name = '', last_name = '' WHERE id = ?").run(legacyEmail, userId);
     await request(server)
       .post('/api/native/bug-reports')
       .set('Authorization', `Bearer ${accessToken}`)
