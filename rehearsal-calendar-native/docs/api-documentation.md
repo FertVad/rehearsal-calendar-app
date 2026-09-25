@@ -98,9 +98,9 @@ it is verified; it is trimmed and lower-cased like every other address.
   it goes — every session, live code and registered push device (they register
   again on the next launch). A password on that account was never proven to be
   the owner's, so it is removed too, and the response says `passwordRevoked: true`. The app
-  is to tell the person and offer a password reset; both the client part and the
-  reset flow are later items. Until then the person can set a first password in
-  the profile, the address being verified now. A confirmed account is only linked.
+  is to tell the person and offer a password reset (`POST
+  /auth/password-reset/request`); the client part is a later item. The person can
+  also set a first password in the profile, the address being verified now. A confirmed account is only linked.
 - **Pending account without proof** (a linked provider whose token carries no
   address): `403 EMAIL_NOT_VERIFIED`, no tokens.
 
@@ -209,6 +209,58 @@ Replace the code with a new one; the previous code stops working.
 - `429 Too Many Requests`: `{ "error": "Wait before asking for another code", "code": "RATE_LIMITED", "retryAfter": 42 }` —
   one code a minute, five an hour
 - `503 Service Unavailable`: `EMAIL_UNAVAILABLE`
+
+---
+
+#### 1c. Request a Password Reset
+
+Email a six-digit code for setting a new password.
+
+**Endpoint:** `POST /auth/password-reset/request`
+
+**Authentication Required:** No
+
+**Request Body:**
+```json
+{ "email": "user@example.com" }
+```
+
+**Response (202):** `{ "status": "reset_requested" }` — the same whether or not the
+address has an account, whether or not the email went out, and when a code was
+already sent less than a minute ago (then nothing is sent). There is no
+`delivery` field: it would tell which addresses have an account.
+
+**Error Responses:**
+- `400 Bad Request`: `EMAIL_INVALID`
+- `503 Service Unavailable`: `EMAIL_UNAVAILABLE`, before the address is looked at
+
+---
+
+#### 1d. Reset the Password
+
+Set a new password with the emailed code and sign in.
+
+**Endpoint:** `POST /auth/password-reset/confirm`
+
+**Authentication Required:** No
+
+**Request Body:**
+```json
+{ "email": "user@example.com", "code": "123456", "newPassword": "newSecurePassword123" }
+```
+
+**Success Response (200):** the same body as login — `user`, `accessToken`, `refreshToken`.
+
+The code proves the mailbox, so the reset also settles who owns the address:
+every other session, live code and push device of the account is revoked, the
+address becomes verified, and the new password replaces any old one. This is how
+the owner of a mailbox takes back an account someone else registered with it.
+
+**Error Responses:**
+- `400 Bad Request`: `PASSWORD_POLICY` (`field: newPassword`) or `EMAIL_INVALID`,
+  before the code is looked at; `CODE_INVALID` (one of five attempts),
+  `CODE_LOCKED`, `CODE_EXPIRED`, `CODE_MISSING` — an address without an account
+  answers `CODE_MISSING` as well
 
 ---
 

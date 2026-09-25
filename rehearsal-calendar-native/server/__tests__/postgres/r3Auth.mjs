@@ -499,6 +499,37 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
     assert.equal(left.value.status, 200, 'DELETE /me must go through once the rebuild commits');
     assert.equal(await count('SELECT count(*) FROM r0_fixture.native_users WHERE id = $1', [leaverId]), 0);
     contracts.push('DELETE /me waiting on slots a rehearsal rebuild deleted, the rebuild inserting a slot for the same person: no deadlock, account deleted');
+
+    // Password reset. The request answers alike with and without an account;
+    // the confirmation proves the mailbox and takes everything from before.
+    const RESET_PASSWORD = 'r3-auth-fixture-reset';
+    const forgotten = await strangerAccount('reset@fixture.invalid', 'google-reset');
+    assert.equal((await call('POST', '/api/native/push-tokens', phone('reset'), forgotten.session.accessToken)).status, 200);
+    const asked = await post('/api/auth/password-reset/request', { email: 'Reset@Fixture.invalid' });
+    const unknownAsked = await post('/api/auth/password-reset/request', { email: 'nobody-reset@fixture.invalid' });
+    assert.equal(asked.status, 202);
+    assert.deepEqual(unknownAsked.body, asked.body, 'a reset request must answer alike with and without an account');
+    assert.equal(await count(`SELECT count(*) FROM r0_fixture.native_email_codes
+      WHERE user_id = $1 AND purpose = 'reset' AND consumed_at IS NULL`, [forgotten.id]), 1);
+    const resetCode = codeFor('reset@fixture.invalid');
+    // Two confirmations with that one code at once, both held at the user row.
+    await control.query('BEGIN');
+    await control.query('SELECT id FROM r0_fixture.native_users WHERE id = $1 FOR UPDATE', [forgotten.id]);
+    const resets = await barrier([0, 1].map(() => post('/api/auth/password-reset/confirm',
+      { email: 'reset@fixture.invalid', code: resetCode, newPassword: RESET_PASSWORD })));
+    assert.deepEqual(resets.map((response) => response.status).sort(), [200, 400], 'one code must reset once');
+    assert.equal(resets.find((response) => response.status === 400).body.code, 'CODE_MISSING');
+    assert.equal((await call('GET', '/api/auth/me', undefined, forgotten.session.accessToken)).status, 401,
+      "a reset must revoke the stranger's session");
+    assert.equal((await post('/api/auth/refresh', { refreshToken: forgotten.session.refreshToken })).status, 401);
+    assert.equal((await post('/api/auth/login', { email: 'reset@fixture.invalid', password: PASSWORD })).status, 401);
+    assert.equal((await post('/api/auth/login', { email: 'reset@fixture.invalid', password: RESET_PASSWORD })).status, 200);
+    assert.equal(await devices(forgotten.id), 0, "a reset must take the stranger's devices off the account");
+    assert.deepEqual((await accounts('reset@fixture.invalid')).map(({ id, password_hash: hash, ...rest }) => rest),
+      [{ status: 'verified', verified_by: 'code', live_codes: 0 }]);
+    assert.equal(await count(`SELECT count(*) FROM r0_fixture.native_auth_providers
+      WHERE user_id = $1 AND provider_type = 'email'`, [forgotten.id]), 1);
+    contracts.push("password reset: request alike with and without an account; two confirmations with one code at once, one succeeds; the stranger's sessions, password and devices are gone, the address verified");
   } finally {
     adapter.transaction = transaction;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });

@@ -703,6 +703,10 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
   password or not, and removes a password if there is one (`passwordRevoked:
   true`): otherwise whoever registered someone else's address first keeps a way
   into the owner's account
+- A password reset (`/auth/password-reset/*`, emailed code) is the same kind of
+  proof: it revokes every session, live code and push device, verifies the
+  address and sets the new password. The request answers 202 alike with and
+  without an account
 - A pending account gets no session: login, refresh, Google/Apple and the auth
   middleware all refuse it
 - The middleware checks the session version before the handler, outside any
