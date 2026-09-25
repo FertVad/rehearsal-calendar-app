@@ -225,10 +225,12 @@ Email a six-digit code for setting a new password.
 { "email": "user@example.com" }
 ```
 
-**Response (202):** `{ "status": "reset_requested" }` — the same whether or not the
-address has an account, whether or not the email went out, and when a code was
-already sent less than a minute ago (then nothing is sent). There is no
-`delivery` field: it would tell which addresses have an account.
+**Response (202):** `{ "status": "reset_requested" }` — the same status and body
+whether or not the address has an account, whether or not the email went out,
+and when a code was already sent less than a minute ago (then nothing is sent).
+There is no `delivery` field: it would tell which addresses have an account. The
+response time is not made equal: the email is sent, and waited for, only when
+the address has an account.
 
 **Error Responses:**
 - `400 Bad Request`: `EMAIL_INVALID`
@@ -260,7 +262,9 @@ the owner of a mailbox takes back an account someone else registered with it.
 - `400 Bad Request`: `PASSWORD_POLICY` (`field: newPassword`) or `EMAIL_INVALID`,
   before the code is looked at; `CODE_INVALID` (one of five attempts),
   `CODE_LOCKED`, `CODE_EXPIRED`, `CODE_MISSING` — an address without an account
-  answers `CODE_MISSING` as well
+  answers `CODE_MISSING` as well, so after a request an expired code tells an
+  account from none. Existence is not hidden further: registration answers 409
+  for a taken address anyway
 
 ---
 
