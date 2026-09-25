@@ -57,7 +57,7 @@ OPS-R3-DATA (25.09).
 | DEV-15 | R1 | Физическое устройство: кнопка открытия приглашения ([H02](REMEDIATION_H02.md)) | H02 → VERIFIED |
 | OPS-IA01 | R1 | `APPLE_CLIENT_ID` в Vercel ([карточка](PRODUCTION_ACCESS.md#ops-ia01--проверка-apple_client_id-человеком)) | IA01 → VERIFIED, выпуск |
 | OPS-IS02 | R1 | Deployment-условия общих лимитов ([карточка](PRODUCTION_ACCESS.md)) | IS02 → VERIFIED, выпуск |
-| OPS-R3-APPLE | R3 | Один запрос в Neon, только чтение ([карточка](REMEDIATION_R3.md)) | R3-10: решение 5 закрывает его, если аккаунтов с Apple и без пароля 0 |
+| OPS-R3-APPLE | R3 | Запрос выполнен 25.09: один аккаунт с Apple, без пароля, с Google. Осталось сказать, чей он ([карточка](REMEDIATION_R3.md)) | R3-10: решение 5 закрывает его, если Apple и Google на аккаунте — один человек |
 | OPS-DEMO-RESEED | вне аудита | По желанию: перезалить демо исправленным сидом | — |
 
 ## Все находки

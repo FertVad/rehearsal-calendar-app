@@ -1,0 +1,16 @@
+{
+  "card": "OPS-R3-APPLE",
+  "date": "2026-09-25",
+  "runBy": "owner, Neon SQL console, read-only; aggregate counts only; Claude had no production access",
+  "sql": "SELECT count(*) AS apple_links, count(*) FILTER (WHERE u.password_hash IS NULL) AS apple_without_password, count(*) FILTER (WHERE EXISTS (SELECT 1 FROM native_auth_providers g WHERE g.user_id = u.id AND g.provider_type = 'google')) AS apple_with_google FROM native_auth_providers p JOIN native_users u ON u.id = p.user_id WHERE p.provider_type = 'apple';",
+  "result": {
+    "apple_links": 1,
+    "apple_without_password": 1,
+    "apple_with_google": 1
+  },
+  "conclusions": {
+    "upperBound": "One account could have the R3-10 shape: an Apple link, no password, and Google linked as well. Whether its Apple link was made from an unverified address cannot be read from the data; the account has to be identified.",
+    "decision5": "Decision 5 closes R3-10 once the owner confirms that the Apple and the Google sign-in on that one account belong to the same person. If not, that account is handled on its own.",
+    "alternative": "Extending the rule to other links would reach exactly this account: its Apple link would be removed at the next Google proof."
+  }
+}
