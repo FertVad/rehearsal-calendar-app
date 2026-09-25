@@ -34,7 +34,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R0 | — | COMPLETE — baseline, real PG/HTTP harness, исходные дефекты, первичная инвентаризация |
 | R1 | 10 | READY_FOR_CHECK — 7 VERIFIED, H02/IA01/IS02 READY_FOR_CHECK (DEV-15/OPS-IA01/OPS-IS02); release gates открыты |
 | R2 | 8 | READY_FOR_CHECK — 7 VERIFIED; FM01 ждёт даты конвертации production (OPS-FM01-DATE, ревью R2-01); OPS-R2-ADOPT до деплоя 007/008 |
-| R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 и серверная часть HP01 в коде без PG-проверки; маршруты A01 `d5564ee`, `3859ece` (почтой — после OPS-EMAIL); правило Google/Apple `d964417`, `56d11e9`; сброс, смена email, клиент, AC05 не сделаны |
+| R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 и серверная часть HP01 в коде без PG-проверки; маршруты A01 `d5564ee`, `3859ece` (почтой — после OPS-EMAIL); правило Google/Apple `d964417`, `56d11e9`, `43cbdac`; сброс, смена email, клиент, AC05 не сделаны |
 | R4 | 8 | TODO |
 | R5 | 15 | TODO |
 | R6 | 14 | TODO |
@@ -57,7 +57,7 @@ OPS-R3-DATA (25.09).
 | DEV-15 | R1 | Физическое устройство: кнопка открытия приглашения ([H02](REMEDIATION_H02.md)) | H02 → VERIFIED |
 | OPS-IA01 | R1 | `APPLE_CLIENT_ID` в Vercel ([карточка](PRODUCTION_ACCESS.md#ops-ia01--проверка-apple_client_id-человеком)) | IA01 → VERIFIED, выпуск |
 | OPS-IS02 | R1 | Deployment-условия общих лимитов ([карточка](PRODUCTION_ACCESS.md)) | IS02 → VERIFIED, выпуск |
-| OPS-R3-APPLE | R3 | Запрос выполнен 25.09: один аккаунт с Apple, без пароля, с Google. Осталось сказать, чей он ([карточка](REMEDIATION_R3.md)) | R3-10: решение 5 закрывает его, если Apple и Google на аккаунте — один человек |
+| OPS-R3-APPLE | R3 | 25.09: один аккаунт с Apple, без пароля, с Google — сказать, чей он. Повторить исправленный запрос после выкладки R3 ([карточка](REMEDIATION_R3.md)) | R3-10: решение 5 закрывает его, если Apple и Google на аккаунте — один человек |
 | OPS-DEMO-RESEED | вне аудита | По желанию: перезалить демо исправленным сидом | — |
 
 ## Все находки
@@ -66,7 +66,7 @@ OPS-R3-DATA (25.09).
 
 | ID | Важность | Условный | Пакет | Статус | Краткая суть | Evidence |
 |---|---|---|---|---|---|---|
-| A01 | High | Нет | R3 | IN_PROGRESS | предварительный захват аккаунта через email/OAuth | [Регистрация ждёт кода, pending без сессии — d5564ee; версия сессии под блокировкой — 3859ece; правило Google/Apple и все пути выдачи сессии — d964417, отзыв под блокировкой и первый пароль — 56d11e9 (route-тесты, PG R3_AUTH, мутации); сброс пароля и клиент не сделаны; R3-10 ждёт OPS-R3-APPLE](REMEDIATION_R3.md) |
+| A01 | High | Нет | R3 | IN_PROGRESS | предварительный захват аккаунта через email/OAuth | [Регистрация ждёт кода, pending без сессии — d5564ee; версия сессии под блокировкой — 3859ece; правило Google/Apple и все пути выдачи сессии — d964417, отзыв под блокировкой и первый пароль — 56d11e9, сессии и устройства при любом доказательстве, без взаимоблокировки удаления — 43cbdac (route-тесты, PG R3_AUTH, мутации); сброс пароля и клиент не сделаны; R3-10 ждёт OPS-R3-APPLE](REMEDIATION_R3.md) |
 | A02 | High | Нет | R1 | VERIFIED | необработанные async-исключения в auth middleware/admin login | [Исполнение и проверки — 7e1eefa](REMEDIATION_A02.md) |
 | A03 | Medium | Нет | R3 | IN_PROGRESS | backend не применяет правила пароля и профильные типы | [Код и route-тест (красный до: 16/22) — 9a702ba; PG не проводился](REMEDIATION_R3.md) |
 | A04 | Medium | Нет | R3 | IN_PROGRESS | способы входа расходятся с реальными credentials | [Код и route-тест (красный до: 5/5) — 6320743; гонка на PG не проверена](REMEDIATION_R3.md) |

@@ -37,8 +37,9 @@ const mutations = [
   { id: 'before-R3-01', description: `routes/auth.js, ${LINKING} and middleware/jwtMiddleware.js as at ${BEFORE}`,
     apply: (root) => ['routes/auth.js', LINKING, 'middleware/jwtMiddleware.js'].forEach((file) => historical(root, file, BEFORE)),
     runs: [jest], expect: /● .*takes back a registration a stranger never confirmed/ },
-  { id: 'before-R3-09', description: `the same three files as at ${BEFORE_R3_09}: the session is checked only outside the lock`,
-    apply: (root) => ['routes/auth.js', LINKING, 'middleware/jwtMiddleware.js'].forEach((file) => historical(root, file, BEFORE_R3_09)),
+  { id: 'before-R3-09', description: `the same files and pushTokens.js as at ${BEFORE_R3_09}: the session is checked only outside the lock`,
+    apply: (root) => ['routes/auth.js', LINKING, 'middleware/jwtMiddleware.js', 'routes/native/pushTokens.js']
+      .forEach((file) => historical(root, file, BEFORE_R3_09)),
     runs: [pgAuth], expect: /a request admitted before the revocation must not set a password/ },
   { id: 'trust-unverified-address', description: 'an address the provider did not verify counts as proof',
     apply: (root) => edit(root, LINKING, 'proof: emailVerified === true && address ? address : null,', 'proof: address,'),
@@ -47,10 +48,34 @@ const mutations = [
     apply: (root) => edit(root, LINKING, 'if (proof && proof === user.email && !isVerified(identity, user.email)) {',
       'if (!link && proof && proof === user.email && !isVerified(identity, user.email)) {'),
     runs: [jest, pgAuth], expect: /the provider proving the address must revoke the unproven password/ },
-  { id: 'sessions-survive', description: 'the password is removed but its sessions are not revoked',
-    apply: (root) => edit(root, LINKING, 'SET password_hash = NULL, token_version = token_version + 1, updated_at',
-      'SET password_hash = NULL, updated_at'),
+  { id: 'sessions-survive', description: 'the proof removes the password but revokes no session',
+    apply: (root) => edit(root, LINKING, `    await tx.run(
+      'UPDATE native_users SET token_version = token_version + 1, updated_at = $2::timestamptz WHERE id = $1',
+      [user.id, now.toISOString()]
+    );
+`, ''),
     runs: [jest, pgAuth], expect: /the stranger's access token must be revoked/ },
+  { id: 'sessions-only-with-password', description: 'sessions are revoked only when a password is taken (b8a86fc)',
+    apply: (root) => {
+      edit(root, LINKING, `    await tx.run(
+      'UPDATE native_users SET token_version = token_version + 1, updated_at = $2::timestamptz WHERE id = $1',
+      [user.id, now.toISOString()]
+    );
+`, '');
+      edit(root, LINKING, "'UPDATE native_users SET password_hash = NULL WHERE id = $1'",
+        "'UPDATE native_users SET password_hash = NULL, token_version = token_version + 1 WHERE id = $1'");
+    },
+    runs: [jest, pgAuth], expect: /● .*revokes the sessions even when the password was removed beforehand/ },
+  { id: 'devices-survive', description: "the stranger's push devices outlive the proof",
+    apply: (root) => edit(root, LINKING, "    await tx.run('DELETE FROM native_push_tokens WHERE user_id = $1', [user.id]);\n", ''),
+    runs: [jest, pgAuth], expect: /● .*takes the stranger's phones off the account/ },
+  { id: 'device-registration-unchecked', description: 'a revoked session still registers a device',
+    apply: (root) => edit(root, 'routes/native/pushTokens.js', '      if (!(await lockSession(tx, req))) return false;\n', ''),
+    runs: [pgAuth], expect: /a device registration admitted before the revocation must not add a device/ },
+  { id: 'session-lock-blocks-foreign-keys', description: 'lockSession takes FOR UPDATE again (R3-14)',
+    apply: (root) => edit(root, 'middleware/jwtMiddleware.js', 'FROM native_users WHERE id = $1 FOR NO KEY UPDATE`',
+      'FROM native_users WHERE id = $1 FOR UPDATE`'),
+    runs: [pgAuth], expect: /a rehearsal rebuild and DELETE \/me must not deadlock|DELETE \/me must go through once the rebuild commits/ },
   { id: 'password-method-stays', description: 'the password is removed but still listed as a way in',
     apply: (root) => edit(root, LINKING,
       `await tx.run("DELETE FROM native_auth_providers WHERE user_id = $1 AND provider_type = 'email'", [user.id]);`, ''),
@@ -121,10 +146,13 @@ for (const mutation of mutations) {
         firstFailure: (output.split('\n').find((line) => /●|AssertionError|Expected|!==/.test(line)) || '').trim().slice(0, 160) || null });
     }
     const output = outputs.join('\n');
-    const caught = mutation.expect === 'pass' ? !failed : failed && mutation.expect.test(output);
+    // A copy that cannot load its modules shows nothing about the behaviour,
+    // whatever test names its failures carry (review R3-15).
+    const loadFailure = /does not provide an export named|Test suite failed to run|Cannot find module/.test(output);
+    const caught = mutation.expect === 'pass' ? !failed : failed && !loadFailure && mutation.expect.test(output);
     results.push(caught);
     console.log(JSON.stringify({ mutation: mutation.id, description: mutation.description,
-      detail, suitesFailed: failed,
+      detail, suitesFailed: failed, loadFailure,
       expected: mutation.expect === 'pass' ? 'all pass' : 'guard test fails', result: caught ? 'PASS' : 'FAIL' }));
   } finally {
     rmSync(parent, { recursive: true, force: true });

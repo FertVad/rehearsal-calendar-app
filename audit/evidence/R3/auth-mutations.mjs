@@ -1,9 +1,10 @@
 // R3 A01 routes: put each weakening of registration and address confirmation
 // back into a copy of the server and require the tests that guard it to fail.
 // The unmutated copy must pass the same commands. The "before-*" variants put
-// back what a fix changed: auth.js before the A01 routes and
-// emailVerification.js before R3-06 as whole files, and PUT /me's read of the
-// version after COMMIT (the other half of R3-06) as an edit.
+// back what a fix changed: auth.js before the A01 routes (with the modules it
+// imports) and emailVerification.js before R3-06 as whole files, and PUT /me's
+// read of the version after COMMIT (the other half of R3-06) as an edit. A
+// variant whose copy fails to load its modules does not count.
 // A Jest expectation names a failed test ("●"), so a passing title in the
 // output cannot match.
 //
@@ -35,13 +36,15 @@ function edit(root, file, from, to) {
 
 const mutations = [
   { id: 'control', description: 'unmutated copy', runs: [jest, pgAuth], expect: 'pass' },
-  // Whole files from before a fix load only while the code around them keeps
-  // their imports: auth.js from c4c5a14 still names findOrCreateOAuthUser,
-  // gone since R3-01. Jest's module linker tolerates the missing export and
-  // runs the route test; Node refuses to start the app, so that variant has no
-  // PostgreSQL run, and the PUT /me half of R3-06 is put back as an edit.
-  { id: 'before-A01', description: `routes/auth.js as at ${BEFORE}: register signs in at once, login and refresh ignore pending`,
-    apply: (root) => historical(root, 'routes/auth.js', BEFORE),
+  // Whole files from before a fix load only beside the modules they import.
+  // auth.js from c4c5a14 names findOrCreateOAuthUser, gone since R3-01, so it
+  // comes back with accountLinking.js and jwtMiddleware.js of the same commit.
+  // Today's pushTokens.js needs today's jwtMiddleware.js, so the whole app
+  // cannot start with that set: this variant runs the route test only. The
+  // PUT /me half of R3-06 is put back as an edit for the same reason.
+  { id: 'before-A01', description: `routes/auth.js, utils/accountLinking.js and middleware/jwtMiddleware.js as at ${BEFORE}`,
+    apply: (root) => ['routes/auth.js', 'utils/accountLinking.js', 'middleware/jwtMiddleware.js']
+      .forEach((file) => historical(root, file, BEFORE)),
     runs: [jest], expect: /● .*tells an app from before R3 to update/ },
   { id: 'before-R3-06-confirm', description: `routes/emailVerification.js as at ${BEFORE_R3_06}: the version is read after COMMIT`,
     apply: (root) => historical(root, 'routes/emailVerification.js', BEFORE_R3_06),
@@ -111,10 +114,13 @@ for (const mutation of mutations) {
         firstFailure: (output.split('\n').find((line) => /●|AssertionError|Expected|!==/.test(line)) || '').trim().slice(0, 160) || null });
     }
     const output = outputs.join('\n');
-    const caught = mutation.expect === 'pass' ? !failed : failed && mutation.expect.test(output);
+    // A copy that cannot load its modules shows nothing about the behaviour,
+    // whatever test names its failures carry (review R3-15).
+    const loadFailure = /does not provide an export named|Test suite failed to run|Cannot find module/.test(output);
+    const caught = mutation.expect === 'pass' ? !failed : failed && !loadFailure && mutation.expect.test(output);
     results.push(caught);
     console.log(JSON.stringify({ mutation: mutation.id, description: mutation.description,
-      detail, suitesFailed: failed,
+      detail, suitesFailed: failed, loadFailure,
       expected: mutation.expect === 'pass' ? 'all pass' : 'guard test fails', result: caught ? 'PASS' : 'FAIL' }));
   } finally {
     rmSync(parent, { recursive: true, force: true });
