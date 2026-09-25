@@ -10,7 +10,7 @@
  *
  * A code is created inside the caller's transaction and sent only after it
  * commits (deliverCode): the message is not part of the transaction, and what
- * the provider answered is recorded on the row, not assumed.
+ * is known about the send is recorded on the row, not assumed.
  */
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { codeMessage } from './messages.js';
@@ -128,18 +128,25 @@ export async function voidCodes(tx, { userId, now = new Date() }) {
 }
 
 /**
- * Send a code whose transaction has committed, and record what the provider
- * said. Resolves to 'sent' (accepted by the provider) or 'failed'.
+ * Send a code whose transaction has committed, and record what is known.
+ * Resolves to:
+ *   'sent'     the provider accepted it — sent_at. Accepted, not delivered.
+ *   'failed'   the provider refused it — failed_at.
+ *   'unknown'  no answer: a timeout or a dropped connection. Nothing is
+ *              written, as after a crash before recording; the provider may
+ *              still send it, so this is not reported as a refusal.
  */
 export async function deliverCode({ db, transport, codeId, to, code, purpose, locale }) {
   const result = await transport.send({ ...codeMessage({ to, code, purpose, locale }), idempotencyKey: `rehearsly-code-${codeId}` });
+  const outcome = result.ok ? 'sent' : ['TIMEOUT', 'NETWORK'].includes(result.reason) ? 'unknown' : 'failed';
+  if (outcome === 'unknown') return outcome;
   try {
     await db.run(
-      `UPDATE native_email_codes SET ${result.ok ? 'sent_at' : 'failed_at'} = NOW() WHERE id = $1`,
+      `UPDATE native_email_codes SET ${outcome === 'sent' ? 'sent_at' : 'failed_at'} = NOW() WHERE id = $1`,
       [codeId]
     );
   } catch (error) {
     logger.error('[Email] Could not record a delivery result:', error?.message);
   }
-  return result.ok ? 'sent' : 'failed';
+  return outcome;
 }

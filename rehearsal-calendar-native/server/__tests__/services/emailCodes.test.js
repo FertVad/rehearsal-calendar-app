@@ -112,10 +112,15 @@ it('binds the hash to the address the code went to', async () => {
   expect(await check(code, { email: 'elsewhere@example.com' })).toEqual({ ok: false, reason: 'CODE_INVALID' });
 });
 
+// Three outcomes, as the contract names them (review R3-05): accepted, refused,
+// and no answer — which records nothing, like a crash before recording, and
+// is never presented as a refusal.
 it.each([
-  ['sent', { ok: true, id: 'provider-id' }, 'sent_at'],
-  ['failed', { ok: false, reason: 'TIMEOUT' }, 'failed_at'],
-])('records a %s delivery on the code row', async (outcome, result, column) => {
+  ['accepted', { ok: true, id: 'provider-id' }, 'sent', { sent_at: true, failed_at: false }],
+  ['refused', { ok: false, reason: 'HTTP_422' }, 'failed', { sent_at: false, failed_at: true }],
+  ['timed out', { ok: false, reason: 'TIMEOUT' }, 'unknown', { sent_at: false, failed_at: false }],
+  ['cut off', { ok: false, reason: 'NETWORK' }, 'unknown', { sent_at: false, failed_at: false }],
+])('records a send the provider %s', async (_label, result, outcome, columns) => {
   const { id, code } = await issue();
   const sent = [];
   const transport = { available: true, send: async (message) => { sent.push(message); return result; } };
@@ -124,6 +129,5 @@ it.each([
   expect(sent[0]).toMatchObject({ to: EMAIL, idempotencyKey: `rehearsly-code-${id}` });
   expect(sent[0].subject).toContain(code);
   const stored = row(id);
-  expect(stored[column]).not.toBeNull();
-  expect(stored[column === 'sent_at' ? 'failed_at' : 'sent_at']).toBeNull();
+  expect({ sent_at: stored.sent_at !== null, failed_at: stored.failed_at !== null }).toEqual(columns);
 });

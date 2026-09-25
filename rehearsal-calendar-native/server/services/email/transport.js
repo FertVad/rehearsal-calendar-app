@@ -9,9 +9,10 @@
  * a message that cannot be sent.
  *
  * `send` never throws. It resolves to { ok: true, id } when the provider
- * accepted the message, or { ok: false, reason } — accepted is not delivered,
- * and a timeout is reported as a failure even though the provider may still
- * send it, so the code row records what is known, nothing more.
+ * accepted the message (accepted is not delivered), or { ok: false, reason }:
+ * HTTP_<status> when the provider refused it, TIMEOUT or NETWORK when there
+ * was no answer — the provider may still send that one, so it is not a
+ * refusal — and UNAVAILABLE when no provider is configured.
  */
 import { logger } from '../../utils/logger.js';
 

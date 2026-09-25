@@ -45,36 +45,57 @@ export async function probeR3Email({ connectionString, control }) {
     const second = db.transaction((tx) => checkCode(tx, { userId, purpose: 'verify', email: EMAIL, code, now }));
     await eventually(async () => (await waitingOnLocks()) === 1);
     release();
-    assert.deepEqual(await first, { ok: true, email: EMAIL });
-    assert.deepEqual(await second, { ok: false, reason: 'CODE_MISSING' });
+    assert.deepEqual(await first, { ok: true, email: EMAIL }, 'first concurrent check of one code must succeed');
+    assert.deepEqual(await second, { ok: false, reason: 'CODE_MISSING' }, 'second concurrent check of one code must not succeed');
     contracts.push('two concurrent checks of one code: one success; the second waited on the code row lock');
 
-    // Five wrong codes at once: every attempt is counted, none is lost to a
+    // Five wrong codes at once: the first holds the code row, the other four
+    // are seen waiting on it, then each counts in turn — none is lost to a
     // race, and the fifth burns the code.
     const issued = await db.transaction((tx) => issueCode(tx, { userId, purpose: 'reset', email: EMAIL, now: tick() }));
     const wrong = issued.code === '000000' ? '000001' : '000000';
     const attemptAt = new Date(clock + 1000);
-    const outcomes = await Promise.all(Array.from({ length: 5 }, () =>
-      db.transaction((tx) => checkCode(tx, { userId, purpose: 'reset', email: EMAIL, code: wrong, now: attemptAt }))));
+    const wrongCheck = (tx) => checkCode(tx, { userId, purpose: 'reset', email: EMAIL, code: wrong, now: attemptAt });
+    let wrongChecked; const firstWrongChecked = new Promise((resolve) => { wrongChecked = resolve; });
+    let releaseWrong; const wrongHeld = new Promise((resolve) => { releaseWrong = resolve; });
+    const firstWrong = db.transaction(async (tx) => { const result = await wrongCheck(tx); wrongChecked(); await wrongHeld; return result; });
+    await firstWrongChecked;
+    const laterWrong = Array.from({ length: 4 }, () => db.transaction(wrongCheck));
+    await eventually(async () => (await waitingOnLocks()) === 4);
+    releaseWrong();
+    const outcomes = await Promise.all([firstWrong, ...laterWrong]);
     assert.deepEqual(outcomes.map((outcome) => outcome.reason).sort(),
-      ['CODE_INVALID', 'CODE_INVALID', 'CODE_INVALID', 'CODE_INVALID', 'CODE_LOCKED']);
+      ['CODE_INVALID', 'CODE_INVALID', 'CODE_INVALID', 'CODE_INVALID', 'CODE_LOCKED'],
+      'five concurrent wrong codes must count as four invalid and one locked');
     const burned = (await control.query('SELECT attempts, consumed_at FROM r0_fixture.native_email_codes WHERE id = $1', [issued.id])).rows[0];
-    assert.equal(burned.attempts, 5);
-    assert.notEqual(burned.consumed_at, null);
-    contracts.push('five concurrent wrong codes: all counted, the code burned');
+    assert.equal(burned.attempts, 5, 'every concurrent wrong attempt must be counted');
+    assert.notEqual(burned.consumed_at, null, 'the fifth wrong attempt must burn the code');
+    contracts.push('five concurrent wrong codes, four seen waiting on the first: all counted, the code burned');
 
     // Two code requests at once under the user row lock, as the routes issue
-    // them: one code, one refusal by the resend interval.
+    // them: the first holds the lock with its code written, the second is seen
+    // waiting, then meets the resend interval. One code, one refusal.
     const requestAt = tick();
-    const requests = await Promise.allSettled(Array.from({ length: 2 }, () => db.transaction(async (tx) => {
+    let issuedFirst; const firstIssued = new Promise((resolve) => { issuedFirst = resolve; });
+    let releaseIssue; const issueHeld = new Promise((resolve) => { releaseIssue = resolve; });
+    const request = (hold) => db.transaction(async (tx) => {
       await tx.get('SELECT id FROM native_users WHERE id = $1 FOR UPDATE', [userId]);
-      return issueCode(tx, { userId, purpose: 'change', email: 'new@fixture.invalid', now: requestAt });
-    })));
-    assert.equal(requests.filter((request) => request.status === 'fulfilled').length, 1);
-    assert.ok(requests.find((request) => request.status === 'rejected').reason instanceof CodeRateLimited);
+      const issuedCode = await issueCode(tx, { userId, purpose: 'change', email: 'new@fixture.invalid', now: requestAt });
+      if (hold) { issuedFirst(); await issueHeld; }
+      return issuedCode;
+    });
+    const firstRequest = request(true); firstRequest.catch(() => {});
+    await firstIssued;
+    const secondRequest = request(false); secondRequest.catch(() => {});
+    await eventually(async () => (await waitingOnLocks()) === 1);
+    releaseIssue();
+    const [firstOutcome, secondOutcome] = await Promise.allSettled([firstRequest, secondRequest]);
+    assert.equal(firstOutcome.status, 'fulfilled', 'the first concurrent code request must get a code');
+    assert.ok(secondOutcome.status === 'rejected' && secondOutcome.reason instanceof CodeRateLimited,
+      'the second concurrent code request must meet the resend interval');
     assert.equal(Number((await control.query(`SELECT count(*) FROM r0_fixture.native_email_codes
-      WHERE user_id = $1 AND purpose = 'change'`, [userId])).rows[0].count), 1);
-    contracts.push('two concurrent code requests under the user lock: one code, one rate-limited');
+      WHERE user_id = $1 AND purpose = 'change'`, [userId])).rows[0].count), 1, 'two concurrent requests must leave one code');
+    contracts.push('two concurrent code requests, the second seen waiting on the user lock: one code, one rate-limited');
   } finally {
     await database.closeDatabase();
   }
