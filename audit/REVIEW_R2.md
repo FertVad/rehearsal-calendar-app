@@ -97,3 +97,45 @@ FM01: локальный отказ и воспроизведение механ
 | `reh-review-seed-before-jest.log` | `d0f40dd70301b443c6e37c48239e0f957eec409fc1cdcbf411acca0a383580cc` |
 
 Исторический снимок для повторов извлечён `git archive 4d08e1f` в `/private/tmp/reh-review-snapshots/r2`; `git diff eb24c62 4d08e1f -- rehearsal-calendar-native .github` пуст. `node_modules` подключены из review-worktree. Служебная ссылка `.git` использовалась только для `git show` старого инструмента, без checkout/commit в основном дереве.
+
+## Повторная проверка 72fc97d..b54143f
+
+25.09.2026. Проверен `b54143f7cf0f77330ca0e1d2383fc2a7086f0281`, tree `ab1ed038b6f538f4bd280cda924925b495855869`, в прежнем отдельном detached worktree. Ниже — результаты именно исправлений после первого ревью; первоначальный текст выше сохранён без изменений.
+
+**Итог: исправления замечаний R2-01 и R2-02 приняты.** Это принятие исправленного учёта и инструмента проверки, **не** закрытие исторического вопроса FM01. R2 правильно остаётся READY_FOR_CHECK: 7 VERIFIED, FM01 READY_FOR_CHECK. Новых замечаний по проверенному диапазону R2/seed-demo нет.
+
+| Пункт повторного ревью | Решение и основание |
+|---|---|
+| 1. `8a22199`, перенос ревью | **Принято.** До удаления неотслеживаемых копий сравнил их байты с git blobs `8a22199`: оба файла идентичны. SHA-256 R2: `6c61714bf969aa80d1be7a6b65206a6fe72f585abfb36195c797564941d340d5`; R3: `3aa482ccb3729305bab03b6f79910db1cb6797faa2818f3ed924318e99a81b50`. Только затем удалены эти две копии и выполнен разрешённый checkout в review-worktree. |
+| 4. `c4bb7c5`, R2-02 | **Принято.** Текущий before/after берёт ожидаемое число таблиц из проверяемого дескриптора; HEAD создаёт 21 таблицу, 59/59 проверок проходят. Проверки каталога и прежних дефектов сохранены, тест не заменён безусловным успехом. В `REMEDIATION_R2.md` появился способ повтора исторического снимка `4d08e1f`; прежние манифест и логи не перештампованы. |
+| 4. Ожидание Docker-порта | **Принято.** Оба before/after и `server/scripts/r0-postgres.mjs` повторяют чтение пустого/ещё недоступного mapping, после чего всё равно требуют `127.0.0.1:<port>`. Запрошенные прогоны прошли с первого запуска этой повторной проверки. |
+| 4. seed-demo | **Принято.** Before/after на HEAD — 12/12, exit 0. Код seed-demo в этом диапазоне не менялся, изменено ожидание локального порта в его harness. |
+| 5. `7c079a6`, R2-01 | **Принято.** В отчёте и реестре FM01 возвращён в READY_FOR_CHECK, R2 больше не COMPLETE. Нулевой счётчик до 17.01 не выдаётся за доказательство даты конвертации. Есть OPS-FM01-DATE. |
+| 8. `c5121cf`, `b54143f`, ответы и карточки | **Принято.** Записано, что владелец дату не знает; FM01 остаётся открытым. Таблица «Ждут владельца» сохраняет необходимые действия, включая смену опубликованного demo-пароля, OPS-R2-ADOPT и OPS-FM01-DATE. Эти действия не выданы за выполненные. |
+| 2 и 7. Общие PG-проверки и группа 010 | **Принято**, результаты ниже; детали исправления F05 и `confirm` — в повторном разделе `REVIEW_R3.md`. |
+
+**Независимые прогоны на b54143f:**
+
+| Команда из корня review-worktree, если не оговорено другое | Результат |
+|---|---|
+| `node audit/evidence/R2/before-after.mjs` | 59/59, exit 0 |
+| `node audit/evidence/seed-demo/before-after.mjs` | 12/12, exit 0 |
+| `npm --prefix rehearsal-calendar-native/server run test:r0-postgres -- --security-only` | controls + все 10 сценариев PASS, exit 0; F05 больше не прерывает набор |
+| `npm --prefix rehearsal-calendar-native/server run test:r0-postgres -- --r2-migrations-schema-only` | controls, R2_SCHEMA: 38 проверок/21 таблица, R2_MIGRATIONS: 16 контрактов; exit 0 |
+| Из `rehearsal-calendar-native`: `npm run check:secrets && npm run type-check && npm test -- --silent` | секреты и TypeScript PASS; scanner 33; Jest 91 suites / 1312 tests; браузерные 7+18+11, stored-content 6; exit 0 |
+
+Среда прежняя: Node 22.16.0, PostgreSQL 15.13, Docker context `desktop-linux`, образ `sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0`. `package-lock.json` в диапазоне не менялся, повторного `npm ci` не было. Старый инструмент по-прежнему запускался только из временных корней без `.env`. PostgreSQL-харнессы сообщают `externalConnections:0`.
+
+Для будущего принятия OPS-FM01-DATE нужна именно обоснованная верхняя граница конвертации/фактического перехода writer, с учётом уже описанных ограничений происхождения `created_at`; дата появления SQL в git доказательством не становится. Текущий READY_FOR_CHECK эту неопределённость сохраняет. Production в повторном ревью не использовался.
+
+Новые сырые логи оставлены отдельно в `/private/tmp/`, старые evidence не перезаписывались:
+
+| Лог | SHA-256 |
+|---|---|
+| `reh-review2-r2-before-after.log` | `1cbfe3c3227414ece50a51bf74866eba6b704bbe0020f72224eee23bdf56b725` |
+| `reh-review2-seed-before-after.log` | `b7cdc66eac5f63fec389d6631012ac97cce8dd94c5191273f1c1a803f01a5de1` |
+| `reh-review2-pg-security.log` | `84c7b15de3f8380c95ce3954cee75da1c96d9d8db26eec96bdd80e53d4f7ab75` |
+| `reh-review2-schema.log` | `619844229c607ffb5b1c86a2c2f6c28512fceaee0c320a76e495913752fa60fc` |
+| `reh-review2-check.log` | `d0708cb434ffff894b4fc361413a67fc3d4ddcdd62c5275c69fc1001b2353b65` |
+
+Правки ограничены добавлением этого раздела и раздела повторной проверки в `REVIEW_R3.md`. Код, тесты, реестр и отчёты реализации не менялись. Основное дерево, его незакоммиченная почтовая реализация, production и `rehearsly.me` не затрагивались. Commit/push не выполнялись.
