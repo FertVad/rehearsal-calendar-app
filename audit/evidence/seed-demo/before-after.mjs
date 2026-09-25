@@ -67,7 +67,12 @@ try {
   container = cli('run', '--pull=never', '--rm', '--detach', '--name', `rehearsly-seed-ba-${nonce}`, '--label', `rehearsly.seedba=${nonce}`,
     '--memory', '512m', '--tmpfs', '/var/lib/postgresql/data:rw,noexec,nosuid,size=256m', '--publish', '127.0.0.1::5432',
     '--env', 'POSTGRES_USER=seed_owner', '--env', 'POSTGRES_DB=seed_admin', '--env', 'POSTGRES_PASSWORD', images[0]);
-  const binding = cli('port', container, '5432/tcp');
+  // Docker Desktop can publish the port a moment after docker run returns.
+  let binding = '';
+  for (let attempt = 0; attempt < 50 && !binding; attempt++) {
+    try { binding = cli('port', container, '5432/tcp').split('\n')[0].trim(); } catch { binding = ''; }
+    if (!binding) await new Promise(resolve => setTimeout(resolve, 100));
+  }
   assert.match(binding, /^127\.0\.0\.1:\d+$/);
   const url = database => { const u = new URL(`postgresql://seed_owner@${binding}/${database}`); u.password = secret; return u.href; };
   let admin;

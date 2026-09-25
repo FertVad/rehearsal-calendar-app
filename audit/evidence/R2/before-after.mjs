@@ -91,7 +91,12 @@ try {
     '--tmpfs', '/var/lib/postgresql/data:rw,noexec,nosuid,size=256m', '--publish', '127.0.0.1::5432',
     '--env', 'POSTGRES_USER=r2_owner', '--env', 'POSTGRES_DB=r2_repro', '--env', 'POSTGRES_PASSWORD', images[0]);
   assert.match(container, /^[a-f0-9]{64}$/);
-  const binding = cli('port', container, '5432/tcp');
+  // Docker Desktop can publish the port a moment after docker run returns.
+  let binding = '';
+  for (let attempt = 0; attempt < 50 && !binding; attempt++) {
+    try { binding = cli('port', container, '5432/tcp').split('\n')[0].trim(); } catch { binding = ''; }
+    if (!binding) await new Promise(resolve => setTimeout(resolve, 100));
+  }
   assert.match(binding, /^127\.0\.0\.1:\d+$/);
   const base = new URL(`postgresql://r2_owner@${binding}/r2_repro`);
   base.password = secret;
@@ -139,7 +144,9 @@ try {
   report('F01', 'after', 'runner --fresh on empty PostgreSQL schema', 'applied', await migrationCode(() => migrate('after_f01', { mode: 'fresh' })));
   const freshInspection = await inspectSchema(q, { schema: 'after_f01', profile: 'rehearsly-pg-current-v1' });
   report('F01', 'after', 'fresh catalog matches the reviewed descriptor', true, freshInspection.compatible);
-  report('F01', 'after', 'application tables created', 19, Number((await q(`SELECT count(*) FROM pg_catalog.pg_tables
+  // As many as the checked-out descriptor names: 19 at eb24c62, 21 once R3 added group 010.
+  const describedTables = JSON.parse(readFileSync(path.join(server, 'database/schema/catalog.json'), 'utf8')).tables.length;
+  report('F01', 'after', 'application tables created', describedTables, Number((await q(`SELECT count(*) FROM pg_catalog.pg_tables
     WHERE schemaname='after_f01' AND tablename LIKE 'native\\_%' AND tablename<>'native_schema_history'`)).rows[0].count));
 
   // ===== F02: bulk availability conflict target after provisioning =====

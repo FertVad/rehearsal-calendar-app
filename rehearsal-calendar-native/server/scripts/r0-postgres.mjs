@@ -52,7 +52,12 @@ try {
     '--env', 'POSTGRES_USER=r0_owner', '--env', 'POSTGRES_DB=r0_test',
     '--env', 'POSTGRES_PASSWORD=' + password, image);
   assert.match(container, /^[a-f0-9]{64}$/);
-  const binding = cli('port', container, '5432/tcp');
+  // Docker Desktop can publish the port a moment after docker run returns.
+  let binding = '';
+  for (let attempt = 0; attempt < 50 && !binding; attempt++) {
+    try { binding = cli('port', container, '5432/tcp').split('\n')[0].trim(); } catch { binding = ''; }
+    if (!binding) await new Promise(resolve => setTimeout(resolve, 100));
+  }
   assert.match(binding, /^127\.0\.0\.1:\d+$/);
   const url = `postgresql://r0_owner:${password}@${binding}/r0_test`;
   let control;
