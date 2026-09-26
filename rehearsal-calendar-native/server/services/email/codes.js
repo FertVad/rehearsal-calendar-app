@@ -81,7 +81,10 @@ export async function issueCode(tx, { userId, purpose, email, now = new Date() }
  * spent attempt has to commit with the caller's transaction.
  *
  * The row is read FOR UPDATE, so of two concurrent checks of one code the
- * second waits, then no longer sees a live row: exactly one succeeds.
+ * second waits, then no longer sees a live row: exactly one succeeds. That
+ * holds when the check consumes the code (the default); a caller passing
+ * consume: false spends the code itself and has to serialize its own callers —
+ * the email change does, under the user row lock.
  *
  * With consume: false a right code stays live, for a caller that needs two
  * codes right before spending either (an email change): it voids them itself
