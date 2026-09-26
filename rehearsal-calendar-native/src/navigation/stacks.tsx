@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
+import VerifyEmailScreen from '../features/auth/screens/VerifyEmailScreen';
 import CalendarScreen from '../features/calendar/screens/CalendarScreen';
 import ProjectsScreen from '../features/projects/screens/ProjectsScreen';
 import ProjectDetailScreen from '../features/projects/screens/ProjectDetailScreen';
@@ -29,6 +30,7 @@ export function AuthNavigator() {
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
     </AuthStack.Navigator>
   );
 }

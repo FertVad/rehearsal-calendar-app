@@ -5,6 +5,7 @@ import { logger } from '../shared/utils/logger';
 import { syncUserPreferences } from '../shared/utils/storage';
 import { unregisterPushToken, syncPushTokenIfGranted } from '../shared/services/notifications';
 import { resetConnectionCache } from '../shared/utils/calendarMappings';
+import { AuthFlowError, toAuthFlowError, DeliveryOutcome } from '../features/auth/utils/authErrors';
 
 function getDeviceTimezone(): string | undefined {
   try {
@@ -33,10 +34,20 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  /** Restoring the session at start; the navigator waits on it. */
   loading: boolean;
+  /** A sign-in form's request in flight. The screen stays mounted meanwhile. */
+  busy: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName: string, lastName?: string) => Promise<void>;
+  /** Creates an unconfirmed account: no session until confirmEmail (R3). */
+  register: (email: string, password: string, firstName: string, lastName?: string, locale?: string)
+    => Promise<{ email: string; delivery: DeliveryOutcome }>;
+  /** The address waiting for its code, for the confirmation screen. */
+  pendingEmail: string | null;
+  confirmEmail: (code: string) => Promise<void>;
+  resendConfirmation: () => Promise<DeliveryOutcome>;
+  forgetPendingSignIn: () => void;
   loginWithTelegram: (telegramData: any) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<{ linked: boolean }>;
   loginWithApple: (idToken: string, user?: any) => Promise<{ linked: boolean }>;
@@ -52,6 +63,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Separate from `loading`: the navigator replaces everything with a spinner
+  // while `loading` is true, so a form toggling it was unmounted mid-request —
+  // a failed registration landed back on Login, and the code screen could
+  // never be reached.
+  const [busy, setBusy] = useState(false);
+  // The credentials of a registration or sign-in waiting for its email code.
+  // In memory only: confirming needs the password again, and it is never
+  // written anywhere. A restarted app asks to sign in again.
+  const pendingSignIn = useRef<{ email: string; password: string } | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const hasTimezoneSynced = useRef(false);
   const hasPushSynced = useRef(false);
 
@@ -81,6 +102,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     await AsyncStorage.setItem('calendar-sync-owner', newUserId);
   }, []);
+
+  const rememberPendingSignIn = useCallback((email: string, password: string) => {
+    pendingSignIn.current = { email, password };
+    setPendingEmail(email);
+  }, []);
+
+  const forgetPendingSignIn = useCallback(() => {
+    pendingSignIn.current = null;
+    setPendingEmail(null);
+  }, []);
+
+  // Every way in ends here: tokens and user stored, stale logout mark cleared,
+  // device state reconciled, preferences synced, then the user set.
+  const startSession = useCallback(async (data: { user: User; accessToken: string; refreshToken: string }) => {
+    await AsyncStorage.multiSet([
+      ['accessToken', data.accessToken],
+      ['refreshToken', data.refreshToken],
+      ['cachedUser', JSON.stringify(data.user)],
+    ]);
+    await AsyncStorage.removeItem('lastLogoutTime');
+    await reconcileDeviceState(data.user);
+    // Sync user preferences (timezone, locale, weekStartDay)
+    await syncUserPreferences(data.user);
+    forgetPendingSignIn();
+    setUser(data.user);
+  }, [reconcileDeviceState, forgetPendingSignIn]);
 
   const loadUser = useCallback(async () => {
     try {
@@ -193,59 +240,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     try {
       setError(null);
-      setLoading(true);
-
+      setBusy(true);
       const response = await authAPI.login(email, password);
-      const { user, accessToken, refreshToken } = response.data;
-
-      // Save tokens, cache user, and clear any stale logout timestamp
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken],
-        ['cachedUser', JSON.stringify(user)],
-      ]);
-      await AsyncStorage.removeItem('lastLogoutTime');
-      await reconcileDeviceState(user);
-      // Sync user preferences (timezone, locale, weekStartDay)
-      await syncUserPreferences(user);
-
-      setUser(user);
+      await startSession(response.data);
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Login failed';
-      setError(message);
-      throw new Error(message);
+      const failure = toAuthFlowError(err, 'Login failed');
+      if (failure.code === 'EMAIL_NOT_VERIFIED') {
+        // The password was right; the address still waits for its code.
+        rememberPendingSignIn(failure.details.email ?? email.trim().toLowerCase(), password);
+      } else {
+        setError(failure.message);
+      }
+      throw failure;
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  }, []);
+  }, [startSession, rememberPendingSignIn]);
 
-  const register = useCallback(async (email: string, password: string, firstName: string, lastName?: string) => {
+  const register = useCallback(async (email: string, password: string, firstName: string, lastName?: string, locale?: string) => {
     try {
       setError(null);
-      setLoading(true);
-
-      const deviceTimezone = getDeviceTimezone();
-      const response = await authAPI.register(email, password, firstName, lastName, deviceTimezone);
-      const { user, accessToken, refreshToken } = response.data;
-
-      // Save tokens, cache user, and clear any stale logout timestamp
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken],
-        ['cachedUser', JSON.stringify(user)],
-      ]);
-      await AsyncStorage.removeItem('lastLogoutTime');
-      await reconcileDeviceState(user);
-      // Sync user preferences (timezone, locale, weekStartDay)
-      await syncUserPreferences(user);
-
-      setUser(user);
+      setBusy(true);
+      const response = await authAPI.register(email, password, firstName, lastName, getDeviceTimezone(), locale);
+      const created = { email: response.data.email as string, delivery: response.data.delivery as DeliveryOutcome };
+      rememberPendingSignIn(created.email, password);
+      return created;
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Registration failed';
-      setError(message);
-      throw new Error(message);
+      const failure = toAuthFlowError(err, 'Registration failed');
+      // A taken address gets its own answer on the screen, not this line.
+      if (failure.code !== 'EMAIL_TAKEN') setError(failure.message);
+      throw failure;
     } finally {
-      setLoading(false);
+      setBusy(false);
+    }
+  }, [rememberPendingSignIn]);
+
+  const confirmEmail = useCallback(async (code: string) => {
+    const pending = pendingSignIn.current;
+    if (!pending) throw new AuthFlowError('Sign in again to confirm your address', 'SIGN_IN_AGAIN');
+    try {
+      setBusy(true);
+      const response = await authAPI.verifyEmail(pending.email, pending.password, code);
+      await startSession(response.data);
+    } catch (err: any) {
+      throw toAuthFlowError(err, 'Confirmation failed');
+    } finally {
+      setBusy(false);
+    }
+  }, [startSession]);
+
+  const resendConfirmation = useCallback(async () => {
+    const pending = pendingSignIn.current;
+    if (!pending) throw new AuthFlowError('Sign in again to confirm your address', 'SIGN_IN_AGAIN');
+    try {
+      setBusy(true);
+      const response = await authAPI.resendVerification(pending.email, pending.password);
+      return response.data.delivery as DeliveryOutcome;
+    } catch (err: any) {
+      throw toAuthFlowError(err, 'Could not send the code');
+    } finally {
+      setBusy(false);
     }
   }, []);
 
@@ -279,67 +333,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = useCallback(async (idToken: string) => {
     try {
       setError(null);
-      setLoading(true);
+      setBusy(true);
 
       const response = await authAPI.loginWithGoogle(idToken);
-      const { user, accessToken, refreshToken, linked } = response.data;
+      await startSession(response.data);
 
-      // Save tokens, cache user, and clear any stale logout timestamp
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken],
-        ['cachedUser', JSON.stringify(user)],
-      ]);
-      await AsyncStorage.removeItem('lastLogoutTime');
-      await reconcileDeviceState(user);
-      // Sync user preferences (timezone, locale, weekStartDay)
-      await syncUserPreferences(user);
-
-      setUser(user);
-
-      return { linked: linked || false };
+      return { linked: response.data.linked || false };
     } catch (err: any) {
       console.error('[Auth] Google login error:', err);
       console.error('[Auth] Error response:', err.response?.data);
       console.error('[Auth] Error status:', err.response?.status);
-      const message = err.response?.data?.error || 'Google sign-in failed';
-      setError(message);
-      throw new Error(message);
+      const failure = toAuthFlowError(err, 'Google sign-in failed');
+      setError(failure.message);
+      throw failure;
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  }, []);
+  }, [startSession]);
 
   const loginWithApple = useCallback(async (idToken: string, user?: any) => {
     try {
       setError(null);
-      setLoading(true);
+      setBusy(true);
 
       const response = await authAPI.loginWithApple(idToken, user);
-      const { user: userData, accessToken, refreshToken, linked } = response.data;
+      await startSession(response.data);
 
-      // Save tokens, cache user, and clear any stale logout timestamp
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken],
-        ['cachedUser', JSON.stringify(userData)],
-      ]);
-      await AsyncStorage.removeItem('lastLogoutTime');
-      await reconcileDeviceState(userData);
-      // Sync user preferences (timezone, locale, weekStartDay)
-      await syncUserPreferences(userData);
-
-      setUser(userData);
-
-      return { linked: linked || false };
+      return { linked: response.data.linked || false };
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Apple sign-in failed';
-      setError(message);
-      throw new Error(message);
+      const failure = toAuthFlowError(err, 'Apple sign-in failed');
+      setError(failure.message);
+      throw failure;
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  }, []);
+  }, [startSession]);
 
   const logout = useCallback(async () => {
     try {
@@ -432,9 +460,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         loading,
+        busy,
         isAuthenticated: !!user,
         login,
         register,
+        pendingEmail,
+        confirmEmail,
+        resendConfirmation,
+        forgetPendingSignIn,
         loginWithTelegram,
         loginWithGoogle,
         loginWithApple,

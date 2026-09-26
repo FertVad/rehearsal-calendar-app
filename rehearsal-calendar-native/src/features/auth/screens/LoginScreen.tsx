@@ -17,6 +17,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { loginScreenStyles as styles } from '../styles';
+import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useGoogleAuth, getGoogleIdToken } from '../../../shared/services/googleAuth';
 import { signInWithApple, isAppleAuthAvailable } from '../../../shared/services/appleAuth';
@@ -29,7 +30,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
-  const { login, loginWithGoogle, loginWithApple, loading, error } = useAuth();
+  const { login, loginWithGoogle, loginWithApple, busy, error } = useAuth();
   const { t } = useI18n();
 
   // Google OAuth
@@ -56,8 +57,13 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     try {
       await login(email, password);
       // Navigation handled by AuthProvider
-    } catch (err: any) {
-      Alert.alert(t.auth.loginError, err.message);
+    } catch (err) {
+      // The password was right, the address still waits for its code (R3).
+      if (err instanceof AuthFlowError && err.code === 'EMAIL_NOT_VERIFIED') {
+        navigation.navigate('VerifyEmail', { email: err.details.email ?? email.trim().toLowerCase() });
+        return;
+      }
+      Alert.alert(t.auth.loginError, authErrorMessage(t, err));
     }
   };
 
@@ -164,7 +170,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               title={t.auth.loginButton}
               onPress={handleLogin}
               variant="purple"
-              loading={loading}
+              loading={busy}
               style={styles.loginButton}
             />
 
@@ -187,7 +193,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 title={t.auth.signInWithGoogle}
                 onPress={() => promptAsync()}
                 loading={googleLoading}
-                disabled={!request || loading || googleLoading}
+                disabled={!request || busy || googleLoading}
                 style={styles.oauthButton}
               />
 

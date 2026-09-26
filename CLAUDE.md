@@ -778,6 +778,17 @@ next.setUTCMinutes(next.getUTCMinutes() + 15);
 it selects rehearsals due soon. An in-process `node-cron` schedule cannot replace
 it: Vercel functions do not stay resident, so the schedule never fires.
 
+### 9. `loading` in AuthContext Unmounts the Whole Navigator
+❌ **Problem**: a sign-in form's request bounces the person back to Login, or a
+screen reached after it (the email code) never appears
+✅ **Fix**: forms use `busy` from `useAuth()`; `loading` is only the session
+restore at start
+
+While `loading` is true, `RootNavigator` renders a spinner instead of the
+`NavigationContainer`, so a request that toggles it unmounts the auth stack
+and remounts it at its first route. Logout and account deletion still use it —
+they end signed out anyway.
+
 ## Environment Setup
 
 ### Required Environment Variables

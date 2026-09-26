@@ -146,8 +146,17 @@ api.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  register: (email: string, password: string, firstName: string, lastName?: string, timezone?: string) =>
-    api.post('/auth/register', { email, password, firstName, lastName, timezone }),
+  // The account starts unconfirmed: the server emails a code and issues no
+  // session until verifyEmail (R3). `verification: 'code'` tells the server
+  // this app can enter one; `locale` picks the language of that email.
+  register: (email: string, password: string, firstName: string, lastName?: string, timezone?: string, locale?: string) =>
+    api.post('/auth/register', { email, password, firstName, lastName, timezone, locale, verification: 'code' }),
+
+  verifyEmail: (email: string, password: string, code: string) =>
+    api.post('/auth/verify-email', { email, password, code }),
+
+  resendVerification: (email: string, password: string) =>
+    api.post('/auth/verify-email/resend', { email, password }),
 
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),

@@ -57,11 +57,9 @@ describe('Auth Flow Integration', () => {
       };
 
       // Step 1: Registration
+      // No session from registration: the server emails a code (R3).
       (axios.post as jest.Mock).mockResolvedValueOnce({
-        data: {
-          user: mockUser,
-          tokens: mockTokens,
-        },
+        data: { status: 'verification_required', email: 'test@example.com', delivery: 'sent' },
       });
 
       const registerResponse = await authAPI.register(
@@ -76,10 +74,29 @@ describe('Auth Flow Integration', () => {
         password: 'password123',
         firstName: 'Test',
         lastName: 'User',
+        timezone: undefined,
+        locale: undefined,
+        verification: 'code',
+      });
+      expect(registerResponse.data.accessToken).toBeUndefined();
+
+      // The emailed code, with the same password, starts the session.
+      (axios.post as jest.Mock).mockResolvedValueOnce({
+        data: {
+          user: mockUser,
+          tokens: mockTokens,
+        },
       });
 
-      expect(registerResponse.data.user).toEqual(mockUser);
-      expect(registerResponse.data.tokens).toEqual(mockTokens);
+      const verifiedResponse = await authAPI.verifyEmail('test@example.com', 'password123', '123456');
+
+      expect(axios.post).toHaveBeenCalledWith('/auth/verify-email', {
+        email: 'test@example.com',
+        password: 'password123',
+        code: '123456',
+      });
+      expect(verifiedResponse.data.user).toEqual(mockUser);
+      expect(verifiedResponse.data.tokens).toEqual(mockTokens);
 
       // Step 2: Token storage (simulated by AsyncStorage mock)
       (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);

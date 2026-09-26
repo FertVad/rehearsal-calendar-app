@@ -22,6 +22,9 @@ const ScrollView = mockComponent('ScrollView');
 const Image = mockComponent('Image');
 const TextInput = mockComponent('TextInput');
 const ActivityIndicator = mockComponent('ActivityIndicator');
+// The sign-in screens lay out inside these two.
+const SafeAreaView = mockComponent('SafeAreaView');
+const KeyboardAvoidingView = mockComponent('KeyboardAvoidingView');
 
 // TouchableOpacity needs special handling for disabled state
 const TouchableOpacity = React.forwardRef((props, ref) => {
@@ -188,6 +191,8 @@ module.exports = {
   Image,
   TextInput,
   ActivityIndicator,
+  SafeAreaView,
+  KeyboardAvoidingView,
   Modal,
 
   // Whether the app is in the foreground.

@@ -1,6 +1,9 @@
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  // delivery is set when a registration has just sent the code; absent when a
+  // sign-in found the address still unconfirmed.
+  VerifyEmail: { email: string; delivery?: 'sent' | 'failed' | 'unknown' };
 };
 
 export type CalendarStackParamList = {

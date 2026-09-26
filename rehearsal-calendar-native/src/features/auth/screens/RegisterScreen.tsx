@@ -16,6 +16,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { registerScreenStyles as styles } from '../styles';
+import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
 
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -25,8 +26,8 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { register, loading, error } = useAuth();
-  const { t } = useI18n();
+  const { register, busy, error } = useAuth();
+  const { t, language } = useI18n();
 
   const validateForm = () => {
     if (!email || !firstName || !password || !confirmPassword) {
@@ -40,7 +41,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       return false;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       Alert.alert(t.common.error, t.auth.passwordMinLength);
       return false;
     }
@@ -57,10 +58,18 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
     if (!validateForm()) return;
 
     try {
-      await register(email, password, firstName, lastName || undefined);
-      // Navigation handled by AuthProvider
-    } catch (err: any) {
-      Alert.alert(t.auth.registerError, err.message);
+      // No session yet: the account waits for the code just emailed (R3).
+      const created = await register(email, password, firstName, lastName || undefined, language);
+      navigation.navigate('VerifyEmail', { email: created.email, delivery: created.delivery });
+    } catch (err) {
+      if (err instanceof AuthFlowError && err.code === 'EMAIL_TAKEN') {
+        Alert.alert(t.auth.emailTakenTitle, t.auth.emailTakenMessage, [
+          { text: t.common.cancel, style: 'cancel' },
+          { text: t.auth.loginButton, onPress: () => navigation.navigate('Login') },
+        ]);
+        return;
+      }
+      Alert.alert(t.auth.registerError, authErrorMessage(t, err));
     }
   };
 
@@ -156,7 +165,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
               title={t.auth.registerButton}
               onPress={handleRegister}
               variant="purple"
-              loading={loading}
+              loading={busy}
               style={styles.registerButton}
             />
 
