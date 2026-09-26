@@ -1139,8 +1139,57 @@ Retrieve all availability slots for the authenticated user.
 
 ---
 
-#### 2. Bulk Set Availability
+#### 2. Save Days (the editor)
 
+Replace the hand-entered availability of the days named — the days the person
+changed — each with exactly the entries given; `[]` clears a day. Days not
+named are not touched, so a day loaded earlier on one device never overwrites
+what another device saved since. The whole request is checked before anything
+is written, and one person's saves run one at a time.
+
+**Endpoint:** `PUT /native/availability/days`
+
+**Authentication Required:** Yes
+
+**Request Body:**
+```json
+{
+  "days": [
+    { "date": "2026-10-01", "entries": [
+      { "startsAt": "2026-10-01T13:00:00+02:00", "endsAt": "2026-10-01T15:00:00+02:00", "type": "busy", "isAllDay": false }
+    ] },
+    { "date": "2026-10-02", "entries": [
+      { "startsAt": "2026-10-02T00:00:00.000Z", "endsAt": "2026-10-02T23:59:59.999Z", "type": "available", "isAllDay": true }
+    ] },
+    { "date": "2026-10-03", "entries": [] }
+  ]
+}
+```
+
+**Parameters:**
+- `days` (array, 1–366): each `date` a real calendar date (`YYYY-MM-DD`), named once
+- `entries` (array, at most 48 per day), each:
+  - `type`: `"available"` or `"busy"`
+  - `isAllDay` (boolean, default `false`): a whole day is sent as that date's UTC bounds, `T00:00:00.000Z`–`T23:59:59.999Z`
+  - `startsAt`, `endsAt`: for a timed slot, local time with its offset (or UTC); the start falls on `date`, the end after the start and at most a day later (through midnight is allowed)
+
+**Success Response (200):**
+```json
+{ "success": true, "days": ["2026-10-01", "2026-10-02", "2026-10-03"] }
+```
+
+**Error Responses:**
+- `400 Bad Request`, `code: "AVAILABILITY_INVALID"`, with a `reason` (`END_NOT_AFTER_START`, `NOT_ON_THIS_DAY`, `DATE_INVALID`, `DATE_REPEATED`, …) and where it was found (`date`, `index`); nothing is written
+
+**Notes:**
+- Only hand-entered rows are replaced; rehearsal and imported rows on the same day stay
+- The app sends only days with unsaved edits, and keeps an edit made while a save was out as unsaved
+
+---
+
+#### 2a. Bulk Set Availability
+
+Used by the calendar import, and by app versions from before `PUT /days`.
 Create or update multiple availability slots at once.
 
 **Endpoint:** `POST /native/availability/bulk`
@@ -1226,8 +1275,9 @@ Create or update multiple availability slots at once.
 
 **Notes:**
 - Only affects manually-created availability (source: "manual")
-- Existing manual slots in the same time ranges are deleted before inserting new ones
+- Every date named by a manual entry has all its manual slots deleted before the new ones go in — the whole day, not only the matching hours
 - Slots from rehearsals or calendar sync are preserved
+- Runs behind the same per-person lock as `PUT /days`
 - Old format converts times using the user's configured timezone
 
 ---

@@ -387,10 +387,11 @@ them. Replacement and deletion are scoped by a key both sides name — the day,
 the device connection, an explicit set of ids — never by absence from whatever
 the client happens to be holding.
 
-Two live examples: Save posts the whole availability snapshot, so a day loaded an
-hour ago overwrites the edit somebody made since; and calendar import diffs the
-phone's events against *every* imported row of that user, so syncing on the
-second phone deletes what the first one imported.
+Save used to post the whole availability snapshot, so a day loaded an hour ago
+overwrote the edit somebody made since; it now names the days it changed
+(`PUT /availability/days`, R6). Still live: calendar import diffs the phone's
+events against *every* imported row of that user, so syncing on the second
+phone deletes what the first one imported.
 
 ## Key Features & Implementation
 
