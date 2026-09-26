@@ -9,6 +9,7 @@ import { limits, positiveId, parseMemberAvailabilityQuery, expandMemberAvailabil
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { notifyRoleChanged, notifyMemberRemoved, notifyAdminAppointed } from '../../services/notifications/pushNotificationService.js';
 import { fullName } from '../../utils/names.js';
+import { takeOffProjectRehearsals } from '../../services/rehearsals/roster.js';
 
 const router = Router();
 
@@ -464,21 +465,11 @@ router.delete('/:projectId/members/:userId', requireAuth, asyncHandler(async (re
       [projectId, userId]
     );
 
-    // And take them off the project's rehearsals.
-    //
-    // Membership is not what grants access to a rehearsal — a row in
-    // native_rehearsal_responses is, and nothing cascades it. So removing
-    // someone used to leave every one of those rows in place: they went on
-    // receiving the reminders and the edited/cancelled pushes, and could still
-    // read any of those rehearsals by id, including changes made after they
-    // were removed. Only an admin re-saving that rehearsal's participants ever
-    // cleared it.
-    await db.run(
-      `DELETE FROM native_rehearsal_responses
-       WHERE user_id = $1
-       AND rehearsal_id IN (SELECT id FROM native_rehearsals WHERE project_id = $2)`,
-      [userId, projectId]
-    );
+    // And take them off the project's rehearsals. Reads already ignore a row
+    // left by someone who is no longer an active member (roster.js), so this
+    // is tidiness rather than the lock; it used to be the only lock, and a
+    // removed member went on receiving reminders and edit pushes.
+    await takeOffProjectRehearsals(db, projectId, userId);
 
     // The busy slots those rehearsals put on their calendar go too, or they
     // stay unavailable to their other projects at times nobody expects them.

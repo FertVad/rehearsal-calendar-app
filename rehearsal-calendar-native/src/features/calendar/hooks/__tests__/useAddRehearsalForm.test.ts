@@ -125,34 +125,20 @@ describe('useAddRehearsalForm Hook', () => {
   });
 
   describe('Form State Initialization - Edit Mode with rehearsalId', () => {
-    it('should enter edit mode when rehearsalId is provided', async () => {
-      const mockRehearsal = {
-        id: 'r1',
-        projectId: '1',
-        startsAt: '2025-12-29T14:00:00Z',
-        endsAt: '2025-12-29T16:00:00Z',
-        location: 'Studio A',
-      };
-
-      const mockResponses = [
-        { userId: 'user1', response: 'yes' },
-        { userId: 'user2', response: 'yes' },
-        { userId: 'user3', response: 'no' },
-      ];
-
-      (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({
-        data: { rehearsals: [mockRehearsal] },
+    // By id, not from the calendar batch: the batch is the caller's own
+    // calendar, so an admin who was not on a rehearsal could not open it for
+    // editing at all (review D04).
+    it('loads the rehearsal by id, so an admin who is not on it can edit it (review D04)', async () => {
+      (rehearsalsAPI.getById as jest.Mock).mockResolvedValue({
+        data: { rehearsal: { id: 'r1', projectId: '1', startsAt: '2025-12-29T14:00:00Z',
+          endsAt: '2025-12-29T16:00:00Z', location: 'Studio A' } },
       });
-
+      // The roster as the server reads it — people still in the project. 'no'
+      // means invited and not yet seen, so everyone listed stays selected.
       (rehearsalsAPI.getResponses as jest.Mock).mockResolvedValue({
-        data: { responses: mockResponses },
-      });
-
-      // The hook drops participants who have since left the project, so it
-      // asks for the current roster. Without this it sees an empty project
-      // and filters everyone out.
-      (projectsAPI.getMembers as jest.Mock).mockResolvedValue({
-        data: { members: [{ userId: 'user1' }, { userId: 'user2' }, { userId: 'user3' }] },
+        data: { allParticipants: [
+          { userId: 'user1', response: 'yes' }, { userId: 'user2', response: 'yes' }, { userId: 'user3', response: 'no' },
+        ] },
       });
 
       const { result } = renderHook(() =>
@@ -160,36 +146,37 @@ describe('useAddRehearsalForm Hook', () => {
           projects: mockProjects,
           selectedProject: null,
           setSelectedProject: mockSetSelectedProject,
-          routeParams: {
-            rehearsalId: 'r1',
-            projectId: '1',
-          },
+          routeParams: { rehearsalId: 'r1', projectId: '1' },
         })
       );
 
-      // Should start loading
       expect(result.current.loadingRehearsal).toBe(true);
       expect(result.current.isEditMode).toBe(true);
 
-      // Wait for async loading
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       });
 
-      // Should have loaded rehearsal data
+      expect(rehearsalsAPI.getById).toHaveBeenCalledWith('r1');
+      expect(rehearsalsAPI.getBatch).not.toHaveBeenCalled();
       expect(result.current.loadingRehearsal).toBe(false);
       expect(result.current.location).toBe('Studio A');
-      // Everyone with a response row is on the rehearsal — 'no' means invited
-      // and not yet seen, not declined. Leaving them unselected would drop
-      // them from the rehearsal on the next save.
       expect(result.current.selectedMemberIds).toEqual(['user1', 'user2', 'user3']);
     });
 
-    it('should show alert and go back if rehearsal not found', async () => {
-      (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({
-        data: { rehearsals: [] }, // Empty - rehearsal not found
-      });
-
+    // An edit sends the whole participant list, and an empty one clears the
+    // call. A form left open over a failed load could save exactly that
+    // (review DF03), so a form that could not load closes.
+    it.each([
+      ['the rehearsal', () => (rehearsalsAPI.getById as jest.Mock).mockRejectedValue({ response: { status: 404 } })],
+      ['its participants', () => {
+        (rehearsalsAPI.getById as jest.Mock).mockResolvedValue({
+          data: { rehearsal: { id: 'r1', projectId: '1', startsAt: '2025-12-29T14:00:00Z', endsAt: '2025-12-29T16:00:00Z' } },
+        });
+        (rehearsalsAPI.getResponses as jest.Mock).mockRejectedValue(new Error('offline'));
+      }],
+    ])('closes the form when %s could not be loaded (review DF03)', async (_what, arrange) => {
+      arrange();
       const mockGoBack = jest.fn();
       jest.spyOn(require('@react-navigation/native'), 'useNavigation').mockReturnValue({
         goBack: mockGoBack,
@@ -201,10 +188,7 @@ describe('useAddRehearsalForm Hook', () => {
           projects: mockProjects,
           selectedProject: null,
           setSelectedProject: mockSetSelectedProject,
-          routeParams: {
-            rehearsalId: 'r1',
-            projectId: '1',
-          },
+          routeParams: { rehearsalId: 'r1', projectId: '1' },
         })
       );
 
@@ -212,7 +196,7 @@ describe('useAddRehearsalForm Hook', () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Rehearsal not found');
+      expect(Alert.alert).toHaveBeenCalled();
       expect(mockGoBack).toHaveBeenCalled();
     });
   });

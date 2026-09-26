@@ -10,6 +10,7 @@
 import db from '../../database/db.js';
 import { logger } from '../../utils/logger.js';
 import { notifyRehearsal24h, notifyRehearsal1h } from './pushNotificationService.js';
+import { ROSTER, rosterOf } from '../rehearsals/roster.js';
 
 /**
  * Search windows, as offsets from "now".
@@ -88,7 +89,7 @@ async function sendReminders({ type, from, to, notify, now }) {
        WHERE r.starts_at BETWEEN ? AND ?
          AND r.is_all_day = FALSE
          AND EXISTS (
-           SELECT 1 FROM native_rehearsal_responses rr
+           SELECT 1 FROM ${ROSTER} rr
            WHERE rr.rehearsal_id = r.id
              AND NOT EXISTS (
                SELECT 1 FROM native_push_reminders pr
@@ -112,14 +113,11 @@ async function sendReminders({ type, from, to, notify, now }) {
     try {
       // The people on this rehearsal, not everyone in the project.
       //
-      // native_rehearsal_responses is the roster — having a row is what puts
-      // you on a rehearsal, and the app only ever shows you rehearsals you have
-      // a row for. Reminding the whole project therefore pushed people about
-      // rehearsals that do not appear anywhere in their calendar.
-      const roster = await db.all(
-        `SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?`,
-        [rehearsal.id]
-      );
+      // The roster (roster.js) — the app only ever shows you rehearsals you are
+      // on, so reminding the whole project pushed people about rehearsals that
+      // do not appear anywhere in their calendar. And someone who has left the
+      // project is not on it, whatever row they left behind.
+      const roster = await rosterOf(db, rehearsal.id);
 
       const memberIds = roster.map((m) => m.user_id);
       if (memberIds.length === 0) continue;

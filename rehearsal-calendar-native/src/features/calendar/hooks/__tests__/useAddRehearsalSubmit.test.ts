@@ -532,8 +532,10 @@ describe('useAddRehearsalSubmit Hook', () => {
       );
     });
 
-    it('should set participant_ids to undefined when no members selected', async () => {
-      (rehearsalsAPI.create as jest.Mock).mockResolvedValue({
+    // [] clears the roster, undefined keeps it; an edit that unselected
+    // everyone used to send undefined and saved nothing (review DF02).
+    it('sends an empty list when nobody is selected, so an edit clears the roster (review DF02)', async () => {
+      (rehearsalsAPI.update as jest.Mock).mockResolvedValue({
         data: { rehearsal: { id: 'r1' } },
       });
 
@@ -541,6 +543,8 @@ describe('useAddRehearsalSubmit Hook', () => {
         useAddRehearsalSubmit({
           ...defaultProps,
           selectedMemberIds: [],
+          isEditMode: true,
+          rehearsalId: 'r1',
         })
       );
 
@@ -548,12 +552,34 @@ describe('useAddRehearsalSubmit Hook', () => {
         await result.current.handleSubmit();
       });
 
-      expect(rehearsalsAPI.create).toHaveBeenCalledWith(
+      expect(rehearsalsAPI.update).toHaveBeenCalledWith(
         '1',
-        expect.objectContaining({
-          participant_ids: undefined,
+        'r1',
+        expect.objectContaining({ participant_ids: [] })
+      );
+    });
+
+    it('says in the app language that someone chosen has left the project', async () => {
+      (rehearsalsAPI.update as jest.Mock).mockRejectedValue({
+        response: { status: 400, data: { error: 'Participants must be active members of the project',
+          code: 'NOT_PROJECT_MEMBERS', userIds: [5] } },
+      });
+
+      const { result } = renderHook(() =>
+        useAddRehearsalSubmit({
+          ...defaultProps,
+          t: { ...mockT, rehearsals: { ...mockT.rehearsals, participantsLeft: 'Someone has left' } },
+          selectedMemberIds: ['user1'],
+          isEditMode: true,
+          rehearsalId: 'r1',
         })
       );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Someone has left');
     });
   });
 });

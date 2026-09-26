@@ -67,7 +67,10 @@ export function useAddRehearsalSubmit({
         // undefined rather than an empty string.
         title: title.trim() || undefined,
         location: location.trim() || undefined,
-        participant_ids: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
+        // The whole roster, always. [] clears it; leaving the field out keeps
+        // the old one, which is how unselecting everyone used to save nothing
+        // (review DF02).
+        participant_ids: selectedMemberIds,
       };
 
       let savedRehearsal;
@@ -153,9 +156,13 @@ export function useAddRehearsalSubmit({
         ? t.rehearsals.updateError
         : t.rehearsals.createError;
 
+      // Someone chosen left the project while the form was open: the server
+      // refuses the whole list rather than quietly dropping them.
+      const participantsLeft = error.response?.data?.code === 'NOT_PROJECT_MEMBERS';
       Alert.alert(
         t.common.error,
-        error.response?.data?.error || error.message || errorMessage
+        participantsLeft ? t.rehearsals.participantsLeft
+          : error.response?.data?.error || error.message || errorMessage
       );
     } finally {
       setLoading(false);

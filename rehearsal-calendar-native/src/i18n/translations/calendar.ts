@@ -66,6 +66,8 @@ export interface RehearsalsTranslations {
   rehearsalCreated: string;
   rehearsalUpdated: string;
   updateError: string;
+  loadRehearsalError: string;
+  participantsLeft: string;
   seenError: string;
   noProjects: string;
   noAdminProjects: string;
@@ -159,6 +161,8 @@ needProject: 'Репетиции появятся, когда вы окажет�
     rehearsalCreated: 'Репетиция создана',
     rehearsalUpdated: 'Репетиция успешно обновлена',
     updateError: 'Не удалось обновить репетицию',
+    loadRehearsalError: 'Не удалось загрузить репетицию. Проверьте соединение и попробуйте ещё раз.',
+    participantsLeft: 'Кто-то из выбранных участников больше не в проекте. Откройте форму заново и сохраните ещё раз.',
     seenError: 'Не удалось отметить просмотр',
     noProjects: 'Нет проектов',
     noAdminProjects: 'Нет проектов, где вы являетесь администратором',
@@ -252,6 +256,8 @@ needProject: 'Rehearsals show up once you are in a project',
     rehearsalCreated: 'Rehearsal created',
     rehearsalUpdated: 'Rehearsal updated successfully',
     updateError: 'Failed to update rehearsal',
+    loadRehearsalError: 'Could not load the rehearsal. Check your connection and try again.',
+    participantsLeft: 'Someone you selected is no longer in the project. Open the form again and save once more.',
     seenError: 'Could not mark it as seen',
     noProjects: 'No projects',
     noAdminProjects: 'No projects where you are an administrator',
@@ -345,6 +351,8 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     rehearsalCreated: 'Ensayo creado',
     rehearsalUpdated: 'Ensayo actualizado correctamente',
     updateError: 'No se pudo actualizar el ensayo',
+    loadRehearsalError: 'No se pudo cargar el ensayo. Comprueba la conexión e inténtalo de nuevo.',
+    participantsLeft: 'Alguien que seleccionaste ya no está en el proyecto. Abre el formulario de nuevo y guarda otra vez.',
     seenError: 'No se pudo marcar como visto',
     noProjects: 'No hay proyectos',
     noAdminProjects: 'No hay proyectos en los que seas administrador',
@@ -438,6 +446,8 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     rehearsalCreated: 'Probe erstellt',
     rehearsalUpdated: 'Probe erfolgreich aktualisiert',
     updateError: 'Probe konnte nicht aktualisiert werden',
+    loadRehearsalError: 'Die Probe konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut.',
+    participantsLeft: 'Jemand, den du ausgewählt hast, ist nicht mehr im Projekt. Öffne das Formular erneut und speichere noch einmal.',
     seenError: 'Konnte nicht als gesehen markiert werden',
     noProjects: 'Keine Projekte',
     noAdminProjects: 'Keine Projekte, in denen du Administrator bist',

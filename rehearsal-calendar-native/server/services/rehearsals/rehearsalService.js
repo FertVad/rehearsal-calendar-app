@@ -3,6 +3,7 @@ import db from '../../database/db.js';
 import { localToTimestamp, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
+import { ROSTER, viewerOf, rosterStats, checkParticipants, settleRoster, clearRoster } from './roster.js';
 
 /**
  * Check if user is an active member of the project
@@ -70,20 +71,19 @@ export async function getRehearsalsForProjects(projectIds, userId) {
     return [];
   }
 
-  // Fetch only rehearsals where user is invited (has a response record)
+  // The caller's calendar: only rehearsals they are on.
   const rehearsals = await db.all(
     `SELECT r.*, p.name as project_name,
-            ur.response as user_response
+            mine.response as user_response
      FROM native_rehearsals r
      JOIN native_projects p ON r.project_id = p.id
-     INNER JOIN native_rehearsal_responses ur ON r.id = ur.rehearsal_id AND ur.user_id = ?
+     JOIN ${ROSTER} mine ON mine.rehearsal_id = r.id AND mine.user_id = ?
      WHERE r.project_id IN (${accessibleProjectIds.map(() => '?').join(',')})
      ORDER BY r.starts_at DESC`,
     [userId, ...accessibleProjectIds]
   );
 
-  // For each rehearsal, fetch admin stats if user is admin
-  // Group rehearsals by project to check admin status
+  // Admins also see how many of the cast have seen each one.
   const projectAdminMap = {};
   const membershipsWithRole = await db.all(
     `SELECT project_id, role FROM native_project_members
@@ -97,60 +97,11 @@ export async function getRehearsalsForProjects(projectIds, userId) {
     projectAdminMap[m.project_id] = (m.role === 'owner' || m.role === 'admin');
   }
 
-  // Collect rehearsal IDs where user is admin
   const adminRehearsalIds = rehearsals
     .filter(r => projectAdminMap[r.project_id])
-    .map(r => r.id);
-
-  // Fetch stats for admin rehearsals in batch
-  const statsMap = {};
-  if (adminRehearsalIds.length > 0) {
-    // Get all responses for admin rehearsals - only from active project members
-    const allResponses = await db.all(
-      `SELECT r.rehearsal_id, r.response, reh.project_id
-       FROM native_rehearsal_responses r
-       JOIN native_rehearsals reh ON r.rehearsal_id = reh.id
-       JOIN native_project_members pm ON pm.user_id = r.user_id AND pm.project_id = reh.project_id
-       WHERE r.rehearsal_id IN (${adminRehearsalIds.map(() => '?').join(',')})
-       AND pm.status = 'active'`,
-      adminRehearsalIds
-    );
-
-    // Get total members for each project
-    const projectMemberCounts = await db.all(
-      `SELECT project_id, COUNT(*) as member_count
-       FROM native_project_members
-       WHERE project_id IN (${accessibleProjectIds.map(() => '?').join(',')})
-       AND status = 'active'
-       GROUP BY project_id`,
-      accessibleProjectIds
-    );
-
-    const memberCountMap = {};
-    for (const pm of projectMemberCounts) {
-      memberCountMap[pm.project_id] = pm.member_count;
-    }
-
-    // Calculate stats for each rehearsal
-    const responsesByRehearsal = {};
-    for (const response of allResponses) {
-      if (!responsesByRehearsal[response.rehearsal_id]) {
-        responsesByRehearsal[response.rehearsal_id] = [];
-      }
-      responsesByRehearsal[response.rehearsal_id].push(response.response);
-    }
-
-    for (const rehearsal of rehearsals) {
-      if (adminRehearsalIds.includes(rehearsal.id)) {
-        const responses = responsesByRehearsal[rehearsal.id] || [];
-        const confirmed = responses.filter(r => r === 'yes').length;
-        // invited = number of participants invited to THIS rehearsal (not all project members)
-        const invited = responses.length;
-
-        statsMap[rehearsal.id] = { confirmed, invited };
-      }
-    }
-  }
+    .map(r => Number(r.id));
+  // `invited` is the people on THIS rehearsal, not the size of the project.
+  const statsMap = await rosterStats(db, adminRehearsalIds);
 
   return rehearsals.map(r => ({
     id: String(r.id),
@@ -164,7 +115,7 @@ export async function getRehearsalsForProjects(projectIds, userId) {
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     userResponse: r.user_response || null,
-    adminStats: statsMap[r.id] || null,
+    adminStats: adminRehearsalIds.includes(Number(r.id)) ? (statsMap.get(Number(r.id)) || { confirmed: 0, invited: 0 }) : null,
   }));
 }
 
@@ -196,9 +147,9 @@ export async function getProjectRehearsals(projectId, userId) {
   if (isAdmin) {
     // Admin: get all rehearsals for the project (with optional RSVP data)
     rehearsals = await db.all(
-      `SELECT r.*, ur.response as user_response
+      `SELECT r.*, mine.response as user_response
        FROM native_rehearsals r
-       LEFT JOIN native_rehearsal_responses ur ON r.id = ur.rehearsal_id AND ur.user_id = $2
+       LEFT JOIN ${ROSTER} mine ON mine.rehearsal_id = r.id AND mine.user_id = $2
        WHERE r.project_id = $1
        ORDER BY r.starts_at DESC`,
       [projectId, userId]
@@ -207,9 +158,9 @@ export async function getProjectRehearsals(projectId, userId) {
   } else {
     // Regular member: only get rehearsals where user is invited
     rehearsals = await db.all(
-      `SELECT r.*, ur.response as user_response
+      `SELECT r.*, mine.response as user_response
        FROM native_rehearsals r
-       INNER JOIN native_rehearsal_responses ur ON r.id = ur.rehearsal_id AND ur.user_id = $2
+       JOIN ${ROSTER} mine ON mine.rehearsal_id = r.id AND mine.user_id = $2
        WHERE r.project_id = $1
        ORDER BY r.starts_at DESC`,
       [projectId, userId]
@@ -281,23 +232,11 @@ export async function getRehearsalById(rehearsalId, userId) {
 
   if (!rehearsal) return null;
 
-  // Membership first, then the roster. Asking only "is there a roster row"
-  // trusted a table that nothing cascades: someone removed from the project
-  // kept their rows and could go on reading the rehearsal by id, including
-  // edits made after they left. Removal prunes those rows now, and this is the
-  // second lock — any other way a stale row appears stops here.
-  const membership = await checkUserMembership(rehearsal.project_id, userId);
-  if (!membership) return null;
-
-  const isAdmin = membership.role === 'owner' || membership.role === 'admin';
-
-  if (!isAdmin) {
-    const onIt = await db.get(
-      'SELECT 1 AS ok FROM native_rehearsal_responses WHERE rehearsal_id = $1 AND user_id = $2',
-      [rehearsalId, userId]
-    );
-    if (!onIt) return null;
-  }
+  // The roster rule (roster.js): an admin of the project sees any rehearsal of
+  // it, anyone else only the ones they are on — and a row left behind by
+  // someone who has since left the project is not being on it.
+  const viewer = await viewerOf(db, rehearsal, userId);
+  if (!viewer) return null;
 
   const userResult = await db.get(
     'SELECT timezone FROM native_users WHERE id = $1',
@@ -305,10 +244,7 @@ export async function getRehearsalById(rehearsalId, userId) {
   );
   const userTimezone = userResult?.timezone || DEFAULT_TIMEZONE;
 
-  const own = await db.get(
-    'SELECT response FROM native_rehearsal_responses WHERE rehearsal_id = $1 AND user_id = $2',
-    [rehearsalId, userId]
-  );
+  const own = viewer.place;
 
   const startsAtISO = timestampToISO(rehearsal.starts_at);
   const endsAtISO = timestampToISO(rehearsal.ends_at);
@@ -345,6 +281,10 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
   logger.debug(`[createRehearsal] rehearsalData:`, JSON.stringify(rehearsalData, null, 2));
 
   const { title, description, date, startTime, endTime, startsAt, endsAt, location, participant_ids } = rehearsalData;
+
+  // Everyone named must be an active member of this project, checked before
+  // anything is written; a list with anyone else is refused whole (roster.js).
+  const participantIds = await checkParticipants(db, projectId, participant_ids);
 
   let startsAtISO, endsAtISO;
 
@@ -398,18 +338,9 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
 
   logger.debug(`[createRehearsal] Rehearsal created with ID: ${newRehearsal.id}`);
 
-  // Add participant invitations with 'no' status (invited but not responded)
-  if (participant_ids && participant_ids.length > 0) {
-    logger.debug(`[createRehearsal] Adding ${participant_ids.length} RSVP records...`);
-    for (const participantId of participant_ids) {
-      await db.run(
-        'INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW())',
-        [newRehearsal.id, participantId, 'no']
-      );
-    }
-    logger.debug(`[createRehearsal] RSVP records added successfully`);
-  } else {
-    logger.debug(`[createRehearsal] No participant_ids provided - skipping RSVP records`);
+  // Everyone named is invited and has not seen it yet ('no').
+  if (participantIds && participantIds.length > 0) {
+    await settleRoster(db, newRehearsal.id, participantIds);
   }
 
   // Book slots in user availability for selected participants
@@ -451,6 +382,9 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
  */
 export async function updateRehearsal(rehearsalId, projectId, updateData) {
   const { title, description, date, startTime, endTime, startsAt, endsAt, location, participant_ids } = updateData;
+
+  // Checked before anything is written. undefined keeps the roster, [] clears it.
+  const participantIds = await checkParticipants(db, projectId, participant_ids);
 
   let startsAtISO, endsAtISO;
 
@@ -510,36 +444,15 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
     await db.run(`DELETE FROM native_push_reminders WHERE rehearsal_id = $1`, [rehearsalId]);
   }
 
-  // Participants first, slots second. bookRehearsalSlots reads the roster out
-  // of native_rehearsal_responses, so doing it the other way round books the
+  // Participants first, slots second. bookRehearsalSlots reads the roster
+  // (roster.js), so doing it the other way round books the
   // people who *were* on the rehearsal: someone added by this edit gets no
   // busy slot at all, and someone removed keeps one.
-  if (participant_ids !== undefined) {
-    const ids = participant_ids.map(Number).filter((id) => Number.isInteger(id));
-
-    // Drop anyone no longer on the rehearsal, keep the rest as they are.
-    if (ids.length > 0) {
-      const placeholders = ids.map((_, i) => `$${i + 2}`).join(', ');
-      await db.run(
-        `DELETE FROM native_rehearsal_responses
-         WHERE rehearsal_id = $1 AND user_id NOT IN (${placeholders})`,
-        [rehearsalId, ...ids]
-      );
-    } else {
-      await db.run('DELETE FROM native_rehearsal_responses WHERE rehearsal_id = $1', [rehearsalId]);
-    }
-
-    // Newcomers are invited-but-unseen, exactly as on creation. Re-inserting
-    // everyone as 'yes' used to mark the whole cast as having seen a rehearsal
-    // the moment it changed, which is the one time they have not.
-    for (const userId of ids) {
-      await db.run(
-        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
-         VALUES ($1, $2, 'no', NOW(), NOW())
-         ON CONFLICT (rehearsal_id, user_id) DO NOTHING`,
-        [rehearsalId, userId]
-      );
-    }
+  // Those who stay keep their answers; newcomers are invited-but-unseen, exactly
+  // as on creation. Re-inserting everyone as 'yes' used to mark the whole cast
+  // as having seen a rehearsal the moment it changed, the one time they have not.
+  if (participantIds !== undefined) {
+    await settleRoster(db, rehearsalId, participantIds);
   }
 
   // Rebuild the busy slots from the roster we just settled
@@ -577,7 +490,7 @@ export async function deleteRehearsal(rehearsalId) {
 
   // Delete RSVP responses
   logger.debug(`[deleteRehearsal] Step 2: Deleting RSVP responses...`);
-  await db.run('DELETE FROM native_rehearsal_responses WHERE rehearsal_id = $1', [rehearsalId]);
+  await clearRoster(db, rehearsalId);
 
   // Delete rehearsal
   logger.debug(`[deleteRehearsal] Step 3: Deleting rehearsal record...`);

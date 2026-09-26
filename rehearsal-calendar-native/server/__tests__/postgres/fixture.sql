@@ -28,7 +28,7 @@ CREATE TABLE native_rehearsals (
 CREATE TABLE native_rehearsal_responses (
   id SERIAL PRIMARY KEY, rehearsal_id INTEGER REFERENCES native_rehearsals(id) ON DELETE CASCADE,
   user_id INTEGER REFERENCES native_users(id) ON DELETE CASCADE,
-  response TEXT NOT NULL CHECK(response IN ('yes', 'no')),
+  response TEXT NOT NULL CHECK(response IN ('yes', 'no')), notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(rehearsal_id, user_id)
 );

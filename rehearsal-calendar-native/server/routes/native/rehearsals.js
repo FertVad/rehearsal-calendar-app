@@ -20,6 +20,7 @@ import {
   getUserResponse,
 } from '../../services/rehearsals/rsvpService.js';
 import { fullName } from '../../utils/names.js';
+import { rosterOf, viewerOf, RosterRefused } from '../../services/rehearsals/roster.js';
 import {
   notifyRehearsalCreated,
   notifyRehearsalUpdated,
@@ -99,16 +100,12 @@ router.post('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res)
 
     // Tell the people who are on this rehearsal, not the whole project.
     //
-    // The roster is native_rehearsal_responses, and the app only ever shows a
-    // rehearsal to someone who has a row there. Notifying everyone announced
-    // rehearsals that never appeared in the recipient's calendar and could not
-    // be opened from the notification either.
+    // The app only ever shows a rehearsal to the people on it (roster.js).
+    // Notifying everyone announced rehearsals that never appeared in the
+    // recipient's calendar and could not be opened from the notification either.
     try {
       const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
-      const members = await db.all(
-        'SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?',
-        [rehearsal.id]
-      );
+      const members = await rosterOf(db, rehearsal.id);
 
       // Everyone on it except whoever scheduled it — they were there. This used
       // to be done inside the notifier, against a created_by the service did
@@ -122,6 +119,7 @@ router.post('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res)
 
     res.status(201).json({ rehearsal });
   } catch (error) {
+    if (error instanceof RosterRefused) return res.status(error.status).json(error.body);
     console.error('Error creating rehearsal:', error);
     if (error.message === 'Invalid date format' || error.message.includes('are required')) {
       return res.status(400).json({ error: error.message });
@@ -157,10 +155,7 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(asyn
     // and anyone dropped from it is not.
     try {
       const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
-      const members = await db.all(
-        'SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?',
-        [updatedRehearsal.id]
-      );
+      const members = await rosterOf(db, updatedRehearsal.id);
 
       // What actually changed, not what the request happened to carry. The app
       // sends the whole form on save, so listing every field that arrived meant
@@ -187,6 +182,7 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(asyn
 
     res.json({ rehearsal: updatedRehearsal });
   } catch (error) {
+    if (error instanceof RosterRefused) return res.status(error.status).json(error.body);
     console.error('Error updating rehearsal:', error);
     if (error.message === 'Invalid date format' || error.message.includes('are required')) {
       return res.status(400).json({ error: error.message });
@@ -217,10 +213,7 @@ router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(a
 
     // The roster, read BEFORE deletion — those rows go with the rehearsal.
     const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
-    const members = await db.all(
-      'SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?',
-      [rehearsal.id]
-    );
+    const members = await rosterOf(db, rehearsal.id);
 
     await deleteRehearsal(rehearsalId);
 
@@ -257,14 +250,14 @@ router.post('/:rehearsalId/respond', requireAuth, asyncHandler(async (req, res) 
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    // Check if user is a member
-    const membership = await checkUserMembership(rehearsal.project_id, userId);
-
-    if (!membership) {
-      return res.status(403).json({ error: 'Access denied' });
+    // Someone who may not see it gets the same answer as for one that does not
+    // exist. Seeing is not enough to answer: an admin not on it is refused by
+    // the service, which never puts anyone on a rehearsal (roster.js).
+    if (!(await viewerOf(db, rehearsal, userId))) {
+      return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    const stats = await respondToRehearsal(rehearsalId, userId, response, notes, rehearsal.project_id);
+    const stats = await respondToRehearsal(rehearsalId, userId, response, notes);
 
     // Send push notifications to admins when member responds
     if (response === 'yes') {
@@ -289,10 +282,8 @@ router.post('/:rehearsalId/respond', requireAuth, asyncHandler(async (req, res) 
 
     res.json(stats);
   } catch (error) {
+    if (error instanceof RosterRefused) return res.status(error.status).json(error.body);
     console.error('Error responding to rehearsal:', error);
-    if (error.message === 'Invalid response value. Must be "yes" or null.') {
-      return res.status(400).json({ error: error.message });
-    }
     res.status(500).json({ error: 'Failed to update response' });
   }
 }));
@@ -310,11 +301,10 @@ router.get('/:rehearsalId/responses', requireAuth, asyncHandler(async (req, res)
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    // Check if user is a member
-    const membership = await checkUserMembership(rehearsal.project_id, userId);
-
-    if (!membership) {
-      return res.status(403).json({ error: 'Access denied' });
+    // Visible to whoever may see the rehearsal itself, and to nobody else — the
+    // cast of a rehearsal is not for project members who are not on it.
+    if (!(await viewerOf(db, rehearsal, userId))) {
+      return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
     const result = await getRehearsalResponses(rehearsalId);
@@ -363,11 +353,10 @@ router.get('/:rehearsalId/my-response', requireAuth, asyncHandler(async (req, re
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    // Check if user is a member
-    const membership = await checkUserMembership(rehearsal.project_id, userId);
-
-    if (!membership) {
-      return res.status(403).json({ error: 'Access denied' });
+    // Visible to whoever may see the rehearsal itself, and to nobody else — the
+    // cast of a rehearsal is not for project members who are not on it.
+    if (!(await viewerOf(db, rehearsal, userId))) {
+      return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
     const response = await getUserResponse(rehearsalId, userId);

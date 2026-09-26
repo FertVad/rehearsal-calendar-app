@@ -25,10 +25,11 @@ const modes = {
   '--r3-email-only': ['controls', 'R3_EMAIL'],
   '--r3-auth-only': ['controls', 'R3_AUTH'],
   '--r3-only': ['controls', 'R3_EMAIL', 'R3_AUTH'],
-  '--security-only': ['controls', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH'],
+  '--r4-only': ['controls', 'D01'],
+  '--security-only': ['controls', 'A02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH'],
 };
 assert.ok(args.length === 0 || (args.length === 1 && Object.hasOwn(modes, args[0])),
-  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only|--b04-only|--h04-only|--is02-only|--f05-only|--r2-foundation-only|--r2-schema-only|--r2-migrations-only|--r2-migrations-schema-only|--r3-email-only|--r3-auth-only|--r3-only|--security-only]');
+  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only|--b04-only|--h04-only|--is02-only|--f05-only|--r2-foundation-only|--r2-schema-only|--r2-migrations-only|--r2-migrations-schema-only|--r3-email-only|--r3-auth-only|--r3-only|--r4-only|--security-only]');
 const scenarios = modes[args[0]] || ['controls', 'B02', 'D01', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH'];
 const docker = process.env.R0_DOCKER_BIN || '/usr/local/bin/docker';
 const context = process.env.R0_DOCKER_CONTEXT || 'desktop-linux';
@@ -92,7 +93,7 @@ try {
   }
   console.log(args.length
     ? `${scenarios.slice(1).join('+')} REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.`
-    : 'R0 HARNESS PASS: controls and repaired A02/B03/B04/H04/IS02/R2 contracts passed; B02/D01 remain known failing application contracts, NOT fixes.');
+    : 'R0 HARNESS PASS: controls and repaired A02/B03/B04/D01/H04/IS02/R2 contracts passed; B02 remains a known failing application contract, NOT a fix.');
 } finally {
   if (container) {
     const label = cli('inspect', container, '--format', '{{index .Config.Labels "rehearsly.r0"}}');

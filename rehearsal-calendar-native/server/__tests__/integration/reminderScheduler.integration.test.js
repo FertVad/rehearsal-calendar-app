@@ -234,6 +234,33 @@ describe('Rehearsal reminders', () => {
       expect(notify24h.mock.calls[0][2]).not.toContain(bystanderId);
     });
 
+    // A row left behind by someone no longer in the project is not being on the
+    // rehearsal (roster.js); it used to keep the reminders coming.
+    it('leaves out someone who has left the project, whatever row they left behind', async () => {
+      const leftId = Number(testDb.run(
+        `INSERT INTO native_users (email, password_hash, first_name) VALUES (?, ?, ?)`,
+        [`left-${Date.now()}@test.com`, 'hash', 'Left']
+      ).lastInsertId);
+      addRehearsal(20 * HOUR, { roster: [memberId, leftId] });
+
+      await checkUpcomingRehearsals();
+
+      expect(notify24h.mock.calls[0][2]).toEqual([memberId]);
+    });
+
+    it('does not count a rehearsal whose only row is someone who has left', async () => {
+      const leftId = Number(testDb.run(
+        `INSERT INTO native_users (email, password_hash, first_name) VALUES (?, ?, ?)`,
+        [`gone-${Date.now()}@test.com`, 'hash', 'Gone']
+      ).lastInsertId);
+      addRehearsal(20 * HOUR, { roster: [leftId] });
+
+      const result = await checkUpcomingRehearsals();
+
+      expect(notify24h).not.toHaveBeenCalled();
+      expect(result.found['24h']).toBe(0);
+    });
+
     it('sends nothing for a rehearsal with nobody on it', async () => {
       addRehearsal(20 * HOUR, { roster: [] });
 

@@ -5,7 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../../navigation';
 import { Project } from '../../../shared/types';
 import { parseTimeString } from '../../../shared/utils/time';
-import { rehearsalsAPI, projectsAPI } from '../../../shared/services/api';
+import { rehearsalsAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
@@ -39,7 +39,7 @@ export function useAddRehearsalForm({
   routeParams,
 }: UseAddRehearsalFormProps) {
   const navigation = useNavigation<NavigationType>();
-  const { language } = useI18n();
+  const { language, t } = useI18n();
 
   // Extract route params
   const { projectId: prefilledProjectId, prefilledDate, prefilledTime, prefilledEndTime } = routeParams || {};
@@ -138,16 +138,11 @@ export function useAddRehearsalForm({
       setIsEditMode(true);
 
       try {
-        // Get rehearsal data
-        const rehearsalResponse = await rehearsalsAPI.getBatch([String(projectId)]);
-        const rehearsals = rehearsalResponse.data.rehearsals || [];
-        const rehearsal = rehearsals.find((r: any) => r.id === rehearsalId);
-
-        if (!rehearsal) {
-          Alert.alert('Error', 'Rehearsal not found');
-          navigation.goBack();
-          return;
-        }
+        // By id, not from the calendar batch: the batch is the caller's own
+        // calendar, so an admin who was not on a rehearsal could not open it
+        // for editing at all (review D04).
+        const rehearsalResponse = await rehearsalsAPI.getById(String(rehearsalId));
+        const rehearsal = rehearsalResponse.data.rehearsal;
 
         // Prefill form fields
         const startsAt = new Date(rehearsal.startsAt);
@@ -159,25 +154,20 @@ export function useAddRehearsalForm({
         setTitle(rehearsal.title || '');
         setLocation(rehearsal.location || '');
 
-        // Load participants - include all invited members regardless of response status
-        const responsesResponse = await rehearsalsAPI.getResponses(rehearsalId);
-        const responses = responsesResponse.data.responses || [];
-
-        // Get current project members to filter out removed members
-        const membersResponse = await projectsAPI.getMembers(projectId);
-        const currentMembers = membersResponse.data.members || [];
-        const currentMemberIds = new Set(currentMembers.map((m: any) => String(m.userId)));
-
-        // Filter participants to only include those still in the project
-        const participantIds = responses
-          .map((r: any) => String(r.userId))
-          .filter((userId: string) => currentMemberIds.has(userId));
-
-        setSelectedMemberIds(participantIds);
-
-      } catch (error) {
+        // The roster as the server reads it: the people on the rehearsal who are
+        // still in the project, whatever their answer — 'no' means invited and
+        // not yet seen, and leaving them unselected would drop them on save.
+        const responsesResponse = await rehearsalsAPI.getResponses(String(rehearsalId));
+        const participants = responsesResponse.data.allParticipants || [];
+        setSelectedMemberIds(participants.map((p: any) => String(p.userId)));
+      } catch (error: any) {
+        // An edit sends the whole participant list, and an empty one clears the
+        // call. A form left open over a failed load could save exactly that
+        // (review DF03), so a form that could not load closes.
         console.error('Failed to load rehearsal:', error);
-        Alert.alert('Error', 'Failed to load rehearsal data');
+        const gone = error?.response?.status === 404;
+        Alert.alert(t.common.error, gone ? t.rehearsals.notFound : t.rehearsals.loadRehearsalError);
+        navigation.goBack();
       } finally {
         setLoadingRehearsal(false);
       }

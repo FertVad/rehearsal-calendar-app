@@ -188,13 +188,37 @@ if (scenario === 'controls') {
   result = { outcome: 'KNOWN_DEFECT_REPRODUCED', status: response.status, orphanProjects: projects,
     expectation: 'Failed project creation must roll back its first write' };
 } else if (scenario === 'D01') {
+  // R4 (roster.js): a participant outside the project is refused before any
+  // write; an answer never puts anyone on a rehearsal; the cast is not for
+  // project members who are not on it; a leftover row puts nobody anywhere.
   assert.equal(await count('native_project_members', 'user_id = 3'), 0);
-  const response = await http('/api/native/projects/1/rehearsals', { method: 'POST', body: rehearsal(3) });
-  assert.equal(response.status, 201);
-  assert.equal(await count('native_rehearsal_responses', 'user_id = 3'), 1);
-  assert.equal(await count('native_user_availability', 'user_id = 3'), 1);
-  result = { outcome: 'KNOWN_DEFECT_REPRODUCED', status: response.status, outsiderInvitations: 1, outsiderBusyRows: 1,
-    expectation: 'Reject a participant outside the project before any write' };
+  const before = await count('native_rehearsals');
+  const refused = await http('/api/native/projects/1/rehearsals', { method: 'POST', body: rehearsal(3) });
+  assert.equal(refused.status, 400);
+  assert.equal(refused.data.code, 'NOT_PROJECT_MEMBERS');
+  assert.deepEqual(refused.data.userIds, [3]);
+  assert.equal(await count('native_rehearsals'), before, 'D01: nothing is written before the refusal');
+  assert.equal(await count('native_rehearsal_responses', 'user_id = 3'), 0);
+  assert.equal(await count('native_user_availability', 'user_id = 3'), 0);
+  // The owner schedules one for themself only: the member is not on it.
+  const created = await http('/api/native/projects/1/rehearsals', { method: 'POST', body: rehearsal(1) });
+  assert.equal(created.status, 201);
+  const id = created.data.rehearsal.id;
+  const answered = await http(`/api/native/rehearsals/${id}/respond`, { user: 2, method: 'POST', body: { response: 'yes' } });
+  assert.equal(answered.status, 404, 'D02: a member not on it cannot answer it');
+  assert.equal(await count('native_rehearsal_responses', 'user_id = 2'), 0);
+  assert.equal((await http(`/api/native/rehearsals/${id}/responses`, { user: 2 })).status, 404);
+  const own = await http(`/api/native/rehearsals/${id}/respond`, { user: 1, method: 'POST', body: { response: 'yes' } });
+  assert.equal(own.status, 200);
+  assert.deepEqual(own.data, { confirmed: 1, invited: 1 });
+  await control.query("INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response) VALUES ($1, 3, 'no')", [id]);
+  const cast = await http(`/api/native/rehearsals/${id}/responses`, { user: 1 });
+  assert.equal(cast.status, 200);
+  assert.deepEqual(cast.data.allParticipants.map((p) => Number(p.userId)), [1]);
+  assert.deepEqual(cast.data.stats, { confirmed: 1, invited: 1 });
+  result = { outcome: 'PASS', contracts: ['outsider refused before any write (D01)',
+    'member off the roster cannot answer it or read its cast (D02)', 'owner on it answers',
+    'leftover row of a non-member is not on the roster'], externalConnections: deniedConnections };
 } else if (scenario === 'B03') {
   const { probeB03 } = await import('./b03.mjs');
   result = await probeB03({ control, db, http, listenApp, allowedPorts });
