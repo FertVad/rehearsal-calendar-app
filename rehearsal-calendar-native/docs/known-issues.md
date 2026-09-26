@@ -176,6 +176,36 @@ Two of the fixed-since claims below were also settled by hand: the schema file
 now creates `native_notifications` and every other live table, and
 `character_name` is in it.
 
+### Below the bar — left by decision (2026-09-26)
+
+These are audit findings from R4 to R9. Each one needs an unusual coincidence to
+happen, and a retry, a refresh or a manual fix undoes the damage. The owner
+decided the app should work without failures, but without bank-grade rigour.
+These findings fall below that bar. The bar and the full triage are in
+`audit/HANDOFF_CLAUDE.md` §4 and `audit/TRIAGE_R4_R9.md`. The IDs are the
+audit's.
+
+| ID | What the user sees | Why it is left |
+|---|---|---|
+| AC03 | A profile answer still in flight at sign-out can bring the previous account's profile back for a moment | Sign-out has to land during that request, and a restart clears it |
+| C02 | A save that carries no end time empties that day and reports success | Only a hand-made request sends one, and it harms only the sender |
+| C03 | Two saves of the same empty day at the same instant keep both sets | Two devices have to save within a moment; the result is visible and editable |
+| DP04 | A planner suggestion for today does not expire while the screen stays open for hours | Reopening the screen recalculates it |
+| DD02 | A rehearsal past midnight is listed under its start day only | That is how the list is organised |
+| EI04 | Moving a recurring event while the network drops mid-sync can leave neither time busy | The next sync writes the new time |
+| EX02 | When "remove all exported" fails part-way, the events it could not remove stay in the phone's calendar | They can be deleted by hand |
+| EX04 | A one-off failure to read the calendar can create a duplicate event | Rare, and the duplicate can be deleted by hand |
+| EO04 | Turning sync off during the seconds a manual sync runs can turn it back on | It takes that exact window, and turning it off again works |
+| HP05 | Onboarding shows the calendar connected when the phone's storage refused the setting | This needs the phone's own storage to fail |
+| G01 | Two accounts registering the same phone for push within the same milliseconds can both keep it | Since R3, logout revokes the session and registration checks it under a lock |
+| GR05 | A rehearsal moved in the same second the reminder run reads it can lose its new reminder | It has to happen within that second |
+| NI01 | The inbox shows the latest 50 notifications | A limit, not a failure |
+| NI04 | A late answer can bring back an old unread count until the next refresh | The next refresh corrects it |
+| NI06 | `{ids: []}` marks the caller's whole inbox read | Only a hand-made request sends it, and it affects only the caller's own inbox |
+| G02 | Expo receipts are not read; `sent` means Expo accepted the message | Documented under The Notification Inbox in CLAUDE.md |
+| D03 (retry) | Retrying a rehearsal save after the answer was lost can create a duplicate | The duplicate can be deleted; idempotency keys are not worth it at this scale |
+| IC01 | Android App Links carry a placeholder signature | Android is not released; add the signing fingerprint when it is |
+
 ---
 
 ## Candidates from the 2026-09-01 sweep — **not verified**
