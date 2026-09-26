@@ -541,11 +541,11 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
     const moveAsked = await call('POST', '/api/auth/me/email/change',
       { newEmail: 'moved-to@fixture.invalid', currentPassword: PASSWORD }, mover.body.accessToken);
     assert.equal(moveAsked.status, 202);
-    const moveCode = codeFor('moved-to@fixture.invalid');
+    const moveCodes = { code: codeFor('moved-to@fixture.invalid'), currentCode: codeFor('mover@fixture.invalid') };
     await control.query('BEGIN');
     await control.query('SELECT id FROM r0_fixture.native_users WHERE id = $1 FOR UPDATE', [moverId]);
     const moves = await barrier([0, 1].map(() =>
-      call('POST', '/api/auth/me/email/change/confirm', { code: moveCode }, mover.body.accessToken)));
+      call('POST', '/api/auth/me/email/change/confirm', moveCodes, mover.body.accessToken)));
     assert.deepEqual(moves.map((response) => response.status).sort(), [200, 401], 'one change must move the account once');
     assert.equal((await control.query('SELECT email FROM r0_fixture.native_users WHERE id = $1', [moverId])).rows[0].email,
       'moved-to@fixture.invalid');
@@ -567,11 +567,11 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
     const racer = await post('/api/auth/login', { email: 'racer@fixture.invalid', password: PASSWORD });
     assert.equal((await call('POST', '/api/auth/me/email/change',
       { newEmail: 'contested-address@fixture.invalid', currentPassword: PASSWORD }, racer.body.accessToken)).status, 202);
-    const raceCode = codeFor('contested-address@fixture.invalid');
+    const raceCodes = { code: codeFor('contested-address@fixture.invalid'), currentCode: codeFor('racer@fixture.invalid') };
     await control.query('BEGIN');
     await control.query('LOCK TABLE r0_fixture.native_auth_providers IN SHARE MODE');
     const [taken, lost] = await inOrder([() => register('contested-address@fixture.invalid'),
-      () => call('POST', '/api/auth/me/email/change/confirm', { code: raceCode }, racer.body.accessToken)]);
+      () => call('POST', '/api/auth/me/email/change/confirm', raceCodes, racer.body.accessToken)]);
     assert.equal(taken.status, 201);
     assert.equal(lost.status, 409, 'a change to an address registered meanwhile must be refused');
     assert.equal(lost.body.code, 'EMAIL_TAKEN');

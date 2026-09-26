@@ -82,9 +82,13 @@ export async function issueCode(tx, { userId, purpose, email, now = new Date() }
  *
  * The row is read FOR UPDATE, so of two concurrent checks of one code the
  * second waits, then no longer sees a live row: exactly one succeeds.
- * @returns {Promise<{ ok: true, email: string } | { ok: false, reason: string }>}
+ *
+ * With consume: false a right code stays live, for a caller that needs two
+ * codes right before spending either (an email change): it voids them itself
+ * once both have passed, and a mistake in one leaves the other usable.
+ * @returns {Promise<{ ok: true, email: string, id: number } | { ok: false, reason: string }>}
  */
-export async function checkCode(tx, { userId, purpose, email, code, now = new Date() }) {
+export async function checkCode(tx, { userId, purpose, email, code, now = new Date(), consume = true }) {
   const live = await tx.get(
     `SELECT id, email, code_hash, attempts, expires_at FROM native_email_codes
      WHERE user_id = $1 AND purpose = $2 AND consumed_at IS NULL FOR UPDATE`,
@@ -111,8 +115,10 @@ export async function checkCode(tx, { userId, purpose, email, code, now = new Da
     }
     return { ok: false, reason: burned ? 'CODE_LOCKED' : 'CODE_INVALID' };
   }
-  await tx.run('UPDATE native_email_codes SET consumed_at = $2::timestamptz WHERE id = $1', [live.id, now.toISOString()]);
-  return { ok: true, email: live.email };
+  if (consume) {
+    await tx.run('UPDATE native_email_codes SET consumed_at = $2::timestamptz WHERE id = $1', [live.id, now.toISOString()]);
+  }
+  return { ok: true, email: live.email, id: live.id };
 }
 
 /**

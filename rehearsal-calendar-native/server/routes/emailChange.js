@@ -3,10 +3,12 @@
  *
  * PUT /me used to drop a new email while the app said "saved"; it now refuses
  * one and points here. A session is not enough to move an account: a stolen
- * token and the thief's own mailbox would take it. So the request needs the
- * current password, or — for an account without one (Google/Apple only) — a
- * code sent to the current address, and the change takes effect only with the
- * code sent to the new address, which proves that mailbox.
+ * token and the thief's own mailbox would take it. Every change needs a code
+ * sent to the current address — the one thing a session cannot give itself —
+ * and the code sent to the new address, which proves that mailbox; with a
+ * password, the password too. A password alone was not enough: a session sets
+ * a first password in the profile, and can unlink Google or Apple beside it
+ * (review R3-19; the owner chose this rule over restricting passwords).
  *
  * The address waiting for confirmation is the one the live 'change' code went
  * to: one live code per purpose, so a new request replaces the target.
@@ -47,8 +49,9 @@ router.post('/me/email/change', requireAuth, asyncHandler(async (req, res) => {
       if (newEmail === user.email) {
         return refused(400, { error: 'This is already your address', code: 'EMAIL_UNCHANGED', field: 'newEmail' });
       }
-      // The password proves the account holder; without one, a code to the
-      // current address does. A code to the new address proves only that mailbox.
+      // The code to the current address proves the account holder's mailbox; a
+      // password, when there is one, is asked for as well. A code to the new
+      // address proves only that mailbox.
       if (user.password_hash) {
         const proof = req.body?.currentPassword;
         if (typeof proof !== 'string' || !(await bcrypt.compare(proof, user.password_hash))) {
@@ -57,8 +60,7 @@ router.post('/me/email/change', requireAuth, asyncHandler(async (req, res) => {
       }
       if (await tx.get('SELECT id FROM native_users WHERE email = $1', [newEmail])) return refused(409, EMAIL_TAKEN);
       const change = await issueCode(tx, { userId: req.userId, purpose: 'change', email: newEmail });
-      const confirm = user.password_hash ? null
-        : await issueCode(tx, { userId: req.userId, purpose: 'confirm', email: user.email });
+      const confirm = await issueCode(tx, { userId: req.userId, purpose: 'confirm', email: user.email });
       return { status: 202, user, change, confirm };
     });
   } catch (error) {
@@ -69,13 +71,13 @@ router.post('/me/email/change', requireAuth, asyncHandler(async (req, res) => {
   if (outcome.status !== 202) return res.status(outcome.status).json(outcome.body);
 
   const { user, change, confirm } = outcome;
-  const delivery = { newAddress: await deliverCode({ db, transport, codeId: change.id, to: newEmail, code: change.code,
-    purpose: 'change', locale: user.locale }) };
-  if (confirm) {
-    delivery.currentAddress = await deliverCode({ db, transport, codeId: confirm.id, to: user.email, code: confirm.code,
-      purpose: 'confirm', locale: user.locale });
-  }
-  res.status(202).json({ status: 'codes_sent', currentCodeRequired: Boolean(confirm), delivery });
+  const delivery = {
+    newAddress: await deliverCode({ db, transport, codeId: change.id, to: newEmail, code: change.code,
+      purpose: 'change', locale: user.locale }),
+    currentAddress: await deliverCode({ db, transport, codeId: confirm.id, to: user.email, code: confirm.code,
+      purpose: 'confirm', locale: user.locale }),
+  };
+  res.status(202).json({ status: 'codes_sent', delivery });
 }));
 
 router.post('/me/email/change/confirm', requireAuth,
@@ -92,15 +94,15 @@ router.post('/me/email/change/confirm', requireAuth,
           [req.userId]
         );
         if (!pending) return refused(400, { error: 'The code is not valid', code: 'CODE_MISSING', field: 'code' });
-        // Without a password the current address is proven first, so a wrong
-        // current code leaves the new-address code unspent.
-        if (!user.password_hash) {
-          const current = await checkCode(tx, { userId: req.userId, purpose: 'confirm', email: user.email,
-            code: req.body?.currentCode, now });
-          if (!current.ok) return refused(400, { error: 'The code is not valid', code: current.reason, field: 'currentCode' });
-        }
+        // Both codes are checked before either is spent: a wrong one counts its
+        // attempt and leaves the right one live, so the person retries with the
+        // pair instead of asking for new codes (review R3-20). voidCodes below
+        // spends both once the change is made.
+        const current = await checkCode(tx, { userId: req.userId, purpose: 'confirm', email: user.email,
+          code: req.body?.currentCode, now, consume: false });
         const checked = await checkCode(tx, { userId: req.userId, purpose: 'change', email: pending.email,
-          code: req.body?.code, now });
+          code: req.body?.code, now, consume: false });
+        if (!current.ok) return refused(400, { error: 'The code is not valid', code: current.reason, field: 'currentCode' });
         if (!checked.ok) return refused(400, { error: 'The code is not valid', code: checked.reason, field: 'code' });
         if (await tx.get('SELECT id FROM native_users WHERE email = $1 AND id <> $2', [checked.email, req.userId])) {
           return refused(409, EMAIL_TAKEN);
@@ -128,11 +130,15 @@ router.post('/me/email/change/confirm', requireAuth,
     }
     if (outcome.status !== 200) return res.status(outcome.status).json(outcome.body);
 
-    // The old address hears about it; the change stands whatever the provider says.
+    // The old address hears about it; the change stands whatever the provider
+    // says. No answer is not a refusal: the provider may still send it.
     const transport = emailTransport();
     const notice = await transport.send(addressChangedMessage({ to: outcome.oldEmail, newAddress: outcome.user.email,
       locale: outcome.locale }));
-    if (!notice.ok) logger.warn(`[EmailChange] Notice to the old address not sent: ${notice.reason}`);
+    if (!notice.ok) {
+      const result = ['TIMEOUT', 'NETWORK'].includes(notice.reason) ? 'unknown' : 'failed';
+      logger.warn(`[EmailChange] Notice to the old address of user ${outcome.user.id}: ${result} (${notice.reason})`);
+    }
 
     const { accessToken, refreshToken } = generateTokens(outcome.user.id, outcome.user.token_version);
     res.json({ user: serializeUser(outcome.user), accessToken, refreshToken });

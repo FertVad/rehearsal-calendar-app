@@ -2,11 +2,12 @@
  * Changing the sign-in address needs more than a session (R3: HP01).
  *
  * Before: PUT /me dropped a new email while the app reported it saved, and
- * nothing else could change it. Now the request proves the account holder —
- * the current password, or for an account without one a code sent to the
- * current address — and the change happens only with the code sent to the new
- * address. The address, its proof and its sign-in method row change together,
- * every other session and live code goes, and the old address is told.
+ * nothing else could change it. Now every change needs a code sent to the
+ * current address and the code sent to the new one, and the password when the
+ * account has one. A password alone is not proof: a session sets a first one
+ * in the profile and can unlink Google or Apple beside it (review R3-19). The
+ * address, its proof and its sign-in method row change together, every other
+ * session and live code goes, and the old address is told.
  *
  * Two confirmations at once and a registration of the new address racing the
  * change need PostgreSQL and live in the R3_AUTH scenario.
@@ -31,6 +32,11 @@ beforeAll(async () => {
   jest.unstable_mockModule('../../database/db.js', () => ({
     default: db, isPostgres: false, initDatabase: async () => db, testConnection: async () => true,
   }));
+  // A Google sign-in is the claims a successful verification yields.
+  jest.unstable_mockModule('../../utils/oauthVerification.js', () => ({
+    verifyGoogleToken: async (idToken) => JSON.parse(idToken),
+    verifyAppleToken: async (idToken) => JSON.parse(idToken),
+  }));
   const express = (await import('express')).default;
   request = (await import('supertest')).default;
   bcrypt = (await import('bcrypt')).default;
@@ -45,8 +51,12 @@ beforeAll(async () => {
 
 afterAll(() => closeIntegrationDb());
 
+const realFetch = globalThis.fetch;
 beforeEach(() => {
   process.env.EMAIL_TRANSPORT = 'capture-for-tests';
+  delete process.env.RESEND_API_KEY;
+  delete process.env.EMAIL_FROM;
+  globalThis.fetch = realFetch;
   capturedEmails.length = 0;
   db.run('DELETE FROM native_users');
 });
@@ -67,6 +77,9 @@ const codeFor = (email) => capturedEmails.filter((mail) => mail.to === email).at
 const emailOf = (id) => db.get('SELECT email FROM native_users WHERE id = ?', [id]).email;
 const codes = (id, purpose) => db.all('SELECT email, attempts, consumed_at FROM native_email_codes WHERE user_id = ? AND purpose = ?', [id, purpose]);
 const wrong = (code) => (code === '000000' ? '000001' : '000000');
+const pair = () => ({ code: codeFor(NEW), currentCode: codeFor(OLD) });
+const google = () => request(app).post('/api/auth/google').send({ idToken: JSON.stringify({
+  providerUserId: 'google-holder', email: OLD, emailVerified: true, firstName: 'Holder' }) });
 
 describe('POST /auth/me/email/change', () => {
   it('refuses a malformed or unchanged address', async () => {
@@ -102,13 +115,13 @@ describe('POST /auth/me/email/change', () => {
     expect(response.body.code).toBe('EMAIL_TAKEN');
   });
 
-  it('sends a code to the new address, and waits a minute before another', async () => {
+  it('sends codes to both addresses, and waits a minute before more', async () => {
     const id = await holder();
     const { accessToken } = tokenFor(id);
     const response = await ask(accessToken, { newEmail: NEW, currentPassword: PASSWORD });
     expect(response.status).toBe(202);
-    expect(response.body).toEqual({ status: 'codes_sent', currentCodeRequired: false, delivery: { newAddress: 'sent' } });
-    expect(capturedEmails.map((mail) => mail.to)).toEqual([NEW]);
+    expect(response.body).toEqual({ status: 'codes_sent', delivery: { newAddress: 'sent', currentAddress: 'sent' } });
+    expect(capturedEmails.map((mail) => mail.to).sort()).toEqual([NEW, OLD]);
     expect(capturedEmails[0].subject).toMatch(/Rehearsly/);
     expect(emailOf(id)).toBe(OLD);
     const again = await ask(accessToken, { newEmail: NEW, currentPassword: PASSWORD });
@@ -116,11 +129,11 @@ describe('POST /auth/me/email/change', () => {
     expect(again.body.code).toBe('RATE_LIMITED');
   });
 
-  it('asks an account without a password for a code to its current address too', async () => {
+  it('asks an account without a password for the two codes only', async () => {
     const id = await holder({ password: null });
     const response = await ask(tokenFor(id).accessToken, { newEmail: NEW });
     expect(response.status).toBe(202);
-    expect(response.body).toMatchObject({ currentCodeRequired: true, delivery: { newAddress: 'sent', currentAddress: 'sent' } });
+    expect(response.body.delivery).toEqual({ newAddress: 'sent', currentAddress: 'sent' });
     expect(capturedEmails.map((mail) => mail.to).sort()).toEqual([NEW, OLD]);
   });
 });
@@ -137,24 +150,36 @@ describe('POST /auth/me/email/change/confirm', () => {
     const id = await holder();
     const { accessToken } = tokenFor(id);
     await ask(accessToken, { newEmail: NEW, currentPassword: PASSWORD });
-    const response = await confirm(accessToken, { code: wrong(codeFor(NEW)) });
+    const response = await confirm(accessToken, { code: wrong(codeFor(NEW)), currentCode: codeFor(OLD) });
     expect(response.status).toBe(400);
     expect(response.body).toMatchObject({ code: 'CODE_INVALID', field: 'code' });
     expect(codes(id, 'change')[0].attempts).toBe(1);
     expect(emailOf(id)).toBe(OLD);
   });
 
-  it('without a password, a wrong current-address code leaves the new-address code unspent', async () => {
+  it('a wrong code in either place spends neither right one: the pair still works', async () => {
     const id = await holder({ password: null });
     const { accessToken } = tokenFor(id);
     await ask(accessToken, { newEmail: NEW });
-    const response = await confirm(accessToken, { code: codeFor(NEW), currentCode: wrong(codeFor(OLD)) });
-    expect(response.status).toBe(400);
-    expect(response.body).toMatchObject({ code: 'CODE_INVALID', field: 'currentCode' });
-    expect(codes(id, 'change')[0]).toMatchObject({ attempts: 0, consumed_at: null });
-    const both = await confirm(accessToken, { code: codeFor(NEW), currentCode: codeFor(OLD) });
+    const badCurrent = await confirm(accessToken, { code: codeFor(NEW), currentCode: wrong(codeFor(OLD)) });
+    expect(badCurrent.body).toMatchObject({ code: 'CODE_INVALID', field: 'currentCode' });
+    const badNew = await confirm(accessToken, { code: wrong(codeFor(NEW)), currentCode: codeFor(OLD) });
+    expect(badNew.body).toMatchObject({ code: 'CODE_INVALID', field: 'code' });
+    expect(codes(id, 'change')[0]).toMatchObject({ attempts: 1, consumed_at: null });
+    expect(codes(id, 'confirm')[0]).toMatchObject({ attempts: 1, consumed_at: null });
+    const both = await confirm(accessToken, pair());
     expect(both.status).toBe(200);
     expect(emailOf(id)).toBe(NEW);
+  });
+
+  it('needs the current-address code from an account with a password too', async () => {
+    const id = await holder();
+    const { accessToken } = tokenFor(id);
+    await ask(accessToken, { newEmail: NEW, currentPassword: PASSWORD });
+    const response = await confirm(accessToken, { code: codeFor(NEW) });
+    expect(response.status).toBe(400);
+    expect(response.body.field).toBe('currentCode');
+    expect(emailOf(id)).toBe(OLD);
   });
 
   it('moves the account: new address proven, other sessions and codes gone, old address told', async () => {
@@ -165,7 +190,7 @@ describe('POST /auth/me/email/change/confirm', () => {
     await request(app).post('/api/auth/password-reset/request').send({ email: OLD });
     const oldResetCode = codeFor(OLD);
     await ask(accessToken, { newEmail: NEW, currentPassword: PASSWORD });
-    const response = await confirm(accessToken, { code: codeFor(NEW) });
+    const response = await confirm(accessToken, pair());
     expect(response.status).toBe(200);
     expect(response.body.user).toMatchObject({ id, email: NEW });
     expect((await me(response.body.accessToken)).status).toBe(200);
@@ -176,7 +201,7 @@ describe('POST /auth/me/email/change/confirm', () => {
       .toEqual({ email: NEW, status: 'verified', verified_by: 'code' });
     expect(db.get("SELECT provider_email FROM native_auth_providers WHERE user_id = ? AND provider_type = 'email'", [id]).provider_email).toBe(NEW);
     expect(db.get('SELECT count(*) AS n FROM native_email_codes WHERE user_id = ? AND consumed_at IS NULL', [id]).n).toBe(0);
-    const notice = capturedEmails.find((mail) => mail.to === OLD && !/\b\d{6}\b/.test(mail.text));
+    const notice = capturedEmails.find((mail) => mail.to === OLD && !/\b\d{6}\b/.test(mail.subject));
     expect(notice.subject).toBe('Адрес для входа в Rehearsly изменён');
     expect(notice.text).toContain(NEW);
     for (const email of [OLD, NEW]) {
@@ -190,7 +215,7 @@ describe('POST /auth/me/email/change/confirm', () => {
     const { accessToken } = tokenFor(id);
     await ask(accessToken, { newEmail: NEW, currentPassword: PASSWORD });
     await holder({ email: NEW, password: null });
-    const response = await confirm(accessToken, { code: codeFor(NEW) });
+    const response = await confirm(accessToken, pair());
     expect(response.status).toBe(409);
     expect(response.body.code).toBe('EMAIL_TAKEN');
     expect(emailOf(id)).toBe(OLD);
@@ -201,7 +226,77 @@ describe('POST /auth/me/email/change/confirm', () => {
     const { accessToken } = tokenFor(id);
     await ask(accessToken, { newEmail: NEW, currentPassword: PASSWORD });
     db.run('UPDATE native_users SET token_version = token_version + 1 WHERE id = ?', [id]);
-    expect((await confirm(accessToken, { code: codeFor(NEW) })).status).toBe(401);
+    expect((await confirm(accessToken, pair())).status).toBe(401);
+    expect(emailOf(id)).toBe(OLD);
+  });
+
+  it('stands when the notice to the old address is refused', async () => {
+    const id = await holder();
+    const elsewhere = tokenFor(id);
+    const { accessToken } = tokenFor(id);
+    await ask(accessToken, { newEmail: NEW, currentPassword: PASSWORD });
+    const codesSent = pair();
+    Object.assign(process.env, { EMAIL_TRANSPORT: 'resend', RESEND_API_KEY: 'test-key-value', EMAIL_FROM: 'Rehearsly <no-reply@rehearsly.me>' });
+    globalThis.fetch = async () => ({ ok: false, status: 422, json: async () => ({}) });
+    const response = await confirm(accessToken, codesSent);
+    expect(response.status).toBe(200);
+    expect(emailOf(id)).toBe(NEW);
+    expect((await me(response.body.accessToken)).status).toBe(200);
+    expect((await me(elsewhere.accessToken)).status).toBe(401);
+  });
+
+  it("leaves the account's push devices in place", async () => {
+    const id = await holder();
+    const { accessToken } = tokenFor(id);
+    db.run(`INSERT INTO native_push_tokens (user_id, device_token, created_at, updated_at)
+      VALUES (?, 'ExponentPushToken[holder-phone]', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`, [id]);
+    await ask(accessToken, { newEmail: NEW, currentPassword: PASSWORD });
+    expect((await confirm(accessToken, pair())).status).toBe(200);
+    expect(db.get('SELECT count(*) AS n FROM native_push_tokens WHERE user_id = ?', [id]).n).toBe(1);
+  });
+});
+
+describe('a stolen session cannot move the account (review R3-19)', () => {
+  it('a first password it sets does not replace the code to the current address', async () => {
+    const signedIn = await google();
+    expect(signedIn.status).toBe(200);
+    const token = signedIn.body.accessToken;
+    const set = await request(app).put('/api/auth/me').set('Authorization', `Bearer ${token}`).send({ password: 'thief-password-1' });
+    expect(set.status).toBe(200);
+    const thief = set.body.accessToken;
+    expect((await ask(thief, { newEmail: NEW, currentPassword: 'thief-password-1' })).status).toBe(202);
+    const moved = await confirm(thief, { code: codeFor(NEW) });
+    expect(moved.status).toBe(400);
+    expect(moved.body.field).toBe('currentCode');
+    expect(emailOf(signedIn.body.user.id)).toBe(OLD);
+  });
+
+  it('nor does unlinking Google beside that password', async () => {
+    const signedIn = await google();
+    const set = await request(app).put('/api/auth/me').set('Authorization', `Bearer ${signedIn.body.accessToken}`)
+      .send({ password: 'thief-password-1' });
+    const thief = set.body.accessToken;
+    const unlinked = await request(app).delete('/api/auth/me/providers/google').set('Authorization', `Bearer ${thief}`);
+    expect(unlinked.status).toBe(200);
+    expect((await ask(thief, { newEmail: NEW, currentPassword: 'thief-password-1' })).status).toBe(202);
+    expect((await confirm(thief, { code: codeFor(NEW) })).body.field).toBe('currentCode');
+    expect(emailOf(signedIn.body.user.id)).toBe(OLD);
+  });
+
+  it('nor does replacing the password of an account with Google', async () => {
+    // Registered with a password, confirmed by code, Google linked later.
+    const id = await holder();
+    db.run(`INSERT INTO native_email_identities (user_id, email, status, verified_at, verified_by, created_at, updated_at)
+      VALUES (?, ?, 'verified', CURRENT_TIMESTAMP, 'code', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`, [id, OLD]);
+    db.run(`INSERT INTO native_auth_providers (user_id, provider_type, provider_user_id, provider_email, created_at, updated_at)
+      VALUES (?, 'google', 'google-holder', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`, [id, OLD]);
+    const stolen = tokenFor(id).accessToken;
+    expect((await request(app).delete('/api/auth/me/providers/email').set('Authorization', `Bearer ${stolen}`)).status).toBe(200);
+    const set = await request(app).put('/api/auth/me').set('Authorization', `Bearer ${stolen}`).send({ password: 'thief-password-1' });
+    expect(set.status).toBe(200);
+    const thief = set.body.accessToken;
+    expect((await ask(thief, { newEmail: NEW, currentPassword: 'thief-password-1' })).status).toBe(202);
+    expect((await confirm(thief, { code: codeFor(NEW) })).body.field).toBe('currentCode');
     expect(emailOf(id)).toBe(OLD);
   });
 });

@@ -45,7 +45,8 @@ export async function probeR3Email({ connectionString, control }) {
     const second = db.transaction((tx) => checkCode(tx, { userId, purpose: 'verify', email: EMAIL, code, now }));
     await eventually(async () => (await waitingOnLocks()) === 1);
     release();
-    assert.deepEqual(await first, { ok: true, email: EMAIL }, 'first concurrent check of one code must succeed');
+    const firstResult = await first;
+    assert.ok(firstResult.ok && firstResult.email === EMAIL, 'first concurrent check of one code must succeed');
     assert.deepEqual(await second, { ok: false, reason: 'CODE_MISSING' }, 'second concurrent check of one code must not succeed');
     contracts.push('two concurrent checks of one code: one success; the second waited on the code row lock');
 

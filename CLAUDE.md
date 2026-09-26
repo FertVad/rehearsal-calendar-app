@@ -707,9 +707,10 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
   proof: it revokes every session, live code and push device, verifies the
   address and sets the new password. The request answers 202 alike with and
   without an account
-- Changing the sign-in address (`/auth/me/email/change`, then `/confirm`) needs
-  the current password — or, without one, a code to the current address — and a
-  code to the new one; `PUT /me` refuses a new email
+- Changing the sign-in address (`/auth/me/email/change`, then `/confirm`) needs a
+  code to the current address and a code to the new one, and the password when
+  there is one. A password alone is not proof: a session can set a first one and
+  unlink Google/Apple. `PUT /me` refuses a new email
 - A pending account gets no session: login, refresh, Google/Apple and the auth
   middleware all refuse it
 - The middleware checks the session version before the handler, outside any

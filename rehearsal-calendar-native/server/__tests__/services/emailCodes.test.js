@@ -43,15 +43,27 @@ it('stores a six-digit code only as a hash', async () => {
 
 it('accepts the right code once', async () => {
   const { code } = await issue();
-  expect(await check(code)).toEqual({ ok: true, email: EMAIL });
+  expect(await check(code)).toMatchObject({ ok: true, email: EMAIL });
   expect(await check(code)).toEqual({ ok: false, reason: 'CODE_MISSING' });
+});
+
+it('leaves a right code live when asked not to consume it, and still counts a wrong one', async () => {
+  const { id, code } = await issue();
+  const wrong = code === '000000' ? '000001' : '000000';
+  expect(await checkCode(db, { userId, purpose: 'verify', email: EMAIL, code, now: later(1000), consume: false }))
+    .toEqual({ ok: true, email: EMAIL, id });
+  expect(row(id).consumed_at).toBeNull();
+  expect(await checkCode(db, { userId, purpose: 'verify', email: EMAIL, code: wrong, now: later(1000), consume: false }))
+    .toEqual({ ok: false, reason: 'CODE_INVALID' });
+  expect(row(id).attempts).toBe(1);
+  expect(await check(code)).toMatchObject({ ok: true, email: EMAIL });
 });
 
 it('refuses a code sent to another address without spending an attempt', async () => {
   const { id, code } = await issue();
   expect(await check(code, { email: 'elsewhere@example.com' })).toEqual({ ok: false, reason: 'CODE_MISSING' });
   expect(row(id).attempts).toBe(0);
-  expect(await check(code)).toEqual({ ok: true, email: EMAIL });
+  expect(await check(code)).toMatchObject({ ok: true, email: EMAIL });
 });
 
 it('burns the code on the fifth wrong attempt', async () => {
@@ -80,13 +92,13 @@ it('replaces the live code of the same purpose', async () => {
   const first = await issue('verify', start);
   const second = await issue('verify', later(61_000));
   expect(row(first.id).consumed_at).not.toBeNull();
-  expect(await check(second.code, { now: later(62_000) })).toEqual({ ok: true, email: EMAIL });
+  expect(await check(second.code, { now: later(62_000) })).toMatchObject({ ok: true, email: EMAIL });
 });
 
 it('keeps purposes apart', async () => {
   const { code } = await issue('verify');
   expect(await check(code, { purpose: 'reset' })).toEqual({ ok: false, reason: 'CODE_MISSING' });
-  expect(await check(code)).toEqual({ ok: true, email: EMAIL });
+  expect(await check(code)).toMatchObject({ ok: true, email: EMAIL });
 });
 
 it('waits a minute between codes and allows five an hour', async () => {
