@@ -1,5 +1,5 @@
-// R3 client, registration and confirmation: put each weakening the review
-// of 164afdb..cc2bc68 found (R3-24..R3-27) back into a copy of the app and
+// R3 client, registration and confirmation: put each weakening the reviews
+// of 164afdb..cc2bc68 and dbe2d0f..f3a05b9 found (R3-24..R3-29) back into a copy of the app and
 // require the test that guards it to fail. The unmutated copy must pass. A
 // variant counts only when the named test fails ("●") and every suite loaded.
 //
@@ -23,7 +23,8 @@ const VERIFY = 'src/features/auth/screens/VerifyEmailScreen.tsx';
 const REGISTER = 'src/features/auth/screens/RegisterScreen.tsx';
 const jest = ['node_modules/jest/bin/jest.js', '--selectProjects', 'frontend', '--runInBand', '--silent',
   'src/contexts/__tests__/AuthContext.test.tsx', 'src/features/auth/screens/__tests__/VerifyEmailScreen.test.tsx',
-  'src/features/auth/screens/__tests__/RegisterScreen.test.tsx', 'src/features/auth/utils/__tests__/authErrors.test.ts'];
+  'src/features/auth/screens/__tests__/RegisterScreen.test.tsx', 'src/features/auth/screens/__tests__/RegisterFlow.test.tsx',
+  'src/features/auth/utils/__tests__/authErrors.test.ts'];
 
 function edit(root, file, from, to) {
   const target = path.join(root, file);
@@ -38,8 +39,10 @@ const mutations = [
   // answer from signing in; what it can no longer protect is a newer sign-in's
   // tokens, which the late answer overwrites and then removes.
   { id: 'stale-confirm-writes', description: 'a stale confirmation writes its tokens before looking (R3-24)',
-    apply: (root) => edit(root, CONTEXT, `    if (attempt !== signInAttempt.current) return false;
-    await AsyncStorage.multiSet([`, '    await AsyncStorage.multiSet(['),
+    apply: (root) => edit(root, CONTEXT, `    const left = () => attempt !== signInAttempt.current;
+    if (left()) return false;
+`, `    const left = () => attempt !== signInAttempt.current;
+`),
     expect: /● .*does not let a late confirmation replace a newer sign-in/ },
   { id: 'leaving-keeps-attempt', description: 'leaving the flow does not make the attempt in flight stale (R3-24)',
     apply: (root) => edit(root, CONTEXT, `  const forgetPendingSignIn = useCallback(() => {
@@ -48,15 +51,29 @@ const mutations = [
 `),
     expect: /● .*signs nobody in when the confirmation answers after the person left/ },
   { id: 'no-take-back', description: 'tokens written for an attempt that went stale meanwhile stay (R3-24)',
-    apply: (root) => edit(root, CONTEXT, `      if ((await AsyncStorage.getItem('accessToken')) === data.accessToken) {
-        await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'cachedUser']);
-      }
-`, ''),
+    apply: (root) => edit(root, CONTEXT, `      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'cachedUser']);
+      return false;
+    };`, `      return false;
+    };`),
     expect: /● .*takes back tokens written for an attempt that went stale meanwhile/ },
   { id: 'late-registration-opens', description: 'a registration answered after the form was left still sets the pending address (R3-24)',
     apply: (root) => edit(root, CONTEXT, `      if (!isCurrent(attempt)) return null;
       const created =`, '      const created ='),
     expect: /● .*opens nothing for a registration answered after the form was left/ },
+  { id: 'writes-interleave', description: 'session writes of two attempts interleave (R3-29)',
+    apply: (root) => edit(root, CONTEXT, 'const run = sessionWrites.current.then(() => writeSession(data, attempt));',
+      'const run = writeSession(data, attempt);'),
+    expect: /● .*a left attempt cannot take back tokens equal to a newer sign-in of the same account/ },
+  { id: 'wipe-without-looking', description: 'a left attempt wipes the device state it read (R3-29)',
+    apply: (root) => edit(root, CONTEXT, `    const lastOwner = await AsyncStorage.getItem('calendar-sync-owner');
+    if (left()) return;
+`, `    const lastOwner = await AsyncStorage.getItem('calendar-sync-owner');
+`),
+    expect: /● .*a left attempt does not erase the calendar state of the account signing in after it/ },
+  { id: 'button-leaves-flow-live', description: "the form's back button leaves the registration in flight live (R3-28)",
+    apply: (root) => edit(root, REGISTER, `                forgetPendingSignIn();
+                navigation.popTo('Login');`, `                navigation.popTo('Login');`),
+    expect: /● .*a registration answered after leaving through the form button opens nothing/ },
   { id: 'code-screen-keeps-flow', description: 'leaving the code screen by a swipe leaves the confirmation live (R3-24)',
     apply: (root) => edit(root, VERIFY, '  useEffect(() => () => forgetPendingSignIn(), [forgetPendingSignIn]);\n', ''),
     expect: /● .*drops the confirmation when the screen is left any way/ },
