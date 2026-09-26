@@ -363,6 +363,27 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
     assert.equal(await count("SELECT count(*) FROM r0_fixture.native_auth_providers WHERE provider_user_id = 'google-unlinked'"), 1);
     contracts.push('link removed while a Google sign-in waited on its lock: the sign-in starts over and links afresh');
 
+    // A04: two unlinks at once of an account with exactly two ways in. The
+    // method table is held, so both reach it whatever else they lock; with the
+    // user row locked, the second waits for the first and counts again.
+    const twoWaysId = (await control.query(`INSERT INTO r0_fixture.native_users (email, password_hash, first_name)
+      VALUES ('two-ways@fixture.invalid', $1, 'Two') RETURNING id`, [await bcrypt.hash(PASSWORD, 4)])).rows[0].id;
+    await control.query(`INSERT INTO r0_fixture.native_auth_providers (user_id, provider_type, provider_email, created_at, updated_at)
+      VALUES ($1, 'email', 'two-ways@fixture.invalid', NOW(), NOW())`, [twoWaysId]);
+    await control.query(`INSERT INTO r0_fixture.native_auth_providers (user_id, provider_type, provider_user_id, provider_email,
+      created_at, updated_at) VALUES ($1, 'google', 'google-two-ways', 'two-ways@fixture.invalid', NOW(), NOW())`, [twoWaysId]);
+    const twoWays = await post('/api/auth/login', { email: 'two-ways@fixture.invalid', password: PASSWORD });
+    assert.equal(twoWays.status, 200);
+    await control.query('BEGIN');
+    await control.query('LOCK TABLE r0_fixture.native_auth_providers IN SHARE MODE');
+    const unlinks = await barrier(['email', 'google'].map((type) =>
+      call('DELETE', `/api/auth/me/providers/${type}`, undefined, twoWays.body.accessToken)));
+    assert.deepEqual(unlinks.map((response) => response.status).sort(), [200, 400], 'two concurrent unlinks must leave one way in');
+    const ways = (await control.query(`SELECT (password_hash IS NOT NULL)::int + (SELECT count(*) FROM r0_fixture.native_auth_providers
+      WHERE user_id = $1 AND provider_type = 'google')::int AS ways FROM r0_fixture.native_users WHERE id = $1`, [twoWaysId])).rows[0].ways;
+    assert.equal(ways, 1, 'exactly one way in must remain');
+    contracts.push('A04 on PostgreSQL: two unlinks at once of an account with two ways in, both seen waiting: one goes, one refused, one way in remains');
+
     // R3-09. A request of the stranger's session is admitted by the middleware
     // before the owner's Google sign-in revokes it, and waits for the account's
     // row behind that sign-in. Under the lock it must find itself revoked.
@@ -578,6 +599,33 @@ export async function probeR3Auth({ connectionString, control, allowedPorts }) {
     assert.equal((await control.query('SELECT email FROM r0_fixture.native_users WHERE id = $1', [racerId])).rows[0].email,
       'racer@fixture.invalid');
     contracts.push('registration of the new address while the change waited on it: 409, the old address kept');
+
+    // A03, HP02 and review R3-02/R3-03 on the real engine: what PostgreSQL
+    // would read differently, or refuse later with a 500, is refused at the door.
+    const profileId = (await control.query(`INSERT INTO r0_fixture.native_users (email, password_hash, first_name, last_name, timezone)
+      VALUES ('profile@fixture.invalid', $1, 'Profile', 'Surname', 'UTC') RETURNING id`, [await bcrypt.hash(PASSWORD, 4)])).rows[0].id;
+    const profile = await post('/api/auth/login', { email: 'profile@fixture.invalid', password: PASSWORD });
+    const put = (body) => call('PUT', '/api/auth/me', body, profile.body.accessToken);
+    assert.equal((await put({ timezone: 'Asia/Jerusalem' })).status, 200);
+    assert.deepEqual((await control.query(`SELECT timezone, to_char(TIMESTAMPTZ '2031-01-01T00:00:00Z' AT TIME ZONE timezone, 'HH24') AS hour
+      FROM r0_fixture.native_users WHERE id = $1`, [profileId])).rows[0], { timezone: 'Asia/Jerusalem', hour: '02' },
+    'a named zone must be stored as sent and read by AT TIME ZONE');
+    // What an offset would have meant here: PostgreSQL reads '+03:00' west of Greenwich.
+    assert.equal((await control.query(`SELECT to_char(TIMESTAMPTZ '2031-01-01T00:00:00Z' AT TIME ZONE '+03:00', 'HH24') AS hour`)).rows[0].hour, '21');
+    const offset = await put({ timezone: '+03:00' });
+    assert.equal(offset.status, 400, 'an offset must be refused: PostgreSQL reads it the other way');
+    assert.equal(offset.body.code, 'TIMEZONE_INVALID');
+    assert.equal((await put({ firstName: 'Na\u0000me' })).status, 400, 'a NUL must be refused before PostgreSQL sees it');
+    assert.equal((await put({ currentPassword: PASSWORD, password: 'long-enough\u0000rest' })).status, 400);
+    assert.equal((await put({ lastName: '' })).status, 200);
+    assert.equal((await control.query('SELECT last_name FROM r0_fixture.native_users WHERE id = $1', [profileId])).rows[0].last_name,
+      null, 'an emptied surname must be cleared');
+    assert.equal((await put({ currentPassword: PASSWORD, password: 'short' })).body.code, 'PASSWORD_POLICY');
+    assert.equal((await put({ currentPassword: PASSWORD, password: '\u00e9'.repeat(37) })).body.code, 'PASSWORD_POLICY',
+      'a password over 72 bytes must be refused');
+    assert.equal((await post('/api/auth/login', { email: 'profile@fixture.invalid', password: PASSWORD })).status, 200);
+    contracts.push('A03/HP02 on PostgreSQL: a named zone stored and read by AT TIME ZONE, an offset refused, NUL refused with 400, an emptied surname cleared, password rules held');
+
   } finally {
     adapter.transaction = transaction;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });
