@@ -20,6 +20,7 @@ const mockApi = {
   login: jest.fn(),
   verifyEmail: jest.fn(),
   resendVerification: jest.fn(),
+  loginWithApple: jest.fn(),
   updateMe: jest.fn(() => Promise.resolve({ data: {} })),
 };
 jest.mock('../../shared/services/api', () => ({
@@ -35,7 +36,8 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   multiRemove: (keys: string[]) => { keys.forEach((k) => delete mockStorage[k]); return Promise.resolve(); },
   clear: () => { Object.keys(mockStorage).forEach((k) => delete mockStorage[k]); return Promise.resolve(); },
 }));
-jest.mock('../../shared/utils/storage', () => ({ syncUserPreferences: jest.fn(() => Promise.resolve()) }));
+const mockSyncPreferences = jest.fn((..._args: any[]) => Promise.resolve());
+jest.mock('../../shared/utils/storage', () => ({ syncUserPreferences: (...args: any[]) => mockSyncPreferences(...args) }));
 jest.mock('../../shared/services/notifications', () => ({
   unregisterPushToken: jest.fn(() => Promise.resolve()),
   syncPushTokenIfGranted: jest.fn(() => Promise.resolve()),
@@ -65,20 +67,107 @@ beforeEach(() => {
   Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
   Object.values(mockApi).forEach((fn) => fn.mockReset());
   mockApi.updateMe.mockImplementation(() => Promise.resolve({ data: {} }));
+  mockSyncPreferences.mockReset();
+  mockSyncPreferences.mockImplementation((..._args: any[]) => Promise.resolve());
   loadingSeen.length = 0;
 });
 
+// A request held open until the test decides how it ends.
+function held<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((ok, fail) => { resolve = ok; reject = fail; });
+  return { promise, resolve, reject };
+}
+const created = { data: { status: 'verification_required', email: 'new@example.com', delivery: 'sent' } };
+const OTHER = { ...USER, id: 8, email: 'other@example.com' };
+
 it('registers without a session, keeps the address for the code, and never raises loading', async () => {
   const screen = await renderAuth();
-  mockApi.register.mockResolvedValue({ data: { status: 'verification_required', email: 'new@example.com', delivery: 'sent' } });
-  let created: any;
-  await act(async () => { created = await auth.register(' New@Example.com', 'long-enough-1', 'New', undefined, 'de'); });
-  expect(created).toEqual({ email: 'new@example.com', delivery: 'sent' });
+  mockApi.register.mockResolvedValue(created);
+  let result: any;
+  await act(async () => { result = await auth.register(' New@Example.com', 'long-enough-1', 'New', undefined, 'de'); });
+  expect(result).toEqual({ email: 'new@example.com', delivery: 'sent' });
   expect(mockApi.register).toHaveBeenCalledWith(' New@Example.com', 'long-enough-1', 'New', undefined, expect.anything(), 'de');
   expect(screen.getByTestId('user').props.children).toBe('none');
   expect(mockStorage.accessToken).toBeUndefined();
   expect(auth.pendingEmail).toBe('new@example.com');
   expect(loadingSeen.every((value) => value === false)).toBe(true);
+});
+
+it('keeps the form mounted while registration waits: busy, never loading (review R3-27)', async () => {
+  await renderAuth();
+  const answer = held<any>();
+  mockApi.register.mockReturnValue(answer.promise);
+  let pending: Promise<any>;
+  act(() => { pending = auth.register('new@example.com', 'long-enough-1', 'New'); });
+  await waitFor(() => expect(auth.busy).toBe(true));
+  expect(auth.loading).toBe(false);
+  await act(async () => { answer.resolve(created); await pending; });
+  expect(auth.busy).toBe(false);
+  expect(auth.loading).toBe(false);
+  expect(auth.pendingEmail).toBe('new@example.com');
+});
+
+it('signs nobody in when the confirmation answers after the person left (review R3-24)', async () => {
+  const screen = await renderAuth();
+  mockApi.register.mockResolvedValue(created);
+  await act(async () => { await auth.register('new@example.com', 'long-enough-1', 'New'); });
+  const answer = held<any>();
+  mockApi.verifyEmail.mockReturnValue(answer.promise);
+  let confirming: Promise<void>;
+  act(() => { confirming = auth.confirmEmail('123456'); });
+  act(() => { auth.forgetPendingSignIn(); });
+  await act(async () => { answer.resolve({ data: { user: USER, accessToken: 'late', refreshToken: 'late' } }); await confirming; });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(auth.isAuthenticated).toBe(false);
+  expect(mockStorage.accessToken).toBeUndefined();
+});
+
+it('does not let a late confirmation replace a newer sign-in (review R3-24)', async () => {
+  const screen = await renderAuth();
+  mockApi.register.mockResolvedValue(created);
+  await act(async () => { await auth.register('new@example.com', 'long-enough-1', 'New'); });
+  const answer = held<any>();
+  mockApi.verifyEmail.mockReturnValue(answer.promise);
+  let confirming: Promise<void>;
+  act(() => { confirming = auth.confirmEmail('123456'); });
+  act(() => { auth.forgetPendingSignIn(); });
+  mockApi.loginWithApple.mockResolvedValue({ data: { user: OTHER, accessToken: 'apple', refreshToken: 'apple' } });
+  await act(async () => { await auth.loginWithApple('apple-token'); });
+  expect(screen.getByTestId('user').props.children).toBe('8');
+  await act(async () => { answer.resolve({ data: { user: USER, accessToken: 'late', refreshToken: 'late' } }); await confirming; });
+  expect(screen.getByTestId('user').props.children).toBe('8');
+  expect(mockStorage.accessToken).toBe('apple');
+});
+
+it('takes back tokens written for an attempt that went stale meanwhile', async () => {
+  const screen = await renderAuth();
+  mockApi.register.mockResolvedValue(created);
+  await act(async () => { await auth.register('new@example.com', 'long-enough-1', 'New'); });
+  mockApi.verifyEmail.mockResolvedValue({ data: { user: USER, accessToken: 'late', refreshToken: 'late' } });
+  const syncing = held<void>();
+  mockSyncPreferences.mockReturnValueOnce(syncing.promise);
+  let confirming: Promise<void>;
+  act(() => { confirming = auth.confirmEmail('123456'); });
+  await waitFor(() => expect(mockStorage.accessToken).toBe('late'));
+  act(() => { auth.forgetPendingSignIn(); });
+  await act(async () => { syncing.resolve(); await confirming; });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.accessToken).toBeUndefined();
+});
+
+it('opens nothing for a registration answered after the form was left (review R3-24)', async () => {
+  await renderAuth();
+  const answer = held<any>();
+  mockApi.register.mockReturnValue(answer.promise);
+  let pending: Promise<any>;
+  act(() => { pending = auth.register('new@example.com', 'long-enough-1', 'New'); });
+  act(() => { auth.forgetPendingSignIn(); });
+  let result: any = 'unset';
+  await act(async () => { answer.resolve(created); result = await pending; });
+  expect(result).toBeNull();
+  expect(auth.pendingEmail).toBeNull();
 });
 
 it('confirms the code with the remembered credentials and starts the session', async () => {

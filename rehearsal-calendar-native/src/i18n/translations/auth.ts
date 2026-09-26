@@ -62,6 +62,10 @@ export interface AuthTranslations {
   invalidCredentials: string;
   signInAgainToConfirm: string;
   backToLogin: string;
+  verifySubtitleUnsent: (email: string) => string;
+  passwordRule: string;
+  nameInvalid: string;
+  timezoneInvalid: string;
 }
 
 export const ru = {
@@ -128,6 +132,10 @@ export const ru = {
     invalidCredentials: 'Неверный email или пароль',
     signInAgainToConfirm: 'Войдите ещё раз, чтобы подтвердить адрес.',
     backToLogin: 'Ко входу',
+    verifySubtitleUnsent: (email: string) => `Аккаунт создан. Чтобы войти, подтвердите ${email} кодом из письма.`,
+    passwordRule: 'Пароль: от 8 символов и не длиннее 72 байт — это 72 латинские буквы или около 36 русских.',
+    nameInvalid: 'Имя обязательно; имя и фамилия — не длиннее 100 символов.',
+    timezoneInvalid: 'Часовой пояс устройства не распознан. Проверьте его в настройках.',
   },
 };
 
@@ -195,6 +203,10 @@ export const en = {
     invalidCredentials: 'Wrong email or password',
     signInAgainToConfirm: 'Sign in again to confirm your address.',
     backToLogin: 'Back to sign in',
+    verifySubtitleUnsent: (email: string) => `Your account is created. To sign in, confirm ${email} with the code from the email.`,
+    passwordRule: 'Password: at least 8 characters and at most 72 bytes — 72 Latin letters, fewer in other scripts.',
+    nameInvalid: 'A first name is required; first and last name are at most 100 characters.',
+    timezoneInvalid: "The device's time zone was not recognised. Check it in Settings.",
   },
 };
 
@@ -262,6 +274,10 @@ export const es = {
     invalidCredentials: 'Correo o contraseña incorrectos',
     signInAgainToConfirm: 'Vuelve a iniciar sesión para confirmar tu dirección.',
     backToLogin: 'Volver a iniciar sesión',
+    verifySubtitleUnsent: (email: string) => `Tu cuenta está creada. Para entrar, confirma ${email} con el código del correo.`,
+    passwordRule: 'Contraseña: al menos 8 caracteres y como máximo 72 bytes — 72 letras latinas, menos con acentos u otros alfabetos.',
+    nameInvalid: 'El nombre es obligatorio; nombre y apellido tienen como máximo 100 caracteres.',
+    timezoneInvalid: 'No se reconoció la zona horaria del dispositivo. Revísala en Ajustes.',
   },
 };
 
@@ -329,5 +345,9 @@ export const de = {
     invalidCredentials: 'E-Mail oder Passwort falsch',
     signInAgainToConfirm: 'Melde dich erneut an, um deine Adresse zu bestätigen.',
     backToLogin: 'Zurück zur Anmeldung',
+    verifySubtitleUnsent: (email: string) => `Dein Konto ist angelegt. Bestätige ${email} mit dem Code aus der E-Mail, um dich anzumelden.`,
+    passwordRule: 'Passwort: mindestens 8 Zeichen und höchstens 72 Bytes — 72 lateinische Buchstaben, weniger mit Umlauten oder anderen Schriften.',
+    nameInvalid: 'Ein Vorname ist nötig; Vor- und Nachname haben höchstens 100 Zeichen.',
+    timezoneInvalid: 'Die Zeitzone des Geräts wurde nicht erkannt. Prüfe sie in den Einstellungen.',
   },
 };

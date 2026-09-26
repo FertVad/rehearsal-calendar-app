@@ -80,11 +80,12 @@ describe('Auth Flow Integration', () => {
       });
       expect(registerResponse.data.accessToken).toBeUndefined();
 
-      // The emailed code, with the same password, starts the session.
+      // The emailed code, with the same password, starts the session. The
+      // server answers with flat accessToken/refreshToken beside the user.
       (axios.post as jest.Mock).mockResolvedValueOnce({
         data: {
           user: mockUser,
-          tokens: mockTokens,
+          ...mockTokens,
         },
       });
 
@@ -96,7 +97,8 @@ describe('Auth Flow Integration', () => {
         code: '123456',
       });
       expect(verifiedResponse.data.user).toEqual(mockUser);
-      expect(verifiedResponse.data.tokens).toEqual(mockTokens);
+      expect(verifiedResponse.data.accessToken).toBe(mockTokens.accessToken);
+      expect(verifiedResponse.data.refreshToken).toBe(mockTokens.refreshToken);
 
       // Step 2: Token storage (simulated by AsyncStorage mock)
       (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);

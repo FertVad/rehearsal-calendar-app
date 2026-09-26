@@ -33,10 +33,18 @@ export default function VerifyEmailScreen({ navigation, route }: VerifyEmailScre
   const { pendingEmail, confirmEmail, resendConfirmation, forgetPendingSignIn, busy } = useAuth();
   const { t } = useI18n();
   const fromRegistration = route.params.delivery !== undefined;
+  // What happened to the latest email, if one was sent from here: 'sent' is the
+  // only outcome that lets the screen say a code went out (review R3-26).
+  const [delivery, setDelivery] = useState<DeliveryOutcome | undefined>(route.params.delivery);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(deliveryNotice(route.params.delivery));
   const [cooldown, setCooldown] = useState(fromRegistration ? RESEND_INTERVAL_SECONDS : 0);
+
+  // Leaving by any way — the button, a swipe, the system back — drops a
+  // confirmation still in flight: its late answer must not sign anyone in
+  // (review R3-24). After a confirmed code the session has already started.
+  useEffect(() => () => forgetPendingSignIn(), [forgetPendingSignIn]);
 
   function deliveryNotice(delivery?: DeliveryOutcome): string | null {
     if (delivery === 'failed') return t.auth.deliveryFailed;
@@ -71,8 +79,10 @@ export default function VerifyEmailScreen({ navigation, route }: VerifyEmailScre
   const handleResend = async () => {
     setError(null);
     try {
-      const delivery = await resendConfirmation();
-      setNotice(deliveryNotice(delivery) ?? t.auth.codeResent);
+      const outcome = await resendConfirmation();
+      if (!outcome) return; // left meanwhile
+      setDelivery(outcome);
+      setNotice(deliveryNotice(outcome) ?? t.auth.codeResent);
       setCode('');
       setCooldown(RESEND_INTERVAL_SECONDS);
     } catch (err) {
@@ -115,7 +125,9 @@ export default function VerifyEmailScreen({ navigation, route }: VerifyEmailScre
           <View style={styles.header}>
             <Text style={styles.title}>{t.auth.verifyTitle}</Text>
             <Text style={styles.subtitle}>
-              {fromRegistration ? t.auth.verifySubtitle(pendingEmail) : t.auth.emailNotVerified}
+              {delivery === 'sent' ? t.auth.verifySubtitle(pendingEmail)
+                : delivery ? t.auth.verifySubtitleUnsent(pendingEmail)
+                  : t.auth.emailNotVerified}
             </Text>
           </View>
 

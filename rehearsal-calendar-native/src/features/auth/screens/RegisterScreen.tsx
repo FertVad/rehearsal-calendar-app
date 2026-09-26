@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -20,17 +20,23 @@ import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
 
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
+const utf8Length = (value: string) => new TextEncoder().encode(value).length;
+
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { register, busy, error } = useAuth();
+  const { register, busy, error, forgetPendingSignIn } = useAuth();
   const { t, language } = useI18n();
 
+  // Leaving the form drops a registration still in flight: its late answer
+  // must not open a code screen nobody is looking at (review R3-24).
+  useEffect(() => () => forgetPendingSignIn(), [forgetPendingSignIn]);
+
   const validateForm = () => {
-    if (!email || !firstName || !password || !confirmPassword) {
+    if (!email.trim() || !firstName.trim() || !password || !confirmPassword) {
       Alert.alert(t.common.error, t.auth.fillAllFields);
       return false;
     }
@@ -41,8 +47,15 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       return false;
     }
 
-    if (password.length < 8) {
-      Alert.alert(t.common.error, t.auth.passwordMinLength);
+    // The server's rule: 8 characters, at most 72 bytes of UTF-8 — bcrypt reads
+    // no further, so a longer password would silently lose its tail.
+    if (password.length < 8 || utf8Length(password) > 72) {
+      Alert.alert(t.common.error, t.auth.passwordRule);
+      return false;
+    }
+
+    if (firstName.trim().length > 100 || lastName.trim().length > 100) {
+      Alert.alert(t.common.error, t.auth.nameInvalid);
       return false;
     }
 
@@ -60,6 +73,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
     try {
       // No session yet: the account waits for the code just emailed (R3).
       const created = await register(email, password, firstName, lastName || undefined, language);
+      if (!created) return; // left the form before the answer came
       navigation.navigate('VerifyEmail', { email: created.email, delivery: created.delivery });
     } catch (err) {
       if (err instanceof AuthFlowError && err.code === 'EMAIL_TAKEN') {
@@ -157,7 +171,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
 
             {error && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.errorText}>{authErrorMessage(t, error)}</Text>
               </View>
             )}
 

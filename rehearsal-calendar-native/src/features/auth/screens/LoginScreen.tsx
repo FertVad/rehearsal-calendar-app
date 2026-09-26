@@ -162,7 +162,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
             {error && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.errorText}>{authErrorMessage(t, error)}</Text>
               </View>
             )}
 

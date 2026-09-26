@@ -42,7 +42,10 @@ export function authErrorMessage(t: Translations, error: unknown): string {
     case 'ALREADY_VERIFIED': return t.auth.alreadyVerified;
     case 'EMAIL_UNAVAILABLE': return t.auth.emailUnavailable;
     case 'RATE_LIMITED': return t.auth.rateLimited(failure.details.retryAfter ?? 60);
-    case 'PASSWORD_POLICY': return t.auth.passwordMinLength;
+    case 'PASSWORD_POLICY': return t.auth.passwordRule;
+    case 'NAME_INVALID':
+    case 'TEXT_INVALID': return t.auth.nameInvalid;
+    case 'TIMEZONE_INVALID': return t.auth.timezoneInvalid;
     case 'EMAIL_INVALID': return t.auth.invalidEmail;
     case 'EMAIL_TAKEN': return t.auth.emailTakenMessage;
     case 'EMAIL_NOT_VERIFIED': return t.auth.emailNotVerified;

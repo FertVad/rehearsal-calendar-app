@@ -41,12 +41,14 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   /** Creates an unconfirmed account: no session until confirmEmail (R3). */
+  /** null when the person left before the answer came: nothing to show. */
   register: (email: string, password: string, firstName: string, lastName?: string, locale?: string)
-    => Promise<{ email: string; delivery: DeliveryOutcome }>;
+    => Promise<{ email: string; delivery: DeliveryOutcome } | null>;
   /** The address waiting for its code, for the confirmation screen. */
   pendingEmail: string | null;
   confirmEmail: (code: string) => Promise<void>;
-  resendConfirmation: () => Promise<DeliveryOutcome>;
+  resendConfirmation: () => Promise<DeliveryOutcome | null>;
+  /** Leave the confirmation: anything still in flight for it writes nothing. */
   forgetPendingSignIn: () => void;
   loginWithTelegram: (telegramData: any) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<{ linked: boolean }>;
@@ -54,7 +56,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<void>;
   deleteAccount: () => Promise<{ deletedProjects: number }>;
-  error: string | null;
+  /** The last failure, kept whole so the screens can say it in the app's language. */
+  error: AuthFlowError | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,7 +65,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuthFlowError | null>(null);
   // Separate from `loading`: the navigator replaces everything with a spinner
   // while `loading` is true, so a form toggling it was unmounted mid-request —
   // a failed registration landed back on Login, and the code screen could
@@ -73,6 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // written anywhere. A restarted app asks to sign in again.
   const pendingSignIn = useRef<{ email: string; password: string } | null>(null);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  // Each sign-in attempt takes a number. A newer attempt, or leaving the flow,
+  // makes older ones stale, and a stale answer writes nothing — no tokens, no
+  // user, no pending address (review R3-24; CLAUDE.md 11). Without it a
+  // confirmation answered after the person had left the code screen signed
+  // them in anyway, over another account's newer sign-in.
+  const signInAttempt = useRef(0);
   const hasTimezoneSynced = useRef(false);
   const hasPushSynced = useRef(false);
 
@@ -109,13 +118,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const forgetPendingSignIn = useCallback(() => {
+    signInAttempt.current += 1;
     pendingSignIn.current = null;
     setPendingEmail(null);
+    setBusy(false);
+  }, []);
+
+  const beginAttempt = useCallback(() => {
+    signInAttempt.current += 1;
+    setError(null);
+    setBusy(true);
+    return signInAttempt.current;
+  }, []);
+  const isCurrent = (attempt: number) => attempt === signInAttempt.current;
+  const endAttempt = useCallback((attempt: number) => {
+    if (attempt === signInAttempt.current) setBusy(false);
   }, []);
 
   // Every way in ends here: tokens and user stored, stale logout mark cleared,
-  // device state reconciled, preferences synced, then the user set.
-  const startSession = useCallback(async (data: { user: User; accessToken: string; refreshToken: string }) => {
+  // device state reconciled, preferences synced, then the user set — only for
+  // the attempt still current. Returns whether the session started.
+  const startSession = useCallback(async (data: { user: User; accessToken: string; refreshToken: string }, attempt: number) => {
+    if (attempt !== signInAttempt.current) return false;
     await AsyncStorage.multiSet([
       ['accessToken', data.accessToken],
       ['refreshToken', data.refreshToken],
@@ -125,9 +149,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await reconcileDeviceState(data.user);
     // Sync user preferences (timezone, locale, weekStartDay)
     await syncUserPreferences(data.user);
-    forgetPendingSignIn();
+    if (attempt !== signInAttempt.current) {
+      // Left while these were being written: take back what is still ours, or
+      // the next launch would restore a session the person walked away from.
+      if ((await AsyncStorage.getItem('accessToken')) === data.accessToken) {
+        await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'cachedUser']);
+      }
+      return false;
+    }
+    pendingSignIn.current = null;
+    setPendingEmail(null);
     setUser(data.user);
-  }, [reconcileDeviceState, forgetPendingSignIn]);
+    return true;
+  }, [reconcileDeviceState]);
 
   const loadUser = useCallback(async () => {
     try {
@@ -238,70 +272,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const login = useCallback(async (email: string, password: string) => {
+    const attempt = beginAttempt();
     try {
-      setError(null);
-      setBusy(true);
       const response = await authAPI.login(email, password);
-      await startSession(response.data);
+      await startSession(response.data, attempt);
     } catch (err: any) {
+      if (!isCurrent(attempt)) return;
       const failure = toAuthFlowError(err, 'Login failed');
       if (failure.code === 'EMAIL_NOT_VERIFIED') {
         // The password was right; the address still waits for its code.
         rememberPendingSignIn(failure.details.email ?? email.trim().toLowerCase(), password);
       } else {
-        setError(failure.message);
+        setError(failure);
       }
       throw failure;
     } finally {
-      setBusy(false);
+      endAttempt(attempt);
     }
-  }, [startSession, rememberPendingSignIn]);
+  }, [beginAttempt, endAttempt, startSession, rememberPendingSignIn]);
 
   const register = useCallback(async (email: string, password: string, firstName: string, lastName?: string, locale?: string) => {
+    const attempt = beginAttempt();
     try {
-      setError(null);
-      setBusy(true);
       const response = await authAPI.register(email, password, firstName, lastName, getDeviceTimezone(), locale);
+      if (!isCurrent(attempt)) return null;
       const created = { email: response.data.email as string, delivery: response.data.delivery as DeliveryOutcome };
       rememberPendingSignIn(created.email, password);
       return created;
     } catch (err: any) {
+      if (!isCurrent(attempt)) return null;
       const failure = toAuthFlowError(err, 'Registration failed');
       // A taken address gets its own answer on the screen, not this line.
-      if (failure.code !== 'EMAIL_TAKEN') setError(failure.message);
+      if (failure.code !== 'EMAIL_TAKEN') setError(failure);
       throw failure;
     } finally {
-      setBusy(false);
+      endAttempt(attempt);
     }
-  }, [rememberPendingSignIn]);
+  }, [beginAttempt, endAttempt, rememberPendingSignIn]);
 
   const confirmEmail = useCallback(async (code: string) => {
     const pending = pendingSignIn.current;
     if (!pending) throw new AuthFlowError('Sign in again to confirm your address', 'SIGN_IN_AGAIN');
+    const attempt = beginAttempt();
     try {
-      setBusy(true);
       const response = await authAPI.verifyEmail(pending.email, pending.password, code);
-      await startSession(response.data);
+      await startSession(response.data, attempt);
     } catch (err: any) {
+      if (!isCurrent(attempt)) return;
       throw toAuthFlowError(err, 'Confirmation failed');
     } finally {
-      setBusy(false);
+      endAttempt(attempt);
     }
-  }, [startSession]);
+  }, [beginAttempt, endAttempt, startSession]);
 
   const resendConfirmation = useCallback(async () => {
     const pending = pendingSignIn.current;
     if (!pending) throw new AuthFlowError('Sign in again to confirm your address', 'SIGN_IN_AGAIN');
+    const attempt = beginAttempt();
     try {
-      setBusy(true);
       const response = await authAPI.resendVerification(pending.email, pending.password);
+      if (!isCurrent(attempt)) return null;
       return response.data.delivery as DeliveryOutcome;
     } catch (err: any) {
+      if (!isCurrent(attempt)) return null;
       throw toAuthFlowError(err, 'Could not send the code');
     } finally {
-      setBusy(false);
+      endAttempt(attempt);
     }
-  }, []);
+  }, [beginAttempt, endAttempt]);
 
   const loginWithTelegram = useCallback(async (telegramData: any) => {
     try {
@@ -322,52 +360,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(user);
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Telegram login failed';
-      setError(message);
-      throw new Error(message);
+      const failure = toAuthFlowError(err, 'Telegram login failed');
+      setError(failure);
+      throw new Error(failure.message);
     } finally {
       setLoading(false);
     }
   }, []);
 
   const loginWithGoogle = useCallback(async (idToken: string) => {
+    const attempt = beginAttempt();
     try {
-      setError(null);
-      setBusy(true);
-
       const response = await authAPI.loginWithGoogle(idToken);
-      await startSession(response.data);
+      const started = await startSession(response.data, attempt);
 
-      return { linked: response.data.linked || false };
+      return { linked: started && Boolean(response.data.linked) };
     } catch (err: any) {
+      if (!isCurrent(attempt)) return { linked: false };
       console.error('[Auth] Google login error:', err);
       console.error('[Auth] Error response:', err.response?.data);
       console.error('[Auth] Error status:', err.response?.status);
       const failure = toAuthFlowError(err, 'Google sign-in failed');
-      setError(failure.message);
+      setError(failure);
       throw failure;
     } finally {
-      setBusy(false);
+      endAttempt(attempt);
     }
-  }, [startSession]);
+  }, [beginAttempt, endAttempt, startSession]);
 
   const loginWithApple = useCallback(async (idToken: string, user?: any) => {
+    const attempt = beginAttempt();
     try {
-      setError(null);
-      setBusy(true);
-
       const response = await authAPI.loginWithApple(idToken, user);
-      await startSession(response.data);
+      const started = await startSession(response.data, attempt);
 
-      return { linked: response.data.linked || false };
+      return { linked: started && Boolean(response.data.linked) };
     } catch (err: any) {
+      if (!isCurrent(attempt)) return { linked: false };
       const failure = toAuthFlowError(err, 'Apple sign-in failed');
-      setError(failure.message);
+      setError(failure);
       throw failure;
     } finally {
-      setBusy(false);
+      endAttempt(attempt);
     }
-  }, [startSession]);
+  }, [beginAttempt, endAttempt, startSession]);
 
   const logout = useCallback(async () => {
     try {
@@ -419,9 +455,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Sync user preferences (timezone, locale, weekStartDay)
       await syncUserPreferences(updatedUser);
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Update failed';
-      setError(message);
-      throw new Error(message);
+      const failure = toAuthFlowError(err, 'Update failed');
+      setError(failure);
+      throw new Error(failure.message);
     }
   }, []);
 
@@ -447,9 +483,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { deletedProjects: deletedProjects || 0 };
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Failed to delete account';
-      setError(message);
-      throw new Error(message);
+      const failure = toAuthFlowError(err, 'Failed to delete account');
+      setError(failure);
+      throw new Error(failure.message);
     } finally {
       setLoading(false);
     }

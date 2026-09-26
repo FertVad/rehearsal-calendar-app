@@ -56,9 +56,39 @@ it('after registering: names the address, waits a minute to resend, sends only d
   expect(mockAuth.confirmEmail).toHaveBeenCalledWith('123456');
 });
 
-it('says when the email was refused', () => {
+it('does not claim a code went out when the email was refused or unanswered (review R3-26)', () => {
+  for (const delivery of ['failed', 'unknown']) {
+    const view = screen({ email: 'new@example.com', delivery });
+    expect(view.getByText(delivery === 'failed' ? t.auth.deliveryFailed : t.auth.deliveryUnknown)).toBeTruthy();
+    expect(view.getByText(t.auth.verifySubtitleUnsent('new@example.com'))).toBeTruthy();
+    expect(view.queryByText(t.auth.verifySubtitle('new@example.com'))).toBeNull();
+    view.unmount();
+  }
+});
+
+it('says the code went out once a resend is accepted', async () => {
   const view = screen({ email: 'new@example.com', delivery: 'failed' });
-  expect(view.getByText(t.auth.deliveryFailed)).toBeTruthy();
+  // The countdown sets one timer per second, each after the last re-render.
+  for (let second = 0; second < 60; second++) act(() => { jest.advanceTimersByTime(1000); });
+  expect(view.getByText(t.auth.resendCode)).toBeTruthy();
+  await act(async () => { fireEvent.press(view.getByText(t.auth.resendCode)); });
+  expect(view.getByText(t.auth.verifySubtitle('new@example.com'))).toBeTruthy();
+  expect(view.getByText(t.auth.codeResent)).toBeTruthy();
+});
+
+it('drops the confirmation when the screen is left any way (review R3-24)', () => {
+  const view = screen({ email: 'new@example.com', delivery: 'sent' });
+  expect(mockAuth.forgetPendingSignIn).not.toHaveBeenCalled();
+  view.unmount();
+  expect(mockAuth.forgetPendingSignIn).toHaveBeenCalledTimes(1);
+});
+
+it('changes nothing when a resend answers after the person left', async () => {
+  mockAuth.resendConfirmation.mockResolvedValue(null);
+  const view = screen({ email: 'new@example.com' });
+  await act(async () => { fireEvent.press(view.getByText(t.auth.resendCode)); });
+  expect(view.queryByText(t.auth.codeResent)).toBeNull();
+  expect(view.getByText(t.auth.resendCode)).toBeTruthy();
 });
 
 it('shows a wrong code in the app language and stays', async () => {
