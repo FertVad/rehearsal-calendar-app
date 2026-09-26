@@ -451,7 +451,7 @@ describe('useAvailabilityData Hook', () => {
       expect(result.current.availability).toEqual(newAvailability);
     });
 
-    it('should track hasChanges flag', async () => {
+    it('has changes while any day is marked changed', async () => {
       (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
         data: [],
       });
@@ -465,10 +465,16 @@ describe('useAvailabilityData Hook', () => {
       expect(result.current.hasChanges).toBe(false);
 
       act(() => {
-        result.current.setHasChanges(true);
+        result.current.markChanged(['2025-12-30']);
       });
 
       expect(result.current.hasChanges).toBe(true);
+
+      act(() => {
+        result.current.markSettled(['2025-12-30']);
+      });
+
+      expect(result.current.hasChanges).toBe(false);
     });
 
     it('should track saving flag', async () => {

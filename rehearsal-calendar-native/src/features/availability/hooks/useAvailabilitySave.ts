@@ -28,73 +28,57 @@ export const useAvailabilitySave = () => {
     return `${isoDateTimeStr}${offsetStr}`;
   };
 
+  type Entry = { startsAt: string; endsAt: string; type: 'available' | 'busy'; isAllDay: boolean };
+
   /**
-   * Convert local availability format to API format.
-   * Skips past dates — they are immutable and re-sending them is what
-   * triggered the chk_availability_time_order bug for legacy bad data.
+   * One day's entries as the server stores them. A day with no state — emptied
+   * by the person — has none, which clears it on save.
    */
-  const prepareEntriesForAPI = (
-    availability: AvailabilityData,
-    today?: string
-  ): Array<{ startsAt: string; endsAt: string; type: 'available' | 'busy' | 'tentative'; isAllDay?: boolean }> => {
-    const entries: Array<{
-      startsAt: string;
-      endsAt: string;
-      type: 'available' | 'busy' | 'tentative';
-      isAllDay?: boolean;
-    }> = [];
-
-    for (const [date, state] of Object.entries(availability)) {
-      if (today && date < today) continue;
-      let type: 'available' | 'busy' | 'tentative' = 'available';
-
-      if (state.mode === 'free') {
-        type = 'available';
-        entries.push({
-          startsAt: `${date}T00:00:00.000Z`,
-          endsAt: `${date}T23:59:59.999Z`,
-          type,
-          isAllDay: true,
-        });
-      } else if (state.mode === 'busy') {
-        type = 'busy';
-        entries.push({
-          startsAt: `${date}T00:00:00.000Z`,
-          endsAt: `${date}T23:59:59.999Z`,
-          type,
-          isAllDay: true,
-        });
-      } else if (state.mode === 'custom') {
-        type = 'busy';
-        for (const slot of state.slots) {
-          // Detect midnight crossing: if end <= start as HH:MM, end belongs to
-          // the next calendar day (e.g. 23:00–00:30 or 22:00–01:00).
-          const startMinutes = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
-          const endMinutes = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
-          const endsNextDay = endMinutes <= startMinutes;
-
-          let endDate = date;
-          if (endsNextDay) {
-            const next = new Date(`${date}T00:00:00`);
-            next.setDate(next.getDate() + 1);
-            const y = next.getFullYear();
-            const m = String(next.getMonth() + 1).padStart(2, '0');
-            const d = String(next.getDate()).padStart(2, '0');
-            endDate = `${y}-${m}-${d}`;
-          }
-
-          entries.push({
-            startsAt: createTimestamp(date, slot.start),
-            endsAt: createTimestamp(endDate, slot.end),
-            type,
-            isAllDay: false,
-          });
-        }
-      }
+  const entriesForDay = (date: string, state: DayState | undefined): Entry[] => {
+    if (!state) return [];
+    if (state.mode === 'free' || state.mode === 'busy') {
+      return [{
+        startsAt: `${date}T00:00:00.000Z`,
+        endsAt: `${date}T23:59:59.999Z`,
+        type: state.mode === 'free' ? 'available' : 'busy',
+        isAllDay: true,
+      }];
     }
+    return state.slots.map((slot) => {
+      // Detect midnight crossing: if end <= start as HH:MM, end belongs to
+      // the next calendar day (e.g. 23:00–00:30 or 22:00–01:00).
+      const startMinutes = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
+      const endMinutes = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
+      const endsNextDay = endMinutes <= startMinutes;
 
-    return entries;
+      let endDate = date;
+      if (endsNextDay) {
+        const next = new Date(`${date}T00:00:00`);
+        next.setDate(next.getDate() + 1);
+        const y = next.getFullYear();
+        const m = String(next.getMonth() + 1).padStart(2, '0');
+        const d = String(next.getDate()).padStart(2, '0');
+        endDate = `${y}-${m}-${d}`;
+      }
+
+      return {
+        startsAt: createTimestamp(date, slot.start),
+        endsAt: createTimestamp(endDate, slot.end),
+        type: 'busy' as const,
+        isAllDay: false,
+      };
+    });
   };
+
+  /**
+   * Every day's entries, in one list. Skips past dates — they are immutable
+   * and re-sending them is what triggered the chk_availability_time_order bug
+   * for legacy bad data.
+   */
+  const prepareEntriesForAPI = (availability: AvailabilityData, today?: string): Entry[] =>
+    Object.entries(availability)
+      .filter(([date]) => !today || date >= today)
+      .flatMap(([date, state]) => entriesForDay(date, state));
 
   /**
    * Validate availability data before saving
@@ -171,19 +155,31 @@ export const useAvailabilitySave = () => {
   };
 
   /**
-   * Save availability data to server
+   * Save the days the person changed — only those, each by name, each replaced
+   * by exactly what it now holds (review CC05). The whole snapshot used to go,
+   * so a day loaded an hour ago overwrote what had been saved to it since.
+   *
+   * The counters are read before the request and handed back afterwards: a day
+   * edited while the save was out keeps a newer counter and stays unsaved
+   * (review CC03). Past days cannot be saved and stop counting as changed.
    */
-  const saveAvailability = async (
-    availability: AvailabilityData,
-    today: string,
-    language: string,
-    t: any,
-    setSaving: (saving: boolean) => void,
-    setHasChanges: (hasChanges: boolean) => void
-  ): Promise<boolean> => {
+  const saveAvailability = async ({ availability, changed, today, language, t, setSaving, markSaved }: {
+    availability: AvailabilityData;
+    changed: Record<string, number>;
+    today: string;
+    language: string;
+    t: any;
+    setSaving: (saving: boolean) => void;
+    markSaved: (sent: Record<string, number>) => void;
+  }): Promise<boolean> => {
+    const sent = { ...changed };
+    const dates = Object.keys(sent).filter((date) => date >= today).sort();
     try {
-      // Validate
-      const validation = validateAvailability(availability, today, language, t);
+      const touched: AvailabilityData = {};
+      for (const date of dates) {
+        if (availability[date]) touched[date] = availability[date];
+      }
+      const validation = validateAvailability(touched, today, language, t);
       if (!validation.isValid) {
         Alert.alert(validation.errorTitle!, validation.errorMessage!, [
           { text: t.availability.understood },
@@ -192,12 +188,11 @@ export const useAvailabilitySave = () => {
       }
 
       setSaving(true);
+      if (dates.length > 0) {
+        await availabilityAPI.saveDays(dates.map((date) => ({ date, entries: entriesForDay(date, availability[date]) })));
+      }
 
-      // Prepare and send (past dates excluded — they're immutable)
-      const entries = prepareEntriesForAPI(availability, today);
-      await availabilityAPI.bulkSet(entries);
-
-      setHasChanges(false);
+      markSaved(sent);
       Alert.alert(t.rehearsals.success, t.availability.saved);
       return true;
     } catch (err: any) {
@@ -211,6 +206,7 @@ export const useAvailabilitySave = () => {
 
   return {
     saveAvailability,
+    entriesForDay,
     prepareEntriesForAPI,
     validateAvailability,
   };

@@ -7,6 +7,7 @@ import {
   formatAvailabilitySlotsResponse,
 } from '../../utils/timezone.js';
 import { AVAILABILITY_TYPES, DEFAULT_TIMEZONE, AVAILABILITY_SOURCES } from '../../constants/timezone.js';
+import { AvailabilityInvalid, checkDays, replaceManualDays, lockOwnAvailability, deleteManualDay } from '../../services/availability/manualDays.js';
 
 const router = Router();
 
@@ -65,6 +66,33 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 /**
+ * PUT /api/native/availability/days - the editor's save.
+ *
+ * Replaces each day it names with exactly the entries given for it, [] clearing
+ * the day, in one transaction; days not named are not touched. Checked whole
+ * before anything is written. See services/availability/manualDays.js.
+ */
+router.put('/days', requireAuth, asyncHandler(async (req, res) => {
+  const userId = req.userId;
+  let days;
+  try {
+    days = checkDays(req.body?.days);
+  } catch (error) {
+    if (error instanceof AvailabilityInvalid) return res.status(400).json(error.body);
+    throw error;
+  }
+
+  const timezone = await getUserTimezone(userId);
+  try {
+    await db.transaction((tx) => replaceManualDays(tx, userId, days, timezone));
+  } catch (error) {
+    console.error('Error saving availability days:', error);
+    return res.status(500).json({ error: 'Failed to save availability' });
+  }
+  res.json({ success: true, days: days.map((day) => day.date) });
+}));
+
+/**
  * POST /api/native/availability/bulk - Bulk set availability
  * Accepts slots with ISO 8601 timestamps
  */
@@ -116,14 +144,11 @@ router.post('/bulk', requireAuth, asyncHandler(async (req, res) => {
   // a bystander's write with it. Everything below uses `tx`, not `db`.
   try {
     await db.transaction(async (tx) => {
+      // Behind the same per-person lock as the editor's save (manualDays.js):
+      // older apps still replace days through here.
+      await lockOwnAvailability(tx, userId);
       for (const date of affectedDates) {
-        await tx.run(
-          `DELETE FROM native_user_availability
-           WHERE user_id = $1
-           AND DATE(starts_at AT TIME ZONE $2) = $3
-           AND source = $4`,
-          [userId, timezone, date, AVAILABILITY_SOURCES.MANUAL]
-        );
+        await deleteManualDay(tx, userId, date, timezone);
       }
 
       for (const entry of entries) {
@@ -186,15 +211,12 @@ router.delete('/:date', requireAuth, asyncHandler(async (req, res) => {
     // Get user's timezone
     const timezone = await getUserTimezone(userId);
 
-    // Only delete manually-created availability for this date
-    // Keep slots from rehearsals or calendar sync
-    await db.run(
-      `DELETE FROM native_user_availability
-       WHERE user_id = $1
-       AND DATE(starts_at AT TIME ZONE $2) = $3
-       AND source = $4`,
-      [userId, timezone, date, AVAILABILITY_SOURCES.MANUAL]
-    );
+    // Only the hand-entered rows of this date, behind the per-person lock the
+    // saves take (manualDays.js). Rehearsal and imported rows stay.
+    await db.transaction(async (tx) => {
+      await lockOwnAvailability(tx, userId);
+      await deleteManualDay(tx, userId, date, timezone);
+    });
 
     res.json({ success: true });
   } catch (error) {

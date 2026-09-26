@@ -336,7 +336,13 @@ export const availabilityAPI = {
   getAll: () =>
     api.get('/native/availability'),
 
-  // Bulk set availability for multiple dates (ISO timestamp format)
+  // The editor's save: each named day is replaced by exactly its entries, []
+  // clearing it; days not named are left alone (R6: CC05).
+  saveDays: (days: { date: string; entries: { startsAt: string; endsAt: string; type: 'available' | 'busy'; isAllDay: boolean }[] }[]) =>
+    api.put('/native/availability/days', { days }),
+
+  // Imported calendar events (and older app versions' saves). Replaces the
+  // hand-entered rows of every date its manual entries name.
   bulkSet: (entries: { startsAt: string; endsAt: string; type: 'available' | 'busy' | 'tentative'; isAllDay?: boolean }[]) =>
     api.post('/native/availability/bulk', { entries }),
 

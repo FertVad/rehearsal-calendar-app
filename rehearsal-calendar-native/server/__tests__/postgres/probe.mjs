@@ -7,7 +7,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH'].includes(scenario));
+assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R6_AVAILABILITY'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -44,7 +44,7 @@ await control.query('SET search_path TO r0_fixture');
 
 // Schema/migration suites start with the empty owned application schema; they
 // never mistake the diagnostic subset below for canonical provisioning.
-if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH'].includes(scenario)) {
+if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R6_AVAILABILITY'].includes(scenario)) {
   target.searchParams.set('options', '-c search_path=r0_fixture');
   process.env.DATABASE_URL = target.href;
   try {
@@ -54,7 +54,9 @@ if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH'].includes(scenario)) {
         ? await (await import('./r2Migrations.mjs')).probeR2Migrations({ connectionString: target.href, control, allowedPorts })
         : scenario === 'R3_EMAIL'
           ? await (await import('./r3Email.mjs')).probeR3Email({ connectionString: target.href, control })
-          : await (await import('./r3Auth.mjs')).probeR3Auth({ connectionString: target.href, control, allowedPorts });
+          : scenario === 'R3_AUTH'
+            ? await (await import('./r3Auth.mjs')).probeR3Auth({ connectionString: target.href, control, allowedPorts })
+            : await (await import('./r6Availability.mjs')).probeR6Availability({ connectionString: target.href, control, allowedPorts });
     assert.equal(deniedConnections, 0, 'A schema/migration contract attempted an external connection');
     console.log(JSON.stringify({ scenario, ...result, externalConnections: deniedConnections }));
   } finally { await control.end(); }

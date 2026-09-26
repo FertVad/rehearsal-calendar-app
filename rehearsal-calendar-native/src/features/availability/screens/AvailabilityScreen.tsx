@@ -46,7 +46,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     saving,
     setSaving,
     hasChanges,
-    setHasChanges,
+    changed,
+    markChanged,
+    markSaved,
+    markSettled,
     getDayState,
     loadAvailability,
     loadFailed,
@@ -70,17 +73,23 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   const months = useMemo(() => generateMonths(7), []);
 
+  const today = new Date().toISOString().split('T')[0];
+
   // Editor hook for selection, validation, time picker, and slot editing
   const editor = useAvailabilityEditor({
     availability,
     setAvailability,
-    setHasChanges,
+    markChanged,
+    markSettled,
+    today,
     getDayState,
     months,
   });
 
   const [refreshing, setRefreshing] = useState(false);
-  const today = new Date().toISOString().split('T')[0];
+  // The past-date action applies to the past days of the selection, whichever
+  // day was tapped first (review CC04).
+  const selectionHasPast = editor.selectedDates.some((date) => date < today);
 
   // Load last sync time on mount
   useEffect(() => {
@@ -96,7 +105,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   );
 
   const handleSave = async () => {
-    await saveAvailability(availability, today, language, t, setSaving, setHasChanges);
+    await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
     // Drop the selection so it is obvious the batch was committed; the sheet
     // stays open because marking several days in a row is the common case.
     editor.clearSelection();
@@ -261,7 +270,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
         <ScrollView style={styles.bottomSheetContent} showsVerticalScrollIndicator={false}>
           {/* Warning for past dates */}
-          {editor.selectedDate && editor.selectedDate < today && (
+          {selectionHasPast && (
             <View style={styles.pastDateWarning}>
               <Ionicons name="information-circle" size={20} color={Colors.accent.yellow} />
               <Text style={styles.pastDateWarningText}>
@@ -271,7 +280,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           )}
 
           {/* Delete button for past dates */}
-          {editor.selectedDate && editor.selectedDate < today && (
+          {selectionHasPast && (
             <TouchableOpacity
               style={styles.deletePastDateButton}
               onPress={() => {

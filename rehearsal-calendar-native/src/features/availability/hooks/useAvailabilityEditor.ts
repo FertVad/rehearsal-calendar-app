@@ -12,7 +12,12 @@ const DEFAULT_SLOT: TimeSlot = { start: '10:00', end: '18:00' };
 interface UseAvailabilityEditorProps {
   availability: Record<string, DayState>;
   setAvailability: (updater: (prev: Record<string, DayState>) => Record<string, DayState>) => void;
-  setHasChanges: (value: boolean) => void;
+  /** These days now differ from what was saved. */
+  markChanged: (dates: string[]) => void;
+  /** These days are settled on the server, whatever was drafted for them. */
+  markSettled: (dates: string[]) => void;
+  /** The local calendar date; earlier days are past. */
+  today: string;
   getDayState: (date: string) => DayState;
   months: Array<{ year: number; month: number; key: string }>;
 }
@@ -20,7 +25,9 @@ interface UseAvailabilityEditorProps {
 export function useAvailabilityEditor({
   availability,
   setAvailability,
-  setHasChanges,
+  markChanged,
+  markSettled,
+  today,
   getDayState,
   months,
 }: UseAvailabilityEditorProps) {
@@ -127,7 +134,7 @@ export function useAvailabilityEditor({
           ),
         }))
       );
-      setHasChanges(true);
+      markChanged(selectedDates);
     }
 
     if (platform === 'ios' && event.type === 'set') {
@@ -147,7 +154,7 @@ export function useAvailabilityEditor({
           ),
         }))
       );
-      setHasChanges(true);
+      markChanged(selectedDates);
     }
     setShowTimePicker(false);
   };
@@ -172,7 +179,7 @@ export function useAvailabilityEditor({
             : [],
       }))
     );
-    setHasChanges(true);
+    markChanged(selectedDates);
   };
 
   const addSlot = () => {
@@ -190,7 +197,7 @@ export function useAvailabilityEditor({
         slots: [...currentState.slots, { ...DEFAULT_SLOT }],
       }))
     );
-    setHasChanges(true);
+    markChanged(selectedDates);
   };
 
   const removeSlot = (index: number) => {
@@ -202,27 +209,27 @@ export function useAvailabilityEditor({
         slots: currentState.slots.filter((_, i) => i !== index),
       }))
     );
-    setHasChanges(true);
+    markChanged(selectedDates);
   };
 
   /**
    * Delete the marks on the selected past dates, on the server as well as here.
    *
-   * It used to drop them from local state and stop. Nothing else could rescue
-   * that: the save deliberately skips past dates, and the bulk endpoint only
-   * clears dates the payload names, so a past date was in neither. The marks
-   * vanished, no error was shown, and they were all back on the next visit to
-   * the tab.
+   * Only the past ones: the action is offered when the selection has any, and it
+   * used to delete every selected date, the future ones included (review CC04).
+   * One request for all of them, and only they are settled afterwards — it used
+   * to mark the whole screen saved, so other unsaved edits looked saved and
+   * were lost on the next load.
    *
    * Nothing is removed locally unless the server agreed, so a failure leaves
    * the screen telling the truth rather than a comfortable fiction.
    */
   const deletePastDates = async (onComplete: (error?: unknown) => void) => {
-    const dates = [...selectedDates];
+    const dates = selectedDates.filter((date) => date < today);
     if (dates.length === 0) return;
 
     try {
-      await Promise.all(dates.map((date) => availabilityAPI.delete(date)));
+      await availabilityAPI.saveDays(dates.map((date) => ({ date, entries: [] })));
     } catch (error) {
       onComplete(error);
       return;
@@ -233,8 +240,7 @@ export function useAvailabilityEditor({
       dates.forEach(date => delete updated[date]);
       return updated;
     });
-    // Nothing is left unsaved: the deletion has already happened on the server.
-    setHasChanges(false);
+    markSettled(dates);
     clearSelection();
     onComplete();
   };

@@ -1,5 +1,5 @@
 import { logger } from '../../../shared/utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayMode, DayState, TimeSlot } from '../types';
 import {
@@ -22,11 +22,63 @@ const CACHED_AVAILABILITY_KEY = 'availability-cache';
 
 const DEFAULT_SLOT = { start: '10:00', end: '18:00' };
 
+/**
+ * What the server says for the days nobody is editing, and the person's own
+ * draft for the days they are. A reload — coming back to the tab, a pull to
+ * refresh, the offline fallback — used to replace unsaved edits with the last
+ * loaded state (review CC02). A changed day missing from the draft was emptied
+ * by the person and stays empty.
+ */
+export function keepDrafts(loaded: AvailabilityData, current: AvailabilityData,
+  changed: Record<string, number>): AvailabilityData {
+  const merged = { ...loaded };
+  for (const date of Object.keys(changed)) {
+    if (current[date]) merged[date] = current[date];
+    else delete merged[date];
+  }
+  return merged;
+}
+
 export const useAvailabilityData = () => {
   const [availability, setAvailability] = useState<AvailabilityData>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
+  // The days changed here and not yet saved, each with a counter bumped by every
+  // edit. A save sends only these days (review CC05) and afterwards clears only
+  // the counters it sent, so an edit made while it was out stays unsaved
+  // (review CC03); a reload leaves them alone (keepDrafts).
+  const [changed, setChanged] = useState<Record<string, number>>({});
+  const changedRef = useRef(changed);
+  changedRef.current = changed;
+  const hasChanges = Object.keys(changed).length > 0;
+
+  const markChanged = useCallback((dates: string[]) => {
+    setChanged((prev) => {
+      const next = { ...prev };
+      for (const date of dates) next[date] = (next[date] ?? 0) + 1;
+      return next;
+    });
+  }, []);
+
+  /** A save went through with these counters: days edited since stay changed. */
+  const markSaved = useCallback((sent: Record<string, number>) => {
+    setChanged((prev) => {
+      const next = { ...prev };
+      for (const [date, version] of Object.entries(sent)) {
+        if (next[date] === version) delete next[date];
+      }
+      return next;
+    });
+  }, []);
+
+  /** These days are settled on the server whatever was drafted for them. */
+  const markSettled = useCallback((dates: string[]) => {
+    setChanged((prev) => {
+      const next = { ...prev };
+      for (const date of dates) delete next[date];
+      return next;
+    });
+  }, []);
 
   // Whether the last load actually answered.
   //
@@ -243,7 +295,7 @@ export const useAvailabilityData = () => {
         2
       ));
 
-      setAvailability(localData);
+      setAvailability((current) => keepDrafts(localData, current, changedRef.current));
       AsyncStorage.setItem(CACHED_AVAILABILITY_KEY, JSON.stringify(localData)).catch(() => {
         // A cache is not worth an error.
       });
@@ -255,7 +307,10 @@ export const useAvailabilityData = () => {
       // reader's real availability sits safely on the server.
       try {
         const cached = await AsyncStorage.getItem(CACHED_AVAILABILITY_KEY);
-        if (cached) setAvailability(JSON.parse(cached));
+        if (cached) {
+          const loaded: AvailabilityData = JSON.parse(cached);
+          setAvailability((current) => keepDrafts(loaded, current, changedRef.current));
+        }
       } catch {
         // Nothing cached, or it will not parse. The banner already says the
         // load failed; an empty screen beside it is at least not a lie.
@@ -281,7 +336,10 @@ export const useAvailabilityData = () => {
     saving,
     setSaving,
     hasChanges,
-    setHasChanges,
+    changed,
+    markChanged,
+    markSaved,
+    markSettled,
     getDayState,
     loadAvailability,
   };
