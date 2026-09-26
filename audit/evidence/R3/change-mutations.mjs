@@ -1,22 +1,26 @@
 // R3 email change (HP01): put each weakening of the change back into a copy
 // of the server and require the tests that guard it to fail. The unmutated
-// copy must pass the same commands. There is no "before" variant: the routes
-// did not exist, and a copy without them fails on the missing module, which
-// the runner does not count. A Jest expectation names a failed test ("●"); a
+// copy must pass the same commands. "before-R3-19" puts back the routes as
+// first written, where a password stood in for the current-address code;
+// there is no variant from before the item — the routes did not exist, and a
+// copy without them fails on the missing module, which the runner refuses. A Jest expectation names a failed test ("●"); a
 // copy that fails to load its modules is refused (loadFailure).
 //
 //   node audit/evidence/R3/change-mutations.mjs
 //
-// Needs Node 22, Docker Desktop (desktop-linux) with postgres:15, as the R0 harness.
+// Needs Node 22, git, Docker Desktop (desktop-linux) with postgres:15, as the R0 harness.
 import assert from 'node:assert/strict';
 import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const server = path.resolve(fileURLToPath(new URL('../../../rehearsal-calendar-native/server', import.meta.url)));
 const CHANGE = 'routes/emailChange.js';
+const BEFORE_R3_19 = '239b5d7';
+const historical = (root, file, commit) => writeFileSync(path.join(root, file),
+  execFileSync('git', ['show', `${commit}:rehearsal-calendar-native/server/${file}`], { cwd: server }));
 const jest = ['--experimental-vm-modules', 'node_modules/jest/bin/jest.js', '--runInBand', '--silent',
   '__tests__/routes/emailChange.test.js'];
 const pgAuth = ['scripts/r0-postgres.mjs', '--r3-auth-only'];
@@ -30,6 +34,9 @@ function edit(root, file, from, to) {
 
 const mutations = [
   { id: 'control', description: 'unmutated copy', runs: [jest, pgAuth], expect: 'pass' },
+  { id: 'before-R3-19', description: `routes/emailChange.js as at ${BEFORE_R3_19}: a password stands in for the current-address code`,
+    apply: (root) => historical(root, CHANGE, BEFORE_R3_19),
+    runs: [jest], expect: /● .*a first password it sets does not replace the code to the current address/ },
   { id: 'session-enough', description: 'the change is asked for without the current password',
     apply: (root) => edit(root, CHANGE, `      if (user.password_hash) {
         const proof = req.body?.currentPassword;
@@ -39,18 +46,13 @@ const mutations = [
       }
 `, ''),
     runs: [jest], expect: /● .*needs the current password: a session alone does not move the account/ },
-  { id: 'no-current-address-code', description: 'an account without a password is not asked for a code to its current address',
-    apply: (root) => edit(root, CHANGE, `      const confirm = user.password_hash ? null
-        : await issueCode(tx, { userId: req.userId, purpose: 'confirm', email: user.email });`, '      const confirm = null;'),
-    runs: [jest], expect: /● .*asks an account without a password for a code to its current address too/ },
-  { id: 'current-code-unchecked', description: 'the current-address code is not checked at confirmation',
-    apply: (root) => edit(root, CHANGE, `        if (!user.password_hash) {
-          const current = await checkCode(tx, { userId: req.userId, purpose: 'confirm', email: user.email,
-            code: req.body?.currentCode, now });
-          if (!current.ok) return refused(400, { error: 'The code is not valid', code: current.reason, field: 'currentCode' });
-        }
-`, ''),
-    runs: [jest], expect: /● .*without a password, a wrong current-address code leaves the new-address code unspent/ },
+  { id: 'current-code-unchecked', description: 'the current-address code is not required at confirmation',
+    apply: (root) => edit(root, CHANGE,
+      "        if (!current.ok) return refused(400, { error: 'The code is not valid', code: current.reason, field: 'currentCode' });\n", ''),
+    runs: [jest], expect: /● .*needs the current-address code from an account with a password too/ },
+  { id: 'burns-current-code', description: 'a right current-address code is spent though the new-address code is wrong (R3-20)',
+    apply: (root) => edit(root, CHANGE, 'code: req.body?.currentCode, now, consume: false });', 'code: req.body?.currentCode, now });'),
+    runs: [jest], expect: /● .*a wrong code in either place spends neither right one: the pair still works/ },
   { id: 'change-keeps-sessions', description: 'the other sessions survive the change',
     apply: (root) => edit(root, CHANGE, 'SET email = $2, token_version = token_version + 1, updated_at', 'SET email = $2, updated_at'),
     runs: [jest, pgAuth], expect: /one change must move the account once/ },
@@ -73,12 +75,19 @@ const mutations = [
   { id: 'codes-survive', description: 'live codes survive the change',
     apply: (root) => edit(root, CHANGE, '        await voidCodes(tx, { userId: req.userId, now });\n', ''),
     runs: [jest], expect: /● .*moves the account: new address proven, other sessions and codes gone, old address told/ },
+  { id: 'change-removes-devices', description: 'the change takes the push devices off the account (R3-22)',
+    apply: (root) => edit(root, CHANGE, '        await voidCodes(tx, { userId: req.userId, now });\n',
+      "        await voidCodes(tx, { userId: req.userId, now });\n        await tx.run('DELETE FROM native_push_tokens WHERE user_id = $1', [req.userId]);\n"),
+    runs: [jest], expect: /● .*leaves the account's push devices in place/ },
   { id: 'old-address-not-told', description: 'the old address is not told',
     apply: (root) => edit(root, CHANGE, `    const notice = await transport.send(addressChangedMessage({ to: outcome.oldEmail, newAddress: outcome.user.email,
       locale: outcome.locale }));
-    if (!notice.ok) logger.warn(\`[EmailChange] Notice to the old address not sent: \${notice.reason}\`);
-`, ''),
+`, '    const notice = { ok: true };\n'),
     runs: [jest], expect: /● .*moves the account: new address proven, other sessions and codes gone, old address told/ },
+  { id: 'notice-undoes-change', description: 'a refused notice turns the confirmation into an error (R3-22)',
+    apply: (root) => edit(root, CHANGE, '    if (!notice.ok) {\n',
+      "    if (!notice.ok) return res.status(502).json({ error: 'The notice was not sent' });\n    if (!notice.ok) {\n"),
+    runs: [jest], expect: /● .*stands when the notice to the old address is refused/ },
   { id: 'taken-unchecked-at-confirm', description: 'the confirmation does not look whether the address was taken meanwhile',
     apply: (root) => edit(root, CHANGE, `        if (await tx.get('SELECT id FROM native_users WHERE email = $1 AND id <> $2', [checked.email, req.userId])) {
           return refused(409, EMAIL_TAKEN);
