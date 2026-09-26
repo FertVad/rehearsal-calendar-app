@@ -82,9 +82,6 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     marginHorizontal: Spacing.md,
   },
-  telegramButton: {
-    marginBottom: Spacing.md,
-  },
   loginButton: {
     marginTop: Spacing.md,
   },

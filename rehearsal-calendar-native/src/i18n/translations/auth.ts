@@ -14,8 +14,6 @@ export interface AuthTranslations {
   registerButton: string;
   createAccount: string;
   alreadyHaveAccount: string;
-  loginWithTelegram: string;
-  registerWithTelegram: string;
   fillAllFields: string;
   invalidEmail: string;
   passwordMinLength: string;
@@ -85,8 +83,6 @@ export const ru = {
     registerButton: 'Зарегистрироваться',
     createAccount: 'Создать аккаунт',
     alreadyHaveAccount: 'Уже есть аккаунт? Войти',
-    loginWithTelegram: 'Войти через Telegram',
-    registerWithTelegram: 'Зарегистрироваться через Telegram',
     fillAllFields: 'Заполните все поля',
     invalidEmail: 'Неверный формат email',
     passwordMinLength: 'Пароль должен содержать минимум 8 символов',
@@ -156,8 +152,6 @@ export const en = {
     registerButton: 'Sign Up',
     createAccount: 'Create Account',
     alreadyHaveAccount: 'Already have an account? Sign In',
-    loginWithTelegram: 'Sign in with Telegram',
-    registerWithTelegram: 'Sign up with Telegram',
     fillAllFields: 'Fill in all fields',
     invalidEmail: 'Invalid email format',
     passwordMinLength: 'Password must be at least 8 characters',
@@ -227,8 +221,6 @@ export const es = {
     registerButton: 'Registrarse',
     createAccount: 'Crear cuenta',
     alreadyHaveAccount: '¿Ya tienes una cuenta? Inicia sesión',
-    loginWithTelegram: 'Iniciar sesión con Telegram',
-    registerWithTelegram: 'Registrarse con Telegram',
     fillAllFields: 'Completa todos los campos',
     invalidEmail: 'Formato de correo no válido',
     passwordMinLength: 'La contraseña debe tener al menos 8 caracteres',
@@ -298,8 +290,6 @@ export const de = {
     registerButton: 'Registrieren',
     createAccount: 'Konto erstellen',
     alreadyHaveAccount: 'Bereits ein Konto? Anmelden',
-    loginWithTelegram: 'Mit Telegram anmelden',
-    registerWithTelegram: 'Mit Telegram registrieren',
     fillAllFields: 'Bitte alle Felder ausfüllen',
     invalidEmail: 'Ungültiges E-Mail-Format',
     passwordMinLength: 'Das Passwort muss mindestens 8 Zeichen lang sein',

@@ -3,6 +3,12 @@
 // require the test that guards it to fail. The unmutated copy must pass. A
 // variant counts only when the named test fails ("●") and every suite loaded.
 //
+// Since the sign-in got one commit point (review R3-30, R3-31) there is no
+// take-back and no staleness check inside the device wipe, so the two variants
+// that removed them are gone. From 26.09 client fixes are proven by plain tests
+// seen red first (audit/HANDOFF_CLAUDE.md §4); this script keeps guarding the
+// mechanisms R3-24..R3-29 introduced.
+//
 // There is no whole-file "before" variant: the frontend tests compile with
 // ts-jest, and the new tests name translation keys the old files lack, so an
 // old file fails to compile rather than to behave — the runner refuses that.
@@ -35,14 +41,11 @@ function edit(root, file, from, to) {
 
 const mutations = [
   { id: 'control', description: 'unmutated copy', expect: 'pass' },
-  // Without the first check the take-back after writing still keeps a late
-  // answer from signing in; what it can no longer protect is a newer sign-in's
-  // tokens, which the late answer overwrites and then removes.
-  { id: 'stale-confirm-writes', description: 'a stale confirmation writes its tokens before looking (R3-24)',
-    apply: (root) => edit(root, CONTEXT, `    const left = () => attempt !== signInAttempt.current;
-    if (left()) return false;
-`, `    const left = () => attempt !== signInAttempt.current;
-`),
+  // The one question a sign-in asks before it writes. Without it a late answer
+  // signs in over a newer sign-in.
+  { id: 'stale-confirm-writes', description: 'a sign-in writes without asking whether its attempt is still current (R3-24)',
+    apply: (root) => edit(root, CONTEXT, `    if (attempt !== signInAttempt.current) return false;
+    await reconcileDeviceState(data.user);`, `    await reconcileDeviceState(data.user);`),
     expect: /● .*does not let a late confirmation replace a newer sign-in/ },
   { id: 'leaving-keeps-attempt', description: 'leaving the flow does not make the attempt in flight stale (R3-24)',
     apply: (root) => edit(root, CONTEXT, `  const forgetPendingSignIn = useCallback(() => {
@@ -50,12 +53,6 @@ const mutations = [
 `, `  const forgetPendingSignIn = useCallback(() => {
 `),
     expect: /● .*signs nobody in when the confirmation answers after the person left/ },
-  { id: 'no-take-back', description: 'tokens written for an attempt that went stale meanwhile stay (R3-24)',
-    apply: (root) => edit(root, CONTEXT, `      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'cachedUser']);
-      return false;
-    };`, `      return false;
-    };`),
-    expect: /● .*takes back tokens written for an attempt that went stale meanwhile/ },
   { id: 'late-registration-opens', description: 'a registration answered after the form was left still sets the pending address (R3-24)',
     apply: (root) => edit(root, CONTEXT, `      if (!isCurrent(attempt)) return null;
       const created =`, '      const created ='),
@@ -63,13 +60,7 @@ const mutations = [
   { id: 'writes-interleave', description: 'session writes of two attempts interleave (R3-29)',
     apply: (root) => edit(root, CONTEXT, 'const run = sessionWrites.current.then(() => writeSession(data, attempt));',
       'const run = writeSession(data, attempt);'),
-    expect: /● .*a left attempt cannot take back tokens equal to a newer sign-in of the same account/ },
-  { id: 'wipe-without-looking', description: 'a left attempt wipes the device state it read (R3-29)',
-    apply: (root) => edit(root, CONTEXT, `    const lastOwner = await AsyncStorage.getItem('calendar-sync-owner');
-    if (left()) return;
-`, `    const lastOwner = await AsyncStorage.getItem('calendar-sync-owner');
-`),
-    expect: /● .*a left attempt does not erase the calendar state of the account signing in after it/ },
+    expect: /● .*a newer sign-in starts writing only after the earlier one has finished/ },
   { id: 'button-leaves-flow-live', description: "the form's back button leaves the registration in flight live (R3-28)",
     apply: (root) => edit(root, REGISTER, `                forgetPendingSignIn();
                 navigation.popTo('Login');`, `                navigation.popTo('Login');`),

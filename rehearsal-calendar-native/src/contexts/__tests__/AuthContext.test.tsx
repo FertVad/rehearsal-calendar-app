@@ -30,6 +30,8 @@ jest.mock('../../shared/services/api', () => ({
 const mockStorage: Record<string, string> = {};
 // A read the test holds until it decides: key → the promise the next read waits for.
 const mockHeldReads: Record<string, Promise<void>> = {};
+// A key whose write storage refuses, after writing the pairs before it.
+const mockRefusedWrite: { key: string | null } = { key: null };
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: async (key: string) => {
     const hold = mockHeldReads[key];
@@ -38,7 +40,13 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
   setItem: (key: string, value: string) => { mockStorage[key] = value; return Promise.resolve(); },
   removeItem: (key: string) => { delete mockStorage[key]; return Promise.resolve(); },
-  multiSet: (pairs: [string, string][]) => { pairs.forEach(([k, v]) => { mockStorage[k] = v; }); return Promise.resolve(); },
+  multiSet: (pairs: [string, string][]) => {
+    for (const [k, v] of pairs) {
+      if (k === mockRefusedWrite.key) return Promise.reject(new Error('write refused'));
+      mockStorage[k] = v;
+    }
+    return Promise.resolve();
+  },
   multiRemove: (keys: string[]) => { keys.forEach((k) => delete mockStorage[k]); return Promise.resolve(); },
   clear: () => { Object.keys(mockStorage).forEach((k) => delete mockStorage[k]); return Promise.resolve(); },
 }));
@@ -76,6 +84,7 @@ beforeEach(() => {
   mockSyncPreferences.mockReset();
   mockSyncPreferences.mockImplementation((..._args: any[]) => Promise.resolve());
   Object.keys(mockHeldReads).forEach((k) => delete mockHeldReads[k]);
+  mockRefusedWrite.key = null;
   loadingSeen.length = 0;
 });
 
@@ -148,7 +157,10 @@ it('does not let a late confirmation replace a newer sign-in (review R3-24)', as
   expect(mockStorage.accessToken).toBe('apple');
 });
 
-it('takes back tokens written for an attempt that went stale meanwhile', async () => {
+// A sign-in commits when its answer's turn to write comes. That is the last
+// point where leaving cancels it; from there it runs to the end, and the
+// credentials are written last (review R3-30, R3-31).
+it('finishes a sign-in whose writing has begun, even if the person leaves meanwhile (review R3-31)', async () => {
   const screen = await renderAuth();
   mockApi.register.mockResolvedValue(created);
   await act(async () => { await auth.register('new@example.com', 'long-enough-1', 'New'); });
@@ -157,14 +169,61 @@ it('takes back tokens written for an attempt that went stale meanwhile', async (
   mockSyncPreferences.mockReturnValueOnce(syncing.promise);
   let confirming: Promise<void>;
   act(() => { confirming = auth.confirmEmail('123456'); });
-  await waitFor(() => expect(mockStorage.accessToken).toBe('late'));
+  await waitFor(() => expect(mockSyncPreferences).toHaveBeenCalled());
   act(() => { auth.forgetPendingSignIn(); });
   await act(async () => { syncing.resolve(); await confirming; });
+  expect(screen.getByTestId('user').props.children).toBe('7');
+  expect(mockStorage.accessToken).toBe('late');
+  expect(auth.pendingEmail).toBeNull();
+});
+
+it('writes no credentials when a step before them fails (review R3-30)', async () => {
+  const screen = await renderAuth();
+  mockApi.register.mockResolvedValue(created);
+  await act(async () => { await auth.register('new@example.com', 'long-enough-1', 'New'); });
+  mockApi.verifyEmail.mockResolvedValue({ data: { user: USER, accessToken: 'half', refreshToken: 'half' } });
+  mockSyncPreferences.mockRejectedValueOnce(new Error('storage refused'));
+  let failure: unknown;
+  await act(async () => { await auth.confirmEmail('123456').catch((error) => { failure = error; }); });
+  expect(failure).toBeDefined();
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.accessToken).toBeUndefined();
+  expect(mockStorage.refreshToken).toBeUndefined();
+  expect(mockStorage.cachedUser).toBeUndefined();
+});
+
+it('leaves no credentials behind when the person left and a step then failed (review R3-30)', async () => {
+  const screen = await renderAuth();
+  mockApi.register.mockResolvedValue(created);
+  await act(async () => { await auth.register('new@example.com', 'long-enough-1', 'New'); });
+  mockApi.verifyEmail.mockResolvedValue({ data: { user: USER, accessToken: 'cancelled', refreshToken: 'cancelled' } });
+  const syncing = held<void>();
+  mockSyncPreferences.mockReturnValueOnce(syncing.promise);
+  let confirming: Promise<void>;
+  act(() => { confirming = auth.confirmEmail('123456'); });
+  await waitFor(() => expect(mockSyncPreferences).toHaveBeenCalled());
+  act(() => { auth.forgetPendingSignIn(); });
+  await act(async () => { syncing.reject(new Error('storage refused')); await confirming; });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.accessToken).toBeUndefined();
+  expect(mockStorage.refreshToken).toBeUndefined();
+  expect(mockStorage.cachedUser).toBeUndefined();
+});
+
+it('takes back a credential write that storage refused part-way (review R3-30)', async () => {
+  const screen = await renderAuth();
+  mockApi.register.mockResolvedValue(created);
+  await act(async () => { await auth.register('new@example.com', 'long-enough-1', 'New'); });
+  mockApi.verifyEmail.mockResolvedValue({ data: { user: USER, accessToken: 'half', refreshToken: 'half' } });
+  mockRefusedWrite.key = 'refreshToken';
+  let failure: unknown;
+  await act(async () => { await auth.confirmEmail('123456').catch((error) => { failure = error; }); });
+  expect(failure).toBeDefined();
   expect(screen.getByTestId('user').props.children).toBe('none');
   expect(mockStorage.accessToken).toBeUndefined();
 });
 
-it('a left attempt cannot take back tokens equal to a newer sign-in of the same account (review R3-29)', async () => {
+it('two sign-ins of the same account in a row leave it signed in with its tokens (review R3-29)', async () => {
   const screen = await renderAuth();
   mockApi.register.mockResolvedValue(created);
   await act(async () => { await auth.register('new@example.com', 'long-enough-1', 'New'); });
@@ -174,7 +233,7 @@ it('a left attempt cannot take back tokens equal to a newer sign-in of the same 
   mockSyncPreferences.mockReturnValueOnce(syncing.promise);
   let first: Promise<void>;
   act(() => { first = auth.confirmEmail('123456'); });
-  await waitFor(() => expect(mockStorage.accessToken).toBe('same'));
+  await waitFor(() => expect(mockSyncPreferences).toHaveBeenCalled());
   act(() => { auth.forgetPendingSignIn(); });
   mockApi.loginWithApple.mockResolvedValue({ data: { user: USER, accessToken: 'same', refreshToken: 'same' } });
   let second: Promise<any>;
@@ -185,22 +244,25 @@ it('a left attempt cannot take back tokens equal to a newer sign-in of the same 
   expect(mockStorage.refreshToken).toBe('same');
 });
 
-it('a left attempt does not erase the calendar state of the account signing in after it (review R3-29)', async () => {
+it('an attempt left while it waits for its turn writes and wipes nothing (review R3-29, R3-31)', async () => {
   const screen = await renderAuth();
   Object.assign(mockStorage, { 'calendar-sync-owner': '8', 'calendar-export-mappings': 'mappings of 8', 'availability-cache': 'cache of 8' });
   mockApi.register.mockResolvedValue(created);
   await act(async () => { await auth.register('new@example.com', 'long-enough-1', 'New'); });
-  mockApi.verifyEmail.mockResolvedValue({ data: { user: USER, accessToken: 'late', refreshToken: 'late' } });
-  const ownerRead = held<void>();
-  mockHeldReads['calendar-sync-owner'] = ownerRead.promise;
-  let first: Promise<void>;
-  act(() => { first = auth.confirmEmail('123456'); });
-  await waitFor(() => expect(mockStorage.accessToken).toBe('late'));
-  act(() => { auth.forgetPendingSignIn(); });
+  // Account 8 signs in with Apple, and its writing is held part-way.
   mockApi.loginWithApple.mockResolvedValue({ data: { user: OTHER, accessToken: 'apple', refreshToken: 'apple' } });
-  let second: Promise<any>;
-  act(() => { second = auth.loginWithApple('apple-token'); });
-  await act(async () => { ownerRead.resolve(); await first; await second; });
+  const syncing = held<void>();
+  mockSyncPreferences.mockReturnValueOnce(syncing.promise);
+  let apple: Promise<any>;
+  act(() => { apple = auth.loginWithApple('apple-token'); });
+  await waitFor(() => expect(mockSyncPreferences).toHaveBeenCalledTimes(1));
+  // The confirmation for 7 is answered and waits behind it; then the person leaves.
+  mockApi.verifyEmail.mockResolvedValue({ data: { user: USER, accessToken: 'late', refreshToken: 'late' } });
+  let confirming: Promise<void>;
+  act(() => { confirming = auth.confirmEmail('123456'); });
+  await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+  act(() => { auth.forgetPendingSignIn(); });
+  await act(async () => { syncing.resolve(); await apple; await confirming; });
   expect(screen.getByTestId('user').props.children).toBe('8');
   expect(mockStorage.accessToken).toBe('apple');
   expect(mockStorage['calendar-sync-owner']).toBe('8');
@@ -208,7 +270,7 @@ it('a left attempt does not erase the calendar state of the account signing in a
   expect(mockStorage['availability-cache']).toBe('cache of 8');
 });
 
-it('a newer sign-in writes only after an abandoned one has taken back its tokens (review R3-29)', async () => {
+it('a newer sign-in starts writing only after the earlier one has finished (review R3-29)', async () => {
   const screen = await renderAuth();
   mockApi.register.mockResolvedValue(created);
   await act(async () => { await auth.register('new@example.com', 'long-enough-1', 'New'); });
@@ -217,17 +279,17 @@ it('a newer sign-in writes only after an abandoned one has taken back its tokens
   mockSyncPreferences.mockReturnValueOnce(syncing.promise);
   let first: Promise<void>;
   act(() => { first = auth.confirmEmail('123456'); });
-  await waitFor(() => expect(mockStorage.accessToken).toBe('late'));
-  act(() => { auth.forgetPendingSignIn(); });
+  await waitFor(() => expect(mockSyncPreferences).toHaveBeenCalled());
   mockApi.loginWithApple.mockResolvedValue({ data: { user: OTHER, accessToken: 'apple', refreshToken: 'apple' } });
   let second: Promise<any>;
   act(() => { second = auth.loginWithApple('apple-token'); });
-  // The newer sign-in has its answer but waits for the older write to finish.
-  await act(async () => { await Promise.resolve(); });
-  expect(mockStorage.accessToken).toBe('late');
+  // The newer sign-in has its answer but waits: the device is still the first one's.
+  await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+  expect(mockStorage['calendar-sync-owner']).toBe('7');
   await act(async () => { syncing.resolve(); await first; await second; });
   expect(screen.getByTestId('user').props.children).toBe('8');
   expect(mockStorage.accessToken).toBe('apple');
+  expect(mockStorage['calendar-sync-owner']).toBe('8');
 });
 
 it('opens nothing for a registration answered after the form was left (review R3-24)', async () => {

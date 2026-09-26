@@ -161,9 +161,6 @@ export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
 
-  loginWithTelegram: (telegramData: any) =>
-    api.post('/auth/telegram', telegramData),
-
   getMe: () => api.get('/auth/me'),
 
   updateMe: (data: {

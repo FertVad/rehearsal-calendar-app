@@ -21,7 +21,6 @@ interface User {
   firstName: string;
   lastName?: string;
   phone?: string;
-  telegramId?: number;
   avatarUrl?: string;
   timezone?: string;
   locale?: string;
@@ -48,9 +47,8 @@ interface AuthContextType {
   pendingEmail: string | null;
   confirmEmail: (code: string) => Promise<void>;
   resendConfirmation: () => Promise<DeliveryOutcome | null>;
-  /** Leave the confirmation: anything still in flight for it writes nothing. */
+  /** Leave the confirmation: an answer not yet writing writes nothing; one already writing finishes. */
   forgetPendingSignIn: () => void;
-  loginWithTelegram: (telegramData: any) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<{ linked: boolean }>;
   loginWithApple: (idToken: string, user?: any) => Promise<{ linked: boolean }>;
   logout: () => Promise<void>;
@@ -61,6 +59,9 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// What a started session writes, and what a failed write takes back.
+const CREDENTIALS = ['accessToken', 'refreshToken', 'cachedUser'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -80,7 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // makes older ones stale, and a stale answer writes nothing — no tokens, no
   // user, no pending address (review R3-24; CLAUDE.md 11). Without it a
   // confirmation answered after the person had left the code screen signed
-  // them in anyway, over another account's newer sign-in.
+  // them in anyway, over another account's newer sign-in. The number is asked
+  // once, when the answer's turn to write comes (see writeSession).
   const signInAttempt = useRef(0);
   const hasTimezoneSynced = useRef(false);
   const hasPushSynced = useRef(false);
@@ -89,13 +91,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // calendars, last-sync timestamps). Wipe it only when a *different* user
   // signs in on the same device — otherwise the same user logging back in
   // would see their sync UI reset to defaults.
-  // `left` says whether the sign-in asking for this was abandoned; it is asked
-  // after reading, just before anything is wiped, so an abandoned attempt
-  // leaves the device as it found it (review R3-29).
-  const reconcileDeviceState = useCallback(async (newUser: User, left: () => boolean = () => false) => {
+  // It runs only inside a sign-in that has committed (writeSession), so a wipe
+  // is never left behind by an attempt that then does not happen (review R3-31).
+  const reconcileDeviceState = useCallback(async (newUser: User) => {
     const newUserId = String(newUser.id);
     const lastOwner = await AsyncStorage.getItem('calendar-sync-owner');
-    if (left()) return;
     if (lastOwner && lastOwner !== newUserId) {
       await AsyncStorage.multiRemove([
         'calendar-export-mappings',
@@ -140,36 +140,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Session writes run one at a time: a newer attempt starts writing only after
-  // an older one has finished or taken back its own. Interleaved, an abandoned
-  // attempt removed the newer sign-in's tokens — equal strings for the same
-  // user in the same second say nothing about who wrote them — or wiped its
-  // calendar state (review R3-29).
+  // an older one has finished. Interleaved, two sign-ins mixed each other's
+  // tokens and calendar state (review R3-29).
   const sessionWrites = useRef<Promise<unknown>>(Promise.resolve());
 
-  // Every way in ends here: tokens and user stored, stale logout mark cleared,
-  // device state reconciled, preferences synced, then the user set — only for
-  // the attempt still current, which is asked again before each step. An
-  // attempt left midway takes back the tokens it wrote: nothing else can have
-  // written them in between. Returns whether the session started.
+  // Every way in ends here. The attempt is asked once, when its turn to write
+  // comes: that is where the sign-in commits. Before it, leaving cancels the
+  // sign-in and nothing is written. After it, the sign-in runs to the end even
+  // if the person leaves — the server has already spent the code and issued the
+  // session, and a half-done sign-in cannot be undone: the wipe of another
+  // account's device state is not reversible (review R3-31). The credentials
+  // go last, so a failure at any step leaves no session behind to be restored
+  // at the next start (review R3-30). Returns whether the session started.
   const writeSession = useCallback(async (data: { user: User; accessToken: string; refreshToken: string }, attempt: number) => {
-    const left = () => attempt !== signInAttempt.current;
-    if (left()) return false;
-    const takeBack = async () => {
-      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'cachedUser']);
-      return false;
-    };
-    await AsyncStorage.multiSet([
-      ['accessToken', data.accessToken],
-      ['refreshToken', data.refreshToken],
-      ['cachedUser', JSON.stringify(data.user)],
-    ]);
-    if (left()) return takeBack();
-    await AsyncStorage.removeItem('lastLogoutTime');
-    await reconcileDeviceState(data.user, left);
-    if (left()) return takeBack();
+    if (attempt !== signInAttempt.current) return false;
+    await reconcileDeviceState(data.user);
     // Sync user preferences (timezone, locale, weekStartDay)
     await syncUserPreferences(data.user);
-    if (left()) return takeBack();
+    await AsyncStorage.removeItem('lastLogoutTime');
+    try {
+      await AsyncStorage.multiSet([
+        ['accessToken', data.accessToken],
+        ['refreshToken', data.refreshToken],
+        ['cachedUser', JSON.stringify(data.user)],
+      ]);
+    } catch (error) {
+      // A write refused part-way may have stored some of them.
+      await AsyncStorage.multiRemove(CREDENTIALS).catch(() => undefined);
+      throw error;
+    }
     pendingSignIn.current = null;
     setPendingEmail(null);
     setUser(data.user);
@@ -360,33 +359,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [beginAttempt, endAttempt]);
 
-  const loginWithTelegram = useCallback(async (telegramData: any) => {
-    try {
-      setError(null);
-      setLoading(true);
-
-      const response = await authAPI.loginWithTelegram(telegramData);
-      const { user, accessToken, refreshToken } = response.data;
-
-      // Save tokens, cache user, and clear any stale logout timestamp
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken],
-        ['cachedUser', JSON.stringify(user)],
-      ]);
-      await AsyncStorage.removeItem('lastLogoutTime');
-      await reconcileDeviceState(user);
-
-      setUser(user);
-    } catch (err: any) {
-      const failure = toAuthFlowError(err, 'Telegram login failed');
-      setError(failure);
-      throw new Error(failure.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const loginWithGoogle = useCallback(async (idToken: string) => {
     const attempt = beginAttempt();
     try {
@@ -523,7 +495,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         confirmEmail,
         resendConfirmation,
         forgetPendingSignIn,
-        loginWithTelegram,
         loginWithGoogle,
         loginWithApple,
         logout,
