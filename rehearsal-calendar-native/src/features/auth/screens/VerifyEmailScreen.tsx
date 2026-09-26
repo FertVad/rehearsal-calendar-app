@@ -106,7 +106,7 @@ export default function VerifyEmailScreen({ navigation, route }: VerifyEmailScre
           </View>
           <GlassButton
             title={t.auth.backToLogin}
-            onPress={() => navigation.navigate('Login')}
+            onPress={() => navigation.popTo('Login')}
             variant="purple"
             style={styles.registerButton}
           />
@@ -175,7 +175,7 @@ export default function VerifyEmailScreen({ navigation, route }: VerifyEmailScre
               title={t.auth.backToLogin}
               onPress={() => {
                 forgetPendingSignIn();
-                navigation.navigate('Login');
+                navigation.popTo('Login');
               }}
               variant="glass"
               style={styles.loginButton}

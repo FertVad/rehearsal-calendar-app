@@ -79,7 +79,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       if (err instanceof AuthFlowError && err.code === 'EMAIL_TAKEN') {
         Alert.alert(t.auth.emailTakenTitle, t.auth.emailTakenMessage, [
           { text: t.common.cancel, style: 'cancel' },
-          { text: t.auth.loginButton, onPress: () => navigation.navigate('Login') },
+          { text: t.auth.loginButton, onPress: () => navigation.popTo('Login') },
         ]);
         return;
       }
@@ -185,7 +185,13 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
 
             <GlassButton
               title={t.auth.alreadyHaveAccount}
-              onPress={() => navigation.navigate('Login')}
+              onPress={() => {
+                // Back to Login while a registration is in flight: its answer
+                // must open nothing. The form stays mounted under navigate(),
+                // so leaving is said here, not left to the unmount (R3-28).
+                forgetPendingSignIn();
+                navigation.popTo('Login');
+              }}
               variant="glass"
               style={styles.loginButton}
             />

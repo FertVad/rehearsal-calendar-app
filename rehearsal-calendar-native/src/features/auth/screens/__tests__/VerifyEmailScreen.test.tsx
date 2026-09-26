@@ -31,12 +31,13 @@ jest.mock('../../../../shared/components', () => {
   };
 });
 
-const navigation: any = { navigate: jest.fn() };
+const navigation: any = { navigate: jest.fn(), popTo: jest.fn() };
 const screen = (params: any) => render(<VerifyEmailScreen navigation={navigation} route={{ key: 'v', name: 'VerifyEmail', params } as any} />);
 
 beforeEach(() => {
   jest.useFakeTimers();
   navigation.navigate.mockReset();
+  navigation.popTo.mockReset();
   Object.assign(mockAuth, {
     pendingEmail: 'new@example.com',
     busy: false,
@@ -132,6 +133,6 @@ it('without remembered credentials, offers only the way back to sign in', () => 
   const view = screen({ email: 'new@example.com', delivery: 'sent' });
   expect(view.getByText(t.auth.signInAgainToConfirm)).toBeTruthy();
   fireEvent.press(view.getByText(t.auth.backToLogin));
-  expect(navigation.navigate).toHaveBeenCalledWith('Login');
+  expect(navigation.popTo).toHaveBeenCalledWith('Login');
   expect(view.queryByTestId('verify-code')).toBeNull();
 });

@@ -89,9 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // calendars, last-sync timestamps). Wipe it only when a *different* user
   // signs in on the same device — otherwise the same user logging back in
   // would see their sync UI reset to defaults.
-  const reconcileDeviceState = useCallback(async (newUser: User) => {
+  // `left` says whether the sign-in asking for this was abandoned; it is asked
+  // after reading, just before anything is wiped, so an abandoned attempt
+  // leaves the device as it found it (review R3-29).
+  const reconcileDeviceState = useCallback(async (newUser: User, left: () => boolean = () => false) => {
     const newUserId = String(newUser.id);
     const lastOwner = await AsyncStorage.getItem('calendar-sync-owner');
+    if (left()) return;
     if (lastOwner && lastOwner !== newUserId) {
       await AsyncStorage.multiRemove([
         'calendar-export-mappings',
@@ -135,33 +139,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (attempt === signInAttempt.current) setBusy(false);
   }, []);
 
+  // Session writes run one at a time: a newer attempt starts writing only after
+  // an older one has finished or taken back its own. Interleaved, an abandoned
+  // attempt removed the newer sign-in's tokens — equal strings for the same
+  // user in the same second say nothing about who wrote them — or wiped its
+  // calendar state (review R3-29).
+  const sessionWrites = useRef<Promise<unknown>>(Promise.resolve());
+
   // Every way in ends here: tokens and user stored, stale logout mark cleared,
   // device state reconciled, preferences synced, then the user set — only for
-  // the attempt still current. Returns whether the session started.
-  const startSession = useCallback(async (data: { user: User; accessToken: string; refreshToken: string }, attempt: number) => {
-    if (attempt !== signInAttempt.current) return false;
+  // the attempt still current, which is asked again before each step. An
+  // attempt left midway takes back the tokens it wrote: nothing else can have
+  // written them in between. Returns whether the session started.
+  const writeSession = useCallback(async (data: { user: User; accessToken: string; refreshToken: string }, attempt: number) => {
+    const left = () => attempt !== signInAttempt.current;
+    if (left()) return false;
+    const takeBack = async () => {
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'cachedUser']);
+      return false;
+    };
     await AsyncStorage.multiSet([
       ['accessToken', data.accessToken],
       ['refreshToken', data.refreshToken],
       ['cachedUser', JSON.stringify(data.user)],
     ]);
+    if (left()) return takeBack();
     await AsyncStorage.removeItem('lastLogoutTime');
-    await reconcileDeviceState(data.user);
+    await reconcileDeviceState(data.user, left);
+    if (left()) return takeBack();
     // Sync user preferences (timezone, locale, weekStartDay)
     await syncUserPreferences(data.user);
-    if (attempt !== signInAttempt.current) {
-      // Left while these were being written: take back what is still ours, or
-      // the next launch would restore a session the person walked away from.
-      if ((await AsyncStorage.getItem('accessToken')) === data.accessToken) {
-        await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'cachedUser']);
-      }
-      return false;
-    }
+    if (left()) return takeBack();
     pendingSignIn.current = null;
     setPendingEmail(null);
     setUser(data.user);
     return true;
   }, [reconcileDeviceState]);
+
+  const startSession = useCallback((data: { user: User; accessToken: string; refreshToken: string }, attempt: number) => {
+    const run = sessionWrites.current.then(() => writeSession(data, attempt));
+    sessionWrites.current = run.catch(() => undefined);
+    return run;
+  }, [writeSession]);
 
   const loadUser = useCallback(async () => {
     try {

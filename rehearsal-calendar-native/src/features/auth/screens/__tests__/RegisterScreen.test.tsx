@@ -30,7 +30,7 @@ jest.mock('../../../../shared/components', () => {
   };
 });
 
-const navigation: any = { navigate: jest.fn() };
+const navigation: any = { navigate: jest.fn(), popTo: jest.fn() };
 const form = () => render(<RegisterScreen navigation={navigation} route={{ key: 'r', name: 'Register' } as any} />);
 function fill(view: ReturnType<typeof form>, values: { first?: string; email?: string; password?: string; confirm?: string }) {
   fireEvent.changeText(view.getByPlaceholderText(t.auth.firstNamePlaceholder), values.first ?? 'Анна');
@@ -42,6 +42,7 @@ function fill(view: ReturnType<typeof form>, values: { first?: string; email?: s
 beforeEach(() => {
   (Alert.alert as jest.Mock).mockReset();
   navigation.navigate.mockReset();
+  navigation.popTo.mockReset();
   Object.assign(mockAuth, {
     busy: false,
     error: null,
@@ -92,6 +93,14 @@ it('opens the code screen, or nothing when the answer came after leaving', async
   navigation.navigate.mockReset();
   mockAuth.register.mockResolvedValue(null);
   await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
+  expect(navigation.navigate).not.toHaveBeenCalled();
+});
+
+it('leaves the flow from its own button, not only on unmount (review R3-28)', () => {
+  const view = form();
+  fireEvent.press(view.getByText(t.auth.alreadyHaveAccount));
+  expect(mockAuth.forgetPendingSignIn).toHaveBeenCalledTimes(1);
+  expect(navigation.popTo).toHaveBeenCalledWith('Login');
   expect(navigation.navigate).not.toHaveBeenCalled();
 });
 
