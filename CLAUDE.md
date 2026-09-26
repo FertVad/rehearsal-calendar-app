@@ -240,11 +240,18 @@ const newStatus = currentStatus === 'yes' ? null : 'yes';   // UI state
 const serverStatus = currentStatus === 'yes' ? 'no' : 'yes'; // wire value
 ```
 
-The backend **upserts** the row (`ON CONFLICT ... DO UPDATE`); it never deletes.
-Sending anything other than `'yes'`/`'no'` throws.
+The backend **updates** the caller's existing row and never creates or deletes
+one: answering is not a way onto a rehearsal. Someone not on it gets 404 (or
+403 `NOT_ON_REHEARSAL` for an admin, who can see it); anything other than
+`'yes'`/`'no'` is a 400.
 
-**Having a row at all is what puts you on the rehearsal.** `'no'` means invited
-and not yet seen — not declined. So editing a rehearsal must keep existing
+**Having a row at all is what puts you on the rehearsal** — a row of someone who
+is still an active member of the project. Who is on a rehearsal is decided in
+one place, [roster.js](rehearsal-calendar-native/server/services/rehearsals/roster.js):
+every read joins the row to the membership, so a leftover row puts nobody in
+announcements, reminders or busy slots, and a test fails if anything else in
+the server names `native_rehearsal_responses`. `'no'` means invited and not yet
+seen — not declined. So editing a rehearsal must keep existing
 answers and add newcomers as `'no'`; wiping the rows and reinserting everyone as
 `'yes'` marks the whole cast as having seen a rehearsal at the exact moment it
 changed, and dropping a `'no'` row removes that person from the call.
@@ -310,10 +317,11 @@ const unknown = participantIds.filter((id) => !allowed.includes(id));
 if (unknown.length) return res.status(400).json({ error: 'Not project members' });
 ```
 
-This is the shape of the `?userIds=` IDOR fixed in `d8b6660`, and it is still
-live in two more places: a project admin can write busy slots into a stranger's
-personal calendar, and an ordinary member can put themselves on a rehearsal they
-were never invited to by calling `respond`.
+This is the shape of the `?userIds=` IDOR fixed in `d8b6660`. The roster had it
+in two more places — a project admin could write busy slots into a stranger's
+personal calendar, and an ordinary member could put themselves on a rehearsal by
+calling `respond` — closed in R4 by `checkParticipants` and `answer` in
+[roster.js](rehearsal-calendar-native/server/services/rehearsals/roster.js).
 
 **Authorize before the work, not after.** A range that comes from a request gets
 an explicit cap before anything is expanded from it. `GET

@@ -778,6 +778,10 @@ Create a new rehearsal for a project.
 - `title` (string, optional): Rehearsal title
 - `description` (string, optional): Rehearsal description
 - `location` (string, optional): Rehearsal location
+- `participant_ids` (array, optional): The people on the rehearsal — user ids,
+  as numbers or digit strings, each counted once. Every one must be an active
+  member of the project, or the whole request is refused before anything is
+  written (at most 500).
 
 **Success Response (201):**
 ```json
@@ -804,13 +808,19 @@ Create a new rehearsal for a project.
   ```json
   { "error": "Invalid date format" }
   ```
+- `400 Bad Request`, `code: "PARTICIPANTS_INVALID"`: `participant_ids` is not a list of user ids
+- `400 Bad Request`, `code: "NOT_PROJECT_MEMBERS"`: someone on the list is not an active member of the project; nothing is written
+  ```json
+  { "error": "Participants must be active members of the project", "code": "NOT_PROJECT_MEMBERS", "userIds": [42] }
+  ```
 - `403 Forbidden`: User is not an admin/owner
   ```json
   { "error": "Only admins can create rehearsals" }
   ```
 
 **Notes:**
-- When a rehearsal is created, busy availability slots are automatically created for all project members
+- Everyone on `participant_ids` is invited and has not seen it yet (`response: "no"`); each of them gets a busy availability slot for its time
+- Who is on a rehearsal is decided in one place, `server/services/rehearsals/roster.js`
 - The old format (date/startTime/endTime) converts times to the project's timezone
 - Only users with "owner" or "admin" role can create rehearsals
 
@@ -840,7 +850,9 @@ Update an existing rehearsal.
 ```
 
 **Parameters:**
-Same as Create Rehearsal (supports both new and old formats)
+Same as Create Rehearsal (supports both new and old formats). `participant_ids`
+left out keeps the roster as it is; `[]` clears it; a list makes it exactly
+that list — those who stay keep their answers, newcomers are added as `"no"`.
 
 **Success Response (200):**
 ```json
@@ -860,6 +872,11 @@ Same as Create Rehearsal (supports both new and old formats)
 ```
 
 **Error Responses:**
+- `400 Bad Request`, `code: "PARTICIPANTS_INVALID"`: `participant_ids` is not a list of user ids
+- `400 Bad Request`, `code: "NOT_PROJECT_MEMBERS"`: someone on the list is not an active member of the project; nothing is written
+  ```json
+  { "error": "Participants must be active members of the project", "code": "NOT_PROJECT_MEMBERS", "userIds": [42] }
+  ```
 - `403 Forbidden`: User is not an admin/owner
   ```json
   { "error": "Only admins can update rehearsals" }
@@ -914,77 +931,54 @@ Delete a rehearsal.
 
 #### 5. Mark Seen/Unseen Rehearsal
 
-Mark a rehearsal as seen or unseen. This is a binary system - you can either mark as seen (yes) or unseen (delete response). Displayed as an eye icon toggle in the UI.
+The eye toggle: marks a rehearsal seen or not yet seen. Only someone already on
+the rehearsal can answer, and answering never changes who is on it
+(`server/services/rehearsals/roster.js`).
 
 **Endpoint:** `POST /native/rehearsals/:rehearsalId/respond`
 
-**Authentication Required:** Yes (must be project member)
+**Authentication Required:** Yes — the caller must be on the rehearsal
 
 **Path Parameters:**
 - `rehearsalId` (string, required): The rehearsal ID
 
 **Request Body:**
 ```json
-{
-  "status": "yes"
-}
+{ "response": "yes" }
 ```
 
 **Parameters:**
-- `status` (string | null, required): Seen status:
-  - `"yes"` - User has seen the rehearsal
-  - `null` - Mark as unseen (removes the response)
+- `response` (string, required): `"yes"` — seen; `"no"` — invited and not yet seen
+- `notes` (string, optional)
 
-**Success Response (200):**
+**Success Response (200):** the rehearsal's counts, over the people on it who
+are still active members of the project
 ```json
-{
-  "response": {
-    "id": "1",
-    "rehearsalId": "1",
-    "userId": "1",
-    "response": "yes",
-    "notes": null,
-    "createdAt": "2024-03-01T10:00:00.000Z",
-    "updatedAt": "2024-03-01T10:00:00.000Z"
-  },
-  "stats": {
-    "confirmed": 5,
-    "invited": 3
-  }
-}
+{ "confirmed": 5, "invited": 8 }
 ```
 
 **Error Responses:**
-- `400 Bad Request`: Invalid status
-  ```json
-  { "error": "Invalid status. Must be 'yes' or null" }
-  ```
-- `403 Forbidden`: User is not a project member
-  ```json
-  { "error": "You must be a project member to respond to rehearsals" }
-  ```
-- `404 Not Found`: Rehearsal not found
-  ```json
-  { "error": "Rehearsal not found" }
-  ```
+- `400 Bad Request`, `code: "RESPONSE_INVALID"`: `response` is neither `"yes"` nor `"no"`
+- `403 Forbidden`, `code: "NOT_ON_REHEARSAL"`: the caller may see the rehearsal (an admin of its project) but is not on it; nothing is written
+- `404 Not Found`: the rehearsal does not exist, or the caller may not see it — the two are indistinguishable
 
 **Notes:**
-- **Binary system**: Only two states - seen ('yes') or unseen (NULL/deleted)
-- If status is `null`, the response record is deleted from the database
-- If the user has already marked seen, sending `null` will mark unseen (delete the response)
-- If the user hasn't responded yet, sending `"yes"` will mark as seen
-- The response includes updated stats (confirmed count + invited count) for admins
-- Client implements optimistic updates with eye icon toggle (eye = seen, eye-off = unseen)
+- The caller's row is updated, never created or deleted. Having a row is what puts someone on a rehearsal, and only an admin's edit changes that — an answer used to create one, so anyone in the project could put themselves on a rehearsal by knowing its id
+- `"no"` is not a decline: it means invited and not yet seen
+- The project's admins get a push when someone marks a rehearsal seen
 
 ---
 
 #### 6. Get All Responses for Rehearsal
 
-Retrieve all RSVP responses for a rehearsal.
+Retrieve the people on a rehearsal with their answers.
 
 **Endpoint:** `GET /native/rehearsals/:rehearsalId/responses`
 
-**Authentication Required:** Yes (must be project member)
+**Authentication Required:** Yes — the caller must be able to see the
+rehearsal: an admin of its project, or someone on it. Anyone else gets `404`,
+as for a rehearsal that does not exist. Lists only people who are still active
+members of the project.
 
 **Path Parameters:**
 - `rehearsalId` (string, required): The rehearsal ID
@@ -1046,11 +1040,12 @@ Retrieve all RSVP responses for a rehearsal.
 
 #### 7. Get Current User's Response
 
-Retrieve the authenticated user's RSVP response for a rehearsal.
+Retrieve the authenticated user's answer on a rehearsal.
 
 **Endpoint:** `GET /native/rehearsals/:rehearsalId/my-response`
 
-**Authentication Required:** Yes (must be project member)
+**Authentication Required:** Yes — the caller must be able to see the
+rehearsal (an admin of its project, or someone on it); anyone else gets `404`
 
 **Path Parameters:**
 - `rehearsalId` (string, required): The rehearsal ID
@@ -1070,7 +1065,7 @@ Retrieve the authenticated user's RSVP response for a rehearsal.
 }
 ```
 
-**Success Response (200) - User has not responded:**
+**Success Response (200) - an admin who is not on the rehearsal:**
 ```json
 {
   "response": null
@@ -1078,11 +1073,7 @@ Retrieve the authenticated user's RSVP response for a rehearsal.
 ```
 
 **Error Responses:**
-- `403 Forbidden`: User is not a project member
-  ```json
-  { "error": "Access denied" }
-  ```
-- `404 Not Found`: Rehearsal not found
+- `404 Not Found`: the rehearsal does not exist, or the caller may not see it
   ```json
   { "error": "Rehearsal not found" }
   ```
