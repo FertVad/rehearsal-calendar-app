@@ -1189,7 +1189,7 @@ is written, and one person's saves run one at a time.
 
 #### 2a. Bulk Set Availability
 
-Used by the calendar import, and by app versions from before `PUT /days`.
+Used by app versions from before `PUT /days` and before the import sync (4).
 Create or update multiple availability slots at once.
 
 **Endpoint:** `POST /native/availability/bulk`
@@ -1304,6 +1304,76 @@ Delete all manually-created availability for a specific date.
 **Notes:**
 - Only deletes manually-created availability (source: "manual")
 - Preserves rehearsal and calendar sync availability
+
+---
+
+#### 4. Sync Imported Calendar Events
+
+One device's calendar import, reconciled on the server within the calendars
+that device names, in one transaction. Calendar ids are the device's own, so
+calendars the device does not name — other devices' — are never touched.
+
+**Endpoint:** `POST /native/availability/imported/sync`
+
+**Authentication Required:** Yes
+
+**Request Body** (up to 2 MB; every other route keeps the default 100 KB):
+```json
+{
+  "source": "apple_calendar",
+  "window": { "from": "2026-10-01T00:00:00.000Z", "to": "2027-10-01T00:00:00.000Z" },
+  "deviceCalendars": ["work-id", "home-id", "holidays-id"],
+  "unreadable": ["home-id"],
+  "calendars": [
+    { "calendarId": "work-id", "events": [
+      { "key": "E57AB294", "startsAt": "2026-10-02T09:00:00.000Z", "endsAt": "2026-10-02T10:00:00.000Z", "isAllDay": false }
+    ] }
+  ]
+}
+```
+
+**Parameters:**
+- `source`: `"apple_calendar"` or `"google_calendar"`
+- `window`: the span read, at most 400 days
+- `deviceCalendars` (1–100): every calendar on the device; ids without `|`
+- `unreadable`: calendars of the device that could not be read — their rows are kept
+- `calendars`: each calendar read, from `deviceCalendars`, not in `unreadable`, named once; its `events` (at most 5000 in all), each with a `key` unique in its calendar (1–512 chars), times with an offset, the end after the start
+
+**What happens:**
+- a calendar read becomes exactly its events inside the window; rows outside the window stay
+- a calendar in `unreadable` keeps its rows
+- a calendar in `deviceCalendars` that is neither read nor unreadable — no longer chosen on this device — is cleared
+- rows are stored under `cal:<calendarId>|<key>`; a row from before, with a plain key sent now for a calendar read, is taken into that calendar
+
+**Success Response (200):**
+```json
+{ "success": true, "added": 1, "updated": 0, "removed": 0, "adopted": 0, "unchanged": 4, "held": 5 }
+```
+`held` — the rows this device's calendars hold after the sync.
+
+**Error Responses:**
+- `400 Bad Request`, `code: "IMPORT_INVALID"`, with a `reason` (`SOURCE_INVALID`, `WINDOW_INVALID`, `DEVICE_CALENDARS_INVALID`, `CALENDAR_INVALID`, `KEY_REPEATED`, `TIME_INVALID`, `TOO_MANY_EVENTS`, …) and where (`calendarId`, `index`); nothing is written
+
+**Related:**
+- `DELETE /native/availability/imported/all` — every imported row of the person, from every device: `{ "success": true, "deletedCount": 7 }`
+- `DELETE` and `PUT /native/availability/imported/batch` — kept for app versions from before the sync; they reach only rows with a plain key, never a `cal:` one
+
+---
+
+### Calendar Export Mappings
+
+One mapping per connection, and a connection is one calendar of one device.
+Only the two deletes are described here; both name the device's calendars, and
+only mappings recorded under them go.
+
+- `DELETE /native/calendar-sync/mappings/by-event/:eventType/:internalEventId`,
+  body `{ "deviceCalendarIds": ["work-id", "home-id"] }`. Without the field — app
+  versions from before — every connection of the person is reached, as before.
+- `DELETE /native/calendar-sync/mappings`, body
+  `{ "eventType": "rehearsal", "deviceCalendarIds": [...] }`, both required:
+  `{ "success": true, "deletedCount": 2 }`.
+- `deviceCalendarIds`: 1–100 non-empty strings; otherwise
+  `400 DEVICE_CALENDARS_INVALID`, nothing deleted.
 
 ---
 

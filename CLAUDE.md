@@ -393,9 +393,10 @@ the client happens to be holding.
 
 Save used to post the whole availability snapshot, so a day loaded an hour ago
 overwrote the edit somebody made since; it now names the days it changed
-(`PUT /availability/days`, R6). Still live: calendar import diffs the phone's
-events against *every* imported row of that user, so syncing on the second
-phone deletes what the first one imported.
+(`PUT /availability/days`, R6). Calendar import diffed the phone's events
+against *every* imported row of the user, so syncing on the second phone
+deleted what the first one had imported; it now names the device's calendars
+and the server reconciles inside them (`POST /availability/imported/sync`, R7).
 
 ## Key Features & Implementation
 
@@ -413,9 +414,23 @@ Analyzes member availability and recommends optimal rehearsal times:
 
 Bi-directional sync with iOS/Google Calendar:
 - **Export**: Rehearsals → device calendar events (batch processing, 10 parallel)
-- **Import**: Calendar events → user availability (chunks of 50)
-- Mappings live on the server (`/native/calendar-sync/mappings`), with
-  AsyncStorage as a local cache
+- **Import**: Calendar events → user availability, one request per sync,
+  reconciled on the server (`POST /availability/imported/sync`,
+  `server/services/availability/importScope.js`)
+- Mappings live on the server (`/native/calendar-sync/mappings`), one per
+  device calendar, with AsyncStorage as a local cache
+
+**Everything is scoped to this device's calendars.** A calendar id is the
+device's own, so an imported row or an export mapping recorded under one
+belongs to the device that has it — the list comes from `deviceCalendars.ts`.
+A sync names every calendar on the device, the ones it read and the ones it
+could not; the server replaces rows only inside the calendars read, in one
+transaction, keeps the unreadable ones, and never touches calendars it was not
+told about, which are other devices'. The scope is in the key the server
+composes, `cal:<calendar>|<event>`. Export mappings are read and deleted the
+same way, newest per rehearsal. On Android calendar ids are row numbers shared
+between phones, so an installation id has to join the scope before Android
+ships (known-issues).
 
 **Auto Sync runs both ways.** Saving a rehearsal exports that one immediately,
 but only on the device that saved it — so without the export half of the
@@ -424,18 +439,20 @@ calendar but the organiser's. The export runs on foreground alongside the
 import, on its own ten-minute timer because each rehearsal costs a mapping
 lookup; pull-to-refresh ignores that timer.
 
-**Import skips what we exported.** Rehearsal events are excluded by their
-mapping ids, otherwise a rehearsal would count as busy twice — once as itself
-and once as an imported event.
+**Import skips what we exported.** Rehearsal events are excluded by the
+`rehearsalapp://rehearsal/` link the export puts on them, and by this device's
+mapping ids for events written before the link existed; otherwise a rehearsal
+would count as busy twice — once as itself and once as an imported event.
 
 **Deleting the event in the phone's calendar does not stick.** The next sync
 sees the mapping has no event and recreates it: the rehearsal is the source of
 truth, the calendar a mirror. The only ways out are deleting the rehearsal or
 "remove all exported" on the sync screen.
 
-**Only hours cross over, never what the events are.** Imported slots are titled
-generically on purpose — see `IMPORTED_SLOT_TITLE` in `calendar/import.ts`. The
-onboarding and the landing both promise this.
+**Only hours cross over, never what the events are.** The app sends each
+event's key and times and nothing else; the server titles the rows
+generically — `IMPORTED_TITLE` in `importScope.js`. A calendar's id crosses
+over as an opaque scope. The onboarding and the landing both promise this.
 
 ### Payments
 

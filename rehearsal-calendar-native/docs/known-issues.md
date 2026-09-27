@@ -168,6 +168,10 @@ than answering it.
 What remains: cross-suite state inside a Jest worker, which would explain
 `rehearsalById.test.js` too and which nothing has yet demonstrated.
 
+A third suite joined on 2026-09-26: `signInMethods.test.js` failed once in a
+full server run, then passed on its own and in the two full runs after it
+(938 of 938). Same shape, same verdict — note it, do not chase it blind.
+
 Nineteen consecutive full runs across 2026-09-03 and 2026-09-05 were clean, so
 it is rare rather than gone. Leave the entry until something explains it, and do
 not chase it blind — that is how an afternoon disappears.
@@ -188,6 +192,22 @@ Left alone on purpose, on the review's agreement (REVIEW_R6): it needs the same
 person to edit the same day on two devices without reloading, and it costs
 their own edit, which they can see. Fixing it takes a revision per day and a
 conflict answer the editor would have to show.
+
+### Calendar sync needs an installation id before Android ships
+
+Imported rows and export mappings belong to the device's calendars (R7): a
+calendar id is the device's own, so what is recorded under it is that device's.
+On iOS that holds — the id is a UUID of that device. On Android it is the row
+number of the calendar (1, 2, 3…), the same on two phones of one person, so
+their imports would replace each other and their mappings merge again. Android
+is not released, so nobody is affected yet. Before it is, an installation id
+has to join the scope — in the imported key and in the calendar connection —
+alongside IC01 below.
+
+The same id would also settle a rarer iOS case: a full iCloud resync gives the
+calendars new ids, and rows imported under the old ones stay until "remove all
+imported" is pressed. It needs signing out of iCloud and back in, and costs
+extra busy hours the person can see and clear.
 
 ### Android App Links wait for an Android release (IC01)
 
