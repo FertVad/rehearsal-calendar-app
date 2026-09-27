@@ -176,6 +176,32 @@ function current(here: Set<string>, server: Mapping | undefined, local: Mapping 
 }
 
 /**
+ * This device's own record alone, for when the server cannot be asked.
+ *
+ * The same rule as `current` with no server side: a record under a calendar
+ * this device does not have is not its own, even offline — a restored backup
+ * or a calendar that changed its id leaves such records behind (review R7,
+ * second round). Only when the calendars cannot be listed either is the
+ * record taken whole: there is nothing left to tell it by.
+ */
+async function localHere(): Promise<Record<string, Mapping>> {
+  const cached = await getAllFromAsyncStorage();
+  let here: Set<string>;
+  try {
+    here = new Set(await listDeviceCalendarIds());
+  } catch (error) {
+    console.error('[CalendarMappings] Could not list the device calendars; using the local record whole:', error);
+    return cached;
+  }
+  const result: Record<string, Mapping> = {};
+  for (const [rehearsalId, mapping] of Object.entries(cached)) {
+    const chosen = current(here, undefined, mapping);
+    if (chosen) result[rehearsalId] = chosen;
+  }
+  return result;
+}
+
+/**
  * Get event mapping (try DB first, fallback to AsyncStorage)
  */
 export async function getEventMapping(
@@ -199,8 +225,8 @@ export async function getEventMapping(
     console.error('[CalendarMappings] DB lookup failed, falling back to AsyncStorage:', error);
   }
 
-  // Fallback: check AsyncStorage (for offline or if DB failed)
-  return await getFromAsyncStorage(rehearsalId);
+  // Fallback: this device's own record (offline, or the server failed)
+  return (await localHere())[String(rehearsalId)] ?? null;
 }
 
 /**
@@ -255,7 +281,7 @@ export async function getAllMappings(): Promise<Record<string, { eventId: string
   } catch (error) {
     console.error('[CalendarMappings] Failed to get mappings from DB, falling back to AsyncStorage:', error);
 
-    const cached = await getAllFromAsyncStorage();
+    const cached = await localHere();
     if (Object.keys(cached).length > 0) return cached;
 
     // Neither the server nor the cache could answer, and "nothing exported" is

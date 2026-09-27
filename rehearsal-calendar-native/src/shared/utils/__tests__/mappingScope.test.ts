@@ -134,3 +134,29 @@ describe('This phone\'s own record against the server\'s (R7-01)', () => {
     expect(await getEventMapping('7')).toBeNull();
   });
 });
+
+describe('When the server cannot be reached (review R7, second round)', () => {
+  beforeEach(async () => {
+    (calendarSyncAPI.getMappings as jest.Mock).mockRejectedValue(new Error('offline'));
+    await AsyncStorage.setItem('calendar-export-mappings', JSON.stringify({
+      '7': { eventId: 'other-phone-event', calendarId: 'phone-B', lastSynced: '2026-09-26T00:00:00.000Z' },
+      '8': { eventId: 'home-event-8', calendarId: 'home', lastSynced: '2026-09-26T00:00:00.000Z' },
+    }));
+  });
+
+  it('the fallback to this phone\'s record still keeps to this phone\'s calendars', async () => {
+    const all = await getAllMappings();
+
+    expect(Object.keys(all)).toEqual(['8']);
+    expect(await getEventMapping('7')).toBeNull();
+    expect((await getEventMapping('8'))?.eventId).toBe('home-event-8');
+  });
+
+  it('with nothing of this phone\'s held, says it could not find out rather than "nothing exported"', async () => {
+    await AsyncStorage.setItem('calendar-export-mappings', JSON.stringify({
+      '7': { eventId: 'other-phone-event', calendarId: 'phone-B', lastSynced: '2026-09-26T00:00:00.000Z' },
+    }));
+
+    await expect(getAllMappings()).rejects.toThrow(/unavailable/i);
+  });
+});
