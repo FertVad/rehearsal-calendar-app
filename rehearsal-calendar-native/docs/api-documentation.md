@@ -1278,6 +1278,7 @@ Create or update multiple availability slots at once.
 - Every date named by a manual entry has all its manual slots deleted before the new ones go in — the whole day, not only the matching hours
 - Slots from rehearsals or calendar sync are preserved
 - Runs behind the same per-person lock as `PUT /days`
+- Hand-entered entries (no `source`, or `"manual"`) are checked by the rules of `PUT /days` before anything is deleted, on the day their start names: `400 AVAILABILITY_INVALID`, nothing written. `source` may only be `"manual"`, `"apple_calendar"` or `"google_calendar"` (`reason: "SOURCE_INVALID"` otherwise)
 - Old format converts times using the user's configured timezone
 
 ---

@@ -176,6 +176,19 @@ Two of the fixed-since claims below were also settled by hand: the schema file
 now creates `native_notifications` and every other live table, and
 `character_name` is in it.
 
+### One day edited on two devices at once: the last save wins
+
+The availability editor saves only the days changed on this device
+(`PUT /availability/days`, R6), so an untouched day is never overwritten by an
+old copy of it. But if the same day is edited on two devices from two different
+loads, each save replaces the whole day, and the one saved last is what stays.
+The other edit has to be made again.
+
+Left alone on purpose, on the review's agreement (REVIEW_R6): it needs the same
+person to edit the same day on two devices without reloading, and it costs
+their own edit, which they can see. Fixing it takes a revision per day and a
+conflict answer the editor would have to show.
+
 ### Android App Links wait for an Android release (IC01)
 
 `assetlinks.json` carries a placeholder where the app's signing fingerprint
