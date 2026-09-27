@@ -37,7 +37,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 — в коде, PG-сценарии `dd73b96`; маршруты A01 `d5564ee`, `3859ece` (почтой — после OPS-EMAIL); правило Google/Apple `d964417`, `56d11e9`, `43cbdac`; сброс пароля `ec292ee`; смена email `50ba23d`; клиент, AC05 не сделаны |
 | R4 | 8 | IN_PROGRESS — [отчёт](REMEDIATION_R4.md): D01, D02, DF02, D04 VERIFIED (правка №1); [разбор](TRIAGE_R4_R9.md) |
 | R5 | 15 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md) |
-| R6 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R6.md): CC05, CC02, CC03, CC04, C02, C03 READY_FOR_CHECK (правка №2); [разбор](TRIAGE_R4_R9.md) |
+| R6 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R6.md): правка №2 принята ревью; C02 VERIFIED, CC02–CC05 и C03 READY_FOR_CHECK до DEV-17/DEV-18; [разбор](TRIAGE_R4_R9.md) |
 | R7 | 16 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md) |
 | R8 | 14 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md) |
 | R9 | 11 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md); DF03 VERIFIED (правка №1, [R4](REMEDIATION_R4.md)); IC01 DEFERRED до выпуска Android |
@@ -54,6 +54,7 @@ OPS-R3-DATA (25.09).
 | OPS-EMAIL | R3 | Resend, DNS домена, ключ в Vercel ([карточка](REMEDIATION_R3.md)) | реальную отправку писем и деплой сервера R3: без почты регистрация отвечает 503. Разработка идёт без неё |
 | OPS-R2-ADOPT | R2 | С разрешения — `npm run migrate -- --dry` против production ([карточка](REMEDIATION_R2.md)) | деплой сервера, которому нужны 007/008/010 |
 | OPS-FM01-DATE | R2 | Дата первого production-деплоя кода со `starts_at` (история Vercel); 25.09 неизвестна | FM01 → VERIFIED |
+| DEV-17, DEV-18 | R6 | Устройства: офлайн-сохранение занятости и два устройства на одном аккаунте ([карточки](notes-remediation-device-tests.md)). Одновременная правка одного дня — последнее сохранение, по решению (known-issues) | CC02–CC05, C03 → VERIFIED |
 | DEV-15 | R1 | Физическое устройство: кнопка открытия приглашения ([H02](REMEDIATION_H02.md)) | H02 → VERIFIED |
 | OPS-IA01 | R1 | `APPLE_CLIENT_ID` в Vercel ([карточка](PRODUCTION_ACCESS.md#ops-ia01--проверка-apple_client_id-человеком)) | IA01 → VERIFIED, выпуск |
 | OPS-IS02 | R1 | Deployment-условия общих лимитов ([карточка](PRODUCTION_ACCESS.md)) | IS02 → VERIFIED, выпуск |
@@ -83,14 +84,14 @@ OPS-R3-DATA (25.09).
 | BC02 | Medium | Нет | R5 | TODO | после удаления или изменения прав выбранный проект остаётся старым объектом | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
 | BC03 | Low | Нет | R9 | TODO | прошедшие репетиции теряют название | [правка причины №22 — разбор](TRIAGE_R4_R9.md) |
 | C01 | High | Нет | R6 | TODO | all-day записи удаляются/заменяются по неверному дню в UTC− | [правка причины №3 — разбор](TRIAGE_R4_R9.md) |
-| C02 | Medium | Нет | R6 | READY_FOR_CHECK | неполная запись стирает день с ответом success | [правка причины №2 — 89d0467](REMEDIATION_R6.md) |
-| C03 | Medium | Нет | R6 | READY_FOR_CHECK | параллельные manual saves могут склеить взаимоисключающие состояния | [правка причины №2 — 89d0467](REMEDIATION_R6.md) |
+| C02 | Medium | Нет | R6 | VERIFIED | неполная запись стирает день с ответом success | [правка причины №2 — 89d0467, 7393358; ревью eb2dbf6 принято; PG 15/15](REMEDIATION_R6.md) |
+| C03 | Medium | Нет | R6 | READY_FOR_CHECK | параллельные manual saves могут склеить взаимоисключающие состояния | [правка причины №2 — 89d0467; ревью eb2dbf6 принято; ждёт DEV-17/DEV-18 на устройствах](REMEDIATION_R6.md) |
 | C04 | Medium | Нет | R6 | TODO | дедупликация по часам теряет источник и может скрыть занятость | [правка причины №16 — разбор](TRIAGE_R4_R9.md) |
 | CC01 | Medium | Нет | R6 | TODO | UTC «сегодня» запрещает редактировать текущий местный день | [правка причины №3 — разбор](TRIAGE_R4_R9.md) |
-| CC02 | Medium | Нет | R6 | READY_FOR_CHECK | Автозагрузка безусловно стирает несохранённые правки | [правка причины №2 — 89d0467](REMEDIATION_R6.md) |
-| CC03 | Medium | Нет | R6 | READY_FOR_CHECK | Изменения во время Save помечаются сохранёнными, хотя не попали в запрос | [правка причины №2 — 89d0467](REMEDIATION_R6.md) |
-| CC04 | Medium | Нет | R6 | READY_FOR_CHECK | «Удалить прошлые даты» может удалить выбранные будущие дни | [правка причины №2 — 89d0467](REMEDIATION_R6.md) |
-| CC05 | High | Нет | R6 | READY_FOR_CHECK | Save отправляет весь старый snapshot и перезаписывает нетронутые дни | [правка причины №2 — 89d0467](REMEDIATION_R6.md) |
+| CC02 | Medium | Нет | R6 | READY_FOR_CHECK | Автозагрузка безусловно стирает несохранённые правки | [правка причины №2 — 89d0467; ревью eb2dbf6 принято; ждёт DEV-17/DEV-18 на устройствах](REMEDIATION_R6.md) |
+| CC03 | Medium | Нет | R6 | READY_FOR_CHECK | Изменения во время Save помечаются сохранёнными, хотя не попали в запрос | [правка причины №2 — 89d0467; ревью eb2dbf6 принято; ждёт DEV-17/DEV-18 на устройствах](REMEDIATION_R6.md) |
+| CC04 | Medium | Нет | R6 | READY_FOR_CHECK | «Удалить прошлые даты» может удалить выбранные будущие дни | [правка причины №2 — 89d0467; ревью eb2dbf6 принято; ждёт DEV-17/DEV-18 на устройствах](REMEDIATION_R6.md) |
+| CC05 | High | Нет | R6 | READY_FOR_CHECK | Save отправляет весь старый snapshot и перезаписывает нетронутые дни | [правка причины №2 — 89d0467; ревью eb2dbf6 принято; ждёт DEV-17/DEV-18 на устройствах](REMEDIATION_R6.md) |
 | CC06 | Medium | Нет | R6 | TODO | Ветка сохранения через полночь недостижима из Save | [правка причины №15 — разбор](TRIAGE_R4_R9.md) |
 | D01 | High | Нет | R4 | VERIFIED | администратор проекта пишет занятость произвольным пользователям | [правка причины №1 — d9a25fd, ревью f0d90b8 принято](REMEDIATION_R4.md) |
 | D02 | High | Нет | R4 | VERIFIED | не приглашённый участник сам получает доступ через RSVP | [правка причины №1 — d9a25fd, ревью f0d90b8 принято](REMEDIATION_R4.md) |
