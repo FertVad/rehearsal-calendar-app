@@ -1,4 +1,4 @@
-// R7 calendar import (cause fix 4: EI01, EI03, EI04, ES02), server half: put
+// R7 calendar import (cause fix 4: EI01, EI03, EI04, ES02; review R7-02), server half: put
 // each weakening back into a copy of the server and require the test that
 // guards it to fail — in Jest, and on PostgreSQL where the SQLite harness cannot
 // show it (a sync rolled back whole, a year of events in one body). The
@@ -36,9 +36,13 @@ function edit(root, file, from, to) {
 const mutations = [
   { id: 'control', description: 'unmutated copy', runs: [jest, jestMappings, pg], expect: 'pass' },
   { id: 'diff-every-device', description: 'a sync diffs against every imported row of the person, not its calendar (EI01)',
-    apply: (root) => edit(root, SCOPE, `       WHERE user_id = $1 AND source = $2 AND \${condition}
-       AND ends_at >= $4::timestamptz`, `       WHERE user_id = $1 AND source = $2 AND $3 = $3
-       AND ends_at >= $4::timestamptz`),
+    apply: (root) => edit(root, SCOPE, `       WHERE user_id = $1 AND source = $2 AND \${condition}\`,
+      [userId, sync.source, prefix]
+    );
+    const wanted`, `       WHERE user_id = $1 AND source = $2 AND $3 = $3\`,
+      [userId, sync.source, prefix]
+    );
+    const wanted`),
     runs: [jest, pg], expect: /● .*a sync on the second phone leaves what the first imported \(EI01\)/ },
   { id: 'no-transaction', description: 'a sync is applied statement by statement, outside one transaction (EI04)',
     apply: (root) => edit(root, ROUTE, 'await db.transaction((tx) => applySync(tx, req.userId, sync))',
@@ -49,9 +53,19 @@ const mutations = [
       'const chosen = new Set([...sync.calendars'),
     runs: [jest], expect: /● .*keeps a calendar it could not read/ },
   { id: 'window-ignored', description: 'a sync deletes rows of its calendar outside the window it read',
-    apply: (root) => edit(root, SCOPE, 'AND ends_at >= $4::timestamptz AND starts_at <= $5::timestamptz',
-      'AND $4 = $4 AND $5 = $5'),
+    apply: (root) => edit(root, SCOPE, "      if (readBy(sync.window, span) !== 'must') continue;\n", ''),
     runs: [jest], expect: /● .*leaves rows outside the window it read/ },
+  { id: 'all-day-as-instant', description: 'a whole day is matched to the window by its UTC instants (R7-02)',
+    apply: (root) => edit(root, SCOPE, '  if (isAllDay) {\n    const first = utcDay(start);',
+      '  if (isAllDay && start < 0) {\n    const first = utcDay(start);'),
+    runs: [jest, pg], expect: /● .*ahead of UTC, yesterday's whole day is not taken for read, and today's is/ },
+  { id: 'edge-deleted', description: 'a row that only touches the window is deleted when the read did not return it (R7-02)',
+    apply: (root) => edit(root, SCOPE, "if (readBy(sync.window, span) !== 'must') continue;",
+      "if (readBy(sync.window, span) === 'no') continue;"),
+    runs: [jest], expect: /● .*keeps an event that only touches the window when the read did not return it/ },
+  { id: 'outside-accepted', description: 'a sync may carry an event the read could not have returned (R7-02)',
+    apply: (root) => edit(root, SCOPE, "      if (readBy(window, { start, end, isAllDay }) === 'no') throw new ImportInvalid('OUTSIDE_WINDOW', where);\n", ''),
+    runs: [jest], expect: /● .*refuses an event the read could not have returned/ },
   { id: 'unlisted-calendar', description: 'a sync may write a calendar the device does not list',
     apply: (root) => edit(root, SCOPE, "typeof calendarId !== 'string' || !device.has(calendarId) ||",
       "typeof calendarId !== 'string' ||"),
@@ -102,7 +116,9 @@ for (const mutation of mutations) {
       if (run.status !== 0) failed = true;
       detail.push({ run: args.at(-1), exit: run.status, seconds: Math.round((Date.now() - started) / 100) / 10,
         passedPg: (output.match(/REGRESSION PASS/) || [null])[0],
-        firstFailure: (output.split('\n').find((line) => /●|AssertionError|Expected|!==/.test(line)) || '').trim().slice(0, 160) || null });
+        firstFailure: (output.split('\n').find((line) => /●|AssertionError|Expected|!==/.test(line)) || '').trim().slice(0, 160) || null,
+        // A run that failed without an assertion says why in its last line.
+        lastLine: run.status === 0 ? null : (output.trim().split('\n').at(-1) || '').trim().slice(0, 160) });
     }
     const output = outputs.join('\n');
     const loadFailure = /does not provide an export named|Test suite failed to run|Cannot find module/.test(output);

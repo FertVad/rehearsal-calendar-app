@@ -38,7 +38,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R4 | 8 | IN_PROGRESS — [отчёт](REMEDIATION_R4.md): D01, D02, DF02, D04 VERIFIED (правка №1); [разбор](TRIAGE_R4_R9.md) |
 | R5 | 15 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md) |
 | R6 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R6.md): правка №2 принята ревью (C02 VERIFIED; CC02–CC05, C03 до DEV-17/DEV-18); правка №3 принята ревью (DP04 VERIFIED; C01, CC01 до DEV-08); [разбор](TRIAGE_R4_R9.md) |
-| R7 | 16 | IN_PROGRESS — [отчёт](REMEDIATION_R7.md): правка №4 (EI01, EI03, EI04, ES02) READY_FOR_CHECK до DEV-03/04/05, ждёт ревью; [разбор](TRIAGE_R4_R9.md) |
+| R7 | 16 | IN_PROGRESS — [отчёт](REMEDIATION_R7.md): правка №4 (EI01, EI03, EI04, ES02) READY_FOR_CHECK до DEV-03/04/05; первый круг ревью `d13f9db` — R7-01..03 отвечены в `a3e6bc8`, ждёт второго круга; [разбор](TRIAGE_R4_R9.md) |
 | R8 | 14 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md) |
 | R9 | 11 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md); DF03 VERIFIED (правка №1, [R4](REMEDIATION_R4.md)); IC01 DEFERRED до выпуска Android |
 

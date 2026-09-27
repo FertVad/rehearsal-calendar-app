@@ -427,7 +427,10 @@ A sync names every calendar on the device, the ones it read and the ones it
 could not; the server replaces rows only inside the calendars read, in one
 transaction, keeps the unreadable ones, and never touches calendars it was not
 told about, which are other devices'. The scope is in the key the server
-composes, `cal:<calendar>|<event>`. Export mappings are read and deleted the
+composes, `cal:<calendar>|<event>`. The window read carries its instants and
+the local dates they cover, and `readBy` in `importScope.js` is the one rule
+for what it covers: a whole day by its dates, never by the instants; what the
+read had to return goes when missing, what only touches an edge stays. Export mappings are read and deleted the
 same way, newest per rehearsal. On Android calendar ids are row numbers shared
 between phones, so an installation id has to join the scope before Android
 ships (known-issues).

@@ -1321,7 +1321,8 @@ calendars the device does not name — other devices' — are never touched.
 ```json
 {
   "source": "apple_calendar",
-  "window": { "from": "2026-10-01T00:00:00.000Z", "to": "2027-10-01T00:00:00.000Z" },
+  "window": { "from": "2026-09-30T21:00:00.000Z", "to": "2027-09-30T21:00:00.000Z",
+              "firstDate": "2026-10-01", "lastDate": "2027-09-30" },
   "deviceCalendars": ["work-id", "home-id", "holidays-id"],
   "unreadable": ["home-id"],
   "calendars": [
@@ -1334,13 +1335,13 @@ calendars the device does not name — other devices' — are never touched.
 
 **Parameters:**
 - `source`: `"apple_calendar"` or `"google_calendar"`
-- `window`: the span read, at most 400 days
+- `window`: the span read — `from`/`to` the instants (at most 400 days apart), `firstDate`/`lastDate` the device's local dates they cover (the date of `from`, and the date of the last moment before `to`), each within a day of the UTC date
 - `deviceCalendars` (1–100): every calendar on the device; ids without `|`
 - `unreadable`: calendars of the device that could not be read — their rows are kept
-- `calendars`: each calendar read, from `deviceCalendars`, not in `unreadable`, named once; its `events` (at most 5000 in all), each with a `key` unique in its calendar (1–512 chars), times with an offset, the end after the start
+- `calendars`: each calendar read, from `deviceCalendars`, not in `unreadable`, named once; its `events` (at most 5000 in all), each with a `key` unique in its calendar (1–512 chars), times with an offset, the end after the start, and inside or touching the window (a whole day by its dates, a timed event by its instants)
 
 **What happens:**
-- a calendar read becomes exactly its events inside the window; rows outside the window stay
+- a calendar read becomes exactly its events inside the window: a row the read had to return and did not is deleted; a row outside the window, or only touching its edge, stays. A whole day is compared with `firstDate`–`lastDate`, never with `from`/`to`
 - a calendar in `unreadable` keeps its rows
 - a calendar in `deviceCalendars` that is neither read nor unreadable — no longer chosen on this device — is cleared
 - rows are stored under `cal:<calendarId>|<key>`; a row from before, with a plain key sent now for a calendar read, is taken into that calendar
@@ -1352,7 +1353,7 @@ calendars the device does not name — other devices' — are never touched.
 `held` — the rows this device's calendars hold after the sync.
 
 **Error Responses:**
-- `400 Bad Request`, `code: "IMPORT_INVALID"`, with a `reason` (`SOURCE_INVALID`, `WINDOW_INVALID`, `DEVICE_CALENDARS_INVALID`, `CALENDAR_INVALID`, `KEY_REPEATED`, `TIME_INVALID`, `TOO_MANY_EVENTS`, …) and where (`calendarId`, `index`); nothing is written
+- `400 Bad Request`, `code: "IMPORT_INVALID"`, with a `reason` (`SOURCE_INVALID`, `WINDOW_INVALID`, `DEVICE_CALENDARS_INVALID`, `CALENDAR_INVALID`, `KEY_REPEATED`, `TIME_INVALID`, `OUTSIDE_WINDOW`, `TOO_MANY_EVENTS`, …) and where (`calendarId`, `index`); nothing is written
 
 **Related:**
 - `DELETE /native/availability/imported/all` — every imported row of the person, from every device: `{ "success": true, "deletedCount": 7 }`
