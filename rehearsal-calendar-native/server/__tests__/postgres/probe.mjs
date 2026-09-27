@@ -275,8 +275,10 @@ if (scenario === 'controls') {
   const beforeRouteFault = await snapshot();
   await control.query('ALTER TABLE native_users RENAME COLUMN timezone TO timezone_unavailable');
   try {
+    // A valid slot, so the request reaches the timezone read this breaks: an
+    // incomplete one is now refused before any database work (review R6-03).
     assertGenericFailure(await http('/api/native/availability/bulk', {
-      method: 'POST', body: { entries: [{ startsAt: '2030-09-17T12:00:00Z', type: 'busy' }] },
+      method: 'POST', body: { entries: [{ startsAt: '2030-09-17T12:00:00Z', endsAt: '2030-09-17T13:00:00Z', type: 'busy' }] },
     }));
     assert.equal((await http('/api/health')).status, 200);
   } finally {
