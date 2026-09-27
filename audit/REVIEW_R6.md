@@ -91,3 +91,59 @@ node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silen
 Временная копия для независимых проб: `/private/tmp/reh-review-r6-1-probes/rehearsal-calendar-native`. В ней дополнительный `server/__tests__/routes/reviewR6Probe.test.js` и дополнение в конце `server/__tests__/postgres/r6Availability.mjs`. Повтор: из этой копии `npm --prefix server run test:r0-postgres -- --r6-only`; route-проба — из её server `node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --runTestsByPath __tests__/routes/reviewR6Probe.test.js`. Точные временные подстановки для проверки R6-02 и трёх мутаций сохранены в `/private/tmp/reh-review-r6-1-extra.py`.
 
 В review-дереве создан только `audit/REVIEW_R6.md`. Код, тесты, реестр, отчёты реализации и предыдущие ревью не менялись. Коммитов и push нет. Основное дерево, ветка `codex/systematic-repair`, production, `server/.env` и `rehearsly.me` не затрагивались. Правки №3/4/14/15/16 и остальные пункты плана вне этого заключения.
+
+## Повторная проверка d654296..eb2dbf6 — ответ на R6-01 и R6-02
+
+27.09.2026. **Второй и последний круг по правке №2.** Source commit `eb2dbf6e0ca8d77e17e4dab02fc64e6a3ad7d338`, tree `eebe950827f9735051af165361c00d3db4bdd2bc`; код — `7393358`. Перед переключением прежний файл побайтово совпал с `9860bf2:audit/REVIEW_R6.md` и копией в eb2dbf6; SHA-256 `4fd9043abc89c7cacefc6899ccdbb9b87ce22eaee92a8321bfccd6cbec77d9c9`. Его текст сохранён без изменений; ниже только дополнение.
+
+**Вердикт: R6-01 и R6-02 закрыты, исправление причины №2 принято по поведению.** C02 теперь закрыт и на совместимом ручном `/bulk`; прежние выводы по CC05, CC02, CC03, CC04 и C03 сохраняются. Новых дефектов поведения приложения в этом диапазоне не выявлено. При этом обязательный `--security-only` на исходном eb2dbf6 **красный из-за устаревшей фикстуры A02**, поэтому общий PG PASS для этого коммита не заявляю. Это отдельное замечание к тесту R6-03 ниже, без третьего круга ревью.
+
+### Закрытие замечаний
+
+| Замечание | Клетка и покрытие причины | Результат |
+|---|---|---|
+| R6-01, P2 | Просто × серьёзно; теперь покрыто общим правилом до записи | **Закрыто.** `checkBulkEntries` (`server/services/availability/manualDays.js:86–94`) проверяет всю ручную часть через тот же `checkEntry`, что и PUT. Вызов `routes/native/availability.js:116` стоит до `affectedDates`, запроса пояса и транзакции. Неполная ручная запись больше не доходит до DELETE/`continue`; смешанный хороший/плохой ручной запрос отвергается целиком. |
+| R6-02, P3 | Просто × мелко; исправлен текст доказательства | **Закрыто.** `audit/REMEDIATION_R6.md:66–70` теперь верно сообщает 15 красных и объясняет прежние 13 отсутствием проверки успешного статуса. Это соответствует воспроизведению первого круга; сами 15 тестов в текущем диапазоне не менялись. |
+
+Ограничение источников находится в том же модуле: `rehearsal` отвергается до записи, `manual` и два календарных источника разрешены. Прежний default `source || manual` согласован с остальным `/bulk`. Отдельного валидатора времени, способного разойтись с PUT, не добавлено. Импортированные записи проходят проверку источника и сохраняют прежний разбор; `src/shared/services/calendar/import.ts:420,438–441` действительно передаёт `apple_calendar`/`google_calendar` в отправляемом payload. Правка №4 этим не считается выполненной.
+
+Перенос тестового некорректного времени в импортированную запись соответствует цели проверки ошибки драйвера: ручная запись теперь отклоняется раньше БД. Историческое условие `if (res.status === 500)` в этом тесте не усилено; оно само не доказывает, что ошибка драйвера возникла на каждом запуске. Закрытие C02 опирается на безусловные новые утверждения HTTP/данных и настоящий PG-сценарий.
+
+### Доказательства до и после
+
+- Временная копия eb2dbf6 без `.env`, с **двумя файлами реализации** (`routes/native/availability.js`, `services/availability/manualDays.js`) из d654296 и неизменённым нынешним `availabilityBulk.test.js`: **3 FAIL / 13 PASS**. Падают ровно три заявленных теста блока `Older apps saving by hand here`, каждый на **200 вместо 400**, без ошибок загрузки. Старый all-day проходит. На новом коде весь suite зелёный в общем прогоне и контроле мутаций.
+- `R6_AVAILABILITY` на PostgreSQL 15.13 проходит: прежний пример `/bulk` без конца даёт 400 `AVAILABILITY_INVALID`, ручная строка 2 мая остаётся. Сохранились контракты named days, атомарного отказа, двух параллельных PUT, импорта и старого DELETE.
+- **Мутации 6/6:** контроль зелёный в Jest и PG; `bulk-unchecked` убирает только вызов валидатора, тесты не меняет, и падает в **обоих** прогонах. Jest называет конкретный тест `refuses an entry without an end, and deletes nothing`; PG тоже завершился с exit 1. У всех вариантов `loadFailure: false`. JSON совпадает с committed evidence за исключением времени; его SHA-256 `75c4aaa644bf46ad6d0fb13d36be10366f1d4470bd8396ed751af6adb1d8e232` подтверждён.
+
+### R6-03 — P3 — фикстура A02 не доходит до намеренно сломанного чтения БД
+
+**Где:** `rehearsal-calendar-native/server/__tests__/postgres/probe.mjs:275–280`, особенно payload в `:279`.
+
+**Клетка: просто × мелко. Покрытие правкой причины: нет — входной пример прежнего теста нужно согласовать с новым контрактом; нового механизма приложения не требуется.** Обычный обязательный `npm --prefix rehearsal-calendar-native/server run test:r0-postgres -- --security-only` на eb2dbf6 останавливается в A02: `400 !== 500`. После controls оставшиеся сценарии штатная команда уже не запускает.
+
+A02 временно переименовывает колонку `native_users.timezone`, чтобы проверить безопасную обработку отказа `getUserTimezone`. Однако его ручной payload содержит `startsAt` и `type`, **без `endsAt`**. Новый общий валидатор справедливо отклоняет его до обращения к этой колонке. Это не ошибка продукта и не повод ослаблять валидацию или заменить ожидаемый 500 на 400: такая замена перестала бы проверять исходный отказ БД.
+
+**Диагностика:** в отдельной временной копии eb2dbf6 добавлено только `endsAt: '2030-09-17T13:00:00Z'` в эту запись. Переименование колонки, ожидания 500/нейтрального тела, проверки сохранности данных и весь код приложения остались неизменными. После этого тот же `--security-only` дал **15/15 PASS**, у всех `externalConnections: 0`. Таким образом, причина остановки локализована в фикстуре. Это диагностический результат изменённой тестовой копии, **не зелёный прогон исходного eb2dbf6**.
+
+Достаточное действие: исправить входной пример и повторить штатный общий PG-прогон; отдельного третьего ревью не требуется. По правилу последнего круга строка для known-issues до этого действия:
+
+> PG `--security-only` at eb2dbf6 stops in A02 because its simulated database-failure request omits `endsAt` and is now rejected with 400 before the intended database read. Supply a valid manual slot while retaining the existing 500, redaction and no-write assertions. Application validation is correct; this is a test-fixture mismatch (simple × minor).
+
+Сам `known-issues.md` ревьюер не правит. Уже добавленное ограничение last-write-wins (`rehearsal-calendar-native/docs/known-issues.md:179–190`) принято: **особое стечение × мелко**, правка причины его намеренно не закрывает; текст верно описывает два снимка одного дня и необходимость повторить свою правку. Новый цикл ради ревизий дня не нужен.
+
+### Прогоны второго круга
+
+Node 22.16.0, чистое окружение HOME/PATH, Docker `desktop-linux`, одноразовый PostgreSQL 15.13. Контейнеры удалены харнессом. Логи сохранены отдельно от committed evidence.
+
+| Проверка | Фактический результат | Лог и SHA-256 |
+|---|---|---|
+| `npm run check:secrets && npm run type-check && npm test -- --silent` | exit 0; сканер 0 findings/0 errors, tsc PASS, **105 suites / 1497 tests**; scanner regressions 33, browser 7 + 18 + 11, stored-content 6 | `/private/tmp/reh-review-r6-2-check.log`: `5fd29a9dcffc21938b5841861e8b75bc96185fc6f7d79b83c9360697656ebed0` |
+| `test:r0-postgres -- --r6-only` | exit 0; controls + R6_AVAILABILITY PASS | `/private/tmp/reh-review-r6-2-pg-target.log`: `b456b6a4ef012ec9c37127cc10f3c991db2659f9ed7e363c69fd22057bb95e75` |
+| `test:r0-postgres -- --security-only` на исходном HEAD | **exit 1**, controls PASS, A02 FAIL `400 !== 500`; остальные 13 сценариев не запущены этой командой | `/private/tmp/reh-review-r6-2-pg-security.log`: `d2aedeed37d21d591e7de153fd15a383fa262ca74d27a008f0a9d3ba715c76f3` |
+| `node audit/evidence/R6/days-mutations.mjs` | exit 0; **6/6**, loadFailure 0 | `/private/tmp/reh-review-r6-2-mutations.log`: `e73c3f2a96781b3feca6928a8324b3acf8e753f900b85bf5f8b1f11f2d28447a` |
+| Нынешний bulk-suite с реализацией до исправления | ожидаемый exit 1; **3 FAIL / 13 PASS**, all-day PASS | `/private/tmp/reh-review-r6-2-before.log`: `b415190b0e14e479e03c910d38c70be0d16ae09b4669f188a44dfe67742251d0` |
+| Диагностический `--security-only` с одним дополненным полем фикстуры | exit 0; **15/15 PASS**, код приложения неизменён | `/private/tmp/reh-review-r6-2-pg-security-diagnostic.log`: `6d532b651eebec5acf8839d5622b423e65a37dc334d13b737821d339c60d01c6` |
+
+Временные копии для повтора: `/private/tmp/reh-review-r6-2-before/rehearsal-calendar-native/server` (Jest `--runInBand --silent --runTestsByPath __tests__/routes/availabilityBulk.test.js`, с `--experimental-vm-modules`) и `/private/tmp/reh-review-r6-2-a02-fixture` (команда PG из таблицы с `npm --prefix rehearsal-calendar-native/server`).
+
+В review-дереве дописан только этот файл. Код, тесты, реестр, отчёт реализации, known-issues и committed evidence не изменялись; коммитов и push нет. Основное дерево, production, `server/.env`, `rehearsly.me` и ветка `codex/systematic-repair` не затрагивались.
