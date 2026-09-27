@@ -72,6 +72,28 @@ function checkEntry(date, entry, index) {
   return { startsAt, endsAt, type, isAllDay };
 }
 
+// What a client may write through the bulk path: hand-entered rows and the two
+// calendar imports. Rehearsal rows are the server's own.
+const BULK_SOURCES = new Set([AVAILABILITY_SOURCES.MANUAL, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE]);
+
+/**
+ * The legacy bulk save, checked whole before anything is deleted (review
+ * R6-01). Older apps still save hand-entered days through it: each such entry
+ * meets the editor's own rules, on the day its start names. A slot without an
+ * end used to empty that day and answer success (C02). Imported entries keep
+ * their own handling (cause fix 4); only their source is checked here.
+ */
+export function checkBulkEntries(entries) {
+  entries.forEach((entry, index) => {
+    const source = entry.source || AVAILABILITY_SOURCES.MANUAL;
+    if (!BULK_SOURCES.has(source)) throw new AvailabilityInvalid('SOURCE_INVALID', { index });
+    if (source !== AVAILABILITY_SOURCES.MANUAL) return;
+    const date = typeof entry.startsAt === 'string' ? entry.startsAt.slice(0, 10) : '';
+    if (!isCalendarDate(date)) throw new AvailabilityInvalid('TIME_INVALID', { index });
+    checkEntry(date, entry, index);
+  });
+}
+
 /** The days of a save, checked whole before anything is written. */
 export function checkDays(raw) {
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_DAYS) throw new AvailabilityInvalid('DAYS_INVALID');

@@ -7,7 +7,7 @@ import {
   formatAvailabilitySlotsResponse,
 } from '../../utils/timezone.js';
 import { AVAILABILITY_TYPES, DEFAULT_TIMEZONE, AVAILABILITY_SOURCES } from '../../constants/timezone.js';
-import { AvailabilityInvalid, checkDays, replaceManualDays, lockOwnAvailability, deleteManualDay } from '../../services/availability/manualDays.js';
+import { AvailabilityInvalid, checkDays, checkBulkEntries, replaceManualDays, lockOwnAvailability, deleteManualDay } from '../../services/availability/manualDays.js';
 
 const router = Router();
 
@@ -105,10 +105,18 @@ router.post('/bulk', requireAuth, asyncHandler(async (req, res) => {
   }
 
   // Validate the structure before property access/date splitting or DB work.
-  // Full slot/date/source validation and replacement semantics belong to C02.
   if (entries.some(entry => !entry || typeof entry !== 'object' || Array.isArray(entry) ||
       (entry.startsAt !== undefined && typeof entry.startsAt !== 'string'))) {
     return res.status(400).json({ error: 'Entries must be objects; startsAt must be a string when provided' });
+  }
+
+  // Then every hand-entered entry by the editor's own rules, before a single
+  // row is deleted (C02, review R6-01): older apps save through here.
+  try {
+    checkBulkEntries(entries);
+  } catch (error) {
+    if (error instanceof AvailabilityInvalid) return res.status(400).json(error.body);
+    throw error;
   }
 
   // Get user's timezone for date extraction

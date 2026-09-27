@@ -110,6 +110,15 @@ export async function probeR6Availability({ connectionString, control, allowedPo
     assert.ok(['2030-05-04T10:00:00.000Z', '2030-05-04T14:00:00.000Z'].includes(day[0].from));
     contracts.push('two concurrent saves of one empty day, both seen waiting: the day holds one of them (C03)');
 
+    // Older apps' hand-entered saves through /bulk meet the same check first
+    // (review R6-01): a slot without an end is refused and the day kept.
+    const legacyRefused = await call('POST', '/api/native/availability/bulk',
+      { entries: [{ startsAt: '2030-05-02T13:00:00+00:00', type: 'busy' }] });
+    assert.equal(legacyRefused.status, 400);
+    assert.equal(legacyRefused.body.code, 'AVAILABILITY_INVALID');
+    assert.equal((await manualOn('2030-05-02')).length, 1, 'C02: the legacy manual save must refuse a missing end before deleting');
+    contracts.push('the legacy bulk save refuses a hand-entered slot without an end and keeps the day (C02, R6-01)');
+
     // Older apps: the bulk save and the day delete take the same lock and work.
     const bulk = await call('POST', '/api/native/availability/bulk',
       { entries: [{ startsAt: '2030-05-05T09:00:00+00:00', endsAt: '2030-05-05T10:00:00+00:00', type: 'busy' }] });

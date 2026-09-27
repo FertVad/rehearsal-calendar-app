@@ -203,7 +203,10 @@ describe('When it goes wrong', () => {
   it('does not hand the database driver back to the client', async () => {
     // message, code, hint and where used to be in the response, which gives out
     // column and constraint names to anyone who can provoke an error.
-    const res = await post([{ startsAt: 'not a date', endsAt: 'also not', type: 'busy' }]);
+    // An imported entry: hand-entered ones are now checked before the database
+    // sees them, and this is about what reaches it.
+    const res = await post([{ startsAt: 'not a date', endsAt: 'also not', type: 'busy',
+      source: 'apple_calendar', external_event_id: 'broken' }]);
 
     if (res.status === 500) {
       expect(Object.keys(res.body)).toEqual(['error']);
@@ -217,6 +220,50 @@ describe('When it goes wrong', () => {
     const res = await post([]);
 
     expect(res.status).toBe(400);
+    expect(rows()).toHaveLength(1);
+  });
+});
+
+// Older apps still save hand-entered days through here. Each such entry is
+// checked by the editor's own rules before anything is deleted: a slot without
+// an end used to empty its day and answer success (C02, review R6-01).
+describe('Older apps saving by hand here', () => {
+  it('refuses an entry without an end, and deletes nothing', async () => {
+    await post([manual('2026-09-15T09:00:00+02:00', '2026-09-15T12:00:00+02:00')]);
+
+    const res = await post([{ startsAt: '2026-09-15T13:00:00+02:00', type: 'busy' }]);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('AVAILABILITY_INVALID');
+    expect(rows()).toHaveLength(1);
+  });
+
+  it('refuses a good day and a bad one together, changing neither', async () => {
+    await post([manual('2026-09-15T09:00:00+02:00', '2026-09-15T12:00:00+02:00')]);
+
+    const res = await post([
+      manual('2026-09-16T09:00:00+02:00', '2026-09-16T12:00:00+02:00'),
+      { startsAt: '2026-09-15T13:00:00+02:00', type: 'busy' },
+    ]);
+
+    expect(res.status).toBe(400);
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0].starts_at).toBe('2026-09-15T09:00:00+02:00');
+  });
+
+  it('refuses a source the app never sends', async () => {
+    const res = await post([{ ...manual('2026-09-15T09:00:00+02:00', '2026-09-15T12:00:00+02:00'),
+      source: 'rehearsal', external_event_id: '1' }]);
+
+    expect(res.status).toBe(400);
+    expect(rows()).toHaveLength(0);
+  });
+
+  it('still takes a whole day the way older apps send it', async () => {
+    const res = await post([{ startsAt: '2026-09-15T00:00:00.000Z', endsAt: '2026-09-15T23:59:59.999Z',
+      type: 'available', isAllDay: true }]);
+
+    expect(res.status).toBe(200);
     expect(rows()).toHaveLength(1);
   });
 });
