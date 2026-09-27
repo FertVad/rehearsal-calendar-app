@@ -354,19 +354,15 @@ export const availabilityAPI = {
   deleteAllImported: () =>
     api.delete('/native/availability/imported/all'),
 
-  // Batch delete imported events by external_event_id
-  batchDeleteImported: (eventIds: string[]) =>
-    api.delete('/native/availability/imported/batch', { data: { eventIds } }),
-
-  // Batch update imported events
-  batchUpdateImported: (updates: Array<{
-    externalEventId: string;
-    startsAt: string;
-    endsAt: string;
-    title?: string;
-    isAllDay?: boolean;
-  }>) =>
-    api.put('/native/availability/imported/batch', { updates }),
+  // One device's calendar import, reconciled on the server within the
+  // calendars this device names (server/services/availability/importScope.js).
+  syncImported: (sync: {
+    source: 'apple_calendar' | 'google_calendar';
+    window: { from: string; to: string };
+    deviceCalendars: string[];
+    unreadable: string[];
+    calendars: { calendarId: string; events: { key: string; startsAt: string; endsAt: string; isAllDay: boolean }[] }[];
+  }) => api.post('/native/availability/imported/sync', sync),
 };
 
 // Calendar Sync API (Native App)
@@ -396,8 +392,6 @@ export const calendarSyncAPI = {
       params: eventType ? { eventType } : {},
     }),
 
-  getMappingByEvent: (eventType: 'rehearsal' | 'availability', internalEventId: string) =>
-    api.get(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`),
 
   createOrUpdateMapping: (data: {
     connectionId: number;
@@ -408,11 +402,13 @@ export const calendarSyncAPI = {
   }) =>
     api.post('/native/calendar-sync/mappings', data),
 
-  deleteMapping: (mappingId: number) =>
-    api.delete(`/native/calendar-sync/mappings/${mappingId}`),
+  // Deletes name the calendars of this device: only mappings recorded under
+  // them are its own (ES02).
+  deleteMappingByEvent: (eventType: 'rehearsal' | 'availability', internalEventId: string, deviceCalendarIds: string[]) =>
+    api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`, { data: { deviceCalendarIds } }),
 
-  deleteMappingByEvent: (eventType: 'rehearsal' | 'availability', internalEventId: string) =>
-    api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`),
+  deleteMappings: (eventType: 'rehearsal' | 'availability', deviceCalendarIds: string[]) =>
+    api.delete('/native/calendar-sync/mappings', { data: { eventType, deviceCalendarIds } }),
 };
 
 // Notifications API (the inbox — what was sent, and what is still unread)

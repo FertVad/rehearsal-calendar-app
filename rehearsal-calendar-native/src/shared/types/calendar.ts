@@ -55,18 +55,6 @@ export interface RehearsalWithProject {
 }
 
 /**
- * Imported event mapping (calendar event → availability slot)
- * Phase 2: Import tracking
- */
-export interface ImportedEventMap {
-  [eventId: string]: {
-    availabilitySlotId: string;  // ID of created availability slot
-    calendarId: string;           // Which calendar this event came from
-    lastImported: string;         // ISO timestamp of last import
-  };
-}
-
-/**
  * Result of batch sync operation (export)
  */
 export interface BatchSyncResult {

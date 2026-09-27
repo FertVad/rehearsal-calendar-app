@@ -77,9 +77,10 @@ export function useCalendarSync() {
       const count = await getSyncedRehearsalsCount();
       setSyncedCount(count);
 
-      // Load import count (Phase 2)
-      const imported = await getImportedEventsCount();
-      setImportedCount(imported);
+      // Load import count (Phase 2). One that cannot be read leaves the last
+      // known count standing rather than reading as none.
+      await getImportedEventsCount().then(setImportedCount, (error) =>
+        logger.warn('[useCalendarSync] Could not read the imported count:', error));
 
       // If has permission, load calendars
       if (permission) {
@@ -328,8 +329,8 @@ export function useCalendarSync() {
       setIsImporting(false);
 
       // Update imported count
-      const count = await getImportedEventsCount();
-      setImportedCount(count);
+      await getImportedEventsCount().then(setImportedCount, (error) =>
+        logger.warn('[useCalendarSync] Could not read the imported count:', error));
 
       // Update last import time
       await updateSettings({ lastImportTime: new Date().toISOString() });

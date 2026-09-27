@@ -259,7 +259,7 @@ describe('Calendar Sync - REAL Integration Tests', () => {
       expect(mapping).toBeDefined();
       expect(mapping.connection_id).toBe(connectionId);
       expect(mapping.event_type).toBe('rehearsal');
-      expect(mapping.internal_event_id).toBe('101');
+      expect(mapping.internal_event_id).toBe(101);
       expect(mapping.external_event_id).toBe('ext-event-abc');
       expect(mapping.last_sync_direction).toBe('to_device');
     });

@@ -4,12 +4,17 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { EventMapping, CalendarSyncSettings, ImportedEventMap } from '../types/calendar';
+import { EventMapping, CalendarSyncSettings } from '../types/calendar';
 
 // Storage keys
 const KEYS = {
   EXPORT_MAPPINGS: 'calendar-export-mappings',
+  // Per-event import records, from before the server reconciled imports. Only
+  // cleared now, never written.
   IMPORT_TRACKING: 'calendar-import-tracking',
+  // How many imported rows the server holds for this device's calendars, as
+  // the last sync reported.
+  IMPORT_COUNT: 'calendar-import-count',
   SYNC_SETTINGS: 'calendar-sync-settings',
 };
 
@@ -247,75 +252,28 @@ export async function getSyncedRehearsalsCount(): Promise<number> {
  */
 
 /**
- * Save imported event mapping
+ * The number of imported events the server holds for this device's calendars.
+ *
+ * It used to be counted from a local record of every event imported, which the
+ * server's reconcile made redundant (R7): the server answers each sync with the
+ * count, and that is what the sync screen shows. Before this device's first
+ * such sync, the old record's size stands in.
  */
-export async function saveImportedEvent(
-  eventId: string,
-  availabilitySlotId: string,
-  calendarId: string
-): Promise<void> {
-  try {
-    await updateStored<ImportedEventMap>(
-      KEYS.IMPORT_TRACKING,
-      (tracking) => ({
-        ...tracking,
-        [eventId]: { availabilitySlotId, calendarId, lastImported: new Date().toISOString() },
-      }),
-      {}
-    );
-  } catch (error) {
-    console.error('[CalendarStorage] Failed to save imported event:', error);
-    throw error;
-  }
+export async function setImportedEventsCount(count: number): Promise<void> {
+  await AsyncStorage.setItem(KEYS.IMPORT_COUNT, String(count));
 }
 
-/**
- * Get all imported events
- */
-export async function getImportedEvents(): Promise<ImportedEventMap> {
-  try {
-    const trackingJson = await AsyncStorage.getItem(KEYS.IMPORT_TRACKING);
-    return trackingJson ? JSON.parse(trackingJson) : {};
-  } catch (error) {
-    console.error('[CalendarStorage] Failed to get imported events:', error);
-    return {};
-  }
-}
-
-/**
- * Remove imported event tracking
- */
-export async function removeImportedEvent(eventId: string): Promise<void> {
-  try {
-    await updateStored<ImportedEventMap>(
-      KEYS.IMPORT_TRACKING,
-      ({ [eventId]: _removed, ...rest }) => rest,
-      {}
-    );
-  } catch (error) {
-    console.error('[CalendarStorage] Failed to remove imported event:', error);
-    throw error;
-  }
-}
-
-/**
- * Clear all imported event tracking
- */
-export async function clearAllImportedEvents(): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(KEYS.IMPORT_TRACKING);
-  } catch (error) {
-    console.error('[CalendarStorage] Failed to clear imported events:', error);
-    throw error;
-  }
-}
-
-/**
- * Get count of imported events
- */
+/** Throws when the count cannot be read: that is not the same as none. */
 export async function getImportedEventsCount(): Promise<number> {
-  const tracking = await getImportedEvents();
-  return Object.keys(tracking).length;
+  const stored = await AsyncStorage.getItem(KEYS.IMPORT_COUNT);
+  if (stored !== null) return Number(stored) || 0;
+  const legacy = await AsyncStorage.getItem(KEYS.IMPORT_TRACKING);
+  return legacy ? Object.keys(JSON.parse(legacy)).length : 0;
+}
+
+/** Forget this device's import count, and the old per-event record with it. */
+export async function clearAllImportedEvents(): Promise<void> {
+  await AsyncStorage.multiRemove([KEYS.IMPORT_COUNT, KEYS.IMPORT_TRACKING]);
 }
 
 /**

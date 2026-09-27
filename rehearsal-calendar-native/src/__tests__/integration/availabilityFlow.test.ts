@@ -283,22 +283,25 @@ describe('Availability Flow Integration', () => {
       expect(response.data.deletedCount).toBe(5);
     });
 
-    it('should batch delete specific imported events', async () => {
-      const eventIds = ['event-1', 'event-2', 'event-3'];
+    it('should sync one device\'s calendars in a single request', async () => {
+      const sync = {
+        source: 'apple_calendar' as const,
+        window: { from: '2025-12-29T00:00:00.000Z', to: '2026-12-29T00:00:00.000Z' },
+        deviceCalendars: ['work', 'home'],
+        unreadable: [],
+        calendars: [{ calendarId: 'work', events: [
+          { key: 'e1', startsAt: '2025-12-29T09:00:00.000Z', endsAt: '2025-12-29T10:00:00.000Z', isAllDay: false },
+        ] }],
+      };
 
-      (axios.delete as jest.Mock).mockResolvedValueOnce({
-        data: {
-          message: 'Events deleted',
-          deletedCount: 3,
-        },
+      (axios.post as jest.Mock).mockResolvedValueOnce({
+        data: { success: true, added: 1, updated: 0, removed: 0, adopted: 0, unchanged: 0, held: 1 },
       });
 
-      const response = await availabilityAPI.batchDeleteImported(eventIds);
+      const response = await availabilityAPI.syncImported(sync);
 
-      expect(axios.delete).toHaveBeenCalledWith('/native/availability/imported/batch', {
-        data: { eventIds },
-      });
-      expect(response.data.deletedCount).toBe(3);
+      expect(axios.post).toHaveBeenCalledWith('/native/availability/imported/sync', sync);
+      expect(response.data.held).toBe(1);
     });
   });
 

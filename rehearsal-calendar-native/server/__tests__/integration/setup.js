@@ -82,7 +82,9 @@ export async function setupIntegrationDb() {
       is_all_day BOOLEAN DEFAULT 0,
       source TEXT DEFAULT 'manual',
       external_event_id TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      -- As in the canonical schema; the import sync stamps it (importScope.js).
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     -- One row per imported calendar event (migration 005). Hand-entered rows
@@ -138,7 +140,7 @@ export async function setupIntegrationDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       connection_id INTEGER NOT NULL REFERENCES native_calendar_connections(id) ON DELETE CASCADE,
       event_type TEXT NOT NULL,
-      internal_event_id TEXT NOT NULL,
+      internal_event_id INTEGER NOT NULL,
       external_event_id TEXT NOT NULL,
       last_sync_direction TEXT,
       last_sync_at DATETIME,

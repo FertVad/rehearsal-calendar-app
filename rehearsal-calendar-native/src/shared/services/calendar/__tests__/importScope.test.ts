@@ -1,300 +1,147 @@
 /**
- * Which stored rows the import can still reach.
+ * What the calendar import sends, and what it leaves to the server
+ * (R7: EI01, EI02, EI03, EI04).
  *
- * The first test in this directory. Calendar sync had none at all, which is how
- * two fixes landed here in a week and both could be reverted without anything
- * going red.
+ * The import used to diff this phone's events against every imported row of the
+ * person — from every device — and delete what this phone did not have: a sync
+ * on the second phone wiped what the first had imported (EI01), and a moved
+ * occurrence went out as a separate delete and add (EI04). The phone now names
+ * its calendars and sends what it read; the server reconciles within them, in
+ * one transaction (server/services/availability/importScope.js).
  *
- * iOS returns every event that OVERLAPS the requested window, so a holiday
- * running 1–15 September still arrives on the 4th. The stored rows were matched
- * by their start instead, so that row fell out of scope: it could not be
- * compared, so it was never updated, and if the event was deleted from the
- * phone it was never deleted here either. It stayed, marking the user busy for
- * a trip they had cancelled, with nothing able to reach it again.
+ * The promise stays: only hours cross over. A calendar's id is an opaque
+ * identifier the server now needs as the scope of its rows; titles, notes,
+ * places and links never leave the phone.
  */
 import * as Calendar from 'expo-calendar';
-import { importCalendarEventsToAvailability } from '../import';
+import { importCalendarEventsToAvailability, removeAllImportedSlots } from '../import';
 import { availabilityAPI } from '../../api';
 import { getAllMappings } from '../../../utils/calendarMappings';
 import { checkCalendarPermissions } from '../permissions';
+import { updateLastImportTime, setImportedEventsCount } from '../../../utils/calendarStorage';
 
 jest.mock('../permissions', () => ({ checkCalendarPermissions: jest.fn() }));
 jest.mock('../../../utils/calendarMappings', () => ({ getAllMappings: jest.fn() }));
+jest.mock('../../../utils/calendarStorage', () => ({
+  updateLastImportTime: jest.fn(),
+  setImportedEventsCount: jest.fn(),
+  clearAllImportedEvents: jest.fn(),
+}));
 jest.mock('../../api', () => ({
   availabilityAPI: {
+    syncImported: jest.fn(),
+    deleteAllImported: jest.fn(),
     getAll: jest.fn(),
     bulkSet: jest.fn(),
-    batchUpdateImported: jest.fn(),
-    batchDeleteImported: jest.fn(),
   },
 }));
 
-const iso = (daysFromToday: number, time = '00:00:00.000') => {
+const day = (daysFromToday: number, time: string) => {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + daysFromToday);
   return `${d.toISOString().split('T')[0]}T${time}Z`;
 };
-
-/** A row already stored from a previous import. */
-const storedRow = (extId: string, startsAt: string, endsAt: string) => ({
-  id: 1,
-  source: 'apple_calendar',
-  externalEventId: extId,
-  startsAt,
-  endsAt,
+const event = (id: string, calendarId: string, extra: Record<string, unknown> = {}) => ({
+  id, calendarId, startDate: day(5, '09:00:00.000'), endDate: day(5, '10:00:00.000'), allDay: false, ...extra,
 });
+const sent = () => (availabilityAPI.syncImported as jest.Mock).mock.calls[0]?.[0];
 
 beforeEach(() => {
   jest.clearAllMocks();
   (checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
-  (getAllMappings as jest.Mock).mockResolvedValue([]);
-  (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([]);
-  (availabilityAPI.bulkSet as jest.Mock).mockResolvedValue({});
-  (availabilityAPI.batchUpdateImported as jest.Mock).mockResolvedValue({});
-  (availabilityAPI.batchDeleteImported as jest.Mock).mockResolvedValue({});
+  (getAllMappings as jest.Mock).mockResolvedValue({});
+  (Calendar.getCalendarsAsync as jest.Mock).mockResolvedValue([{ id: 'work' }, { id: 'home' }, { id: 'old' }]);
+  (Calendar.getEventsAsync as jest.Mock).mockImplementation(async ([calendarId]: string[]) =>
+    (calendarId === 'work' ? [event('w1', 'work')] : calendarId === 'home' ? [event('h1', 'home')] : []));
+  (availabilityAPI.syncImported as jest.Mock).mockResolvedValue({
+    data: { success: true, added: 2, updated: 0, removed: 0, adopted: 0, unchanged: 0, held: 2 },
+  });
 });
 
-const deletedIds = () => {
-  const call = (availabilityAPI.batchDeleteImported as jest.Mock).mock.calls[0];
-  return call ? call[0] : [];
-};
+describe('What a sync sends', () => {
+  it('each calendar it read, by id, with the events it holds — and every calendar on the device', async () => {
+    await importCalendarEventsToAvailability(['work', 'home']);
 
-describe('A stored event the phone no longer has', () => {
-  it('is deleted when it lies inside the window', async () => {
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
-      data: [storedRow('evt-soon', iso(5), iso(5, '23:59:59.999'))],
-    });
-
-    await importCalendarEventsToAvailability(['cal-1']);
-
-    expect(deletedIds()).toContain('evt-soon');
-  });
-
-  it('is deleted even though it began before today, if it is still running', async () => {
-    // The holiday. Started on the 1st, runs to the 15th, cancelled on the 4th.
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
-      data: [storedRow('evt-holiday', iso(-3), iso(11, '23:59:59.999'))],
-    });
-
-    await importCalendarEventsToAvailability(['cal-1']);
-
-    expect(deletedIds()).toContain('evt-holiday');
-  });
-
-  it('is left alone when it finished before the window opens', async () => {
-    // Past availability is nobody's business — the window looks forward on
-    // purpose, and churning history costs work for no one's benefit.
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
-      data: [storedRow('evt-last-week', iso(-9), iso(-8, '23:59:59.999'))],
-    });
-
-    await importCalendarEventsToAvailability(['cal-1']);
-
-    expect(deletedIds()).not.toContain('evt-last-week');
-  });
-
-  it('is left alone when it lies beyond the year the window covers', async () => {
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
-      data: [storedRow('evt-far', iso(400), iso(401, '23:59:59.999'))],
-    });
-
-    await importCalendarEventsToAvailability(['cal-1']);
-
-    expect(deletedIds()).not.toContain('evt-far');
-  });
-
-  it('reads the end from either spelling the server may use', async () => {
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
-      data: [
-        {
-          id: 2,
-          source: 'apple_calendar',
-          external_event_id: 'evt-snake',
-          startsAt: iso(-3),
-          ends_at: iso(11, '23:59:59.999'),
-        },
+    expect(sent()).toMatchObject({
+      source: expect.stringMatching(/^(apple|google)_calendar$/),
+      deviceCalendars: expect.arrayContaining(['work', 'home', 'old']),
+      unreadable: [],
+      calendars: [
+        { calendarId: 'work', events: [{ key: 'w1', startsAt: day(5, '09:00:00.000'), endsAt: day(5, '10:00:00.000'), isAllDay: false }] },
+        { calendarId: 'home', events: [expect.objectContaining({ key: 'h1' })] },
       ],
     });
-
-    await importCalendarEventsToAvailability(['cal-1']);
-
-    expect(deletedIds()).toContain('evt-snake');
-  });
-});
-
-describe('An event the phone still has, unchanged', () => {
-  // The comparison read `(dbSlot.isAllDay || dbSlot.is_all_day) !== (event.allDay || false)`.
-  // A stored timed event has isAllDay false, so `||` fell through to a field the
-  // API does not send: undefined !== false, true every time. Every timed event
-  // counted as changed on every sync, the update batch grew to the whole
-  // calendar, and past a few hundred events the request outgrew the body limit
-  // and the update stopped going through at all.
-  const deviceEvent = (over: Record<string, unknown> = {}) => ({
-    id: 'evt-1',
-    calendarId: 'cal-1',
-    startDate: iso(5, '09:00:00.000'),
-    endDate: iso(5, '11:00:00.000'),
-    allDay: false,
-    ...over,
   });
 
-  // A one-off event is stored under its plain id; only a recurring one gets the
-  // occurrence suffix, so that rows written before that keep their keys.
-  const storedFor = (event: { id: string; startDate: string; endDate: string }) => ({
-    id: 9,
-    source: 'apple_calendar',
-    externalEventId: event.id,
-    startsAt: event.startDate,
-    endsAt: event.endDate,
-    isAllDay: false,
-  });
+  it('diffs and deletes nothing itself: that is the server\'s, within this device\'s calendars (EI01, EI04)', async () => {
+    await importCalendarEventsToAvailability(['work']);
 
-  const updated = () => {
-    const call = (availabilityAPI.batchUpdateImported as jest.Mock).mock.calls[0];
-    return call ? call[0] : [];
-  };
-
-  it('is left alone rather than rewritten', async () => {
-    const event = deviceEvent();
-    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([event]);
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [storedFor(event)] });
-
-    await importCalendarEventsToAvailability(['cal-1']);
-
-    expect(updated()).toHaveLength(0);
-  });
-
-  it('writes nothing at all when the whole calendar is unchanged', async () => {
-    // The no-op run. Opening the app should cost no writes when nothing moved.
-    const events = [deviceEvent({ id: 'a' }), deviceEvent({ id: 'b' }), deviceEvent({ id: 'c' })];
-    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue(events);
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: events.map(storedFor) });
-
-    await importCalendarEventsToAvailability(['cal-1']);
-
+    expect(availabilityAPI.getAll).not.toHaveBeenCalled();
     expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
-    expect(availabilityAPI.batchUpdateImported).not.toHaveBeenCalled();
-    expect(availabilityAPI.batchDeleteImported).not.toHaveBeenCalled();
   });
 
-  it('still notices one that really moved', async () => {
-    const event = deviceEvent();
-    const stored = storedFor(event);
-    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([event]);
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
-      data: [{ ...stored, endsAt: iso(5, '12:00:00.000') }],
-    });
+  it('sends the hours and nothing that says what the events are', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([event('w1', 'work', {
+      title: 'Dentist', notes: 'Bring the letter', location: 'Main Street 5', url: 'https://example.invalid/private',
+    })]);
 
-    await importCalendarEventsToAvailability(['cal-1']);
+    await importCalendarEventsToAvailability(['work']);
 
-    expect(updated()).toHaveLength(1);
-  });
-});
-
-
-describe('What leaves the device', () => {
-  // The promise this feature makes, on the landing page and in onboarding: only
-  // hours cross over, never what the events are. Worth a test rather than a
-  // careful habit.
-  it('sends the hours and nothing that identifies the event', async () => {
-    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
-      {
-        id: 'evt-1',
-        calendarId: 'the-device-s-own-calendar-id',
-        title: 'Дантист, второй этаж',
-        notes: 'взять снимок',
-        location: 'ул. Пушкина, 3',
-        url: 'https://clinic.example/appointment/9',
-        startDate: iso(5, '09:00:00.000'),
-        endDate: iso(5, '10:00:00.000'),
-        allDay: false,
-      },
-    ]);
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
-
-    await importCalendarEventsToAvailability(['cal-1']);
-
-    const [sent] = (availabilityAPI.bulkSet as jest.Mock).mock.calls[0];
-    const posted = JSON.stringify(sent);
-
-    for (const secret of ['Дантист', 'снимок', 'Пушкина', 'clinic.example']) {
-      expect(posted).not.toContain(secret);
+    const payload = JSON.stringify(sent());
+    for (const secret of ['Dentist', 'Bring the letter', 'Main Street 5', 'example.invalid']) {
+      expect(payload).not.toContain(secret);
     }
-    expect(sent[0].title).toBe('Calendar Event');
   });
 
-  it('does not send the device\'s calendar identifier either', async () => {
-    // Not event content, so not a broken promise — but the server has no use
-    // for it, and a narrower payload has less to be wrong about.
+  it('leaves our own rehearsals out, even when the stored id means nothing here', async () => {
     (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
-      {
-        id: 'evt-1',
-        calendarId: 'the-device-s-own-calendar-id',
-        startDate: iso(5, '09:00:00.000'),
-        endDate: iso(5, '10:00:00.000'),
-        allDay: false,
-      },
+      event('ours', 'work', { url: 'rehearsalapp://rehearsal/42' }), event('theirs', 'work'),
     ]);
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
 
-    await importCalendarEventsToAvailability(['cal-1']);
+    await importCalendarEventsToAvailability(['work']);
 
-    const [sent] = (availabilityAPI.bulkSet as jest.Mock).mock.calls[0];
-    expect(JSON.stringify(sent)).not.toContain('the-device-s-own-calendar-id');
+    expect(sent().calendars[0].events.map((e: { key: string }) => e.key)).toEqual(['theirs']);
+  });
+
+  it('keys each occurrence of a recurring event by when it starts', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([event('series', 'work', { recurrenceRule: { frequency: 'weekly' } })]);
+
+    await importCalendarEventsToAvailability(['work']);
+
+    expect(sent().calendars[0].events[0].key).toBe(`series:${day(5, '09:00:00.000')}`);
   });
 });
 
-
-describe('Our own rehearsals, seen from a second device', () => {
-  // A mapping holds the calendar event's id, and that id is local to the phone
-  // that made it. On another device the stored ids match nothing, so the
-  // exclusion came up empty and every rehearsal the app had put in the calendar
-  // was read straight back in as busy time — counted twice, on a call the
-  // person is already on, with nothing afterwards able to tell the two apart.
-  const ourEvent = {
-    id: 'this-device-would-call-it-something-else',
-    calendarId: 'cal-1',
-    url: 'rehearsalapp://rehearsal/42',
-    startDate: iso(5, '18:00:00.000'),
-    endDate: iso(5, '20:00:00.000'),
-    allDay: false,
-  };
-
-  it('are left out even when the stored id means nothing here', async () => {
-    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([ourEvent]);
-    (getAllMappings as jest.Mock).mockResolvedValue({
-      '42': { eventId: 'the-other-phone-s-id', calendarId: 'cal-1', lastSynced: '' },
+describe('A calendar that could not be read (EI02)', () => {
+  it('is named unreadable, so the server keeps its rows, and the sync is not called a success', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockImplementation(async ([calendarId]: string[]) => {
+      if (calendarId === 'home') throw new Error('account needs sign-in');
+      return [event('w1', 'work')];
     });
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
 
-    await importCalendarEventsToAvailability(['cal-1']);
+    const result = await importCalendarEventsToAvailability(['work', 'home']);
 
-    expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
+    expect(sent()).toMatchObject({ unreadable: ['home'], calendars: [{ calendarId: 'work' }] });
+    expect(result.failed).toBeGreaterThan(0);
+    expect(updateLastImportTime).not.toHaveBeenCalled();
   });
 
-  it('are still left out when written before the mark existed', async () => {
-    const { url: _url, ...unmarked } = ourEvent;
-    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([unmarked]);
-    (getAllMappings as jest.Mock).mockResolvedValue({
-      '42': { eventId: unmarked.id, calendarId: 'cal-1', lastSynced: '' },
-    });
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+  it('stamps the sync when every calendar was read', async () => {
+    await importCalendarEventsToAvailability(['work', 'home']);
 
-    await importCalendarEventsToAvailability(['cal-1']);
-
-    expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
+    expect(updateLastImportTime).toHaveBeenCalled();
+    expect(setImportedEventsCount).toHaveBeenCalledWith(2);
   });
+});
 
-  it('still import an ordinary event that is nobody\'s rehearsal', async () => {
-    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
-      { ...ourEvent, url: 'https://example.com/dentist', id: 'evt-dentist' },
-    ]);
-    (getAllMappings as jest.Mock).mockResolvedValue({});
-    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+describe('Removing everything imported (EI03)', () => {
+  it('asks the server even when this phone holds no record of what it imported', async () => {
+    (availabilityAPI.deleteAllImported as jest.Mock).mockResolvedValue({ data: { success: true, deletedCount: 7 } });
 
-    await importCalendarEventsToAvailability(['cal-1']);
+    const result = await removeAllImportedSlots();
 
-    expect(availabilityAPI.bulkSet).toHaveBeenCalled();
+    expect(availabilityAPI.deleteAllImported).toHaveBeenCalled();
+    expect(result.success).toBe(7);
   });
 });

@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await AsyncStorage.multiRemove([
         'calendar-export-mappings',
         'calendar-import-tracking',
+        'calendar-import-count',
         'calendar-sync-settings',
         // The last availability that loaded, kept so a start with no network is
         // not blank. It is the previous person's.

@@ -1,5 +1,5 @@
 import { asyncHandler } from '../../middleware/asyncHandler.js';
-import { Router } from 'express';
+import express, { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import {
@@ -8,6 +8,7 @@ import {
 } from '../../utils/timezone.js';
 import { AVAILABILITY_TYPES, DEFAULT_TIMEZONE, AVAILABILITY_SOURCES } from '../../constants/timezone.js';
 import { AvailabilityInvalid, checkDays, checkBulkEntries, replaceManualDays, lockOwnAvailability, deleteManualDay } from '../../services/availability/manualDays.js';
+import { ImportInvalid, checkSync, applySync } from '../../services/availability/importScope.js';
 
 const router = Router();
 
@@ -234,6 +235,29 @@ router.delete('/:date', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 /**
+ * POST /api/native/availability/imported/sync - calendar import, reconciled on
+ * the server within the calendars the device names, in one transaction. See
+ * services/availability/importScope.js. Its body is a device's calendars for a
+ * year, so it is parsed here with a larger limit; app.js leaves it alone.
+ */
+router.post('/imported/sync', requireAuth, express.json({ limit: '2mb' }), asyncHandler(async (req, res) => {
+  let sync;
+  try {
+    sync = checkSync(req.body);
+  } catch (error) {
+    if (error instanceof ImportInvalid) return res.status(400).json(error.body);
+    throw error;
+  }
+  try {
+    const counts = await db.transaction((tx) => applySync(tx, req.userId, sync));
+    res.json({ success: true, ...counts });
+  } catch (error) {
+    console.error('Error syncing imported events:', error);
+    res.status(500).json({ error: 'Failed to sync imported events' });
+  }
+}));
+
+/**
  * DELETE /api/native/availability/imported/all - Delete all imported calendar events
  * Removes all availability slots from calendar sync (apple_calendar, google_calendar)
  */
@@ -277,9 +301,13 @@ router.delete('/imported/batch', requireAuth, asyncHandler(async (req, res) => {
       const batch = eventIds.slice(i, i + BATCH_SIZE);
       const placeholders = batch.map((_, idx) => `$${idx + 4}`).join(',');
 
+      // Only rows from before the device scope: older apps diff against every
+      // imported row, and must not delete what another device imported under
+      // its own calendar (importScope.js, EI01).
       const sql = `DELETE FROM native_user_availability
          WHERE user_id = $1
          AND source IN ($2, $3)
+         AND external_event_id NOT LIKE 'cal:%'
          AND external_event_id IN (${placeholders})`;
 
       const result = await db.run(sql, [userId, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE, ...batch]);
@@ -323,6 +351,7 @@ router.put('/imported/batch', requireAuth, asyncHandler(async (req, res) => {
              title = $3,
              is_all_day = $4
          WHERE user_id = $5
+         AND external_event_id NOT LIKE 'cal:%'
          AND external_event_id = $6
          AND source IN ($7, $8)`,
         [startsAt, endsAt, title || null, isAllDay || false, userId, externalEventId, AVAILABILITY_SOURCES.APPLE, AVAILABILITY_SOURCES.GOOGLE]

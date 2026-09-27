@@ -658,6 +658,24 @@ describe('useCalendarSync - Import (Calendar → App)', () => {
       expect(result.current.isImporting).toBe(false);
       expect(result.current.importError).toBe('Import failed');
     });
+
+    it('keeps the last known count when the new one cannot be read, rather than showing none', async () => {
+      (calendarStorage.getImportedEventsCount as jest.Mock).mockResolvedValue(7);
+      (calendar.importCalendarEventsToAvailability as jest.Mock).mockResolvedValue({ success: 1, failed: 0, skipped: 0, errors: [] });
+      (calendarStorage.saveSyncSettings as jest.Mock).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useCalendarSync());
+      await waitFor(() => {
+        expect(result.current.importedCount).toBe(7);
+      });
+
+      (calendarStorage.getImportedEventsCount as jest.Mock).mockRejectedValueOnce(new Error('storage unavailable'));
+      await act(async () => {
+        await result.current.importNow();
+      });
+
+      expect(result.current.importedCount).toBe(7);
+    });
   });
 
   describe('Clear Imported', () => {

@@ -20,6 +20,8 @@ import { limitOperationIp } from './middleware/operationIpRateLimit.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { asyncHandler } from './middleware/asyncHandler.js';
 
+const IMPORT_SYNC_PATH = /^\/api(\/native)?\/availability\/imported\/sync$/;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -63,7 +65,11 @@ export function createApp({ databaseRuntime } = {}) {
     },
   }));
 
-  app.use(express.json());
+  // One route parses its own, larger body: a calendar import sync carries a
+  // device's calendars for a year in one request, so it can be one reconcile
+  // (routes/native/availability.js). Everything else keeps the default limit.
+  const json = express.json();
+  app.use((req, res, next) => (IMPORT_SYNC_PATH.test(req.path) ? next() : json(req, res, next)));
   app.use(express.urlencoded({ extended: true }));
 
   // Resolve the live adapter after lazy initialization, including on the first

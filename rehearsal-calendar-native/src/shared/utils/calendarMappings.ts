@@ -10,6 +10,7 @@
 
 import { Platform } from 'react-native';
 import { calendarSyncAPI } from '../services/api';
+import { listDeviceCalendarIds } from '../services/calendar/deviceCalendars';
 import {
   saveEventMapping as saveToAsyncStorage,
   getEventMapping as getFromAsyncStorage,
@@ -110,6 +111,48 @@ export async function saveEventMapping(
   }
 }
 
+type Mapping = { eventId: string; calendarId: string; lastSynced: string };
+type ServerMapping = {
+  internal_event_id: number | string;
+  external_event_id: string;
+  device_calendar_id: string;
+  last_sync_at: string;
+};
+
+/**
+ * This device's export mappings on the server, one per rehearsal: the newest.
+ *
+ * The server keeps a mapping per connection, and a connection is one calendar
+ * of one device, so a rehearsal exported from two phones has two. They were
+ * folded into one per rehearsal with the oldest winning, and the export then
+ * worked with an event id from the other phone — which means nothing here, so
+ * it recreated the event, or, by coincidence, names another event on this one
+ * (ES02). Only mappings recorded under a calendar this device has are its own
+ * (deviceCalendars.ts); among them the newest is the one in use — a rehearsal
+ * moved to another calendar keeps its old mapping until it is removed.
+ */
+async function thisDeviceServerMappings(): Promise<Map<string, Mapping>> {
+  const [response, calendars] = await Promise.all([
+    calendarSyncAPI.getMappings('rehearsal'),
+    listDeviceCalendarIds(),
+  ]);
+  const here = new Set(calendars);
+  const time = (value: string) => new Date(value).getTime() || 0;
+  const newest = new Map<string, Mapping>();
+  for (const row of (response.data.mappings || []) as ServerMapping[]) {
+    if (!here.has(row.device_calendar_id)) continue;
+    const rehearsalId = String(row.internal_event_id);
+    const held = newest.get(rehearsalId);
+    if (held && time(held.lastSynced) >= time(row.last_sync_at)) continue;
+    newest.set(rehearsalId, {
+      eventId: row.external_event_id,
+      calendarId: row.device_calendar_id,
+      lastSynced: row.last_sync_at,
+    });
+  }
+  return newest;
+}
+
 /**
  * Get event mapping (try DB first, fallback to AsyncStorage)
  */
@@ -117,17 +160,10 @@ export async function getEventMapping(
   rehearsalId: string
 ): Promise<{ eventId: string; calendarId: string; lastSynced: string } | null> {
   try {
-    // Try database first (primary source)
-    const response = await calendarSyncAPI.getMappingByEvent('rehearsal', rehearsalId);
-    const mapping = response.data.mapping;
+    // Try database first (primary source), within this device's calendars.
+    const result = (await thisDeviceServerMappings()).get(String(rehearsalId));
 
-    if (mapping) {
-      // Convert DB format to expected format
-      const result = {
-        eventId: mapping.external_event_id,
-        calendarId: mapping.device_calendar_id,
-        lastSynced: mapping.last_sync_at,
-      };
+    if (result) {
 
       // Update AsyncStorage cache
       await saveToAsyncStorage(rehearsalId, result.eventId, result.calendarId);
@@ -152,9 +188,10 @@ export async function removeEventMapping(rehearsalId: string): Promise<void> {
     // Remove from AsyncStorage
     await removeFromAsyncStorage(rehearsalId);
 
-    // Remove from database
+    // Remove from database — this device's mapping only. Another phone that
+    // exported the same rehearsal keeps its own (ES02).
     try {
-      await calendarSyncAPI.deleteMappingByEvent('rehearsal', rehearsalId);
+      await calendarSyncAPI.deleteMappingByEvent('rehearsal', rehearsalId, await listDeviceCalendarIds());
     } catch (error: any) {
       // 404 is okay - mapping doesn't exist
       if (error.response?.status !== 404) {
@@ -172,19 +209,8 @@ export async function removeEventMapping(rehearsalId: string): Promise<void> {
  */
 export async function getAllMappings(): Promise<Record<string, { eventId: string; calendarId: string; lastSynced: string }>> {
   try {
-    // Try database first
-    const response = await calendarSyncAPI.getMappings('rehearsal');
-    const mappings = response.data.mappings || [];
-
-    // Convert to expected format
-    const result: Record<string, { eventId: string; calendarId: string; lastSynced: string }> = {};
-    for (const mapping of mappings) {
-      result[mapping.internal_event_id] = {
-        eventId: mapping.external_event_id,
-        calendarId: mapping.device_calendar_id,
-        lastSynced: mapping.last_sync_at,
-      };
-    }
+    // Try database first, within this device's calendars
+    const result = Object.fromEntries(await thisDeviceServerMappings());
 
     // Merged with what is held locally, not substituted for it.
     //
@@ -226,15 +252,12 @@ export async function clearAllMappings(): Promise<void> {
     // Clear AsyncStorage
     await clearAllFromAsyncStorage();
 
-    // Clear database - get all connections and delete mappings
+    // Clear database — this device's mappings, in one request. It used to
+    // delete every mapping of the person, so "remove all exported" on one
+    // phone left the other's events in its calendar with nothing pointing at
+    // them (ES02).
     try {
-      const response = await calendarSyncAPI.getMappings('rehearsal');
-      const mappings = response.data.mappings || [];
-
-      // Delete each mapping
-      for (const mapping of mappings) {
-        await calendarSyncAPI.deleteMapping(mapping.id);
-      }
+      await calendarSyncAPI.deleteMappings('rehearsal', await listDeviceCalendarIds());
     } catch (error) {
       console.error('[CalendarMappings] Failed to clear DB mappings:', error);
     }
