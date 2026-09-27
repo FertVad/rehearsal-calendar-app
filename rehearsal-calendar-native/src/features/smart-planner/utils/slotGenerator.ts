@@ -202,6 +202,16 @@ function categorizeSlot(busyCount: number, totalMembers: number): SlotCategory {
 }
 
 /**
+ * How finely today's cut-off reads the clock. A start is offered while it is
+ * not before the current minute — a half-hour beginning this very minute still
+ * is — so the set of starts on offer changes from one minute to the next. A
+ * caller recomputing on the clock has to move in these steps: moving in
+ * half-hours kept a start that had begun on offer until the next half-hour
+ * (review R6-04).
+ */
+export const NOW_STEP_MINUTES = 1;
+
+/**
  * Generates all time slots for a date range
  */
 export function generateTimeSlots(

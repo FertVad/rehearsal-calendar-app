@@ -42,20 +42,31 @@ beforeEach(() => {
 
 afterEach(() => jest.useRealTimers());
 
-it('works out today again as the clock moves on, with nothing reloaded', async () => {
+// What is offered, not only what is passed: a start that begins this minute is
+// still offered (the generator's contract), and gone the minute after — the
+// clock moved in half-hours and kept 10:30 on offer until 11:00 (review R6-04).
+it('offers today only starts still ahead, as the clock moves on, with nothing reloaded', async () => {
   jest.useFakeTimers({ now: new Date(2026, 0, 1, 10, 5) });
   const props = { projectId: '1', startDate: '2026-01-01', endDate: '2026-01-07',
     selectedCategories: ['perfect'] as SlotCategory[], selectedMemberIds: [] };
   const { result } = renderHook(() => useSmartPlanner(props));
   await waitFor(() => expect(result.current.loading).toBe(false));
-  expect(nowOfLastRun()?.getHours()).toBe(10);
+  const firstStart = () => result.current.allSlots[0]?.startTime;
   const loads = (projectsAPI.getMembersAvailabilityRange as jest.Mock).mock.calls.length;
+  expect(firstStart()).toBe('10:30');
 
-  act(() => {
-    jest.setSystemTime(new Date(2026, 0, 1, 12, 0));
-    jest.advanceTimersByTime(60 * 1000);
+  // Land in the given minute and let one poll of the clock run, staying in it.
+  const moveTo = (minutes: number) => act(() => {
+    jest.setSystemTime(new Date(2026, 0, 1, 10, minutes));
+    jest.advanceTimersByTime(30 * 1000);
   });
 
-  expect(nowOfLastRun()?.getHours()).toBe(12);
+  moveTo(30);
+  expect(firstStart()).toBe('10:30');
+  moveTo(31);
+  expect(firstStart()).toBe('11:00');
+  moveTo(45);
+  expect(firstStart()).toBe('11:00');
+  expect(nowOfLastRun()?.getMinutes()).toBeGreaterThanOrEqual(45);
   expect((projectsAPI.getMembersAvailabilityRange as jest.Mock).mock.calls.length).toBe(loads);
 });

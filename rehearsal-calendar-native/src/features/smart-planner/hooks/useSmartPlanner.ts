@@ -10,6 +10,7 @@ import {
   filterSlotsByCategory,
   countSlotsByCategory,
   groupSlotsByDate,
+  NOW_STEP_MINUTES,
 } from '../utils/slotGenerator';
 import { mergeMemberAvailability, type MemberAvailability } from '../utils/availabilityMerger';
 import { logger } from '../../../shared/utils/logger';
@@ -171,10 +172,10 @@ export function useSmartPlanner({
       .map(m => m.name);
   }, [simpleMembers, memberAvailability, selectedMemberIds]);
 
-  // Today's slots start from the next half-hour, so the clock is read again at
-  // each half-hour and on return to the app — a planner left open from 10:05
-  // kept offering 10:30 at noon (review DP04).
-  const now = useNow(30);
+  // Today's cut-off follows the clock: a planner left open from 10:05 kept
+  // offering 10:30 at noon (review DP04). The clock moves in the generator's own
+  // step, so a start drops out the minute after it begins (review R6-04).
+  const now = useNow(NOW_STEP_MINUTES);
 
   // Generate time slots
   const allSlots: TimeSlot[] = useMemo(() => {
