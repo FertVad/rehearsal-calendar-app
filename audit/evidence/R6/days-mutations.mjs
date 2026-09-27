@@ -39,12 +39,16 @@ const mutations = [
   { id: 'no-person-lock', description: 'saves of one person are not serialised (C03)',
     apply: (root) => edit(root, DAYS, '  await lockOwnAvailability(tx, userId);\n  for (const day of days) {', '  for (const day of days) {'),
     runs: [pg], expect: /C03: two concurrent saves of one day must leave one of them, not both/ },
+  { id: 'all-day-read-in-zone', description: 'a whole day is found by its date in the person\'s zone (C01, cause fix 3)',
+    apply: (root) => edit(root, DAYS, '     AND ((is_all_day = TRUE AND DATE(starts_at AT TIME ZONE $5) = $3)\n',
+      '     AND ((is_all_day = TRUE AND DATE(starts_at AT TIME ZONE $2) = $3 AND $5 = $5)\n'),
+    runs: [pg], expect: /C01: behind UTC, saving 10 June must replace 10 June/ },
   { id: 'every-day-replaced', description: 'a save replaces days it does not name (CC05)',
-    apply: (root) => edit(root, DAYS, '     AND DATE(starts_at AT TIME ZONE $2) = $3\n', '     AND ($2 = $2 OR $3 = $3)\n'),
+    apply: (root) => edit(root, DAYS, `     AND ((is_all_day = TRUE AND DATE(starts_at AT TIME ZONE $5) = $3)
+       OR (is_all_day = FALSE AND DATE(starts_at AT TIME ZONE $2) = $3))`, `     AND ($2 = $2 OR $3 = $3 OR $5 = $5)`),
     runs: [jest], expect: /● .*leaves the days it does not name as they are/ },
   { id: 'imported-replaced', description: 'a save removes rehearsal and imported rows of the day',
-    apply: (root) => edit(root, DAYS, '     AND source = $4`,\n    [userId, timezone, date, AVAILABILITY_SOURCES.MANUAL]',
-      '     AND $4 = $4`,\n    [userId, timezone, date, AVAILABILITY_SOURCES.MANUAL]'),
+    apply: (root) => edit(root, DAYS, '     AND source = $4\n', '     AND $4 = $4\n'),
     runs: [jest], expect: /● .*leaves the rehearsal and the imported event on a replaced day alone/ },
 ];
 

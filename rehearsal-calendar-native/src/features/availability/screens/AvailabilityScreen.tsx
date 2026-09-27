@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useToday } from '../../../shared/hooks/useClock';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Spacing } from '../../../shared/constants/colors';
@@ -73,7 +74,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   const months = useMemo(() => generateMonths(7), []);
 
-  const today = new Date().toISOString().split('T')[0];
+  // The local date, turning at midnight — the UTC one called this evening past
+  // behind UTC and refused it (review CC01).
+  const today = useToday();
 
   // Editor hook for selection, validation, time picker, and slot editing
   const editor = useAvailabilityEditor({

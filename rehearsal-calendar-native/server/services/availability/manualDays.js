@@ -114,14 +114,22 @@ export async function lockOwnAvailability(tx, userId) {
   await tx.get('SELECT id FROM native_users WHERE id = $1 FOR NO KEY UPDATE', [userId]);
 }
 
-/** Remove the hand-entered rows of one day, and only those. */
+/**
+ * Remove the hand-entered rows of one day, and only those.
+ *
+ * A whole day is a calendar date, stored at that date's UTC bounds, so it is
+ * found by its UTC date; a timed slot is an instant, found by its date in the
+ * person's zone. Read in the zone, a whole day behind UTC landed on the day
+ * before: saving one day kept its old version and deleted its neighbour (C01).
+ */
 export async function deleteManualDay(tx, userId, date, timezone) {
   await tx.run(
     `DELETE FROM native_user_availability
      WHERE user_id = $1
-     AND DATE(starts_at AT TIME ZONE $2) = $3
-     AND source = $4`,
-    [userId, timezone, date, AVAILABILITY_SOURCES.MANUAL]
+     AND source = $4
+     AND ((is_all_day = TRUE AND DATE(starts_at AT TIME ZONE $5) = $3)
+       OR (is_all_day = FALSE AND DATE(starts_at AT TIME ZONE $2) = $3))`,
+    [userId, timezone, date, AVAILABILITY_SOURCES.MANUAL, 'UTC']
   );
 }
 

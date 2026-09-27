@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNow } from '../../../shared/hooks/useClock';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { projectsAPI } from '../../../shared/services/api';
@@ -170,6 +171,11 @@ export function useSmartPlanner({
       .map(m => m.name);
   }, [simpleMembers, memberAvailability, selectedMemberIds]);
 
+  // Today's slots start from the next half-hour, so the clock is read again at
+  // each half-hour and on return to the app — a planner left open from 10:05
+  // kept offering 10:30 at noon (review DP04).
+  const now = useNow(30);
+
   // Generate time slots
   const allSlots: TimeSlot[] = useMemo(() => {
     // Check before generateTimeSlots walks the requested dates. A rejected or
@@ -193,7 +199,10 @@ export function useSmartPlanner({
       endDate,
       simpleMembers,
       mergedAvailability,
-      memberIds
+      memberIds,
+      undefined,
+      undefined,
+      now
     );
 
     if (__DEV__) {
@@ -201,7 +210,7 @@ export function useSmartPlanner({
     }
     return slots;
   }, [startDate, endDate, simpleMembers, mergedAvailability, selectedMemberIds,
-    rangeError, error, loading, loadedRangeKey, rangeKey]);
+    rangeError, error, loading, loadedRangeKey, rangeKey, now]);
 
   // Filter slots by category
   const filteredSlots = useMemo(() => {

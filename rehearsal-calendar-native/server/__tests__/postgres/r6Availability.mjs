@@ -36,11 +36,11 @@ export async function probeR6Availability({ connectionString, control, allowedPo
   const userId = (await control.query(`INSERT INTO r0_fixture.native_users (email, first_name, timezone)
     VALUES ('days@fixture.invalid', 'Days', 'UTC') RETURNING id`)).rows[0].id;
   const token = generateTokens(userId, 1).accessToken;
-  const call = (method, route, body) => new Promise((resolve, reject) => {
+  const call = (method, route, body, as = token) => new Promise((resolve, reject) => {
     const bytes = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
     const req = http.request({ hostname: '127.0.0.1', port: server.address().port, path: route, method,
       headers: { Connection: 'close', 'Content-Type': 'application/json', 'X-Forwarded-For': `198.51.100.${forwardedFor++}`,
-        Authorization: `Bearer ${token}`, ...(bytes ? { 'Content-Length': bytes.length } : {}) } }, (res) => {
+        Authorization: `Bearer ${as}`, ...(bytes ? { 'Content-Length': bytes.length } : {}) } }, (res) => {
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
       res.once('end', () => {
@@ -109,6 +109,31 @@ export async function probeR6Availability({ connectionString, control, allowedPo
     assert.equal(day.length, 1, 'C03: two concurrent saves of one day must leave one of them, not both');
     assert.ok(['2030-05-04T10:00:00.000Z', '2030-05-04T14:00:00.000Z'].includes(day[0].from));
     contracts.push('two concurrent saves of one empty day, both seen waiting: the day holds one of them (C03)');
+
+    // A whole day is a calendar date, stored at that date's UTC bounds and read
+    // in UTC; a timed slot is read in the person's own zone. Read in the zone,
+    // a whole day behind UTC lands on the day before, so saving one day kept
+    // its old version and deleted its neighbour (C01, cause fix 3).
+    const newYork = (await control.query(`INSERT INTO r0_fixture.native_users (email, first_name, timezone)
+      VALUES ('new-york@fixture.invalid', 'NY', 'America/New_York') RETURNING id`)).rows[0].id;
+    await control.query(`INSERT INTO r0_fixture.native_user_availability (user_id, starts_at, ends_at, type, source, is_all_day)
+      VALUES ($1, '2030-06-09T00:00:00Z', '2030-06-09T23:59:59.999Z', 'available', 'manual', TRUE),
+             ($1, '2030-06-10T00:00:00Z', '2030-06-10T23:59:59.999Z', 'available', 'manual', TRUE),
+             ($1, '2030-06-11T00:00:00Z', '2030-06-11T23:59:59.999Z', 'available', 'manual', TRUE),
+             ($1, '2030-06-11T02:00:00Z', '2030-06-11T03:00:00Z', 'busy', 'manual', FALSE)`, [newYork]);
+    const nySaved = await call('PUT', '/api/native/availability/days', { days: [{ date: '2030-06-10', entries: [
+      { startsAt: '2030-06-10T00:00:00.000Z', endsAt: '2030-06-10T23:59:59.999Z', type: 'busy', isAllDay: true }] }] },
+      generateTokens(newYork, 1).accessToken);
+    assert.equal(nySaved.status, 200);
+    const nyRows = (await control.query(`SELECT starts_at, type, is_all_day FROM r0_fixture.native_user_availability
+      WHERE user_id = $1 ORDER BY starts_at`, [newYork])).rows
+      .map((row) => `${row.starts_at.toISOString()} ${row.type}${row.is_all_day ? ' all-day' : ''}`);
+    assert.deepEqual(nyRows, [
+      '2030-06-09T00:00:00.000Z available all-day',
+      '2030-06-10T00:00:00.000Z busy all-day',
+      '2030-06-11T00:00:00.000Z available all-day',
+    ], 'C01: behind UTC, saving 10 June must replace 10 June (and its 22:00 slot) and leave 9 and 11 June alone');
+    contracts.push('behind UTC a whole day is replaced on its own date and a late-evening slot on the local one; the neighbours stay (C01)');
 
     // Older apps' hand-entered saves through /bulk meet the same check first
     // (review R6-01): a slot without an end is refused and the day kept.
