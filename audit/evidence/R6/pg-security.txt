@@ -2,7 +2,7 @@
 > rehearsal-calendar-backend@1.0.0 test:r0-postgres
 > node scripts/r0-postgres.mjs --security-only
 
-{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:60139","database":"r0_test","schema":"diagnostic subset plus separately provisioned canonical fresh/upgrade fixtures"}
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:49413","database":"r0_test","schema":"diagnostic subset plus separately provisioned canonical fresh/upgrade fixtures"}
 {"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
 {"scenario":"A02","outcome":"PASS","contracts":["auth DB rejection returns bounded generic 500 for GET/POST","health survives DB fault; authorized traffic recovers","no application row changes during failures","pre-try availability DB failure returns bounded generic 500; process alive","malformed availability entries400 through both public mounts","real bcrypt malformed passwords400/wrong401/correct200+usable admin token"],"externalConnections":0}
 [ERROR] Request failed: { status: 500, code: '42P01' }
@@ -76,7 +76,7 @@
 {"check":"rollback and expired handle; caught statement error never becomes success","result":"PASS"}
 {"check":"failed rollback discards actual closed connection and recovers","result":"PASS"}
 {"check":"leased idle backend failure is observed and releases once","result":"PASS"}
-{"observation":"actual pg-pool saturation","maxClients":10,"rejectedWaiters":100,"queueAfter":0,"elapsedMs":2007}
+{"observation":"actual pg-pool saturation","maxClients":10,"rejectedWaiters":100,"queueAfter":0,"elapsedMs":2012}
 {"check":"real max10/queue100/acquisition2s removes waiters with no late write","result":"PASS"}
 {"check":"close stops new calls, drains issued transaction, expires old handles, reinitializes","result":"PASS"}
 {"check":"close waits for queued acquisition refusal after issued leases finish","result":"PASS"}
@@ -177,7 +177,7 @@
 [WARN] [AccountLinking] google proved the address of user 20; its unproven password is revoked
 [WARN] [AccountLinking] google proved the address of user 22; its unproven password is revoked
 [WARN] [AccountLinking] google proved the address of user 23; its unproven password is revoked
-{"scenario":"R6_AVAILABILITY","outcome":"PASS","contracts":["named days replaced on PostgreSQL, others and imported rows left alone","a request with one bad slot refused whole: nothing deleted (C02)","two concurrent saves of one empty day, both seen waiting: the day holds one of them (C03)","the legacy bulk save refuses a hand-entered slot without an end and keeps the day (C02, R6-01)","the bulk save and the day delete of older apps work behind the same lock"],"externalConnections":0}
+{"scenario":"R6_AVAILABILITY","outcome":"PASS","contracts":["named days replaced on PostgreSQL, others and imported rows left alone","a request with one bad slot refused whole: nothing deleted (C02)","two concurrent saves of one empty day, both seen waiting: the day holds one of them (C03)","behind UTC a whole day is replaced on its own date and a late-evening slot on the local one; the neighbours stay (C01)","the legacy bulk save refuses a hand-entered slot without an end and keeps the day (C02, R6-01)","the bulk save and the day delete of older apps work behind the same lock"],"externalConnections":0}
 A02+B03+B04+D01+H04+IS02+R2_ADAPTER+R2_STARTUP+F05+R2_SCHEMA+R2_MIGRATIONS+R3_EMAIL+R3_AUTH+R6_AVAILABILITY REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
 R0 cleanup: owned disposable container removed
 exit=0

@@ -199,9 +199,13 @@ All dates/times use **ISO 8601 with timezone** (TIMESTAMPTZ in PostgreSQL):
 `DATE(starts_at AT TIME ZONE $tz)` lands on the previous day at every negative
 offset — saving one day deletes its neighbour and leaves the original standing.
 Read all-day rows in UTC and timed rows in the user's zone, in the same query if
-it comes to that. The client version of the mistake is `new Date('2026-09-10')`,
-which prints as 9 September in New York; use `parseDateString` from
-`shared/utils/time.ts`.
+it comes to that — `deleteManualDay` in `server/services/availability/manualDays.js`
+is the one place the server picks a day's rows. The client version of the
+mistake is `new Date('2026-09-10')`, which prints as 9 September in New York; use
+`parseDateString` from `shared/utils/time.ts`. And "today" is never
+`new Date().toISOString().split('T')[0]` — that is the UTC date; use `useToday`
+or `useNow` from `shared/hooks/useClock.ts`, which also move on at midnight and
+when the app returns to the foreground.
 
 ### 4. Availability Types & Sources
 ```javascript
