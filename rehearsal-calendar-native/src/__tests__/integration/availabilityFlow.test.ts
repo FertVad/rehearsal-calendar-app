@@ -286,7 +286,7 @@ describe('Availability Flow Integration', () => {
     it('should sync one device\'s calendars in a single request', async () => {
       const sync = {
         source: 'apple_calendar' as const,
-        window: { from: '2025-12-29T00:00:00.000Z', to: '2026-12-29T00:00:00.000Z' },
+        window: { from: '2025-12-29T00:00:00.000Z', to: '2026-12-29T00:00:00.000Z', firstDate: '2025-12-29', lastDate: '2026-12-28' },
         deviceCalendars: ['work', 'home'],
         unreadable: [],
         calendars: [{ calendarId: 'work', events: [

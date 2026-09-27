@@ -21,6 +21,7 @@ import { getAllMappings } from '../../utils/calendarMappings';
 import { listDeviceCalendarIds } from './deviceCalendars';
 import { availabilityAPI } from '../api';
 import { logger } from '../../utils/logger';
+import { formatDateToString } from '../../utils/time';
 
 
 /**
@@ -100,11 +101,10 @@ function convertEventToTimestamps(event: Calendar.Event): { startsAt: string; en
   if (event.allDay) {
     // A whole-day event stands for calendar dates rather than instants, so both
     // ends are written as UTC midnight of the local date — the form the server
-    // stores and the availability screen reads.
-    const localDate = (value: string | Date): string => {
-      const d = typeof value === 'string' ? new Date(value) : value;
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    };
+    // stores and the availability screen reads. The dates of the window read
+    // come from the same function, so the server compares like with like.
+    const localDate = (value: string | Date): string =>
+      formatDateToString(typeof value === 'string' ? new Date(value) : value);
 
     const firstDate = localDate(event.startDate);
 
@@ -223,7 +223,14 @@ export async function importCalendarEventsToAvailability(
 
     const response = await availabilityAPI.syncImported({
       source: Platform.OS === 'ios' ? 'apple_calendar' : 'google_calendar',
-      window: { from: startDate.toISOString(), to: endDate.toISOString() },
+      // The instants read, and the local dates they cover — the server
+      // compares whole days with the dates, never with the instants (R7-02).
+      window: {
+        from: startDate.toISOString(),
+        to: endDate.toISOString(),
+        firstDate: formatDateToString(startDate),
+        lastDate: formatDateToString(new Date(endDate.getTime() - 1)),
+      },
       deviceCalendars: device,
       unreadable: failedCalendarIds,
       calendars,

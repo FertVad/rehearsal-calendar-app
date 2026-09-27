@@ -11,12 +11,22 @@
  */
 import * as Calendar from 'expo-calendar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAllMappings, getEventMapping, removeEventMapping, clearAllMappings } from '../calendarMappings';
+import {
+  getAllMappings,
+  getEventMapping,
+  removeEventMapping,
+  clearAllMappings,
+  saveEventMapping,
+  resetConnectionCache,
+} from '../calendarMappings';
 import { calendarSyncAPI } from '../../services/api';
 
 jest.mock('../../services/api', () => ({
   calendarSyncAPI: {
     getMappings: jest.fn(),
+    getConnections: jest.fn(),
+    createOrUpdateConnection: jest.fn(),
+    createOrUpdateMapping: jest.fn(),
     deleteMappingByEvent: jest.fn(),
     deleteMappings: jest.fn(),
   },
@@ -28,6 +38,7 @@ const row = (rehearsal: number, calendar: string, event: string, at: string) => 
 
 beforeEach(async () => {
   jest.clearAllMocks();
+  resetConnectionCache();
   await AsyncStorage.removeItem('calendar-export-mappings');
   // This phone has two calendars; "phone-B" is a calendar of another phone.
   (Calendar.getCalendarsAsync as jest.Mock).mockResolvedValue([{ id: 'home' }, { id: 'work' }]);
@@ -77,5 +88,49 @@ describe('Deleting the mappings', () => {
 
     expect(calendarSyncAPI.deleteMappings).toHaveBeenCalledTimes(1);
     expect(calendarSyncAPI.deleteMappings).toHaveBeenCalledWith('rehearsal', ['home', 'work']);
+  });
+});
+
+describe('This phone\'s own record against the server\'s (R7-01)', () => {
+  const local = async () => JSON.parse((await AsyncStorage.getItem('calendar-export-mappings')) || '{}');
+
+  beforeEach(() => {
+    // The server still holds last year's export of 42, in "home".
+    (calendarSyncAPI.getMappings as jest.Mock).mockResolvedValue({ data: { mappings: [
+      row(42, 'home', 'old-home-event', '2025-01-01T00:00:00.000Z'),
+    ] } });
+    (calendarSyncAPI.getConnections as jest.Mock).mockResolvedValue({ data: { connections: [{ id: 5, device_calendar_id: 'work' }] } });
+  });
+
+  it('a mapping saved while the server could not take it wins over the older one the server still holds', async () => {
+    (calendarSyncAPI.createOrUpdateMapping as jest.Mock).mockRejectedValue(new Error('offline'));
+    await saveEventMapping('42', 'new-work-event', 'work');
+
+    expect((await getAllMappings())['42'].eventId).toBe('new-work-event');
+    expect((await getEventMapping('42'))?.eventId).toBe('new-work-event');
+    // Reading does not put the server's older one in its place.
+    expect((await local())['42'].eventId).toBe('new-work-event');
+  });
+
+  it('a server mapping newer than this phone\'s record wins, and is kept here with the time it was written', async () => {
+    await AsyncStorage.setItem('calendar-export-mappings', JSON.stringify({
+      '42': { eventId: 'older-local-event', calendarId: 'home', lastSynced: '2024-06-01T00:00:00.000Z' },
+    }));
+
+    expect((await getEventMapping('42'))?.eventId).toBe('old-home-event');
+    expect((await local())['42']).toEqual({
+      eventId: 'old-home-event', calendarId: 'home', lastSynced: '2025-01-01T00:00:00.000Z',
+    });
+    // So it does not read as newer than it is next time.
+    expect((await getAllMappings())['42'].eventId).toBe('old-home-event');
+  });
+
+  it('a record held here under a calendar this phone does not have is not used', async () => {
+    await AsyncStorage.setItem('calendar-export-mappings', JSON.stringify({
+      '7': { eventId: 'b-event-7', calendarId: 'phone-B', lastSynced: '2026-09-26T00:00:00.000Z' },
+    }));
+
+    expect((await getAllMappings())['7']).toBeUndefined();
+    expect(await getEventMapping('7')).toBeNull();
   });
 });

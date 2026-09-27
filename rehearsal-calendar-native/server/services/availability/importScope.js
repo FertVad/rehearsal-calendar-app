@@ -33,8 +33,10 @@ export const IMPORTED_TITLE = 'Calendar Event';
 export const SCOPE_PREFIX = 'cal:';
 const MAX_CALENDARS = 100;
 const MAX_EVENTS = 5000;
-const MAX_WINDOW_MS = 400 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_WINDOW_MS = 400 * DAY_MS;
 const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CALENDAR_ID = /^[^|]{1,255}$/;
 
 export class ImportInvalid extends Error {
@@ -60,6 +62,46 @@ function instant(value, reason, where) {
   return ms;
 }
 
+function date(value, reason) {
+  if (typeof value !== 'string' || !DATE.test(value)) throw new ImportInvalid(reason);
+  const ms = Date.parse(`${value}T00:00:00.000Z`);
+  if (!Number.isFinite(ms) || new Date(ms).toISOString().slice(0, 10) !== value) throw new ImportInvalid(reason);
+  return ms;
+}
+
+const utcDay = (ms) => ms - (((ms % DAY_MS) + DAY_MS) % DAY_MS);
+
+/**
+ * Whether a read of the window had to return an event, could have, or could
+ * not have (R7-02).
+ *
+ * - `must`: it lies inside what was read, so if it is missing the calendar no
+ *   longer has it, and its row goes.
+ * - `may`: it only touches an edge. Whether a calendar returns such an event
+ *   is the platform's call, so it is taken when it comes and kept when it
+ *   does not.
+ * - `no`: the read could not have returned it, and a sync carrying it is
+ *   refused.
+ *
+ * A whole day is a calendar date stored as its UTC bounds (CLAUDE.md 3), not
+ * an instant, so it is compared with the dates the device read — the local
+ * dates of the window, which only the device knows — and never with the
+ * window's instants. Comparing it with them took yesterday for read in every
+ * zone ahead of UTC and the day after the window in every zone behind it.
+ */
+export function readBy(window, { start, end, isAllDay }) {
+  if (isAllDay) {
+    const first = utcDay(start);
+    const last = utcDay(end);
+    if (last >= window.firstDay && first <= window.lastDay) return 'must';
+    if (last >= window.firstDay - DAY_MS && first <= window.lastDay + DAY_MS) return 'may';
+    return 'no';
+  }
+  if (start < window.to && end > window.from) return 'must';
+  if (start <= window.to && end >= window.from) return 'may';
+  return 'no';
+}
+
 function calendarIds(raw, reason) {
   if (!Array.isArray(raw) || raw.length > MAX_CALENDARS) throw new ImportInvalid(reason);
   const ids = new Set();
@@ -74,9 +116,17 @@ function calendarIds(raw, reason) {
 export function checkSync(body) {
   if (!body || typeof body !== 'object') throw new ImportInvalid('BODY_INVALID');
   if (!IMPORT_SOURCES.has(body.source)) throw new ImportInvalid('SOURCE_INVALID');
+  // The instants read, and the local dates they cover: the first date, and the
+  // date of the last moment. A local date is within a day of the UTC one.
   const from = instant(body.window?.from, 'WINDOW_INVALID');
   const to = instant(body.window?.to, 'WINDOW_INVALID');
   if (to <= from || to - from > MAX_WINDOW_MS) throw new ImportInvalid('WINDOW_INVALID');
+  const firstDay = date(body.window?.firstDate, 'WINDOW_INVALID');
+  const lastDay = date(body.window?.lastDate, 'WINDOW_INVALID');
+  if (lastDay < firstDay || Math.abs(firstDay - utcDay(from)) > DAY_MS || Math.abs(lastDay - utcDay(to - 1)) > DAY_MS) {
+    throw new ImportInvalid('WINDOW_INVALID');
+  }
+  const window = { from, to, firstDay, lastDay };
 
   const device = calendarIds(body.deviceCalendars, 'DEVICE_CALENDARS_INVALID');
   if (device.size === 0) throw new ImportInvalid('DEVICE_CALENDARS_INVALID');
@@ -107,14 +157,14 @@ export function checkSync(body) {
       const end = instant(event.endsAt, 'TIME_INVALID', where);
       if (end <= start || end - start > MAX_WINDOW_MS) throw new ImportInvalid('TIME_INVALID', where);
       if (typeof (event.isAllDay ?? false) !== 'boolean') throw new ImportInvalid('ALL_DAY_NOT_BOOLEAN', where);
-      return { key: event.key, startsAt: new Date(start).toISOString(), endsAt: new Date(end).toISOString(),
-        isAllDay: event.isAllDay ?? false };
+      const isAllDay = event.isAllDay ?? false;
+      if (readBy(window, { start, end, isAllDay }) === 'no') throw new ImportInvalid('OUTSIDE_WINDOW', where);
+      return { key: event.key, startsAt: new Date(start).toISOString(), endsAt: new Date(end).toISOString(), isAllDay };
     });
     return { calendarId, events };
   });
 
-  return { source: body.source, from: new Date(from).toISOString(), to: new Date(to).toISOString(),
-    device: [...device], unreadable: [...unreadable], calendars };
+  return { source: body.source, window, device: [...device], unreadable: [...unreadable], calendars };
 }
 
 const placeholders = (values, first) => values.map((_, i) => `$${i + first}`).join(', ');
@@ -165,26 +215,25 @@ export async function applySync(tx, userId, sync) {
       }
     }
 
-    // What the calendar holds now, inside the window read.
+    // What the calendar holds now. A row the read had to return and did not is
+    // gone from the calendar; any other row missing from the read stays.
     const stored = await tx.all(
       `SELECT external_event_id, starts_at, ends_at, is_all_day FROM native_user_availability
-       WHERE user_id = $1 AND source = $2 AND ${condition}
-       AND ends_at >= $4::timestamptz AND starts_at <= $5::timestamptz`,
-      [userId, sync.source, prefix, sync.from, sync.to]
+       WHERE user_id = $1 AND source = $2 AND ${condition}`,
+      [userId, sync.source, prefix]
     );
     const wanted = new Map(events.map((event) => [scopedKey(calendarId, event.key), event]));
     for (const row of stored) {
       if (wanted.has(row.external_event_id)) continue;
+      const span = { start: new Date(row.starts_at).getTime(), end: new Date(row.ends_at).getTime(),
+        isAllDay: Boolean(row.is_all_day) };
+      if (readBy(sync.window, span) !== 'must') continue;
       await tx.run('DELETE FROM native_user_availability WHERE user_id = $1 AND source = $2 AND external_event_id = $3',
         [userId, sync.source, row.external_event_id]);
       counts.removed += 1;
     }
 
-    const existing = new Map((await tx.all(
-      `SELECT external_event_id, starts_at, ends_at, is_all_day FROM native_user_availability
-       WHERE user_id = $1 AND source = $2 AND ${condition}`,
-      [userId, sync.source, prefix]
-    )).map((row) => [row.external_event_id, row]));
+    const existing = new Map(stored.map((row) => [row.external_event_id, row]));
     for (const [key, event] of wanted) {
       const row = existing.get(key);
       if (!row) {

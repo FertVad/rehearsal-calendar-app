@@ -64,19 +64,24 @@ async function updateStored<T>(key: string, change: (current: T) => T, empty: T)
  */
 
 /**
- * Save event mapping for a rehearsal
+ * Save event mapping for a rehearsal.
+ *
+ * `lastSynced` is when the mapping was written — now, for one written here;
+ * the server's own time, for one copied from the server. Never when it was
+ * read: calendarMappings.ts picks between this record and the server's by it.
  */
 export async function saveEventMapping(
   rehearsalId: string,
   eventId: string,
-  calendarId: string
+  calendarId: string,
+  lastSynced: string = new Date().toISOString()
 ): Promise<void> {
   try {
     await updateStored<Record<string, unknown>>(
       KEYS.EXPORT_MAPPINGS,
       (mappings) => ({
         ...mappings,
-        [rehearsalId]: { eventId, calendarId, lastSynced: new Date().toISOString() },
+        [rehearsalId]: { eventId, calendarId, lastSynced },
       }),
       {}
     );

@@ -104,6 +104,18 @@ describe('What a sync sends', () => {
     expect(sent().calendars[0].events.map((e: { key: string }) => e.key)).toEqual(['theirs']);
   });
 
+  it('names the local dates it read, so the server compares whole days as dates (R7-02)', async () => {
+    await importCalendarEventsToAvailability(['work']);
+
+    const { window } = sent();
+    const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    expect(new Date(window.from).getHours()).toBe(0);
+    expect(window.firstDate).toBe(ymd(new Date()));
+    // The last date is the one the read ends in, not the midnight after it.
+    expect(window.lastDate).toBe(ymd(new Date(Date.parse(window.to) - 1)));
+    expect(window.lastDate < ymd(new Date(window.to))).toBe(true);
+  });
+
   it('keys each occurrence of a recurring event by when it starts', async () => {
     (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([event('series', 'work', { recurrenceRule: { frequency: 'weekly' } })]);
 

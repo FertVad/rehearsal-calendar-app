@@ -358,7 +358,7 @@ export const availabilityAPI = {
   // calendars this device names (server/services/availability/importScope.js).
   syncImported: (sync: {
     source: 'apple_calendar' | 'google_calendar';
-    window: { from: string; to: string };
+    window: { from: string; to: string; firstDate: string; lastDate: string };
     deviceCalendars: string[];
     unreadable: string[];
     calendars: { calendarId: string; events: { key: string; startsAt: string; endsAt: string; isAllDay: boolean }[] }[];

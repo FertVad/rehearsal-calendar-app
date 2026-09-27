@@ -50,7 +50,8 @@ export async function probeR7Import({ connectionString, control, allowedPorts })
     startsAt: `2030-10-${day}T${String(hour).padStart(2, '0')}:00:00Z`,
     endsAt: `2030-10-${day}T${String(hour + 1).padStart(2, '0')}:00:00Z` });
   const sync = (body) => call('POST', '/api/native/availability/imported/sync', { source: 'apple_calendar',
-    window: { from: '2030-10-01T00:00:00Z', to: '2031-10-01T00:00:00Z' }, unreadable: [], ...body });
+    window: { from: '2030-10-01T00:00:00Z', to: '2031-10-01T00:00:00Z', firstDate: '2030-10-01', lastDate: '2031-09-30' },
+    unreadable: [], ...body });
 
   try {
     assert.equal((await sync({ deviceCalendars: ['A-work'], calendars: [{ calendarId: 'A-work', events: [event('e1', '02')] }] })).status, 200);
@@ -102,6 +103,29 @@ export async function probeR7Import({ connectionString, control, allowedPorts })
     const after = await keys();
     assert.ok(after.includes('cal:B-work|L1') && !after.includes('L1'));
     contracts.push('a row from before the scope is adopted by the calendar that still has it');
+
+    // A whole day is a date, compared with the dates the device read, never
+    // with the window's instants (R7-02). Ahead of UTC the window starts the
+    // evening before in UTC; behind it, it ends the morning after.
+    await control.query(`INSERT INTO r0_fixture.native_user_availability
+      (user_id, starts_at, ends_at, type, source, external_event_id, is_all_day) VALUES
+      ($1, '2030-10-01T00:00:00Z', '2030-10-01T23:59:59.999Z', 'busy', 'apple_calendar', 'cal:date-zone|oct-1', TRUE),
+      ($1, '2030-10-02T00:00:00Z', '2030-10-02T23:59:59.999Z', 'busy', 'apple_calendar', 'cal:date-zone|oct-2', TRUE),
+      ($1, '2031-10-02T00:00:00Z', '2031-10-02T23:59:59.999Z', 'busy', 'apple_calendar', 'cal:date-zone|after', TRUE)`, [userId]);
+    const zoned = (window) => call('POST', '/api/native/availability/imported/sync', { source: 'apple_calendar', window,
+      deviceCalendars: ['date-zone'], unreadable: [], calendars: [{ calendarId: 'date-zone', events: [] }] });
+    const dated = async () => (await keys()).filter((key) => key.startsWith('cal:date-zone|'));
+    const ahead = await zoned({ from: '2030-10-02T00:00:00+03:00', to: '2031-10-02T00:00:00+03:00',
+      firstDate: '2030-10-02', lastDate: '2031-10-01' });
+    assert.equal(ahead.status, 200);
+    assert.deepEqual(await dated(), ['cal:date-zone|after', 'cal:date-zone|oct-1'],
+      'R7-02: ahead of UTC, 1 October must stay and 2 October go');
+    const behind = await zoned({ from: '2030-10-01T00:00:00-05:00', to: '2031-10-02T00:00:00-05:00',
+      firstDate: '2030-10-01', lastDate: '2031-10-01' });
+    assert.equal(behind.status, 200);
+    assert.deepEqual(await dated(), ['cal:date-zone|after'],
+      'R7-02: behind UTC, the day after the window must stay and 1 October go');
+    contracts.push('whole days are matched to the window by their dates, on both sides of UTC (R7-02)');
 
     // Export mappings: one per connection, a connection per device calendar.
     // A delete names the device's calendars and reaches no further (ES02).

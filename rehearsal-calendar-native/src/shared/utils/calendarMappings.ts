@@ -119,8 +119,28 @@ type ServerMapping = {
   last_sync_at: string;
 };
 
+const writtenAt = (mapping: Mapping) => new Date(mapping.lastSynced).getTime() || 0;
+
 /**
- * This device's export mappings on the server, one per rehearsal: the newest.
+ * The later written of two records of one rehearsal's mapping; a tie keeps the
+ * first.
+ *
+ * The one rule this device uses to choose its mapping, between server rows and
+ * between the server and its own record (ES02, R7-01). A mapping is written
+ * here first and on the server after, so a server row older than the local one
+ * is an update that never arrived — one failed request is enough — and a local
+ * record older than the server's has been superseded. Both sides stamp the
+ * time of writing, never of reading (calendarStorage.saveEventMapping).
+ */
+function later(first: Mapping | undefined, second: Mapping | undefined): Mapping | undefined {
+  if (!first) return second;
+  if (!second) return first;
+  return writtenAt(second) > writtenAt(first) ? second : first;
+}
+
+/**
+ * This device's calendars, and its export mappings on the server — the newest
+ * per rehearsal.
  *
  * The server keeps a mapping per connection, and a connection is one calendar
  * of one device, so a rehearsal exported from two phones has two. They were
@@ -128,29 +148,31 @@ type ServerMapping = {
  * worked with an event id from the other phone — which means nothing here, so
  * it recreated the event, or, by coincidence, names another event on this one
  * (ES02). Only mappings recorded under a calendar this device has are its own
- * (deviceCalendars.ts); among them the newest is the one in use — a rehearsal
- * moved to another calendar keeps its old mapping until it is removed.
+ * (deviceCalendars.ts), whichever side holds them.
  */
-async function thisDeviceServerMappings(): Promise<Map<string, Mapping>> {
+async function serverMappingsHere(): Promise<{ here: Set<string>; server: Map<string, Mapping> }> {
   const [response, calendars] = await Promise.all([
     calendarSyncAPI.getMappings('rehearsal'),
     listDeviceCalendarIds(),
   ]);
   const here = new Set(calendars);
-  const time = (value: string) => new Date(value).getTime() || 0;
-  const newest = new Map<string, Mapping>();
+  const server = new Map<string, Mapping>();
   for (const row of (response.data.mappings || []) as ServerMapping[]) {
     if (!here.has(row.device_calendar_id)) continue;
     const rehearsalId = String(row.internal_event_id);
-    const held = newest.get(rehearsalId);
-    if (held && time(held.lastSynced) >= time(row.last_sync_at)) continue;
-    newest.set(rehearsalId, {
+    const chosen = later(server.get(rehearsalId), {
       eventId: row.external_event_id,
       calendarId: row.device_calendar_id,
       lastSynced: row.last_sync_at,
     });
+    if (chosen) server.set(rehearsalId, chosen);
   }
-  return newest;
+  return { here, server };
+}
+
+/** The mapping this device uses for a rehearsal: its own, written last; a tie goes to the server. */
+function current(here: Set<string>, server: Mapping | undefined, local: Mapping | null | undefined) {
+  return later(server, local && here.has(local.calendarId) ? local : undefined);
 }
 
 /**
@@ -160,16 +182,17 @@ export async function getEventMapping(
   rehearsalId: string
 ): Promise<{ eventId: string; calendarId: string; lastSynced: string } | null> {
   try {
-    // Try database first (primary source), within this device's calendars.
-    const result = (await thisDeviceServerMappings()).get(String(rehearsalId));
+    const [{ here, server }, local] = await Promise.all([
+      serverMappingsHere(),
+      getFromAsyncStorage(rehearsalId),
+    ]);
+    const result = current(here, server.get(String(rehearsalId)), local);
 
-    if (result) {
-
-      // Update AsyncStorage cache
-      await saveToAsyncStorage(rehearsalId, result.eventId, result.calendarId);
-
-      return result;
+    // The server's is newer: keep it here too, with the time it was written.
+    if (result && result !== local) {
+      await saveToAsyncStorage(rehearsalId, result.eventId, result.calendarId, result.lastSynced);
     }
+    return result ?? null;
   } catch (error: any) {
     // A missing mapping comes back as null, so anything landing here is a real
     // failure — the local cache is the fallback.
@@ -209,8 +232,10 @@ export async function removeEventMapping(rehearsalId: string): Promise<void> {
  */
 export async function getAllMappings(): Promise<Record<string, { eventId: string; calendarId: string; lastSynced: string }>> {
   try {
-    // Try database first, within this device's calendars
-    const result = Object.fromEntries(await thisDeviceServerMappings());
+    const [{ here, server }, cached] = await Promise.all([
+      serverMappingsHere(),
+      getAllFromAsyncStorage(),
+    ]);
 
     // Merged with what is held locally, not substituted for it.
     //
@@ -219,12 +244,14 @@ export async function getAllMappings(): Promise<Record<string, { eventId: string
     // exists on this device alone. Answering with the server's rows only made
     // those invisible: "remove all exported" walked past their events and left
     // them in the calendar while reporting success, and the import had nothing
-    // to exclude them by.
-    //
-    // The server wins where both know a rehearsal: it is the shared record, and
-    // a local entry can be left over from a device that has since been wiped.
-    const cached = await getAllFromAsyncStorage();
-    return { ...cached, ...result };
+    // to exclude them by. Where both know a rehearsal, the one written last is
+    // used — see `later`.
+    const result: Record<string, Mapping> = {};
+    for (const rehearsalId of new Set([...server.keys(), ...Object.keys(cached)])) {
+      const chosen = current(here, server.get(rehearsalId), cached[rehearsalId]);
+      if (chosen) result[rehearsalId] = chosen;
+    }
+    return result;
   } catch (error) {
     console.error('[CalendarMappings] Failed to get mappings from DB, falling back to AsyncStorage:', error);
 

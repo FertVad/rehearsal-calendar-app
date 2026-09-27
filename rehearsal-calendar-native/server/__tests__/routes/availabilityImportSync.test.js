@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 const auth = () => ['Authorization', `Bearer ${generateTokens(userId, 1).accessToken}`];
-const WINDOW = { from: '2026-10-01T00:00:00.000Z', to: '2027-10-01T00:00:00.000Z' };
+const WINDOW = { from: '2026-10-01T00:00:00.000Z', to: '2027-10-01T00:00:00.000Z', firstDate: '2026-10-01', lastDate: '2027-09-30' };
 const event = (key, day, hour = 10, isAllDay = false) => ({
   key,
   startsAt: `2026-10-${day}T${String(hour).padStart(2, '0')}:00:00.000Z`,
@@ -133,6 +133,63 @@ describe('Within one device', () => {
   });
 });
 
+describe('The edges of the window (R7-02)', () => {
+  const allDay = (key, date) => testDb.run(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, source, external_event_id, title, is_all_day)
+     VALUES (?, ?, ?, 'busy', 'apple_calendar', ?, 'Calendar Event', 1)`,
+    [userId, `${date}T00:00:00.000Z`, `${date}T23:59:59.999Z`, `cal:A-work|${key}`],
+  );
+  const timed = (key, startsAt, endsAt) => testDb.run(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, source, external_event_id, title, is_all_day)
+     VALUES (?, ?, ?, 'busy', 'apple_calendar', ?, 'Calendar Event', 0)`,
+    [userId, startsAt, endsAt, `cal:A-work|${key}`],
+  );
+  const empty = (window) => sync({ window, deviceCalendars: ['A-work'], calendars: [{ calendarId: 'A-work', events: [] }] });
+
+  it('ahead of UTC, yesterday\'s whole day is not taken for read, and today\'s is', async () => {
+    // Read from midnight of 2 October in UTC+3, which is 21:00 on 1 October in UTC.
+    allDay('oct-1', '2026-10-01');
+    allDay('oct-2', '2026-10-02');
+
+    const res = await empty({ from: '2026-10-02T00:00:00+03:00', to: '2027-10-02T00:00:00+03:00',
+      firstDate: '2026-10-02', lastDate: '2027-10-01' });
+
+    expect(res.status).toBe(200);
+    expect(keys()).toEqual(['cal:A-work|oct-1']);
+  });
+
+  it('behind UTC, the whole day after the window is not taken for read', async () => {
+    // Read to midnight of 1 October 2027 in UTC−5, which is 05:00 that day in UTC.
+    allDay('last', '2027-09-30');
+    allDay('after', '2027-10-01');
+
+    const res = await empty({ from: '2026-10-01T00:00:00-05:00', to: '2027-10-01T00:00:00-05:00',
+      firstDate: '2026-10-01', lastDate: '2027-09-30' });
+
+    expect(res.status).toBe(200);
+    expect(keys()).toEqual(['cal:A-work|after']);
+  });
+
+  it('keeps an event that only touches the window when the read did not return it', async () => {
+    timed('touching', '2026-09-30T23:00:00.000Z', '2026-10-01T00:00:00.000Z');
+    timed('crossing', '2026-09-30T23:00:00.000Z', '2026-10-01T01:00:00.000Z');
+
+    await empty(WINDOW);
+
+    expect(keys()).toEqual(['cal:A-work|touching']);
+  });
+
+  it('takes an event that only touches the window when the read did return it', async () => {
+    const res = await sync({ deviceCalendars: ['A-work'], calendars: [{ calendarId: 'A-work', events: [
+      { key: 'next-day', startsAt: '2027-10-01T00:00:00.000Z', endsAt: '2027-10-01T23:59:59.999Z', isAllDay: true },
+      { key: 'ends-at-start', startsAt: '2026-09-30T23:00:00.000Z', endsAt: '2026-10-01T00:00:00.000Z', isAllDay: false },
+    ] }] });
+
+    expect(res.status).toBe(200);
+    expect(keys()).toEqual(['cal:A-work|ends-at-start', 'cal:A-work|next-day']);
+  });
+});
+
 describe('Rows from before this contract', () => {
   it('are taken into the calendar that still has them, not duplicated', async () => {
     legacy('L1');
@@ -182,8 +239,14 @@ describe('A request with anything wrong in it changes nothing', () => {
     ['an event ending before it starts', { deviceCalendars: ['A-work'], calendars: [{ calendarId: 'A-work',
       events: [{ key: 'bad', startsAt: '2026-10-02T11:00:00.000Z', endsAt: '2026-10-02T10:00:00.000Z', isAllDay: false }] }] }],
     ['one key twice in a calendar', { deviceCalendars: ['A-work'], calendars: [{ calendarId: 'A-work', events: [event('d', '02'), event('d', '03')] }] }],
-    ['a window longer than a year and a month', { window: { from: '2026-10-01T00:00:00.000Z', to: '2028-10-01T00:00:00.000Z' },
+    ['a window longer than a year and a month', { window: { from: '2026-10-01T00:00:00.000Z', to: '2028-10-01T00:00:00.000Z',
+      firstDate: '2026-10-01', lastDate: '2028-09-30' }, deviceCalendars: ['A-work'], calendars: [{ calendarId: 'A-work', events: [] }] }],
+    ['a window without its dates', { window: { from: WINDOW.from, to: WINDOW.to },
       deviceCalendars: ['A-work'], calendars: [{ calendarId: 'A-work', events: [] }] }],
+    ['window dates that are not the dates of its instants', { window: { ...WINDOW, firstDate: '2026-10-05' },
+      deviceCalendars: ['A-work'], calendars: [{ calendarId: 'A-work', events: [] }] }],
+    ['an event the read could not have returned', { deviceCalendars: ['A-work'], calendars: [{ calendarId: 'A-work',
+      events: [{ key: 'old', startsAt: '2020-10-02T10:00:00.000Z', endsAt: '2020-10-02T11:00:00.000Z', isAllDay: false }] }] }],
   ])('refuses %s', async (_label, body) => {
     const res = await sync(body);
 
