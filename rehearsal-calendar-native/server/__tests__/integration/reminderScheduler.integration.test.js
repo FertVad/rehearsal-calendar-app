@@ -317,6 +317,65 @@ describe('Rehearsal reminders', () => {
     });
   });
 
+  describe('what a reminder says (GR04)', () => {
+    // 09:00 in Jerusalem, 02:00 in New York, on 5 October 2026.
+    const NOW = new Date('2026-10-05T06:00:00Z');
+    const at = (iso, roster) => {
+      const id = Number(testDb.run(
+        `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, is_all_day) VALUES (?, 'Прогон', ?, ?, 0)`,
+        [projectId, iso, new Date(Date.parse(iso) + 2 * HOUR).toISOString()]
+      ).lastInsertId);
+      for (const userId of roster) {
+        testDb.run(`INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response) VALUES (?, ?, 'no')`, [id, userId]);
+      }
+      return id;
+    };
+    const titleFor = (userId) => expo.messages.find((m) => m.to === tokenOf(userId))?.title.replace(/\s/g, ' ');
+    const inboxTitle = (userId) => testDb.get(
+      `SELECT title FROM native_notifications WHERE user_id = ? ORDER BY id DESC LIMIT 1`, [userId])?.title.replace(/\s/g, ' ');
+
+    it('thirteen hours ahead, each reader is told the rehearsal\'s own time, in their own zone and language', async () => {
+      const inJerusalem = addUser('Jerusalem');
+      const inNewYork = addUser('NewYork');
+      testDb.run(`UPDATE native_users SET locale = 'ru', timezone = 'Asia/Jerusalem' WHERE id = ?`, [inJerusalem]);
+      testDb.run(`UPDATE native_users SET locale = 'en', timezone = 'America/New_York' WHERE id = ?`, [inNewYork]);
+      // 22:00 in Jerusalem, 15:00 in New York — the same day for both.
+      at('2026-10-05T19:00:00Z', [inJerusalem, inNewYork]);
+
+      await run({ now: NOW });
+
+      expect(titleFor(inJerusalem)).toBe('Репетиция сегодня в 22:00');
+      expect(titleFor(inNewYork)).toBe('Rehearsal today at 3:00 PM');
+      expect(inboxTitle(inJerusalem)).toBe('Репетиция сегодня в 22:00');
+    });
+
+    it('caught ten minutes before the start, the hour-before reminder says when, not "in 1 hour"', async () => {
+      const late = addUser('Late');
+      testDb.run(`UPDATE native_users SET locale = 'ru', timezone = 'Asia/Jerusalem' WHERE id = ?`, [late]);
+      at('2026-10-05T06:10:00Z', [late]);
+
+      await run({ now: NOW });
+
+      expect(titleFor(late)).toBe('Скоро репетиция: сегодня в 9:10');
+    });
+
+    it('a rehearsal moved inside the window after the run read it is worded at its new time', async () => {
+      const mover = addUser('Mover');
+      testDb.run(`UPDATE native_users SET locale = 'en', timezone = 'UTC' WHERE id = ?`, [mover]);
+      const id = at('2026-10-05T20:00:00Z', [mover]);
+      const snapshot = testDb.get(
+        `SELECT r.*, p.name AS project_name FROM native_rehearsals r JOIN native_projects p ON p.id = r.project_id WHERE r.id = ?`, [id]);
+      testDb.run('UPDATE native_rehearsals SET starts_at = ? WHERE id = ?', ['2026-10-05T21:30:00Z', id]);
+
+      await testDb.transaction((tx) => remindRehearsal(tx, {
+        rehearsal: snapshot, type: '24h', notify: notifyRehearsal24h, now: NOW, expo,
+        from: new Date(NOW.getTime() + 12 * HOUR), to: new Date(NOW.getTime() + 24 * HOUR),
+      }));
+
+      expect(titleFor(mover)).toBe('Rehearsal today at 9:30 PM UTC');
+    });
+  });
+
   describe('somebody added after the reminder has gone out', () => {
     it('is reminded on the next run, and nobody else is again', async () => {
       // The claim used to retire the whole rehearsal on the first send, so a
@@ -374,7 +433,8 @@ describe('Rehearsal reminders', () => {
     it('the service says who it failed, rather than resolving with nothing', async () => {
       expo.down = true;
 
-      const delivery = await notifyRehearsal24h({ id: 1, title: 'Прогон', project_id: projectId }, 'P', [memberId], { expo });
+      const delivery = await notifyRehearsal24h({ id: 1, title: 'Прогон', project_id: projectId, starts_at: new Date(Date.now() + 20 * HOUR).toISOString() },
+        'P', [memberId], { expo });
 
       expect(delivery.undelivered).toEqual([memberId]);
       expect(delivery.delivered).toEqual([]);

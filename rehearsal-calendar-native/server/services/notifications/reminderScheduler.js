@@ -30,9 +30,11 @@ import { ROSTER } from '../rehearsals/roster.js';
  * within hours of the intended one still catches the same rehearsals.
  *
  * Sending twice is prevented by native_push_reminders, not by the window, so
- * widening costs nothing. The 12-hour floor on the day-before reminder is what
- * keeps its wording honest: "Rehearsal tomorrow" should not arrive for
- * something starting this afternoon.
+ * widening costs nothing. The 12-hour floor keeps the day-before reminder from
+ * landing on top of the hour-before one. The wording does not depend on the
+ * windows: it says the rehearsal's own start, in the reader's zone
+ * (reminderText.js) — it used to be a fixed "tomorrow" and "in 1 hour", which a
+ * late run made false (GR04).
  */
 const DAY_BEFORE_FLOOR_MS = 12 * 60 * 60 * 1000;
 const DAY_BEFORE_CEILING_MS = 24 * 60 * 60 * 1000;
@@ -227,7 +229,7 @@ export async function remindRehearsal(tx, {
   // compared equal — such a rehearsal read as moved and was never reminded
   // (R8-02).
   const current = await tx.get(
-    `SELECT id FROM native_rehearsals
+    `SELECT id, starts_at, title FROM native_rehearsals
      WHERE id = $1 AND is_all_day = FALSE AND starts_at BETWEEN $2 AND $3
      FOR SHARE`,
     [rehearsal.id, from.toISOString(), to.toISOString()]
@@ -262,7 +264,10 @@ export async function remindRehearsal(tx, {
     return { told: 0, retry: 0 };
   }
 
-  const delivery = await notify(rehearsal, rehearsal.project_name, userIds, { executor: tx, ...(expo ? { expo } : {}) });
+  // Worded from the rehearsal as it is now, locked, not the copy the run read:
+  // a move inside the window is reminded at once, at its new time (GR04).
+  const delivery = await notify({ ...rehearsal, starts_at: current.starts_at, title: current.title },
+    rehearsal.project_name, userIds, { executor: tx, now, ...(expo ? { expo } : {}) });
 
   // Nobody's device took it: release their claims, and the inbox rows written
   // for them, so the next run tries again without doubling the inbox (GR01).

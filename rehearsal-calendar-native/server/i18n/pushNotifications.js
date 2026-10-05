@@ -57,15 +57,21 @@ const translations = {
       body: ({ projectName }) =>
         `Проект ${projectName} был удалён`,
     },
+    // The time is the rehearsal's own, in the reader's zone (reminderText.js).
     rehearsal24h: {
-      title: 'Репетиция завтра',
+      title: ({ when }) => `Репетиция ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Репетиция'}`,
     },
     rehearsal1h: {
-      title: 'Репетиция через 1 час',
+      title: ({ when }) => `Скоро репетиция: ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Репетиция'}`,
+    },
+    when: {
+      today: (time) => `сегодня в ${time}`,
+      tomorrow: (time) => `завтра в ${time}`,
+      on: (date, time) => `${date} в ${time}`,
     },
     changes: {
       datetime: 'дата/время',
@@ -127,15 +133,21 @@ const translations = {
       body: ({ projectName }) =>
         `The project ${projectName} has been deleted`,
     },
+    // The time is the rehearsal's own, in the reader's zone (reminderText.js).
     rehearsal24h: {
-      title: 'Rehearsal tomorrow',
+      title: ({ when }) => `Rehearsal ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Rehearsal'}`,
     },
     rehearsal1h: {
-      title: 'Rehearsal in 1 hour',
+      title: ({ when }) => `Rehearsal soon: ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Rehearsal'}`,
+    },
+    when: {
+      today: (time) => `today at ${time}`,
+      tomorrow: (time) => `tomorrow at ${time}`,
+      on: (date, time) => `on ${date} at ${time}`,
     },
     changes: {
       datetime: 'date/time',
@@ -197,15 +209,21 @@ const translations = {
       body: ({ projectName }) =>
         `El proyecto ${projectName} ha sido eliminado`,
     },
+    // The time is the rehearsal's own, in the reader's zone (reminderText.js).
     rehearsal24h: {
-      title: 'Ensayo mañana',
+      title: ({ when }) => `Ensayo ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Ensayo'}`,
     },
     rehearsal1h: {
-      title: 'Ensayo en 1 hora',
+      title: ({ when }) => `Ensayo pronto: ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Ensayo'}`,
+    },
+    when: {
+      today: (time) => `hoy a las ${time}`,
+      tomorrow: (time) => `mañana a las ${time}`,
+      on: (date, time) => `el ${date} a las ${time}`,
     },
     changes: {
       datetime: 'fecha/hora',
@@ -267,15 +285,21 @@ const translations = {
       body: ({ projectName }) =>
         `Das Projekt ${projectName} wurde gelöscht`,
     },
+    // The time is the rehearsal's own, in the reader's zone (reminderText.js).
     rehearsal24h: {
-      title: 'Probe morgen',
+      title: ({ when }) => `Probe ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Probe'}`,
     },
     rehearsal1h: {
-      title: 'Probe in 1 Stunde',
+      title: ({ when }) => `Probe gleich: ${when}`,
       body: ({ projectName, rehearsalTitle }) =>
         `${projectName}: ${rehearsalTitle || 'Probe'}`,
+    },
+    when: {
+      today: (time) => `heute um ${time}`,
+      tomorrow: (time) => `morgen um ${time}`,
+      on: (date, time) => `am ${date} um ${time}`,
     },
     changes: {
       datetime: 'Datum/Zeit',

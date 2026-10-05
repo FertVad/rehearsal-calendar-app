@@ -3,11 +3,14 @@
  * Handles sending push notifications via Expo Push API
  */
 
+import http from 'node:http';
+import https from 'node:https';
 import { Expo } from 'expo-server-sdk';
 import db from '../../database/db.js';
 import { logger } from '../../utils/logger.js';
 import { recordNotifications, getUnreadCounts } from './notificationStore.js';
 import { t } from '../../i18n/pushNotifications.js';
+import { reminderWhen } from './reminderText.js';
 
 const EXPO_CHUNK = 100;
 export const EXPO_TIMEOUT_MS = 10_000;
@@ -15,7 +18,7 @@ export const EXPO_TIMEOUT_MS = 10_000;
 /**
  * The one way this server talks to Expo: a send and a receipts request, each
  * given a deadline that covers the whole exchange — connecting, waiting and
- * reading the answer — and that aborts the request when it passes (R8-01).
+ * reading the answer — and that destroys the connection when it passes (R8-01).
  *
  * The SDK's client set no deadline at all: a server that accepted the request
  * and never answered held the await for ever, and with it the reminder's
@@ -28,25 +31,56 @@ export const EXPO_TIMEOUT_MS = 10_000;
  * tests point it at a local server that never answers.
  */
 export function expoTransport({ baseUrl = process.env.EXPO_BASE_URL || 'https://exp.host', timeoutMs = EXPO_TIMEOUT_MS } = {}) {
-  async function post(path, body) {
-    const response = await fetch(`${baseUrl}/--/api/v2/push/${path}`, {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Accept-Encoding': 'gzip, deflate', 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
+  // node:http rather than fetch, and no connection pool: fetch's shared pool
+  // opened a fresh connection to the origin the moment a request was aborted,
+  // behind the caller's back. Here each request has its own connection, and
+  // the deadline destroys it, answer and all.
+  function post(path, body) {
+    const url = new URL(`${baseUrl}/--/api/v2/push/${path}`);
+    const payload = Buffer.from(JSON.stringify(body));
+    const client = url.protocol === 'http:' ? http : https;
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const settle = (error, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (error) reject(error); else resolve(value);
+      };
+      const request = client.request(url, {
+        method: 'POST',
+        agent: false,
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'Content-Length': payload.length },
+      }, (response) => {
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('error', (error) => settle(error));
+        response.on('aborted', () => settle(new Error('Expo closed the answer half-way')));
+        response.on('end', () => {
+          let result;
+          try {
+            result = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          } catch {
+            settle(new Error(`Expo answered ${response.statusCode} without JSON`));
+            return;
+          }
+          if (response.statusCode !== 200 || result.errors) {
+            const reasons = (result.errors || []).map((error) => error.message).join('; ');
+            settle(new Error(`Expo answered ${response.statusCode}${reasons ? `: ${reasons}` : ''}`));
+            return;
+          }
+          settle(null, result.data);
+        });
+      });
+      const timer = setTimeout(() => {
+        const error = new Error(`Expo did not answer within ${timeoutMs} ms`);
+        error.name = 'TimeoutError';
+        settle(error);
+        request.destroy(error);
+      }, timeoutMs);
+      request.on('error', (error) => settle(error));
+      request.end(payload);
     });
-    const text = await response.text();
-    let result;
-    try {
-      result = JSON.parse(text);
-    } catch {
-      throw new Error(`Expo answered ${response.status} without JSON`);
-    }
-    if (response.status !== 200 || result.errors) {
-      const reasons = (result.errors || []).map((error) => error.message).join('; ');
-      throw new Error(`Expo answered ${response.status}${reasons ? `: ${reasons}` : ''}`);
-    }
-    return result.data;
   }
   return {
     async sendPushNotificationsAsync(messages) {
@@ -528,28 +562,63 @@ export async function notifyProjectDeleted(projectName, memberIds) {
 }
 
 /**
- * Send 24-hour reminder for upcoming rehearsal
+ * A rehearsal reminder, worded for each reader (R8: GR04).
+ *
+ * Grouped by language and time zone rather than language alone: the title
+ * carries the rehearsal's start — today, tomorrow or the date, and the time —
+ * as the reader's own clock shows it (reminderText.js), so two people in one
+ * language but different zones read different times. `options.now` is the
+ * moment the run sends at; the rest passes to sendPushNotification.
+ */
+async function sendRehearsalReminder(rehearsal, projectName, userIds, key, data, { now = new Date(), ...options } = {}) {
+  const outcome = emptyOutcome();
+  if (userIds.length === 0) return outcome;
+  const executor = options.executor || db;
+  const rows = await executor.all(
+    `SELECT id, locale, timezone FROM native_users WHERE id IN (${userIds.map(() => '?').join(',')})`,
+    userIds
+  );
+  const readers = new Map(rows.map((row) => [Number(row.id), row]));
+  const groups = new Map();
+  for (const userId of userIds) {
+    const reader = readers.get(Number(userId));
+    const locale = reader?.locale || 'en';
+    const timeZone = reader?.timezone || 'UTC';
+    const group = `${locale}|${timeZone}`;
+    if (!groups.has(group)) groups.set(group, { locale, timeZone, ids: [] });
+    groups.get(group).ids.push(userId);
+  }
+
+  for (const { locale, timeZone, ids } of groups.values()) {
+    const tr = t(locale, key);
+    const when = reminderWhen(locale, rehearsal.starts_at, now, timeZone);
+    merge(outcome, await sendPushNotification(ids, {
+      title: tr.title({ when }),
+      body: tr.body({ projectName, rehearsalTitle: rehearsal.title }),
+      data,
+    }, options));
+  }
+  return outcome;
+}
+
+/**
+ * Send the day-before reminder for an upcoming rehearsal
  */
 export async function notifyRehearsal24h(rehearsal, projectName, memberIds, options) {
-  return sendLocalizedNotification(
-    memberIds,
-    'rehearsal24h',
-    { projectName, rehearsalTitle: rehearsal.title },
+  return sendRehearsalReminder(
+    rehearsal, projectName, memberIds, 'rehearsal24h',
     { type: 'rehearsal_reminder_24h', rehearsalId: rehearsal.id, projectId: rehearsal.project_id },
     options
   );
 }
 
 /**
- * Send 1-hour reminder for upcoming rehearsal
+ * Send the hour-before reminder for an upcoming rehearsal
  */
 export async function notifyRehearsal1h(rehearsal, projectName, memberIds, options) {
-  return sendLocalizedNotification(
-    memberIds,
-    'rehearsal1h',
-    { projectName, rehearsalTitle: rehearsal.title },
+  return sendRehearsalReminder(
+    rehearsal, projectName, memberIds, 'rehearsal1h',
     { type: 'rehearsal_reminder_1h', rehearsalId: rehearsal.id, projectId: rehearsal.project_id },
     options
   );
 }
-
