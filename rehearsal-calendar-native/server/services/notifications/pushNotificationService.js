@@ -30,6 +30,29 @@ export const EXPO_TIMEOUT_MS = 10_000;
  * `EXPO_BASE_URL` is the SDK's own variable for pointing at another host; the
  * tests point it at a local server that never answers.
  */
+/**
+ * Expo's answer: `{ data }` on success, `{ errors: [...] }` on failure. Anything
+ * else — not JSON, `null`, a list, `errors` that is not a list — is not an
+ * answer, and is thrown as one more way the request failed.
+ */
+function readAnswer(status, text) {
+  let result;
+  try {
+    result = JSON.parse(text);
+  } catch {
+    throw new Error(`Expo answered ${status} without JSON`);
+  }
+  if (!result || typeof result !== 'object' || Array.isArray(result)
+    || (result.errors !== undefined && !Array.isArray(result.errors))) {
+    throw new Error(`Expo answered ${status} with something that is not an answer`);
+  }
+  if (status !== 200 || result.errors) {
+    const reasons = (result.errors || []).map((error) => error?.message).filter(Boolean).join('; ');
+    throw new Error(`Expo answered ${status}${reasons ? `: ${reasons}` : ''}`);
+  }
+  return result.data;
+}
+
 export function expoTransport({ baseUrl = process.env.EXPO_BASE_URL || 'https://exp.host', timeoutMs = EXPO_TIMEOUT_MS } = {}) {
   // node:http rather than fetch, and no connection pool: fetch's shared pool
   // opened a fresh connection to the origin the moment a request was aborted,
@@ -56,20 +79,15 @@ export function expoTransport({ baseUrl = process.env.EXPO_BASE_URL || 'https://
         response.on('data', (chunk) => chunks.push(chunk));
         response.on('error', (error) => settle(error));
         response.on('aborted', () => settle(new Error('Expo closed the answer half-way')));
+        // Everything about the answer is read inside one guard: this runs in
+        // an event handler, outside the promise, so anything thrown here would
+        // not reject it — it would end the process (R8-04).
         response.on('end', () => {
-          let result;
           try {
-            result = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-          } catch {
-            settle(new Error(`Expo answered ${response.statusCode} without JSON`));
-            return;
+            settle(null, readAnswer(response.statusCode, Buffer.concat(chunks).toString('utf8')));
+          } catch (error) {
+            settle(error);
           }
-          if (response.statusCode !== 200 || result.errors) {
-            const reasons = (result.errors || []).map((error) => error.message).join('; ');
-            settle(new Error(`Expo answered ${response.statusCode}${reasons ? `: ${reasons}` : ''}`));
-            return;
-          }
-          settle(null, result.data);
         });
       });
       const timer = setTimeout(() => {

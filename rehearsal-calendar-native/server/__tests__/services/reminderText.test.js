@@ -51,6 +51,10 @@ describe('A time that is not the reader\'s local time says so', () => {
     expect(when('ru', '2026-10-05T19:00:00Z', new Date('2026-10-05T06:00:00Z'), 'Mars/Olympus')).toBe('сегодня в 19:00 UTC');
   });
 
+  it.each(['Etc/UTC', 'utc', 'Etc/GMT'])('a stored zone that is UTC by another name (%s) is marked too', (zone) => {
+    expect(when('ru', '2026-10-05T19:00:00Z', new Date('2026-10-05T06:00:00Z'), zone)).toBe('сегодня в 19:00 UTC');
+  });
+
   it('an unknown language reads English', () => {
     expect(when('fr', '2026-10-05T19:00:00Z', new Date('2026-10-05T06:00:00Z'), 'UTC')).toBe('today at 7:00 PM UTC');
   });

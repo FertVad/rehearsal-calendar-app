@@ -16,13 +16,17 @@ import { t } from '../../i18n/pushNotifications.js';
 const LOCALE_TAGS = { ru: 'ru-RU', en: 'en-US', es: 'es-ES', de: 'de-DE' };
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function knownZone(timeZone) {
-  if (typeof timeZone !== 'string' || timeZone.length === 0) return false;
+/**
+ * The zone's canonical name, or UTC when it is not a zone. Canonical, so that
+ * `Etc/UTC`, `utc` and `Etc/GMT` are recognised as UTC and marked as such.
+ */
+function zoneOf(timeZone) {
+  if (typeof timeZone !== 'string' || timeZone.length === 0) return 'UTC';
   try {
-    new Intl.DateTimeFormat('en-US', { timeZone });
-    return true;
+    const canonical = new Intl.DateTimeFormat('en-US', { timeZone }).resolvedOptions().timeZone;
+    return ['Etc/UTC', 'Etc/GMT', 'GMT'].includes(canonical) ? 'UTC' : canonical;
   } catch {
-    return false;
+    return 'UTC';
   }
 }
 
@@ -42,7 +46,7 @@ const nextDate = (date) => new Date(Date.parse(`${date}T00:00:00.000Z`) + DAY_MS
  * @param {string} timeZone - the reader's IANA zone
  */
 export function reminderWhen(locale, startsAt, now, timeZone) {
-  const zone = knownZone(timeZone) ? timeZone : 'UTC';
+  const zone = zoneOf(timeZone);
   const tag = LOCALE_TAGS[locale] || LOCALE_TAGS.en;
   const start = new Date(startsAt);
   const words = t(locale, 'when');
