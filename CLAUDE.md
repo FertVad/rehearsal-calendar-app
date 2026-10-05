@@ -136,8 +136,9 @@ server/public/
 ### Database
 - **Server runtime, development and production**: PostgreSQL only. There is no SQLite fallback.
 - **SQLite**: isolated test fixtures only; they do not prove PostgreSQL behavior.
-- **Canonical schema**: twenty-one `native_*` application tables: thirteen domain
-  tables, six shared-budget tables and two for email address proof (group 010).
+- **Canonical schema**: twenty-two `native_*` application tables: thirteen domain
+  tables, six shared-budget tables, two for email address proof (group 010) and
+  one for push tickets awaiting their receipts (group 011).
   Migration history is separate. Retired
   payment/activity/participant tables are not created by fresh provisioning.
   Actual production catalog and migration history have not been inspected here.
@@ -506,14 +507,40 @@ minutes and both sending `Authorization: Bearer $CRON_SECRET`:
 
 Running both is safe, and that is by design — see the claim below.
 
+**Both are switched off since 2026-09-12**, so no reminders go out: a ping every
+fifteen minutes kept the Neon compute awake and ran through its allowance (see
+the workflow's header). Turning one back on is the owner's decision, and after
+R8 it needs migration 011 (`native_push_tickets`) applied first.
+
 **The windows are deliberately wide** — 12–24h ahead for the day-before
 reminder, 0–1h for the hour-before — because no free scheduler is punctual.
 They used to be narrow bands (23–24h, 50–70min) that only worked under a
 metronome: one missed run and a rehearsal crossed the band and was never
 announced. Widening is free because each send is *claimed* in
-`native_push_reminders` (unique on `rehearsal_id, reminder_type`) before the
-push goes out, so overlapping schedulers cannot double-send, and a failed push
-releases the claim so the next run retries.
+`native_push_reminders` (unique on `rehearsal_id, user_id, reminder_type`), so
+overlapping schedulers cannot double-send.
+
+**Each rehearsal is reminded in one transaction** (R8,
+`remindRehearsal`): the rehearsal is locked `FOR SHARE` provided it still starts
+when the run read it, the people not yet told are claimed in one statement, the
+push goes out, and whoever no device took — Expo down, every device refusing —
+has their claim and inbox row removed before the commit. A run that stops
+half-way commits nothing, so nobody is left claimed and untold; a move of the
+rehearsal waits for a send in flight or makes the run skip it; a second
+scheduler waits on the first one's claim. Someone with no device at all counts
+as told — the inbox row is the delivery.
+
+**A failed run answers 500**, with the counts and what failed: due rehearsals
+that could not be read, a rehearsal whose transaction failed, people whose
+devices all refused, receipts that could not be read or tickets not kept. A
+quiet night and a broken query used to both answer 200 with zeros. Both
+schedulers alarm on the status.
+
+**Receipts are read at the start of every run.** Each accepted push leaves its
+Expo ticket in `native_push_tickets`; fifteen minutes on its receipt is read,
+and one saying the device is not registered removes that token — unless it was
+registered again after the send. A ticket whose receipt Expo no longer holds
+(about a day) is dropped.
 
 Auth is fail-closed — without `CRON_SECRET` the endpoint answers 503 rather than
 running unauthenticated.
@@ -537,9 +564,13 @@ nowhere in the app to re-read what you were told.
 Each push carries the id of that recipient's own row, so tapping one marks
 exactly that notification read rather than guessing.
 
-**Delivery is still not tracked.** Expo's tickets say it accepted the message;
-the receipts that say whether a phone got it are never fetched. `sent` means
-accepted, not delivered.
+**Accepted is not delivered.** `sendPushNotification` answers per person —
+`delivered` (Expo accepted it for one of their devices), `undelivered` (they
+have devices and none took it), `unreachable` (no device: the inbox row is the
+delivery) — and throws when the database fails rather than answer "nobody".
+Whether the phone then got it is in the receipt, read by the reminder cron
+(above) and used only to drop dead tokens; nothing shows a person their
+delivery state.
 
 ### The Rehearsal Details Sheet
 

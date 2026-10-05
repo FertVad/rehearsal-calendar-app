@@ -193,6 +193,16 @@ person to edit the same day on two devices without reloading, and it costs
 their own edit, which they can see. Fixing it takes a revision per day and a
 conflict answer the editor would have to show.
 
+### A reminder can go out twice when a rehearsal is moved at the moment it is sent
+
+Each rehearsal is reminded in one transaction that holds the rehearsal while
+it sends (R8), so a move waits for a send in flight and then releases its
+claims. But the edit itself is still two statements — the new time, then the
+release — until cause fix 10 makes saving a rehearsal one transaction. A run
+that claims people for the *new* time in the milliseconds between the two has
+those claims released too, and the next run reminds them again: one extra
+push. Left for cause fix 10, which removes the gap rather than narrowing it.
+
 ### Calendar sync needs an installation id before Android ships
 
 Imported rows and export mappings belong to the device's calendars (R7): a
