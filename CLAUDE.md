@@ -521,14 +521,23 @@ announced. Widening is free because each send is *claimed* in
 overlapping schedulers cannot double-send.
 
 **Each rehearsal is reminded in one transaction** (R8,
-`remindRehearsal`): the rehearsal is locked `FOR SHARE` provided it still starts
-when the run read it, the people not yet told are claimed in one statement, the
+`remindRehearsal`): the rehearsal is locked `FOR SHARE` provided it is still due
+for this reminder — the same window the run found it in, never the start time
+the run read, which comes back through JavaScript to the millisecond while
+PostgreSQL keeps microseconds — the people not yet told are claimed in one statement, the
 push goes out, and whoever no device took — Expo down, every device refusing —
 has their claim and inbox row removed before the commit. A run that stops
 half-way commits nothing, so nobody is left claimed and untold; a move of the
 rehearsal waits for a send in flight or makes the run skip it; a second
 scheduler waits on the first one's claim. Someone with no device at all counts
 as told — the inbox row is the delivery.
+
+**Nothing waits on Expo without a deadline.** Every send and receipts request
+goes through `expoTransport`, whose deadline covers the whole exchange and
+aborts the request; a send that runs out of time releases its people for the
+next run. A run stops starting rehearsals after its budget, and each reminder
+transaction sets `idle_in_transaction_session_timeout`, so a stalled process
+cannot keep the rehearsal locked: PostgreSQL ends the transaction itself.
 
 **A failed run answers 500**, with the counts and what failed: due rehearsals
 that could not be read, a rehearsal whose transaction failed, people whose

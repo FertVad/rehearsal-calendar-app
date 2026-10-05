@@ -39,7 +39,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R5 | 15 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md) |
 | R6 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R6.md): правка №2 принята ревью (C02 VERIFIED; CC02–CC05, C03 до DEV-17/DEV-18); правка №3 принята ревью (DP04 VERIFIED; C01, CC01 до DEV-08); [разбор](TRIAGE_R4_R9.md) |
 | R7 | 16 | IN_PROGRESS — [отчёт](REMEDIATION_R7.md): правка №4 принята ревью `ad09154` (EI01, EI03, EI04, ES02 — READY_FOR_CHECK до DEV-03/04/05); [разбор](TRIAGE_R4_R9.md) |
-| R8 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R8.md): правка №5 (GR01, GR02, GR03, GR05, G02) READY_FOR_CHECK до DEV-11/DEV-14, ждёт ревью; выкладка — после миграции 011; [разбор](TRIAGE_R4_R9.md) |
+| R8 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R8.md): правка №5 (GR01, GR02, GR03, GR05, G02) READY_FOR_CHECK до DEV-11/DEV-14; первый круг ревью `0d8b707` — R8-01, R8-02 отвечены в `7f85bab`, ждёт второго круга; выкладка — после миграции 011; [разбор](TRIAGE_R4_R9.md) |
 | R9 | 11 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md); DF03 VERIFIED (правка №1, [R4](REMEDIATION_R4.md)); IC01 DEFERRED до выпуска Android |
 
 ## Ждут владельца
