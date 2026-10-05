@@ -1,5 +1,5 @@
 // R8 rehearsal reminders (cause fix 5: GR01, GR02, GR03, GR05, G02; review
-// R8-01, R8-02), server
+// R8-01, R8-02, R8-04), server
 // half: put each weakening back into a copy of the server and require the test
 // that guards it to fail — in Jest, and on PostgreSQL where only a real engine
 // shows it (a row lock a move waits on). The unmutated copy must pass both. A
@@ -26,6 +26,7 @@ const ROUTE = 'routes/cron.js';
 const jestRun = (file) => ['--experimental-vm-modules', 'node_modules/jest/bin/jest.js', '--runInBand', '--silent', file];
 const jest = jestRun('__tests__/integration/reminderScheduler.integration.test.js');
 const jestRoute = jestRun('__tests__/routes/cronReminders.test.js');
+const jestTransport = jestRun('__tests__/services/expoTransport.test.js');
 const pg = ['scripts/r0-postgres.mjs', '--r8-only'];
 
 function edit(root, file, from, to) {
@@ -36,7 +37,14 @@ function edit(root, file, from, to) {
 }
 
 const mutations = [
-  { id: 'control', description: 'unmutated copy', runs: [jest, jestRoute, pg], expect: 'pass' },
+  { id: 'control', description: 'unmutated copy', runs: [jest, jestRoute, jestTransport, pg], expect: 'pass' },
+  { id: 'answer-unguarded', description: 'an answer of an unexpected shape throws in the response handler, outside the promise (R8-04)',
+    apply: (root) => edit(root, PUSH, `          try {
+            settle(null, readAnswer(response.statusCode, Buffer.concat(chunks).toString('utf8')));
+          } catch (error) {
+            settle(error);
+          }`, `          settle(null, readAnswer(response.statusCode, Buffer.concat(chunks).toString('utf8')));`),
+    runs: [jestTransport], expect: /● .*a receipts request answered with null is a rejection \(R8-04\)/ },
   { id: 'no-transaction', description: 'a rehearsal is reminded statement by statement, outside one transaction (GR02)',
     apply: (root) => edit(root, SCHEDULER, 'await db.transaction((tx) => remindRehearsal(tx, {\n        rehearsal, type, from, to, notify, now, expo, idleInTransactionMs,\n      }));',
       'await remindRehearsal(db, {\n        rehearsal, type, from, to, notify, now, expo, idleInTransactionMs,\n      });'),
