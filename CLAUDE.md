@@ -533,11 +533,19 @@ scheduler waits on the first one's claim. Someone with no device at all counts
 as told — the inbox row is the delivery.
 
 **Nothing waits on Expo without a deadline.** Every send and receipts request
-goes through `expoTransport`, whose deadline covers the whole exchange and
-aborts the request; a send that runs out of time releases its people for the
-next run. A run stops starting rehearsals after its budget, and each reminder
+goes through `expoTransport` — `node:http` with no connection pool, because
+fetch's pool reconnected behind the caller's back after an abort — whose
+deadline covers the whole exchange and destroys the connection; a send that
+runs out of time releases its people for the next run. A run stops starting rehearsals after its budget, and each reminder
 transaction sets `idle_in_transaction_session_timeout`, so a stalled process
 cannot keep the rehearsal locked: PostgreSQL ends the transaction itself.
+
+**A reminder says when the rehearsal starts**, not "tomorrow" or "in 1
+hour": today, tomorrow or the date, and the time, in each reader's own zone
+and language (`reminderText.js`, R8 GR04), from the row the transaction holds.
+The windows are wide, so fixed words were false whenever a run was late. A
+reader whose zone is UTC — never synced — or not a real zone sees "UTC" next to
+the time.
 
 **A failed run answers 500**, with the counts and what failed: due rehearsals
 that could not be read, a rehearsal whose transaction failed, people whose

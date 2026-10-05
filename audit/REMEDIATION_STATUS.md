@@ -39,7 +39,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R5 | 15 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md) |
 | R6 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R6.md): правка №2 принята ревью (C02 VERIFIED; CC02–CC05, C03 до DEV-17/DEV-18); правка №3 принята ревью (DP04 VERIFIED; C01, CC01 до DEV-08); [разбор](TRIAGE_R4_R9.md) |
 | R7 | 16 | IN_PROGRESS — [отчёт](REMEDIATION_R7.md): правка №4 принята ревью `ad09154` (EI01, EI03, EI04, ES02 — READY_FOR_CHECK до DEV-03/04/05); [разбор](TRIAGE_R4_R9.md) |
-| R8 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R8.md): правка №5 (GR01, GR02, GR03, GR05, G02) READY_FOR_CHECK до DEV-11/DEV-14; принята ревью `b948056` (R8-01, R8-02 закрыты в `7f85bab`); выкладка — после миграции 011; [разбор](TRIAGE_R4_R9.md) |
+| R8 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R8.md): правка №5 (GR01, GR02, GR03, GR05, G02) READY_FOR_CHECK до DEV-11/DEV-14; принята ревью `b948056` (R8-01, R8-02 закрыты в `7f85bab`); правка №6 (GR04) READY_FOR_CHECK в `dc82278`, ждёт ревью; выкладка — после миграции 011; [разбор](TRIAGE_R4_R9.md) |
 | R9 | 11 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md); DF03 VERIFIED (правка №1, [R4](REMEDIATION_R4.md)); IC01 DEFERRED до выпуска Android |
 
 ## Ждут владельца
@@ -147,7 +147,7 @@ OPS-R3-DATA (25.09).
 | GR01 | Medium | Нет | R8 | READY_FOR_CHECK | ошибка отправки push не освобождает reminder claim | [правка причины №5 — 03042b9, 7f85bab; ревью b948056 принято; ждёт DEV-11/DEV-14](REMEDIATION_R8.md) |
 | GR02 | Medium | Нет | R8 | READY_FOR_CHECK | ошибка или остановка между claims и notify навсегда исключает ещё не уведомлённых пользователей | [правка причины №5 — 03042b9, 7f85bab; ревью b948056 принято; PG R8_REMINDERS; ждёт DEV-14](REMEDIATION_R8.md) |
 | GR03 | Medium | Нет | R8 | READY_FOR_CHECK | cron и workflow показывают успех при отказе БД/напоминаний | [правка причины №5 — 03042b9, 7f85bab; ревью b948056 принято; ждёт DEV-14](REMEDIATION_R8.md) |
-| GR04 | Low | Нет | R8 | TODO | текст «завтра»/«через1час» противоречит расширенным окнам напоминания | [правка причины №6 — разбор](TRIAGE_R4_R9.md) |
+| GR04 | Low | Нет | R8 | READY_FOR_CHECK | текст «завтра»/«через1час» противоречит расширенным окнам напоминания | [правка причины №6 — dc82278; ждёт ревью и DEV-14](REMEDIATION_R8.md) |
 | GR05 | Medium | Нет | R8 | READY_FOR_CHECK | старый scheduler snapshot ставит claim уже после переноса репетиции и блокирует новое напоминание | [правка причины №5 — 03042b9, 7f85bab; ревью b948056 принято; PG R8_REMINDERS; ждёт DEV-14](REMEDIATION_R8.md) |
 | H01 | High | Нет | R1 | VERIFIED | сохранённая XSS из обращения/профиля выполняется в admin origin | [Исправление](REMEDIATION_H01.md); [обязательные проверки и точный commit](REMEDIATION_H01_FOLLOWUP.md) |
 | H02 | Medium | Нет | R1 | READY_FOR_CHECK | резервная кнопка открытия приглашения блокируется CSP | [Локальные проверки — df6fd01; DEV-15 NOT_RUN](REMEDIATION_H02.md) |

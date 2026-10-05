@@ -68,7 +68,7 @@ const mutations = [
     },
     runs: [pg], expect: /R8-02: a start stored to the microsecond must still be reminded/ },
   { id: 'no-deadline', description: 'a request to Expo waits as long as Expo does (R8-01)',
-    apply: (root) => edit(root, PUSH, '      signal: AbortSignal.timeout(timeoutMs),\n', ''),
+    apply: (root) => edit(root, PUSH, "      }, timeoutMs);\n      request.on('error'", "      }, 2 ** 31 - 1);\n      request.on('error'"),
     runs: [jest, pg], expect: /● .*an Expo that takes the request and never answers \(R8-01\) › gives up at the deadline/ },
   { id: 'no-db-backstop', description: 'a reminder transaction is not ended when its worker stalls (R8-01)',
     apply: (root) => edit(root, SCHEDULER, "  await tx.run(`SET LOCAL idle_in_transaction_session_timeout = ${Math.max(1, Math.trunc(idleInTransactionMs))}`);\n", ''),
