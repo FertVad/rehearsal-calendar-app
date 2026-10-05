@@ -245,6 +245,7 @@ export async function setupIntegrationDb() {
   testDb.exec(readFileSync(join(__dirname, '../../migrations/007-member-availability-rate-limit.sql'), 'utf8'));
   testDb.exec(readFileSync(join(__dirname, '../../migrations/008-invite-rate-limits.sql'), 'utf8'));
   testDb.exec(readFileSync(join(__dirname, '../../migrations/009-operation-ip-rate-limits.sql'), 'utf8'));
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/011-push-tickets.sql'), 'utf8'));
 
   // Translate the PostgreSQL dialect our routes are written in into something
   // SQLite can parse. Only the constructs actually used in the codebase are
@@ -282,8 +283,9 @@ export async function setupIntegrationDb() {
         // NOW() → SQLite's equivalent
         .replace(/\bNOW\(\)/gi, "CURRENT_TIMESTAMP")
         // Row locks: SQLite has one writer, so there is nothing to lock. What
-        // FOR UPDATE buys against a second connection is proven on PostgreSQL.
-        .replace(/\s+FOR\s+(?:NO\s+KEY\s+)?UPDATE\b/gi, '')
+        // FOR UPDATE or FOR SHARE buys against a second connection is proven on
+        // PostgreSQL.
+        .replace(/\s+FOR\s+(?:(?:NO\s+KEY\s+)?UPDATE|SHARE)\b/gi, '')
     );
 
     // better-sqlite3 binds only numbers, strings, bigints, buffers and null, so

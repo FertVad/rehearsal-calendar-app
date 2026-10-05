@@ -11,8 +11,10 @@ name: Rehearsal reminders
 # primary is a cron-job.org job on the same URL and the same 15 minutes.
 #
 # Both running at once is deliberate and safe: every send is claimed in
-# native_push_reminders (unique on rehearsal_id, reminder_type) before the push
-# goes out, so whichever scheduler arrives second sends nothing.
+# native_push_reminders (unique on rehearsal_id, user_id, reminder_type) inside
+# the transaction that sends it, so whichever scheduler arrives second waits
+# for the first and sends nothing. A run that failed answers 500, which fails
+# this job — so a red run here means reminders are not going out.
 #
 # Requires one repository secret: CRON_SECRET, the same value as in Vercel.
 # Settings → Secrets and variables → Actions → New repository secret.

@@ -440,6 +440,11 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
   //
   // Released only when the start actually moves. Renaming a rehearsal or
   // changing its room is not a reason to remind everyone a second time.
+  //
+  // The scheduler claims only while the rehearsal still starts when it read
+  // it, holding the row as it sends (reminderScheduler.remindRehearsal): the
+  // update above waits for a send in flight, and this release then takes its
+  // claims too (R8: GR05).
   if (existing && new Date(existing.starts_at).getTime() !== new Date(updatedRehearsal.starts_at).getTime()) {
     await db.run(`DELETE FROM native_push_reminders WHERE rehearsal_id = $1`, [rehearsalId]);
   }

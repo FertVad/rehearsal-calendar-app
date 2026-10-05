@@ -6,9 +6,10 @@ an empty, explicitly selected application schema and commits DDL, verified
 postconditions and the new history record in one transaction. The snapshot has
 no table drops, historical data conversion or implicit environment loading.
 
-The snapshot defines 21 application tables: 13 domain tables, the six tables
-of the approved 007/008/009 budget groups and the two of group 010 (email
-address proof, R3). It supplies the availability conflict
+The snapshot defines 22 application tables: 13 domain tables, the six tables
+of the approved 007/008/009 budget groups, the two of group 010 (email
+address proof, R3) and the one of group 011 (push tickets awaiting their
+receipts, R8). It supplies the availability conflict
 key, notification indexes and other historical structural postconditions that
 the old mixed-dialect bootstrap omitted. Fresh `provider_metadata` is TEXT;
 `native_bug_reports.created_at` and other instant columns are TIMESTAMPTZ.
@@ -16,11 +17,11 @@ No existing column is silently cast to those types.
 
 ## Named profiles
 
-- `rehearsly-pg-current-v1`: all 21 tables, required constraints/indexes, and
+- `rehearsly-pg-current-v1`: all 22 tables, required constraints/indexes, and
   consistent budget gate rows. Fresh and adoption are both allowed.
 - `rehearsly-pg-domain13-v1`: the complete modern domain schema, with each budget
   group either wholly absent or fully compatible. After adoption, an explicit
-  `--apply` installs the missing approved groups in 007, 008, 009, 010 order.
+  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011 order.
 - `rehearsly-pg-domain13-pre-import-key-v1`: the same modern predecessor, except
   that the availability imported-event unique key is absent and the aggregate
   duplicate count is zero. Adoption requires this explicit profile. Apply first

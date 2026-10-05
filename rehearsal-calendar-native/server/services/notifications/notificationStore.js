@@ -20,10 +20,13 @@ import { logger } from '../../utils/logger.js';
  *
  * @param {number[]} userIds - intended recipients
  * @param {{title: string, body: string, data: object}} notification
+ * @param {{executor?: object}} options - a caller's transaction, if the rows
+ *   belong to it: then a failed row fails the whole send, since the caller
+ *   undoes it and tries again rather than send half-recorded.
  * @returns {Promise<Map<number, number>>} recipient → the row written for them,
  *   so the push can carry its own id and a tap can mark exactly that one read.
  */
-export async function recordNotifications(userIds, notification) {
+export async function recordNotifications(userIds, notification, { executor = db } = {}) {
   const written = new Map();
   if (!userIds || userIds.length === 0) return written;
 
@@ -37,7 +40,7 @@ export async function recordNotifications(userIds, notification) {
 
   for (const userId of userIds) {
     try {
-      const row = await db.get(
+      const row = await executor.get(
         `INSERT INTO native_notifications
            (user_id, type, title, body, data, related_type, related_id, sent_at, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -56,8 +59,11 @@ export async function recordNotifications(userIds, notification) {
       );
       if (row?.id) written.set(Number(userId), Number(row.id));
     } catch (err) {
-      // One bad row must not cost the others their notification, and it must
-      // certainly not stop the push from going out.
+      // Inside a caller's transaction the statement has failed the whole of
+      // it, on PostgreSQL at least: say so rather than send on a dead one.
+      if (executor !== db) throw err;
+      // Otherwise one bad row must not cost the others their notification, and
+      // it must certainly not stop the push from going out.
       logger.error(`[Notifications] Could not record for user ${userId}:`, err);
     }
   }
@@ -67,25 +73,23 @@ export async function recordNotifications(userIds, notification) {
 
 /**
  * How many unread each of these users has.
+ *
+ * Throws when it cannot count: an empty map would read as "none unread"
+ * (CLAUDE.md 10).
  * @returns {Promise<Map<number, number>>}
  */
-export async function getUnreadCounts(userIds) {
+export async function getUnreadCounts(userIds, executor = db) {
   if (!userIds || userIds.length === 0) return new Map();
 
   const placeholders = userIds.map(() => '?').join(',');
-  try {
-    const rows = await db.all(
-      `SELECT user_id, COUNT(*) AS unread
-       FROM native_notifications
-       WHERE user_id IN (${placeholders}) AND read_at IS NULL
-       GROUP BY user_id`,
-      userIds
-    );
-    return new Map(rows.map((r) => [Number(r.user_id), Number(r.unread)]));
-  } catch (err) {
-    logger.error('[Notifications] Could not count unread:', err);
-    return new Map();
-  }
+  const rows = await executor.all(
+    `SELECT user_id, COUNT(*) AS unread
+     FROM native_notifications
+     WHERE user_id IN (${placeholders}) AND read_at IS NULL
+     GROUP BY user_id`,
+    userIds
+  );
+  return new Map(rows.map((r) => [Number(r.user_id), Number(r.unread)]));
 }
 
 /**

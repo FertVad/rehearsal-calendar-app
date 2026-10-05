@@ -46,15 +46,21 @@ router.get('/reminders', asyncHandler(async (req, res) => {
 
     const result = await checkUpcomingRehearsals();
 
-    logger.info('[Cron API] Reminder check completed');
-
     // The counts go in the response on purpose: whatever calls this endpoint is
-    // the only place a human sees it working. A scheduler's log showing 200 and
-    // nothing else cannot tell "nothing was due" from "the query is broken".
+    // the only place a human sees it working. And a run that failed answers
+    // 500, not 200 with zeros (R8: GR03) — the schedulers alarm on the status,
+    // and a broken query used to look exactly like a quiet night.
+    const { ok, ...report } = result;
+    if (!ok) {
+      logger.error('[Cron API] Reminder check failed:', report.errors);
+      return res.status(500).json({ success: false, error: 'Reminder check failed', ...report });
+    }
+
+    logger.info('[Cron API] Reminder check completed');
     res.json({
       success: true,
       message: 'Reminder check completed',
-      ...result
+      ...report
     });
   } catch (error) {
     logger.error('[Cron API] Reminder check failed:', error);

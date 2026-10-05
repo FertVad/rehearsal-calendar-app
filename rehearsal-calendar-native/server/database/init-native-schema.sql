@@ -344,3 +344,13 @@ CREATE TABLE native_email_codes (
 );
 CREATE UNIQUE INDEX idx_email_codes_live ON native_email_codes (user_id, purpose) WHERE consumed_at IS NULL;
 CREATE INDEX idx_email_codes_recent ON native_email_codes (user_id, purpose, created_at);
+
+-- 011: tickets of accepted pushes until their receipts are read (R8: G02).
+-- Same DDL as migrations/011-push-tickets.sql, the forward step for existing schemas.
+CREATE TABLE native_push_tickets (
+  ticket_id TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+  device_token TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_push_tickets_created ON native_push_tickets (created_at);

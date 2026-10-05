@@ -9,21 +9,23 @@ import { logger } from '../../utils/logger.js';
 import { recordNotifications, getUnreadCounts } from './notificationStore.js';
 import { t } from '../../i18n/pushNotifications.js';
 
-// Initialize Expo SDK
-const expo = new Expo();
+// The client every send goes through unless a caller hands in another — the
+// reminder scheduler's tests and PostgreSQL scenarios do, to stand in for Expo.
+const expoClient = new Expo();
+const EXPO_CHUNK = 100;
 
 /**
  * Get active push tokens for given user IDs
  * @param {number[]} userIds - Array of user IDs
  * @returns {Promise<Array>} Array of {userId, token} objects
  */
-export async function getUserPushTokens(userIds) {
+export async function getUserPushTokens(userIds, executor = db) {
   if (!userIds || userIds.length === 0) {
     return [];
   }
 
   const placeholders = userIds.map(() => '?').join(',');
-  const tokens = await db.all(
+  const tokens = await executor.all(
     `SELECT t.user_id, t.device_token
      FROM native_push_tokens t
      JOIN native_users u ON t.user_id = u.id
@@ -38,34 +40,65 @@ export async function getUserPushTokens(userIds) {
 }
 
 /**
- * Send push notifications to multiple users
- * @param {number[]} userIds - Array of user IDs to notify
- * @param {Object} notification - Notification payload {title, body, data}
- * @returns {Promise<Object>} Result summary {sent, failed, errors}
+ * Send one notification to these people, and say what became of it for each
+ * (R8: GR01).
+ *
+ * It used to answer with counts nobody read: the helpers above it resolved to
+ * nothing whether Expo took the message or refused it, so the reminder
+ * scheduler counted an outage as a send and kept its claims — nobody told,
+ * and nobody tried again.
+ *
+ * - `delivered`: Expo accepted the message for at least one of their devices.
+ *   Accepted, not shown: whether the phone got it is in the receipt, read
+ *   later (checkPushReceipts).
+ * - `undelivered`: they have devices and none of them took it — worth another
+ *   try.
+ * - `unreachable`: no device to send to, or notifications turned off. The inbox
+ *   row is the delivery.
+ *
+ * A database failure is thrown: "could not find out" is not "nobody". The
+ * caller's `executor` carries the inbox rows, the lookups and the token
+ * cleanup, so a scheduler can hold them in its own transaction; `expo` is the
+ * client that sends.
+ *
+ * @returns {Promise<{delivered: number[], undelivered: number[], unreachable: number[],
+ *   notificationIds: Map<number, number>, sent: number, failed: number, errors: string[]}>}
  */
-export async function sendPushNotification(userIds, notification) {
-  try {
-    // Recorded before anything is sent, and for every intended recipient —
-    // including those with no device registered. The inbox is what the user
-    // reads later; whether a phone was reachable at this instant is a separate
-    // question.
-    const recorded = await recordNotifications(userIds, notification);
+export async function sendPushNotification(userIds, notification, { executor = db, expo = expoClient } = {}) {
+  const ids = [...new Set((userIds || []).map(Number))];
 
-    const tokenData = await getUserPushTokens(userIds);
+  // Recorded before anything is sent, and for every intended recipient —
+  // including those with no device registered. The inbox is what the user
+  // reads later; whether a phone was reachable at this instant is a separate
+  // question.
+  const notificationIds = await recordNotifications(ids, notification, { executor });
+  const tokenData = await getUserPushTokens(ids, executor);
+  const reachable = new Set(tokenData.map(({ user_id }) => Number(user_id)));
+  const outcome = {
+    delivered: [],
+    undelivered: [],
+    unreachable: ids.filter((id) => !reachable.has(id)),
+    notificationIds,
+    sent: 0,
+    failed: 0,
+    errors: [],
+  };
 
-    if (tokenData.length === 0) {
-      logger.info('[Push] No valid tokens found for users:', userIds);
-      return { sent: 0, failed: 0, errors: [] };
-    }
+  if (tokenData.length === 0) {
+    logger.info('[Push] No valid tokens found for users:', ids);
+    return outcome;
+  }
 
-    // The badge is the recipient's unread count, not a constant 1. It used to
-    // be the latter, so two unread notifications still showed "1" and the
-    // number meant nothing beyond "something happened".
-    const unread = await getUnreadCounts([...new Set(tokenData.map((t) => t.user_id))]);
+  // The badge is the recipient's unread count, not a constant 1. It used to
+  // be the latter, so two unread notifications still showed "1" and the
+  // number meant nothing beyond "something happened".
+  const unread = await getUnreadCounts([...reachable], executor);
 
-    // Each message carries the id of that recipient's own inbox row, so tapping
-    // the push can mark exactly that notification read rather than guessing.
-    const messages = tokenData.map(({ device_token, user_id }) => ({
+  // Each message carries the id of that recipient's own inbox row, so tapping
+  // the push can mark exactly that notification read rather than guessing.
+  const messages = tokenData.map(({ device_token, user_id }) => ({
+    userId: Number(user_id),
+    message: {
       to: device_token,
       sound: 'default',
       badge: unread.get(Number(user_id)) ?? 1,
@@ -74,61 +107,158 @@ export async function sendPushNotification(userIds, notification) {
       ...notification,
       data: {
         ...(notification.data || {}),
-        notificationId: recorded.get(Number(user_id)) ?? null,
+        notificationId: notificationIds.get(Number(user_id)) ?? null,
       },
-    }));
+    },
+  }));
 
-    // Send in chunks of 100 (Expo limit)
-    const chunks = expo.chunkPushNotifications(messages);
-    let totalSent = 0;
-    let totalFailed = 0;
-    const allErrors = [];
-
-    for (const chunk of chunks) {
-      try {
-        const tickets = await expo.sendPushNotificationsAsync(chunk);
-
-        tickets.forEach((ticket, index) => {
-          if (ticket.status === 'ok') {
-            totalSent++;
-          } else {
-            totalFailed++;
-            logger.error('[Push] Ticket error:', ticket.message, ticket.details);
-            allErrors.push(ticket.message);
-
-            // Remove invalid tokens
-            if (ticket.details?.error === 'DeviceNotRegistered') {
-              const failedToken = chunk[index].to;
-              removeInvalidToken(failedToken);
-            }
-          }
-        });
-      } catch (err) {
-        logger.error('[Push] Chunk send error:', err);
-        totalFailed += chunk.length;
-        allErrors.push(err.message);
+  // In chunks of 100, Expo's limit, each ticket read against the message it
+  // answers — by position, which is how Expo returns them.
+  const accepted = new Set();
+  const tickets = [];
+  for (let first = 0; first < messages.length; first += EXPO_CHUNK) {
+    const chunk = messages.slice(first, first + EXPO_CHUNK);
+    let answers;
+    try {
+      answers = await expo.sendPushNotificationsAsync(chunk.map(({ message }) => message));
+    } catch (err) {
+      logger.error('[Push] Chunk send error:', err);
+      outcome.failed += chunk.length;
+      outcome.errors.push(err.message);
+      continue;
+    }
+    for (const [index, { userId, message }] of chunk.entries()) {
+      const ticket = answers[index];
+      if (ticket?.status === 'ok') {
+        outcome.sent += 1;
+        accepted.add(userId);
+        if (ticket.id) tickets.push({ id: ticket.id, userId, token: message.to });
+        continue;
+      }
+      outcome.failed += 1;
+      outcome.errors.push(ticket?.message || 'No ticket');
+      logger.error('[Push] Ticket error:', ticket?.message, ticket?.details);
+      if (ticket?.details?.error === 'DeviceNotRegistered') {
+        await removeDeadToken(message.to, { executor });
       }
     }
+  }
 
-    logger.info(`[Push] Sent: ${totalSent}, Failed: ${totalFailed}`);
-    return { sent: totalSent, failed: totalFailed, errors: allErrors };
+  outcome.delivered = [...reachable].filter((id) => accepted.has(id));
+  outcome.undelivered = [...reachable].filter((id) => !accepted.has(id));
+
+  // Kept for the receipts, outside any caller's transaction: these pushes went
+  // out whatever becomes of it. A failure here is reported, not swallowed —
+  // without the rows, dead tokens are never found (G02).
+  try {
+    await recordTickets(tickets);
   } catch (err) {
-    logger.error('[Push] Send notification error:', err);
-    return { sent: 0, failed: userIds.length, errors: [err.message] };
+    logger.error('[Push] Could not keep the tickets for their receipts:', err);
+    outcome.errors.push(`Tickets not kept: ${err.message}`);
+    outcome.ticketsLost = tickets.length;
+  }
+
+  logger.info(`[Push] Sent: ${outcome.sent}, Failed: ${outcome.failed}`);
+  return outcome;
+}
+
+async function recordTickets(tickets) {
+  const sentAt = new Date().toISOString();
+  for (let first = 0; first < tickets.length; first += EXPO_CHUNK) {
+    const chunk = tickets.slice(first, first + EXPO_CHUNK);
+    // RETURNING named: the adapter's run() adds `RETURNING id` to an INSERT
+    // without one, and this table's key is the ticket.
+    await db.all(
+      `INSERT INTO native_push_tickets (ticket_id, user_id, device_token, created_at)
+       VALUES ${chunk.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4}::timestamptz)`).join(', ')}
+       ON CONFLICT (ticket_id) DO NOTHING
+       RETURNING ticket_id`,
+      chunk.flatMap(({ id, userId, token }) => [id, userId, token, sentAt])
+    );
   }
 }
 
 /**
- * Remove invalid push token from database
+ * Remove a token Expo or Apple/Google says belongs to no installed app.
+ *
+ * `notAfter` keeps a token registered again since the message was sent: the
+ * receipt is about the send, and a sign-in since may have brought the token
+ * back to life.
  */
-async function removeInvalidToken(token) {
-  try {
-    await db.run('DELETE FROM native_push_tokens WHERE device_token = ?', [token]);
-    logger.info('[Push] Removed invalid token:', token);
-  } catch (err) {
-    logger.error('[Push] Error removing invalid token:', err);
-  }
+async function removeDeadToken(token, { executor = db, notAfter = null } = {}) {
+  const result = notAfter
+    ? await executor.run(
+      'DELETE FROM native_push_tokens WHERE device_token = ? AND last_active_at <= ?',
+      [token, notAfter]
+    )
+    : await executor.run('DELETE FROM native_push_tokens WHERE device_token = ?', [token]);
+  logger.info('[Push] Removed a token no app answers to');
+  return result.changes || 0;
 }
+
+/**
+ * Read the receipts of pushes Expo accepted at least fifteen minutes ago
+ * (R8: G02).
+ *
+ * A ticket only says Expo took the message; the receipt says whether Apple or
+ * Google did. Expo keeps receipts for about a day and asks that they be read
+ * no sooner than fifteen minutes after the send. A receipt saying the device is
+ * no longer registered — the app was deleted — removes the token, so the next
+ * send does not go to it; any other receipt, or one Expo no longer holds,
+ * retires the ticket. A ticket whose receipt is not ready yet waits for the
+ * next run.
+ *
+ * Throws when Expo cannot be asked: the tickets stay for the next run, and the
+ * run says it failed.
+ */
+export async function checkPushReceipts({ now = new Date(), expo = expoClient, limit = 1000 } = {}) {
+  const due = await db.all(
+    `SELECT ticket_id, device_token, created_at FROM native_push_tickets
+     WHERE created_at <= ? ORDER BY created_at LIMIT ?`,
+    [new Date(now.getTime() - RECEIPT_DELAY_MS).toISOString(), limit]
+  );
+  const result = { checked: due.length, ok: 0, failed: 0, tokensRemoved: 0, waiting: 0, expired: 0 };
+  if (due.length === 0) return result;
+
+  const receipts = {};
+  for (let first = 0; first < due.length; first += RECEIPT_CHUNK) {
+    const ids = due.slice(first, first + RECEIPT_CHUNK).map((row) => row.ticket_id);
+    Object.assign(receipts, await expo.getPushNotificationReceiptsAsync(ids));
+  }
+
+  const retired = [];
+  for (const row of due) {
+    const receipt = receipts[row.ticket_id];
+    if (!receipt) {
+      if (now.getTime() - new Date(row.created_at).getTime() < RECEIPT_KEPT_MS) {
+        result.waiting += 1;
+        continue;
+      }
+      result.expired += 1;
+    } else if (receipt.status === 'ok') {
+      result.ok += 1;
+    } else {
+      result.failed += 1;
+      logger.warn('[Push] Receipt error:', receipt.message, receipt.details);
+      if (receipt.details?.error === 'DeviceNotRegistered') {
+        result.tokensRemoved += await removeDeadToken(row.device_token, {
+          notAfter: new Date(row.created_at).toISOString(),
+        });
+      }
+    }
+    retired.push(row.ticket_id);
+  }
+
+  for (let first = 0; first < retired.length; first += RECEIPT_CHUNK) {
+    const ids = retired.slice(first, first + RECEIPT_CHUNK);
+    await db.run(`DELETE FROM native_push_tickets WHERE ticket_id IN (${ids.map(() => '?').join(', ')})`, ids);
+  }
+  return result;
+}
+
+const RECEIPT_DELAY_MS = 15 * 60 * 1000;
+const RECEIPT_KEPT_MS = 24 * 60 * 60 * 1000;
+const RECEIPT_CHUNK = 300;
 
 /**
  * Notification builders for different event types
@@ -138,10 +268,10 @@ async function removeInvalidToken(token) {
  * Fetch locale preference for given user IDs.
  * Returns a Map of userId → locale ('ru' | 'en'), falling back to 'en'.
  */
-async function getUserLocales(userIds) {
+async function getUserLocales(userIds, executor = db) {
   if (userIds.length === 0) return new Map();
   const placeholders = userIds.map(() => '?').join(',');
-  const rows = await db.all(
+  const rows = await executor.all(
     `SELECT id, locale FROM native_users WHERE id IN (${placeholders})`,
     userIds
   );
@@ -169,19 +299,37 @@ function groupByLocale(userIds, localesMap) {
  * @param {Object} params - Params passed to the body template
  * @param {Object} data - Notification data payload (same for all locales)
  */
-async function sendLocalizedNotification(userIds, key, params, data) {
-  if (userIds.length === 0) return;
-  const locales = await getUserLocales(userIds);
+async function sendLocalizedNotification(userIds, key, params, data, options = {}) {
+  const outcome = emptyOutcome();
+  if (userIds.length === 0) return outcome;
+  const locales = await getUserLocales(userIds, options.executor);
   const groups = groupByLocale(userIds, locales);
 
   for (const [locale, ids] of groups.entries()) {
     const tr = t(locale, key);
-    await sendPushNotification(ids, {
+    merge(outcome, await sendPushNotification(ids, {
       title: tr.title,
       body: tr.body(params),
       data,
-    });
+    }, options));
   }
+  return outcome;
+}
+
+function emptyOutcome() {
+  return { delivered: [], undelivered: [], unreachable: [], notificationIds: new Map(), sent: 0, failed: 0, errors: [] };
+}
+
+/** One recipient's outcome in one locale group; the groups do not overlap. */
+function merge(into, part) {
+  into.delivered.push(...part.delivered);
+  into.undelivered.push(...part.undelivered);
+  into.unreachable.push(...part.unreachable);
+  for (const [userId, id] of part.notificationIds) into.notificationIds.set(userId, id);
+  into.sent += part.sent;
+  into.failed += part.failed;
+  into.errors.push(...part.errors);
+  if (part.ticketsLost) into.ticketsLost = (into.ticketsLost || 0) + part.ticketsLost;
 }
 
 /**
@@ -326,24 +474,26 @@ export async function notifyProjectDeleted(projectName, memberIds) {
 /**
  * Send 24-hour reminder for upcoming rehearsal
  */
-export async function notifyRehearsal24h(rehearsal, projectName, memberIds) {
-  await sendLocalizedNotification(
+export async function notifyRehearsal24h(rehearsal, projectName, memberIds, options) {
+  return sendLocalizedNotification(
     memberIds,
     'rehearsal24h',
     { projectName, rehearsalTitle: rehearsal.title },
-    { type: 'rehearsal_reminder_24h', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }
+    { type: 'rehearsal_reminder_24h', rehearsalId: rehearsal.id, projectId: rehearsal.project_id },
+    options
   );
 }
 
 /**
  * Send 1-hour reminder for upcoming rehearsal
  */
-export async function notifyRehearsal1h(rehearsal, projectName, memberIds) {
-  await sendLocalizedNotification(
+export async function notifyRehearsal1h(rehearsal, projectName, memberIds, options) {
+  return sendLocalizedNotification(
     memberIds,
     'rehearsal1h',
     { projectName, rehearsalTitle: rehearsal.title },
-    { type: 'rehearsal_reminder_1h', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }
+    { type: 'rehearsal_reminder_1h', rehearsalId: rehearsal.id, projectId: rehearsal.project_id },
+    options
   );
 }
 
