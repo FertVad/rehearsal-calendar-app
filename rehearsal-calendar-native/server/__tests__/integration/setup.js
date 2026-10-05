@@ -286,6 +286,9 @@ export async function setupIntegrationDb() {
         // FOR UPDATE or FOR SHARE buys against a second connection is proven on
         // PostgreSQL.
         .replace(/\s+FOR\s+(?:(?:NO\s+KEY\s+)?UPDATE|SHARE)\b/gi, '')
+        // SET LOCAL tunes the PostgreSQL session for one transaction — a
+        // timeout, a lock wait — and SQLite has nothing to tune.
+        .replace(/^\s*SET\s+LOCAL\s+[\s\S]*$/i, 'SELECT 1')
     );
 
     // better-sqlite3 binds only numbers, strings, bigints, buffers and null, so

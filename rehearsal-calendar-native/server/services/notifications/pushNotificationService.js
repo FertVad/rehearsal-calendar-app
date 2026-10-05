@@ -9,10 +9,60 @@ import { logger } from '../../utils/logger.js';
 import { recordNotifications, getUnreadCounts } from './notificationStore.js';
 import { t } from '../../i18n/pushNotifications.js';
 
-// The client every send goes through unless a caller hands in another — the
-// reminder scheduler's tests and PostgreSQL scenarios do, to stand in for Expo.
-const expoClient = new Expo();
 const EXPO_CHUNK = 100;
+export const EXPO_TIMEOUT_MS = 10_000;
+
+/**
+ * The one way this server talks to Expo: a send and a receipts request, each
+ * given a deadline that covers the whole exchange — connecting, waiting and
+ * reading the answer — and that aborts the request when it passes (R8-01).
+ *
+ * The SDK's client set no deadline at all: a server that accepted the request
+ * and never answered held the await for ever, and with it the reminder's
+ * transaction, its lock on the rehearsal and a pooled connection. A send that
+ * runs out of time fails like any other — its people are released for the next
+ * run — and Expo may still have delivered it, which the at-least-once contract
+ * allows.
+ *
+ * `EXPO_BASE_URL` is the SDK's own variable for pointing at another host; the
+ * tests point it at a local server that never answers.
+ */
+export function expoTransport({ baseUrl = process.env.EXPO_BASE_URL || 'https://exp.host', timeoutMs = EXPO_TIMEOUT_MS } = {}) {
+  async function post(path, body) {
+    const response = await fetch(`${baseUrl}/--/api/v2/push/${path}`, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Accept-Encoding': 'gzip, deflate', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const text = await response.text();
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch {
+      throw new Error(`Expo answered ${response.status} without JSON`);
+    }
+    if (response.status !== 200 || result.errors) {
+      const reasons = (result.errors || []).map((error) => error.message).join('; ');
+      throw new Error(`Expo answered ${response.status}${reasons ? `: ${reasons}` : ''}`);
+    }
+    return result.data;
+  }
+  return {
+    async sendPushNotificationsAsync(messages) {
+      const tickets = await post('send', messages);
+      if (!Array.isArray(tickets) || tickets.length !== messages.length) {
+        throw new Error(`Expo answered ${Array.isArray(tickets) ? tickets.length : 'no'} tickets for ${messages.length} messages`);
+      }
+      return tickets;
+    },
+    getPushNotificationReceiptsAsync: (ids) => post('getReceipts', { ids }),
+  };
+}
+
+// Every send goes through this unless a caller hands in another client — the
+// reminder scheduler's tests and PostgreSQL scenarios do.
+const expoClient = expoTransport();
 
 /**
  * Get active push tokens for given user IDs
@@ -112,6 +162,11 @@ export async function sendPushNotification(userIds, notification, { executor = d
     },
   }));
 
+  // When the tickets' sends began, taken before the wait for Expo: a token
+  // registered again while the answer was outstanding is newer than the send,
+  // and a late "not registered" receipt must leave it (checkPushReceipts).
+  const sentAt = new Date().toISOString();
+
   // In chunks of 100, Expo's limit, each ticket read against the message it
   // answers — by position, which is how Expo returns them.
   const accepted = new Set();
@@ -151,7 +206,7 @@ export async function sendPushNotification(userIds, notification, { executor = d
   // out whatever becomes of it. A failure here is reported, not swallowed —
   // without the rows, dead tokens are never found (G02).
   try {
-    await recordTickets(tickets);
+    await recordTickets(tickets, sentAt);
   } catch (err) {
     logger.error('[Push] Could not keep the tickets for their receipts:', err);
     outcome.errors.push(`Tickets not kept: ${err.message}`);
@@ -162,8 +217,7 @@ export async function sendPushNotification(userIds, notification, { executor = d
   return outcome;
 }
 
-async function recordTickets(tickets) {
-  const sentAt = new Date().toISOString();
+async function recordTickets(tickets, sentAt) {
   for (let first = 0; first < tickets.length; first += EXPO_CHUNK) {
     const chunk = tickets.slice(first, first + EXPO_CHUNK);
     // RETURNING named: the adapter's run() adds `RETURNING id` to an INSERT
@@ -188,7 +242,9 @@ async function recordTickets(tickets) {
 async function removeDeadToken(token, { executor = db, notAfter = null } = {}) {
   const result = notAfter
     ? await executor.run(
-      'DELETE FROM native_push_tokens WHERE device_token = ? AND last_active_at <= ?',
+      // Strictly before: a sign-in in the same instant as the send is not
+      // proof the token died — kept, a dead one only fails the next send.
+      'DELETE FROM native_push_tokens WHERE device_token = ? AND last_active_at < ?',
       [token, notAfter]
     )
     : await executor.run('DELETE FROM native_push_tokens WHERE device_token = ?', [token]);

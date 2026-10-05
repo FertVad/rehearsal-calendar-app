@@ -18,6 +18,8 @@ export async function probeR8Reminders({ connectionString, control, allowedPorts
   const database = await import('../../database/db.js');
   const { createApp } = await import('../../app.js');
   const { checkUpcomingRehearsals } = await import('../../services/notifications/reminderScheduler.js');
+  const { expoTransport } = await import('../../services/notifications/pushNotificationService.js');
+  const { generateTokens } = await import('../../middleware/jwtMiddleware.js');
   await database.initDatabase({ connectionString });
   const server = await new Promise((resolve, reject) => {
     const listener = createApp().listen(0, '127.0.0.1', () => resolve(listener));
@@ -165,6 +167,121 @@ export async function probeR8Reminders({ connectionString, control, allowedPorts
     assert.equal(await inbox(cara), 1);
     assert.equal(one.ok && two.ok, true);
     contracts.push('two overlapping runs remind each person once');
+
+    // R8-01: Expo takes the request and never answers. The send gives up at
+    // its deadline and the transaction ends, so an edit of the rehearsal
+    // waiting behind it goes through — under a statement_timeout that would
+    // have stopped it had the reminder held on.
+    const sockets = new Set();
+    const silent = http.createServer(() => { /* accepts, and never answers */ });
+    silent.on('connection', (socket) => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });
+    await new Promise((resolve) => silent.listen(0, '127.0.0.1', resolve));
+    allowedPorts.add(silent.address().port);
+    try {
+      const fay = await person('fay');
+      const held = await rehearsal(inADay, [fay]);
+      const quiet = expoTransport({ baseUrl: `http://127.0.0.1:${silent.address().port}`, timeoutMs: 1000 });
+      const started = Date.now();
+      const stuck = checkUpcomingRehearsals({ now, expo: quiet });
+      const idleInTransaction = async () => {
+        await q('SELECT pg_catalog.pg_stat_clear_snapshot()');
+        return Number((await q(`SELECT count(*) FROM pg_catalog.pg_stat_activity
+          WHERE datname = current_database() AND state = 'idle in transaction' AND pid <> pg_backend_pid()`)).rows[0].count);
+      };
+      await until(async () => (await idleInTransaction()) > 0, 'the reminder to hold its transaction while Expo is silent');
+      await q('BEGIN');
+      try {
+        await q(`SET LOCAL statement_timeout = '5s'`);
+        await q(`UPDATE r0_fixture.native_rehearsals SET title = title || '' WHERE id = $1`, [held]);
+        await q('COMMIT');
+      } catch (error) {
+        await q('ROLLBACK');
+        throw new Error(`R8-01: the edit waited past five seconds behind a silent Expo: ${error.message}`);
+      }
+      const gaveUp = await stuck;
+      assert.ok(Date.now() - started < 5000, 'R8-01: the send must give up at its deadline');
+      assert.equal(gaveUp.ok, false);
+      assert.deepEqual(await claims(held), [], 'R8-01: a send that ran out of time must leave its people unclaimed');
+      assert.equal(await inbox(fay), 0);
+      const recovered = expo();
+      assert.equal((await checkUpcomingRehearsals({ now, expo: recovered })).ok, true);
+      assert.deepEqual(await claims(held), [fay]);
+      contracts.push('a silent Expo: the send ends at its deadline, the edit behind it goes through, the next run delivers (R8-01)');
+    } finally {
+      for (const socket of sockets) socket.destroy();
+      await new Promise((resolve) => silent.close(resolve));
+    }
+
+    // R8-01, the backstop: the worker itself stalls mid-send — no request
+    // deadline can fire in a process that is not running. PostgreSQL ends the
+    // idle transaction, the edit behind it goes through, nothing it claimed
+    // survives, and when the worker wakes its run reports the failure.
+    const hal = await person('hal');
+    const stalledRehearsal = await rehearsal(inADay, [hal]);
+    const stalled = {
+      messages: [],
+      async sendPushNotificationsAsync(messages) {
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+        this.messages.push(...messages);
+        return messages.map(() => ({ status: 'ok', id: `stalled-${Date.now()}` }));
+      },
+      async getPushNotificationReceiptsAsync() { return {}; },
+    };
+    const stalledRun = checkUpcomingRehearsals({ now, expo: stalled, idleInTransactionMs: 800 });
+    await q('BEGIN');
+    try {
+      await q(`SET LOCAL statement_timeout = '5s'`);
+      await until(async () => {
+        await q('SELECT pg_catalog.pg_stat_clear_snapshot()');
+        return Number((await q(`SELECT count(*) FROM pg_catalog.pg_stat_activity WHERE datname = current_database()
+          AND state = 'idle in transaction' AND pid <> pg_backend_pid()`)).rows[0].count) > 0;
+      }, 'the stalled reminder to hold its transaction');
+      await q(`UPDATE r0_fixture.native_rehearsals SET title = title || '' WHERE id = $1`, [stalledRehearsal]);
+      await q('COMMIT');
+    } catch (error) {
+      await q('ROLLBACK');
+      throw new Error(`R8-01: the edit stayed behind a stalled reminder: ${error.message}`);
+    }
+    const woke = await stalledRun;
+    assert.equal(woke.ok, false, 'R8-01: a run whose transaction was ended must say it failed');
+    assert.deepEqual(await claims(stalledRehearsal), [], 'R8-01: nothing a stalled transaction claimed may survive');
+    assert.equal((await checkUpcomingRehearsals({ now, expo: expo() })).ok, true);
+    assert.deepEqual(await claims(stalledRehearsal), [hal]);
+    contracts.push('a worker stalled mid-send: PostgreSQL ends its transaction, the edit goes through, the next run delivers (R8-01)');
+
+    // R8-02: a start stored to the microsecond, as the API accepts it, is
+    // reminded; the run used to compare it with a millisecond copy and take
+    // it for moved.
+    const owner = await person('owner');
+    await q(`UPDATE r0_fixture.native_project_members SET role = 'owner' WHERE project_id = $1 AND user_id = $2`, [projectId, owner]);
+    const gus = await person('gus');
+    // No device for anyone the API call notifies: the creation push would go
+    // to the real Expo, which this machine is not allowed to reach. With no
+    // device the inbox row is the delivery, and the claim is what is checked.
+    await q('DELETE FROM r0_fixture.native_push_tokens WHERE user_id = ANY($1)', [[gus, owner]]);
+    const precise = new Date(now.getTime() + 18 * HOUR);
+    const micro = (date) => `${date.toISOString().slice(0, 19)}.123456Z`;
+    const created = await new Promise((resolve, reject) => {
+      const bytes = Buffer.from(JSON.stringify({ title: 'Precise', startsAt: micro(precise),
+        endsAt: micro(new Date(precise.getTime() + HOUR)), participant_ids: [gus] }));
+      const req = http.request({ hostname: '127.0.0.1', port: server.address().port, method: 'POST',
+        path: `/api/native/projects/${projectId}/rehearsals`, headers: { Connection: 'close', 'Content-Type': 'application/json',
+          'Content-Length': bytes.length, Authorization: `Bearer ${generateTokens(owner, 1).accessToken}` } }, (res) => {
+        const chunks = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.once('end', () => resolve({ status: res.statusCode, body: JSON.parse(Buffer.concat(chunks).toString()) }));
+      });
+      req.once('error', reject);
+      req.end(bytes);
+    });
+    assert.equal(created.status, 201, `the API must accept the rehearsal: ${JSON.stringify(created.body)}`);
+    const preciseId = Number(created.body.rehearsal.id);
+    const stored = (await q('SELECT starts_at::text AS text FROM r0_fixture.native_rehearsals WHERE id = $1', [preciseId])).rows[0].text;
+    assert.match(stored, /\.123456/, 'the start must be stored to the microsecond');
+    const told = await checkUpcomingRehearsals({ now, expo: expo() });
+    assert.equal(told.ok, true);
+    assert.ok((await claims(preciseId)).includes(gus), 'R8-02: a start stored to the microsecond must still be reminded');
+    contracts.push('a rehearsal stored to the microsecond through the API is reminded (R8-02)');
 
     // GR03 through the real app: a run that cannot read what is due answers
     // 500; a working one 200. Nothing is due for these calls.

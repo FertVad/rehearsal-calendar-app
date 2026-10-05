@@ -17,7 +17,7 @@
 
 import db from '../../database/db.js';
 import { logger } from '../../utils/logger.js';
-import { notifyRehearsal24h, notifyRehearsal1h, checkPushReceipts } from './pushNotificationService.js';
+import { notifyRehearsal24h, notifyRehearsal1h, checkPushReceipts, EXPO_TIMEOUT_MS } from './pushNotificationService.js';
 import { ROSTER } from '../rehearsals/roster.js';
 
 /**
@@ -38,6 +38,22 @@ const DAY_BEFORE_FLOOR_MS = 12 * 60 * 60 * 1000;
 const DAY_BEFORE_CEILING_MS = 24 * 60 * 60 * 1000;
 const HOUR_BEFORE_CEILING_MS = 60 * 60 * 1000;
 
+/**
+ * How long one run may keep starting rehearsals (R8-01). Every request to Expo
+ * has its own deadline; this one keeps a run with many slow sends from
+ * outliving whatever drives it. Rehearsals left over wait for the next run,
+ * and the run says so.
+ */
+const RUN_BUDGET_MS = 45_000;
+
+/**
+ * PostgreSQL's own backstop for a reminder transaction that stops moving —
+ * the process stalled rather than an Expo request that times out: the
+ * session is ended and everything it held, the lock on the rehearsal
+ * included, is released.
+ */
+const IDLE_IN_TRANSACTION_MS = EXPO_TIMEOUT_MS * 3;
+
 const placeholders = (values, first) => values.map((_, i) => `$${i + first}`).join(', ');
 
 /**
@@ -52,9 +68,12 @@ const placeholders = (values, first) => values.map((_, i) => `$${i + first}`).jo
  * @param {{now?: Date, expo?: object}} options - `expo` stands in for the Expo
  *   client in tests.
  */
-export async function checkUpcomingRehearsals({ now = new Date(), expo } = {}) {
+export async function checkUpcomingRehearsals({
+  now = new Date(), expo, budgetMs = RUN_BUDGET_MS, idleInTransactionMs = IDLE_IN_TRANSACTION_MS,
+} = {}) {
   logger.info('[Reminder] Checking for upcoming rehearsals...');
   const errors = [];
+  const stopAt = Date.now() + budgetMs;
 
   // Receipts first: a token a receipt shows dead is gone before the
   // reminders go out.
@@ -73,6 +92,8 @@ export async function checkUpcomingRehearsals({ now = new Date(), expo } = {}) {
     notify: notifyRehearsal24h,
     now,
     expo,
+    stopAt,
+    idleInTransactionMs,
   });
 
   const hourBefore = await sendReminders({
@@ -82,6 +103,8 @@ export async function checkUpcomingRehearsals({ now = new Date(), expo } = {}) {
     notify: notifyRehearsal1h,
     now,
     expo,
+    stopAt,
+    idleInTransactionMs,
   });
 
   errors.push(...dayBefore.errors, ...hourBefore.errors);
@@ -110,7 +133,7 @@ export async function checkUpcomingRehearsals({ now = new Date(), expo } = {}) {
  * `sent` counts rehearsals someone was told about, `told` the people, `retry`
  * the people whose devices all refused and who stay unclaimed for the next run.
  */
-async function sendReminders({ type, from, to, notify, now, expo }) {
+async function sendReminders({ type, from, to, notify, now, expo, stopAt, idleInTransactionMs }) {
   const tally = { found: 0, sent: 0, told: 0, retry: 0, errors: [] };
   let rehearsals;
   try {
@@ -149,9 +172,15 @@ async function sendReminders({ type, from, to, notify, now, expo }) {
   tally.found = rehearsals.length;
   logger.info(`[Reminder] Found ${rehearsals.length} rehearsals for the ${type} reminder`);
 
-  for (const rehearsal of rehearsals) {
+  for (const [index, rehearsal] of rehearsals.entries()) {
+    if (Date.now() >= stopAt) {
+      tally.errors.push({ step: type, error: 'Run budget spent', left: rehearsals.length - index });
+      break;
+    }
     try {
-      const outcome = await db.transaction((tx) => remindRehearsal(tx, { rehearsal, type, notify, now, expo }));
+      const outcome = await db.transaction((tx) => remindRehearsal(tx, {
+        rehearsal, type, from, to, notify, now, expo, idleInTransactionMs,
+      }));
       if (outcome.told > 0) tally.sent += 1;
       tally.told += outcome.told;
       tally.retry += outcome.retry;
@@ -180,16 +209,28 @@ async function sendReminders({ type, from, to, notify, now, expo }) {
  *
  * @returns {Promise<{told: number, retry: number, moved?: boolean, error?: string, ticketsLost?: number}>}
  */
-export async function remindRehearsal(tx, { rehearsal, type, notify, now, expo }) {
-  // Still the rehearsal the run read, and held so while it is reminded. A move
-  // that commits first leaves nothing here to lock; a move that comes after
+export async function remindRehearsal(tx, {
+  rehearsal, type, from, to, notify, now, expo, idleInTransactionMs = IDLE_IN_TRANSACTION_MS,
+}) {
+  await tx.run(`SET LOCAL idle_in_transaction_session_timeout = ${Math.max(1, Math.trunc(idleInTransactionMs))}`);
+
+  // Still due for this reminder — by the same window the run found it in —
+  // and held so while it is reminded. A move that commits first is seen here:
+  // moved out of the window, the rehearsal is skipped; a move that comes after
   // waits until the claims are in, and the edit then releases them
-  // (rehearsalService.updateRehearsal) — so no claim outlives the time it was
-  // made for (GR05). Until the edit is one transaction (cause fix 10), the
-  // release is a separate statement after the move.
+  // (rehearsalService.updateRehearsal) — so no claim stands for a time the
+  // rehearsal no longer has (GR05). Until the edit is one transaction (cause
+  // fix 10), the release is a separate statement after the move.
+  //
+  // The window, not the start the run read: that came back through JavaScript
+  // at millisecond precision, and a start stored to the microsecond never
+  // compared equal — such a rehearsal read as moved and was never reminded
+  // (R8-02).
   const current = await tx.get(
-    `SELECT id FROM native_rehearsals WHERE id = $1 AND starts_at = $2::timestamptz FOR SHARE`,
-    [rehearsal.id, new Date(rehearsal.starts_at).toISOString()]
+    `SELECT id FROM native_rehearsals
+     WHERE id = $1 AND is_all_day = FALSE AND starts_at BETWEEN $2 AND $3
+     FOR SHARE`,
+    [rehearsal.id, from.toISOString(), to.toISOString()]
   );
   if (!current) return { told: 0, retry: 0, moved: true };
 

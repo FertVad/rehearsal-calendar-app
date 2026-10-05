@@ -13,6 +13,7 @@
  * did not exist (R8: GR01).
  */
 import { jest } from '@jest/globals';
+import http from 'node:http';
 import { setupIntegrationDb, closeIntegrationDb, seedTestData } from './setup.js';
 
 let testDb;
@@ -34,7 +35,7 @@ jest.unstable_mockModule('../../utils/logger.js', () => ({
 const { checkUpcomingRehearsals, remindRehearsal } = await import(
   '../../services/notifications/reminderScheduler.js'
 );
-const { notifyRehearsal24h } = await import('../../services/notifications/pushNotificationService.js');
+const { notifyRehearsal24h, expoTransport } = await import('../../services/notifications/pushNotificationService.js');
 
 const HOUR = 60 * 60 * 1000;
 const MINUTE = 60 * 1000;
@@ -415,8 +416,10 @@ describe('Rehearsal reminders', () => {
       testDb.run('UPDATE native_rehearsals SET starts_at = ?, ends_at = ? WHERE id = ?',
         [later.toISOString(), new Date(later.getTime() + 2 * HOUR).toISOString(), id]);
 
+      const now = new Date();
       const outcome = await testDb.transaction((tx) => remindRehearsal(tx, {
-        rehearsal: snapshot, type: '24h', notify: notifyRehearsal24h, now: new Date(), expo,
+        rehearsal: snapshot, type: '24h', notify: notifyRehearsal24h, now, expo,
+        from: new Date(now.getTime() + 12 * HOUR), to: new Date(now.getTime() + 24 * HOUR),
       }));
 
       expect(outcome).toMatchObject({ told: 0, moved: true });
@@ -449,6 +452,25 @@ describe('Rehearsal reminders', () => {
       expect(result.receipts).toMatchObject({ checked: 1, failed: 1, tokensRemoved: 1 });
       expect(hasToken(leaving)).toBe(false);
       expect(tickets()).toEqual([]);
+    });
+
+    it('keeps a token registered again while Expo had not yet answered the send', async () => {
+      const waiting = addUser('Waiting');
+      addRehearsal(20 * HOUR, { roster: [waiting] });
+      const send = expo.sendPushNotificationsAsync.bind(expo);
+      expo.sendPushNotificationsAsync = async (messages) => {
+        // The device signs in again while the answer is still outstanding.
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        testDb.run('UPDATE native_push_tokens SET last_active_at = ? WHERE user_id = ?', [new Date().toISOString(), waiting]);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return send(messages);
+      };
+      await run();
+      expo.receipts['ticket-1'] = { status: 'error', message: 'gone', details: { error: 'DeviceNotRegistered' } };
+
+      await run({ now: later(16 * MINUTE) });
+
+      expect(hasToken(waiting)).toBe(true);
     });
 
     it('keeps a token registered again since the send', async () => {
@@ -499,6 +521,62 @@ describe('Rehearsal reminders', () => {
       expect(result.errors).toEqual([expect.objectContaining({ step: 'receipts' })]);
       expect(tickets()).toEqual(['ticket-1']);
     });
+  });
+
+  describe('an Expo that takes the request and never answers (R8-01)', () => {
+    let silent;
+    const sockets = new Set();
+
+    beforeAll(async () => {
+      silent = http.createServer(() => { /* accepts, and never answers */ });
+      silent.on('connection', (socket) => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });
+      await new Promise((resolve) => silent.listen(0, '127.0.0.1', resolve));
+    });
+    afterAll(async () => {
+      for (const socket of sockets) socket.destroy();
+      await new Promise((resolve) => silent.close(resolve));
+    });
+    const quiet = () => expoTransport({ baseUrl: `http://127.0.0.1:${silent.address().port}`, timeoutMs: 300 });
+    const tickets = () => testDb.all('SELECT ticket_id FROM native_push_tickets ORDER BY ticket_id').map((r) => r.ticket_id);
+    const later = (ms) => new Date(Date.now() + ms);
+
+    it('gives up at the deadline: nobody claimed, no inbox row, the run fails, and the next run delivers', async () => {
+      const id = addRehearsal(20 * HOUR);
+
+      const started = Date.now();
+      const failed = await run({ expo: quiet() });
+
+      expect(Date.now() - started).toBeLessThan(3000);
+      expect(failed.ok).toBe(false);
+      expect(failed.retry['24h']).toBe(1);
+      expect(claimedFor(id)).toEqual([]);
+      expect(inboxOf(memberId)).toEqual([]);
+
+      await run();
+
+      expect(claimedFor(id)).toEqual([memberId]);
+    });
+
+    it('a receipts request that never answers fails the run at its deadline and keeps the tickets', async () => {
+      addRehearsal(20 * HOUR);
+      await run();
+
+      const result = await run({ now: later(16 * MINUTE), expo: quiet() });
+
+      expect(result.ok).toBe(false);
+      expect(result.errors[0]).toMatchObject({ step: 'receipts' });
+      expect(tickets()).toEqual(['ticket-1']);
+    });
+  });
+
+  it('stops starting rehearsals when the run budget is spent, and says how many are left', async () => {
+    const id = addRehearsal(20 * HOUR);
+
+    const result = await run({ budgetMs: 0 });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors[0]).toMatchObject({ step: '24h', error: 'Run budget spent', left: 1 });
+    expect(claimedFor(id)).toEqual([]);
   });
 
   it('a run that cannot read what is due fails, instead of reporting a quiet night (GR03)', async () => {
