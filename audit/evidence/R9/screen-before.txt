@@ -1,0 +1,34 @@
+# R9 review answer: AddRehearsalScreen.test.tsx as now, against the app at 58a7706 (cause fix 7, first round) and at 3037699 (before cause fix 7). ts-jest diagnostics off: the older modules lack the new props and keys.
+
+## 58a7706
+    ✓ saves the people the planner planned for, not the whole project (71 ms)
+    ✕ picking the project already shown keeps the people (50 ms)
+    ✕ back on the planner's project after one that failed to load, it starts with the planner's people again (65 ms)
+    ✕ an existing rehearsal stays in its project, and its saved roster is what is sent (43 ms)
+    ✕ while the project's members are loading, Create sends nothing and says why (24 ms)
+    ✕ after the load failed, Create sends nothing; trying again loads them, and then it saves (22 ms)
+
+   3     + Received  + 1
+   2     Received number of calls: 1
+   2     Expected number of calls: 0
+   2     - Expected  - 4
+   1     - Expected  - 3
+
+Tests:       5 failed, 1 passed, 6 total
+
+## 3037699
+    ✕ saves the people the planner planned for, not the whole project (66 ms)
+    ✕ picking the project already shown keeps the people (49 ms)
+    ✕ back on the planner's project after one that failed to load, it starts with the planner's people again (83 ms)
+    ✕ an existing rehearsal stays in its project, and its saved roster is what is sent (38 ms)
+    ✕ while the project's members are loading, Create sends nothing and says why (23 ms)
+    ✕ after the load failed, Create sends nothing; trying again loads them, and then it saves (17 ms)
+
+   4     + Received  + 1
+   2     Received number of calls: 1
+   2     Expected number of calls: 0
+   2     - Expected  - 0
+   1     - Expected  - 4
+   1     - Expected  - 3
+
+Tests:       6 failed, 6 total
