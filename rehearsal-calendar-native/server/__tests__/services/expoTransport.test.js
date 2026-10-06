@@ -67,6 +67,12 @@ describe('Answers that fail the request, and nothing else', () => {
     await expect(send()).rejects.toThrow(reason);
   });
 
+  it.each([['{}', '{}'], ['data null', '{"data": null}']])('a receipts request answered with %s is a rejection, not "no receipts yet"', async (_label, body) => {
+    answer = reply(200, body);
+
+    await expect(receipts()).rejects.toThrow(/not an answer/);
+  });
+
   it('a receipts request answered with null is a rejection (R8-04)', async () => {
     answer = reply(200, 'null');
 

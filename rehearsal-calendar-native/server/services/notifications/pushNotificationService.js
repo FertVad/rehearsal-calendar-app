@@ -32,8 +32,10 @@ export const EXPO_TIMEOUT_MS = 10_000;
  */
 /**
  * Expo's answer: `{ data }` on success, `{ errors: [...] }` on failure. Anything
- * else — not JSON, `null`, a list, `errors` that is not a list — is not an
- * answer, and is thrown as one more way the request failed.
+ * else — not JSON, `null`, a list, `errors` that is not a list, a success
+ * without `data` — is not an answer, and is thrown as one more way the
+ * request failed. A success without data read as "no receipts ready yet",
+ * silently.
  */
 function readAnswer(status, text) {
   let result;
@@ -49,6 +51,9 @@ function readAnswer(status, text) {
   if (status !== 200 || result.errors) {
     const reasons = (result.errors || []).map((error) => error?.message).filter(Boolean).join('; ');
     throw new Error(`Expo answered ${status}${reasons ? `: ${reasons}` : ''}`);
+  }
+  if (result.data === undefined || result.data === null) {
+    throw new Error(`Expo answered ${status} with something that is not an answer`);
   }
   return result.data;
 }
@@ -108,7 +113,13 @@ export function expoTransport({ baseUrl = process.env.EXPO_BASE_URL || 'https://
       }
       return tickets;
     },
-    getPushNotificationReceiptsAsync: (ids) => post('getReceipts', { ids }),
+    async getPushNotificationReceiptsAsync(ids) {
+      const receipts = await post('getReceipts', { ids });
+      if (typeof receipts !== 'object' || Array.isArray(receipts)) {
+        throw new Error('Expo answered with something that is not an answer');
+      }
+      return receipts;
+    },
   };
 }
 
