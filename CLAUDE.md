@@ -870,6 +870,15 @@ While `loading` is true, `RootNavigator` renders a spinner instead of the
 and remounts it at its first route. Logout and account deletion still use it —
 they end signed out anyway.
 
+### 10. A date or time picker goes through `PickerModal`
+❌ **Problem**: Cancel in a picker keeps the value the wheel was turned to
+✅ **Fix**: `PickerModal` (with `usePickerDraft`) holds a draft and calls
+`onConfirm` on Done only; Cancel, a tap outside and back leave the owner's value
+
+Every turn of the wheel used to reach the owner, so Cancel was Done (HC02).
+Do not put a `DateTimePicker` in a screen directly — there is one picker, and
+the rehearsal form and the availability editor both use it.
+
 ## Environment Setup
 
 ### Required Environment Variables

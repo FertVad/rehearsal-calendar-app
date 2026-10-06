@@ -1,0 +1,24 @@
+# R9 cause fix 7: PickerModal.test.tsx and useRehearsalMembers.test.ts as committed in 58a7706, run against the app at 3037699 (before the fix); ts-jest diagnostics off — the old PickerModal takes onChange, not onConfirm.
+# Expected to pass on the old code: 'reopened, the wheel starts from the owner's value' (the test's owner never changes its value) and Android 'set' (the old component also handed the value on).
+# DP02's seeding (useParticipantSeed) is a new module; before it the screen selected everyone — there is nothing older to run it against.
+
+  ● drops a late answer for a project the form has left
+  ● hands out no list while the new project's is in flight
+  ● On Android, the native dialog answers once › "dismissed" only closes
+  ● On iOS › Cancel after turning the wheel tells the owner nothing (HC02)
+  ● On iOS › Done hands over the value the wheel was turned to, once
+
+  ● On iOS › Cancel after turning the wheel tells the owner nothing (HC02)
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● On iOS › Done hands over the value the wheel was turned to, once
+    Expected number of calls: 1
+    Received number of calls: 2
+  ● hands out no list while the new project's is in flight
+    - Expected  - 1
+    + Received  + 5
+  ● drops a late answer for a project the form has left
+    - Expected  - 1
+    + Received  + 1
+
+Tests:       5 failed, 2 passed, 7 total
