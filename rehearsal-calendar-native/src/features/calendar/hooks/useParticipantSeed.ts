@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 /**
  * Who a new rehearsal starts with: the people the planner planned it for, when
@@ -22,35 +22,39 @@ interface ParticipantSeedOptions {
   projectId: string | null | undefined;
   /** Its members — only that project's (useRehearsalMembers). */
   memberIds: string[];
-  loading: boolean;
+  /** The members are that project's, loaded, and the load did not fail. */
+  membersReady: boolean;
+  /** The participants are already settled for this project (useAddRehearsalForm). */
+  participantsSettled: boolean;
   /** The project the planner opened the form for, and the people it planned for. */
   plannedProjectId?: string;
   plannedMemberIds?: string[];
-  setSelectedMemberIds: (ids: string[]) => void;
+  startParticipants: (projectId: string, ids: string[]) => void;
 }
 
 /**
- * Seeds the selection once per project, when that project's members are in.
- * The planner's people apply to the planner's project only: switching the form
- * to another project starts it with everyone, as a form opened anywhere else.
- * An edit keeps the rehearsal's own roster (useAddRehearsalForm).
+ * Settles a new rehearsal's participants when the project the form is on has
+ * none settled and its members are in: the planner's people on the planner's
+ * project, everyone on any other. Arriving at a project — at the start, or by
+ * switching to it — always starts it this way, whatever happened to a
+ * project visited in between; picking the project already shown changes
+ * nothing, and a selection the person cleared stays clear (review R9-01). An
+ * edit settles from the rehearsal's own roster instead (useAddRehearsalForm).
  */
 export function useParticipantSeed({
   isEditMode,
   projectId,
   memberIds,
-  loading,
+  membersReady,
+  participantsSettled,
   plannedProjectId,
   plannedMemberIds,
-  setSelectedMemberIds,
+  startParticipants,
 }: ParticipantSeedOptions) {
-  const seededFor = useRef<string | null>(null);
-
   useEffect(() => {
-    if (isEditMode || loading || !projectId || memberIds.length === 0) return;
-    if (seededFor.current === projectId) return;
-    seededFor.current = projectId;
+    if (isEditMode || !projectId || !membersReady || participantsSettled) return;
     const fromPlanner = projectId === plannedProjectId ? plannedMemberIds : undefined;
-    setSelectedMemberIds(initialParticipants(memberIds, fromPlanner));
-  }, [isEditMode, loading, projectId, memberIds, plannedProjectId, plannedMemberIds, setSelectedMemberIds]);
+    startParticipants(projectId, initialParticipants(memberIds, fromPlanner));
+  }, [isEditMode, projectId, memberIds, membersReady, participantsSettled, plannedProjectId, plannedMemberIds,
+    startParticipants]);
 }

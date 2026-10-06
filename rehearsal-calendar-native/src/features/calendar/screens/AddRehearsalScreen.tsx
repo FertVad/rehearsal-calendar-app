@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,7 +53,8 @@ export default function AddRehearsalScreen() {
   });
 
   // Data loading hooks
-  const { members, loading: loadingMembers } = useRehearsalMembers(form.localSelectedProject, t);
+  const membersLoad = useRehearsalMembers(form.localSelectedProject);
+  const { members, loading: loadingMembers } = membersLoad;
   const { memberAvailability, loading: loadingAvailability } = useRehearsalAvailability(
     form.localSelectedProject,
     form.date,
@@ -70,6 +72,9 @@ export default function AddRehearsalScreen() {
     title: form.title,
     location: form.location,
     selectedMemberIds: form.selectedMemberIds,
+    participantsSettled: form.participantsSettled,
+    membersFailed: membersLoad.failed,
+    reloadMembers: membersLoad.reload,
     members,
     memberAvailability,
     resetForm: form.resetForm,
@@ -84,11 +89,22 @@ export default function AddRehearsalScreen() {
     isEditMode: form.isEditMode,
     projectId: form.localSelectedProject?.id,
     memberIds,
-    loading: loadingMembers,
+    membersReady: membersLoad.ready,
+    participantsSettled: form.participantsSettled,
     plannedProjectId: route.params?.projectId,
     plannedMemberIds: route.params?.prefilledMemberIds,
-    setSelectedMemberIds: form.setSelectedMemberIds,
+    startParticipants: form.startParticipants,
   });
+
+  // A project whose members could not be loaded says so, with a way to try
+  // again; until then nothing is saved (useAddRehearsalSubmit).
+  useEffect(() => {
+    if (!membersLoad.failed) return;
+    Alert.alert(t.common.error, t.rehearsals.loadMembersError, [
+      { text: t.common.cancel, style: 'cancel' },
+      { text: t.common.retry, onPress: membersLoad.reload },
+    ]);
+  }, [membersLoad.failed]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -143,6 +159,8 @@ export default function AddRehearsalScreen() {
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={() => form.setShowProjectPicker(true)}
+              // A rehearsal that exists stays in its project (review R9-01).
+              disabled={form.isEditMode}
             >
               <Ionicons name="folder-outline" size={20} color={Colors.accent.purple} />
               <Text style={[

@@ -1,11 +1,12 @@
 /**
- * Who a new rehearsal starts with (DP02).
+ * Who a new rehearsal starts with (DP02, review R9-01).
  *
  * The planner works out its times for the members picked in it, and the form
- * used to open with the whole project selected — the busy people the planner
- * had left out included. A rehearsal opened from the planner now starts with
- * the planner's people; one opened anywhere else, or switched to another
- * project, starts with everyone.
+ * used to open with the whole project selected. The seed settles a project's
+ * participants when they are not yet settled and its members are in: the
+ * planner's people on the planner's project, everyone on any other. The form
+ * decides when a project is unsettled — on arriving at it — so the seed keeps
+ * no memory of its own (the screen tests drive the two together).
  */
 import { renderHook } from '@testing-library/react-native';
 import { useParticipantSeed, initialParticipants } from '../useParticipantSeed';
@@ -14,20 +15,20 @@ const TEN = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
 type Props = Parameters<typeof useParticipantSeed>[0];
 function seed(props: Partial<Props>) {
-  const setSelectedMemberIds = jest.fn();
+  const startParticipants = jest.fn();
   const initial: Props = {
-    isEditMode: false, projectId: 'p1', memberIds: TEN, loading: false,
-    plannedProjectId: undefined, plannedMemberIds: undefined, setSelectedMemberIds, ...props,
+    isEditMode: false, projectId: 'p1', memberIds: TEN, membersReady: true, participantsSettled: false,
+    plannedProjectId: undefined, plannedMemberIds: undefined, startParticipants, ...props,
   };
   const hook = renderHook((current: Props) => useParticipantSeed(current), { initialProps: initial });
-  return { ...hook, initial, setSelectedMemberIds };
+  return { ...hook, initial, startParticipants };
 }
 
-describe('Opened from the planner', () => {
+describe('On the planner\'s project', () => {
   it('starts with the people the planner planned for, not the whole project (DP02)', () => {
-    const { setSelectedMemberIds } = seed({ plannedProjectId: 'p1', plannedMemberIds: ['3', '7'] });
+    const { startParticipants } = seed({ plannedProjectId: 'p1', plannedMemberIds: ['3', '7'] });
 
-    expect(setSelectedMemberIds).toHaveBeenCalledWith(['3', '7']);
+    expect(startParticipants).toHaveBeenCalledWith('p1', ['3', '7']);
   });
 
   it('leaves out someone the planner had who is no longer in the project', () => {
@@ -35,40 +36,36 @@ describe('Opened from the planner', () => {
   });
 
   it('with nobody picked in the planner, starts with everyone, as the planner reads it', () => {
-    const { setSelectedMemberIds } = seed({ plannedProjectId: 'p1', plannedMemberIds: [] });
+    const { startParticipants } = seed({ plannedProjectId: 'p1', plannedMemberIds: [] });
 
-    expect(setSelectedMemberIds).toHaveBeenCalledWith(TEN);
-  });
-
-  it('switched to another project, starts that one with everyone', () => {
-    const { setSelectedMemberIds, rerender, initial } = seed({ plannedProjectId: 'p1', plannedMemberIds: ['3'] });
-
-    rerender({ ...initial, projectId: 'p2', memberIds: ['21', '22'] });
-
-    expect(setSelectedMemberIds).toHaveBeenLastCalledWith(['21', '22']);
+    expect(startParticipants).toHaveBeenCalledWith('p1', TEN);
   });
 });
 
-describe('Opened anywhere else', () => {
+describe('On any other project', () => {
   it('starts with everyone', () => {
-    const { setSelectedMemberIds } = seed({});
+    const { startParticipants } = seed({ projectId: 'p2', plannedProjectId: 'p1', plannedMemberIds: ['3'] });
 
-    expect(setSelectedMemberIds).toHaveBeenCalledWith(TEN);
+    expect(startParticipants).toHaveBeenCalledWith('p2', TEN);
+  });
+});
+
+describe('When it does nothing', () => {
+  it('while the project\'s members are not in, or failed to load', () => {
+    const { startParticipants } = seed({ membersReady: false });
+
+    expect(startParticipants).not.toHaveBeenCalled();
   });
 
-  it('waits for the project\'s members, and seeds once — a cleared selection stays cleared', () => {
-    const { setSelectedMemberIds, rerender, initial } = seed({ memberIds: [], loading: true });
-    expect(setSelectedMemberIds).not.toHaveBeenCalled();
+  it('once the project\'s participants are settled — a cleared selection stays clear (R9-01)', () => {
+    const { startParticipants } = seed({ participantsSettled: true });
 
-    rerender({ ...initial, memberIds: TEN, loading: false });
-    rerender({ ...initial, memberIds: [...TEN], loading: false });
-
-    expect(setSelectedMemberIds).toHaveBeenCalledTimes(1);
+    expect(startParticipants).not.toHaveBeenCalled();
   });
 
-  it('an edit keeps the rehearsal\'s own roster', () => {
-    const { setSelectedMemberIds } = seed({ isEditMode: true, plannedProjectId: 'p1', plannedMemberIds: ['3'] });
+  it('on an edit, which keeps the rehearsal\'s own roster', () => {
+    const { startParticipants } = seed({ isEditMode: true, plannedProjectId: 'p1', plannedMemberIds: ['3'] });
 
-    expect(setSelectedMemberIds).not.toHaveBeenCalled();
+    expect(startParticipants).not.toHaveBeenCalled();
   });
 });

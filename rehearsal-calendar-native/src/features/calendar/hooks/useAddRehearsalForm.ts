@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -75,14 +75,36 @@ export function useAddRehearsalForm({
   const [localSelectedProject, setLocalSelectedProject] = useState<Project | null>(
     selectedProject?.is_admin ? selectedProject : null
   );
-  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  // Who is on the rehearsal, for which project, and whether that is settled
+  // (review R9-01, R9-02). One owner: the project switch empties it and marks
+  // it unsettled, starting it settles it — from the edited rehearsal's roster,
+  // or for a new one from the project's members (useParticipantSeed) — and
+  // a choice in the form changes the people and nothing else. Settled for
+  // another project than the one shown is not settled.
+  const [participants, setParticipants] = useState<{ projectId: string | null; ids: string[]; settled: boolean }>({
+    projectId: null,
+    ids: [],
+    settled: false,
+  });
+  const selectedMemberIds = participants.ids;
+  const setSelectedMemberIds = useCallback(
+    (ids: string[]) => setParticipants((current) => ({ ...current, ids })),
+    []
+  );
+  const startParticipants = useCallback(
+    (projectId: string, ids: string[]) => setParticipants({ projectId, ids, settled: true }),
+    []
+  );
 
   // UI state - separate state for each modal picker
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  // An edit is what the route says it is, from the first render: a form
+  // that read it from state set in an effect could act as a new rehearsal for
+  // a frame (review R9-01).
+  const isEditMode = Boolean(routeParams?.rehearsalId && routeParams?.projectId);
   const [loadingRehearsal, setLoadingRehearsal] = useState(false);
 
   // Prefill form from route params
@@ -135,7 +157,6 @@ export function useAddRehearsalForm({
 
     const loadRehearsal = async () => {
       setLoadingRehearsal(true);
-      setIsEditMode(true);
 
       try {
         // By id, not from the calendar batch: the batch is the caller's own
@@ -158,8 +179,8 @@ export function useAddRehearsalForm({
         // still in the project, whatever their answer — 'no' means invited and
         // not yet seen, and leaving them unselected would drop them on save.
         const responsesResponse = await rehearsalsAPI.getResponses(String(rehearsalId));
-        const participants = responsesResponse.data.allParticipants || [];
-        setSelectedMemberIds(participants.map((p: any) => String(p.userId)));
+        const onRehearsal = responsesResponse.data.allParticipants || [];
+        startParticipants(String(projectId), onRehearsal.map((p: any) => String(p.userId)));
       } catch (error: any) {
         // An edit sends the whole participant list, and an empty one clears the
         // call. A form left open over a failed load could save exactly that
@@ -224,11 +245,15 @@ export function useAddRehearsalForm({
     setLocation('');
   };
 
+  // A rehearsal that exists stays in its project — the server has no move —
+  // and picking the project already shown changes nothing (review R9-01). Only
+  // a real switch starts the participants over, for the project switched to.
   const handleSelectProject = (project: Project) => {
+    setShowProjectPicker(false);
+    if (isEditMode || project.id === localSelectedProject?.id) return;
     setLocalSelectedProject(project);
     setSelectedProject(project); // Also update global context
-    setSelectedMemberIds([]); // Reset selection when changing project
-    setShowProjectPicker(false);
+    setParticipants({ projectId: project.id, ids: [], settled: false });
   };
 
   const handleCreateProject = async () => {
@@ -259,6 +284,8 @@ export function useAddRehearsalForm({
     setLocalSelectedProject,
     selectedMemberIds,
     setSelectedMemberIds,
+    startParticipants,
+    participantsSettled: participants.settled && participants.projectId === localSelectedProject?.id,
     // UI state
     showDatePicker,
     setShowDatePicker,

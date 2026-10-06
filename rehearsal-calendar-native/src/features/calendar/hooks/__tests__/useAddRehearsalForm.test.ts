@@ -361,6 +361,59 @@ describe('useAddRehearsalForm Hook', () => {
       expect(mockSetSelectedProject).toHaveBeenCalledWith(mockProjects[0]);
       expect(result.current.showProjectPicker).toBe(false);
       expect(result.current.selectedMemberIds).toEqual([]); // Reset members
+      expect(result.current.participantsSettled).toBe(false);
+    });
+
+    // Review R9-01: picking the project already shown used to empty the
+    // participants — on an edit, the saved roster went out empty.
+    it('picking the project already shown keeps the participants', () => {
+      const { result } = renderHook(() =>
+        useAddRehearsalForm({
+          projects: mockProjects,
+          selectedProject: mockProjects[0],
+          setSelectedProject: mockSetSelectedProject,
+          routeParams: { projectId: '1' },
+        })
+      );
+      act(() => {
+        result.current.startParticipants('1', ['user1', 'user2']);
+      });
+
+      act(() => {
+        result.current.handleSelectProject(mockProjects[0]);
+      });
+
+      expect(result.current.selectedMemberIds).toEqual(['user1', 'user2']);
+      expect(result.current.participantsSettled).toBe(true);
+      expect(result.current.showProjectPicker).toBe(false);
+    });
+
+    it('an existing rehearsal stays in its project, and its roster is not touched', async () => {
+      (rehearsalsAPI.getById as jest.Mock).mockResolvedValue({
+        data: { rehearsal: { id: 'r1', projectId: '1', startsAt: '2025-12-29T14:00:00Z', endsAt: '2025-12-29T16:00:00Z' } },
+      });
+      (rehearsalsAPI.getResponses as jest.Mock).mockResolvedValue({ data: { allParticipants: [{ userId: 'user9' }] } });
+      const { result } = renderHook(() =>
+        useAddRehearsalForm({
+          projects: mockProjects,
+          selectedProject: null,
+          setSelectedProject: mockSetSelectedProject,
+          routeParams: { rehearsalId: 'r1', projectId: '1' },
+        })
+      );
+      expect(result.current.participantsSettled).toBe(false);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(result.current.participantsSettled).toBe(true);
+
+      act(() => {
+        result.current.handleSelectProject(mockProjects[2]);
+      });
+
+      expect(mockSetSelectedProject).not.toHaveBeenCalledWith(mockProjects[2]);
+      expect(result.current.localSelectedProject?.id).toBe('1');
+      expect(result.current.selectedMemberIds).toEqual(['user9']);
     });
 
     it('should open create project screen', () => {

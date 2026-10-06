@@ -12,7 +12,6 @@ import { projectsAPI } from '../../../../shared/services/api';
 
 jest.mock('../../../../shared/services/api', () => ({ projectsAPI: { getMembers: jest.fn() } }));
 
-const t = { common: { error: 'Error' }, rehearsals: { loadMembersError: 'Could not load' } };
 const project = (id: string) => ({ id, name: id }) as any;
 const member = (userId: string) => ({ userId }) as any;
 
@@ -26,7 +25,7 @@ it('hands out no list while the new project\'s is in flight', async () => {
   (projectsAPI.getMembers as jest.Mock).mockResolvedValueOnce({ data: { members: [member('1')] } });
   const second = deferred();
   (projectsAPI.getMembers as jest.Mock).mockReturnValueOnce(second.promise);
-  const { result, rerender } = renderHook(({ p }: { p: ReturnType<typeof project> }) => useRehearsalMembers(p, t), { initialProps: { p: project('A') } });
+  const { result, rerender } = renderHook(({ p }: { p: ReturnType<typeof project> }) => useRehearsalMembers(p), { initialProps: { p: project('A') } });
   await waitFor(() => expect(result.current.members).toEqual([member('1')]));
 
   rerender({ p: project('B') });
@@ -41,7 +40,7 @@ it('drops a late answer for a project the form has left', async () => {
   const first = deferred();
   (projectsAPI.getMembers as jest.Mock).mockReturnValueOnce(first.promise);
   (projectsAPI.getMembers as jest.Mock).mockResolvedValueOnce({ data: { members: [member('2')] } });
-  const { result, rerender } = renderHook(({ p }: { p: ReturnType<typeof project> }) => useRehearsalMembers(p, t), { initialProps: { p: project('A') } });
+  const { result, rerender } = renderHook(({ p }: { p: ReturnType<typeof project> }) => useRehearsalMembers(p), { initialProps: { p: project('A') } });
 
   rerender({ p: project('B') });
   await waitFor(() => expect(result.current.members).toEqual([member('2')]));

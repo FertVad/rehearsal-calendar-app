@@ -23,6 +23,11 @@ interface UseAddRehearsalSubmitProps {
   title: string;
   location: string;
   selectedMemberIds: string[];
+  /** The participants are settled for this project (useAddRehearsalForm). */
+  participantsSettled: boolean;
+  /** The project's members could not be loaded, and a retry for that. */
+  membersFailed: boolean;
+  reloadMembers: () => void;
   members: ProjectMember[];
   memberAvailability: Record<string, { timeRanges: TimeRange[] }>;
   resetForm: () => void;
@@ -39,6 +44,9 @@ export function useAddRehearsalSubmit({
   title,
   location,
   selectedMemberIds,
+  participantsSettled,
+  membersFailed,
+  reloadMembers,
   members,
   memberAvailability,
   resetForm,
@@ -178,6 +186,21 @@ export function useAddRehearsalSubmit({
 
     if (endTime <= startTime) {
       Alert.alert(t.common.error, t.rehearsals.endTimeError);
+      return;
+    }
+
+    // Nobody is sent until the participants are settled: the list goes as the
+    // whole roster, and one sent while the members were loading — or after
+    // they failed to load — put nobody on the rehearsal (review R9-02).
+    if (!participantsSettled) {
+      if (membersFailed) {
+        Alert.alert(t.common.error, t.rehearsals.loadMembersError, [
+          { text: t.common.cancel, style: 'cancel' },
+          { text: t.common.retry, onPress: reloadMembers },
+        ]);
+      } else {
+        Alert.alert(t.common.error, t.rehearsals.participantsLoading);
+      }
       return;
     }
 
