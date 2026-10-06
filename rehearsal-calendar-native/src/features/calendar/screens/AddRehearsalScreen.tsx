@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import { getDateLocale } from '../../../shared/utils/locale';
 import { ActorSelector } from '../components/ActorSelector';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
+import { useParticipantSeed } from '../hooks/useParticipantSeed';
 import { addRehearsalScreenStyles as styles } from '../styles';
 import {
   useRehearsalMembers,
@@ -77,15 +78,17 @@ export default function AddRehearsalScreen() {
     rehearsalId: form.rehearsalId,
   });
 
-  // Auto-select all participants when members are loaded
-  useEffect(() => {
-    if (!form.isEditMode &&
-        members.length > 0 &&
-        form.selectedMemberIds.length === 0 &&
-        !loadingMembers) {
-      form.setSelectedMemberIds(members.map(m => m.userId));
-    }
-  }, [members, loadingMembers, form.isEditMode]);
+  // Who a new rehearsal starts with: the planner's people, or everyone (DP02).
+  const memberIds = useMemo(() => members.map(m => m.userId), [members]);
+  useParticipantSeed({
+    isEditMode: form.isEditMode,
+    projectId: form.localSelectedProject?.id,
+    memberIds,
+    loading: loadingMembers,
+    plannedProjectId: route.params?.projectId,
+    plannedMemberIds: route.params?.prefilledMemberIds,
+    setSelectedMemberIds: form.setSelectedMemberIds,
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -284,7 +287,7 @@ export default function AddRehearsalScreen() {
         visible={form.showDatePicker}
         onClose={() => form.setShowDatePicker(false)}
         value={form.date}
-        onChange={form.handleDateChange}
+        onConfirm={form.handleDateChange}
         mode="date"
         title={t.rehearsals.selectDate}
         language={getDateLocale(language)}
@@ -295,7 +298,7 @@ export default function AddRehearsalScreen() {
         visible={form.showStartTimePicker}
         onClose={() => form.setShowStartTimePicker(false)}
         value={form.startTime}
-        onChange={form.handleStartTimeChange}
+        onConfirm={form.handleStartTimeChange}
         mode="time"
         title={t.rehearsals.selectStartTime}
         language={getDateLocale(language)}
@@ -306,7 +309,7 @@ export default function AddRehearsalScreen() {
         visible={form.showEndTimePicker}
         onClose={() => form.setShowEndTimePicker(false)}
         value={form.endTime}
-        onChange={form.handleEndTimeChange}
+        onConfirm={form.handleEndTimeChange}
         mode="time"
         title={t.rehearsals.selectEndTime}
         language={getDateLocale(language)}

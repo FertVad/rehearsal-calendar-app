@@ -6,9 +6,6 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
-  Modal,
-  Pressable,
-  Platform,
   Animated,
   Alert,
   ActivityIndicator,
@@ -16,7 +13,6 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useToday } from '../../../shared/hooks/useClock';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Spacing } from '../../../shared/constants/colors';
 import { CalendarMonth, EditorHeader, ModeInfo } from '../components';
 import { DayMode } from '../types';
@@ -31,6 +27,7 @@ import {
 } from '../hooks';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
+import { PickerModal } from '../../../shared/components/PickerModal';
 
 type AvailabilityScreenProps = {
   navigation: any;
@@ -500,44 +497,16 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         )}
       </Animated.View>
 
-      {/* Time Picker Modal */}
-      {editor.showTimePicker && (
-        <Modal
-          visible={editor.showTimePicker}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => editor.setShowTimePicker(false)}
-        >
-          <Pressable
-            style={styles.timePickerOverlay}
-            onPress={() => editor.setShowTimePicker(false)}
-          >
-            <Pressable style={styles.timePickerContainer} onPress={e => e.stopPropagation()}>
-              <View style={styles.timePickerHeader}>
-                <TouchableOpacity onPress={() => editor.setShowTimePicker(false)}>
-                  <Text style={styles.timePickerCancel}>{t.common.cancel}</Text>
-                </TouchableOpacity>
-                <Text style={styles.timePickerTitle}>
-                  {editor.editingSlot?.field === 'start' ? t.availability.startTime : t.availability.endTime}
-                </Text>
-                <TouchableOpacity onPress={editor.confirmTimePicker}>
-                  <Text style={styles.timePickerDone}>{t.common.done}</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={editor.tempTime}
-                mode="time"
-                display="spinner"
-                onChange={(event, date) => {
-                  if (date) editor.setTempTime(date);
-                }}
-                locale={language}
-                textColor={Colors.text.primary}
-              />
-            </Pressable>
-          </Pressable>
-        </Modal>
-      )}
+      {/* Time Picker Modal — Cancel keeps the slot's time (usePickerDraft) */}
+      <PickerModal
+        visible={editor.showTimePicker}
+        onClose={editor.closeTimePicker}
+        value={editor.timePickerValue}
+        onConfirm={editor.confirmTimePicker}
+        mode="time"
+        title={editor.editingSlot?.field === 'start' ? t.availability.startTime : t.availability.endTime}
+        language={language}
+      />
     </SafeAreaView>
   );
 }

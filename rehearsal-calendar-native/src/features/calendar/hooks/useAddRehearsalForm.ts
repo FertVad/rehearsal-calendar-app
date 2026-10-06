@@ -194,28 +194,24 @@ export function useAddRehearsalForm({
     setShowEndTimePicker(true);
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (selectedDate) {
-      setDate(selectedDate);
+  // Called with a confirmed value only: Cancel in the picker never reaches the
+  // form, nor the end moved along with a start (usePickerDraft, HC02).
+  const handleDateChange = (selectedDate: Date) => {
+    setDate(selectedDate);
+  };
+
+  const handleStartTimeChange = (selectedTime: Date) => {
+    setStartTime(selectedTime);
+    // Auto-adjust end time if it's before start time
+    if (selectedTime >= endTime) {
+      const newEnd = new Date(selectedTime);
+      newEnd.setHours(newEnd.getHours() + 2);
+      setEndTime(newEnd);
     }
   };
 
-  const handleStartTimeChange = (event: any, selectedTime?: Date) => {
-    if (selectedTime) {
-      setStartTime(selectedTime);
-      // Auto-adjust end time if it's before start time
-      if (selectedTime >= endTime) {
-        const newEnd = new Date(selectedTime);
-        newEnd.setHours(newEnd.getHours() + 2);
-        setEndTime(newEnd);
-      }
-    }
-  };
-
-  const handleEndTimeChange = (event: any, selectedTime?: Date) => {
-    if (selectedTime) {
-      setEndTime(selectedTime);
-    }
+  const handleEndTimeChange = (selectedTime: Date) => {
+    setEndTime(selectedTime);
   };
 
   const resetForm = () => {

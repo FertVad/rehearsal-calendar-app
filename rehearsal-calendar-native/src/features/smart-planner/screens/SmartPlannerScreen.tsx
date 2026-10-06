@@ -401,6 +401,10 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
                     prefilledDate: slot.date,
                     prefilledTime: slot.startTime,
                     prefilledEndTime: slot.endTime,
+                    // The slot is free for the people picked here, so the
+                    // rehearsal starts with them; none picked means everyone,
+                    // as in the planner itself (DP02).
+                    prefilledMemberIds: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
                   });
                 }}
               />

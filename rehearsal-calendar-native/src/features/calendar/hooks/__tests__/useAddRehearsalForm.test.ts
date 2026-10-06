@@ -317,7 +317,7 @@ describe('useAddRehearsalForm Hook', () => {
       const newDate = new Date('2025-12-31');
 
       act(() => {
-        result.current.handleDateChange({}, newDate);
+        result.current.handleDateChange(newDate);
       });
 
       expect(result.current.date).toEqual(newDate);
@@ -336,7 +336,7 @@ describe('useAddRehearsalForm Hook', () => {
       const newStartTime = new Date(initialEndTime.getTime() + 1000); // 1 second after end
 
       act(() => {
-        result.current.handleStartTimeChange({}, newStartTime);
+        result.current.handleStartTimeChange(newStartTime);
       });
 
       // End time should be auto-adjusted to 2 hours after start

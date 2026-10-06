@@ -10,12 +10,14 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
+import { usePickerDraft } from '../hooks/usePickerDraft';
 
 interface PickerModalProps {
   visible: boolean;
   onClose: () => void;
   value: Date;
-  onChange: (event: any, date?: Date) => void;
+  /** Called with the picked value on Done — never on Cancel (usePickerDraft). */
+  onConfirm: (value: Date) => void;
   mode: 'date' | 'time';
   title: string;
   language?: string;
@@ -25,21 +27,13 @@ export const PickerModal: React.FC<PickerModalProps> = ({
   visible,
   onClose,
   value,
-  onChange,
+  onConfirm,
   mode,
   title,
   language = 'en-US',
 }) => {
   const { t } = useI18n();
-  // For Android, close immediately after selection
-  const handleChange = (event: any, selectedValue?: Date) => {
-    if (Platform.OS === 'android') {
-      onChange(event, selectedValue);
-      onClose();
-    } else {
-      onChange(event, selectedValue);
-    }
-  };
+  const picker = usePickerDraft({ visible, value, onConfirm, onClose });
 
   // Android uses native modal, no custom UI needed
   if (Platform.OS === 'android' && visible) {
@@ -48,7 +42,7 @@ export const PickerModal: React.FC<PickerModalProps> = ({
         value={value}
         mode={mode}
         display="default"
-        onChange={handleChange}
+        onChange={picker.change}
         is24Hour={mode === 'time'}
         locale={language}
         themeVariant="dark"
@@ -64,12 +58,12 @@ export const PickerModal: React.FC<PickerModalProps> = ({
         visible={visible}
         transparent
         animationType="slide"
-        onRequestClose={onClose}
+        onRequestClose={picker.cancel}
       >
         <TouchableOpacity
           style={styles.overlay}
           activeOpacity={1}
-          onPress={onClose}
+          onPress={picker.cancel}
         >
           <TouchableOpacity
             activeOpacity={1}
@@ -78,11 +72,11 @@ export const PickerModal: React.FC<PickerModalProps> = ({
             <View style={styles.modalContent}>
               {/* Header with Cancel and Done buttons */}
               <View style={styles.header}>
-                <TouchableOpacity onPress={onClose}>
+                <TouchableOpacity onPress={picker.cancel}>
                   <Text style={styles.cancelButton}>{t.common.cancel}</Text>
                 </TouchableOpacity>
                 <Text style={styles.title}>{title}</Text>
-                <TouchableOpacity onPress={onClose}>
+                <TouchableOpacity onPress={picker.confirm}>
                   <Text style={styles.doneButton}>{t.common.done}</Text>
                 </TouchableOpacity>
               </View>
@@ -90,10 +84,10 @@ export const PickerModal: React.FC<PickerModalProps> = ({
               {/* Picker */}
               <View style={styles.pickerContainer}>
                 <DateTimePicker
-                  value={value}
+                  value={picker.draft}
                   mode={mode}
                   display="spinner"
-                  onChange={handleChange}
+                  onChange={picker.change}
                   is24Hour={mode === 'time'}
                   locale={language}
                   themeVariant="dark"

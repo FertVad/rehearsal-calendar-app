@@ -34,10 +34,10 @@ export function useAvailabilityEditor({
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Time picker state
+  // Time picker state. The picker holds its own draft and hands back only a
+  // confirmed time (PickerModal, usePickerDraft).
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [editingSlot, setEditingSlot] = useState<{ index: number; field: 'start' | 'end' } | null>(null);
-  const [tempTime, setTempTime] = useState(new Date());
 
   // Animation for bottom panel
   const panelAnimation = useRef(new Animated.Value(0)).current;
@@ -108,43 +108,21 @@ export function useAvailabilityEditor({
   // Time picker handlers
   const openTimePicker = (slotIndex: number, field: 'start' | 'end') => {
     if (!selectedDate) return;
-
-    const state = getDayState(selectedDate);
-    const timeStr = state.slots[slotIndex][field];
-    const date = parseTimeString(timeStr);
-
-    setTempTime(date);
     setEditingSlot({ index: slotIndex, field });
     setShowTimePicker(true);
   };
 
-  const handleTimeChange = (event: any, date?: Date, platform: 'ios' | 'android' = 'ios') => {
-    if (platform === 'android') {
-      setShowTimePicker(false);
-    }
+  // The time the picker opens on: the slot's own.
+  const editingTime = selectedDate && editingSlot
+    ? getDayState(selectedDate).slots[editingSlot.index]?.[editingSlot.field]
+    : undefined;
+  const timePickerValue = editingTime ? parseTimeString(editingTime) : new Date();
 
-    if (date && editingSlot && selectedDates.length > 0) {
-      const timeStr = formatDateToTimeString(date);
+  const closeTimePicker = () => setShowTimePicker(false);
 
-      setAvailability(prev =>
-        applyToSelectedDates(prev, selectedDates, getDayState, (currentState) => ({
-          ...currentState,
-          slots: currentState.slots.map((slot, i) =>
-            i === editingSlot.index ? { ...slot, [editingSlot.field]: timeStr } : slot
-          ),
-        }))
-      );
-      markChanged(selectedDates);
-    }
-
-    if (platform === 'ios' && event.type === 'set') {
-      setShowTimePicker(false);
-    }
-  };
-
-  const confirmTimePicker = () => {
+  const confirmTimePicker = (picked: Date) => {
     if (editingSlot && selectedDates.length > 0) {
-      const timeStr = formatDateToTimeString(tempTime);
+      const timeStr = formatDateToTimeString(picked);
 
       setAvailability(prev =>
         applyToSelectedDates(prev, selectedDates, getDayState, (currentState) => ({
@@ -156,7 +134,6 @@ export function useAvailabilityEditor({
       );
       markChanged(selectedDates);
     }
-    setShowTimePicker(false);
   };
 
   const handleModeChange = (mode: DayMode) => {
@@ -255,15 +232,13 @@ export function useAvailabilityEditor({
     flatListRef,
     // Time picker
     showTimePicker,
-    setShowTimePicker,
+    closeTimePicker,
     editingSlot,
-    tempTime,
-    setTempTime,
+    timePickerValue,
     // Handlers
     handleDayPress,
     clearSelection,
     openTimePicker,
-    handleTimeChange,
     confirmTimePicker,
     handleModeChange,
     addSlot,

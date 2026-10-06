@@ -48,5 +48,7 @@ export type AppStackParamList = {
     prefilledDate?: string;
     prefilledTime?: string;
     prefilledEndTime?: string;
+    /** The people the planner planned the slot for; absent means everyone (DP02). */
+    prefilledMemberIds?: string[];
   };
 };
