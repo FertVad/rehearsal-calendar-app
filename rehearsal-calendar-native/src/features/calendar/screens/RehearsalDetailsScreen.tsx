@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { getDateLocale } from '../../../shared/utils/locale';
@@ -21,6 +21,7 @@ import { useSeen } from '../../../contexts/SeenContext';
 import { Rehearsal, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDateLocalized } from '../../../shared/utils/time';
+import type { AppNavigation, AppStackParamList } from '../../../navigation';
 
 interface Participant {
   userId: string;
@@ -48,8 +49,8 @@ interface AdminStats {
  */
 
 export default function RehearsalDetailsScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigation = useNavigation<AppNavigation<'RehearsalDetails'>>();
+  const route = useRoute<RouteProp<AppStackParamList, 'RehearsalDetails'>>();
   const rehearsalId: string = String(route.params?.rehearsalId ?? '');
 
   const { t, language } = useI18n();

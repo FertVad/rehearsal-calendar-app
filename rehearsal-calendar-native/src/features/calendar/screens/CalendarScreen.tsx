@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { CalendarScreenNavigation } from '../../../navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
@@ -21,7 +22,7 @@ import { calendarScreenStyles as styles } from '../styles';
 import { unsyncRehearsal } from '../../../shared/services/calendar';
 
 export default function CalendarScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<CalendarScreenNavigation>();
   const { projects } = useProjects();
   const { t, language } = useI18n();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -345,7 +346,7 @@ export default function CalendarScreen() {
           <SmartPlannerButton
             adminProjects={adminProjects}
             onPress={(projectId) => {
-              // @ts-ignore - Navigate to Planner tab, which is in parent TabNavigator
+              // The Planner tab's own stack, beside this one.
               navigation.navigate('Planner', { screen: 'SmartPlanner', params: { projectId } });
             }}
           />

@@ -435,7 +435,8 @@ describe('useAddRehearsalForm Hook', () => {
         result.current.handleCreateProject();
       });
 
-      expect(mockNavigate).toHaveBeenCalledWith('Projects', { screen: 'CreateProject' });
+      // On the app stack, beside the form; the Projects tab has no such screen (R9-03).
+      expect(mockNavigate).toHaveBeenCalledWith('CreateProject');
       expect(result.current.showProjectPicker).toBe(false);
     });
   });

@@ -8,6 +8,7 @@ import { Rehearsal } from '../../../shared/types';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useSeen } from '../../../contexts/SeenContext';
+import type { AppNavigation } from '../../../navigation';
 
 interface RehearsalCardProps {
   rehearsal: Rehearsal;
@@ -41,7 +42,7 @@ export default function RehearsalCard({
   onDelete,
 }: RehearsalCardProps) {
   const { t } = useI18n();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<AppNavigation>();
 
   // Read straight from the store. These used to arrive as five props threaded
   // from the screen through every list in between, which is why a second list

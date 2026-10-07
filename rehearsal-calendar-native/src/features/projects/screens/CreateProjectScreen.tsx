@@ -57,7 +57,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
       // Close the modal and drop the user straight into the new project
       // so they can invite members / set up rehearsals without an extra tap.
-      navigation.navigate('MainTabs' as any, {
+      navigation.navigate('MainTabs', {
         screen: 'Projects',
         params: {
           screen: 'ProjectDetail',

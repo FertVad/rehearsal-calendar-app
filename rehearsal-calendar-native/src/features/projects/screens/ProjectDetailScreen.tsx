@@ -11,11 +11,11 @@ import {
   RefreshControl,
   Modal,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
-import { ProjectsStackParamList } from '../../../navigation';
+import type { ProjectsStackParamList, ProjectDetailNavigation } from '../../../navigation';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
 import { formatDateToString as formatDateToStringUtil } from '../../../shared/utils/time';
@@ -24,7 +24,10 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import * as Clipboard from 'expo-clipboard';
 import { useInviteLink } from '../hooks';
 
-type ProjectDetailScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'ProjectDetail'>;
+type ProjectDetailScreenProps = {
+  route: RouteProp<ProjectsStackParamList, 'ProjectDetail'>;
+  navigation: ProjectDetailNavigation;
+};
 
 interface Project {
   id: string;
@@ -160,10 +163,10 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
     }
   };
 
-  // RehearsalDetails lives in the root stack rather than this one. navigate
-  // bubbles up to find it, which the types available here cannot express.
+  // RehearsalDetails lives in the app stack rather than this one; navigate
+  // goes up to it.
   const openRehearsal = (rehearsalId: string) => {
-    (navigation as any).navigate('RehearsalDetails', { rehearsalId: String(rehearsalId) });
+    navigation.navigate('RehearsalDetails', { rehearsalId: String(rehearsalId) });
   };
 
   const handleCopyCode = async () => {

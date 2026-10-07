@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import type { AppNavigation } from '../../../navigation';
 import { useToday } from '../../../shared/hooks/useClock';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../../shared/constants/colors';
@@ -30,7 +31,7 @@ import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
 import { PickerModal } from '../../../shared/components/PickerModal';
 
 type AvailabilityScreenProps = {
-  navigation: any;
+  navigation: AppNavigation<'MarkBusy'>;
 };
 
 export default function AvailabilityScreen({ navigation }: AvailabilityScreenProps) {

@@ -23,6 +23,7 @@ import { notificationsAPI } from '../../../shared/services/api';
 import { useUnread } from '../../../contexts/UnreadContext';
 import { logger } from '../../../shared/utils/logger';
 import { styles } from '../styles/notificationsScreenStyles';
+import type { AppNavigation } from '../../../navigation';
 
 interface NotificationItem {
   id: number;
@@ -48,7 +49,7 @@ function iconFor(type: string): keyof typeof Ionicons.glyphMap {
 }
 
 export default function NotificationsScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<AppNavigation<'Notifications'>>();
   const { t } = useI18n();
   const { markRead, remove, removeAll } = useUnread();
 

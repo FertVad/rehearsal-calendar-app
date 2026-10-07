@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../../shared/constants/colors';
 import { Rehearsal, Project } from '../../../shared/types';
 import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
@@ -33,7 +32,6 @@ export default function TodayRehearsals({
   onOpenRehearsal,
 }: TodayRehearsalsProps) {
   const { t, language } = useI18n();
-  const navigation = useNavigation<any>();
   const [syncedRehearsals, setSyncedRehearsals] = useState<Record<string, boolean>>({});
 
   // Memoize project lookup to avoid repeated searches (MUST be before early returns!)

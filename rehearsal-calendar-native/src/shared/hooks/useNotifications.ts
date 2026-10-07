@@ -13,13 +13,14 @@ import { emitDataChanged } from '../utils/dataChanged';
 import { hapticMedium } from '../utils/haptics';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnread } from '../../contexts/UnreadContext';
+import type { AppNavigation } from '../../navigation';
 
 /**
  * Hook for managing push notifications
  * Should be called once in the root component (App.tsx)
  */
 export function useNotifications() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<AppNavigation<'MainTabs'>>();
   const { user } = useAuth();
   const { refresh, markRead } = useUnread();
   const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
@@ -157,7 +158,7 @@ export function useNotifications() {
    *
    */
   const openProject = (projectId: string | number) => {
-    navigation.navigate('MainTabs' as any, {
+    navigation.navigate('MainTabs', {
       screen: 'Projects',
       params: {
         screen: 'ProjectDetail',
@@ -171,15 +172,15 @@ export function useNotifications() {
    *
    * A notification names one rehearsal, so landing on the project list — or
    * even the project — makes the reader hunt for what they were just told
-   * about. Its details are a modal on the calendar rather than a route, so the
-   * id goes across as a param and CalendarScreen opens it once its data is in.
+   * about. Its details are a route on the app stack, loaded by id, so the
+   * sheet opens over whatever screen is up.
    */
   const openRehearsal = (rehearsalId: string | number) => {
-    navigation.navigate('RehearsalDetails' as any, { rehearsalId: String(rehearsalId) });
+    navigation.navigate('RehearsalDetails', { rehearsalId: String(rehearsalId) });
   };
 
   const openProjectsList = () => {
-    navigation.navigate('MainTabs' as any, { screen: 'Projects' });
+    navigation.navigate('MainTabs', { screen: 'Projects' });
   };
 
   const handleNotificationNavigation = (data: any) => {

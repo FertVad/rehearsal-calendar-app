@@ -1,6 +1,6 @@
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import { Platform, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { NavigationContainer, useNavigation, useNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,7 +27,7 @@ import {
   PlannerNavigator,
   ProfileNavigator,
 } from './stacks';
-import type { TabParamList, AppStackParamList } from './types';
+import type { TabParamList, AppStackParamList, AppNavigation } from './types';
 
 // Re-export types for consumers
 export type {
@@ -38,6 +38,11 @@ export type {
   ProfileStackParamList,
   TabParamList,
   AppStackParamList,
+  CalendarScreenNavigation,
+  SmartPlannerNavigation,
+  ProjectsScreenNavigation,
+  ProjectDetailNavigation,
+  AppNavigation,
 } from './types';
 
 // Context for ActionSheet state
@@ -60,7 +65,7 @@ const localhostPrefix = Platform.OS === 'android'
   ? 'http://10.0.2.2:3001'
   : 'http://localhost:3001';
 
-const linking: any = {
+const linking: LinkingOptions<AppStackParamList> = {
   prefixes: [
     prefix,
     'rehearsalapp://',
@@ -135,7 +140,7 @@ const tabButtonStyles = StyleSheet.create({
 
 // Wrapper component to handle ActionSheet navigation
 function ActionSheetWrapper() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<AppNavigation<'MainTabs'>>();
   const { showActionSheet, setShowActionSheet } = useActionSheet();
   const { language } = useI18n();
 
@@ -295,7 +300,7 @@ function AppNavigator() {
         />
         <AppStack.Screen
           name="MarkBusy"
-          component={AvailabilityScreen as any}
+          component={AvailabilityScreen}
           options={{ presentation: 'modal' }}
         />
         <AppStack.Screen
@@ -342,7 +347,7 @@ function AppNavigator() {
 export default function Navigation() {
   const { user, isAuthenticated, loading } = useAuth();
   const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
-  const navigationRef = React.useRef<any>(null);
+  const navigationRef = useNavigationContainerRef<AppStackParamList>();
 
   const shouldShowOnboarding = isAuthenticated && !user?.onboardingCompleted;
 
@@ -374,7 +379,7 @@ export default function Navigation() {
     return () => {
       subscription.remove();
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigationRef]);
 
   // Navigate to invite when user logs in
   useEffect(() => {
@@ -384,7 +389,7 @@ export default function Navigation() {
         setPendingInviteCode(null);
       }, 500);
     }
-  }, [isAuthenticated, pendingInviteCode]);
+  }, [isAuthenticated, pendingInviteCode, navigationRef]);
 
   if (loading) {
     return (

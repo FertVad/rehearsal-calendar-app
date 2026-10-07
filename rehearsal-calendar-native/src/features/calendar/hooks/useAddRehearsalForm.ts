@@ -260,9 +260,10 @@ export function useAddRehearsalForm({
     setShowProjectPicker(false);
 
     // Anyone can create a project: the paid tier was taken out of the app for
-  // the App Store release — see docs/app-store-release.md
-    // @ts-ignore - Navigate to Projects tab -> CreateProject screen
-    navigation.navigate('Projects', { screen: 'CreateProject' });
+    // the App Store release — see docs/app-store-release.md. CreateProject is
+    // on the app stack, beside this form; the Projects tab has no such screen,
+    // and asking it for one did nothing (review R9-03).
+    navigation.navigate('CreateProject');
   };
 
   return {

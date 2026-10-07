@@ -18,7 +18,7 @@ import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { hapticMedium, hapticSuccess } from '../../../shared/utils/haptics';
-import { AppStackParamList } from '../../../navigation';
+import type { AppStackParamList, AppNavigation } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
@@ -40,7 +40,7 @@ type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
 
 export default function AddRehearsalScreen() {
   const route = useRoute<RouteType>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<AppNavigation<'AddRehearsal'>>();
   const { projects, selectedProject, setSelectedProject } = useProjects();
   const { t, language } = useI18n();
 

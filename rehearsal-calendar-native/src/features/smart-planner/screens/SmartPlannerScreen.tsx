@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useFocusEffect } from '@react-navigation/native';
-import type { PlannerStackParamList } from '../../../navigation';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { PlannerStackParamList, SmartPlannerNavigation } from '../../../navigation';
 import { Colors } from '../../../shared/constants/colors';
 import type { SlotCategory } from '../types';
 import { useSmartPlanner } from '../hooks/useSmartPlanner';
@@ -27,6 +27,7 @@ import { smartPlannerScreenStyles as styles } from '../styles';
 type Props = NativeStackScreenProps<PlannerStackParamList, 'SmartPlanner'>;
 
 export default function SmartPlannerScreen({ route, navigation }: Props) {
+  const appNavigation = useNavigation<SmartPlannerNavigation>();
   const { projectId } = route.params;
   const { projects } = useProjects();
   const { t, language } = useI18n();
@@ -394,9 +395,8 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
                 date={date}
                 slots={slots}
                 onCreateRehearsal={(slot) => {
-                  // Navigate directly to AddRehearsal (now at AppStack level)
-                  // @ts-ignore - Navigate to parent app navigator
-                  navigation.navigate('AddRehearsal', {
+                  // AddRehearsal is on the app stack, above this tab.
+                  appNavigation.navigate('AddRehearsal', {
                     projectId,
                     prefilledDate: slot.date,
                     prefilledTime: slot.startTime,
