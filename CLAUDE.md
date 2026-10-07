@@ -879,6 +879,21 @@ Every turn of the wheel used to reach the owner, so Cancel was Done (HC02).
 Do not put a `DateTimePicker` in a screen directly — there is one picker, and
 the rehearsal form and the availability editor both use it.
 
+### 11. Navigation is typed; a route is never cast
+❌ **Problem**: a button navigates to a route that is not there and nothing
+happens — no error, no screen
+✅ **Fix**: `useNavigation<…>()` with a type from `navigation/types.ts`, never
+`<any>`, `as any` or a `@ts-ignore` above a `navigate()`
+
+The nesting — app stack, tabs, a stack per tab — is written down there with
+`NavigatorScreenParams`, and screens that leave their own stack have composite
+types (`CalendarScreenNavigation`, `ProjectDetailNavigation`, `AppNavigation`).
+"Create project" in the rehearsal form asked the Projects tab for a screen it
+does not have, behind a `useNavigation<any>()` (R9-03). `typedNavigation.test.ts`
+refuses any cast in navigation; `registeredRoutes.test.tsx` requires each
+navigator to register exactly what its param list declares — add a screen to
+both or the tests fail.
+
 ## Environment Setup
 
 ### Required Environment Variables
