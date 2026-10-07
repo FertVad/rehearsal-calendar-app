@@ -1,0 +1,16 @@
+# Signing in lands on the calendar with the account's own rehearsals —
+# the ones the seed put on the local server, so this also shows the app is
+# talking to it.
+appId: ${APP_ID}
+name: Sign in
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+# A card is one accessibility element, labelled with all of its text — so its
+# contents are matched as part of the label.
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*Hamlet.*"
+    timeout: 30000
+- takeScreenshot: 01-calendar-after-sign-in

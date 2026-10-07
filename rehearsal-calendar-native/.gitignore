@@ -67,3 +67,7 @@ server/uploads/
 
 # Cache
 .cache/
+
+# e2e: logs, reports and screenshots, and the simulator build
+e2e/out/
+e2e/.build/

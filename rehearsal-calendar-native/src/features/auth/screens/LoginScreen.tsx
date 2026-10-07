@@ -136,6 +136,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t.auth.email}</Text>
               <TextInput
+                testID="login-email"
                 style={styles.input}
                 placeholder={t.auth.emailPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
@@ -150,6 +151,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t.auth.password}</Text>
               <TextInput
+                testID="login-password"
                 style={styles.input}
                 placeholder={t.auth.passwordPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
@@ -167,6 +169,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             )}
 
             <GlassButton
+              testID="login-submit"
               title={t.auth.loginButton}
               onPress={handleLogin}
               variant="purple"
