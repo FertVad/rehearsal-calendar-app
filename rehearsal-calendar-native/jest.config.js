@@ -14,7 +14,7 @@ module.exports = {
         }],
       },
       transformIgnorePatterns: [
-        'node_modules/(?!(react-native|@react-native|expo|@expo|expo-clipboard|react-native-calendars)/)',
+        'node_modules/(?!(react-native|@react-native|expo|@expo|expo-clipboard|react-native-calendars|@react-navigation/routers)/)',
       ],
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
       moduleNameMapper: {
@@ -32,6 +32,10 @@ module.exports = {
         '^expo-device$': '<rootDir>/src/__tests__/__mocks__/expo-device.js',
         '^@react-navigation/native$': '<rootDir>/src/__tests__/__mocks__/react-navigation-native.js',
         '^@react-native-async-storage/async-storage$': '<rootDir>/src/__tests__/__mocks__/async-storage.js',
+        // The real stack router, for checking a navigation is handled. Its built
+        // copy is an ES module, which the server's --experimental-vm-modules run
+        // refuses to require; the TypeScript source it ships compiles like ours.
+        '^@react-navigation/routers$': '<rootDir>/node_modules/@react-navigation/routers/src/index.tsx',
       },
       setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
       collectCoverageFrom: [

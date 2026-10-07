@@ -19,5 +19,6 @@ module.exports = {
   })),
   useFocusEffect: jest.fn((callback) => callback()),
   useIsFocused: jest.fn(() => true),
+  useNavigationContainerRef: jest.fn(() => ({ current: null })),
   NavigationContainer: ({ children }) => children,
 };

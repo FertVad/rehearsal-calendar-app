@@ -40,3 +40,18 @@ src/features/calendar/hooks/useAddRehearsalForm.ts(266,25): error TS2345: Argume
   Type '["Projects", { screen: "CreateProject"; }]' is not assignable to type '[screen: "AddRehearsal", params: { projectId?: string | undefined; rehearsalId?: string | undefined; prefilledDate?: string | undefined; prefilledTime?: string | undefined; prefilledEndTime?: string | undefined; prefilledMemberIds?: string[] | undefined; }, options?: { ...; } | undefined]'.
     Type at position 0 in source is not compatible with type at position 0 in target.
       Type '"Projects"' is not assignable to type '"AddRehearsal"'.
+
+# registeredRoutes.test.tsx at a684f6b: the navigators register what the param lists declare (the screen existed), and the form's action through React Navigation's StackRouter is unhandled — null.
+  ✓ every navigator registers exactly the screens its param list declares (6 ms)
+  ✕ "Create project" in the rehearsal form opens a screen the app stack has (R9-03) (4 ms)
+    Received: null
+Tests:       1 failed, 1 passed, 2 total
+
+# The same test on the fixed code with the CreateProject screen taken out of the app stack (a declared, unregistered route): both fail.
+  ✕ every navigator registers exactly the screens its param list declares (10 ms)
+  ✕ "Create project" in the rehearsal form opens a screen the app stack has (R9-03) (4 ms)
+    - Expected  - 1
+    + Received  + 1
+    -   "AddRehearsal, CreateProject, JoinProject, MainTabs, MarkBusy, Notifications, RehearsalDetails",
+    +   "AddRehearsal, JoinProject, MainTabs, MarkBusy, Notifications, RehearsalDetails",
+Tests:       2 failed, 2 total
