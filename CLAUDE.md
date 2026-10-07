@@ -57,7 +57,7 @@ cd rehearsal-calendar-native/server && npm run dev
 cd rehearsal-calendar-native && npm start
 
 # Terminal 3: iOS Simulator (optional)
-# Open ios/rehearsalcalendarnative.xcworkspace in Xcode and press ⌘R
+# Open ios/Rehearsly.xcworkspace in Xcode and press ⌘R
 ```
 
 ## Architecture Overview
@@ -759,7 +759,7 @@ Server must listen on `0.0.0.0:3001` (not `127.0.0.1`) for physical device acces
 
 ### 5. Xcode Build Configuration
 Ensure Xcode scheme uses **Debug** build configuration (not Release):
-- File: `ios/rehearsalcalendarnative.xcodeproj/xcshareddata/xcschemes/rehearsalcalendarnative.xcscheme`
+- File: `ios/Rehearsly.xcodeproj/xcshareddata/xcschemes/Rehearsly.xcscheme`
 - Check: `LaunchAction` should have `buildConfiguration = "Debug"`
 - Symptom if wrong: `__DEV__` returns false, app connects to production server
 
@@ -1014,6 +1014,23 @@ cd rehearsal-calendar-native/server
 npm test                    # Run all tests
 npm run test:coverage       # With coverage
 ```
+
+### End-to-End (Maestro)
+```bash
+cd rehearsal-calendar-native
+npm run e2e                 # flows in e2e/flows on the "Rehearsly E2E" simulator
+npm run e2e:up              # stay up for Maestro MCP / Studio until Ctrl-C
+```
+Everything is local and thrown away: a PostgreSQL container, the server with an
+environment built from nothing, its own Metro, a Debug build, a seed made
+through the API. See [e2e.md](rehearsal-calendar-native/docs/e2e.md).
+
+**Setting `EXPO_PUBLIC_API_URL` does not decide where a dev build talks.** In
+development Expo bundles the project's `.env` files and lets them win over the
+environment, and this checkout's `.env` names production. The runner keeps
+`.env*` out of its bundle (`REHEARSLY_E2E=1` in `metro.config.js`), refuses a
+bundle carrying any other address, and stops everything if the app reports
+one. Never point the simulator app at a Metro the runner did not start.
 
 ## Documentation
 
