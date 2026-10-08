@@ -1,0 +1,48 @@
+# A rehearsal planned in the planner is saved with the people the planner
+# planned it for, not the whole project (DP02, cause fix 7).
+appId: ${APP_ID}
+name: From the planner to a rehearsal
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- tapOn: "Planner, tab.*"
+- tapOn:
+    id: planner-project
+- tapOn: "Hamlet"
+- tapOn: "Expand.*"
+# The director is selected to begin with; add Hamlet: two of four.
+- tapOn: "Hamlet Dane"
+- assertVisible: "2 of 4 selected"
+# The first slot offered, whichever day it falls on — it sits under the tab
+# bar until the list is scrolled.
+- scroll
+- tapOn:
+    text: "\\+ Add"
+    index: 0
+- extendedWaitUntil:
+    visible: "Selected: 2 of 4"
+    timeout: 15000
+- tapOn: "e.g. Act II run-through"
+- inputText: "Duel scene"
+- tapOn:
+    id: rehearsal-submit
+- extendedWaitUntil:
+    visible: "Rehearsal created"
+    timeout: 15000
+- tapOn: "OK"
+- tapOn: "Calendar, tab.*"
+- scrollUntilVisible:
+    element: ".*Duel scene.*"
+    direction: DOWN
+- tapOn: ".*Duel scene.*"
+- extendedWaitUntil:
+    visible: "Participants"
+    timeout: 15000
+- assertVisible: "0/2"
+- assertVisible: "Anna Director.*"
+- assertVisible: "Hamlet Dane"
+- assertNotVisible: "Ophelia Bright"
+- assertNotVisible: "Horatio Friend"
+- takeScreenshot: 06-rehearsal-from-planner

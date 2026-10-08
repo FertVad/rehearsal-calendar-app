@@ -1,0 +1,24 @@
+# The rehearsal form's project picker offers "Create New Project", and it
+# opens the project form (review R9-03: it asked the Projects tab for a screen
+# that tab does not have, and nothing happened).
+appId: ${APP_ID}
+name: Create a project from the rehearsal form
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- tapOn:
+    id: rehearsal-project
+- tapOn: ".*Create New Project"
+- extendedWaitUntil:
+    visible: "Project Name"
+    timeout: 10000
+- assertVisible: "Create Project"
+- takeScreenshot: 02-project-form-from-rehearsal-form

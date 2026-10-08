@@ -1,0 +1,34 @@
+# A cast member marks a rehearsal seen, and the director's count moves: the
+# answer reaches the server and is counted against the rehearsal's own roster
+# of four (CLAUDE.md, "Seen System").
+appId: ${APP_ID}
+name: Mark a rehearsal seen
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${HAMLET_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*"
+    timeout: 30000
+- tapOn:
+    id: seen-toggle
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      index: 0
+      selected: true
+    timeout: 10000
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*"
+    timeout: 30000
+- assertVisible:
+    id: seen-toggle
+    index: 0
+    text: "1/4"
+- takeScreenshot: 04-director-sees-one-of-four

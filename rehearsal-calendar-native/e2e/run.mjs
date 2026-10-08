@@ -243,6 +243,15 @@ function showSimulator(udid) {
   execFileSync('open', ['-a', 'Simulator', '--args', '-CurrentDeviceUDID', udid]);
 }
 
+/**
+ * The keyboard's first-use tip ("Speed up your typing by sliding your finger")
+ * covers the lower half of the screen the first time a field is focused.
+ */
+function quietKeyboard(udid) {
+  simctl('spawn', udid, 'defaults', 'write', 'com.apple.keyboard.preferences',
+    'DidShowContinuousPathIntroduction', '-bool', 'true');
+}
+
 /** The e2e simulator, created on the newest iOS runtime the first time. */
 function simulator() {
   const { devices } = JSON.parse(simctl('list', 'devices', '--json'));
@@ -339,6 +348,7 @@ async function main() {
     simctl('shutdown', udid);
     simctl('bootstatus', udid, '-b');
   }
+  quietKeyboard(udid);
   showSimulator(udid);
 
   if (forceBuild || !fs.existsSync(APP)) {
