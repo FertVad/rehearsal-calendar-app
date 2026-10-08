@@ -15,7 +15,7 @@ and on to the next, without anyone relaying messages between them.
 | `STATUS.md` | What is happening now: the task and phase, a limit being waited out, a pause. |
 | `reports/T-001-<name>.md` | One per task: its timeline and, when done, the developer's report. |
 | `reviews/T-001-r1.md` | Astra's answer for each round. |
-| `DECISIONS.md` | For a paused task: `T-001: продолжить` or `T-001: пропустить`. |
+| `DECISIONS.md` | For a paused task: `T-001: продолжить` (three more attempts / two more rounds) or `T-001: пропустить` (its commits leave `auto/main` and are kept on `auto/skipped/T-001`). |
 | `STOP` | While it exists, nothing new starts. |
 
 ## What it waits out, and what it stops for

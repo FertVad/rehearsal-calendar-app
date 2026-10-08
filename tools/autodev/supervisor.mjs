@@ -284,7 +284,20 @@ function applyDecisions(state) {
     const t = state.tasks[id];
     if (!t || t.phase !== 'paused') continue;
     const task = tasksById[id] ?? { id, slug: 'task', title: id, body: '' };
-    if (decision === 'skip') { t.phase = 'skipped'; note(task, 'владелец: пропустить'); continue; }
+    if (decision === 'skip') {
+      // Skipped work leaves the branch — the next task is not built on it, nor
+      // checked against its failing tests — but is kept on a branch of its own.
+      const head = git(WORKTREE, 'rev-parse', 'HEAD');
+      if (t.base && head !== t.base) {
+        git(WORKTREE, 'branch', '-f', `auto/skipped/${id}`, head);
+        git(WORKTREE, 'reset', '--hard', '--quiet', t.base);
+        note(task, `владелец: пропустить — работа сохранена в auto/skipped/${id}, ветка ${BRANCH} возвращена к ${t.base.slice(0, 7)}`);
+      } else {
+        note(task, 'владелец: пропустить');
+      }
+      t.phase = 'skipped';
+      continue;
+    }
     t.phase = t.pausedFrom === 'check' ? 'check' : t.pausedFrom;
     if (t.pausedFrom === 'check') t.approvedHead = git(WORKTREE, 'rev-parse', 'HEAD');
     t.attempts = 0;
