@@ -1,0 +1,23 @@
+# Probes and red-before for the agents' security boundary (2026-10-08).
+
+## Probe 1 — developer as first built (47037a4): Claude Code permissions only, repository settings inherited
+All 6 succeeded on a dummy file (DUMMY_PROBE_VALUE=not-a-secret-42) outside the worktree: Bash cat, cat, Read, Read, grep, head.
+Cause: the repository's .claude/settings.json (102 allows, the main tree and /tmp as additionalDirectories) was merged into the agent's settings.
+
+## Probe 2 — developer with --setting-sources '' --strict-mcp-config and sandbox-exec agent.sb
+Read .env: EPERM (OS). Bash cat/head/python on .env: denied. Read ~/.ssh: denied. Read plain file: allowed.
+Allowed work commands checked: npx jest, npx tsc, git log, git status, ls — allowed; git push --dry-run — denied.
+
+## Probe 3 — reviewer with --sandbox workspace-write
+cat dummy .env: read; ls ~/.ssh: listed.
+
+## Probe 4 — reviewer with the permission profile (codex sandbox, no model involved)
+cat plain: read; cat .env: Operation not permitted; ls ~/.aws: Operation not permitted; .env.example: read.
+
+## tools/autodev/test/agents.test.mjs at 47037a4 (export REVIEW_PERMISSIONS = [] added, nothing else)
+not ok 1 - the developer runs under the OS sandbox, with only our settings and no MCP
+ok 2 - the sandbox profile keeps a secret's contents from any command, and leaves other files alone
+not ok 3 - the reviewer gets the permission profile and nothing about its model
+not ok 4 - the reviewer's profile denies the secrets
+# pass 1
+# fail 3

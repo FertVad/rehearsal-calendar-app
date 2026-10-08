@@ -49,13 +49,21 @@ function runJsonLines(command, args, { cwd, env, log, timeoutMs }) {
  * One developer turn. A new session is started with `sessionId`, an existing
  * one continued with `resume`.
  */
-export async function runClaude({ bin, cwd, prompt, sessionId, resume, settingsFile, systemPrompt, log, timeoutMs, env }) {
+export async function runClaude({ bin, cwd, prompt, sessionId, resume, settingsFile, sandboxProfile, systemPrompt, log, timeoutMs, env }) {
+  // Only our settings: the repository's .claude/settings.json (102 allows and
+  // the main tree as a working directory) and the user's own would otherwise
+  // be merged in, and the whitelist would mean little. No MCP servers either —
+  // the user's include mail and documents.
   const args = ['-p', prompt, '--output-format', 'stream-json', '--verbose',
-    '--permission-mode', 'dontAsk', '--settings', settingsFile];
+    '--permission-mode', 'dontAsk', '--setting-sources', '', '--strict-mcp-config', '--settings', settingsFile];
   if (resume) args.push('--resume', resume);
   else if (sessionId) args.push('--session-id', sessionId);
   if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
-  const run = await runJsonLines(bin, args, { cwd, env, log, timeoutMs });
+  // And under the OS sandbox (agent.sb), so no command it runs can read a
+  // secret's contents, whatever Claude Code's rules allow.
+  const run = sandboxProfile
+    ? await runJsonLines('/usr/bin/sandbox-exec', ['-f', sandboxProfile, '-D', `HOME=${env.HOME}`, bin, ...args], { cwd, env, log, timeoutMs })
+    : await runJsonLines(bin, args, { cwd, env, log, timeoutMs });
   const result = [...run.events].reverse().find((event) => event.type === 'result');
   const init = run.events.find((event) => event.type === 'system' && event.session_id);
   const limit = limitFromClaudeEvents(run.events.length ? run.events : [{ type: 'result', is_error: true, result: run.stderr }]);
@@ -70,14 +78,32 @@ export async function runClaude({ bin, cwd, prompt, sessionId, resume, settingsF
 }
 
 /**
+ * What the reviewer's commands may touch: read anything, write the review tree
+ * and /private/tmp, and never the contents of a secret. A permission profile,
+ * not --sandbox workspace-write: that one reads everything, and a probe read a
+ * dummy .env and listed ~/.ssh through it. The profile is enforced by the
+ * sandbox itself (`codex sandbox` → "Operation not permitted"), not by the
+ * model choosing to stay away. Sandbox only — no model or reasoning settings.
+ */
+export const REVIEW_PERMISSIONS = [
+  '-c', 'default_permissions="autodev_review"',
+  '-c', `permissions.autodev_review.filesystem={${[
+    '"/"="read"', '":project_roots"="write"', '"/private/tmp"="write"',
+    '"~/**/.env"="deny"', '"~/**/.env.local"="deny"', '"~/**/.env.production"="deny"',
+    '"~/.ssh"="deny"', '"~/.aws"="deny"', '"~/.appstoreconnect"="deny"', '"~/.config/gh"="deny"',
+    '"~/.netrc"="deny"', '"~/.npmrc"="deny"',
+  ].join(', ')}}`,
+];
+
+/**
  * One reviewer turn in `cwd` (the review worktree). A new thread, or `resume`
  * to continue one. The last message is also written to `lastMessageFile`.
  */
-export async function runCodex({ bin, cwd, prompt, resume, sandbox = 'workspace-write', addDirs = [], lastMessageFile, log, timeoutMs, env }) {
-  const common = ['--json', '--output-last-message', lastMessageFile];
+export async function runCodex({ bin, cwd, prompt, resume, lastMessageFile, log, timeoutMs, env }) {
+  const common = [...REVIEW_PERMISSIONS, '--json', '--output-last-message', lastMessageFile];
   const args = resume
     ? ['exec', 'resume', resume, prompt, ...common]
-    : ['exec', '--sandbox', sandbox, ...addDirs.flatMap((dir) => ['--add-dir', dir]), ...common, prompt];
+    : ['exec', ...common, prompt];
   const run = await runJsonLines(bin, args, { cwd, env, log, timeoutMs });
   const started = run.events.find((event) => event.type === 'thread.started');
   const failure = [...run.events].reverse().find((event) => event.type === 'turn.failed' || event.type === 'error');

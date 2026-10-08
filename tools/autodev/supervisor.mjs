@@ -166,6 +166,7 @@ async function develop(state, task, t) {
     sessionId: fresh ? t.claudeSession : undefined,
     resume: fresh ? undefined : t.claudeSession,
     settingsFile: path.join(HERE, 'claude-settings.json'),
+    sandboxProfile: path.join(HERE, 'agent.sb'),
     log: path.join(LOGS, `${task.id}-claude.jsonl`),
     timeoutMs: 3 * 60 * 60 * 1000,
   });
@@ -218,7 +219,6 @@ async function review(state, task, t) {
     bin: CODEX, cwd: REVIEW_TREE, prompt, env: ENV, lastMessageFile,
     // Round two continues the reviewer's own thread, so it remembers round one.
     resume: continuing || round > 1 ? t.codexThread : undefined,
-    sandbox: 'workspace-write', addDirs: ['/private/tmp'],
     log: path.join(LOGS, `${task.id}-codex.jsonl`),
     timeoutMs: 3 * 60 * 60 * 1000,
   });

@@ -37,7 +37,10 @@
       "Bash(ls:*)",
       "Bash(mkdir:*)",
       "Bash(shasum:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(cd:*)",
+      "Bash(npm --prefix rehearsal-calendar-native:*)",
+      "Bash(/Users/vadimfertik/.maestro/bin/maestro:*)"
     ],
     "deny": [
       "Read(**/.env)",

@@ -1,0 +1,20 @@
+;; The developer agent, and everything it starts, cannot read the contents of
+;; secrets — whatever command it tries. Claude Code's own permission rules are
+;; not enough on their own: a probe read a dummy .env outside the worktree six
+;; ways (cat, head, grep, Read) because the repository's .claude/settings.json
+;; made the main tree a working directory. Applied with
+;;   sandbox-exec -f agent.sb -D HOME=$HOME claude …
+;; Only file contents are denied (file-read-data): checking that a file exists
+;; still works, so tools that look for a missing .env go on as before.
+(version 1)
+(allow default)
+(deny file-read-data
+  (regex #"/\.env$")
+  (regex #"/\.env\.(local|development|production|test|staging)(\.local)?$")
+  (subpath (string-append (param "HOME") "/.ssh"))
+  (subpath (string-append (param "HOME") "/.aws"))
+  (subpath (string-append (param "HOME") "/.appstoreconnect"))
+  (subpath (string-append (param "HOME") "/.config/gh"))
+  (literal (string-append (param "HOME") "/.codex/auth.json"))
+  (literal (string-append (param "HOME") "/.netrc"))
+  (literal (string-append (param "HOME") "/.npmrc")))
