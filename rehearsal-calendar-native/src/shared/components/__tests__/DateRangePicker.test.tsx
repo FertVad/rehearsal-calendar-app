@@ -237,7 +237,8 @@ describe('DateRangePicker Component', () => {
 
   describe('Min Date Constraint', () => {
     it('should pass minDate to Calendar component', () => {
-      const minDate = new Date('2025-12-20');
+      // The 20th here, not midnight UTC — that is the 19th west of UTC.
+      const minDate = new Date(2025, 11, 20);
 
       const { UNSAFE_getByType } = render(
         <DateRangePicker

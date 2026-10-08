@@ -25,6 +25,7 @@ import { getDateLocale } from '../../../shared/utils/locale';
 import { ActorSelector } from '../components/ActorSelector';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
+import { ModalSheet } from '../../../shared/components/ModalSheet';
 import { useParticipantSeed } from '../hooks/useParticipantSeed';
 import { addRehearsalScreenStyles as styles } from '../styles';
 import {
@@ -157,6 +158,7 @@ export default function AddRehearsalScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.rehearsals.project}</Text>
             <TouchableOpacity
+              testID="rehearsal-project"
               style={styles.pickerButton}
               onPress={() => form.setShowProjectPicker(true)}
               // A rehearsal that exists stays in its project (review R9-01).
@@ -274,6 +276,7 @@ export default function AddRehearsalScreen() {
 
           {/* Submit Button */}
           <TouchableOpacity
+            testID="rehearsal-submit"
             style={[styles.submitButton, (loading || form.loadingRehearsal) && styles.submitButtonDisabled]}
             onPress={() => {
               hapticSuccess();
@@ -340,15 +343,11 @@ export default function AddRehearsalScreen() {
         animationType="slide"
         onRequestClose={() => form.setShowProjectPicker(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => form.setShowProjectPicker(false)}
-        >
+        <ModalSheet overlayStyle={styles.modalOverlay} onClose={() => form.setShowProjectPicker(false)}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.rehearsals.selectProject}</Text>
-              <TouchableOpacity onPress={() => form.setShowProjectPicker(false)}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => form.setShowProjectPicker(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -408,7 +407,7 @@ export default function AddRehearsalScreen() {
               <Text style={styles.createProjectButtonText}>{t.rehearsals.createNewProject}</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </ModalSheet>
       </Modal>
     </SafeAreaView>
   );

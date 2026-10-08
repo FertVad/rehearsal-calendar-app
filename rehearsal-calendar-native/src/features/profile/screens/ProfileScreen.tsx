@@ -366,7 +366,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.timezoneModalTitle}</Text>
-              <TouchableOpacity onPress={() => { hapticLight(); setTimezoneModalVisible(false); }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setTimezoneModalVisible(false); }}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -411,7 +411,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.language}</Text>
-              <TouchableOpacity onPress={() => { hapticLight(); setLanguageModalVisible(false); }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setLanguageModalVisible(false); }}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -457,7 +457,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.weekStart}</Text>
-              <TouchableOpacity onPress={() => { hapticLight(); setWeekStartModalVisible(false); }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setWeekStartModalVisible(false); }}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -504,6 +504,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.deleteAccountConfirm}</Text>
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={t.common.close}
                 onPress={() => {
                   hapticLight();
                   setDeleteAccountModalVisible(false);

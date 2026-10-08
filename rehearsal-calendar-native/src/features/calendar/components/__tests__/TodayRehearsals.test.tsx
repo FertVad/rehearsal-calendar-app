@@ -37,6 +37,11 @@ jest.mock('../../../../contexts/I18nContext', () => ({
     t: {
       common: {
         today: 'Today',
+        delete: 'Delete',
+        edit: 'Edit',
+      },
+      rehearsals: {
+        markSeen: 'Mark as seen',
       },
       calendar: {
         tomorrow: 'Tomorrow',

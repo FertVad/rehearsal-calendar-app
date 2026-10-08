@@ -174,6 +174,8 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     <View style={styles.headerContainer}>
       <View style={styles.header}>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t.common.back}
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
@@ -189,6 +191,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const renderProjectSelector = () => (
     <View style={styles.projectSelectorContainer}>
       <TouchableOpacity
+        testID="planner-project"
         style={styles.projectSelectorButton}
         onPress={() => setIsProjectSelectorExpanded(!isProjectSelectorExpanded)}
       >

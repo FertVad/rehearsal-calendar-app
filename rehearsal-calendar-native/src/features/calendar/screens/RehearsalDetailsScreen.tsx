@@ -208,7 +208,7 @@ export default function RehearsalDetailsScreen() {
       <View style={styles.fill}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t.calendar.rehearsal}</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color={Colors.text.secondary} />
           </TouchableOpacity>
         </View>
@@ -253,7 +253,7 @@ export default function RehearsalDetailsScreen() {
             <Text style={styles.headerTitle} numberOfLines={2}>
               {rehearsal.title || t.calendar.rehearsal}
             </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={Colors.text.secondary} />
             </TouchableOpacity>
           </View>

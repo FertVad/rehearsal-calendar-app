@@ -117,6 +117,8 @@ export default function RehearsalCard({
                 <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
               </View>
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={t.common.delete}
                 onPress={(e) => {
                   e?.stopPropagation();
                   onDelete(rehearsal.id);
@@ -126,6 +128,8 @@ export default function RehearsalCard({
                 <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
               </TouchableOpacity>
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={t.common.edit}
                 onPress={(e) => {
                   e?.stopPropagation();
                   navigation.navigate('AddRehearsal', {
@@ -144,6 +148,12 @@ export default function RehearsalCard({
 
       <View style={styles.seenSection}>
         <Pressable
+          testID="seen-toggle"
+          // Only an icon and a count: VoiceOver read nothing here.
+          accessibilityRole="button"
+          accessibilityLabel={t.rehearsals.markSeen}
+          accessibilityState={{ selected: currentResponse === 'yes', disabled: responding }}
+          accessibilityValue={seenLabel ? { text: seenLabel } : undefined}
           style={styles.seenButton}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

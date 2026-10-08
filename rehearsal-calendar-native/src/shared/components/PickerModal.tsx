@@ -11,6 +11,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { usePickerDraft } from '../hooks/usePickerDraft';
+import { ModalSheet } from './ModalSheet';
 
 interface PickerModalProps {
   visible: boolean;
@@ -60,44 +61,35 @@ export const PickerModal: React.FC<PickerModalProps> = ({
         animationType="slide"
         onRequestClose={picker.cancel}
       >
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={picker.cancel}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalContent}>
-              {/* Header with Cancel and Done buttons */}
-              <View style={styles.header}>
-                <TouchableOpacity onPress={picker.cancel}>
-                  <Text style={styles.cancelButton}>{t.common.cancel}</Text>
-                </TouchableOpacity>
-                <Text style={styles.title}>{title}</Text>
-                <TouchableOpacity onPress={picker.confirm}>
-                  <Text style={styles.doneButton}>{t.common.done}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Picker */}
-              <View style={styles.pickerContainer}>
-                <DateTimePicker
-                  value={picker.draft}
-                  mode={mode}
-                  display="spinner"
-                  onChange={picker.change}
-                  is24Hour={mode === 'time'}
-                  locale={language}
-                  themeVariant="dark"
-                  textColor={Colors.text.primary}
-                  style={styles.picker}
-                />
-              </View>
+        <ModalSheet overlayStyle={styles.overlay} onClose={picker.cancel}>
+          <View style={styles.modalContent}>
+            {/* Header with Cancel and Done buttons */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={picker.cancel}>
+                <Text style={styles.cancelButton}>{t.common.cancel}</Text>
+              </TouchableOpacity>
+              <Text style={styles.title}>{title}</Text>
+              <TouchableOpacity onPress={picker.confirm}>
+                <Text style={styles.doneButton}>{t.common.done}</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+
+            {/* Picker */}
+            <View style={styles.pickerContainer}>
+              <DateTimePicker
+                value={picker.draft}
+                mode={mode}
+                display="spinner"
+                onChange={picker.change}
+                is24Hour={mode === 'time'}
+                locale={language}
+                themeVariant="dark"
+                textColor={Colors.text.primary}
+                style={styles.picker}
+              />
+            </View>
+          </View>
+        </ModalSheet>
       </Modal>
     );
   }

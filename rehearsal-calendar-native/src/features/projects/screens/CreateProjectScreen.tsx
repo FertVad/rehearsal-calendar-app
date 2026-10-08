@@ -22,6 +22,7 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { createProjectScreenStyles as styles } from '../styles';
+import { ModalSheet } from '../../../shared/components/ModalSheet';
 
 type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
 
@@ -79,14 +80,14 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>{t.projects.createProject}</Text>
           <View style={styles.headerRight} />
         </View>
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Project Name */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.projects.projectName}</Text>
@@ -166,15 +167,11 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
         animationType="slide"
         onRequestClose={() => setTimezonePickerVisible(false)}
       >
-        <TouchableOpacity
-          style={styles.timezoneModalOverlay}
-          activeOpacity={1}
-          onPress={() => setTimezonePickerVisible(false)}
-        >
+        <ModalSheet overlayStyle={styles.timezoneModalOverlay} onClose={() => setTimezonePickerVisible(false)}>
           <View style={styles.timezoneModalContent}>
             <View style={styles.timezoneModalHeader}>
               <Text style={styles.timezoneModalTitle}>{t.projects.selectTimezone}</Text>
-              <TouchableOpacity onPress={() => setTimezonePickerVisible(false)}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => setTimezonePickerVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -208,7 +205,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
               style={styles.timezoneList}
             />
           </View>
-        </TouchableOpacity>
+        </ModalSheet>
       </Modal>
     </SafeAreaView>
   );

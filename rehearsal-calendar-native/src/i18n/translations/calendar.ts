@@ -70,6 +70,8 @@ export interface RehearsalsTranslations {
   participantsLeft: string;
   participantsLoading: string;
   seenError: string;
+  /** The eye on a rehearsal, for VoiceOver: it is only an icon. */
+  markSeen: string;
   noProjects: string;
   noAdminProjects: string;
   createNewProject: string;
@@ -166,6 +168,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     participantsLeft: 'Кто-то из выбранных участников больше не в проекте. Откройте форму заново и сохраните ещё раз.',
     participantsLoading: 'Участники проекта ещё загружаются. Подождите секунду и сохраните снова.',
     seenError: 'Не удалось отметить просмотр',
+    markSeen: 'Отметить просмотренным',
     noProjects: 'Нет проектов',
     noAdminProjects: 'Нет проектов, где вы являетесь администратором',
     createNewProject: 'Создать новый проект',
@@ -262,6 +265,7 @@ needProject: 'Rehearsals show up once you are in a project',
     participantsLeft: 'Someone you selected is no longer in the project. Open the form again and save once more.',
     participantsLoading: 'The project members are still loading. Wait a moment and save again.',
     seenError: 'Could not mark it as seen',
+    markSeen: 'Mark as seen',
     noProjects: 'No projects',
     noAdminProjects: 'No projects where you are an administrator',
     createNewProject: 'Create New Project',
@@ -358,6 +362,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     participantsLeft: 'Alguien que seleccionaste ya no está en el proyecto. Abre el formulario de nuevo y guarda otra vez.',
     participantsLoading: 'Los miembros del proyecto aún se están cargando. Espera un momento y guarda de nuevo.',
     seenError: 'No se pudo marcar como visto',
+    markSeen: 'Marcar como visto',
     noProjects: 'No hay proyectos',
     noAdminProjects: 'No hay proyectos en los que seas administrador',
     createNewProject: 'Crear nuevo proyecto',
@@ -454,6 +459,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     participantsLeft: 'Jemand, den du ausgewählt hast, ist nicht mehr im Projekt. Öffne das Formular erneut und speichere noch einmal.',
     participantsLoading: 'Die Projektmitglieder werden noch geladen. Warte einen Moment und speichere erneut.',
     seenError: 'Konnte nicht als gesehen markiert werden',
+    markSeen: 'Als gesehen markieren',
     noProjects: 'Keine Projekte',
     noAdminProjects: 'Keine Projekte, in denen du Administrator bist',
     createNewProject: 'Neues Projekt erstellen',

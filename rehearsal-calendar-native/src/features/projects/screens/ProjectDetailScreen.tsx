@@ -18,7 +18,9 @@ import { Colors } from '../../../shared/constants/colors';
 import type { ProjectsStackParamList, ProjectDetailNavigation } from '../../../navigation';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
-import { formatDateToString as formatDateToStringUtil } from '../../../shared/utils/time';
+import { ModalSheet } from '../../../shared/components/ModalSheet';
+import { formatDateToString as formatDateToStringUtil, parseDateString } from '../../../shared/utils/time';
+import { getDateLocale } from '../../../shared/utils/locale';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
 import * as Clipboard from 'expo-clipboard';
@@ -61,10 +63,11 @@ interface Rehearsal {
   status: string;
 }
 
-// Helper to format date with locale support
-function formatDate(dateStr: string, locale: string): string {
-  const date = new Date(dateStr);
-  const formatted = date.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', {
+// A rehearsal's calendar date, in the reader's language. Not new Date(dateStr):
+// that reads '2026-09-10' as UTC midnight, the 9th anywhere west of UTC.
+export function formatDate(dateStr: string, language: string): string {
+  const date = parseDateString(dateStr);
+  const formatted = date.toLocaleDateString(getDateLocale(language), {
     day: 'numeric',
     month: 'short',
   });
@@ -372,7 +375,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.title} numberOfLines={1}>{project.name}</Text>
@@ -610,11 +613,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
         animationType="fade"
         onRequestClose={() => setSelectedMember(null)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setSelectedMember(null)}
-        >
+        <ModalSheet overlayStyle={styles.modalOverlay} onClose={() => setSelectedMember(null)}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.projects.manageMember}</Text>
@@ -671,7 +670,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
               </TouchableOpacity>
             </View>
           </View>
-        </TouchableOpacity>
+        </ModalSheet>
       </Modal>
     </SafeAreaView>
   );

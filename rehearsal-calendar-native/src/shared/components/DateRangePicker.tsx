@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { getDateLocale } from '../../shared/utils/locale';
 import { formatDateToString, parseDateString } from '../utils/time';
 import { calendarRangeDays } from '../utils/memberAvailabilityLimits';
+import { ModalSheet } from './ModalSheet';
 
 interface DateRangePickerProps {
   visible: boolean;
@@ -152,7 +153,8 @@ export function DateRangePicker({
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
-    const date = new Date(dateStr);
+    // A calendar date, not an instant: new Date('2026-09-10') is the 9th west of UTC.
+    const date = parseDateString(dateStr);
     const locale = getDateLocale(language);
     return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
   };
@@ -164,8 +166,8 @@ export function DateRangePicker({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={handleCancel}>
-        <Pressable style={styles.container} onPress={(e) => e.stopPropagation()}>
+      <ModalSheet overlayStyle={styles.overlay} onClose={handleCancel}>
+        <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>{t.common.selectPeriod}</Text>
           </View>
@@ -225,8 +227,8 @@ export function DateRangePicker({
               </Text>
             </TouchableOpacity>
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </ModalSheet>
     </Modal>
   );
 }

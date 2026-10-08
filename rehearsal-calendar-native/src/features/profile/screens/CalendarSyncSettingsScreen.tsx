@@ -416,7 +416,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>{t.calendarSync.title}</Text>

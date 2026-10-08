@@ -418,6 +418,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
                   {selectedDayState.slots.length > 1 && (
                     <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel={t.common.delete}
                       style={styles.removeSlotButton}
                       onPress={() => editor.removeSlot(index)}
                     >

@@ -1,3 +1,9 @@
+// West of UTC on purpose. A date-only value read as an instant —
+// new Date('2026-09-10') is midnight UTC — lands on the day before there and
+// nowhere east of it, so on this machine (Jerusalem) and in UTC CI the
+// mistake passes every test. Set before any test runs; workers inherit it.
+process.env.TZ = 'America/New_York';
+
 module.exports = {
   projects: [
     {

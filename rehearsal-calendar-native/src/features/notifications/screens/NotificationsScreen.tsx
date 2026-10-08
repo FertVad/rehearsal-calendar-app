@@ -217,7 +217,7 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.title} numberOfLines={1}>{t.notifications.title}</Text>

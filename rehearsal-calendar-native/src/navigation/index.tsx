@@ -102,9 +102,13 @@ const AppTabs = createBottomTabNavigator<TabParamList>();
 const EmptyCreateScreen = () => <View />;
 
 // Custom tab button component for the center "+" button
-const CreateTabButton = React.memo(({ onPress }: { onPress: () => void }) => {
+// The "+" is only an icon, so it says what it is: VoiceOver read nothing here.
+const CreateTabButton = React.memo(({ onPress, label }: { onPress: () => void; label: string }) => {
   return (
     <TouchableOpacity
+      testID="tab-create"
+      accessibilityRole="button"
+      accessibilityLabel={label}
       style={tabButtonStyles.container}
       onPress={() => {
         hapticMedium();
@@ -193,8 +197,8 @@ function TabNavigator() {
   }, [setShowActionSheet]);
 
   const renderCreateButton = useCallback(() => (
-    <CreateTabButton onPress={handleCreatePress} />
-  ), [handleCreatePress]);
+    <CreateTabButton onPress={handleCreatePress} label={t.actionSheet.title} />
+  ), [handleCreatePress, t]);
 
   return (
     <>

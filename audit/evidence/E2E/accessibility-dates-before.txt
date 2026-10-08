@@ -1,0 +1,50 @@
+# Found by the e2e flows. The new tests, run against the app at b59fbbb (before the fix) with TZ=America/New_York; ts-jest diagnostics off.
+# The one change to the old code: 'export' added to ProjectDetailScreen's formatDate, unchanged otherwise, so the test reaches it.
+
+  ● no Modal opens on a touchable wrapped around its sheet
+    - Expected  - 1
+    + Received  + 8
+    +   "features/calendar/screens/AddRehearsalScreen.tsx:343 — <TouchableOpacity> around the sheet; use ModalSheet",
+    +   "features/projects/screens/CreateProjectScreen.tsx:169 — <TouchableOpacity> around the sheet; use ModalSheet",
+    +   "features/projects/screens/ProjectDetailScreen.tsx:613 — <TouchableOpacity> around the sheet; use ModalSheet",
+    +   "shared/components/CreateActionSheet.tsx:87 — <TouchableOpacity> around the sheet; use ModalSheet",
+    +   "shared/components/DateRangePicker.tsx:167 — <Pressable> around the sheet; use ModalSheet",
+    +   "shared/components/PickerModal.tsx:63 — <TouchableOpacity> around the sheet; use ModalSheet",
+  ● every icon-only button has an accessibility label
+    - Expected  -  1
+    + Received  + 24
+    +   "features/availability/components/editor/EditorHeader.tsx:38",
+    +   "features/availability/components/editor/TimeSlotsEditor.tsx:72",
+    +   "features/availability/screens/AvailabilityScreen.tsx:420",
+    +   "features/calendar/components/RehearsalCard.tsx:119",
+    +   "features/calendar/components/RehearsalCard.tsx:128",
+    +   "features/calendar/screens/AddRehearsalScreen.tsx:351",
+    +   "features/calendar/screens/RehearsalDetailsScreen.tsx:211",
+    +   "features/calendar/screens/RehearsalDetailsScreen.tsx:256",
+    +   "features/notifications/screens/NotificationsScreen.tsx:220",
+    +   "features/profile/screens/CalendarSyncSettingsScreen.tsx:419",
+    +   "features/profile/screens/EditProfileScreen.tsx:98",
+    +   "features/profile/screens/ProfileScreen.tsx:369",
+    +   "features/profile/screens/ProfileScreen.tsx:414",
+    +   "features/profile/screens/ProfileScreen.tsx:460",
+    +   "features/profile/screens/ProfileScreen.tsx:506",
+    +   "features/projects/screens/CreateProjectScreen.tsx:82",
+    +   "features/projects/screens/CreateProjectScreen.tsx:177",
+    +   "features/projects/screens/ProjectDetailScreen.tsx:375",
+    +   "features/projects/screens/ProjectsScreen.tsx:46",
+    +   "features/smart-planner/screens/SmartPlannerScreen.tsx:176",
+    +   "navigation/index.tsx:107",
+    +   "shared/components/BetaBanner.tsx:78",
+  ● every scroll view on a screen with a text input lets a tap through the keyboard
+    - Expected  - 1
+    + Received  + 3
+    +   "features/projects/screens/CreateProjectScreen.tsx:89",
+  ● the availability editor names the day that was picked
+    Unable to find an element with text: September 10
+  ● the period picker shows the days of the period
+    Unable to find an element with text: Sep 10
+  ● a project page shows a rehearsal on its own date, in the reader's language
+    Expected: "Sep 10"
+    Received: "Sep 9"
+
+Tests:       6 failed, 1 passed, 7 total

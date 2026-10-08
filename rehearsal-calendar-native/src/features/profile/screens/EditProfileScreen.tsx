@@ -96,6 +96,8 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
       >
         <View style={styles.header}>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t.common.back}
             style={styles.backButton}
             onPress={() => {
               hapticLight();

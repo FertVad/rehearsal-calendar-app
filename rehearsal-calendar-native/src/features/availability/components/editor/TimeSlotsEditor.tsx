@@ -70,6 +70,8 @@ export default function TimeSlotsEditor({
 
           {slots.length > 1 && (
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t.common.delete}
               style={styles.removeSlotButton}
               onPress={() => onRemoveSlot(index)}
             >

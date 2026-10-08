@@ -3,6 +3,7 @@ import { ActionSheetIOS, Platform, Modal, View, Text, TouchableOpacity, StyleShe
 import { useI18n } from '../../contexts/I18nContext';
 import { Colors } from '../constants/colors';
 import { hapticLight } from '../../shared/utils/haptics';
+import { ModalSheet } from './ModalSheet';
 
 interface CreateActionSheetProps {
   visible: boolean;
@@ -84,11 +85,7 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
+      <ModalSheet overlayStyle={styles.overlay} onClose={onClose}>
         <View style={styles.container}>
           <View style={styles.sheet}>
             <Text style={styles.title}>{t.actionSheet.title}</Text>
@@ -125,7 +122,7 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </TouchableOpacity>
+      </ModalSheet>
     </Modal>
   );
 };

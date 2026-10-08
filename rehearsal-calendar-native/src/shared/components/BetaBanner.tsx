@@ -75,7 +75,7 @@ export function BetaBanner() {
           <View style={styles.modal}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.betaBanner.bugReport}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>

@@ -44,6 +44,8 @@ export default function ProjectsScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>{t.projects.title}</Text>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t.projects.createProject}
             style={styles.addButton}
             onPress={handleCreateProject}
           >
