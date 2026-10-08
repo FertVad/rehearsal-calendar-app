@@ -39,6 +39,7 @@ import { parseDiff, pauseReasons } from './lib/guard.mjs';
 import { waitFor } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
 import { appendReport, loadState, parseDecisions, parseTasks, saveState, writeAtomic } from './lib/store.mjs';
+import { auditTasks, taskMarkdown } from './lib/audit.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..');
@@ -277,6 +278,18 @@ function push(state, task, t) {
 
 // ---- the loop ----------------------------------------------------------------
 
+/** Appends the audit's next open cause fix to TASKS.md; its id, or null. */
+function fillFromAudit(queue, state) {
+  const read = (rel) => fs.readFileSync(path.join(WORKTREE, rel), 'utf8');
+  let candidates;
+  try { candidates = auditTasks(read('audit/TRIAGE_R4_R9.md'), read('audit/REMEDIATION_STATUS.md')); } catch { return null; }
+  const known = new Set([...queue.map((task) => task.id), ...Object.keys(state.tasks)]);
+  const next = candidates.find((task) => !known.has(task.id));
+  if (!next) return null;
+  fs.appendFileSync(path.join(DIR, 'TASKS.md'), `\n${taskMarkdown(next)}`);
+  return next.id;
+}
+
 function applyDecisions(state) {
   let text = '';
   try { text = fs.readFileSync(path.join(DIR, 'DECISIONS.md'), 'utf8'); } catch { return; }
@@ -322,8 +335,19 @@ async function step() {
   if (Object.values(state.tasks).some((t) => t.phase === 'paused')) { saveState(STATE, state); writeStatus(state); return IDLE_MS; }
 
   if (!state.current) {
-    const next = queue.find((task) => !state.tasks[task.id] || !['done', 'skipped'].includes(state.tasks[task.id].phase));
-    if (!next) { saveState(STATE, state); writeStatus(state, 'Очередь пуста — добавь задачи в AUTODEV/TASKS.md.'); return IDLE_MS; }
+    const pending = (q) => q.find((task) => !state.tasks[task.id] || !['done', 'skipped'].includes(state.tasks[task.id].phase));
+    // The queue refills from the audit: the next cause fix not yet done, as
+    // the developer's tree records it (owner, 2026-10-08).
+    if (!pending(queue)) {
+      const added = fillFromAudit(queue, state);
+      if (added) {
+        note(null, `очередь пополнена из аудита: ${added}`);
+        queue = parseTasks(fs.readFileSync(path.join(DIR, 'TASKS.md'), 'utf8'));
+        tasksById = Object.fromEntries(queue.map((task) => [task.id, task]));
+      }
+    }
+    const next = pending(queue);
+    if (!next) { saveState(STATE, state); writeStatus(state, 'Очередь пуста: в аудите не осталось несделанных правок, а в AUTODEV/TASKS.md — задач.'); return IDLE_MS; }
     state.current = next.id;
     state.tasks[next.id] ??= { phase: 'develop', base: git(WORKTREE, 'rev-parse', 'HEAD'), startedAt: new Date().toISOString() };
   }

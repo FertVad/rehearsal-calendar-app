@@ -18,6 +18,11 @@ const PATHS = [
   [/(^|\/)middleware\/(jwtMiddleware|adminAuth|auth)[^/]*\.js$/, 'авторизация'],
   [/(^|\/)utils\/(accountLinking|oauthVerification)\.js$/, 'вход через Google/Apple'],
   [/(^|\/)services\/email\//, 'подтверждение почты'],
+  // The app's side of signing in is auth too: screens, session, stored tokens.
+  [/(^|\/)src\/features\/auth\//, 'вход в приложении'],
+  [/(^|\/)src\/contexts\/AuthContext/, 'сессия в приложении'],
+  [/(^|\/)src\/shared\/services\/(googleAuth|appleAuth|auth)[^/]*$/, 'вход через Google/Apple в приложении'],
+  [/(^|\/)src\/shared\/(utils|services)\/[^/]*(token|secureStore|credential)[^/]*$/i, 'хранение токенов'],
   [/(^|\/)config\/(env|tokenTtl|appleAuth)\.js$/, 'конфигурация безопасности'],
   [/(^|\/)ios\//, 'нативная часть iOS'],
   [/(^|\/)app\.json$/, 'конфигурация приложения'],
