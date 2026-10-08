@@ -159,17 +159,33 @@ function waitOut(state, task, who, limit) {
 
 async function develop(state, task, t) {
   const fresh = !t.claudeSession;
-  if (fresh) { t.claudeSession = randomUUID(); note(task, 'разработка: начата'); }
-  const prompt = fresh ? P.developTask(task) : (t.pending ?? P.CONTINUE);
+  if (fresh) {
+    t.claudeSession = randomUUID();
+    t.sessionStarted = false;
+    note(task, 'разработка: начата');
+  }
+  // The id is chosen here, so it is on disk before the session exists: a crash
+  // or reboot mid-turn continues this session instead of starting another.
+  // Only a session marked not yet started is started; one from older state,
+  // without the mark, already exists.
+  const starting = t.sessionStarted === false;
+  t.sessionStarted = true;
+  saveState(STATE, state);
+  const prompt = starting ? P.developTask(task) : (t.pending ?? P.CONTINUE);
   const run = await runClaude({
     bin: CLAUDE, cwd: WORKTREE, prompt, env: ENV,
-    sessionId: fresh ? t.claudeSession : undefined,
-    resume: fresh ? undefined : t.claudeSession,
+    sessionId: starting ? t.claudeSession : undefined,
+    resume: starting ? undefined : t.claudeSession,
     settingsFile: path.join(HERE, 'claude-settings.json'),
     sandboxProfile: path.join(HERE, 'agent.sb'),
     log: path.join(LOGS, `${task.id}-claude.jsonl`),
     timeoutMs: 3 * 60 * 60 * 1000,
   });
+  if (run.missingSession && !starting) {
+    t.sessionStarted = false; // it never existed: start it next step
+    note(task, 'разработка: сессии нет — начну её заново');
+    return;
+  }
   if (run.sessionId) t.claudeSession = run.sessionId;
   if (run.limit.limited) { t.pending = P.CONTINUE; return waitOut(state, task, 'Claude', run.limit); }
   const result = P.readResult(run.text);

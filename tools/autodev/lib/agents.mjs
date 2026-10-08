@@ -74,6 +74,9 @@ export async function runClaude({ bin, cwd, prompt, sessionId, resume, settingsF
     limit,
     exit: run.code,
     signal: run.signal,
+    // Resuming a session that never got created (a crash between choosing
+    // its id and starting it) is told apart from a real failure.
+    missingSession: /No conversation found/i.test(`${result?.result ?? ''}\n${run.stderr}`),
   };
 }
 
