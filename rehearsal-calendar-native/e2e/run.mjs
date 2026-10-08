@@ -46,7 +46,12 @@ const SERVER = path.join(ROOT, 'server');
 const E2E = path.join(ROOT, 'e2e');
 const OUT = path.join(E2E, 'out');
 const BUILD = path.join(E2E, '.build');
-const APP = path.join(BUILD, 'Build', 'Products', 'Debug-iphonesimulator', 'Rehearsly.app');
+// A worktree without the iOS Pods (the autodev supervisor's) uses an app built
+// elsewhere: E2E_APP names it. The JS comes from this tree's Metro either way.
+const PREBUILT = process.env.E2E_APP || null;
+const APP = PREBUILT || path.join(BUILD, 'Build', 'Products', 'Debug-iphonesimulator', 'Rehearsly.app');
+// One run at a time on this machine: the simulator and ports 3001/8081 are shared.
+const LOCK = '/tmp/rehearsly-e2e.lock';
 const pg = createRequire(path.join(SERVER, 'package.json'))('pg');
 
 const API_PORT = 3001;
@@ -274,11 +279,36 @@ function simulator() {
   return simctl('create', DEVICE.name, DEVICE.type, runtimes.at(-1).identifier);
 }
 
+// ---- one run at a time ------------------------------------------------------
+
+const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+
+/** Waits for another run on this machine to finish, then holds the lock. */
+async function takeLock(timeoutMs = 60 * 60 * 1000) {
+  const deadline = Date.now() + timeoutMs;
+  for (let said = false; ; ) {
+    try {
+      fs.writeFileSync(LOCK, String(process.pid), { flag: 'wx' });
+      teardown.push(() => fs.rmSync(LOCK, { force: true }));
+      return;
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      const holder = Number(fs.readFileSync(LOCK, 'utf8')) || 0;
+      if (!holder || !alive(holder)) { fs.rmSync(LOCK, { force: true }); continue; }
+      if (!said) { step(`another e2e run (pid ${holder}) is going; waiting for it`); said = true; }
+      assert.ok(Date.now() < deadline, 'Gave up waiting for the other e2e run');
+      await sleep(10000);
+    }
+  }
+}
+
 // ---- the run --------------------------------------------------------------
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   assert.ok(fs.existsSync(MAESTRO), `Maestro is not installed at ${MAESTRO}`);
+  if (PREBUILT) assert.ok(fs.existsSync(PREBUILT), `E2E_APP ${PREBUILT} does not exist`);
+  await takeLock();
   await requireFree(API_PORT, 'server');
   await requireFree(METRO_PORT, 'Metro');
 
@@ -358,7 +388,7 @@ async function main() {
   quietKeyboard(udid);
   showSimulator(udid);
 
-  if (forceBuild || !fs.existsSync(APP)) {
+  if (!PREBUILT && (forceBuild || !fs.existsSync(APP))) {
     step('building the Debug app — the first build takes a while');
     const buildLog = fs.openSync(path.join(OUT, 'build.log'), 'w');
     execFileSync('xcodebuild', ['-workspace', 'ios/Rehearsly.xcworkspace', '-scheme', 'Rehearsly',

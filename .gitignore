@@ -17,3 +17,6 @@ TEST_RESULTS.md
 
 # Ad-hoc screenshots dropped into screens/ by hand
 screens/Снимок*.png
+
+# Autonomous development: the owner's queue, reports and the supervisor's state
+/AUTODEV/
