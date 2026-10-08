@@ -11,13 +11,14 @@ name: Mark a rehearsal seen
 - extendedWaitUntil:
     visible: ".*Act I run-through.*"
     timeout: 30000
+# The toggle of that card: other flows may have put rehearsals before it.
 - tapOn:
     id: seen-toggle
-    index: 0
+    below: ".*Act I run-through.*"
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      index: 0
+      below: ".*Act I run-through.*"
       selected: true
     timeout: 10000
 - runFlow:
@@ -29,6 +30,6 @@ name: Mark a rehearsal seen
     timeout: 30000
 - assertVisible:
     id: seen-toggle
-    index: 0
+    below: ".*Act I run-through.*"
     text: "1/4"
 - takeScreenshot: 04-director-sees-one-of-four

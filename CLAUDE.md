@@ -298,8 +298,8 @@ const { t, language, changeLanguage } = useI18n();
 // Dynamic strings (functions)
 <Text>{t.rehearsals.selectedCount(3, 10)}</Text>  // "Selected: 3 of 10"
 
-// Localized dates
-date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US')
+// Localized dates — all four languages, from one place
+date.toLocaleDateString(getDateLocale(language))   // shared/utils/locale.ts
 ```
 
 ### 8. Authorize the ids, not only the caller
@@ -879,6 +879,28 @@ Every turn of the wheel used to reach the owner, so Cancel was Done (HC02).
 Do not put a `DateTimePicker` in a screen directly — there is one picker, and
 the rehearsal form and the availability editor both use it.
 
+### 12. A sheet in a `Modal` goes through `ModalSheet`
+❌ **Problem**: VoiceOver reads a whole sheet as one button, and a tap on the
+sheet's title closes it
+✅ **Fix**: `<ModalSheet overlayStyle={…} onClose={…}>` directly inside the
+`Modal`; it puts the closing area *behind* the sheet
+
+A touchable wrapped around a sheet makes iOS present everything in it as a
+single element — six sheets were built that way, and neither VoiceOver nor the
+e2e flows could reach a project, a member action or a picker's Done.
+`modalBackdrops.test.ts` refuses a touchable as the first child of a `Modal`.
+
+### 13. Every control can be found without looking at it
+- **An icon-only button has an `accessibilityLabel`** (and
+  `accessibilityRole="button"`): VoiceOver reads nothing on it otherwise, and a
+  flow can only tap it by screen position. `iconButtonLabels.test.ts`.
+- **A ScrollView on a screen with a text input sets
+  `keyboardShouldPersistTaps="handled"`**: without it the first tap with the
+  keyboard up only hides the keyboard — "Create" did nothing on the new-project
+  form. `keyboardTaps.test.ts`.
+- What a flow needs to find carries a `testID` (`id:` in Maestro); see
+  [e2e.md](rehearsal-calendar-native/docs/e2e.md).
+
 ### 11. Navigation is typed; a route is never cast
 ❌ **Problem**: a button navigates to a route that is not there and nothing
 happens — no error, no screen
@@ -993,6 +1015,10 @@ obvious the moment a request went through the router: the calendar import
 deleting hand-entered availability, and a removed member keeping access to a
 project's rehearsals. Both live in what the handler *decides*, not in what the
 SQL does.
+
+**Jest runs in `America/New_York`** (`jest.config.js`). A date-only value read
+as an instant — `new Date('2026-09-10')` — is the day before only west of UTC;
+east of it (this machine) and in UTC CI the mistake passes every test.
 
 The SQLite harness in `__tests__/integration/setup.js` translates the
 PostgreSQL dialect the routes are written in. It covers only the constructs

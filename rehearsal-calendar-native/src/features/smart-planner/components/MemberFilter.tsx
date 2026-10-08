@@ -70,7 +70,7 @@ export const MemberFilter: React.FC<MemberFilterProps> = React.memo(({
       {/* Header with Select All and Expand/Collapse */}
       <View style={styles.header}>
         {members.length > 1 && (
-          <TouchableOpacity style={styles.selectAllButton} onPress={toggleAll}>
+          <TouchableOpacity testID="members-toggle-all" style={styles.selectAllButton} onPress={toggleAll}>
             <View style={[styles.checkbox, allSelected && styles.checkboxChecked]}>
               {allSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
             </View>

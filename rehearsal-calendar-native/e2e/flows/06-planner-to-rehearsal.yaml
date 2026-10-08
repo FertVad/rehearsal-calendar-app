@@ -12,12 +12,27 @@ name: From the planner to a rehearsal
     id: planner-project
 - tapOn: "Hamlet"
 - tapOn: "Expand.*"
-# The director is selected to begin with; add Hamlet: two of four.
-- tapOn: "Hamlet Dane"
+# Start from everyone and take two out. What is selected on arrival is
+# whatever the previous project had — DP01, cause fix 8 — so it is not relied
+# on; and none selected reads "All members", since it means everyone.
+- repeat:
+    while:
+      notVisible: "4 of 4 selected"
+    times: 2
+    commands:
+      - tapOn:
+          id: members-toggle-all
+- assertVisible: "4 of 4 selected"
+- tapOn: ".*Ophelia Bright"
+- tapOn: ".*Horatio Friend"
 - assertVisible: "2 of 4 selected"
-# The first slot offered, whichever day it falls on — it sits under the tab
-# bar until the list is scrolled.
-- scroll
+# The first slot offered, whichever day it falls on, brought to the middle of
+# the screen — under the tab bar or still moving, a tap misses it.
+- scrollUntilVisible:
+    element: "\\+ Add"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
 - tapOn:
     text: "\\+ Add"
     index: 0
@@ -26,6 +41,10 @@ name: From the planner to a rehearsal
     timeout: 15000
 - tapOn: "e.g. Act II run-through"
 - inputText: "Duel scene"
+- scrollUntilVisible:
+    element:
+      id: rehearsal-submit
+    direction: DOWN
 - tapOn:
     id: rehearsal-submit
 - extendedWaitUntil:

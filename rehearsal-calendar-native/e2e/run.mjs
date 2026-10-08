@@ -121,7 +121,14 @@ async function requireFree(port, what) {
 const docker = (...args) =>
   execFileSync(DOCKER, ['--context', DOCKER_CONTEXT, ...args], { encoding: 'utf8', timeout: 30000 }).trim();
 
+/** Docker Desktop idles its VM; the first command after that can take a minute. */
+function wakeDocker() {
+  execFileSync(DOCKER, ['--context', DOCKER_CONTEXT, 'version', '--format', '{{.Server.Version}}'],
+    { encoding: 'utf8', timeout: 180000 });
+}
+
 async function startDatabase() {
+  wakeDocker();
   const endpoint = docker('context', 'inspect', DOCKER_CONTEXT, '--format', '{{.Endpoints.docker.Host}}');
   assert.ok(endpoint.startsWith('unix://'), 'A remote Docker context is not permitted');
   // An image already on this machine, never a silent pull.

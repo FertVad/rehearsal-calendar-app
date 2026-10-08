@@ -66,3 +66,11 @@ which is also the simulator's zone.
   match a part of it as a regex, `".*Act I run-through.*"`.
 - `EXPO_PUBLIC_E2E=1` (set by the runner) silences the development warning
   toasts, which sit over the tab bar.
+- Maestro does not run the flows in file order, and they share one database:
+  a flow never relies on what another one created. Find a control relative to
+  its own card (`below: ".*Act I run-through.*"`), not by `index`, and set a
+  selection explicitly instead of trusting the one on arrival.
+- A list item under the tab bar, or still scrolling, takes no tap: bring it
+  into view with `scrollUntilVisible` (`centerElement: true`) first.
+- Docker Desktop idles its VM; the runner wakes it with a long-timeout call
+  before anything else.
