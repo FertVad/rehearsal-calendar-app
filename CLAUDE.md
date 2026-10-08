@@ -1058,6 +1058,18 @@ environment, and this checkout's `.env` names production. The runner keeps
 bundle carrying any other address, and stops everything if the app reports
 one. Never point the simulator app at a Metro the runner did not start.
 
+## Autonomous Development
+
+`tools/autodev/supervisor.mjs` runs Claude Code (developer) and Codex ("Astra",
+reviewer) through the owner's queue in `AUTODEV/TASKS.md`: develop → guard →
+checks → review (≤ 2 rounds) → push of `auto/main`, in its own worktrees
+(`../reh_app-auto`, `../reh_app-auto-review`). It waits out subscription limits
+and continues the same session; it pauses the whole queue for the owner on
+migrations, auth, `.env`, production, keys, red checks after three attempts or
+no agreement after two rounds. Reports, one per task, and `STATUS.md` are in
+`AUTODEV/` (not in git). See [tools/autodev/README.md](tools/autodev/README.md).
+Codex gets no model or reasoning flags; Claude a whitelist with `dontAsk`.
+
 ## Documentation
 
 Key documentation files:
