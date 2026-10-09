@@ -123,6 +123,10 @@ function ensureTrees() {
     else git(REPO, 'worktree', 'add', '-b', BRANCH, WORKTREE, START_FROM);
   }
   if (!fs.existsSync(REVIEW_TREE)) git(REPO, 'worktree', 'add', '--detach', REVIEW_TREE, BRANCH);
+  // Neither agent can push from its tree, whatever command it finds.
+  git(REPO, 'config', 'extensions.worktreeConfig', 'true');
+  git(WORKTREE, 'config', '--worktree', 'remote.origin.pushurl', 'disabled://the-developer-does-not-push');
+  git(REVIEW_TREE, 'config', '--worktree', 'remote.origin.pushurl', 'disabled://the-reviewer-does-not-push');
   // Dependencies are the main tree's: the same lockfile, no second install.
   for (const tree of [WORKTREE, REVIEW_TREE]) {
     for (const rel of ['rehearsal-calendar-native/node_modules', 'rehearsal-calendar-native/server/node_modules']) {
@@ -290,7 +294,11 @@ async function review(state, task, t) {
 
 function push(state, task, t) {
   try {
-    git(WORKTREE, 'push', '--quiet', '-u', 'origin', BRANCH);
+    // The developer's tree has a dead push URL of its own (git config
+    // --worktree), so a push by remote name goes nowhere; this one names the
+    // real address outright.
+    const url = git(REPO, 'remote', 'get-url', '--push', 'origin');
+    git(WORKTREE, 'push', '--quiet', url, `${BRANCH}:${BRANCH}`);
     note(task, `готово: ${t.base.slice(0, 7)}..${t.head.slice(0, 7)} в ${BRANCH}, отправлено`);
   } catch (error) {
     // Nothing is lost: the commits are on the branch and the next push takes them.
