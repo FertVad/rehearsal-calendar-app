@@ -109,6 +109,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     error,
     project,
     simpleMembers,
+    membersProjectId,
     membersWithoutData,
     filteredSlots,
     slotsByDate,
@@ -141,19 +142,22 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   // only calls setParams), so a plain "did this run yet" flag would keep the
   // previous project's member ids: the counter reads "7 of 5" and, worse, the
   // recommendations get filtered by people who are not in this project.
-  // Re-seeding is keyed on the project instead, and the ids are dropped while
-  // the new roster is in flight — an empty selection means "everyone".
+  //
+  // The guard membersProjectId === projectId is what prevents seeding from
+  // stale data. When projectId changes, useSmartPlanner resets membersProjectId
+  // to null and starts a new load. Both the clearing effect (inside the hook)
+  // and this seeding effect fire in the same render batch — but simpleMembers
+  // in that batch still reflects the previous project's roster. Without the
+  // guard the seeding effect would lock the new projectId to the old members
+  // before the real roster arrives (DP01). Waiting for membersProjectId to
+  // match ensures members state was actually loaded for the active project.
   useEffect(() => {
     if (hasInitializedMembers.current === projectId) return;
-
-    if (simpleMembers.length === 0) {
-      setSelectedMemberIds([]);
-      return;
-    }
+    if (membersProjectId !== projectId) return;
 
     setSelectedMemberIds(simpleMembers.map(m => m.id));
     hasInitializedMembers.current = projectId;
-  }, [simpleMembers, projectId]);
+  }, [simpleMembers, projectId, membersProjectId]);
 
   const handleSelectProject = useCallback((newProjectId: string) => {
     setIsProjectSelectorExpanded(false);

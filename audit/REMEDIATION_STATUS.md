@@ -36,7 +36,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R2 | 8 | READY_FOR_CHECK — 7 VERIFIED; FM01 ждёт даты конвертации production (OPS-FM01-DATE, ревью R2-01); OPS-R2-ADOPT до деплоя 007/008 |
 | R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 — в коде, PG-сценарии `dd73b96`; маршруты A01 `d5564ee`, `3859ece` (почтой — после OPS-EMAIL); правило Google/Apple `d964417`, `56d11e9`, `43cbdac`; сброс пароля `ec292ee`; смена email `50ba23d`; клиент регистрации `77bddd1`..`286787a`; экраны сброса и смены адреса `23f59cb`, замечания ревью `a7e42d8` (T-130) — A01, A03, A04, HP01, HP02 READY_FOR_CHECK до ревью и DEV-20; AC05 не сделан |
 | R4 | 8 | IN_PROGRESS — [отчёт](REMEDIATION_R4.md): D01, D02, DF02, D04 VERIFIED (правка №1); [разбор](TRIAGE_R4_R9.md) |
-| R5 | 15 | TODO — [разбор: правки причин](TRIAGE_R4_R9.md) |
+| R5 | 15 | IN_PROGRESS — [отчёт](REMEDIATION_R5.md): правка №8 (DP01) READY_FOR_CHECK до DEV-19; остальные TODO |
 | R6 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R6.md): правка №2 принята ревью (C02 VERIFIED; CC02–CC05, C03 до DEV-17/DEV-18); правка №3 принята ревью (DP04 VERIFIED; C01, CC01 до DEV-08); [разбор](TRIAGE_R4_R9.md) |
 | R7 | 16 | IN_PROGRESS — [отчёт](REMEDIATION_R7.md): правка №4 принята ревью `ad09154` (EI01, EI03, EI04, ES02 — READY_FOR_CHECK до DEV-03/04/05); [разбор](TRIAGE_R4_R9.md) |
 | R8 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R8.md): правка №5 (GR01, GR02, GR03, GR05, G02) READY_FOR_CHECK до DEV-11/DEV-14; принята ревью `b948056` (R8-01, R8-02 закрыты в `7f85bab`); правка №6 (GR04) принята ревью `7665ae4` (READY_FOR_CHECK до DEV-14); выкладка — после миграции 011; [разбор](TRIAGE_R4_R9.md) |
@@ -107,7 +107,7 @@ OPS-R3-DATA (25.09).
 | DD01 | Medium | Нет | R9 | TODO | Details ведёт вторую копию RSVP и расходится с SeenContext | [правка причины №22 — разбор](TRIAGE_R4_R9.md) |
 | DD02 | Medium | Нет | R6 | TODO | Репетиция через полночь отсутствует в календаре второго дня | [правка причины №15 — разбор](TRIAGE_R4_R9.md) |
 | DD03 | Low | Нет | R9 | TODO | Кнопка «Сегодня» не выбирает сегодняшний день | [правка причины №22 — разбор](TRIAGE_R4_R9.md) |
-| DP01 | Medium | Нет | R5 | TODO | смена проекта закрепляет старые ID участников за новым проектом | [правка причины №8 — разбор](TRIAGE_R4_R9.md) |
+| DP01 | Medium | Нет | R5 | READY_FOR_CHECK | смена проекта закрепляет старые ID участников за новым проектом | [правка причины №8 — коммит в auto/main; ждёт DEV-19](REMEDIATION_R5.md) |
 | DP02 | Medium | Нет | R9 | VERIFIED | выбранный в planner состав не переносится в создание репетиции | [правка причины №7 — 58a7706, 9a0ce85; ревью a684f6b принято](REMEDIATION_R9.md) |
 | DP04 | Low | Нет | R6 | VERIFIED | предложение на сегодня не устаревает вместе с часами | [правка причины №3 — 173d227, 7375a13; ревью bbf4b6e принято](REMEDIATION_R6.md) |
 | EI01 | High | Нет | R7 | READY_FOR_CHECK | diff удаляет импорт другого устройства/источника пользователя | [правка причины №4 — 16c6723, a3e6bc8; ревью ad09154 принято; ждёт DEV-03](REMEDIATION_R7.md) |
