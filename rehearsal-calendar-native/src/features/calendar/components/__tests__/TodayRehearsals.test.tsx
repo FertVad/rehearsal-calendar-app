@@ -30,6 +30,7 @@ jest.mock('../../../../contexts/SeenContext', () => ({
 
 import TodayRehearsals from '../TodayRehearsals';
 import { Rehearsal, Project, RSVPStatus } from '../../../../shared/types';
+import { formatDateToString } from '../../../../shared/utils/time';
 
 // Mock dependencies
 jest.mock('../../../../contexts/I18nContext', () => ({
@@ -435,8 +436,9 @@ describe('TodayRehearsals Component', () => {
 
   describe('Date Label', () => {
     it('should show "Today" for today\'s date', () => {
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      // The local date, as the card reads it: the UTC one is tomorrow every
+      // evening west of UTC.
+      const todayStr = formatDateToString(new Date());
 
       const { getByText } = render(
         <TodayRehearsals
@@ -455,7 +457,7 @@ describe('TodayRehearsals Component', () => {
     it('should show "Tomorrow" for tomorrow\'s date', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      const tomorrowStr = formatDateToString(tomorrow);
 
       const { getByText } = render(
         <TodayRehearsals

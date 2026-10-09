@@ -12,6 +12,7 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useRehearsals } from '../useRehearsals';
 import { rehearsalsAPI } from '../../../../shared/services/api';
 import { Project, Rehearsal } from '../../../../shared/types';
+import { formatDateToString } from '../../../../shared/utils/time';
 
 // Mock dependencies
 jest.mock('../../../../shared/services/api');
@@ -20,10 +21,12 @@ jest.mock('../../../../shared/services/api');
 // was in the future when they were written; once it passed, the hook rightly
 // stopped fetching RSVPs for them and four tests went red on the calendar
 // rather than on any change to the code.
+// The local date, as the hook reads it — not toISOString(), the UTC date,
+// which west of UTC is a day ahead every evening.
 const daysFromNow = (days: number) => {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
+  return formatDateToString(d);
 };
 const SOON = daysFromNow(7);
 const SOON_AFTER = daysFromNow(8);
@@ -227,15 +230,18 @@ describe('useRehearsals Hook', () => {
     });
 
     it('should only fetch RSVP for upcoming rehearsals', async () => {
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
+      // Two days back, not one. The hook dates a rehearsal in the profile's
+      // zone (UTC here) and "today" in the device's; a day back is still today
+      // in UTC every evening west of it. That split is cause fix 14's to remove
+      // (audit/TRIAGE_R4_R9.md); this test is about past rehearsals.
+      const past = new Date();
+      past.setDate(past.getDate() - 2);
 
       const mockRehearsals = [
         {
           id: 'r1',
-          startsAt: yesterday.toISOString(),
-          endsAt: yesterday.toISOString(),
+          startsAt: past.toISOString(),
+          endsAt: past.toISOString(),
         },
       ];
 
