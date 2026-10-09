@@ -304,6 +304,23 @@ function push(state, task, t) {
 
 // ---- the loop ----------------------------------------------------------------
 
+/**
+ * What lands on the interactive branch (claude/systematic-repair) — fixes to
+ * tests, the audit, the docs — reaches auto/main at the start of each task.
+ * Before the task's base is taken, so it is not part of the task's diff and
+ * review. A conflict leaves the branch as it was and is reported.
+ */
+function syncFromInteractive() {
+  try { git(WORKTREE, 'merge-base', '--is-ancestor', START_FROM, 'HEAD'); return; } catch { /* not yet in */ }
+  try {
+    git(WORKTREE, 'merge', '--no-edit', '--quiet', START_FROM);
+    note(null, `в ${BRANCH} влиты новые коммиты из ${START_FROM}`);
+  } catch (error) {
+    try { git(WORKTREE, 'merge', '--abort'); } catch { /* nothing to abort */ }
+    note(null, `не удалось влить ${START_FROM} (${String(error.message).split('\n')[0]}) — задача идёт без них`);
+  }
+}
+
 /** Appends the audit's next open cause fix to TASKS.md; its id, or null. */
 function fillFromAudit(queue, state) {
   const read = (rel) => fs.readFileSync(path.join(WORKTREE, rel), 'utf8');
@@ -399,7 +416,10 @@ async function step() {
     const next = pending(queue);
     if (!next) { saveState(STATE, state); writeStatus(state, 'Очередь пуста: в аудите не осталось несделанных правок, а в AUTODEV/TASKS.md — задач.'); return IDLE_MS; }
     state.current = next.id;
-    state.tasks[next.id] ??= { phase: 'develop', base: git(WORKTREE, 'rev-parse', 'HEAD'), startedAt: new Date().toISOString() };
+    if (!state.tasks[next.id]) {
+      syncFromInteractive();
+      state.tasks[next.id] = { phase: 'develop', base: git(WORKTREE, 'rev-parse', 'HEAD'), startedAt: new Date().toISOString() };
+    }
   }
   const task = tasksById[state.current];
   const t = state.tasks[state.current];
