@@ -7,6 +7,7 @@
 const DEVELOPER_RULES = `Правила — CLAUDE.md и audit/HANDOFF_CLAUDE.md (метод, планка, «красное до»): исправляй причину, а не симптом; тест сначала должен упасть на старом коде.
 Ты в рабочем дереве супервизора, ветка auto/main. Коммить сам: сообщения по-английски, как в репозитории, последней строкой «Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>». Не пушь и не переключай ветки — это делает супервизор.
 Не трогай: production, rehearsly.me, server/.env и любые ключи, миграции и схему БД, авторизацию, деплой, tools/autodev, .claude. Если задача без этого не решается — остановись и ответь BLOCKED с причиной.
+Node 22 уже первым в PATH — export PATH не нужен. Серверные тесты: cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest …; клиентские: cd rehearsal-calendar-native && npx jest --selectProjects frontend …. Чтение секретов (.env, ключи) запрещено самой ОС — это не ошибка твоих команд.
 Механические проверки после тебя запустит супервизор: npm run check:secrets, type-check, npm test; при изменениях клиента — npm run e2e; при изменениях сервера — PG-проверки. Запускай их и сам, пока работаешь.`;
 
 const DEVELOPER_END = `В конце ответа — короткий отчёт для владельца по-русски: что сделано, какие коммиты, чем проверено. Последней строкой ровно одно из:

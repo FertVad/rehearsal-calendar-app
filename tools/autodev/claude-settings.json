@@ -40,7 +40,33 @@
       "Bash(wc:*)",
       "Bash(cd:*)",
       "Bash(npm --prefix rehearsal-calendar-native:*)",
-      "Bash(/Users/vadimfertik/.maestro/bin/maestro:*)"
+      "Bash(/Users/vadimfertik/.maestro/bin/maestro:*)",
+      "Bash(export:*)",
+      "Bash(NODE_OPTIONS=--experimental-vm-modules npx jest:*)",
+      "Bash(npm run:*)",
+      "Bash(npm --prefix server:*)",
+      "Bash(npm --prefix rehearsal-calendar-native/server:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(diff:*)",
+      "Bash(echo:*)",
+      "Bash(printf:*)",
+      "Bash(pwd:*)",
+      "Bash(test:*)",
+      "Bash(which:*)",
+      "Bash(node -e:*)",
+      "Bash(node --version:*)",
+      "Bash(git branch:*)",
+      "Bash(git stash:*)",
+      "Bash(git rm:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [
       "Read(**/.env)",
@@ -69,7 +95,10 @@
       "Bash(wget:*)",
       "Bash(ssh:*)",
       "WebFetch",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git branch -d:*)",
+      "Bash(git stash drop:*)",
+      "Bash(git stash clear:*)"
     ]
   }
 }
