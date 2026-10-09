@@ -7,9 +7,16 @@
 const DEVELOPER_RULES = `Правила — CLAUDE.md и audit/HANDOFF_CLAUDE.md (метод, планка, «красное до»): исправляй причину, а не симптом; тест сначала должен упасть на старом коде.
 Ты в рабочем дереве супервизора, ветка auto/main. Коммить сам: сообщения по-английски, как в репозитории, последней строкой «Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>». Не пушь и не переключай ветки — это делает супервизор.
 Не трогай: production, rehearsly.me, server/.env и любые ключи, миграции и схему БД, авторизацию, деплой, tools/autodev, .claude. Если задача без этого не решается — остановись и ответь BLOCKED с причиной.
-Node 22 уже первым в PATH — export PATH не нужен. Серверные тесты: cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest …; клиентские: cd rehearsal-calendar-native && npx jest --selectProjects frontend …. Чтение секретов (.env, ключи) запрещено самой ОС — это не ошибка твоих команд.
-Если команду отклонили права — сделай иначе, не останавливаясь: файлы и каталоги создавай инструментом Write (каталог появится сам), команды пиши проще и по одной. BLOCKED — только для того, что решает владелец: миграции, авторизация, production, ключи.
 Механические проверки после тебя запустит супервизор: npm run check:secrets, type-check, npm test; при изменениях клиента — npm run e2e; при изменениях сервера — PG-проверки. Запускай их и сам, пока работаешь.`;
+
+// In every developer prompt, a resumed session included: it never sees the
+// first one's rules again (T-108 stopped twice on this).
+const TOOLING = `Как работать с командами (режим без вопросов: что не разрешено — отклоняется молча):
+- Рабочий каталог — корень дерева. git вызывай без cd: \`git add …\`, \`git commit -m …\`. Связка «cd <папка> && git …» отклоняется всегда.
+- В файлы пиши инструментом Write (каталоги он создаёт сам), не перенаправлением «>» и не mkdir. Вывод теста для доказательства — запусти тест, затем сохрани его вывод через Write.
+- Node 22 уже первым в PATH, export не нужен. Тесты сервера: \`cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest …\`; клиента: \`cd rehearsal-calendar-native && npx jest --selectProjects frontend …\`.
+- Чтение .env и ключей запрещено самой ОС — это не ошибка твоих команд.
+- Отклонили команду — сделай то же другим способом и продолжай. RESULT: BLOCKED — только для решений владельца: миграции, авторизация, production, ключи; не из-за отклонённой команды.`;
 
 const DEVELOPER_END = `В конце ответа — короткий отчёт для владельца по-русски: что сделано, какие коммиты, чем проверено. Последней строкой ровно одно из:
 RESULT: DONE
@@ -22,6 +29,8 @@ ${task.body}
 
 ${DEVELOPER_RULES}
 
+${TOOLING}
+
 ${DEVELOPER_END}`;
 }
 
@@ -31,7 +40,11 @@ export function fixChecks(task, steps) {
 
 ${failed.map((step) => `### ${step.name} (код ${step.code})\n\`\`\`\n${step.tail}\n\`\`\``).join('\n\n')}
 
-Найди причину и исправь. ${DEVELOPER_END}`;
+Найди причину и исправь.
+
+${TOOLING}
+
+${DEVELOPER_END}`;
 }
 
 export function fixReview(task, review) {
@@ -39,10 +52,18 @@ export function fixReview(task, review) {
 
 ${review}
 
-Исправь то, что выше планки, по причине; что ниже — исправь, если то же правило покрывает, иначе объясни в отчёте. ${DEVELOPER_END}`;
+Исправь то, что выше планки, по причине; что ниже — исправь, если то же правило покрывает, иначе объясни в отчёте.
+
+${TOOLING}
+
+${DEVELOPER_END}`;
 }
 
-export const CONTINUE = `Сессию прервал лимит подписки или сбой. Продолжай ровно с того места, где остановился, ничего не повторяя. ${DEVELOPER_END}`;
+export const CONTINUE = `Сессию прервал лимит, сбой или остановка. Продолжай ровно с того места, где остановился, ничего не повторяя.
+
+${TOOLING}
+
+${DEVELOPER_END}`;
 
 export function review(task, { base, head, devReport, checks, round }) {
   return `Ты — ревьюер (Астра) в автономном цикле разработки Rehearsly. Это ${round === 1 ? 'первый' : 'второй и последний'} круг ревью задачи ${task.id} «${task.title}».
