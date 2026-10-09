@@ -27,14 +27,19 @@ the wordings taken from the installed CLIs). Then the same session continues —
 `claude -p --resume`, `codex exec resume`. An unreadable time is checked again
 after 20 minutes.
 
-**It pauses the whole queue and waits for the owner** when:
-- a change touches migrations, SQL, auth, `.env`, deploy, CI, production
-  addresses, data deletion, keys, `ios/` or the supervisor (`lib/guard.mjs`);
-- the checks are still red after three attempts;
-- the reviewer is not satisfied after two rounds;
-- an agent gives no usable answer three times, or the developer says BLOCKED.
+**A task that cannot be finished is set aside, and the queue goes on**
+(owner, 2026-10-09): checks still red after three attempts, the reviewer not
+satisfied after two rounds, or an agent giving no usable answer three times.
+Its commits leave `auto/main` and are kept on `auto/deferred/T-…`; the reason
+is in its report and in `STATUS.md`. `T-…: продолжить` starts it again.
 
-The whole queue, because the next task would be built on top of the paused one.
+**Only what is dangerous stops the whole queue** and waits for the owner:
+a change touching migrations, SQL, auth (server or app), `.env`, deploy, CI,
+production addresses, data deletion, keys, `ios/` or the supervisor
+(`lib/guard.mjs`), or the developer answering BLOCKED.
+
+Applied decisions move under `## Применено` in `DECISIONS.md`, so an old line
+never fires twice.
 
 ## How it runs
 

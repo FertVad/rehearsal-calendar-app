@@ -62,7 +62,9 @@ export function slugify(title) {
 /** The owner's decisions for paused tasks: "T-001: продолжить" / "пропустить". */
 export function parseDecisions(markdown) {
   const decisions = {};
-  for (const line of markdown.split('\n')) {
+  // Lines already applied are kept below "## Применено" and not read again.
+  const open = markdown.split(/^## Применено\s*$/m)[0];
+  for (const line of open.split('\n')) {
     // No \b: in JavaScript it knows only Latin letters.
     const m = /^\s*[-*]?\s*(T-\d{3,})\s*:\s*(продолжить|пропустить|continue|skip)(?![\p{L}])/iu.exec(line);
     if (m) decisions[m[1]] = /продолжить|continue/i.test(m[2]) ? 'continue' : 'skip';

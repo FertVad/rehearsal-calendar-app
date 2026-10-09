@@ -41,3 +41,8 @@ test('state survives a round trip, a missing file is empty, a corrupt one is an 
   fs.writeFileSync(file, '{ broken');
   assert.throws(() => loadState(file));
 });
+
+test('decisions already applied are not read again', () => {
+  const text = 'T-003: продолжить\n\n## Применено\n- 09.10.2026, 09:00 — T-002: пропустить\n';
+  assert.deepEqual(parseDecisions(text), { 'T-003': 'continue' });
+});

@@ -107,6 +107,8 @@ function writeStatus(state, now) {
   if (task) lines.push(`Сейчас: **${state.current}** ${tasksById[state.current]?.title ?? ''} — фаза ${task.phase}${task.round ? `, ревью круг ${task.round}` : ''}.`);
   else if (!paused) lines.push(now ?? 'Очередь пуста.');
   lines.push('', '## Последнее', '', ...events.map((e) => `- ${e}`));
+  const deferred = Object.entries(state.tasks).filter(([, t]) => t.phase === 'deferred');
+  if (deferred.length) lines.push('', '## Отложено (очередь шла дальше)', '', ...deferred.map(([id, t]) => `- ${id}: ${t.deferReason}. Вернуть — \`${id}: продолжить\` в DECISIONS.md.`));
   const done = Object.entries(state.tasks).filter(([, t]) => t.phase === 'done' || t.phase === 'skipped');
   if (done.length) lines.push('', '## Завершено', '', ...done.map(([id, t]) => `- ${id}: ${t.phase === 'done' ? 'готово' : 'пропущено'}`));
   writeAtomic(path.join(DIR, 'STATUS.md'), `${lines.join('\n')}\n`);
@@ -152,6 +154,27 @@ function pause(state, task, t, reason) {
   note(task, `ПАУЗА: ${reason}. Решение — в AUTODEV/DECISIONS.md.`);
 }
 
+/**
+ * A task that could not be finished is set aside and the queue goes on
+ * (owner, 2026-10-09): one stuck task must not stop the night's work. Its
+ * commits leave auto/main — the next task is neither built on them nor checked
+ * against their failures — and are kept on auto/deferred/<id>. Only what is
+ * dangerous stops the whole queue (pause()).
+ */
+function defer(state, task, t, reason) {
+  const head = git(WORKTREE, 'rev-parse', 'HEAD');
+  let kept = '';
+  if (t.base && head !== t.base) {
+    git(WORKTREE, 'branch', '-f', `auto/deferred/${task.id}`, head);
+    git(WORKTREE, 'reset', '--hard', '--quiet', t.base);
+    kept = `; работа сохранена в auto/deferred/${task.id}`;
+  }
+  t.phase = 'deferred';
+  t.deferReason = reason;
+  state.current = null;
+  note(task, `ОТЛОЖЕНО: ${reason}${kept}. Очередь идёт дальше. Вернуть — строкой «${task.id}: продолжить» в AUTODEV/DECISIONS.md.`);
+}
+
 function waitOut(state, task, who, limit) {
   state.waitUntil = Date.now() + waitFor(limit);
   state.waitingFor = who;
@@ -194,7 +217,7 @@ async function develop(state, task, t) {
     t.failures = (t.failures ?? 0) + 1;
     t.pending = P.CONTINUE;
     note(task, `разработка: ${run.failed ? `сбой (код ${run.exit})` : 'ответ без строки RESULT'}, попытка ${t.failures}`);
-    if (t.failures >= MAX_AGENT_FAILURES) pause(state, task, t, 'разработчик трижды не дал ответа');
+    if (t.failures >= MAX_AGENT_FAILURES) defer(state, task, t, 'разработчик трижды не дал ответа');
     return;
   }
   t.failures = 0;
@@ -207,7 +230,7 @@ async function develop(state, task, t) {
 
 async function check(state, task, t) {
   const head = git(WORKTREE, 'rev-parse', 'HEAD');
-  if (head === t.base) return pause(state, task, t, 'разработчик ответил DONE, но коммитов нет');
+  if (head === t.base) return defer(state, task, t, 'разработчик ответил DONE, но коммитов нет');
   const { files, added } = parseDiff(git(WORKTREE, 'diff', '--unified=0', `${t.base}..${head}`));
   const reasons = pauseReasons(files, added);
   if (reasons.length && t.approvedHead !== head) {
@@ -219,7 +242,10 @@ async function check(state, task, t) {
   note(task, `проверки: ${checks.steps.map((s) => `${s.name} ${s.ok ? 'PASS' : 'FAIL'}`).join(', ')}`);
   if (checks.ok) { t.head = head; t.phase = 'review'; t.round = t.round || 1; return; }
   t.attempts = (t.attempts ?? 0) + 1;
-  if (t.attempts >= MAX_CHECK_ATTEMPTS) return pause(state, task, t, `проверки красные после ${MAX_CHECK_ATTEMPTS} попыток`);
+  if (t.attempts >= MAX_CHECK_ATTEMPTS) {
+    const red = checks.steps.filter((step) => !step.ok).map((step) => step.name).join(', ');
+    return defer(state, task, t, `проверки красные после ${MAX_CHECK_ATTEMPTS} попыток (${red}), лог — .state/logs/${task.id}-checks.log`);
+  }
   t.pending = P.fixChecks(task, checks.steps);
   t.phase = 'develop';
 }
@@ -246,7 +272,7 @@ async function review(state, task, t) {
     t.failures = (t.failures ?? 0) + 1;
     t.reviewPending = Boolean(t.codexThread);
     note(task, `ревью: ${run.failed ? `сбой (код ${run.exit})` : 'ответ без строки VERDICT'}, попытка ${t.failures}`);
-    if (t.failures >= MAX_AGENT_FAILURES) pause(state, task, t, 'ревьюер трижды не дал ответа');
+    if (t.failures >= MAX_AGENT_FAILURES) defer(state, task, t, 'ревьюер трижды не дал ответа');
     return;
   }
   t.failures = 0;
@@ -255,7 +281,7 @@ async function review(state, task, t) {
   writeAtomic(file, run.text);
   note(task, `ревью круг ${round}: ${verdict === 'accept' ? 'принято' : 'есть замечания'} — reviews/${path.basename(file)}`);
   if (verdict === 'accept') { t.phase = 'push'; return; }
-  if (round >= 2) return pause(state, task, t, 'нет согласия с ревьюером после двух кругов');
+  if (round >= 2) return defer(state, task, t, `нет согласия с ревьюером после двух кругов — reviews/${task.id}-r2.md`);
   t.round = 2;
   t.attempts = 0;
   t.pending = P.fixReview(task, run.text);
@@ -291,12 +317,22 @@ function fillFromAudit(queue, state) {
 }
 
 function applyDecisions(state) {
+  const file = path.join(DIR, 'DECISIONS.md');
   let text = '';
-  try { text = fs.readFileSync(path.join(DIR, 'DECISIONS.md'), 'utf8'); } catch { return; }
+  try { text = fs.readFileSync(file, 'utf8'); } catch { return; }
+  const applied = [];
   for (const [id, decision] of Object.entries(parseDecisions(text))) {
     const t = state.tasks[id];
-    if (!t || t.phase !== 'paused') continue;
+    if (!t || !['paused', 'deferred'].includes(t.phase)) continue;
     const task = tasksById[id] ?? { id, slug: 'task', title: id, body: '' };
+    applied.push(id);
+    if (t.phase === 'deferred') {
+      if (decision === 'skip') { t.phase = 'skipped'; note(task, 'владелец: пропустить отложенную'); continue; }
+      // Taken up again from the start, on top of what the branch has now.
+      state.tasks[id] = { phase: 'develop', base: git(WORKTREE, 'rev-parse', 'HEAD'), startedAt: new Date().toISOString(), reopened: true };
+      note(task, `владелец: продолжить — задача начата заново; прежняя работа в auto/deferred/${id}`);
+      continue;
+    }
     if (decision === 'skip') {
       // Skipped work leaves the branch — the next task is not built on it, nor
       // checked against its failing tests — but is kept on a branch of its own.
@@ -320,6 +356,20 @@ function applyDecisions(state) {
     state.current = id;
     note(task, 'владелец: продолжить');
   }
+  if (applied.length) consumeDecisions(file, text, applied);
+}
+
+/** Applied lines move under "## Применено", so an old line never fires twice. */
+function consumeDecisions(file, text, ids) {
+  const [open, done = ''] = text.split(/^## Применено\s*$/m);
+  const keep = [];
+  const moved = [];
+  for (const line of open.split('\n')) {
+    const id = /^\s*[-*]?\s*(T-\d{3,})\s*:/.exec(line)?.[1];
+    if (id && ids.includes(id)) moved.push(`- ${stamp()} — ${line.trim()}`);
+    else keep.push(line);
+  }
+  writeAtomic(file, `${keep.join('\n').trimEnd()}\n\n## Применено\n${done.trimEnd() ? `${done.trimEnd()}\n` : '\n'}${moved.join('\n')}\n`);
 }
 
 async function step() {
@@ -335,7 +385,7 @@ async function step() {
   if (Object.values(state.tasks).some((t) => t.phase === 'paused')) { saveState(STATE, state); writeStatus(state); return IDLE_MS; }
 
   if (!state.current) {
-    const pending = (q) => q.find((task) => !state.tasks[task.id] || !['done', 'skipped'].includes(state.tasks[task.id].phase));
+    const pending = (q) => q.find((task) => !state.tasks[task.id] || !['done', 'skipped', 'deferred'].includes(state.tasks[task.id].phase));
     // The queue refills from the audit: the next cause fix not yet done, as
     // the developer's tree records it (owner, 2026-10-08).
     if (!pending(queue)) {
