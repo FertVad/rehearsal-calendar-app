@@ -6,51 +6,64 @@
 
 ## Правка №8: состав и расчёт планировщика привязаны к проекту
 
-**Причина.** `useSmartPlanner` не сообщал, для какого проекта загружен текущий
-стейт `members`. Эффект-сеялка в `SmartPlannerScreen` срабатывал одновременно с
-эффектом очистки хука — в одном цикле рендера после смены `projectId`. В этом
-цикле `simpleMembers` ещё отражали прошлый проект (стейт-апдейт из эффекта
-очистки не успевал распространиться). Эффект видел стейл-данные, засевал
-`selectedMemberIds` ID-шниками старого проекта под ключом нового `projectId` и
-помечал новый проект как «уже инициализированный». Когда реальные участники
-нового проекта наконец загружались, сеялка выходила по ранней защите
-`hasInitializedMembers.current === projectId` и старые ID оставались навсегда.
+### Причина
 
-Следствие: планировщик рассчитывал слоты для людей из прошлого проекта и
-передавал их же в форму создания репетиции (`prefilledMemberIds`).
+`useSmartPlanner` не нёс информацию о том, для какого проекта загружены текущие
+`members`. Эффект-сеялка в `SmartPlannerScreen` срабатывал в том же цикле
+рендера, что и эффект очистки хука — в этом цикле `simpleMembers` ещё отражали
+прошлый проект. Эффект засевал `selectedMemberIds` ID-шниками старого проекта
+под ключом нового `projectId` и помечал его как «уже инициализированный». Когда
+реальные участники нового проекта наконец загружались, сеялка выходила по ранней
+защите `hasInitializedMembers.current === projectId` и старые ID оставались
+навсегда.
 
-**Правка.** `useSmartPlanner` сбрасывает `membersProjectId` → `null` при смене
-проекта и выставляет `membersProjectId = projectId` только после успешной
-загрузки участников. Эффект-сеялка в `SmartPlannerScreen` добавляет охрану
-`if (membersProjectId !== projectId) return` — ждёт, пока данные в стейте
-подтверждённо принадлежат активному проекту.
+Та же защита (`hasInitializedMembers.current === projectId`) блокировала
+reconciliation при перезагрузке состава того же проекта: если участник удалялся,
+а дата-диапазон менялся (смена периода «Неделя» → «Месяц»), состав перезагружался,
+но `selectedMemberIds` сохранял удалённый ID. Генератор слотов получал ID, которого
+нет в `simpleMembers`, считал эффективный охват нулём и не отображал кнопки создания
+репетиции.
 
-Правило живёт в одном месте: хук отвечает за актуальность данных и декларирует
-это через `membersProjectId`; экран полагается на этот инвариант и не пытается
-самостоятельно рассуждать о своевременности загрузки.
+### Правка
 
-**Изменённые файлы:**
-- [`useSmartPlanner.ts`](../rehearsal-calendar-native/src/features/smart-planner/hooks/useSmartPlanner.ts):
-  новый стейт `membersProjectId`, сброс в `[projectId]`-эффекте, установка
-  после `setMembers`; возвращается из хука.
-- [`SmartPlannerScreen.tsx`](../rehearsal-calendar-native/src/features/smart-planner/screens/SmartPlannerScreen.tsx):
-  деструктурирует `membersProjectId`; эффект-сеялка добавляет охрану.
+**`useSmartPlanner.ts`** — новый стейт `membersProjectId`: `null` при очистке
+(clearing-эффект по `[projectId]`), `= projectId` сразу после `setMembers` при
+успешной загрузке. Возвращается из хука.
 
-**Проверки:**
-- [`SmartPlannerScreen.test.tsx`](../rehearsal-calendar-native/src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx),
-  2 теста: после переключения с проекта A (3 участника) на проект B (2
-  участника) summary фильтра участников не содержит "3 of 2" — что было бы
-  невозможным счётчиком «больше выбрано, чем существует».
-- **«Красное до»** ([planner-before.txt](evidence/R5/planner-before.txt)):
-  на коде до правки оба теста падали: первый — потому что "3 of 2" присутствовало
-  в DOM (queryByText вернул не null); второй — та же причина. Второй тест прямо
-  доказывает баг: summary показывал "3 of 2 selected" после смены на B.
-- **Полная проверка после правки:** `check:secrets` — 0 находок; `type-check` —
-  exit 0; `npm test --silent` — 2 теста DP01 PASS, все клиентские наборы PASS.
-  Два серверных набора (`runtimeStartup`, `notifications`) упали по таймауту —
-  это задокументированный флап под параллельной нагрузкой (REMEDIATION_R8.md:
-  «нетронутые наборы `runtimeStartup`... проходили за секунды»); мои изменения
-  затрагивают только клиент.
+**`SmartPlannerScreen.tsx`** — эффект-сеялка переписан в два рукава:
+- Охрана `membersProjectId !== projectId` ждёт подтверждённых данных (не
+  возникает гонки со стейл-данными при смене проекта).
+- При `hasInitializedMembers.current !== projectId` — первый подтверждённый лоад:
+  засеваем всех участников, помечаем ref.
+- При `hasInitializedMembers.current === projectId` — перезагрузка состава того же
+  проекта: фильтруем `selectedMemberIds`, удаляя ID, которых больше нет в
+  `simpleMembers`. Ручные деселекции оставшихся участников не трогаются.
 
-**Статусы.** DP01 → READY_FOR_CHECK до проверки на устройстве DEV-19
-(переключить проект в планировщике — убедиться, что участники обновляются).
+Правило живёт в одном месте: хук декларирует актуальность данных через
+`membersProjectId`; экран полагается на этот инвариант для обоих сценариев
+(смена проекта и обновление состава).
+
+### Изменённые файлы
+
+- [`useSmartPlanner.ts`](../rehearsal-calendar-native/src/features/smart-planner/hooks/useSmartPlanner.ts)
+- [`SmartPlannerScreen.tsx`](../rehearsal-calendar-native/src/features/smart-planner/screens/SmartPlannerScreen.tsx)
+
+### Проверки
+
+| Тест | Что проверяет | Красный до |
+|---|---|---|
+| `SmartPlannerScreen.test.tsx` — 2 теста DP01 | После переключения A(3)→B(2) summary не содержит «3 of 2» | `47037a4` — оба теста падали |
+| `SmartPlannerScreen.test.tsx` — тест R5-01 | После удаления a3 из A и смены периода summary не содержит «3 of 2» | `f9212b3` — тест падал |
+
+- **«Красное до» DP01** ([planner-before.txt](evidence/R5/planner-before.txt)):
+  на коде `47037a4` оба теста DP01 падали с «3 of 2 selected» в DOM.
+- **«Красное до» R5-01** ([planner-r5-01-before.txt](evidence/R5/planner-r5-01-before.txt)):
+  на коде `f9212b3` тест R5-01 падал — «3 of 2 selected» после удаления участника.
+- **Полная проверка после всех правок:** `check:secrets` — 0; `type-check` — exit 0;
+  3 теста SmartPlannerScreen PASS; все клиентские наборы PASS.
+
+### Статусы
+
+DP01 → READY_FOR_CHECK до проверки на устройстве DEV-19 (переключить проект в
+планировщике, убедиться что состав обновляется; удалить участника и сменить
+период — убедиться что кнопки создания не исчезают).

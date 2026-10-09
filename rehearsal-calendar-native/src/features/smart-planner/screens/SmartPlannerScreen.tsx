@@ -136,27 +136,46 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
 
   const projectName = project?.name || t.common.loading;
 
-  // Select everyone by default, once per project.
+  // Select everyone by default on first load per project; keep the selection
+  // consistent with the roster on every subsequent reload.
   //
-  // The project can change without this screen unmounting (handleSelectProject
-  // only calls setParams), so a plain "did this run yet" flag would keep the
-  // previous project's member ids: the counter reads "7 of 5" and, worse, the
-  // recommendations get filtered by people who are not in this project.
+  // Two separate concerns live here:
   //
-  // The guard membersProjectId === projectId is what prevents seeding from
-  // stale data. When projectId changes, useSmartPlanner resets membersProjectId
-  // to null and starts a new load. Both the clearing effect (inside the hook)
-  // and this seeding effect fire in the same render batch — but simpleMembers
-  // in that batch still reflects the previous project's roster. Without the
-  // guard the seeding effect would lock the new projectId to the old members
-  // before the real roster arrives (DP01). Waiting for membersProjectId to
-  // match ensures members state was actually loaded for the active project.
+  // 1. Project switch (DP01). The project can change without this screen
+  //    unmounting (handleSelectProject only calls setParams). When projectId
+  //    changes, useSmartPlanner resets membersProjectId to null and starts a
+  //    new load. Both the clearing effect (inside the hook) and this seeding
+  //    effect fire in the same render batch — but simpleMembers in that batch
+  //    still reflects the previous project's roster. The guard
+  //    `membersProjectId !== projectId` prevents seeding from stale data by
+  //    waiting until the hook confirms the members state is for the right
+  //    project. On first confirmed load the full roster is selected.
+  //
+  // 2. Roster reload within the same project (R5-01). When the date range
+  //    changes (period picker) the hook reloads without resetting
+  //    membersProjectId. If a member was removed between loads their ID stays
+  //    in selectedMemberIds; the slot generator receives an ID it cannot find
+  //    in simpleMembers, counts it as a missing member, and may produce no
+  //    usable slots. The reconciliation branch filters out IDs that are no
+  //    longer present — without touching manual deselections for members that
+  //    remain.
   useEffect(() => {
-    if (hasInitializedMembers.current === projectId) return;
     if (membersProjectId !== projectId) return;
 
-    setSelectedMemberIds(simpleMembers.map(m => m.id));
-    hasInitializedMembers.current = projectId;
+    const validIds = new Set(simpleMembers.map(m => m.id));
+
+    if (hasInitializedMembers.current !== projectId) {
+      // First confirmed load for this project: start with everyone selected.
+      setSelectedMemberIds(simpleMembers.map(m => m.id));
+      hasInitializedMembers.current = projectId;
+      return;
+    }
+
+    // Same project, roster reloaded: drop IDs no longer in the project.
+    setSelectedMemberIds(prev => {
+      const next = prev.filter(id => validIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
   }, [simpleMembers, projectId, membersProjectId]);
 
   const handleSelectProject = useCallback((newProjectId: string) => {

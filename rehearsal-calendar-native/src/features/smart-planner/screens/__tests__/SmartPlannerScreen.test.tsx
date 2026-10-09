@@ -108,6 +108,32 @@ function makeProps(projectId: string) {
   };
 }
 
+describe('DP01 — roster reload within the same project (R5-01)', () => {
+  it('drops removed members from selection when the roster reloads', async () => {
+    // Phase 1: project A loads with 3 members; selection seeds to all three.
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    // Phase 2: a3 is removed from the project. Next reload must drop it.
+    getMembers.mockImplementation(async (id: string) => ({
+      data: { members: id === 'A' ? ['a1', 'a2'].map(member) : (MEMBERS[id] ?? []) },
+    }));
+
+    // Trigger reload by switching to the Month period (changes date range).
+    fireEvent.press(screen.getByText(t.smartPlanner.month));
+    await settle();
+    await settle();
+    await settle();
+
+    // With the bug: selectedMemberIds = [a1,a2,a3], members = [a1,a2]
+    //   → "3 of 2 selected" — slot generator receives a3 which is not in
+    //   simpleMembers, counts zero valid members, renders no slot buttons.
+    // With the fix: selectedMemberIds trimmed to [a1,a2] → "2 of 2 selected".
+    expect(screen.queryByText(/3 of 2/)).toBeNull();
+  });
+});
+
 describe('DP01 — member selection follows the project', () => {
   it('member filter shows exactly the new project\'s count after switching', async () => {
     // Project A has 3 members, project B has 2. After switching, the filter
