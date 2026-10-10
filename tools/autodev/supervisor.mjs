@@ -40,6 +40,7 @@ import { waitFor } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
 import { appendReport, loadState, parseDecisions, parseTasks, saveState, writeAtomic } from './lib/store.mjs';
 import { auditTasks, taskMarkdown } from './lib/audit.mjs';
+import { flakeTask, flakeTitle, insertAfter, nextFlakeId } from './lib/flakes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..');
@@ -366,13 +367,33 @@ async function check(state, task, t) {
     return pause(state, task, t, `изменение требует решения владельца — ${reasons.join('; ')}`);
   }
   note(task, `проверки: запущены (${files.length} файлов)`);
-  const checks = await runChecks({ root: WORKTREE, changedFiles: files, node: NODE, log: path.join(LOGS, `${task.id}-checks.log`), env: ENV });
+  const runAll = async () => {
+    const result = await runChecks({ root: WORKTREE, changedFiles: files, node: NODE, log: path.join(LOGS, `${task.id}-checks.log`), env: ENV });
+    note(task, `проверки: ${result.steps.map((s) => `${s.name} ${s.ok ? 'PASS' : 'FAIL'}`).join(', ')}`);
+    return result;
+  };
+  const machineOnly = (result) => {
+    const red = result.steps.filter((s) => !s.ok);
+    return red.length > 0 && red.every((s) => s.environment);
+  };
+  let checks = await runAll();
+  // Red once more on the same commits, so a flaky test is told apart from the
+  // task: green the second time, the task goes on and the test is queued as a
+  // task of its own (lib/flakes.mjs). Three hit T-109 in a day.
+  if (!checks.ok && !machineOnly(checks)) {
+    const first = checks;
+    note(task, 'проверки: красные — повторяю на тех же коммитах, чтобы отличить нестабильный тест');
+    checks = await runAll();
+    if (checks.ok) {
+      const id = queueFlake(task, head, first.steps.filter((s) => !s.ok && !s.environment));
+      note(task, `проверки: на повторе зелёные — тест нестабилен, задача ни при чём; он поставлен в очередь как ${id}`);
+    }
+  }
   t.checks = { head, ok: checks.ok, steps: checks.steps.map(({ name, ok, code }) => ({ name, ok, code })) };
-  note(task, `проверки: ${checks.steps.map((s) => `${s.name} ${s.ok ? 'PASS' : 'FAIL'}`).join(', ')}`);
   // e2e could not start on this machine: not the task's failure, and not an
   // attempt. T-109 was sent to "fix" a port a dead e2e run held (2026-10-10).
   const failed = checks.steps.filter((s) => !s.ok);
-  if (failed.length && failed.every((s) => s.environment)) {
+  if (machineOnly(checks)) {
     const why = failed.map((s) => s.tail.trim().split('\n').at(-1)).join('; ').slice(0, 300);
     const retry = NOT_READY_RETRY_MS[Math.min(t.notReady ?? 0, NOT_READY_RETRY_MS.length - 1)];
     t.notReady = (t.notReady ?? 0) + 1;
@@ -389,6 +410,22 @@ async function check(state, task, t) {
     return defer(state, task, t, `проверки красные после ${MAX_CHECK_ATTEMPTS} попыток (${red}), лог — .state/logs/${task.id}-checks.log`);
   }
   nextStep(t, { kind: 'fix-checks', steps: checks.steps.filter((step) => !step.ok) });
+}
+
+/** Queues a flaky test as a task right after `task`; the same test again is not queued twice. Its id. */
+function queueFlake(task, head, steps) {
+  const file = path.join(DIR, 'TASKS.md');
+  const text = fs.readFileSync(file, 'utf8');
+  const title = flakeTitle(steps);
+  const known = parseTasks(text).find((queued) => queued.title === title);
+  if (known) {
+    note(known, `снова упал в проверках ${task.id} (${head.slice(0, 7)})`);
+    return known.id;
+  }
+  const id = nextFlakeId(text);
+  const block = flakeTask({ id, task, head, steps, log: `AUTODEV/.state/logs/${task.id}-checks.log`, when: stamp() });
+  writeAtomic(file, insertAfter(text, task.id, block));
+  return id;
 }
 
 async function review(state, task, t) {

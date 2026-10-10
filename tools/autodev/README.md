@@ -36,6 +36,13 @@ scratch; `T-…: на ревью [commits]` sends it back to Astra with its own 
 the commits named (or all of that branch), cherry-picked onto `auto/main` when
 the queue reaches it, then checks and review in her same thread and round.
 
+**A red check is run once more on the same commits.** Green the second time,
+the test is flaky, not the task's: the task goes on to review, and the test is
+queued as a task of its own right after it — `T-2NN Нестабильный тест: …`,
+with what failed (`lib/flakes.mjs`). An e2e run that exits 75 is the machine,
+not the task: no attempt is counted, and the checks run again in 15 minutes,
+then hourly.
+
 **Only what is dangerous stops the whole queue** and waits for the owner:
 a change touching migrations, SQL, auth (server or app), `.env`, deploy, CI,
 production addresses, data deletion, keys, `ios/` or the supervisor
