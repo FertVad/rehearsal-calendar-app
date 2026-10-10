@@ -119,6 +119,15 @@ ${TOOLING}
 ${DEVELOPER_END}`;
 }
 
+/** A note from the owner, put ahead of the message's closing instructions. */
+export function withNote(message, note) {
+  if (!note) return message;
+  return `Заметка владельца к этой задаче (через супервизор):
+${note}
+
+${message}`;
+}
+
 /** After a limit or a crash in the middle of a step: the same task, named again. */
 export function continueStep(task, step) {
   return `Задача ${task.id}: ${task.title}. Цель этого шага — ${STEP_GOAL[step] ?? STEP_GOAL.develop}.

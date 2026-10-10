@@ -289,6 +289,24 @@ const STEP_TITLE = {
   'fix-review': 'Исправление замечаний ревью',
 };
 
+/**
+ * AUTODEV/notes/<id>.md, from the owner (or Claude on the owner's behalf):
+ * appended once to the next message the task's developer gets, then moved to
+ * notes/delivered/. A session already running cannot be told anything
+ * otherwise — T-203's went on believing a script was still refused, and did
+ * not know where the red run's surviving artifacts were.
+ */
+function takeNote(task) {
+  const file = path.join(DIR, 'notes', `${task.id}.md`);
+  let text = '';
+  try { text = fs.readFileSync(file, 'utf8').trim(); } catch { return null; }
+  if (!text) return null;
+  const delivered = path.join(DIR, 'notes', 'delivered', `${task.id}-${new Date().toISOString().replace(/[:.]/g, '-')}.md`);
+  fs.mkdirSync(path.dirname(delivered), { recursive: true });
+  fs.renameSync(file, delivered);
+  return { text, delivered };
+}
+
 /** A fresh session's statement: the task, its commits so far, this step's purpose. */
 function stepPrompt(task, t) {
   const done = t.base ? git(WORKTREE, 'log', '--oneline', `${t.base}..HEAD`) : '';
@@ -318,7 +336,8 @@ async function develop(state, task, t) {
   const starting = t.sessionStarted === false;
   t.sessionStarted = true;
   saveState(STATE, state);
-  const prompt = starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind));
+  const note_ = takeNote(task);
+  const prompt = P.withNote(starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind)), note_?.text);
   const run = await runClaude({
     bin: claudeBin(), cwd: WORKTREE, prompt, env: CLAUDE_ENV, model: ownerModel(),
     sessionId: starting ? t.claudeSession : undefined,
@@ -328,6 +347,7 @@ async function develop(state, task, t) {
     log: path.join(LOGS, `${task.id}-claude.jsonl`),
     timeoutMs: 3 * 60 * 60 * 1000,
   });
+  if (note_) note(task, `разработчику передана заметка ${path.relative(DIR, note_.delivered)}`);
   if (run.missingSession && !starting) {
     t.sessionStarted = false; // it never existed: start it next step
     note(task, 'разработка: сессии нет — начну её заново');

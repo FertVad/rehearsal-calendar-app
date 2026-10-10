@@ -79,3 +79,10 @@ test('a step\'s fresh session is told what the branch already holds', () => {
   assert.doesNotMatch(P.developTask(task), /уже есть коммиты/);
   assert.match(P.developTask(task), /Работай только над этой задачей/);
 });
+
+test('a note from the owner leads the message, which still ends with the marker request', () => {
+  const message = P.withNote(P.continueStep(task, 'develop'), 'node <файл> теперь разрешён');
+  assert.match(message, /^Заметка владельца к этой задаче \(через супервизор\):\nnode <файл> теперь разрешён/);
+  assert.match(message, /RESULT: DONE\nRESULT: BLOCKED: <причина>$/);
+  assert.equal(P.withNote('x', ''), 'x');
+});
