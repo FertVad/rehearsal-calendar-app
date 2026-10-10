@@ -94,6 +94,9 @@ never fires twice.
 - `RESULT: DONE` with changes left uncommitted goes back to the developer:
   checked, reviewed and pushed is only what is committed. A task set aside
   keeps its uncommitted work in a `git stash` named after it.
+- A commit that changes `tools/autodev` restarts the supervisor at its next
+  step boundary, where nothing is running; launchd brings it back on the new
+  code. No STOP file or hand restart is needed to deploy a fix.
 - State is written before each step (`AUTODEV/.state/state.json`); a crash,
   reboot or limit resumes there. Logs: `AUTODEV/.state/logs/`.
 

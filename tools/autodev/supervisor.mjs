@@ -124,6 +124,18 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const stamp = () => new Date().toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
 const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', env: ENV, maxBuffer: 64 * 1024 * 1024 }).trim();
 
+/**
+ * The supervisor's own code as committed when it started. A commit that
+ * changes it restarts the supervisor at the next step boundary — nothing is
+ * running there — and launchd (KeepAlive) brings it back on the new code. The
+ * other way, a STOP file and a hand restart, once left the queue standing
+ * three hours after a limit had reset (2026-10-10).
+ */
+function codeVersion() {
+  try { return git(REPO, 'rev-parse', 'HEAD:tools/autodev'); } catch { return null; }
+}
+const STARTED_ON = codeVersion();
+
 let tasksById = {};
 const events = [];
 
@@ -681,6 +693,10 @@ function consumeDecisions(file, text, ids) {
 }
 
 async function step() {
+  if (!once && STARTED_ON && codeVersion() !== STARTED_ON) {
+    note(null, 'код супервизора обновился — перезапускаюсь на новом');
+    process.exit(0);
+  }
   const state = loadState(STATE);
   let queue = [];
   try { queue = parseTasks(fs.readFileSync(path.join(DIR, 'TASKS.md'), 'utf8')); } catch { /* no queue yet */ }
