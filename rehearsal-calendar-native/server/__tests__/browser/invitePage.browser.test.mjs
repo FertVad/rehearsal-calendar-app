@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { once } from 'node:events';
 import { after, before, test } from 'node:test';
 import { chromium } from 'playwright';
 
@@ -34,7 +33,9 @@ after(async () => {
   assert.equal(database.default, undefined, 'Browser checks must not initialize a database');
 });
 
-async function fixture(t, { code = 'ABCDEFGH', query = '', javaScriptEnabled = true, blockScript = false, locale = 'en-US' } = {}) {
+async function fixture(t, {
+  code = 'ABCDEFGH', query = '', javaScriptEnabled = true, blockScript = false, locale = 'en-US', beforeNavigation,
+} = {}) {
   const context = await browser.newContext({ javaScriptEnabled, locale, serviceWorkers: 'block' });
   const unexpectedRequests = [];
   const blockedScripts = [];
@@ -74,6 +75,9 @@ async function fixture(t, { code = 'ABCDEFGH', query = '', javaScriptEnabled = t
     await page.clock.install({ time: new Date('2026-09-18T12:00:00Z') });
     await page.clock.pauseAt(new Date('2026-09-18T12:00:01Z'));
   }
+  // Observers of the page's own startup must exist before it loads: the first
+  // scheme attempt is a zero-delay timer that may already run during load.
+  await beforeNavigation?.(page);
   const response = await page.goto(`${base}/invite/${encodeURIComponent(code)}${query}`);
   t.after(async () => {
     await context.close();
@@ -229,14 +233,25 @@ test('Russian browser language localizes the status, fallback and both manual li
 
 test('visibility changes and page restoration cancel a pending second automatic scheme attempt', async t => {
   for (const lifecycleEvent of ['visibilitychange', 'pageshow']) {
-    const { page } = await fixture(t, { query: '?expoHost=127.0.0.1%3A8081' });
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send('Page.enable');
+    let cdp;
     const attempts = [];
-    cdp.on('Page.frameRequestedNavigation', event => {
-      if (/^(exp|rehearsalapp):/.test(event.url)) attempts.push(event.url);
+    let firstAttempt;
+    const { page } = await fixture(t, {
+      query: '?expoHost=127.0.0.1%3A8081',
+      beforeNavigation: async target => {
+        cdp = await target.context().newCDPSession(target);
+        await cdp.send('Page.enable');
+        firstAttempt = new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error('No automatic scheme attempt within 5 s')), 5000);
+          cdp.on('Page.frameRequestedNavigation', event => {
+            if (!/^(exp|rehearsalapp):/.test(event.url)) return;
+            attempts.push(event.url);
+            clearTimeout(timer);
+            resolve();
+          });
+        });
+      },
     });
-    const firstAttempt = once(cdp, 'Page.frameRequestedNavigation', { signal: AbortSignal.timeout(5000) });
     await page.clock.runFor(1);
     await firstAttempt;
     assert.deepEqual(attempts, ['exp://127.0.0.1:8081/--/invite/ABCDEFGH']);
