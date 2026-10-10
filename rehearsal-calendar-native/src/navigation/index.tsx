@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { Colors } from '../shared/constants/colors';
 import { hapticLight, hapticMedium } from '../shared/utils/haptics';
+import { inviteCodeFromUrl } from '../shared/utils/inviteCode';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
 import { useNotifications } from '../shared/hooks/useNotifications';
 import { BetaBanner } from '../shared/components/BetaBanner';
@@ -358,12 +359,13 @@ export default function Navigation() {
   // Every invite link, whenever it arrives, only queues its code. Opening it is
   // the job of the one effect below. Navigating straight from here reached the
   // auth or onboarding stack whenever it was showing — neither has JoinProject,
-  // so the call was dropped and the invite lost (HN01).
+  // so the call was dropped and the invite lost (HN01). The code is read by the
+  // server's own format, whole — never a prefix of it.
   useEffect(() => {
     const handleUrl = (url: string) => {
-      const inviteMatch = url.match(/invite\/([a-f0-9]+)/);
-      if (inviteMatch) {
-        setPendingInviteCode(inviteMatch[1]);
+      const code = inviteCodeFromUrl(url);
+      if (code) {
+        setPendingInviteCode(code);
       }
     };
 

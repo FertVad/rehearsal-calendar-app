@@ -11,6 +11,9 @@
  * Red before: navigate is called while onboarding is still active — both for a
  * link queued before sign-in and for one that arrives during onboarding. After
  * the fix the code waits until the app stack is mounted, then opens once.
+ *
+ * The links carry codes the server really issues. The handler once parsed only
+ * lowercase hex, so a short code was dropped or cut to its leading digits.
  */
 import React from 'react';
 import { render, act } from '@testing-library/react-native';
@@ -111,7 +114,7 @@ it('holds the invite code until onboarding completes, then navigates (HN01)', ()
     const { rerender } = render(<Navigation />);
 
     // 2. Invite URL arrives while unauthenticated → stored as pendingInviteCode.
-    act(() => { urlListener({ url: 'rehearsalapp://invite/deadbeef' }); });
+    act(() => { urlListener({ url: 'rehearsalapp://invite/ABCDEFGH' }); });
 
     // 3. User signs in; onboarding not yet complete.
     authState = { user: { id: 'u1', onboardingCompleted: false }, isAuthenticated: true, loading: false };
@@ -131,7 +134,7 @@ it('holds the invite code until onboarding completes, then navigates (HN01)', ()
     // 6. Advance again: now the invite must be dispatched.
     act(() => { jest.advanceTimersByTime(600); });
 
-    expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code: 'deadbeef' });
+    expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code: 'ABCDEFGH' });
   } finally {
     jest.useRealTimers();
   }
@@ -146,7 +149,7 @@ it('holds an invite that arrives while onboarding is already showing (HN01)', ()
 
     // The link arrives now. On unfixed code it is navigated straight into the
     // onboarding stack, which has no JoinProject, and dropped.
-    act(() => { urlListener({ url: 'rehearsalapp://invite/cafe01' }); });
+    act(() => { urlListener({ url: 'rehearsalapp://invite/23KMNPQR' }); });
     act(() => { jest.advanceTimersByTime(600); });
     expect(mockNavigate).not.toHaveBeenCalled();
 
@@ -155,7 +158,52 @@ it('holds an invite that arrives while onboarding is already showing (HN01)', ()
     act(() => { jest.advanceTimersByTime(600); });
 
     expect(mockNavigate).toHaveBeenCalledTimes(1);
-    expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code: 'cafe01' });
+    expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code: '23KMNPQR' });
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+// The queue keeps the whole code in the format the server issues: today's short
+// codes (digits and capitals) and the legacy 32-digit hexadecimal ones. Codes
+// below are valid on the server (server/utils/inviteCodes.js).
+it.each([
+  ['a short code of capitals only', 'rehearsalapp://invite/ABCDEFGH', 'ABCDEFGH'],
+  ['a short code starting with digits', 'rehearsalapp://invite/23KMNPQR', '23KMNPQR'],
+  ['a short code through Expo Go', 'exp://192.168.1.5:8081/--/invite/XYZ23456', 'XYZ23456'],
+  ['a legacy hexadecimal code', 'rehearsalapp://invite/0123456789abcdef0123456789abcdef', '0123456789abcdef0123456789abcdef'],
+  ['a legacy code in capitals', 'rehearsalapp://invite/0123456789ABCDEF0123456789ABCDEF', '0123456789ABCDEF0123456789ABCDEF'],
+])('queues %s whole and opens it after onboarding (HN01)', (_name, url, code) => {
+  jest.useFakeTimers();
+  try {
+    authState = { user: { id: 'u1', onboardingCompleted: false }, isAuthenticated: true, loading: false };
+    const { rerender } = render(<Navigation />);
+    act(() => { urlListener({ url }); });
+
+    authState = { user: { id: 'u1', onboardingCompleted: true }, isAuthenticated: true, loading: false };
+    rerender(<Navigation />);
+    act(() => { jest.advanceTimersByTime(600); });
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code });
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it.each([
+  ['a code of the wrong length', 'rehearsalapp://invite/ABCDEFG'],
+  ['a code with letters the server never issues', 'rehearsalapp://invite/ABCDEFGI'],
+  ['a code followed by more characters', 'rehearsalapp://invite/ABCDEFGHJ'],
+])('does not queue %s (HN01)', (_name, url) => {
+  jest.useFakeTimers();
+  try {
+    authState = { user: { id: 'u1', onboardingCompleted: true }, isAuthenticated: true, loading: false };
+    render(<Navigation />);
+    act(() => { urlListener({ url }); });
+    act(() => { jest.advanceTimersByTime(600); });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
   } finally {
     jest.useRealTimers();
   }
