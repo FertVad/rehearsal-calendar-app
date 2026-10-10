@@ -54,6 +54,21 @@ never fires twice.
   `.claude`, no push, checkout, reset, migrate, curl or web.
 - Codex runs with `--sandbox workspace-write` in the review tree and **no model
   or reasoning flags** — those are the owner's settings in `~/.codex/config.toml`.
+- **One session per step.** Developing the task, fixing red checks and
+  fixing the reviewer's notes are three steps, and each starts a fresh Claude
+  session with the whole statement: the task, the commits its branch already
+  holds, what this step is for. A session is resumed only inside its step —
+  after a limit, a crash, an answer without its `RESULT` line — and every
+  message to it names the task again; there is no bare "continue". T-108 ran
+  one session through every round: it compacted away its rules, a "continue"
+  reached it after it had finished, and it took up the next audit fixes itself.
+- The developer works in the foreground only: background jobs, cron and
+  auto-memory are switched off (`CLAUDE_CODE_DISABLE_*`), and the agent,
+  monitor and schedule tools are denied. A background job gave T-108's runs
+  extra turns after the real answer, so the last turn had no marker.
+- `RESULT: DONE` with changes left uncommitted goes back to the developer:
+  checked, reviewed and pushed is only what is committed. A task set aside
+  keeps its uncommitted work in a `git stash` named after it.
 - State is written before each step (`AUTODEV/.state/state.json`); a crash,
   reboot or limit resumes there. Logs: `AUTODEV/.state/logs/`.
 

@@ -64,12 +64,16 @@ export async function runClaude({ bin, cwd, prompt, sessionId, resume, settingsF
   const run = sandboxProfile
     ? await runJsonLines('/usr/bin/sandbox-exec', ['-f', sandboxProfile, '-D', `HOME=${env.HOME}`, bin, ...args], { cwd, env, log, timeoutMs })
     : await runJsonLines(bin, args, { cwd, env, log, timeoutMs });
-  const result = [...run.events].reverse().find((event) => event.type === 'result');
+  const results = run.events.filter((event) => event.type === 'result');
+  const result = results.at(-1);
   const init = run.events.find((event) => event.type === 'system' && event.session_id);
   const limit = limitFromClaudeEvents(run.events.length ? run.events : [{ type: 'result', is_error: true, result: run.stderr }]);
   return {
     sessionId: result?.session_id ?? init?.session_id ?? resume ?? sessionId,
     text: result?.result ?? '',
+    // Every time the run ended, in order: background jobs and notifications
+    // add turns after the real answer (prompts.pickResult).
+    results: results.map((event) => String(event.result ?? '')),
     failed: !result || Boolean(result.is_error) || run.code !== 0,
     limit,
     exit: run.code,

@@ -71,6 +71,16 @@ const ENV = {
   MAESTRO_CLI_NO_ANALYTICS: '1',
 };
 
+// The developer answers once per run, in the foreground. A background job or
+// a cron gave T-108's runs turns after the answer; auto-memory would carry one
+// task's notes into the next.
+const CLAUDE_ENV = {
+  ...ENV,
+  CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1',
+  CLAUDE_CODE_DISABLE_CRON: '1',
+  CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1',
+};
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const stamp = () => new Date().toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
 const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', env: ENV, maxBuffer: 64 * 1024 * 1024 }).trim();
@@ -166,17 +176,31 @@ function pause(state, task, t, reason) {
  * dangerous stops the whole queue (pause()).
  */
 function defer(state, task, t, reason) {
-  const head = git(WORKTREE, 'rev-parse', 'HEAD');
-  let kept = '';
-  if (t.base && head !== t.base) {
-    git(WORKTREE, 'branch', '-f', `auto/deferred/${task.id}`, head);
-    git(WORKTREE, 'reset', '--hard', '--quiet', t.base);
-    kept = `; работа сохранена в auto/deferred/${task.id}`;
-  }
+  const kept = setAside(task, t, 'deferred');
   t.phase = 'deferred';
   t.deferReason = reason;
   state.current = null;
   note(task, `ОТЛОЖЕНО: ${reason}${kept}. Очередь идёт дальше. Вернуть — строкой «${task.id}: продолжить» в AUTODEV/DECISIONS.md.`);
+}
+
+/**
+ * Takes a task's work off auto/main: its commits onto auto/<kind>/<id>, what
+ * it left uncommitted into a stash, so the next task starts from a clean base.
+ * A note for the report, or ''.
+ */
+function setAside(task, t, kind) {
+  let kept = '';
+  if (git(WORKTREE, 'status', '--porcelain')) {
+    git(WORKTREE, 'stash', 'push', '--include-untracked', '--quiet', '-m', `autodev ${task.id}: незакоммиченное при «${kind}»`);
+    kept += `; незакоммиченное — в git stash («autodev ${task.id}»)`;
+  }
+  const head = git(WORKTREE, 'rev-parse', 'HEAD');
+  if (t.base && head !== t.base) {
+    git(WORKTREE, 'branch', '-f', `auto/${kind}/${task.id}`, head);
+    git(WORKTREE, 'reset', '--hard', '--quiet', t.base);
+    kept += `; коммиты сохранены в auto/${kind}/${task.id}`;
+  }
+  return kept;
 }
 
 function waitOut(state, task, who, limit) {
@@ -185,23 +209,42 @@ function waitOut(state, task, who, limit) {
   note(task, `лимит ${who}${limit.known ? `, сброс в ${limit.at.toLocaleString('ru-RU')}` : ', время сброса не прочитано — проверим через 20 минут'}; продолжим ту же сессию`);
 }
 
+const STEP_NOTE = {
+  develop: 'начата',
+  'fix-checks': 'исправление упавших проверок, новая сессия',
+  'fix-review': 'исправление замечаний ревью, новая сессия',
+};
+
+/** A fresh session's statement: the task, its commits so far, this step's purpose. */
+function stepPrompt(task, t) {
+  const done = t.base ? git(WORKTREE, 'log', '--oneline', `${t.base}..HEAD`) : '';
+  if (t.step?.kind === 'fix-checks') return P.fixChecks(task, t.step.steps, done);
+  if (t.step?.kind === 'fix-review') return P.fixReview(task, t.step.review, done);
+  return P.developTask(task, done);
+}
+
+/**
+ * One step of development — the task, the red checks, the reviewer's notes —
+ * is one session, started with the whole statement (prompts.mjs). It is
+ * resumed only inside its step: after a limit, a crash, an answer missing its
+ * marker; each time told the task again.
+ */
 async function develop(state, task, t) {
-  const fresh = !t.claudeSession;
-  if (fresh) {
+  const kind = t.step?.kind ?? 'develop';
+  if (!t.claudeSession) {
     t.claudeSession = randomUUID();
     t.sessionStarted = false;
-    note(task, 'разработка: начата');
+    t.followUp = null;
+    note(task, `разработка: ${STEP_NOTE[kind]}`);
   }
   // The id is chosen here, so it is on disk before the session exists: a crash
   // or reboot mid-turn continues this session instead of starting another.
-  // Only a session marked not yet started is started; one from older state,
-  // without the mark, already exists.
   const starting = t.sessionStarted === false;
   t.sessionStarted = true;
   saveState(STATE, state);
-  const prompt = starting ? P.developTask(task) : (t.pending ?? P.CONTINUE);
+  const prompt = starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind));
   const run = await runClaude({
-    bin: CLAUDE, cwd: WORKTREE, prompt, env: ENV,
+    bin: CLAUDE, cwd: WORKTREE, prompt, env: CLAUDE_ENV,
     sessionId: starting ? t.claudeSession : undefined,
     resume: starting ? undefined : t.claudeSession,
     settingsFile: path.join(HERE, 'claude-settings.json'),
@@ -215,30 +258,58 @@ async function develop(state, task, t) {
     return;
   }
   if (run.sessionId) t.claudeSession = run.sessionId;
-  if (run.limit.limited) { t.pending = P.CONTINUE; return waitOut(state, task, 'Claude', run.limit); }
-  const result = P.readResult(run.text);
-  if (run.failed || !result) {
+  if (run.limit.limited) { t.followUp = P.continueStep(task, kind); return waitOut(state, task, 'Claude', run.limit); }
+  const picked = P.pickResult(run.results);
+  if (!picked.result) {
     t.failures = (t.failures ?? 0) + 1;
-    t.pending = P.CONTINUE;
+    // A run that ended normally without its marker is asked for it, not told
+    // to "continue" — T-108 took that as leave to start the next fix.
+    t.followUp = run.failed ? P.continueStep(task, kind) : P.missingMarker(task);
     note(task, `разработка: ${run.failed ? `сбой (код ${run.exit})` : 'ответ без строки RESULT'}, попытка ${t.failures}`);
     if (t.failures >= MAX_AGENT_FAILURES) defer(state, task, t, 'разработчик трижды не дал ответа');
     return;
   }
+  const { result } = picked;
   // Stopped by a refused command is a tooling hitch, not the owner's decision:
   // sent back to carry on another way, and set aside after three.
   if (result.blocked && /don.?t.?ask|заблокирован|отклон|denied|permission|права/i.test(result.reason)) {
     t.failures = (t.failures ?? 0) + 1;
-    t.pending = P.CONTINUE;
+    t.followUp = P.refusedCommand(task, kind, result.reason);
     note(task, `разработка: остановился на отклонённой команде (${result.reason.slice(0, 120)}), попытка ${t.failures} — продолжать другим способом`);
     if (t.failures >= MAX_AGENT_FAILURES) defer(state, task, t, `разработчик трижды упирался в права: ${result.reason.slice(0, 120)}`);
     return;
   }
+  if (result.blocked) {
+    t.failures = 0;
+    t.followUp = null;
+    t.blockedReason = result.reason;
+    return pause(state, task, t, `разработчик остановился: ${result.reason}`);
+  }
+  // Checked, reviewed and pushed is what is committed; nothing else may be in
+  // the tree the checks run in.
+  const leftovers = git(WORKTREE, 'status', '--porcelain');
+  if (leftovers) {
+    t.failures = (t.failures ?? 0) + 1;
+    t.followUp = P.uncommitted(task, leftovers);
+    note(task, `разработка: DONE, но остались незакоммиченные изменения, попытка ${t.failures}`);
+    if (t.failures >= MAX_AGENT_FAILURES) defer(state, task, t, 'разработчик трижды оставлял незакоммиченные изменения');
+    return;
+  }
   t.failures = 0;
-  t.pending = null;
-  if (result.blocked) return pause(state, task, t, `разработчик остановился: ${result.reason}`);
-  t.devReport = run.text;
+  t.followUp = null;
+  t.devReport = picked.text;
   t.phase = 'check';
   note(task, 'разработка: готово');
+}
+
+/** The next development step: a session of its own, never the last one's. */
+function nextStep(t, step) {
+  t.step = step;
+  t.claudeSession = null;
+  t.sessionStarted = undefined;
+  t.followUp = null;
+  t.failures = 0;
+  t.phase = 'develop';
 }
 
 async function check(state, task, t) {
@@ -259,8 +330,7 @@ async function check(state, task, t) {
     const red = checks.steps.filter((step) => !step.ok).map((step) => step.name).join(', ');
     return defer(state, task, t, `проверки красные после ${MAX_CHECK_ATTEMPTS} попыток (${red}), лог — .state/logs/${task.id}-checks.log`);
   }
-  t.pending = P.fixChecks(task, checks.steps);
-  t.phase = 'develop';
+  nextStep(t, { kind: 'fix-checks', steps: checks.steps.filter((step) => !step.ok) });
 }
 
 async function review(state, task, t) {
@@ -297,8 +367,7 @@ async function review(state, task, t) {
   if (round >= 2) return defer(state, task, t, `нет согласия с ревьюером после двух кругов — reviews/${task.id}-r2.md`);
   t.round = 2;
   t.attempts = 0;
-  t.pending = P.fixReview(task, run.text);
-  t.phase = 'develop';
+  nextStep(t, { kind: 'fix-review', review: run.text });
 }
 
 function push(state, task, t) {
@@ -370,14 +439,8 @@ function applyDecisions(state) {
     if (decision === 'skip') {
       // Skipped work leaves the branch — the next task is not built on it, nor
       // checked against its failing tests — but is kept on a branch of its own.
-      const head = git(WORKTREE, 'rev-parse', 'HEAD');
-      if (t.base && head !== t.base) {
-        git(WORKTREE, 'branch', '-f', `auto/skipped/${id}`, head);
-        git(WORKTREE, 'reset', '--hard', '--quiet', t.base);
-        note(task, `владелец: пропустить — работа сохранена в auto/skipped/${id}, ветка ${BRANCH} возвращена к ${t.base.slice(0, 7)}`);
-      } else {
-        note(task, 'владелец: пропустить');
-      }
+      const kept = setAside(task, t, 'skipped');
+      note(task, `владелец: пропустить${kept}${kept ? `, ветка ${BRANCH} возвращена к ${t.base.slice(0, 7)}` : ''}`);
       t.phase = 'skipped';
       continue;
     }
@@ -386,7 +449,12 @@ function applyDecisions(state) {
     t.attempts = 0;
     t.failures = 0;
     if (t.pausedFrom === 'review') t.round = 1; // two more rounds
+    // Back to the session that stopped, told what the owner decided.
+    if (t.pausedFrom === 'develop' && t.claudeSession) {
+      t.followUp = P.ownerApproved(task, t.step?.kind ?? 'develop', t.blockedReason ?? t.pauseReason);
+    }
     delete t.pauseReason;
+    delete t.blockedReason;
     state.current = id;
     note(task, 'владелец: продолжить');
   }

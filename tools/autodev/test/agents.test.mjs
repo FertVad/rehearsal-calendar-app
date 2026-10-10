@@ -43,6 +43,25 @@ test('the developer runs under the OS sandbox, with only our settings and no MCP
   assert.ok(!args.some((a) => /skip-permissions|bypassPermissions/.test(a)));
 });
 
+test('a run that ended several times keeps every answer, in order', async () => {
+  const twice = stub('claude-twice', `
+const out = (e) => console.log(JSON.stringify(e));
+out({ type: 'system', subtype: 'init', session_id: 's2' });
+out({ type: 'result', is_error: false, session_id: 's2', result: 'Отчёт\\nRESULT: DONE' });
+out({ type: 'result', is_error: false, session_id: 's2', result: 'Уведомление уже обработано.' });`);
+  const run = await runClaude({ bin: twice, cwd: dir, prompt: 'p', sessionId: 's2', settingsFile: path.join(dir, 's.json'),
+    sandboxProfile: PROFILE, log: path.join(dir, 'c2.jsonl'), env });
+  assert.deepEqual(run.results, ['Отчёт\nRESULT: DONE', 'Уведомление уже обработано.']);
+  assert.equal(run.text, 'Уведомление уже обработано.');
+});
+
+test('the developer has no background jobs, agents or schedules to give it turns after its answer', () => {
+  const { deny } = JSON.parse(fs.readFileSync(path.join(HERE, '..', 'claude-settings.json'), 'utf8')).permissions;
+  for (const tool of ['Agent', 'Task', 'TaskOutput', 'Monitor', 'CronCreate', 'ScheduleWakeup', 'SendMessage', 'RemoteTrigger', 'EnterWorktree']) {
+    assert.ok(deny.includes(tool), tool);
+  }
+});
+
 test('the sandbox profile keeps a secret\'s contents from any command, and leaves other files alone', () => {
   const secret = path.join(dir, '.env');
   const plain = path.join(dir, 'notes.txt');

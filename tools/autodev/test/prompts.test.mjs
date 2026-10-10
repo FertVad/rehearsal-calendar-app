@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readResult, readVerdict } from '../lib/prompts.mjs';
+import * as P from '../lib/prompts.mjs';
+
+const { readResult, readVerdict, pickResult } = P;
+const task = { id: 'T-109', title: 'Правка причины №9', body: 'Что сделать.' };
 
 test('the developer\'s marker is read off the last line only', () => {
   assert.deepEqual(readResult('Сделано то-то.\n\nRESULT: DONE\n'), { done: true });
@@ -9,8 +12,50 @@ test('the developer\'s marker is read off the last line only', () => {
   assert.equal(readResult(''), null);
 });
 
+test('markdown around the marker is not mistaken for more text', () => {
+  assert.deepEqual(readResult('Отчёт.\n\n**RESULT: DONE**'), { done: true });
+  assert.deepEqual(readResult('Отчёт.\n```\nRESULT: DONE\n```\n'), { done: true });
+  assert.deepEqual(readResult('Отчёт.\n`RESULT: DONE`\n\n---'), { done: true });
+  assert.equal(readVerdict('Замечаний нет.\n\n**VERDICT: ACCEPT**\n'), 'accept');
+});
+
 test('the reviewer\'s verdict is read off the last line only', () => {
   assert.equal(readVerdict('Замечаний нет.\nVERDICT: ACCEPT'), 'accept');
   assert.equal(readVerdict('R-01 …\nVERDICT: CHANGES\n'), 'changes');
   assert.equal(readVerdict('VERDICT: ACCEPT\nно вообще-то нет'), null);
+});
+
+test('a run that ended several times counts the answer with the marker, not the last turn', () => {
+  // T-108: the report, then a reply to a background job's notification.
+  const picked = pickResult(['Отчёт по задаче.\nRESULT: DONE', 'Уведомление уже обработано.']);
+  assert.deepEqual(picked.result, { done: true });
+  assert.equal(picked.text, 'Отчёт по задаче.\nRESULT: DONE');
+  assert.deepEqual(pickResult(['раз', 'два']), { result: null, text: 'два' });
+  assert.deepEqual(pickResult([]), { result: null, text: '' });
+});
+
+test('every developer message names its task and asks for the marker', () => {
+  const messages = [
+    P.developTask(task),
+    P.fixChecks(task, [{ name: 'tests', ok: false, code: 1, tail: 'FAIL x' }], 'abc1234 fix'),
+    P.fixReview(task, 'R-01 …', 'abc1234 fix'),
+    P.continueStep(task, 'fix-review'),
+    P.missingMarker(task),
+    P.refusedCommand(task, 'develop', 'cd && git отклонено'),
+    P.ownerApproved(task, 'develop', 'нужна миграция'),
+    P.uncommitted(task, ' M a.ts'),
+  ];
+  for (const message of messages) {
+    assert.ok(message.includes(`${task.id}: ${task.title}`), message.slice(0, 80));
+    assert.match(message, /RESULT: DONE\nRESULT: BLOCKED: <причина>$/);
+    // T-108 was sent a bare "continue" and started the next audit fix.
+    assert.doesNotMatch(message, /^Продолжай/);
+  }
+});
+
+test('a step\'s fresh session is told what the branch already holds', () => {
+  assert.match(P.fixChecks(task, [{ name: 'tests', ok: false, code: 1, tail: 'FAIL x' }], 'abc1234 fix'), /уже есть коммиты:\nabc1234 fix/);
+  assert.match(P.fixReview(task, 'R-01 …', 'abc1234 fix'), /R-01 …/);
+  assert.doesNotMatch(P.developTask(task), /уже есть коммиты/);
+  assert.match(P.developTask(task), /Работай только над этой задачей/);
 });

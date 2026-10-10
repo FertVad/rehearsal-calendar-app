@@ -114,7 +114,25 @@
       "Bash(git gc:*)",
       "Bash(git reflog expire:*)",
       "Bash(git --git-dir:*)",
-      "Bash(git --work-tree:*)"
+      "Bash(git --work-tree:*)",
+      "Agent",
+      "Task",
+      "TaskOutput",
+      "TaskStop",
+      "Monitor",
+      "CronCreate",
+      "CronDelete",
+      "CronList",
+      "ScheduleWakeup",
+      "EnterWorktree",
+      "ExitWorktree",
+      "AskUserQuestion",
+      "EnterPlanMode",
+      "ExitPlanMode",
+      "PushNotification",
+      "RemoteTrigger",
+      "SendMessage",
+      "Skill"
     ]
   }
 }
