@@ -24,7 +24,8 @@ JUnit and screenshots go to `e2e/out`.
   nothing — no `SERVER_ENV_FILE`, nothing inherited but `PATH`/`HOME` — so
   `server/.env` (production) cannot reach it.
 - **Ports 3001 or 8081 already taken.** A server or Metro already running is not
-  reused: it could be pointed anywhere.
+  reused: it could be pointed anywhere. What a dead e2e run left there is not
+  that case — see below.
 - **A bundle that could reach another API.** This checkout's `.env` sets
   `EXPO_PUBLIC_API_URL=https://rehearsly.me/api`, and in development Expo bundles
   the `.env` files and lets them win over the environment — setting the variable
@@ -38,6 +39,29 @@ JUnit and screenshots go to `e2e/out`.
   Russian layout loses characters. The run requires I/O → Keyboard → "Use the
   Same Keyboard Language as macOS" to be off (`EnableKeyboardSync = 0`; turned
   off by the owner on 2026-10-07).
+
+## A run that died
+
+A run stopped by Ctrl-C or SIGTERM takes everything down itself. One killed
+outright — a tool's time limit ended one that way on 2026-10-10 — gets no
+teardown, and its server and Metro, each in a process group of its own,
+outlive it on 3001 and 8081. So the lock (`/tmp/rehearsly-e2e.lock`,
+`e2e/lock.mjs`) names the run and every group it puts in the background, by
+leader pid and start time, and the next run to find its holder dead stops
+those groups before it takes the lock — only those still led by the process
+the dead run started, never whatever has the pid now. Under the lock any
+container labelled `rehearsly.e2e` is a dead run's too, and is stopped.
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | The flows passed |
+| 1 | The change failed: a flow, the server, the seed, the bundle |
+| 2 | The app reported an API address other than the local one |
+| 75 | The machine was not ready — Docker, a port held by something not ours, the simulator, another run that never finished. Not the change: run it again later |
+
+The autonomous supervisor waits out a 75 instead of sending the task back.
 
 ## The simulator
 

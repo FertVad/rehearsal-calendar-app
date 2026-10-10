@@ -29,6 +29,12 @@
  *   own, "Rehearsly E2E", so no other simulator's data is touched.
  *
  * Everything it writes goes to e2e/out: logs, the seed, JUnit, screenshots.
+ *
+ * Exit codes: 0 the flows passed; 1 the change failed — a flow, the server,
+ * the seed, the bundle; 2 the app reported another API address; 75 the machine
+ * was not ready — Docker, a port held by something not ours, the simulator,
+ * another run that never finished — so a scheduler waits and runs it again
+ * rather than send the change back.
  */
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
@@ -39,6 +45,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { takeLock } from './lock.mjs';
 import { seed } from './seed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -50,8 +57,10 @@ const BUILD = path.join(E2E, '.build');
 // elsewhere: E2E_APP names it. The JS comes from this tree's Metro either way.
 const PREBUILT = process.env.E2E_APP || null;
 const APP = PREBUILT || path.join(BUILD, 'Build', 'Products', 'Debug-iphonesimulator', 'Rehearsly.app');
-// One run at a time on this machine: the simulator and ports 3001/8081 are shared.
+// One run at a time on this machine: the simulator and ports 3001/8081 are
+// shared. It also names what each run started (lock.mjs).
 const LOCK = '/tmp/rehearsly-e2e.lock';
+let lock = null;
 const pg = createRequire(path.join(SERVER, 'package.json'))('pg');
 
 const API_PORT = 3001;
@@ -71,6 +80,12 @@ const forceBuild = argv.includes('--build');
 const flows = argv.filter((arg) => !arg.startsWith('--')).map((flow) => path.resolve(flow));
 
 const step = (text) => console.log(`[e2e] ${text}`);
+
+/** The machine is not ready: nothing the change under test did. Exit 75. */
+class EnvironmentError extends Error {}
+async function environment(work) {
+  try { return await work(); } catch (error) { throw error instanceof EnvironmentError ? error : new EnvironmentError(error.message); }
+}
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ---- taking it down -------------------------------------------------------
@@ -93,6 +108,8 @@ function background(name, command, args, options) {
   const logFile = path.join(OUT, `${name}.log`);
   const log = fs.openSync(logFile, 'w');
   const child = spawn(command, args, { ...options, detached: true, stdio: ['ignore', log, log] });
+  // Its own group outlives a run killed outright; the lock names it for the next.
+  lock.record(name, child.pid);
   teardown.push(() => { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ } });
   child.once('exit', (code) => { if (!tornDown) console.error(`[e2e] ${name} exited (${code}) — see ${logFile}`); });
   return child;
@@ -140,6 +157,11 @@ async function startDatabase() {
   const images = [...new Set(docker('image', 'ls', '--filter', 'reference=postgres:15', '--quiet', '--no-trunc')
     .split('\n').filter(Boolean))];
   assert.equal(images.length, 1, 'Exactly one locally installed postgres:15 image is required');
+  // Under the lock every e2e container is one a dead run left: one run at a time.
+  for (const left of docker('ps', '--quiet', '--filter', 'label=rehearsly.e2e').split('\n').filter(Boolean)) {
+    step(`stopping the database a dead run left behind (${left})`);
+    docker('stop', left);
+  }
 
   const nonce = randomBytes(6).toString('hex');
   const password = randomBytes(20).toString('hex');
@@ -279,41 +301,21 @@ function simulator() {
   return simctl('create', DEVICE.name, DEVICE.type, runtimes.at(-1).identifier);
 }
 
-// ---- one run at a time ------------------------------------------------------
-
-const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
-
-/** Waits for another run on this machine to finish, then holds the lock. */
-async function takeLock(timeoutMs = 60 * 60 * 1000) {
-  const deadline = Date.now() + timeoutMs;
-  for (let said = false; ; ) {
-    try {
-      fs.writeFileSync(LOCK, String(process.pid), { flag: 'wx' });
-      teardown.push(() => fs.rmSync(LOCK, { force: true }));
-      return;
-    } catch (error) {
-      if (error.code !== 'EEXIST') throw error;
-      const holder = Number(fs.readFileSync(LOCK, 'utf8')) || 0;
-      if (!holder || !alive(holder)) { fs.rmSync(LOCK, { force: true }); continue; }
-      if (!said) { step(`another e2e run (pid ${holder}) is going; waiting for it`); said = true; }
-      assert.ok(Date.now() < deadline, 'Gave up waiting for the other e2e run');
-      await sleep(10000);
-    }
-  }
-}
-
 // ---- the run --------------------------------------------------------------
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
-  assert.ok(fs.existsSync(MAESTRO), `Maestro is not installed at ${MAESTRO}`);
-  if (PREBUILT) assert.ok(fs.existsSync(PREBUILT), `E2E_APP ${PREBUILT} does not exist`);
-  await takeLock();
-  await requireFree(API_PORT, 'server');
-  await requireFree(METRO_PORT, 'Metro');
+  await environment(async () => {
+    assert.ok(fs.existsSync(MAESTRO), `Maestro is not installed at ${MAESTRO}`);
+    if (PREBUILT) assert.ok(fs.existsSync(PREBUILT), `E2E_APP ${PREBUILT} does not exist`);
+    lock = await takeLock(LOCK, { log: step });
+    teardown.push(() => lock.release());
+    await requireFree(API_PORT, 'server');
+    await requireFree(METRO_PORT, 'Metro');
+  });
 
   step('starting a disposable PostgreSQL');
-  const databaseUrl = await startDatabase();
+  const databaseUrl = await environment(startDatabase);
   assertLocalDatabase(databaseUrl);
 
   step('provisioning the canonical schema');
@@ -376,17 +378,19 @@ async function main() {
   const bundle = await (await fetch(
     `http://localhost:${METRO_PORT}/.expo/.virtual-metro-entry.bundle?platform=ios&dev=true&minify=false`)).text();
   checkBundle(bundle);
-  const udid = simulator();
-  step(`booting ${DEVICE.name} (${udid})`);
-  simctl('bootstatus', udid, '-b');
-  teardown.push(() => simctl('shutdown', udid));
-  if (pinLocale(udid)) {
-    step('switching it to English and rebooting');
-    simctl('shutdown', udid);
+  const udid = await environment(simulator);
+  await environment(() => {
+    step(`booting ${DEVICE.name} (${udid})`);
     simctl('bootstatus', udid, '-b');
-  }
-  quietKeyboard(udid);
-  showSimulator(udid);
+    teardown.push(() => simctl('shutdown', udid));
+    if (pinLocale(udid)) {
+      step('switching it to English and rebooting');
+      simctl('shutdown', udid);
+      simctl('bootstatus', udid, '-b');
+    }
+    quietKeyboard(udid);
+    showSimulator(udid);
+  });
 
   if (!PREBUILT && (forceBuild || !fs.existsSync(APP))) {
     step('building the Debug app — the first build takes a while');
@@ -424,5 +428,9 @@ async function main() {
 }
 
 main()
-  .catch((error) => { console.error(`[e2e] ${error.message}`); process.exitCode = 1; })
+  .catch((error) => {
+    const machine = error instanceof EnvironmentError;
+    console.error(`[e2e] ${machine ? 'not ready, not the change: ' : ''}${error.message}`);
+    process.exitCode = machine ? 75 : 1;
+  })
   .finally(tearDown);

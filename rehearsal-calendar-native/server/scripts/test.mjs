@@ -64,6 +64,8 @@ try {
   if (mode === 'all' || mode === 'backend') {
     console.log('[tests] Running mandatory secret scanner CLI regressions with synthetic fixtures.');
     runNode(['--test', 'scripts/__tests__/check-secrets.test.mjs'], appDirectory);
+    console.log('[tests] Running the e2e lock regressions with real processes.');
+    runNode(['--test', 'e2e/__tests__/lock.test.mjs'], appDirectory);
   }
   await prepareBrowser({ withDeps: mode === 'install' && args.includes('--with-deps') });
   if (mode === 'all' || mode === 'backend') {
