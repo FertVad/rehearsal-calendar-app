@@ -62,8 +62,8 @@ export function slugify(title) {
 /** The owner's decisions for paused tasks: "T-001: продолжить" / "пропустить". */
 /**
  * The owner's decisions: {id: {action, commits}}. `action` is continue, skip
- * or review — a deferred task back to the reviewer with its own commits; the
- * commits named after it (none: all of them) are kept as written.
+ * or review. For a deferred task, continue and review bring its own commits
+ * back — those named after the word, or all of them when none are.
  */
 export function parseDecisions(markdown) {
   const decisions = {};
@@ -75,7 +75,7 @@ export function parseDecisions(markdown) {
     if (!m) continue;
     const word = m[2].toLowerCase();
     const action = /продолжить|continue/.test(word) ? 'continue' : /пропустить|skip/.test(word) ? 'skip' : 'review';
-    const commits = action === 'review' ? m[3].match(/\b[0-9a-f]{7,40}\b/gi) ?? [] : [];
+    const commits = action === 'skip' ? [] : m[3].match(/\b[0-9a-f]{7,40}\b/gi) ?? [];
     decisions[m[1]] = { action, commits };
   }
   return decisions;

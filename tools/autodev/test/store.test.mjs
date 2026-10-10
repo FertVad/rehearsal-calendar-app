@@ -27,6 +27,11 @@ test('reads the owner\'s decisions', () => {
     { 'T-001': { action: 'continue', commits: [] }, 'T-002': { action: 'skip', commits: [] } });
 });
 
+test('a deferred task is continued with the commits named', () => {
+  assert.deepEqual(parseDecisions('T-108: продолжить 02a8549 c9f40a5'), { 'T-108': { action: 'continue', commits: ['02a8549', 'c9f40a5'] } });
+  assert.deepEqual(parseDecisions('T-108: пропустить abcdef1'), { 'T-108': { action: 'skip', commits: [] } });
+});
+
 test('a deferred task goes back to review with the commits named, or all of them', () => {
   assert.deepEqual(parseDecisions('T-108: на ревью f9212b3, 0b9f1a9 — только по задаче\nT-109: на ревью'), {
     'T-108': { action: 'review', commits: ['f9212b3', '0b9f1a9'] },

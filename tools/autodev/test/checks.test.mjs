@@ -35,6 +35,19 @@ test('an e2e run that found the machine not ready is told apart from a failed ch
   assert.equal(failed.steps.find((step) => step.name === 'e2e').environment, false);
 });
 
+test('what failed is kept whole, however the output was cut and however long it ran on', async () => {
+  // A test name split across two writes, then far more output than the tail keeps.
+  const script = [
+    "printf '  \\342\\227\\217 process database'", 'sleep 0.3', "printf ' configuration takes precedence\\n'",
+    "printf '  \\342\\227\\217 library import exports the app\\n'",
+    'i=0; while [ $i -lt 300 ]; do echo "filler $i"; i=$((i+1)); done', 'exit 1',
+  ].join('\n');
+  const result = await runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('d', script), log: path.join(dir, 'd.log'), env });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.deepEqual(e2e.failures, ['  ● process database configuration takes precedence', '  ● library import exports the app']);
+  assert.doesNotMatch(e2e.tail, /●/);
+});
+
 test('stopping the supervisor stops a check in flight', async () => {
   const pending = runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('c', 'exec sleep 60'), log: path.join(dir, 'c.log'), env });
   await new Promise((resolve) => setTimeout(resolve, 500));

@@ -147,8 +147,11 @@ export function missingMarker(task) {
 ${DEVELOPER_END}`;
 }
 
-export function review(task, { base, head, devReport, checks, round }) {
-  return `Ты — ревьюер (Астра) в автономном цикле разработки Rehearsly. Это ${round === 1 ? 'первый' : 'второй и последний'} круг ревью задачи ${task.id} «${task.title}».
+export function review(task, { base, head, devReport, checks, round, earlier = false }) {
+  const which = round === 1
+    ? (earlier ? 'новый первый круг (владелец продлил работу над задачей; прежние круги и твои замечания — выше в этой беседе)' : 'первый')
+    : 'второй и последний';
+  return `Ты — ревьюер (Астра) в автономном цикле разработки Rehearsly. Это ${which} круг ревью задачи ${task.id} «${task.title}».
 
 Дерево уже стоит на ${head} (detached). Проверяй диапазон ${base}..${head}: git log ${base}..${head}, git diff ${base}..${head}.
 

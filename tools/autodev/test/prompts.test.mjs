@@ -53,6 +53,13 @@ test('every developer message names its task and asks for the marker', () => {
   }
 });
 
+test('the reviewer is told when a round follows her earlier ones in the same conversation', () => {
+  const args = { base: 'a', head: 'b', devReport: 'r', checks: { steps: [] }, round: 1 };
+  assert.match(P.review(task, args), /Это первый круг/);
+  assert.match(P.review(task, { ...args, earlier: true }), /новый первый круг \(владелец продлил/);
+  assert.match(P.review(task, { ...args, round: 2, earlier: true }), /второй и последний/);
+});
+
 test('a step\'s fresh session is told what the branch already holds', () => {
   assert.match(P.fixChecks(task, [{ name: 'tests', ok: false, code: 1, tail: 'FAIL x' }], 'abc1234 fix'), /уже есть коммиты:\nabc1234 fix/);
   assert.match(P.fixReview(task, 'R-01 …', 'abc1234 fix'), /R-01 …/);
