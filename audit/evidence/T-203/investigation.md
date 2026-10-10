@@ -63,6 +63,37 @@ the server took 450 ms (1–3 ms elsewhere).
   burner per core around a single-flow run) was refused by the session's
   permissions, so the failure was not reproduced.
 
+## Second pass
+
+- **Load, run differently.** The same load as one inline foreground command
+  (one `for(;;){}` per core around a single run of flow 06). With every core
+  busy the run never got going: in 10 minutes Maestro reached only
+  `Define variables` (artifacts 2026-10-10_211809), and the command was cut at
+  the tool's limit. Full-core load gives no useful repro of a 10 s stall in a
+  flow that otherwise passes. No burner outlived the command (checked). The
+  server and Metro it left are cleared by the next run's lock (lock.mjs).
+- **Request on the wire.** The failing POST went out exactly as in the
+  passing runs (`sent request, body S 124` both times). The app was not at
+  fault. The request was written to the server's socket and got no answer.
+- **The host was not frozen.** Simulator daemons kept logging every second
+  through 15:29:47–15:29:59. The stall was in the server or its database, not
+  the whole machine.
+- **Docker Desktop.** The VM's own log
+  (~/Library/Containers/com.docker.docker/Data/log/vm/init.log) shows the VM
+  booted at 12:20:58Z, 3.5 minutes before the failing run. It shows the VM
+  being paused/unpaused and shut down by Docker Desktop between runs
+  (12:38:51Z). Between 12:20:59Z and 12:32:50Z, the failure included, it
+  logged nothing at all: no pause, no trim. The host-side backend log that
+  would show more rotates every ~15 minutes and no longer covers 12:29Z.
+- **Other load on the machine.** Besides the supervisor, the Mac runs other
+  agents (a Codex app-server, VS Code's TypeScript servers) whose work is not
+  serialized with e2e. The e2e lock covers only e2e runs.
+
+Conclusion: the evidence that would name the stalled component (the server
+log of that run, Docker's host log of 12:29Z) no longer exists. Nothing in
+the flow, the app or the server's create path explains it. The same request
+answers in 55–349 ms in every other run, including after long idle pauses.
+
 ## Change made
 
 e2e/run.mjs now copies server.log and metro.log into the artifacts folder of
