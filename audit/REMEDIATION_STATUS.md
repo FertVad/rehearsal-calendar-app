@@ -158,7 +158,7 @@ OPS-R3-DATA (25.09).
 | HP03 | Low | Нет | R9 | READY_FOR_CHECK | ошибка «пропустить онбординг» остаётся необработанным Promise | [правка причины №9 — 4dd49c5; регресс-тест, «красное до» — evidence/R9/onboarding-before.txt; ждёт ревью](REMEDIATION_R9.md) |
 | HP04 | Medium | Нет | R5 | TODO | ручная настройка timezone сбрасывается при следующем запуске/входе | [правка причины №14 — разбор](TRIAGE_R4_R9.md) |
 | HP05 | Low | Нет | R7 | TODO | онбординг показывает подключённый календарь после отказа сохранения | [правка причины №18 — разбор](TRIAGE_R4_R9.md) |
-| HN01 | Medium | Нет | R9 | READY_FOR_CHECK | Приглашение теряется при первом входе через onboarding | [правка причины №9 — 4dd49c5; 2 теста, «красное до» — evidence/R9/onboarding-before.txt; ждёт ревью и DEV-15](REMEDIATION_R9.md) |
+| HN01 | Medium | Нет | R9 | READY_FOR_CHECK | Приглашение теряется при первом входе через onboarding | [правка причины №9 — 4dd49c5, формат кода по ревью — 647860a; «красное до» — evidence/R9/onboarding-before.txt, evidence/R9/invite-code-before.txt; ждёт ревью и DEV-15](REMEDIATION_R9.md) |
 | HN02 | Medium | Нет | R5 | TODO | Успешная загрузка всех проектов не снимает устаревшую отметку «просмотрено» | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
 | HN03 | Medium | Нет | R5 | TODO | SeenContext сохраняет ответы предыдущего аккаунта | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
 | HC01 | Low | Нет | R5 | TODO | язык аккаунта записывается в cache, но не обновляет уже работающий I18nContext | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
