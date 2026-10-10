@@ -115,6 +115,28 @@ function background(name, command, args, options) {
   return child;
 }
 
+/**
+ * The server's and Metro's logs, copied next to the flows' artifacts of the
+ * run that wrote them. e2e/out/server.log is rewritten by every run, so a
+ * failure the supervisor reran was left with no server side at all: a POST
+ * the server never answered could not be told from one it never got (T-203).
+ * Runs on teardown, after the server is stopped, so the copy is whole.
+ */
+function keepLogs(startedAt) {
+  return () => {
+    const artifacts = path.join(OUT, 'artifacts');
+    if (!fs.existsSync(artifacts)) return;
+    for (const run of fs.readdirSync(artifacts)) {
+      const dir = path.join(artifacts, run);
+      if (!fs.statSync(dir).isDirectory() || fs.statSync(dir).birthtimeMs < startedAt) continue;
+      for (const name of ['server.log', 'metro.log']) {
+        const log = path.join(OUT, name);
+        if (fs.existsSync(log)) fs.copyFileSync(log, path.join(dir, name));
+      }
+    }
+  };
+}
+
 async function waitFor(what, check, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
@@ -310,6 +332,7 @@ async function main() {
     if (PREBUILT) assert.ok(fs.existsSync(PREBUILT), `E2E_APP ${PREBUILT} does not exist`);
     lock = await takeLock(LOCK, { log: step });
     teardown.push(() => lock.release());
+    teardown.push(keepLogs(Date.now()));
     await requireFree(API_PORT, 'server');
     await requireFree(METRO_PORT, 'Metro');
   });
