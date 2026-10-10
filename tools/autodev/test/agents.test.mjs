@@ -65,7 +65,15 @@ out({ type: 'result', is_error: false, session_id: 's2', result: 'Уведомл
 
 test('the developer has no background jobs, agents or schedules to give it turns after its answer', () => {
   const { deny } = JSON.parse(fs.readFileSync(path.join(HERE, '..', 'claude-settings.json'), 'utf8')).permissions;
-  for (const tool of ['Agent', 'Task', 'TaskOutput', 'Monitor', 'CronCreate', 'ScheduleWakeup', 'SendMessage', 'RemoteTrigger', 'EnterWorktree']) {
+  for (const tool of ['Agent', 'Task', 'TaskOutput', 'Monitor', 'CronCreate', 'ScheduleWakeup', 'SendMessage', 'RemoteTrigger', 'EnterWorktree',
+    'Workflow', 'ListAgents']) {
+    assert.ok(deny.includes(tool), tool);
+  }
+});
+
+test('nothing the developer writes leaves the machine through a tool', () => {
+  const { deny } = JSON.parse(fs.readFileSync(path.join(HERE, '..', 'claude-settings.json'), 'utf8')).permissions;
+  for (const tool of ['WebFetch', 'WebSearch', 'Artifact', 'ArtifactComments', 'ArtifactData', 'DesignSync', 'PushNotification']) {
     assert.ok(deny.includes(tool), tool);
   }
 });

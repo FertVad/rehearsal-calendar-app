@@ -132,7 +132,13 @@
       "PushNotification",
       "RemoteTrigger",
       "SendMessage",
-      "Skill"
+      "Skill",
+      "Artifact",
+      "ArtifactComments",
+      "ArtifactData",
+      "DesignSync",
+      "ListAgents",
+      "Workflow"
     ]
   }
 }
