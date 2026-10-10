@@ -35,7 +35,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runClaude, runCodex, stopAgents } from './lib/agents.mjs';
 import { runChecks, stopChecks } from './lib/checks.mjs';
-import { parseDiff, pauseReasons } from './lib/guard.mjs';
+import { parseDiff, pauseReasons, reasonKind, unapproved } from './lib/guard.mjs';
 import { waitFor } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
 import { appendReport, loadState, parseDecisions, parseTasks, saveState, writeAtomic } from './lib/store.mjs';
@@ -375,8 +375,8 @@ async function check(state, task, t) {
   const head = git(WORKTREE, 'rev-parse', 'HEAD');
   if (head === t.base) return defer(state, task, t, 'разработчик ответил DONE, но коммитов нет');
   const { files, added } = parseDiff(git(WORKTREE, 'diff', '--unified=0', `${t.base}..${head}`));
-  const reasons = pauseReasons(files, added);
-  if (reasons.length && t.approvedHead !== head) {
+  const reasons = unapproved(pauseReasons(files, added), t.approvedKinds);
+  if (reasons.length) {
     return pause(state, task, t, `изменение требует решения владельца — ${reasons.join('; ')}`);
   }
   note(task, `проверки: запущены (${files.length} файлов)`);
@@ -562,7 +562,12 @@ function applyDecisions(state) {
       continue;
     }
     t.phase = t.pausedFrom === 'check' ? 'check' : t.pausedFrom;
-    if (t.pausedFrom === 'check') t.approvedHead = git(WORKTREE, 'rev-parse', 'HEAD');
+    if (t.pausedFrom === 'check') {
+      // The kinds of change it stopped on are allowed for this task from now on.
+      const { files, added } = parseDiff(git(WORKTREE, 'diff', '--unified=0', `${t.base}..HEAD`));
+      t.approvedKinds = [...new Set([...(t.approvedKinds ?? []), ...pauseReasons(files, added).map(reasonKind)])];
+      delete t.approvedHead;
+    }
     t.attempts = 0;
     t.failures = 0;
     if (t.pausedFrom === 'review') t.round = 1; // two more rounds
@@ -603,7 +608,7 @@ function toReview(state, task, t, named, resume) {
   // ревью" keeps the round; "продолжить" gives two more.
   state.tasks[task.id] = {
     phase: 'adopt', adopt: commits, adoptedFrom: kept, round: resume ? 1 : t.round ?? 1, codexThread: t.codexThread,
-    devReport: t.devReport, resume, startedAt: new Date().toISOString(),
+    devReport: t.devReport, resume, approvedKinds: t.approvedKinds, startedAt: new Date().toISOString(),
   };
   note(task, `владелец: ${what} — ${commits.length} коммит(ов) из ${kept}${commits.length ? ` (${commits.map((sha) => sha.slice(0, 7)).join(', ')})` : ''}${resume ? `, дальше шаг «${STEP_NOTE[resume.kind]}»` : ''}; возьму, когда очередь дойдёт`);
 }

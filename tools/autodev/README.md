@@ -54,6 +54,11 @@ a change touching migrations, SQL, auth (server or app), `.env`, deploy, CI,
 production addresses, data deletion, keys, `ios/` or the supervisor
 (`lib/guard.mjs`), or the developer answering BLOCKED.
 
+"Продолжить" after such a stop allows that task the kinds of change it
+stopped on — "сессия в приложении", "вход в приложении" — so the reviewer's
+notes fixed in the same files do not stop it again; a kind it has not shown
+before still does.
+
 Applied decisions move under `## Применено` in `DECISIONS.md`, so an old line
 never fires twice.
 
