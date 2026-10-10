@@ -54,3 +54,15 @@ it('clears a last name with an empty string and never sends the address (HP02, H
   await act(async () => { fireEvent.press(view.getByText(t.profile.saveChanges)); });
   expect(mockAuth.updateUser).toHaveBeenCalledWith({ firstName: 'Anna', lastName: '' });
 });
+
+it('says a refused name and a lost connection in the app language, not the server English', async () => {
+  const { AuthFlowError } = require('../../../auth/utils/authErrors');
+  const view = form();
+  fireEvent.changeText(view.getByDisplayValue('Anna'), 'Anna Maria');
+  mockAuth.updateUser.mockRejectedValueOnce(new AuthFlowError('Name is not valid', 'NAME_INVALID', 400));
+  await act(async () => { fireEvent.press(view.getByText(t.profile.saveChanges)); });
+  expect(Alert.alert).toHaveBeenLastCalledWith(t.profile.updateError, t.auth.nameInvalid);
+  mockAuth.updateUser.mockRejectedValueOnce(new AuthFlowError('Update failed'));
+  await act(async () => { fireEvent.press(view.getByText(t.profile.saveChanges)); });
+  expect(Alert.alert).toHaveBeenLastCalledWith(t.profile.updateError, t.auth.noConnection);
+});

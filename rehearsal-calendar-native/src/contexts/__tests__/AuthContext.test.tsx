@@ -26,6 +26,7 @@ const mockApi = {
   confirmPasswordReset: jest.fn(),
   requestEmailChange: jest.fn(),
   confirmEmailChange: jest.fn(),
+  logout: jest.fn(() => Promise.resolve({ data: {} })),
 };
 jest.mock('../../shared/services/api', () => ({
   authAPI: new Proxy({}, { get: (_target, key: string) => (...args: any[]) => (mockApi as any)[key](...args) }),
@@ -85,6 +86,7 @@ beforeEach(() => {
   Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
   Object.values(mockApi).forEach((fn) => fn.mockReset());
   mockApi.updateMe.mockImplementation(() => Promise.resolve({ data: {} }));
+  mockApi.logout.mockImplementation(() => Promise.resolve({ data: {} }));
   mockSyncPreferences.mockReset();
   mockSyncPreferences.mockImplementation((..._args: any[]) => Promise.resolve());
   Object.keys(mockHeldReads).forEach((k) => delete mockHeldReads[k]);
@@ -440,4 +442,57 @@ it('keeps the old pair and says which code was wrong when the change is refused'
   expect([failure.code, failure.details.field]).toEqual(['CODE_INVALID', 'currentCode']);
   expect(mockStorage.accessToken).toBe('old-access');
   expect(auth.user?.email).toBe('new@example.com');
+});
+
+// Signing out ends the session for every answer still on its way: none of
+// them writes it back (review of T-130).
+it('stays signed out when a change answers after the sign-out', async () => {
+  const screen = await signedIn();
+  const answer = held<any>();
+  mockApi.confirmEmailChange.mockReturnValue(answer.promise);
+  let confirming: Promise<void>;
+  act(() => { confirming = auth.confirmEmailChange('222222', '111111'); });
+  await act(async () => { await auth.logout(); });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  const moved = { ...USER, email: 'moved@example.com' };
+  await act(async () => { answer.resolve({ data: { user: moved, accessToken: 'late', refreshToken: 'late' } }); await confirming; });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.accessToken).toBeUndefined();
+  expect(mockStorage.refreshToken).toBeUndefined();
+  expect(mockStorage.cachedUser).toBeUndefined();
+});
+
+it('a sign-out waits for a change already writing, then clears it', async () => {
+  const screen = await signedIn();
+  const moved = { ...USER, email: 'moved@example.com' };
+  mockApi.confirmEmailChange.mockResolvedValue({ data: { user: moved, accessToken: 'new-access', refreshToken: 'new-refresh' } });
+  const syncing = held<void>();
+  mockSyncPreferences.mockReturnValueOnce(syncing.promise);
+  let confirming: Promise<void>;
+  act(() => { confirming = auth.confirmEmailChange('222222', '111111'); });
+  await waitFor(() => expect(mockSyncPreferences).toHaveBeenCalledTimes(2));
+  let tokenAtSignOut: string | undefined;
+  mockApi.logout.mockImplementation(() => { tokenAtSignOut = mockStorage.accessToken; return Promise.resolve({ data: {} }); });
+  let leaving: Promise<void>;
+  act(() => { leaving = auth.logout(); });
+  // The sign-out has every chance to run ahead before the write goes on.
+  await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
+  await act(async () => { syncing.resolve(); await confirming; await leaving; });
+  // The server is told with the pair that works now, not the revoked one.
+  expect(tokenAtSignOut).toBe('new-access');
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.accessToken).toBeUndefined();
+  expect(mockStorage.cachedUser).toBeUndefined();
+});
+
+it('stays signed out when a profile update answers after the sign-out', async () => {
+  const screen = await signedIn();
+  const answer = held<any>();
+  mockApi.updateMe.mockReturnValue(answer.promise);
+  let updating: Promise<void>;
+  act(() => { updating = auth.updateUser({ firstName: 'Late' }); });
+  await act(async () => { await auth.logout(); });
+  await act(async () => { answer.resolve({ data: { user: { ...USER, firstName: 'Late' } } }); await updating; });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.cachedUser).toBeUndefined();
 });

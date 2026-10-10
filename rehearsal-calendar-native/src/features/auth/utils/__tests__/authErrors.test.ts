@@ -38,10 +38,25 @@ describe('authErrorMessage', () => {
     expect(authErrorMessage(t, new AuthFlowError('server text', 'RATE_LIMITED', 429, { retryAfter: 30 }))).toContain('30');
   });
 
-  it('names wrong credentials, and passes any other message through', () => {
+  it('names wrong credentials', () => {
     const t = translations.en;
     expect(authErrorMessage(t, new AuthFlowError('Invalid email or password', undefined, 401))).toBe(t.auth.invalidCredentials);
-    expect(authErrorMessage(t, new AuthFlowError('Something else', undefined, 500))).toBe('Something else');
-    expect(authErrorMessage(t, 'not an error')).toBe(t.common.error);
+  });
+
+  // The English text — the app's own fallback or the server's — never reaches
+  // the screen: no answer and an unknown code have their own message in every
+  // language (review of T-130).
+  it.each(Object.keys(translations))('says no answer and an unknown failure in %s, not in English', (language) => {
+    const t = translations[language as keyof typeof translations];
+    const offline = toAuthFlowError(new Error('Network Error'), 'Could not send the code');
+    expect(authErrorMessage(t, offline)).toBe(t.auth.noConnection);
+    expect(authErrorMessage(t, new AuthFlowError('Something else', undefined, 500))).toBe(t.auth.requestFailed);
+    expect(authErrorMessage(t, new AuthFlowError('Something else', 'SOME_NEW_CODE', 400))).toBe(t.auth.requestFailed);
+    expect(authErrorMessage(t, new Error('Failed to get ID token from Google'))).toBe(t.auth.requestFailed);
+    expect(authErrorMessage(t, 'not an error')).toBe(t.auth.requestFailed);
+    for (const key of ['noConnection', 'requestFailed'] as const) {
+      expect(t.auth[key].length).toBeGreaterThan(0);
+      if (language !== 'en') expect(t.auth[key]).not.toBe(translations.en.auth[key]);
+    }
   });
 });

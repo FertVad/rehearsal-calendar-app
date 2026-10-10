@@ -90,7 +90,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
       // Navigation handled by AuthProvider
     } catch (err: any) {
-      Alert.alert(t.auth.googleSignInError, err.message);
+      Alert.alert(t.auth.googleSignInError, authErrorMessage(t, err));
     } finally {
       setGoogleLoading(false);
     }
@@ -112,7 +112,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
       // Navigation handled by AuthProvider
     } catch (err: any) {
-      Alert.alert(t.auth.appleSignInError, err.message);
+      Alert.alert(t.auth.appleSignInError, authErrorMessage(t, err));
     } finally {
       setAppleLoading(false);
     }

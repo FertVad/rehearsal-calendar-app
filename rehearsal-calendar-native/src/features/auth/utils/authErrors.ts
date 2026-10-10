@@ -55,5 +55,9 @@ export function authErrorMessage(t: Translations, error: unknown): string {
     default: break;
   }
   if (failure?.status === 401) return t.auth.invalidCredentials;
-  return error instanceof Error && error.message ? error.message : t.common.error;
+  // Anything else is English — the server's text or the app's own fallback —
+  // so it gets the app's words instead (review of T-130). No answer at all is
+  // the network, which the person can do something about.
+  if (failure && failure.status === undefined) return t.auth.noConnection;
+  return t.auth.requestFailed;
 }

@@ -76,6 +76,10 @@ export interface AuthTranslations {
   otherAddress: string;
   currentPasswordInvalid: string;
   emailUnchanged: string;
+  /** The request got no answer: no network, or it timed out. */
+  noConnection: string;
+  /** A failure with no code the app knows: the server's English is not shown. */
+  requestFailed: string;
 }
 
 export const ru = {
@@ -155,6 +159,8 @@ export const ru = {
     otherAddress: 'Другой адрес',
     currentPasswordInvalid: 'Неверный текущий пароль',
     emailUnchanged: 'Это и есть ваш адрес',
+    noConnection: 'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз',
+    requestFailed: 'Что-то пошло не так. Попробуйте ещё раз',
   },
 };
 
@@ -235,6 +241,8 @@ export const en = {
     otherAddress: 'Another address',
     currentPasswordInvalid: 'The current password is wrong',
     emailUnchanged: 'This already is your address',
+    noConnection: 'No connection to the server. Check the internet and try again',
+    requestFailed: 'Something went wrong. Try again',
   },
 };
 
@@ -315,6 +323,8 @@ export const es = {
     otherAddress: 'Otra dirección',
     currentPasswordInvalid: 'La contraseña actual no es correcta',
     emailUnchanged: 'Esta ya es tu dirección',
+    noConnection: 'Sin conexión con el servidor. Revisa internet e inténtalo de nuevo',
+    requestFailed: 'Algo salió mal. Inténtalo de nuevo',
   },
 };
 
@@ -395,5 +405,7 @@ export const de = {
     otherAddress: 'Andere Adresse',
     currentPasswordInvalid: 'Das aktuelle Passwort ist falsch',
     emailUnchanged: 'Das ist bereits deine Adresse',
+    noConnection: 'Keine Verbindung zum Server. Prüfe das Internet und versuche es erneut',
+    requestFailed: 'Etwas ist schiefgelaufen. Versuche es erneut',
   },
 };

@@ -90,8 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // written anywhere. A restarted app asks to sign in again.
   const pendingSignIn = useRef<{ email: string; password: string } | null>(null);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-  // Each sign-in attempt takes a number. A newer attempt, or leaving the flow,
-  // makes older ones stale, and a stale answer writes nothing — no tokens, no
+  // Each sign-in attempt takes a number. A newer attempt, leaving the flow, or
+  // signing out makes older ones stale, and a stale answer writes nothing — no tokens, no
   // user, no pending address (review R3-24; CLAUDE.md 11). Without it a
   // confirmation answered after the person had left the code screen signed
   // them in anyway, over another account's newer sign-in. The number is asked
@@ -189,11 +189,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true;
   }, [reconcileDeviceState]);
 
-  const startSession = useCallback((data: { user: User; accessToken: string; refreshToken: string }, attempt: number) => {
-    const run = sessionWrites.current.then(() => writeSession(data, attempt));
+  // Everything that writes or clears the session takes its turn here.
+  const inTurn = useCallback(<T,>(write: () => Promise<T>) => {
+    const run = sessionWrites.current.then(write);
     sessionWrites.current = run.catch(() => undefined);
     return run;
-  }, [writeSession]);
+  }, []);
+
+  const startSession = useCallback((data: { user: User; accessToken: string; refreshToken: string }, attempt: number) =>
+    inTurn(() => writeSession(data, attempt)), [inTurn, writeSession]);
 
   const loadUser = useCallback(async () => {
     try {
@@ -290,8 +294,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!deviceTimezone || user.timezone === deviceTimezone) return;
 
     // Silently sync timezone in background
+    const session = signInAttempt.current;
     authAPI.updateMe({ timezone: deviceTimezone })
       .then(response => {
+        // Answered after a sign-out: not this session's to write (see logout).
+        if (session !== signInAttempt.current) return;
         const updatedUser = response.data.user;
         setUser(updatedUser);
         AsyncStorage.setItem('cachedUser', JSON.stringify(updatedUser));
@@ -409,15 +416,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // A confirmed change revokes every session of the account, this one's too,
   // and answers with the pair that works now. It is written through the same
-  // path as a sign-in, and nothing cancels it — no screen calls
-  // forgetPendingSignIn here: the old pair is already dead, so not writing the
-  // new one would sign the person out.
+  // path as a sign-in, and leaving the screen does not cancel it — no screen
+  // calls forgetPendingSignIn here: the old pair is already dead, so not
+  // writing the new one would sign the person out. Signing out does cancel it
+  // (see endSession).
   const confirmEmailChange = useCallback(async (code: string, currentCode: string) => {
     const attempt = beginAttempt();
     try {
       const response = await authAPI.confirmEmailChange(code, currentCode);
       await startSession(response.data, attempt);
     } catch (err: any) {
+      if (!isCurrent(attempt)) return;
       throw toAuthFlowError(err, 'Could not change the address');
     } finally {
       endAttempt(attempt);
@@ -461,49 +470,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [beginAttempt, endAttempt, startSession]);
 
+  // Signing out ends the session for every answer still on its way: the
+  // attempt number moves on, so a sign-in, a confirmed address change or a
+  // profile update answered later writes nothing back (review of T-130: the
+  // person had to sign out twice). The clearing takes its turn behind a write
+  // already under way — that one has committed and runs to the end — so it
+  // removes that write too, and tells the server with the pair that works now.
   const logout = useCallback(async () => {
+    forgetPendingSignIn();
+    setLoading(true);
     try {
-      setLoading(true);
+      await inTurn(async () => {
+        // Order matters: dropping the push token needs a *valid* access token,
+        // and /auth/logout bumps token_version, which invalidates it. Revoking
+        // first would leave the token in the database and keep delivering this
+        // user's notifications to a signed-out device.
+        await unregisterPushToken();
 
-      // Order matters: dropping the push token needs a *valid* access token,
-      // and /auth/logout bumps token_version, which invalidates it. Revoking
-      // first would leave the token in the database and keep delivering this
-      // user's notifications to a signed-out device.
-      await unregisterPushToken();
+        // Revoke all sessions server-side (best-effort; ignore if offline)
+        try {
+          await authAPI.logout();
+        } catch (err) {
+          logger.warn('Server logout failed (continuing with local cleanup):', err);
+        }
 
-      // Revoke all sessions server-side (best-effort; ignore if offline)
-      try {
-        await authAPI.logout();
-      } catch (err) {
-        logger.warn('Server logout failed (continuing with local cleanup):', err);
-      }
+        // Set flag to ignore stale deep links
+        await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
 
-      // Set flag to ignore stale deep links
-      await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
+        // Clear user-bound data but keep device-bound calendar sync state
+        // and the language preference. If a *different* user signs back in,
+        // reconcileDeviceState wipes the calendar state on the way in.
+        await AsyncStorage.multiRemove([
+          'accessToken',
+          'refreshToken',
+          'cachedUser',
+          'weekStartDay',
+          'timezone',
+        ]);
 
-      // Clear user-bound data but keep device-bound calendar sync state
-      // and the language preference. If a *different* user signs back in,
-      // reconcileDeviceState wipes the calendar state on the way in.
-      await AsyncStorage.multiRemove([
-        'accessToken',
-        'refreshToken',
-        'cachedUser',
-        'weekStartDay',
-        'timezone',
-      ]);
-
-      setUser(null);
+        setUser(null);
+      });
     } catch (err) {
       logger.error('Logout error:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [forgetPendingSignIn, inTurn]);
 
   const updateUser = useCallback(async (data: ProfileUpdate) => {
+    // An answer after a sign-out, or after a newer session was written, is
+    // about a session that is gone: it writes nothing (see logout).
+    const session = signInAttempt.current;
     try {
       setError(null);
       const response = await authAPI.updateMe(data);
+      if (session !== signInAttempt.current) return;
       const updatedUser = response.data.user;
       setUser(updatedUser);
       // Update cached user data
@@ -511,9 +532,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Sync user preferences (timezone, locale, weekStartDay)
       await syncUserPreferences(updatedUser);
     } catch (err: any) {
+      if (session !== signInAttempt.current) return;
       const failure = toAuthFlowError(err, 'Update failed');
       setError(failure);
-      throw new Error(failure.message);
+      // Whole, with its code: the screen says it in the person's language.
+      throw failure;
     }
   }, []);
 
@@ -525,6 +548,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Call delete account API
       const response = await authAPI.deleteMe();
       const { deletedProjects } = response.data;
+      // The session is over, as at a sign-out: nothing answered later writes it back.
+      forgetPendingSignIn();
 
       // Set flag to ignore stale deep links
       await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
@@ -545,7 +570,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [forgetPendingSignIn]);
 
   return (
     <AuthContext.Provider

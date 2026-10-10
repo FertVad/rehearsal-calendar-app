@@ -74,12 +74,23 @@ const getApiUrl = (): string => {
 
 const API_URL = getApiUrl();
 
+const REQUEST_TIMEOUT_MS = 10000;
+// A request that sends email answers only after the provider does: the server
+// sends each email inside the request, one after another, giving each up to
+// SEND_TIMEOUT_MS in server/services/email/transport.js. A client that gives
+// up sooner drops the answer while the codes are already issued — the person
+// is told it failed and gets no fields for the codes in their mailbox (review
+// of T-130). Such a request waits for every email it sends, and then as long
+// as any other request.
+const EMAIL_SEND_TIMEOUT_MS = 8000;
+const sendsEmails = (count: number) => ({ timeout: REQUEST_TIMEOUT_MS + count * EMAIL_SEND_TIMEOUT_MS });
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: REQUEST_TIMEOUT_MS,
 });
 
 // Request interceptor - add access token to requests
@@ -150,13 +161,13 @@ export const authAPI = {
   // session until verifyEmail (R3). `verification: 'code'` tells the server
   // this app can enter one; `locale` picks the language of that email.
   register: (email: string, password: string, firstName: string, lastName?: string, timezone?: string, locale?: string) =>
-    api.post('/auth/register', { email, password, firstName, lastName, timezone, locale, verification: 'code' }),
+    api.post('/auth/register', { email, password, firstName, lastName, timezone, locale, verification: 'code' }, sendsEmails(1)),
 
   verifyEmail: (email: string, password: string, code: string) =>
     api.post('/auth/verify-email', { email, password, code }),
 
   resendVerification: (email: string, password: string) =>
-    api.post('/auth/verify-email/resend', { email, password }),
+    api.post('/auth/verify-email/resend', { email, password }, sendsEmails(1)),
 
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
@@ -165,19 +176,20 @@ export const authAPI = {
   // answers alike with and without an account; the confirmation answers with
   // a session.
   requestPasswordReset: (email: string) =>
-    api.post('/auth/password-reset/request', { email }),
+    api.post('/auth/password-reset/request', { email }, sendsEmails(1)),
 
   confirmPasswordReset: (email: string, code: string, newPassword: string) =>
     api.post('/auth/password-reset/confirm', { email, code, newPassword }),
 
   // A new sign-in address: a code to it and one to the current address, and
   // the password when the account has one (R3: HP01). The confirmation revokes
-  // every session and answers with the pair that works now.
+  // every session and answers with the pair that works now, after a notice to
+  // the old address.
   requestEmailChange: (newEmail: string, currentPassword?: string) =>
-    api.post('/auth/me/email/change', { newEmail, currentPassword }),
+    api.post('/auth/me/email/change', { newEmail, currentPassword }, sendsEmails(2)),
 
   confirmEmailChange: (code: string, currentCode: string) =>
-    api.post('/auth/me/email/change/confirm', { code, currentCode }),
+    api.post('/auth/me/email/change/confirm', { code, currentCode }, sendsEmails(1)),
 
   getMe: () => api.get('/auth/me'),
 

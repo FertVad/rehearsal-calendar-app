@@ -19,6 +19,7 @@ import { GlassButton, UserAvatar } from '../../../shared/components';
 import { ProfileStackParamList } from '../../../navigation';
 import { editProfileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess } from '../../../shared/utils/haptics';
+import { authErrorMessage } from '../../auth/utils/authErrors';
 
 type EditProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'EditProfile'>;
 
@@ -66,7 +67,7 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
         },
       ]);
     } catch (err: any) {
-      Alert.alert(t.profile.updateError, err.message);
+      Alert.alert(t.profile.updateError, authErrorMessage(t, err));
     } finally {
       setSaving(false);
     }
