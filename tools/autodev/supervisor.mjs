@@ -34,7 +34,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runClaude, runCodex, stopAgents } from './lib/agents.mjs';
-import { runChecks } from './lib/checks.mjs';
+import { runChecks, stopChecks } from './lib/checks.mjs';
 import { parseDiff, pauseReasons } from './lib/guard.mjs';
 import { waitFor } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
@@ -57,6 +57,9 @@ const CODEX = process.env.CODEX_BIN || `${HOME}/.nvm/versions/node/v20.19.2/bin/
 const E2E_APP = path.join(REPO, 'rehearsal-calendar-native/e2e/.build/Build/Products/Debug-iphonesimulator/Rehearsly.app');
 const MAX_CHECK_ATTEMPTS = 3;
 const MAX_AGENT_FAILURES = 3;
+// The machine not ready for e2e: checked again soon, then hourly — it comes
+// back by itself (a port freed, Docker woken) or the owner sees it in STATUS.
+const NOT_READY_RETRY_MS = [15 * 60 * 1000, 15 * 60 * 1000, 60 * 60 * 1000];
 const IDLE_MS = 5 * 60 * 1000;
 const once = process.argv.includes('--once');
 
@@ -144,7 +147,9 @@ function writeStatus(state, now) {
   if (paused) lines.push(`**ПАУЗА — ждёт решения владельца.** ${paused[0]}: ${paused[1].pauseReason}`, '',
     `Решение — строкой в AUTODEV/DECISIONS.md: \`${paused[0]}: продолжить\` или \`${paused[0]}: пропустить\`.`);
   if (state.waitUntil && Date.now() < state.waitUntil) {
-    lines.push(`**Ждём сброса лимита ${state.waitingFor}** до ${new Date(state.waitUntil).toLocaleString('ru-RU')}; потом продолжим ту же сессию.`);
+    lines.push(state.waitNote
+      ? `**Ждём: ${state.waitNote}.** Повтор в ${new Date(state.waitUntil).toLocaleString('ru-RU')}.`
+      : `**Ждём сброса лимита ${state.waitingFor}** до ${new Date(state.waitUntil).toLocaleString('ru-RU')}; потом продолжим ту же сессию.`);
   }
   if (task) lines.push(`Сейчас: **${state.current}** ${tasksById[state.current]?.title ?? ''} — фаза ${task.phase}${task.round ? `, ревью круг ${task.round}` : ''}.`);
   else if (!paused) lines.push(now ?? 'Очередь пуста.');
@@ -238,6 +243,7 @@ function setAside(task, t, kind) {
 function waitOut(state, task, who, limit) {
   state.waitUntil = Date.now() + waitFor(limit);
   state.waitingFor = who;
+  state.waitNote = null;
   note(task, `лимит ${who}${limit.known ? `, сброс в ${limit.at.toLocaleString('ru-RU')}` : ', время сброса не прочитано — проверим через 20 минут'}; продолжим ту же сессию`);
 }
 
@@ -245,6 +251,11 @@ const STEP_NOTE = {
   develop: 'начата',
   'fix-checks': 'исправление упавших проверок, новая сессия',
   'fix-review': 'исправление замечаний ревью, новая сессия',
+};
+
+const STEP_TITLE = {
+  'fix-checks': 'Исправление упавших проверок',
+  'fix-review': 'Исправление замечаний ревью',
 };
 
 /** A fresh session's statement: the task, its commits so far, this step's purpose. */
@@ -329,7 +340,9 @@ async function develop(state, task, t) {
   }
   t.failures = 0;
   t.followUp = null;
-  t.devReport = picked.text;
+  // The reviewer reads the whole task: what was done, then each fix after it.
+  t.devReport = kind === 'develop' || !t.devReport ? picked.text
+    : `${t.devReport}\n\n---\n\n**${STEP_TITLE[kind]}:**\n\n${picked.text}`;
   t.phase = 'check';
   note(task, 'разработка: готово');
 }
@@ -356,6 +369,19 @@ async function check(state, task, t) {
   const checks = await runChecks({ root: WORKTREE, changedFiles: files, node: NODE, log: path.join(LOGS, `${task.id}-checks.log`), env: ENV });
   t.checks = { head, ok: checks.ok, steps: checks.steps.map(({ name, ok, code }) => ({ name, ok, code })) };
   note(task, `проверки: ${checks.steps.map((s) => `${s.name} ${s.ok ? 'PASS' : 'FAIL'}`).join(', ')}`);
+  // e2e could not start on this machine: not the task's failure, and not an
+  // attempt. T-109 was sent to "fix" a port a dead e2e run held (2026-10-10).
+  const failed = checks.steps.filter((s) => !s.ok);
+  if (failed.length && failed.every((s) => s.environment)) {
+    const why = failed.map((s) => s.tail.trim().split('\n').at(-1)).join('; ').slice(0, 300);
+    const retry = NOT_READY_RETRY_MS[Math.min(t.notReady ?? 0, NOT_READY_RETRY_MS.length - 1)];
+    t.notReady = (t.notReady ?? 0) + 1;
+    state.waitUntil = Date.now() + retry;
+    state.waitingFor = 'e2e';
+    state.waitNote = `машина не готова к e2e (${why})`;
+    return note(task, `проверки: e2e не поднялись — дело в машине, не в задаче (${why}); повтор через ${retry / 60000} мин`);
+  }
+  t.notReady = 0;
   if (checks.ok) { t.head = head; t.phase = 'review'; t.round = t.round || 1; return; }
   t.attempts = (t.attempts ?? 0) + 1;
   if (t.attempts >= MAX_CHECK_ATTEMPTS) {
@@ -571,6 +597,7 @@ async function step() {
   if (fs.existsSync(path.join(DIR, 'STOP'))) { saveState(STATE, state); writeStatus(state); return IDLE_MS; }
   if (state.waitUntil && Date.now() < state.waitUntil) { saveState(STATE, state); writeStatus(state); return Math.min(state.waitUntil - Date.now(), IDLE_MS); }
   state.waitUntil = null;
+  state.waitNote = null;
   if (Object.values(state.tasks).some((t) => t.phase === 'paused')) { saveState(STATE, state); writeStatus(state); return IDLE_MS; }
 
   if (!state.current) {
@@ -610,10 +637,11 @@ async function step() {
 }
 
 async function main() {
-  // Stopped (launchd, Ctrl-C) — the agents go too. State is on disk before
-  // every run, so the restart resumes the same session; nothing else holds it.
+  // Stopped (launchd, Ctrl-C) — the agents and checks go too. State is on disk
+  // before every run, so the restart resumes the same session; nothing else
+  // holds it. An e2e check tears its environment down on the signal.
   for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
-    process.on(signal, () => { stopAgents(); process.exit(0); });
+    process.on(signal, () => { stopAgents(); stopChecks(); process.exit(0); });
   }
   fs.mkdirSync(LOGS, { recursive: true });
   singleInstance();

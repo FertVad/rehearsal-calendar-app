@@ -11,12 +11,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const TAIL_LINES = 80;
+// e2e/run.mjs: the machine was not ready — not the change (docs/e2e.md).
+const E2E_NOT_READY = 75;
+
+// Checks still running, stopped with the supervisor (stopChecks): the e2e
+// run tears its environment down on SIGTERM.
+const running = new Set();
+
+export function stopChecks(signal = 'SIGTERM') {
+  for (const child of running) child.kill(signal);
+}
 
 function run(name, command, args, { cwd, env, log, timeoutMs }) {
   return new Promise((resolve) => {
     const out = fs.createWriteStream(log, { flags: 'a' });
     out.write(`\n### ${new Date().toISOString()} ${name}: ${command} ${args.join(' ')}\n`);
     const child = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    running.add(child);
     const lines = [];
     const keep = (chunk) => {
       out.write(chunk);
@@ -27,6 +38,7 @@ function run(name, command, args, { cwd, env, log, timeoutMs }) {
     child.stderr.on('data', keep);
     const timer = setTimeout(() => child.kill('SIGTERM'), timeoutMs);
     child.on('close', (code, signal) => {
+      running.delete(child);
       clearTimeout(timer);
       out.end();
       resolve({ name, ok: code === 0, code, signal, tail: lines.slice(-TAIL_LINES).join('\n') });
@@ -43,7 +55,7 @@ export function checksFor(changedFiles) {
 
 /**
  * @param root the worktree
- * @returns {{ok: boolean, steps: {name, ok, tail}[]}}
+ * @returns {{ok: boolean, steps: {name, ok, code, tail, environment?}[]}}
  */
 export async function runChecks({ root, changedFiles, node, log, env }) {
   const app = path.join(root, 'rehearsal-calendar-native');
@@ -63,6 +75,7 @@ export async function runChecks({ root, changedFiles, node, log, env }) {
   }
   if (want.e2e) {
     const step = await run('e2e', node, ['e2e/run.mjs'], opts(45 * 60 * 1000));
+    step.environment = step.code === E2E_NOT_READY;
     steps.push(step);
     if (!step.ok) return { ok: false, steps };
   }
