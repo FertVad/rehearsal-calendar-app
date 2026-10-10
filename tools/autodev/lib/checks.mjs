@@ -9,6 +9,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { isFailureLine } from './flakes.mjs';
 
 const TAIL_LINES = 80;
 // e2e/run.mjs: the machine was not ready — not the change (docs/e2e.md).
@@ -29,9 +30,21 @@ function run(name, command, args, { cwd, env, log, timeoutMs }) {
     const child = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     running.add(child);
     const lines = [];
+    // What failed, over the whole run: a Jest summary of three failures is
+    // longer than the tail (T-202 was named after a fragment).
+    const failures = [];
+    // Output arrives in chunks that cut lines in two; a line is whole only at
+    // its newline.
+    let partial = '';
+    const add = (line) => {
+      lines.push(line);
+      if (isFailureLine(line) && failures.length < 200) failures.push(line);
+    };
     const keep = (chunk) => {
       out.write(chunk);
-      lines.push(...String(chunk).split('\n'));
+      const parts = (partial + String(chunk)).split('\n');
+      partial = parts.pop();
+      parts.forEach(add);
       if (lines.length > TAIL_LINES * 4) lines.splice(0, lines.length - TAIL_LINES * 2);
     };
     child.stdout.on('data', keep);
@@ -40,8 +53,9 @@ function run(name, command, args, { cwd, env, log, timeoutMs }) {
     child.on('close', (code, signal) => {
       running.delete(child);
       clearTimeout(timer);
+      if (partial) add(partial);
       out.end();
-      resolve({ name, ok: code === 0, code, signal, tail: lines.slice(-TAIL_LINES).join('\n') });
+      resolve({ name, ok: code === 0, code, signal, tail: lines.slice(-TAIL_LINES).join('\n'), failures });
     });
   });
 }

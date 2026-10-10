@@ -32,6 +32,12 @@ test('the failing test is named by its own title', () => {
   assert.equal(flakeName([{ name: 'tests', tail: 'something odd' }]), 'проверка tests');
 });
 
+test('the failure lines gathered over the whole run name the test, not the tail', () => {
+  const step = { name: 'tests', code: 1, tail: 'filler\nfiller', failures: ['FAIL server/__tests__/startup/runtimeStartup.test.js', '  ● library import exports the app'] };
+  assert.equal(flakeName([step]), 'library import exports the app');
+  assert.match(flakeTask({ id: 'T-202', task: { id: 'T-109' }, head: 'abcdef1', steps: [step], log: 'x', when: 'y' }), /runtimeStartup\.test\.js/);
+});
+
 test('the excerpt keeps what failed and leaves the passes out', () => {
   const excerpt = failureExcerpt(jest);
   assert.match(excerpt, /FAIL server\/__tests__\/routes\/authorization\.test\.js/);

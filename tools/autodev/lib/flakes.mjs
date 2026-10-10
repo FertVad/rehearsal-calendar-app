@@ -15,17 +15,27 @@ const MARKS = [
   /^\s*(Expected|Received):/, // Jest assertion
 ];
 
+/** A line that says what failed: a suite, a test, an assertion. */
+export function isFailureLine(line) {
+  return MARKS.some((mark) => mark.test(line));
+}
+
+/** What a step's output says failed: its failure lines, gathered over the whole run, else its tail. */
+function failureText(step) {
+  return step.failures?.length ? step.failures.join('\n') : String(step.tail ?? '');
+}
+
 /** The lines of a check's output that say what failed; the last ones when nothing does. */
-export function failureExcerpt(tail, max = 24) {
-  const lines = String(tail).split('\n');
-  const marked = [...new Set(lines.filter((line) => MARKS.some((mark) => mark.test(line))).map((line) => line.trimEnd()))];
+export function failureExcerpt(text, max = 24) {
+  const lines = String(text).split('\n');
+  const marked = [...new Set(lines.filter(isFailureLine).map((line) => line.trimEnd()))];
   return (marked.length ? marked : lines.slice(-30)).slice(0, max).join('\n');
 }
 
 /** What to call the flaky test: the first failing test's own name. */
 export function flakeName(steps) {
   for (const step of steps) {
-    for (const line of String(step.tail).split('\n')) {
+    for (const line of failureText(step).split('\n')) {
       const name = /^\s*●\s+(.+)$/.exec(line)?.[1] ?? /^not ok \d+ - (.+)$/.exec(line)?.[1]
         ?? /^\s*\[Failed\]\s+(.+?)(\s+\(.*\))?$/.exec(line)?.[1];
       if (name) return name.trim().slice(0, 100);
@@ -46,7 +56,7 @@ export function flakeTitle(steps) {
 
 /** The task's markdown, "## T-2NN Нестабильный тест: …" and what to do. */
 export function flakeTask({ id, task, head, steps, log, when }) {
-  const excerpt = steps.map((step) => `### ${step.name} (код ${step.code})\n${failureExcerpt(step.tail)}`).join('\n\n');
+  const excerpt = steps.map((step) => `### ${step.name} (код ${step.code})\n${failureExcerpt(failureText(step))}`).join('\n\n');
   return `## ${id} ${flakeTitle(steps)}
 
 Источник: проверки супервизора на задаче ${task.id}, коммит ${head.slice(0, 7)}, ${when}. Тест упал, а повторный прогон тех же коммитов прошёл: он нестабилен, задача ${task.id} тут ни при чём.
