@@ -43,12 +43,27 @@ ${done}` : ''}`;
 
 const STEP_GOAL = {
   develop: 'сделать задачу',
+  port: 'перенести работу задачи на текущую ветку',
   'fix-checks': 'исправить то, на чём упали проверки супервизора',
   'fix-review': 'исправить замечания ревьюера',
 };
 
-export function developTask(task, done) {
-  return `${statement(task, done)}
+/**
+ * A task's kept commits that would not cherry-pick by themselves — every task
+ * edits the shared tables in audit/, so a task brought back later conflicts
+ * there (T-108, 2026-10-10). The developer ports them first, by meaning.
+ */
+function portFirst(port) {
+  if (!port) return '';
+  return `
+
+Сначала перенеси на текущую ветку работу этой задачи из ${port.from} — коммиты по порядку:
+${port.commits.map((sha) => `- ${sha.slice(0, 7)}`).join('\n')}
+Каждый: \`git cherry-pick -x <коммит>\`. Сами они не легли${port.conflicts?.length ? ` (конфликт: ${port.conflicts.join(', ')})` : ''}. Конфликт разреши по смыслу: в общих таблицах audit/ (TRIAGE, REMEDIATION_STATUS) сохрани строки обеих сторон, в коде — сохрани и то, что уже есть в ветке, и то, что несёт задача. Затем \`git add <файлы>\` и \`git commit --no-edit\`. Переноси только эти коммиты.`;
+}
+
+export function developTask(task, done, port) {
+  return `${statement(task, done)}${portFirst(port)}
 
 ${DEVELOPER_RULES}
 
@@ -57,9 +72,9 @@ ${TOOLING}
 ${DEVELOPER_END}`;
 }
 
-export function fixChecks(task, steps, done) {
+export function fixChecks(task, steps, done, port) {
   const failed = steps.filter((step) => !step.ok);
-  return `${statement(task, done)}
+  return `${statement(task, done)}${portFirst(port)}
 
 Сейчас: проверки супервизора упали на этих коммитах.
 
@@ -74,14 +89,27 @@ ${TOOLING}
 ${DEVELOPER_END}`;
 }
 
-export function fixReview(task, reviewText, done) {
-  return `${statement(task, done)}
+export function fixReview(task, reviewText, done, port) {
+  return `${statement(task, done)}${portFirst(port)}
 
 Сейчас: ревьюер (Астра) вернул замечания к этим коммитам.
 
 ${reviewText}
 
 Исправь то, что выше планки, по причине; что ниже — исправь, если то же правило покрывает, иначе объясни в отчёте.
+
+${DEVELOPER_RULES}
+
+${TOOLING}
+
+${DEVELOPER_END}`;
+}
+
+/** Only the porting: the task goes to checks and review as it was. */
+export function portTask(task, port, done) {
+  return `${statement(task, done)}${portFirst(port)}
+
+Больше ничего не меняй: после переноса задача идёт на проверки и ревью как есть.
 
 ${DEVELOPER_RULES}
 

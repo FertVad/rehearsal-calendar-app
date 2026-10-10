@@ -82,6 +82,9 @@ const CLAUDE_ENV = {
   CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1',
   CLAUDE_CODE_DISABLE_CRON: '1',
   CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1',
+  // A conflicted cherry-pick or merge takes its prepared message instead of
+  // waiting for an editor nobody will close.
+  GIT_EDITOR: 'true',
 };
 
 /**
@@ -263,11 +266,13 @@ function waitOut(state, task, who, limit) {
 
 const STEP_NOTE = {
   develop: 'начата',
+  port: 'перенос коммитов задачи на текущую ветку, новая сессия',
   'fix-checks': 'исправление упавших проверок, новая сессия',
   'fix-review': 'исправление замечаний ревью, новая сессия',
 };
 
 const STEP_TITLE = {
+  port: 'Перенос коммитов на текущую ветку',
   'fix-checks': 'Исправление упавших проверок',
   'fix-review': 'Исправление замечаний ревью',
 };
@@ -275,9 +280,11 @@ const STEP_TITLE = {
 /** A fresh session's statement: the task, its commits so far, this step's purpose. */
 function stepPrompt(task, t) {
   const done = t.base ? git(WORKTREE, 'log', '--oneline', `${t.base}..HEAD`) : '';
-  if (t.step?.kind === 'fix-checks') return P.fixChecks(task, t.step.steps, done);
-  if (t.step?.kind === 'fix-review') return P.fixReview(task, t.step.review, done);
-  return P.developTask(task, done);
+  const port = t.step?.port;
+  if (t.step?.kind === 'port') return P.portTask(task, port, done);
+  if (t.step?.kind === 'fix-checks') return P.fixChecks(task, t.step.steps, done, port);
+  if (t.step?.kind === 'fix-review') return P.fixReview(task, t.step.review, done, port);
+  return P.developTask(task, done, port);
 }
 
 /**
@@ -635,13 +642,17 @@ function adopt(state, task, t) {
   t.base = git(WORKTREE, 'rev-parse', 'HEAD');
   try {
     for (const sha of t.adopt) git(WORKTREE, 'cherry-pick', '-x', sha);
-  } catch (error) {
+  } catch {
+    // Not set aside again: the developer ports them, by meaning, as the first
+    // part of the step the task resumes at (prompts.portFirst).
+    let conflicts = [];
+    try { conflicts = git(WORKTREE, 'diff', '--name-only', '--diff-filter=U').split('\n').filter(Boolean); } catch { /* none listed */ }
     try { git(WORKTREE, 'cherry-pick', '--abort'); } catch { /* nothing in progress */ }
     git(WORKTREE, 'reset', '--hard', '--quiet', t.base);
-    t.phase = 'deferred';
-    t.deferReason = `коммиты из ${t.adoptedFrom} не легли на ${BRANCH}: ${String(error.message).split('\n')[0]}`;
-    state.current = null;
-    return note(task, `ОТЛОЖЕНО: ${t.deferReason}`);
+    const port = { from: t.adoptedFrom, commits: t.adopt, conflicts };
+    nextStep(t, t.resume ? { ...t.resume, port } : { kind: 'port', port });
+    delete t.resume;
+    return note(task, `коммиты из ${t.adoptedFrom} не легли на ${BRANCH} сами (конфликт: ${conflicts.join(', ') || 'не назван'}) — переносит разработчик, дальше — ${STEP_NOTE[t.step.kind]}`);
   }
   if (t.resume) {
     nextStep(t, t.resume);
