@@ -792,6 +792,11 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
   code to the current address and a code to the new one, and the password when
   there is one. A password alone is not proof: a session can set a first one and
   unlink Google/Apple. `PUT /me` refuses a new email
+- In the app: `ResetPasswordScreen` (from sign-in and from a taken address at
+  registration) and `ChangeEmailScreen` (from the profile, where the address is
+  read only). Both write a session only through `startSession` in
+  `AuthContext`; the address and password rules are in
+  `features/auth/utils/accountRules.ts`, counted as the server counts them
 - A pending account gets no session: login, refresh, Google/Apple and the auth
   middleware all refuse it
 - The middleware checks the session version before the handler, outside any
