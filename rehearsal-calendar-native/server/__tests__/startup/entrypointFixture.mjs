@@ -11,6 +11,14 @@ import { fileURLToPath } from 'node:url';
 const sourceServer = fileURLToPath(new URL('../../', import.meta.url));
 export const fixtureJwtSecret = 'r2-child-fixture-' + 's'.repeat(32);
 export const fixtureAdminPassword = 'r2-owned-admin-password';
+// The fixture's own bounded waits. A test copies the tree, starts one child,
+// makes requests (each bounded) and closes it; its Jest budget is derived from
+// these so the fixture reports a stuck child, never Jest's default 5 s cut-off
+// on a cold spawn that is merely slow under a full-suite load.
+export const fixtureStartTimeoutMs = 6000;
+export const fixtureRequestTimeoutMs = 6000;
+export const fixtureCloseTimeoutMs = 2000;
+export const fixtureTestTimeoutMs = 5 * fixtureStartTimeoutMs;
 
 function copyTree(from, to, publicFiles = false) {
   mkdirSync(to, { recursive: true });
@@ -165,7 +173,7 @@ try {
       signal();
     }
   }
-  const waitFor = (predicate, timeoutMs = 6000) => new Promise((resolve, reject) => {
+  const waitFor = (predicate, timeoutMs = fixtureStartTimeoutMs) => new Promise((resolve, reject) => {
     const timeout = setTimeout(() => { waiters.delete(check); reject(new Error('Owned child did not reach its expected state')); }, timeoutMs);
     function check() {
       if (predicate()) { clearTimeout(timeout); waiters.delete(check); resolve(); }
@@ -215,7 +223,7 @@ try {
             : events.some(event => event.type === 'import-settled')));
       return fixture;
     },
-    async request(route, { method = 'GET', body, headers = {}, timeoutMs = 6000 } = {}) {
+    async request(route, { method = 'GET', body, headers = {}, timeoutMs = fixtureRequestTimeoutMs } = {}) {
       assert.match(route, /^\/(?!\/)/);
       const listener = events.find(event => event.type === 'framework-listener' || event.type === 'entrypoint-listener');
       assert.ok(listener, 'copied entrypoint must provide an owned HTTP listener');
@@ -257,7 +265,7 @@ try {
         if (child && !closed) {
           const closing = new Promise(resolve => { resolveClosed = resolve; });
           child.kill('SIGTERM');
-          const force = setTimeout(() => { if (!closed) child.kill('SIGKILL'); }, 2000);
+          const force = setTimeout(() => { if (!closed) child.kill('SIGKILL'); }, fixtureCloseTimeoutMs);
           try { await closing; } finally { clearTimeout(force); }
         }
         // close waits for stdio/IPC drain, so late boundary events and logs are

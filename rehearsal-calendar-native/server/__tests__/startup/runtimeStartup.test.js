@@ -1,4 +1,7 @@
-import { createEntrypointFixture, createPgRefusal, fixtureAdminPassword, fixtureJwtSecret } from './entrypointFixture.mjs';
+import { jest } from '@jest/globals';
+import { createEntrypointFixture, createPgRefusal, fixtureAdminPassword, fixtureJwtSecret, fixtureTestTimeoutMs } from './entrypointFixture.mjs';
+
+jest.setTimeout(fixtureTestTimeoutMs);
 
 const fixtures = [];
 const endpoints = [];
@@ -112,7 +115,7 @@ test('an owned stalled PostgreSQL handshake is bounded and not retried by follow
   await publicPages(fixture);
   expect((await fixture.request('/api/ready')).status).toBe(503);
   expect(endpoint.connections).toBe(1);
-}, 10000);
+});
 
 test('default startup ignores a synthetic adjacent .env unless explicitly selected', async () => {
   const endpoint = await refusal();

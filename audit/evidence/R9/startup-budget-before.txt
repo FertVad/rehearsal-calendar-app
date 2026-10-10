@@ -1,0 +1,39 @@
+Fix #9 follow-up: supervisor `npm test` on 5274d40 failed with 1 of 1634 tests,
+server/__tests__/startup/runtimeStartup.test.js:29
+"library import (VERCEL=false) ..." - "Exceeded timeout ... Add a timeout value
+to this test". The file set no budget, so Jest's default 5 s applied, while the
+fixture's own start wait is 6 s and one owned child takes ~3.7-4.8 s on an idle
+machine (local --verbose: 3637..4830 ms per test). The first, cold spawn under the
+full-suite load crossed 5 s.
+
+Red before: new __tests__/startup/fixtureBudget.test.js against the old
+__tests__/startup/entrypointFixture.mjs (from 5274d40, the fix kept aside):
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/startup/fixtureBudget.test.js
+FAIL __tests__/startup/fixtureBudget.test.js
+  ✕ the startup test budget covers the fixture's own bounded waits (15 ms)
+
+  ● the startup test budget covers the fixture's own bounded waits
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+       8 |   const { fixtureStartTimeoutMs, fixtureRequestTimeoutMs, fixtureCloseTimeoutMs, fixtureTestTimeoutMs } = fixture;
+       9 |   for (const budget of [fixtureStartTimeoutMs, fixtureRequestTimeoutMs, fixtureCloseTimeoutMs, fixtureTestTimeoutMs]) {
+    > 10 |     expect(Number.isFinite(budget) && budget > 0).toBe(true);
+         |                                                   ^
+      11 |   }
+      12 |   const jestDefaultMs = 5000;
+      13 |   expect(fixtureTestTimeoutMs).toBeGreaterThan(jestDefaultMs);
+
+      at Object.toBe (__tests__/startup/fixtureBudget.test.js:10:51)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        1.184 s
+
+After the fix: the same test passes (18 ms); runtimeStartup.test.js runs under
+jest.setTimeout(fixtureTestTimeoutMs) = 30000 ms.
