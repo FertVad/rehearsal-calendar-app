@@ -55,6 +55,21 @@ export function pauseReasons(files, addedLines) {
   return [...reasons];
 }
 
+/** The kind of change a reason names — "сессия в приложении", "миграции" — without its file or line. */
+export function reasonKind(reason) {
+  return reason.split(': ')[0];
+}
+
+/**
+ * The reasons whose kind the owner has not yet allowed this task. "Продолжить"
+ * allows a task the kinds it stopped on, so its next rounds — the reviewer's
+ * notes fixed in the same auth files — do not stop again; a kind it has not
+ * shown before (a migration, the server) still does (T-130, 2026-10-10).
+ */
+export function unapproved(reasons, approvedKinds = []) {
+  return reasons.filter((reason) => !approvedKinds.includes(reasonKind(reason)));
+}
+
 /** Changed files and added lines from `git diff --unified=0` output. */
 export function parseDiff(diffText) {
   const files = new Set();

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pauseReasons, parseDiff } from '../lib/guard.mjs';
+import { pauseReasons, parseDiff, reasonKind, unapproved } from '../lib/guard.mjs';
 
 test('an ordinary client change goes on', () => {
   assert.deepEqual(pauseReasons(
@@ -45,4 +45,16 @@ test('reads files and added lines from a unified diff', () => {
     '+another',
   ].join('\n');
   assert.deepEqual(parseDiff(diff), { files: ['x/a.ts'], added: ['new line', 'another'] });
+});
+
+test('the owner allows a task the kinds of change it stopped on, not a new kind', () => {
+  const auth = ['rehearsal-calendar-native/src/contexts/AuthContext.tsx', 'rehearsal-calendar-native/src/features/auth/screens/LoginScreen.tsx'];
+  const approved = [...new Set(pauseReasons(auth, []).map(reasonKind))];
+  assert.equal(approved.length, 2);
+  // The next round changes the same kinds of file again: no new stop.
+  assert.deepEqual(unapproved(pauseReasons(auth, []), approved), []);
+  // A migration is a kind it has not shown: that still stops, and only that.
+  const later = unapproved(pauseReasons([...auth, 'rehearsal-calendar-native/server/migrations/012_x.sql'], []), approved);
+  assert.ok(later.length > 0);
+  assert.ok(later.every((reason) => /012_x\.sql/.test(reason)), later.join(' | '));
 });
