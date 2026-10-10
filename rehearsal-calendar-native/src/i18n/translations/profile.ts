@@ -41,6 +41,23 @@ export interface ProfileTranslations {
   languageError: string;
   timezoneError: string;
   weekStartError: string;
+  // Changing the sign-in address with codes to both addresses (R3: HP01)
+  changeEmail: string;
+  changeEmailTitle: string;
+  changeEmailSubtitle: (email: string) => string;
+  newEmail: string;
+  currentPassword: string;
+  sendCodes: string;
+  codesSent: string;
+  currentAddressCode: (email: string) => string;
+  newAddressCode: (email: string) => string;
+  deliveryFailedTo: (email: string) => string;
+  deliveryUnknownTo: (email: string) => string;
+  resendCodes: string;
+  confirmChange: string;
+  emailChangedTitle: string;
+  emailChanged: (email: string) => string;
+  emailTakenByOther: string;
 }
 
 export const ru = {
@@ -90,6 +107,22 @@ export const ru = {
     languageError: 'Не удалось изменить язык',
     timezoneError: 'Не удалось обновить часовой пояс',
     weekStartError: 'Не удалось обновить начало недели',
+    changeEmail: 'Сменить адрес',
+    changeEmailTitle: 'Смена адреса',
+    changeEmailSubtitle: (email: string) => `Мы пришлём по коду на ${email} и на новый адрес. Адрес сменится, когда вы введёте оба.`,
+    newEmail: 'Новый адрес',
+    currentPassword: 'Текущий пароль',
+    sendCodes: 'Прислать коды',
+    codesSent: 'Коды отправлены. Прежние больше не действуют.',
+    currentAddressCode: (email: string) => `Код из письма на ${email}`,
+    newAddressCode: (email: string) => `Код из письма на ${email}`,
+    deliveryFailedTo: (email: string) => `Письмо на ${email} не удалось отправить. Запросите коды ещё раз.`,
+    deliveryUnknownTo: (email: string) => `Письмо на ${email} может прийти с задержкой. Если его нет через пару минут, запросите коды ещё раз.`,
+    resendCodes: 'Отправить коды ещё раз',
+    confirmChange: 'Подтвердить смену',
+    emailChangedTitle: 'Адрес изменён',
+    emailChanged: (email: string) => `Теперь вы входите с ${email}. На прежний адрес отправлено уведомление.`,
+    emailTakenByOther: 'Этот адрес уже занят другим аккаунтом.',
   },
 };
 
@@ -140,6 +173,22 @@ export const en = {
     languageError: 'Failed to change language',
     timezoneError: 'Failed to update timezone',
     weekStartError: 'Failed to update week start day',
+    changeEmail: 'Change address',
+    changeEmailTitle: 'Change address',
+    changeEmailSubtitle: (email: string) => `We will send a code to ${email} and one to the new address. The address changes once you enter both.`,
+    newEmail: 'New address',
+    currentPassword: 'Current password',
+    sendCodes: 'Send codes',
+    codesSent: 'The codes are on their way. Earlier ones no longer work.',
+    currentAddressCode: (email: string) => `Code from the email to ${email}`,
+    newAddressCode: (email: string) => `Code from the email to ${email}`,
+    deliveryFailedTo: (email: string) => `The email to ${email} could not be sent. Ask for the codes again.`,
+    deliveryUnknownTo: (email: string) => `The email to ${email} may take a while. If it has not arrived in a couple of minutes, ask for the codes again.`,
+    resendCodes: 'Send the codes again',
+    confirmChange: 'Confirm change',
+    emailChangedTitle: 'Address changed',
+    emailChanged: (email: string) => `You now sign in with ${email}. A notice went to the previous address.`,
+    emailTakenByOther: 'Another account already uses this address.',
   },
 };
 
@@ -190,6 +239,22 @@ export const es = {
     languageError: 'No se pudo cambiar el idioma',
     timezoneError: 'No se pudo actualizar la zona horaria',
     weekStartError: 'No se pudo actualizar el inicio de la semana',
+    changeEmail: 'Cambiar dirección',
+    changeEmailTitle: 'Cambiar dirección',
+    changeEmailSubtitle: (email: string) => `Enviaremos un código a ${email} y otro a la dirección nueva. La dirección cambia cuando introduzcas los dos.`,
+    newEmail: 'Dirección nueva',
+    currentPassword: 'Contraseña actual',
+    sendCodes: 'Enviar códigos',
+    codesSent: 'Te enviamos los códigos. Los anteriores ya no sirven.',
+    currentAddressCode: (email: string) => `Código del correo a ${email}`,
+    newAddressCode: (email: string) => `Código del correo a ${email}`,
+    deliveryFailedTo: (email: string) => `No se pudo enviar el correo a ${email}. Pide los códigos otra vez.`,
+    deliveryUnknownTo: (email: string) => `El correo a ${email} puede tardar. Si no llega en un par de minutos, pide los códigos otra vez.`,
+    resendCodes: 'Enviar los códigos otra vez',
+    confirmChange: 'Confirmar el cambio',
+    emailChangedTitle: 'Dirección cambiada',
+    emailChanged: (email: string) => `Ahora entras con ${email}. Enviamos un aviso a la dirección anterior.`,
+    emailTakenByOther: 'Otra cuenta ya usa esta dirección.',
   },
 };
 
@@ -240,5 +305,21 @@ export const de = {
     languageError: 'Sprache konnte nicht geändert werden',
     timezoneError: 'Zeitzone konnte nicht aktualisiert werden',
     weekStartError: 'Wochenbeginn konnte nicht aktualisiert werden',
+    changeEmail: 'Adresse ändern',
+    changeEmailTitle: 'Adresse ändern',
+    changeEmailSubtitle: (email: string) => `Wir schicken einen Code an ${email} und einen an die neue Adresse. Die Adresse ändert sich, sobald du beide eingibst.`,
+    newEmail: 'Neue Adresse',
+    currentPassword: 'Aktuelles Passwort',
+    sendCodes: 'Codes senden',
+    codesSent: 'Die Codes sind unterwegs. Frühere gelten nicht mehr.',
+    currentAddressCode: (email: string) => `Code aus der E-Mail an ${email}`,
+    newAddressCode: (email: string) => `Code aus der E-Mail an ${email}`,
+    deliveryFailedTo: (email: string) => `Die E-Mail an ${email} konnte nicht gesendet werden. Fordere die Codes erneut an.`,
+    deliveryUnknownTo: (email: string) => `Die E-Mail an ${email} kann etwas dauern. Ist sie nach ein paar Minuten nicht da, fordere die Codes erneut an.`,
+    resendCodes: 'Codes erneut senden',
+    confirmChange: 'Änderung bestätigen',
+    emailChangedTitle: 'Adresse geändert',
+    emailChanged: (email: string) => `Du meldest dich jetzt mit ${email} an. Die bisherige Adresse hat eine Nachricht bekommen.`,
+    emailTakenByOther: 'Ein anderes Konto nutzt diese Adresse bereits.',
   },
 };

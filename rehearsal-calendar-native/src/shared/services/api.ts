@@ -161,12 +161,31 @@ export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
 
+  // A forgotten password, with a code emailed to the address (R3). The request
+  // answers alike with and without an account; the confirmation answers with
+  // a session.
+  requestPasswordReset: (email: string) =>
+    api.post('/auth/password-reset/request', { email }),
+
+  confirmPasswordReset: (email: string, code: string, newPassword: string) =>
+    api.post('/auth/password-reset/confirm', { email, code, newPassword }),
+
+  // A new sign-in address: a code to it and one to the current address, and
+  // the password when the account has one (R3: HP01). The confirmation revokes
+  // every session and answers with the pair that works now.
+  requestEmailChange: (newEmail: string, currentPassword?: string) =>
+    api.post('/auth/me/email/change', { newEmail, currentPassword }),
+
+  confirmEmailChange: (code: string, currentCode: string) =>
+    api.post('/auth/me/email/change/confirm', { code, currentCode }),
+
   getMe: () => api.get('/auth/me'),
 
+  // No email: the server refuses a new one here (requestEmailChange instead).
+  // An empty lastName clears it; undefined leaves it.
   updateMe: (data: {
     firstName?: string;
     lastName?: string;
-    email?: string;
     phone?: string;
     password?: string;
     timezone?: string;

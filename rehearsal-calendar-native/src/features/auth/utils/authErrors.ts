@@ -50,6 +50,8 @@ export function authErrorMessage(t: Translations, error: unknown): string {
     case 'EMAIL_TAKEN': return t.auth.emailTakenMessage;
     case 'EMAIL_NOT_VERIFIED': return t.auth.emailNotVerified;
     case 'SIGN_IN_AGAIN': return t.auth.signInAgainToConfirm;
+    case 'CURRENT_PASSWORD_INVALID': return t.auth.currentPasswordInvalid;
+    case 'EMAIL_UNCHANGED': return t.auth.emailUnchanged;
     default: break;
   }
   if (failure?.status === 401) return t.auth.invalidCredentials;

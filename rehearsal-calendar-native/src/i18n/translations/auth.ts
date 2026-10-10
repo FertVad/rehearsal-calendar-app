@@ -64,6 +64,18 @@ export interface AuthTranslations {
   passwordRule: string;
   nameInvalid: string;
   timezoneInvalid: string;
+  // Resetting a forgotten password with an emailed code (R3)
+  forgotPassword: string;
+  resetTitle: string;
+  resetSubtitle: string;
+  resetSendCode: string;
+  resetCodeSent: (email: string) => string;
+  newPassword: string;
+  resetButton: string;
+  resetPassword: string;
+  otherAddress: string;
+  currentPasswordInvalid: string;
+  emailUnchanged: string;
 }
 
 export const ru = {
@@ -132,6 +144,17 @@ export const ru = {
     passwordRule: 'Пароль: от 8 символов и не длиннее 72 байт — это 72 латинские буквы или около 36 русских.',
     nameInvalid: 'Имя обязательно; имя и фамилия — не длиннее 100 символов.',
     timezoneInvalid: 'Часовой пояс устройства не распознан. Проверьте его в настройках.',
+    forgotPassword: 'Забыли пароль?',
+    resetTitle: 'Новый пароль',
+    resetSubtitle: 'Введите адрес аккаунта — мы пришлём на него код.',
+    resetSendCode: 'Прислать код',
+    resetCodeSent: (email: string) => `Если с ${email} есть аккаунт, на него отправлен шестизначный код. Введите его и новый пароль.`,
+    newPassword: 'Новый пароль',
+    resetButton: 'Сменить пароль и войти',
+    resetPassword: 'Восстановить пароль',
+    otherAddress: 'Другой адрес',
+    currentPasswordInvalid: 'Неверный текущий пароль',
+    emailUnchanged: 'Это и есть ваш адрес',
   },
 };
 
@@ -201,6 +224,17 @@ export const en = {
     passwordRule: 'Password: at least 8 characters and at most 72 bytes — 72 Latin letters, fewer in other scripts.',
     nameInvalid: 'A first name is required; first and last name are at most 100 characters.',
     timezoneInvalid: "The device's time zone was not recognised. Check it in Settings.",
+    forgotPassword: 'Forgot password?',
+    resetTitle: 'New password',
+    resetSubtitle: 'Enter the address of your account and we will send it a code.',
+    resetSendCode: 'Send code',
+    resetCodeSent: (email: string) => `If ${email} has an account, a six-digit code is on its way there. Enter it and a new password.`,
+    newPassword: 'New password',
+    resetButton: 'Change password and sign in',
+    resetPassword: 'Reset password',
+    otherAddress: 'Another address',
+    currentPasswordInvalid: 'The current password is wrong',
+    emailUnchanged: 'This already is your address',
   },
 };
 
@@ -270,6 +304,17 @@ export const es = {
     passwordRule: 'Contraseña: al menos 8 caracteres y como máximo 72 bytes — 72 letras latinas, menos con acentos u otros alfabetos.',
     nameInvalid: 'El nombre es obligatorio; nombre y apellido tienen como máximo 100 caracteres.',
     timezoneInvalid: 'No se reconoció la zona horaria del dispositivo. Revísala en Ajustes.',
+    forgotPassword: '¿Olvidaste tu contraseña?',
+    resetTitle: 'Nueva contraseña',
+    resetSubtitle: 'Introduce la dirección de tu cuenta y te enviaremos un código.',
+    resetSendCode: 'Enviar código',
+    resetCodeSent: (email: string) => `Si ${email} tiene una cuenta, le hemos enviado un código de seis dígitos. Introdúcelo junto con una contraseña nueva.`,
+    newPassword: 'Nueva contraseña',
+    resetButton: 'Cambiar contraseña y entrar',
+    resetPassword: 'Restablecer contraseña',
+    otherAddress: 'Otra dirección',
+    currentPasswordInvalid: 'La contraseña actual no es correcta',
+    emailUnchanged: 'Esta ya es tu dirección',
   },
 };
 
@@ -339,5 +384,16 @@ export const de = {
     passwordRule: 'Passwort: mindestens 8 Zeichen und höchstens 72 Bytes — 72 lateinische Buchstaben, weniger mit Umlauten oder anderen Schriften.',
     nameInvalid: 'Ein Vorname ist nötig; Vor- und Nachname haben höchstens 100 Zeichen.',
     timezoneInvalid: 'Die Zeitzone des Geräts wurde nicht erkannt. Prüfe sie in den Einstellungen.',
+    forgotPassword: 'Passwort vergessen?',
+    resetTitle: 'Neues Passwort',
+    resetSubtitle: 'Gib die Adresse deines Kontos ein, wir schicken ihr einen Code.',
+    resetSendCode: 'Code senden',
+    resetCodeSent: (email: string) => `Wenn es zu ${email} ein Konto gibt, ist ein sechsstelliger Code dorthin unterwegs. Gib ihn und ein neues Passwort ein.`,
+    newPassword: 'Neues Passwort',
+    resetButton: 'Passwort ändern und anmelden',
+    resetPassword: 'Passwort zurücksetzen',
+    otherAddress: 'Andere Adresse',
+    currentPasswordInvalid: 'Das aktuelle Passwort ist falsch',
+    emailUnchanged: 'Das ist bereits deine Adresse',
   },
 };

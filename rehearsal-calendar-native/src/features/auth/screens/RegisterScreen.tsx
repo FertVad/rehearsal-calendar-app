@@ -17,10 +17,9 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { registerScreenStyles as styles } from '../styles';
 import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
+import { looksLikeEmail, meetsPasswordRule, normalizeEmail } from '../utils/accountRules';
 
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
-
-const utf8Length = (value: string) => new TextEncoder().encode(value).length;
 
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [email, setEmail] = useState('');
@@ -41,15 +40,12 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!looksLikeEmail(email)) {
       Alert.alert(t.common.error, t.auth.invalidEmail);
       return false;
     }
 
-    // The server's rule: 8 characters, at most 72 bytes of UTF-8 — bcrypt reads
-    // no further, so a longer password would silently lose its tail.
-    if (password.length < 8 || utf8Length(password) > 72) {
+    if (!meetsPasswordRule(password)) {
       Alert.alert(t.common.error, t.auth.passwordRule);
       return false;
     }
@@ -77,9 +73,12 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       navigation.navigate('VerifyEmail', { email: created.email, delivery: created.delivery });
     } catch (err) {
       if (err instanceof AuthFlowError && err.code === 'EMAIL_TAKEN') {
+        // Sign in, or — when someone else registered the address — take it back
+        // with a code to the mailbox (R3 contract).
         Alert.alert(t.auth.emailTakenTitle, t.auth.emailTakenMessage, [
           { text: t.common.cancel, style: 'cancel' },
           { text: t.auth.loginButton, onPress: () => navigation.popTo('Login') },
+          { text: t.auth.resetPassword, onPress: () => navigation.navigate('ResetPassword', { email: normalizeEmail(email) }) },
         ]);
         return;
       }

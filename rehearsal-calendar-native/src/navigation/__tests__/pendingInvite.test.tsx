@@ -85,6 +85,7 @@ function mockScreen() { return { __esModule: true, default: () => null }; }
 jest.mock('../../features/auth/screens/LoginScreen', mockScreen);
 jest.mock('../../features/auth/screens/RegisterScreen', mockScreen);
 jest.mock('../../features/auth/screens/VerifyEmailScreen', mockScreen);
+jest.mock('../../features/auth/screens/ResetPasswordScreen', mockScreen);
 jest.mock('../../features/calendar/screens/CalendarScreen', mockScreen);
 jest.mock('../../features/calendar/screens/AddRehearsalScreen', mockScreen);
 jest.mock('../../features/calendar/screens/RehearsalDetailsScreen', mockScreen);
@@ -95,6 +96,7 @@ jest.mock('../../features/projects/screens/CreateProjectScreen', mockScreen);
 jest.mock('../../features/profile/screens/ProfileScreen', mockScreen);
 jest.mock('../../features/profile/screens/CalendarSyncSettingsScreen', mockScreen);
 jest.mock('../../features/profile/screens/EditProfileScreen', mockScreen);
+jest.mock('../../features/profile/screens/ChangeEmailScreen', mockScreen);
 jest.mock('../../features/smart-planner/screens/SmartPlannerScreen', mockScreen);
 jest.mock('../../features/smart-planner/screens/SmartPlannerTabScreen', mockScreen);
 jest.mock('../../features/availability/screens/AvailabilityScreen', mockScreen);

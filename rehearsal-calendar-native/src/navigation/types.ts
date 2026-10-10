@@ -8,6 +8,8 @@ export type AuthStackParamList = {
   // delivery is set when a registration has just sent the code; absent when a
   // sign-in found the address still unconfirmed.
   VerifyEmail: { email: string; delivery?: 'sent' | 'failed' | 'unknown' };
+  // The address typed where the reset was opened from, if any.
+  ResetPassword: { email?: string } | undefined;
 };
 
 export type CalendarStackParamList = {
@@ -28,6 +30,7 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   CalendarSyncSettings: undefined;
   EditProfile: undefined;
+  ChangeEmail: undefined;
 };
 
 // Each tab holds its own stack, and the tabs sit inside the app stack. Said

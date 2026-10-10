@@ -6,6 +6,10 @@ import { syncUserPreferences } from '../shared/utils/storage';
 import { unregisterPushToken, syncPushTokenIfGranted } from '../shared/services/notifications';
 import { resetConnectionCache } from '../shared/utils/calendarMappings';
 import { AuthFlowError, toAuthFlowError, DeliveryOutcome } from '../features/auth/utils/authErrors';
+import { normalizeEmail } from '../features/auth/utils/accountRules';
+
+/** What the profile may change in place. The address is not here: it takes a code to each address. */
+type ProfileUpdate = Parameters<typeof authAPI.updateMe>[0];
 
 function getDeviceTimezone(): string | undefined {
   try {
@@ -49,10 +53,19 @@ interface AuthContextType {
   resendConfirmation: () => Promise<DeliveryOutcome | null>;
   /** Leave the confirmation: an answer not yet writing writes nothing; one already writing finishes. */
   forgetPendingSignIn: () => void;
+  /** Asks for a reset code; the answer is the same with or without an account. Returns the normalized address. */
+  requestPasswordReset: (email: string) => Promise<string>;
+  /** A confirmed reset is a sign-in; leaving before its answer writes nothing (forgetPendingSignIn). */
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
+  /** Codes to the new and the current address; what happened to each email. */
+  requestEmailChange: (newEmail: string, currentPassword?: string)
+    => Promise<{ newAddress: DeliveryOutcome; currentAddress: DeliveryOutcome }>;
+  /** Moves the account to the new address and writes the session the server replaced. */
+  confirmEmailChange: (code: string, currentCode: string) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<{ linked: boolean }>;
   loginWithApple: (idToken: string, user?: any) => Promise<{ linked: boolean }>;
   logout: () => Promise<void>;
-  updateUser: (data: Partial<User>) => Promise<void>;
+  updateUser: (data: ProfileUpdate) => Promise<void>;
   deleteAccount: () => Promise<{ deletedProjects: number }>;
   /** The last failure, kept whole so the screens can say it in the app's language. */
   error: AuthFlowError | null;
@@ -360,6 +373,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [beginAttempt, endAttempt]);
 
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const address = normalizeEmail(email);
+    try {
+      await authAPI.requestPasswordReset(address);
+      return address;
+    } catch (err: any) {
+      throw toAuthFlowError(err, 'Could not send the code');
+    }
+  }, []);
+
+  // The emailed code proves the mailbox, and the server answers with a session:
+  // a sign-in like a confirmed registration, through the same write.
+  const resetPassword = useCallback(async (email: string, code: string, newPassword: string) => {
+    const attempt = beginAttempt();
+    try {
+      const response = await authAPI.confirmPasswordReset(normalizeEmail(email), code, newPassword);
+      await startSession(response.data, attempt);
+    } catch (err: any) {
+      if (!isCurrent(attempt)) return;
+      throw toAuthFlowError(err, 'Password reset failed');
+    } finally {
+      endAttempt(attempt);
+    }
+  }, [beginAttempt, endAttempt, startSession]);
+
+  const requestEmailChange = useCallback(async (newEmail: string, currentPassword?: string) => {
+    try {
+      const response = await authAPI.requestEmailChange(normalizeEmail(newEmail), currentPassword);
+      return response.data.delivery as { newAddress: DeliveryOutcome; currentAddress: DeliveryOutcome };
+    } catch (err: any) {
+      throw toAuthFlowError(err, 'Could not send the codes');
+    }
+  }, []);
+
+  // A confirmed change revokes every session of the account, this one's too,
+  // and answers with the pair that works now. It is written through the same
+  // path as a sign-in, and nothing cancels it — no screen calls
+  // forgetPendingSignIn here: the old pair is already dead, so not writing the
+  // new one would sign the person out.
+  const confirmEmailChange = useCallback(async (code: string, currentCode: string) => {
+    const attempt = beginAttempt();
+    try {
+      const response = await authAPI.confirmEmailChange(code, currentCode);
+      await startSession(response.data, attempt);
+    } catch (err: any) {
+      throw toAuthFlowError(err, 'Could not change the address');
+    } finally {
+      endAttempt(attempt);
+    }
+  }, [beginAttempt, endAttempt, startSession]);
+
   const loginWithGoogle = useCallback(async (idToken: string) => {
     const attempt = beginAttempt();
     try {
@@ -436,7 +500,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const updateUser = useCallback(async (data: Partial<User>) => {
+  const updateUser = useCallback(async (data: ProfileUpdate) => {
     try {
       setError(null);
       const response = await authAPI.updateMe(data);
@@ -496,6 +560,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         confirmEmail,
         resendConfirmation,
         forgetPendingSignIn,
+        requestPasswordReset,
+        resetPassword,
+        requestEmailChange,
+        confirmEmailChange,
         loginWithGoogle,
         loginWithApple,
         logout,

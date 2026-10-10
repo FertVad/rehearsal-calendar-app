@@ -18,6 +18,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { loginScreenStyles as styles } from '../styles';
 import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
+import { normalizeEmail } from '../utils/accountRules';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useGoogleAuth, getGoogleIdToken } from '../../../shared/services/googleAuth';
 import { signInWithApple, isAppleAuthAvailable } from '../../../shared/services/appleAuth';
@@ -175,6 +176,13 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               variant="purple"
               loading={busy}
               style={styles.loginButton}
+            />
+
+            <GlassButton
+              title={t.auth.forgotPassword}
+              onPress={() => navigation.navigate('ResetPassword', { email: normalizeEmail(email) })}
+              variant="glass"
+              style={styles.registerButton}
             />
 
             <GlassButton

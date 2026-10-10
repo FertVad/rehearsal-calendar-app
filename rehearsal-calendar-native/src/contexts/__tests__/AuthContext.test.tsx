@@ -22,6 +22,10 @@ const mockApi = {
   resendVerification: jest.fn(),
   loginWithApple: jest.fn(),
   updateMe: jest.fn(() => Promise.resolve({ data: {} })),
+  requestPasswordReset: jest.fn(),
+  confirmPasswordReset: jest.fn(),
+  requestEmailChange: jest.fn(),
+  confirmEmailChange: jest.fn(),
 };
 jest.mock('../../shared/services/api', () => ({
   authAPI: new Proxy({}, { get: (_target, key: string) => (...args: any[]) => (mockApi as any)[key](...args) }),
@@ -352,4 +356,88 @@ it('keeps the code screen on a wrong code, with the server code to show', async 
   expect(failure.code).toBe('CODE_INVALID');
   expect(auth.pendingEmail).toBe('new@example.com');
   expect(mockStorage.accessToken).toBeUndefined();
+});
+
+// Password reset (R3): the request is the same for any address; a confirmed
+// code is a sign-in, through the one session write.
+it('asks for a reset code for the normalized address, without a session', async () => {
+  const screen = await renderAuth();
+  mockApi.requestPasswordReset.mockResolvedValue({ data: { status: 'reset_requested' } });
+  let address: any;
+  await act(async () => { address = await auth.requestPasswordReset(' Anna@Example.com '); });
+  expect(address).toBe('anna@example.com');
+  expect(mockApi.requestPasswordReset).toHaveBeenCalledWith('anna@example.com');
+  expect(screen.getByTestId('user').props.children).toBe('none');
+});
+
+it('signs in with the pair a confirmed reset answers with', async () => {
+  const screen = await renderAuth();
+  mockApi.confirmPasswordReset.mockResolvedValue({ data: { user: USER, accessToken: 'access', refreshToken: 'refresh' } });
+  await act(async () => { await auth.resetPassword('new@example.com', '123456', 'long-enough-1'); });
+  expect(mockApi.confirmPasswordReset).toHaveBeenCalledWith('new@example.com', '123456', 'long-enough-1');
+  expect(mockStorage.accessToken).toBe('access');
+  expect(mockStorage.refreshToken).toBe('refresh');
+  expect(screen.getByTestId('user').props.children).toBe('7');
+});
+
+it('signs nobody in when a reset answers after the person left (review R3-24)', async () => {
+  const screen = await renderAuth();
+  const answer = held<any>();
+  mockApi.confirmPasswordReset.mockReturnValue(answer.promise);
+  let resetting: Promise<void>;
+  act(() => { resetting = auth.resetPassword('new@example.com', '123456', 'long-enough-1'); });
+  act(() => { auth.forgetPendingSignIn(); });
+  await act(async () => { answer.resolve({ data: { user: USER, accessToken: 'late', refreshToken: 'late' } }); await resetting; });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.accessToken).toBeUndefined();
+});
+
+it('keeps a refused reset code with the server code to show', async () => {
+  await renderAuth();
+  mockApi.confirmPasswordReset.mockRejectedValue({ response: { status: 400, data: { error: 'The code is not valid', code: 'CODE_LOCKED' } } });
+  let failure: any;
+  await act(async () => { failure = await auth.resetPassword('new@example.com', '000000', 'long-enough-1').catch((error) => error); });
+  expect(failure.code).toBe('CODE_LOCKED');
+  expect(mockStorage.accessToken).toBeUndefined();
+});
+
+// Changing the address (R3: HP01): the server revokes every session, this
+// one's too, and answers with the pair that works now.
+async function signedIn() {
+  const screen = await renderAuth();
+  mockApi.login.mockResolvedValue({ data: { user: USER, accessToken: 'old-access', refreshToken: 'old-refresh' } });
+  await act(async () => { await auth.login('new@example.com', 'long-enough-1'); });
+  return screen;
+}
+
+it('asks for both codes and returns what happened to each email', async () => {
+  await signedIn();
+  mockApi.requestEmailChange.mockResolvedValue({ data: { status: 'codes_sent', delivery: { newAddress: 'sent', currentAddress: 'failed' } } });
+  let delivery: any;
+  await act(async () => { delivery = await auth.requestEmailChange(' Moved@Example.com', 'long-enough-1'); });
+  expect(mockApi.requestEmailChange).toHaveBeenCalledWith('moved@example.com', 'long-enough-1');
+  expect(delivery).toEqual({ newAddress: 'sent', currentAddress: 'failed' });
+});
+
+it('keeps the session with the new pair and the new address after a confirmed change', async () => {
+  await signedIn();
+  const moved = { ...USER, email: 'moved@example.com' };
+  mockApi.confirmEmailChange.mockResolvedValue({ data: { user: moved, accessToken: 'new-access', refreshToken: 'new-refresh' } });
+  await act(async () => { await auth.confirmEmailChange('222222', '111111'); });
+  expect(mockApi.confirmEmailChange).toHaveBeenCalledWith('222222', '111111');
+  expect(mockStorage.accessToken).toBe('new-access');
+  expect(mockStorage.refreshToken).toBe('new-refresh');
+  expect(JSON.parse(mockStorage.cachedUser).email).toBe('moved@example.com');
+  expect(auth.user?.email).toBe('moved@example.com');
+});
+
+it('keeps the old pair and says which code was wrong when the change is refused', async () => {
+  await signedIn();
+  mockApi.confirmEmailChange.mockRejectedValue({ response: { status: 400, data: {
+    error: 'The code is not valid', code: 'CODE_INVALID', field: 'currentCode' } } });
+  let failure: any;
+  await act(async () => { failure = await auth.confirmEmailChange('222222', '000000').catch((error) => error); });
+  expect([failure.code, failure.details.field]).toEqual(['CODE_INVALID', 'currentCode']);
+  expect(mockStorage.accessToken).toBe('old-access');
+  expect(auth.user?.email).toBe('new@example.com');
 });
