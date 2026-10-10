@@ -52,6 +52,10 @@ never fires twice.
 - The checks are its own, not an agent's: secrets, types and every test; the
   e2e flows when the app changed (with the main tree's built app, `E2E_APP`);
   the PostgreSQL harness when the server did.
+- Claude is the newest Claude Code on the machine (the VS Code extension's,
+  which updates itself; the npm install only as a fallback) on the model the
+  owner chose in `~/.claude/settings.json` — the one key read from there,
+  since the owner's settings are otherwise left out.
 - Claude runs with `claude-settings.json`: a whitelist and `dontAsk`, never a
   permission bypass. No reading `.env` or keys, no editing `tools/autodev` or
   `.claude`, no push, checkout, reset, migrate, curl or web.

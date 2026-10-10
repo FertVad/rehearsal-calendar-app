@@ -53,7 +53,6 @@ const BRANCH = 'auto/main';
 const START_FROM = process.env.AUTODEV_START_FROM || 'claude/systematic-repair';
 const NODE = process.execPath;
 const HOME = os.homedir();
-const CLAUDE = process.env.CLAUDE_BIN || `${HOME}/.nvm/versions/node/v20.19.2/bin/claude`;
 const CODEX = process.env.CODEX_BIN || `${HOME}/.nvm/versions/node/v20.19.2/bin/codex`;
 const E2E_APP = path.join(REPO, 'rehearsal-calendar-native/e2e/.build/Build/Products/Debug-iphonesimulator/Rehearsly.app');
 const MAX_CHECK_ATTEMPTS = 3;
@@ -89,6 +88,29 @@ const CLAUDE_ENV = {
  */
 function ownerModel() {
   try { return JSON.parse(fs.readFileSync(path.join(HOME, '.claude', 'settings.json'), 'utf8')).model || undefined; } catch { return undefined; }
+}
+
+/**
+ * The newest Claude Code here: the VS Code extension's, which updates itself,
+ * before the npm install, which stays at whatever version it was installed
+ * (2.1.74, where "opus" still meant Opus 4.6). Looked up on every run — an
+ * update removes the old folder. CLAUDE_BIN overrides.
+ */
+function claudeBin() {
+  if (process.env.CLAUDE_BIN) return process.env.CLAUDE_BIN;
+  const root = path.join(HOME, '.vscode', 'extensions');
+  const version = (name) => (/^anthropic\.claude-code-(\d+)\.(\d+)\.(\d+)/.exec(name) ?? []).slice(1).map(Number);
+  let names = [];
+  try { names = fs.readdirSync(root).filter((name) => version(name).length === 3); } catch { /* no VS Code */ }
+  names.sort((a, b) => {
+    const [x, y] = [version(a), version(b)];
+    return y[0] - x[0] || y[1] - x[1] || y[2] - x[2];
+  });
+  for (const name of names) {
+    const bin = path.join(root, name, 'resources', 'native-binary', 'claude');
+    if (fs.existsSync(bin)) return bin;
+  }
+  return `${HOME}/.nvm/versions/node/v20.19.2/bin/claude`;
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -254,7 +276,7 @@ async function develop(state, task, t) {
   saveState(STATE, state);
   const prompt = starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind));
   const run = await runClaude({
-    bin: CLAUDE, cwd: WORKTREE, prompt, env: CLAUDE_ENV, model: ownerModel(),
+    bin: claudeBin(), cwd: WORKTREE, prompt, env: CLAUDE_ENV, model: ownerModel(),
     sessionId: starting ? t.claudeSession : undefined,
     resume: starting ? undefined : t.claudeSession,
     settingsFile: path.join(HERE, 'claude-settings.json'),
