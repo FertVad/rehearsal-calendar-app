@@ -408,16 +408,19 @@ async function check(state, task, t) {
     const red = result.steps.filter((s) => !s.ok);
     return red.length > 0 && red.every((s) => s.environment);
   };
+  const checksLog = path.join(LOGS, `${task.id}-checks.log`);
+  const logOffset = fs.existsSync(checksLog) ? fs.statSync(checksLog).size : 0;
   let checks = await runAll();
   // Red once more on the same commits, so a flaky test is told apart from the
   // task: green the second time, the task goes on and the test is queued as a
   // task of its own (lib/flakes.mjs). Three hit T-109 in a day.
   if (!checks.ok && !machineOnly(checks)) {
     const first = checks;
-    note(task, 'проверки: красные — повторяю на тех же коммитах, чтобы отличить нестабильный тест');
+    const kept = keepFailedRun(task, checksLog, logOffset, first);
+    note(task, `проверки: красные — повторяю на тех же коммитах, чтобы отличить нестабильный тест; логи красного прогона — ${kept}`);
     checks = await runAll();
     if (checks.ok) {
-      const id = queueFlake(task, head, first.steps.filter((s) => !s.ok && !s.environment));
+      const id = queueFlake(task, head, first.steps.filter((s) => !s.ok && !s.environment), kept);
       note(task, `проверки: на повторе зелёные — тест нестабилен, задача ни при чём; он поставлен в очередь как ${id}`);
     }
   }
@@ -445,8 +448,34 @@ async function check(state, task, t) {
   nextStep(t, { kind: 'fix-checks', steps: checks.steps.filter((step) => !step.ok) });
 }
 
+/**
+ * A red run's logs, kept where the developer can read them — in its own tree,
+ * under e2e/out (not in git) — before the rerun overwrites them. T-203's
+ * developer could reach neither the supervisor's log, outside its tree, nor
+ * the server log of the failed e2e run, gone with the rerun. The path,
+ * relative to the tree.
+ */
+function keepFailedRun(task, checksLog, offset, run) {
+  const rel = path.join('rehearsal-calendar-native', 'e2e', 'out', 'failed', `${task.id}-${new Date().toISOString().replace(/[:.]/g, '-')}`);
+  const dir = path.join(WORKTREE, rel);
+  fs.mkdirSync(dir, { recursive: true });
+  try { fs.writeFileSync(path.join(dir, 'checks.log'), fs.readFileSync(checksLog).subarray(offset)); } catch { /* no log */ }
+  // The e2e environment's own logs only when e2e ran red here; older ones would mislead.
+  if (run.steps.some((step) => step.name === 'e2e' && !step.ok)) {
+    const out = path.join(WORKTREE, 'rehearsal-calendar-native', 'e2e', 'out');
+    for (const name of ['server.log', 'metro.log', 'migrate.log', 'seed.json', 'junit.xml']) {
+      try { fs.copyFileSync(path.join(out, name), path.join(dir, name)); } catch { /* not written */ }
+    }
+    try {
+      const runs = fs.readdirSync(path.join(out, 'artifacts')).sort();
+      if (runs.length) fs.writeFileSync(path.join(dir, 'maestro-artifacts.txt'), `${path.join('rehearsal-calendar-native', 'e2e', 'out', 'artifacts', runs.at(-1))}\n`);
+    } catch { /* none */ }
+  }
+  return rel;
+}
+
 /** Queues a flaky test as a task right after `task`; the same test again is not queued twice. Its id. */
-function queueFlake(task, head, steps) {
+function queueFlake(task, head, steps, kept) {
   const file = path.join(DIR, 'TASKS.md');
   const text = fs.readFileSync(file, 'utf8');
   const title = flakeTitle(steps);
@@ -456,7 +485,8 @@ function queueFlake(task, head, steps) {
     return known.id;
   }
   const id = nextFlakeId(text);
-  const block = flakeTask({ id, task, head, steps, log: `AUTODEV/.state/logs/${task.id}-checks.log`, when: stamp() });
+  const evidence = `Логи красного прогона — в рабочем дереве, не в git: ${kept}/ — checks.log (вывод проверок)${steps.some((s) => s.name === 'e2e') ? ', server.log, metro.log, junit.xml и в maestro-artifacts.txt — папка Maestro со скриншотами и логом устройства' : ''}.`;
+  const block = flakeTask({ id, task, head, steps, evidence, when: stamp() });
   writeAtomic(file, insertAfter(text, task.id, block));
   return id;
 }

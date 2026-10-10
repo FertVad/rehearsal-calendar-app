@@ -23,7 +23,7 @@ const DEVELOPER_RULES = `Работай только над этой задач�
 const TOOLING = `Как работать с командами (режим без вопросов: что не разрешено — отклоняется молча):
 - Рабочий каталог — корень дерева. git вызывай без cd: \`git add …\`, \`git commit -m …\`. Связка «cd <папка> && git …» отклоняется всегда.
 - В файлы пиши инструментом Write (каталоги он создаёт сам), не перенаправлением «>» и не mkdir. Вывод теста для доказательства — запусти тест, затем сохрани его вывод через Write.
-- Node 22 уже первым в PATH, export не нужен. Тесты сервера: \`cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest …\`; клиента: \`cd rehearsal-calendar-native && npx jest --selectProjects frontend …\`.
+- Node 22 уже первым в PATH, export не нужен. Свой скрипт запускай как \`node <файл>\`; python не разрешён. Тесты сервера: \`cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest …\`; клиента: \`cd rehearsal-calendar-native && npx jest --selectProjects frontend …\`.
 - Всё делай на переднем плане: фоновых задач, мониторов и субагентов нет.
 - Полный \`npm run e2e\` запускает супервизор: он идёт дольше 10 минут, и твою команду оборвут. Сам — только нужный сценарий: \`npm run e2e -- e2e/flows/<файл>.yaml\` с timeout 600000. Сбой машины (Docker, занятый порт, симулятор; код 75) — не ошибка задачи, его не чини.
 - Чтение .env и ключей запрещено самой ОС — это не ошибка твоих команд.
