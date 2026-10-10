@@ -5,7 +5,9 @@
  * @see https://date-fns.org/docs/Time-Zones
  */
 
-import { fromZonedTime, toZonedTime, formatInTimeZone } from 'date-fns-tz';
+// The subpath only: the package root's format helpers load the whole date-fns
+// barrel, about half of the server's cold start (__tests__/startup/importWeight).
+import { fromZonedTime } from 'date-fns-tz/fromZonedTime';
 
 /**
  * @typedef {Object} DateTimeResult
