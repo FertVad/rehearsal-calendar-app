@@ -40,7 +40,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R6 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R6.md): правка №2 принята ревью (C02 VERIFIED; CC02–CC05, C03 до DEV-17/DEV-18); правка №3 принята ревью (DP04 VERIFIED; C01, CC01 до DEV-08); [разбор](TRIAGE_R4_R9.md) |
 | R7 | 16 | IN_PROGRESS — [отчёт](REMEDIATION_R7.md): правка №4 принята ревью `ad09154` (EI01, EI03, EI04, ES02 — READY_FOR_CHECK до DEV-03/04/05); [разбор](TRIAGE_R4_R9.md) |
 | R8 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R8.md): правка №5 (GR01, GR02, GR03, GR05, G02) READY_FOR_CHECK до DEV-11/DEV-14; принята ревью `b948056` (R8-01, R8-02 закрыты в `7f85bab`); правка №6 (GR04) принята ревью `7665ae4` (READY_FOR_CHECK до DEV-14); выкладка — после миграции 011; [разбор](TRIAGE_R4_R9.md) |
-| R9 | 11 | IN_PROGRESS — [отчёт](REMEDIATION_R9.md): правка №7 принята ревью `a684f6b` (R9-01, R9-02 закрыты в `9a0ce85`); DP02 VERIFIED, HC02 READY_FOR_CHECK до DEV-16; R9-03 (навигация) исправлено в `df60673`, `2d79fa2`, ждёт проверки; [разбор](TRIAGE_R4_R9.md); DF03 VERIFIED (правка №1, [R4](REMEDIATION_R4.md)); IC01 DEFERRED до выпуска Android |
+| R9 | 11 | IN_PROGRESS — [отчёт](REMEDIATION_R9.md): правка №7 принята ревью `a684f6b` (R9-01, R9-02 закрыты в `9a0ce85`); DP02 VERIFIED, HC02 READY_FOR_CHECK до DEV-16; R9-03 (навигация) исправлено в `df60673`, `2d79fa2`, ждёт проверки; правка №9 — `4dd49c5`: HN01 READY_FOR_CHECK до ревью и DEV-15, HP03 READY_FOR_CHECK до ревью; [разбор](TRIAGE_R4_R9.md); DF03 VERIFIED (правка №1, [R4](REMEDIATION_R4.md)); IC01 DEFERRED до выпуска Android |
 
 ## Ждут владельца
 
@@ -55,7 +55,7 @@ OPS-R3-DATA (25.09).
 | OPS-R2-ADOPT | R2 | С разрешения — `npm run migrate -- --dry` против production ([карточка](REMEDIATION_R2.md)) | деплой сервера, которому нужны 007/008/010 |
 | OPS-FM01-DATE | R2 | Дата первого production-деплоя кода со `starts_at` (история Vercel); 25.09 неизвестна | FM01 → VERIFIED |
 | DEV-17, DEV-18 | R6 | Устройства: офлайн-сохранение занятости и два устройства на одном аккаунте ([карточки](notes-remediation-device-tests.md)). Одновременная правка одного дня — последнее сохранение, по решению (known-issues) | CC02–CC05, C03 → VERIFIED |
-| DEV-15 | R1 | Физическое устройство: кнопка открытия приглашения ([H02](REMEDIATION_H02.md)) | H02 → VERIFIED |
+| DEV-15 | R1, R9 | Физическое устройство: кнопка открытия приглашения ([H02](REMEDIATION_H02.md)); приглашение до входа и во время онбординга открывается после него ([правка №9](REMEDIATION_R9.md)) | H02, HN01 → VERIFIED |
 | OPS-IA01 | R1 | `APPLE_CLIENT_ID` в Vercel ([карточка](PRODUCTION_ACCESS.md#ops-ia01--проверка-apple_client_id-человеком)) | IA01 → VERIFIED, выпуск |
 | OPS-IS02 | R1 | Deployment-условия общих лимитов ([карточка](PRODUCTION_ACCESS.md)) | IS02 → VERIFIED, выпуск |
 | OPS-R3-APPLE | R3 | 25.09 выполнено: единственный аккаунт с Apple — владельца, R3-10 закрыт. Повторить исправленный запрос после выкладки R3 ([карточка](REMEDIATION_R3.md)) | повтор после выкладки: новые связи Apple до неё ещё возможны |
@@ -155,10 +155,10 @@ OPS-R3-DATA (25.09).
 | H04 | Low | Нет | R1 | VERIFIED | admin скрывает ошибки загрузки/смены статуса | [Исполнение и проверки — 7ab1e41](REMEDIATION_H04.md) |
 | HP01 | Medium | Нет | R3 | IN_PROGRESS | изменение email подтверждается, но сервер его игнорирует | [Сервер отказывает вместо молчаливого сброса — 9a702ba; подтверждённая смена кодами на оба адреса — 50ba23d, 075e5d6 (route-тест, PG R3_AUTH, мутации); клиент не сделан](REMEDIATION_R3.md) |
 | HP02 | Low | Нет | R3 | IN_PROGRESS | существующую фамилию нельзя очистить | [Сервер очищает по `''`/`null` — 9a702ba; клиент ещё шлёт undefined](REMEDIATION_R3.md) |
-| HP03 | Low | Нет | R9 | TODO | ошибка «пропустить онбординг» остаётся необработанным Promise | [правка причины №9 — разбор](TRIAGE_R4_R9.md) |
+| HP03 | Low | Нет | R9 | READY_FOR_CHECK | ошибка «пропустить онбординг» остаётся необработанным Promise | [правка причины №9 — 4dd49c5; регресс-тест, «красное до» — evidence/R9/onboarding-before.txt; ждёт ревью](REMEDIATION_R9.md) |
 | HP04 | Medium | Нет | R5 | TODO | ручная настройка timezone сбрасывается при следующем запуске/входе | [правка причины №14 — разбор](TRIAGE_R4_R9.md) |
 | HP05 | Low | Нет | R7 | TODO | онбординг показывает подключённый календарь после отказа сохранения | [правка причины №18 — разбор](TRIAGE_R4_R9.md) |
-| HN01 | Medium | Нет | R9 | TODO | Приглашение теряется при первом входе через onboarding | [правка причины №9 — разбор](TRIAGE_R4_R9.md) |
+| HN01 | Medium | Нет | R9 | READY_FOR_CHECK | Приглашение теряется при первом входе через onboarding | [правка причины №9 — 4dd49c5; 2 теста, «красное до» — evidence/R9/onboarding-before.txt; ждёт ревью и DEV-15](REMEDIATION_R9.md) |
 | HN02 | Medium | Нет | R5 | TODO | Успешная загрузка всех проектов не снимает устаревшую отметку «просмотрено» | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
 | HN03 | Medium | Нет | R5 | TODO | SeenContext сохраняет ответы предыдущего аккаунта | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
 | HC01 | Low | Нет | R5 | TODO | язык аккаунта записывается в cache, но не обновляет уже работающий I18nContext | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
