@@ -81,6 +81,16 @@ const CLAUDE_ENV = {
   CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1',
 };
 
+/**
+ * The model the owner chose for Claude (~/.claude/settings.json). The
+ * developer runs without the owner's settings (agents.mjs), so the choice
+ * would be lost with them: T-108 and T-109 ran on the CLI's default. Read on
+ * every run, so a change there applies to the next one; only this key.
+ */
+function ownerModel() {
+  try { return JSON.parse(fs.readFileSync(path.join(HOME, '.claude', 'settings.json'), 'utf8')).model || undefined; } catch { return undefined; }
+}
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const stamp = () => new Date().toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
 const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', env: ENV, maxBuffer: 64 * 1024 * 1024 }).trim();
@@ -244,7 +254,7 @@ async function develop(state, task, t) {
   saveState(STATE, state);
   const prompt = starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind));
   const run = await runClaude({
-    bin: CLAUDE, cwd: WORKTREE, prompt, env: CLAUDE_ENV,
+    bin: CLAUDE, cwd: WORKTREE, prompt, env: CLAUDE_ENV, model: ownerModel(),
     sessionId: starting ? t.claudeSession : undefined,
     resume: starting ? undefined : t.claudeSession,
     settingsFile: path.join(HERE, 'claude-settings.json'),

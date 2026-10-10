@@ -41,6 +41,14 @@ test('the developer runs under the OS sandbox, with only our settings and no MCP
   assert.ok(args.includes('--strict-mcp-config'));
   assert.deepEqual(args.slice(args.indexOf('--permission-mode'), args.indexOf('--permission-mode') + 2), ['--permission-mode', 'dontAsk']);
   assert.ok(!args.some((a) => /skip-permissions|bypassPermissions/.test(a)));
+  assert.ok(!args.includes('--model'));
+});
+
+test('the developer keeps the owner\'s model when their settings are left out', async () => {
+  const run = await runClaude({ bin: claude, cwd: dir, prompt: 'p', sessionId: 's1', model: 'opus', settingsFile: path.join(dir, 's.json'),
+    sandboxProfile: PROFILE, log: path.join(dir, 'c3.jsonl'), env });
+  const args = JSON.parse(run.text.split('\n')[0]);
+  assert.deepEqual(args.slice(args.indexOf('--model'), args.indexOf('--model') + 2), ['--model', 'opus']);
 });
 
 test('a run that ended several times keeps every answer, in order', async () => {
