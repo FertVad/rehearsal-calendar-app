@@ -3,6 +3,10 @@
 # that tab does not have, and nothing happened).
 appId: ${APP_ID}
 name: Create a project from the rehearsal form
+tags:
+  - rehearsals
+  - projects
+  - navigation
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml

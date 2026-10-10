@@ -78,6 +78,27 @@ get `${PASSWORD}`, `${APP_ID}` and `${<KEY>_EMAIL}` for each account in
 `PEOPLE` (`DIRECTOR_EMAIL`, `HAMLET_EMAIL`, …). Times are local to the machine,
 which is also the simulator's zone.
 
+## A fix seen on screen has a flow
+
+A defect a person can see in the app is fixed together with a flow that
+shows it: added to `e2e/flows`, or an existing one extended. Jest proves the
+mechanism; the flow proves what someone would actually see, and keeps it that
+way. Show it red first: put the files the fix changed back as they were
+(`git restore --source=<base> -- <files>`), run only that flow
+(`npm run e2e -- e2e/flows/<flow>.yaml`, a few minutes), save the output as
+evidence, then `git restore --source=HEAD -- <files>`. A fix with nothing on
+screen — the server, a schedule, a log — needs no flow.
+
+Every flow carries `tags:` naming the parts of the app it walks through —
+`smoke`, `auth`, `calendar`, `projects`, `rehearsals`, `seen`,
+`notifications`, `planner`, and new ones as flows need them (`availability`,
+`invite`, `profile`). For now every check runs the whole set: six flows take
+about five minutes, and a change in shared code — the API client, the
+session, navigation — can break any of them. When a full run grows past ten
+or fifteen minutes, a task runs `smoke` and the tags of what it touched, the
+whole set runs when shared code changes and every night; the tags are there
+so that switch needs no rework.
+
 ## Writing flows
 
 - Sign in through `e2e/subflows/sign-in.yaml` (`env: { EMAIL: ... }`). It

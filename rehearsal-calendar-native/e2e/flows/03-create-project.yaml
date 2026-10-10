@@ -3,6 +3,8 @@
 # that tap used to only hide the keyboard.
 appId: ${APP_ID}
 name: Create a project
+tags:
+  - projects
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
