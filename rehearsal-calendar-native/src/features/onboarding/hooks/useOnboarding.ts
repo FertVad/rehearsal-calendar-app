@@ -23,8 +23,10 @@ export function useOnboarding() {
     }
   };
 
-  const skipOnboarding = async () => {
-    // Показать Alert перед завершением
+  const skipOnboarding = () => {
+    // Показать Alert перед завершением.
+    // Alert does not await its buttons: a throw here would be an unhandled
+    // rejection the user never sees (HP03), so the error is shown right here.
     Alert.alert(
       t.onboarding.skipTitle,
       t.onboarding.skipMessage,
@@ -32,7 +34,14 @@ export function useOnboarding() {
         {
           text: t.common.yes,
           onPress: async () => {
-            await completeOnboarding();
+            try {
+              await completeOnboarding();
+            } catch (error) {
+              Alert.alert(
+                t.common.error,
+                error instanceof Error ? error.message : String(error),
+              );
+            }
           },
         },
       ]

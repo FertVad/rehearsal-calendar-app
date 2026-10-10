@@ -355,18 +355,15 @@ export default function Navigation() {
 
   const shouldShowOnboarding = isAuthenticated && !user?.onboardingCompleted;
 
-  // Handle deep links for unauthenticated users
+  // Every invite link, whenever it arrives, only queues its code. Opening it is
+  // the job of the one effect below. Navigating straight from here reached the
+  // auth or onboarding stack whenever it was showing — neither has JoinProject,
+  // so the call was dropped and the invite lost (HN01).
   useEffect(() => {
-    const handleUrl = async (url: string) => {
+    const handleUrl = (url: string) => {
       const inviteMatch = url.match(/invite\/([a-f0-9]+)/);
       if (inviteMatch) {
-        const code = inviteMatch[1];
-
-        if (isAuthenticated && navigationRef.current) {
-          navigationRef.current.navigate('JoinProject', { code });
-        } else {
-          setPendingInviteCode(code);
-        }
+        setPendingInviteCode(inviteMatch[1]);
       }
     };
 
@@ -383,17 +380,21 @@ export default function Navigation() {
     return () => {
       subscription.remove();
     };
-  }, [isAuthenticated, navigationRef]);
+  }, []);
 
-  // Navigate to invite when user logs in
+  // The queued invite is opened only once the app stack — the one that has
+  // JoinProject — is mounted: signed in and past onboarding. Until then the
+  // code waits, and is cleared only by the navigation that opens it.
+  const appStackMounted = isAuthenticated && !shouldShowOnboarding;
   useEffect(() => {
-    if (isAuthenticated && pendingInviteCode && navigationRef.current) {
-      setTimeout(() => {
-        navigationRef.current?.navigate('JoinProject', { code: pendingInviteCode });
-        setPendingInviteCode(null);
-      }, 500);
-    }
-  }, [isAuthenticated, pendingInviteCode, navigationRef]);
+    if (!appStackMounted || !pendingInviteCode) return;
+    const timer = setTimeout(() => {
+      if (!navigationRef.current) return;
+      navigationRef.current.navigate('JoinProject', { code: pendingInviteCode });
+      setPendingInviteCode(null);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [appStackMounted, pendingInviteCode, navigationRef]);
 
   if (loading) {
     return (
