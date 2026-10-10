@@ -33,7 +33,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runClaude, runCodex } from './lib/agents.mjs';
+import { runClaude, runCodex, stopAgents } from './lib/agents.mjs';
 import { runChecks } from './lib/checks.mjs';
 import { parseDiff, pauseReasons } from './lib/guard.mjs';
 import { waitFor } from './lib/limits.mjs';
@@ -588,6 +588,11 @@ async function step() {
 }
 
 async function main() {
+  // Stopped (launchd, Ctrl-C) — the agents go too. State is on disk before
+  // every run, so the restart resumes the same session; nothing else holds it.
+  for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
+    process.on(signal, () => { stopAgents(); process.exit(0); });
+  }
   fs.mkdirSync(LOGS, { recursive: true });
   singleInstance();
   ensureTrees();

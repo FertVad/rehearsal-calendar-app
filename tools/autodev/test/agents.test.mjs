@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runClaude, runCodex, REVIEW_PERMISSIONS } from '../lib/agents.mjs';
+import { runClaude, runCodex, stopAgents, REVIEW_PERMISSIONS } from '../lib/agents.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROFILE = path.join(HERE, '..', 'agent.sb');
@@ -68,6 +68,19 @@ test('the developer has no background jobs, agents or schedules to give it turns
   for (const tool of ['Agent', 'Task', 'TaskOutput', 'Monitor', 'CronCreate', 'ScheduleWakeup', 'SendMessage', 'RemoteTrigger', 'EnterWorktree']) {
     assert.ok(deny.includes(tool), tool);
   }
+});
+
+test('stopping the supervisor stops the agent it is running', async () => {
+  const slow = stub('claude-slow', `
+console.log(JSON.stringify({ type: 'system', subtype: 'init', session_id: 's4' }));
+setTimeout(() => {}, 60000);`);
+  const pending = runClaude({ bin: slow, cwd: dir, prompt: 'p', sessionId: 's4', settingsFile: path.join(dir, 's.json'),
+    sandboxProfile: PROFILE, log: path.join(dir, 'c4.jsonl'), env });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  stopAgents();
+  const run = await pending;
+  assert.equal(run.signal, 'SIGTERM');
+  assert.equal(run.failed, true);
 });
 
 test('the sandbox profile keeps a secret\'s contents from any command, and leaves other files alone', () => {

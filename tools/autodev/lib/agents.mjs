@@ -13,6 +13,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { limitFromClaudeEvents, limitFromCodexEvents } from './limits.mjs';
 
+// Agents still running. The supervisor stops them when it is stopped: one
+// left behind keeps working the session the restarted supervisor resumes,
+// two writers on one conversation (seen 2026-10-10 on a launchd restart).
+const running = new Set();
+
+/** Sends every running agent the signal; for the supervisor's own shutdown. */
+export function stopAgents(signal = 'SIGTERM') {
+  for (const child of running) child.kill(signal);
+}
+
 /** Runs a command whose stdout is JSON lines; every line is kept in `log`. */
 function runJsonLines(command, args, { cwd, env, log, timeoutMs }) {
   return new Promise((resolve) => {
@@ -20,6 +30,7 @@ function runJsonLines(command, args, { cwd, env, log, timeoutMs }) {
     const out = fs.createWriteStream(log, { flags: 'a' });
     out.write(`\n### ${new Date().toISOString()} ${path.basename(command)} ${args.filter((a) => a.length < 80).join(' ')}\n`);
     const child = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    running.add(child);
     const events = [];
     let buffer = '';
     let stderr = '';
@@ -37,6 +48,7 @@ function runJsonLines(command, args, { cwd, env, log, timeoutMs }) {
     child.stderr.on('data', (chunk) => { out.write(chunk); stderr += chunk; });
     const timer = timeoutMs ? setTimeout(() => child.kill('SIGTERM'), timeoutMs) : null;
     child.on('close', (code, signal) => {
+      running.delete(child);
       if (timer) clearTimeout(timer);
       if (buffer.trim()) { try { events.push(JSON.parse(buffer.trim())); } catch { /* kept in the log */ } }
       out.end();
