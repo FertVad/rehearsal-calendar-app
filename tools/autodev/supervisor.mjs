@@ -118,7 +118,7 @@ function writeStatus(state, now) {
   else if (!paused) lines.push(now ?? 'Очередь пуста.');
   lines.push('', '## Последнее', '', ...events.map((e) => `- ${e}`));
   const deferred = Object.entries(state.tasks).filter(([, t]) => t.phase === 'deferred');
-  if (deferred.length) lines.push('', '## Отложено (очередь шла дальше)', '', ...deferred.map(([id, t]) => `- ${id}: ${t.deferReason}. Вернуть — \`${id}: продолжить\` в DECISIONS.md.`));
+  if (deferred.length) lines.push('', '## Отложено (очередь шла дальше)', '', ...deferred.map(([id, t]) => `- ${id}: ${t.deferReason}. Начать заново — \`${id}: продолжить\`, на ревью с её коммитами — \`${id}: на ревью\` в DECISIONS.md.`));
   const done = Object.entries(state.tasks).filter(([, t]) => t.phase === 'done' || t.phase === 'skipped');
   if (done.length) lines.push('', '## Завершено', '', ...done.map(([id, t]) => `- ${id}: ${t.phase === 'done' ? 'готово' : 'пропущено'}`));
   writeAtomic(path.join(DIR, 'STATUS.md'), `${lines.join('\n')}\n`);
@@ -429,14 +429,19 @@ function applyDecisions(state) {
     if (!t || !['paused', 'deferred'].includes(t.phase)) continue;
     const task = tasksById[id] ?? { id, slug: 'task', title: id, body: '' };
     applied.push(id);
+    if (decision.action === 'review') {
+      if (t.phase === 'deferred') toReview(state, task, t, decision.commits);
+      else note(task, '«на ревью» — только для отложенной задачи; решение не применено');
+      continue;
+    }
     if (t.phase === 'deferred') {
-      if (decision === 'skip') { t.phase = 'skipped'; note(task, 'владелец: пропустить отложенную'); continue; }
+      if (decision.action === 'skip') { t.phase = 'skipped'; note(task, 'владелец: пропустить отложенную'); continue; }
       // Taken up again from the start, on top of what the branch has now.
       state.tasks[id] = { phase: 'develop', base: git(WORKTREE, 'rev-parse', 'HEAD'), startedAt: new Date().toISOString(), reopened: true };
       note(task, `владелец: продолжить — задача начата заново; прежняя работа в auto/deferred/${id}`);
       continue;
     }
-    if (decision === 'skip') {
+    if (decision.action === 'skip') {
       // Skipped work leaves the branch — the next task is not built on it, nor
       // checked against its failing tests — but is kept on a branch of its own.
       const kept = setAside(task, t, 'skipped');
@@ -459,6 +464,56 @@ function applyDecisions(state) {
     note(task, 'владелец: продолжить');
   }
   if (applied.length) consumeDecisions(file, text, applied);
+}
+
+/**
+ * "T-108: на ревью [commits]": a deferred task goes back to the reviewer with
+ * its own work instead of being started over. Only commits kept for it on
+ * auto/deferred/<id> are taken — named ones in branch order, or all of them —
+ * and they land on auto/main when the queue reaches the task (adopt()).
+ */
+function toReview(state, task, t, named) {
+  const kept = `auto/deferred/${task.id}`;
+  let commits;
+  try {
+    const all = git(WORKTREE, 'rev-list', '--reverse', `${t.base}..${kept}`).split('\n').filter(Boolean);
+    const wanted = named.map((ref) => git(WORKTREE, 'rev-parse', '--verify', `${ref}^{commit}`));
+    const foreign = wanted.filter((sha) => !all.includes(sha));
+    if (foreign.length) throw new Error(`не из ${kept}: ${foreign.map((sha) => sha.slice(0, 7)).join(', ')}`);
+    commits = wanted.length ? all.filter((sha) => wanted.includes(sha)) : all;
+    if (!commits.length) throw new Error(`в ${kept} нет коммитов`);
+  } catch (error) {
+    note(task, `владелец: на ревью — не применено (${String(error.message).split('\n')[0]})`);
+    return;
+  }
+  // Astra's thread and round are kept: she reviews the answer to her notes.
+  state.tasks[task.id] = {
+    phase: 'adopt', adopt: commits, adoptedFrom: kept, round: t.round ?? 1, codexThread: t.codexThread,
+    devReport: t.devReport, startedAt: new Date().toISOString(),
+  };
+  note(task, `владелец: на ревью — ${commits.length} коммит(ов) из ${kept} (${commits.map((sha) => sha.slice(0, 7)).join(', ')}); возьму, когда очередь дойдёт`);
+}
+
+/** Puts a task's adopted commits on top of auto/main; then checks and review as usual. */
+function adopt(state, task, t) {
+  syncFromInteractive();
+  t.base = git(WORKTREE, 'rev-parse', 'HEAD');
+  try {
+    for (const sha of t.adopt) git(WORKTREE, 'cherry-pick', '-x', sha);
+  } catch (error) {
+    try { git(WORKTREE, 'cherry-pick', '--abort'); } catch { /* nothing in progress */ }
+    git(WORKTREE, 'reset', '--hard', '--quiet', t.base);
+    t.phase = 'deferred';
+    t.deferReason = `коммиты из ${t.adoptedFrom} не легли на ${BRANCH}: ${String(error.message).split('\n')[0]}`;
+    state.current = null;
+    return note(task, `ОТЛОЖЕНО: ${t.deferReason}`);
+  }
+  const log = git(WORKTREE, 'log', '--reverse', '--format=%h %s%n%n%b', `${t.base}..HEAD`);
+  t.devReport = `Владелец вернул задачу на ревью с её коммитами из ${t.adoptedFrom}; остальное в той ветке в задачу не входит.
+
+${log}${t.devReport ? `\n\nПрежний отчёт разработчика:\n\n${t.devReport}` : ''}`;
+  t.phase = 'check';
+  note(task, `перенесено в ${BRANCH}: ${t.adopt.length} коммит(ов); дальше проверки и ревью, круг ${t.round}`);
 }
 
 /** Applied lines move under "## Применено", so an old line never fires twice. */
@@ -512,7 +567,8 @@ async function step() {
 
   writeStatus(state);
   saveState(STATE, state); // what is about to run is on disk before it runs
-  if (t.phase === 'develop') await develop(state, task, t);
+  if (t.phase === 'adopt') adopt(state, task, t);
+  else if (t.phase === 'develop') await develop(state, task, t);
   else if (t.phase === 'check') await check(state, task, t);
   else if (t.phase === 'review') await review(state, task, t);
   else if (t.phase === 'push') push(state, task, t);

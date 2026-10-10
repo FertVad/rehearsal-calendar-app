@@ -60,14 +60,23 @@ export function slugify(title) {
 }
 
 /** The owner's decisions for paused tasks: "T-001: продолжить" / "пропустить". */
+/**
+ * The owner's decisions: {id: {action, commits}}. `action` is continue, skip
+ * or review — a deferred task back to the reviewer with its own commits; the
+ * commits named after it (none: all of them) are kept as written.
+ */
 export function parseDecisions(markdown) {
   const decisions = {};
   // Lines already applied are kept below "## Применено" and not read again.
   const open = markdown.split(/^## Применено\s*$/m)[0];
   for (const line of open.split('\n')) {
     // No \b: in JavaScript it knows only Latin letters.
-    const m = /^\s*[-*]?\s*(T-\d{3,})\s*:\s*(продолжить|пропустить|continue|skip)(?![\p{L}])/iu.exec(line);
-    if (m) decisions[m[1]] = /продолжить|continue/i.test(m[2]) ? 'continue' : 'skip';
+    const m = /^\s*[-*]?\s*(T-\d{3,})\s*:\s*(продолжить|пропустить|на ревью|continue|skip|review)(?![\p{L}])(.*)$/iu.exec(line);
+    if (!m) continue;
+    const word = m[2].toLowerCase();
+    const action = /продолжить|continue/.test(word) ? 'continue' : /пропустить|skip/.test(word) ? 'skip' : 'review';
+    const commits = action === 'review' ? m[3].match(/\b[0-9a-f]{7,40}\b/gi) ?? [] : [];
+    decisions[m[1]] = { action, commits };
   }
   return decisions;
 }

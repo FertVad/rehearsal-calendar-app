@@ -24,7 +24,14 @@ Body two.
 
 test('reads the owner\'s decisions', () => {
   assert.deepEqual(parseDecisions('- T-001: продолжить\nT-002: пропустить — не нужно\nчто-то ещё'),
-    { 'T-001': 'continue', 'T-002': 'skip' });
+    { 'T-001': { action: 'continue', commits: [] }, 'T-002': { action: 'skip', commits: [] } });
+});
+
+test('a deferred task goes back to review with the commits named, or all of them', () => {
+  assert.deepEqual(parseDecisions('T-108: на ревью f9212b3, 0b9f1a9 — только по задаче\nT-109: на ревью'), {
+    'T-108': { action: 'review', commits: ['f9212b3', '0b9f1a9'] },
+    'T-109': { action: 'review', commits: [] },
+  });
 });
 
 test('slugs stay short and safe', () => {
@@ -44,5 +51,5 @@ test('state survives a round trip, a missing file is empty, a corrupt one is an 
 
 test('decisions already applied are not read again', () => {
   const text = 'T-003: продолжить\n\n## Применено\n- 09.10.2026, 09:00 — T-002: пропустить\n';
-  assert.deepEqual(parseDecisions(text), { 'T-003': 'continue' });
+  assert.deepEqual(parseDecisions(text), { 'T-003': { action: 'continue', commits: [] } });
 });

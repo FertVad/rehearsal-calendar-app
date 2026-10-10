@@ -31,7 +31,10 @@ after 20 minutes.
 (owner, 2026-10-09): checks still red after three attempts, the reviewer not
 satisfied after two rounds, or an agent giving no usable answer three times.
 Its commits leave `auto/main` and are kept on `auto/deferred/T-…`; the reason
-is in its report and in `STATUS.md`. `T-…: продолжить` starts it again.
+is in its report and in `STATUS.md`. `T-…: продолжить` starts it again from
+scratch; `T-…: на ревью [commits]` sends it back to Astra with its own work —
+the commits named (or all of that branch), cherry-picked onto `auto/main` when
+the queue reaches it, then checks and review in her same thread and round.
 
 **Only what is dangerous stops the whole queue** and waits for the owner:
 a change touching migrations, SQL, auth (server or app), `.env`, deploy, CI,
