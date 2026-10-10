@@ -213,8 +213,10 @@ function pause(state, task, t, reason) {
  * against their failures — and are kept on auto/deferred/<id>. Only what is
  * dangerous stops the whole queue (pause()).
  */
-function defer(state, task, t, reason) {
+function defer(state, task, t, reason, resume = null) {
   const kept = setAside(task, t, 'deferred');
+  // Where "продолжить" picks it up again, its commits restored (applyDecisions).
+  t.resume = resume ?? t.step ?? { kind: 'develop' };
   t.phase = 'deferred';
   t.deferReason = reason;
   state.current = null;
@@ -234,7 +236,18 @@ function setAside(task, t, kind) {
   }
   const head = git(WORKTREE, 'rev-parse', 'HEAD');
   if (t.base && head !== t.base) {
-    git(WORKTREE, 'branch', '-f', `auto/${kind}/${task.id}`, head);
+    // A task set aside before keeps that work too: T-108's first deferral was
+    // overwritten by its second, and only the reflog still had it.
+    const branch = `auto/${kind}/${task.id}`;
+    let earlier = '';
+    try { earlier = git(WORKTREE, 'rev-parse', '--verify', '--quiet', branch); } catch { /* none */ }
+    if (earlier && earlier !== head) {
+      let n = 1;
+      for (;; n++) { try { git(WORKTREE, 'rev-parse', '--verify', '--quiet', `${branch}-${n}`); } catch { break; } }
+      git(WORKTREE, 'branch', `${branch}-${n}`, earlier);
+      kept += `; прежняя отложенная работа — ${branch}-${n}`;
+    }
+    git(WORKTREE, 'branch', '-f', branch, head);
     git(WORKTREE, 'reset', '--hard', '--quiet', t.base);
     kept += `; коммиты сохранены в auto/${kind}/${task.id}`;
   }
@@ -407,7 +420,8 @@ async function check(state, task, t) {
   t.attempts = (t.attempts ?? 0) + 1;
   if (t.attempts >= MAX_CHECK_ATTEMPTS) {
     const red = checks.steps.filter((step) => !step.ok).map((step) => step.name).join(', ');
-    return defer(state, task, t, `проверки красные после ${MAX_CHECK_ATTEMPTS} попыток (${red}), лог — .state/logs/${task.id}-checks.log`);
+    return defer(state, task, t, `проверки красные после ${MAX_CHECK_ATTEMPTS} попыток (${red}), лог — .state/logs/${task.id}-checks.log`,
+      { kind: 'fix-checks', steps: checks.steps.filter((step) => !step.ok) });
   }
   nextStep(t, { kind: 'fix-checks', steps: checks.steps.filter((step) => !step.ok) });
 }
@@ -433,13 +447,15 @@ async function review(state, task, t) {
   const round = t.round;
   const continuing = Boolean(t.reviewPending && t.codexThread);
   const prompt = continuing ? P.REVIEW_CONTINUE
-    : P.review(task, { base: t.base, head: t.head, devReport: t.devReport ?? '', checks: t.checks, round });
+    : P.review(task, { base: t.base, head: t.head, devReport: t.devReport ?? '', checks: t.checks, round, earlier: Boolean(t.codexThread) });
   if (!continuing) note(task, `ревью: круг ${round}`);
   const lastMessageFile = path.join(STATE_DIR, `${task.id}-codex-last.md`);
   const run = await runCodex({
     bin: CODEX, cwd: REVIEW_TREE, prompt, env: ENV, lastMessageFile,
     // Round two continues the reviewer's own thread, so it remembers round one.
-    resume: continuing || round > 1 ? t.codexThread : undefined,
+    // Her own thread whenever there is one: round two, a task sent back to
+    // review, a task continued after the owner's decision.
+    resume: t.codexThread || undefined,
     log: path.join(LOGS, `${task.id}-codex.jsonl`),
     timeoutMs: 3 * 60 * 60 * 1000,
   });
@@ -459,7 +475,10 @@ async function review(state, task, t) {
   writeAtomic(file, run.text);
   note(task, `ревью круг ${round}: ${verdict === 'accept' ? 'принято' : 'есть замечания'} — reviews/${path.basename(file)}`);
   if (verdict === 'accept') { t.phase = 'push'; return; }
-  if (round >= 2) return defer(state, task, t, `нет согласия с ревьюером после двух кругов — reviews/${task.id}-r2.md`);
+  if (round >= 2) {
+    return defer(state, task, t, `нет согласия с ревьюером после двух кругов — reviews/${task.id}-r${round}.md`,
+      { kind: 'fix-review', review: run.text });
+  }
   t.round = 2;
   t.attempts = 0;
   nextStep(t, { kind: 'fix-review', review: run.text });
@@ -525,15 +544,13 @@ function applyDecisions(state) {
     const task = tasksById[id] ?? { id, slug: 'task', title: id, body: '' };
     applied.push(id);
     if (decision.action === 'review') {
-      if (t.phase === 'deferred') toReview(state, task, t, decision.commits);
+      if (t.phase === 'deferred') toReview(state, task, t, decision.commits, null);
       else note(task, '«на ревью» — только для отложенной задачи; решение не применено');
       continue;
     }
     if (t.phase === 'deferred') {
       if (decision.action === 'skip') { t.phase = 'skipped'; note(task, 'владелец: пропустить отложенную'); continue; }
-      // Taken up again from the start, on top of what the branch has now.
-      state.tasks[id] = { phase: 'develop', base: git(WORKTREE, 'rev-parse', 'HEAD'), startedAt: new Date().toISOString(), reopened: true };
-      note(task, `владелец: продолжить — задача начата заново; прежняя работа в auto/deferred/${id}`);
+      resumeDeferred(state, task, t, decision.commits);
       continue;
     }
     if (decision.action === 'skip') {
@@ -567,8 +584,9 @@ function applyDecisions(state) {
  * auto/deferred/<id> are taken — named ones in branch order, or all of them —
  * and they land on auto/main when the queue reaches the task (adopt()).
  */
-function toReview(state, task, t, named) {
+function toReview(state, task, t, named, resume) {
   const kept = `auto/deferred/${task.id}`;
+  const what = resume ? 'продолжить' : 'на ревью';
   let commits;
   try {
     const all = git(WORKTREE, 'rev-list', '--reverse', `${t.base}..${kept}`).split('\n').filter(Boolean);
@@ -576,17 +594,34 @@ function toReview(state, task, t, named) {
     const foreign = wanted.filter((sha) => !all.includes(sha));
     if (foreign.length) throw new Error(`не из ${kept}: ${foreign.map((sha) => sha.slice(0, 7)).join(', ')}`);
     commits = wanted.length ? all.filter((sha) => wanted.includes(sha)) : all;
-    if (!commits.length) throw new Error(`в ${kept} нет коммитов`);
+    if (!commits.length && !resume) throw new Error(`в ${kept} нет коммитов`);
   } catch (error) {
-    note(task, `владелец: на ревью — не применено (${String(error.message).split('\n')[0]})`);
+    note(task, `владелец: ${what} — не применено (${String(error.message).split('\n')[0]})`);
     return;
   }
-  // Astra's thread and round are kept: she reviews the answer to her notes.
+  // Astra's thread is kept: she reviews the answer to her own notes. "На
+  // ревью" keeps the round; "продолжить" gives two more.
   state.tasks[task.id] = {
-    phase: 'adopt', adopt: commits, adoptedFrom: kept, round: t.round ?? 1, codexThread: t.codexThread,
-    devReport: t.devReport, startedAt: new Date().toISOString(),
+    phase: 'adopt', adopt: commits, adoptedFrom: kept, round: resume ? 1 : t.round ?? 1, codexThread: t.codexThread,
+    devReport: t.devReport, resume, startedAt: new Date().toISOString(),
   };
-  note(task, `владелец: на ревью — ${commits.length} коммит(ов) из ${kept} (${commits.map((sha) => sha.slice(0, 7)).join(', ')}); возьму, когда очередь дойдёт`);
+  note(task, `владелец: ${what} — ${commits.length} коммит(ов) из ${kept}${commits.length ? ` (${commits.map((sha) => sha.slice(0, 7)).join(', ')})` : ''}${resume ? `, дальше шаг «${STEP_NOTE[resume.kind]}»` : ''}; возьму, когда очередь дойдёт`);
+}
+
+/**
+ * "T-108: продолжить [commits]" on a deferred task: its commits back on
+ * auto/main and the step it stopped at — the reviewer's notes to fix, the red
+ * checks, the development — not a start from nothing, which threw away code
+ * the reviewer had accepted. Tasks deferred before the step was recorded
+ * resume at their last review if they had one, else at development.
+ */
+function resumeDeferred(state, task, t, named) {
+  let resume = t.resume;
+  if (!resume && t.round) {
+    const file = path.join(DIR, 'reviews', `${task.id}-r${t.round}.md`);
+    if (fs.existsSync(file)) resume = { kind: 'fix-review', review: fs.readFileSync(file, 'utf8') };
+  }
+  toReview(state, task, t, named, resume ?? { kind: 'develop' });
 }
 
 /** Puts a task's adopted commits on top of auto/main; then checks and review as usual. */
@@ -602,6 +637,11 @@ function adopt(state, task, t) {
     t.deferReason = `коммиты из ${t.adoptedFrom} не легли на ${BRANCH}: ${String(error.message).split('\n')[0]}`;
     state.current = null;
     return note(task, `ОТЛОЖЕНО: ${t.deferReason}`);
+  }
+  if (t.resume) {
+    nextStep(t, t.resume);
+    delete t.resume;
+    return note(task, `перенесено в ${BRANCH}: ${t.adopt.length} коммит(ов); дальше — ${STEP_NOTE[t.step.kind]}`);
   }
   const log = git(WORKTREE, 'log', '--reverse', '--format=%h %s%n%n%b', `${t.base}..HEAD`);
   t.devReport = `Владелец вернул задачу на ревью с её коммитами из ${t.adoptedFrom}; остальное в той ветке в задачу не входит.

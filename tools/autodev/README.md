@@ -31,10 +31,16 @@ after 20 minutes.
 (owner, 2026-10-09): checks still red after three attempts, the reviewer not
 satisfied after two rounds, or an agent giving no usable answer three times.
 Its commits leave `auto/main` and are kept on `auto/deferred/T-…`; the reason
-is in its report and in `STATUS.md`. `T-…: продолжить` starts it again from
-scratch; `T-…: на ревью [commits]` sends it back to Astra with its own work —
-the commits named (or all of that branch), cherry-picked onto `auto/main` when
-the queue reaches it, then checks and review in her same thread and round.
+is in its report and in `STATUS.md`. Two ways back, both bringing its own
+commits onto `auto/main` when the queue reaches it — those named after the
+word, or all of `auto/deferred/T-…`:
+
+- `T-…: продолжить [commits]` — on from the step it stopped at: the
+  reviewer's last notes to fix, the red checks, or the development; then two
+  more review rounds in Astra's same conversation.
+- `T-…: на ревью [commits]` — straight to checks and Astra, same round.
+
+A task set aside twice keeps the earlier work too, as `auto/deferred/T-…-1`.
 
 **A red check is run once more on the same commits.** Green the second time,
 the test is flaky, not the task's: the task goes on to review, and the test is
