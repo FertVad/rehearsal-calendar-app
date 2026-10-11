@@ -125,8 +125,9 @@ so that switch needs no rework.
   toasts, which sit over the tab bar.
 - Maestro does not run the flows in file order, and they share one database:
   a flow never relies on what another one created. Find a control relative to
-  its own card (`below: ".*Act I run-through.*"`), not by `index`, and set a
-  selection explicitly instead of trusting the one on arrival.
+  its own card (`below: ".*Act I run-through.*"`), not by `index`. A project
+  opened in the planner arrives with its whole roster selected (DP01, flow
+  07); a flow that needs another selection makes it itself.
 - A list item under the tab bar, or still scrolling, takes no tap: bring it
   into view with `scrollUntilVisible` (`centerElement: true`) first.
 - Docker Desktop idles its VM; the runner wakes it with a long-timeout call

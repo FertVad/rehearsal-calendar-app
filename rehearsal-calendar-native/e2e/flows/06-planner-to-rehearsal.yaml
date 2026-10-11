@@ -15,18 +15,12 @@ tags:
     id: planner-project
 - tapOn: "Hamlet"
 - tapOn: "Expand.*"
-# Start from everyone and take two out. Arrival selects the whole project
-# (DP01, cause fix 8; 07-planner-project-switch shows it), but a flow sets its
-# selection itself; and none selected reads "All members", since it means
-# everyone.
-- repeat:
-    while:
-      notVisible: "4 of 4 selected"
-    times: 2
-    commands:
-      - tapOn:
-          id: members-toggle-all
-- assertVisible: "4 of 4 selected"
+# Start from everyone and take two out. Arrival selects Hamlet's whole roster,
+# whichever project the planner opened on (DP01, cause fix 8;
+# 07-planner-project-switch shows it).
+- extendedWaitUntil:
+    visible: "4 of 4 selected"
+    timeout: 15000
 - tapOn: ".*Ophelia Bright"
 - tapOn: ".*Horatio Friend"
 - assertVisible: "2 of 4 selected"

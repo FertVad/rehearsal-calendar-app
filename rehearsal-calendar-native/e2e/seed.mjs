@@ -26,6 +26,10 @@ export const PEOPLE = {
   hamlet: { email: 'hamlet@e2e.test', firstName: 'Hamlet', lastName: 'Dane', onboarded: true },
   ophelia: { email: 'ophelia@e2e.test', firstName: 'Ophelia', lastName: 'Bright', onboarded: true },
   horatio: { email: 'horatio@e2e.test', firstName: 'Horatio', lastName: 'Friend', onboarded: true },
+  // The planner's project switch (07): two projects of their own.
+  masha: { email: 'masha@e2e.test', firstName: 'Masha', lastName: 'Prozorova', onboarded: true },
+  irina: { email: 'irina@e2e.test', firstName: 'Irina', lastName: 'Prozorova', onboarded: true },
+  smirnov: { email: 'smirnov@e2e.test', firstName: 'Grigory', lastName: 'Smirnov', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -92,6 +96,9 @@ export async function seed({ client, apiUrl, timezone }) {
   };
   const hamletId = await project('Hamlet', 'Spring production', ['hamlet', 'ophelia', 'horatio']);
   const seagullId = await project('The Seagull', 'Studio reading', ['ophelia']);
+  // Three people, then two with nobody in common but the director (07).
+  const sistersId = await project('Three Sisters', 'Chekhov evening', ['masha', 'irina']);
+  const bearId = await project('The Bear', 'Chekhov evening', ['smirnov']);
 
   const rehearsal = async (projectId, title, day, from, to, cast) => {
     const { rehearsal: created } = await call(apiUrl, 'POST', `/native/projects/${projectId}/rehearsals`, {
@@ -117,11 +124,13 @@ export async function seed({ client, apiUrl, timezone }) {
   const busy = (day, from, to) => ({ date: localDate(day), entries: [{ startsAt: localInstant(day, from), endsAt: localInstant(day, to), type: 'busy' }] });
   await call(apiUrl, 'PUT', '/native/availability/days', { token: token.hamlet, body: { days: [busy(2, 9, 17), busy(4, 18, 22)] } });
   await call(apiUrl, 'PUT', '/native/availability/days', { token: token.horatio, body: { days: [busy(4, 10, 14)] } });
+  // Only The Bear has him: its slots tomorrow name him, Three Sisters' never do.
+  await call(apiUrl, 'PUT', '/native/availability/days', { token: token.smirnov, body: { days: [busy(1, 10, 14)] } });
 
   return {
     password: PASSWORD,
     people: Object.fromEntries(Object.entries(PEOPLE).map(([key, person]) => [key, { id: ids[key], email: person.email }])),
-    projects: { hamlet: hamletId, seagull: seagullId },
+    projects: { hamlet: hamletId, seagull: seagullId, sisters: sistersId, bear: bearId },
     rehearsals,
   };
 }

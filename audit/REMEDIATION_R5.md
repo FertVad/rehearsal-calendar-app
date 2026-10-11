@@ -58,7 +58,8 @@ reconciliation при перезагрузке состава того же пр
 |---|---|---|
 | `SmartPlannerScreen.test.tsx` — 2 теста DP01 | После переключения A(3)→B(2) summary не содержит «3 of 2» | `9fd6f64` — оба теста падают |
 | `SmartPlannerScreen.test.tsx` — тест R5-01 | После удаления a3 из A и смены периода summary не содержит «3 of 2» | `9fd6f64` и `9d7bb83` — тест падает |
-| `e2e/flows/07-planner-project-switch.yaml` (`planner`, `projects`) | The Seagull → Hamlet → The Seagull: «2 of 2», «4 of 4», без чужих ID | `9fd6f64` — Hamlet показывает «2 of 4 selected» |
+| `e2e/flows/07-planner-project-switch.yaml` (`planner`, `projects`), версия `f95061c` | The Seagull → Hamlet → The Seagull: «2 of 2», «4 of 4», без чужих ID | `9fd6f64` — Hamlet показывает «2 of 4 selected» |
+| `e2e/flows/07-planner-project-switch.yaml`, версия T-301 (ниже) | Three Sisters → The Bear → Three Sisters: счётчик и слоты по людям проекта | `9fd6f64` — «3 of 2 selected», Smirnov не в слотах |
 
 Все прогоны — на файлах правки, возвращённых `git restore --source=<коммит>`,
 с тестами из `23e4342`; источник и хеши — в
@@ -93,6 +94,28 @@ reconciliation при перезагрузке состава того же пр
   базе `9fd6f64` (это и есть «красное до»).
 - В `06-planner-to-rehearsal.yaml` исправлен комментарий: выбор при входе
   больше не наследуется от прошлого проекта.
+
+### Экранное покрытие (T-301)
+
+Сценарий `07-planner-project-switch.yaml` (`planner`, `projects`) переписан на
+собственные данные из `e2e/seed.mjs`: Three Sisters (режиссёр, Masha, Irina —
+3 человека) и The Bear (режиссёр, Grigory Smirnov — 2), у Smirnov занятость
+завтра 10:00–14:00. Шаги: Three Sisters, выбор «3 of 3» задан явно → The Bear:
+«2 of 2 selected», нет «3 of 2 selected», в слотах есть «Busy: … Grigory
+Smirnov» → обратно Three Sisters: «3 of 3», нет «2 of 3» и Smirnov в слотах.
+
+- **e2e, красное до** ([e2e-07-t301-before.txt](evidence/R5/e2e-07-t301-before.txt),
+  SHA-256 `b7fa15135db30cad75ac77760e891d7441104ef4fe8c696c18e8348626fb7307`):
+  файлы правки на `9fd6f64` — The Bear показывает «3 of 2 selected», слоты
+  посчитаны только по режиссёру (3 слота на завтра вместо 5, Smirnov не
+  упомянут), exit 1.
+- **e2e, после** ([e2e-07-t301-after.txt](evidence/R5/e2e-07-t301-after.txt),
+  SHA-256 `f76dae530b0ff3cb60ba3f0988faa764d3fdd342ff6762ec9cd986ceee67743b`):
+  на HEAD сценарий 07 PASS; 06 PASS.
+- Обход DP01 из `06-planner-to-rehearsal.yaml` убран: вместо цикла
+  `members-toggle-all` сценарий ждёт «4 of 4 selected» при входе в Hamlet.
+  Правило в `docs/e2e.md` («не доверять выбору при входе») заменено: проект
+  приходит со всем составом, другой выбор сценарий задаёт сам.
 
 ### Ревью
 

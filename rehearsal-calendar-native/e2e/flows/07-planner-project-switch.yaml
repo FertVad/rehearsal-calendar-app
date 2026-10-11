@@ -1,5 +1,7 @@
 # Switching the planner to another project selects that project's people, not
-# the ones the previous project had (DP01, cause fix 8).
+# the ones the previous project had, and plans its slots for them (DP01, cause
+# fix 8). Three Sisters has three people, The Bear two; only the director is in
+# both, and Grigory Smirnov, The Bear's other, is busy tomorrow 10:00-14:00.
 appId: ${APP_ID}
 name: Planner follows the project
 tags:
@@ -13,24 +15,47 @@ tags:
 - tapOn: "Planner, tab.*"
 - tapOn:
     id: planner-project
-- tapOn: "Hamlet"
+- tapOn: "Three Sisters"
+# Its roster is in once the counter names three. Everyone selected, set here:
+# the flow does not lean on arrival for its starting point.
 - extendedWaitUntil:
-    visible: "4 of 4 selected"
+    visible: "\\d+ of 3 selected"
     timeout: 15000
-# The Seagull has two people. Its own roster, all of it, is what is selected.
+- repeat:
+    while:
+      notVisible: "3 of 3 selected"
+    times: 2
+    commands:
+      - tapOn:
+          id: members-toggle-all
+- assertVisible: "3 of 3 selected"
+# The Bear: its own two, all of them. Three Sisters' three seeded here read
+# "3 of 2 selected" and planned The Bear for the director alone.
 - tapOn:
     id: planner-project
-- tapOn: "The Seagull"
+- tapOn: "The Bear"
 - extendedWaitUntil:
     visible: "2 of 2 selected"
     timeout: 15000
-- assertNotVisible: "4 of 2 selected"
-# And back: Hamlet's four again, not The Seagull's two.
+- assertNotVisible: "3 of 2 selected"
+# The slots are The Bear's: tomorrow morning names Smirnov as busy.
+- scrollUntilVisible:
+    element: "Busy: .*Grigory Smirnov.*"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: 07-planner-the-bear
+# And back: Three Sisters' three again, not The Bear's two, and nobody from
+# The Bear in its slots.
+- scrollUntilVisible:
+    element:
+      id: planner-project
+    direction: UP
 - tapOn:
     id: planner-project
-- tapOn: "Hamlet"
+- tapOn: "Three Sisters"
 - extendedWaitUntil:
-    visible: "4 of 4 selected"
+    visible: "3 of 3 selected"
     timeout: 15000
-- assertNotVisible: "2 of 4 selected"
-- takeScreenshot: 07-planner-project-switch
+- assertNotVisible: "2 of 3 selected"
+- assertNotVisible: "Busy: .*Grigory Smirnov.*"
+- takeScreenshot: 07-planner-three-sisters
