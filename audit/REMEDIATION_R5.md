@@ -50,17 +50,55 @@ reconciliation при перезагрузке состава того же пр
 
 ### Проверки
 
+Коммиты правки на `auto/main`: `9d7bb83` (DP01, перенесён из `02a8549`),
+`23e4342` (R5-01, перенесён из `c9f40a5`), `f95061c` (e2e-сценарий). База до
+правки — `9fd6f64`.
+
 | Тест | Что проверяет | Красный до |
 |---|---|---|
-| `SmartPlannerScreen.test.tsx` — 2 теста DP01 | После переключения A(3)→B(2) summary не содержит «3 of 2» | `47037a4` — оба теста падали |
-| `SmartPlannerScreen.test.tsx` — тест R5-01 | После удаления a3 из A и смены периода summary не содержит «3 of 2» | `f9212b3` — тест падал |
+| `SmartPlannerScreen.test.tsx` — 2 теста DP01 | После переключения A(3)→B(2) summary не содержит «3 of 2» | `9fd6f64` — оба теста падают |
+| `SmartPlannerScreen.test.tsx` — тест R5-01 | После удаления a3 из A и смены периода summary не содержит «3 of 2» | `9fd6f64` и `9d7bb83` — тест падает |
+| `e2e/flows/07-planner-project-switch.yaml` (`planner`, `projects`) | The Seagull → Hamlet → The Seagull: «2 of 2», «4 of 4», без чужих ID | `9fd6f64` — Hamlet показывает «2 of 4 selected» |
 
-- **«Красное до» DP01** ([planner-before.txt](evidence/R5/planner-before.txt)):
-  на коде `47037a4` оба теста DP01 падали с «3 of 2 selected» в DOM.
-- **«Красное до» R5-01** ([planner-r5-01-before.txt](evidence/R5/planner-r5-01-before.txt)):
-  на коде `f9212b3` тест R5-01 падал — «3 of 2 selected» после удаления участника.
-- **Полная проверка после всех правок:** `check:secrets` — 0; `type-check` — exit 0;
-  3 теста SmartPlannerScreen PASS; все клиентские наборы PASS.
+Все прогоны — на файлах правки, возвращённых `git restore --source=<коммит>`,
+с тестами из `23e4342`; источник и хеши — в
+[manifest.json](evidence/R5/manifest.json) (`sourceCommit` `23e4342`,
+`sourceTree` `1c0a871`).
+
+- **«Красное до» DP01** ([planner-dp01-before.log](evidence/R5/planner-dp01-before.log),
+  SHA-256 `a9577405bc2832aa2113a000c741cbf292c769a5ef5c0fbf39b2dbf38bee6d07`):
+  на `9fd6f64` падают все 3 теста, «3 of 2» в DOM.
+- **«Красное до» R5-01** ([planner-r5-01-before.log](evidence/R5/planner-r5-01-before.log),
+  SHA-256 `8d9bf1a971b7b8645fd3f34fb1d73f983cc6aadedcd953486c9bd17405d6392c`):
+  на `9d7bb83` падает только тест R5-01, оба теста DP01 проходят.
+- **После** ([planner-after.log](evidence/R5/planner-after.log),
+  SHA-256 `75ebd8acaaa5dd88502873d52f3501fea8bb176c5ea1ddff69160b2439a987bc`):
+  на `23e4342` 3 из 3 PASS.
+- **e2e, красное до** ([e2e-07-before.txt](evidence/R5/e2e-07-before.txt),
+  SHA-256 `2998cd1c394abe99f523d986a3145bf66ab9c2fa05f9799aa908694664a8c6ec`):
+  на `9fd6f64` планировщик открылся на The Seagull, после выбора Hamlet —
+  «2 of 4 selected» (ID The Seagull под Hamlet), exit 1.
+- **e2e, после** ([e2e-07-after.txt](evidence/R5/e2e-07-after.txt),
+  SHA-256 `30f46df8f03ee9bcb66365df061463cf5b02aceb0b93795db91cb3666d83ed92`):
+  на `23e4342` сценарий PASS.
+- **Исторические файлы** — первые «красное до», записанные на ветке
+  `auto/out-of-scope/T-108` (`47037a4`, `f9212b3`), оставлены как были:
+  [planner-before.txt](evidence/R5/planner-before.txt) (SHA-256
+  `1eb04085cc431564c415dfedf77a96f1c48207b799dd7b93da11f9e39f40e02a`; пересказ,
+  не сырой вывод) и [planner-r5-01-before.txt](evidence/R5/planner-r5-01-before.txt)
+  (SHA-256 `a131074ec8a4179609f4cd6da4673a9ccb56531f6e0fbd30e5cafb7b3b09e9a2`).
+  Их заменяют сырые логи выше (R5-02).
+- **Полная проверка:** `check:secrets` — 0 находок; `type-check` — exit 0;
+  все клиентские наборы — PASS, кроме трёх тестов планировщика в прогоне на
+  базе `9fd6f64` (это и есть «красное до»).
+- В `06-planner-to-rehearsal.yaml` исправлен комментарий: выбор при входе
+  больше не наследуется от прошлого проекта.
+
+### Ревью
+
+- **R5-01** (сверка состава при перезагрузке того же проекта) — закрыт в `23e4342`.
+- **R5-02** (оформление evidence) — сырые логи, хеши, манифест, точные коммиты
+  в TRIAGE; исторические файлы сохранены и помечены.
 
 ### Статусы
 

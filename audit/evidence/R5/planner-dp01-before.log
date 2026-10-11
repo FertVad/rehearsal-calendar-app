@@ -1,0 +1,59 @@
+-- Red-before, Jest: DP01 and R5-01 on the code before the fix --
+-- Base: 9fd6f64 (auto/main before 9d7bb83). Test file at 23e4342. --
+-- git restore --source=9fd6f64 -- src/features/smart-planner/hooks/useSmartPlanner.ts src/features/smart-planner/screens/SmartPlannerScreen.tsx
+-- cd rehearsal-calendar-native && npx jest src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx --silent --selectProjects frontend
+-- exit code 1; run 2026-10-11 --
+Running one project: frontend
+FAIL frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx (32.861 s)
+  ● DP01 — roster reload within the same project (R5-01) › drops removed members from selection when the roster reloads
+
+    expect(received).toBeNull()
+
+    Received: {"_fiber": {"_debugHookTypes": null, "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": [FiberNode], "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": -0, "actualStartTime": 12520.605417, "alternate": [FiberNode], "child": [FiberNode], "childLanes": 0, "deletions": null, "dependencies": null, "elementType": "Text", "flags": 4, "index": 0, "key": null, "lanes": 0, "memoizedProps": [Object], "memoizedState": null, "mode": 1, "pendingProps": [Object], "ref": null, "refCleanup": null, "return": [FiberNode], "selfBaseDuration": -0, "sibling": null, "stateNode": [Object], "subtreeFlags": 262144, "tag": 5, "treeBaseDuration": -0, "type": "Text", "updateQueue": null}}
+
+      131 |     //   simpleMembers, counts zero valid members, renders no slot buttons.
+      132 |     // With the fix: selectedMemberIds trimmed to [a1,a2] → "2 of 2 selected".
+    > 133 |     expect(screen.queryByText(/3 of 2/)).toBeNull();
+          |                                          ^
+      134 |   });
+      135 | });
+      136 |
+
+      at Object.<anonymous> (src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx:133:42)
+
+  ● DP01 — member selection follows the project › member filter shows exactly the new project's count after switching
+
+    expect(received).toBeNull()
+
+    Received: {"_fiber": {"_debugHookTypes": null, "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": [FiberNode], "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": -0, "actualStartTime": 25117.91275, "alternate": null, "child": [FiberNode], "childLanes": 0, "deletions": null, "dependencies": null, "elementType": "Text", "flags": 0, "index": 0, "key": null, "lanes": 0, "memoizedProps": [Object], "memoizedState": null, "mode": 1, "pendingProps": [Object], "ref": null, "refCleanup": null, "return": [FiberNode], "selfBaseDuration": -0, "sibling": null, "stateNode": [Object], "subtreeFlags": 0, "tag": 5, "treeBaseDuration": -0, "type": "Text", "updateQueue": null}}
+
+      152 |
+      153 |     // "3 of 2" means the stale seed from project A is still in effect.
+    > 154 |     expect(screen.queryByText(/3 of 2/)).toBeNull();
+          |                                          ^
+      155 |   });
+      156 |
+      157 |   it('member filter summary does not show more selected than there are members', async () => {
+
+      at Object.<anonymous> (src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx:154:42)
+
+  ● DP01 — member selection follows the project › member filter summary does not show more selected than there are members
+
+    expect(received).toBeNull()
+
+    Received: {"_fiber": {"_debugHookTypes": null, "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": [FiberNode], "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": -0, "actualStartTime": 29805.397375, "alternate": null, "child": [FiberNode], "childLanes": 0, "deletions": null, "dependencies": null, "elementType": "Text", "flags": 0, "index": 0, "key": null, "lanes": 0, "memoizedProps": [Object], "memoizedState": null, "mode": 1, "pendingProps": [Object], "ref": null, "refCleanup": null, "return": [FiberNode], "selfBaseDuration": -0, "sibling": null, "stateNode": [Object], "subtreeFlags": 0, "tag": 5, "treeBaseDuration": -0, "type": "Text", "updateQueue": null}}
+
+      168 |     // With the fix: selectedMemberIds = [b1,b2] → "2 of 2 selected" (or
+      169 |     // "All Members" if still loading). "3 of 2" never appears.
+    > 170 |     expect(screen.queryByText(/3 of 2/)).toBeNull();
+          |                                          ^
+      171 |   });
+      172 | });
+      173 |
+
+      at Object.<anonymous> (src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx:170:42)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 3 total
+Snapshots:   0 total
+Time:        33.362 s, estimated 102 s

@@ -15,9 +15,10 @@ tags:
     id: planner-project
 - tapOn: "Hamlet"
 - tapOn: "Expand.*"
-# Start from everyone and take two out. What is selected on arrival is
-# whatever the previous project had — DP01, cause fix 8 — so it is not relied
-# on; and none selected reads "All members", since it means everyone.
+# Start from everyone and take two out. Arrival selects the whole project
+# (DP01, cause fix 8; 07-planner-project-switch shows it), but a flow sets its
+# selection itself; and none selected reads "All members", since it means
+# everyone.
 - repeat:
     while:
       notVisible: "4 of 4 selected"

@@ -1,0 +1,39 @@
+-- Red-before, e2e: DP01 seen on screen --
+-- Flow: rehearsal-calendar-native/e2e/flows/07-planner-project-switch.yaml --
+-- Fix files put back to 9fd6f64 (base before the fix on auto/main):
+--   git restore --source=9fd6f64 -- src/features/smart-planner/hooks/useSmartPlanner.ts
+--                                    src/features/smart-planner/screens/SmartPlannerScreen.tsx
+-- Run 2026-10-11 12:32, artifacts e2e/out/artifacts/2026-10-11_123208 --
+-- Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/07-planner-project-switch.yaml --
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/07-planner-project-switch.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Planner follows the project (2m 37s) (Assertion is false: "4 of 4 selected" is visible)
+
+1/1 Flow Failed
+exit code 1
+
+-- commands.json, last steps --
+tapOnElement {"selector":{"idRegex":"planner-project"}} COMPLETED
+tapOnElement {"selector":{"textRegex":"Hamlet"}} COMPLETED
+assertConditionCommand {"condition":{"visible":{"textRegex":"4 of 4 selected"}},"timeout":"15000"} FAILED
+
+-- screen-hierarchy/step-031-assertCondition-4_of_4_selected.json, member summary --
+'2 of 4 selected'
+
+-- Reading --
+The planner opened on The Seagull (2 people). Switching to Hamlet (4 people)
+seeded Hamlet's selection from The Seagull's still-loaded roster and marked
+Hamlet initialised: Hamlet showed "2 of 4 selected" and stayed so for 15 s.
+That is DP01 as a person sees it.

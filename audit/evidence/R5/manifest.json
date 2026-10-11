@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-11",
+  "branch": "auto/main",
+  "finding": "DP01",
+  "reviewFindings": ["R5-01", "R5-02"],
+  "baseCommit": "9fd6f645254c3497d0a990dabdd9edb7a551d165",
+  "fixCommits": [
+    {
+      "commit": "9d7bb83a97a66179cb4e59a83a3855e397aadf96",
+      "tree": "fd3951767b0f8920a04adcdc75117f0ae8bc93da",
+      "scope": "DP01: membersProjectId in useSmartPlanner; seeding waits for the confirmed roster",
+      "cherryPickedFrom": ["02a8549f93a7e2c8143d2e8da7b5d3e4528692ff", "f9212b3a58d28852bb081656e14a71a9f8c3ba35"]
+    },
+    {
+      "commit": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "tree": "1c0a871898149f4e715ddfd31d96c3cb0f6a3126",
+      "scope": "R5-01: roster reload in the same project drops removed members from the selection",
+      "cherryPickedFrom": ["c9f40a5e3d250a9b23567558f02bd6756fccb075", "0b9f1a98194f1f8c13091ec42d3678dfec22bc25"]
+    },
+    {
+      "commit": "f95061c5b41943defb21db8e843ec6844bd76943",
+      "tree": "bdeeca348f2f967b8b9fe1bd42dd10471e5dfd4e",
+      "scope": "e2e flow 07-planner-project-switch.yaml"
+    }
+  ],
+  "sourceCommit": "23e43425801be17ca6f4108b1bee12d11283def5",
+  "sourceTree": "1c0a871898149f4e715ddfd31d96c3cb0f6a3126",
+  "runtime": {
+    "node": "v22",
+    "platform": "darwin",
+    "simulator": "Rehearsly E2E (iPhone 16), 0E96462E-BD5B-4C19-9847-8E63D550B36E",
+    "environment": "jest frontend project; e2e via npm run e2e (disposable PostgreSQL, local server, Metro on the local API)",
+    "production": "NOT_RUN",
+    "physicalDevice": "DEV-19 NOT_RUN",
+    "findingStatus": "READY_FOR_CHECK"
+  },
+  "runs": [
+    {
+      "file": "planner-dp01-before.log",
+      "sha256": "a9577405bc2832aa2113a000c741cbf292c769a5ef5c0fbf39b2dbf38bee6d07",
+      "fixFilesAt": "9fd6f645254c3497d0a990dabdd9edb7a551d165",
+      "testFileAt": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "exitCode": 1,
+      "tests": { "failed": 3, "passed": 0 }
+    },
+    {
+      "file": "planner-r5-01-before.log",
+      "sha256": "8d9bf1a971b7b8645fd3f34fb1d73f983cc6aadedcd953486c9bd17405d6392c",
+      "fixFilesAt": "9d7bb83a97a66179cb4e59a83a3855e397aadf96",
+      "testFileAt": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "exitCode": 1,
+      "tests": { "failed": 1, "passed": 2 }
+    },
+    {
+      "file": "planner-after.log",
+      "sha256": "75ebd8acaaa5dd88502873d52f3501fea8bb176c5ea1ddff69160b2439a987bc",
+      "fixFilesAt": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "testFileAt": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "exitCode": 0,
+      "tests": { "failed": 0, "passed": 3 }
+    },
+    {
+      "file": "e2e-07-before.txt",
+      "sha256": "2998cd1c394abe99f523d986a3145bf66ab9c2fa05f9799aa908694664a8c6ec",
+      "fixFilesAt": "9fd6f645254c3497d0a990dabdd9edb7a551d165",
+      "flowAt": "f95061c5b41943defb21db8e843ec6844bd76943",
+      "exitCode": 1,
+      "flows": { "failed": 1, "passed": 0 },
+      "seen": "Hamlet after a switch from The Seagull: \"2 of 4 selected\""
+    },
+    {
+      "file": "e2e-07-after.txt",
+      "sha256": "30f46df8f03ee9bcb66365df061463cf5b02aceb0b93795db91cb3666d83ed92",
+      "fixFilesAt": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "flowAt": "f95061c5b41943defb21db8e843ec6844bd76943",
+      "exitCode": 0,
+      "flows": { "failed": 0, "passed": 1 }
+    }
+  ],
+  "historical": [
+    {
+      "file": "planner-before.txt",
+      "sha256": "1eb04085cc431564c415dfedf77a96f1c48207b799dd7b93da11f9e39f40e02a",
+      "note": "first red-before for DP01, written on 47037a4 (branch auto/out-of-scope/T-108); a summary, not raw output; kept as written, superseded by planner-dp01-before.log"
+    },
+    {
+      "file": "planner-r5-01-before.txt",
+      "sha256": "a131074ec8a4179609f4cd6da4673a9ccb56531f6e0fbd30e5cafb7b3b09e9a2",
+      "note": "first red-before for R5-01, written on f9212b3 (branch auto/out-of-scope/T-108); kept as written, superseded by planner-r5-01-before.log"
+    }
+  ]
+}
