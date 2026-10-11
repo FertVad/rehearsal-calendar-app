@@ -94,6 +94,57 @@ log of that run, Docker's host log of 12:29Z) no longer exists. Nothing in
 the flow, the app or the server's create path explains it. The same request
 answers in 55–349 ms in every other run, including after long idle pauses.
 
+## Third pass: under load (2026-10-11, `node` allowed by the owner)
+
+The owner names the load that day: a macOS service (ANECompilerService) held
+one core at 100%, alongside Docker, VS Code and an interactive session. The
+supervisor itself runs nothing in parallel.
+
+- `node audit/evidence/T-203/under-load.mjs e2e/flows/06-planner-to-rehearsal.yaml 2`
+  (two cores busy, closer to that day than every core). Setup alone took
+  5 minutes instead of the usual 1.5 (artifacts 2026-10-11_100546: flow
+  started 10:10:20, run started 10:05:46). The flow then stopped inside
+  Maestro's own `waitForAnimationToEnd` screenshot at 10:10:56, before the
+  form was ever opened, and the command was cut at the 10-minute limit.
+  e2e/out/server.log of that run holds only the seed's four creates: the
+  app's POST never came. Not reproduced: under load the whole toolchain
+  slows past the tool's limit before the step that failed.
+- The earlier full-core run (2026-10-10_211809) got no further than
+  `Define variables`.
+- Both cut runs left their server and Metro on ports 3001/8081, and the next
+  run stopped at exit 75. They were stopped by
+  `node audit/evidence/T-203/stop-leftovers.mjs <server pid> <metro pid>`,
+  which touches only processes listening there with this tree as their cwd.
+  No CPU burner outlived either command.
+
+What the failing run itself shows about the stall:
+
+- The server was answering again within 40 s. The first requests of the next
+  flow ("Sign in", 15:30:39–15:31:03) took 11–930 ms. The stall was short.
+- It sat between the app and the server's answer: the request was written to
+  the socket (15:29:49.911), simulator daemons kept logging every second, and
+  no answer came for 10 s. Loopback connect (450 ms vs 1–3 ms) and
+  tap-to-request (2.5 s vs 0.9 s) were slow at the same moment.
+
+## Conclusion
+
+The cause is the machine's load, not the flow, the app or the server.
+
+- The create path has no wait that reaches 10 s without load. There is no
+  transaction and no row lock. No push is sent (nobody in e2e has a token).
+  The pool's idle close is harmless: the same POST answers in 349 ms after
+  a 22 s pause.
+- In 17 kept runs the same POST answers in 55–349 ms, and no other API
+  request in any of them takes over 1 s.
+- The one failure coincides with measured load on the machine and recovered
+  by itself within seconds.
+
+Which process lost the 10 s, the Node server or PostgreSQL in Docker's VM,
+cannot be told any more. That run's server log was overwritten, and Docker's
+host log for 12:29Z has rotated away. The supervisor now keeps a red run's
+logs in e2e/out/failed/, and this task keeps every run's server and Metro
+logs with its artifacts. The next occurrence will name the process.
+
 ## Change made
 
 e2e/run.mjs now copies server.log and metro.log into the artifacts folder of
