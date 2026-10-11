@@ -126,9 +126,11 @@ What the failing run itself shows about the stall:
   no answer came for 10 s. Loopback connect (450 ms vs 1–3 ms) and
   tap-to-request (2.5 s vs 0.9 s) were slow at the same moment.
 
-## Conclusion
+## Conclusion of the third pass (withdrawn — see the fourth pass)
 
-The cause is the machine's load, not the flow, the app or the server.
+This pass named the machine's load as the cause. The review rejected that, and
+rightly: neither run under load reached the POST, and a timeout was all that
+was shown. Load stays an unconfirmed hypothesis.
 
 - The create path has no wait that reaches 10 s without load. There is no
   transaction and no row lock. No push is sent (nobody in e2e has a token).
@@ -153,6 +155,62 @@ run 2026-10-10_210445 holds both logs; flow 06 passed (2m 49s).
 
 The next occurrence will show whether the POST reached the server and where
 it stopped.
+
+## Fourth pass: another process on port 3001 (after review)
+
+The supertest 401 below has the same root: a socket on the wildcard shares
+its port with any later socket on a specific address. The kernel gives each
+connection to the more specific socket. e2e's server ran exactly that way:
+`HOST: '::'` on 3001, with the app on `localhost`. requireFree() checks the
+port only before the run.
+
+- **The kernel side** (`e2e-port-shadow.mjs`). The server listens on `[::]:P`.
+  A later process can still bind `::1:P`, `127.0.0.1:P` or `localhost:P`; only
+  `0.0.0.0:P` is refused. Each fresh connection to that address then goes to
+  the newcomer. If the newcomer accepts and never answers, the client sees
+  "connected, request sent, no answer". When it exits, ours answers again.
+- **What the T-130 failure shows fits that exactly.** The POST went out on a
+  new connection (C14) to `IPv6 … 3001` on lo0, with connect 21 ms. The
+  request was sent, no byte came back, and it ended at -1001 after 10 s. The
+  next flow's requests were answered: whatever held the address was gone. A
+  new connection was certain: the server's keep-alive is 5 s, and the gap
+  before the POST was 11.5 s.
+- **Red before, up to the request itself** (`interloper.mjs`,
+  `interloper-red.txt`). On HEAD, flow 06 ran while another process bound
+  `::1:3001` and `127.0.0.1:3001` once the planner had loaded, held for 15 s
+  and then left. It received the app's
+  `POST /api/native/projects/1/rehearsals` and did not answer. The flow failed
+  with the same assertion as on T-130. In the device log, the request,
+  connection and timeout match T-130 line for line: task <15>, `body S 124`,
+  a new IPv6 connection on lo0, -1001 after 10 014 ms, then
+  `Failed to save rehearsal: timeout of 10000ms exceeded`.
+- **This machine has such processes.** The 401 below came from another copy of
+  this server on 127.0.0.1, at a port this one had been given. Other worktrees
+  of this repository run their checks and probes here, and other agents and
+  dev servers run alongside them. None of them is serialized with e2e.
+
+What still cannot be shown is which process held 3001 at 15:29:49 on
+2026-10-10. Nothing kept a record of sockets back then. So this is not proof
+of that one occurrence. It is the one mechanism that reproduces it,
+signature included, while load never got a run as far as the POST.
+
+### Fix
+
+e2e/run.mjs starts the server on `127.0.0.1` and gives the app
+`http://127.0.0.1:3001/api`. Nothing else on the machine can bind an address
+the server itself holds: a later `127.0.0.1:3001` gets EADDRINUSE. A later
+`[::]:3001` or `::1:3001` gets none of the app's connections, which go to an
+IP address and so never resolve to anything else. Green after
+(`interloper-green.txt`): the same interloper got `::1:3001` but EADDRINUSE on
+127.0.0.1. The create went out on a new IPv4 connection while the interloper
+was up, and flow 06 passed.
+
+Metro on 8081 has the same exposure in principle. It is not changed here.
+Expo decides how Metro binds, and the app loads the bundle only at launch, so
+a newcomer there would fail a flow at launch, not the way T-130 failed.
+
+If load ever stalls the server, the next red run's server.log (kept by the
+supervisor and by keepLogs()) will show it.
 
 ## Supervisor's checks on these commits: a valid token answered 401
 

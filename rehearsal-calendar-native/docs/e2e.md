@@ -26,6 +26,11 @@ JUnit and screenshots go to `e2e/out`.
 - **Ports 3001 or 8081 already taken.** A server or Metro already running is not
   reused: it could be pointed anywhere. What a dead e2e run left there is not
   that case — see below.
+- **Sharing 3001 with a newcomer.** The server holds `127.0.0.1:3001` itself and
+  the app is given `http://127.0.0.1:3001/api`. On the wildcard with the app on
+  `localhost`, a process that bound `::1:3001` or `127.0.0.1:3001` mid-run got
+  the app's new connections and never answered them: a create timed out
+  (T-203).
 - **A bundle that could reach another API.** This checkout's `.env` sets
   `EXPO_PUBLIC_API_URL=https://rehearsly.me/api`, and in development Expo bundles
   the `.env` files and lets them win over the environment — setting the variable

@@ -65,7 +65,14 @@ const pg = createRequire(path.join(SERVER, 'package.json'))('pg');
 
 const API_PORT = 3001;
 const METRO_PORT = 8081;
-const API_URL = `http://localhost:${API_PORT}/api`;
+// One address, held by the server itself. On '::' with the app on localhost,
+// any process that came up later on ::1:3001 or 127.0.0.1:3001 — the kernel
+// lets a specific address share a port with the wildcard — got the app's new
+// connections and left them unanswered: a create timed out (T-203). Bound to
+// 127.0.0.1, the port is refused to anyone else there, and an IP address
+// leaves the simulator nothing else to try.
+const API_HOST = '127.0.0.1';
+const API_URL = `http://${API_HOST}:${API_PORT}/api`;
 const BUNDLE_ID = 'com.rehearsal.app';
 const DEVICE = { name: 'Rehearsly E2E', type: 'com.apple.CoreSimulator.SimDeviceType.iPhone-16' };
 const MAESTRO = process.env.MAESTRO_BIN || path.join(os.homedir(), '.maestro', 'bin', 'maestro');
@@ -358,12 +365,11 @@ async function main() {
       HOME: os.homedir(),
       NODE_ENV: 'development',
       PORT: String(API_PORT),
-      // Both localhost addresses: the simulator may try either.
-      HOST: '::',
+      HOST: API_HOST,
       DATABASE_URL: databaseUrl,
       JWT_SECRET: randomBytes(32).toString('base64'),
       CRON_SECRET: randomBytes(32).toString('base64'),
-      BASE_URL: `http://localhost:${API_PORT}`,
+      BASE_URL: `http://${API_HOST}:${API_PORT}`,
     },
   });
   await waitFor('the local server', async () => (await fetch(`${API_URL}/ready`)).ok, 30000);
