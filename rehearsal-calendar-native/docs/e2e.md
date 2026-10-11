@@ -52,6 +52,13 @@ those groups before it takes the lock — only those still led by the process
 the dead run started, never whatever has the pid now. Under the lock any
 container labelled `rehearsly.e2e` is a dead run's too, and is stopped.
 
+The server and Metro are also started through `e2e/watchdog.mjs`, which holds
+a pipe from the run and takes its process group down when the pipe closes —
+the system closes it when the run dies, SIGKILL included. That does not need
+`ps`, which the autonomous developer's sandbox does not let run: there the
+lock could not identify a dead run's groups, and a run cut off by a tool's
+time limit left both on their ports (T-203, 2026-10-11).
+
 ## Exit codes
 
 | Code | Meaning |
