@@ -179,6 +179,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             />
 
             <GlassButton
+              testID="login-forgot-password"
               title={t.auth.forgotPassword}
               onPress={() => navigation.navigate('ResetPassword', { email: normalizeEmail(email) })}
               variant="glass"

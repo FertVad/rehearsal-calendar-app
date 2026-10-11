@@ -189,7 +189,7 @@ export default function ChangeEmailScreen({ navigation }: ChangeEmailScreenProps
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.avatarHint}>{t.profile.changeEmailSubtitle(currentEmail)}</Text>
+          <Text testID="change-subtitle" style={styles.avatarHint}>{t.profile.changeEmailSubtitle(currentEmail)}</Text>
 
           <View style={styles.form}>
             <View style={styles.fieldContainer}>
@@ -250,6 +250,7 @@ export default function ChangeEmailScreen({ navigation }: ChangeEmailScreenProps
 
           {!sent ? (
             <GlassButton
+              testID="change-send"
               title={t.profile.sendCodes}
               onPress={handleSend}
               variant="purple"
@@ -259,6 +260,7 @@ export default function ChangeEmailScreen({ navigation }: ChangeEmailScreenProps
           ) : (
             <>
               <GlassButton
+                testID="change-confirm"
                 title={t.profile.confirmChange}
                 onPress={handleConfirm}
                 variant="purple"

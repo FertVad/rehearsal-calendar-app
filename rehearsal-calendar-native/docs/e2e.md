@@ -23,7 +23,13 @@ JUnit and screenshots go to `e2e/out`.
   data on tmpfs, port on 127.0.0.1. The server gets an environment built from
   nothing — no `SERVER_ENV_FILE`, nothing inherited but `PATH`/`HOME` — so
   `server/.env` (production) cannot reach it.
-- **Ports 3001 or 8081 already taken.** A server or Metro already running is not
+- **Any mail leaving the machine.** The server runs with
+  `EMAIL_TRANSPORT=capture-for-tests` and no provider key: a code it mails is
+  kept in its own process. `e2e/server-with-mailbox.mjs` imports `server.js`
+  unchanged, listens for it, and answers `GET /code?to=<address>` on
+  `127.0.0.1:3002` with the code in the latest message to that address; each
+  message is also written to `e2e/out/mail`.
+- **Ports 3001, 3002 or 8081 already taken.** A server or Metro already running is not
   reused: it could be pointed anywhere. What a dead e2e run left there is not
   that case — see below.
 - **Sharing 3001 with a newcomer.** The server holds `127.0.0.1:3001` itself and
@@ -94,7 +100,9 @@ issued it — and `${<KEY>_DAY}` for each day it names (`MARK_DAY`, a local
 
 A flow that needs something changed behind the app's back while it runs — what
 another device would do — calls the local server from `e2e/scripts` with
-`runScript`; `${API_URL}` is its address (flow 10).
+`runScript`; `${API_URL}` is its address (flow 10). A code the server
+mailed is read the same way: `e2e/scripts/read-code.js` with `MAIL_URL`
+(`${MAIL_URL}`), `TO` and `NAME` puts it in `${output.<NAME>}` (flows 11, 12).
 
 ## A fix seen on screen has a flow
 

@@ -41,6 +41,10 @@ export const PEOPLE = {
   // The availability editor (10): marks of his own, in no project, so nothing
   // another flow books lands on his days.
   treplev: { email: 'treplev@e2e.test', firstName: 'Konstantin', lastName: 'Treplev', onboarded: true },
+  // A forgotten password (11) and a new sign-in address (12): accounts of
+  // their own, since each flow leaves its account signing in differently.
+  lear: { email: 'lear@e2e.test', firstName: 'King', lastName: 'Lear', onboarded: true },
+  kent: { email: 'kent@e2e.test', firstName: 'Earl', lastName: 'Kent', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };

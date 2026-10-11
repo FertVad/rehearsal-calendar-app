@@ -1,0 +1,103 @@
+# The sign-in address is changed in the profile with a code to each address,
+# and the new one signs in (R3: HP01, T-130). Earl Kent opens the change from
+# his profile, gives a new address and his password; the local server mails a
+# code to the old address and one to the new, the flow reads both from the
+# e2e mailbox and confirms. The profile then shows the new address, and from a
+# fresh install the new address signs in. Before T-130 the address was a
+# field of the profile form, which the server refuses to change. He is in no
+# other flow.
+appId: ${APP_ID}
+name: Address change by emailed codes
+tags:
+  - profile
+  - auth
+env:
+  NEW_EMAIL: caius@e2e.test
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${KENT_EMAIL}
+- tapOn: "Profile, tab.*"
+- tapOn:
+    id: profile-edit
+- tapOn:
+    id: profile-change-email
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: change-new-email
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: ${NEW_EMAIL}
+      - assertVisible:
+          id: change-new-email
+          text: ${NEW_EMAIL}
+- tapOn:
+    id: change-password
+- inputText: ${PASSWORD}
+- assertVisible:
+    id: change-password
+    text: ${'•'.repeat(PASSWORD.length)}
+# hideKeyboard finds no dismiss action here; a tap off the fields closes it.
+- tapOn:
+    id: change-subtitle
+- tapOn:
+    id: change-send
+- extendedWaitUntil:
+    visible:
+      id: change-new-code
+    timeout: 30000
+- runScript:
+    file: ../scripts/read-code.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      TO: ${KENT_EMAIL}
+      NAME: currentCode
+- runScript:
+    file: ../scripts/read-code.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      TO: ${NEW_EMAIL}
+      NAME: newCode
+- tapOn:
+    id: change-current-code
+- inputText: ${output.currentCode}
+- assertVisible:
+    id: change-current-code
+    text: ${output.currentCode}
+- tapOn:
+    id: change-new-code
+- inputText: ${output.newCode}
+- assertVisible:
+    id: change-new-code
+    text: ${output.newCode}
+- tapOn:
+    id: change-subtitle
+- takeScreenshot: 12-change-email-codes
+- tapOn:
+    id: change-confirm
+- extendedWaitUntil:
+    visible: ".*${NEW_EMAIL}.*"
+    timeout: 20000
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: profile-email
+      text: ${NEW_EMAIL}
+    timeout: 10000
+# A fresh install: the new address is the one that signs in.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${NEW_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-create
+    timeout: 20000
+- takeScreenshot: 12-signed-in-with-new-address

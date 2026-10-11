@@ -15,7 +15,9 @@
  *   canonical schema goes in with `migrate --fresh`; seed.mjs fills it.
  * - The server: started with an environment built here from nothing — no
  *   SERVER_ENV_FILE, nothing inherited but PATH and HOME — so server/.env, which
- *   is production, cannot reach it; the database must be the container's.
+ *   is production, cannot reach it; the database must be the container's. Its
+ *   mail stays in its process (EMAIL_TRANSPORT=capture-for-tests), and
+ *   server-with-mailbox.mjs hands the codes to the flows on 127.0.0.1:3002.
  * - Metro: its own. The checkout's .env points the app at rehearsly.me, and in
  *   development Expo bundles .env files over the environment — a variable given
  *   to Metro does not reach the app while the file names another address. So
@@ -23,7 +25,7 @@
  *   (metro.config.js); the bundle is then searched for every address the app
  *   could read, and the app is not opened unless each is the local server. After
  *   that the address the app reports on start is watched, and the run stops if
- *   it is ever another. Ports 3001 and 8081 must be free: a server or Metro
+ *   it is ever another. Ports 3001, 3002 and 8081 must be free: a server or Metro
  *   already running there is not ours to reuse, and could be pointed anywhere.
  * - The app: a Debug build (Release talks to production) on a simulator of its
  *   own, "Rehearsly E2E", so no other simulator's data is touched.
@@ -73,6 +75,9 @@ const METRO_PORT = 8081;
 // leaves the simulator nothing else to try.
 const API_HOST = '127.0.0.1';
 const API_URL = `http://${API_HOST}:${API_PORT}/api`;
+// The codes the local server mailed, for the flows (server-with-mailbox.mjs).
+const MAIL_PORT = 3002;
+const MAIL_URL = `http://${API_HOST}:${MAIL_PORT}`;
 const BUNDLE_ID = 'com.rehearsal.app';
 const DEVICE = { name: 'Rehearsly E2E', type: 'com.apple.CoreSimulator.SimDeviceType.iPhone-16' };
 const MAESTRO = process.env.MAESTRO_BIN || path.join(os.homedir(), '.maestro', 'bin', 'maestro');
@@ -347,6 +352,7 @@ async function main() {
     teardown.push(() => lock.release());
     teardown.push(keepLogs(Date.now()));
     await requireFree(API_PORT, 'server');
+    await requireFree(MAIL_PORT, 'mailbox');
     await requireFree(METRO_PORT, 'Metro');
   });
 
@@ -364,7 +370,9 @@ async function main() {
   });
 
   step('starting the local server');
-  background('server', process.execPath, ['server.js'], {
+  // server.js through server-with-mailbox.mjs: the codes it mails stay in that
+  // process, and the flows read them from MAIL_URL.
+  background('server', process.execPath, [path.join(E2E, 'server-with-mailbox.mjs')], {
     cwd: SERVER,
     env: {
       PATH: process.env.PATH,
@@ -376,9 +384,13 @@ async function main() {
       JWT_SECRET: randomBytes(32).toString('base64'),
       CRON_SECRET: randomBytes(32).toString('base64'),
       BASE_URL: `http://${API_HOST}:${API_PORT}`,
+      EMAIL_TRANSPORT: 'capture-for-tests',
+      MAIL_HOST: API_HOST,
+      MAIL_PORT: String(MAIL_PORT),
     },
   });
   await waitFor('the local server', async () => (await fetch(`${API_URL}/ready`)).ok, 30000);
+  await waitFor('the mailbox', async () => (await fetch(`${MAIL_URL}/code?to=`)).status === 404, 10000);
 
   step('seeding');
   const client = new pg.Client({ connectionString: databaseUrl });
@@ -443,7 +455,7 @@ async function main() {
   watchReportedAddress(udid);
 
   const variables = ['-e', `PASSWORD=${seeded.password}`, '-e', `APP_ID=${BUNDLE_ID}`,
-    '-e', `API_URL=${API_URL}`,
+    '-e', `API_URL=${API_URL}`, '-e', `MAIL_URL=${MAIL_URL}`,
     ...Object.entries(seeded.people).flatMap(([key, person]) => ['-e', `${key.toUpperCase()}_EMAIL=${person.email}`]),
     ...Object.entries(seeded.invites).flatMap(([key, code]) => ['-e', `${key.toUpperCase()}_INVITE=${code}`]),
     ...Object.entries(seeded.days).flatMap(([key, date]) => ['-e', `${key.toUpperCase()}_DAY=${date}`])];

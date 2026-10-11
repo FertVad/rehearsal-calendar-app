@@ -159,8 +159,9 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
             {/* Email: read only here — a new address needs a code to each (HP01) */}
             <View style={styles.fieldContainer}>
               <Text style={styles.label}>{t.profile.email}</Text>
-              <Text style={styles.input}>{user?.email}</Text>
+              <Text testID="profile-email" style={styles.input}>{user?.email}</Text>
               <GlassButton
+                testID="profile-change-email"
                 title={t.profile.changeEmail}
                 onPress={() => {
                   hapticLight();

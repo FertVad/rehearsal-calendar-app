@@ -207,6 +207,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </View>
           <Text style={styles.userEmail}>{user?.email}</Text>
           <TouchableOpacity
+            testID="profile-edit"
             style={styles.editProfileButton}
             onPress={() => {
               hapticLight();

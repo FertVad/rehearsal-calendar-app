@@ -186,6 +186,7 @@ export default function ResetPasswordScreen({ navigation, route }: ResetPassword
 
             {!sentTo ? (
               <GlassButton
+                testID="reset-send"
                 title={t.auth.resetSendCode}
                 onPress={handleSend}
                 variant="purple"
@@ -195,6 +196,7 @@ export default function ResetPasswordScreen({ navigation, route }: ResetPassword
             ) : (
               <>
                 <GlassButton
+                  testID="reset-submit"
                   title={t.auth.resetButton}
                   onPress={handleReset}
                   variant="purple"
