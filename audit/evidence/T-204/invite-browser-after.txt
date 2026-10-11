@@ -1,0 +1,38 @@
+T-204 — after the fix: invitePage.browser.test.mjs with scheme attempts recorded
+and cancelled in the page (Navigation API `navigate`), on top of b4b96c8.
+Same runner and the same machine as invite-browser-before.txt.
+
+$ node audit/evidence/T-204/repeat-invite-browser.mjs 20
+node v22.16.0, 8 cores, 0 busy threads
+run 1..20: exit 0, 11 pass, 0 fail   (each of the 20 lines identical)
+
+0 of 20 runs failed
+
+$ node audit/evidence/T-204/repeat-invite-browser.mjs 12 8      # before: 5 of 12 failed
+node v22.16.0, 8 cores, 8 busy threads
+run 1..12: exit 0, 11 pass, 0 fail   (each of the 12 lines identical)
+
+0 of 12 runs failed
+
+$ node audit/evidence/T-204/repeat-invite-browser.mjs 12 16
+node v22.16.0, 8 cores, 16 busy threads
+run 1..12: exit 0, 11 pass, 0 fail   (each of the 12 lines identical)
+
+0 of 12 runs failed
+
+Guarded bug (T-109 test, "visibility changes and page restoration cancel a
+pending second automatic scheme attempt") still catches the defect it guards.
+Mutation: in server/public/invite-page/invite.js, showManual() no longer clears
+the pending timers (`timers.forEach(clearTimeout); timers.length = 0;` removed),
+so a return to the page resumes the second automatic attempt.
+
+$ node audit/evidence/T-204/repeat-invite-browser.mjs 1        # with the mutation
+node v22.16.0, 8 cores, 0 busy threads
+run 1: exit 1, 10 pass, 1 fail
+  not ok: visibility changes and page restoration cancel a pending second automatic scheme attempt — visibilitychange
+
+1 of 1 runs failed
+  1× visibility changes and page restoration cancel a pending second automatic scheme attempt — visibilitychange
+
+$ git restore -- rehearsal-calendar-native/server/public/invite-page/invite.js
+Unmutated page: green (runs above).

@@ -34,7 +34,7 @@ after(async () => {
 });
 
 async function fixture(t, {
-  code = 'ABCDEFGH', query = '', javaScriptEnabled = true, blockScript = false, locale = 'en-US', beforeNavigation,
+  code = 'ABCDEFGH', query = '', javaScriptEnabled = true, blockScript = false, locale = 'en-US',
 } = {}) {
   const context = await browser.newContext({ javaScriptEnabled, locale, serviceWorkers: 'block' });
   const unexpectedRequests = [];
@@ -54,6 +54,7 @@ async function fixture(t, {
   await context.addInitScript(() => {
     window.inviteCspViolations = [];
     window.inviteActivations = [];
+    window.inviteSchemeNavigations = [];
     document.addEventListener('securitypolicyviolation', event => {
       window.inviteCspViolations.push(event.violatedDirective);
     });
@@ -66,23 +67,37 @@ async function fixture(t, {
         event.preventDefault();
       }
     });
+    // Record and cancel the page's automatic scheme attempts the same way. In
+    // headless Chromium each one is otherwise a real navigation that is aborted
+    // a few milliseconds later; until then Playwright silently drops clock
+    // commands, and one started before `load` cancels the load event. The
+    // paused clock still runs zero-delay timers, so the first attempt would
+    // start at a moment the test does not control.
+    navigation.addEventListener('navigate', event => {
+      if (/^(exp|rehearsalapp):/.test(event.destination.url)) {
+        window.inviteSchemeNavigations.push(event.destination.url);
+        event.preventDefault();
+      }
+    });
   });
   const page = await context.newPage();
   page.setDefaultTimeout(5000);
   const errors = [];
+  const schemeRequests = [];
   page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => {
+    if (/^(exp|rehearsalapp):/.test(request.url())) schemeRequests.push(request.url());
+  });
   if (javaScriptEnabled) {
     await page.clock.install({ time: new Date('2026-09-18T12:00:00Z') });
     await page.clock.pauseAt(new Date('2026-09-18T12:00:01Z'));
   }
-  // Observers of the page's own startup must exist before it loads: the first
-  // scheme attempt is a zero-delay timer that may already run during load.
-  await beforeNavigation?.(page);
   const response = await page.goto(`${base}/invite/${encodeURIComponent(code)}${query}`);
   t.after(async () => {
     await context.close();
     assert.deepEqual(unexpectedRequests, [], 'No HTTP request may leave the isolated test origin');
     assert.deepEqual(errors, [], 'The invite document must not raise browser errors');
+    assert.deepEqual(schemeRequests, [], 'Scheme attempts must stay cancelled in the page');
   });
   assert.equal(response.status(), 200);
   return { page, response, blockedScripts };
@@ -178,6 +193,9 @@ test('Expo links preserve their encoded invite path and retain a native app link
   assert.equal(await page.locator('#openButton').getAttribute('href'), `exp://127.0.0.1:8081/--/invite/${code}`);
   assert.equal(await page.locator('#nativeOpenButton').getAttribute('href'), `rehearsalapp://invite/${code}`);
   await page.clock.runFor(3000);
+  assert.deepEqual(await page.evaluate(() => window.inviteSchemeNavigations), [
+    `exp://127.0.0.1:8081/--/invite/${code}`, `rehearsalapp://invite/${code}`,
+  ], 'Both links are attempted automatically before the manual fallback');
   await page.locator('#openButton').click();
   await page.clock.runFor(3000);
   await page.locator('#nativeOpenButton').click();
@@ -233,30 +251,13 @@ test('Russian browser language localizes the status, fallback and both manual li
 
 test('visibility changes and page restoration cancel a pending second automatic scheme attempt', async t => {
   for (const lifecycleEvent of ['visibilitychange', 'pageshow']) {
-    let cdp;
-    const attempts = [];
-    let firstAttempt;
-    const { page } = await fixture(t, {
-      query: '?expoHost=127.0.0.1%3A8081',
-      beforeNavigation: async target => {
-        cdp = await target.context().newCDPSession(target);
-        await cdp.send('Page.enable');
-        firstAttempt = new Promise((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error('No automatic scheme attempt within 5 s')), 5000);
-          cdp.on('Page.frameRequestedNavigation', event => {
-            if (!/^(exp|rehearsalapp):/.test(event.url)) return;
-            attempts.push(event.url);
-            clearTimeout(timer);
-            resolve();
-          });
-        });
-      },
-    });
+    const { page } = await fixture(t, { query: '?expoHost=127.0.0.1%3A8081' });
+    const attempts = () => page.evaluate(() => window.inviteSchemeNavigations);
+    // The first attempt is a zero-delay timer: it has run once the clock moves.
     await page.clock.runFor(1);
-    await firstAttempt;
-    assert.deepEqual(attempts, ['exp://127.0.0.1:8081/--/invite/ABCDEFGH']);
+    assert.deepEqual(await attempts(), ['exp://127.0.0.1:8081/--/invite/ABCDEFGH']);
     // Exercise the page's lifecycle handlers without claiming a real iOS
-    // background/return transition. CDP observes a request, not OS delivery.
+    // background/return transition. The page records a request, not OS delivery.
     await page.evaluate(event => {
       if (event === 'visibilitychange') document.dispatchEvent(new Event(event));
       else window.dispatchEvent(new PageTransitionEvent(event, { persisted: true }));
@@ -264,11 +265,8 @@ test('visibility changes and page restoration cancel a pending second automatic 
     assert.equal(await page.locator('#manual').isVisible(), true);
     assert.equal(await page.locator('#status').isVisible(), false);
     await page.clock.runFor(3000);
-    // Navigation notifications cross the CDP process boundary asynchronously.
-    await new Promise(resolve => setTimeout(resolve, 100));
-    assert.deepEqual(attempts, ['exp://127.0.0.1:8081/--/invite/ABCDEFGH'], lifecycleEvent);
+    assert.deepEqual(await attempts(), ['exp://127.0.0.1:8081/--/invite/ABCDEFGH'], lifecycleEvent);
     await assertCleanDocument(page);
-    await cdp.detach();
   }
 });
 
