@@ -153,3 +153,72 @@ run 2026-10-10_210445 holds both logs; flow 06 passed (2m 49s).
 
 The next occurrence will show whether the POST reached the server and where
 it stopped.
+
+## Supervisor's checks on these commits: a valid token answered 401
+
+`npm test` failed once in membersAvailabilityRange.test.js ("splits a span
+crossing midnight…"): 401 where 200 was due, with the admin's token from
+`generateTokens(adminId, 1)`. The three requests before it and the six after
+it in the same file got 200. The commits under check changed no server code.
+On 2026-10-10 authorization.test.js had the same failure (401 instead of
+403), and five reruns did not repeat it.
+
+### Ruled out
+
+- Only `requireAuth` answers 401 on that route. All four of its reasons are
+  fixed within one file: the secret is read once, the token lives for 30 days,
+  the user row and token_version 1 never change, and nothing fakes the clock.
+  A single 401 in the middle of the file cannot come from any of them.
+- Jest workers taking each other's ports: `npm test` runs `--runInBand`. And
+  in port-race.mjs, 38,810 supertest-style requests run against three
+  processes that keep opening 127.0.0.1:0 servers reached no other process.
+  The kernel never hands one automatically picked port to two of them.
+
+### Cause
+
+supertest starts the app with `listen(0)`, which binds the IPv6 wildcard
+`[::]`, and then sends to `http://127.0.0.1:P`. On macOS a process can hold
+the same P on 127.0.0.1 too, and the more specific socket gets the
+connection (port-cross.mjs, part 1). The kernel checks a new wildcard port
+against other Node sockets but not against every socket on 127.0.0.1. On
+this machine some process listens on 127.0.0.1:59164, inside the ephemeral
+range, and answers `ok`. Stock supertest was given port 59164 and so reached
+that process: in stale-socket.mjs, 3 of 20,000 requests and 1 of 8,000
+(stale-socket-output.txt). When that process is another copy of this
+server, such as another worktree's checks or a probe with its own secret and
+database, a valid token comes back 401. The request never reaches our app.
+Load raises the odds only because a run under load overlaps more of those
+other processes.
+
+### Fix
+
+server/__tests__/loopbackSupertest.js: the app listens on 127.0.0.1 itself,
+in end() (with a host given, listen is asynchronous). There the kernel gives
+out no port someone else holds. Both Jest configs map `supertest` to the
+wrapper, so all 32 test files get it without edits, and so will new ones.
+Through the wrapper, 8,000 requests had 0 stray answers and 0 failures.
+Stock supertest had 1 stray answer and 2 ECONNRESET on the same machine
+minutes apart.
+
+A limit of the measurement: at a synthetic 550 requests/s the wrapper used
+up 127.0.0.1's ports after about 10,600 requests (EADDRNOTAVAIL), because
+the server's and the client's ports now share one table and wait out
+TIME_WAIT. The suite makes a couple of thousand requests over about 200 s,
+roughly 100 times slower. The full run below did not come near the limit.
+
+Red before: loopbackSupertest.test.js with the old mapping. The server
+supertest starts is on `::`/IPv6 (loopback-red.txt). Green after.
+
+membersAvailabilityRange.test.js now asserts its status with the body, as
+authorization.test.js does since 7a0d4b4.
+
+Full Jest run in band with the fix: 134 of 135 suites pass, 1698 of 1706
+tests. runtimeStartup.test.js fails here (fixture "import-failed") exactly
+as on HEAD without the change. That is this sandbox; the supervisor's run of
+the same file passed. The scanner's own regressions fail here on their
+synthetic `.env` fixtures for the same reason.
+
+The first red run (`page.goto: Timeout 5000ms` in the invite page browser
+test) is not this cause. That test's server listens on 127.0.0.1 itself and
+the browser connects to it, so nothing can take its port. It stays a
+separate instability, in the class T-109 handled.

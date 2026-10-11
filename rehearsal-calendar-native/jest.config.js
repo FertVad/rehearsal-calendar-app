@@ -59,6 +59,11 @@ module.exports = {
       testMatch: ['<rootDir>/server/**/*.(test|spec).(js)'],
       transform: {}, // No transform needed - using native ES modules
       moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
+      // The app listens on 127.0.0.1, where supertest sends; on the wildcard
+      // another process could take the request (loopbackSupertest.js).
+      moduleNameMapper: {
+        '^supertest$': '<rootDir>/server/__tests__/loopbackSupertest.js',
+      },
       collectCoverageFrom: [
         'server/**/*.{js}',
         '!server/**/__tests__/__mocks__/**',
