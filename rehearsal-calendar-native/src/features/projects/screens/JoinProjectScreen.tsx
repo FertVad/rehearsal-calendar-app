@@ -225,7 +225,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
         <Text style={styles.title}>{t.projects.projectInvitation}</Text>
 
         <View style={styles.projectCard}>
-          <Text style={styles.projectName}>{projectInfo?.projectName}</Text>
+          <Text testID="join-project-name" style={styles.projectName}>{projectInfo?.projectName}</Text>
           {projectInfo?.projectDescription && (
             <Text style={styles.projectDescription}>
               {projectInfo.projectDescription}
@@ -239,6 +239,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
+            testID="join-project-submit"
             style={[styles.button, styles.primaryButton]}
             onPress={handleJoin}
             disabled={joining}

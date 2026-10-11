@@ -14,6 +14,7 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import inviteFormat from'../shared/contracts/inviteCode.json' with { type: 'json' };
 
 const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'server');
 const bcrypt = createRequire(path.join(SERVER, 'package.json'))('bcrypt');
@@ -32,6 +33,11 @@ export const PEOPLE = {
   masha: { email: 'masha@e2e.test', firstName: 'Masha', lastName: 'Prozorova', onboarded: true },
   irina: { email: 'irina@e2e.test', firstName: 'Irina', lastName: 'Prozorova', onboarded: true },
   smirnov: { email: 'smirnov@e2e.test', firstName: 'Grigory', lastName: 'Smirnov', onboarded: true },
+  // An invite link opened before sign-in (08) and during onboarding (09): a
+  // project of their own, and two people not yet in it.
+  orsino: { email: 'orsino@e2e.test', firstName: 'Duke', lastName: 'Orsino', onboarded: true },
+  viola: { email: 'viola@e2e.test', firstName: 'Viola', lastName: 'Messina', onboarded: true },
+  sebastian: { email: 'sebastian@e2e.test', firstName: 'Sebastian', lastName: 'Messina', onboarded: false },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -94,13 +100,20 @@ export async function seed({ client, apiUrl, timezone }) {
       { token: token[owner], body: { name, description, timezone } });
     const { inviteCode } = await call(apiUrl, 'POST', `/native/projects/${created.id}/invite`, { token: token[owner], body: {} });
     for (const key of cast) await call(apiUrl, 'POST', `/native/invite/${inviteCode}/join`, { token: token[key], body: {} });
-    return created.id;
+    return { id: created.id, inviteCode };
   };
-  const hamletId = await project('Hamlet', 'Spring production', ['hamlet', 'ophelia', 'horatio']);
-  const seagullId = await project('The Seagull', 'Studio reading', ['ophelia']);
+  const { id: hamletId } = await project('Hamlet', 'Spring production', ['hamlet', 'ophelia', 'horatio']);
+  const { id: seagullId } = await project('The Seagull', 'Studio reading', ['ophelia']);
   // Three people, then two with nobody in common but their director (07).
-  const sistersId = await project('Three Sisters', 'Chekhov evening', ['masha', 'irina'], 'stage');
-  const bearId = await project('The Bear', 'Chekhov evening', ['smirnov'], 'stage');
+  const { id: sistersId } = await project('Three Sisters', 'Chekhov evening', ['masha', 'irina'], 'stage');
+  const { id: bearId } = await project('The Bear', 'Chekhov evening', ['smirnov'], 'stage');
+  // Nobody joins: Viola and Sebastian are asked in by link (08, 09). The code
+  // is the server's own — eight characters, capitals among them — not one the
+  // app's old lowercase-hex reading would take.
+  const twelfth = await project('Twelfth Night', 'Illyria in winter', [], 'orsino');
+  if (!new RegExp(`^[${inviteFormat.alphabet}]{${inviteFormat.length}}$`).test(twelfth.inviteCode)) {
+    throw new Error(`The server issued ${twelfth.inviteCode}, not a short invite code`);
+  }
 
   const rehearsal = async (projectId, title, day, from, to, cast) => {
     const { rehearsal: created } = await call(apiUrl, 'POST', `/native/projects/${projectId}/rehearsals`, {
@@ -132,7 +145,8 @@ export async function seed({ client, apiUrl, timezone }) {
   return {
     password: PASSWORD,
     people: Object.fromEntries(Object.entries(PEOPLE).map(([key, person]) => [key, { id: ids[key], email: person.email }])),
-    projects: { hamlet: hamletId, seagull: seagullId, sisters: sistersId, bear: bearId },
+    projects: { hamlet: hamletId, seagull: seagullId, sisters: sistersId, bear: bearId, twelfth: twelfth.id },
+    invites: { twelfth: twelfth.inviteCode },
     rehearsals,
   };
 }

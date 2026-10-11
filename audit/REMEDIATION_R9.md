@@ -330,6 +330,45 @@ CDP-сессию в этом хуке и записывает попытки о�
 
 **Статусы.** HN01 — READY_FOR_CHECK до ревью и DEV-15. HP03 — без изменений.
 
+### T-302: правка №9 на экране — e2e-сценарии приглашения по ссылке
+
+**Покрытие.** HN01 показан на экране двумя сценариями (метки `invite`, `auth`).
+Код приложения не менялся, добавлены только testID.
+- [08-invite-before-sign-in.yaml](../rehearsal-calendar-native/e2e/flows/08-invite-before-sign-in.yaml):
+  чистая установка, экран входа, ссылка `rehearsalapp://invite/<код>`. Viola
+  входит (онбординг она уже прошла) → видит «Twelfth Night» на экране
+  присоединения → «Join» → проект в «Projects».
+- [09-invite-during-onboarding.yaml](../rehearsal-calendar-native/e2e/flows/09-invite-during-onboarding.yaml):
+  Sebastian (онбординг не пройден) входит, ссылка приходит на первом шаге
+  онбординга. Онбординг остаётся на экране → «Skip» → экран присоединения
+  к «Twelfth Night» → «Join» → проект в «Projects».
+- [seed.mjs](../rehearsal-calendar-native/e2e/seed.mjs): свой проект «Twelfth Night»
+  (владелец Orsino) и двое ещё не вступивших. Код приглашения выдаёт сервер.
+  Seed проверяет его по `shared/contracts/inviteCode.json` (короткий формат,
+  заглавные), `run.mjs` передаёт его как `${TWELFTH_INVITE}`.
+- testID: `join-project-name`, `join-project-submit` (JoinProject),
+  `onboarding-skip` (OnboardingStep). Подсценарий входа разделён:
+  `sign-in.yaml` = запуск + `sign-in-form.yaml`. Новый `open-link.yaml`
+  отвечает на системный вопрос iOS «Open in "Rehearsly"?».
+
+**«Красное до»** ([e2e-invite-before.txt](evidence/R9/e2e-invite-before.txt), SHA-256
+`8fcebc55e369aef7cc1fb6bb0354d59c8a498ffd709d2d6eb0becd49116b9a5d`):
+- `index.tsx` из `2409dca` (до `1712675`): 08 и 09 красные, вместо
+  приглашения календарь. Код `ZXBHXET7` старое `/invite\/([a-f0-9]+)/` не
+  читает, ссылка не попадает в очередь.
+- Тот же старый файл, где вручную заменена только строка разбора на
+  `inviteCodeFromUrl`: 08 зелёный, 09 красный. Старый обработчик навигирует
+  сразу в стек онбординга, и приглашение пропадает. Значит, 09 сам охраняет
+  навигационную половину правки, а не только разбор кода.
+- Каждый раз потом: `git restore --source=HEAD -- src/navigation/index.tsx`.
+
+**После** ([e2e-invite-after.txt](evidence/R9/e2e-invite-after.txt), SHA-256
+`8f4c2aa448ce14a51973b0d5cb45cc16f49d8ac585d5cfee4abd749602aba5a8`): 08 и 09
+зелёные. 01-login после разделения подсценария входа тоже зелёный.
+
+Не покрыто: ссылка при холодном старте (приложение не запущено). Здесь ссылка
+приходит в уже открытое приложение. Это остаётся за DEV-15.
+
 ### T-202: нестабильный `runtimeStartup` — половина холодного старта сервера уходила на неиспользуемый barrel
 
 **Причина.** Проверка супервизора на `2df2724` (10.10, 11:09): 3 теста

@@ -1,0 +1,47 @@
+# On the sign-in screen, already open: signs in as ${EMAIL}. sign-in.yaml
+# launches the app first; a flow that has to do something before signing in —
+# open a link — launches it itself and runs this.
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible:
+      id: login-submit
+    timeout: 60000
+# The first keyboard after a cold launch is slow to come up, and text typed
+# before it is there goes nowhere; the inputs do not report focus to wait on.
+# So: type, check it landed — the password by its number of dots — and try
+# again if not.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: login-email
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: ${EMAIL}
+      - assertVisible:
+          id: login-email
+          text: ${EMAIL}
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: login-password
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: ${PASSWORD}
+      - assertVisible:
+          id: login-password
+          text: ${'•'.repeat(PASSWORD.length)}
+- tapOn:
+    id: login-submit
+# iOS offers to keep the password, over the whole screen.
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 10000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true

@@ -87,8 +87,9 @@ open: the on-screen keyboard Maestro types through only appears with it.
 needs an emailed code); projects, invites, rosters, rehearsals and busy days go
 through the local server's API. Everyone's password is `e2e-local-only`; flows
 get `${PASSWORD}`, `${APP_ID}` and `${<KEY>_EMAIL}` for each account in
-`PEOPLE` (`DIRECTOR_EMAIL`, `HAMLET_EMAIL`, …). Times are local to the machine,
-which is also the simulator's zone.
+`PEOPLE` (`DIRECTOR_EMAIL`, `HAMLET_EMAIL`, …) and `${<KEY>_INVITE}` for each
+invite code the seed returns (`TWELFTH_INVITE`) — the server's own, as it
+issued it. Times are local to the machine, which is also the simulator's zone.
 
 ## A fix seen on screen has a flow
 
@@ -117,7 +118,10 @@ so that switch needs no rework.
   types, checks the text landed and retries: the first keyboard after a cold
   launch is slow, and text typed before it is up goes nowhere. The inputs do not
   report focus, so there is nothing else to wait on. It also dismisses iOS's
-  "Save Password?" sheet, which covers the screen.
+  "Save Password?" sheet, which covers the screen. A flow that acts before
+  signing in launches the app itself and then runs `sign-in-form.yaml`.
+- Open a link through `e2e/subflows/open-link.yaml` (`env: { LINK: ... }`): iOS
+  asks 'Open in "Rehearsly"?' first, and it answers.
 - Find controls by `testID` (`id:` in Maestro), not by their English label.
 - A touchable card is one accessibility element labelled with all of its text:
   match a part of it as a regex, `".*Act I run-through.*"`.
