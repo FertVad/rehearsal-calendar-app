@@ -155,6 +155,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             tab root there is nothing to go back to and the button is hidden. */}
         {navigation.canGoBack() && (
           <TouchableOpacity
+            testID="availability-close"
             onPress={() => navigation.goBack()}
             accessibilityRole="button"
             accessibilityLabel={t.common.cancel}
@@ -312,6 +313,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           <>
           <View style={styles.modeSelector}>
             <TouchableOpacity
+              testID="mode-free"
+              accessibilityState={{ selected: shownMode === 'free' }}
               style={[
                 styles.modeButton,
                 shownMode === 'free' && styles.modeButtonActive,
@@ -333,6 +336,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="mode-custom"
+              accessibilityState={{ selected: shownMode === 'custom' }}
               style={[
                 styles.modeButton,
                 shownMode === 'custom' && styles.modeButtonActive,
@@ -354,6 +359,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="mode-busy"
+              accessibilityState={{ selected: shownMode === 'busy' }}
               style={[
                 styles.modeButton,
                 shownMode === 'busy' && styles.modeButtonActive,
@@ -394,6 +401,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                     <View style={styles.timeInput}>
                       <Text style={styles.timeLabel}>{t.availability.from}</Text>
                       <TouchableOpacity
+                        testID={`slot-${index}-start`}
                         style={styles.timeButton}
                         onPress={() => editor.openTimePicker(index, 'start')}
                       >
@@ -407,6 +415,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                     <View style={styles.timeInput}>
                       <Text style={styles.timeLabel}>{t.availability.to}</Text>
                       <TouchableOpacity
+                        testID={`slot-${index}-end`}
                         style={styles.timeButton}
                         onPress={() => editor.openTimePicker(index, 'end')}
                       >
@@ -482,6 +491,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         {hasChanges && (
           <View style={styles.sheetSaveBar}>
             <TouchableOpacity
+              testID="availability-save"
               style={[styles.sheetSaveButton, saving && styles.sheetSaveButtonDisabled]}
               onPress={handleSave}
               disabled={saving}

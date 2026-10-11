@@ -1,0 +1,114 @@
+# Saving a day in the availability editor writes that day and only that day
+# (cause fix 2: PUT /availability/days, CC05). Konstantin Treplev is busy all
+# day on OTHER_DAY. With the editor open, another device of his marks that day
+# free; he then marks MARK_DAY busy 10:00-18:00 here and saves. Back in the
+# editor, MARK_DAY has its hours, the days either side of it nothing, and
+# OTHER_DAY is still free: the old save sent every loaded day, and put the
+# busy day it had loaded back over the newer one. He is in no project, so no
+# other flow's rehearsals land on his days.
+appId: ${APP_ID}
+name: Availability saves the day it changed
+tags:
+  - availability
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${TREPLEV_EMAIL}
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+# Loaded once OTHER_DAY shows the seeded mark.
+- scrollUntilVisible:
+    element:
+      id: day-${OTHER_DAY}
+      text: ".*, Busy"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+# Another device saves OTHER_DAY as free; the screen keeps what it loaded.
+- runScript:
+    file: ../scripts/mark-day-free.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${TREPLEV_EMAIL}
+      PASSWORD: ${PASSWORD}
+      DAY: ${OTHER_DAY}
+# MARK_DAY: busy for hours, the default 10:00-18:00.
+- scrollUntilVisible:
+    element:
+      id: day-${MARK_DAY}
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: day-${MARK_DAY}
+- tapOn:
+    id: mode-custom
+- extendedWaitUntil:
+    visible:
+      id: slot-0-start
+      text: "10:00.*"
+    timeout: 10000
+- assertVisible:
+    id: slot-0-end
+    text: "18:00.*"
+- tapOn:
+    id: availability-save
+- extendedWaitUntil:
+    visible: "Availability saved"
+    timeout: 15000
+- tapOn: "OK"
+- assertNotVisible:
+    id: availability-save
+# Away and back: the editor loads from the server again.
+- tapOn:
+    id: availability-close
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${MARK_DAY}
+      text: ".*, Partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+# On its own day, not a neighbour.
+- assertVisible:
+    id: day-${BEFORE_DAY}
+    text: "\\d+"
+- assertVisible:
+    id: day-${AFTER_DAY}
+    text: "\\d+"
+# The other device's save stands.
+- scrollUntilVisible:
+    element:
+      id: day-${OTHER_DAY}
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: day-${OTHER_DAY}
+    text: ".*, Free"
+- assertNotVisible:
+    id: day-${OTHER_DAY}
+    text: ".*, Busy"
+# And MARK_DAY holds its hours.
+- scrollUntilVisible:
+    element:
+      id: day-${MARK_DAY}
+    direction: UP
+    centerElement: true
+- tapOn:
+    id: day-${MARK_DAY}
+- extendedWaitUntil:
+    visible:
+      id: mode-custom
+      selected: true
+    timeout: 10000
+- assertVisible:
+    id: slot-0-start
+    text: "10:00.*"
+- assertVisible:
+    id: slot-0-end
+    text: "18:00.*"
+- takeScreenshot: 10-availability-days

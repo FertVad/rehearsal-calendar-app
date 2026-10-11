@@ -89,7 +89,12 @@ through the local server's API. Everyone's password is `e2e-local-only`; flows
 get `${PASSWORD}`, `${APP_ID}` and `${<KEY>_EMAIL}` for each account in
 `PEOPLE` (`DIRECTOR_EMAIL`, `HAMLET_EMAIL`, …) and `${<KEY>_INVITE}` for each
 invite code the seed returns (`TWELFTH_INVITE`) — the server's own, as it
-issued it. Times are local to the machine, which is also the simulator's zone.
+issued it — and `${<KEY>_DAY}` for each day it names (`MARK_DAY`, a local
+`YYYY-MM-DD`). Times are local to the machine, which is also the simulator's zone.
+
+A flow that needs something changed behind the app's back while it runs — what
+another device would do — calls the local server from `e2e/scripts` with
+`runScript`; `${API_URL}` is its address (flow 10).
 
 ## A fix seen on screen has a flow
 

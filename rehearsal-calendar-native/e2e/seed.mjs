@@ -38,6 +38,9 @@ export const PEOPLE = {
   orsino: { email: 'orsino@e2e.test', firstName: 'Duke', lastName: 'Orsino', onboarded: true },
   viola: { email: 'viola@e2e.test', firstName: 'Viola', lastName: 'Messina', onboarded: true },
   sebastian: { email: 'sebastian@e2e.test', firstName: 'Sebastian', lastName: 'Messina', onboarded: false },
+  // The availability editor (10): marks of his own, in no project, so nothing
+  // another flow books lands on his days.
+  treplev: { email: 'treplev@e2e.test', firstName: 'Konstantin', lastName: 'Treplev', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -142,11 +145,20 @@ export async function seed({ client, apiUrl, timezone }) {
   // Only The Bear has him: its slots tomorrow name him, Three Sisters' never do.
   await call(apiUrl, 'PUT', '/native/availability/days', { token: token.smirnov, body: { days: [busy(1, 10, 14)] } });
 
+  // The editor (10) marks the first of these; the last is busy all day, and
+  // the flow changes it behind the screen's back while the editor is open.
+  const days = { before: localDate(2), mark: localDate(3), after: localDate(4), other: localDate(6) };
+  await call(apiUrl, 'PUT', '/native/availability/days', {
+    token: token.treplev,
+    body: { days: [{ date: days.other, entries: [{ startsAt: `${days.other}T00:00:00.000Z`, endsAt: `${days.other}T23:59:59.999Z`, type: 'busy', isAllDay: true }] }] },
+  });
+
   return {
     password: PASSWORD,
     people: Object.fromEntries(Object.entries(PEOPLE).map(([key, person]) => [key, { id: ids[key], email: person.email }])),
     projects: { hamlet: hamletId, seagull: seagullId, sisters: sistersId, bear: bearId, twelfth: twelfth.id },
     invites: { twelfth: twelfth.inviteCode },
+    days,
     rehearsals,
   };
 }

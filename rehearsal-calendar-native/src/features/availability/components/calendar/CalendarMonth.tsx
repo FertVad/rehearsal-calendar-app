@@ -80,10 +80,16 @@ export const CalendarMonth: React.FC<CalendarMonthProps> = ({
           const isToday = date === today;
           const isPast = date < today;
           const isSelected = selectedDates.includes(date);
+          // The dot's colour is the only sign of the mark, so it is said too.
+          const statusLabel = status === 'none' ? null : t.availability[status];
 
           return (
             <TouchableOpacity
               key={date}
+              testID={`day-${date}`}
+              accessibilityRole="button"
+              accessibilityLabel={statusLabel ? `${day}, ${statusLabel}` : String(day)}
+              accessibilityState={{ selected: isSelected }}
               style={[
                 styles.dayCell,
                 isToday && styles.dayCellToday,
