@@ -124,7 +124,10 @@ so that switch needs no rework.
 - `EXPO_PUBLIC_E2E=1` (set by the runner) silences the development warning
   toasts, which sit over the tab bar.
 - Maestro does not run the flows in file order, and they share one database:
-  a flow never relies on what another one created. Find a control relative to
+  a flow never relies on what another one created. A flow that asserts on
+  slots or busy times gets people of its own in the seed: a rehearsal another
+  flow books for a shared person changes their day (flow 07 has its own
+  director for that). Find a control relative to
   its own card (`below: ".*Act I run-through.*"`), not by `index`. A project
   opened in the planner arrives with its whole roster selected (DP01, flow
   07); a flow that needs another selection makes it itself.

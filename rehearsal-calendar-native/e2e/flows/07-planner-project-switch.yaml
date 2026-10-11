@@ -1,7 +1,9 @@
 # Switching the planner to another project selects that project's people, not
 # the ones the previous project had, and plans its slots for them (DP01, cause
-# fix 8). Three Sisters has three people, The Bear two; only the director is in
-# both, and Grigory Smirnov, The Bear's other, is busy tomorrow 10:00-14:00.
+# fix 8). Three Sisters has three people, The Bear two; only their director,
+# Olga Stage, is in both, and Grigory Smirnov, The Bear's other, is busy
+# tomorrow 10:00-14:00. Olga is in no other flow's projects, so nothing another
+# flow books lands on her day.
 appId: ${APP_ID}
 name: Planner follows the project
 tags:
@@ -11,7 +13,7 @@ tags:
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
-      EMAIL: ${DIRECTOR_EMAIL}
+      EMAIL: ${STAGE_EMAIL}
 - tapOn: "Planner, tab.*"
 - tapOn:
     id: planner-project

@@ -26,7 +26,9 @@ export const PEOPLE = {
   hamlet: { email: 'hamlet@e2e.test', firstName: 'Hamlet', lastName: 'Dane', onboarded: true },
   ophelia: { email: 'ophelia@e2e.test', firstName: 'Ophelia', lastName: 'Bright', onboarded: true },
   horatio: { email: 'horatio@e2e.test', firstName: 'Horatio', lastName: 'Friend', onboarded: true },
-  // The planner's project switch (07): two projects of their own.
+  // The planner's project switch (07): two projects of their own, under a
+  // director of their own, so no other flow's rehearsals weigh on their slots.
+  stage: { email: 'stage@e2e.test', firstName: 'Olga', lastName: 'Stage', onboarded: true },
   masha: { email: 'masha@e2e.test', firstName: 'Masha', lastName: 'Prozorova', onboarded: true },
   irina: { email: 'irina@e2e.test', firstName: 'Irina', lastName: 'Prozorova', onboarded: true },
   smirnov: { email: 'smirnov@e2e.test', firstName: 'Grigory', lastName: 'Smirnov', onboarded: true },
@@ -87,18 +89,18 @@ export async function seed({ client, apiUrl, timezone }) {
     token[key] = (await call(apiUrl, 'POST', '/auth/login', { body: { email: person.email, password: PASSWORD } })).accessToken;
   }
 
-  const project = async (name, description, cast) => {
+  const project = async (name, description, cast, owner = 'director') => {
     const { project: created } = await call(apiUrl, 'POST', '/native/projects',
-      { token: token.director, body: { name, description, timezone } });
-    const { inviteCode } = await call(apiUrl, 'POST', `/native/projects/${created.id}/invite`, { token: token.director, body: {} });
+      { token: token[owner], body: { name, description, timezone } });
+    const { inviteCode } = await call(apiUrl, 'POST', `/native/projects/${created.id}/invite`, { token: token[owner], body: {} });
     for (const key of cast) await call(apiUrl, 'POST', `/native/invite/${inviteCode}/join`, { token: token[key], body: {} });
     return created.id;
   };
   const hamletId = await project('Hamlet', 'Spring production', ['hamlet', 'ophelia', 'horatio']);
   const seagullId = await project('The Seagull', 'Studio reading', ['ophelia']);
-  // Three people, then two with nobody in common but the director (07).
-  const sistersId = await project('Three Sisters', 'Chekhov evening', ['masha', 'irina']);
-  const bearId = await project('The Bear', 'Chekhov evening', ['smirnov']);
+  // Three people, then two with nobody in common but their director (07).
+  const sistersId = await project('Three Sisters', 'Chekhov evening', ['masha', 'irina'], 'stage');
+  const bearId = await project('The Bear', 'Chekhov evening', ['smirnov'], 'stage');
 
   const rehearsal = async (projectId, title, day, from, to, cast) => {
     const { rehearsal: created } = await call(apiUrl, 'POST', `/native/projects/${projectId}/rehearsals`, {
