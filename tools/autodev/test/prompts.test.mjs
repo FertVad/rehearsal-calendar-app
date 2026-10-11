@@ -60,9 +60,29 @@ test('the reviewer is told when a round follows her earlier ones in the same con
   assert.match(P.review(task, { ...args, round: 2, earlier: true }), /второй и последний/);
 });
 
+test('commits that would not cherry-pick are ported first, by meaning, then the step itself', () => {
+  const port = { from: 'auto/deferred/T-108', commits: ['02a8549f93a7', 'c9f40a5e3d25'], conflicts: ['audit/TRIAGE_R4_R9.md'] };
+  const message = P.fixReview(task, 'R5-02 …', '', port);
+  assert.match(message, /Сначала перенеси на текущую ветку работу этой задачи из auto\/deferred\/T-108/);
+  assert.match(message, /- 02a8549\n- c9f40a5/);
+  assert.match(message, /конфликт: audit\/TRIAGE_R4_R9\.md/);
+  assert.match(message, /git commit --no-edit/);
+  assert.ok(message.indexOf('Сначала перенеси') < message.indexOf('R5-02'), 'the port comes before the notes');
+  assert.match(P.portTask(task, port, ''), /Больше ничего не меняй/);
+  assert.match(P.portTask(task, port, ''), /RESULT: DONE\nRESULT: BLOCKED: <причина>$/);
+  assert.doesNotMatch(P.fixReview(task, 'R5-02 …', ''), /Сначала перенеси/);
+});
+
 test('a step\'s fresh session is told what the branch already holds', () => {
   assert.match(P.fixChecks(task, [{ name: 'tests', ok: false, code: 1, tail: 'FAIL x' }], 'abc1234 fix'), /уже есть коммиты:\nabc1234 fix/);
   assert.match(P.fixReview(task, 'R-01 …', 'abc1234 fix'), /R-01 …/);
   assert.doesNotMatch(P.developTask(task), /уже есть коммиты/);
   assert.match(P.developTask(task), /Работай только над этой задачей/);
+});
+
+test('a note from the owner leads the message, which still ends with the marker request', () => {
+  const message = P.withNote(P.continueStep(task, 'develop'), 'node <файл> теперь разрешён');
+  assert.match(message, /^Заметка владельца к этой задаче \(через супервизор\):\nnode <файл> теперь разрешён/);
+  assert.match(message, /RESULT: DONE\nRESULT: BLOCKED: <причина>$/);
+  assert.equal(P.withNote('x', ''), 'x');
 });

@@ -35,7 +35,7 @@ test('the failing test is named by its own title', () => {
 test('the failure lines gathered over the whole run name the test, not the tail', () => {
   const step = { name: 'tests', code: 1, tail: 'filler\nfiller', failures: ['FAIL server/__tests__/startup/runtimeStartup.test.js', '  ● library import exports the app'] };
   assert.equal(flakeName([step]), 'library import exports the app');
-  assert.match(flakeTask({ id: 'T-202', task: { id: 'T-109' }, head: 'abcdef1', steps: [step], log: 'x', when: 'y' }), /runtimeStartup\.test\.js/);
+  assert.match(flakeTask({ id: 'T-202', task: { id: 'T-109' }, head: 'abcdef1', steps: [step], evidence: 'x', when: 'y' }), /runtimeStartup\.test\.js/);
 });
 
 test('the excerpt keeps what failed and leaves the passes out', () => {
@@ -63,13 +63,14 @@ test('a flaky test is queued right after the task it hit, with an id of its own'
   const id = nextFlakeId(QUEUE);
   assert.equal(id, 'T-201');
   const block = flakeTask({ id, task: { id: 'T-109' }, head: '712995b7296e', steps: [{ name: 'tests', code: 1, tail: jest }],
-    log: 'AUTODEV/.state/logs/T-109-checks.log', when: '10.10.2026, 10:05' });
+    evidence: 'Логи красного прогона — rehearsal-calendar-native/e2e/out/failed/T-109-x/', when: '10.10.2026, 10:05' });
   const queue = insertAfter(QUEUE, 'T-109', block);
   assert.deepEqual(parseTasks(queue).map((task) => task.id), ['T-108', 'T-109', 'T-201', 'T-130']);
   const flake = parseTasks(queue).find((task) => task.id === 'T-201');
   assert.match(flake.title, /^Нестабильный тест: Route authorization/);
   assert.match(flake.body, /712995b/);
   assert.match(flake.body, /Received: 401/);
+  assert.match(flake.body, /e2e\/out\/failed\/T-109-x/);
   assert.equal(parseTasks(queue).find((task) => task.id === 'T-109').body, 'Тело 9.');
   assert.equal(nextFlakeId(queue), 'T-202');
 });

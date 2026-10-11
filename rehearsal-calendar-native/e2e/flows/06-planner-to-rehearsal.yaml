@@ -2,6 +2,9 @@
 # planned it for, not the whole project (DP02, cause fix 7).
 appId: ${APP_ID}
 name: From the planner to a rehearsal
+tags:
+  - planner
+  - rehearsals
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml

@@ -55,7 +55,7 @@ export function flakeTitle(steps) {
 }
 
 /** The task's markdown, "## T-2NN Нестабильный тест: …" and what to do. */
-export function flakeTask({ id, task, head, steps, log, when }) {
+export function flakeTask({ id, task, head, steps, evidence, when }) {
   const excerpt = steps.map((step) => `### ${step.name} (код ${step.code})\n${failureExcerpt(failureText(step))}`).join('\n\n');
   return `## ${id} ${flakeTitle(steps)}
 
@@ -65,7 +65,7 @@ export function flakeTask({ id, task, head, steps, log, when }) {
 \`\`\`
 ${excerpt}
 \`\`\`
-Полный вывод — ${log}.
+${evidence}
 
 Найди причину нестабильности и устрани её по причине: не поднимай лимиты наугад и не добавляй повторы. «Красное до» — воспроизведи падение (повтор в цикле, нагрузка, тот же порядок файлов) и сохрани вывод в audit/evidence. Если тест охраняет исправленный баг — проверь, что сам баг не вернулся, и напиши это в отчёте.
 `;

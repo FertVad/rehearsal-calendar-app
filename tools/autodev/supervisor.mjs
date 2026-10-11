@@ -82,6 +82,9 @@ const CLAUDE_ENV = {
   CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1',
   CLAUDE_CODE_DISABLE_CRON: '1',
   CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1',
+  // A conflicted cherry-pick or merge takes its prepared message instead of
+  // waiting for an editor nobody will close.
+  GIT_EDITOR: 'true',
 };
 
 /**
@@ -120,6 +123,18 @@ function claudeBin() {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const stamp = () => new Date().toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
 const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', env: ENV, maxBuffer: 64 * 1024 * 1024 }).trim();
+
+/**
+ * The supervisor's own code as committed when it started. A commit that
+ * changes it restarts the supervisor at the next step boundary — nothing is
+ * running there — and launchd (KeepAlive) brings it back on the new code. The
+ * other way, a STOP file and a hand restart, once left the queue standing
+ * three hours after a limit had reset (2026-10-10).
+ */
+function codeVersion() {
+  try { return git(REPO, 'rev-parse', 'HEAD:tools/autodev'); } catch { return null; }
+}
+const STARTED_ON = codeVersion();
 
 let tasksById = {};
 const events = [];
@@ -263,21 +278,43 @@ function waitOut(state, task, who, limit) {
 
 const STEP_NOTE = {
   develop: 'начата',
+  port: 'перенос коммитов задачи на текущую ветку, новая сессия',
   'fix-checks': 'исправление упавших проверок, новая сессия',
   'fix-review': 'исправление замечаний ревью, новая сессия',
 };
 
 const STEP_TITLE = {
+  port: 'Перенос коммитов на текущую ветку',
   'fix-checks': 'Исправление упавших проверок',
   'fix-review': 'Исправление замечаний ревью',
 };
 
+/**
+ * AUTODEV/notes/<id>.md, from the owner (or Claude on the owner's behalf):
+ * appended once to the next message the task's developer gets, then moved to
+ * notes/delivered/. A session already running cannot be told anything
+ * otherwise — T-203's went on believing a script was still refused, and did
+ * not know where the red run's surviving artifacts were.
+ */
+function takeNote(task) {
+  const file = path.join(DIR, 'notes', `${task.id}.md`);
+  let text = '';
+  try { text = fs.readFileSync(file, 'utf8').trim(); } catch { return null; }
+  if (!text) return null;
+  const delivered = path.join(DIR, 'notes', 'delivered', `${task.id}-${new Date().toISOString().replace(/[:.]/g, '-')}.md`);
+  fs.mkdirSync(path.dirname(delivered), { recursive: true });
+  fs.renameSync(file, delivered);
+  return { text, delivered };
+}
+
 /** A fresh session's statement: the task, its commits so far, this step's purpose. */
 function stepPrompt(task, t) {
   const done = t.base ? git(WORKTREE, 'log', '--oneline', `${t.base}..HEAD`) : '';
-  if (t.step?.kind === 'fix-checks') return P.fixChecks(task, t.step.steps, done);
-  if (t.step?.kind === 'fix-review') return P.fixReview(task, t.step.review, done);
-  return P.developTask(task, done);
+  const port = t.step?.port;
+  if (t.step?.kind === 'port') return P.portTask(task, port, done);
+  if (t.step?.kind === 'fix-checks') return P.fixChecks(task, t.step.steps, done, port);
+  if (t.step?.kind === 'fix-review') return P.fixReview(task, t.step.review, done, port);
+  return P.developTask(task, done, port);
 }
 
 /**
@@ -299,7 +336,8 @@ async function develop(state, task, t) {
   const starting = t.sessionStarted === false;
   t.sessionStarted = true;
   saveState(STATE, state);
-  const prompt = starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind));
+  const note_ = takeNote(task);
+  const prompt = P.withNote(starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind)), note_?.text);
   const run = await runClaude({
     bin: claudeBin(), cwd: WORKTREE, prompt, env: CLAUDE_ENV, model: ownerModel(),
     sessionId: starting ? t.claudeSession : undefined,
@@ -309,6 +347,7 @@ async function develop(state, task, t) {
     log: path.join(LOGS, `${task.id}-claude.jsonl`),
     timeoutMs: 3 * 60 * 60 * 1000,
   });
+  if (note_) note(task, `разработчику передана заметка ${path.relative(DIR, note_.delivered)}`);
   if (run.missingSession && !starting) {
     t.sessionStarted = false; // it never existed: start it next step
     note(task, 'разработка: сессии нет — начну её заново');
@@ -389,16 +428,19 @@ async function check(state, task, t) {
     const red = result.steps.filter((s) => !s.ok);
     return red.length > 0 && red.every((s) => s.environment);
   };
+  const checksLog = path.join(LOGS, `${task.id}-checks.log`);
+  const logOffset = fs.existsSync(checksLog) ? fs.statSync(checksLog).size : 0;
   let checks = await runAll();
   // Red once more on the same commits, so a flaky test is told apart from the
   // task: green the second time, the task goes on and the test is queued as a
   // task of its own (lib/flakes.mjs). Three hit T-109 in a day.
   if (!checks.ok && !machineOnly(checks)) {
     const first = checks;
-    note(task, 'проверки: красные — повторяю на тех же коммитах, чтобы отличить нестабильный тест');
+    const kept = keepFailedRun(task, checksLog, logOffset, first);
+    note(task, `проверки: красные — повторяю на тех же коммитах, чтобы отличить нестабильный тест; логи красного прогона — ${kept}`);
     checks = await runAll();
     if (checks.ok) {
-      const id = queueFlake(task, head, first.steps.filter((s) => !s.ok && !s.environment));
+      const id = queueFlake(task, head, first.steps.filter((s) => !s.ok && !s.environment), kept);
       note(task, `проверки: на повторе зелёные — тест нестабилен, задача ни при чём; он поставлен в очередь как ${id}`);
     }
   }
@@ -426,8 +468,34 @@ async function check(state, task, t) {
   nextStep(t, { kind: 'fix-checks', steps: checks.steps.filter((step) => !step.ok) });
 }
 
+/**
+ * A red run's logs, kept where the developer can read them — in its own tree,
+ * under e2e/out (not in git) — before the rerun overwrites them. T-203's
+ * developer could reach neither the supervisor's log, outside its tree, nor
+ * the server log of the failed e2e run, gone with the rerun. The path,
+ * relative to the tree.
+ */
+function keepFailedRun(task, checksLog, offset, run) {
+  const rel = path.join('rehearsal-calendar-native', 'e2e', 'out', 'failed', `${task.id}-${new Date().toISOString().replace(/[:.]/g, '-')}`);
+  const dir = path.join(WORKTREE, rel);
+  fs.mkdirSync(dir, { recursive: true });
+  try { fs.writeFileSync(path.join(dir, 'checks.log'), fs.readFileSync(checksLog).subarray(offset)); } catch { /* no log */ }
+  // The e2e environment's own logs only when e2e ran red here; older ones would mislead.
+  if (run.steps.some((step) => step.name === 'e2e' && !step.ok)) {
+    const out = path.join(WORKTREE, 'rehearsal-calendar-native', 'e2e', 'out');
+    for (const name of ['server.log', 'metro.log', 'migrate.log', 'seed.json', 'junit.xml']) {
+      try { fs.copyFileSync(path.join(out, name), path.join(dir, name)); } catch { /* not written */ }
+    }
+    try {
+      const runs = fs.readdirSync(path.join(out, 'artifacts')).sort();
+      if (runs.length) fs.writeFileSync(path.join(dir, 'maestro-artifacts.txt'), `${path.join('rehearsal-calendar-native', 'e2e', 'out', 'artifacts', runs.at(-1))}\n`);
+    } catch { /* none */ }
+  }
+  return rel;
+}
+
 /** Queues a flaky test as a task right after `task`; the same test again is not queued twice. Its id. */
-function queueFlake(task, head, steps) {
+function queueFlake(task, head, steps, kept) {
   const file = path.join(DIR, 'TASKS.md');
   const text = fs.readFileSync(file, 'utf8');
   const title = flakeTitle(steps);
@@ -437,7 +505,8 @@ function queueFlake(task, head, steps) {
     return known.id;
   }
   const id = nextFlakeId(text);
-  const block = flakeTask({ id, task, head, steps, log: `AUTODEV/.state/logs/${task.id}-checks.log`, when: stamp() });
+  const evidence = `Логи красного прогона — в рабочем дереве, не в git: ${kept}/ — checks.log (вывод проверок)${steps.some((s) => s.name === 'e2e') ? ', server.log, metro.log, junit.xml и в maestro-artifacts.txt — папка Maestro со скриншотами и логом устройства' : ''}.`;
+  const block = flakeTask({ id, task, head, steps, evidence, when: stamp() });
   writeAtomic(file, insertAfter(text, task.id, block));
   return id;
 }
@@ -635,13 +704,17 @@ function adopt(state, task, t) {
   t.base = git(WORKTREE, 'rev-parse', 'HEAD');
   try {
     for (const sha of t.adopt) git(WORKTREE, 'cherry-pick', '-x', sha);
-  } catch (error) {
+  } catch {
+    // Not set aside again: the developer ports them, by meaning, as the first
+    // part of the step the task resumes at (prompts.portFirst).
+    let conflicts = [];
+    try { conflicts = git(WORKTREE, 'diff', '--name-only', '--diff-filter=U').split('\n').filter(Boolean); } catch { /* none listed */ }
     try { git(WORKTREE, 'cherry-pick', '--abort'); } catch { /* nothing in progress */ }
     git(WORKTREE, 'reset', '--hard', '--quiet', t.base);
-    t.phase = 'deferred';
-    t.deferReason = `коммиты из ${t.adoptedFrom} не легли на ${BRANCH}: ${String(error.message).split('\n')[0]}`;
-    state.current = null;
-    return note(task, `ОТЛОЖЕНО: ${t.deferReason}`);
+    const port = { from: t.adoptedFrom, commits: t.adopt, conflicts };
+    nextStep(t, t.resume ? { ...t.resume, port } : { kind: 'port', port });
+    delete t.resume;
+    return note(task, `коммиты из ${t.adoptedFrom} не легли на ${BRANCH} сами (конфликт: ${conflicts.join(', ') || 'не назван'}) — переносит разработчик, дальше — ${STEP_NOTE[t.step.kind]}`);
   }
   if (t.resume) {
     nextStep(t, t.resume);
@@ -670,6 +743,10 @@ function consumeDecisions(file, text, ids) {
 }
 
 async function step() {
+  if (!once && STARTED_ON && codeVersion() !== STARTED_ON) {
+    note(null, 'код супервизора обновился — перезапускаюсь на новом');
+    process.exit(0);
+  }
   const state = loadState(STATE);
   let queue = [];
   try { queue = parseTasks(fs.readFileSync(path.join(DIR, 'TASKS.md'), 'utf8')); } catch { /* no queue yet */ }

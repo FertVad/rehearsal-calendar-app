@@ -16,6 +16,7 @@ and on to the next, without anyone relaying messages between them.
 | `reports/T-001-<name>.md` | One per task: its timeline and, when done, the developer's report. |
 | `reviews/T-001-r1.md` | Astra's answer for each round. |
 | `DECISIONS.md` | For a paused task: `T-001: продолжить` (three more attempts / two more rounds) or `T-001: пропустить` (its commits leave `auto/main` and are kept on `auto/skipped/T-001`). |
+| `notes/T-001.md` | A note to the task's developer: added once to the next message it gets, then moved to `notes/delivered/`. |
 | `STOP` | While it exists, nothing new starts. |
 
 ## What it waits out, and what it stops for
@@ -94,6 +95,9 @@ never fires twice.
 - `RESULT: DONE` with changes left uncommitted goes back to the developer:
   checked, reviewed and pushed is only what is committed. A task set aside
   keeps its uncommitted work in a `git stash` named after it.
+- A commit that changes `tools/autodev` restarts the supervisor at its next
+  step boundary, where nothing is running; launchd brings it back on the new
+  code. No STOP file or hand restart is needed to deploy a fix.
 - State is written before each step (`AUTODEV/.state/state.json`); a crash,
   reboot or limit resumes there. Logs: `AUTODEV/.state/logs/`.
 

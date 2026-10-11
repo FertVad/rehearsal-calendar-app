@@ -2,6 +2,8 @@
 # not the whole project's — and a notification opens its rehearsal.
 appId: ${APP_ID}
 name: Inbox
+tags:
+  - notifications
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml

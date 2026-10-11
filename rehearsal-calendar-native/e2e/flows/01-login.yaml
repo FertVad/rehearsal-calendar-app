@@ -3,6 +3,10 @@
 # talking to it.
 appId: ${APP_ID}
 name: Sign in
+tags:
+  - smoke
+  - auth
+  - calendar
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml

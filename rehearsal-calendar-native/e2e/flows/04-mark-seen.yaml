@@ -3,6 +3,9 @@
 # of four (CLAUDE.md, "Seen System").
 appId: ${APP_ID}
 name: Mark a rehearsal seen
+tags:
+  - rehearsals
+  - seen
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
