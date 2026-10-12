@@ -1,0 +1,44 @@
+Cause fix 10 — a repeated create with the same Idempotency-Key: red before.
+Tests at 9ed5d83; server files restored from f92c3da (atomicity done, no key)
+for the run, then restored from HEAD:
+  routes/native/projects.js, routes/native/rehearsals.js, services/rehearsals/rehearsalService.js
+Schema (migration 012, canonical snapshot) as at 9ed5d83 in both runs.
+
+1) SQLite, from rehearsal-calendar-native/server:
+   NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/lifecycleAtomicity.test.js --silent -t "Idempotency-Key"
+   (failure headlines and assertion lines; stack frames and diff bodies stripped)
+
+  ● Creating again with the same Idempotency-Key › makes one project, and answers the repeat with it
+    - Expected  - 1
+    + Received  + 1
+    > 278 |     expect(second.body).toEqual(first.body);
+  ● Creating again with the same Idempotency-Key › makes one rehearsal, with one set of busy slots, announced once
+    - Expected  - 1
+    + Received  + 1
+    > 287 |     expect(second.body).toEqual(first.body);
+  ● Creating again with the same Idempotency-Key › the same key with a different request is refused, and creates nothing
+    Expected: 422
+    Received: 201
+    > 321 |     expect(res.status).toBe(422);
+  ● Creating again with the same Idempotency-Key › a malformed key is refused before anything is written
+    Expected: 400
+    Received: 201
+    > 340 |     expect((await createProject('short')).status).toBe(400);
+Tests:       4 failed, 12 skipped, 4 passed, 20 total
+
+   (The one-line diffs are the second answer's id: the repeat created a
+   second project / rehearsal. The four passing tests hold on both sides by
+   construction: different keys, another user's key, no key, failed create.)
+
+2) PostgreSQL, from rehearsal-calendar-native/server:
+   npm run test:r0-postgres -- --r4-only
+
+{"scenario":"controls","outcome":"PASS",...}
+{"scenario":"D01","outcome":"PASS",...}
+Error: timed out waiting for the second create to wait on the first one's key
+AssertionError [ERR_ASSERTION]: R4_LIFECYCLE probe failed unexpectedly
+
+   Without the key the second create never waits: it makes its own rehearsal.
+
+On 9ed5d83 both commands pass: Jest 20/20; R4_LIFECYCLE PASS with 7 contracts,
+"D01+R4_LIFECYCLE REGRESSION PASS".

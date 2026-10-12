@@ -11,7 +11,7 @@ interface ProjectContextType {
   error: string | null;
   setSelectedProject: (project: Project | null) => void;
   refreshProjects: () => Promise<void>;
-  createProject: (name: string, description?: string, timezone?: string) => Promise<Project>;
+  createProject: (idempotencyKey: string, name: string, description?: string, timezone?: string) => Promise<Project>;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -50,12 +50,16 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     await fetchProjects();
   };
 
-  const createProject = async (name: string, description?: string, timezone?: string): Promise<Project> => {
-    const response = await projectsAPI.createProject({ name, description, timezone });
+  const createProject = async (
+    idempotencyKey: string, name: string, description?: string, timezone?: string,
+  ): Promise<Project> => {
+    const response = await projectsAPI.createProject({ name, description, timezone }, idempotencyKey);
     const newProject = response.data.project;
 
-    // Add to local state
-    setProjects(prev => [newProject, ...prev]);
+    // Add to local state. A repeat is answered with the project the first try
+    // made, which a refresh in between may already have listed: replace it
+    // rather than show it twice.
+    setProjects(prev => [newProject, ...prev.filter(p => p.id !== newProject.id)]);
 
     // Auto-select the new project
     setSelectedProject(newProject);

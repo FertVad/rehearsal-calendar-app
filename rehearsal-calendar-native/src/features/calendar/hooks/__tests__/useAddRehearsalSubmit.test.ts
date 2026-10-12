@@ -255,7 +255,8 @@ describe('useAddRehearsalSubmit Hook', () => {
           // An untitled rehearsal must not send an empty string.
           title: undefined,
           location: 'Studio A',
-        })
+        }),
+        expect.any(String)
       );
 
       // Should show success alert
@@ -288,7 +289,8 @@ describe('useAddRehearsalSubmit Hook', () => {
         '1',
         expect.objectContaining({
           location: undefined, // Should be undefined, not empty string
-        })
+        }),
+        expect.any(String)
       );
     });
 
@@ -510,6 +512,59 @@ describe('useAddRehearsalSubmit Hook', () => {
     });
   });
 
+  // A create whose answer was lost reads as a failure and is tapped again.
+  // Each tap used to make another rehearsal; the server now creates once per
+  // Idempotency-Key, and the form keeps its key for the same request (cause
+  // fix 10: D03).
+  describe('Idempotency-Key of a create', () => {
+    const keysSent = () => (rehearsalsAPI.create as jest.Mock).mock.calls.map((call) => call[2]);
+    const submit = async (result: { current: { handleSubmit: () => Promise<void> } }) => {
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+    };
+
+    it('a retry of the same form after a failure sends the same key', async () => {
+      (rehearsalsAPI.create as jest.Mock)
+        .mockRejectedValueOnce(new Error('timeout of 15000ms exceeded'))
+        .mockResolvedValueOnce({ data: { rehearsal: { id: 'r1' } } });
+      const { result } = renderHook(() => useAddRehearsalSubmit(defaultProps));
+
+      await submit(result);
+      await submit(result);
+
+      const [first, second] = keysSent();
+      expect(first).toMatch(/^[A-Za-z0-9_-]{16,100}$/);
+      expect(second).toBe(first);
+    });
+
+    it('a changed form is a new create, with a new key', async () => {
+      (rehearsalsAPI.create as jest.Mock).mockRejectedValue(new Error('timeout'));
+      const { result, rerender } = renderHook(
+        (props: typeof defaultProps) => useAddRehearsalSubmit(props),
+        { initialProps: defaultProps },
+      );
+
+      await submit(result);
+      rerender({ ...defaultProps, location: 'Studio B' });
+      await submit(result);
+
+      const [first, second] = keysSent();
+      expect(second).not.toBe(first);
+    });
+
+    it('after a success, the next create is a new one even if it asks the same', async () => {
+      (rehearsalsAPI.create as jest.Mock).mockResolvedValue({ data: { rehearsal: { id: 'r1' } } });
+      const { result } = renderHook(() => useAddRehearsalSubmit(defaultProps));
+
+      await submit(result);
+      await submit(result);
+
+      const [first, second] = keysSent();
+      expect(second).not.toBe(first);
+    });
+  });
+
   describe('Member Participant IDs', () => {
     it('should include participant_ids when members selected', async () => {
       (rehearsalsAPI.create as jest.Mock).mockResolvedValue({
@@ -531,7 +586,8 @@ describe('useAddRehearsalSubmit Hook', () => {
         '1',
         expect.objectContaining({
           participant_ids: ['user1', 'user2'],
-        })
+        }),
+        expect.any(String)
       );
     });
 

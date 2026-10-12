@@ -12,6 +12,7 @@ import { getSyncSettings } from '../../../shared/utils/calendarStorage';
 import { syncRehearsalToCalendar } from '../../../shared/services/calendar';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
@@ -56,6 +57,7 @@ export function useAddRehearsalSubmit({
 }: UseAddRehearsalSubmitProps) {
   const navigation = useNavigation<NavigationType>();
   const [loading, setLoading] = useState(false);
+  const idempotency = useIdempotencyKey();
   const { user } = useAuth();
   const userTimezone = user?.timezone || 'UTC';
 
@@ -92,7 +94,12 @@ export function useAddRehearsalSubmit({
         );
         savedRehearsal = response.data.rehearsal || response.data;
       } else {
-        const response = await rehearsalsAPI.create(localSelectedProject!.id, rehearsalData);
+        // The same form sent again after a lost answer gets the rehearsal the
+        // first try made, not a second one (useIdempotencyKey).
+        const projectId = localSelectedProject!.id;
+        const response = await rehearsalsAPI.create(projectId, rehearsalData,
+          idempotency.keyFor({ projectId, rehearsalData }));
+        idempotency.settle();
         savedRehearsal = response.data.rehearsal;
       }
 

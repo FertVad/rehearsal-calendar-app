@@ -277,9 +277,10 @@ export const projectsAPI = {
       },
     }),
 
-  // Create new project
-  createProject: (data: { name: string; description?: string; timezone?: string }) =>
-    api.post('/native/projects', data),
+  // Create new project. A repeat with the same key gets the same project
+  // (useIdempotencyKey).
+  createProject: (data: { name: string; description?: string; timezone?: string }, idempotencyKey: string) =>
+    api.post('/native/projects', data, { headers: { 'Idempotency-Key': idempotencyKey } }),
 
   // Delete project
   deleteProject: (projectId: string) =>
@@ -308,9 +309,10 @@ export const rehearsalsAPI = {
       },
     }),
 
-  // Create rehearsal
-  create: (projectId: string, data: any) =>
-    api.post(`/native/projects/${projectId}/rehearsals`, data),
+  // Create rehearsal. A repeat with the same key gets the same rehearsal
+  // (useIdempotencyKey).
+  create: (projectId: string, data: any, idempotencyKey: string) =>
+    api.post(`/native/projects/${projectId}/rehearsals`, data, { headers: { 'Idempotency-Key': idempotencyKey } }),
 
   // Update rehearsal
   update: (projectId: string, rehearsalId: string, data: any) =>
