@@ -7,7 +7,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'].includes(scenario));
+assert.ok(['controls', 'A02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -44,7 +44,7 @@ await control.query('SET search_path TO r0_fixture');
 
 // Schema/migration suites start with the empty owned application schema; they
 // never mistake the diagnostic subset below for canonical provisioning.
-if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'].includes(scenario)) {
+if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'].includes(scenario)) {
   target.searchParams.set('options', '-c search_path=r0_fixture');
   process.env.DATABASE_URL = target.href;
   try {
@@ -56,6 +56,8 @@ if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R6_AVAILABILITY', 'R7
           ? await (await import('./r3Email.mjs')).probeR3Email({ connectionString: target.href, control })
           : scenario === 'R3_AUTH'
             ? await (await import('./r3Auth.mjs')).probeR3Auth({ connectionString: target.href, control, allowedPorts })
+            : scenario === 'R4_LIFECYCLE'
+              ? await (await import('./r4Lifecycle.mjs')).probeR4Lifecycle({ connectionString: target.href, control, allowedPorts })
             : scenario === 'R6_AVAILABILITY'
               ? await (await import('./r6Availability.mjs')).probeR6Availability({ connectionString: target.href, control, allowedPorts })
               : scenario === 'R7_IMPORT'
@@ -181,18 +183,6 @@ if (scenario === 'controls') {
   for (const asset of ['dashboard.js', 'dashboard.css']) assert.equal((await fetch(base + '/admin/' + asset)).status, 200);
   result = { outcome: 'PASS', controls: ['health', 'project+owner', 'member403/no write', 'valid roster+busy+inbox',
     'adapter rollback and commit checked on independent connection', 'admin CSP/assets'], externalConnections: deniedConnections };
-} else if (scenario === 'B02') {
-  await control.query(`CREATE FUNCTION reject_second_write() RETURNS trigger LANGUAGE plpgsql AS $$
-    BEGIN RAISE EXCEPTION 'R0_INJECTED_SECOND_WRITE'; END $$;
-    CREATE TRIGGER reject_second_write BEFORE INSERT ON native_project_members
-    FOR EACH ROW EXECUTE FUNCTION reject_second_write()`);
-  const response = await http('/api/native/projects', { method: 'POST', body: { name: 'R0 orphan candidate' } });
-  assert.equal(response.status, 500);
-  const projects = await count('native_projects', "name = 'R0 orphan candidate'");
-  assert.equal(projects, 1, 'Baseline B02: first write survives second-write failure');
-  assert.equal(await count('native_project_members', 'project_id != 1'), 0);
-  result = { outcome: 'KNOWN_DEFECT_REPRODUCED', status: response.status, orphanProjects: projects,
-    expectation: 'Failed project creation must roll back its first write' };
 } else if (scenario === 'D01') {
   // R4 (roster.js): a participant outside the project is refused before any
   // write; an answer never puts anyone on a rehearsal; the cast is not for

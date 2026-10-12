@@ -66,20 +66,21 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
       return res.status(400).json({ error: 'Project name is required' });
     }
 
-    // Create project in native_projects table
+    // The project and its owner, one transaction (R4: B02). Committed apart, a
+    // failure between them left a project nobody owns — nobody could see,
+    // delete or hand it on — and the retry made a second one.
     const projectTimezone = timezone || DEFAULT_TIMEZONE;
-    const newProject = await db.get(
-      'INSERT INTO native_projects (name, description, timezone, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING *',
-      [name, description || null, projectTimezone]
-    );
-
-    const projectId = newProject.id;
-
-    // Add creator as owner member
-    await db.run(
-      'INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at) VALUES ($1, $2, $3, $4, NOW(), NOW())',
-      [projectId, accountId, 'owner', 'active']
-    );
+    const newProject = await db.transaction(async (tx) => {
+      const created = await tx.get(
+        'INSERT INTO native_projects (name, description, timezone, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING *',
+        [name, description || null, projectTimezone]
+      );
+      await tx.run(
+        'INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at) VALUES ($1, $2, $3, $4, NOW(), NOW())',
+        [created.id, accountId, 'owner', 'active']
+      );
+      return created;
+    });
 
     res.status(201).json({
       project: {
@@ -182,16 +183,20 @@ router.delete('/:projectId', requireAuth, asyncHandler(async (req, res) => {
     // returns availability with no source filter, so those hours would make
     // someone look unavailable in every other project's planner, forever.
     //
-    // Must run before the project, or the subselect has nothing left to find.
-    await db.run(
-      `DELETE FROM native_user_availability
-       WHERE source = 'rehearsal'
-       AND external_event_id IN (SELECT CAST(id AS TEXT) FROM native_rehearsals WHERE project_id = $1)`,
-      [projectId]
-    );
+    // Must run before the project, or the subselect has nothing left to find —
+    // and in the same transaction (R4: B02): committed alone, a failure of the
+    // delete below left every rehearsal standing with nobody busy for it.
+    await db.transaction(async (tx) => {
+      await tx.run(
+        `DELETE FROM native_user_availability
+         WHERE source = 'rehearsal'
+         AND external_event_id IN (SELECT CAST(id AS TEXT) FROM native_rehearsals WHERE project_id = $1)`,
+        [projectId]
+      );
 
-    // Delete project (CASCADE will automatically delete all related data)
-    await db.run('DELETE FROM native_projects WHERE id = $1', [projectId]);
+      // Delete project (CASCADE will automatically delete all related data)
+      await tx.run('DELETE FROM native_projects WHERE id = $1', [projectId]);
+    });
 
     // Send push notifications to all members
     if (members.length > 0) {

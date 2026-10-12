@@ -150,6 +150,11 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(asyn
 
     const updatedRehearsal = await updateRehearsal(rehearsalId, projectId, req.body);
 
+    // Deleted between the check above and the edit.
+    if (!updatedRehearsal) {
+      return res.status(404).json({ error: 'Rehearsal not found' });
+    }
+
     // The roster, not the project — see the note on creation. Participants are
     // already settled by this point, so newcomers to the rehearsal are included
     // and anyone dropped from it is not.

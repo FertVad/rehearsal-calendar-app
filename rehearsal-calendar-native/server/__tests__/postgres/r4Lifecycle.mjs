@@ -1,0 +1,149 @@
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import { fileURLToPath } from 'node:url';
+import { inspectSchema } from '../../database/schema/inspect.mjs';
+import { manifest } from '../../database/schema/manifest.mjs';
+import { loadArtifacts, runMigrations } from '../../database/migrations/core.mjs';
+
+// Lifecycle operations on PostgreSQL (R4, cause fix 10: B01, B02, D03): each
+// commits whole or not at all through the real adapter and the real app. The
+// last write of each operation is made to fail with a trigger, so everything
+// before it has already run on the same connection; an independent connection
+// then checks that none of it is left, and the same request succeeds once the
+// fault is gone. Replaces the R0 baseline that reproduced B02.
+export async function probeR4Lifecycle({ connectionString, control, allowedPorts }) {
+  const artifacts = await loadArtifacts(manifest, fileURLToPath(new URL('../../', import.meta.url)));
+  assert.equal((await runMigrations({ connectionString, schema: 'r0_fixture', request: { mode: 'fresh' },
+    artifacts, inspectSchema })).outcome, 'applied');
+  const database = await import('../../database/db.js');
+  const { createApp } = await import('../../app.js');
+  const { generateTokens } = await import('../../middleware/jwtMiddleware.js');
+  await database.initDatabase({ connectionString });
+  const server = await new Promise((resolve, reject) => {
+    const listener = createApp().listen(0, '127.0.0.1', () => resolve(listener));
+    listener.once('error', reject);
+  });
+  allowedPorts.add(server.address().port);
+  const contracts = [];
+
+  const q = (sql, params) => control.query(sql, params);
+  const count = async (from, params = []) => Number((await q(`SELECT count(*) FROM r0_fixture.${from}`, params)).rows[0].count);
+  const person = async (label) => (await q(`INSERT INTO r0_fixture.native_users (email, first_name, timezone)
+    VALUES ($1, $2, 'UTC') RETURNING id`, [`${label}@fixture.invalid`, label])).rows[0].id;
+  const owner = await person('owner');
+  const member = await person('member');
+  const token = generateTokens(owner, 1).accessToken;
+  const call = (method, path, body) => new Promise((resolve, reject) => {
+    const bytes = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
+    const req = http.request({ hostname: '127.0.0.1', port: server.address().port, method, path,
+      headers: { Connection: 'close', Authorization: `Bearer ${token}`,
+        ...(bytes ? { 'Content-Type': 'application/json', 'Content-Length': bytes.length } : {}) } }, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.once('end', () => {
+        const text = Buffer.concat(chunks).toString();
+        resolve({ status: res.statusCode, body: text ? JSON.parse(text) : null });
+      });
+    });
+    req.once('error', reject);
+    req.setTimeout(10000, () => req.destroy(new Error('R4 lifecycle request timed out')));
+    req.end(bytes);
+  });
+
+  // Every table these operations write, as an independent connection sees it.
+  const snapshot = async () => {
+    const rows = {};
+    for (const table of ['native_projects', 'native_project_members', 'native_rehearsals',
+      'native_rehearsal_responses', 'native_user_availability', 'native_push_reminders']) {
+      rows[table] = (await q(`SELECT * FROM r0_fixture.${table} ORDER BY id`)).rows;
+    }
+    return rows;
+  };
+  await q(`CREATE FUNCTION r0_fixture.injected_failure() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'R4_INJECTED_FAILURE'; END $$`);
+  // Fails `event` on `table` for the length of `body`, and checks that the
+  // request answered 500 and left every row as it was.
+  const failing = async (event, table, request) => {
+    const before = await snapshot();
+    await q(`CREATE TRIGGER injected_failure BEFORE ${event} ON r0_fixture.${table}
+      FOR EACH ROW EXECUTE FUNCTION r0_fixture.injected_failure()`);
+    let response;
+    try { response = await request(); }
+    finally { await q(`DROP TRIGGER injected_failure ON r0_fixture.${table}`); }
+    assert.equal(response.status, 500, `the injected failure must surface: ${JSON.stringify(response.body)}`);
+    assert.deepEqual(await snapshot(), before, `a failure on ${event} ${table} must leave nothing behind`);
+  };
+
+  const START = '2031-05-20T17:00:00.000Z';
+  const END = '2031-05-20T19:00:00.000Z';
+  try {
+    // B02: a project and its owner.
+    await failing('INSERT', 'native_project_members', () => call('POST', '/api/native/projects', { name: 'Lifecycle' }));
+    const created = await call('POST', '/api/native/projects', { name: 'Lifecycle' });
+    assert.equal(created.status, 201);
+    const projectId = Number(created.body.project.id);
+    assert.equal(await count(`native_projects WHERE name = 'Lifecycle'`), 1, 'B02: the retry makes one project');
+    assert.equal(await count(`native_project_members WHERE project_id = $1 AND user_id = $2 AND role = 'owner'`,
+      [projectId, owner]), 1);
+    contracts.push('a project whose owner cannot be written is not created; the retry creates one, owned (B02)');
+    await q(`INSERT INTO r0_fixture.native_project_members (project_id, user_id, role, status) VALUES ($1, $2, 'member', 'active')`,
+      [projectId, member]);
+
+    // D03: creating a rehearsal.
+    const rehearsal = { title: 'Run', startsAt: START, endsAt: END, participant_ids: [owner, member] };
+    await failing('INSERT', 'native_user_availability',
+      () => call('POST', `/api/native/projects/${projectId}/rehearsals`, rehearsal));
+    const made = await call('POST', `/api/native/projects/${projectId}/rehearsals`, rehearsal);
+    assert.equal(made.status, 201);
+    const rehearsalId = Number(made.body.rehearsal.id);
+    assert.equal(await count('native_rehearsals'), 1, 'D03: the retry makes one rehearsal');
+    assert.equal(await count(`native_user_availability WHERE external_event_id = $1`, [String(rehearsalId)]), 2);
+    contracts.push('a rehearsal whose busy slots cannot be written is not created; the retry creates one (D03)');
+
+    // D03: editing it — moved, recast, its claims released, all or nothing.
+    await q(`INSERT INTO r0_fixture.native_push_reminders (rehearsal_id, user_id, reminder_type, sent_at) VALUES ($1, $2, '24h', NOW())`,
+      [rehearsalId, member]);
+    const moved = { title: 'Moved', startsAt: '2031-05-22T17:00:00.000Z', endsAt: '2031-05-22T19:00:00.000Z', participant_ids: [owner] };
+    await failing('INSERT', 'native_user_availability',
+      () => call('PUT', `/api/native/projects/${projectId}/rehearsals/${rehearsalId}`, moved));
+    assert.equal((await call('PUT', `/api/native/projects/${projectId}/rehearsals/${rehearsalId}`, moved)).status, 200);
+    assert.deepEqual((await q(`SELECT user_id, starts_at FROM r0_fixture.native_user_availability WHERE external_event_id = $1`,
+      [String(rehearsalId)])).rows.map((row) => [row.user_id, row.starts_at.toISOString()]), [[owner, moved.startsAt]]);
+    assert.equal(await count('native_push_reminders WHERE rehearsal_id = $1', [rehearsalId]), 0);
+    contracts.push('an edit whose busy slots cannot be rebuilt keeps the old time, cast, slots and claims (D03)');
+
+    // B01: removing a member.
+    await q(`INSERT INTO r0_fixture.native_rehearsal_responses (rehearsal_id, user_id, response) VALUES ($1, $2, 'no')`, [rehearsalId, member]);
+    await q(`INSERT INTO r0_fixture.native_user_availability (user_id, starts_at, ends_at, type, source, external_event_id, is_all_day)
+      VALUES ($1, $2, $3, 'busy', 'rehearsal', $4, FALSE)`, [member, START, END, String(rehearsalId)]);
+    const removal = () => call('DELETE', `/api/native/projects/${projectId}/members/${member}`);
+    await failing('DELETE', 'native_user_availability', removal);
+    assert.equal((await removal()).status, 200, 'B01: the retry still finds the member');
+    assert.equal(await count('native_project_members WHERE user_id = $1', [member]), 0);
+    assert.equal(await count('native_rehearsal_responses WHERE user_id = $1', [member]), 0);
+    assert.equal(await count('native_user_availability WHERE user_id = $1', [member]), 0);
+    contracts.push('a removal that fails half-way keeps the member whole, and the retry removes everything (B01)');
+
+    // D03: deleting the rehearsal.
+    const remove = () => call('DELETE', `/api/native/projects/${projectId}/rehearsals/${rehearsalId}`);
+    await failing('DELETE', 'native_rehearsals', remove);
+    assert.equal((await remove()).status, 200);
+    assert.equal(await count('native_rehearsals WHERE id = $1', [rehearsalId]), 0);
+    assert.equal(await count('native_user_availability WHERE external_event_id = $1', [String(rehearsalId)]), 0);
+    contracts.push('a rehearsal that cannot be deleted keeps its cast and busy slots (D03)');
+
+    // B02: deleting the project, with a rehearsal still on it.
+    const last = await call('POST', `/api/native/projects/${projectId}/rehearsals`, { ...rehearsal, participant_ids: [owner] });
+    assert.equal(last.status, 201);
+    const dropProject = () => call('DELETE', `/api/native/projects/${projectId}`);
+    await failing('DELETE', 'native_projects', dropProject);
+    assert.equal((await dropProject()).status, 200);
+    assert.equal(await count('native_projects WHERE id = $1', [projectId]), 0);
+    assert.equal(await count(`native_user_availability WHERE source = 'rehearsal'`), 0);
+    contracts.push('a project that cannot be deleted keeps its rehearsals\' busy slots; the retry deletes both (B02)');
+  } finally {
+    await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });
+    await database.closeDatabase();
+  }
+  return { outcome: 'PASS', contracts };
+}

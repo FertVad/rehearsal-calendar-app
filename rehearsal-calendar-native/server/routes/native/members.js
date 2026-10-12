@@ -459,26 +459,31 @@ router.delete('/:projectId/members/:userId', requireAuth, asyncHandler(async (re
     // Get project name BEFORE deletion
     const project = await db.get('SELECT name FROM native_projects WHERE id = $1', [projectId]);
 
-    // Remove member from project
-    await db.run(
-      'DELETE FROM native_project_members WHERE project_id = $1 AND user_id = $2',
-      [projectId, userId]
-    );
+    // One transaction (R4: B01). Committed one by one, a failure after the
+    // first delete left the rows and busy hours below for good: the person was
+    // no longer a member, so the retry answered 404 and never reached them.
+    await db.transaction(async (tx) => {
+      // Remove member from project
+      await tx.run(
+        'DELETE FROM native_project_members WHERE project_id = $1 AND user_id = $2',
+        [projectId, userId]
+      );
 
-    // And take them off the project's rehearsals. Reads already ignore a row
-    // left by someone who is no longer an active member (roster.js), so this
-    // is tidiness rather than the lock; it used to be the only lock, and a
-    // removed member went on receiving reminders and edit pushes.
-    await takeOffProjectRehearsals(db, projectId, userId);
+      // And take them off the project's rehearsals. Reads already ignore a row
+      // left by someone who is no longer an active member (roster.js), so this
+      // is tidiness rather than the lock; it used to be the only lock, and a
+      // removed member went on receiving reminders and edit pushes.
+      await takeOffProjectRehearsals(tx, projectId, userId);
 
-    // The busy slots those rehearsals put on their calendar go too, or they
-    // stay unavailable to their other projects at times nobody expects them.
-    await db.run(
-      `DELETE FROM native_user_availability
-       WHERE user_id = $1 AND source = 'rehearsal'
-       AND external_event_id IN (SELECT CAST(id AS TEXT) FROM native_rehearsals WHERE project_id = $2)`,
-      [userId, projectId]
-    );
+      // The busy slots those rehearsals put on their calendar go too, or they
+      // stay unavailable to their other projects at times nobody expects them.
+      await tx.run(
+        `DELETE FROM native_user_availability
+         WHERE user_id = $1 AND source = 'rehearsal'
+         AND external_event_id IN (SELECT CAST(id AS TEXT) FROM native_rehearsals WHERE project_id = $2)`,
+        [userId, projectId]
+      );
+    });
 
     // Send push notification to the removed user
     try {
