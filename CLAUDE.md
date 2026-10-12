@@ -136,9 +136,10 @@ server/public/
 ### Database
 - **Server runtime, development and production**: PostgreSQL only. There is no SQLite fallback.
 - **SQLite**: isolated test fixtures only; they do not prove PostgreSQL behavior.
-- **Canonical schema**: twenty-two `native_*` application tables: thirteen domain
-  tables, six shared-budget tables, two for email address proof (group 010) and
-  one for push tickets awaiting their receipts (group 011).
+- **Canonical schema**: twenty-three `native_*` application tables: thirteen domain
+  tables, six shared-budget tables, two for email address proof (group 010),
+  one for push tickets awaiting their receipts (group 011) and one for the
+  idempotency keys of creates (group 012).
   Migration history is separate. Retired
   payment/activity/participant tables are not created by fresh provisioning.
   Actual production catalog and migration history have not been inspected here.

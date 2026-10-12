@@ -35,7 +35,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R1 | 10 | READY_FOR_CHECK — 7 VERIFIED, H02/IA01/IS02 READY_FOR_CHECK (DEV-15/OPS-IA01/OPS-IS02); release gates открыты |
 | R2 | 8 | READY_FOR_CHECK — 7 VERIFIED; FM01 ждёт даты конвертации production (OPS-FM01-DATE, ревью R2-01); OPS-R2-ADOPT до деплоя 007/008 |
 | R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 — в коде, PG-сценарии `dd73b96`; маршруты A01 `d5564ee`, `3859ece` (почтой — после OPS-EMAIL); правило Google/Apple `d964417`, `56d11e9`, `43cbdac`; сброс пароля `ec292ee`; смена email `50ba23d`; клиент регистрации `77bddd1`..`286787a`; экраны сброса и смены адреса `23f59cb`, замечания ревью `a7e42d8` (T-130) — A01, A03, A04, HP01, HP02 READY_FOR_CHECK до ревью и DEV-20; AC05 не сделан |
-| R4 | 8 | IN_PROGRESS — [отчёт](REMEDIATION_R4.md): D01, D02, DF02, D04 VERIFIED (правка №1); [разбор](TRIAGE_R4_R9.md) |
+| R4 | 8 | IN_PROGRESS — [отчёт](REMEDIATION_R4.md): D01, D02, DF02, D04 VERIFIED (правка №1); правка №10 (B01, B02, D03) READY_FOR_CHECK до ревью, выкладка сервера — после миграции 012; [разбор](TRIAGE_R4_R9.md) |
 | R5 | 15 | IN_PROGRESS — [отчёт](REMEDIATION_R5.md): правка №8 (DP01) READY_FOR_CHECK до DEV-19; остальные TODO |
 | R6 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R6.md): правка №2 принята ревью (C02 VERIFIED; CC02–CC05, C03 до DEV-17/DEV-18); правка №3 принята ревью (DP04 VERIFIED; C01, CC01 до DEV-08); [разбор](TRIAGE_R4_R9.md) |
 | R7 | 16 | IN_PROGRESS — [отчёт](REMEDIATION_R7.md): правка №4 принята ревью `ad09154` (EI01, EI03, EI04, ES02 — READY_FOR_CHECK до DEV-03/04/05); [разбор](TRIAGE_R4_R9.md) |
@@ -77,8 +77,8 @@ OPS-R3-DATA (25.09).
 | AC03 | Medium | Нет | R5 | TODO | Поздний ответ профиля восстанавливает user после выхода или подменяет user нового входа | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
 | AC04 | Medium | Нет | R5 | TODO | OAuth токен и возможный Authorization передаются в незащищённый log sink | [правка причины №13 — разбор](TRIAGE_R4_R9.md) |
 | AC05 | Medium | Нет | R3 | TODO | Долгоживущие bearer credentials сохраняются в обычном AsyncStorage | — |
-| B01 | Medium | Нет | R4 | TODO | удаление участника неатомарно, сбой оставляет связанные записи | [правка причины №10 — разбор](TRIAGE_R4_R9.md) |
-| B02 | Medium | Нет | R4 | TODO | создание/удаление проекта частично фиксируются при ошибке | [правка причины №10 — разбор](TRIAGE_R4_R9.md) |
+| B01 | Medium | Нет | R4 | READY_FOR_CHECK | удаление участника неатомарно, сбой оставляет связанные записи | [правка причины №10 — f92c3da; ждёт ревью](REMEDIATION_R4.md) |
+| B02 | Medium | Нет | R4 | READY_FOR_CHECK | создание/удаление проекта частично фиксируются при ошибке | [правка причины №10 — f92c3da, 9ed5d83, 7cde64f; миграция 012; ждёт ревью](REMEDIATION_R4.md) |
 | B03 | High | Нет | R1 | VERIFIED | неограниченный диапазон дат блокирует event loop до проверки членства | [Исполнение, миграция и проверки — e0a0ede](REMEDIATION_B03.md) |
 | B04 | Medium | Нет | R1 | VERIFIED | альтернативный join URL обходит rate limit приглашений | [Исполнение, миграция и проверки — fd5f1eb](REMEDIATION_B04.md) |
 | BC01 | Medium | Нет | R5 | TODO | проекты и выбранный проект переживают смену аккаунта | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
@@ -96,7 +96,7 @@ OPS-R3-DATA (25.09).
 | CC06 | Medium | Нет | R6 | TODO | Ветка сохранения через полночь недостижима из Save | [правка причины №15 — разбор](TRIAGE_R4_R9.md) |
 | D01 | High | Нет | R4 | VERIFIED | администратор проекта пишет занятость произвольным пользователям | [правка причины №1 — d9a25fd, ревью f0d90b8 принято](REMEDIATION_R4.md) |
 | D02 | High | Нет | R4 | VERIFIED | не приглашённый участник сам получает доступ через RSVP | [правка причины №1 — d9a25fd, ревью f0d90b8 принято](REMEDIATION_R4.md) |
-| D03 | High | Нет | R4 | TODO | жизненный цикл репетиции фиксируется частями | [правка причины №10 — разбор](TRIAGE_R4_R9.md) |
+| D03 | High | Нет | R4 | READY_FOR_CHECK | жизненный цикл репетиции фиксируется частями | [правка причины №10 — f92c3da, 9ed5d83, 7cde64f; миграция 012; ждёт ревью](REMEDIATION_R4.md) |
 | D04 | Medium | Нет | R4 | VERIFIED | администратор не может открыть редактирование репетиции, в которую не приглашён | [правка причины №1 — d9a25fd, ревью f0d90b8 принято](REMEDIATION_R4.md) |
 | DF01 | Medium | Да | R6 | TODO | редактирование сдвигает время при разных timezone профиля и устройства | [правка причины №14 — разбор](TRIAGE_R4_R9.md) |
 | DF02 | Medium | Нет | R4 | VERIFIED | невозможно удалить всех участников при редактировании | [правка причины №1 — d9a25fd, ревью f0d90b8 принято](REMEDIATION_R4.md) |
