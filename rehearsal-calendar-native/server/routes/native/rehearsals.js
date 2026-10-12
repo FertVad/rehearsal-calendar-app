@@ -21,6 +21,7 @@ import {
 } from '../../services/rehearsals/rsvpService.js';
 import { fullName } from '../../utils/names.js';
 import { rosterOf, viewerOf, RosterRefused } from '../../services/rehearsals/roster.js';
+import { idempotencyKeyOf, IdempotencyRefused } from '../../services/idempotency.js';
 import {
   notifyRehearsalCreated,
   notifyRehearsalUpdated,
@@ -96,7 +97,11 @@ router.post('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res)
       return res.status(403).json({ error: 'Only admins can create rehearsals' });
     }
 
-    const rehearsal = await createRehearsal(projectId, userId, req.body);
+    const { rehearsal, replayed } = await createRehearsal(projectId, userId, req.body, idempotencyKeyOf(req));
+
+    // A repeat of a create that already happened: the same answer, and the
+    // people on it were told the first time.
+    if (replayed) return res.status(201).json({ rehearsal });
 
     // Tell the people who are on this rehearsal, not the whole project.
     //
@@ -119,7 +124,9 @@ router.post('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res)
 
     res.status(201).json({ rehearsal });
   } catch (error) {
-    if (error instanceof RosterRefused) return res.status(error.status).json(error.body);
+    if (error instanceof RosterRefused || error instanceof IdempotencyRefused) {
+      return res.status(error.status).json(error.body);
+    }
     console.error('Error creating rehearsal:', error);
     if (error.message === 'Invalid date format' || error.message.includes('are required')) {
       return res.status(400).json({ error: error.message });

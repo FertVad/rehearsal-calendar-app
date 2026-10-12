@@ -354,3 +354,15 @@ CREATE TABLE native_push_tickets (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_push_tickets_created ON native_push_tickets (created_at);
+
+-- 012: creates by the key the client sent with them (R4: B02, D03).
+-- Same DDL as migrations/012-idempotency-keys.sql, the forward step for existing schemas.
+CREATE TABLE native_idempotency_keys (
+  user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+  idempotency_key TEXT NOT NULL,
+  operation TEXT NOT NULL,
+  fingerprint TEXT NOT NULL,
+  response TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, idempotency_key)
+);

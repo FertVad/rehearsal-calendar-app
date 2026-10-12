@@ -4,6 +4,7 @@ import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { notifyProjectDeleted } from '../../services/notifications/pushNotificationService.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
+import { idempotencyKeyOf, IdempotencyRefused, once } from '../../services/idempotency.js';
 
 const router = Router();
 
@@ -68,9 +69,16 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
 
     // The project and its owner, one transaction (R4: B02). Committed apart, a
     // failure between them left a project nobody owns — nobody could see,
-    // delete or hand it on — and the retry made a second one.
+    // delete or hand it on. A repeat with the same key gets the same project
+    // back instead of a second one (services/idempotency.js).
+    const key = idempotencyKeyOf(req);
     const projectTimezone = timezone || DEFAULT_TIMEZONE;
-    const newProject = await db.transaction(async (tx) => {
+    const { response: project } = await db.transaction((tx) => once(tx, {
+      userId: accountId,
+      key,
+      operation: 'project.create',
+      request: req.body,
+    }, async () => {
       const created = await tx.get(
         'INSERT INTO native_projects (name, description, timezone, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING *',
         [name, description || null, projectTimezone]
@@ -79,21 +87,20 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
         'INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at) VALUES ($1, $2, $3, $4, NOW(), NOW())',
         [created.id, accountId, 'owner', 'active']
       );
-      return created;
-    });
-
-    res.status(201).json({
-      project: {
-        id: String(newProject.id),
-        name: newProject.name,
-        description: newProject.description || '',
-        timezone: newProject.timezone || DEFAULT_TIMEZONE,
+      return {
+        id: String(created.id),
+        name: created.name,
+        description: created.description || '',
+        timezone: created.timezone || DEFAULT_TIMEZONE,
         is_admin: true,
-        created_at: newProject.created_at,
-        updated_at: newProject.updated_at,
-      },
-    });
+        created_at: created.created_at,
+        updated_at: created.updated_at,
+      };
+    }));
+
+    res.status(201).json({ project });
   } catch (error) {
+    if (error instanceof IdempotencyRefused) return res.status(error.status).json(error.body);
     console.error('Error creating project:', error);
     res.status(500).json({ error: 'Failed to create project' });
   }

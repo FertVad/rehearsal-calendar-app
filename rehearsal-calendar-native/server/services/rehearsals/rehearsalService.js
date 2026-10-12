@@ -4,6 +4,7 @@ import { localToTimestamp, timestampToISO, timestampToLocal } from '../../utils/
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
 import { ROSTER, viewerOf, rosterStats, checkParticipants, settleRoster, clearRoster } from './roster.js';
+import { once } from '../idempotency.js';
 
 /**
  * Check if user is an active member of the project
@@ -300,16 +301,24 @@ async function rehearsalTimes(conn, projectId, { date, startTime, endTime, start
  */
 
 /**
- * Create a new rehearsal
+ * Create a new rehearsal — once per idempotency key (services/idempotency.js).
  * @param {number} projectId - Project ID
  * @param {number} userId - User ID (creator)
  * @param {object} rehearsalData - Rehearsal data
- * @returns {Promise<object>} - Created rehearsal
+ * @param {string} [idempotencyKey] - The client's key for this create
+ * @returns {Promise<{ rehearsal: object, replayed: boolean }>} - The rehearsal,
+ *   and whether it was made by an earlier request with the same key
  */
-export async function createRehearsal(projectId, userId, rehearsalData) {
+export async function createRehearsal(projectId, userId, rehearsalData, idempotencyKey) {
   logger.debug(`[createRehearsal] START - projectId: ${projectId}, userId: ${userId}`);
 
-  return db.transaction((tx) => insertRehearsal(tx, projectId, userId, rehearsalData));
+  const { response, replayed } = await db.transaction((tx) => once(tx, {
+    userId,
+    key: idempotencyKey,
+    operation: 'rehearsal.create',
+    request: { projectId: String(projectId), rehearsalData },
+  }, () => insertRehearsal(tx, projectId, userId, rehearsalData)));
+  return { rehearsal: response, replayed };
 }
 
 async function insertRehearsal(tx, projectId, userId, rehearsalData) {

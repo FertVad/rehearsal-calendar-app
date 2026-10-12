@@ -19,8 +19,9 @@ const freeze = value => {
 };
 // Optional table groups, each installed whole by one forward step and
 // recorded in the frontier as present. 007-009 are the rate-limit budgets
-// (hence the frontier key "budgets"); 010 is email address proof (R3).
-export const tableGroups = Object.freeze(['007', '008', '009', '010', '011']);
+// (hence the frontier key "budgets"); 010 is email address proof (R3), 011
+// push tickets (R8), 012 idempotency keys of creates (R4).
+export const tableGroups = Object.freeze(['007', '008', '009', '010', '011', '012']);
 const idValid = value => typeof value === 'string' && /^[a-z0-9][a-z0-9-]{0,99}$/.test(value);
 const artifactValid = value => value && typeof value.file === 'string'
   && /^[a-zA-Z0-9_./-]+$/.test(value.file) && !path.posix.isAbsolute(value.file)

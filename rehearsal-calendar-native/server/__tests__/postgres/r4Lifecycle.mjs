@@ -33,10 +33,10 @@ export async function probeR4Lifecycle({ connectionString, control, allowedPorts
   const owner = await person('owner');
   const member = await person('member');
   const token = generateTokens(owner, 1).accessToken;
-  const call = (method, path, body) => new Promise((resolve, reject) => {
+  const call = (method, path, body, key) => new Promise((resolve, reject) => {
     const bytes = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
     const req = http.request({ hostname: '127.0.0.1', port: server.address().port, method, path,
-      headers: { Connection: 'close', Authorization: `Bearer ${token}`,
+      headers: { Connection: 'close', Authorization: `Bearer ${token}`, ...(key ? { 'Idempotency-Key': key } : {}),
         ...(bytes ? { 'Content-Type': 'application/json', 'Content-Length': bytes.length } : {}) } }, (res) => {
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
@@ -131,6 +131,47 @@ export async function probeR4Lifecycle({ connectionString, control, allowedPorts
     assert.equal(await count('native_rehearsals WHERE id = $1', [rehearsalId]), 0);
     assert.equal(await count('native_user_availability WHERE external_event_id = $1', [String(rehearsalId)]), 0);
     contracts.push('a rehearsal that cannot be deleted keeps its cast and busy slots (D03)');
+
+    // The same create twice at once with one Idempotency-Key, as a tap
+    // repeated while the first answer is still on its way: the second waits
+    // on the first one's key and answers with its rehearsal (migration 012).
+    const sessions = async (where) => {
+      await q('SELECT pg_catalog.pg_stat_clear_snapshot()');
+      return Number((await q(`SELECT count(*) FROM pg_catalog.pg_stat_activity
+        WHERE datname = current_database() AND pid <> pg_backend_pid() AND ${where}`)).rows[0].count);
+    };
+    const until = async (condition, what) => {
+      for (let i = 0; i < 200; i += 1) {
+        if (await condition()) return;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      throw new Error(`timed out waiting for ${what}`);
+    };
+    const KEY = 'r4-lifecycle-pg-key-0001';
+    const keyed = { title: 'Keyed', startsAt: START, endsAt: END, participant_ids: [owner] };
+    const path = `/api/native/projects/${projectId}/rehearsals`;
+    await q(`CREATE FUNCTION r0_fixture.slow_slot() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN PERFORM pg_sleep(1); RETURN NEW; END $$;
+      CREATE TRIGGER slow_slot BEFORE INSERT ON r0_fixture.native_user_availability
+      FOR EACH ROW EXECUTE FUNCTION r0_fixture.slow_slot()`);
+    let first;
+    let second;
+    try {
+      const firstCall = call('POST', path, keyed, KEY);
+      await until(async () => (await sessions(`wait_event = 'PgSleep'`)) > 0, 'the first create to hold its key');
+      const secondCall = call('POST', path, keyed, KEY);
+      await until(async () => (await sessions(`wait_event_type = 'Lock'`)) > 0, 'the second create to wait on the first one\'s key');
+      [first, second] = await Promise.all([firstCall, secondCall]);
+    } finally {
+      await q('DROP TRIGGER slow_slot ON r0_fixture.native_user_availability; DROP FUNCTION r0_fixture.slow_slot()');
+    }
+    assert.deepEqual([first.status, second.status], [201, 201]);
+    assert.deepEqual(second.body, first.body, 'the repeat answers with the first create');
+    assert.equal(await count(`native_rehearsals WHERE title = 'Keyed'`), 1, 'one key, one rehearsal');
+    const again = await call('POST', path, { ...keyed, title: 'Other' }, KEY);
+    assert.equal(again.status, 422, 'the same key with a different request is refused');
+    assert.equal(await count(`native_rehearsals WHERE title = 'Other'`), 0);
+    contracts.push('two creates with one Idempotency-Key at once: the second waits on the first and answers with its rehearsal');
 
     // B02: deleting the project, with a rehearsal still on it.
     const last = await call('POST', `/api/native/projects/${projectId}/rehearsals`, { ...rehearsal, participant_ids: [owner] });

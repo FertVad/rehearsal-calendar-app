@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "schemaId": "rehearsly-pg-current-v1",
   "postgresCatalogMajor": 15,
-  "bootstrapSha256": "eb25959e379631767d22144c9205acfb3966d25d12a559410dacdb51b0f2daa1",
+  "bootstrapSha256": "ff454105b556daefda999101c0e5159dccf7089caa7693b76dd48dd9d06fc4ff",
   "tables": [
     {
       "name": "native_auth_providers",
@@ -200,6 +200,32 @@
       ],
       "indexes": [
         {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_idempotency_keys",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"fingerprint","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"idempotency_key","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"operation","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"response","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id","idempotency_key"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id","idempotency_key"],"options":[0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.text_ops"],"collations":[null,"pg_catalog.default"],"included":[]}
       ]
     },
     {

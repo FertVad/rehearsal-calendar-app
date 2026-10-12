@@ -24,6 +24,7 @@ let generateTokens;
 
 const START = '2030-03-10T17:00:00.000Z';
 const END = '2030-03-10T19:00:00.000Z';
+const announced = jest.fn(async () => ({ sent: 0, failed: 0, errors: [] }));
 
 beforeAll(async () => {
   testDb = await setupIntegrationDb();
@@ -40,7 +41,7 @@ beforeAll(async () => {
   jest.unstable_mockModule('../../services/notifications/pushNotificationService.js', () => ({
     getUserPushTokens: async () => [],
     sendPushNotification: noop,
-    notifyRehearsalCreated: noop,
+    notifyRehearsalCreated: announced,
     notifyRehearsalUpdated: noop,
     notifyRehearsalDeleted: noop,
     notifyMemberResponse: noop,
@@ -111,7 +112,8 @@ const snapshot = () => Object.fromEntries([
 
 beforeEach(() => {
   heal();
-  for (const table of ['native_push_reminders', 'native_user_availability', 'native_rehearsal_responses', 'native_rehearsals']) {
+  announced.mockClear();
+  for (const table of ['native_idempotency_keys', 'native_push_reminders','native_user_availability', 'native_rehearsal_responses', 'native_rehearsals']) {
     testDb.run(`DELETE FROM ${table}`);
   }
   testDb.run('DELETE FROM native_project_members WHERE project_id <> ?', [project()]);
@@ -253,6 +255,99 @@ describe('Editing a rehearsal (D03)', () => {
     expect(testDb.all('SELECT user_id, starts_at FROM native_user_availability').map((r) => [Number(r.user_id), r.starts_at]))
       .toEqual([[owner(), MOVED_START]]);
     expect(count('native_push_reminders WHERE rehearsal_id = ?', [id])).toBe(0);
+  });
+});
+
+describe('Creating again with the same Idempotency-Key', () => {
+  // The answer to a create is lost — a timeout, a dropped connection — and the
+  // form is tapped again with the key it kept. Without the key each tap made
+  // another project or rehearsal.
+  const KEY = 'k7w2-3f9a-5c1d-8e6b';
+  const projectBody = { name: 'Один проект' };
+  const rehearsalBody = () => ({ title: 'Один прогон', startsAt: START, endsAt: END, participant_ids: [owner(), member()] });
+  const createProject = (key = KEY, body = projectBody) => request(app)
+    .post('/api/native/projects').set(...auth()).set('Idempotency-Key', key).send(body);
+  const createRehearsal = (key = KEY, body = rehearsalBody()) => request(app)
+    .post(`/api/native/projects/${project()}/rehearsals`).set(...auth()).set('Idempotency-Key', key).send(body);
+
+  it('makes one project, and answers the repeat with it', async () => {
+    const first = await createProject();
+    const second = await createProject();
+
+    expect([first.status, second.status]).toEqual([201, 201]);
+    expect(second.body).toEqual(first.body);
+    expect(count(`native_projects WHERE name = 'Один проект'`)).toBe(1);
+  });
+
+  it('makes one rehearsal, with one set of busy slots, announced once', async () => {
+    const first = await createRehearsal();
+    const second = await createRehearsal();
+
+    expect([first.status, second.status]).toEqual([201, 201]);
+    expect(second.body).toEqual(first.body);
+    expect(count('native_rehearsals')).toBe(1);
+    expect(count('native_user_availability')).toBe(2);
+    expect(announced).toHaveBeenCalledTimes(1);
+  });
+
+  it('a different key is a different create', async () => {
+    await createRehearsal('k7w2-3f9a-5c1d-0001');
+    await createRehearsal('k7w2-3f9a-5c1d-0002');
+
+    expect(count('native_rehearsals')).toBe(2);
+  });
+
+  it('a key belongs to its user: someone else\'s same key is theirs', async () => {
+    testDb.run(`UPDATE native_project_members SET role = 'admin' WHERE project_id = ? AND user_id = ?`, [project(), member()]);
+    try {
+      await createRehearsal();
+      const theirs = await request(app)
+        .post(`/api/native/projects/${project()}/rehearsals`).set(...auth(member())).set('Idempotency-Key', KEY)
+        .send(rehearsalBody());
+
+      expect(theirs.status).toBe(201);
+      expect(count('native_rehearsals')).toBe(2);
+    } finally {
+      testDb.run(`UPDATE native_project_members SET role = 'member' WHERE project_id = ? AND user_id = ?`, [project(), member()]);
+    }
+  });
+
+  it('the same key with a different request is refused, and creates nothing', async () => {
+    await createRehearsal();
+    const before = snapshot();
+
+    const res = await createRehearsal(KEY, { ...rehearsalBody(), title: 'Другой' });
+
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('IDEMPOTENCY_KEY_REUSED');
+    expect(snapshot()).toEqual(before);
+    expect((await createProject()).status).toBe(422);
+  });
+
+  it('a create that failed keeps no key, so its retry creates', async () => {
+    failOn('INSERT', 'native_user_availability');
+    expect((await createRehearsal()).status).toBe(500);
+    expect(count('native_idempotency_keys')).toBe(0);
+    heal();
+
+    expect((await createRehearsal()).status).toBe(201);
+    expect(count('native_rehearsals')).toBe(1);
+  });
+
+  it('a malformed key is refused before anything is written', async () => {
+    const before = snapshot();
+
+    expect((await createProject('short')).status).toBe(400);
+    expect((await createRehearsal('has spaces in it, sixteen+')).body.code).toBe('IDEMPOTENCY_KEY_INVALID');
+    expect(snapshot()).toEqual(before);
+  });
+
+  it('without a key, each create is its own, as before', async () => {
+    const plain = () => request(app).post('/api/native/projects').set(...auth()).send(projectBody);
+    await plain();
+    await plain();
+
+    expect(count(`native_projects WHERE name = 'Один проект'`)).toBe(2);
   });
 });
 

@@ -1,0 +1,52 @@
+Cause fix 10 — PostgreSQL scenario R4_LIFECYCLE against the old server code.
+Probe: rehearsal-calendar-native/server/__tests__/postgres/r4Lifecycle.mjs at f92c3da.
+Server files restored from d72ec20 for the run, then restored from HEAD:
+  routes/native/{members,projects,rehearsals}.js, services/rehearsals/{rehearsalService,slotService}.js
+Command (from repository root):
+  npm --prefix rehearsal-calendar-native/server run test:r0-postgres -- --r4-only
+Stack frames and pg error field dumps stripped; nothing else edited.
+
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:64566","database":"r0_test","schema":"diagnostic subset plus separately provisioned canonical fresh/upgrade fixtures"}
+{"scenario":"controls","outcome":"PASS",...}
+{"scenario":"D01","outcome":"PASS",...}
+Error creating project: error: R4_INJECTED_FAILURE
+
+AssertionError [ERR_ASSERTION]: a failure on INSERT native_project_members must leave nothing behind
++ actual - expected
+
+  {
+    native_project_members: [],
++   native_projects: [
++     {
++       color: '#A855F7',
++       created_at: 2026-10-12T18:09:35.316Z,
++       description: null,
++       end_date: null,
++       id: 1,
++       invite_code: null,
++       invite_created_by: null,
++       invite_expires_at: null,
++       name: 'Lifecycle',
++       premiere_date: null,
++       start_date: null,
++       status: 'active',
++       timezone: 'UTC',
++       updated_at: 2026-10-12T18:09:35.316Z
++     }
++   ],
+-   native_projects: [],
+    native_push_reminders: [],
+    native_rehearsal_responses: [],
+    native_rehearsals: [],
+    native_user_availability: []
+  }
+
+R0 cleanup: owned disposable container removed
+AssertionError [ERR_ASSERTION]: R4_LIFECYCLE probe failed unexpectedly
+1 !== 0
+
+The scenario stops at its first broken contract (B02, an ownerless project);
+each later operation fails the same way on the old code in the SQLite test
+(fix10-lifecycle-red-before.txt). On f92c3da the same command prints
+{"scenario":"R4_LIFECYCLE","outcome":"PASS", 6 contracts} and
+"D01+R4_LIFECYCLE REGRESSION PASS".

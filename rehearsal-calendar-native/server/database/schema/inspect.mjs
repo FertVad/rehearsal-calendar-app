@@ -11,6 +11,7 @@ const budgetGroups = {
   '009': ['native_operation_ip_rate_limits', 'native_operation_ip_rate_limit_gates'],
   '010': ['native_email_identities', 'native_email_codes'],
   '011': ['native_push_tickets'],
+  '012': ['native_idempotency_keys'],
 };
 export const schemaTableNames = Object.freeze(descriptor.tables?.map(table => table.name) || []);
 const retiredTables = new Set(['native_subscription_plans', 'native_user_subscriptions',

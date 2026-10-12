@@ -13,6 +13,7 @@ const groupTables={
   '009':['native_operation_ip_rate_limits','native_operation_ip_rate_limit_gates'],
   '010':['native_email_codes','native_email_identities'],
   '011':['native_push_tickets'],
+  '012':['native_idempotency_keys'],
 };
 
 // Only invoked after probe.mjs verifies its freshly owned disposable database.
@@ -227,7 +228,7 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
   // and the runner accepts no non-PostgreSQL target.
   assert.deepEqual(manifest.steps.map(step=>step.sql.file).sort(),['database/schema/availability-conflict-key-v1.sql',
     'migrations/007-member-availability-rate-limit.sql','migrations/008-invite-rate-limits.sql','migrations/009-operation-ip-rate-limits.sql',
-    'migrations/010-email-verification.sql','migrations/011-push-tickets.sql']);
+    'migrations/010-email-verification.sql','migrations/011-push-tickets.sql','migrations/012-idempotency-keys.sql']);
   await query('BEGIN');
   try {
     await query('SET LOCAL search_path TO r2_schema_legacy_time,pg_catalog');
@@ -243,5 +244,5 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
     assert.equal((await check(schema)).compatible,true);
     pass('actual HTTP contracts on '+schema);
   }
-  return {outcome:'PASS',checks:report.length,catalogTables:22,http};
+  return {outcome:'PASS',checks:report.length,catalogTables:23,http};
 }
