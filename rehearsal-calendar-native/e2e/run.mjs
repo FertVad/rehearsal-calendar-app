@@ -45,6 +45,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getText } from './http.mjs';
 import { takeLock } from './lock.mjs';
 import { seed } from './seed.mjs';
 
@@ -381,8 +382,16 @@ async function main() {
   // prelude. Every value the bundle carries is checked, and no .env file may be
   // in it at all.
   step('checking the bundle talks to the local server');
-  const bundle = await (await fetch(
-    `http://localhost:${METRO_PORT}/.expo/.virtual-metro-entry.bundle?platform=ios&dev=true&minify=false`)).text();
+  // A cold bundle (Metro starts with --clear) takes minutes under load; an
+  // error in the app's code answers at once, so running out of time is the
+  // machine's (75), not the change's.
+  let bundle;
+  try {
+    bundle = await getText(`http://localhost:${METRO_PORT}/.expo/.virtual-metro-entry.bundle?platform=ios&dev=true&minify=false`,
+      { deadlineMs: 30 * 60 * 1000 });
+  } catch (error) {
+    throw error.code === 'DEADLINE' ? new EnvironmentError(error.message) : error;
+  }
   checkBundle(bundle);
   const udid = await environment(simulator);
   await environment(() => {

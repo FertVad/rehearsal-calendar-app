@@ -66,7 +66,7 @@ time limit left both on their ports (T-203, 2026-10-11).
 | 0 | The flows passed |
 | 1 | The change failed: a flow, the server, the seed, the bundle |
 | 2 | The app reported an API address other than the local one |
-| 75 | The machine was not ready — Docker, a port held by something not ours, the simulator, another run that never finished. Not the change: run it again later |
+| 75 | The machine was not ready — Docker, a port held by something not ours, the simulator, another run that never finished, Metro not delivering the bundle within 30 minutes. Not the change: run it again later |
 
 The autonomous supervisor waits out a 75 instead of sending the task back.
 
