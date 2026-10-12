@@ -79,3 +79,9 @@ test('after the last task, a flaky test goes to the end', () => {
   const queue = insertAfter(QUEUE, 'T-130', '## T-201 Нестабильный тест: x\n\nТело.\n');
   assert.deepEqual(parseTasks(queue).map((task) => task.id), ['T-108', 'T-109', 'T-130', 'T-201']);
 });
+
+test('an e2e run that failed before any flow is named by what it said', () => {
+  const tail = '[e2e] starting Metro, pointed at the local server\n[e2e] checking the bundle talks to the local server\n[e2e] fetch failed';
+  assert.equal(flakeName([{ name: 'e2e', tail }]), 'e2e до сценариев: fetch failed');
+  assert.match(failureExcerpt(tail), /^\[e2e\] fetch failed$/);
+});
