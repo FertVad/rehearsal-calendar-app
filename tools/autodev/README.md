@@ -55,6 +55,11 @@ a change touching migrations, SQL, auth (server or app), `.env`, deploy, CI,
 production addresses, data deletion, keys, `ios/` or the supervisor
 (`lib/guard.mjs`), or the developer answering BLOCKED.
 
+An app file changed only by `testID`s — the handles e2e flows find controls
+by — is not a reason to stop. A stop for the owner raises a macOS
+notification with a sound: T-304 waited a day with STATUS.md as its only
+sign.
+
 "Продолжить" after such a stop allows that task the kinds of change it
 stopped on — "сессия в приложении", "вход в приложении" — so the reviewer's
 notes fixed in the same files do not stop it again; a kind it has not shown

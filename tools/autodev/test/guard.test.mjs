@@ -44,7 +44,8 @@ test('reads files and added lines from a unified diff', () => {
     '+new line',
     '+another',
   ].join('\n');
-  assert.deepEqual(parseDiff(diff), { files: ['x/a.ts'], added: ['new line', 'another'] });
+  assert.deepEqual(parseDiff(diff), { files: ['x/a.ts'], added: ['new line', 'another'],
+    changes: { 'x/a.ts': { added: ['new line', 'another'], removed: ['old'] } } });
 });
 
 test('the owner allows a task the kinds of change it stopped on, not a new kind', () => {
@@ -57,4 +58,35 @@ test('the owner allows a task the kinds of change it stopped on, not a new kind'
   const later = unapproved(pauseReasons([...auth, 'rehearsal-calendar-native/server/migrations/012_x.sql'], []), approved);
   assert.ok(later.length > 0);
   assert.ok(later.every((reason) => /012_x\.sql/.test(reason)), later.join(' | '));
+});
+
+test('app files changed only by testIDs are not a reason; anything more still is', () => {
+  const diff = [
+    'diff --git a/rehearsal-calendar-native/src/features/auth/screens/LoginScreen.tsx b/rehearsal-calendar-native/src/features/auth/screens/LoginScreen.tsx',
+    '--- a/rehearsal-calendar-native/src/features/auth/screens/LoginScreen.tsx',
+    '+++ b/rehearsal-calendar-native/src/features/auth/screens/LoginScreen.tsx',
+    '@@ -10,0 +11 @@',
+    '+              testID="login-forgot-password"',
+    'diff --git a/rehearsal-calendar-native/src/features/profile/screens/ChangeEmailScreen.tsx b/rehearsal-calendar-native/src/features/profile/screens/ChangeEmailScreen.tsx',
+    '--- a/rehearsal-calendar-native/src/features/profile/screens/ChangeEmailScreen.tsx',
+    '+++ b/rehearsal-calendar-native/src/features/profile/screens/ChangeEmailScreen.tsx',
+    '@@ -5 +5 @@',
+    '-          <Text style={styles.hint}>{subtitle}</Text>',
+    '+          <Text testID="change-subtitle" style={styles.hint}>{subtitle}</Text>',
+  ].join('\n');
+  const { files, added, changes } = parseDiff(diff);
+  assert.deepEqual(pauseReasons(files, added, changes), []);
+  // A testID and a change of what the button does: that is a reason.
+  const more = diff + '\n' + [
+    'diff --git a/rehearsal-calendar-native/src/contexts/AuthContext.tsx b/rehearsal-calendar-native/src/contexts/AuthContext.tsx',
+    '--- a/rehearsal-calendar-native/src/contexts/AuthContext.tsx',
+    '+++ b/rehearsal-calendar-native/src/contexts/AuthContext.tsx',
+    '@@ -7 +7 @@',
+    '-    await api.logout();',
+    '+    await api.logout({ everywhere: true }); // testID="x"',
+  ].join('\n');
+  const parsed = parseDiff(more);
+  const reasons = pauseReasons(parsed.files, parsed.added, parsed.changes);
+  assert.equal(reasons.length, 1);
+  assert.match(reasons[0], /AuthContext/);
 });
