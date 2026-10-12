@@ -219,6 +219,19 @@ function pause(state, task, t, reason) {
   t.pauseReason = reason;
   state.current = null;
   note(task, `ПАУЗА: ${reason}. Решение — в AUTODEV/DECISIONS.md.`);
+  notifyOwner(`${task.id} ждёт вашего решения: ${reason}`);
+}
+
+/**
+ * A macOS notification with a sound. A pause used to be visible only in
+ * STATUS.md: T-304 waited a day before anyone looked (2026-10-11/12).
+ */
+function notifyOwner(text) {
+  const quoted = (value) => `"${String(value).replace(/[\\"]/g, ' ').replace(/\s+/g, ' ').slice(0, 220)}"`;
+  try {
+    execFileSync('osascript', ['-e', `display notification ${quoted(text)} with title ${quoted('Автодев ждёт решения')} sound name "Glass"`],
+      { env: ENV, timeout: 10000, stdio: 'ignore' });
+  } catch { /* no notification is not a reason to stop */ }
 }
 
 /**
@@ -413,8 +426,8 @@ function nextStep(t, step) {
 async function check(state, task, t) {
   const head = git(WORKTREE, 'rev-parse', 'HEAD');
   if (head === t.base) return defer(state, task, t, 'разработчик ответил DONE, но коммитов нет');
-  const { files, added } = parseDiff(git(WORKTREE, 'diff', '--unified=0', `${t.base}..${head}`));
-  const reasons = unapproved(pauseReasons(files, added), t.approvedKinds);
+  const { files, added, changes } = parseDiff(git(WORKTREE, 'diff', '--unified=0', `${t.base}..${head}`));
+  const reasons = unapproved(pauseReasons(files, added, changes), t.approvedKinds);
   if (reasons.length) {
     return pause(state, task, t, `изменение требует решения владельца — ${reasons.join('; ')}`);
   }
@@ -633,8 +646,8 @@ function applyDecisions(state) {
     t.phase = t.pausedFrom === 'check' ? 'check' : t.pausedFrom;
     if (t.pausedFrom === 'check') {
       // The kinds of change it stopped on are allowed for this task from now on.
-      const { files, added } = parseDiff(git(WORKTREE, 'diff', '--unified=0', `${t.base}..HEAD`));
-      t.approvedKinds = [...new Set([...(t.approvedKinds ?? []), ...pauseReasons(files, added).map(reasonKind)])];
+      const { files, added, changes } = parseDiff(git(WORKTREE, 'diff', '--unified=0', `${t.base}..HEAD`));
+      t.approvedKinds = [...new Set([...(t.approvedKinds ?? []), ...pauseReasons(files, added, changes).map(reasonKind)])];
       delete t.approvedHead;
     }
     t.attempts = 0;

@@ -39,14 +39,32 @@ const ADDED = [
   [/\bgit push\b/, 'git push в коде'],
 ];
 
+const TEST_ID = /\s*testID=(\{[^}]*\}|"[^"]*"|'[^']*')/g;
+
+/**
+ * A change to app code that only adds or moves `testID`s — the handles e2e
+ * flows find controls by — and touches nothing else. T-304 put four of them
+ * on the sign-in screens and waited a day for the owner (2026-10-11/12).
+ */
+export function testIdsOnly(change) {
+  if (!change) return false;
+  const strip = (lines) => lines.map((line) => line.replace(TEST_ID, '').trim()).filter(Boolean).sort();
+  const added = strip(change.added);
+  const removed = strip(change.removed);
+  return added.length === removed.length && added.every((line, i) => line === removed[i]);
+}
+
 /**
  * @param files paths changed by the task (relative to the repository root)
  * @param addedLines lines the diff adds
+ * @param changes per file, {added, removed} — app files changed only by
+ *   testIDs are not a reason (testIdsOnly)
  * @returns reasons to pause, empty when the task may go on
  */
-export function pauseReasons(files, addedLines) {
+export function pauseReasons(files, addedLines, changes = {}) {
   const reasons = new Set();
   for (const file of files) {
+    if (/(^|\/)src\//.test(file) && testIdsOnly(changes[file])) continue;
     for (const [pattern, reason] of PATHS) if (pattern.test(file)) reasons.add(`${reason}: ${file}`);
   }
   for (const line of addedLines) {
@@ -74,10 +92,16 @@ export function unapproved(reasons, approvedKinds = []) {
 export function parseDiff(diffText) {
   const files = new Set();
   const added = [];
+  const changes = {};
+  let current = null;
   for (const line of diffText.split('\n')) {
+    const header = /^diff --git a\/(.+) b\/(.+)$/.exec(line);
+    if (header) { current = header[2]; changes[current] = { added: [], removed: [] }; continue; }
     const file = /^\+\+\+ b\/(.+)$/.exec(line) || /^--- a\/(.+)$/.exec(line);
     if (file) { files.add(file[1]); continue; }
-    if (line.startsWith('+') && !line.startsWith('+++')) added.push(line.slice(1));
+    if (line.startsWith('+++') || line.startsWith('---')) continue;
+    if (line.startsWith('+')) { added.push(line.slice(1)); changes[current]?.added.push(line.slice(1)); }
+    else if (line.startsWith('-')) changes[current]?.removed.push(line.slice(1));
   }
-  return { files: [...files], added };
+  return { files: [...files], added, changes };
 }
