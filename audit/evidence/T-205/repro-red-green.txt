@@ -1,0 +1,14 @@
+Tree: auto/main at e2a2d71 (contains 902d4a6). Old code = the bundle expression of
+rehearsal-calendar-native/e2e/run.mjs at 902d4a6^ (lines 384-385), verbatim;
+new code = rehearsal-calendar-native/e2e/http.mjs getText at 902d4a6+, deadline 30 min.
+Both run at the same time against the same stand-in for a cold Metro.
+
+$ node audit/evidence/T-205/repro.mjs 0.3          # control: the delay the old unit test used
+node v22.16.0; the bundle answers after 0.3 s
+old (fetch, before 902d4a6): OK after 0.4 s, body "bundle"
+new (getText, 902d4a6+): OK after 0.4 s, body "bundle"
+
+$ node audit/evidence/T-205/repro.mjs 310          # headers held past five minutes
+node v22.16.0; the bundle answers after 310 s
+old (fetch, before 902d4a6): FAILED after 301.7 s: fetch failed — cause UND_ERR_HEADERS_TIMEOUT: Headers Timeout Error
+new (getText, 902d4a6+): OK after 310.1 s, body "bundle"

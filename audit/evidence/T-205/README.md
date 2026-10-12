@@ -35,11 +35,37 @@ fetched without Node's five-minute header limit". The bundle is read with
 from Metro is still the change's (exit 1). Regression:
 `e2e/__tests__/http.test.mjs`, part of `npm test`.
 
+## Red before, green after (review round 1)
+
+`repro.mjs` stands in for a cold Metro: it accepts the bundle request and holds
+the headers back for N seconds. Against it, at the same time, it runs the
+bundle expression from `run.mjs` at 902d4a6^ (lines 384-385), copied exactly,
+`await (await fetch(url)).text()`, and `getText` from `e2e/http.mjs` (902d4a6+)
+with run.mjs's 30-minute deadline. Output: `repro-red-green.txt`.
+
+- 0.3 s (the delay the unit test uses): both pass. So that test alone would
+  not notice a return to `fetch`, as the review said.
+- 310 s: the old code fails after **301.7 s** with `fetch failed`, cause
+  `UND_ERR_HEADERS_TIMEOUT` (undici's `headersTimeout`, 300 s, Node 22.16.0):
+  the same bare message as in the T-304 `checks.log`. The new code gets the
+  bundle at 310.1 s.
+
+This confirms the mechanism. Whether this exact timeout fired in the T-304
+run comes from the logs: the bare message, the ~5 minutes between Metro
+starting and the failure folder being written, and Metro still building with
+no error. The original logs are only on the supervisor's machine.
+
+Five minutes is too long for `npm test`, so a fast guard was added to
+`e2e/__tests__/http.test.mjs`: every `run.mjs` line that requests the bundle
+must use `getText`. It fails on run.mjs from 902d4a6^ and passes now
+(`guard-red-green.txt`). The slow check is `node audit/evidence/T-205/repro.mjs`.
+
 ## Checked for T-205
 
-- The logs above match the cause 902d4a6 describes: same step, same bare
-  message, same five-minute wait, Metro mid-build without an error.
-- `node --test e2e/__tests__/http.test.mjs` on auto/main (987f3fc): 3 of 3 pass
-  (a slow answer is waited for; past the deadline it is `DEADLINE`; a 500 is an
-  error with its body).
+- The bug the fix guards against has not come back: on the current tree,
+  `getText` waits through 310 s of held headers, and run.mjs's bundle request
+  goes through it (the guard). Other `fetch` calls in run.mjs (`/ready`, the
+  mailbox, Metro `/status`) answer at once, so the header limit does not
+  apply to them.
+- `node --test e2e/__tests__/http.test.mjs`: 4 of 4 pass.
 - No other change was made for this task.
