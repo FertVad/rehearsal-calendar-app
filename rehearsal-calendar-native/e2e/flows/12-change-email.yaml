@@ -18,7 +18,8 @@ env:
     file: ../subflows/sign-in.yaml
     env:
       EMAIL: ${KENT_EMAIL}
-- tapOn: "Profile, tab.*"
+- tapOn:
+    id: tab-profile
 - tapOn:
     id: profile-edit
 - tapOn:

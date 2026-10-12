@@ -236,6 +236,7 @@ function TabNavigator() {
           component={CalendarNavigator}
           options={{
             tabBarLabel: t.nav.calendar,
+            tabBarButtonTestID: 'tab-calendar',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="calendar-outline" size={size} color={color} />
             ),
@@ -246,6 +247,7 @@ function TabNavigator() {
           component={ProjectsNavigator}
           options={{
             tabBarLabel: t.nav.projects,
+            tabBarButtonTestID: 'tab-projects',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="people-outline" size={size} color={color} />
             ),
@@ -264,6 +266,7 @@ function TabNavigator() {
           component={PlannerNavigator}
           options={{
             tabBarLabel: t.nav.planner,
+            tabBarButtonTestID: 'tab-planner',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="bar-chart-outline" size={size} color={color} />
             ),
@@ -274,6 +277,7 @@ function TabNavigator() {
           component={ProfileNavigator}
           options={{
             tabBarLabel: t.nav.profile,
+            tabBarButtonTestID: 'tab-profile',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person-circle-outline" size={size} color={color} />
             ),
