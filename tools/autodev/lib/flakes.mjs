@@ -13,6 +13,7 @@ const MARKS = [
   /^\s*(error|location|code):/, // node:test details
   /^\s*\[Failed\]\s/,         // Maestro
   /^\s*(Expected|Received):/, // Jest assertion
+  /^\[e2e\] .*(fail|error|did not|not ready|STOPPED|refus|exited|timed out)/i, // the e2e run itself, before any flow
 ];
 
 /** A line that says what failed: a suite, a test, an assertion. */
@@ -37,7 +38,8 @@ export function flakeName(steps) {
   for (const step of steps) {
     for (const line of failureText(step).split('\n')) {
       const name = /^\s*●\s+(.+)$/.exec(line)?.[1] ?? /^not ok \d+ - (.+)$/.exec(line)?.[1]
-        ?? /^\s*\[Failed\]\s+(.+?)(\s+\(.*\))?$/.exec(line)?.[1];
+        ?? /^\s*\[Failed\]\s+(.+?)(\s+\(.*\))?$/.exec(line)?.[1]
+        ?? (isFailureLine(line) && /^\[e2e\] (.+)$/.exec(line)?.[1]?.replace(/^/, 'e2e до сценариев: '));
       if (name) return name.trim().slice(0, 100);
     }
   }
