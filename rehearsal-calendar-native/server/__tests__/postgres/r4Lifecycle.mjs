@@ -147,24 +147,27 @@ export async function probeR4Lifecycle({ connectionString, control, allowedPorts
       }
       throw new Error(`timed out waiting for ${what}`);
     };
+    // Every busy slot written takes a second: a create is caught after it has
+    // read its roster and while it books, its transaction still open.
+    await q(`CREATE FUNCTION r0_fixture.slow_slot() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN PERFORM pg_sleep(1); RETURN NEW; END $$`);
+    const slowSlots = async (body) => {
+      await q(`CREATE TRIGGER slow_slot BEFORE INSERT ON r0_fixture.native_user_availability
+        FOR EACH ROW EXECUTE FUNCTION r0_fixture.slow_slot()`);
+      try { return await body(); }
+      finally { await q('DROP TRIGGER slow_slot ON r0_fixture.native_user_availability'); }
+    };
+    const booking = () => until(async () => (await sessions(`wait_event = 'PgSleep'`)) > 0, 'a create to be booking its slots');
     const KEY = 'r4-lifecycle-pg-key-0001';
     const keyed = { title: 'Keyed', startsAt: START, endsAt: END, participant_ids: [owner] };
     const path = `/api/native/projects/${projectId}/rehearsals`;
-    await q(`CREATE FUNCTION r0_fixture.slow_slot() RETURNS trigger LANGUAGE plpgsql AS $$
-      BEGIN PERFORM pg_sleep(1); RETURN NEW; END $$;
-      CREATE TRIGGER slow_slot BEFORE INSERT ON r0_fixture.native_user_availability
-      FOR EACH ROW EXECUTE FUNCTION r0_fixture.slow_slot()`);
-    let first;
-    let second;
-    try {
+    const [first, second] = await slowSlots(async () => {
       const firstCall = call('POST', path, keyed, KEY);
-      await until(async () => (await sessions(`wait_event = 'PgSleep'`)) > 0, 'the first create to hold its key');
+      await booking();
       const secondCall = call('POST', path, keyed, KEY);
       await until(async () => (await sessions(`wait_event_type = 'Lock'`)) > 0, 'the second create to wait on the first one\'s key');
-      [first, second] = await Promise.all([firstCall, secondCall]);
-    } finally {
-      await q('DROP TRIGGER slow_slot ON r0_fixture.native_user_availability; DROP FUNCTION r0_fixture.slow_slot()');
-    }
+      return Promise.all([firstCall, secondCall]);
+    });
     assert.deepEqual([first.status, second.status], [201, 201]);
     assert.deepEqual(second.body, first.body, 'the repeat answers with the first create');
     assert.equal(await count(`native_rehearsals WHERE title = 'Keyed'`), 1, 'one key, one rehearsal');
@@ -173,15 +176,44 @@ export async function probeR4Lifecycle({ connectionString, control, allowedPorts
     assert.equal(await count(`native_rehearsals WHERE title = 'Other'`), 0);
     contracts.push('two creates with one Idempotency-Key at once: the second waits on the first and answers with its rehearsal');
 
-    // B02: deleting the project, with a rehearsal still on it.
-    const last = await call('POST', `/api/native/projects/${projectId}/rehearsals`, { ...rehearsal, participant_ids: [owner] });
+    // B01 against a create in flight: the create has read a roster with the
+    // leaver on it and is booking; the removal must not clear their slots
+    // before that booking commits (projectLock.js).
+    const leaver = await person('leaver');
+    await q(`INSERT INTO r0_fixture.native_project_members (project_id, user_id, role, status) VALUES ($1, $2, 'member', 'active')`,
+      [projectId, leaver]);
+    const [raced, leaving] = await slowSlots(async () => {
+      const creating = call('POST', path, { title: 'Raced', startsAt: START, endsAt: END, participant_ids: [owner, leaver] });
+      await booking();
+      return Promise.all([creating, call('DELETE', `/api/native/projects/${projectId}/members/${leaver}`)]);
+    });
+    assert.deepEqual([raced.status, leaving.status], [201, 200]);
+    assert.equal(await count('native_project_members WHERE user_id = $1', [leaver]), 0);
+    assert.equal(await count('native_rehearsal_responses WHERE user_id = $1', [leaver]), 0,
+      'B01: a member removed while a rehearsal was being created is not left on it');
+    assert.equal(await count('native_user_availability WHERE user_id = $1', [leaver]), 0,
+      'B01: a member removed while a rehearsal was being created keeps no busy slot from it');
+    contracts.push('a member removed while a rehearsal is being created with them is left on nothing and busy for nothing (B01)');
+
+    // B02: deleting the project, with a rehearsal still on it — and the retry
+    // racing another create, which must not be cascaded away with its busy
+    // slots left behind (projectLock.js).
+    const last = await call('POST', path, { ...rehearsal, participant_ids: [owner] });
     assert.equal(last.status, 201);
     const dropProject = () => call('DELETE', `/api/native/projects/${projectId}`);
     await failing('DELETE', 'native_projects', dropProject);
-    assert.equal((await dropProject()).status, 200);
+    const [late, dropped] = await slowSlots(async () => {
+      const creating = call('POST', path, { title: 'Late', startsAt: START, endsAt: END, participant_ids: [owner] });
+      await booking();
+      return Promise.all([creating, dropProject()]);
+    });
+    assert.deepEqual([late.status, dropped.status], [201, 200]);
     assert.equal(await count('native_projects WHERE id = $1', [projectId]), 0);
-    assert.equal(await count(`native_user_availability WHERE source = 'rehearsal'`), 0);
-    contracts.push('a project that cannot be deleted keeps its rehearsals\' busy slots; the retry deletes both (B02)');
+    assert.equal(await count('native_rehearsals'), 0);
+    assert.equal(await count(`native_user_availability WHERE source = 'rehearsal'`), 0,
+      'B02: a rehearsal created while the project was deleted leaves no busy slot');
+    contracts.push('a project that cannot be deleted keeps its rehearsals\' busy slots; the retry deletes both, '
+      + 'and a rehearsal created meanwhile with them (B02)');
   } finally {
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });
     await database.closeDatabase();

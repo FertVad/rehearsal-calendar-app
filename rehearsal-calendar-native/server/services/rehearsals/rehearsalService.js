@@ -3,7 +3,8 @@ import db from '../../database/db.js';
 import { localToTimestamp, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
-import { ROSTER, viewerOf, rosterStats, checkParticipants, settleRoster, clearRoster } from './roster.js';
+import { ROSTER, viewerOf, rosterStats, checkParticipants, settleRoster, clearRoster, RosterRefused } from './roster.js';
+import { lockProject } from './projectLock.js';
 import { once } from '../idempotency.js';
 
 /**
@@ -324,6 +325,12 @@ export async function createRehearsal(projectId, userId, rehearsalData, idempote
 async function insertRehearsal(tx, projectId, userId, rehearsalData) {
   const { title, description, location, participant_ids } = rehearsalData;
 
+  // Before the roster is read: a removal or the project's deletion waits for
+  // this create, or this create for them (projectLock.js).
+  if (!(await lockProject(tx, projectId, 'write'))) {
+    throw new RosterRefused(404, 'PROJECT_NOT_FOUND', 'Project not found');
+  }
+
   // Everyone named must be an active member of this project, checked before
   // anything is written; a list with anyone else is refused whole (roster.js).
   const participantIds = await checkParticipants(tx, projectId, participant_ids);
@@ -407,6 +414,9 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
 
 async function editRehearsal(tx, rehearsalId, projectId, updateData) {
   const { title, description, location, participant_ids } = updateData;
+
+  // As on creation (projectLock.js); the project gone means the rehearsal is.
+  if (!(await lockProject(tx, projectId, 'write'))) return null;
 
   // Checked before anything is written. undefined keeps the roster, [] clears it.
   const participantIds = await checkParticipants(tx, projectId, participant_ids);
@@ -497,10 +507,15 @@ async function editRehearsal(tx, rehearsalId, projectId, updateData) {
  * @param {number} rehearsalId - Rehearsal ID
  * @returns {Promise<void>}
  */
-export async function deleteRehearsal(rehearsalId) {
+export async function deleteRehearsal(rehearsalId, projectId) {
   logger.debug(`[deleteRehearsal] START - Deleting rehearsal ID: ${rehearsalId}`);
 
   await db.transaction(async (tx) => {
+    // The project, then the rehearsal itself (projectLock.js): an edit in
+    // flight rebooks its slots and commits before these deletes look for them.
+    await lockProject(tx, projectId, 'write');
+    await tx.get('SELECT id FROM native_rehearsals WHERE id = $1 FOR UPDATE', [rehearsalId]);
+
     // The busy slots are tied to the rehearsal by an id in text, which no
     // foreign key cascades; the roster would go with the row, but goes
     // explicitly, as on every other path (roster.js).

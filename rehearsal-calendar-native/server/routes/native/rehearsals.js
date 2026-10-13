@@ -227,7 +227,7 @@ router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(a
     const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
     const members = await rosterOf(db, rehearsal.id);
 
-    await deleteRehearsal(rehearsalId);
+    await deleteRehearsal(rehearsalId, projectId);
 
     // Send push notifications after deletion
     try {

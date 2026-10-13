@@ -5,6 +5,7 @@ import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { notifyProjectDeleted } from '../../services/notifications/pushNotificationService.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { idempotencyKeyOf, IdempotencyRefused, once } from '../../services/idempotency.js';
+import { lockProject } from '../../services/rehearsals/projectLock.js';
 
 const router = Router();
 
@@ -193,7 +194,13 @@ router.delete('/:projectId', requireAuth, asyncHandler(async (req, res) => {
     // Must run before the project, or the subselect has nothing left to find —
     // and in the same transaction (R4: B02): committed alone, a failure of the
     // delete below left every rehearsal standing with nobody busy for it.
+    //
+    // The project row is locked first (projectLock.js): a rehearsal still being
+    // created is committed before the slots are looked for, not cascaded away
+    // afterwards with its slots left behind.
     await db.transaction(async (tx) => {
+      await lockProject(tx, projectId, 'delete');
+
       await tx.run(
         `DELETE FROM native_user_availability
          WHERE source = 'rehearsal'

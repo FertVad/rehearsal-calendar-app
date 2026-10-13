@@ -10,6 +10,7 @@ import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { notifyRoleChanged, notifyMemberRemoved, notifyAdminAppointed } from '../../services/notifications/pushNotificationService.js';
 import { fullName } from '../../utils/names.js';
 import { takeOffProjectRehearsals } from '../../services/rehearsals/roster.js';
+import { lockProject } from '../../services/rehearsals/projectLock.js';
 
 const router = Router();
 
@@ -463,6 +464,11 @@ router.delete('/:projectId/members/:userId', requireAuth, asyncHandler(async (re
     // first delete left the rows and busy hours below for good: the person was
     // no longer a member, so the retry answered 404 and never reached them.
     await db.transaction(async (tx) => {
+      // First, exclusively (projectLock.js): a rehearsal being created or
+      // edited has read the roster with this person on it, and books their
+      // slot after the deletes below — so they wait for it, and it for them.
+      await lockProject(tx, projectId, 'remove');
+
       // Remove member from project
       await tx.run(
         'DELETE FROM native_project_members WHERE project_id = $1 AND user_id = $2',
