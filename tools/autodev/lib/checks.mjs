@@ -29,6 +29,8 @@ function run(name, command, args, { cwd, env, log, timeoutMs }) {
     out.write(`\n### ${new Date().toISOString()} ${name}: ${command} ${args.join(' ')}\n`);
     const child = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     running.add(child);
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
     const lines = [];
     // What failed, over the whole run: a Jest summary of three failures is
     // longer than the tail (T-202 was named after a fragment).

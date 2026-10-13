@@ -31,6 +31,10 @@ function runJsonLines(command, args, { cwd, env, log, timeoutMs }) {
     out.write(`\n### ${new Date().toISOString()} ${path.basename(command)} ${args.filter((a) => a.length < 80).join(' ')}\n`);
     const child = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     running.add(child);
+    // Decoded as a stream: a Russian letter cut between two chunks came out
+    // as two replacement characters ("нужн��", T-110's stop reason).
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
     const events = [];
     let buffer = '';
     let stderr = '';

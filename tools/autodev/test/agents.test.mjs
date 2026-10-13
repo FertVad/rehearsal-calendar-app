@@ -123,3 +123,15 @@ test('the reviewer\'s profile denies the secrets', () => {
     assert.ok(profile.includes(denied), denied);
   }
 });
+
+test('a letter cut between two chunks of output arrives whole', async () => {
+  // «нужно», with the two bytes of «о» written apart.
+  const cut = stub('claude-cut', `
+const word = Buffer.from(JSON.stringify({ type: 'result', is_error: false, session_id: 's5', result: 'нужно\\nRESULT: DONE' }) + '\\n');
+const at = word.indexOf(Buffer.from('о')) + 1;
+process.stdout.write(word.subarray(0, at));
+setTimeout(() => process.stdout.write(word.subarray(at)), 200);`);
+  const run = await runClaude({ bin: cut, cwd: dir, prompt: 'p', sessionId: 's5', settingsFile: path.join(dir, 's.json'),
+    sandboxProfile: PROFILE, log: path.join(dir, 'c5.jsonl'), env });
+  assert.equal(run.text, 'нужно\nRESULT: DONE');
+});
