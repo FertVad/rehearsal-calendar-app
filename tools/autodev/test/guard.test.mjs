@@ -90,3 +90,16 @@ test('app files changed only by testIDs are not a reason; anything more still is
   assert.equal(reasons.length, 1);
   assert.match(reasons[0], /AuthContext/);
 });
+
+test('a DELETE is read whole: a WHERE on the next line scopes it, and test fixtures are not data', () => {
+  const diff = (file, lines) => [`diff --git a/${file} b/${file}`, `--- a/${file}`, `+++ b/${file}`, '@@ -1 +1,9 @@', ...lines.map((l) => `+${l}`)].join('\n');
+  const scoped = parseDiff(diff('rehearsal-calendar-native/server/routes/native/projects.js', [
+    '      `DELETE FROM native_user_availability',
+    "       WHERE source = 'rehearsal' AND user_id = $1`,",
+  ]));
+  assert.deepEqual(pauseReasons(scoped.files, scoped.added, scoped.changes), []);
+  const fixture = parseDiff(diff('rehearsal-calendar-native/server/__tests__/routes/x.test.js', ["    testDb.exec('DELETE FROM native_idempotency_keys');"]));
+  assert.deepEqual(pauseReasons(fixture.files, fixture.added, fixture.changes), []);
+  const unscoped = parseDiff(diff('rehearsal-calendar-native/server/services/cleanup.js', ["  await db.run('DELETE FROM native_users');"]));
+  assert.equal(pauseReasons(unscoped.files, unscoped.added, unscoped.changes).length, 1);
+});
