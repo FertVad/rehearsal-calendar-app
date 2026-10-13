@@ -674,6 +674,13 @@ The app keeps one key per form while the request stays the same
 (`src/shared/hooks/useIdempotencyKey.ts`). The server side is
 `server/services/idempotency.js`, table `native_idempotency_keys` (migration 012).
 
+Creating, editing and deleting a rehearsal, removing a member and deleting a
+project each lock the project row first (`server/services/rehearsals/projectLock.js`):
+rehearsal writers share it, a removal or a project deletion takes it alone and
+waits for the writers in flight. A member removed while a rehearsal with them
+was being created is taken off it; a project deleted meanwhile takes that
+rehearsal's busy slots with it.
+
 ---
 
 #### 3. Get Single Project
@@ -846,6 +853,7 @@ Create a new rehearsal for a project.
   ```json
   { "error": "Only admins can create rehearsals" }
   ```
+- `404 Not Found`, `code: "PROJECT_NOT_FOUND"`: the project was deleted while the request waited for it; nothing is written
 - `422 Unprocessable Entity`, `code: "IDEMPOTENCY_KEY_REUSED"`: the key was already used for a different request; nothing is written
 
 **Notes:**
