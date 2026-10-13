@@ -350,7 +350,7 @@ async function develop(state, task, t) {
   t.sessionStarted = true;
   saveState(STATE, state);
   const note_ = takeNote(task);
-  const prompt = P.withNote(starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind)), note_?.text);
+  const prompt = P.withDecisions(P.withNote(starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind)), note_?.text), t.ownerDecided);
   const run = await runClaude({
     bin: claudeBin(), cwd: WORKTREE, prompt, env: CLAUDE_ENV, model: ownerModel(),
     sessionId: starting ? t.claudeSession : undefined,
@@ -660,6 +660,8 @@ function applyDecisions(state) {
     if (t.pausedFrom === 'develop' && t.claudeSession) {
       t.followUp = P.ownerApproved(task, t.step?.kind ?? 'develop', t.blockedReason ?? t.pauseReason);
     }
+    // Every later message to this task's developer carries it (prompts.withDecisions).
+    t.ownerDecided = [...(t.ownerDecided ?? []), { reason: t.blockedReason ?? t.pauseReason, decision: 'продолжить', at: stamp() }];
     delete t.pauseReason;
     delete t.blockedReason;
     state.current = id;
@@ -693,7 +695,7 @@ function toReview(state, task, t, named, resume) {
   // ревью" keeps the round; "продолжить" gives two more.
   state.tasks[task.id] = {
     phase: 'adopt', adopt: commits, adoptedFrom: kept, round: resume ? 1 : t.round ?? 1, codexThread: t.codexThread,
-    devReport: t.devReport, resume, approvedKinds: t.approvedKinds, startedAt: new Date().toISOString(),
+    devReport: t.devReport, resume, approvedKinds: t.approvedKinds, ownerDecided: t.ownerDecided, startedAt: new Date().toISOString(),
   };
   note(task, `владелец: ${what} — ${commits.length} коммит(ов) из ${kept}${commits.length ? ` (${commits.map((sha) => sha.slice(0, 7)).join(', ')})` : ''}${resume ? `, дальше шаг «${STEP_NOTE[resume.kind]}»` : ''}; возьму, когда очередь дойдёт`);
 }
