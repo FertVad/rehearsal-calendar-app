@@ -34,7 +34,6 @@ const PATHS = [
 const ADDED = [
   [/rehearsly\.me|neon\.tech|vercel\.app/i, 'адрес production'],
   [/\bDROP\s+(TABLE|COLUMN|SCHEMA)\b|\bTRUNCATE\b/i, 'удаление данных'],
-  [/\bDELETE\s+FROM\b(?![^\n]*\bWHERE\b)/i, 'DELETE без WHERE'],
   [/BEGIN [A-Z ]*PRIVATE KEY|sk-[A-Za-z0-9]{20,}|re_[A-Za-z0-9]{20,}/, 'похоже на ключ'],
   [/\bgit push\b/, 'git push в коде'],
 ];
@@ -61,8 +60,28 @@ export function testIdsOnly(change) {
  *   testIDs are not a reason (testIdsOnly)
  * @returns reasons to pause, empty when the task may go on
  */
+/**
+ * DELETE statements with no WHERE, read whole: T-110's scoped deletes had
+ * their WHERE on the next line and were taken for unscoped ones. Test code
+ * clears its own in-memory fixtures and is not data deletion.
+ */
+export function unscopedDeletes(file, addedLines) {
+  if (/(^|\/)(__tests__|e2e)\//.test(file) || /\.test\.[cm]?[jt]sx?$/.test(file)) return [];
+  const text = addedLines.join('\n');
+  const found = [];
+  for (const match of text.matchAll(/\bDELETE\s+FROM\b[^;`'"]*/gi)) {
+    if (!/\bWHERE\b/i.test(match[0])) found.push(match[0].replace(/\s+/g, ' ').trim().slice(0, 120));
+  }
+  return found;
+}
+
 export function pauseReasons(files, addedLines, changes = {}) {
   const reasons = new Set();
+  // Per file when the diff is known; otherwise the added lines as one text.
+  const byFile = Object.keys(changes).length ? Object.entries(changes).map(([file, change]) => [file, change.added]) : [['', addedLines]];
+  for (const [file, lines] of byFile) {
+    for (const statement of unscopedDeletes(file, lines)) reasons.add(`DELETE без WHERE: ${statement}`);
+  }
   for (const file of files) {
     if (/(^|\/)src\//.test(file) && testIdsOnly(changes[file])) continue;
     for (const [pattern, reason] of PATHS) if (pattern.test(file)) reasons.add(`${reason}: ${file}`);

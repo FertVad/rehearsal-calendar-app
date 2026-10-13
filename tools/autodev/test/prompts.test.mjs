@@ -86,3 +86,11 @@ test('a note from the owner leads the message, which still ends with the marker 
   assert.match(message, /RESULT: DONE\nRESULT: BLOCKED: <причина>$/);
   assert.equal(P.withNote('x', ''), 'x');
 });
+
+test('the owner\'s earlier decisions on a task lead every message to its developer', () => {
+  const message = P.withDecisions(P.fixReview(task, 'R-01 …', ''), [{ reason: 'миграцию 012 нужно применить до выкладки', decision: 'продолжить', at: '13.10.2026, 18:20' }]);
+  assert.match(message, /^Владелец уже решил по этой задаче — из-за этого повторно не останавливайся/);
+  assert.match(message, /«миграцию 012 нужно применить до выкладки» → продолжить/);
+  assert.match(message, /RESULT: DONE\nRESULT: BLOCKED: <причина>$/);
+  assert.equal(P.withDecisions('x', []), 'x');
+});

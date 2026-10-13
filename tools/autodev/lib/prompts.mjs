@@ -119,6 +119,19 @@ ${TOOLING}
 ${DEVELOPER_END}`;
 }
 
+/**
+ * What the owner already decided on this task, at the head of every message
+ * its developer gets. Each step is a fresh session: T-110's review-fix session
+ * stopped again on the migration the owner had allowed an hour before.
+ */
+export function withDecisions(message, decided) {
+  if (!decided?.length) return message;
+  return `Владелец уже решил по этой задаче — из-за этого повторно не останавливайся (применение к production по-прежнему не твоё дело):
+${decided.map((d) => `- «${d.reason}» → ${d.decision} (${d.at})`).join('\n')}
+
+${message}`;
+}
+
 /** A note from the owner, put ahead of the message's closing instructions. */
 export function withNote(message, note) {
   if (!note) return message;
