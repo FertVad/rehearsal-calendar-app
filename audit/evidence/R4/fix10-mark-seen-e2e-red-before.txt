@@ -1,0 +1,42 @@
+Cause fix 10, supervisor check: e2e flow 04-mark-seen red before the flow fix.
+Flow 04 as of ac7bbd5 (taps the "Act I run-through" seen-toggle without
+scrolling it into view). Flow 06 runs first and creates "Duel scene" on the
+first slot offered — late in the day that is tomorrow 09:00, above
+"Act I run-through" (tomorrow 18:00) — so the toggle lands under the tab bar.
+Supervisor's run hierarchy (e2e/out/artifacts/2026-10-13_222630): seen-toggle
+of "Act I run-through" at [33,813][65,846], tab bar row at y 781..824; the
+tap at its centre hits the tab bar, the toggle stays unselected.
+
+$ npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml e2e/flows/04-mark-seen.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/06-planner-to-rehearsal.yaml e2e/flows/04-mark-seen.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] From the planner to a rehearsal (2m 7s)
+[Failed] Mark a rehearsal seen (51s) (Assertion is false: id: seen-toggle, Below ".*Act I run-through.*", selected is visible)
+
+1/2 Flow Failed
+
+After the fix (scrollUntilVisible with centerElement before the tap and
+before the director's count):
+
+$ npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml e2e/flows/04-mark-seen.yaml
+[Passed] From the planner to a rehearsal (2m 21s)
+[Passed] Mark a rehearsal seen (1m 41s)
+
+2/2 Flows Passed in 4m 2s
+
+$ npm run e2e -- e2e/flows/04-mark-seen.yaml
+[Passed] Mark a rehearsal seen (2m 38s)
+
+1/1 Flow Passed in 2m 38s
