@@ -644,8 +644,11 @@ function applyDecisions(state) {
       continue;
     }
     t.phase = t.pausedFrom === 'check' ? 'check' : t.pausedFrom;
-    if (t.pausedFrom === 'check') {
-      // The kinds of change it stopped on are allowed for this task from now on.
+    // The owner allows the task as its commits stand: the kinds of change in
+    // them are allowed from now on — after a stop on checks, and after the
+    // developer stopped to ask (T-110: its migration would otherwise have
+    // stopped the queue a second time, on checks).
+    if (['check', 'develop'].includes(t.pausedFrom) && t.base) {
       const { files, added, changes } = parseDiff(git(WORKTREE, 'diff', '--unified=0', `${t.base}..HEAD`));
       t.approvedKinds = [...new Set([...(t.approvedKinds ?? []), ...pauseReasons(files, added, changes).map(reasonKind)])];
       delete t.approvedHead;
