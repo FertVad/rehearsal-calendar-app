@@ -120,6 +120,11 @@ function claudeBin() {
   return `${HOME}/.nvm/versions/node/v20.19.2/bin/claude`;
 }
 
+/** macOS memory pressure: 1 normal, 2 warning, 4 critical; 1 when it cannot be read. */
+function memoryPressure() {
+  try { return Number(execFileSync('sysctl', ['-n', 'kern.memorystatus_vm_pressure_level'], { encoding: 'utf8', env: ENV }).trim()) || 1; } catch { return 1; }
+}
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const stamp = () => new Date().toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
 const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', env: ENV, maxBuffer: 64 * 1024 * 1024 }).trim();
@@ -226,10 +231,10 @@ function pause(state, task, t, reason) {
  * A macOS notification with a sound. A pause used to be visible only in
  * STATUS.md: T-304 waited a day before anyone looked (2026-10-11/12).
  */
-function notifyOwner(text) {
+function notifyOwner(text, title = 'Автодев ждёт решения') {
   const quoted = (value) => `"${String(value).replace(/[\\"]/g, ' ').replace(/\s+/g, ' ').slice(0, 220)}"`;
   try {
-    execFileSync('osascript', ['-e', `display notification ${quoted(text)} with title ${quoted('Автодев ждёт решения')} sound name "Glass"`],
+    execFileSync('osascript', ['-e', `display notification ${quoted(text)} with title ${quoted(title)} sound name "Glass"`],
       { env: ENV, timeout: 10000, stdio: 'ignore' });
   } catch { /* no notification is not a reason to stop */ }
 }
@@ -430,6 +435,19 @@ async function check(state, task, t) {
   const reasons = unapproved(pauseReasons(files, added, changes), t.approvedKinds);
   if (reasons.length) {
     return pause(state, task, t, `изменение требует решения владельца — ${reasons.join('; ')}`);
+  }
+  // Checks on a machine short of memory measure the swap, not the code:
+  // T-110's tests took 30 minutes and failed twice at pressure level 2 with
+  // 4 GB swapped out (2026-10-13). They wait, like an e2e machine not ready.
+  const pressure = memoryPressure();
+  if (pressure >= 2) {
+    const retry = NOT_READY_RETRY_MS[Math.min(t.notReady ?? 0, NOT_READY_RETRY_MS.length - 1)];
+    t.notReady = (t.notReady ?? 0) + 1;
+    state.waitUntil = Date.now() + retry;
+    state.waitingFor = 'память';
+    state.waitNote = `на машине не хватает памяти (давление памяти macOS: ${pressure >= 4 ? 'критическое' : 'предупреждение'}) — проверки отложены; закройте лишние приложения`;
+    if (t.notReady === 1) notifyOwner('Мало памяти: закройте лишние приложения (браузер, ChatGPT, Claude). Проверки отложены, пока память не освободится.', 'Автодев ждёт память');
+    return note(task, `проверки: отложены — не хватает памяти (давление ${pressure}); повтор через ${retry / 60000} мин`);
   }
   note(task, `проверки: запущены (${files.length} файлов)`);
   const runAll = async () => {
