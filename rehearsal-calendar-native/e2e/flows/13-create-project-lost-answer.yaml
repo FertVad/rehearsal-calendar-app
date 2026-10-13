@@ -1,0 +1,46 @@
+# A create whose answer was lost, tapped again, makes one project (cause fix
+# 10: B02). Macduff creates Dunsinane; the seed makes the server take longer
+# than the app waits, so the app says it failed while the server commits the
+# project anyway. He taps Create again on the same form. The app sends the
+# key of the first try, and the server answers with the project it made:
+# reopened, the app lists Dunsinane once. Each tap used to make a project of
+# its own, and he found two.
+appId: ${APP_ID}
+name: A create tapped again after its answer was lost makes one project
+tags:
+  - projects
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MACDUFF_EMAIL}
+- tapOn:
+    id: tab-create
+- tapOn: "Create Project"
+- tapOn: "Enter name"
+- inputText: "Dunsinane"
+- tapOn: "Create"
+# The app stops waiting after ten seconds; the server is still at it.
+- extendedWaitUntil:
+    visible: ".*timeout.*"
+    timeout: 30000
+- takeScreenshot: 13-lost-answer
+- tapOn: "OK"
+- tapOn: "Create"
+- extendedWaitUntil:
+    visible: ".*Lord Macduff, Owner.*"
+    timeout: 30000
+# Both requests are done by now, whatever the server made of them. Reopened,
+# the app lists what the server holds.
+- launchApp
+- tapOn: "Projects, tab.*"
+# He is in no other project: every card is a Dunsinane, and there is one.
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Dunsinane.*"
+    timeout: 15000
+- assertNotVisible:
+    id: project-card
+    index: 1
+- takeScreenshot: 13-one-project

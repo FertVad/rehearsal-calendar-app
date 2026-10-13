@@ -45,6 +45,9 @@ export const PEOPLE = {
   // their own, since each flow leaves its account signing in differently.
   lear: { email: 'lear@e2e.test', firstName: 'King', lastName: 'Lear', onboarded: true },
   kent: { email: 'kent@e2e.test', firstName: 'Earl', lastName: 'Kent', onboarded: true },
+  // A create whose answer is lost (13): in no project, so the projects they
+  // see are the ones that flow makes.
+  macduff: { email: 'macduff@e2e.test', firstName: 'Lord', lastName: 'Macduff', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -156,6 +159,21 @@ export async function seed({ client, apiUrl, timezone }) {
     token: token.treplev,
     body: { days: [{ date: days.other, entries: [{ startsAt: `${days.other}T00:00:00.000Z`, endsAt: `${days.other}T23:59:59.999Z`, type: 'busy', isAllDay: true }] }] },
   });
+
+  // A create whose answer never arrives (13). The first project named
+  // Dunsinane takes 13 seconds to insert — longer than the app's 10-second
+  // request timeout — so the app gives up and shows an error while the server
+  // goes on to commit it, its answer going to a closed connection. Only the
+  // first: what the app sends after that is answered at once. On this
+  // database alone; the schema the app runs on has no such trigger.
+  await client.query(`CREATE SEQUENCE e2e_lost_answer;
+    CREATE FUNCTION e2e_lose_answer() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF NEW.name = 'Dunsinane' AND nextval('e2e_lost_answer') = 1 THEN PERFORM pg_sleep(13); END IF;
+      RETURN NEW;
+    END $$;
+    CREATE TRIGGER e2e_lose_answer BEFORE INSERT ON native_projects
+      FOR EACH ROW EXECUTE FUNCTION e2e_lose_answer()`);
 
   return {
     password: PASSWORD,

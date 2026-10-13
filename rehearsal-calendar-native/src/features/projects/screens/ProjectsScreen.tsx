@@ -91,6 +91,7 @@ export default function ProjectsScreen() {
               return (
                 <TouchableOpacity
                   key={project.id}
+                  testID="project-card"
                   style={[
                     styles.projectCard,
                     isSelected && styles.projectCardSelected,

@@ -98,6 +98,11 @@ invite code the seed returns (`TWELFTH_INVITE`) — the server's own, as it
 issued it — and `${<KEY>_DAY}` for each day it names (`MARK_DAY`, a local
 `YYYY-MM-DD`). Times are local to the machine, which is also the simulator's zone.
 
+A create whose answer is lost (flow 13) is made in the seed too: a trigger on
+the disposable database makes the first insert of a project named Dunsinane
+take 13 seconds, longer than the app's 10-second request timeout, so the app
+gives up while the server commits. Only that database has it.
+
 A flow that needs something changed behind the app's back while it runs — what
 another device would do — calls the local server from `e2e/scripts` with
 `runScript`; `${API_URL}` is its address (flow 10). A code the server
