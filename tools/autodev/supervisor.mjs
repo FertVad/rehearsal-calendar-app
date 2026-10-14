@@ -643,14 +643,21 @@ function applyDecisions(state) {
     if (!t || !['paused', 'deferred'].includes(t.phase)) continue;
     const task = tasksById[id] ?? { id, slug: 'task', title: id, body: '' };
     applied.push(id);
+    // The decision, with what the owner wrote after it, goes to every later
+    // message to the task's developer (prompts.withDecisions).
+    const decided = {
+      reason: t.blockedReason ?? t.pauseReason ?? t.deferReason ?? '',
+      decision: `${{ continue: 'продолжить', review: 'на ревью', skip: 'пропустить' }[decision.action]}${decision.note ? `: ${decision.note}` : ''}`,
+      at: stamp(),
+    };
     if (decision.action === 'review') {
-      if (t.phase === 'deferred') toReview(state, task, t, decision.commits, null);
+      if (t.phase === 'deferred') toReview(state, task, t, decision.commits, null, decided);
       else note(task, '«на ревью» — только для отложенной задачи; решение не применено');
       continue;
     }
     if (t.phase === 'deferred') {
       if (decision.action === 'skip') { t.phase = 'skipped'; note(task, 'владелец: пропустить отложенную'); continue; }
-      resumeDeferred(state, task, t, decision.commits);
+      resumeDeferred(state, task, t, decision.commits, decided);
       continue;
     }
     if (decision.action === 'skip') {
@@ -679,7 +686,7 @@ function applyDecisions(state) {
       t.followUp = P.ownerApproved(task, t.step?.kind ?? 'develop', t.blockedReason ?? t.pauseReason);
     }
     // Every later message to this task's developer carries it (prompts.withDecisions).
-    t.ownerDecided = [...(t.ownerDecided ?? []), { reason: t.blockedReason ?? t.pauseReason, decision: 'продолжить', at: stamp() }];
+    t.ownerDecided = [...(t.ownerDecided ?? []), decided];
     delete t.pauseReason;
     delete t.blockedReason;
     state.current = id;
@@ -694,7 +701,7 @@ function applyDecisions(state) {
  * auto/deferred/<id> are taken — named ones in branch order, or all of them —
  * and they land on auto/main when the queue reaches the task (adopt()).
  */
-function toReview(state, task, t, named, resume) {
+function toReview(state, task, t, named, resume, decided = null) {
   const kept = `auto/deferred/${task.id}`;
   const what = resume ? 'продолжить' : 'на ревью';
   let commits;
@@ -713,7 +720,8 @@ function toReview(state, task, t, named, resume) {
   // ревью" keeps the round; "продолжить" gives two more.
   state.tasks[task.id] = {
     phase: 'adopt', adopt: commits, adoptedFrom: kept, round: resume ? 1 : t.round ?? 1, codexThread: t.codexThread,
-    devReport: t.devReport, resume, approvedKinds: t.approvedKinds, ownerDecided: t.ownerDecided, startedAt: new Date().toISOString(),
+    devReport: t.devReport, resume, approvedKinds: t.approvedKinds,
+    ownerDecided: [...(t.ownerDecided ?? []), ...(decided ? [decided] : [])], startedAt: new Date().toISOString(),
   };
   note(task, `владелец: ${what} — ${commits.length} коммит(ов) из ${kept}${commits.length ? ` (${commits.map((sha) => sha.slice(0, 7)).join(', ')})` : ''}${resume ? `, дальше шаг «${STEP_NOTE[resume.kind]}»` : ''}; возьму, когда очередь дойдёт`);
 }
@@ -725,13 +733,13 @@ function toReview(state, task, t, named, resume) {
  * the reviewer had accepted. Tasks deferred before the step was recorded
  * resume at their last review if they had one, else at development.
  */
-function resumeDeferred(state, task, t, named) {
+function resumeDeferred(state, task, t, named, decided = null) {
   let resume = t.resume;
   if (!resume && t.round) {
     const file = path.join(DIR, 'reviews', `${task.id}-r${t.round}.md`);
     if (fs.existsSync(file)) resume = { kind: 'fix-review', review: fs.readFileSync(file, 'utf8') };
   }
-  toReview(state, task, t, named, resume ?? { kind: 'develop' });
+  toReview(state, task, t, named, resume ?? { kind: 'develop' }, decided);
 }
 
 /** Puts a task's adopted commits on top of auto/main; then checks and review as usual. */

@@ -24,18 +24,18 @@ Body two.
 
 test('reads the owner\'s decisions', () => {
   assert.deepEqual(parseDecisions('- T-001: продолжить\nT-002: пропустить — не нужно\nчто-то ещё'),
-    { 'T-001': { action: 'continue', commits: [] }, 'T-002': { action: 'skip', commits: [] } });
+    { 'T-001': { action: 'continue', commits: [], note: '' }, 'T-002': { action: 'skip', commits: [], note: 'не нужно' } });
 });
 
 test('a deferred task is continued with the commits named', () => {
-  assert.deepEqual(parseDecisions('T-108: продолжить 02a8549 c9f40a5'), { 'T-108': { action: 'continue', commits: ['02a8549', 'c9f40a5'] } });
-  assert.deepEqual(parseDecisions('T-108: пропустить abcdef1'), { 'T-108': { action: 'skip', commits: [] } });
+  assert.deepEqual(parseDecisions('T-108: продолжить 02a8549 c9f40a5'), { 'T-108': { action: 'continue', commits: ['02a8549', 'c9f40a5'], note: '' } });
+  assert.deepEqual(parseDecisions('T-108: пропустить abcdef1'), { 'T-108': { action: 'skip', commits: [], note: '' } });
 });
 
 test('a deferred task goes back to review with the commits named, or all of them', () => {
   assert.deepEqual(parseDecisions('T-108: на ревью f9212b3, 0b9f1a9 — только по задаче\nT-109: на ревью'), {
-    'T-108': { action: 'review', commits: ['f9212b3', '0b9f1a9'] },
-    'T-109': { action: 'review', commits: [] },
+    'T-108': { action: 'review', commits: ['f9212b3', '0b9f1a9'], note: 'только по задаче' },
+    'T-109': { action: 'review', commits: [], note: '' },
   });
 });
 
@@ -56,5 +56,11 @@ test('state survives a round trip, a missing file is empty, a corrupt one is an 
 
 test('decisions already applied are not read again', () => {
   const text = 'T-003: продолжить\n\n## Применено\n- 09.10.2026, 09:00 — T-002: пропустить\n';
-  assert.deepEqual(parseDecisions(text), { 'T-003': { action: 'continue', commits: [] } });
+  assert.deepEqual(parseDecisions(text), { 'T-003': { action: 'continue', commits: [], note: '' } });
+});
+
+test('what the owner writes after the decision is kept for the developer', () => {
+  assert.equal(parseDecisions('T-110: продолжить — разрешено изменить routes/auth.js: только блокировка').T_110, undefined);
+  assert.equal(parseDecisions('T-110: продолжить — разрешено изменить routes/auth.js: только блокировка')['T-110'].note,
+    'разрешено изменить routes/auth.js: только блокировка');
 });

@@ -76,7 +76,9 @@ export function parseDecisions(markdown) {
     const word = m[2].toLowerCase();
     const action = /продолжить|continue/.test(word) ? 'continue' : /пропустить|skip/.test(word) ? 'skip' : 'review';
     const commits = action === 'skip' ? [] : m[3].match(/\b[0-9a-f]{7,40}\b/gi) ?? [];
-    decisions[m[1]] = { action, commits };
+    // What the owner wrote after the word: conditions the developer must see.
+    const note = m[3].replace(/\b[0-9a-f]{7,40}\b/gi, '').replace(/^[\s,—–:-]+/, '').replace(/\s+/g, ' ').trim();
+    decisions[m[1]] = { action, commits, note };
   }
   return decisions;
 }
