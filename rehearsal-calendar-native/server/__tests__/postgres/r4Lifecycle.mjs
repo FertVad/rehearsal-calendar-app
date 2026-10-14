@@ -33,10 +33,10 @@ export async function probeR4Lifecycle({ connectionString, control, allowedPorts
   const owner = await person('owner');
   const member = await person('member');
   const token = generateTokens(owner, 1).accessToken;
-  const call = (method, path, body, key) => new Promise((resolve, reject) => {
+  const call = (method, path, body, key, as = token) => new Promise((resolve, reject) => {
     const bytes = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
     const req = http.request({ hostname: '127.0.0.1', port: server.address().port, method, path,
-      headers: { Connection: 'close', Authorization: `Bearer ${token}`, ...(key ? { 'Idempotency-Key': key } : {}),
+      headers: { Connection: 'close', Authorization: `Bearer ${as}`, ...(key ? { 'Idempotency-Key': key } : {}),
         ...(bytes ? { 'Content-Type': 'application/json', 'Content-Length': bytes.length } : {}) } }, (res) => {
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
@@ -214,6 +214,35 @@ export async function probeR4Lifecycle({ connectionString, control, allowedPorts
       'B02: a rehearsal created while the project was deleted leaves no busy slot');
     contracts.push('a project that cannot be deleted keeps its rehearsals\' busy slots; the retry deletes both, '
       + 'and a rehearsal created meanwhile with them (B02)');
+
+    // B02 through account deletion: the owner deletes their account, which
+    // takes the project with it, while another administrator is booking a
+    // rehearsal there. The deletion must take the project in the same order
+    // as DELETE /projects/:id, or that rehearsal is cascaded away and its
+    // busy slots stay on the administrator's calendar (projectLock.js).
+    const departing = await person('departing');
+    const admin = await person('admin');
+    const departingToken = generateTokens(departing, 1).accessToken;
+    const adminToken = generateTokens(admin, 1).accessToken;
+    const theirs = await call('POST', '/api/native/projects', { name: 'Departing' }, undefined, departingToken);
+    assert.equal(theirs.status, 201);
+    const theirsId = Number(theirs.body.project.id);
+    await q(`INSERT INTO r0_fixture.native_project_members (project_id, user_id, role, status) VALUES ($1, $2, 'admin', 'active')`,
+      [theirsId, admin]);
+    const [booked, gone] = await slowSlots(async () => {
+      const creating = call('POST', `/api/native/projects/${theirsId}/rehearsals`,
+        { title: 'Orphaned', startsAt: START, endsAt: END, participant_ids: [admin] }, undefined, adminToken);
+      await booking();
+      return Promise.all([creating, call('DELETE', '/api/auth/me', undefined, undefined, departingToken)]);
+    });
+    assert.deepEqual([booked.status, gone.status], [201, 200]);
+    assert.equal(await count('native_users WHERE id = $1', [departing]), 0);
+    assert.equal(await count('native_projects WHERE id = $1', [theirsId]), 0);
+    assert.equal(await count('native_rehearsals'), 0);
+    assert.equal(await count(`native_user_availability WHERE user_id = $1 AND source = 'rehearsal'`, [admin]), 0,
+      'B02: a rehearsal created while its project went with the owner\'s account leaves no busy slot');
+    contracts.push('an account deleted while another administrator creates a rehearsal in its project takes the '
+      + 'project, the rehearsal and its busy slots together (B02)');
   } finally {
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });
     await database.closeDatabase();
