@@ -35,7 +35,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R1 | 10 | READY_FOR_CHECK — 7 VERIFIED, H02/IA01/IS02 READY_FOR_CHECK (DEV-15/OPS-IA01/OPS-IS02); release gates открыты |
 | R2 | 8 | READY_FOR_CHECK — 7 VERIFIED; FM01 ждёт даты конвертации production (OPS-FM01-DATE, ревью R2-01); OPS-R2-ADOPT до деплоя 007/008 |
 | R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 — в коде, PG-сценарии `dd73b96`; маршруты A01 `d5564ee`, `3859ece` (почтой — после OPS-EMAIL); правило Google/Apple `d964417`, `56d11e9`, `43cbdac`; сброс пароля `ec292ee`; смена email `50ba23d`; клиент регистрации `77bddd1`..`286787a`; экраны сброса и смены адреса `23f59cb`, замечания ревью `a7e42d8` (T-130) — A01, A03, A04, HP01, HP02 READY_FOR_CHECK до ревью и DEV-20; AC05 не сделан |
-| R4 | 8 | IN_PROGRESS — [отчёт](REMEDIATION_R4.md): D01, D02, DF02, D04 VERIFIED (правка №1); правка №10 (B01, B02, D03) READY_FOR_CHECK до ревью, выкладка сервера — после миграции 012; [разбор](TRIAGE_R4_R9.md) |
+| R4 | 8 | IN_PROGRESS — [отчёт](REMEDIATION_R4.md): D01, D02, DF02, D04 VERIFIED (правка №1); правка №10 (B01, B02, D03) READY_FOR_CHECK до ревью, выкладка сервера — после миграции 012; правка №11 (G01) READY_FOR_CHECK до ревью и DEV-02, выкладка — после миграции 013; [разбор](TRIAGE_R4_R9.md) |
 | R5 | 15 | IN_PROGRESS — [отчёт](REMEDIATION_R5.md): правка №8 (DP01) READY_FOR_CHECK до DEV-19; остальные TODO |
 | R6 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R6.md): правка №2 принята ревью (C02 VERIFIED; CC02–CC05, C03 до DEV-17/DEV-18); правка №3 принята ревью (DP04 VERIFIED; C01, CC01 до DEV-08); [разбор](TRIAGE_R4_R9.md) |
 | R7 | 16 | IN_PROGRESS — [отчёт](REMEDIATION_R7.md): правка №4 принята ревью `ad09154` (EI01, EI03, EI04, ES02 — READY_FOR_CHECK до DEV-03/04/05); [разбор](TRIAGE_R4_R9.md) |
@@ -134,7 +134,7 @@ OPS-R3-DATA (25.09).
 | FT02 | Medium | Нет | R2 | VERIFIED | SQL миграции и её запись в журнал не атомарны | [Одна транзакция на вызов, отказ журнала откатывает шаг — eb24c62](REMEDIATION_R2.md) |
 | FM01 | Medium | Да | R2 | READY_FOR_CHECK | Историческая конверсия UTC зависит от session timezone | [Legacy-раскладка отклоняется всеми режимами — eb24c62; дата конвертации production не установлена (ревью R2-01, OPS-FM01-DATE)](REMEDIATION_R2.md) |
 | FM02 | Low | Да | R2 | VERIFIED | Повторный OAuth backfill создаёт дубли email-provider | [SQLite-пути нет, 001 не исполним — eb24c62; дублей в production нет (OPS-R2-DATA 24.09)](REMEDIATION_R2.md) |
-| G01 | High | Нет | R4 | TODO | конкурентная регистрация оставляет двух владельцев одного push-токена | [правка причины №11 — разбор](TRIAGE_R4_R9.md) |
+| G01 | High | Нет | R4 | READY_FOR_CHECK | конкурентная регистрация оставляет двух владельцев одного push-токена | [правка причины №11 — 6f47364: токен уникален в схеме, регистрация — один upsert по нему; миграция 013 до выкладки сервера; PG R4_PUSH_TOKEN (красное до — fix11-push-token-pg-red-before.txt), мутации; ждёт ревью и DEV-02](REMEDIATION_R4.md) |
 | G02 | Medium | Нет | R8 | READY_FOR_CHECK | ticket Expo принят за окончательный результат; receipts не обрабатываются | [правка причины №5 — 03042b9, 7f85bab; ревью b948056 принято; миграция 011; ждёт DEV-11](REMEDIATION_R8.md) |
 | GC01 | Medium | Нет | R8 | TODO | «Позже» в onboarding не откладывает системный запрос уведомлений | [правка причины №20 — разбор](TRIAGE_R4_R9.md) |
 | GC02 | Medium | Нет | R8 | TODO | Profile сообщает успешное включение push при отказе OS или backend | [правка причины №20 — разбор](TRIAGE_R4_R9.md) |

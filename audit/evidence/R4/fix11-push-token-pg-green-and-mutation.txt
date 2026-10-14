@@ -1,0 +1,29 @@
+# Cause fix 11 (G01) — after the fix, and mutation checks, real PostgreSQL 15.13
+# Source: 6f47364 (fix commit). Command: npm --prefix rehearsal-calendar-native/server run test:r0-postgres -- <mode>
+
+## Green: --r4-push-token-only on 6f47364
+{"scenario":"controls","outcome":"PASS",...}
+{"scenario":"R4_PUSH_TOKEN","outcome":"PASS","contracts":["two registrations of one token at once leave one owner, the later one (G01)","a held token re-registered while the next person signs in ends with one owner (G01)","the schema refuses a second owner of a token to any writer","migration 013 keeps the most recently active holder of each token and yields the current catalog"],"externalConnections":0}
+R4_PUSH_TOKEN REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+
+## Mutation 1: routes/native/pushTokens.js from 3cbdfa3 (delete + upsert on the pair), new schema
+Error: timed out waiting for the first registration to be writing its row
+AssertionError [ERR_ASSERTION]: R4_PUSH_TOKEN probe failed unexpectedly
+# The old upsert names a conflict target (user_id, device_token) the schema no longer has:
+# every registration fails at once (42P10) and none reaches the insert.
+
+## Mutation 2: upsert on device_token without `user_id = EXCLUDED.user_id` (the token is not moved)
+AssertionError [ERR_ASSERTION]: G01: one push token, one owner — the later registration
+  actual: [ 1 ],
+  expected: [ 2 ],
+AssertionError [ERR_ASSERTION]: R4_PUSH_TOKEN probe failed unexpectedly
+# Same mutation, SQLite route test pushTokenOwnership.test.js: Tests: 3 failed, 2 passed, 5 total.
+
+## Other PG scenarios on 6f47364 — PASS
+--r2-migrations-schema-only: R2_SCHEMA (38 checks, catalogTables 23), R2_MIGRATIONS
+--r3-only: R3_EMAIL, R3_AUTH
+--r4-only: D01, R4_LIFECYCLE, R4_PUSH_TOKEN
+--r6-only: R6_AVAILABILITY; --r7-only: R7_IMPORT; --r8-only: R8_REMINDERS
+default run: controls, D01, R4_LIFECYCLE, R4_PUSH_TOKEN, A02, B03, B04, H04, IS02, R2_ADAPTER — PASS;
+R2_STARTUP fails on importing the copied server, the same on base 3cbdfa3 (checked by restoring the
+base files): the fixture writes a .env into its temporary copy, which this sandbox forbids.
