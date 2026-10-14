@@ -25,15 +25,16 @@ const modes = {
   '--r3-email-only': ['controls', 'R3_EMAIL'],
   '--r3-auth-only': ['controls', 'R3_AUTH'],
   '--r3-only': ['controls', 'R3_EMAIL', 'R3_AUTH'],
-  '--r4-only': ['controls', 'D01', 'R4_LIFECYCLE'],
+  '--r4-only': ['controls', 'D01', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN'],
+  '--r4-push-token-only': ['controls', 'R4_PUSH_TOKEN'],
   '--r6-only': ['controls', 'R6_AVAILABILITY'],
   '--r7-only': ['controls', 'R7_IMPORT'],
   '--r8-only': ['controls', 'R8_REMINDERS'],
-  '--security-only': ['controls', 'A02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'],
+  '--security-only': ['controls', 'A02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'],
 };
 assert.ok(args.length === 0 || (args.length === 1 && Object.hasOwn(modes, args[0])),
-  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only|--b04-only|--h04-only|--is02-only|--f05-only|--r2-foundation-only|--r2-schema-only|--r2-migrations-only|--r2-migrations-schema-only|--r3-email-only|--r3-auth-only|--r3-only|--r4-only|--r6-only|--r7-only|--r8-only|--security-only]');
-const scenarios = modes[args[0]] || ['controls', 'D01', 'R4_LIFECYCLE', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'];
+  'Usage: node scripts/r0-postgres.mjs [--a02-only|--b03-only|--a02-b03-only|--b04-only|--h04-only|--is02-only|--f05-only|--r2-foundation-only|--r2-schema-only|--r2-migrations-only|--r2-migrations-schema-only|--r3-email-only|--r3-auth-only|--r3-only|--r4-only|--r4-push-token-only|--r6-only|--r7-only|--r8-only|--security-only]');
+const scenarios = modes[args[0]] || ['controls', 'D01', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'A02', 'B03', 'B04', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'];
 const docker = process.env.R0_DOCKER_BIN || '/usr/local/bin/docker';
 const context = process.env.R0_DOCKER_CONTEXT || 'desktop-linux';
 const cli = (...args) => execFileSync(docker, ['--context', context, ...args], { encoding: 'utf8', timeout: 20000 }).trim();
@@ -83,7 +84,7 @@ try {
   for (const scenario of scenarios) {
     const result = spawnSync(process.execPath, ['--unhandled-rejections=strict', probe, scenario], {
       cwd, encoding: 'utf8', timeout: ['IS02', 'R2_SCHEMA', 'R2_MIGRATIONS'].includes(scenario) ? 120000
-        : ['B03', 'B04', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'].includes(scenario) ? 45000 : 15000,
+        : ['B03', 'B04', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'].includes(scenario) ? 45000 : 15000,
       maxBuffer: 2 * 1024 * 1024,
       env: { PATH: '/usr/bin:/bin', TZ: 'UTC', NODE_ENV: 'production',
         JWT_SECRET: 'r0-local-signing-secret', ADMIN_PASSWORD: 'r0-local-password', CRON_SECRET: 'r0-local-cron',

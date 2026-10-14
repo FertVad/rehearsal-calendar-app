@@ -1,10 +1,10 @@
 /**
  * Who a device token belongs to.
  *
- * A push token identifies a phone, and only one person is signed in on it. The
- * unique key is (user_id, device_token), so registration on its own adds a row
- * rather than moving one — and a session that ends without the client reaching
- * DELETE /push-tokens leaves the previous row behind. Signing out on a second
+ * A push token identifies a phone, and only one person is signed in on it, so
+ * the token is unique on its own (migration 013, G01) and registration moves
+ * it — a session that ends without the client reaching DELETE /push-tokens
+ * leaves the previous row behind. Signing out on a second
  * device bumps token_version and invalidates this phone silently; a refresh can
  * fail; a sign-out with no network swallows the error and proceeds.
  *
@@ -52,7 +52,7 @@ beforeAll(async () => {
       last_active_at DATETIME NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user_id, device_token)
+      UNIQUE(device_token)
     )`
   );
 

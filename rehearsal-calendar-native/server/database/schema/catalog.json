@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "schemaId": "rehearsly-pg-current-v1",
   "postgresCatalogMajor": 15,
-  "bootstrapSha256": "ff454105b556daefda999101c0e5159dccf7089caa7693b76dd48dd9d06fc4ff",
+  "bootstrapSha256": "48284687247da9559e196a0175f427fd39c997fab04f2356de2f7ab204217cf9",
   "tables": [
     {
       "name": "native_auth_providers",
@@ -560,9 +560,8 @@
         {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
       ],
       "indexes": [
-        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["device_token"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
         {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
-        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id","device_token"],"options":[0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.text_ops"],"collations":[null,"pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["device_token"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
         {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
       ]
     },

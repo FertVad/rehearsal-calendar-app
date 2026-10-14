@@ -7,7 +7,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 
 const scenario = process.argv[2];
-assert.ok(['controls', 'A02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'].includes(scenario));
+assert.ok(['controls', 'A02', 'B03', 'B04', 'D01', 'H04', 'IS02', 'R2_ADAPTER', 'R2_STARTUP', 'F05', 'R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'].includes(scenario));
 assert.equal(process.env.NODE_ENV, 'production'); // quieter logger, real production JWT guard
 assert.equal(process.env.POSTGRES_URL, undefined);
 const target = new URL(process.env.DATABASE_URL);
@@ -44,7 +44,7 @@ await control.query('SET search_path TO r0_fixture');
 
 // Schema/migration suites start with the empty owned application schema; they
 // never mistake the diagnostic subset below for canonical provisioning.
-if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'].includes(scenario)) {
+if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R4_PUSH_TOKEN', 'R6_AVAILABILITY', 'R7_IMPORT', 'R8_REMINDERS'].includes(scenario)) {
   target.searchParams.set('options', '-c search_path=r0_fixture');
   process.env.DATABASE_URL = target.href;
   try {
@@ -58,6 +58,8 @@ if (['R2_SCHEMA', 'R2_MIGRATIONS', 'R3_EMAIL', 'R3_AUTH', 'R4_LIFECYCLE', 'R6_AV
             ? await (await import('./r3Auth.mjs')).probeR3Auth({ connectionString: target.href, control, allowedPorts })
             : scenario === 'R4_LIFECYCLE'
               ? await (await import('./r4Lifecycle.mjs')).probeR4Lifecycle({ connectionString: target.href, control, allowedPorts })
+            : scenario === 'R4_PUSH_TOKEN'
+              ? await (await import('./r4PushToken.mjs')).probeR4PushToken({ connectionString: target.href, control, allowedPorts })
             : scenario === 'R6_AVAILABILITY'
               ? await (await import('./r6Availability.mjs')).probeR6Availability({ connectionString: target.href, control, allowedPorts })
               : scenario === 'R7_IMPORT'

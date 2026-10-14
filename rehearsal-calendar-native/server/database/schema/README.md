@@ -109,6 +109,14 @@ is disposable — so no recorded root changed meaning. The owner confirmed on
 From the first production adoption on, changes take new versioned paths as
 described above.
 
+On 2026-10-14 R4 (cause fix 11, G01) changed a domain table the same way, still
+before any adoption: `native_push_tokens` is unique on `device_token` alone
+instead of `(user_id, device_token)`, and the plain token index is gone. The
+snapshot, catalog and manifest were re-pinned. `migrations/013-push-token-owner.sql`
+brings an existing schema there (dropping all but the most recently active
+holder of each token); it is not a manifest step, so a domain schema without it
+no longer matches v1 and is refused for adoption until the owner applies 013.
+
 `r2Schema.mjs` checks actual fresh and adopted schemas through the real migration
 runner and application HTTP/adapter code, plus independent catalog drift and
 data-preservation controls. It explicitly reproduces PostgreSQL `42P10` on an

@@ -17,13 +17,13 @@ export const manifest = freeze({
       "id": "rehearsly-pg-current-v1",
       "descriptor": {
         "file": "database/schema/catalog.json",
-        "sha256": "fe3b13c9d4748e43c991e4ac43b06f7c28f54f1b991114d297545e8269179ae7"
+        "sha256": "3ed03aaac7a6516936b2a8617802a8c286fb5aa711fb1cb9412bb13608af6f83"
       },
       "fresh": true,
       "adopt": true,
       "bootstrap": {
         "file": "database/init-native-schema.sql",
-        "sha256": "ff454105b556daefda999101c0e5159dccf7089caa7693b76dd48dd9d06fc4ff"
+        "sha256": "48284687247da9559e196a0175f427fd39c997fab04f2356de2f7ab204217cf9"
       },
       "inspector": {
         "file": "database/schema/inspect.mjs",
@@ -35,7 +35,7 @@ export const manifest = freeze({
       "id": "rehearsly-pg-domain13-v1",
       "descriptor": {
         "file": "database/schema/catalog.json",
-        "sha256": "fe3b13c9d4748e43c991e4ac43b06f7c28f54f1b991114d297545e8269179ae7"
+        "sha256": "3ed03aaac7a6516936b2a8617802a8c286fb5aa711fb1cb9412bb13608af6f83"
       },
       "fresh": false,
       "adopt": true,
@@ -49,7 +49,7 @@ export const manifest = freeze({
       "id": "rehearsly-pg-domain13-pre-import-key-v1",
       "descriptor": {
         "file": "database/schema/catalog.json",
-        "sha256": "fe3b13c9d4748e43c991e4ac43b06f7c28f54f1b991114d297545e8269179ae7"
+        "sha256": "3ed03aaac7a6516936b2a8617802a8c286fb5aa711fb1cb9412bb13608af6f83"
       },
       "fresh": false,
       "adopt": true,

@@ -40,37 +40,31 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     // invalidates this one, a refresh can fail, and signing out with no network
     // swallows the error and proceeds. The old row survives all three.
     //
-    // The unique key is (user_id, device_token), so without this the next
-    // person's login inserts a *second* row against the same token instead of
-    // moving it, and `getUserPushTokens` keeps handing it to the previous
-    // owner. Their lock screen then carries someone else's project names,
-    // rehearsal titles and members' names — unopenable, since the fetch by id
-    // 404s for a non-member, and invisible to the person whose notifications
-    // are going astray.
+    // So registering moves the token to whoever registers it, or the previous
+    // owner's pushes — project names, rehearsal titles, members' names — keep
+    // landing on a lock screen that is now someone else's.
     //
-    // Both writes and the session check share one transaction. A session
+    // The token is unique on its own (migration 013, G01), and this is one
+    // upsert on it. A delete of the other holders followed by an upsert on
+    // (user_id, device_token) did the same one request at a time, but two at
+    // once — an account switch with the previous session's late registration
+    // still in flight — each deleted before the other had inserted, and both
+    // rows stayed. Now the later request waits for the earlier one's row and
+    // takes it; overlapping registrations by the same person (app start, the
+    // profile toggle, onboarding — a 500 on 2026-08-26) land on the same row.
+    //
+    // The write and the session check share one transaction. A session
     // revoked while this request waited — the owner's Google or Apple sign-in
     // taking the account back — registers nothing: the device would keep
     // receiving the account's notifications (review R3-12).
     const registered = await db.transaction(async (tx) => {
       if (!(await lockSession(tx, req))) return false;
       await tx.run(
-        'DELETE FROM native_push_tokens WHERE device_token = ? AND user_id != ?',
-        [deviceToken, userId]
-      );
-
-      // One upsert rather than SELECT-then-INSERT.
-      //
-      // Registration is triggered from more than one place — app start, the
-      // profile toggle, the onboarding screen — and two of them can overlap. Both
-      // requests then found no row, both inserted, and the second hit the unique
-      // index on (user_id, device_token) and came back as a 500 to a user who had
-      // done nothing wrong. Which is exactly what happened on 2026-08-26.
-      await tx.run(
         `INSERT INTO native_push_tokens (user_id, device_token, device_type, device_name, last_active_at, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT (user_id, device_token)
-         DO UPDATE SET last_active_at = EXCLUDED.last_active_at,
+         ON CONFLICT (device_token)
+         DO UPDATE SET user_id = EXCLUDED.user_id,
+                       last_active_at = EXCLUDED.last_active_at,
                        updated_at = EXCLUDED.updated_at,
                        device_type = EXCLUDED.device_type,
                        device_name = EXCLUDED.device_name`,

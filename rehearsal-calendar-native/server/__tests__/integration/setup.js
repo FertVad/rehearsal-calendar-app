@@ -221,7 +221,7 @@ export async function setupIntegrationDb() {
       last_active_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE (user_id, device_token)
+      UNIQUE (device_token)
     );
 
     -- Push reminders already sent. The unique pair is what stops a rehearsal
