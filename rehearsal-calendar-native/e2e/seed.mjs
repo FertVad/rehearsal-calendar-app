@@ -48,6 +48,10 @@ export const PEOPLE = {
   // A create whose answer is lost (13): in no project, so the projects they
   // see are the ones that flow makes.
   macduff: { email: 'macduff@e2e.test', firstName: 'Lord', lastName: 'Macduff', onboarded: true },
+  // One account after another on the same running app (14): a project they
+  // share, and one of Lopakhin's own that he runs.
+  ranevskaya: { email: 'ranevskaya@e2e.test', firstName: 'Lyubov', lastName: 'Ranevskaya', onboarded: true },
+  lopakhin: { email: 'lopakhin@e2e.test', firstName: 'Yermolai', lastName: 'Lopakhin', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -124,10 +128,13 @@ export async function seed({ client, apiUrl, timezone }) {
   if (!new RegExp(`^[${inviteFormat.alphabet}]{${inviteFormat.length}}$`).test(twelfth.inviteCode)) {
     throw new Error(`The server issued ${twelfth.inviteCode}, not a short invite code`);
   }
+  // Ranevskaya runs the orchard and Lopakhin is in it; he runs a project of his own.
+  const { id: orchardId } = await project('The Cherry Orchard', 'Act IV', ['lopakhin'], 'ranevskaya');
+  await project('Lopakhin Holdings', 'Summer cottages', [], 'lopakhin');
 
-  const rehearsal = async (projectId, title, day, from, to, cast) => {
+  const rehearsal = async (projectId, title, day, from, to, cast, by = 'director') => {
     const { rehearsal: created } = await call(apiUrl, 'POST', `/native/projects/${projectId}/rehearsals`, {
-      token: token.director,
+      token: token[by],
       body: {
         title,
         startsAt: localInstant(day, from),
@@ -143,6 +150,7 @@ export async function seed({ client, apiUrl, timezone }) {
     ophelia: await rehearsal(hamletId, 'Ophelia scenes', 3, 11, 13, ['director', 'ophelia']),
     dress: await rehearsal(hamletId, 'Full dress', 8, 19, 22, ['director', 'hamlet', 'ophelia', 'horatio']),
     reading: await rehearsal(seagullId, 'Table read', 2, 15, 17, ['director', 'ophelia']),
+    orchard: await rehearsal(orchardId, 'Orchard walk', 1, 12, 14, ['ranevskaya', 'lopakhin'], 'ranevskaya'),
   };
 
   // Some of the cast are busy, so the planner has something to weigh.

@@ -348,6 +348,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             {/* Logout Button */}
             <GlassButton
               title={t.profile.logout}
+              testID="profile-logout"
               onPress={handleLogout}
               variant="glass"
               style={styles.logoutButton}

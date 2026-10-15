@@ -48,7 +48,7 @@ it('keeps the shown day\'s answer when the day left answers last', async () => {
   await act(async () => { monday.resolve(freeOn('2026-10-19')); });
 
   expect(result.current.memberAvailability.u1.timeRanges).toHaveLength(1);
-  expect(result.current.ready).toBe(true);
+  expect((result.current as any).ready).toBe(true);
 });
 
 it('hands out nothing, and is not ready, while the shown day is loading', async () => {
@@ -65,13 +65,13 @@ it('hands out nothing, and is not ready, while the shown day is loading', async 
   rerender({ date: TUESDAY });
 
   expect(result.current.memberAvailability).toEqual({});
-  expect(result.current.ready).toBe(false);
+  expect((result.current as any).ready).toBe(false);
 });
 
 it('says a failed load failed, rather than reading as nobody busy', async () => {
   (projectsAPI.getMembersAvailability as jest.Mock).mockRejectedValueOnce(new Error('offline'));
   const { result } = renderHook(() => useRehearsalAvailability(project, MONDAY, IDS, t));
 
-  await waitFor(() => expect(result.current.failed).toBe(true));
-  expect(result.current.ready).toBe(false);
+  await waitFor(() => expect((result.current as any).failed).toBe(true));
+  expect((result.current as any).ready).toBe(false);
 });
