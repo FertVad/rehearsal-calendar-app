@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EventMapping, CalendarSyncSettings } from '../types/calendar';
 
+import { logger } from './logger';
 // Storage keys
 const KEYS = {
   EXPORT_MAPPINGS: 'calendar-export-mappings',
@@ -86,7 +87,7 @@ export async function saveEventMapping(
       {}
     );
   } catch (error) {
-    console.error('[CalendarStorage] Failed to save event mapping:', error);
+    logger.error('[CalendarStorage] Failed to save event mapping:', error);
     throw error;
   }
 }
@@ -104,7 +105,7 @@ export async function getEventMapping(
     const mappings = JSON.parse(mappingsJson);
     return mappings[rehearsalId] || null;
   } catch (error) {
-    console.error('[CalendarStorage] Failed to get event mapping:', error);
+    logger.error('[CalendarStorage] Failed to get event mapping:', error);
     return null;
   }
 }
@@ -120,7 +121,7 @@ export async function removeEventMapping(rehearsalId: string): Promise<void> {
       {}
     );
   } catch (error) {
-    console.error('[CalendarStorage] Failed to remove event mapping:', error);
+    logger.error('[CalendarStorage] Failed to remove event mapping:', error);
     throw error;
   }
 }
@@ -133,7 +134,7 @@ export async function getAllMappings(): Promise<Record<string, EventMapping>> {
     const mappingsJson = await AsyncStorage.getItem(KEYS.EXPORT_MAPPINGS);
     return mappingsJson ? JSON.parse(mappingsJson) : {};
   } catch (error) {
-    console.error('[CalendarStorage] Failed to get all mappings:', error);
+    logger.error('[CalendarStorage] Failed to get all mappings:', error);
     return {};
   }
 }
@@ -145,7 +146,7 @@ export async function clearAllMappings(): Promise<void> {
   try {
     await AsyncStorage.removeItem(KEYS.EXPORT_MAPPINGS);
   } catch (error) {
-    console.error('[CalendarStorage] Failed to clear mappings:', error);
+    logger.error('[CalendarStorage] Failed to clear mappings:', error);
     throw error;
   }
 }
@@ -189,7 +190,7 @@ export async function getSyncSettings(): Promise<CalendarSyncSettings> {
       lastImportTime: settings.lastImportTime || null,
     };
   } catch (error) {
-    console.error('[CalendarStorage] Failed to get sync settings:', error);
+    logger.error('[CalendarStorage] Failed to get sync settings:', error);
     // Return default settings on error
     return {
       // Export settings
@@ -214,7 +215,7 @@ export async function saveSyncSettings(
   try {
     await AsyncStorage.setItem(KEYS.SYNC_SETTINGS, JSON.stringify(settings));
   } catch (error) {
-    console.error('[CalendarStorage] Failed to save sync settings:', error);
+    logger.error('[CalendarStorage] Failed to save sync settings:', error);
     throw error;
   }
 }
@@ -228,7 +229,7 @@ export async function updateLastExportTime(): Promise<void> {
     settings.lastExportTime = new Date().toISOString();
     await saveSyncSettings(settings);
   } catch (error) {
-    console.error('[CalendarStorage] Failed to update last export time:', error);
+    logger.error('[CalendarStorage] Failed to update last export time:', error);
     throw error;
   }
 }
@@ -296,7 +297,7 @@ export async function updateLastImportTime(): Promise<void> {
       {} as CalendarSyncSettings
     );
   } catch (error) {
-    console.error('[CalendarStorage] Failed to update last import time:', error);
+    logger.error('[CalendarStorage] Failed to update last import time:', error);
     throw error;
   }
 }

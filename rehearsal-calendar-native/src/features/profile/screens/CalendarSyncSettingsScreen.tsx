@@ -398,12 +398,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
         `${t.calendarSync.imported || 'Imported'}: ${importResult.success}\n${t.calendarSync.exportedRehearsals || 'Rehearsals exported'}: ${syncResult?.success ?? 0}`
       );
     } catch (error: any) {
-      console.error('[Sync] ❌ Error during synchronization:', error);
-      console.error('[Sync] ❌ Error details:', {
-        message: error.message,
-        stack: error.stack,
-        response: error.response?.data,
-      });
+      logger.error('[Sync] ❌ Error during synchronization:', error);
       Alert.alert(
         t.calendarSync.syncError || 'Sync Error',
         error.message || 'Failed to synchronize calendars'

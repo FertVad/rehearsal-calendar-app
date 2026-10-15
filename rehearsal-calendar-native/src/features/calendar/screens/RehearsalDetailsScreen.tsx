@@ -120,7 +120,7 @@ export default function RehearsalDetailsScreen() {
           logger.warn('[RehearsalDetails] Response had no allParticipants');
         }
       } catch (err) {
-        console.error('Failed to load participants:', err);
+        logger.error('Failed to load participants:', err);
       } finally {
         setLoading(false);
       }

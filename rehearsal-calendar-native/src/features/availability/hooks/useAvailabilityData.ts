@@ -210,7 +210,7 @@ export const useAvailabilityData = () => {
               uniqueSlots.push(slot);
               seenTimeRanges.add(key);
             } else {
-              console.log(`[useAvailabilityData] Skipping duplicate ${slot.source} slot on ${dateStr} ${key} (covered by rehearsal)`);
+              logger.debug(`[useAvailabilityData] Skipping duplicate ${slot.source} slot on ${dateStr} ${key} (covered by rehearsal)`);
             }
           }
         }
@@ -300,7 +300,7 @@ export const useAvailabilityData = () => {
         // A cache is not worth an error.
       });
     } catch (err) {
-      console.error('Failed to load availability:', err);
+      logger.error('Failed to load availability:', err);
       setLoadFailed(true);
 
       // Fall back to what was last seen, so the screen is not blank while the

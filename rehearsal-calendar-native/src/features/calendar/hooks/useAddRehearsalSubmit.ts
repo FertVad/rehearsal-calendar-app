@@ -144,7 +144,7 @@ export function useAddRehearsalSubmit({
         }
       } catch (syncError) {
         // Don't fail the whole operation if sync fails, just log it
-        console.error('[AddRehearsal] ❌ Failed to auto-sync to calendar:', syncError);
+        logger.error('[AddRehearsal] ❌ Failed to auto-sync to calendar:', syncError);
       }
 
       // Success message based on mode
@@ -166,7 +166,7 @@ export function useAddRehearsalSubmit({
         ]
       );
     } catch (error: any) {
-      console.error('Failed to save rehearsal:', error);
+      logger.error('Failed to save rehearsal:', error);
       const errorMessage = isEditMode
         ? t.rehearsals.updateError
         : t.rehearsals.createError;

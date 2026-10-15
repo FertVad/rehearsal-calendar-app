@@ -28,7 +28,7 @@ try {
     }),
   });
 } catch (error) {
-  console.log('[Notifications] Handler setup failed (expected on simulator):', error);
+  logger.debug('[Notifications] Handler setup failed (expected on simulator):', error);
 }
 
 /**
@@ -39,7 +39,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
   try {
     // Check if running on physical device
     if (!Device.isDevice) {
-      console.log('[Notifications] Push notifications only work on physical devices');
+      logger.debug('[Notifications] Push notifications only work on physical devices');
       return null;
     }
 
@@ -53,7 +53,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
     }
 
     if (finalStatus !== 'granted') {
-      console.log('[Notifications] Permission denied');
+      logger.debug('[Notifications] Permission denied');
       return null;
     }
 
@@ -63,7 +63,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
     });
 
     const token = tokenData.data;
-    console.log('[Notifications] Push token:', token);
+    logger.debug('[Notifications] Push token obtained');
 
     // Get device info
     const deviceType = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
@@ -86,10 +86,10 @@ export async function registerForPushNotifications(): Promise<string | null> {
       });
     }
 
-    console.log('[Notifications] Registration successful');
+    logger.debug('[Notifications] Registration successful');
     return token;
   } catch (error) {
-    console.error('[Notifications] Registration error:', error);
+    logger.error('[Notifications] Registration error:', error);
     return null;
   }
 }
@@ -153,10 +153,10 @@ export async function unregisterPushToken(): Promise<void> {
       // Remove from local storage
       await AsyncStorage.removeItem(PUSH_TOKEN_KEY);
 
-      console.log('[Notifications] Token unregistered');
+      logger.debug('[Notifications] Token unregistered');
     }
   } catch (error) {
-    console.error('[Notifications] Unregister error:', error);
+    logger.error('[Notifications] Unregister error:', error);
   }
 }
 

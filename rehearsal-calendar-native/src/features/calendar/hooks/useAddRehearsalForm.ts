@@ -8,6 +8,7 @@ import { parseTimeString } from '../../../shared/utils/time';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
 
+import { logger } from '../../../shared/utils/logger';
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
 interface RouteParams {
@@ -185,7 +186,7 @@ export function useAddRehearsalForm({
         // An edit sends the whole participant list, and an empty one clears the
         // call. A form left open over a failed load could save exactly that
         // (review DF03), so a form that could not load closes.
-        console.error('Failed to load rehearsal:', error);
+        logger.error('Failed to load rehearsal:', error);
         const gone = error?.response?.status === 404;
         Alert.alert(t.common.error, gone ? t.rehearsals.notFound : t.rehearsals.loadRehearsalError);
         navigation.goBack();

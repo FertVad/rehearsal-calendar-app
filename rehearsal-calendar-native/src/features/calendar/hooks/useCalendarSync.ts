@@ -89,7 +89,7 @@ export function useCalendarSync() {
         // DEBUG: Log all calendars found
         logger.debug('[DEBUG] 📅 Total calendars found:', deviceCalendars.length);
         deviceCalendars.forEach((cal, index) => {
-          console.log(`[DEBUG] Calendar ${index + 1}:`, {
+          logger.debug(`[DEBUG] Calendar ${index + 1}:`, {
             title: cal.title,
             source: cal.source?.name || 'Unknown',
             type: cal.source?.type || 'N/A',
@@ -111,7 +111,7 @@ export function useCalendarSync() {
         }
       }
     } catch (error) {
-      console.error('[useCalendarSync] Init failed:', error);
+      logger.error('[useCalendarSync] Init failed:', error);
     }
   };
 
@@ -139,7 +139,7 @@ export function useCalendarSync() {
 
       return granted;
     } catch (error) {
-      console.error('[useCalendarSync] Request permission failed:', error);
+      logger.error('[useCalendarSync] Request permission failed:', error);
       return false;
     }
   }, [settings]);
@@ -153,7 +153,7 @@ export function useCalendarSync() {
       await saveSyncSettings(updated);
       setSettings(updated);
     } catch (error) {
-      console.error('[useCalendarSync] Update settings failed:', error);
+      logger.error('[useCalendarSync] Update settings failed:', error);
       throw error;
     }
   }, [settings]);
@@ -184,7 +184,7 @@ export function useCalendarSync() {
       // Update last export time
       await updateSettings({ lastExportTime: new Date().toISOString() });
     } catch (error: any) {
-      console.error('[useCalendarSync] Sync rehearsal failed:', error);
+      logger.error('[useCalendarSync] Sync rehearsal failed:', error);
       setSyncStatus('error');
       setSyncError(error.message);
       throw error;
@@ -210,7 +210,7 @@ export function useCalendarSync() {
       const count = await getSyncedRehearsalsCount();
       setSyncedCount(count);
     } catch (error: any) {
-      console.error('[useCalendarSync] Unsync rehearsal failed:', error);
+      logger.error('[useCalendarSync] Unsync rehearsal failed:', error);
       setSyncStatus('error');
       setSyncError(error.message);
       throw error;
@@ -253,7 +253,7 @@ export function useCalendarSync() {
 
       return result;
     } catch (error: any) {
-      console.error('[useCalendarSync] Sync all failed:', error);
+      logger.error('[useCalendarSync] Sync all failed:', error);
       setSyncStatus('error');
       setSyncError(error.message);
       throw error;
@@ -283,7 +283,7 @@ export function useCalendarSync() {
 
       return result;
     } catch (error: any) {
-      console.error('[useCalendarSync] Remove all failed:', error);
+      logger.error('[useCalendarSync] Remove all failed:', error);
       setSyncStatus('error');
       setSyncError(error.message);
       throw error;
@@ -297,7 +297,7 @@ export function useCalendarSync() {
     try {
       return await isRehearsalSynced(rehearsalId);
     } catch (error) {
-      console.error('[useCalendarSync] Check sync status failed:', error);
+      logger.error('[useCalendarSync] Check sync status failed:', error);
       return false;
     }
   }, []);
@@ -337,7 +337,7 @@ export function useCalendarSync() {
 
       return result;
     } catch (error: any) {
-      console.error('[useCalendarSync] Import failed:', error);
+      logger.error('[useCalendarSync] Import failed:', error);
       setIsImporting(false);
       setImportError(error.message);
       throw error;
@@ -368,7 +368,7 @@ export function useCalendarSync() {
 
       return result;
     } catch (error: any) {
-      console.error('[useCalendarSync] Clear imported failed:', error);
+      logger.error('[useCalendarSync] Clear imported failed:', error);
       setIsImporting(false);
       setImportError(error.message);
       throw error;

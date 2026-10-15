@@ -132,7 +132,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
                   responses[rehearsal.id] = serverResponse === 'yes' ? 'yes' : null;
                 }
               } catch (err) {
-                console.error(`Failed to fetch RSVP for ${rehearsal.id}:`, err);
+                logger.error(`Failed to fetch RSVP for ${rehearsal.id}:`, err);
               }
 
               // Load stats for admins
@@ -146,7 +146,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
                     };
                   }
                 } catch (err) {
-                  console.error(`Failed to fetch admin stats for ${rehearsal.id}:`, err);
+                  logger.error(`Failed to fetch admin stats for ${rehearsal.id}:`, err);
                 }
               }
             })
@@ -161,7 +161,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
       lastFetchTime.current = Date.now();
       isInitialLoadRef.current = false;
     } catch (err: any) {
-      console.error('Failed to fetch rehearsals:', err);
+      logger.error('Failed to fetch rehearsals:', err);
       setError(err.message || 'Failed to load rehearsals');
     } finally {
       setLoading(false);

@@ -19,6 +19,7 @@ import {
   clearAllMappings as clearAllFromAsyncStorage,
 } from './calendarStorage';
 
+import { logger } from './logger';
 // Connection cache
 //
 // Keyed by the calendar and nothing else, so it has to be cleared when a
@@ -74,7 +75,7 @@ export async function getOrCreateConnection(
     connectionCache = { id: newConnection.id, deviceCalendarId };
     return newConnection.id;
   } catch (error) {
-    console.error('[CalendarMappings] Failed to get/create connection:', error);
+    logger.error('[CalendarMappings] Failed to get/create connection:', error);
     return null;
   }
 }
@@ -106,7 +107,7 @@ export async function saveEventMapping(
       syncDirection: 'export',
     });
   } catch (error) {
-    console.error('[CalendarMappings] Failed to save mapping to DB:', error);
+    logger.error('[CalendarMappings] Failed to save mapping to DB:', error);
     // Fallback: at least AsyncStorage is saved
   }
 }
@@ -190,7 +191,7 @@ async function localHere(): Promise<Record<string, Mapping>> {
   try {
     here = new Set(await listDeviceCalendarIds());
   } catch (error) {
-    console.error('[CalendarMappings] Could not list the device calendars; using the local record whole:', error);
+    logger.error('[CalendarMappings] Could not list the device calendars; using the local record whole:', error);
     return cached;
   }
   const result: Record<string, Mapping> = {};
@@ -222,7 +223,7 @@ export async function getEventMapping(
   } catch (error: any) {
     // A missing mapping comes back as null, so anything landing here is a real
     // failure — the local cache is the fallback.
-    console.error('[CalendarMappings] DB lookup failed, falling back to AsyncStorage:', error);
+    logger.error('[CalendarMappings] DB lookup failed, falling back to AsyncStorage:', error);
   }
 
   // Fallback: this device's own record (offline, or the server failed)
@@ -244,11 +245,11 @@ export async function removeEventMapping(rehearsalId: string): Promise<void> {
     } catch (error: any) {
       // 404 is okay - mapping doesn't exist
       if (error.response?.status !== 404) {
-        console.error('[CalendarMappings] Failed to remove from DB:', error);
+        logger.error('[CalendarMappings] Failed to remove from DB:', error);
       }
     }
   } catch (error) {
-    console.error('[CalendarMappings] Failed to remove mapping:', error);
+    logger.error('[CalendarMappings] Failed to remove mapping:', error);
     throw error;
   }
 }
@@ -279,7 +280,7 @@ export async function getAllMappings(): Promise<Record<string, { eventId: string
     }
     return result;
   } catch (error) {
-    console.error('[CalendarMappings] Failed to get mappings from DB, falling back to AsyncStorage:', error);
+    logger.error('[CalendarMappings] Failed to get mappings from DB, falling back to AsyncStorage:', error);
 
     const cached = await localHere();
     if (Object.keys(cached).length > 0) return cached;
@@ -312,10 +313,10 @@ export async function clearAllMappings(): Promise<void> {
     try {
       await calendarSyncAPI.deleteMappings('rehearsal', await listDeviceCalendarIds());
     } catch (error) {
-      console.error('[CalendarMappings] Failed to clear DB mappings:', error);
+      logger.error('[CalendarMappings] Failed to clear DB mappings:', error);
     }
   } catch (error) {
-    console.error('[CalendarMappings] Failed to clear mappings:', error);
+    logger.error('[CalendarMappings] Failed to clear mappings:', error);
     throw error;
   }
 }

@@ -15,6 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useUnread } from '../../contexts/UnreadContext';
 import type { AppNavigation } from '../../navigation';
 
+import { logger } from '../utils/logger';
 /**
  * Hook for managing push notifications
  * Should be called once in the root component (App.tsx)
@@ -34,18 +35,18 @@ export function useNotifications() {
       registerForPushNotifications()
         .then((token) => {
           if (token) {
-            console.log('[useNotifications] Registered with token:', token);
+            logger.debug('[useNotifications] Registered for push notifications');
           }
         })
         .catch((error) => {
-          console.error('[useNotifications] Registration failed:', error);
+          logger.error('[useNotifications] Registration failed:', error);
         });
     }
 
     // Listen for notifications received while app is foregrounded
     try {
       notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-        console.log('[useNotifications] Notification received:', notification);
+        logger.debug('[useNotifications] Notification received:', notification);
 
         // Trigger haptic feedback
         hapticMedium();
@@ -73,7 +74,7 @@ export function useNotifications() {
 
       // Listen for user interaction with notification
       responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log('[useNotifications] Notification tapped:', response);
+        logger.debug('[useNotifications] Notification tapped:', response);
 
         const data = response.notification.request.content.data;
 
@@ -108,11 +109,11 @@ export function useNotifications() {
             else refresh();
           })
           .catch((error) => {
-            console.log('[useNotifications] Could not read the launching notification:', error);
+            logger.debug('[useNotifications] Could not read the launching notification:', error);
           });
       }
     } catch (error) {
-      console.log('[useNotifications] Listener setup failed (expected on simulator):', error);
+      logger.debug('[useNotifications] Listener setup failed (expected on simulator):', error);
     }
 
     // The badge is the unread count from the server, refreshed whenever the app
@@ -144,7 +145,7 @@ export function useNotifications() {
           appStateListener.current.remove();
         }
       } catch (error) {
-        console.log('[useNotifications] Cleanup failed (expected on simulator):', error);
+        logger.debug('[useNotifications] Cleanup failed (expected on simulator):', error);
       }
     };
   }, [user, refresh, markRead]);
@@ -214,10 +215,10 @@ export function useNotifications() {
           break;
 
         default:
-          console.log('[useNotifications] Unknown notification type:', type);
+          logger.debug('[useNotifications] Unknown notification type:', type);
       }
     } catch (error) {
-      console.error('[useNotifications] Navigation error:', error);
+      logger.error('[useNotifications] Navigation error:', error);
     }
   };
 }

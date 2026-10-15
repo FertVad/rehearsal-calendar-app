@@ -11,6 +11,7 @@ import { hapticLight, hapticSuccess } from '../../../shared/utils/haptics';
 import type { DeviceCalendar } from '../../../shared/types/calendar';
 import type { OnboardingStackParamList } from '../navigation/OnboardingNavigator';
 
+import { logger } from '../../../shared/utils/logger';
 type CalendarSyncScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'CalendarSync'>;
 
 export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenProps) {
@@ -142,7 +143,7 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
 
       hapticSuccess();
     } catch (error: any) {
-      console.error('Failed to set up calendar sync:', error);
+      logger.error('Failed to set up calendar sync:', error);
       Alert.alert(t.common.error, error.message || 'Failed to set up calendar sync');
     } finally {
       setIsSettingUp(false);

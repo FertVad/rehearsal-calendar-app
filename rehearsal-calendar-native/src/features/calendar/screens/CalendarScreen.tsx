@@ -21,6 +21,7 @@ import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { calendarScreenStyles as styles } from '../styles';
 import { unsyncRehearsal } from '../../../shared/services/calendar';
 
+import { logger } from '../../../shared/utils/logger';
 export default function CalendarScreen() {
   const navigation = useNavigation<CalendarScreenNavigation>();
   const { projects } = useProjects();
@@ -120,7 +121,7 @@ export default function CalendarScreen() {
     const rehearsal = rehearsals.find(r => r.id === rehearsalId);
 
     if (!rehearsal) {
-      console.error('[CalendarScreen] Rehearsal not found:', rehearsalId);
+      logger.error('[CalendarScreen] Rehearsal not found:', rehearsalId);
       Alert.alert(t.common.error, 'Rehearsal not found');
       return;
     }
@@ -129,7 +130,7 @@ export default function CalendarScreen() {
     const projectId = rehearsal.projectId || (rehearsal as any)?.project_id;
 
     if (!projectId) {
-      console.error('[CalendarScreen] projectId missing for rehearsal:', rehearsalId, rehearsal);
+      logger.error('[CalendarScreen] projectId missing for rehearsal:', rehearsalId, rehearsal);
       Alert.alert(t.common.error, 'Cannot delete: project ID is missing');
       return;
     }
@@ -151,7 +152,7 @@ export default function CalendarScreen() {
                 await unsyncRehearsal(rehearsalId);
               } catch (syncError) {
                 // Don't fail the whole operation if unsync fails
-                console.error('[CalendarScreen] Failed to unsync from calendar:', syncError);
+                logger.error('[CalendarScreen] Failed to unsync from calendar:', syncError);
               }
 
               // Force refetch rehearsals after deletion (bypass cache)
@@ -159,7 +160,7 @@ export default function CalendarScreen() {
 
               Alert.alert(t.common.success, t.rehearsals.deleteSuccess);
             } catch (err: any) {
-              console.error('[CalendarScreen] Failed to delete rehearsal:', err);
+              logger.error('[CalendarScreen] Failed to delete rehearsal:', err);
               const errorMessage = err.response?.data?.error || err.message || t.rehearsals.createError;
               Alert.alert(t.common.error, errorMessage);
             }

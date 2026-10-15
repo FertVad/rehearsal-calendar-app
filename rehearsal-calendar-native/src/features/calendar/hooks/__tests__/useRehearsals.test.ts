@@ -290,7 +290,10 @@ describe('useRehearsals Hook', () => {
       expect(result.current.loading).toBe(false);
       expect(result.current.error).toBe('Network error');
       expect(result.current.rehearsals).toEqual([]);
-      expect(consoleError).toHaveBeenCalledWith('Failed to fetch rehearsals:', error);
+      expect(consoleError).toHaveBeenCalledWith(
+        '[ERROR] Failed to fetch rehearsals:',
+        expect.objectContaining({ name: 'Error', message: 'Network error' }),
+      );
 
       consoleError.mockRestore();
     });
@@ -325,7 +328,7 @@ describe('useRehearsals Hook', () => {
       // Should log error
       expect(consoleError).toHaveBeenCalledWith(
         expect.stringContaining('Failed to fetch RSVP'),
-        expect.any(Error)
+        expect.objectContaining({ name: 'Error', message: 'RSVP fetch failed' })
       );
 
       consoleError.mockRestore();

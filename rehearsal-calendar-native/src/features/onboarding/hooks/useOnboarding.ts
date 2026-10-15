@@ -4,6 +4,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { hapticSuccess } from '../../../shared/utils/haptics';
 
+import { logger } from '../../../shared/utils/logger';
 export function useOnboarding() {
   const { updateUser } = useAuth();
   const { t } = useI18n();
@@ -16,7 +17,7 @@ export function useOnboarding() {
       hapticSuccess();
       // Navigation обновится автоматически через AuthContext
     } catch (error) {
-      console.error('Failed to complete onboarding:', error);
+      logger.error('Failed to complete onboarding:', error);
       throw error;
     } finally {
       setIsCompleting(false);

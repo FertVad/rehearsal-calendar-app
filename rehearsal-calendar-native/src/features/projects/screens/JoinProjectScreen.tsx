@@ -20,6 +20,7 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { joinProjectScreenStyles as styles } from '../styles';
 
+import { logger } from '../../../shared/utils/logger';
 type JoinProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'JoinProject'>;
 
 export default function JoinProjectScreen({ route, navigation }: JoinProjectScreenProps) {
@@ -75,7 +76,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
       // Proceed with fetching invite info
       await fetchInviteInfo();
     } catch (err) {
-      console.error('Error checking logout time:', err);
+      logger.error('Error checking logout time:', err);
       // If check fails, proceed anyway
       await fetchInviteInfo();
     }

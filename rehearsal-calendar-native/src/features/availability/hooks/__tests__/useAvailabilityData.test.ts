@@ -207,8 +207,8 @@ describe('useAvailabilityData Hook', () => {
       });
 
       expect(consoleError).toHaveBeenCalledWith(
-        'Failed to load availability:',
-        expect.any(Error)
+        '[ERROR] Failed to load availability:',
+        expect.objectContaining({ name: 'Error', message: 'Network error' })
       );
       expect(result.current.availability).toEqual({});
 

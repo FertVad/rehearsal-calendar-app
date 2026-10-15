@@ -37,7 +37,7 @@ async function shouldImportNow(): Promise<{ importCalendarIds: string[] } | null
     logger.debug('[AutoSync] Import enabled, will sync from', settings.importCalendarIds.length, 'calendars');
     return { importCalendarIds: settings.importCalendarIds };
   } catch (error) {
-    console.error('[AutoSync] Error checking if should import:', error);
+    logger.error('[AutoSync] Error checking if should import:', error);
     return null;
   }
 }
@@ -275,10 +275,10 @@ export async function runAutoSync(): Promise<void> {
       try {
         await exportRehearsalsIfDue(false, sharedMappings);
       } catch (error) {
-        console.error('[AutoSync] Error during auto-export:', error);
+        logger.error('[AutoSync] Error during auto-export:', error);
       }
     } catch (error) {
-      console.error('[AutoSync] Error during auto-import:', error);
+      logger.error('[AutoSync] Error during auto-import:', error);
     }
     }, { waitForTurn: false });
 }
@@ -354,7 +354,7 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
         sharedMappings = await getAllMappings();
         await exportRehearsalsIfDue(true, sharedMappings);
       } catch (error) {
-        console.error('[AutoSync] Force sync - export failed:', error);
+        logger.error('[AutoSync] Force sync - export failed:', error);
       }
 
       // Only check if import is enabled
@@ -371,7 +371,7 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
       );
       logger.debug('[AutoSync] Force sync completed:', result);
     } catch (error) {
-      console.error('[AutoSync] Error during force sync:', error);
+      logger.error('[AutoSync] Error during force sync:', error);
       throw error;
     }
     }, { waitForTurn: true });

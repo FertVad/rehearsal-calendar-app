@@ -248,7 +248,7 @@ export async function createCalendarEvent(
     return eventId;
   } catch (error) {
     logger.error('[CalendarSync] Failed to create event:', error);
-    console.error('[CalendarSync] ❌ createCalendarEvent failed:', error);
+    logger.error('[CalendarSync] ❌ createCalendarEvent failed:', error);
     throw error;
   }
 }
@@ -417,7 +417,7 @@ export async function syncRehearsalToCalendar(
     logger.debug('[CalendarSync] ✅ syncRehearsalToCalendar completed successfully');
   } catch (error) {
     logger.error('[CalendarSync] Failed to sync rehearsal:', error);
-    console.error('[CalendarSync] ❌ syncRehearsalToCalendar failed:', error);
+    logger.error('[CalendarSync] ❌ syncRehearsalToCalendar failed:', error);
     throw error;
   }
 }

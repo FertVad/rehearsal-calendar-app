@@ -26,6 +26,7 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import * as Clipboard from 'expo-clipboard';
 import { useInviteLink } from '../hooks';
 
+import { logger } from '../../../shared/utils/logger';
 type ProjectDetailScreenProps = {
   route: RouteProp<ProjectsStackParamList, 'ProjectDetail'>;
   navigation: ProjectDetailNavigation;
@@ -115,7 +116,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       setRehearsals(rehearsalsRes.data.rehearsals || []);
       setIsOwner(projectData.is_owner);
     } catch (err) {
-      console.error('Failed to fetch project data:', err);
+      logger.error('Failed to fetch project data:', err);
       Alert.alert(t.common.error, t.projects.fetchError);
     } finally {
       setLoading(false);

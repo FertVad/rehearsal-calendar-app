@@ -4,6 +4,7 @@ import { AvailabilityData, DayState } from '../types';
 import { validateSlot, slotsOverlap } from '../utils';
 import { getDateLocale } from '../../../shared/utils/locale';
 
+import { logger } from '../../../shared/utils/logger';
 /**
  * Hook for saving availability data
  * Handles validation and data transformation for API
@@ -196,7 +197,7 @@ export const useAvailabilitySave = () => {
       Alert.alert(t.rehearsals.success, t.availability.saved);
       return true;
     } catch (err: any) {
-      console.error('Failed to save availability:', err);
+      logger.error('Failed to save availability:', err);
       Alert.alert(t.common.error, err.response?.data?.error || t.availability.saveError);
       return false;
     } finally {

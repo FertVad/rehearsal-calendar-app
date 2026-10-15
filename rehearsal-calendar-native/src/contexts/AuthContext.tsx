@@ -442,9 +442,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { linked: started && Boolean(response.data.linked) };
     } catch (err: any) {
       if (!isCurrent(attempt)) return { linked: false };
-      console.error('[Auth] Google login error:', err);
-      console.error('[Auth] Error response:', err.response?.data);
-      console.error('[Auth] Error status:', err.response?.status);
+      // Status and the server's message are in the logged summary; the
+      // request, with the ID token in its body, is not.
+      logger.error('[Auth] Google login error:', err);
       const failure = toAuthFlowError(err, 'Google sign-in failed');
       setError(failure);
       throw failure;

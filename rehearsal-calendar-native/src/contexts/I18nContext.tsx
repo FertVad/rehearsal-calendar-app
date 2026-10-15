@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Language, Translations, translations } from '../i18n/translations';
 
+import { logger } from '../shared/utils/logger';
 interface I18nContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -27,7 +28,7 @@ export function I18nProvider({ children }: I18nProviderProps) {
         setLanguageState(saved as Language);
       }
     } catch (error) {
-      console.warn('Failed to load language preference:', error);
+      logger.warn('Failed to load language preference:', error);
     } finally {
       setLoading(false);
     }
@@ -43,7 +44,7 @@ export function I18nProvider({ children }: I18nProviderProps) {
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
       setLanguageState(lang);
     } catch (error) {
-      console.warn('Failed to save language preference:', error);
+      logger.warn('Failed to save language preference:', error);
     }
   }, []);
 
