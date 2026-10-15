@@ -120,6 +120,19 @@ function claudeBin() {
   return `${HOME}/.nvm/versions/node/v20.19.2/bin/claude`;
 }
 
+/**
+ * Whether the machine slept since `startMs` (kern.waketime: the last wake).
+ * A run that spans a sleep loses its network and timers: T-111's review
+ * failed twice on an idle Mac that slept a minute after the owner left
+ * (2026-10-15). Such a failure is the machine's, not an attempt.
+ */
+function sleptSince(startMs) {
+  try {
+    const sec = Number(/sec = (\d+)/.exec(execFileSync('sysctl', ['-n', 'kern.waketime'], { encoding: 'utf8', env: ENV }))?.[1]);
+    return Boolean(sec) && sec * 1000 > startMs;
+  } catch { return false; }
+}
+
 /** macOS memory pressure: 1 normal, 2 warning, 4 critical; 1 when it cannot be read. */
 function memoryPressure() {
   try { return Number(execFileSync('sysctl', ['-n', 'kern.memorystatus_vm_pressure_level'], { encoding: 'utf8', env: ENV }).trim()) || 1; } catch { return 1; }
@@ -356,6 +369,7 @@ async function develop(state, task, t) {
   saveState(STATE, state);
   const note_ = takeNote(task);
   const prompt = P.withDecisions(P.withNote(starting ? stepPrompt(task, t) : (t.followUp ?? P.continueStep(task, kind)), note_?.text), t.ownerDecided);
+  const startedAt = Date.now();
   const run = await runClaude({
     bin: claudeBin(), cwd: WORKTREE, prompt, env: CLAUDE_ENV, model: ownerModel(),
     sessionId: starting ? t.claudeSession : undefined,
@@ -374,6 +388,10 @@ async function develop(state, task, t) {
   if (run.sessionId) t.claudeSession = run.sessionId;
   if (run.limit.limited) { t.followUp = P.continueStep(task, kind); return waitOut(state, task, 'Claude', run.limit); }
   const picked = P.pickResult(run.results);
+  if (!picked.result && sleptSince(startedAt)) {
+    t.followUp = P.continueStep(task, kind);
+    return note(task, 'разработка: машина спала во время запуска — продолжу ту же сессию, попыткой не считаю');
+  }
   if (!picked.result) {
     t.failures = (t.failures ?? 0) + 1;
     // A run that ended normally without its marker is asked for it, not told
@@ -461,7 +479,11 @@ async function check(state, task, t) {
   };
   const checksLog = path.join(LOGS, `${task.id}-checks.log`);
   const logOffset = fs.existsSync(checksLog) ? fs.statSync(checksLog).size : 0;
+  const checksStarted = Date.now();
   let checks = await runAll();
+  if (!checks.ok && sleptSince(checksStarted)) {
+    return note(task, 'проверки: машина спала во время прогона — повторю, попыткой не считаю');
+  }
   // Red once more on the same commits, so a flaky test is told apart from the
   // task: green the second time, the task goes on and the test is queued as a
   // task of its own (lib/flakes.mjs). Three hit T-109 in a day.
@@ -550,6 +572,7 @@ async function review(state, task, t) {
     : P.review(task, { base: t.base, head: t.head, devReport: t.devReport ?? '', checks: t.checks, round, earlier: Boolean(t.codexThread) });
   if (!continuing) note(task, `ревью: круг ${round}`);
   const lastMessageFile = path.join(STATE_DIR, `${task.id}-codex-last.md`);
+  const startedAt = Date.now();
   const run = await runCodex({
     bin: CODEX, cwd: REVIEW_TREE, prompt, env: ENV, lastMessageFile,
     // Round two continues the reviewer's own thread, so it remembers round one.
@@ -562,6 +585,10 @@ async function review(state, task, t) {
   if (run.threadId) t.codexThread = run.threadId;
   if (run.limit.limited) { t.reviewPending = true; return waitOut(state, task, 'Codex', run.limit); }
   const verdict = P.readVerdict(run.text);
+  if ((run.failed || !verdict) && sleptSince(startedAt)) {
+    t.reviewPending = Boolean(t.codexThread);
+    return note(task, 'ревью: машина спала во время ревью — повторю, попыткой не считаю');
+  }
   if (run.failed || !verdict) {
     t.failures = (t.failures ?? 0) + 1;
     t.reviewPending = Boolean(t.codexThread);
