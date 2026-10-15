@@ -1,0 +1,37 @@
+Cause fix 12, review round — e2e after. App, flows and e2e server at 856a88d.
+Two runs (the tool's 10-minute limit); 05-inbox and 14-switch-account run with them
+as the flows sharing the inbox and the account switch.
+Commands (rehearsal-calendar-native):
+npm run e2e -- e2e/flows/14-switch-account.yaml e2e/flows/15-session-revoked.yaml e2e/flows/16-switch-account-unread-language.yaml e2e/flows/17-filter-late-answer.yaml
+npm run e2e -- e2e/flows/18-inbox-late-answer.yaml e2e/flows/19-chosen-project-deleted.yaml e2e/flows/20-save-before-availability.yaml e2e/flows/05-inbox.yaml
+Output filtered to the runner's steps and Maestro's results.
+
+--- run 1
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Passed] Switch accounts on a running app (2m 13s)
+[Passed] Signed out elsewhere (41s)
+[Passed] Switch accounts - count and language (1m 17s)
+[Passed] Calendar filter against a late answer (56s)
+4/4 Flows Passed in 5m 7s
+
+--- run 2
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Passed] Inbox against a late answer (1m 31s)
+[Passed] Chosen project deleted (1m 2s)
+[Passed] Save before the availability is in (50s)
+[Passed] Inbox (41s)
+4/4 Flows Passed in 4m 5s

@@ -106,6 +106,25 @@
       { "file": "cause12-after.log", "sha256": "151dbfe1ab8c9fdf5d2ad31215c1fd98b7381457b42d8fff99d5ebb7ea415092", "fixFilesAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 0, "tests": { "failed": 0, "passed": 112 } },
       { "file": "e2e-14-before.txt", "sha256": "aa24787592b226e11ea7abbd31e412dda699d9394d0af0b5a57b6efbf39e73cc", "fixFilesAt": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd", "flowAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 1, "flows": { "failed": 1, "passed": 0 }, "seen": "Lopakhin's toggle on Orchard walk shows Ranevskaya's mark" },
       { "file": "e2e-14-after.txt", "sha256": "941d8660c64a873c4ccb092b79a9736030cd57520f943f5d1fb72d9b0ef80272", "fixFilesAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "flowAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 0, "flows": { "failed": 0, "passed": 1 } }
-    ]
+    ],
+    "review": {
+      "reviewer": "Astra",
+      "findings": ["ES01", "HN02", "NI04", "useRehearsals loading regression", "e2e for AC02, BC02, DF05, DF06, NI03, NI04, HC01"],
+      "fixCommits": [
+        { "commit": "62173fd8dec9cb4c433c10a929d5236a853a8e8c", "tree": "b6d7baddba10516056e1792ca656d252882b023d", "scope": "session stamp down the whole sync, request sent only in its session; SeenContext read/change order; inbox changes take a turn; empty project list ends loading; tests" },
+        { "commit": "a0815113044fd6451386ceba6616bb8771a033e9", "tree": "44b3725bc671e84d64ebbea76d14934d41693cb9", "scope": "e2e flows 15-20, held answers in the e2e server, revoke script, seed people, testIDs" },
+        { "commit": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "tree": "ecb9e3a11dea117843f079d3d0a83882d5133dcf", "scope": "held answer may outlast the app's timeout; flow 16 uses it" }
+      ],
+      "sourceCommit": "856a88d30f72a1e08671a9e1bd5470e57a06fadb",
+      "sourceTree": "ecb9e3a11dea117843f079d3d0a83882d5133dcf",
+      "runs": [
+        { "file": "cause12-review-before.log", "sha256": "ec40c765a083d1a18556a912bfab523f3dca54d0a6597a3fd8f9f2eaf32fae1f", "fixFilesAt": "ac5e1ec", "testFilesAt": "62173fd8dec9cb4c433c10a929d5236a853a8e8c", "exitCode": 1, "tests": { "failed": 7, "passed": 22 } },
+        { "file": "cause12-review-after.log", "sha256": "f1ec5c60212ecb354e8c744691d58c7ef12f091756c4e2b8cb79f8d3cd4427c2", "fixFilesAt": "62173fd8dec9cb4c433c10a929d5236a853a8e8c", "exitCode": 0, "tests": { "failed": 0, "passed": 29 } },
+        { "file": "e2e-15-17-before.txt", "sha256": "a5d4d92684652a50275b4e07eb348b9ab3093269b6c0762acbe313c6499ea20e", "fixFilesAt": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd", "flowAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "exitCode": 1, "flows": { "failed": 3, "passed": 0 } },
+        { "file": "e2e-18-20-before.txt", "sha256": "c0a9e55d923450f7a27f2b95fb33549f05d40f5831e5a3d8e7772e0c3729e1a1", "fixFilesAt": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd", "flowAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "exitCode": 1, "flows": { "failed": 3, "passed": 0 } },
+        { "file": "e2e-16-hc01-before.txt", "sha256": "9197fff2a2a81fe196dcac08bafd26eb881b57623ed7ffa7fd2f511677357447", "fixFilesAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb except I18nContext.tsx, storage.ts at ce1a4fb", "flowAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "exitCode": 1, "flows": { "failed": 1, "passed": 0 } },
+        { "file": "e2e-14-20-after.txt", "sha256": "92244b67489e79973725b841c49f3224b21679d8628abdee92e404cc118d6801", "fixFilesAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "flowAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "exitCode": 0, "flows": { "failed": 0, "passed": 8 } }
+      ]
+    }
   }
 }

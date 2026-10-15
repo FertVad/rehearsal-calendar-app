@@ -109,6 +109,19 @@ another device would do — calls the local server from `e2e/scripts` with
 mailed is read the same way: `e2e/scripts/read-code.js` with `MAIL_URL`
 (`${MAIL_URL}`), `TO` and `NAME` puts it in `${output.<NAME>}` (flows 11, 12).
 
+A late answer is made the same way: `e2e/scripts/hold-answers.js` with
+`MAIL_URL`, `METHOD` and `PATH` (a regular expression on the path) holds the
+answers to matching requests until `release-answers.js` — the request is
+handled at once, only its answer waits, as on a slow network (flows 16–18,
+20). An answer waits nine seconds at most, inside the app's ten; `MS` makes it
+longer, and the app then gives up on the request as offline (flow 16). A hold
+lapses after a minute, so a flow that fails before its release does not slow
+the next. `revoke-sessions.js` ends every session of an account, as its other
+device logging out would (flow 15).
+
+The seed signs in only the people it acts as: the server takes twenty
+sign-ins a minute from one address.
+
 ## A fix seen on screen has a flow
 
 A defect a person can see in the app is fixed together with a flow that
