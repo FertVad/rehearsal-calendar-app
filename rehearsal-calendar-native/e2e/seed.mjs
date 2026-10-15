@@ -52,6 +52,22 @@ export const PEOPLE = {
   // share, and one of Lopakhin's own that he runs.
   ranevskaya: { email: 'ranevskaya@e2e.test', firstName: 'Lyubov', lastName: 'Ranevskaya', onboarded: true },
   lopakhin: { email: 'lopakhin@e2e.test', firstName: 'Yermolai', lastName: 'Lopakhin', onboarded: true },
+  // The rest of cause fix 12, one flow each, so none sees what another does.
+  // Gaev runs the projects the others are told about (17, 18, 16).
+  gaev: { email: 'gaev@e2e.test', firstName: 'Leonid', lastName: 'Gaev', onboarded: true },
+  // Signed out from another device while the app is open (15).
+  firs: { email: 'firs@e2e.test', firstName: 'Firs', lastName: 'Servant', onboarded: true },
+  // One after the other on a running app (16): Yasha has a notification
+  // unread, Dunyasha none, and her account speaks Russian.
+  yasha: { email: 'yasha@e2e.test', firstName: 'Yasha', lastName: 'Valet', onboarded: true },
+  dunyasha: { email: 'dunyasha@e2e.test', firstName: 'Dunyasha', lastName: 'Maid', onboarded: true, locale: 'ru' },
+  // A filter answered late (17), an inbox answered late (18).
+  trofimov: { email: 'trofimov@e2e.test', firstName: 'Petya', lastName: 'Trofimov', onboarded: true },
+  anya: { email: 'anya@e2e.test', firstName: 'Anya', lastName: 'Ranevskaya', onboarded: true },
+  // Deletes the project the form opened on (19).
+  pishchik: { email: 'pishchik@e2e.test', firstName: 'Boris', lastName: 'Pishchik', onboarded: true },
+  // Saves while the day's availability is still on its way (20).
+  charlotta: { email: 'charlotta@e2e.test', firstName: 'Charlotta', lastName: 'Ivanovna', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -95,8 +111,8 @@ export async function seed({ client, apiUrl, timezone }) {
   for (const [key, person] of Object.entries(PEOPLE)) {
     const { rows } = await client.query(
       `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed)
-       VALUES ($1, $2, $3, $4, $5, 'en', $6) RETURNING id`,
-      [person.email, hash, person.firstName, person.lastName, timezone, person.onboarded]);
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [person.email, hash, person.firstName, person.lastName, timezone, person.locale ?? 'en', person.onboarded]);
     ids[key] = rows[0].id;
     await client.query(
       `INSERT INTO native_email_identities (user_id, email, status, verified_at, verified_by)
@@ -104,16 +120,19 @@ export async function seed({ client, apiUrl, timezone }) {
       [ids[key], person.email]);
   }
 
-  const token = {};
-  for (const [key, person] of Object.entries(PEOPLE)) {
-    token[key] = (await call(apiUrl, 'POST', '/auth/login', { body: { email: person.email, password: PASSWORD } })).accessToken;
-  }
+  // Signed in only when the seed acts as them: the server takes twenty
+  // sign-ins a minute from one address, and most people need none here.
+  const tokens = {};
+  const token = async (key) => {
+    tokens[key] ??= (await call(apiUrl, 'POST', '/auth/login', { body: { email: PEOPLE[key].email, password: PASSWORD } })).accessToken;
+    return tokens[key];
+  };
 
   const project = async (name, description, cast, owner = 'director') => {
     const { project: created } = await call(apiUrl, 'POST', '/native/projects',
-      { token: token[owner], body: { name, description, timezone } });
-    const { inviteCode } = await call(apiUrl, 'POST', `/native/projects/${created.id}/invite`, { token: token[owner], body: {} });
-    for (const key of cast) await call(apiUrl, 'POST', `/native/invite/${inviteCode}/join`, { token: token[key], body: {} });
+      { token: await token(owner), body: { name, description, timezone } });
+    const { inviteCode } = await call(apiUrl, 'POST', `/native/projects/${created.id}/invite`, { token: await token(owner), body: {} });
+    for (const key of cast) await call(apiUrl, 'POST', `/native/invite/${inviteCode}/join`, { token: await token(key), body: {} });
     return { id: created.id, inviteCode };
   };
   const { id: hamletId } = await project('Hamlet', 'Spring production', ['hamlet', 'ophelia', 'horatio']);
@@ -131,10 +150,18 @@ export async function seed({ client, apiUrl, timezone }) {
   // Ranevskaya runs the orchard and Lopakhin is in it; he runs a project of his own.
   const { id: orchardId } = await project('The Cherry Orchard', 'Act IV', ['lopakhin'], 'ranevskaya');
   await project('Lopakhin Holdings', 'Summer cottages', [], 'lopakhin');
+  const { id: billiardsId } = await project('Gaev Billiards', 'Off the cushion', ['yasha', 'anya'], 'gaev');
+  const { id: studentId } = await project('Eternal Student', 'Lectures', ['trofimov'], 'gaev');
+  const { id: debatesId } = await project('Garden Debates', 'Evenings', ['trofimov'], 'gaev');
+  const { id: pantryId } = await project('Firs Pantry', 'The silver', [], 'firs');
+  // Made in this order: the Estate is the newer, so the form opens on it.
+  await project('Pishchik Mill', 'Flour', [], 'pishchik');
+  await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
+  await project('Charlotta Tricks', 'Card tricks', [], 'charlotta');
 
   const rehearsal = async (projectId, title, day, from, to, cast, by = 'director') => {
     const { rehearsal: created } = await call(apiUrl, 'POST', `/native/projects/${projectId}/rehearsals`, {
-      token: token[by],
+      token: await token(by),
       body: {
         title,
         startsAt: localInstant(day, from),
@@ -151,20 +178,27 @@ export async function seed({ client, apiUrl, timezone }) {
     dress: await rehearsal(hamletId, 'Full dress', 8, 19, 22, ['director', 'hamlet', 'ophelia', 'horatio']),
     reading: await rehearsal(seagullId, 'Table read', 2, 15, 17, ['director', 'ophelia']),
     orchard: await rehearsal(orchardId, 'Orchard walk', 1, 12, 14, ['ranevskaya', 'lopakhin'], 'ranevskaya'),
+    // Each tells the people on it, and nobody else.
+    billiards: await rehearsal(billiardsId, 'Billiards practice', 2, 18, 20, ['gaev', 'yasha'], 'gaev'),
+    cue: await rehearsal(billiardsId, 'Cue lesson', 3, 18, 20, ['gaev', 'anya'], 'gaev'),
+    drill: await rehearsal(billiardsId, 'Cue drill', 4, 18, 20, ['gaev', 'anya'], 'gaev'),
+    lecture: await rehearsal(studentId, 'Lecture on progress', 2, 10, 12, ['gaev', 'trofimov'], 'gaev'),
+    debate: await rehearsal(debatesId, 'Garden debate', 2, 14, 16, ['gaev', 'trofimov'], 'gaev'),
+    silver: await rehearsal(pantryId, 'Silver polishing', 1, 9, 11, ['firs'], 'firs'),
   };
 
   // Some of the cast are busy, so the planner has something to weigh.
   const busy = (day, from, to) => ({ date: localDate(day), entries: [{ startsAt: localInstant(day, from), endsAt: localInstant(day, to), type: 'busy' }] });
-  await call(apiUrl, 'PUT', '/native/availability/days', { token: token.hamlet, body: { days: [busy(2, 9, 17), busy(4, 18, 22)] } });
-  await call(apiUrl, 'PUT', '/native/availability/days', { token: token.horatio, body: { days: [busy(4, 10, 14)] } });
+  await call(apiUrl, 'PUT', '/native/availability/days', { token: await token('hamlet'), body: { days: [busy(2, 9, 17), busy(4, 18, 22)] } });
+  await call(apiUrl, 'PUT', '/native/availability/days', { token: await token('horatio'), body: { days: [busy(4, 10, 14)] } });
   // Only The Bear has him: its slots tomorrow name him, Three Sisters' never do.
-  await call(apiUrl, 'PUT', '/native/availability/days', { token: token.smirnov, body: { days: [busy(1, 10, 14)] } });
+  await call(apiUrl, 'PUT', '/native/availability/days', { token: await token('smirnov'), body: { days: [busy(1, 10, 14)] } });
 
   // The editor (10) marks the first of these; the last is busy all day, and
   // the flow changes it behind the screen's back while the editor is open.
   const days = { before: localDate(2), mark: localDate(3), after: localDate(4), other: localDate(6) };
   await call(apiUrl, 'PUT', '/native/availability/days', {
-    token: token.treplev,
+    token: await token('treplev'),
     body: { days: [{ date: days.other, entries: [{ startsAt: `${days.other}T00:00:00.000Z`, endsAt: `${days.other}T23:59:59.999Z`, type: 'busy', isAllDay: true }] }] },
   });
 

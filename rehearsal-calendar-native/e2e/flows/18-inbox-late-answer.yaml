@@ -1,0 +1,53 @@
+# What was marked read stays read, whatever answers last (cause fix 12:
+# NI04). Anya has two notifications unread. She opens one and comes back: the
+# inbox asks for its list again, and that answer is held back. Meanwhile she
+# marks everything read. The old screen then took the late list over it and
+# the other card came back unread, with "Mark all read" beside it, while the
+# count said nothing was.
+appId: ${APP_ID}
+name: Inbox against a late answer
+tags:
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${ANYA_EMAIL}
+- tapOn: "Notifications"
+- extendedWaitUntil:
+    visible: ".*Cue drill scheduled.*"
+    timeout: 15000
+- assertVisible: ".*Cue lesson scheduled.*"
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "^/api/native/notifications$"
+# Opening one reads it; coming back asks for the list again, its answer held.
+- tapOn: ".*Cue lesson scheduled.*"
+- extendedWaitUntil:
+    visible: "Participants"
+    timeout: 15000
+- tapOn:
+    text: "Close"
+    index: 0
+- extendedWaitUntil:
+    visible: "Mark all read"
+    timeout: 10000
+- tapOn: "Mark all read"
+- extendedWaitUntil:
+    notVisible: "Mark all read"
+    timeout: 10000
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+# The late list has landed, or been dropped.
+- extendedWaitUntil:
+    visible: "Mark all read"
+    timeout: 5000
+    optional: true
+- assertNotVisible: "Mark all read"
+- assertVisible: ".*Cue drill scheduled.*"
+- takeScreenshot: 18-inbox-stays-read

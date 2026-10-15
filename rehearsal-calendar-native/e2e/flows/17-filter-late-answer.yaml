@@ -1,0 +1,52 @@
+# The rehearsals shown are the chosen project's, whatever answers last (cause
+# fix 12: DF06). Trofimov is in two of Gaev's projects. A refresh of "All
+# Projects" is on its way, held back; he picks Eternal Student, whose own list
+# comes at once. The old screen then took the late "All Projects" answer over
+# it, and Garden Debates' rehearsal stood under the Eternal Student filter.
+appId: ${APP_ID}
+name: Calendar filter against a late answer
+tags:
+  - calendar
+  - rehearsals
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${TROFIMOV_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Garden debate.*"
+    timeout: 30000
+- assertVisible: ".*Lecture on progress.*"
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "^/api/native/rehearsals/batch$"
+# Pull to refresh: "All Projects" asked again, its answer held.
+- swipe:
+    start: 50%, 25%
+    end: 50%, 75%
+- tapOn:
+    id: calendar-filter
+- tapOn:
+    id: calendar-filter-option
+    text: "Eternal Student"
+- extendedWaitUntil:
+    notVisible: ".*Garden debate.*"
+    timeout: 10000
+- assertVisible: ".*Lecture on progress.*"
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+# The late answer has landed, or been dropped.
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: ".*Garden debate.*"
+    timeout: 4000
+    optional: true
+- assertNotVisible: ".*Garden debate.*"
+- assertVisible: ".*Lecture on progress.*"
+- takeScreenshot: 17-filter-keeps-its-project

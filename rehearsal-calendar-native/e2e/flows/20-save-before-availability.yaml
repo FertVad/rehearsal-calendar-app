@@ -1,0 +1,49 @@
+# The form does not save before it knows who is busy that day (cause fix 12:
+# DF05). Charlotta opens the rehearsal form for her project; the availability
+# of the day shown is on its way, held back. She saves: the old form checked
+# conflicts against nothing — "nobody is busy" — and created the rehearsal;
+# now it says the availability is still being checked.
+appId: ${APP_ID}
+name: Save before the availability is in
+tags:
+  - rehearsals
+  - availability
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${CHARLOTTA_EMAIL}
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "/members/availability$"
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-project
+      text: ".*Charlotta Tricks.*"
+    timeout: 15000
+# The people are in; the day's availability is not.
+- extendedWaitUntil:
+    visible: "Selected: 1 of 1"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: rehearsal-submit
+    direction: DOWN
+- tapOn:
+    id: rehearsal-submit
+- extendedWaitUntil:
+    visible: ".*availability for this day is still being checked.*"
+    timeout: 5000
+- assertNotVisible: "Rehearsal created"
+- takeScreenshot: 20-save-waits-for-availability
+- tapOn: "OK"
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}

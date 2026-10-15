@@ -1,0 +1,35 @@
+# A session ended elsewhere takes the open app to the sign-in screen (cause
+# fix 12: AC02). Firs is signed in; another device of his logs out, which ends
+# every session of the account. His next request is refused, and so is its
+# refresh: the old client threw the tokens away and told nobody, and the app
+# stayed on screens whose every request failed. Now the refusal ends the
+# session and the sign-in screen opens.
+appId: ${APP_ID}
+name: Signed out elsewhere
+tags:
+  - auth
+  - calendar
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${FIRS_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Silver polishing.*"
+    timeout: 30000
+- runScript:
+    file: ../scripts/revoke-sessions.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${FIRS_EMAIL}
+      PASSWORD: ${PASSWORD}
+# Pull to refresh: the next request goes out with the ended session.
+- swipe:
+    start: 50%, 25%
+    end: 50%, 75%
+- extendedWaitUntil:
+    visible:
+      id: login-submit
+    timeout: 20000
+- assertNotVisible: ".*Silver polishing.*"
+- takeScreenshot: 15-signed-out-elsewhere

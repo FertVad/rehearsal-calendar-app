@@ -1,0 +1,62 @@
+# The next person on a running app sees their own count and their own
+# language (cause fix 12: NI03, HC01). Yasha has a notification unread and
+# signs out; Dunyasha, who has none and whose account speaks Russian, signs in
+# on the same app. Her count is held back on its way, as on a slow network:
+# the old app showed Yasha's "1" on her bell until it came, and stayed in
+# English, since the account's language only reached the screen at the next
+# start.
+appId: ${APP_ID}
+name: Switch accounts - count and language
+tags:
+  - auth
+  - notifications
+  - profile
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${YASHA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: unread-badge
+    timeout: 30000
+- takeScreenshot: 16-yasha-unread
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-logout
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-logout
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "^/api/native/notifications/unread-count$"
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${DUNYASHA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+# Hers is still on its way: nothing is known, so nothing is shown (NI03).
+- assertNotVisible:
+    id: unread-badge
+# Her account's language, at once (HC01).
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+      text: ".*Все проекты.*"
+    timeout: 10000
+- takeScreenshot: 16-dunyasha-own-count-and-language
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+- assertNotVisible:
+    id: unread-badge

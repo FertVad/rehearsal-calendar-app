@@ -597,6 +597,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
           <View style={styles.section}>
             <TouchableOpacity
               style={styles.deleteButton}
+              testID="project-delete"
               onPress={handleDeleteProject}
               activeOpacity={0.7}
             >

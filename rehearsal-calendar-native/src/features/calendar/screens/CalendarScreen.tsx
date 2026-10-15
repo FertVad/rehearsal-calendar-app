@@ -253,6 +253,7 @@ export default function CalendarScreen() {
         <View style={styles.filterContainer}>
           <TouchableOpacity
             style={styles.filterButton}
+            testID="calendar-filter"
             onPress={() => setFilterExpanded(!filterExpanded)}
           >
             <Ionicons name="funnel-outline" size={18} color={Colors.accent.purple} />
@@ -284,7 +285,7 @@ export default function CalendarScreen() {
               color={unreadCount > 0 ? Colors.accent.purple : Colors.text.secondary}
             />
             {unreadCount > 0 && (
-              <View style={styles.bellBadge}>
+              <View style={styles.bellBadge} testID="unread-badge">
                 <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
               </View>
             )}
@@ -314,6 +315,7 @@ export default function CalendarScreen() {
             {projects.map(project => (
               <TouchableOpacity
                 key={project.id}
+                testID="calendar-filter-option"
                 style={[
                   styles.filterOption,
                   filterProjectId === project.id && styles.filterOptionSelected
