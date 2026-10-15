@@ -27,7 +27,7 @@
  *   node tools/autodev/supervisor.mjs            run (launchd keeps it running)
  *   node tools/autodev/supervisor.mjs --once     one step, then exit
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -866,6 +866,22 @@ async function step() {
   return 0;
 }
 
+/**
+ * The Mac stays awake while the supervisor runs (owner, 2026-10-15): it slept
+ * a minute after being left, and every agent, check and review froze with it —
+ * a day went by with one review unfinished. caffeinate holds the assertion
+ * until this process exits (-w), so a stopped autodev lets the Mac sleep as
+ * before. -i: no idle sleep; -s: no system sleep on power. The display still
+ * turns off; a lid closed on battery still sleeps.
+ */
+function stayAwake() {
+  try {
+    spawn('/usr/bin/caffeinate', ['-i', '-s', '-w', String(process.pid)], { stdio: 'ignore', detached: true }).unref();
+  } catch (error) {
+    note(null, `caffeinate не запустился (${error.message}) — Mac может засыпать`);
+  }
+}
+
 async function main() {
   // Stopped (launchd, Ctrl-C) — the agents and checks go too. State is on disk
   // before every run, so the restart resumes the same session; nothing else
@@ -875,6 +891,7 @@ async function main() {
   }
   fs.mkdirSync(LOGS, { recursive: true });
   singleInstance();
+  stayAwake();
   ensureTrees();
   for (;;) {
     let pauseMs;

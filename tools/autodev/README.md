@@ -106,6 +106,9 @@ never fires twice.
 - `RESULT: DONE` with changes left uncommitted goes back to the developer:
   checked, reviewed and pushed is only what is committed. A task set aside
   keeps its uncommitted work in a `git stash` named after it.
+- The Mac stays awake while the supervisor runs: it starts
+  `caffeinate -i -s -w <its pid>`, which ends with it. The display still turns
+  off; a lid closed on battery still sleeps. Asleep, everything here stands.
 - A commit that changes `tools/autodev` restarts the supervisor at its next
   step boundary, where nothing is running; launchd brings it back on the new
   code. No STOP file or hand restart is needed to deploy a fix.
