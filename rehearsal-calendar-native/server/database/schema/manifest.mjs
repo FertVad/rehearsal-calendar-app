@@ -27,7 +27,7 @@ export const manifest = freeze({
       },
       "inspector": {
         "file": "database/schema/inspect.mjs",
-        "sha256": "33c8547006a0bd422bf5b564248873719cc88db721218d43c1214d8b0156a9f1"
+        "sha256": "a38f465f02be34242f43257197b391c4caaf73bfe4c975814ad33a3afe5ca317"
       },
       "completionProfile": "rehearsly-pg-current-v1"
     },
@@ -41,7 +41,7 @@ export const manifest = freeze({
       "adopt": true,
       "inspector": {
         "file": "database/schema/inspect.mjs",
-        "sha256": "33c8547006a0bd422bf5b564248873719cc88db721218d43c1214d8b0156a9f1"
+        "sha256": "a38f465f02be34242f43257197b391c4caaf73bfe4c975814ad33a3afe5ca317"
       },
       "completionProfile": "rehearsly-pg-current-v1"
     },
@@ -55,7 +55,7 @@ export const manifest = freeze({
       "adopt": true,
       "inspector": {
         "file": "database/schema/inspect.mjs",
-        "sha256": "33c8547006a0bd422bf5b564248873719cc88db721218d43c1214d8b0156a9f1"
+        "sha256": "a38f465f02be34242f43257197b391c4caaf73bfe4c975814ad33a3afe5ca317"
       },
       "completionProfile": "rehearsly-pg-current-v1"
     }
@@ -165,6 +165,22 @@ export const manifest = freeze({
       },
       "when": {
         "missingBudget": "012"
+      },
+      "verifyProfile": "rehearsly-pg-domain13-v1",
+      "roots": [
+        "rehearsly-pg-current-v1",
+        "rehearsly-pg-domain13-v1",
+        "rehearsly-pg-domain13-pre-import-key-v1"
+      ]
+    },
+    {
+      "id": "013-push-token-owner",
+      "sql": {
+        "file": "migrations/013-push-token-owner.sql",
+        "sha256": "3fe1254b348ee3be9112ad91fb9a754306a261102697e7662ccbf8c7de0a9998"
+      },
+      "when": {
+        "missingBudget": "013"
       },
       "verifyProfile": "rehearsly-pg-domain13-v1",
       "roots": [

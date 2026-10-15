@@ -22,7 +22,7 @@ No existing column is silently cast to those types.
   consistent budget gate rows. Fresh and adoption are both allowed.
 - `rehearsly-pg-domain13-v1`: the complete modern domain schema, with each budget
   group either wholly absent or fully compatible. After adoption, an explicit
-  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011, 012 order.
+  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011, 012, 013 order.
 - `rehearsly-pg-domain13-pre-import-key-v1`: the same modern predecessor, except
   that the availability imported-event unique key is absent and the aggregate
   duplicate count is zero. Adoption requires this explicit profile. Apply first
@@ -112,10 +112,11 @@ described above.
 On 2026-10-14 R4 (cause fix 11, G01) changed a domain table the same way, still
 before any adoption: `native_push_tokens` is unique on `device_token` alone
 instead of `(user_id, device_token)`, and the plain token index is gone. The
-snapshot, catalog and manifest were re-pinned. `migrations/013-push-token-owner.sql`
-brings an existing schema there (dropping all but the most recently active
-holder of each token); it is not a manifest step, so a domain schema without it
-no longer matches v1 and is refused for adoption until the owner applies 013.
+snapshot, catalog and manifest were re-pinned. This is group 013, a key rather
+than tables: the inspector counts it present when the token is unique on its
+own, and otherwise checks `native_push_tokens` against its predecessor shape.
+`migrations/013-push-token-owner.sql` is its forward step (dropping all but the
+most recently active holder of each token), installed by `--apply` after 012.
 
 `r2Schema.mjs` checks actual fresh and adopted schemas through the real migration
 runner and application HTTP/adapter code, plus independent catalog drift and
