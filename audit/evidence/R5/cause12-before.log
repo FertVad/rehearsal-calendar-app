@@ -1,0 +1,123 @@
+Cause fix 12 — red before.
+Production files of the fix restored from ce1a4fb (git restore --source=ce1a4fb), tests from
+1a4071a (+ the DF05 hook test reading ready/failed through `as any`, so it runs on the old types).
+New modules session.ts / useSession.ts present but unused by the old code.
+Command (rehearsal-calendar-native):
+npx jest --selectProjects frontend --silent <the 11 suites below>
+Output filtered: stack frames, console and source excerpts dropped; ●, Expected/Received, totals kept.
+
+FAIL frontend src/shared/services/calendar/__tests__/importSession.test.ts (39.28 s)
+  ● sends nothing, and stamps nothing, when the account changed while the calendars were read
+    Expected: false
+    Received: true
+FAIL frontend src/contexts/__tests__/I18nContext.test.tsx (39.869 s)
+  ● switches to the language of the account that signs in
+    Expected: "ru"
+    Received: "en"
+FAIL frontend src/shared/services/__tests__/api.refresh.test.ts
+  ● keeps the session when the refresh cannot reach the server (AC01)
+    Expected: "old-access"
+    Received: undefined
+  ● keeps the session when the server fails the refresh with its own error (AC01)
+    Expected: "refresh-1"
+    Received: undefined
+  ● reports the session over when the server refuses the refresh token (AC02)
+    Expected number of calls: 1
+    Received number of calls: 0
+  ● spends the refresh token once when two requests are refused together
+    Expected number of calls: 1
+    Received number of calls: 2
+  ● does not refresh or retry a request of a session that has ended
+    Expected: "SessionEndedError"
+    Received: "TypeError"
+  ● leaves a refused password at sign-in alone: no session was sent
+FAIL frontend src/contexts/__tests__/SeenContext.test.tsx (40.431 s)
+  ● Seen store across accounts (HN03) › shows the next person none of the previous one's marks or counts
+    Expected: "null"
+    Received: "yes"
+  ● Seen store across accounts (HN03) › writes nothing when the previous person's toggle answers after the change
+    Expected: "null"
+    Received: "yes"
+FAIL frontend src/contexts/__tests__/ProjectContext.test.tsx
+  ● Across accounts (BC01) › shows the next person neither the list nor the choice of the previous one
+    Expected: ""
+    Received: "The Cherry Orchard,The Estate"
+  ● Across accounts (BC01) › drops the previous person's list when it answers after the change
+    Expected: "Lopakhin Holdings"
+    Received: "The Cherry Orchard,The Estate"
+  ● The chosen project is the list's (BC02) › moves to a project that is still there when the chosen one was deleted
+    Expected: "The Cherry Orchard"
+    Received: "The Estate"
+  ● The chosen project is the list's (BC02) › reads the role as the latest list has it
+    - Expected  - 1
+    + Received  + 1
+  ● The chosen project is the list's (BC02) › keeps the newest list when an older load answers last
+    Expected: "The Cherry Orchard"
+    Received: "The Cherry Orchard,The Estate"
+FAIL frontend src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts (41.592 s)
+  ● useAddRehearsalSubmit Hook › Availability not yet in hand (DF05) › does not save while the availability of the day shown is loading
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● useAddRehearsalSubmit Hook › Availability not yet in hand (DF05) › does not save over a failed availability load, and offers to try again
+    Expected number of calls: 0
+    Received number of calls: 1
+FAIL frontend src/features/calendar/hooks/__tests__/useRehearsals.test.ts
+  ● useRehearsals Hook › fetchRehearsals - Batch Endpoint (All Projects) › should fetch rehearsals from all projects using batch endpoint
+    - Expected
+    + Received
+  ● useRehearsals Hook › fetchRehearsals - Batch Endpoint (All Projects) › keeps the chosen project's rehearsals when the earlier filter answers last (DF06)
+    - Expected  - 0
+    + Received  + 1
+  ● useRehearsals Hook › fetchRehearsals - Single Project › should not fetch admin stats for non-admin projects
+    - Expected
+    + Received
+FAIL frontend src/features/calendar/hooks/__tests__/useRehearsalAvailability.test.ts
+  ● keeps the shown day's answer when the day left answers last
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+  ● hands out nothing, and is not ready, while the shown day is loading
+    - Expected  -  1
+    + Received  + 11
+  ● says a failed load failed, rather than reading as nobody busy
+    Expected: true
+    Received: undefined
+FAIL frontend src/contexts/__tests__/UnreadContext.test.tsx (42.901 s)
+  ● Unread count › comes back with the last count it knew, before asking anyone
+    Expected: "5"
+    Received: "0"
+  ● Unread count › shows the stored count when the server cannot be reached
+    Expected: "4"
+    Received: "0"
+  ● Unread count across accounts (NI03) › shows the next person none of the previous one's count
+    Expected: "0"
+    Received: "3"
+  ● Unread count across accounts (NI03) › writes nothing when the previous person's answer comes after the change
+    Expected: "0"
+    Received: "8"
+  ● Unread count and late answers (NI04) › keeps the count of a mark-all that finished after a slower read began
+    Expected: "0"
+    Received: "5"
+FAIL frontend src/contexts/__tests__/AuthContext.test.tsx (43.568 s)
+  ● signs out and opens sign-in when the server refuses the session (AC02)
+    Expected: "none"
+    Received: "7"
+  ● writes the next person's tokens only after the previous session's work has finished (ES01)
+    Received: "other-access"
+FAIL frontend src/features/notifications/screens/__tests__/NotificationsScreen.test.tsx (52.288 s)
+  ● does not bring back a card deleted while a load was out
+    Received: {"_fiber": {... "elementType": "Text" ...}}   (the deleted card "Dress cancelled" is on screen again)
+Test Suites: 11 failed, 11 total
+Tests:       31 failed, 81 passed, 112 total
+
+Notes:
+- "Unread count › comes back with the last count…" and "› shows the stored count…" fail only because
+  the stored count moved to a per-person key (unread-count:<userId>); the old code reads 'unread-count'.
+- AC03 ("keeps the next person when the previous one's time zone update answers late") passes here:
+  the late-answer check landed in a7e42d8 (R3 review). It is kept as the regression test of AC03.
+  Red before that commit — AuthContext.tsx restored from 23f59cb, same test file:
+    npx jest --selectProjects frontend --silent src/contexts/__tests__/AuthContext -t "AC03"
+    ● keeps the next person when the previous one's time zone update answers late (AC03)
+      Expected: "8"
+      Received: "7"
+    Tests:       1 failed, 28 skipped, 29 total

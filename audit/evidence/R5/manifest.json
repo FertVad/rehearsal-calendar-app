@@ -88,5 +88,24 @@
       "sha256": "a131074ec8a4179609f4cd6da4673a9ccb56531f6e0fbd30e5cafb7b3b09e9a2",
       "note": "first red-before for R5-01, written on f9212b3 (branch auto/out-of-scope/T-108); kept as written, superseded by planner-r5-01-before.log"
     }
-  ]
+  ],
+  "cause12": {
+    "date": "2026-10-15",
+    "task": "T-112",
+    "findings": ["AC01", "AC02", "AC03", "BC01", "BC02", "NI03", "HN02", "HN03", "HC01", "DF05", "DF06", "NI04", "ES01"],
+    "baseCommit": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd",
+    "fixCommits": [
+      { "commit": "1a4071ae8a8734985ce5e09bbd6daad4622de683", "tree": "a3f03291ab2586abbfdef5451442dc229803c51c", "scope": "session module, contexts, API refresh, sync as session work, tests" },
+      { "commit": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "tree": "1300e4b86375daf9f649443cf1404802a3b34c17", "scope": "e2e flow 14-switch-account.yaml, seed people, profile-logout testID; DF05 hook test runs on old types" }
+    ],
+    "sourceCommit": "20724bd6bded1c587d57090dfe38cb7bcd3effdf",
+    "sourceTree": "1300e4b86375daf9f649443cf1404802a3b34c17",
+    "runtime": { "node": "v22", "production": "NOT_RUN", "physicalDevice": "DEV-01, DEV-17, DEV-19, DEV-21 NOT_RUN", "findingStatus": "READY_FOR_CHECK" },
+    "runs": [
+      { "file": "cause12-before.log", "sha256": "0999800258c0b3421cb5df6bb69724aec777ed5131be364f7444e541d9d3d87c", "fixFilesAt": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd", "testFilesAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 1, "tests": { "failed": 31, "passed": 81 } },
+      { "file": "cause12-after.log", "sha256": "151dbfe1ab8c9fdf5d2ad31215c1fd98b7381457b42d8fff99d5ebb7ea415092", "fixFilesAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 0, "tests": { "failed": 0, "passed": 112 } },
+      { "file": "e2e-14-before.txt", "sha256": "aa24787592b226e11ea7abbd31e412dda699d9394d0af0b5a57b6efbf39e73cc", "fixFilesAt": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd", "flowAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 1, "flows": { "failed": 1, "passed": 0 }, "seen": "Lopakhin's toggle on Orchard walk shows Ranevskaya's mark" },
+      { "file": "e2e-14-after.txt", "sha256": "941d8660c64a873c4ccb092b79a9736030cd57520f943f5d1fb72d9b0ef80272", "fixFilesAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "flowAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 0, "flows": { "failed": 0, "passed": 1 } }
+    ]
+  }
 }

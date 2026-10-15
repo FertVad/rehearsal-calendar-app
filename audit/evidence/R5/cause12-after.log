@@ -1,0 +1,20 @@
+Cause fix 12 — after. Code at 20724bd (fix 1a4071a + flow commit).
+Command (rehearsal-calendar-native):
+npx jest --selectProjects frontend --silent <the same 11 suites as cause12-before.log>
+
+PASS frontend src/contexts/__tests__/UnreadContext.test.tsx (82.763 s)
+PASS frontend src/shared/services/calendar/__tests__/importSession.test.ts (85.012 s)
+PASS frontend src/contexts/__tests__/I18nContext.test.tsx (88.05 s)
+PASS frontend src/contexts/__tests__/SeenContext.test.tsx (91.005 s)
+PASS frontend src/features/notifications/screens/__tests__/NotificationsScreen.test.tsx (91.601 s)
+PASS frontend src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts (92.849 s)
+PASS frontend src/features/calendar/hooks/__tests__/useRehearsalAvailability.test.ts (11.282 s)
+PASS frontend src/contexts/__tests__/ProjectContext.test.tsx (11.369 s)
+PASS frontend src/shared/services/__tests__/api.refresh.test.ts (5.131 s)
+PASS frontend src/contexts/__tests__/AuthContext.test.tsx (96.692 s)
+PASS frontend src/features/calendar/hooks/__tests__/useRehearsals.test.ts (9.488 s)
+Test Suites: 11 passed, 11 total
+Tests:       112 passed, 112 total
+
+Whole client (npx jest --selectProjects frontend --silent) at 1a4071a: 73 suites, 733 tests, all PASS.
+npm run type-check: exit 0.
