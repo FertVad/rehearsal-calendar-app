@@ -13,6 +13,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, act, waitFor } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '../AuthContext';
+import { reportSessionExpired, restoreOwner, sessionWork, resetSessionForTests } from '../../shared/services/session';
 
 const mockApi = {
   getMe: jest.fn(),
@@ -92,6 +93,7 @@ beforeEach(() => {
   Object.keys(mockHeldReads).forEach((k) => delete mockHeldReads[k]);
   mockRefusedWrite.key = null;
   loadingSeen.length = 0;
+  resetSessionForTests();
 });
 
 // A request held open until the test decides how it ends.
@@ -495,4 +497,56 @@ it('stays signed out when a profile update answers after the sign-out', async ()
   await act(async () => { answer.resolve({ data: { user: { ...USER, firstName: 'Late' } } }); await updating; });
   expect(screen.getByTestId('user').props.children).toBe('none');
   expect(mockStorage.cachedUser).toBeUndefined();
+});
+
+// Cause fix 12: the app's state belongs to the session.
+
+// The server refused the session for good — revoked from another device. The
+// open app went on showing the account, every request failing (AC02).
+it('signs out and opens sign-in when the server refuses the session (AC02)', async () => {
+  const screen = await signedIn();
+  await act(async () => {
+    reportSessionExpired();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('none'));
+  expect(mockStorage.accessToken).toBeUndefined();
+  expect(mockStorage.refreshToken).toBeUndefined();
+  expect(mockStorage.cachedUser).toBeUndefined();
+});
+
+// A calendar sync of the previous person still running: the next person's
+// tokens are written only after it, so nothing it sends goes out under them (ES01).
+it('writes the next person\'s tokens only after the previous session\'s work has finished (ES01)', async () => {
+  await renderAuth();
+  restoreOwner(USER.id);
+  const work = held<void>();
+  let tokenWhenWorkEnded: string | undefined = 'not yet';
+  sessionWork(() => work.promise.then(() => { tokenWhenWorkEnded = mockStorage.accessToken; }));
+  mockApi.login.mockResolvedValue({ data: { user: OTHER, accessToken: 'other-access', refreshToken: 'other-refresh' } });
+  let signingIn: Promise<void>;
+  act(() => { signingIn = auth.login('other@example.com', 'long-enough-1'); });
+  await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
+  expect(mockStorage.accessToken).toBeUndefined();
+  await act(async () => { work.resolve(); await signingIn; });
+  expect(tokenWhenWorkEnded).toBeUndefined();
+  expect(mockStorage.accessToken).toBe('other-access');
+});
+
+// The device's zone, sent for the previous person, answered after the next
+// one signed in: the profile shown stays the next person's (AC03).
+it('keeps the next person when the previous one\'s time zone update answers late (AC03)', async () => {
+  const away = { ...USER, timezone: 'Pacific/Kiritimati' };
+  const answer = held<any>();
+  mockApi.updateMe.mockReturnValue(answer.promise);
+  const screen = await renderAuth();
+  mockApi.login.mockResolvedValue({ data: { user: away, accessToken: 'a', refreshToken: 'a' } });
+  await act(async () => { await auth.login('new@example.com', 'long-enough-1'); });
+  await waitFor(() => expect(mockApi.updateMe).toHaveBeenCalled());
+  await act(async () => { await auth.logout(); });
+  mockApi.login.mockResolvedValue({ data: { user: OTHER, accessToken: 'b', refreshToken: 'b' } });
+  await act(async () => { await auth.login('other@example.com', 'long-enough-1'); });
+  await act(async () => { answer.resolve({ data: { user: { ...away, timezone: USER.timezone } } }); });
+  expect(screen.getByTestId('user').props.children).toBe('8');
+  expect(JSON.parse(mockStorage.cachedUser).id).toBe(8);
 });

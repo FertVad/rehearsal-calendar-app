@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { logger } from '../utils/logger';
+import { currentSession, isCurrentSession, reportSessionExpired, SessionEndedError } from './session';
 
 /**
  * API Configuration
@@ -93,9 +94,12 @@ const api = axios.create({
   timeout: REQUEST_TIMEOUT_MS,
 });
 
-// Request interceptor - add access token to requests
+// Request interceptor - add access token to requests. A request carries the
+// session it was sent in (shared/services/session.ts): its 401 is refreshed and
+// retried only while that session lasts, never under the next person's pair.
 api.interceptors.request.use(
   async (config) => {
+    (config as any).session = currentSession();
     const token = await AsyncStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -107,6 +111,54 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// The server's answers to a refresh that end the session: the refresh token
+// itself is missing, invalid, revoked or its account cannot sign in.
+const refusesSession = (status?: number) => status === 400 || status === 401 || status === 403;
+
+/**
+ * A new pair for the session, one refresh at a time. The server rotates the
+ * pair, so two 401s refreshing at once spent the same refresh token twice.
+ *
+ * Only the server's refusal ends the session (AC02): it is reported, and the
+ * AuthContext signs the person out and opens the sign-in screen. No network, a
+ * timeout or a server error says nothing about the session — the tokens stay,
+ * and the request fails with that error, which the caller treats as offline
+ * (AC01). An answer for a session that has meanwhile ended writes nothing.
+ */
+let refreshing: Promise<string> | null = null;
+
+async function refreshSession(): Promise<string> {
+  const session = currentSession();
+  const refreshToken = await AsyncStorage.getItem('refreshToken');
+  if (!refreshToken) {
+    if (isCurrentSession(session)) reportSessionExpired();
+    throw new Error('No refresh token');
+  }
+  let response;
+  try {
+    response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken }, { timeout: REQUEST_TIMEOUT_MS });
+  } catch (error: any) {
+    if (refusesSession(error?.response?.status) && isCurrentSession(session)) reportSessionExpired();
+    throw error;
+  }
+  if (!isCurrentSession(session)) throw new SessionEndedError();
+  const { accessToken, refreshToken: newRefreshToken } = response.data;
+  await AsyncStorage.multiSet([
+    ['accessToken', accessToken],
+    ['refreshToken', newRefreshToken],
+  ]);
+  return accessToken;
+}
+
+function refreshOnce(): Promise<string> {
+  if (!refreshing) {
+    refreshing = refreshSession().finally(() => {
+      refreshing = null;
+    });
+  }
+  return refreshing;
+}
 
 // Response interceptor - handle token refresh
 api.interceptors.response.use(
@@ -120,35 +172,21 @@ api.interceptors.response.use(
     const url = originalRequest?.url || '';
     logger.error(`Response Error: ${status || 'Network Error'} ${originalRequest?.method?.toUpperCase()} ${url}`, error.response?.data);
 
-    // If 401 and not already retried
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Only a request sent with a session has one to refresh: a refused
+    // password at sign-in is a 401 too.
+    const sentWith = originalRequest?.headers?.Authorization;
+    if (status === 401 && sentWith && !originalRequest._retry) {
       originalRequest._retry = true;
+      if (!isCurrentSession(originalRequest.session)) return Promise.reject(new SessionEndedError());
 
-      try {
-        const refreshToken = await AsyncStorage.getItem('refreshToken');
-        if (refreshToken) {
-          // Try to refresh the token
-          const response = await axios.post(`${API_URL}/auth/refresh`, {
-            refreshToken,
-          });
+      // Refreshed by another request since this one went out: its pair is the
+      // one to use.
+      const stored = await AsyncStorage.getItem('accessToken');
+      const accessToken = stored && `Bearer ${stored}` !== sentWith ? stored : await refreshOnce();
+      if (!isCurrentSession(originalRequest.session)) return Promise.reject(new SessionEndedError());
 
-          const { accessToken, refreshToken: newRefreshToken } = response.data;
-
-          // Save new tokens
-          await AsyncStorage.multiSet([
-            ['accessToken', accessToken],
-            ['refreshToken', newRefreshToken],
-          ]);
-
-          // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return api(originalRequest);
-        }
-      } catch (refreshError) {
-        // Refresh failed - logout user
-        await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
-        return Promise.reject(refreshError);
-      }
+      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+      return api(originalRequest);
     }
 
     return Promise.reject(error);

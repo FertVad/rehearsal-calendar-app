@@ -31,6 +31,10 @@ interface UseAddRehearsalSubmitProps {
   reloadMembers: () => void;
   members: ProjectMember[];
   memberAvailability: Record<string, { timeRanges: TimeRange[] }>;
+  /** The availability is for the day and people shown (useRehearsalAvailability). */
+  availabilityReady: boolean;
+  availabilityFailed: boolean;
+  reloadAvailability: () => void;
   resetForm: () => void;
   t: any;
   isEditMode: boolean;
@@ -50,6 +54,9 @@ export function useAddRehearsalSubmit({
   reloadMembers,
   members,
   memberAvailability,
+  availabilityReady,
+  availabilityFailed,
+  reloadAvailability,
   resetForm,
   t,
   isEditMode,
@@ -207,6 +214,20 @@ export function useAddRehearsalSubmit({
         ]);
       } else {
         Alert.alert(t.common.error, t.rehearsals.participantsLoading);
+      }
+      return;
+    }
+
+    // The conflict check reads the availability of the day shown: one still
+    // loading, or failed, is not "nobody is busy" (DF05).
+    if (selectedMemberIds.length > 0 && !availabilityReady) {
+      if (availabilityFailed) {
+        Alert.alert(t.common.error, t.rehearsals.loadAvailabilityError, [
+          { text: t.common.cancel, style: 'cancel' },
+          { text: t.common.retry, onPress: reloadAvailability },
+        ]);
+      } else {
+        Alert.alert(t.common.error, t.rehearsals.availabilityChecking);
       }
       return;
     }

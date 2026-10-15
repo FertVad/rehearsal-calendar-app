@@ -10,6 +10,7 @@ import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { SeenProvider, useSeen } from '../SeenContext';
+import { changeOwner, resetSessionForTests, restoreOwner } from '../../shared/services/session';
 
 const mockRespond = jest.fn();
 
@@ -145,5 +146,41 @@ describe('Seen store', () => {
     });
 
     expect(getByTestId('response').props.children).toBe('yes');
+  });
+});
+
+// The provider sits above the navigator, so a sign-out does not unmount it:
+// the next person saw the previous one's marks as their own, and their first
+// tap sent the opposite of what they meant (HN03).
+describe('Seen store across accounts (HN03)', () => {
+  beforeEach(() => {
+    resetSessionForTests();
+    restoreOwner(1);
+  });
+
+  it('shows the next person none of the previous one\'s marks or counts', async () => {
+    const { getByTestId } = renderProbe();
+    fireEvent.press(getByTestId('toggle'));
+    await waitFor(() => expect(getByTestId('stats').props.children).toBe('3/5'));
+    expect(getByTestId('response').props.children).toBe('yes');
+
+    await act(async () => { await changeOwner(2); });
+
+    expect(getByTestId('response').props.children).toBe('null');
+    expect(getByTestId('stats').props.children).toBe('none');
+  });
+
+  it('writes nothing when the previous person\'s toggle answers after the change', async () => {
+    let answer!: (value: unknown) => void;
+    mockRespond.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    const { getByTestId } = renderProbe();
+    fireEvent.press(getByTestId('toggle'));
+
+    await act(async () => { await changeOwner(2); });
+    await act(async () => { answer({ data: { confirmed: 9, invited: 9 } }); });
+
+    expect(getByTestId('response').props.children).toBe('null');
+    expect(getByTestId('stats').props.children).toBe('none');
+    expect(getByTestId('busy').props.children).toBe('false');
   });
 });

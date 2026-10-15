@@ -9,6 +9,7 @@ import {
 } from '../../../shared/utils/time';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSeen } from '../../../contexts/SeenContext';
+import { useLatestRequest } from '../../../shared/hooks/useSession';
 
 // Cache duration in milliseconds (15 seconds)
 const CACHE_DURATION = 15000;
@@ -46,6 +47,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
   const [error, setError] = useState<string | null>(null);
   const lastFetchTime = useRef<number>(0);
   const isInitialLoadRef = useRef(true);
+  const beginLoad = useLatestRequest();
 
   // Seen state lives in one place for the whole app, so this hook hands what
   // the server told it to the store rather than keeping a copy of its own.
@@ -57,6 +59,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
 
   const fetchRehearsals = useCallback(async (force = false) => {
     if (projects.length === 0) {
+      beginLoad();
       setRehearsals([]);
       return;
     }
@@ -68,6 +71,10 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
       logger.debug('[useRehearsals] Skipping fetch - cache is fresh');
       return;
     }
+
+    // Only the newest load lands: a filter changed while the previous one was
+    // out must not be answered with the previous filter's rehearsals (DF06).
+    const current = beginLoad();
 
     // Use loading for initial load (no data), refreshing for background updates
     if (isInitialLoadRef.current) {
@@ -89,10 +96,10 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
         const projectIds = projects.map(p => p.id);
         const response = await rehearsalsAPI.getBatch(projectIds);
         const allRehearsals = (response.data.rehearsals || []).map((r: any) => {
-          // Extract RSVP data from batch response
-          if (r.userResponse === 'yes') {
-            responses[r.id] = 'yes';
-          }
+          // Every rehearsal of the answer says where this person stands, and
+          // "not seen" is said too: left out, a mark taken back elsewhere stayed
+          // on here (HN02).
+          responses[r.id] = r.userResponse === 'yes' ? 'yes' : null;
           if (r.adminStats) {
             stats[r.id] = r.adminStats;
           }
@@ -127,10 +134,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
               // Load personal response for everyone
               try {
                 const res = await rehearsalsAPI.getMyResponse(rehearsal.id);
-                if (res.data.response) {
-                  const serverResponse = res.data.response.response;
-                  responses[rehearsal.id] = serverResponse === 'yes' ? 'yes' : null;
-                }
+                responses[rehearsal.id] = res.data.response?.response === 'yes' ? 'yes' : null;
               } catch (err) {
                 logger.error(`Failed to fetch RSVP for ${rehearsal.id}:`, err);
               }
@@ -154,6 +158,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
         }
       }
 
+      if (!current()) return;
       setRehearsals(fetchedRehearsals);
       prime(responses, stats);
 
@@ -161,13 +166,16 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
       lastFetchTime.current = Date.now();
       isInitialLoadRef.current = false;
     } catch (err: any) {
+      if (!current()) return;
       logger.error('Failed to fetch rehearsals:', err);
       setError(err.message || 'Failed to load rehearsals');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (current()) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, [projects, filterProjectId, userTimezone, prime]);
+  }, [projects, filterProjectId, userTimezone, prime, beginLoad]);
 
   return {
     rehearsals,

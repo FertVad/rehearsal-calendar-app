@@ -7,6 +7,7 @@ import { unregisterPushToken, syncPushTokenIfGranted } from '../shared/services/
 import { resetConnectionCache } from '../shared/utils/calendarMappings';
 import { AuthFlowError, toAuthFlowError, DeliveryOutcome } from '../features/auth/utils/authErrors';
 import { normalizeEmail } from '../features/auth/utils/accountRules';
+import { changeOwner, restoreOwner, onSessionExpired } from '../shared/services/session';
 
 /** What the profile may change in place. The address is not here: it takes a code to each address. */
 type ProfileUpdate = Parameters<typeof authAPI.updateMe>[0];
@@ -168,6 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // at the next start (review R3-30). Returns whether the session started.
   const writeSession = useCallback(async (data: { user: User; accessToken: string; refreshToken: string }, attempt: number) => {
     if (attempt !== signInAttempt.current) return false;
+    // Another person's session ends here, and its work — a calendar sync —
+    // finishes under its own tokens before these are written (ES01).
+    await changeOwner(data.user.id);
     await reconcileDeviceState(data.user);
     // Sync user preferences (timezone, locale, weekStartDay)
     await syncUserPreferences(data.user);
@@ -216,6 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('User data not found in response');
       }
 
+      restoreOwner(user.id);
       await reconcileDeviceState(user);
       setUser(user);
       // Cache user data for offline use
@@ -238,7 +243,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const cachedUser = await AsyncStorage.getItem('cachedUser');
           if (cachedUser) {
-            setUser(JSON.parse(cachedUser));
+            const cached = JSON.parse(cachedUser);
+            restoreOwner(cached.id);
+            setUser(cached);
           }
         } catch {
           // No cached user - will show login screen
@@ -481,6 +488,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await inTurn(async () => {
+        // The session ends first: its state is dropped and its answers with
+        // it, and a calendar sync under way stops before anything below.
+        await changeOwner(null);
+
         // Order matters: dropping the push token needs a *valid* access token,
         // and /auth/logout bumps token_version, which invalidates it. Revoking
         // first would leave the token in the database and keep delivering this
@@ -517,6 +528,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [forgetPendingSignIn, inTurn]);
 
+  // The server refused the session for good — revoked by a sign-out or a new
+  // password elsewhere (AC02). Signed out here too, without asking the server:
+  // there is no session left to tell it about. The navigator opens sign-in.
+  useEffect(() => onSessionExpired(() => {
+    logger.info('[Auth] The session was refused; signing out');
+    forgetPendingSignIn();
+    inTurn(async () => {
+      await changeOwner(null);
+      await AsyncStorage.multiRemove(CREDENTIALS);
+      setUser(null);
+    }).catch((err) => logger.error('Clearing a refused session failed:', err));
+  }), [forgetPendingSignIn, inTurn]);
+
   const updateUser = useCallback(async (data: ProfileUpdate) => {
     // An answer after a sign-out, or after a newer session was written, is
     // about a session that is gone: it writes nothing (see logout).
@@ -550,6 +574,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { deletedProjects } = response.data;
       // The session is over, as at a sign-out: nothing answered later writes it back.
       forgetPendingSignIn();
+      await changeOwner(null);
 
       // Set flag to ignore stale deep links
       await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());

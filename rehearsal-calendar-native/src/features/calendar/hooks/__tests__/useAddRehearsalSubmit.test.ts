@@ -84,6 +84,9 @@ describe('useAddRehearsalSubmit Hook', () => {
     reloadMembers: jest.fn(),
     members: mockMembers,
     memberAvailability: {},
+    availabilityReady: true,
+    availabilityFailed: false,
+    reloadAvailability: jest.fn(),
     resetForm: jest.fn(),
     t: mockT,
     isEditMode: false,
@@ -639,6 +642,43 @@ describe('useAddRehearsalSubmit Hook', () => {
       });
 
       expect(Alert.alert).toHaveBeenCalledWith('Error', 'Someone has left');
+    });
+  });
+
+  // The conflict check reads the availability of the day on the form. Saved
+  // while that was still loading — or after it failed — the check ran on the
+  // previous day's answer, or on none, and found nobody busy (DF05).
+  describe('Availability not yet in hand (DF05)', () => {
+    const t = { ...mockT, common: { ...mockT.common, retry: 'Retry' },
+      rehearsals: { ...mockT.rehearsals, availabilityChecking: 'Still checking', loadAvailabilityError: 'Could not check' } };
+
+    it('does not save while the availability of the day shown is loading', async () => {
+      const props: any = { ...defaultProps, t, selectedMemberIds: ['user1'], availabilityReady: false, availabilityFailed: false };
+      const { result } = renderHook(() => useAddRehearsalSubmit(props));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(checkSchedulingConflicts).not.toHaveBeenCalled();
+      expect(rehearsalsAPI.create).not.toHaveBeenCalled();
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Still checking');
+    });
+
+    it('does not save over a failed availability load, and offers to try again', async () => {
+      const reloadAvailability = jest.fn();
+      const props: any = { ...defaultProps, t, selectedMemberIds: ['user1'], availabilityReady: false, availabilityFailed: true, reloadAvailability };
+      const { result } = renderHook(() => useAddRehearsalSubmit(props));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(rehearsalsAPI.create).not.toHaveBeenCalled();
+      const [, message, buttons] = (Alert.alert as jest.Mock).mock.calls[0];
+      expect(message).toBe('Could not check');
+      buttons[1].onPress();
+      expect(reloadAvailability).toHaveBeenCalled();
     });
   });
 });

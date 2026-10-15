@@ -56,13 +56,14 @@ export default function AddRehearsalScreen() {
   // Data loading hooks
   const membersLoad = useRehearsalMembers(form.localSelectedProject);
   const { members, loading: loadingMembers } = membersLoad;
-  const { memberAvailability, loading: loadingAvailability } = useRehearsalAvailability(
+  const availabilityLoad = useRehearsalAvailability(
     form.localSelectedProject,
     form.date,
     form.selectedMemberIds,
     t,
     form.isEditMode ? form.rehearsalId : undefined
   );
+  const { memberAvailability, loading: loadingAvailability } = availabilityLoad;
 
   // Submit logic hook
   const { loading, handleSubmit } = useAddRehearsalSubmit({
@@ -78,6 +79,9 @@ export default function AddRehearsalScreen() {
     reloadMembers: membersLoad.reload,
     members,
     memberAvailability,
+    availabilityReady: availabilityLoad.ready,
+    availabilityFailed: availabilityLoad.failed,
+    reloadAvailability: availabilityLoad.reload,
     resetForm: form.resetForm,
     t,
     isEditMode: form.isEditMode,

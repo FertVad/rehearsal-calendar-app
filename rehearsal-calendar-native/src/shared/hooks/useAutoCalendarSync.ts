@@ -18,6 +18,7 @@ import { getSyncSettings, saveSyncSettings } from '../utils/calendarStorage';
 import { importCalendarEventsToAvailability, syncAllRehearsals, unsyncRehearsal } from '../services/calendar';
 import { getAllMappings } from '../utils/calendarMappings';
 import { projectsAPI, rehearsalsAPI } from '../services/api';
+import { assertSession, sessionWork, SessionEndedError, SessionStamp } from '../services/session';
 
 /**
  * Check if should import now
@@ -53,6 +54,7 @@ async function shouldImportNow(): Promise<{ importCalendarIds: string[] } | null
  */
 
 async function exportRehearsalsIfDue(
+  session: SessionStamp,
   force = false,
   knownMappings?: Record<string, { eventId: string; calendarId: string }>
 ): Promise<void> {
@@ -104,6 +106,8 @@ async function exportRehearsalsIfDue(
   // reader thought to pull down. One request answers for all of them.
   const mappings = knownMappings ?? (await getAllMappings());
 
+  // What was read above is this session's; the writes below are too, or none.
+  assertSession(session);
   await reconcileDeletedRehearsals(
     rehearsals.map((r: { id: string }) => String(r.id)),
     mappings
@@ -127,6 +131,7 @@ async function exportRehearsalsIfDue(
   if (result.failed === 0) {
     // Re-read rather than reusing `settings`, which was fetched before the
     // import ran and stamped its own timestamp into the same object.
+    assertSession(session);
     await saveSyncSettings({
       ...(await getSyncSettings()),
       lastExportTime: new Date().toISOString(),
@@ -160,6 +165,7 @@ async function reconcileDeletedRehearsals(
     try {
       await unsyncRehearsal(rehearsalId);
     } catch (error) {
+      if (error instanceof SessionEndedError) throw error;
       logger.error(`[AutoSync] Could not remove the event for rehearsal ${rehearsalId}:`, error);
     }
   }
@@ -252,7 +258,7 @@ export async function runAutoSync(): Promise<void> {
     }
     lastSyncAttempt = now;
 
-    await runExclusively(async () => {
+    await runExclusively(() => sessionWork(async (session) => {
     try {
       // Check if we should import
       const importSettings = await shouldImportNow();
@@ -273,14 +279,18 @@ export async function runAutoSync(): Promise<void> {
 
       // A failed import should not stop the export, and the other way round.
       try {
-        await exportRehearsalsIfDue(false, sharedMappings);
+        assertSession(session);
+        await exportRehearsalsIfDue(session, false, sharedMappings);
       } catch (error) {
+        if (error instanceof SessionEndedError) throw error;
         logger.error('[AutoSync] Error during auto-export:', error);
       }
     } catch (error) {
+      // Ended with its session: nothing more is written, and that is no error.
+      if (error instanceof SessionEndedError) return;
       logger.error('[AutoSync] Error during auto-import:', error);
     }
-    }, { waitForTurn: false });
+    }), { waitForTurn: false });
 }
 
 interface AutoSyncOptions {
@@ -340,7 +350,7 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
     // A pull-to-refresh waits rather than being dropped — see runExclusively.
     let sharedMappings: Record<string, { eventId: string; calendarId: string }> | undefined;
 
-    await runExclusively(async () => {
+    await runExclusively(() => sessionWork(async (session) => {
     try {
       const settings = await getSyncSettings();
       logger.debug('[AutoSync] Force sync - current settings:', {
@@ -352,10 +362,12 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
       // Pull-to-refresh means "now", so the export ignores its own timer.
       try {
         sharedMappings = await getAllMappings();
-        await exportRehearsalsIfDue(true, sharedMappings);
+        await exportRehearsalsIfDue(session, true, sharedMappings);
       } catch (error) {
+        if (error instanceof SessionEndedError) throw error;
         logger.error('[AutoSync] Force sync - export failed:', error);
       }
+      assertSession(session);
 
       // Only check if import is enabled
       if (!settings.importEnabled || settings.importCalendarIds.length === 0) {
@@ -371,10 +383,11 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
       );
       logger.debug('[AutoSync] Force sync completed:', result);
     } catch (error) {
+      if (error instanceof SessionEndedError) return;
       logger.error('[AutoSync] Error during force sync:', error);
       throw error;
     }
-    }, { waitForTurn: true });
+    }), { waitForTurn: true });
   }, []);
 
   return {

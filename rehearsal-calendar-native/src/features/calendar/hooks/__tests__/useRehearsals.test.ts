@@ -123,14 +123,49 @@ describe('useRehearsals Hook', () => {
       });
 
       // Seen state now lives in the shared store, so what matters is what the
-      // hook handed over rather than what it kept.
+      // hook handed over rather than what it kept. r2 is not seen, and says
+      // so: left out, a mark taken back on another device stayed on here after
+      // a successful refresh (HN02).
       expect(mockPrime).toHaveBeenCalledWith(
-        { r1: 'yes' },
+        { r1: 'yes', r2: null },
         { r1: { confirmed: 5, invited: 10 } }
       );
 
       expect(result.current.loading).toBe(false);
       expect(result.current.error).toBeNull();
+    });
+
+    // "All projects" still loading when one project is picked: the project's
+    // answer comes first, then the old one — which must not replace it (DF06).
+    it('keeps the chosen project\'s rehearsals when the earlier filter answers last (DF06)', async () => {
+      let answerAll!: (value: unknown) => void;
+      (rehearsalsAPI.getBatch as jest.Mock).mockReturnValue(new Promise((resolve) => { answerAll = resolve; }));
+      (rehearsalsAPI.getAll as jest.Mock).mockResolvedValue({
+        data: { rehearsals: [{ id: 'p2', startsAt: `${SOON}T10:00:00Z`, endsAt: `${SOON}T12:00:00Z` }] },
+      });
+      (rehearsalsAPI.getMyResponse as jest.Mock).mockResolvedValue({ data: { response: null } });
+
+      const { result, rerender } = renderHook(
+        ({ filter }: { filter: string | null }) => useRehearsals(mockProjects, filter),
+        { initialProps: { filter: null as string | null } }
+      );
+
+      let allLoad!: Promise<void>;
+      act(() => { allLoad = result.current.fetchRehearsals(true); });
+      rerender({ filter: '2' });
+      await act(async () => { await result.current.fetchRehearsals(true); });
+      expect(result.current.rehearsals.map((r) => r.id)).toEqual(['p2']);
+
+      await act(async () => {
+        answerAll({ data: { rehearsals: [
+          { id: 'r1', projectId: '1', startsAt: `${SOON}T10:00:00Z`, endsAt: `${SOON}T12:00:00Z`, userResponse: 'yes' },
+          { id: 'p2', projectId: '2', startsAt: `${SOON}T10:00:00Z`, endsAt: `${SOON}T12:00:00Z` },
+        ] } });
+        await allLoad;
+      });
+
+      expect(result.current.rehearsals.map((r) => r.id)).toEqual(['p2']);
+      expect(mockPrime).toHaveBeenCalledTimes(1);
     });
 
     it('should handle empty rehearsals array', async () => {
@@ -226,7 +261,8 @@ describe('useRehearsals Hook', () => {
 
       // Should NOT fetch admin stats
       expect(rehearsalsAPI.getResponses).not.toHaveBeenCalled();
-      expect(mockPrime).toHaveBeenCalledWith(expect.anything(), {});
+      // No answer row is "not seen", said out loud (HN02).
+      expect(mockPrime).toHaveBeenCalledWith({ r1: null }, {});
     });
 
     it('should only fetch RSVP for upcoming rehearsals', async () => {

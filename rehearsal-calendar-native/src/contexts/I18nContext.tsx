@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Language, Translations, translations } from '../i18n/translations';
+import { onAccountLanguage } from '../shared/utils/storage';
 
 import { logger } from '../shared/utils/logger';
 interface I18nContextType {
@@ -38,6 +39,12 @@ export function I18nProvider({ children }: I18nProviderProps) {
   useEffect(() => {
     loadLanguage();
   }, [loadLanguage]);
+
+  // The signed-in account's language, whenever its preferences are written —
+  // at sign-in, at start, after a profile change (HC01).
+  useEffect(() => onAccountLanguage((locale) => {
+    if (locale in translations) setLanguageState(locale as Language);
+  }), []);
 
   const setLanguage = useCallback(async (lang: Language) => {
     try {

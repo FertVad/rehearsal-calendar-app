@@ -1,8 +1,9 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, ReactNode } from 'react';
 import { projectsAPI } from '../shared/services/api';
 import { Project } from '../shared/types';
 import { useAuth } from './AuthContext';
 import { logger } from '../shared/utils/logger';
+import { useLatestRequest, useSession, useSessionState } from '../shared/hooks/useSession';
 
 interface ProjectContextType {
   projects: Project[];
@@ -16,33 +17,42 @@ interface ProjectContextType {
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
+// The session's projects: a sign-out or another person's sign-in starts from
+// none (BC01), and only the newest load's answer lands.
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const session = useSession();
+  const [projects, setProjects] = useSessionState<Project[]>([]);
+  // The choice is an id, and the project is read from the list as it is now:
+  // a project deleted or left falls back to the first one, and a changed role
+  // is the list's, not a copy taken when it was picked (BC02).
+  const [selectedId, setSelectedId] = useSessionState<string | null>(null);
+  const [loading, setLoading] = useSessionState(false);
+  const [error, setError] = useSessionState<string | null>(null);
+  const beginLoad = useLatestRequest();
+
+  const selectedProject = useMemo(
+    () => projects.find((p) => p.id === selectedId) ?? projects[0] ?? null,
+    [projects, selectedId]
+  );
 
   const fetchProjects = async () => {
     if (!user) return;
+    const current = beginLoad();
 
     setLoading(true);
     setError(null);
 
     try {
       const response = await projectsAPI.getUserProjects();
-      const projectsList = response.data.projects || [];
-      setProjects(projectsList);
-
-      // Auto-select first project if none selected
-      if (!selectedProject && projectsList.length > 0) {
-        setSelectedProject(projectsList[0]);
-      }
+      if (!current()) return;
+      setProjects(response.data.projects || []);
     } catch (err: any) {
+      if (!current()) return;
       logger.error('Failed to fetch projects:', err);
       setError(err.message || 'Failed to load projects');
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
   };
 
@@ -62,7 +72,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setProjects(prev => [newProject, ...prev.filter(p => p.id !== newProject.id)]);
 
     // Auto-select the new project
-    setSelectedProject(newProject);
+    setSelectedId(newProject.id);
 
     return newProject;
   };
@@ -71,7 +81,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     if (user) {
       fetchProjects();
     }
-  }, [user]);
+  }, [user, session]);
 
   return (
     <ProjectContext.Provider
@@ -80,7 +90,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         selectedProject,
         loading,
         error,
-        setSelectedProject,
+        setSelectedProject: (project) => setSelectedId(project?.id ?? null),
         refreshProjects,
         createProject,
       }}

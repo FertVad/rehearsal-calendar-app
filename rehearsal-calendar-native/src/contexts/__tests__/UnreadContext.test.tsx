@@ -10,6 +10,7 @@ import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { UnreadProvider, useUnread } from '../UnreadContext';
+import { changeOwner, resetSessionForTests } from '../../shared/services/session';
 
 const mockUnreadCount = jest.fn();
 const mockMarkRead = jest.fn();
@@ -41,6 +42,11 @@ jest.mock('expo-notifications', () => ({
     return Promise.resolve();
   },
 }));
+
+// Signed in unless a test says otherwise; the session moves through the real
+// module, as the AuthContext moves it.
+const mockAuth: { user: { id: number } | null } = { user: { id: 1 } };
+jest.mock('../AuthContext', () => ({ useAuth: () => mockAuth }));
 
 function Probe() {
   const { unreadCount, refresh, markRead, remove, removeAll } = useUnread();
@@ -80,7 +86,15 @@ beforeEach(() => {
   mockRemove.mockReset().mockResolvedValue({ data: { unreadCount: 2 } });
   mockRemoveAll.mockReset().mockResolvedValue({ data: { unreadCount: 0 } });
   mockSetBadge.mockReset();
+  mockAuth.user = { id: 1 };
+  resetSessionForTests();
 });
+
+function held<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((ok) => { resolve = ok; });
+  return { promise, resolve };
+}
 
 describe('Unread count', () => {
   it('starts at zero and asks nobody until told', () => {
@@ -101,7 +115,7 @@ describe('Unread count', () => {
   });
 
   it('comes back with the last count it knew, before asking anyone', async () => {
-    mockStorage['unread-count'] = '5';
+    mockStorage['unread-count:1'] = '5';
 
     const { getByTestId } = renderProbe();
 
@@ -111,7 +125,7 @@ describe('Unread count', () => {
   it('shows the stored count when the server cannot be reached', async () => {
     // The case that matters: a launch with no network. Nought here would hide
     // notifications the reader has never seen.
-    mockStorage['unread-count'] = '4';
+    mockStorage['unread-count:1'] = '4';
     mockUnreadCount.mockRejectedValue(new Error('offline'));
 
     const { getByTestId } = renderProbe();
@@ -125,7 +139,7 @@ describe('Unread count', () => {
   });
 
   it('prefers the server to what it had stored', async () => {
-    mockStorage['unread-count'] = '9';
+    mockStorage['unread-count:1'] = '9';
 
     const { getByTestId } = renderProbe();
     fireEvent.press(getByTestId('refresh'));
@@ -231,5 +245,54 @@ describe('Unread count', () => {
     fireEvent.press(getByTestId('refresh'));
 
     await waitFor(() => expect(getByTestId('count').props.children).toBe('0'));
+  });
+});
+
+// The provider sits above the navigator, so a sign-out does not unmount it.
+describe('Unread count across accounts (NI03)', () => {
+  it('shows the next person none of the previous one\'s count', async () => {
+    const { getByTestId } = renderProbe();
+    fireEvent.press(getByTestId('refresh'));
+    await waitFor(() => expect(getByTestId('count').props.children).toBe('3'));
+
+    mockAuth.user = { id: 2 };
+    await act(async () => { await changeOwner(2); });
+
+    expect(getByTestId('count').props.children).toBe('0');
+  });
+
+  it('writes nothing when the previous person\'s answer comes after the change', async () => {
+    const late = held<any>();
+    mockUnreadCount.mockReturnValueOnce(late.promise);
+    const { getByTestId } = renderProbe();
+    fireEvent.press(getByTestId('refresh'));
+
+    mockAuth.user = { id: 2 };
+    await act(async () => { await changeOwner(2); });
+    mockSetBadge.mockReset();
+    await act(async () => { late.resolve({ data: { unreadCount: 8 } }); });
+
+    expect(getByTestId('count').props.children).toBe('0');
+    expect(Object.values(mockStorage)).not.toContain('8');
+    expect(mockSetBadge).not.toHaveBeenCalledWith(8);
+  });
+});
+
+// A read of the count that started before a change and answers after it is
+// the old count (NI04).
+describe('Unread count and late answers (NI04)', () => {
+  it('keeps the count of a mark-all that finished after a slower read began', async () => {
+    const slow = held<any>();
+    mockUnreadCount.mockReturnValueOnce(slow.promise);
+    const { getByTestId } = renderProbe();
+
+    fireEvent.press(getByTestId('refresh'));
+    fireEvent.press(getByTestId('read-all'));
+    await waitFor(() => expect(getByTestId('count').props.children).toBe('0'));
+
+    await act(async () => { slow.resolve({ data: { unreadCount: 5 } }); });
+
+    expect(getByTestId('count').props.children).toBe('0');
+    expect(mockStorage['unread-count:1']).toBe('0');
   });
 });

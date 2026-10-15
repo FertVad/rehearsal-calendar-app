@@ -1,12 +1,16 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, ReactNode } from 'react';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationsAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
+import { useAuth } from './AuthContext';
+import { useLatestRequest, useSession, useSessionState } from '../shared/hooks/useSession';
+import { isCurrentSession } from '../shared/services/session';
 
 // Survives a restart, so the count does not begin at nought every launch — and
-// so it can be shown at all when the server cannot be reached.
-const STORED_COUNT_KEY = 'unread-count';
+// so it can be shown at all when the server cannot be reached. One per person:
+// a shared key was read by the next account before anything wiped it (NI03).
+const storedCountKey = (userId: string | number) => `unread-count:${userId}`;
 
 interface UnreadContextValue {
   unreadCount: number;
@@ -35,72 +39,92 @@ const UnreadContext = createContext<UnreadContextValue | undefined>(undefined);
  * alongside it, which is what kept the two from drifting.
  */
 export function UnreadProvider({ children }: { children: ReactNode }) {
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const session = useSession();
+  // The count is the session's: the next person starts from nothing known, and
+  // an answer for the previous one writes neither the count nor the stored
+  // copy (NI03).
+  const [unreadCount, setUnreadCount] = useSessionState(0);
 
   // Until a real number arrives — from storage or the server — there is nothing
   // worth showing, and nothing worth writing to the app icon.
-  const [known, setKnown] = useState(false);
-  const knownRef = useRef(false);
+  const [known, setKnown] = useSessionState(false);
+  const knownRef = useRef<{ session: number; known: boolean }>({ session, known: false });
+
+  // Each read and each change of the count takes a turn: a count read before a
+  // change and answered after it is the old count (NI04).
+  const begin = useLatestRequest();
 
   const remember = useCallback((count: number) => {
-    knownRef.current = true;
+    if (!isCurrentSession(session)) return;
+    knownRef.current = { session, known: true };
     setKnown(true);
     setUnreadCount(count);
-    AsyncStorage.setItem(STORED_COUNT_KEY, String(count)).catch(() => {
+    if (userId === null) return;
+    AsyncStorage.setItem(storedCountKey(userId), String(count)).catch(() => {
       // A count is not worth an error.
     });
-  }, []);
+  }, [session, userId, setKnown, setUnreadCount]);
 
+  // The signed-in person's own stored count.
+  const signedIn = userId !== null;
   useEffect(() => {
-    AsyncStorage.getItem(STORED_COUNT_KEY)
+    if (userId === null) return;
+    AsyncStorage.getItem(storedCountKey(userId))
       .then((stored) => {
         // A fetch that has already answered wins over the stored value.
-        if (stored !== null && !knownRef.current) remember(Number(stored) || 0);
+        const known = knownRef.current.session === session && knownRef.current.known;
+        if (stored !== null && !known) remember(Number(stored) || 0);
       })
       .catch(() => {});
-  }, [remember]);
+  }, [userId, session, remember]);
 
   const refresh = useCallback(async () => {
+    const current = begin();
     try {
       const res = await notificationsAPI.unreadCount();
-      remember(res.data?.unreadCount ?? 0);
+      if (current()) remember(res.data?.unreadCount ?? 0);
     } catch (error) {
       // Offline, most likely. Keeping the last known count beats zeroing it and
       // hiding something the reader has not seen.
       logger.warn('[Unread] Could not refresh the count:', error);
     }
-  }, [remember]);
+  }, [begin, remember]);
 
   const markRead = useCallback(async (ids?: number[]) => {
+    const current = begin();
     try {
       const res = await notificationsAPI.markRead(ids);
-      remember(res.data?.unreadCount ?? 0);
+      if (current()) remember(res.data?.unreadCount ?? 0);
     } catch (error) {
       logger.warn('[Unread] Could not mark as read:', error);
     }
-  }, [remember]);
+  }, [begin, remember]);
 
   const remove = useCallback(async (id: number) => {
+    const current = begin();
     try {
       const res = await notificationsAPI.remove(id);
-      remember(res.data?.unreadCount ?? 0);
+      if (current()) remember(res.data?.unreadCount ?? 0);
       return true;
     } catch (error) {
       logger.warn('[Unread] Could not delete:', error);
       return false;
     }
-  }, [remember]);
+  }, [begin, remember]);
 
   const removeAll = useCallback(async () => {
+    const current = begin();
     try {
       const res = await notificationsAPI.removeAll();
-      remember(res.data?.unreadCount ?? 0);
+      if (current()) remember(res.data?.unreadCount ?? 0);
       return true;
     } catch (error) {
       logger.warn('[Unread] Could not clear the inbox:', error);
       return false;
     }
-  }, [remember]);
+  }, [begin, remember]);
 
   // The badge is not set at the call sites; it follows the count. Six places
   // used to set it, which is six chances for it to disagree with the bell.
@@ -114,6 +138,12 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
       // Simulators and devices without permission both land here.
     });
   }, [known, unreadCount]);
+
+  // Signed out, the icon shows nobody's count.
+  useEffect(() => {
+    if (signedIn || session === 0) return;
+    Notifications.setBadgeCountAsync(0).catch(() => {});
+  }, [signedIn, session]);
 
   const value = useMemo(
     () => ({ unreadCount, refresh, markRead, remove, removeAll }),

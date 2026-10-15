@@ -1,8 +1,10 @@
-import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, ReactNode } from 'react';
 import { Alert } from 'react-native';
 import { RSVPStatus } from '../shared/types';
 import { rehearsalsAPI } from '../shared/services/api';
 import { useI18n } from './I18nContext';
+import { useSessionState } from '../shared/hooks/useSession';
+import { isCurrentSession, currentSession } from '../shared/services/session';
 
 export interface SeenStats {
   confirmed: number;
@@ -43,9 +45,11 @@ const SeenContext = createContext<SeenContextValue | undefined>(undefined);
  */
 export function SeenProvider({ children }: { children: ReactNode }) {
   const { t } = useI18n();
-  const [responses, setResponses] = useState<Record<string, RSVPStatus>>({});
-  const [stats, setStats] = useState<Record<string, SeenStats>>({});
-  const [responding, setResponding] = useState<Record<string, boolean>>({});
+  // The marks are the session's: the next person starts from none, and a
+  // toggle answered after a sign-out writes nothing back (HN03).
+  const [responses, setResponses] = useSessionState<Record<string, RSVPStatus>>({});
+  const [stats, setStats] = useSessionState<Record<string, SeenStats>>({});
+  const [responding, setResponding] = useSessionState<Record<string, boolean>>({});
 
   const prime = useCallback(
     (nextResponses: Record<string, RSVPStatus>, nextStats?: Record<string, SeenStats>) => {
@@ -54,7 +58,7 @@ export function SeenProvider({ children }: { children: ReactNode }) {
       setResponses((prev) => ({ ...prev, ...nextResponses }));
       if (nextStats) setStats((prev) => ({ ...prev, ...nextStats }));
     },
-    []
+    [setResponses, setStats]
   );
 
   const toggleSeen = useCallback(
@@ -69,6 +73,7 @@ export function SeenProvider({ children }: { children: ReactNode }) {
 
       setResponses((prev) => ({ ...prev, [rehearsalId]: next }));
       setResponding((prev) => ({ ...prev, [rehearsalId]: true }));
+      const session = currentSession();
 
       try {
         const response = await rehearsalsAPI.respond(rehearsalId, onTheWire);
@@ -79,12 +84,12 @@ export function SeenProvider({ children }: { children: ReactNode }) {
         // Put it back. An optimistic update that survives its own failure is
         // worse than no optimism at all.
         setResponses((prev) => ({ ...prev, [rehearsalId]: current }));
-        Alert.alert(t.common.error, err?.message || t.rehearsals.seenError);
+        if (isCurrentSession(session)) Alert.alert(t.common.error, err?.message || t.rehearsals.seenError);
       } finally {
         setResponding((prev) => ({ ...prev, [rehearsalId]: false }));
       }
     },
-    [responses, t]
+    [responses, t, setResponses, setResponding, setStats]
   );
 
   const value = useMemo<SeenContextValue>(

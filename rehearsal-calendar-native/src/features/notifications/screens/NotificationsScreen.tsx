@@ -22,6 +22,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
 import { useUnread } from '../../../contexts/UnreadContext';
 import { logger } from '../../../shared/utils/logger';
+import { useLatestRequest } from '../../../shared/hooks/useSession';
 import { styles } from '../styles/notificationsScreenStyles';
 import type { AppNavigation } from '../../../navigation';
 
@@ -57,18 +58,23 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // A list read before a deletion and answered after it still holds the deleted
+  // card: a deletion takes a turn too, and the read's answer is dropped (NI04).
+  const begin = useLatestRequest();
+
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
+    const current = begin();
     try {
       const res = await notificationsAPI.list();
-      setItems(res.data.notifications || []);
+      if (current()) setItems(res.data.notifications || []);
     } catch (err) {
       logger.warn('[Notifications] Could not load:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [begin]);
 
   // Reading the inbox is what marks it read — this screen is the only place the
   // notifications can be read at all, so arriving here is the acknowledgement.
@@ -126,6 +132,7 @@ export default function NotificationsScreen() {
     // Gone from the list first: the row has already slid away under the
     // reader's thumb, and putting it back on success would be a stutter.
     const wasAt = items.findIndex((n) => n.id === item.id);
+    begin();
     setItems((prev) => prev.filter((n) => n.id !== item.id));
 
     const ok = await remove(item.id);
@@ -155,6 +162,7 @@ export default function NotificationsScreen() {
           // Same care as a single row: emptied on screen at once, and put back
           // in full if the server never heard about it.
           const before = items;
+          begin();
           setItems([]);
 
           const ok = await removeAll();

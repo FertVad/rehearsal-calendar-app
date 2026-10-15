@@ -22,6 +22,7 @@ import { listDeviceCalendarIds } from './deviceCalendars';
 import { availabilityAPI } from '../api';
 import { logger } from '../../utils/logger';
 import { formatDateToString } from '../../utils/time';
+import { assertSession, sessionWork, SessionStamp } from '../session';
 
 
 /**
@@ -169,7 +170,7 @@ function occurrenceKey(event: Calendar.Event): string {
  * Returns: { success, failed, skipped, errors }. A calendar that could not be
  * read counts as failed, and the sync is then not stamped as done (EI02).
  */
-export async function importCalendarEventsToAvailability(
+export function importCalendarEventsToAvailability(
   calendarIds: string[],
   onProgress?: (current: number, total: number) => void,
   /**
@@ -179,6 +180,17 @@ export async function importCalendarEventsToAvailability(
    * know which events are our own rehearsals and must not be imported as busy
    * time, once there to know which event belongs to which rehearsal.
    */
+  knownMappings?: Record<string, { eventId: string; calendarId: string }>
+): Promise<ImportResult> {
+  // The session's work (ES01): the calendars were read for the person signed
+  // in when it began, and their hours go to that person's account or nowhere.
+  return sessionWork((session) => importForSession(session, calendarIds, onProgress, knownMappings));
+}
+
+async function importForSession(
+  session: SessionStamp,
+  calendarIds: string[],
+  onProgress?: (current: number, total: number) => void,
   knownMappings?: Record<string, { eventId: string; calendarId: string }>
 ): Promise<ImportResult> {
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, errors: [] };
@@ -221,6 +233,7 @@ export async function importCalendarEventsToAvailability(
     });
     onProgress?.(0, total);
 
+    assertSession(session);
     const response = await availabilityAPI.syncImported({
       source: Platform.OS === 'ios' ? 'apple_calendar' : 'google_calendar',
       // The instants read, and the local dates they cover — the server
@@ -239,6 +252,7 @@ export async function importCalendarEventsToAvailability(
     result.success = (counts.added || 0) + (counts.updated || 0);
     result.skipped += counts.unchanged || 0;
     onProgress?.(total, total);
+    assertSession(session);
     logger.info(`[CalendarSync] Synced: ${counts.added} added, ${counts.updated} updated, ${counts.removed} removed, ` +
       `${counts.adopted} adopted, ${counts.unchanged} unchanged`);
 
@@ -264,9 +278,13 @@ export async function importCalendarEventsToAvailability(
 /**
  * Remove all imported availability slots
  */
-export async function removeAllImportedSlots(
+export function removeAllImportedSlots(
   _onProgress?: (current: number, total: number) => void
 ): Promise<ImportResult> {
+  return sessionWork((session) => removeImportedForSession(session));
+}
+
+async function removeImportedForSession(session: SessionStamp): Promise<ImportResult> {
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, errors: [] };
 
   // The server holds every imported row, from every device. This used to ask
@@ -276,6 +294,7 @@ export async function removeAllImportedSlots(
   try {
     const response = await availabilityAPI.deleteAllImported();
     result.success = response.data?.deletedCount ?? 0;
+    assertSession(session);
     await clearAllImportedEvents();
     logger.info(`[CalendarSync] Removed ${result.success} imported events`);
     return result;
