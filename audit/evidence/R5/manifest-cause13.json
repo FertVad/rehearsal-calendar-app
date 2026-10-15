@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-16",
+  "branch": "auto/main",
+  "causeFix": 13,
+  "finding": "AC04",
+  "baseCommit": "ce1a4fb",
+  "sourceCommit": "f847b3efa11e9b18a1c9844f8b24d3fd06e5ab7d",
+  "sourceTree": "c610aaa24fd7978e681a160827df984a7b5c3377",
+  "runtime": {
+    "node": "v22",
+    "platform": "darwin",
+    "environment": "jest frontend project",
+    "production": "NOT_RUN",
+    "physicalDevice": "not required",
+    "findingStatus": "READY_FOR_CHECK"
+  },
+  "runs": [
+    {
+      "file": "logger-ac04-before.txt",
+      "sha256": "9a913d28e4492bd1a113596d873bfe2a4f5ea40c35c1f9e2ff7bc4629119e000",
+      "fixFilesAt": "ce1a4fb",
+      "exitCode": 1,
+      "tests": { "failed": 5, "passed": 0 }
+    },
+    {
+      "file": "logger-ac04-after.txt",
+      "sha256": "e1c1e36fe7fda9a0ac27186d7f2a97c28c273d2bf0da2a3f233b100979173b4f",
+      "fixFilesAt": "f847b3efa11e9b18a1c9844f8b24d3fd06e5ab7d",
+      "exitCode": 0,
+      "tests": { "failed": 0, "passed": 5 }
+    }
+  ]
+}

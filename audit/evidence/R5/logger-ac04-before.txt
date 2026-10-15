@@ -1,0 +1,37 @@
+AC04 / cause fix 13 — red before. Base: ce1a4fb (old src/shared/utils/logger.ts and call sites),
+new test src/shared/utils/__tests__/logger.test.ts.
+Command: npx jest --selectProjects frontend --forceExit src/shared/utils/__tests__/logger.test.ts
+(filtered to result lines)
+
+    ✕ logs a failed request as a typed summary without its body or headers (11 ms)
+    ✕ applies the same rule to warn, info and debug (3 ms)
+    ✕ redacts credential fields and token-shaped strings anywhere in a plain value (3 ms)
+    ✕ keeps a plain error readable and survives a cycle (38 ms)
+    ✕ finds no direct console call (175 ms)
+  ● logger keeps credentials out of the journal › logs a failed request as a typed summary without its body or headers
+    Expected substring: not "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJnb29nbGUtdXNlciJ9.c2lnbmF0dXJlLXBhcnQ"
+  ● logger keeps credentials out of the journal › applies the same rule to warn, info and debug
+    Expected substring: not "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJnb29nbGUtdXNlciJ9.c2lnbmF0dXJlLXBhcnQ"
+  ● logger keeps credentials out of the journal › redacts credential fields and token-shaped strings anywhere in a plain value
+    Expected substring: not "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjQyfQ.YWNjZXNzLXNpZ25hdHVyZQ"
+  ● logger keeps credentials out of the journal › keeps a plain error readable and survives a cycle
+    Error message: "Converting circular structure to JSON
+  ● no client code writes to console but the logger › finds no direct console call
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 5 total
+
+Excerpt from the first, unfiltered run of the same test on the same base — what the old logger
+handed to console.error for a 401 from /auth/google (test fixtures, not real credentials;
+the access-token fixture after "Bearer" is written here as <ACCESS_TOKEN> so the secret
+scanner passes — the run printed the fixture itself, the ACCESS_TOKEN constant in the test):
+
+    Received string: "[ERROR] [Auth] Google login error: {\"name\":\"AxiosError\",\"isAxiosError\":true,
+      \"code\":\"ERR_BAD_REQUEST\",\"config\":{\"method\":\"post\",\"url\":\"/auth/google?state=abc\",
+      ...\"data\":\"{\\\"idToken\\\":\\\"eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJnb29nbGUtdXNlciJ9.c2lnbmF0dXJlLXBhcnQ\\\"}\",
+      \"headers\":{\"Authorization\":\"Bearer <ACCESS_TOKEN>\", ...}}, ...}"
+    [INFO] [Notifications] token ExponentPushToken[xXxSecretPushTokenxXx]
+    [DEBUG] [Auth] header Bearer <ACCESS_TOKEN>
+
+  The console scan found 81 direct console calls outside the logger, among them
+  contexts/AuthContext.tsx:445-447 (AC04), shared/services/notifications.ts:66 (push token),
+  shared/hooks/useNotifications.ts:37 (push token), shared/services/notifications.ts:92,159 (whole AxiosError).

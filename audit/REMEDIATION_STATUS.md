@@ -36,7 +36,7 @@ R0 — baseline/harness, решения и первичная инвентари
 | R2 | 8 | READY_FOR_CHECK — 7 VERIFIED; FM01 ждёт даты конвертации production (OPS-FM01-DATE, ревью R2-01); OPS-R2-ADOPT до деплоя 007/008 |
 | R3 | 6 | IN_PROGRESS — [контракт](REMEDIATION_R3.md) `e5d9edc`; A03/A04/HP02 — в коде, PG-сценарии `dd73b96`; маршруты A01 `d5564ee`, `3859ece` (почтой — после OPS-EMAIL); правило Google/Apple `d964417`, `56d11e9`, `43cbdac`; сброс пароля `ec292ee`; смена email `50ba23d`; клиент регистрации `77bddd1`..`286787a`; экраны сброса и смены адреса `23f59cb`, замечания ревью `a7e42d8` (T-130) — A01, A03, A04, HP01, HP02 READY_FOR_CHECK до ревью и DEV-20; AC05 не сделан |
 | R4 | 8 | IN_PROGRESS — [отчёт](REMEDIATION_R4.md): D01, D02, DF02, D04 VERIFIED (правка №1); правка №10 (B01, B02, D03) READY_FOR_CHECK до ревью, выкладка сервера — после миграции 012; правка №11 (G01) READY_FOR_CHECK до ревью и DEV-02, выкладка — после миграций 012 и 013; [разбор](TRIAGE_R4_R9.md) |
-| R5 | 15 | IN_PROGRESS — [отчёт](REMEDIATION_R5.md): правка №8 (DP01) READY_FOR_CHECK до DEV-19; остальные TODO |
+| R5 | 15 | IN_PROGRESS — [отчёт](REMEDIATION_R5.md): правка №8 (DP01) READY_FOR_CHECK до DEV-19; правка №13 (AC04) READY_FOR_CHECK до ревью; остальные TODO |
 | R6 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R6.md): правка №2 принята ревью (C02 VERIFIED; CC02–CC05, C03 до DEV-17/DEV-18); правка №3 принята ревью (DP04 VERIFIED; C01, CC01 до DEV-08); [разбор](TRIAGE_R4_R9.md) |
 | R7 | 16 | IN_PROGRESS — [отчёт](REMEDIATION_R7.md): правка №4 принята ревью `ad09154` (EI01, EI03, EI04, ES02 — READY_FOR_CHECK до DEV-03/04/05); [разбор](TRIAGE_R4_R9.md) |
 | R8 | 14 | IN_PROGRESS — [отчёт](REMEDIATION_R8.md): правка №5 (GR01, GR02, GR03, GR05, G02) READY_FOR_CHECK до DEV-11/DEV-14; принята ревью `b948056` (R8-01, R8-02 закрыты в `7f85bab`); правка №6 (GR04) принята ревью `7665ae4` (READY_FOR_CHECK до DEV-14); выкладка — после миграции 011; [разбор](TRIAGE_R4_R9.md) |
@@ -75,7 +75,7 @@ OPS-R3-DATA (25.09).
 | AC01 | Medium | Нет | R5 | TODO | Кратковременный сбой refresh уничтожает сессию | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
 | AC02 | Medium | Нет | R5 | TODO | Окончательная потеря авторизации не переводит открытое приложение на вход | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
 | AC03 | Medium | Нет | R5 | TODO | Поздний ответ профиля восстанавливает user после выхода или подменяет user нового входа | [правка причины №12 — разбор](TRIAGE_R4_R9.md) |
-| AC04 | Medium | Нет | R5 | TODO | OAuth токен и возможный Authorization передаются в незащищённый log sink | [правка причины №13 — разбор](TRIAGE_R4_R9.md) |
+| AC04 | Medium | Нет | R5 | READY_FOR_CHECK | OAuth токен и возможный Authorization передаются в незащищённый log sink | [правка причины №13 — `f847b3e`: один журнал с редактированием, ошибки — `LoggedError`, прямой `console` запрещён тестом и ESLint; «красное до» logger-ac04-before.txt; устройство не нужно, ждёт ревью](REMEDIATION_R5.md) |
 | AC05 | Medium | Нет | R3 | TODO | Долгоживущие bearer credentials сохраняются в обычном AsyncStorage | — |
 | B01 | Medium | Нет | R4 | READY_FOR_CHECK | удаление участника неатомарно, сбой оставляет связанные записи | [правка причины №10 — f92c3da, c689277 (порядок блокировок); ждёт ревью](REMEDIATION_R4.md) |
 | B02 | Medium | Нет | R4 | READY_FOR_CHECK | создание/удаление проекта частично фиксируются при ошибке | [правка причины №10 — f92c3da, 9ed5d83, 7cde64f, c689277, e2e 5e4d680, удаление аккаунта 1507eab; миграция 012; ждёт ревью](REMEDIATION_R4.md) |

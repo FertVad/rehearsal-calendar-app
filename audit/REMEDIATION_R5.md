@@ -1,8 +1,8 @@
 # R5 — клиент: состояние приложения
 
 **Статус: IN_PROGRESS.** Ветка `auto/main`. Находки R5 распределены по правкам
-причин из [разбора](TRIAGE_R4_R9.md). Правка №8 — здесь. Остальные правки R5
-(№12, №13, №14) — в последующих задачах.
+причин из [разбора](TRIAGE_R4_R9.md). Правки №8 и №13 — здесь. Остальные правки R5
+(№12, №14) — в последующих задачах.
 
 ## Правка №8: состав и расчёт планировщика привязаны к проекту
 
@@ -143,3 +143,80 @@ Smirnov» → обратно Three Sisters: «3 of 3», нет «2 of 3» и Smi
 DP01 → READY_FOR_CHECK до проверки на устройстве DEV-19 (переключить проект в
 планировщике, убедиться что состав обновляется; удалить участника и сменить
 период — убедиться что кнопки создания не исчезают).
+
+## Правка №13: журнал без секретов
+
+### Причина
+
+Журнал клиента не имел правила, что в него можно писать. 81 вызов шёл прямо в
+`console`, а `logger` передавал аргументы как есть. Неудачный запрос попадал
+туда целиком: `AxiosError` хранит конфиг запроса, поэтому ID-токен Google лежал
+в `config.data` (`/auth/google`), а bearer текущей сессии — в `config.headers`
+и `request._headers`. `AuthContext` (AC04) логировал объект ошибки и тело
+ответа; `notifications.ts` и `useNotifications.ts` писали push-токен открытым
+текстом; `notifications.ts` отдавал `AxiosError` целиком в `logger.warn` и
+`console.error`. Любой сборщик консоли — отладчик, сборщик логов, crash
+reporter — получал эти токены.
+
+### Правка
+
+Правило живёт в одном месте — в
+[`logger.ts`](../rehearsal-calendar-native/src/shared/utils/logger.ts), и это
+единственный файл, который пишет в `console`:
+
+- **Ошибки типизированы.** Ошибка (в том числе `AxiosError`) пишется как
+  `LoggedError`: `name`, `message`, `code`, `status`, `method`, `path` (без
+  query), `serverError` (строка `error` из ответа сервера), `stack` — только в
+  development и не для HTTP-ошибок. Конфиг, заголовки, тело и native request в
+  журнал не попадают.
+- **Всё остальное — через `toLogSafe`.** Ключи-учётные данные (`*token*`,
+  `authorization`, `password`, `secret`, `cookie`, `credential`, `api key`,
+  `otp`) заменяются на `[redacted]`; `config`, `request`, `headers`, `_body…`
+  выбрасываются; строки с JWT, `Bearer …`, `ExponentPushToken[…]` и параметрами
+  query, в имени которых есть token, code, password или key, редактируются — и в аргументах,
+  и в самом сообщении. Циклы и глубина обрезаются.
+- **Один механизм.** Все 81 прямой вызов `console` в `src/` переведены на
+  `logger` (`log` → `debug`, остальные уровни один к одному); три строки AC04 в
+  `AuthContext` свелись к одной — статус и текст сервера уже в `LoggedError`.
+  Push-токен больше не логируется вовсе. Новый прямой вызов `console` ловят тест
+  (скан `src/`) и ESLint (`no-console: error` везде, кроме логгера и тестов).
+
+Сервер не менялся: его журнал push-токены не пишет (`pushTokens.js` логирует
+только id пользователя), а AC04 — находка клиента.
+
+### Изменённые файлы
+
+- [`logger.ts`](../rehearsal-calendar-native/src/shared/utils/logger.ts) и тест
+  [`logger.test.ts`](../rehearsal-calendar-native/src/shared/utils/__tests__/logger.test.ts)
+- 22 файла `src/` с прямыми вызовами `console` (список — `git show --stat f847b3e`)
+- [`eslint.config.js`](../rehearsal-calendar-native/eslint.config.js) — `no-console`
+- `useRehearsals.test.ts`, `useAvailabilityData.test.ts` — ждут `LoggedError`
+  вместо сырого `Error`
+
+### Проверки
+
+Коммит правки — `f847b3e` (дерево `c610aaa`), база — `ce1a4fb`.
+Экранного эффекта нет — e2e-сценарий не нужен (журнал).
+
+| Тест | Что проверяет | Красный до |
+|---|---|---|
+| `logger.test.ts` — typed summary | 401 от `/auth/google`: в выводе `console.error` нет ID-токена, bearer, cookie и query; ошибка — ровно `LoggedError` | `ce1a4fb` — в выводе весь конфиг с `idToken` и `Authorization` |
+| `logger.test.ts` — warn/info/debug | То же правило на всех уровнях; push-токен, `Bearer`, `token=` в URL сообщения редактируются | `ce1a4fb` — токены в выводе |
+| `logger.test.ts` — plain value | Ключи-учётные данные и JWT в строках вложенных объектов | `ce1a4fb` — токены и пароль в выводе |
+| `logger.test.ts` — cycle | Обычная ошибка читаема, цикл не роняет сериализацию | `ce1a4fb` — `Converting circular structure to JSON` |
+| `logger.test.ts` — console scan | В `src/` нет прямых `console.*` вне логгера | `ce1a4fb` — 81 вызов |
+
+- **«Красное до»** ([logger-ac04-before.txt](evidence/R5/logger-ac04-before.txt),
+  SHA-256 `9a913d28e4492bd1a113596d873bfe2a4f5ea40c35c1f9e2ff7bc4629119e000`):
+  на `ce1a4fb` 5 из 5 FAIL. Проверку `token=` в сообщении добавил после
+  записи — тест warn/info/debug падал на старом коде и без неё.
+- **После** ([logger-ac04-after.txt](evidence/R5/logger-ac04-after.txt),
+  SHA-256 `e1c1e36fe7fda9a0ac27186d7f2a97c28c273d2bf0da2a3f233b100979173b4f`):
+  5 из 5 PASS; клиент 68 наборов / 707 тестов PASS; `type-check` exit 0;
+  `eslint src/` — 0 ошибок; `check:secrets` — 0 находок.
+- Источник и хеши — [manifest-cause13.json](evidence/R5/manifest-cause13.json).
+
+### Статусы
+
+AC04 → READY_FOR_CHECK до ревью. Проверка на устройстве не нужна: правило
+целиком в логгере и проверено тестом.
