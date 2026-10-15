@@ -24,7 +24,9 @@
  *
  * The request itself is handled at once; only its answer waits, so it says
  * what was true when it was asked. None waits past HOLD_LIMIT_MS: the app gives
- * up on a request after ten seconds, and a held answer must still arrive.
+ * up on a request after ten seconds, and a held answer must still arrive. A
+ * flow that wants the request to fail as on no network names a longer wait
+ * (`&ms=`, a minute at most).
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -60,7 +62,8 @@ const held = new Set();
 function holdAnswer(request, response) {
   const { pathname } = new URL(request.url, 'http://api');
   holds = holds.filter((hold) => hold.until > Date.now());
-  if (!holds.some((hold) => hold.method === request.method && hold.path.test(pathname))) return;
+  const hold = holds.find((candidate) => candidate.method === request.method && candidate.path.test(pathname));
+  if (!hold) return;
   const end = response.end.bind(response);
   let released = false;
   let pending = null;
@@ -71,7 +74,7 @@ function holdAnswer(request, response) {
     clearTimeout(limit);
     if (pending) end(...pending);
   };
-  const limit = setTimeout(release, HOLD_LIMIT_MS);
+  const limit = setTimeout(release, hold.limitMs);
   held.add(release);
   response.end = (...args) => {
     if (released) return end(...args);
@@ -97,7 +100,8 @@ http.createServer((request, response) => {
   };
   if (request.method === 'GET' && url.pathname === '/hold') {
     const method = (url.searchParams.get('method') || 'GET').toUpperCase();
-    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), until: Date.now() + HOLD_WINDOW_MS });
+    const limitMs = Math.min(Number(url.searchParams.get('ms')) || HOLD_LIMIT_MS, HOLD_WINDOW_MS);
+    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
   }
   if (request.method === 'GET' && url.pathname === '/release') {

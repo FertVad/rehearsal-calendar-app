@@ -3,5 +3,8 @@
 // — each answer nine seconds at most, the hold a minute at most
 // (server-with-mailbox.mjs). What a slow network does to one
 // request and not to the next. Run by Maestro (runScript), which provides http.
-const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH));
+// ${MS}, when given, is how long each answer waits instead: past ten seconds
+// the app gives up on the request, as with no network.
+const wait = typeof MS === 'undefined' ? '' : '&ms=' + MS;
+const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait);
 if (!response.ok) throw new Error('hold answered ' + response.status + ': ' + response.body);

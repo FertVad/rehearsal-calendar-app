@@ -1,8 +1,8 @@
 # The next person on a running app sees their own count and their own
 # language (cause fix 12: NI03, HC01). Yasha has a notification unread and
 # signs out; Dunyasha, who has none and whose account speaks Russian, signs in
-# on the same app. Her count is held back on its way, as on a slow network:
-# the old app showed Yasha's "1" on her bell until it came, and stayed in
+# on the same app. Her count does not arrive, as on no network: the old app
+# showed Yasha's "1" on her bell, and stayed in
 # English, since the account's language only reached the screen at the next
 # start.
 appId: ${APP_ID}
@@ -36,6 +36,8 @@ tags:
       MAIL_URL: ${MAIL_URL}
       METHOD: GET
       PATH: "^/api/native/notifications/unread-count$"
+      # Past the app's ten seconds: her count does not come at all, as offline.
+      MS: "40000"
 - runFlow:
     file: ../subflows/sign-in-form.yaml
     env:
