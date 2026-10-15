@@ -279,7 +279,7 @@ describe('Availability Flow Integration', () => {
 
       const response = await availabilityAPI.deleteAllImported();
 
-      expect(axios.delete).toHaveBeenCalledWith('/native/availability/imported/all');
+      expect(axios.delete).toHaveBeenCalledWith('/native/availability/imported/all', undefined);
       expect(response.data.deletedCount).toBe(5);
     });
 
@@ -300,7 +300,7 @@ describe('Availability Flow Integration', () => {
 
       const response = await availabilityAPI.syncImported(sync);
 
-      expect(axios.post).toHaveBeenCalledWith('/native/availability/imported/sync', sync);
+      expect(axios.post).toHaveBeenCalledWith('/native/availability/imported/sync', sync, undefined);
       expect(response.data.held).toBe(1);
     });
   });

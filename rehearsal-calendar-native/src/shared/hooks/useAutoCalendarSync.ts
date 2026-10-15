@@ -104,11 +104,12 @@ async function exportRehearsalsIfDue(
   // interval existed to keep that from happening constantly. Its cost was also
   // its consequence: somebody else's edit did not reach the calendar until the
   // reader thought to pull down. One request answers for all of them.
-  const mappings = knownMappings ?? (await getAllMappings());
+  const mappings = knownMappings ?? (await getAllMappings(session));
 
   // What was read above is this session's; the writes below are too, or none.
   assertSession(session);
   await reconcileDeletedRehearsals(
+    session,
     rehearsals.map((r: { id: string }) => String(r.id)),
     mappings
   );
@@ -118,7 +119,7 @@ async function exportRehearsalsIfDue(
     return;
   }
 
-  const result = await syncAllRehearsals(rehearsals, settings.exportCalendarId, undefined, mappings);
+  const result = await syncAllRehearsals(rehearsals, settings.exportCalendarId, undefined, mappings, session);
   logger.debug('[AutoSync] Export completed:', result);
 
   // Only a run that wrote everything counts as done.
@@ -151,6 +152,7 @@ async function exportRehearsalsIfDue(
  * failure leaves the mapping alone and the next sync tries again.
  */
 async function reconcileDeletedRehearsals(
+  session: SessionStamp,
   liveRehearsalIds: string[],
   mappings: Record<string, { eventId: string; calendarId: string }>
 ): Promise<void> {
@@ -163,7 +165,7 @@ async function reconcileDeletedRehearsals(
 
   for (const rehearsalId of stale) {
     try {
-      await unsyncRehearsal(rehearsalId);
+      await unsyncRehearsal(rehearsalId, session);
     } catch (error) {
       if (error instanceof SessionEndedError) throw error;
       logger.error(`[AutoSync] Could not remove the event for rehearsal ${rehearsalId}:`, error);
@@ -266,11 +268,14 @@ export async function runAutoSync(): Promise<void> {
         logger.debug('[AutoSync] Auto-importing calendar events');
         // Fetched once for both halves — the import needs it to leave our own
         // exported rehearsals alone, the export to match event to rehearsal.
-        sharedMappings = await getAllMappings();
+        // Every step below runs as this run's session, handed down — never the
+        // session current when the step starts (ES01).
+        sharedMappings = await getAllMappings(session);
         const result = await importCalendarEventsToAvailability(
           importSettings.importCalendarIds,
           undefined,
-          sharedMappings
+          sharedMappings,
+          session
         );
         logger.debug('[AutoSync] Auto-import completed:', result);
       } else {
@@ -361,7 +366,7 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
 
       // Pull-to-refresh means "now", so the export ignores its own timer.
       try {
-        sharedMappings = await getAllMappings();
+        sharedMappings = await getAllMappings(session);
         await exportRehearsalsIfDue(session, true, sharedMappings);
       } catch (error) {
         if (error instanceof SessionEndedError) throw error;
@@ -379,7 +384,8 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
       const result = await importCalendarEventsToAvailability(
         settings.importCalendarIds,
         undefined,
-        sharedMappings
+        sharedMappings,
+        session
       );
       logger.debug('[AutoSync] Force sync completed:', result);
     } catch (error) {

@@ -133,6 +133,6 @@ describe('What a new event carries', () => {
   it('is recorded against the rehearsal for this device', async () => {
     await createCalendarEvent(rehearsal(), 'cal-1');
 
-    expect(saveEventMapping).toHaveBeenCalledWith('42', 'new-event', 'cal-1');
+    expect(saveEventMapping).toHaveBeenCalledWith('42', 'new-event', 'cal-1', expect.any(Number));
   });
 });

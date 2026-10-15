@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, ReactNode } from 'react';
 import { Alert } from 'react-native';
 import { RSVPStatus } from '../shared/types';
 import { rehearsalsAPI } from '../shared/services/api';
@@ -20,11 +20,19 @@ interface SeenContextValue {
   isResponding: (rehearsalId: string) => boolean;
   toggleSeen: (rehearsalId: string) => Promise<void>;
   /** Seeds what the server already told us, so a fresh list starts correct. */
-  prime: (
-    responses: Record<string, RSVPStatus>,
-    stats?: Record<string, SeenStats>
-  ) => void;
+  prime: SeenWriter;
+  /**
+   * A read of the marks begins: call before the request, and hand its answer
+   * to the writer returned. A rehearsal toggled after the read began keeps the
+   * toggle — the answer is older than it (HN02).
+   */
+  beginRead: () => SeenWriter;
 }
+
+type SeenWriter = (
+  responses: Record<string, RSVPStatus>,
+  stats?: Record<string, SeenStats>
+) => void;
 
 const SeenContext = createContext<SeenContextValue | undefined>(undefined);
 
@@ -51,14 +59,39 @@ export function SeenProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useSessionState<Record<string, SeenStats>>({});
   const [responding, setResponding] = useSessionState<Record<string, boolean>>({});
 
-  const prime = useCallback(
-    (nextResponses: Record<string, RSVPStatus>, nextStats?: Record<string, SeenStats>) => {
+  // Reads and changes in one order. Each change of a rehearsal's mark takes the
+  // next number, when it is made and when the server has it; a read remembers
+  // the number it began at, and its answer for a rehearsal changed since is
+  // older than what is shown. Without this a list asked for before a tap and
+  // answered after it took the mark back (HN02, review).
+  const changes = useRef(0);
+  const changedAt = useRef<Record<string, number>>({});
+  const markChanged = useCallback((rehearsalId: string) => {
+    changes.current += 1;
+    changedAt.current[rehearsalId] = changes.current;
+  }, []);
+
+  const beginRead = useCallback((): SeenWriter => {
+    const since = changes.current;
+    const unchanged = <T,>(answers: Record<string, T>) =>
+      Object.fromEntries(
+        Object.entries(answers).filter(([id]) => (changedAt.current[id] ?? 0) <= since)
+      ) as Record<string, T>;
+    return (nextResponses, nextStats) => {
       // Merged rather than replaced: a list covering one project must not erase
       // what is known about another.
-      setResponses((prev) => ({ ...prev, ...nextResponses }));
-      if (nextStats) setStats((prev) => ({ ...prev, ...nextStats }));
-    },
-    [setResponses, setStats]
+      const responsesNow = unchanged(nextResponses);
+      setResponses((prev) => ({ ...prev, ...responsesNow }));
+      if (nextStats) {
+        const statsNow = unchanged(nextStats);
+        setStats((prev) => ({ ...prev, ...statsNow }));
+      }
+    };
+  }, [setResponses, setStats]);
+
+  const prime = useCallback<SeenWriter>(
+    (nextResponses, nextStats) => beginRead()(nextResponses, nextStats),
+    [beginRead]
   );
 
   const toggleSeen = useCallback(
@@ -71,6 +104,7 @@ export function SeenProvider({ children }: { children: ReactNode }) {
       const next: RSVPStatus = current === 'yes' ? null : 'yes';
       const onTheWire = current === 'yes' ? 'no' : 'yes';
 
+      markChanged(rehearsalId);
       setResponses((prev) => ({ ...prev, [rehearsalId]: next }));
       setResponding((prev) => ({ ...prev, [rehearsalId]: true }));
       const session = currentSession();
@@ -86,10 +120,12 @@ export function SeenProvider({ children }: { children: ReactNode }) {
         setResponses((prev) => ({ ...prev, [rehearsalId]: current }));
         if (isCurrentSession(session)) Alert.alert(t.common.error, err?.message || t.rehearsals.seenError);
       } finally {
+        // A read that began while this was on its way may carry the old mark.
+        markChanged(rehearsalId);
         setResponding((prev) => ({ ...prev, [rehearsalId]: false }));
       }
     },
-    [responses, t, setResponses, setResponding, setStats]
+    [responses, t, setResponses, setResponding, setStats, markChanged]
   );
 
   const value = useMemo<SeenContextValue>(
@@ -99,8 +135,9 @@ export function SeenProvider({ children }: { children: ReactNode }) {
       isResponding: (id) => Boolean(responding[id]),
       toggleSeen,
       prime,
+      beginRead,
     }),
-    [responses, stats, responding, toggleSeen, prime]
+    [responses, stats, responding, toggleSeen, prime, beginRead]
   );
 
   return <SeenContext.Provider value={value}>{children}</SeenContext.Provider>;

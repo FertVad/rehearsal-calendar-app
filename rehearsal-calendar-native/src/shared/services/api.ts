@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { logger } from '../utils/logger';
-import { currentSession, isCurrentSession, reportSessionExpired, SessionEndedError } from './session';
+import { currentSession, isCurrentSession, reportSessionExpired, SessionEndedError, SessionStamp } from './session';
 
 /**
  * API Configuration
@@ -97,10 +97,19 @@ const api = axios.create({
 // Request interceptor - add access token to requests. A request carries the
 // session it was sent in (shared/services/session.ts): its 401 is refreshed and
 // retried only while that session lasts, never under the next person's pair.
+// Work of a session (the calendar sync) names its own with `session`: such a
+// request goes out with that session's token or not at all (ES01). The check
+// follows the read, and a change of owner ends the session before it writes
+// the next person's pair, so a token read while the session lasts is its own.
+const inSession = (session?: SessionStamp) =>
+  session === undefined ? undefined : ({ session } as Record<string, unknown>);
+
 api.interceptors.request.use(
   async (config) => {
-    (config as any).session = currentSession();
+    const session = (config as any).session ?? currentSession();
+    (config as any).session = session;
     const token = await AsyncStorage.getItem('accessToken');
+    if (!isCurrentSession(session)) throw new SessionEndedError();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -422,8 +431,8 @@ export const availabilityAPI = {
     api.delete(`/native/availability/${date}`),
 
   // Delete all imported calendar events
-  deleteAllImported: () =>
-    api.delete('/native/availability/imported/all'),
+  deleteAllImported: (session?: SessionStamp) =>
+    api.delete('/native/availability/imported/all', inSession(session)),
 
   // One device's calendar import, reconciled on the server within the
   // calendars this device names (server/services/availability/importScope.js).
@@ -433,14 +442,15 @@ export const availabilityAPI = {
     deviceCalendars: string[];
     unreadable: string[];
     calendars: { calendarId: string; events: { key: string; startsAt: string; endsAt: string; isAllDay: boolean }[] }[];
-  }) => api.post('/native/availability/imported/sync', sync),
+  }, session?: SessionStamp) => api.post('/native/availability/imported/sync', sync, inSession(session)),
 };
 
-// Calendar Sync API (Native App)
+// Calendar Sync API (Native App). The calendar sync is a session's work, and
+// each call takes the session it belongs to (`inSession`, ES01).
 export const calendarSyncAPI = {
   // Calendar Connections
-  getConnections: () =>
-    api.get('/native/calendar-sync/connections'),
+  getConnections: (session?: SessionStamp) =>
+    api.get('/native/calendar-sync/connections', inSession(session)),
 
   createOrUpdateConnection: (data: {
     provider: 'apple' | 'google';
@@ -448,8 +458,8 @@ export const calendarSyncAPI = {
     deviceCalendarName?: string;
     syncEnabled?: boolean;
     syncDirection?: 'both' | 'export' | 'import';
-  }) =>
-    api.post('/native/calendar-sync/connections', data),
+  }, session?: SessionStamp) =>
+    api.post('/native/calendar-sync/connections', data, inSession(session)),
 
   deleteConnection: (connectionId: number) =>
     api.delete(`/native/calendar-sync/connections/${connectionId}`),
@@ -458,8 +468,9 @@ export const calendarSyncAPI = {
     api.post(`/native/calendar-sync/connections/${connectionId}/update-sync-time`),
 
   // Event Mappings
-  getMappings: (eventType?: 'rehearsal' | 'availability') =>
+  getMappings: (eventType?: 'rehearsal' | 'availability', session?: SessionStamp) =>
     api.get('/native/calendar-sync/mappings', {
+      ...inSession(session),
       params: eventType ? { eventType } : {},
     }),
 
@@ -470,16 +481,16 @@ export const calendarSyncAPI = {
     internalEventId: string;
     externalEventId: string;
     syncDirection?: 'export' | 'import';
-  }) =>
-    api.post('/native/calendar-sync/mappings', data),
+  }, session?: SessionStamp) =>
+    api.post('/native/calendar-sync/mappings', data, inSession(session)),
 
   // Deletes name the calendars of this device: only mappings recorded under
   // them are its own (ES02).
-  deleteMappingByEvent: (eventType: 'rehearsal' | 'availability', internalEventId: string, deviceCalendarIds: string[]) =>
-    api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`, { data: { deviceCalendarIds } }),
+  deleteMappingByEvent: (eventType: 'rehearsal' | 'availability', internalEventId: string, deviceCalendarIds: string[], session?: SessionStamp) =>
+    api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`, { ...inSession(session), data: { deviceCalendarIds } }),
 
-  deleteMappings: (eventType: 'rehearsal' | 'availability', deviceCalendarIds: string[]) =>
-    api.delete('/native/calendar-sync/mappings', { data: { eventType, deviceCalendarIds } }),
+  deleteMappings: (eventType: 'rehearsal' | 'availability', deviceCalendarIds: string[], session?: SessionStamp) =>
+    api.delete('/native/calendar-sync/mappings', { ...inSession(session), data: { eventType, deviceCalendarIds } }),
 };
 
 // Notifications API (the inbox — what was sent, and what is still unread)

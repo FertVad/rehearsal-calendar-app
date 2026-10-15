@@ -51,7 +51,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
 
   // Seen state lives in one place for the whole app, so this hook hands what
   // the server told it to the store rather than keeping a copy of its own.
-  const { prime } = useSeen();
+  const { beginRead } = useSeen();
 
   // ✅ Get user's timezone from AuthContext
   const { user } = useAuth();
@@ -59,8 +59,13 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
 
   const fetchRehearsals = useCallback(async (force = false) => {
     if (projects.length === 0) {
+      // No projects is an answer, and the newest: the load still out is
+      // dropped, and with it the `finally` that would have ended the spinner,
+      // so it ends here (review).
       beginLoad();
       setRehearsals([]);
+      setLoading(false);
+      setRefreshing(false);
       return;
     }
 
@@ -75,6 +80,8 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
     // Only the newest load lands: a filter changed while the previous one was
     // out must not be answered with the previous filter's rehearsals (DF06).
     const current = beginLoad();
+    // The marks of the answer land only where nobody toggled since (HN02).
+    const primeSeen = beginRead();
 
     // Use loading for initial load (no data), refreshing for background updates
     if (isInitialLoadRef.current) {
@@ -160,7 +167,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
 
       if (!current()) return;
       setRehearsals(fetchedRehearsals);
-      prime(responses, stats);
+      primeSeen(responses, stats);
 
       // Update cache timestamp and mark initial load complete
       lastFetchTime.current = Date.now();
@@ -175,7 +182,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
         setRefreshing(false);
       }
     }
-  }, [projects, filterProjectId, userTimezone, prime, beginLoad]);
+  }, [projects, filterProjectId, userTimezone, beginRead, beginLoad]);
 
   return {
     rehearsals,

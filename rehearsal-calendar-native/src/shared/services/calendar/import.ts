@@ -180,11 +180,13 @@ export function importCalendarEventsToAvailability(
    * know which events are our own rehearsals and must not be imported as busy
    * time, once there to know which event belongs to which rehearsal.
    */
-  knownMappings?: Record<string, { eventId: string; calendarId: string }>
+  knownMappings?: Record<string, { eventId: string; calendarId: string }>,
+  /** The session of the work this is a step of; the current one otherwise. */
+  session?: SessionStamp
 ): Promise<ImportResult> {
   // The session's work (ES01): the calendars were read for the person signed
   // in when it began, and their hours go to that person's account or nowhere.
-  return sessionWork((session) => importForSession(session, calendarIds, onProgress, knownMappings));
+  return sessionWork((stamp) => importForSession(stamp, calendarIds, onProgress, knownMappings), session);
 }
 
 async function importForSession(
@@ -205,7 +207,7 @@ async function importForSession(
     const [{ byCalendar, failedCalendarIds }, device, exportedMappings] = await Promise.all([
       fetchCalendarEvents(calendarIds, startDate, endDate),
       deviceCalendarIds(calendarIds),
-      knownMappings ? Promise.resolve(knownMappings) : getAllMappings(),
+      knownMappings ? Promise.resolve(knownMappings) : getAllMappings(session),
     ]);
 
     // Our own rehearsals are left out, recognised two ways. An event we
@@ -247,7 +249,7 @@ async function importForSession(
       deviceCalendars: device,
       unreadable: failedCalendarIds,
       calendars,
-    });
+    }, session);
     const counts = response.data;
     result.success = (counts.added || 0) + (counts.updated || 0);
     result.skipped += counts.unchanged || 0;
@@ -279,9 +281,10 @@ async function importForSession(
  * Remove all imported availability slots
  */
 export function removeAllImportedSlots(
-  _onProgress?: (current: number, total: number) => void
+  _onProgress?: (current: number, total: number) => void,
+  session?: SessionStamp
 ): Promise<ImportResult> {
-  return sessionWork((session) => removeImportedForSession(session));
+  return sessionWork((stamp) => removeImportedForSession(stamp), session);
 }
 
 async function removeImportedForSession(session: SessionStamp): Promise<ImportResult> {
@@ -292,7 +295,7 @@ async function removeImportedForSession(session: SessionStamp): Promise<ImportRe
   // reinstall, or on a second device — reporting success with the rows still
   // there (EI03).
   try {
-    const response = await availabilityAPI.deleteAllImported();
+    const response = await availabilityAPI.deleteAllImported(session);
     result.success = response.data?.deletedCount ?? 0;
     assertSession(session);
     await clearAllImportedEvents();

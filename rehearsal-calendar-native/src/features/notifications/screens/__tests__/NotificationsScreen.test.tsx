@@ -68,3 +68,24 @@ it('does not bring back a card deleted while a load was out', async () => {
   expect(screen.queryByText('Dress cancelled')).toBeNull();
   expect(screen.getByText('Act I moved')).toBeTruthy();
 });
+
+// Every change takes its turn, not only a deletion (review): "Mark all read"
+// succeeded, then a load asked for before it answered with the cards unread —
+// the count at zero and the dots and the button back.
+it('does not make cards unread again after "Mark all read" while a load was out', async () => {
+  const unread = (id: number, title: string) => ({ ...item(id, title), read: false });
+  mockList.mockResolvedValueOnce({ data: { notifications: [unread(1, 'Act I moved')] } });
+  const screen = render(<NotificationsScreen />);
+  await act(async () => { mockFocus.run?.(); });
+  const markAll = await waitFor(() => screen.getByLabelText('Mark all read'));
+
+  const stale = deferred();
+  mockList.mockReturnValueOnce(stale.promise);
+  await act(async () => { mockFocus.run?.(); });
+  await act(async () => { await markAll.props.onPress(); });
+  expect(screen.queryByLabelText('Mark all read')).toBeNull();
+
+  await act(async () => { stale.resolve({ data: { notifications: [unread(1, 'Act I moved')] } }); });
+
+  expect(screen.queryByLabelText('Mark all read')).toBeNull();
+});

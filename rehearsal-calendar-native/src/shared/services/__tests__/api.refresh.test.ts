@@ -107,6 +107,20 @@ it('does not refresh or retry a request of a session that has ended', async () =
   expect(mockRetry).not.toHaveBeenCalled();
 });
 
+it('sends a request of an ended session with nobody\'s token (ES01)', async () => {
+  // A step of the first person's calendar sync, started after the account
+  // changed: it names its session, and the next person's pair is already in.
+  await changeOwner(1);
+  const firstPersons = 1;
+  await changeOwner(2);
+  mockStorage.accessToken = 'second-persons-access';
+
+  const sent = await mockHandlers.request!({ headers: {}, url: '/native/calendar-sync/mappings', method: 'post', session: firstPersons })
+    .catch((e: any) => e);
+
+  expect(sent.name).toBe('SessionEndedError');
+});
+
 it('leaves a refused password at sign-in alone: no session was sent', async () => {
   const error = await mockHandlers.rejected!({ config: { headers: {}, url: '/auth/login' }, response: { status: 401 } })
     .catch((e: any) => e);

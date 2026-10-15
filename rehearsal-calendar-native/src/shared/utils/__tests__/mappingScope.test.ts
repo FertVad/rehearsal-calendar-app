@@ -80,14 +80,14 @@ describe('Deleting the mappings', () => {
   it('unsyncing one rehearsal names this phone\'s calendars, so the other phone keeps its own', async () => {
     await removeEventMapping('42');
 
-    expect(calendarSyncAPI.deleteMappingByEvent).toHaveBeenCalledWith('rehearsal', '42', ['home', 'work']);
+    expect(calendarSyncAPI.deleteMappingByEvent).toHaveBeenCalledWith('rehearsal', '42', ['home', 'work'], expect.any(Number));
   });
 
   it('removing everything exported does so for this phone\'s calendars, in one request', async () => {
     await clearAllMappings();
 
     expect(calendarSyncAPI.deleteMappings).toHaveBeenCalledTimes(1);
-    expect(calendarSyncAPI.deleteMappings).toHaveBeenCalledWith('rehearsal', ['home', 'work']);
+    expect(calendarSyncAPI.deleteMappings).toHaveBeenCalledWith('rehearsal', ['home', 'work'], expect.any(Number));
   });
 });
 

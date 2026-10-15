@@ -181,7 +181,7 @@ describe('Taking back the events of rehearsals that no longer exist', () => {
     await runExport(['1', '3'], ['1', '2', '3']);
 
     expect(unsyncRehearsal).toHaveBeenCalledTimes(1);
-    expect(unsyncRehearsal).toHaveBeenCalledWith('2');
+    expect(unsyncRehearsal).toHaveBeenCalledWith('2', expect.any(Number));
   });
 
   it('leaves the events of rehearsals that still exist', async () => {
@@ -255,7 +255,7 @@ describe('Exporting soon after the last export', () => {
       await result.current.performAutoSync();
     });
 
-    expect(unsyncRehearsal).toHaveBeenCalledWith('7');
+    expect(unsyncRehearsal).toHaveBeenCalledWith('7', expect.any(Number));
   });
 
   it('asks for the mappings once, not once per rehearsal', async () => {
@@ -299,7 +299,7 @@ describe('A push arriving while the app is open', () => {
       await runAutoSync();
     });
 
-    expect(unsyncRehearsal).toHaveBeenCalledWith('7');
+    expect(unsyncRehearsal).toHaveBeenCalledWith('7', expect.any(Number));
   });
 
   it('shares the lock, so an extra caller causes no extra run', async () => {

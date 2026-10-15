@@ -58,9 +58,19 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // A list read before a deletion and answered after it still holds the deleted
-  // card: a deletion takes a turn too, and the read's answer is dropped (NI04).
+  // A list read before a change and answered after it still holds the deleted
+  // card, or the read one as unread: every change on this screen takes a turn,
+  // as it is sent and once the server has it, and a read's answer older than
+  // either is dropped (NI04). Only `change` sends one.
   const begin = useLatestRequest();
+  const change = useCallback(async <T,>(send: () => Promise<T>): Promise<T> => {
+    begin();
+    try {
+      return await send();
+    } finally {
+      begin();
+    }
+  }, [begin]);
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -80,9 +90,9 @@ export default function NotificationsScreen() {
   // notifications can be read at all, so arriving here is the acknowledgement.
   // The badge follows the count the server reports back.
   const markEverythingRead = useCallback(async () => {
-    await markRead();
+    await change(() => markRead());
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-  }, [markRead]);
+  }, [markRead, change]);
 
   useFocusEffect(
     useCallback(() => {
@@ -94,7 +104,7 @@ export default function NotificationsScreen() {
     // Opening it is reading it. Without this the count stayed lit after the user
     // had plainly dealt with the thing.
     if (!item.read) {
-      await markRead([item.id]);
+      await change(() => markRead([item.id]));
       setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
     }
 
@@ -132,10 +142,9 @@ export default function NotificationsScreen() {
     // Gone from the list first: the row has already slid away under the
     // reader's thumb, and putting it back on success would be a stutter.
     const wasAt = items.findIndex((n) => n.id === item.id);
-    begin();
     setItems((prev) => prev.filter((n) => n.id !== item.id));
 
-    const ok = await remove(item.id);
+    const ok = await change(() => remove(item.id));
     if (ok) return;
 
     // Put it back where it was, from memory. Asking the server for the list
@@ -162,10 +171,9 @@ export default function NotificationsScreen() {
           // Same care as a single row: emptied on screen at once, and put back
           // in full if the server never heard about it.
           const before = items;
-          begin();
           setItems([]);
 
-          const ok = await removeAll();
+          const ok = await change(() => removeAll());
           if (!ok) {
             setItems(before);
             Alert.alert(t.common.error, t.notifications.deleteError);

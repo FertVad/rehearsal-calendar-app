@@ -71,7 +71,7 @@ describe('An event the reader really did delete', () => {
 
     const result = await syncAllRehearsals([rehearsals[0]], 'cal-1');
 
-    expect(removeEventMapping).toHaveBeenCalledWith('1');
+    expect(removeEventMapping).toHaveBeenCalledWith('1', expect.any(Number));
     expect(Calendar.createEventAsync).toHaveBeenCalled();
     expect(result.success).toBe(1);
   });

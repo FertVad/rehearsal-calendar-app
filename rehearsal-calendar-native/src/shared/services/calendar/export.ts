@@ -15,7 +15,7 @@ import {
 } from '../../utils/calendarMappings';
 import { updateLastExportTime } from '../../utils/calendarStorage';
 import { logger } from '../../utils/logger';
-import { assertSession, sessionWork, SessionStamp } from '../session';
+import { assertSession, currentSession, sessionWork, SessionEndedError, SessionStamp } from '../session';
 
 /**
  * Check if event exists in calendar
@@ -170,7 +170,8 @@ async function findDuplicateEvent(
  */
 export async function createCalendarEvent(
   rehearsal: RehearsalWithProject,
-  calendarId: string
+  calendarId: string,
+  session: SessionStamp = currentSession()
 ): Promise<string | null> {
   try {
     logger.debug('[CalendarSync] 📅 createCalendarEvent called:', {
@@ -198,7 +199,7 @@ export async function createCalendarEvent(
       logger.info(`[CalendarSync] Using existing event ${duplicateEventId} instead of creating duplicate`);
       logger.debug('[CalendarSync] ♻️ Found duplicate, using existing event:', duplicateEventId);
       // Save mapping to existing event
-      await saveEventMapping(rehearsal.id, duplicateEventId, calendarId);
+      await saveEventMapping(rehearsal.id, duplicateEventId, calendarId, session);
       return duplicateEventId;
     }
 
@@ -237,12 +238,13 @@ export async function createCalendarEvent(
     });
 
     logger.debug('[CalendarSync] 🚀 Calling Calendar.createEventAsync...');
+    assertSession(session);
     const eventId = await Calendar.createEventAsync(calendarId, eventDetails);
     logger.debug('[CalendarSync] ✅ Event created with ID:', eventId);
 
     // Save mapping to database + AsyncStorage
     logger.debug('[CalendarSync] 💾 Saving event mapping...');
-    await saveEventMapping(rehearsal.id, eventId, calendarId);
+    await saveEventMapping(rehearsal.id, eventId, calendarId, session);
     logger.debug('[CalendarSync] ✅ Mapping saved successfully');
 
     logger.info(`[CalendarSync] Created event ${eventId} for rehearsal ${rehearsal.id}`);
@@ -259,7 +261,8 @@ export async function createCalendarEvent(
  */
 export async function updateCalendarEvent(
   eventId: string,
-  rehearsal: RehearsalWithProject
+  rehearsal: RehearsalWithProject,
+  session: SessionStamp = currentSession()
 ): Promise<void> {
   try {
     const hasPermission = await checkCalendarPermissions();
@@ -279,6 +282,7 @@ export async function updateCalendarEvent(
     };
 
     logger.info('[CalendarSync] Updating event:', eventId);
+    assertSession(session);
     await Calendar.updateEventAsync(eventId, eventDetails);
 
     logger.info(`[CalendarSync] Updated event ${eventId}`);
@@ -291,7 +295,10 @@ export async function updateCalendarEvent(
 /**
  * Delete calendar event
  */
-export async function deleteCalendarEvent(eventId: string): Promise<void> {
+export async function deleteCalendarEvent(
+  eventId: string,
+  session: SessionStamp = currentSession()
+): Promise<void> {
   try {
     const hasPermission = await checkCalendarPermissions();
     if (!hasPermission) {
@@ -299,6 +306,7 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
     }
 
     logger.info('[CalendarSync] Deleting event:', eventId);
+    assertSession(session);
     await Calendar.deleteEventAsync(eventId);
 
     logger.info(`[CalendarSync] Deleted event ${eventId}`);
@@ -327,11 +335,14 @@ export function syncRehearsalToCalendar(
    * the reader thought to pull down. getAllMappings answers for all of them at
    * once, so the caller fetches once and hands the answer down.
    */
-  knownMapping?: { eventId: string; calendarId: string } | null
+  knownMapping?: { eventId: string; calendarId: string } | null,
+  /** The session of the work this is a step of; the current one otherwise. */
+  session?: SessionStamp
 ): Promise<void> {
   // The session's work: it writes nothing once the session has ended, and a
-  // change of account waits for it (ES01).
-  return sessionWork((session) => syncOneRehearsal(session, rehearsal, calendarId, knownMapping));
+  // change of account waits for it (ES01). Every helper below is handed the
+  // same stamp and checks it before its own write.
+  return sessionWork((stamp) => syncOneRehearsal(stamp, rehearsal, calendarId, knownMapping), session);
 }
 
 async function syncOneRehearsal(
@@ -350,7 +361,7 @@ async function syncOneRehearsal(
     });
 
     // Check if already synced
-    const mapping = knownMapping !== undefined ? knownMapping : await getEventMapping(rehearsal.id);
+    const mapping = knownMapping !== undefined ? knownMapping : await getEventMapping(rehearsal.id, session);
     logger.debug('[CalendarSync] 🔍 Event mapping check:', mapping ? 'Found existing mapping' : 'No mapping found');
     assertSession(session);
 
@@ -380,11 +391,12 @@ async function syncOneRehearsal(
       // old copy cannot be adopted as the new one.
       if (mapping.calendarId && mapping.calendarId !== calendarId) {
         logger.info(`[CalendarSync] Moving rehearsal ${rehearsal.id} to calendar ${calendarId}`);
-        const movedId = await createCalendarEvent(rehearsal, calendarId);
+        const movedId = await createCalendarEvent(rehearsal, calendarId, session);
         if (movedId) {
           try {
-            await deleteCalendarEvent(mapping.eventId);
+            await deleteCalendarEvent(mapping.eventId, session);
           } catch (error) {
+            if (error instanceof SessionEndedError) throw error;
             logger.warn('[CalendarSync] Moved the event but could not remove the old copy:', error);
           }
         }
@@ -401,29 +413,30 @@ async function syncOneRehearsal(
         logger.info(`[CalendarSync] Rehearsal ${rehearsal.id} already synced, updating...`);
         logger.debug('[CalendarSync] 📝 Updating existing event...');
         try {
-          await updateCalendarEvent(mapping.eventId, rehearsal);
+          await updateCalendarEvent(mapping.eventId, rehearsal, session);
           // Update lastSynced timestamp
-          await saveEventMapping(rehearsal.id, mapping.eventId, mapping.calendarId);
+          await saveEventMapping(rehearsal.id, mapping.eventId, mapping.calendarId, session);
           logger.debug('[CalendarSync] ✅ Event updated successfully');
         } catch (error) {
+          if (error instanceof SessionEndedError) throw error;
           // Update failed, event might be deleted - recreate
           logger.warn(`[CalendarSync] Update failed for event ${mapping.eventId}, recreating...`);
           logger.debug('[CalendarSync] ⚠️ Update failed, recreating event...');
-          await removeEventMapping(rehearsal.id);
-          await createCalendarEvent(rehearsal, calendarId);
+          await removeEventMapping(rehearsal.id, session);
+          await createCalendarEvent(rehearsal, calendarId, session);
         }
       } else {
         // Event was deleted from calendar - recreate and update mapping
         logger.warn(`[CalendarSync] Event ${mapping.eventId} no longer exists, recreating...`);
         logger.debug('[CalendarSync] ⚠️ Event no longer exists, recreating...');
-        await removeEventMapping(rehearsal.id);
-        await createCalendarEvent(rehearsal, calendarId);
+        await removeEventMapping(rehearsal.id, session);
+        await createCalendarEvent(rehearsal, calendarId, session);
       }
     } else {
       // Create new event
       logger.info(`[CalendarSync] Rehearsal ${rehearsal.id} not synced, creating...`);
       logger.debug('[CalendarSync] ➕ Creating new event...');
-      const eventId = await createCalendarEvent(rehearsal, calendarId);
+      const eventId = await createCalendarEvent(rehearsal, calendarId, session);
       logger.debug('[CalendarSync] ✅ New event created:', eventId);
     }
 
@@ -440,24 +453,23 @@ async function syncOneRehearsal(
 /**
  * Unsync rehearsal (remove from calendar)
  */
-export function unsyncRehearsal(rehearsalId: string): Promise<void> {
-  return sessionWork((session) => unsyncOneRehearsal(session, rehearsalId));
+export function unsyncRehearsal(rehearsalId: string, session?: SessionStamp): Promise<void> {
+  return sessionWork((stamp) => unsyncOneRehearsal(stamp, rehearsalId), session);
 }
 
 async function unsyncOneRehearsal(session: SessionStamp, rehearsalId: string): Promise<void> {
   try {
-    const mapping = await getEventMapping(rehearsalId);
+    const mapping = await getEventMapping(rehearsalId, session);
     if (!mapping) {
       logger.info(`[CalendarSync] Rehearsal ${rehearsalId} not synced, nothing to do`);
       return;
     }
-    assertSession(session);
 
     // Delete calendar event
-    await deleteCalendarEvent(mapping.eventId);
+    await deleteCalendarEvent(mapping.eventId, session);
 
     // Remove mapping
-    await removeEventMapping(rehearsalId);
+    await removeEventMapping(rehearsalId, session);
 
     logger.info(`[CalendarSync] Unsynced rehearsal ${rehearsalId}`);
   } catch (error) {
@@ -475,9 +487,10 @@ export function syncAllRehearsals(
   calendarId: string,
   onProgress?: (current: number, total: number) => void,
   /** All of this user's mappings, when the caller already holds them. */
-  knownMappings?: Record<string, { eventId: string; calendarId: string }>
+  knownMappings?: Record<string, { eventId: string; calendarId: string }>,
+  session?: SessionStamp
 ): Promise<BatchSyncResult> {
-  return sessionWork((session) => syncRehearsals(session, rehearsals, calendarId, onProgress, knownMappings));
+  return sessionWork((stamp) => syncRehearsals(stamp, rehearsals, calendarId, onProgress, knownMappings), session);
 }
 
 async function syncRehearsals(
@@ -507,10 +520,13 @@ async function syncRehearsals(
         syncRehearsalToCalendar(
           rehearsal,
           calendarId,
-          knownMappings ? knownMappings[rehearsal.id] ?? null : undefined
+          knownMappings ? knownMappings[rehearsal.id] ?? null : undefined,
+          session
         )
       )
     );
+    // A step that stopped with the session stops the whole run, not one row.
+    assertSession(session);
 
     // Collect results
     results.forEach((res, idx) => {
@@ -542,9 +558,10 @@ async function syncRehearsals(
  * Uses database mappings as source of truth
  */
 export function removeAllExportedEvents(
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  session?: SessionStamp
 ): Promise<BatchSyncResult> {
-  return sessionWork((session) => removeExportedEvents(session, onProgress));
+  return sessionWork((stamp) => removeExportedEvents(stamp, onProgress), session);
 }
 
 async function removeExportedEvents(
@@ -553,7 +570,7 @@ async function removeExportedEvents(
 ): Promise<BatchSyncResult> {
   try {
     // Get mappings from database (primary) or AsyncStorage (fallback)
-    const mappings = await getAllMappings();
+    const mappings = await getAllMappings(session);
     const rehearsalIds = Object.keys(mappings);
 
     const result: BatchSyncResult = {
@@ -577,11 +594,12 @@ async function removeExportedEvents(
         batchIds.map(async rehearsalId => {
           const eventId = mappings[rehearsalId].eventId;
           // Try to delete event from calendar
-          await deleteCalendarEvent(eventId);
+          await deleteCalendarEvent(eventId, session);
           // Remove mapping from DB + AsyncStorage
-          await removeEventMapping(rehearsalId);
+          await removeEventMapping(rehearsalId, session);
         })
       );
+      assertSession(session);
 
       // Collect results
       results.forEach((res, idx) => {
@@ -603,8 +621,7 @@ async function removeExportedEvents(
     }
 
     // Clear all remaining mappings (in case some deletions failed)
-    assertSession(session);
-    await clearAllMappings();
+    await clearAllMappings(session);
 
     logger.info(`[CalendarSync] Remove all complete: ${result.success} success, ${result.failed} failed`);
     return result;

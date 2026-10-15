@@ -45,7 +45,7 @@ jest.mock('../../../../contexts/I18nContext', () => ({
 }));
 const mockPrime = jest.fn();
 jest.mock('../../../../contexts/SeenContext', () => ({
-  useSeen: () => ({ prime: mockPrime }),
+  useSeen: () => ({ prime: mockPrime, beginRead: () => mockPrime }),
 }));
 jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -308,6 +308,29 @@ describe('useRehearsals Hook', () => {
       expect(result.current.rehearsals).toEqual([]);
       expect(rehearsalsAPI.getBatch).not.toHaveBeenCalled();
       expect(rehearsalsAPI.getAll).not.toHaveBeenCalled();
+    });
+
+    // The last project deleted while a load was out: the empty list drops that
+    // load, its `finally` with it, and the spinner turned forever (review).
+    it('ends the loading when the last project goes while a load is out', async () => {
+      let answer!: (value: unknown) => void;
+      (rehearsalsAPI.getBatch as jest.Mock).mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+      const { result, rerender } = renderHook(
+        ({ projects }: { projects: Project[] }) => useRehearsals(projects, null),
+        { initialProps: { projects: mockProjects } }
+      );
+
+      let load!: Promise<void>;
+      act(() => { load = result.current.fetchRehearsals(true); });
+      expect(result.current.loading).toBe(true);
+
+      rerender({ projects: [] });
+      await act(async () => { await result.current.fetchRehearsals(true); });
+      await act(async () => { answer({ data: { rehearsals: [] } }); await load; });
+
+      expect(result.current.loading).toBe(false);
+      expect(result.current.refreshing).toBe(false);
+      expect(result.current.rehearsals).toEqual([]);
     });
   });
 

@@ -96,11 +96,20 @@ async function settleSessionWork(): Promise<void> {
 }
 
 /**
- * Runs `run` as the current session's work. It gets the session's stamp and
- * checks it (assertSession) before each write; a change of owner waits for it.
+ * Runs `run` as the work of `session` — the current one, unless the caller is
+ * itself a step of earlier work and hands its own stamp down. It gets the stamp
+ * and checks it (assertSession) before each write; a change of owner waits for
+ * it.
+ *
+ * The stamp goes down the whole chain, never re-read on the way: a step that
+ * starts after the account changed would read the next person's session and
+ * write as them (ES01, review). Work of an ended session does not start.
  */
-export function sessionWork<T>(run: (session: SessionStamp) => Promise<T>): Promise<T> {
-  const session = generation;
+export function sessionWork<T>(
+  run: (session: SessionStamp) => Promise<T>,
+  session: SessionStamp = generation
+): Promise<T> {
+  if (session !== generation) return Promise.reject(new SessionEndedError());
   const running = run(session);
   work.add(running);
   const done = () => {
