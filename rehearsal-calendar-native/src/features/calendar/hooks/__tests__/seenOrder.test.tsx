@@ -75,6 +75,26 @@ it('keeps a mark put on while the list was out and the tap was on its way', asyn
   expect(result.current.seen.responseFor('r1')).toBe('yes');
 });
 
+// The whole time the tap is on its way counts (review): the list asked for
+// after the tap began and answered before the server took it said "not seen",
+// and the tap's own success then wrote only the counts.
+it('keeps a mark when the list answers while the tap is still on its way', async () => {
+  let respond!: (value: unknown) => void;
+  (rehearsalsAPI.respond as jest.Mock).mockReturnValue(new Promise((resolve) => { respond = resolve; }));
+  (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({ data: { rehearsals: [rehearsal(null)] } });
+  const { result } = render();
+
+  let toggling!: Promise<void>;
+  act(() => { toggling = result.current.seen.toggleSeen('r1'); });
+  await act(async () => { await result.current.list.fetchRehearsals(true); });
+  expect(result.current.seen.responseFor('r1')).toBe('yes');
+
+  await act(async () => { respond({ data: { confirmed: 1, invited: 2 } }); await toggling; });
+
+  expect(result.current.seen.responseFor('r1')).toBe('yes');
+  expect(result.current.seen.statsFor('r1')).toEqual({ confirmed: 1, invited: 2 });
+});
+
 it('takes off a mark taken back elsewhere when nothing was tapped here', async () => {
   (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValueOnce({ data: { rehearsals: [rehearsal('yes')] } });
   const { result } = render();

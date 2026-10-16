@@ -22,7 +22,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
 import { useUnread } from '../../../contexts/UnreadContext';
 import { logger } from '../../../shared/utils/logger';
-import { useLatestRequest } from '../../../shared/hooks/useSession';
+import { useRequestOrder } from '../../../shared/hooks/useSession';
 import { styles } from '../styles/notificationsScreenStyles';
 import type { AppNavigation } from '../../../navigation';
 
@@ -58,33 +58,29 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // A list read before a change and answered after it still holds the deleted
-  // card, or the read one as unread: every change on this screen takes a turn,
-  // as it is sent and once the server has it, and a read's answer older than
-  // either is dropped (NI04). Only `change` sends one.
-  const begin = useLatestRequest();
-  const change = useCallback(async <T,>(send: () => Promise<T>): Promise<T> => {
-    begin();
-    try {
-      return await send();
-    } finally {
-      begin();
-    }
-  }, [begin]);
+  // A list read while a change was on its way may still hold the deleted card,
+  // or the read one as unread: reads and changes on this screen go in one order
+  // (useRequestOrder), and such a read's answer is dropped (NI04, review). Only
+  // `change` sends one.
+  const order = useRequestOrder();
+  const change = useCallback(
+    <T,>(send: () => Promise<T>): Promise<T> => order.write(() => send()),
+    [order]
+  );
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
-    const current = begin();
+    const answer = order.beginRead();
     try {
       const res = await notificationsAPI.list();
-      if (current()) setItems(res.data.notifications || []);
+      if (answer()) setItems(res.data.notifications || []);
     } catch (err) {
       logger.warn('[Notifications] Could not load:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [begin]);
+  }, [order]);
 
   // Reading the inbox is what marks it read — this screen is the only place the
   // notifications can be read at all, so arriving here is the acknowledgement.

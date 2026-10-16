@@ -295,4 +295,36 @@ describe('Unread count and late answers (NI04)', () => {
     expect(getByTestId('count').props.children).toBe('0');
     expect(mockStorage['unread-count:1']).toBe('0');
   });
+
+  // The whole time a change is on its way counts (review): a push or the app
+  // coming forward asks for the count after "Read all" was sent; its old 5
+  // answered first and the 0 of "Read all" was then dropped as older.
+  it('keeps the count of a mark-all when a read answers while it is on its way', async () => {
+    const marking = held<any>();
+    mockMarkRead.mockReturnValueOnce(marking.promise);
+    mockUnreadCount.mockResolvedValueOnce({ data: { unreadCount: 5 } });
+    const { getByTestId } = renderProbe();
+
+    fireEvent.press(getByTestId('read-all'));
+    await act(async () => { fireEvent.press(getByTestId('refresh')); });
+    await act(async () => { marking.resolve({ data: { unreadCount: 0 } }); });
+
+    expect(getByTestId('count').props.children).toBe('0');
+    expect(mockStorage['unread-count:1']).toBe('0');
+  });
+
+  it('takes the answer of the change sent last, whichever answers first', async () => {
+    const one = held<any>();
+    const all = held<any>();
+    mockRemove.mockReturnValueOnce(one.promise);
+    mockMarkRead.mockReturnValueOnce(all.promise);
+    const { getByTestId } = renderProbe();
+
+    fireEvent.press(getByTestId('remove-one'));
+    fireEvent.press(getByTestId('read-all'));
+    await act(async () => { all.resolve({ data: { unreadCount: 0 } }); });
+    await act(async () => { one.resolve({ data: { unreadCount: 4 } }); });
+
+    expect(getByTestId('count').props.children).toBe('0');
+  });
 });

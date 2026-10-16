@@ -3,8 +3,9 @@
  *
  * The inbox loads its list on focus and on pull. A load that read the list
  * before a deletion and answered after it put the deleted card back, and the
- * next tap on it found nothing on the server. A deletion now takes its turn
- * like a load: the earlier load's answer is dropped.
+ * next tap on it found nothing on the server. Reads and changes now go in one
+ * order (useRequestOrder): a load that answers while a deletion is on its way,
+ * or that began before it landed, is dropped.
  */
 import React from 'react';
 import { render, act, waitFor } from '@testing-library/react-native';
@@ -14,9 +15,10 @@ const mockList = jest.fn();
 jest.mock('../../../../shared/services/api', () => ({
   notificationsAPI: { list: (...args: any[]) => mockList(...args) },
 }));
-const mockRemove = jest.fn(() => Promise.resolve(true));
+const mockRemove = jest.fn((_id: number) => Promise.resolve(true));
+const mockMarkRead = jest.fn((_ids?: number[]) => Promise.resolve() as Promise<unknown>);
 jest.mock('../../../../contexts/UnreadContext', () => ({
-  useUnread: () => ({ markRead: jest.fn(() => Promise.resolve()), remove: mockRemove, removeAll: jest.fn() }),
+  useUnread: () => ({ markRead: mockMarkRead, remove: mockRemove, removeAll: jest.fn() }),
 }));
 jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: jest.requireActual('../../../../i18n/translations').en }),
@@ -86,6 +88,50 @@ it('does not make cards unread again after "Mark all read" while a load was out'
   expect(screen.queryByLabelText('Mark all read')).toBeNull();
 
   await act(async () => { stale.resolve({ data: { notifications: [unread(1, 'Act I moved')] } }); });
+
+  expect(screen.queryByLabelText('Mark all read')).toBeNull();
+});
+
+// The whole time a change is on its way counts (review): a load asked for after
+// the deletion was sent and answered before the server took it still holds the
+// card, and nothing after the deletion's success took it out again.
+it('does not bring back a card when a load answers while its deletion is on its way', async () => {
+  mockList.mockResolvedValueOnce({ data: { notifications: [item(1, 'Act I moved'), item(2, 'Dress cancelled')] } });
+  const screen = render(<NotificationsScreen />);
+  await act(async () => { mockFocus.run?.(); });
+  await waitFor(() => expect(screen.getByText('Dress cancelled')).toBeTruthy());
+
+  const removing = deferred();
+  mockRemove.mockReturnValueOnce(removing.promise as Promise<boolean>);
+  const deletes = screen.getAllByLabelText('Delete');
+  await act(async () => { deletes[1].props.onPress(); });
+
+  mockList.mockResolvedValueOnce({ data: { notifications: [item(1, 'Act I moved'), item(2, 'Dress cancelled')] } });
+  await act(async () => { mockFocus.run?.(); });
+  expect(screen.queryByText('Dress cancelled')).toBeNull();
+
+  await act(async () => { removing.resolve(true); });
+
+  expect(screen.queryByText('Dress cancelled')).toBeNull();
+  expect(screen.getByText('Act I moved')).toBeTruthy();
+});
+
+it('keeps cards read when a load answers while "Mark all read" is on its way', async () => {
+  const unread = (id: number, title: string) => ({ ...item(id, title), read: false });
+  mockList.mockResolvedValueOnce({ data: { notifications: [unread(1, 'Act I moved')] } });
+  const screen = render(<NotificationsScreen />);
+  await act(async () => { mockFocus.run?.(); });
+  const markAll = await waitFor(() => screen.getByLabelText('Mark all read'));
+
+  const marking = deferred();
+  mockMarkRead.mockReturnValueOnce(marking.promise);
+  let pressed!: Promise<void>;
+  act(() => { pressed = markAll.props.onPress(); });
+
+  mockList.mockResolvedValueOnce({ data: { notifications: [unread(1, 'Act I moved')] } });
+  await act(async () => { mockFocus.run?.(); });
+
+  await act(async () => { marking.resolve(undefined); await pressed; });
 
   expect(screen.queryByLabelText('Mark all read')).toBeNull();
 });

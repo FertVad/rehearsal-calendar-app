@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationsAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
 import { useAuth } from './AuthContext';
-import { useLatestRequest, useSession, useSessionState } from '../shared/hooks/useSession';
+import { useRequestOrder, useSession, useSessionState } from '../shared/hooks/useSession';
 import { isCurrentSession } from '../shared/services/session';
 
 // Survives a restart, so the count does not begin at nought every launch — and
@@ -52,9 +52,10 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
   const [known, setKnown] = useSessionState(false);
   const knownRef = useRef<{ session: number; known: boolean }>({ session, known: false });
 
-  // Each read and each change of the count takes a turn: a count read before a
-  // change and answered after it is the old count (NI04).
-  const begin = useLatestRequest();
+  // Reads and changes of the count in one order (useRequestOrder): a count read
+  // while a change was on its way may be the old count, and a change's answer
+  // is not dropped for a read that came after it (NI04, review).
+  const order = useRequestOrder();
 
   const remember = useCallback((count: number) => {
     if (!isCurrentSession(session)) return;
@@ -81,50 +82,54 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
   }, [userId, session, remember]);
 
   const refresh = useCallback(async () => {
-    const current = begin();
+    const answer = order.beginRead();
     try {
       const res = await notificationsAPI.unreadCount();
-      if (current()) remember(res.data?.unreadCount ?? 0);
+      if (answer()) remember(res.data?.unreadCount ?? 0);
     } catch (error) {
       // Offline, most likely. Keeping the last known count beats zeroing it and
       // hiding something the reader has not seen.
       logger.warn('[Unread] Could not refresh the count:', error);
     }
-  }, [begin, remember]);
+  }, [order, remember]);
+
+  // Every change answers with the count it leaves behind.
+  const change = useCallback(
+    (send: () => Promise<{ data?: { unreadCount?: number } }>) =>
+      order.write(async (answer) => {
+        const res = await send();
+        if (answer()) remember(res.data?.unreadCount ?? 0);
+      }),
+    [order, remember]
+  );
 
   const markRead = useCallback(async (ids?: number[]) => {
-    const current = begin();
     try {
-      const res = await notificationsAPI.markRead(ids);
-      if (current()) remember(res.data?.unreadCount ?? 0);
+      await change(() => notificationsAPI.markRead(ids));
     } catch (error) {
       logger.warn('[Unread] Could not mark as read:', error);
     }
-  }, [begin, remember]);
+  }, [change]);
 
   const remove = useCallback(async (id: number) => {
-    const current = begin();
     try {
-      const res = await notificationsAPI.remove(id);
-      if (current()) remember(res.data?.unreadCount ?? 0);
+      await change(() => notificationsAPI.remove(id));
       return true;
     } catch (error) {
       logger.warn('[Unread] Could not delete:', error);
       return false;
     }
-  }, [begin, remember]);
+  }, [change]);
 
   const removeAll = useCallback(async () => {
-    const current = begin();
     try {
-      const res = await notificationsAPI.removeAll();
-      if (current()) remember(res.data?.unreadCount ?? 0);
+      await change(() => notificationsAPI.removeAll());
       return true;
     } catch (error) {
       logger.warn('[Unread] Could not clear the inbox:', error);
       return false;
     }
-  }, [begin, remember]);
+  }, [change]);
 
   // The badge is not set at the call sites; it follows the count. Six places
   // used to set it, which is six chances for it to disagree with the bell.
