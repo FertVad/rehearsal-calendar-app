@@ -64,3 +64,10 @@ test('what the owner writes after the decision is kept for the developer', () =>
   assert.equal(parseDecisions('T-110: продолжить — разрешено изменить routes/auth.js: только блокировка')['T-110'].note,
     'разрешено изменить routes/auth.js: только блокировка');
 });
+
+test('a hash quoted in the note is not a choice of commits', () => {
+  assert.deepEqual(parseDecisions('T-112: продолжить — сценарий красный на 1fbbc47 и зелёный после')['T-112'],
+    { action: 'continue', commits: [], note: 'сценарий красный на 1fbbc47 и зелёный после' });
+  assert.deepEqual(parseDecisions('T-108: на ревью f9212b3, 0b9f1a9 — только по задаче')['T-108'],
+    { action: 'review', commits: ['f9212b3', '0b9f1a9'], note: 'только по задаче' });
+});
