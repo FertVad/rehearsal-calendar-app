@@ -98,6 +98,24 @@ describe('logger keeps credentials out of the journal', () => {
     expect(out).not.toContain('xXxSecretPushTokenxXx');
   });
 
+  it('keeps an invite code out of a path, in the message and in LoggedError.path', () => {
+    // The code is the key to a project: whoever reads it can join.
+    const error: any = new Error('Network Error');
+    error.name = 'AxiosError';
+    error.isAxiosError = true;
+    error.code = 'ERR_NETWORK';
+    error.config = { method: 'post', url: '/native/invite/ABCD2345/join' };
+
+    logger.error('Response Error: Network Error POST /native/invite/ABCD2345/join', error);
+    logger.info('[Linking] open', 'https://rehearsly.me/invite/0123456789abcdef0123456789abcdef?x=1');
+
+    const out = [captured(errorSpy), captured(infoSpy)].join('\n');
+    expect(out).not.toContain('ABCD2345');
+    expect(out).not.toContain('0123456789abcdef0123456789abcdef');
+    expect(errorSpy.mock.calls[0][0]).toBe('[ERROR] Response Error: Network Error POST /native/invite/[redacted]/join');
+    expect(errorSpy.mock.calls[0][1]).toMatchObject({ method: 'POST', path: '/native/invite/[redacted]/join' });
+  });
+
   it('redacts credential fields and token-shaped strings anywhere in a plain value', () => {
     logger.error('[Test] state:', {
       user: { id: 7, email: 'a@b.test' },

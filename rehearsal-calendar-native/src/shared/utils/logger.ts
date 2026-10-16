@@ -26,7 +26,7 @@ export interface LoggedError {
   /** HTTP status of a failed request. */
   status?: number;
   method?: string;
-  /** Request path without its query string. */
+  /** Request path without its query string, secret segments redacted. */
   path?: string;
   /** The server's own `error` text, if it sent one. */
   serverError?: string;
@@ -40,12 +40,15 @@ const SECRET_KEY = /token|authorization|password|passwd|secret|cookie|credential
 const DROPPED_KEY = /^(config|request|headers|_headers|_body|_bodyInit|_bodyText)$/;
 
 // Token-shaped text, wherever it turns up — a message, a positional argument,
-// a URL's query.
+// a URL's query or path.
 const SECRET_TEXT: [RegExp, string][] = [
   [/\bBearer\s+[A-Za-z0-9\-._~+/]+=*/gi, REDACTED],
   [/\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]+/g, REDACTED], // JWT
   [/\bExpo(?:nent)?PushToken\[[^\]]*\]/g, REDACTED],
   [/([?&][^=&\s#]*(?:token|code|password|secret|key)[^=&\s#]*=)[^&\s#]+/gi, `$1${REDACTED}`],
+  // An invite code is the key to a project: /native/invite/<code>/join, an
+  // invite link. Whoever reads it can join, so it is redacted in any path.
+  [/(\/invite\/)[^/?#\s"'`]+/gi, `$1${REDACTED}`],
 ];
 
 const MAX_DEPTH = 4;
