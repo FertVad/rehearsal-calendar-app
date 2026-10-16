@@ -1,0 +1,55 @@
+# A deleted notification stays deleted while its deletion is still on its way
+# (cause fix 12: NI04, review). Varya has two notifications. She deletes one on
+# a slow connection: the deletion has not reached the server yet. Meanwhile
+# she pulls the list to refresh, and the server, not yet told, answers with
+# both. The old screen took that list and the deleted card came back — and
+# stayed once the deletion succeeded.
+appId: ${APP_ID}
+name: Inbox deletion on its way
+tags:
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${VARYA_EMAIL}
+- tapOn: "Notifications"
+- extendedWaitUntil:
+    visible: ".*Ledger check scheduled.*"
+    timeout: 15000
+- assertVisible: ".*Keys handover scheduled.*"
+# The deletion waits on its way to the server, until the release.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: DELETE
+      PATH: "^/api/native/notifications/[0-9]+$"
+      BEFORE: "1"
+- swipe:
+    from: ".*Ledger check scheduled.*"
+    direction: LEFT
+- tapOn: "Delete"
+- extendedWaitUntil:
+    notVisible: ".*Ledger check scheduled.*"
+    timeout: 3000
+# Pull to refresh: the server has not heard of the deletion yet.
+- swipe:
+    start: 50%, 25%
+    end: 50%, 75%
+- extendedWaitUntil:
+    visible: ".*Ledger check scheduled.*"
+    timeout: 3000
+    optional: true
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+# The deletion has landed, and the list answered before it is not on screen.
+- extendedWaitUntil:
+    visible: ".*Ledger check scheduled.*"
+    timeout: 3000
+    optional: true
+- assertNotVisible: ".*Ledger check scheduled.*"
+- assertVisible: ".*Keys handover scheduled.*"
+- takeScreenshot: 21-inbox-deletion-stays

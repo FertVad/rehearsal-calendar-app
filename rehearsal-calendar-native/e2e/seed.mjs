@@ -68,6 +68,8 @@ export const PEOPLE = {
   pishchik: { email: 'pishchik@e2e.test', firstName: 'Boris', lastName: 'Pishchik', onboarded: true },
   // Saves while the day's availability is still on its way (20).
   charlotta: { email: 'charlotta@e2e.test', firstName: 'Charlotta', lastName: 'Ivanovna', onboarded: true },
+  // Deletes a notification while the inbox reloads (21): two of her own.
+  varya: { email: 'varya@e2e.test', firstName: 'Varya', lastName: 'Housekeeper', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -154,6 +156,7 @@ export async function seed({ client, apiUrl, timezone }) {
   const { id: studentId } = await project('Eternal Student', 'Lectures', ['trofimov'], 'gaev');
   const { id: debatesId } = await project('Garden Debates', 'Evenings', ['trofimov'], 'gaev');
   const { id: pantryId } = await project('Firs Pantry', 'The silver', [], 'firs');
+  const { id: keysId } = await project('Estate Keys', 'The housekeeping', ['varya'], 'gaev');
   // Made in this order: the Estate is the newer, so the form opens on it.
   await project('Pishchik Mill', 'Flour', [], 'pishchik');
   await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
@@ -185,6 +188,8 @@ export async function seed({ client, apiUrl, timezone }) {
     lecture: await rehearsal(studentId, 'Lecture on progress', 2, 10, 12, ['gaev', 'trofimov'], 'gaev'),
     debate: await rehearsal(debatesId, 'Garden debate', 2, 14, 16, ['gaev', 'trofimov'], 'gaev'),
     silver: await rehearsal(pantryId, 'Silver polishing', 1, 9, 11, ['firs'], 'firs'),
+    ledger: await rehearsal(keysId, 'Ledger check', 3, 9, 11, ['gaev', 'varya'], 'gaev'),
+    handover: await rehearsal(keysId, 'Keys handover', 4, 9, 11, ['gaev', 'varya'], 'gaev'),
   };
 
   // Some of the cast are busy, so the planner has something to weigh.

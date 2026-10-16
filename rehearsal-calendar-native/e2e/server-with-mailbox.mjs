@@ -23,10 +23,12 @@
  *   GET /release                        sends every answer held, holds no more
  *
  * The request itself is handled at once; only its answer waits, so it says
- * what was true when it was asked. None waits past HOLD_LIMIT_MS: the app gives
- * up on a request after ten seconds, and a held answer must still arrive. A
- * flow that wants the request to fail as on no network names a longer wait
- * (`&ms=`, a minute at most).
+ * what was true when it was asked. With `&before=1` the request waits instead,
+ * and is handled on release: a change still on its way to the server, so what
+ * is read meanwhile says what was true before it (flow 21). None waits past
+ * HOLD_LIMIT_MS: the app gives up on a request after ten seconds, and a held
+ * answer must still arrive. A flow that wants the request to fail as on no
+ * network names a longer wait (`&ms=`, a minute at most).
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -59,35 +61,49 @@ const HOLD_WINDOW_MS = 60000;
 let holds = [];
 const held = new Set();
 
-function holdAnswer(request, response) {
+// Hands the request to `handle` — at once, or on release when its hold says
+// the request waits.
+function holdAnswer(request, response, handle) {
   const { pathname } = new URL(request.url, 'http://api');
   holds = holds.filter((hold) => hold.until > Date.now());
   const hold = holds.find((candidate) => candidate.method === request.method && candidate.path.test(pathname));
-  if (!hold) return;
-  const end = response.end.bind(response);
+  if (!hold) return handle();
   let released = false;
-  let pending = null;
-  const release = () => {
+  const release = (then) => () => {
     if (released) return;
     released = true;
-    held.delete(release);
+    held.delete(onRelease);
     clearTimeout(limit);
-    if (pending) end(...pending);
+    then();
   };
-  const limit = setTimeout(release, hold.limitMs);
-  held.add(release);
+  let onRelease;
+  let limit;
+  if (hold.before) {
+    onRelease = release(handle);
+    limit = setTimeout(onRelease, hold.limitMs);
+    held.add(onRelease);
+    console.log(`[e2e] holding the request ${request.method} ${pathname}`);
+    return;
+  }
+  const end = response.end.bind(response);
+  let pending = null;
+  onRelease = release(() => {
+    if (pending) end(...pending);
+  });
+  limit = setTimeout(onRelease, hold.limitMs);
+  held.add(onRelease);
   response.end = (...args) => {
     if (released) return end(...args);
     pending = args;
     return response;
   };
   console.log(`[e2e] holding the answer to ${request.method} ${pathname}`);
+  handle();
 }
 
 // As app.listen would, with the hold in front.
 http.createServer((request, response) => {
-  holdAnswer(request, response);
-  app(request, response);
+  holdAnswer(request, response, () => app(request, response));
 }).listen(Number(process.env.PORT), process.env.HOST, () => {
   console.log('[e2e] server listening');
 });
@@ -101,7 +117,8 @@ http.createServer((request, response) => {
   if (request.method === 'GET' && url.pathname === '/hold') {
     const method = (url.searchParams.get('method') || 'GET').toUpperCase();
     const limitMs = Math.min(Number(url.searchParams.get('ms')) || HOLD_LIMIT_MS, HOLD_WINDOW_MS);
-    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, until: Date.now() + HOLD_WINDOW_MS });
+    const before = url.searchParams.get('before') === '1';
+    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
   }
   if (request.method === 'GET' && url.pathname === '/release') {
