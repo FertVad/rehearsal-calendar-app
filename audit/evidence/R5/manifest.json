@@ -157,6 +157,17 @@
         { "file": "T-112-r3-red-before.log", "sha256": "15d8cc80cd119ead25ff264578410285b1793642f1ca7c3b1efbc8b0e5691655", "fixFilesAt": "1fbbc471569c16fcf7066dc4687268eb5b695a21", "testFilesAt": "9e70ab67a3b4de84cd98c88fe19907c7b27f87cc", "exitCode": 1, "tests": { "failed": 3, "passed": 766 } },
         { "file": "cause12-r3-after.log", "sha256": "b965e81dd0731da30f81d59f7d206592c636fb5d275957566a53445ceebde212", "fixFilesAt": "9e70ab67a3b4de84cd98c88fe19907c7b27f87cc", "exitCode": 0, "tests": { "failed": 0, "passed": 769 } }
       ]
+    },
+    "review4": {
+      "reviewer": "Astra",
+      "findings": ["no e2e for the next person's count while the previous person's change is on its way"],
+      "baseCommit": "1fbbc471569c16fcf7066dc4687268eb5b695a21",
+      "e2eCommit": "e677aaf",
+      "e2e": "flow 22 (22-switch-account-change-on-its-way.yaml); the e2e server holds the change with its connection open (OPEN: \"1\"), so it is still on its way at the next sign-in",
+      "runs": [
+        { "file": "e2e-22-before.txt", "sha256": "b94ed91d7ac744f513ad972b81f3f0f75c70b2d2558323144fcb239ba4730984", "fixFilesAt": "1fbbc471569c16fcf7066dc4687268eb5b695a21", "fixFiles": ["rehearsal-calendar-native/src/shared/hooks/useSession.ts"], "flows": { "failed": 1, "passed": 0 } },
+        { "file": "e2e-22-after.txt", "sha256": "2a30267b98472272454a2b5c8f05af0a2857de3f0457096bf089c441d73893f1", "fixFilesAt": "HEAD (useSession.ts of 9e70ab6)", "flows": { "failed": 0, "passed": 3 } }
+      ]
     }
   }
 }
