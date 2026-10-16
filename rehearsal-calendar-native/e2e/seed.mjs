@@ -70,6 +70,10 @@ export const PEOPLE = {
   charlotta: { email: 'charlotta@e2e.test', firstName: 'Charlotta', lastName: 'Ivanovna', onboarded: true },
   // Deletes a notification while the inbox reloads (21): two of her own.
   varya: { email: 'varya@e2e.test', firstName: 'Varya', lastName: 'Housekeeper', onboarded: true },
+  // One after the other while the first one's "mark all read" is on its way
+  // (22): one notification unread for Yepikhodov, two for Dasha.
+  yepikhodov: { email: 'yepikhodov@e2e.test', firstName: 'Semyon', lastName: 'Yepikhodov', onboarded: true },
+  dasha: { email: 'dasha@e2e.test', firstName: 'Dasha', lastName: 'Cook', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -157,6 +161,15 @@ export async function seed({ client, apiUrl, timezone }) {
   const { id: debatesId } = await project('Garden Debates', 'Evenings', ['trofimov'], 'gaev');
   const { id: pantryId } = await project('Firs Pantry', 'The silver', [], 'firs');
   const { id: keysId } = await project('Estate Keys', 'The housekeeping', ['varya'], 'gaev');
+  // Yepikhodov and Dasha (22) are put in it as the join does, without signing
+  // in: the seed has spent the twenty sign-ins it gets.
+  const { id: kitchenId } = await project('Estate Kitchen', 'The servants', [], 'gaev');
+  for (const key of ['yepikhodov', 'dasha']) {
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+      [kitchenId, ids[key]]);
+  }
   // Made in this order: the Estate is the newer, so the form opens on it.
   await project('Pishchik Mill', 'Flour', [], 'pishchik');
   await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
@@ -190,6 +203,9 @@ export async function seed({ client, apiUrl, timezone }) {
     silver: await rehearsal(pantryId, 'Silver polishing', 1, 9, 11, ['firs'], 'firs'),
     ledger: await rehearsal(keysId, 'Ledger check', 3, 9, 11, ['gaev', 'varya'], 'gaev'),
     handover: await rehearsal(keysId, 'Keys handover', 4, 9, 11, ['gaev', 'varya'], 'gaev'),
+    guitar: await rehearsal(kitchenId, 'Guitar song', 2, 20, 21, ['gaev', 'yepikhodov'], 'gaev'),
+    supper: await rehearsal(kitchenId, 'Supper service', 3, 19, 20, ['gaev', 'dasha'], 'gaev'),
+    linen: await rehearsal(kitchenId, 'Linen count', 4, 12, 13, ['gaev', 'dasha'], 'gaev'),
   };
 
   // Some of the cast are busy, so the planner has something to weigh.

@@ -118,11 +118,17 @@ longer, and the app then gives up on the request as offline (flow 16). A hold
 lapses after a minute, so a flow that fails before its release does not slow
 the next. `BEFORE: "1"` holds the request itself instead: the server handles
 it only on release, so a change is still on its way and what is read meanwhile
-says what was true before it (flow 21). `revoke-sessions.js` ends every
+says what was true before it (flow 21). `OPEN: "1"` holds it so too, and keeps
+its connection open until release, three minutes at most: the answer begins at
+once (200, JSON) and a space follows every two seconds, so the app — whose ten
+seconds count from the last byte heard — does not give up while a flow signs
+out and back in (flow 22). The server's own status cannot follow, so this is
+for a change whose outcome the flow does not read. `revoke-sessions.js` ends every
 session of an account, as its other device logging out would (flow 15).
 
 The seed signs in only the people it acts as: the server takes twenty
-sign-ins a minute from one address.
+sign-ins a minute from one address. The twenty are spent, so a newer person
+joins a project by the membership row the join writes (flow 22's two).
 
 ## A fix seen on screen has a flow
 
