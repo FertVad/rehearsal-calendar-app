@@ -276,6 +276,28 @@ describe('Unread count across accounts (NI03)', () => {
     expect(Object.values(mockStorage)).not.toContain('8');
     expect(mockSetBadge).not.toHaveBeenCalledWith(8);
   });
+
+  // The order of reads and changes is the session's (review 3): a "Read all"
+  // of the previous person still on its way kept the next person's count at 0.
+  it('shows the next person their count while the previous one\'s change is on its way', async () => {
+    const marking = held<any>();
+    mockMarkRead.mockReturnValueOnce(marking.promise);
+    const { getByTestId } = renderProbe();
+    fireEvent.press(getByTestId('read-all'));
+
+    mockAuth.user = { id: 2 };
+    await act(async () => { await changeOwner(2); });
+    mockUnreadCount.mockResolvedValueOnce({ data: { unreadCount: 8 } });
+    await act(async () => { fireEvent.press(getByTestId('refresh')); });
+    expect(getByTestId('count').props.children).toBe('8');
+
+    await act(async () => { marking.resolve({ data: { unreadCount: 0 } }); });
+    expect(getByTestId('count').props.children).toBe('8');
+
+    mockUnreadCount.mockResolvedValueOnce({ data: { unreadCount: 6 } });
+    await act(async () => { fireEvent.press(getByTestId('refresh')); });
+    expect(getByTestId('count').props.children).toBe('6');
+  });
 });
 
 // A read of the count that started before a change and answers after it is

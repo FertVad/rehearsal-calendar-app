@@ -164,4 +164,35 @@ describe('sessions', () => {
     expect(answer()).toBe(false);
     expect(landed).toBe(false);
   });
+
+  // The order is the session's too (review 3): the stores live above the
+  // navigator, so the hook outlives a sign-out, and the previous person's
+  // change on its way kept the next person's reads from landing.
+  it('lands the next session\'s read while the previous session\'s change is on its way', async () => {
+    await changeOwner('u1');
+    const order = setup();
+    const sent = held();
+    const writing = order.write(() => sent.promise);
+
+    await changeOwner('u2');
+    expect(order.beginRead()()).toBe(true);
+
+    sent.resolve();
+    await writing;
+  });
+
+  it('lands the next session\'s read after the previous session\'s change has ended', async () => {
+    await changeOwner('u1');
+    const order = setup();
+    const sent = held();
+    const writing = order.write(() => sent.promise);
+
+    await changeOwner('u2');
+    const answer = order.beginRead();
+    sent.resolve();
+    await writing;
+
+    expect(answer()).toBe(true);
+    expect(order.beginRead()()).toBe(true);
+  });
 });

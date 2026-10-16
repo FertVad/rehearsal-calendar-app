@@ -58,7 +58,12 @@ const WHOLE = '';
  * hold the state from before the change — its answer is dropped. Among the
  * answers that remain the one asked last wins, so an older answer never
  * replaces a newer one already shown, and a read never drops a change's answer.
- * Everything ends with the session.
+ *
+ * The order itself is the session's. The stores that use it sit above the
+ * navigator and outlive a sign-out, so each session gets an order of its own,
+ * and a request keeps the one it was sent in: the previous person's change
+ * still on its way, and its ending, touch nothing of the next person's
+ * (review 3).
  *
  * `beginRead()` before the request, and ask the check it returns right as each
  * key's answer lands. `write(send, key)` wraps a change; `send` gets the check
@@ -69,41 +74,55 @@ export function useRequestOrder(): {
   beginRead: () => AnswerCheck;
   write: <T>(send: (answer: () => boolean) => Promise<T>, key?: string) => Promise<T>;
 } {
-  const order = useRef({
-    clock: 0,
-    inFlight: new Map<string, number>(),
-    lastWriteEnd: new Map<string, number>(),
-    shown: new Map<string, number>(),
-  }).current;
+  const held = useRef<SessionOrder | null>(null);
 
-  // An answer lands unless one asked later already has.
-  const land = useCallback((key: string, askedAt: number) => {
-    if ((order.shown.get(key) ?? 0) > askedAt) return false;
-    order.shown.set(key, askedAt);
-    return true;
-  }, [order]);
+  // The order of the session running now; a new session starts a new one.
+  const current = useCallback((): SessionOrder => {
+    const session = currentSession();
+    if (held.current?.session !== session) held.current = newOrder(session);
+    return held.current;
+  }, []);
 
   const beginRead = useCallback((): AnswerCheck => {
+    const order = current();
     const askedAt = ++order.clock;
-    const session = currentSession();
     return (key = WHOLE) =>
-      isCurrentSession(session)
+      isCurrentSession(order.session)
       && !order.inFlight.get(key)
       && (order.lastWriteEnd.get(key) ?? 0) < askedAt
-      && land(key, askedAt);
-  }, [order, land]);
+      && land(order, key, askedAt);
+  }, [current]);
 
   const write = useCallback(async <T,>(send: (answer: () => boolean) => Promise<T>, key = WHOLE) => {
+    const order = current();
     const askedAt = ++order.clock;
-    const session = currentSession();
     order.inFlight.set(key, (order.inFlight.get(key) ?? 0) + 1);
     try {
-      return await send(() => isCurrentSession(session) && land(key, askedAt));
+      return await send(() => isCurrentSession(order.session) && land(order, key, askedAt));
     } finally {
       order.inFlight.set(key, (order.inFlight.get(key) ?? 1) - 1);
       order.lastWriteEnd.set(key, ++order.clock);
     }
-  }, [order, land]);
+  }, [current]);
 
   return useMemo(() => ({ beginRead, write }), [beginRead, write]);
+}
+
+interface SessionOrder {
+  session: SessionStamp;
+  clock: number;
+  inFlight: Map<string, number>;
+  lastWriteEnd: Map<string, number>;
+  shown: Map<string, number>;
+}
+
+function newOrder(session: SessionStamp): SessionOrder {
+  return { session, clock: 0, inFlight: new Map(), lastWriteEnd: new Map(), shown: new Map() };
+}
+
+// An answer lands unless one asked later already has.
+function land(order: SessionOrder, key: string, askedAt: number): boolean {
+  if ((order.shown.get(key) ?? 0) > askedAt) return false;
+  order.shown.set(key, askedAt);
+  return true;
 }
