@@ -1,0 +1,67 @@
+# One zone, the one the person chose (cause fix 14: HP04, DF01; the owner's
+# decision of 16.10.2026). Chebutykin's profile is in Tel Aviv, the machine's
+# zone (seed.mjs); the simulator is in Honolulu (run.mjs), thirteen hours
+# behind it, as if he had flown there. Everything stays in Tel Aviv: today, and
+# the time of each rehearsal. Changing the zone in the profile changes what is
+# shown.
+#
+# The old app wrote the device's zone over the chosen one at sign-in (HP04),
+# and took "today" from the device while dating rehearsals by the profile
+# (DF01): Midnight call, at 00:30 in Tel Aviv, belongs to yesterday in Honolulu.
+appId: ${APP_ID}
+name: The profile's timezone, not the device's
+tags:
+  - calendar
+  - profile
+  - rehearsals
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+# Today in Tel Aviv: Midnight call is today's, at its Tel Aviv time.
+- extendedWaitUntil:
+    visible: "(?s)(?=.*Midnight call)(?=.*00:30).*"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "(?s)(?=.*Night watch).*"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "(?s)(?=.*Night watch)(?=.*02:00).*"
+- takeScreenshot: 23-calendar-in-tel-aviv
+# The profile still says Tel Aviv after signing in on a phone in Honolulu.
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element: ".*Tel Aviv \\(UTC\\+2\\).*"
+    direction: DOWN
+    centerElement: true
+- assertNotVisible: ".*Honolulu.*"
+- tapOn: ".*Tel Aviv \\(UTC\\+2\\).*"
+# The picker offers the phone's own zone first: the simulator is in Honolulu.
+# (Its offset in the label is whatever the engine's Intl gives — Hermes says
+# "UTC".)
+- extendedWaitUntil:
+    visible: "Honolulu \\(.*\\)"
+    timeout: 10000
+- takeScreenshot: 23-picker-device-in-honolulu
+- scrollUntilVisible:
+    element: "Tokyo \\(UTC\\+9\\)"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Tokyo \\(UTC\\+9\\)"
+# The picker closes on the saved choice, and the profile names it.
+- extendedWaitUntil:
+    notVisible: "Honolulu \\(.*\\)"
+    timeout: 10000
+- assertVisible: ".*Tokyo \\(UTC\\+9\\).*"
+# The calendar follows: Night watch at Tokyo's time — today's or tomorrow's,
+# by the hour the flow runs at.
+- tapOn:
+    id: tab-calendar
+- scrollUntilVisible:
+    element: "(?s)(?=.*Night watch)(?=.*${WATCH_TOKYO_TIME}).*"
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
+- takeScreenshot: 23-calendar-in-tokyo

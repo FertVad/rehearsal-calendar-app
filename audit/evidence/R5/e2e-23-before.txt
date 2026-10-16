@@ -1,0 +1,25 @@
+Cause fix 14 (T-402) - flow 23, red before.
+
+The client code of 8ff8757 put back as it was at 1e9a265
+(git restore --source=1e9a265 -- <the 17 src files of 8ff8757, tests excepted>);
+the flow, the seed and the runner's simulator zone (Pacific/Honolulu) as now.
+Run at 18:40 on 16 October in Tel Aviv - 05:40 the same day in Honolulu.
+
+$ npm run e2e -- e2e/flows/23-profile-timezone.yaml
+...
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] The profile's timezone, not the device's (1m 57s) (Assertion is false: "(?s)(?=.*Midnight call)(?=.*00:30).*" is visible)
+
+1/1 Flow Failed
+
+What the screen showed (artifacts 2026-10-16_184041, step-031): Today, Fri 16 -
+"Night watch 13:00 - 14:00", Upcoming - "Nothing scheduled yet". Signing in had
+put the phone's zone, Honolulu, over Tel Aviv chosen in the profile (HP04), so:
+Night watch, 02:00 on the 17th in Tel Aviv, was shown as today at 13:00; and
+Midnight call, 00:30 today in Tel Aviv, fell into yesterday and off the screen.
+
+After (8ff8757): e2e-23-after.txt - passed.
+Then: git restore --source=HEAD -- src

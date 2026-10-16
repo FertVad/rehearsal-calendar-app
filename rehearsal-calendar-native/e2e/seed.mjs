@@ -8,8 +8,10 @@
  * app does — the owner's membership, invites, rosters and the busy slots a
  * rehearsal books are made the way they are made for real.
  *
- * Times are local to the machine, which is also the simulator's zone, so a
- * rehearsal seeded for 18:00 tomorrow reads 18:00 tomorrow on screen.
+ * Times are local to the machine, and everyone's profile is in its zone, so a
+ * rehearsal seeded for 18:00 tomorrow reads 18:00 tomorrow on screen. The
+ * simulator is somewhere else on purpose (run.mjs, SIMULATOR_ZONE): the app
+ * shows the profile's zone, never the device's (cause fix 14).
  */
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -74,6 +76,9 @@ export const PEOPLE = {
   // (22): one notification unread for Yepikhodov, two for Dasha.
   yepikhodov: { email: 'yepikhodov@e2e.test', firstName: 'Semyon', lastName: 'Yepikhodov', onboarded: true },
   dasha: { email: 'dasha@e2e.test', firstName: 'Dasha', lastName: 'Cook', onboarded: true },
+  // One zone, the profile's (23): Tel Aviv chosen, the phone elsewhere, and he
+  // changes it in the profile. Rehearsals only he is on, so no other flow's move.
+  chebutykin: { email: 'chebutykin@e2e.test', firstName: 'Ivan', lastName: 'Chebutykin', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -174,14 +179,22 @@ export async function seed({ client, apiUrl, timezone }) {
   await project('Pishchik Mill', 'Flour', [], 'pishchik');
   await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
   await project('Charlotta Tricks', 'Card tricks', [], 'charlotta');
+  // Gaev's, and Chebutykin in it as the join puts him (23): the sign-ins are spent.
+  const { id: roundsId } = await project('Doctor Rounds', 'The Prozorov house', [], 'gaev');
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+    [roundsId, ids.chebutykin]);
 
+  // `from` and `to` are hours, or [hours, minutes].
+  const at = (day, time) => (Array.isArray(time) ? localInstant(day, ...time) : localInstant(day, time));
   const rehearsal = async (projectId, title, day, from, to, cast, by = 'director') => {
     const { rehearsal: created } = await call(apiUrl, 'POST', `/native/projects/${projectId}/rehearsals`, {
       token: await token(by),
       body: {
         title,
-        startsAt: localInstant(day, from),
-        endsAt: localInstant(day, to),
+        startsAt: at(day, from),
+        endsAt: at(day, to),
         location: 'Main hall',
         participant_ids: cast.map((key) => String(ids[key])),
       },
@@ -206,7 +219,17 @@ export async function seed({ client, apiUrl, timezone }) {
     guitar: await rehearsal(kitchenId, 'Guitar song', 2, 20, 21, ['gaev', 'yepikhodov'], 'gaev'),
     supper: await rehearsal(kitchenId, 'Supper service', 3, 19, 20, ['gaev', 'dasha'], 'gaev'),
     linen: await rehearsal(kitchenId, 'Linen count', 4, 12, 13, ['gaev', 'dasha'], 'gaev'),
+    // Both in the small hours here, where the simulator (run.mjs) is still on
+    // the day before: dated by the device, today's would be yesterday's.
+    midnight: await rehearsal(roundsId, 'Midnight call', 0, [0, 30], 1, ['chebutykin'], 'gaev'),
+    watch: await rehearsal(roundsId, 'Night watch', 1, 2, 3, ['chebutykin'], 'gaev'),
   };
+
+  // What the flow reads after moving the profile to Tokyo: the same instant on
+  // Tokyo's clock, which is six or seven hours on from here with summer time.
+  const tokyo = (instant) => new Intl.DateTimeFormat('en-GB',
+    { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(instant));
+  const times = { watch_tokyo: tokyo(localInstant(1, 2)) };
 
   // Some of the cast are busy, so the planner has something to weigh.
   const busy = (day, from, to) => ({ date: localDate(day), entries: [{ startsAt: localInstant(day, from), endsAt: localInstant(day, to), type: 'busy' }] });
@@ -244,6 +267,7 @@ export async function seed({ client, apiUrl, timezone }) {
     projects: { hamlet: hamletId, seagull: seagullId, sisters: sistersId, bear: bearId, twelfth: twelfth.id },
     invites: { twelfth: twelfth.inviteCode },
     days,
+    times,
     rehearsals,
   };
 }

@@ -327,6 +327,20 @@ function quietKeyboard(udid) {
     'DidShowContinuousPathIntroduction', '-bool', 'true');
 }
 
+/**
+ * The simulator's own zone, away from the machine's and so from everyone's
+ * profile (seed.mjs). The app shows the zone the person chose, never the
+ * device's (cause fix 14); with both the same, nothing on screen could tell
+ * them apart. Honolulu: no summer time, and absent from the profile's list, so
+ * the picker names it as the device's at the top. Set for the simulator's
+ * launchd, so the app inherits it at every launch; a reboot clears it.
+ */
+const SIMULATOR_ZONE = 'Pacific/Honolulu';
+
+function pinZone(udid) {
+  simctl('spawn', udid, 'launchctl', 'setenv', 'TZ', SIMULATOR_ZONE);
+}
+
 /** The e2e simulator, created on the newest iOS runtime the first time. */
 function simulator() {
   const { devices } = JSON.parse(simctl('list', 'devices', '--json'));
@@ -445,6 +459,7 @@ async function main() {
       simctl('bootstatus', udid, '-b');
     }
     quietKeyboard(udid);
+    pinZone(udid);
     showSimulator(udid);
   });
 
@@ -467,7 +482,8 @@ async function main() {
     '-e', `API_URL=${API_URL}`, '-e', `MAIL_URL=${MAIL_URL}`,
     ...Object.entries(seeded.people).flatMap(([key, person]) => ['-e', `${key.toUpperCase()}_EMAIL=${person.email}`]),
     ...Object.entries(seeded.invites).flatMap(([key, code]) => ['-e', `${key.toUpperCase()}_INVITE=${code}`]),
-    ...Object.entries(seeded.days).flatMap(([key, date]) => ['-e', `${key.toUpperCase()}_DAY=${date}`])];
+    ...Object.entries(seeded.days).flatMap(([key, date]) => ['-e', `${key.toUpperCase()}_DAY=${date}`]),
+    ...Object.entries(seeded.times).flatMap(([key, time]) => ['-e', `${key.toUpperCase()}_TIME=${time}`])];
 
   if (stayUp) {
     step(`up. Simulator ${udid}; server ${API_URL}; seed in ${path.join(OUT, 'seed.json')}`);

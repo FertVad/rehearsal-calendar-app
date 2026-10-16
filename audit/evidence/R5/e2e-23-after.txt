@@ -1,0 +1,26 @@
+Cause fix 14 (T-402) - flow 23, after: the code of 8ff8757, simulator in Pacific/Honolulu,
+profiles in the machine's zone, Asia/Jerusalem (Tel Aviv).
+
+$ npm run e2e -- e2e/flows/23-profile-timezone.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/23-profile-timezone.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] The profile's timezone, not the device's (2m 11s)
+
+1/1 Flow Passed in 2m 11s
+
+An earlier run of the same flow stopped at the picker's "Honolulu (UTC-10)": its
+screenshot showed "Honolulu (UTC)" at the top of the list - the simulator's zone
+had reached the app (Hermes gives no offset for that label), so the flow now
+matches "Honolulu (...)".
