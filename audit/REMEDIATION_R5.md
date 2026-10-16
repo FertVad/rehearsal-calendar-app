@@ -172,9 +172,10 @@ reporter — получал эти токены.
 - **Всё остальное — через `toLogSafe`.** Ключи-учётные данные (`*token*`,
   `authorization`, `password`, `secret`, `cookie`, `credential`, `api key`,
   `otp`) заменяются на `[redacted]`; `config`, `request`, `headers`, `_body…`
-  выбрасываются; строки с JWT, `Bearer …`, `ExponentPushToken[…]` и параметрами
-  query, в имени которых есть token, code, password или key, редактируются — и в аргументах,
-  и в самом сообщении. Циклы и глубина обрезаются.
+  выбрасываются; строки с JWT, `Bearer …`, `ExponentPushToken[…]`, параметрами
+  query, в имени которых есть token, code, password или key, и кодом приглашения
+  в пути (`/invite/<код>`) редактируются — и в аргументах, и в самом сообщении,
+  и в `LoggedError.path`. Циклы и глубина обрезаются.
 - **Один механизм.** Все 81 прямой вызов `console` в `src/` переведены на
   `logger` (`log` → `debug`, остальные уровни один к одному); три строки AC04 в
   `AuthContext` свелись к одной — статус и текст сервера уже в `LoggedError`.
@@ -215,6 +216,33 @@ reporter — получал эти токены.
   5 из 5 PASS; клиент 68 наборов / 707 тестов PASS; `type-check` exit 0;
   `eslint src/` — 0 ошибок; `check:secrets` — 0 находок.
 - Источник и хеши — [manifest-cause13.json](evidence/R5/manifest-cause13.json).
+
+### Ревью: код приглашения в пути
+
+Ревьюер (P2): правило знало секреты в query, но не в пути. Код приглашения
+идёт в пути запроса — `/native/invite/<код>/join`, — а перехватчик ответа
+`api.ts` пишет URL каждого отказа, поэтому сетевой отказ `joinProject` клал
+код в сообщение и в `LoggedError.path`. Кто прочёл код, вступает в проект.
+
+Правка — `94d09de` (дерево `7608f34`): ещё одно правило в `SECRET_TEXT`
+того же логгера — сегмент после `/invite/` заменяется на `[redacted]` в любом
+тексте. Сообщение, аргументы и `LoggedError.path` проходят через одну
+`redactText`, так что правило одно на все три места; ссылки-приглашения
+(`https://rehearsly.me/invite/<код>`) под него попадают тоже. Других секретов
+в пути у клиента нет: остальные сегменты API — числовые id, дата и тип события.
+
+| Тест | Что проверяет | Красный до |
+|---|---|---|
+| `logger.test.ts` — invite code | Сообщение и `LoggedError.path` для `POST /native/invite/ABCD2345/join` — с `[redacted]` вместо кода; ссылка с legacy hex-кодом тоже | `2f76652` — код в сообщении и в `path` |
+| `api.log.test.ts` | Настоящий перехватчик ответа `api.ts`, сетевой отказ `joinProject`: кода нет в выводе `console.error` | `2f76652` — `Response Error: Network Error POST /native/invite/ABCD2345/join` |
+
+- **«Красное до»** ([logger-ac04-invite-before.txt](evidence/R5/logger-ac04-invite-before.txt),
+  SHA-256 `94f00e0fdab3575e8d5db31a6ee23b4675d2607ab6ef5f046c20853546c33968`):
+  на `2f76652` 2 FAIL (оба новых), 5 PASS.
+- **После** ([logger-ac04-invite-after.txt](evidence/R5/logger-ac04-invite-after.txt),
+  SHA-256 `1178ba0d05222f114c10a923792166db9bb1b2fd578d7fa4c35960a5c5148c7a`):
+  7 из 7 PASS; клиент 69 наборов / 709 тестов PASS; `type-check` exit 0;
+  `check:secrets` — 0 находок.
 
 ### Статусы
 
