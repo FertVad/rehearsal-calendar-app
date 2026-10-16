@@ -75,9 +75,13 @@ export function parseDecisions(markdown) {
     if (!m) continue;
     const word = m[2].toLowerCase();
     const action = /продолжить|continue/.test(word) ? 'continue' : /пропустить|skip/.test(word) ? 'skip' : 'review';
-    const commits = action === 'skip' ? [] : m[3].match(/\b[0-9a-f]{7,40}\b/gi) ?? [];
+    // Commits are named right after the word, before any explanation: a hash
+    // quoted in the note is not a choice of commits (T-112 came back with one
+    // docs commit — "красный на 1fbbc47" in the note was taken for the list).
+    const lead = /^((?:[\s,]+[0-9a-f]{7,40}\b)*)(.*)$/is.exec(m[3]);
+    const commits = action === 'skip' ? [] : lead[1].match(/[0-9a-f]{7,40}/gi) ?? [];
     // What the owner wrote after the word: conditions the developer must see.
-    const note = m[3].replace(/\b[0-9a-f]{7,40}\b/gi, '').replace(/^[\s,—–:-]+/, '').replace(/\s+/g, ' ').trim();
+    const note = lead[2].replace(/^[\s,—–:-]+/, '').replace(/\s+/g, ' ').trim();
     decisions[m[1]] = { action, commits, note };
   }
   return decisions;
