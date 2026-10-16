@@ -20,7 +20,8 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { DateRangePicker } from '../../../shared/components/DateRangePicker';
-import { formatDateToString } from '../../../shared/utils/time';
+import { addDays, formatDateToString, parseDateString } from '../../../shared/utils/time';
+import { useToday } from '../../../shared/hooks/useClock';
 import { memberAvailabilityLimits } from '../../../shared/utils/memberAvailabilityLimits';
 import { smartPlannerScreenStyles as styles } from '../styles';
 
@@ -61,13 +62,12 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isProjectSelectorExpanded, setIsProjectSelectorExpanded] = useState(false);
 
+  // Today in the profile's zone: the planner's days are its days (cause fix 14).
+  const today = useToday();
+
   // Custom date range state
-  const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
-  const [customEndDate, setCustomEndDate] = useState<Date>(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 6);
-    return date;
-  });
+  const [customStartDate, setCustomStartDate] = useState<Date>(() => parseDateString(today));
+  const [customEndDate, setCustomEndDate] = useState<Date>(() => parseDateString(addDays(today, 6)));
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
 
   // Which project the current member selection was seeded for
@@ -81,27 +81,18 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   // early — offering slots on a day already past, tappable straight through to
   // scheduling a rehearsal in it — and lost its last day at the far end.
   const { startDate, endDate } = useMemo(() => {
-    const today = new Date();
-    const start = new Date(today);
-    const end = new Date(today);
-
     if (selectedPeriod === 'week') {
-      end.setDate(end.getDate() + 6); // 7 days total
-    } else if (selectedPeriod === 'month') {
-      end.setDate(end.getDate() + 29); // 30 days total
-    } else {
-      // custom period
-      return {
-        startDate: formatDateToString(customStartDate),
-        endDate: formatDateToString(customEndDate),
-      };
+      return { startDate: today, endDate: addDays(today, 6) }; // 7 days total
     }
-
+    if (selectedPeriod === 'month') {
+      return { startDate: today, endDate: addDays(today, 29) }; // 30 days total
+    }
+    // custom period
     return {
-      startDate: formatDateToString(start),
-      endDate: formatDateToString(end),
+      startDate: formatDateToString(customStartDate),
+      endDate: formatDateToString(customEndDate),
     };
-  }, [selectedPeriod, customStartDate, customEndDate]);
+  }, [selectedPeriod, customStartDate, customEndDate, today]);
 
   // Load data using hook
   const {
@@ -382,7 +373,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         onConfirm={handleDateRangeConfirm}
         initialStartDate={customStartDate}
         initialEndDate={customEndDate}
-        minDate={new Date()}
+        minDate={parseDateString(today)}
         maxDays={memberAvailabilityLimits.maxDays}
       />
       <ScrollView

@@ -8,6 +8,7 @@ import { Alert } from 'react-native';
 import { useAvailabilitySave } from '../useAvailabilitySave';
 import { availabilityAPI } from '../../../../shared/services/api';
 import { AvailabilityData } from '../../types';
+import { setProfileTimezone } from '../../../../shared/utils/time';
 
 // Mock dependencies
 jest.mock('../../../../shared/services/api');
@@ -120,9 +121,24 @@ describe('useAvailabilitySave Hook', () => {
       expect(entries).toHaveLength(2);
       expect(entries[0].type).toBe('busy');
       expect(entries[0].isAllDay).toBe(false);
-      expect(entries[0].startsAt).toContain('2025-12-29');
-      expect(entries[0].startsAt).toContain('10:00');
-      expect(entries[1].startsAt).toContain('14:00');
+      // No profile zone yet: the device's, New York (jest.config.js).
+      expect(new Date(entries[0].startsAt).toISOString()).toBe('2025-12-29T15:00:00.000Z');
+      expect(new Date(entries[1].startsAt).toISOString()).toBe('2025-12-29T19:00:00.000Z');
+    });
+
+    it('saves the hours in the profile\'s zone, not the device\'s (cause fix 14)', () => {
+      // Tel Aviv chosen, the phone in New York: 10:00 is Tel Aviv's 10:00, as
+      // the day was read and as the server keys it. It went out with the
+      // device's offset: seven hours later than marked, in December.
+      setProfileTimezone('Asia/Jerusalem');
+      const { result } = renderHook(() => useAvailabilitySave());
+
+      const entries = result.current.prepareEntriesForAPI({
+        '2025-12-29': { mode: 'custom', slots: [{ start: '10:00', end: '12:00' }] },
+      });
+
+      expect(new Date(entries[0].startsAt).toISOString()).toBe('2025-12-29T08:00:00.000Z');
+      expect(new Date(entries[0].endsAt).toISOString()).toBe('2025-12-29T10:00:00.000Z');
     });
 
     it('should handle multiple dates', () => {

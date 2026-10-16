@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNow } from '../../../shared/hooks/useClock';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useNow, useTimezone } from '../../../shared/hooks/useClock';
 import { useI18n } from '../../../contexts/I18nContext';
 import { projectsAPI } from '../../../shared/services/api';
 import type { Project, ProjectMember } from '../../../shared/types';
@@ -31,9 +30,9 @@ export function useSmartPlanner({
   selectedCategories,
   selectedMemberIds,
 }: UseSmartPlannerProps) {
-  const { user } = useAuth();
   const { t } = useI18n();
-  const userTimezone = user?.timezone;
+  // The server answers in the profile's zone; a new zone is a new answer.
+  const userTimezone = useTimezone();
   const rangeDays = calendarRangeDays(startDate, endDate);
   const rangeError = rangeDays === null
     ? t.common.invalidDateRange

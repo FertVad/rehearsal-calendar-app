@@ -4,9 +4,10 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../../navigation';
 import { Project } from '../../../shared/types';
-import { parseTimeString } from '../../../shared/utils/time';
+import { parseTimeString, wallClockIn } from '../../../shared/utils/time';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
 import { logger } from '../../../shared/utils/logger';
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
@@ -62,11 +63,18 @@ export function useAddRehearsalForm({
     return sorted[0];
   }, [adminProjects]);
 
+  // The form's date and times are wall clocks in the profile's zone (time.ts):
+  // what the pickers show is what the submit reads, in the zone it writes in.
+  // The edit used to open on the device's clock and save on the profile's, so
+  // where the two differed an edit saved unchanged moved the rehearsal by the
+  // difference (review DF01).
+  const timezone = useTimezone();
+
   // Form state - set minutes to 00 for better UX
-  const [date, setDate] = useState(new Date());
-  const [startTime, setStartTime] = useState(() => setMinutesToZero(new Date()));
+  const [date, setDate] = useState(() => wallClockIn(timezone));
+  const [startTime, setStartTime] = useState(() => setMinutesToZero(wallClockIn(timezone)));
   const [endTime, setEndTime] = useState(() => {
-    const start = setMinutesToZero(new Date());
+    const start = setMinutesToZero(wallClockIn(timezone));
     const end = new Date(start);
     end.setHours(end.getHours() + 2);
     return end;
@@ -167,8 +175,8 @@ export function useAddRehearsalForm({
         const rehearsal = rehearsalResponse.data.rehearsal;
 
         // Prefill form fields
-        const startsAt = new Date(rehearsal.startsAt);
-        const endsAt = new Date(rehearsal.endsAt);
+        const startsAt = wallClockIn(timezone, rehearsal.startsAt);
+        const endsAt = wallClockIn(timezone, rehearsal.endsAt);
 
         setDate(startsAt);
         setStartTime(startsAt);
@@ -237,8 +245,8 @@ export function useAddRehearsalForm({
   };
 
   const resetForm = () => {
-    setDate(new Date());
-    const start = setMinutesToZero(new Date());
+    setDate(wallClockIn(timezone));
+    const start = setMinutesToZero(wallClockIn(timezone));
     setStartTime(start);
     const end = new Date(start);
     end.setHours(end.getHours() + 2);

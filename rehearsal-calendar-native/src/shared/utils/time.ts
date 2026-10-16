@@ -104,11 +104,89 @@ export const formatDateLocalized = (
   return date.toLocaleDateString(locale, options);
 };
 
+/**
+ * The calendar date `days` after `dateStr` ('YYYY-MM-DD'), stepped in UTC for
+ * the reason datesBetween gives.
+ */
+export const addDays = (dateStr: string, days: number): string => {
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().split('T')[0];
+};
+
 // =============================================================================
 // TIMEZONE-AWARE FUNCTIONS (using date-fns-tz)
 // =============================================================================
 
 import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
+
+// -----------------------------------------------------------------------------
+// One zone in the app: the profile's (cause fix 14, owner's decision 16.10.2026)
+// -----------------------------------------------------------------------------
+//
+// The zone is the one the person chose. Registration starts it at the device's;
+// after that only the profile changes it — a flight does not. Everything the
+// app shows or sends is read in it: rehearsal times, "today" and the day's
+// bounds, busy hours, the planner, the events written to the phone's calendar.
+// The server reads the same zone for reminder texts and a day's bounds.
+//
+// The client used to date rehearsals in the profile's zone and take "today",
+// the form's pickers and busy hours from the device's, so where the two differed
+// a past rehearsal counted as upcoming and an edit saved unchanged moved the
+// rehearsal by the difference (review DF01). And sign-in put the device's zone
+// back over the one chosen (review HP04).
+//
+// The native pickers and Date's local getters speak the device's zone, so what
+// they show is a wall clock (wallClockIn): a Date whose local fields read what a
+// clock in the profile's zone reads. It is never an instant; it becomes one only
+// through dateTimeToISOInTimezone with the same zone.
+
+/** The device's IANA zone; registration's default and nothing more. */
+export const deviceTimezone = (): string | undefined => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+/** The zone a profile's setting means: its own, or the device's while it has none. */
+export const timezoneOf = (profileTimezone?: string | null): string =>
+  profileTimezone || deviceTimezone() || 'UTC';
+
+// The signed-in profile's zone. AuthContext writes it together with the user,
+// so the screens (useTimezone, useClock.ts) and code outside React — the
+// calendar export — read one value.
+let profileTimezone: string | null = null;
+const timezoneListeners = new Set<() => void>();
+
+export const setProfileTimezone = (zone?: string | null): void => {
+  const next = zone || null;
+  if (next === profileTimezone) return;
+  profileTimezone = next;
+  timezoneListeners.forEach((listener) => listener());
+};
+
+export const onAppTimezone = (listener: () => void): (() => void) => {
+  timezoneListeners.add(listener);
+  return () => {
+    timezoneListeners.delete(listener);
+  };
+};
+
+/** The app's zone: the profile's, the device's only while the profile has none. */
+export const appTimezone = (): string => timezoneOf(profileTimezone);
+
+/**
+ * What a clock in `timezone` reads at `at`, as a Date whose local fields say it:
+ * for the pickers, formatDateToString and formatDateToTimeString. Not an instant.
+ */
+export const wallClockIn = (timezone: string, at: Date | string = new Date()): Date =>
+  toZonedTime(at, timezone);
+
+/** The date in `timezone` at `at`, 'YYYY-MM-DD'. */
+export const todayIn = (timezone: string, at: Date = new Date()): string =>
+  formatDateToString(wallClockIn(timezone, at));
 
 /**
  * Convert ISO 8601 timestamp (UTC) to date string in user's timezone
@@ -181,12 +259,14 @@ export const dateTimeToISOInTimezone = (
 ): string => {
   const [year, month, day] = dateStr.split('-').map(Number);
   const [hours, minutes] = timeStr.split(':').map(Number);
+  const pad = (n: number) => String(n).padStart(2, '0');
 
-  // Create a date object representing the local time (not UTC!)
-  const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-
-  // Convert from local time in specified timezone to UTC
-  const utcDate = fromZonedTime(localDate, timezone);
+  // Read as text, not through a device-local Date: an hour the device's clocks
+  // skip (its own spring-forward night) exists in another zone all the same.
+  const utcDate = fromZonedTime(
+    `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`,
+    timezone
+  );
 
   return utcDate.toISOString();
 };

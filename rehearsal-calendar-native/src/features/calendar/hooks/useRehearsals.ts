@@ -3,13 +3,13 @@ import { useState, useCallback, useRef } from 'react';
 import { Rehearsal, Project, RSVPStatus } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import {
-  formatDateToString,
   isoToDateStringInTimezone,
   isoToTimeStringInTimezone,
+  todayIn,
 } from '../../../shared/utils/time';
-import { useAuth } from '../../../contexts/AuthContext';
 import { useSeen } from '../../../contexts/SeenContext';
 import { useLatestRequest } from '../../../shared/hooks/useSession';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
 // Cache duration in milliseconds (15 seconds)
 const CACHE_DURATION = 15000;
@@ -17,7 +17,7 @@ const CACHE_DURATION = 15000;
 /**
  * Transform rehearsal from API format to UI format
  * Converts ISO timestamps to legacy date/time fields for backward compatibility
- * Uses user's timezone from AuthContext
+ * In the profile's zone, the app's one (time.ts, cause fix 14)
  */
 const transformRehearsal = (r: Rehearsal, userTimezone: string): Rehearsal => {
   // If rehearsal already has legacy format, return as-is
@@ -26,7 +26,6 @@ const transformRehearsal = (r: Rehearsal, userTimezone: string): Rehearsal => {
   }
 
   // Convert from new format (startsAt/endsAt) to legacy format (date/time/endTime)
-  // ✅ FIXED: Using user's timezone instead of device timezone
   if (r.startsAt && r.endsAt) {
     return {
       ...r,
@@ -53,9 +52,10 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
   // the server told it to the store rather than keeping a copy of its own.
   const { beginRead } = useSeen();
 
-  // ✅ Get user's timezone from AuthContext
-  const { user } = useAuth();
-  const userTimezone = user?.timezone || 'UTC';
+  // The zone rehearsals are dated in, and "today" below with them: the
+  // profile's (DF01 — dated by the profile and compared with the device's today,
+  // a rehearsal already over counted as upcoming).
+  const userTimezone = useTimezone();
 
   const fetchRehearsals = useCallback(async (force = false) => {
     if (projects.length === 0) {
@@ -110,7 +110,6 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
           if (r.adminStats) {
             stats[r.id] = r.adminStats;
           }
-          // ✅ Pass userTimezone to transformRehearsal
           return transformRehearsal(r, userTimezone);
         });
         fetchedRehearsals = allRehearsals;
@@ -119,7 +118,6 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
         const response = await rehearsalsAPI.getAll(filterProjectId);
         const project = projects.find(p => p.id === filterProjectId);
         const projectRehearsals = (response.data.rehearsals || []).map((r: Rehearsal) =>
-          // ✅ Pass userTimezone to transformRehearsal
           transformRehearsal({
             ...r,
             projectName: project?.name,
@@ -130,7 +128,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
 
         // For single project view, still need to fetch RSVP data separately
         // (since getAll endpoint doesn't include it yet)
-        const today = formatDateToString(new Date());
+        const today = todayIn(userTimezone);
         const upcomingRehearsals = fetchedRehearsals.filter(r => r.date && r.date >= today);
 
         if (upcomingRehearsals.length > 0) {

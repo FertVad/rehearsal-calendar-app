@@ -70,11 +70,12 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // Auto-sync hook for calendar import
   const { performAutoSync, forceSync } = useAutoCalendarSync();
 
-  const months = useMemo(() => generateMonths(7), []);
-
-  // The local date, turning at midnight — the UTC one called this evening past
-  // behind UTC and refused it (review CC01).
+  // The date in the profile's zone, turning at its midnight — the UTC one called
+  // this evening past behind UTC and refused it (review CC01), the device's
+  // disagreed with the days the hours are read into (cause fix 14).
   const today = useToday();
+
+  const months = useMemo(() => generateMonths(7, today), [today]);
 
   // Editor hook for selection, validation, time picker, and slot editing
   const editor = useAvailabilityEditor({

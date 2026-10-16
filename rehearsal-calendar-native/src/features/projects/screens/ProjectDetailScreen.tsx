@@ -19,7 +19,8 @@ import type { ProjectsStackParamList, ProjectDetailNavigation } from '../../../n
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
-import { formatDateToString as formatDateToStringUtil, parseDateString } from '../../../shared/utils/time';
+import { parseDateString } from '../../../shared/utils/time';
+import { useToday } from '../../../shared/hooks/useClock';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -75,9 +76,6 @@ export function formatDate(dateStr: string, language: string): string {
   // Remove trailing period from Russian month abbreviations
   return formatted.replace(/\.$/, '');
 }
-
-// Use shared utility
-const formatDateToString = formatDateToStringUtil;
 
 export default function ProjectDetailScreen({ route, navigation }: ProjectDetailScreenProps) {
   const { projectId } = route.params;
@@ -186,9 +184,12 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
     generateInviteLink(projectId, project.name);
   };
 
+  // The server dates the rehearsals in the profile's zone; today is the same
+  // zone's (DF01).
+  const today = useToday();
+
   // Memoize split rehearsals into upcoming and past to avoid re-sorting on every render
   const { upcomingRehearsals, pastRehearsals } = useMemo(() => {
-    const today = formatDateToString(new Date());
     const upcoming = rehearsals
       .filter(r => r.date >= today)
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
@@ -197,7 +198,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
 
     return { upcomingRehearsals: upcoming, pastRehearsals: past };
-  }, [rehearsals]);
+  }, [rehearsals, today]);
 
   const handleMemberPress = useCallback((member: Member) => {
     // Only allow admins to manage members, and can't manage owner

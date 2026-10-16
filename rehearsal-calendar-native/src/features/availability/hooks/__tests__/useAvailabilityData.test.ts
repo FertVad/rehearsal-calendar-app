@@ -6,6 +6,10 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useAvailabilityData } from '../useAvailabilityData';
 import { availabilityAPI } from '../../../../shared/services/api';
+import { setProfileTimezone } from '../../../../shared/utils/time';
+
+// The profile's zone, as AuthContext sets it with the user.
+beforeEach(() => setProfileTimezone('UTC'));
 
 // Mock dependencies
 jest.mock('../../../../shared/services/api');

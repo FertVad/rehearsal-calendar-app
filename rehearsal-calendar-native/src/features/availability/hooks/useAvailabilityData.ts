@@ -8,7 +8,7 @@ import {
   datesBetween,
 } from '../../../shared/utils/time';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
 // The last availability that loaded, kept so a start with no network shows
 // something true rather than an empty screen.
@@ -88,9 +88,9 @@ export const useAvailabilityData = () => {
   // server, and nobody is being told anything different.
   const [loadFailed, setLoadFailed] = useState(false);
 
-  // ✅ Get user's timezone from AuthContext
-  const { user } = useAuth();
-  const userTimezone = user?.timezone || 'UTC';
+  // Busy hours are read in the profile's zone, the app's one (time.ts), and
+  // saved in it (useAvailabilitySave); the server keys a day on it too.
+  const userTimezone = useTimezone();
 
   const loadAvailability = useCallback(async () => {
     try {

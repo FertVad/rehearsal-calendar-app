@@ -3,6 +3,8 @@ import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayState } from '../types';
 import { validateSlot, slotsOverlap } from '../utils';
 import { getDateLocale } from '../../../shared/utils/locale';
+import { addDays, dateTimeToISOInTimezone } from '../../../shared/utils/time';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
 import { logger } from '../../../shared/utils/logger';
 /**
@@ -10,24 +12,17 @@ import { logger } from '../../../shared/utils/logger';
  * Handles validation and data transformation for API
  */
 export const useAvailabilitySave = () => {
+  // The day's hours are the profile's zone's, as they were read
+  // (useAvailabilityData) and as the server keys the day. They went out with the
+  // device's offset, so where the two differed a slot saved moved by the
+  // difference — or onto another day (cause fix 14).
+  const timezone = useTimezone();
+
   /**
-   * Create ISO timestamp from date and time in user's timezone
+   * Create ISO timestamp from date and time in the profile's timezone
    */
-  const createTimestamp = (dateStr: string, timeStr: string): string => {
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const [hours, minutes] = timeStr.split(':').map(Number);
-
-    const isoDateTimeStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-    const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-
-    const offsetMinutes = -localDate.getTimezoneOffset();
-    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
-    const offsetMins = Math.abs(offsetMinutes) % 60;
-    const offsetSign = offsetMinutes >= 0 ? '+' : '-';
-    const offsetStr = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
-
-    return `${isoDateTimeStr}${offsetStr}`;
-  };
+  const createTimestamp = (dateStr: string, timeStr: string): string =>
+    dateTimeToISOInTimezone(dateStr, timeStr, timezone);
 
   type Entry = { startsAt: string; endsAt: string; type: 'available' | 'busy'; isAllDay: boolean };
 
@@ -52,15 +47,7 @@ export const useAvailabilitySave = () => {
       const endMinutes = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
       const endsNextDay = endMinutes <= startMinutes;
 
-      let endDate = date;
-      if (endsNextDay) {
-        const next = new Date(`${date}T00:00:00`);
-        next.setDate(next.getDate() + 1);
-        const y = next.getFullYear();
-        const m = String(next.getMonth() + 1).padStart(2, '0');
-        const d = String(next.getDate()).padStart(2, '0');
-        endDate = `${y}-${m}-${d}`;
-      }
+      const endDate = endsNextDay ? addDays(date, 1) : date;
 
       return {
         startsAt: createTimestamp(date, slot.start),

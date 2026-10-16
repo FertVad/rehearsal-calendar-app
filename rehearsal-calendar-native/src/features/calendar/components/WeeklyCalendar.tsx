@@ -2,7 +2,8 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing } from '../../../shared/constants/colors';
 import { Rehearsal } from '../../../shared/types';
-import { formatDateToString } from '../../../shared/utils/time';
+import { formatDateToString, parseDateString } from '../../../shared/utils/time';
+import { useToday } from '../../../shared/hooks/useClock';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useWeekStart, getWeekStart as getWeekStartUtil } from '../../../hooks/useWeekStart';
@@ -63,11 +64,12 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     return map;
   }, [rehearsals]);
 
+  // Today in the profile's zone, the one rehearsals are dated in (DF01).
+  const today = useToday();
+
   // Generate week data
   const generateWeekData = useCallback((weekStart: Date): DayInfo[] => {
     const days: DayInfo[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStart);
@@ -80,18 +82,18 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
         date: dateString,
         dayOfWeek: DAYS_OF_WEEK[i],
         dayOfMonth: date.getDate(),
-        isToday: date.getTime() === today.getTime(),
+        isToday: dateString === today,
         rehearsalCount,
       });
     }
 
     return days;
-  }, [rehearsalCountMap, DAYS_OF_WEEK]);
+  }, [rehearsalCountMap, DAYS_OF_WEEK, today]);
 
   // Generate all weeks
   const weeks = useMemo((): WeekData[] => {
     const result: WeekData[] = [];
-    const todayWeekStart = getWeekStart(new Date());
+    const todayWeekStart = getWeekStart(parseDateString(today));
 
     for (let i = -CENTER_INDEX; i <= CENTER_INDEX; i++) {
       const weekStart = new Date(todayWeekStart);
@@ -105,7 +107,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     }
 
     return result;
-  }, [getWeekStart, generateWeekData]);
+  }, [getWeekStart, generateWeekData, today]);
 
   // Show the month of the week's middle day so the header flips when the
   // majority of visible days have crossed into a new month — not when the

@@ -14,6 +14,7 @@ import { Text } from 'react-native';
 import { render, act, waitFor } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '../AuthContext';
 import { reportSessionExpired, restoreOwner, sessionWork, resetSessionForTests } from '../../shared/services/session';
+import { appTimezone } from '../../shared/utils/time';
 
 const mockApi = {
   getMe: jest.fn(),
@@ -64,7 +65,7 @@ jest.mock('../../shared/services/notifications', () => ({
 }));
 jest.mock('../../shared/utils/calendarMappings', () => ({ resetConnectionCache: jest.fn() }));
 
-// The device's own zone, so the provider's timezone auto-sync has nothing to do.
+// The device's own zone; the tests of the zone itself are at the end.
 const USER = { id: 7, email: 'new@example.com', firstName: 'New', createdAt: '2026-09-26T00:00:00Z',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
 let auth: ReturnType<typeof useAuth>;
@@ -533,10 +534,11 @@ it('writes the next person\'s tokens only after the previous session\'s work has
   expect(mockStorage.accessToken).toBe('other-access');
 });
 
-// The device's zone, sent for the previous person, answered after the next
-// one signed in: the profile shown stays the next person's (AC03).
+// The device's zone, sent for the previous person — an account with none of
+// its own — answered after the next one signed in: the profile shown stays the
+// next person's (AC03).
 it('keeps the next person when the previous one\'s time zone update answers late (AC03)', async () => {
-  const away = { ...USER, timezone: 'Pacific/Kiritimati' };
+  const away = { ...USER, timezone: undefined };
   const answer = held<any>();
   mockApi.updateMe.mockReturnValue(answer.promise);
   const screen = await renderAuth();
@@ -549,4 +551,65 @@ it('keeps the next person when the previous one\'s time zone update answers late
   await act(async () => { answer.resolve({ data: { user: { ...away, timezone: USER.timezone } } }); });
   expect(screen.getByTestId('user').props.children).toBe('8');
   expect(JSON.parse(mockStorage.cachedUser).id).toBe(8);
+});
+
+// The zone is the one the person chose; the device's never replaces it (owner's
+// decision 16.10.2026, cause fix 14). Tests run in New York (jest.config.js).
+describe('the profile\'s time zone (HP04)', () => {
+  const TEL_AVIV = { ...USER, timezone: 'Asia/Jerusalem' };
+
+  it('keeps a zone chosen by hand at sign-in, with the device elsewhere', async () => {
+    await renderAuth();
+    mockApi.login.mockResolvedValue({ data: { user: TEL_AVIV, accessToken: 'a', refreshToken: 'a' } });
+    await act(async () => { await auth.login('new@example.com', 'long-enough-1'); });
+    await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
+
+    expect(mockApi.updateMe).not.toHaveBeenCalled();
+    expect(auth.user?.timezone).toBe('Asia/Jerusalem');
+    expect(appTimezone()).toBe('Asia/Jerusalem');
+  });
+
+  it('keeps it at the next start, too', async () => {
+    mockStorage.accessToken = 'saved';
+    mockApi.getMe.mockResolvedValue({ data: { user: TEL_AVIV } });
+    await renderAuth();
+    await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
+
+    expect(mockApi.updateMe).not.toHaveBeenCalled();
+    expect(appTimezone()).toBe('Asia/Jerusalem');
+  });
+
+  it('follows a zone changed in the profile, and drops it at sign-out', async () => {
+    await renderAuth();
+    mockApi.login.mockResolvedValue({ data: { user: TEL_AVIV, accessToken: 'a', refreshToken: 'a' } });
+    await act(async () => { await auth.login('new@example.com', 'long-enough-1'); });
+    mockApi.updateMe.mockResolvedValue({ data: { user: { ...TEL_AVIV, timezone: 'Asia/Tokyo' } } });
+    await act(async () => { await auth.updateUser({ timezone: 'Asia/Tokyo' }); });
+    expect(appTimezone()).toBe('Asia/Tokyo');
+
+    await act(async () => { await auth.logout(); });
+    expect(appTimezone()).toBe('America/New_York');
+  });
+
+  it('gives an account created through Apple the device\'s zone, once', async () => {
+    await renderAuth();
+    // The server makes it with its default, which nobody chose.
+    mockApi.loginWithApple.mockResolvedValue({
+      data: { user: { ...OTHER, timezone: 'UTC' }, isNewUser: true, accessToken: 'n', refreshToken: 'n' },
+    });
+    await act(async () => { await auth.loginWithApple('token'); });
+
+    await waitFor(() => expect(mockApi.updateMe).toHaveBeenCalledWith({ timezone: 'America/New_York' }));
+  });
+
+  it('leaves an existing Apple account\'s zone as it is', async () => {
+    await renderAuth();
+    mockApi.loginWithApple.mockResolvedValue({
+      data: { user: { ...OTHER, timezone: 'UTC' }, isNewUser: false, accessToken: 'n', refreshToken: 'n' },
+    });
+    await act(async () => { await auth.loginWithApple('token'); });
+    await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
+
+    expect(mockApi.updateMe).not.toHaveBeenCalled();
+  });
 });

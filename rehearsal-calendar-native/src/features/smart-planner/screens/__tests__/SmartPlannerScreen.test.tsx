@@ -58,6 +58,8 @@ jest.mock('../../../../shared/services/api', () => ({
 jest.mock('../../../../shared/hooks/useClock', () => ({
   // Fixed point in the past: all slots in today's range are "future" and render
   useNow: () => new Date('2026-01-01T08:00:00Z'),
+  useToday: () => '2026-01-01',
+  useTimezone: () => 'America/New_York',
 }));
 
 const member = (userId: string) => ({

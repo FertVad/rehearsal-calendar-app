@@ -152,18 +152,15 @@ describe('TodayRehearsals Component', () => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   describe('Loading State', () => {
     it('should display loading indicator when loading is true', () => {
-      // Mock date to match selectedDate
-      const mockDate = new Date('2025-12-28T12:00:00');
-      jest.spyOn(global, 'Date').mockImplementation(((...args: any[]) => {
-        if (args.length === 0) {
-          return mockDate;
-        }
-        return new (jest.requireActual('util').types.isDate(args[0]) ? Date : Object)(
-          ...args
-        ) as any;
-      }) as any);
+      // The clock on the selected date. Not a spy on Date: left in place it
+      // broke every Date made after it, in this test and the next.
+      jest.useFakeTimers({ now: new Date('2025-12-28T12:00:00') });
 
       const { getByText, UNSAFE_getByType } = render(
         <TodayRehearsals

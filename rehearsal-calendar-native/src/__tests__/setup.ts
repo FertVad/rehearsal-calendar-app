@@ -28,5 +28,11 @@ afterAll(() => {
   console.error = originalError;
 });
 
+// The signed-in profile's zone is the app's (time.ts). A test that sets it
+// sets it for itself: the next one starts signed out, on the device's zone.
+afterEach(() => {
+  jest.requireActual('../shared/utils/time').setProfileTimezone(null);
+});
+
 // Set up global test timeout
 jest.setTimeout(10000);

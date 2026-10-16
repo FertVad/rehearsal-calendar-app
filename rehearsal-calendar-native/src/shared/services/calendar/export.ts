@@ -15,6 +15,7 @@ import {
 } from '../../utils/calendarMappings';
 import { updateLastExportTime } from '../../utils/calendarStorage';
 import { logger } from '../../utils/logger';
+import { appTimezone } from '../../utils/time';
 import { assertSession, currentSession, sessionWork, SessionEndedError, SessionStamp } from '../session';
 
 /**
@@ -29,7 +30,7 @@ import { assertSession, currentSession, sessionWork, SessionEndedError, SessionS
  * event is being read anyway to check it still exists.
  */
 function eventMatchesRehearsal(
-  event: { title?: string; startDate?: string | Date; endDate?: string | Date; location?: string | null },
+  event: { title?: string; startDate?: string | Date; endDate?: string | Date; location?: string | null; timeZone?: string | null },
   rehearsal: RehearsalWithProject
 ): boolean {
   const sameMoment = (a?: string | Date, b?: string | Date) =>
@@ -39,7 +40,10 @@ function eventMatchesRehearsal(
     event.title === eventTitleFor(rehearsal) &&
     sameMoment(event.startDate, rehearsal.startsAt) &&
     sameMoment(event.endDate, rehearsal.endsAt) &&
-    locationKey(event.location) === locationKey(rehearsal.location)
+    locationKey(event.location) === locationKey(rehearsal.location) &&
+    // An event in a zone the profile has left is rewritten in place; a
+    // platform that does not report the zone is not asked to every run.
+    (!event.timeZone || event.timeZone === appTimezone())
   );
 }
 
@@ -218,7 +222,11 @@ export async function createCalendarEvent(
       // briefly showed a time that was neither the old one nor the new one.
       // Unconfirmed, but stating the zone costs nothing and removes the
       // question.
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      //
+      // The profile's zone, the app's one (time.ts, cause fix 14) — not the
+      // device's, which a flight changes. The event is found again by the
+      // rehearsal's id, never by its time, so a new zone updates it in place.
+      timeZone: appTimezone(),
       alarms: [
         {
           relativeOffset: -30, // 30 minutes before
@@ -278,7 +286,7 @@ export async function updateCalendarEvent(
       notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
       // Also on update, so events written before this gain the mark.
       url: eventUrlFor(rehearsal.id),
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timeZone: appTimezone(),
     };
 
     logger.info('[CalendarSync] Updating event:', eventId);

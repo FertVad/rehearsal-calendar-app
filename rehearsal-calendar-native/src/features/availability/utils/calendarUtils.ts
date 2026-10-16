@@ -7,14 +7,15 @@ import { MONTH_TITLE_HEIGHT, WEEKDAY_ROW_HEIGHT, DAY_ROW_HEIGHT } from '../const
 import { WeekStartDay } from '../../../hooks/useWeekStart';
 
 /**
- * Generate months data for calendar
+ * Generate months data for calendar, from the month of `today` ('YYYY-MM-DD',
+ * the profile's zone's — useToday).
  */
-export const generateMonths = (count: number): (MonthData & { key: string })[] => {
+export const generateMonths = (count: number, today: string): (MonthData & { key: string })[] => {
   const months: (MonthData & { key: string })[] = [];
-  const today = new Date();
+  const [year, month] = today.split('-').map(Number);
 
   for (let i = 0; i < count; i++) {
-    const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    const date = new Date(year, month - 1 + i, 1);
     months.push({
       year: date.getFullYear(),
       month: date.getMonth(),

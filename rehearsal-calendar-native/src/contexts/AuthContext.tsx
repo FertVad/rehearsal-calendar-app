@@ -8,17 +8,10 @@ import { resetConnectionCache } from '../shared/utils/calendarMappings';
 import { AuthFlowError, toAuthFlowError, DeliveryOutcome } from '../features/auth/utils/authErrors';
 import { normalizeEmail } from '../features/auth/utils/accountRules';
 import { changeOwner, restoreOwner, onSessionExpired } from '../shared/services/session';
+import { deviceTimezone, setProfileTimezone } from '../shared/utils/time';
 
 /** What the profile may change in place. The address is not here: it takes a code to each address. */
 type ProfileUpdate = Parameters<typeof authAPI.updateMe>[0];
-
-function getDeviceTimezone(): string | undefined {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  } catch {
-    return undefined;
-  }
-}
 
 interface User {
   id: number;
@@ -78,7 +71,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const CREDENTIALS = ['accessToken', 'refreshToken', 'cachedUser'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
+  // The profile's zone is the app's (time.ts). The calendar export reads it
+  // outside React, so it is written with the user, before anything renders or
+  // runs with the new one.
+  const setUser = useCallback((next: User | null) => {
+    setProfileTimezone(next?.timezone);
+    setUserState(next);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AuthFlowError | null>(null);
   // Separate from `loading`: the navigator replaces everything with a spinner
@@ -191,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPendingEmail(null);
     setUser(data.user);
     return true;
-  }, [reconcileDeviceState]);
+  }, [reconcileDeviceState, setUser]);
 
   // Everything that writes or clears the session takes its turn here.
   const inTurn = useCallback(<T,>(write: () => Promise<T>) => {
@@ -253,7 +253,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-  }, [reconcileDeviceState]);
+  }, [reconcileDeviceState, setUser]);
 
   // Load user from storage on mount
   useEffect(() => {
@@ -287,7 +287,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
   }, [user]);
 
-  // Auto-sync device timezone on login/restore
+  // The profile's zone is the person's choice and the device never overwrites
+  // it (owner's decision, 16.10.2026). This wrote the device's zone over it at
+  // every sign-in and start, so a zone picked in the profile was gone by the
+  // next launch (review HP04), and a flight moved every rehearsal's time.
+  //
+  // The device's zone is only the starting value: registration sends it, and
+  // an account that has none of its own takes it here once — one created
+  // through Google or Apple, which the server makes with its default, or one
+  // from before the zone was kept.
+  const createdBySignIn = useRef<number | null>(null);
   useEffect(() => {
     if (!user) {
       hasTimezoneSynced.current = false;
@@ -297,12 +306,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     hasTimezoneSynced.current = true;
 
-    const deviceTimezone = getDeviceTimezone();
-    if (!deviceTimezone || user.timezone === deviceTimezone) return;
+    const unchosen = !user.timezone || createdBySignIn.current === user.id;
+    createdBySignIn.current = null;
+    const device = deviceTimezone();
+    if (!unchosen || !device || user.timezone === device) return;
 
-    // Silently sync timezone in background
     const session = signInAttempt.current;
-    authAPI.updateMe({ timezone: deviceTimezone })
+    authAPI.updateMe({ timezone: device })
       .then(response => {
         // Answered after a sign-out: not this session's to write (see logout).
         if (session !== signInAttempt.current) return;
@@ -310,12 +320,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(updatedUser);
         AsyncStorage.setItem('cachedUser', JSON.stringify(updatedUser));
         syncUserPreferences(updatedUser);
-        logger.info(`[Auth] Auto-synced timezone: ${user.timezone || 'none'} → ${deviceTimezone}`);
+        logger.info(`[Auth] The account's first timezone: ${device}`);
       })
       .catch(err => {
-        logger.warn('[Auth] Failed to auto-sync timezone:', err?.message);
+        logger.warn('[Auth] Failed to set the first timezone:', err?.message);
       });
-  }, [user]);
+  }, [user, setUser]);
 
   const login = useCallback(async (email: string, password: string) => {
     const attempt = beginAttempt();
@@ -340,7 +350,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (email: string, password: string, firstName: string, lastName?: string, locale?: string) => {
     const attempt = beginAttempt();
     try {
-      const response = await authAPI.register(email, password, firstName, lastName, getDeviceTimezone(), locale);
+      const response = await authAPI.register(email, password, firstName, lastName, deviceTimezone(), locale);
       if (!isCurrent(attempt)) return null;
       const created = { email: response.data.email as string, delivery: response.data.delivery as DeliveryOutcome };
       rememberPendingSignIn(created.email, password);
@@ -444,6 +454,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const attempt = beginAttempt();
     try {
       const response = await authAPI.loginWithGoogle(idToken);
+      if (response.data.isNewUser) createdBySignIn.current = response.data.user.id;
       const started = await startSession(response.data, attempt);
 
       return { linked: started && Boolean(response.data.linked) };
@@ -464,6 +475,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const attempt = beginAttempt();
     try {
       const response = await authAPI.loginWithApple(idToken, user);
+      if (response.data.isNewUser) createdBySignIn.current = response.data.user.id;
       const started = await startSession(response.data, attempt);
 
       return { linked: started && Boolean(response.data.linked) };
@@ -526,7 +538,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [forgetPendingSignIn, inTurn]);
+  }, [forgetPendingSignIn, inTurn, setUser]);
 
   // The server refused the session for good — revoked by a sign-out or a new
   // password elsewhere (AC02). Signed out here too, without asking the server:
@@ -539,7 +551,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await AsyncStorage.multiRemove(CREDENTIALS);
       setUser(null);
     }).catch((err) => logger.error('Clearing a refused session failed:', err));
-  }), [forgetPendingSignIn, inTurn]);
+  }), [forgetPendingSignIn, inTurn, setUser]);
 
   const updateUser = useCallback(async (data: ProfileUpdate) => {
     // An answer after a sign-out, or after a newer session was written, is
@@ -562,7 +574,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Whole, with its code: the screen says it in the person's language.
       throw failure;
     }
-  }, []);
+  }, [setUser]);
 
   const deleteAccount = useCallback(async () => {
     try {
@@ -595,7 +607,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [forgetPendingSignIn]);
+  }, [forgetPendingSignIn, setUser]);
 
   return (
     <AuthContext.Provider

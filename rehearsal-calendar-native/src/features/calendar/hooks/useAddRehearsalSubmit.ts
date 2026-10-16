@@ -11,8 +11,8 @@ import { dateTimeToISOInTimezone, formatDateToString, formatDateToTimeString } f
 import { getSyncSettings } from '../../../shared/utils/calendarStorage';
 import { syncRehearsalToCalendar } from '../../../shared/services/calendar';
 import { TimeRange } from '../../../shared/utils/availability';
-import { useAuth } from '../../../contexts/AuthContext';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
@@ -65,14 +65,14 @@ export function useAddRehearsalSubmit({
   const navigation = useNavigation<NavigationType>();
   const [loading, setLoading] = useState(false);
   const idempotency = useIdempotencyKey();
-  const { user } = useAuth();
-  const userTimezone = user?.timezone || 'UTC';
+  const userTimezone = useTimezone();
 
   const saveRehearsal = async () => {
     setLoading(true);
 
     try {
-      // Convert date + time to ISO timestamps using user's timezone
+      // The form's wall clocks, in the zone the form was filled in from — the
+      // profile's (useAddRehearsalForm, review DF01).
       const dateString = formatDateToString(date);
       const startTimeString = formatDateToTimeString(startTime);
       const endTimeString = formatDateToTimeString(endTime);

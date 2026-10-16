@@ -15,7 +15,8 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useUnread } from '../../../contexts/UnreadContext';
 import { getDateLocale } from '../../../shared/utils/locale';
-import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
+import { addDays, formatDateLocalized } from '../../../shared/utils/time';
+import { useToday } from '../../../shared/hooks/useClock';
 import { useRehearsals } from '../hooks';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { calendarScreenStyles as styles } from '../styles';
@@ -26,9 +27,12 @@ export default function CalendarScreen() {
   const navigation = useNavigation<CalendarScreenNavigation>();
   const { projects } = useProjects();
   const { t, language } = useI18n();
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return formatDateToString(new Date());
-  });
+  // Today in the profile's zone, the one rehearsals are dated in (DF01).
+  const today = useToday();
+  // Until a day is picked, the day shown is today, and moves with it: at
+  // midnight, and when the profile's zone changes.
+  const [pickedDate, setSelectedDate] = useState<string | null>(null);
+  const selectedDate = pickedDate ?? today;
   const [filterExpanded, setFilterExpanded] = useState(false);
 
 
@@ -194,8 +198,6 @@ export default function CalendarScreen() {
   }, [rehearsals, selectedDate]);
 
   const upcomingRehearsals = useMemo(() => {
-    const today = formatDateToString(new Date());
-
     // After the day being shown above, and never in the past.
     //
     // This compared against today alone, which is only the same thing while
@@ -217,14 +219,11 @@ export default function CalendarScreen() {
         }
         return 0;
       });
-  }, [rehearsals, selectedDate]);
+  }, [rehearsals, selectedDate, today]);
 
   // Get relative date label (Today, Tomorrow, or formatted date)
   const getRelativeDateLabel = (dateStr: string) => {
-    const today = formatDateToString(new Date());
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = formatDateToString(tomorrow);
+    const tomorrowStr = addDays(today, 1);
 
     if (dateStr === today) return t.common.today;
     if (dateStr === tomorrowStr) return t.calendar.tomorrow || 'Tomorrow';
