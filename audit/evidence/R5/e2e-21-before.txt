@@ -1,0 +1,32 @@
+# Cause fix 12, review round 2 — flow 21 red before
+# Files of the fix put back as at 1aa1bd5 (git restore --source=1aa1bd5 --
+#   src/shared/hooks/useSession.ts src/contexts/SeenContext.tsx
+#   src/contexts/UnreadContext.tsx src/features/notifications/screens/NotificationsScreen.tsx),
+# flow, seed and the server's request hold as at 3b20f40.
+# npm run e2e -- e2e/flows/21-inbox-delete-on-its-way.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Inbox deletion on its way (2m 3s) (Assertion is false: ".*Ledger check scheduled.*" is not visible)
+
+1/1 Flow Failed
+
+# server.log: [e2e] holding the request DELETE /api/native/notifications/28
+# Steps (commands.json), from the hold on:
+COMPLETED runScriptCommand "../scripts/hold-answers.js"            (DELETE held before the server)
+COMPLETED swipeCommand
+COMPLETED tapOnElement "Delete"
+COMPLETED assertConditionCommand notVisible ".*Ledger check scheduled.*"   (gone at once)
+COMPLETED swipeCommand                                              (pull to refresh)
+COMPLETED assertConditionCommand visible ".*Ledger check scheduled.*"      (optional: the deleted card is back)
+COMPLETED runScriptCommand "../scripts/release-answers.js"         (DELETE handled, succeeds)
+COMPLETED assertConditionCommand visible ".*Ledger check scheduled.*"      (optional: still there)
+FAILED    assertConditionCommand notVisible ".*Ledger check scheduled.*"

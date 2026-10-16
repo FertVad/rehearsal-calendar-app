@@ -390,8 +390,10 @@ The mechanism is `src/shared/services/session.ts` (cause fix 12). Only the
 AuthContext changes the owner (`changeOwner`), and every change ends the
 session: provider state is held with `useSessionState` (the next person starts
 empty, a write from an earlier session is dropped), an answer goes through
-`useLatestRequest` (only the newest question of the live session lands; a
-mutation takes a turn too), and work that writes in the person's name — the
+`useLatestRequest` (only the newest question of the live session lands), state
+that is both read and changed goes through `useRequestOrder` (a change is on
+its way from send to answer, and a read that answers in that time or began
+before it ended does not land), and work that writes in the person's name — the
 calendar sync — runs as `sessionWork`, which the change of owner waits for
 before writing the next tokens and which calls `assertSession` before each
 write. Only the server's refusal of the refresh token ends a session from the

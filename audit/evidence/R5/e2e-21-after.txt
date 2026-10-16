@@ -1,0 +1,25 @@
+# Cause fix 12, review round 2 — flow 21 after (code at 52934c9, flow at 3b20f40)
+# npm run e2e -- e2e/flows/21-inbox-delete-on-its-way.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Inbox deletion on its way (2m 3s)
+
+1/1 Flow Passed in 2m 3s
+
+# server.log: [e2e] holding the request DELETE /api/native/notifications/28
+
+# With the flows on the same screens, code at 3b20f40:
+# npm run e2e -- e2e/flows/16-switch-account-unread-language.yaml e2e/flows/18-inbox-late-answer.yaml e2e/flows/21-inbox-delete-on-its-way.yaml
+[Passed] Switch accounts - count and language (2m 39s)
+[Passed] Inbox against a late answer (54s)
+[Passed] Inbox deletion on its way (1m 7s)
+3/3 Flows Passed in 4m 41s
