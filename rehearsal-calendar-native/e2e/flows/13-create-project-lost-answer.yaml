@@ -2,7 +2,8 @@
 # 10: B02). Macduff creates Dunsinane; the seed makes the server take longer
 # than the app waits, so the app says it failed while the server commits the
 # project anyway. He taps Create again on the same form. The app sends the
-# key of the first try, and the server answers with the project it made:
+# key of the first try (and of a third, should the second be lost too), and
+# the server answers with the project it made:
 # reopened, the app lists Dunsinane once. Each tap used to make a project of
 # its own, and he found two.
 appId: ${APP_ID}
@@ -27,6 +28,19 @@ tags:
 - takeScreenshot: 13-lost-answer
 - tapOn: "OK"
 - tapOn: "Create"
+# The second try waits on the first one's row until it commits
+# (services/idempotency.js). On a loaded machine the first commits late, and
+# the app gives up on the second too: he taps once more, as anyone would. Every
+# try carries the same key, so however many there are, there is one project.
+- extendedWaitUntil:
+    visible: ".*(Lord Macduff, Owner|timeout).*"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: ".*timeout.*"
+    commands:
+      - tapOn: "OK"
+      - tapOn: "Create"
 - extendedWaitUntil:
     visible: ".*Lord Macduff, Owner.*"
     timeout: 30000

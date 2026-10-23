@@ -1,0 +1,34 @@
+T-402, supervisor e2e run of 23.10.2026 21:27: flow 13 ("A create tapped again
+after its answer was lost makes one project") failed:
+  Assertion is false: ".*Lord Macduff, Owner.*" is visible
+
+What the simulator's network log shows (artifacts/2026-10-23_212734, flow 13,
+device-simulator.log, CFNetwork, simulator clock in Pacific/Honolulu):
+  08:34:14.999  POST /native/projects (body 48 B) sent        - first tap
+  08:34:25.050  timed out after 10130 ms                       - expected (seed trigger sleeps 13 s)
+  08:34:36.756  POST /native/projects (body 48 B) sent        - second tap, same Idempotency-Key
+  08:34:46.764  timed out after 10049 ms                       - NOT expected
+The failure screenshot is the second "timeout of 10000ms exceeded" alert.
+
+The second request waits on the first one's idempotency row until that commits
+(server/services/idempotency.js). The first sleeps 13 s in the trigger, so with
+a responsive server it commits about 13 s after 08:34:15, well before 08:34:36.
+Here the server had not answered either by 08:34:46: the first create took
+more than 31 s end to end. The same full run on this branch earlier (20:27)
+had GET /native/projects/18/members, a plain read, time out in flow 02 the same
+way. The machine was overloaded: later in the session Metro sat at 80 % of the
+bundle for over half an hour, then at 0 % for ten minutes, twice.
+
+Flow 13 alone on HEAD (8ff8757 + docs): passed, 2m 32s (23.10.2026 22:10,
+second create answered 201 in 80 ms).
+
+Cause in the flow: it assumed the first create commits before the second tap
+gives up. On a slow server the second waits behind the first, by design, and
+the app gives up on it as well. Fix: when the second try also times out, the
+flow taps OK and Create once more, as a person would. Every try carries the
+same key; the assertion is unchanged: reopened, the app lists one Dunsinane.
+
+Not re-run after the change: Metro on this machine could not finish a bundle
+in two 10-minute attempts (exit 143, metro.log stuck at 0 %), a machine
+failure, not the task's. The flow's YAML was parsed with js-yaml to check its
+structure.
