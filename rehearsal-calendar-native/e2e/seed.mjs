@@ -89,6 +89,9 @@ export const PEOPLE = {
   // A three-day trip from his calendar, and its middle day marked free by
   // hand (28).
   dorn: { email: 'dorn@e2e.test', firstName: 'Yevgeny', lastName: 'Dorn', onboarded: true },
+  // A busy slot from 23:00 to 01:00, and an event from his calendar at the
+  // morning's same hours, 00:00 to 01:00 (29).
+  shamrayev: { email: 'shamrayev@e2e.test', firstName: 'Ilya', lastName: 'Shamrayev', onboarded: true },
   // Makes a rehearsal from 23:00 to 01:00 in the form (26), alone in a project
   // of her own.
   arkadina: { email: 'arkadina@e2e.test', firstName: 'Irina', lastName: 'Arkadina', onboarded: true },
@@ -361,6 +364,13 @@ export async function seed({ client, apiUrl, timezone }) {
             ($1, $4::timestamptz, $5::timestamptz, 'available', TRUE, 'manual', NULL)`,
     [ids.dorn, `${localDate(3)}T00:00:00.000Z`, `${localDate(5)}T23:59:59.999Z`,
       `${days.trip}T00:00:00.000Z`, `${days.trip}T23:59:59.999Z`]);
+  // Shamrayev's (29): the same night as Trigorin's, and an event from his
+  // calendar at the hours the night ends in the morning.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source, external_event_id)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual', NULL),
+            ($1, $4::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-early-train')`,
+    [ids.shamrayev, localInstant(5, 23), localInstant(6, 1), localInstant(6, 0)]);
 
   // A create whose answer never arrives (13). The first project named
   // Dunsinane takes 13 seconds to insert — longer than the app's 10-second

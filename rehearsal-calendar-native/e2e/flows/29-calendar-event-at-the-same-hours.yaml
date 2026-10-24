@@ -1,0 +1,57 @@
+# An event from the calendar shows beside a row with the same hours (cause fix
+# 16, C04). Ilya Shamrayev is busy from 23:00 on EVENING_DAY to 01:00 on
+# MORNING_DAY, and his phone's calendar has an event on MORNING_DAY from 00:00
+# to 01:00. The deduplication went by hours alone, so the event went under the
+# night's end: the morning said only "from the day before", and dropping that
+# slot looked like freeing the morning, while the event, which everyone else's
+# planner counts, stayed. Now the morning shows both. Only he is on his days.
+appId: ${APP_ID}
+name: A calendar event shows beside a row with the same hours
+tags:
+  - availability
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${SHAMRAYEV_EMAIL}
+# The calendar first. iOS's "Save Password?" sheet can come later than the
+# sign-in waits for it, over the tab bar; it is let go here too.
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+# A tap on + right after sign-in can be lost; it is tapped until the menu opens.
+- repeat:
+    times: 3
+    while:
+      notVisible: "Mark Busy"
+    commands:
+      - tapOn:
+          id: tab-create
+      - waitForAnimationToEnd
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${MORNING_DAY}
+      text: ".*, Partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+# A tap while the list still glides only stops it; it is tapped once it rests.
+- waitForAnimationToEnd
+- tapOn:
+    id: day-${MORNING_DAY}
+# The night's end and the event, each with where it came from.
+- extendedWaitUntil:
+    visible: "Already on this day"
+    timeout: 10000
+- assertVisible: ".*from the day before.*"
+- assertVisible: ".*from calendar.*"
+- takeScreenshot: 29-calendar-event-at-the-same-hours
