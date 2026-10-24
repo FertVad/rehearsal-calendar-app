@@ -3,7 +3,7 @@ import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayState } from '../types';
 import { validateSlot, slotsOverlap } from '../utils';
 import { getDateLocale } from '../../../shared/utils/locale';
-import { clockRangeEndDate, dateTimeToISOInTimezone, parseDateString } from '../../../shared/utils/time';
+import { clockRangeEndDate, dateTimeToOffsetISOInTimezone, parseDateString } from '../../../shared/utils/time';
 import { useTimezone } from '../../../shared/hooks/useClock';
 
 import { logger } from '../../../shared/utils/logger';
@@ -19,10 +19,12 @@ export const useAvailabilitySave = () => {
   const timezone = useTimezone();
 
   /**
-   * Create ISO timestamp from date and time in the profile's timezone
+   * The date and time in the profile's zone, with its offset: the text names
+   * the day the slot is saved under, as the server checks (cause fix 15,
+   * review 2).
    */
   const createTimestamp = (dateStr: string, timeStr: string): string =>
-    dateTimeToISOInTimezone(dateStr, timeStr, timezone);
+    dateTimeToOffsetISOInTimezone(dateStr, timeStr, timezone);
 
   type Entry = { startsAt: string; endsAt: string; type: 'available' | 'busy'; isAllDay: boolean };
 

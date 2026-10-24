@@ -126,6 +126,20 @@ describe('useAvailabilitySave Hook', () => {
       expect(new Date(entries[0].endsAt).toISOString()).toBe('2025-12-29T10:00:00.000Z');
     });
 
+    it('names the day a morning slot is saved under, east of UTC too (cause fix 15, review 2)', () => {
+      // The server takes a slot only under the day its start names
+      // (manualDays.js). Sent in UTC, Tel Aviv's 00:00 on the 29th read as the
+      // 28th, and the morning could not be saved at all.
+      setProfileTimezone('Asia/Jerusalem');
+      const { result } = renderHook(() => useAvailabilitySave());
+
+      const [entry] = result.current.entriesForDay('2025-12-29', { mode: 'custom', slots: [{ start: '00:00', end: '01:00' }] });
+
+      expect(entry.startsAt.slice(0, 10)).toBe('2025-12-29');
+      expect(new Date(entry.startsAt).toISOString()).toBe('2025-12-28T22:00:00.000Z');
+      expect(new Date(entry.endsAt).toISOString()).toBe('2025-12-28T23:00:00.000Z');
+    });
+
     it('should handle multiple dates', () => {
       const { result } = renderHook(() => useAvailabilitySave());
 

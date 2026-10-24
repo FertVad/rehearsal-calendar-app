@@ -165,7 +165,7 @@ export const addDays = (dateStr: string, days: number): string => {
 // TIMEZONE-AWARE FUNCTIONS (using date-fns-tz)
 // =============================================================================
 
-import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime, format, formatInTimeZone } from 'date-fns-tz';
 
 // -----------------------------------------------------------------------------
 // One zone in the app: the profile's (cause fix 14, owner's decision 16.10.2026)
@@ -336,6 +336,20 @@ export const dateTimeToISOInTimezone = (
 
   return utcDate.toISOString();
 };
+
+/**
+ * The same instant as dateTimeToISOInTimezone, written as the clock in
+ * `timezone` reads it, with its offset: "2026-01-21T00:30:00.000+03:00". Its
+ * text names the date it was entered on, which the server files a busy slot
+ * under; in UTC an early-morning slot east of UTC named the day before and was
+ * refused (cause fix 15, review 2).
+ */
+export const dateTimeToOffsetISOInTimezone = (
+  dateStr: string,
+  timeStr: string,
+  timezone: string
+): string =>
+  formatInTimeZone(dateTimeToISOInTimezone(dateStr, timeStr, timezone), timezone, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
 
 /** A clock range on a date as the interval it is, in a timezone (the rule above). */
 export const clockRangeToISO = (
