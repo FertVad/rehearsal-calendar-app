@@ -293,6 +293,9 @@ export async function seed({ client, apiUrl, timezone }) {
     token: await token('treplev'),
     body: { days: [{ date: days.other, entries: [{ startsAt: `${days.other}T00:00:00.000Z`, endsAt: `${days.other}T23:59:59.999Z`, type: 'busy', isAllDay: true }] }] },
   });
+  // The day the editor's error names, in English: "October 27, 2026".
+  labels.mark_day = new Date(`${days.mark}T00:00:00Z`).toLocaleDateString('en-US',
+    { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
   // A create whose answer never arrives (13). The first project named
   // Dunsinane takes 13 seconds to insert — longer than the app's 10-second

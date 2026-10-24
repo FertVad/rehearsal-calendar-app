@@ -6,6 +6,9 @@
 # OTHER_DAY is still free: the old save sent every loaded day, and put the
 # busy day it had loaded back over the newer one. He is in no project, so no
 # other flow's rehearsals land on his days.
+# Then a second slot over the first: the save refuses, naming MARK_DAY. The old
+# error read the day as UTC midnight with the device's clock (Honolulu): the
+# day before (cause fix 14).
 appId: ${APP_ID}
 name: Availability saves the day it changed
 tags:
@@ -112,3 +115,16 @@ tags:
     id: slot-0-end
     text: "18:00.*"
 - takeScreenshot: 10-availability-days
+# A second slot, the default 10:00-18:00 again, overlaps the first.
+- tapOn: ".*Add slot.*"
+- assertVisible:
+    id: slot-1-start
+    text: "10:00.*"
+- tapOn:
+    id: availability-save
+- extendedWaitUntil:
+    visible: "Cannot save"
+    timeout: 10000
+- assertVisible: "Error \\(${MARK_DAY_LABEL}\\):[\\s\\S]*Slots must not overlap[\\s\\S]*"
+- takeScreenshot: 10-availability-overlap
+- tapOn: "Understood"
