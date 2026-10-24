@@ -60,8 +60,9 @@ tags:
     element: "(?s)(?=.*Night watch).*"
     direction: DOWN
     centerElement: true
-# Each card is one button, its texts one label.
-- assertVisible: "(?s)(?=.*Night watch)(?=.*02:00 - 03:00).*"
+# Each card is one button, its texts one label. Its time reads as the
+# calendar's card does, "02:00 — 03:00" (one label for both since cause fix 15).
+- assertVisible: "(?s)(?=.*Night watch)(?=.*02:00 — 03:00).*"
 - takeScreenshot: 23-project-in-tel-aviv
 # The profile still says Tel Aviv after signing in on a phone in Honolulu.
 - tapOn:
@@ -108,7 +109,7 @@ tags:
     direction: DOWN
     centerElement: true
 - extendedWaitUntil:
-    visible: "(?s)(?=.*Night watch)(?=.*${WATCH_TOKYO_TIME} - ).*"
+    visible: "(?s)(?=.*Night watch)(?=.*${WATCH_TOKYO_TIME} — ).*"
     timeout: 10000
-- assertNotVisible: "(?s)(?=.*Night watch)(?=.*02:00 - 03:00).*"
+- assertNotVisible: "(?s)(?=.*Night watch)(?=.*02:00 — 03:00).*"
 - takeScreenshot: 23-project-in-tokyo
