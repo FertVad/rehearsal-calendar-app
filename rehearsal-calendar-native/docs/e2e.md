@@ -89,7 +89,8 @@ open: the on-screen keyboard Maestro types through only appears with it.
 
 Its clock is in Pacific/Honolulu (`SIMULATOR_ZONE` in `run.mjs`, set for the
 simulator's launchd after boot), and everyone's profile is in the machine's
-zone. The app shows the zone the person chose, never the device's (cause fix
+zone but Chebutykin's, pinned to Asia/Jerusalem (`CHOSEN_ZONE` in `seed.mjs`) so
+flow 23 reads the same on any machine. The app shows the zone the person chose, never the device's (cause fix
 14), so every flow runs as someone who has flown away from it; with the two
 the same, nothing on screen could tell them apart. Honolulu has no summer time
 and is not in the profile's list, so the zone picker names it at the top as
@@ -105,7 +106,9 @@ get `${PASSWORD}`, `${APP_ID}` and `${<KEY>_EMAIL}` for each account in
 invite code the seed returns (`TWELFTH_INVITE`) — the server's own, as it
 issued it — and `${<KEY>_DAY}` for each day it names (`MARK_DAY`, a local
 `YYYY-MM-DD`), and `${<KEY>_TIME}` for each time it computes (`WATCH_TOKYO_TIME`,
-an `HH:mm`). Times are local to the machine, which is every profile's zone; the
+an `HH:mm`), and `${<KEY>_LABEL}` for each text it computes (`WEEK_CHOSEN_LABEL`,
+the planner's week as its header names it). Times are local to the machine,
+which is every profile's zone but Chebutykin's, whose are in his; the
 simulator's is another (see above).
 
 A create whose answer is lost (flow 13) is made in the seed too: a trigger on

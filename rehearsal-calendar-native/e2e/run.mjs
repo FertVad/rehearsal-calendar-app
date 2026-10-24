@@ -483,7 +483,8 @@ async function main() {
     ...Object.entries(seeded.people).flatMap(([key, person]) => ['-e', `${key.toUpperCase()}_EMAIL=${person.email}`]),
     ...Object.entries(seeded.invites).flatMap(([key, code]) => ['-e', `${key.toUpperCase()}_INVITE=${code}`]),
     ...Object.entries(seeded.days).flatMap(([key, date]) => ['-e', `${key.toUpperCase()}_DAY=${date}`]),
-    ...Object.entries(seeded.times).flatMap(([key, time]) => ['-e', `${key.toUpperCase()}_TIME=${time}`])];
+    ...Object.entries(seeded.times).flatMap(([key, time]) => ['-e', `${key.toUpperCase()}_TIME=${time}`]),
+    ...Object.entries(seeded.labels).flatMap(([key, label]) => ['-e', `${key.toUpperCase()}_LABEL=${label}`])];
 
   if (stayUp) {
     step(`up. Simulator ${udid}; server ${API_URL}; seed in ${path.join(OUT, 'seed.json')}`);

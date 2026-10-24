@@ -1,19 +1,24 @@
 # One zone, the one the person chose (cause fix 14: HP04, DF01; the owner's
-# decision of 16.10.2026). Chebutykin's profile is in Tel Aviv, the machine's
-# zone (seed.mjs); the simulator is in Honolulu (run.mjs), thirteen hours
-# behind it, as if he had flown there. Everything stays in Tel Aviv: today, and
-# the time of each rehearsal. Changing the zone in the profile changes what is
-# shown.
+# decision of 16.10.2026). Chebutykin's profile is in Tel Aviv — set so by the
+# seed (seed.mjs, CHOSEN_ZONE), whatever the machine's zone; the simulator is
+# in Honolulu (run.mjs), thirteen hours behind it, as if he had flown there.
+# Everything stays in Tel Aviv: today, the time of each rehearsal, the
+# planner's week. Changing the zone in the profile changes what is shown, on
+# the project's page left open too.
 #
 # The old app wrote the device's zone over the chosen one at sign-in (HP04),
 # and took "today" from the device while dating rehearsals by the profile
 # (DF01): Midnight call, at 00:30 in Tel Aviv, belongs to yesterday in Honolulu.
+# The planner read its week's dates as UTC midnights, the day before in
+# Honolulu; the project's page kept the hours of the zone it was opened in.
 appId: ${APP_ID}
 name: The profile's timezone, not the device's
 tags:
   - calendar
   - profile
   - rehearsals
+  - planner
+  - projects
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -29,6 +34,35 @@ tags:
     centerElement: true
 - assertVisible: "(?s)(?=.*Night watch)(?=.*02:00).*"
 - takeScreenshot: 23-calendar-in-tel-aviv
+# The planner's week starts on today in Tel Aviv.
+- tapOn: "Planner, tab.*"
+- extendedWaitUntil:
+    visible: "${WEEK_CHOSEN_LABEL}"
+    timeout: 15000
+- takeScreenshot: 23-planner-week-in-tel-aviv
+# The project's page, at Tel Aviv's hours; left open while the zone changes.
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Doctor Rounds.*"
+    timeout: 10000
+- waitForAnimationToEnd
+# On its name, as in flow 19: his only project, listed first.
+- tapOn:
+    point: "25%,23%"
+- extendedWaitUntil:
+    visible: ".*Upcoming Rehearsals.*"
+    timeout: 15000
+- tapOn: ".*Upcoming Rehearsals.*"
+- scrollUntilVisible:
+    element: "(?s)(?=.*Night watch).*"
+    direction: DOWN
+    centerElement: true
+# Each card is one button, its texts one label.
+- assertVisible: "(?s)(?=.*Night watch)(?=.*02:00 - 03:00).*"
+- takeScreenshot: 23-project-in-tel-aviv
 # The profile still says Tel Aviv after signing in on a phone in Honolulu.
 - tapOn:
     id: tab-profile
@@ -65,3 +99,16 @@ tags:
     timeout: 20000
     centerElement: true
 - takeScreenshot: 23-calendar-in-tokyo
+# And so does the project's page, still open where it was left: Night watch
+# at Tokyo's time, not the 02:00 it was opened with.
+- tapOn:
+    id: tab-projects
+- scrollUntilVisible:
+    element: "(?s)(?=.*Night watch).*"
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible: "(?s)(?=.*Night watch)(?=.*${WATCH_TOKYO_TIME} - ).*"
+    timeout: 10000
+- assertNotVisible: "(?s)(?=.*Night watch)(?=.*02:00 - 03:00).*"
+- takeScreenshot: 23-project-in-tokyo

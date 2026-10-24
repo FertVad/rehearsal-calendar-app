@@ -11,7 +11,8 @@
  * Times are local to the machine, and everyone's profile is in its zone, so a
  * rehearsal seeded for 18:00 tomorrow reads 18:00 tomorrow on screen. The
  * simulator is somewhere else on purpose (run.mjs, SIMULATOR_ZONE): the app
- * shows the profile's zone, never the device's (cause fix 14).
+ * shows the profile's zone, never the device's (cause fix 14). One account is
+ * in a zone of its own whatever the machine's (CHOSEN_ZONE, flow 23).
  */
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -101,6 +102,35 @@ export function localInstant(offset, hours, minutes = 0) {
   return `${localDate(offset)}T${pad(hours)}:${pad(minutes)}:00${sign}${pad(Math.floor(Math.abs(zone) / 60))}:${pad(Math.abs(zone) % 60)}`;
 }
 
+/** The calendar date in `zone` `offset` days from today, as YYYY-MM-DD. */
+export function zoneDate(zone, offset) {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const day = new Date(`${today}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + offset);
+  return day.toISOString().slice(0, 10);
+}
+
+/** How far `zone`'s clock is ahead of UTC at `instant` (ms since the epoch), in ms. */
+function zoneOffset(zone, instant) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(instant).map(({ type, value }) => [type, Number(value)]));
+  return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second) - instant;
+}
+
+/** That day at a time on `zone`'s clock, as an ISO instant. */
+export function zoneInstant(zone, offset, hours, minutes = 0) {
+  const wall = Date.parse(`${zoneDate(zone, offset)}T${pad(hours)}:${pad(minutes)}:00Z`);
+  return new Date(wall - zoneOffset(zone, wall - zoneOffset(zone, wall))).toISOString();
+}
+
+/**
+ * Chebutykin's zone (23): Tel Aviv, set here rather than taken from the
+ * machine, so his flow reads the same wherever it runs.
+ */
+export const CHOSEN_ZONE = 'Asia/Jerusalem';
+
 async function call(apiUrl, method, route, { token, body } = {}) {
   const response = await fetch(apiUrl + route, {
     method,
@@ -139,9 +169,9 @@ export async function seed({ client, apiUrl, timezone }) {
     return tokens[key];
   };
 
-  const project = async (name, description, cast, owner = 'director') => {
+  const project = async (name, description, cast, owner = 'director', zone = timezone) => {
     const { project: created } = await call(apiUrl, 'POST', '/native/projects',
-      { token: await token(owner), body: { name, description, timezone } });
+      { token: await token(owner), body: { name, description, timezone: zone } });
     const { inviteCode } = await call(apiUrl, 'POST', `/native/projects/${created.id}/invite`, { token: await token(owner), body: {} });
     for (const key of cast) await call(apiUrl, 'POST', `/native/invite/${inviteCode}/join`, { token: await token(key), body: {} });
     return { id: created.id, inviteCode };
@@ -180,21 +210,26 @@ export async function seed({ client, apiUrl, timezone }) {
   await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
   await project('Charlotta Tricks', 'Card tricks', [], 'charlotta');
   // Gaev's, and Chebutykin in it as the join puts him (23): the sign-ins are spent.
-  const { id: roundsId } = await project('Doctor Rounds', 'The Prozorov house', [], 'gaev');
+  // His profile, and the project, in the zone he chose.
+  await client.query('UPDATE native_users SET timezone = $1 WHERE id = $2', [CHOSEN_ZONE, ids.chebutykin]);
+  const { id: roundsId } = await project('Doctor Rounds', 'The Prozorov house', [], 'gaev', CHOSEN_ZONE);
   await client.query(
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
     [roundsId, ids.chebutykin]);
 
-  // `from` and `to` are hours, or [hours, minutes].
-  const at = (day, time) => (Array.isArray(time) ? localInstant(day, ...time) : localInstant(day, time));
-  const rehearsal = async (projectId, title, day, from, to, cast, by = 'director') => {
+  // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
+  const at = (day, time, zone) => {
+    const [hours, minutes = 0] = Array.isArray(time) ? time : [time];
+    return zone ? zoneInstant(zone, day, hours, minutes) : localInstant(day, hours, minutes);
+  };
+  const rehearsal = async (projectId, title, day, from, to, cast, by = 'director', zone) => {
     const { rehearsal: created } = await call(apiUrl, 'POST', `/native/projects/${projectId}/rehearsals`, {
       token: await token(by),
       body: {
         title,
-        startsAt: at(day, from),
-        endsAt: at(day, to),
+        startsAt: at(day, from, zone),
+        endsAt: at(day, to, zone),
         location: 'Main hall',
         participant_ids: cast.map((key) => String(ids[key])),
       },
@@ -219,17 +254,30 @@ export async function seed({ client, apiUrl, timezone }) {
     guitar: await rehearsal(kitchenId, 'Guitar song', 2, 20, 21, ['gaev', 'yepikhodov'], 'gaev'),
     supper: await rehearsal(kitchenId, 'Supper service', 3, 19, 20, ['gaev', 'dasha'], 'gaev'),
     linen: await rehearsal(kitchenId, 'Linen count', 4, 12, 13, ['gaev', 'dasha'], 'gaev'),
-    // Both in the small hours here, where the simulator (run.mjs) is still on
-    // the day before: dated by the device, today's would be yesterday's.
-    midnight: await rehearsal(roundsId, 'Midnight call', 0, [0, 30], 1, ['chebutykin'], 'gaev'),
-    watch: await rehearsal(roundsId, 'Night watch', 1, 2, 3, ['chebutykin'], 'gaev'),
+    // Both in the small hours in Tel Aviv, where the simulator (run.mjs) is
+    // still on the day before: dated by the device, today's would be yesterday's.
+    midnight: await rehearsal(roundsId, 'Midnight call', 0, [0, 30], 1, ['chebutykin'], 'gaev', CHOSEN_ZONE),
+    watch: await rehearsal(roundsId, 'Night watch', 1, 2, 3, ['chebutykin'], 'gaev', CHOSEN_ZONE),
   };
 
   // What the flow reads after moving the profile to Tokyo: the same instant on
-  // Tokyo's clock, which is six or seven hours on from here with summer time.
+  // Tokyo's clock, six or seven hours on from Tel Aviv with summer time.
   const tokyo = (instant) => new Intl.DateTimeFormat('en-GB',
     { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(instant));
-  const times = { watch_tokyo: tokyo(localInstant(1, 2)) };
+  const times = { watch_tokyo: tokyo(zoneInstant(CHOSEN_ZONE, 1, 2)) };
+
+  // The planner's week in Tel Aviv, as its header names it in English:
+  // "16-22 Oct", or "28 Oct - 3 Nov" across a month.
+  const plannerDay = (offset) => {
+    const day = new Date(`${zoneDate(CHOSEN_ZONE, offset)}T00:00:00Z`);
+    return { day: day.getUTCDate(), month: day.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }) };
+  };
+  const [first, last] = [plannerDay(0), plannerDay(6)];
+  const labels = {
+    week_chosen: first.month === last.month
+      ? `${first.day}-${last.day} ${first.month}`
+      : `${first.day} ${first.month} - ${last.day} ${last.month}`,
+  };
 
   // Some of the cast are busy, so the planner has something to weigh.
   const busy = (day, from, to) => ({ date: localDate(day), entries: [{ startsAt: localInstant(day, from), endsAt: localInstant(day, to), type: 'busy' }] });
@@ -268,6 +316,7 @@ export async function seed({ client, apiUrl, timezone }) {
     invites: { twelfth: twelfth.inviteCode },
     days,
     times,
+    labels,
     rehearsals,
   };
 }
