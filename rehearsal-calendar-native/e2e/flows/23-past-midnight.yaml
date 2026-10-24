@@ -1,0 +1,21 @@
+# A rehearsal running past midnight is on both days (cause fix 15: DD02).
+# Nina Zarechnaya's "Night run" goes from 23:00 yesterday to 01:00 today. The
+# calendar filed a rehearsal under its start date alone, so today — the day
+# the calendar opens on — said nothing of it, and the card said "23:00 — 01:00"
+# without the end's date. Only she is on it, so no other flow's plans reach
+# her days. Her own slot past midnight is flow 24.
+appId: ${APP_ID}
+name: A rehearsal past midnight is on both days
+tags:
+  - calendar
+  - rehearsals
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${ZARECHNAYA_EMAIL}
+# Today, under today's heading: the end with its own date.
+- extendedWaitUntil:
+    visible: ".*23:00 — .*, 01:00.*Night run.*"
+    timeout: 30000
+- takeScreenshot: 23-night-run-today

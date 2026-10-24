@@ -128,12 +128,15 @@ describe('useAddRehearsalSubmit Hook', () => {
   });
 
   describe('Validation - End Time Before Start Time', () => {
-    it('should show error when end time <= start time', async () => {
+    it('an end before the start is the next morning, and is sent so (DF04)', async () => {
+      (rehearsalsAPI.create as jest.Mock).mockResolvedValue({ data: { rehearsal: { id: '9' } } });
+      // The form opened at 23:00: its end, two hours on, is 01:00 the next day.
       const { result } = renderHook(() =>
         useAddRehearsalSubmit({
           ...defaultProps,
-          startTime: new Date('2025-12-29T16:00:00'),
-          endTime: new Date('2025-12-29T14:00:00'), // Before start
+          date: new Date('2025-12-31T00:00:00'),
+          startTime: new Date('2025-12-31T23:00:00'),
+          endTime: new Date('2026-01-01T01:00:00'),
         })
       );
 
@@ -141,11 +144,31 @@ describe('useAddRehearsalSubmit Hook', () => {
         await result.current.handleSubmit();
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'End time must be after start time'
+      expect(rehearsalsAPI.create).toHaveBeenCalledWith('1', expect.objectContaining({
+        startsAt: '2025-12-31T23:00:00.000Z',
+        endsAt: '2026-01-01T01:00:00.000Z',
+      }), expect.anything());
+    });
+
+    it('only the clock counts: an end Date on the start day before the start is still the next morning', async () => {
+      (rehearsalsAPI.create as jest.Mock).mockResolvedValue({ data: { rehearsal: { id: '9' } } });
+      const { result } = renderHook(() =>
+        useAddRehearsalSubmit({
+          ...defaultProps,
+          date: new Date('2025-12-29T00:00:00'),
+          startTime: new Date('2025-12-29T22:00:00'),
+          endTime: new Date('2025-12-29T00:30:00'),
+        })
       );
-      expect(rehearsalsAPI.create).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(rehearsalsAPI.create).toHaveBeenCalledWith('1', expect.objectContaining({
+        startsAt: '2025-12-29T22:00:00.000Z',
+        endsAt: '2025-12-30T00:30:00.000Z',
+      }), expect.anything());
     });
 
     it('should show error when end time equals start time', async () => {

@@ -27,6 +27,8 @@ export interface Rehearsal {
     date?: string;
     time?: string;
     endTime?: string;
+    /** The last day the rehearsal is on, when read through rehearsalInZone. */
+    endDate?: string;
     duration?: string;
     /** Optional name for the call, e.g. "Act II run-through". */
     title?: string;

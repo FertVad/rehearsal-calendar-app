@@ -2,8 +2,13 @@
  * Type definitions for Availability feature
  */
 
-/** Where a row came from, when it is not the user's own. */
-export type SlotSource = 'apple_calendar' | 'google_calendar' | 'rehearsal';
+/**
+ * Where a row came from, when it is not the user's own — or not this day's:
+ * 'previous_day' is the morning end of the user's own slot from the day before
+ * that runs past midnight. It is edited on the day it starts (the day the
+ * server files it under), and shown here so this day does not read free.
+ */
+export type SlotSource = 'apple_calendar' | 'google_calendar' | 'rehearsal' | 'previous_day';
 
 export interface TimeSlot {
   start: string;
@@ -22,7 +27,7 @@ export interface TimeSlot {
 
 /** Which rule a slot broke. Validation stays free of i18n; the screen
  *  turns the key into text so the message follows the user's language. */
-export type SlotValidationError = 'endBeforeStart' | 'overlap';
+export type SlotValidationError = 'sameStartEnd' | 'overlap';
 
 export interface SlotValidation {
   isValid: boolean;

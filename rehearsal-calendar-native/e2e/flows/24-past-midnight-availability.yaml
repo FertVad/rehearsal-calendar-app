@@ -1,0 +1,94 @@
+# A busy slot past midnight is one slot, on both days (cause fix 15: CC06).
+# Nina Zarechnaya is busy from 23:00 on EVENING_DAY to 01:00 on MORNING_DAY.
+# The editor cut that into two slots of her own, so the evening read
+# 23:00–23:59 and a save of it wrote that back; an evening slot ending after
+# midnight could not be saved at all. Now the evening holds it whole, "01:00,
+# next day", and saves it as it is; the morning shows its end, from the day
+# before. Only she is on her days (flow 23 has her rehearsal, days earlier).
+appId: ${APP_ID}
+name: A busy slot past midnight is one slot, on both days
+tags:
+  - availability
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${ZARECHNAYA_EMAIL}
+# The calendar first. iOS's "Save Password?" sheet can come later than the
+# sign-in waits for it, over the tab bar; it is let go here too.
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${EVENING_DAY}
+      text: ".*, Partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+# The evening's slot, whole.
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    visible:
+      id: slot-0-start
+      text: "23:00.*"
+    timeout: 10000
+- assertVisible:
+    id: slot-0-end
+    text: "01:00.*"
+- assertVisible:
+    id: slot-0-next-day
+# Saved as it is: picking its mode again makes the day one to save.
+- tapOn:
+    id: mode-custom
+- tapOn:
+    id: availability-save
+- extendedWaitUntil:
+    visible: "Availability saved"
+    timeout: 15000
+- tapOn: "OK"
+# Away and back: the editor loads from the server again.
+- tapOn:
+    id: availability-close
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+# The morning: the slot's end, from the day before, and nothing of her own.
+- scrollUntilVisible:
+    element:
+      id: day-${MORNING_DAY}
+      text: ".*, Partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn:
+    id: day-${MORNING_DAY}
+- extendedWaitUntil:
+    visible: ".*00:00 – 01:00.*"
+    timeout: 10000
+- assertVisible: ".*from the day before.*"
+- assertNotVisible:
+    id: slot-0-start
+# The evening still ends at 01:00 the next day.
+- tapOn:
+    id: day-${MORNING_DAY}
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    visible:
+      id: slot-0-end
+      text: "01:00.*"
+    timeout: 10000
+- takeScreenshot: 24-evening-slot-whole

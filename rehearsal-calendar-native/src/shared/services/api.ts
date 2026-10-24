@@ -315,12 +315,13 @@ export const projectsAPI = {
     }),
 
   // Get members availability for a date range (for Smart Planner)
-  getMembersAvailabilityRange: (projectId: string, startDate: string, endDate: string, userIds?: string[]) =>
+  getMembersAvailabilityRange: (projectId: string, startDate: string, endDate: string, userIds?: string[], excludeRehearsalId?: string) =>
     api.get(`/native/projects/${projectId}/members/availability`, {
       params: {
         startDate,
         endDate,
         userIds: userIds?.join(','),
+        excludeRehearsalId,
       },
     }),
 

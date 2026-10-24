@@ -2,11 +2,8 @@ import { logger } from '../../../shared/utils/logger';
 import { useState, useCallback, useRef } from 'react';
 import { Rehearsal, Project, RSVPStatus } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
-import {
-  isoToDateStringInTimezone,
-  isoToTimeStringInTimezone,
-  todayIn,
-} from '../../../shared/utils/time';
+import { todayIn } from '../../../shared/utils/time';
+import { lastDateOf, rehearsalInZone } from '../../../shared/utils/rehearsalDays';
 import { useSeen } from '../../../contexts/SeenContext';
 import { useLatestRequest } from '../../../shared/hooks/useSession';
 import { useTimezone } from '../../../shared/hooks/useClock';
@@ -15,29 +12,13 @@ import { useTimezone } from '../../../shared/hooks/useClock';
 const CACHE_DURATION = 15000;
 
 /**
- * Transform rehearsal from API format to UI format
- * Converts ISO timestamps to legacy date/time fields for backward compatibility
- * In the profile's zone, the app's one (time.ts, cause fix 14)
+ * Every rehearsal is read from its interval, in the profile's zone (time.ts,
+ * cause fix 14), even when the server sent the legacy date/time fields too:
+ * those name the start's day only, and the screens need the last day as well
+ * (rehearsalInZone, DD02).
  */
-const transformRehearsal = (r: Rehearsal, userTimezone: string): Rehearsal => {
-  // If rehearsal already has legacy format, return as-is
-  if (r.date && r.time) {
-    return r;
-  }
-
-  // Convert from new format (startsAt/endsAt) to legacy format (date/time/endTime)
-  if (r.startsAt && r.endsAt) {
-    return {
-      ...r,
-      date: isoToDateStringInTimezone(r.startsAt, userTimezone),
-      time: isoToTimeStringInTimezone(r.startsAt, userTimezone),
-      endTime: isoToTimeStringInTimezone(r.endsAt, userTimezone),
-    };
-  }
-
-  // Fallback: return as-is
-  return r;
-};
+const transformRehearsal = (r: Rehearsal, userTimezone: string): Rehearsal =>
+  rehearsalInZone(r, userTimezone);
 
 export const useRehearsals = (projects: Project[], filterProjectId: string | null) => {
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
@@ -129,7 +110,7 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
         // For single project view, still need to fetch RSVP data separately
         // (since getAll endpoint doesn't include it yet)
         const today = todayIn(userTimezone);
-        const upcomingRehearsals = fetchedRehearsals.filter(r => r.date && r.date >= today);
+        const upcomingRehearsals = fetchedRehearsals.filter(r => (lastDateOf(r) ?? '') >= today);
 
         if (upcomingRehearsals.length > 0) {
           await Promise.all(

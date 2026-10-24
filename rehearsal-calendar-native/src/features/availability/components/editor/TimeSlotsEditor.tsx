@@ -35,7 +35,7 @@ export default function TimeSlotsEditor({
           <Text style={styles.validationErrorText}>
             {validationError === 'overlap'
               ? t.availability.slotsOverlap
-              : t.availability.slotEndBeforeStart}
+              : t.availability.slotSameStartEnd}
           </Text>
         </View>
       )}

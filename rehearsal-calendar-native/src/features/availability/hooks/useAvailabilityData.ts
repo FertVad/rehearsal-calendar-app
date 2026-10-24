@@ -6,6 +6,8 @@ import {
   isoToDateStringInTimezone,
   isoToTimeStringInTimezone,
   datesBetween,
+  addDays,
+  endsNextDay,
 } from '../../../shared/utils/time';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTimezone } from '../../../shared/hooks/useClock';
@@ -124,7 +126,7 @@ export const useAvailabilityData = () => {
         // marked and 10 September free, and each save after a reload walked it
         // another day back. Nobody east of UTC ever saw it, which is why it
         // survived — the current users are all in Berlin, Moscow and Jerusalem.
-        const push = (dateStr: string, startTime: string, endTime: string) => {
+        const push = (dateStr: string, startTime: string, endTime: string, source = record.source) => {
           if (!startTime || !endTime) return;
           if (!serverData[dateStr]) serverData[dateStr] = [];
           serverData[dateStr].push({
@@ -132,7 +134,7 @@ export const useAvailabilityData = () => {
             endTime,
             type: record.type,
             isAllDay,
-            source: record.source,
+            source,
           });
         };
 
@@ -172,6 +174,18 @@ export const useAvailabilityData = () => {
 
         if (firstDate === lastDate) {
           push(firstDate, startTime, endTime);
+          continue;
+        }
+
+        // The person's own slot running past midnight is one slot of the day it
+        // starts on — that day edits and saves it, and the server files it
+        // there — and the next morning shows its end, read-only (cause fix 15).
+        // Cut into two own slots, saving the first day wrote it back as ending
+        // at 23:59, and the second day held a copy of the morning.
+        const ownRow = !record.source || record.source === 'manual';
+        if (ownRow && lastDate === addDays(firstDate, 1) && endsNextDay(startTime, endTime)) {
+          push(firstDate, startTime, endTime);
+          if (endTime !== '00:00') push(lastDate, '00:00', endTime, 'previous_day');
           continue;
         }
 

@@ -7,7 +7,12 @@ import { AppStackParamList } from '../../../navigation';
 import { Project, ProjectMember } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { checkSchedulingConflicts, formatConflictMessage } from '../../../shared/utils/conflictDetection';
-import { dateTimeToISOInTimezone, formatDateToString, formatDateToTimeString } from '../../../shared/utils/time';
+import {
+  clockRangeToISO,
+  formatDateToString,
+  formatDateToTimeString,
+  isEmptyClockRange,
+} from '../../../shared/utils/time';
 import { getSyncSettings } from '../../../shared/utils/calendarStorage';
 import { syncRehearsalToCalendar } from '../../../shared/services/calendar';
 import { TimeRange } from '../../../shared/utils/availability';
@@ -30,7 +35,7 @@ interface UseAddRehearsalSubmitProps {
   membersFailed: boolean;
   reloadMembers: () => void;
   members: ProjectMember[];
-  memberAvailability: Record<string, { timeRanges: TimeRange[] }>;
+  memberAvailability: Record<string, { timeRanges: TimeRange[]; nextDayRanges?: TimeRange[] }>;
   /** The availability is for the day and people shown (useRehearsalAvailability). */
   availabilityReady: boolean;
   availabilityFailed: boolean;
@@ -71,15 +76,19 @@ export function useAddRehearsalSubmit({
     setLoading(true);
 
     try {
-      // The form's wall clocks, in the zone the form was filled in from — the
-      // profile's (useAddRehearsalForm, review DF01).
-      const dateString = formatDateToString(date);
-      const startTimeString = formatDateToTimeString(startTime);
-      const endTimeString = formatDateToTimeString(endTime);
+      // The date and the two clock times as the interval they are, in the
+      // profile's zone, the one the form was filled in from (useAddRehearsalForm,
+      // review DF01): an end before the start is the next morning (DF04).
+      const { startsAt, endsAt } = clockRangeToISO(
+        formatDateToString(date),
+        formatDateToTimeString(startTime),
+        formatDateToTimeString(endTime),
+        userTimezone
+      );
 
       const rehearsalData = {
-        startsAt: dateTimeToISOInTimezone(dateString, startTimeString, userTimezone),
-        endsAt: dateTimeToISOInTimezone(dateString, endTimeString, userTimezone),
+        startsAt,
+        endsAt,
         // Optional: an untitled rehearsal is perfectly normal, so send
         // undefined rather than an empty string.
         title: title.trim() || undefined,
@@ -198,7 +207,9 @@ export function useAddRehearsalSubmit({
       return;
     }
 
-    if (endTime <= startTime) {
+    // Only the clock times count: the form's Date objects carry whatever day
+    // they were made on, and an end before the start is the next day.
+    if (isEmptyClockRange(formatDateToTimeString(startTime), formatDateToTimeString(endTime))) {
       Alert.alert(t.common.error, t.rehearsals.endTimeError);
       return;
     }

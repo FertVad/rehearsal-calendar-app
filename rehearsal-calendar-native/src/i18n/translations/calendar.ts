@@ -59,6 +59,8 @@ export interface RehearsalsTranslations {
   loadAvailabilityError: string;
   projectNotSelected: string;
   endTimeError: string;
+  /** Beside an end time that is on the day after the start. */
+  endsNextDay: string;
   scheduleConflict: string;
   scheduleConflictMessage: string;
   createAnyway: string;
@@ -157,7 +159,8 @@ needProject: 'Репетиции появятся, когда вы окажет�
     loadMembersError: 'Не удалось загрузить участников проекта',
     loadAvailabilityError: 'Не удалось загрузить доступность участников',
     projectNotSelected: 'Выберите проект для создания репетиции',
-    endTimeError: 'Время окончания должно быть позже времени начала',
+    endTimeError: 'Время окончания не может совпадать со временем начала',
+    endsNextDay: 'следующего дня',
     scheduleConflict: '⚠️ Конфликт расписания',
     scheduleConflictMessage: 'Вы уверены, что хотите создать репетицию?',
     createAnyway: 'Создать всё равно',
@@ -255,7 +258,8 @@ needProject: 'Rehearsals show up once you are in a project',
     loadMembersError: 'Failed to load project members',
     loadAvailabilityError: 'Failed to load member availability',
     projectNotSelected: 'Select a project to create a rehearsal',
-    endTimeError: 'End time must be after start time',
+    endTimeError: 'End time cannot be the same as start time',
+    endsNextDay: 'next day',
     scheduleConflict: '⚠️ Schedule Conflict',
     scheduleConflictMessage: 'Are you sure you want to create this rehearsal?',
     createAnyway: 'Create Anyway',
@@ -353,7 +357,8 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     loadMembersError: 'No se pudieron cargar los miembros del proyecto',
     loadAvailabilityError: 'No se pudo cargar la disponibilidad de los miembros',
     projectNotSelected: 'Selecciona un proyecto para crear un ensayo',
-    endTimeError: 'La hora de fin debe ser posterior a la de inicio',
+    endTimeError: 'La hora de fin no puede ser igual a la de inicio',
+    endsNextDay: 'día siguiente',
     scheduleConflict: '⚠️ Conflicto de horario',
     scheduleConflictMessage: '¿Seguro que quieres crear este ensayo?',
     createAnyway: 'Crear de todos modos',
@@ -451,7 +456,8 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     loadMembersError: 'Projektmitglieder konnten nicht geladen werden',
     loadAvailabilityError: 'Verfügbarkeit der Mitglieder konnte nicht geladen werden',
     projectNotSelected: 'Wähle ein Projekt aus, um eine Probe zu erstellen',
-    endTimeError: 'Die Endzeit muss nach der Startzeit liegen',
+    endTimeError: 'Die Endzeit darf nicht gleich der Startzeit sein',
+    endsNextDay: 'am nächsten Tag',
     scheduleConflict: '⚠️ Terminkonflikt',
     scheduleConflictMessage: 'Möchtest du diese Probe wirklich erstellen?',
     createAnyway: 'Trotzdem erstellen',

@@ -88,6 +88,53 @@ export const minutesToTime = (minutes: number): string => {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 };
 
+const DAY_MINUTES = 24 * 60;
+
+// =============================================================================
+// CLOCK RANGES (cause fix 15)
+//
+// A rehearsal and a busy slot are intervals, not a date with two times. Every
+// form picks a date, a start and an end on the clock; this is the one rule that
+// turns those into an interval, for every form that has them:
+//
+// - an end after the start is on the same day: 10:00–18:00;
+// - an end before the start is on the next day: 23:00–01:00 runs two hours into
+//   the next morning, 22:00–00:00 ends at midnight;
+// - an end equal to the start is no range at all — zero hours, or a whole day,
+//   and nobody can tell which.
+//
+// The end used to be put on the start's date whatever it said, so 23:00–01:00
+// went out ending before it began (DF04) and the editor's next-day branch was
+// refused before it ran (CC06).
+// =============================================================================
+
+/** Start and end are the same moment on the clock: not a range. */
+export const isEmptyClockRange = (start: string, end: string): boolean =>
+  timeToMinutes(start) === timeToMinutes(end);
+
+/** The end is on the day after the start. */
+export const endsNextDay = (start: string, end: string): boolean =>
+  timeToMinutes(end) < timeToMinutes(start);
+
+/** The date the end of a range starting on `date` falls on. */
+export const clockRangeEndDate = (date: string, start: string, end: string): string =>
+  endsNextDay(start, end) ? addDays(date, 1) : date;
+
+/**
+ * The range as minutes from the start day's midnight: [start, end), with an end
+ * on the next day past 24:00. Two ranges of one day compare on this axis, and a
+ * range of the next day sits on it shifted by a day (`dayOffset` 1).
+ */
+export const clockRangeMinutes = (start: string, end: string, dayOffset = 0): [number, number] => {
+  const from = timeToMinutes(start) + dayOffset * DAY_MINUTES;
+  const to = timeToMinutes(end) + dayOffset * DAY_MINUTES;
+  return [from, endsNextDay(start, end) ? to + DAY_MINUTES : to];
+};
+
+/** Two half-open minute ranges share time; touching ends do not. */
+export const minuteRangesOverlap = (a: [number, number], b: [number, number]): boolean =>
+  a[0] < b[1] && b[0] < a[1];
+
 /**
  * Format YYYY-MM-DD string to localized date string (e.g., "25 ноября, понедельник").
  */
@@ -288,6 +335,35 @@ export const dateTimeToISOInTimezone = (
   );
 
   return utcDate.toISOString();
+};
+
+/** A clock range on a date as the interval it is, in a timezone (the rule above). */
+export const clockRangeToISO = (
+  dateStr: string,
+  start: string,
+  end: string,
+  timezone: string
+): { startsAt: string; endsAt: string } => ({
+  startsAt: dateTimeToISOInTimezone(dateStr, start, timezone),
+  endsAt: dateTimeToISOInTimezone(clockRangeEndDate(dateStr, start, end), end, timezone),
+});
+
+/**
+ * The calendar dates an interval covers in a timezone, first to last. An end at
+ * exactly midnight closes the day before; it does not put the interval on the
+ * next day too.
+ */
+export const intervalDates = (
+  startsAt: string,
+  endsAt: string,
+  timezone: string
+): { first: string; last: string } => {
+  const first = isoToDateStringInTimezone(startsAt, timezone);
+  let last = isoToDateStringInTimezone(endsAt, timezone);
+  if (last > first && isoToTimeStringInTimezone(endsAt, timezone) === '00:00') {
+    last = addDays(last, -1);
+  }
+  return { first, last: last < first ? first : last };
 };
 
 /**

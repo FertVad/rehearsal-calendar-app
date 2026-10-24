@@ -80,6 +80,9 @@ export const PEOPLE = {
   // One zone, the profile's (23): Tel Aviv chosen, the phone elsewhere, and he
   // changes it in the profile. Rehearsals only he is on, so no other flow's move.
   chebutykin: { email: 'chebutykin@e2e.test', firstName: 'Ivan', lastName: 'Chebutykin', onboarded: true },
+  // What runs past midnight: a rehearsal from 23:00 yesterday to 01:00 today
+  // (23), and a busy slot of her own from 23:00 to 01:00 later on (24).
+  zarechnaya: { email: 'zarechnaya@e2e.test', firstName: 'Nina', lastName: 'Zarechnaya', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -205,6 +208,12 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
       [kitchenId, ids[key]]);
   }
+  // Zarechnaya (23) too, for the same reason.
+  const { id: nightId } = await project('Night Train', 'To Yelets', [], 'gaev');
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+    [nightId, ids.zarechnaya]);
   // Made in this order: the Estate is the newer, so the form opens on it.
   await project('Pishchik Mill', 'Flour', [], 'pishchik');
   await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
@@ -258,6 +267,17 @@ export async function seed({ client, apiUrl, timezone }) {
     // still on the day before: dated by the device, today's would be yesterday's.
     midnight: await rehearsal(roundsId, 'Midnight call', 0, [0, 30], 1, ['chebutykin'], 'gaev', CHOSEN_ZONE),
     watch: await rehearsal(roundsId, 'Night watch', 1, 2, 3, ['chebutykin'], 'gaev', CHOSEN_ZONE),
+    // 23:00 yesterday to 01:00 today, so it is on today too (23).
+    night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
+      token: await token('gaev'),
+      body: {
+        title: 'Night run',
+        startsAt: localInstant(-1, 23),
+        endsAt: localInstant(0, 1),
+        location: 'Station',
+        participant_ids: [String(ids.zarechnaya)],
+      },
+    })).rehearsal.id,
   };
 
   // What the flow reads after moving the profile to Tokyo: the same instant on
@@ -288,7 +308,11 @@ export async function seed({ client, apiUrl, timezone }) {
 
   // The editor (10) marks the first of these; the last is busy all day, and
   // the flow changes it behind the screen's back while the editor is open.
-  const days = { before: localDate(2), mark: localDate(3), after: localDate(4), other: localDate(6) };
+  const days = {
+    before: localDate(2), mark: localDate(3), after: localDate(4), other: localDate(6),
+    // Zarechnaya's slot (24): from 23:00 on the first to 01:00 on the second.
+    evening: localDate(5), morning: localDate(6),
+  };
   await call(apiUrl, 'PUT', '/native/availability/days', {
     token: await token('treplev'),
     body: { days: [{ date: days.other, entries: [{ startsAt: `${days.other}T00:00:00.000Z`, endsAt: `${days.other}T23:59:59.999Z`, type: 'busy', isAllDay: true }] }] },
@@ -296,6 +320,13 @@ export async function seed({ client, apiUrl, timezone }) {
   // The day the editor's error names, in English: "October 27, 2026".
   labels.mark_day = new Date(`${days.mark}T00:00:00Z`).toLocaleDateString('en-US',
     { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+  // Zarechnaya's own slot past midnight (24), the row PUT /availability/days
+  // writes for it — written here, since the sign-ins are spent.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.zarechnaya, localInstant(5, 23), localInstant(6, 1)]);
 
   // A create whose answer never arrives (13). The first project named
   // Dunsinane takes 13 seconds to insert — longer than the app's 10-second

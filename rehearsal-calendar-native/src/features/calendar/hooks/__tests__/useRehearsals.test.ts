@@ -459,6 +459,28 @@ describe('useRehearsals Hook', () => {
       });
     });
 
+    // DD02: one running past midnight is on the next day too, and says so —
+    // even when the server sent the legacy fields, which name the start's day.
+    it('a rehearsal past midnight carries its last day', async () => {
+      (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({
+        data: { rehearsals: [
+          { id: 'night', startsAt: '2026-09-10T23:00:00Z', endsAt: '2026-09-11T01:00:00Z',
+            date: '2026-09-10', time: '23:00:00', endTime: '01:00:00' },
+          { id: 'late', startsAt: '2026-09-10T22:00:00Z', endsAt: '2026-09-11T00:00:00Z' },
+        ] },
+      });
+
+      const { result } = renderHook(() => useRehearsals(mockProjects, null));
+      await act(async () => {
+        await result.current.fetchRehearsals();
+      });
+
+      const byId = Object.fromEntries(result.current.rehearsals.map((r) => [r.id, r]));
+      expect(byId.night).toMatchObject({ date: '2026-09-10', endDate: '2026-09-11', time: '23:00', endTime: '01:00' });
+      // Ending at midnight, it is over by the next day.
+      expect(byId.late).toMatchObject({ date: '2026-09-10', endDate: '2026-09-10' });
+    });
+
     it('should keep legacy format if already present', async () => {
       const mockRehearsals = [
         {

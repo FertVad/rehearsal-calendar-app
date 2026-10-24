@@ -22,6 +22,10 @@ export interface AvailabilityTranslations {
   fromCalendar: string;
   fromDeviceCalendar: string;
   fromRehearsal: string;
+  /** The morning end of the person's own slot from the evening before. */
+  fromPreviousDay: string;
+  /** Beside a slot's end that is on the next day. */
+  nextDay: string;
   importedNote: string;
   startTime: string;
   endTime: string;
@@ -32,7 +36,7 @@ export interface AvailabilityTranslations {
   cannotSave: string;
   invalidSlot: string;
   slotsOverlap: string;
-  slotEndBeforeStart: string;
+  slotSameStartEnd: string;
   fixSlots: string;
   understood: string;
   selectedDates: (count: number) => string;
@@ -107,6 +111,8 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     fromCalendar: 'Уже есть в этот день',
     fromDeviceCalendar: 'из календаря',
     fromRehearsal: 'репетиция',
+    fromPreviousDay: 'с предыдущего дня',
+    nextDay: 'след. дня',
     importedNote: 'Эти часы видят остальные, когда подбирают время. Чтобы освободить их, удалите событие в календаре телефона.',
     startTime: 'Время начала',
     endTime: 'Время окончания',
@@ -117,7 +123,7 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     cannotSave: 'Невозможно сохранить',
     invalidSlot: 'Пожалуйста, исправьте время слотов и попробуйте снова.',
     slotsOverlap: 'Слоты не должны пересекаться',
-    slotEndBeforeStart: 'Время окончания должно быть позже начала',
+    slotSameStartEnd: 'Время окончания не может совпадать с началом',
     fixSlots: 'Пожалуйста, исправьте время слотов и попробуйте снова.',
     understood: 'Понятно',
     selectedDates: (count: number) => `Выбрано дат: ${count}`,
@@ -197,6 +203,8 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     fromCalendar: 'Already on this day',
     fromDeviceCalendar: 'from calendar',
     fromRehearsal: 'rehearsal',
+    fromPreviousDay: 'from the day before',
+    nextDay: 'next day',
     importedNote: 'Everyone else sees these hours when looking for a time. To free them up, delete the event in your phone calendar.',
     startTime: 'Start time',
     endTime: 'End time',
@@ -207,7 +215,7 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     cannotSave: 'Cannot save',
     invalidSlot: 'Please fix the time slots and try again.',
     slotsOverlap: 'Slots must not overlap',
-    slotEndBeforeStart: 'End time must be after the start time',
+    slotSameStartEnd: 'End time cannot be the same as the start time',
     fixSlots: 'Please fix the time slots and try again.',
     understood: 'Understood',
     selectedDates: (count: number) => `Selected dates: ${count}`,
@@ -280,6 +288,8 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     fromCalendar: 'Ya hay algo ese día',
     fromDeviceCalendar: 'del calendario',
     fromRehearsal: 'ensayo',
+    fromPreviousDay: 'del día anterior',
+    nextDay: 'día sig.',
     importedNote: 'Los demás ven estas horas al buscar un hueco. Para liberarlas, elimina el evento en el calendario del teléfono.',
     startTime: 'Hora de inicio',
     endTime: 'Hora de fin',
@@ -290,7 +300,7 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     cannotSave: 'No se puede guardar',
     invalidSlot: 'Por favor, corrige las horas de las franjas e inténtalo de nuevo.',
     slotsOverlap: 'Las franjas no deben solaparse',
-    slotEndBeforeStart: 'La hora de fin debe ser posterior a la de inicio',
+    slotSameStartEnd: 'La hora de fin no puede ser igual a la de inicio',
     fixSlots: 'Por favor, corrige las horas de las franjas e inténtalo de nuevo.',
     understood: 'Entendido',
     selectedDates: (count: number) => `Fechas seleccionadas: ${count}`,
@@ -363,6 +373,8 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     fromCalendar: 'An diesem Tag schon vorhanden',
     fromDeviceCalendar: 'aus dem Kalender',
     fromRehearsal: 'Probe',
+    fromPreviousDay: 'vom Vortag',
+    nextDay: 'Folgetag',
     importedNote: 'Diese Zeiten sehen die anderen bei der Terminsuche. Zum Freigeben den Termin im Telefonkalender löschen.',
     startTime: 'Startzeit',
     endTime: 'Endzeit',
@@ -373,7 +385,7 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     cannotSave: 'Speichern nicht möglich',
     invalidSlot: 'Bitte korrigiere die Zeitfenster und versuche es erneut.',
     slotsOverlap: 'Zeitfenster dürfen sich nicht überschneiden',
-    slotEndBeforeStart: 'Die Endzeit muss nach der Startzeit liegen',
+    slotSameStartEnd: 'Die Endzeit darf nicht gleich der Startzeit sein',
     fixSlots: 'Bitte korrigiere die Zeitfenster und versuche es erneut.',
     understood: 'Verstanden',
     selectedDates: (count: number) => `Ausgewählte Daten: ${count}`,

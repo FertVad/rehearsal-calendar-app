@@ -11,7 +11,9 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useRehearsalAvailability } from '../useRehearsalAvailability';
 import { projectsAPI } from '../../../../shared/services/api';
 
-jest.mock('../../../../shared/services/api', () => ({ projectsAPI: { getMembersAvailability: jest.fn() } }));
+jest.mock('../../../../shared/services/api', () => ({
+  projectsAPI: { getMembersAvailability: jest.fn(), getMembersAvailabilityRange: jest.fn() },
+}));
 jest.mock('react-native/Libraries/Alert/Alert', () => ({ alert: jest.fn() }));
 
 const t = { common: { error: 'Error' }, rehearsals: { loadAvailabilityError: 'Could not load' } };
@@ -49,6 +51,25 @@ it('keeps the shown day\'s answer when the day left answers last', async () => {
 
   expect(result.current.memberAvailability.u1.timeRanges).toHaveLength(1);
   expect((result.current as any).ready).toBe(true);
+});
+
+// Cause fix 15: a rehearsal past midnight is checked against the next morning.
+it('asks for the next day too when the rehearsal ends on it', async () => {
+  (projectsAPI.getMembersAvailabilityRange as jest.Mock).mockResolvedValueOnce({
+    data: { availability: [{ userId: 'u1', dates: [
+      { date: '2026-10-19', timeRanges: [] },
+      { date: '2026-10-20', timeRanges: [{ start: '00:00', end: '00:30', type: 'busy' }] },
+    ] }] },
+  });
+  const { result } = renderHook(() => useRehearsalAvailability(project, MONDAY, IDS, t, 'r9', true));
+
+  await waitFor(() => expect(result.current.ready).toBe(true));
+  expect(projectsAPI.getMembersAvailabilityRange).toHaveBeenCalledWith('p1', '2026-10-19', '2026-10-20', IDS, 'r9');
+  expect(projectsAPI.getMembersAvailability).not.toHaveBeenCalled();
+  expect(result.current.memberAvailability.u1).toEqual({
+    timeRanges: [],
+    nextDayRanges: [{ start: '00:00', end: '00:30', type: 'busy' }],
+  });
 });
 
 it('hands out nothing, and is not ready, while the shown day is loading', async () => {

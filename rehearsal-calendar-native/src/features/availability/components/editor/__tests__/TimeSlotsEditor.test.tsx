@@ -281,12 +281,12 @@ describe('TimeSlotsEditor Component', () => {
     it('should show error message when validationError is provided', () => {
       // The component receives a key and looks the wording up itself, so the
       // message follows the user's language rather than the caller's.
-      const errorMessage = ru.availability.slotEndBeforeStart;
+      const errorMessage = ru.availability.slotSameStartEnd;
 
       const { getByText, UNSAFE_getAllByType } = render(
         <TimeSlotsEditor
           slots={singleSlot}
-          validationError="endBeforeStart"
+          validationError="sameStartEnd"
           onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
@@ -304,7 +304,7 @@ describe('TimeSlotsEditor Component', () => {
 
     it('should show different error messages', () => {
       const error1 = ru.availability.slotsOverlap;
-      const error2 = ru.availability.slotEndBeforeStart;
+      const error2 = ru.availability.slotSameStartEnd;
 
       const { getByText, rerender } = render(
         <TimeSlotsEditor
@@ -323,7 +323,7 @@ describe('TimeSlotsEditor Component', () => {
       rerender(
         <TimeSlotsEditor
           slots={multipleSlots}
-          validationError="endBeforeStart"
+          validationError="sameStartEnd"
           onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}

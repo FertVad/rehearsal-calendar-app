@@ -11,25 +11,9 @@ import { AvailabilityData } from '../../types';
 import { setProfileTimezone } from '../../../../shared/utils/time';
 
 // Mock dependencies
+// The slot rules are the real ones: a copy of them here kept testing the old
+// rule after the editor had promised overnight slots (CC06).
 jest.mock('../../../../shared/services/api');
-jest.mock('../../utils', () => ({
-  validateSlot: jest.fn((slot) => {
-    if (!slot.start || !slot.end) {
-      return { isValid: false, error: 'Missing time' };
-    }
-    if (slot.start >= slot.end) {
-      return { isValid: false, error: 'End must be after start' };
-    }
-    return { isValid: true };
-  }),
-  slotsOverlap: jest.fn((slot1, slot2) => {
-    const start1 = slot1.start;
-    const end1 = slot1.end;
-    const start2 = slot2.start;
-    const end2 = slot2.end;
-    return start1 < end2 && start2 < end1;
-  }),
-}));
 jest.mock('react-native/Libraries/Alert/Alert', () => ({
   alert: jest.fn(),
 }));
@@ -47,6 +31,7 @@ describe('useAvailabilitySave Hook', () => {
       saveError: 'Failed to save',
       cannotSave: 'Cannot Save',
       invalidSlot: 'Please fix the slot',
+      slotSameStartEnd: 'End cannot be the same as start',
       slotsOverlap: 'Slots overlap',
       fixSlots: 'Please fix overlapping slots',
       understood: 'OK',
@@ -190,7 +175,7 @@ describe('useAvailabilitySave Hook', () => {
       const availability: AvailabilityData = {
         '2025-12-29': {
           mode: 'custom',
-          slots: [{ start: '12:00', end: '10:00' }], // Invalid: end before start
+          slots: [{ start: '12:00', end: '12:00' }], // Invalid: no time between them
         },
       };
 
@@ -203,10 +188,26 @@ describe('useAvailabilitySave Hook', () => {
 
       expect(validation.isValid).toBe(false);
       expect(validation.errorTitle).toBe('Cannot Save');
-      expect(validation.errorMessage).toContain('End must be after start');
+      expect(validation.errorMessage).toContain('End cannot be the same as start');
       // The day it names is the day edited, not the one before: '2025-12-29'
       // read as UTC midnight is the 28th in New York (jest.config.js).
       expect(validation.errorMessage).toContain('(December 29, 2025)');
+    });
+
+    it('an overnight slot is valid, and overlaps the evening it takes (CC06)', () => {
+      const { result } = renderHook(() => useAvailabilitySave());
+      const valid = result.current.validateAvailability(
+        { '2025-12-29': { mode: 'custom', slots: [{ start: '23:00', end: '01:00' }] } },
+        '2025-12-01', 'en', mockT
+      );
+      expect(valid.isValid).toBe(true);
+
+      const overlapping = result.current.validateAvailability(
+        { '2025-12-29': { mode: 'custom', slots: [{ start: '22:00', end: '02:00' }, { start: '23:00', end: '23:30' }] } },
+        '2025-12-01', 'en', mockT
+      );
+      expect(overlapping.isValid).toBe(false);
+      expect(overlapping.errorMessage).toContain('Slots overlap');
     });
 
     it('should fail validation for overlapping slots', () => {
@@ -311,6 +312,27 @@ describe('useAvailabilitySave Hook', () => {
       expect(Alert.alert).toHaveBeenCalledWith('Success', 'Availability saved');
     });
 
+    it('saves a slot past midnight from Save, ending on the next day (CC06)', async () => {
+      (availabilityAPI.saveDays as jest.Mock).mockResolvedValue({});
+      const { result } = renderHook(() => useAvailabilitySave());
+
+      let success = false;
+      await act(async () => {
+        success = await save(result, {
+          '2025-12-31': { mode: 'custom', slots: [{ start: '23:00', end: '01:00' }] },
+        }, { '2025-12-31': 1 });
+      });
+
+      expect(success).toBe(true);
+      const [[days]] = (availabilityAPI.saveDays as jest.Mock).mock.calls;
+      expect(days).toHaveLength(1);
+      const [entry] = days[0].entries;
+      expect(entry.startsAt.slice(0, 16)).toBe('2025-12-31T23:00');
+      // Across the year, too: the end is on the first of January.
+      expect(entry.endsAt.slice(0, 16)).toBe('2026-01-01T01:00');
+      expect(Date.parse(entry.endsAt) - Date.parse(entry.startsAt)).toBe(2 * 60 * 60 * 1000);
+    });
+
     it('sends a day the person emptied as an empty list', async () => {
       (availabilityAPI.saveDays as jest.Mock).mockResolvedValue({});
       const { result } = renderHook(() => useAvailabilitySave());
@@ -355,7 +377,7 @@ describe('useAvailabilitySave Hook', () => {
 
       let success = true;
       await act(async () => {
-        success = await save(result, { '2025-12-29': { mode: 'custom', slots: [{ start: '14:00', end: '12:00' }] } },
+        success = await save(result, { '2025-12-29': { mode: 'custom', slots: [{ start: '14:00', end: '14:00' }] } },
           { '2025-12-29': 1 }, markSaved);
       });
 

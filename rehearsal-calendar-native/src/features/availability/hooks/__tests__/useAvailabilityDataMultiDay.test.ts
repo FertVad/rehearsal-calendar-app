@@ -14,6 +14,7 @@
  */
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { useAvailabilityData } from '../useAvailabilityData';
+import { useAvailabilitySave } from '../useAvailabilitySave';
 import { availabilityAPI } from '../../../../shared/services/api';
 import { setProfileTimezone } from '../../../../shared/utils/time';
 
@@ -125,6 +126,42 @@ describe('A multi-day calendar event, read in Jerusalem', () => {
     // Runs to the end of the 5th and stops there — the 6th gets nothing.
     expect(Object.keys(result.current.availability)).toEqual(['2026-09-05']);
     expect(imported(result.current.availability['2026-09-05'])).toEqual(['22:00-23:59']);
+  });
+
+  // Cause fix 15: the person's own slot past midnight is one slot of the day it
+  // starts on, the day that edits and saves it. Cut into 23:00–23:59 plus an
+  // own 00:00–01:00, saving that day wrote it back ending at 23:59.
+  describe('a hand-entered slot past midnight', () => {
+    // 10 September 23:00 → 11 September 01:00 local.
+    const OVERNIGHT = {
+      startsAt: '2026-09-10T20:00:00.000Z',
+      endsAt: '2026-09-10T22:00:00.000Z',
+      type: 'busy',
+      isAllDay: false,
+      source: 'manual',
+    };
+
+    it('is one slot of the day it starts, whole', async () => {
+      const result = await load([OVERNIGHT]);
+      expect(result.current.availability['2026-09-10'].slots).toEqual([{ start: '23:00', end: '01:00' }]);
+    });
+
+    it('shows its morning on the next day, read-only', async () => {
+      const result = await load([OVERNIGHT]);
+      const next = result.current.availability['2026-09-11'];
+      expect(next.slots).toEqual([]);
+      expect(next.importedSlots).toEqual([
+        expect.objectContaining({ start: '00:00', end: '01:00', source: 'previous_day' }),
+      ]);
+    });
+
+    it('saved back unchanged, is the same interval', async () => {
+      const result = await load([OVERNIGHT]);
+      const { result: save } = renderHook(() => useAvailabilitySave());
+      const [entry] = save.current.entriesForDay('2026-09-10', result.current.availability['2026-09-10']);
+      // The device's zone writes it here; the instants are what must match.
+      expect(Date.parse(entry.endsAt) - Date.parse(entry.startsAt)).toBe(2 * 60 * 60 * 1000);
+    });
   });
 
   it('covers every day of a multi-day whole-day entry', async () => {

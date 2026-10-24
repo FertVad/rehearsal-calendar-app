@@ -13,6 +13,7 @@ import {
   updateRehearsal,
   deleteRehearsal,
   getRehearsalById,
+  RehearsalTimesInvalid,
 } from '../../services/rehearsals/rehearsalService.js';
 import {
   respondToRehearsal,
@@ -124,7 +125,7 @@ router.post('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res)
 
     res.status(201).json({ rehearsal });
   } catch (error) {
-    if (error instanceof RosterRefused || error instanceof IdempotencyRefused) {
+    if (error instanceof RosterRefused || error instanceof IdempotencyRefused || error instanceof RehearsalTimesInvalid) {
       return res.status(error.status).json(error.body);
     }
     console.error('Error creating rehearsal:', error);
@@ -194,7 +195,9 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(asyn
 
     res.json({ rehearsal: updatedRehearsal });
   } catch (error) {
-    if (error instanceof RosterRefused) return res.status(error.status).json(error.body);
+    if (error instanceof RosterRefused || error instanceof RehearsalTimesInvalid) {
+      return res.status(error.status).json(error.body);
+    }
     console.error('Error updating rehearsal:', error);
     if (error.message === 'Invalid date format' || error.message.includes('are required')) {
       return res.status(400).json({ error: error.message });

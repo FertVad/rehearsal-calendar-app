@@ -13,6 +13,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { AppNavigation } from '../../../navigation';
 import { useToday } from '../../../shared/hooks/useClock';
+import { endsNextDay } from '../../../shared/utils/time';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../../shared/constants/colors';
 import { CalendarMonth, EditorHeader, ModeInfo } from '../components';
@@ -107,7 +108,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   );
 
   const handleSave = async () => {
-    await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
+    const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
+    // A slot past midnight shows on the next day as read from the server, so
+    // a saved change to it is read back rather than left to the next visit.
+    if (saved) loadAvailability();
     // Drop the selection so it is obvious the batch was committed; the sheet
     // stays open because marking several days in a row is the common case.
     editor.clearSelection();
@@ -392,7 +396,11 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
               {editor.validationError && (
                 <View style={styles.validationError}>
                   <Ionicons name="warning" size={18} color={Colors.accent.red} />
-                  <Text style={styles.validationErrorText}>{editor.validationError}</Text>
+                  <Text style={styles.validationErrorText}>
+                    {editor.validationError === 'overlap'
+                      ? t.availability.slotsOverlap
+                      : t.availability.slotSameStartEnd}
+                  </Text>
                 </View>
               )}
 
@@ -421,7 +429,14 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                         onPress={() => editor.openTimePicker(index, 'end')}
                       >
                         <Text style={styles.timeValue}>{slot.end}</Text>
-                        <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
+                        {/* An end before the start is the next morning, and says so. */}
+                        {endsNextDay(slot.start, slot.end) ? (
+                          <Text style={styles.importedSource} testID={`slot-${index}-next-day`}>
+                            {t.availability.nextDay}
+                          </Text>
+                        ) : (
+                          <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
+                        )}
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -459,7 +474,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
               {selectedDayState.importedSlots.map((slot, index) => (
                 <View key={`imported-${index}`} style={styles.importedRow}>
                   <Ionicons
-                    name={slot.source === 'rehearsal' ? 'people-outline' : 'calendar-outline'}
+                    name={slot.source === 'rehearsal' ? 'people-outline'
+                      : slot.source === 'previous_day' ? 'moon-outline' : 'calendar-outline'}
                     size={16}
                     color={Colors.text.tertiary}
                   />
@@ -469,7 +485,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                   <Text style={styles.importedSource}>
                     {slot.source === 'rehearsal'
                       ? t.availability.fromRehearsal
-                      : t.availability.fromDeviceCalendar}
+                      : slot.source === 'previous_day'
+                        ? t.availability.fromPreviousDay
+                        : t.availability.fromDeviceCalendar}
                   </Text>
                 </View>
               ))}

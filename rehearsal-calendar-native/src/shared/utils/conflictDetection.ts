@@ -1,6 +1,6 @@
 import { TimeRange } from './availability';
 import { ProjectMember } from '../types';
-import { timeToMinutes } from './time';
+import { clockRangeMinutes, minuteRangesOverlap } from './time';
 
 export interface ConflictInfo {
   hasConflicts: boolean;
@@ -11,39 +11,27 @@ export interface ConflictInfo {
 }
 
 /**
- * Check if two time ranges overlap
- */
-function timeRangesOverlap(
-  range1Start: string,
-  range1End: string,
-  range2Start: string,
-  range2End: string
-): boolean {
-  const start1 = timeToMinutes(range1Start);
-  const end1 = timeToMinutes(range1End);
-  const start2 = timeToMinutes(range2Start);
-  const end2 = timeToMinutes(range2End);
-
-  // Ranges overlap if one starts before the other ends
-  return start1 < end2 && end1 > start2;
-}
-
-/**
  * Check for scheduling conflicts with busy participants
  *
+ * The rehearsal is a clock range on its day, and one ending before it starts
+ * runs into the next morning (cause fix 15) — so it is checked against that
+ * morning's busy time too, `nextDayRanges`. Compared as HH:mm alone, 23:00–01:00
+ * overlapped nothing at all.
+ *
  * @param selectedMembers - Members selected for the rehearsal
- * @param memberAvailability - Availability data for each member (busy/available slots)
+ * @param memberAvailability - Each member's busy ranges on the day, and on the next
  * @param rehearsalStart - Rehearsal start time (HH:MM)
- * @param rehearsalEnd - Rehearsal end time (HH:MM)
+ * @param rehearsalEnd - Rehearsal end time (HH:MM), the next day when before the start
  * @returns Conflict information including which members are busy
  */
 export function checkSchedulingConflicts(
   selectedMembers: ProjectMember[],
-  memberAvailability: Record<string, { timeRanges: TimeRange[] }>,
+  memberAvailability: Record<string, { timeRanges: TimeRange[]; nextDayRanges?: TimeRange[] }>,
   rehearsalStart: string,
   rehearsalEnd: string
 ): ConflictInfo {
   const busyMembers: ConflictInfo['busyMembers'] = [];
+  const rehearsal = clockRangeMinutes(rehearsalStart, rehearsalEnd);
 
   for (const member of selectedMembers) {
     const availability = memberAvailability[member.userId];
@@ -51,15 +39,16 @@ export function checkSchedulingConflicts(
       continue;
     }
 
-    // Find conflicting busy slots
-    const conflictingSlots = availability.timeRanges.filter(slot => {
-      // Only check 'busy' slots (ignore 'available' or 'tentative')
-      if (slot.type !== 'busy') {
-        return false;
-      }
+    // Only 'busy' slots count (not 'available' or 'tentative').
+    const busyOn = (ranges: TimeRange[] | undefined, dayOffset: number) =>
+      (ranges ?? []).filter(slot =>
+        slot.type === 'busy' &&
+        minuteRangesOverlap(rehearsal, clockRangeMinutes(slot.start, slot.end, dayOffset)));
 
-      return timeRangesOverlap(rehearsalStart, rehearsalEnd, slot.start, slot.end);
-    });
+    const conflictingSlots = [
+      ...busyOn(availability.timeRanges, 0),
+      ...busyOn(availability.nextDayRanges, 1),
+    ];
 
     if (conflictingSlots.length > 0) {
       busyMembers.push({

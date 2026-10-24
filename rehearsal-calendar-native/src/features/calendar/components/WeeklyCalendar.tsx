@@ -4,6 +4,7 @@ import { Colors, FontSize, FontWeight, Spacing } from '../../../shared/constants
 import { Rehearsal } from '../../../shared/types';
 import { formatDateToString, parseDateString } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
+import { rehearsalDates } from '../../../shared/utils/rehearsalDays';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useWeekStart, getWeekStart as getWeekStartUtil } from '../../../hooks/useWeekStart';
@@ -53,12 +54,13 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     return getWeekStartUtil(date, weekStartDay);
   }, [weekStartDay]);
 
-  // Memoize rehearsal count map to avoid re-filtering on every render
+  // Rehearsals per day, counted on every day each one is on — one running past
+  // midnight counts on the next day too (DD02).
   const rehearsalCountMap = useMemo(() => {
     const map = new Map<string, number>();
     rehearsals.forEach(r => {
-      if (r.date) {
-        map.set(r.date, (map.get(r.date) || 0) + 1);
+      for (const date of rehearsalDates(r)) {
+        map.set(date, (map.get(date) || 0) + 1);
       }
     });
     return map;

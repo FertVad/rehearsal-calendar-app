@@ -4,7 +4,13 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../../navigation';
 import { Project } from '../../../shared/types';
-import { parseTimeString, wallClockIn } from '../../../shared/utils/time';
+import {
+  endsNextDay,
+  formatDateToTimeString,
+  isEmptyClockRange,
+  parseTimeString,
+  wallClockIn,
+} from '../../../shared/utils/time';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useTimezone } from '../../../shared/hooks/useClock';
@@ -230,10 +236,19 @@ export function useAddRehearsalForm({
     setDate(selectedDate);
   };
 
+  // The form's times are clock times on `date`; an end before the start is the
+  // next morning (clockRangeToISO, cause fix 15).
+  const startClock = formatDateToTimeString(startTime);
+  const endClock = formatDateToTimeString(endTime);
+
   const handleStartTimeChange = (selectedTime: Date) => {
     setStartTime(selectedTime);
-    // Auto-adjust end time if it's before start time
-    if (selectedTime >= endTime) {
+    // A later start moves a same-day end along with it — two hours on, which
+    // may well be the next morning. A rehearsal that already ran overnight
+    // keeps its end, unless the start lands right on it.
+    const start = formatDateToTimeString(selectedTime);
+    const wasOvernight = endsNextDay(startClock, endClock);
+    if (isEmptyClockRange(start, endClock) || (!wasOvernight && endsNextDay(start, endClock))) {
       const newEnd = new Date(selectedTime);
       newEnd.setHours(newEnd.getHours() + 2);
       setEndTime(newEnd);
@@ -286,6 +301,8 @@ export function useAddRehearsalForm({
     setStartTime,
     endTime,
     setEndTime,
+    /** The end is on the day after `date`. */
+    endsNextDay: endsNextDay(startClock, endClock),
     title,
     setTitle,
     location,

@@ -61,7 +61,8 @@ export default function AddRehearsalScreen() {
     form.date,
     form.selectedMemberIds,
     t,
-    form.isEditMode ? form.rehearsalId : undefined
+    form.isEditMode ? form.rehearsalId : undefined,
+    form.endsNextDay
   );
   const { memberAvailability, loading: loadingAvailability } = availabilityLoad;
 
@@ -252,11 +253,18 @@ export default function AddRehearsalScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.rehearsals.endTime}</Text>
             <TouchableOpacity
+              testID="rehearsal-end-time"
               style={styles.pickerButton}
               onPress={form.openEndTimePicker}
             >
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.pickerButtonText}>{formatDateToTimeString(form.endTime)}</Text>
+              {/* An end before the start is the next morning, and says so. */}
+              {form.endsNextDay && (
+                <Text style={styles.nextDayText} testID="rehearsal-ends-next-day">
+                  {t.rehearsals.endsNextDay}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
 

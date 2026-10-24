@@ -5,7 +5,10 @@ import { Project } from '../../../shared/types';
 import { TimeRange } from '../../../shared/utils/availability';
 import { logger } from '../../../shared/utils/logger';
 
-type AvailabilityMap = Record<string, { timeRanges: TimeRange[] }>;
+import { addDays } from '../../../shared/utils/time';
+
+/** Each person's busy time on the rehearsal's day, and on the next one when it runs into it. */
+type AvailabilityMap = Record<string, { timeRanges: TimeRange[]; nextDayRanges?: TimeRange[] }>;
 type Loaded = { key: string | null; availability: AvailabilityMap; failed: boolean };
 
 // Format date as YYYY-MM-DD
@@ -31,15 +34,18 @@ export const useRehearsalAvailability = (
   date: Date,
   selectedMemberIds: string[],
   t: any,
-  excludeRehearsalId?: string
+  excludeRehearsalId?: string,
+  /** The rehearsal ends the next morning: that day's busy time is asked for too. */
+  endsNextDay = false
 ) => {
   const [loaded, setLoaded] = useState<Loaded>({ key: null, availability: {}, failed: false });
   const [loading, setLoading] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
   const dateStr = formatDate(date);
+  const nextDateStr = endsNextDay ? addDays(dateStr, 1) : null;
   const key = project && selectedMemberIds.length > 0
-    ? [project.id, dateStr, [...selectedMemberIds].sort().join(','), excludeRehearsalId ?? ''].join('|')
+    ? [project.id, dateStr, nextDateStr ?? '', [...selectedMemberIds].sort().join(','), excludeRehearsalId ?? ''].join('|')
     : null;
 
   useEffect(() => {
@@ -53,16 +59,24 @@ export const useRehearsalAvailability = (
     }
 
     setLoading(true);
-    projectsAPI.getMembersAvailability(project.id, dateStr, selectedMemberIds, excludeRehearsalId)
+    const request = nextDateStr
+      ? projectsAPI.getMembersAvailabilityRange(project.id, dateStr, nextDateStr, selectedMemberIds, excludeRehearsalId)
+      : projectsAPI.getMembersAvailability(project.id, dateStr, selectedMemberIds, excludeRehearsalId);
+    request
       .then((response) => {
         if (!current) return;
         // Transform array response to Record<userId, {timeRanges}>
         const availabilityMap: AvailabilityMap = {};
         for (const userAvail of response.data.availability || []) {
-          // Find the data for the current date
-          const dateData = userAvail.dates?.find((d: any) => d.date === dateStr);
-          if (dateData && dateData.timeRanges) {
-            availabilityMap[userAvail.userId] = { timeRanges: dateData.timeRanges };
+          const rangesOn = (day: string | null) =>
+            userAvail.dates?.find((d: any) => d.date === day)?.timeRanges as TimeRange[] | undefined;
+          const timeRanges = rangesOn(dateStr);
+          const nextDayRanges = nextDateStr ? rangesOn(nextDateStr) : undefined;
+          if (timeRanges || nextDayRanges) {
+            availabilityMap[userAvail.userId] = {
+              timeRanges: timeRanges ?? [],
+              ...(nextDayRanges ? { nextDayRanges } : {}),
+            };
           }
         }
         setLoaded({ key, availability: availabilityMap, failed: false });

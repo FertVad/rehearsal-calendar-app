@@ -19,13 +19,15 @@ import type { ProjectsStackParamList, ProjectDetailNavigation } from '../../../n
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
-import { onClockOf, parseDateString } from '../../../shared/utils/time';
+import { parseDateString } from '../../../shared/utils/time';
 import { useTimezone, useToday } from '../../../shared/hooks/useClock';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
 import * as Clipboard from 'expo-clipboard';
 import { useInviteLink } from '../hooks';
+import type { Rehearsal as RehearsalInterval } from '../../../shared/types';
+import { lastDateOf, rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
 
 import { logger } from '../../../shared/utils/logger';
 type ProjectDetailScreenProps = {
@@ -54,12 +56,10 @@ interface Member {
   joinedAt: string;
 }
 
-interface Rehearsal {
+interface Rehearsal extends RehearsalInterval {
   id: string;
   title: string;
   scene?: string;
-  startsAt?: string;
-  endsAt?: string;
   date: string;
   time: string;
   endTime?: string;
@@ -195,12 +195,14 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
 
   // Memoize split rehearsals into upcoming and past to avoid re-sorting on every render
   const { upcomingRehearsals, pastRehearsals } = useMemo(() => {
-    const shown = rehearsals.map(r => onClockOf(r, timezone));
+    // Days and times from the interval, as the calendar reads them (cause fix
+    // 15): a rehearsal still running into today is not past yet.
+    const shown = rehearsals.map(r => rehearsalInZone(r, timezone));
     const upcoming = shown
-      .filter(r => r.date >= today)
+      .filter(r => (lastDateOf(r) ?? r.date) >= today)
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
     const past = shown
-      .filter(r => r.date < today)
+      .filter(r => (lastDateOf(r) ?? r.date) < today)
       .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
 
     return { upcomingRehearsals: upcoming, pastRehearsals: past };
@@ -484,8 +486,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
                     <View style={styles.rehearsalMeta}>
                       <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
                       <Text style={styles.rehearsalTime}>
-                        {rehearsal.time.substring(0, 5)}
-                        {rehearsal.endTime && ` - ${rehearsal.endTime.substring(0, 5)}`}
+                        {rehearsalTimeLabel(rehearsal, getDateLocale(language))}
                       </Text>
                     </View>
                     {rehearsal.location && (

@@ -21,6 +21,7 @@ import { useSeen } from '../../../contexts/SeenContext';
 import { Rehearsal, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDateLocalized } from '../../../shared/utils/time';
+import { rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
 import type { AppNavigation, AppStackParamList } from '../../../navigation';
 
 interface Participant {
@@ -55,6 +56,7 @@ export default function RehearsalDetailsScreen() {
 
   const { t, language } = useI18n();
   const { user } = useAuth();
+  const userTimezone = user?.timezone || 'UTC';
   const { projects } = useProjects();
   const { toggleSeen, statsFor } = useSeen();
 
@@ -69,7 +71,8 @@ export default function RehearsalDetailsScreen() {
     rehearsalsAPI
       .getById(rehearsalId)
       .then((res: any) => {
-        if (alive) setRehearsal(res.data.rehearsal);
+        // Days and times from the interval, as the calendar reads them.
+        if (alive) setRehearsal(rehearsalInZone(res.data.rehearsal, userTimezone));
       })
       .catch((err: any) => {
         logger.warn('[RehearsalDetails] Could not load:', err);
@@ -79,7 +82,7 @@ export default function RehearsalDetailsScreen() {
     return () => {
       alive = false;
     };
-  }, [rehearsalId]);
+  }, [rehearsalId, userTimezone]);
 
   const project = rehearsal ? projects.find(p => p.id === rehearsal.projectId) || null : null;
   const isAdmin = project?.is_admin || false;
@@ -269,9 +272,8 @@ export default function RehearsalDetailsScreen() {
             {/* Time */}
             <View style={styles.detailRow}>
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
-              <Text style={styles.detailText}>
-                {rehearsal.time?.substring(0, 5) || ''}
-                {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
+              <Text style={styles.detailText} testID="rehearsal-details-time">
+                {rehearsalTimeLabel(rehearsal, locale)}
               </Text>
             </View>
 

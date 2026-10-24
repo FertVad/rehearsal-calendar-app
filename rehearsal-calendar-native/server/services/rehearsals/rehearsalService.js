@@ -1,6 +1,6 @@
 import { logger } from '../../utils/logger.js';
 import db from '../../database/db.js';
-import { localToTimestamp, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
+import { localRangeToTimestamps, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
 import { ROSTER, viewerOf, rosterStats, checkParticipants, settleRoster, clearRoster, RosterRefused } from './roster.js';
@@ -272,23 +272,46 @@ export async function getRehearsalById(rehearsalId, userId) {
 }
 
 /**
+ * A rehearsal whose times are not an interval: unreadable, or ending where or
+ * before it starts. Refused with 400 before any write — the schema's CHECK
+ * (ends_at > starts_at) refused it too, but as a 500 (DF04).
+ */
+export class RehearsalTimesInvalid extends Error {
+  constructor() {
+    super('The rehearsal must end after it starts');
+    this.name = 'RehearsalTimesInvalid';
+    this.status = 400;
+  }
+
+  get body() {
+    return { error: this.message, code: 'TIME_RANGE_INVALID' };
+  }
+}
+
+/**
  * The rehearsal's start and end as instants, from either request format:
- * startsAt/endsAt, or the older date/startTime/endTime in the project's zone.
+ * startsAt/endsAt, or the older date/startTime/endTime in the project's zone,
+ * where an end before the start is the next morning (localRangeToTimestamps).
+ * Either way the result is an interval, or the request is refused.
  */
 async function rehearsalTimes(conn, projectId, { date, startTime, endTime, startsAt, endsAt }) {
-  if (startsAt && endsAt) return { startsAtISO: startsAt, endsAtISO: endsAt };
-  if (date && startTime && endTime) {
+  let times;
+  if (startsAt && endsAt) {
+    times = { startsAtISO: startsAt, endsAtISO: endsAt };
+  } else if (date && startTime && endTime) {
     const timezone = await getProjectTimezone(projectId, conn);
     const formattedDate = formatDateString(date);
     if (!formattedDate) {
       throw new Error('Invalid date format');
     }
-    return {
-      startsAtISO: localToTimestamp(formattedDate, startTime, timezone),
-      endsAtISO: localToTimestamp(formattedDate, endTime, timezone),
-    };
+    times = localRangeToTimestamps(formattedDate, startTime, endTime, timezone);
+  } else {
+    throw new Error('Either (startsAt, endsAt) or (date, startTime, endTime) are required');
   }
-  throw new Error('Either (startsAt, endsAt) or (date, startTime, endTime) are required');
+  const start = Date.parse(times.startsAtISO);
+  const end = Date.parse(times.endsAtISO);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) throw new RehearsalTimesInvalid();
+  return times;
 }
 
 /*

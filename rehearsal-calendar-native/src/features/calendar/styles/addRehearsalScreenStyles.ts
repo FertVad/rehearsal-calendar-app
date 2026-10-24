@@ -65,6 +65,10 @@ export const styles = StyleSheet.create({
   placeholderText: {
     color: Colors.text.tertiary,
   },
+  nextDayText: {
+    fontSize: FontSize.sm,
+    color: Colors.accent.purple,
+  },
   chevronIcon: {
     marginLeft: 'auto',
   },

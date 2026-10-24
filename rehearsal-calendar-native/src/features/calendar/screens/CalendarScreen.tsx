@@ -17,6 +17,7 @@ import { useUnread } from '../../../contexts/UnreadContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { addDays, formatDateLocalized } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
+import { rehearsalOnDate } from '../../../shared/utils/rehearsalDays';
 import { useRehearsals } from '../hooks';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { calendarScreenStyles as styles } from '../styles';
@@ -185,16 +186,13 @@ export default function CalendarScreen() {
     setFilterExpanded(false);
   };
 
-  // Get rehearsals for selected date (defaults to today)
+  // The rehearsals on the selected day (defaults to today): the ones starting
+  // on it, and the ones running into it from the day before (DD02), in the
+  // order they start.
   const selectedDateRehearsals = useMemo(() => {
     return rehearsals
-      .filter(r => r.date === selectedDate)
-      .sort((a, b) => {
-        if (a.time && b.time) {
-          return a.time.localeCompare(b.time);
-        }
-        return 0;
-      });
+      .filter(r => rehearsalOnDate(r, selectedDate))
+      .sort((a, b) => (a.startsAt || '').localeCompare(b.startsAt || ''));
   }, [rehearsals, selectedDate]);
 
   const upcomingRehearsals = useMemo(() => {
