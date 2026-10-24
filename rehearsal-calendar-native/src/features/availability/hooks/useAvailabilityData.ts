@@ -200,8 +200,14 @@ export const useAvailabilityData = () => {
         }
       }
 
-      // DEDUPLICATION: a range shown twice is shown once — but only among rows
-      // that are read-only here, and only by one another. The person's own
+      // DEDUPLICATION: a row shown twice is shown once — and a row is the same
+      // row only when it says the same thing: the same source, the same kind,
+      // the same hours (cause fix 16). The hours alone made one of two different
+      // things vanish: a calendar event at a rehearsal's hours, or on the
+      // morning a slot of the night before ends, went under the other one, and
+      // the day said only "rehearsal" or "from the day before" — so dropping
+      // that slot looked like freeing the morning while the event, which
+      // everyone else's planner counts, stayed (review C04). The person's own
       // rows are kept apart from it both ways:
       // - none of them is dropped: a save of the day writes back what the
       //   editor holds, so one hidden behind another row with the same hours
@@ -213,28 +219,23 @@ export const useAvailabilityData = () => {
       for (const dateStr in serverData) {
         const slots = serverData[dateStr];
         const isOwn = (slot: typeof slots[number]) => !slot.source || slot.source === 'manual';
+        const sameRow = (slot: typeof slots[number]) =>
+          `${slot.source}|${slot.type}|${slot.startTime}-${slot.endTime}`;
         const uniqueSlots: typeof slots = slots.filter(isOwn);
-        const seenTimeRanges = new Set<string>();
+        const seen = new Set<string>();
 
-        // First pass: rehearsals, all of them
-        for (const slot of slots) {
-          if (slot.source === 'rehearsal') {
-            const key = `${slot.startTime}-${slot.endTime}`;
+        // Rehearsals first, then the other read-only rows
+        const readOnly = [
+          ...slots.filter((slot) => slot.source === 'rehearsal'),
+          ...slots.filter((slot) => slot.source !== 'rehearsal' && !isOwn(slot)),
+        ];
+        for (const slot of readOnly) {
+          const key = sameRow(slot);
+          if (!seen.has(key)) {
             uniqueSlots.push(slot);
-            seenTimeRanges.add(key);
-          }
-        }
-
-        // Second pass: other read-only rows, only if their range is not shown yet
-        for (const slot of slots) {
-          if (slot.source !== 'rehearsal' && !isOwn(slot)) {
-            const key = `${slot.startTime}-${slot.endTime}`;
-            if (!seenTimeRanges.has(key)) {
-              uniqueSlots.push(slot);
-              seenTimeRanges.add(key);
-            } else {
-              logger.debug(`[useAvailabilityData] Skipping duplicate ${slot.source} slot on ${dateStr} ${key} (already shown)`);
-            }
+            seen.add(key);
+          } else {
+            logger.debug(`[useAvailabilityData] Skipping duplicate slot on ${dateStr} ${key} (already shown)`);
           }
         }
 
