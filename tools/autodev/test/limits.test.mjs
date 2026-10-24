@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  limitFromText, limitFromClaudeEvents, limitFromCodexEvents, waitFor, FALLBACK_MS, MARGIN_MS,
+  limitFromText, limitFromClaudeEvents, limitFromCodexEvents, waitFor, waitOver, FALLBACK_MS, MARGIN_MS, MEMORY,
 } from '../lib/limits.mjs';
 
 // 8 October 2026, 14:20 local time.
@@ -93,4 +93,23 @@ test('waiting: until the reset plus a margin, never negative', () => {
   const past = { limited: true, known: true, at: new Date(NOW.getTime() - 60000) };
   assert.equal(waitFor(past, NOW), MARGIN_MS);
   assert.equal(waitFor({ limited: false }, NOW), 0);
+});
+
+test('a wait for memory ends when the pressure is normal, not at its hour', () => {
+  const now = NOW.getTime();
+  const memory = { waitUntil: now + 60 * 60 * 1000, waitingFor: MEMORY };
+  assert.equal(waitOver(memory, now, () => 1), true);
+  assert.equal(waitOver(memory, now, () => 2), false);
+  assert.equal(waitOver(memory, now, () => 4), false);
+  assert.equal(waitOver(memory, memory.waitUntil, () => 2), true);
+});
+
+test('a limit or an e2e machine waits for its hour whatever the memory', () => {
+  const now = NOW.getTime();
+  for (const waitingFor of ['Claude', 'Codex', 'e2e']) {
+    const wait = { waitUntil: now + 60000, waitingFor };
+    assert.equal(waitOver(wait, now, () => 1), false, waitingFor);
+    assert.equal(waitOver(wait, now + 60000, () => 1), true, waitingFor);
+  }
+  assert.equal(waitOver({ waitUntil: null, waitingFor: null }, now, () => 4), true);
 });

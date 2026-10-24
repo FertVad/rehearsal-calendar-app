@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 import { runClaude, runCodex, stopAgents } from './lib/agents.mjs';
 import { runChecks, stopChecks } from './lib/checks.mjs';
 import { parseDiff, pauseReasons, reasonKind, unapproved } from './lib/guard.mjs';
-import { waitFor } from './lib/limits.mjs';
+import { MEMORY, waitFor, waitOver } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
 import { appendReport, loadState, parseDecisions, parseTasks, saveState, writeAtomic } from './lib/store.mjs';
 import { auditTasks, taskMarkdown } from './lib/audit.mjs';
@@ -62,6 +62,9 @@ const MAX_AGENT_FAILURES = 3;
 // back by itself (a port freed, Docker woken) or the owner sees it in STATUS.
 const NOT_READY_RETRY_MS = [15 * 60 * 1000, 15 * 60 * 1000, 60 * 60 * 1000];
 const IDLE_MS = 5 * 60 * 1000;
+// While checks wait for memory it is read every minute: the wait ends when it
+// is back, the retry above is only the latest the checks are tried again.
+const MEMORY_POLL_MS = 60 * 1000;
 const once = process.argv.includes('--once');
 
 // The children get a plain environment: the tools they need on PATH, nothing
@@ -181,7 +184,9 @@ function writeStatus(state, now) {
   if (paused) lines.push(`**ПАУЗА — ждёт решения владельца.** ${paused[0]}: ${paused[1].pauseReason}`, '',
     `Решение — строкой в AUTODEV/DECISIONS.md: \`${paused[0]}: продолжить\` или \`${paused[0]}: пропустить\`.`);
   if (state.waitUntil && Date.now() < state.waitUntil) {
-    lines.push(state.waitNote
+    lines.push(state.waitingFor === MEMORY
+      ? `**Ждём: ${state.waitNote}.** Память проверяется каждую минуту — проверки начнутся, как только она освободится.`
+      : state.waitNote
       ? `**Ждём: ${state.waitNote}.** Повтор в ${new Date(state.waitUntil).toLocaleString('ru-RU')}.`
       : `**Ждём сброса лимита ${state.waitingFor}** до ${new Date(state.waitUntil).toLocaleString('ru-RU')}; потом продолжим ту же сессию.`);
   }
@@ -462,7 +467,7 @@ async function check(state, task, t) {
     const retry = NOT_READY_RETRY_MS[Math.min(t.notReady ?? 0, NOT_READY_RETRY_MS.length - 1)];
     t.notReady = (t.notReady ?? 0) + 1;
     state.waitUntil = Date.now() + retry;
-    state.waitingFor = 'память';
+    state.waitingFor = MEMORY;
     state.waitNote = `на машине не хватает памяти (давление памяти macOS: ${pressure >= 4 ? 'критическое' : 'предупреждение'}) — проверки отложены; закройте лишние приложения`;
     if (t.notReady === 1) notifyOwner('Мало памяти: закройте лишние приложения (браузер, ChatGPT, Claude). Проверки отложены, пока память не освободится.', 'Автодев ждёт память');
     return note(task, `проверки: отложены — не хватает памяти (давление ${pressure}); повтор через ${retry / 60000} мин`);
@@ -825,7 +830,10 @@ async function step() {
   applyDecisions(state);
 
   if (fs.existsSync(path.join(DIR, 'STOP'))) { saveState(STATE, state); writeStatus(state); return IDLE_MS; }
-  if (state.waitUntil && Date.now() < state.waitUntil) { saveState(STATE, state); writeStatus(state); return Math.min(state.waitUntil - Date.now(), IDLE_MS); }
+  if (!waitOver(state, Date.now(), memoryPressure)) {
+    saveState(STATE, state); writeStatus(state);
+    return Math.min(state.waitUntil - Date.now(), state.waitingFor === MEMORY ? MEMORY_POLL_MS : IDLE_MS);
+  }
   state.waitUntil = null;
   state.waitNote = null;
   if (Object.values(state.tasks).some((t) => t.phase === 'paused')) { saveState(STATE, state); writeStatus(state); return IDLE_MS; }

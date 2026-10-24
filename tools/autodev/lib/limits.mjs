@@ -146,3 +146,17 @@ export function waitFor(limit, now = new Date()) {
   if (!limit.known) return FALLBACK_MS;
   return Math.max(0, limit.at.getTime() - now.getTime()) + MARGIN_MS;
 }
+
+/** What a wait for memory is called in the state and in STATUS.md. */
+export const MEMORY = 'память';
+
+/**
+ * Whether a wait is over at `now` (ms). A limit lifts at a time; memory comes
+ * back on its own, so the wait for it ends the moment the pressure is normal
+ * again (`readPressure()` below 2), not at the hour it was put off to — T-402
+ * sat out an hour on a free machine (2026-10-23).
+ */
+export function waitOver({ waitUntil, waitingFor }, now, readPressure) {
+  if (!waitUntil || now >= waitUntil) return true;
+  return waitingFor === MEMORY && readPressure() < 2;
+}

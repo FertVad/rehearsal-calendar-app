@@ -52,9 +52,12 @@ then hourly.
 
 **Checks wait while the machine is short of memory.** At macOS memory
 pressure warning or worse (`kern.memorystatus_vm_pressure_level` ≥ 2) the
-checks are put off — 15 minutes, then hourly — with the reason in STATUS.md
-and one notification: on an 8 GB machine swapping 4 GB, T-110's tests took
-30 minutes and failed twice, measuring the swap rather than the code.
+checks are put off, with the reason in STATUS.md and one notification: on an
+8 GB machine swapping 4 GB, T-110's tests took 30 minutes and failed twice,
+measuring the swap rather than the code. The pressure is read every minute
+while they wait, and they start as soon as it is normal; the 15 minutes, then
+hourly, is only the latest they are tried again. A fixed retry kept T-402
+waiting an hour on a machine that was already free.
 
 **Only what is dangerous stops the whole queue** and waits for the owner:
 a change touching migrations, SQL, auth (server or app), `.env`, deploy, CI,
