@@ -4,7 +4,7 @@
 # 23:00–23:59 and a save of it wrote that back; an evening slot ending after
 # midnight could not be saved at all. Now the evening holds it whole, "01:00,
 # next day", and saves it as it is; the morning shows its end, from the day
-# before. Only she is on her days (flow 23 has her rehearsal, days earlier).
+# before. Only she is on her days (flow 24 has her rehearsal, days earlier).
 appId: ${APP_ID}
 name: A busy slot past midnight is one slot, on both days
 tags:
@@ -91,4 +91,4 @@ tags:
       id: slot-0-end
       text: "01:00.*"
     timeout: 10000
-- takeScreenshot: 24-evening-slot-whole
+- takeScreenshot: 25-evening-slot-whole

@@ -106,7 +106,7 @@ tags:
     text: ".*01:00.*"
 - assertVisible:
     id: rehearsal-ends-next-day
-- takeScreenshot: 25-form-ends-next-day
+- takeScreenshot: 26-form-ends-next-day
 - tapOn: "e.g. Act II run-through"
 - inputText: "Lakeside night"
 - scrollUntilVisible:
@@ -132,4 +132,4 @@ tags:
       id: rehearsal-details-time
       text: "23:00 — .*, 01:00"
     timeout: 15000
-- takeScreenshot: 25-reopened
+- takeScreenshot: 26-reopened

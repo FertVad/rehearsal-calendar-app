@@ -81,9 +81,12 @@ export const PEOPLE = {
   // changes it in the profile. Rehearsals only he is on, so no other flow's move.
   chebutykin: { email: 'chebutykin@e2e.test', firstName: 'Ivan', lastName: 'Chebutykin', onboarded: true },
   // What runs past midnight: a rehearsal from 23:00 yesterday to 01:00 today
-  // (23), and a busy slot of her own from 23:00 to 01:00 later on (24).
+  // (24), and a busy slot of her own from 23:00 to 01:00 later on (25).
   zarechnaya: { email: 'zarechnaya@e2e.test', firstName: 'Nina', lastName: 'Zarechnaya', onboarded: true },
-  // Makes a rehearsal from 23:00 to 01:00 in the form (23), alone in a project
+  // A busy slot from 23:00 to 01:00 and one of the next morning, 00:00 to
+  // 01:00, entered on its own; he adds an hour to the morning (27).
+  trigorin: { email: 'trigorin@e2e.test', firstName: 'Boris', lastName: 'Trigorin', onboarded: true },
+  // Makes a rehearsal from 23:00 to 01:00 in the form (26), alone in a project
   // of her own.
   arkadina: { email: 'arkadina@e2e.test', firstName: 'Irina', lastName: 'Arkadina', onboarded: true },
   // Has not been through onboarding yet.
@@ -211,13 +214,13 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
       [kitchenId, ids[key]]);
   }
-  // Zarechnaya (23) too, for the same reason.
+  // Zarechnaya (24) too, for the same reason.
   const { id: nightId } = await project('Night Train', 'To Yelets', [], 'gaev');
   await client.query(
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
     [nightId, ids.zarechnaya]);
-  // Arkadina's (23), made as the server makes a project: the sign-ins are spent.
+  // Arkadina's (26), made as the server makes a project: the sign-ins are spent.
   const { rows: [lake] } = await client.query(
     `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
      VALUES ('Lake Theatre', 'By the lake', $1, NOW(), NOW()) RETURNING id`, [timezone]);
@@ -278,7 +281,7 @@ export async function seed({ client, apiUrl, timezone }) {
     // still on the day before: dated by the device, today's would be yesterday's.
     midnight: await rehearsal(roundsId, 'Midnight call', 0, [0, 30], 1, ['chebutykin'], 'gaev', CHOSEN_ZONE),
     watch: await rehearsal(roundsId, 'Night watch', 1, 2, 3, ['chebutykin'], 'gaev', CHOSEN_ZONE),
-    // 23:00 yesterday to 01:00 today, so it is on today too (23).
+    // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),
       body: {
@@ -321,7 +324,8 @@ export async function seed({ client, apiUrl, timezone }) {
   // the flow changes it behind the screen's back while the editor is open.
   const days = {
     before: localDate(2), mark: localDate(3), after: localDate(4), other: localDate(6),
-    // Zarechnaya's slot (24): from 23:00 on the first to 01:00 on the second.
+    // Zarechnaya's slot (25), and Trigorin's (27): from 23:00 on the first to
+    // 01:00 on the second.
     evening: localDate(5), morning: localDate(6),
   };
   await call(apiUrl, 'PUT', '/native/availability/days', {
@@ -332,12 +336,18 @@ export async function seed({ client, apiUrl, timezone }) {
   labels.mark_day = new Date(`${days.mark}T00:00:00Z`).toLocaleDateString('en-US',
     { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
-  // Zarechnaya's own slot past midnight (24), the row PUT /availability/days
+  // Zarechnaya's own slot past midnight (25), the row PUT /availability/days
   // writes for it — written here, since the sign-ins are spent.
   await client.query(
     `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.zarechnaya, localInstant(5, 23), localInstant(6, 1)]);
+  // Trigorin's two (27): the same night, and the morning's hour of his own.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual'),
+            ($1, $4::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.trigorin, localInstant(5, 23), localInstant(6, 1), localInstant(6, 0)]);
 
   // A create whose answer never arrives (13). The first project named
   // Dunsinane takes 13 seconds to insert — longer than the app's 10-second
