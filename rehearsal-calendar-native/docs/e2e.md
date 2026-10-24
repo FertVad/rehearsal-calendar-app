@@ -154,6 +154,12 @@ way. Show it red first: put the files the fix changed back as they were
 evidence, then `git restore --source=HEAD -- <files>`. A fix with nothing on
 screen — the server, a schedule, a log — needs no flow.
 
+A fix that shows on screen only once the clock has moved — the app left open
+for hours, past midnight — is proved by Jest with a mocked clock, red before
+and green after. The simulator's clock is the Mac's, and moving it would take
+a test hook in the app's code, a mechanism of its own for a rare case (cause
+fix 14: "today" after a change of zone hours after the app opened).
+
 Every flow carries `tags:` naming the parts of the app it walks through —
 `smoke`, `auth`, `calendar`, `projects`, `rehearsals`, `seen`,
 `notifications`, `planner`, and new ones as flows need them (`availability`,
