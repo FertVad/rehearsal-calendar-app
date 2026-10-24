@@ -191,6 +191,50 @@ describe('A multi-day calendar event, read in Jerusalem', () => {
     expect(imported(day)).toEqual(['19:00-22:00']);
   });
 
+  // Review round 2: the person's own rows went into the set the imported ones
+  // were dropped by, so a day marked free in the middle of a trip read
+  // "free, nothing imported" — while everyone else's planner counts the trip.
+  describe('a trip from the phone across a day marked free by hand', () => {
+    // 10 September, free all day.
+    const FREE = {
+      startsAt: '2026-09-10T00:00:00.000Z',
+      endsAt: '2026-09-10T23:59:59.999Z',
+      type: 'available',
+      isAllDay: true,
+      source: 'manual',
+    };
+    const TRIPS = {
+      'whole days, 9 to 11 September': {
+        startsAt: '2026-09-09T00:00:00.000Z',
+        endsAt: '2026-09-11T23:59:59.999Z',
+        type: 'busy',
+        isAllDay: true,
+        source: 'google_calendar',
+      },
+      // 9 September 10:00 → 11 September 18:00 local.
+      'timed, 9 to 11 September': {
+        startsAt: '2026-09-09T07:00:00.000Z',
+        endsAt: '2026-09-11T15:00:00.000Z',
+        type: 'busy',
+        isAllDay: false,
+        source: 'apple_calendar',
+      },
+    };
+
+    for (const [name, trip] of Object.entries(TRIPS)) {
+      it(`shows the trip on the day marked free (${name})`, async () => {
+        for (const data of [[trip, FREE], [FREE, trip]]) {
+          const result = await load(data);
+          const day = result.current.availability['2026-09-10'];
+          expect(day.mode).toBe('custom');
+          expect(day.importedSlots).toEqual([
+            expect.objectContaining({ start: '00:00', end: '23:59', isAllDay: true }),
+          ]);
+        }
+      });
+    }
+  });
+
   it('covers every day of a multi-day whole-day entry', async () => {
     const result = await load([
       {

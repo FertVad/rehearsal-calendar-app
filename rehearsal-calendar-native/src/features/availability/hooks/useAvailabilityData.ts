@@ -201,20 +201,24 @@ export const useAvailabilityData = () => {
       }
 
       // DEDUPLICATION: a range shown twice is shown once — but only among rows
-      // that are read-only here. The person's own rows are what a save of the
-      // day writes back, replacing the day, so one hidden behind another row
-      // with the same hours was deleted by the next save (cause fix 15, review
-      // round 1): a slot of the 11th at 00:00–01:00 pushed out by the morning
-      // of the 10th's overnight slot, or a slot matching a rehearsal's hours.
+      // that are read-only here, and only by one another. The person's own
+      // rows are kept apart from it both ways:
+      // - none of them is dropped: a save of the day writes back what the
+      //   editor holds, so one hidden behind another row with the same hours
+      //   was deleted by the next save (cause fix 15, review round 1);
+      // - none of them drops a read-only row: a day marked free by hand in the
+      //   middle of a trip from the phone hid the trip's 00:00–23:59 behind the
+      //   free mark's, and the day read free while everyone else's planner
+      //   counted the trip (review round 2).
       for (const dateStr in serverData) {
         const slots = serverData[dateStr];
         const isOwn = (slot: typeof slots[number]) => !slot.source || slot.source === 'manual';
-        const uniqueSlots: typeof slots = [];
+        const uniqueSlots: typeof slots = slots.filter(isOwn);
         const seenTimeRanges = new Set<string>();
 
-        // First pass: rehearsals and the person's own rows, all of them
+        // First pass: rehearsals, all of them
         for (const slot of slots) {
-          if (slot.source === 'rehearsal' || isOwn(slot)) {
+          if (slot.source === 'rehearsal') {
             const key = `${slot.startTime}-${slot.endTime}`;
             uniqueSlots.push(slot);
             seenTimeRanges.add(key);
@@ -265,8 +269,8 @@ export const useAvailabilityData = () => {
         const own = typedSlots.filter((s) => !s.source || s.source === 'manual');
 
         // The day's own declaration. The all-day row is searched for rather
-        // than assumed to be first: the deduplication above puts rehearsal rows
-        // in front, and a timed row can sort ahead of it anyway.
+        // than assumed to be first: the deduplication above reorders the rows,
+        // and a timed row can sort ahead of it anyway.
         const allDay = own.find((s) => s.isAllDay);
         let mode: DayMode = allDay ? (allDay.type === 'busy' ? 'busy' : 'free') : 'custom';
 
