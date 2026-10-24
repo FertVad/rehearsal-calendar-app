@@ -86,6 +86,9 @@ export const PEOPLE = {
   // A busy slot from 23:00 to 01:00 and one of the next morning, 00:00 to
   // 01:00, entered on its own; he adds an hour to the morning (27).
   trigorin: { email: 'trigorin@e2e.test', firstName: 'Boris', lastName: 'Trigorin', onboarded: true },
+  // A three-day trip from his calendar, and its middle day marked free by
+  // hand (28).
+  dorn: { email: 'dorn@e2e.test', firstName: 'Yevgeny', lastName: 'Dorn', onboarded: true },
   // Makes a rehearsal from 23:00 to 01:00 in the form (26), alone in a project
   // of her own.
   arkadina: { email: 'arkadina@e2e.test', firstName: 'Irina', lastName: 'Arkadina', onboarded: true },
@@ -327,6 +330,8 @@ export async function seed({ client, apiUrl, timezone }) {
     // Zarechnaya's slot (25), and Trigorin's (27): from 23:00 on the first to
     // 01:00 on the second.
     evening: localDate(5), morning: localDate(6),
+    // The middle of Dorn's trip (28), marked free by hand.
+    trip: localDate(4),
   };
   await call(apiUrl, 'PUT', '/native/availability/days', {
     token: await token('treplev'),
@@ -348,6 +353,14 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual'),
             ($1, $4::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual')`,
     [ids.trigorin, localInstant(5, 23), localInstant(6, 1), localInstant(6, 0)]);
+  // Dorn's (28): a whole-day trip over three days, as the phone's calendar
+  // imports it, and the middle day free all day, as a save of that day writes it.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source, external_event_id)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'google_calendar', 'e2e-trip'),
+            ($1, $4::timestamptz, $5::timestamptz, 'available', TRUE, 'manual', NULL)`,
+    [ids.dorn, `${localDate(3)}T00:00:00.000Z`, `${localDate(5)}T23:59:59.999Z`,
+      `${days.trip}T00:00:00.000Z`, `${days.trip}T23:59:59.999Z`]);
 
   // A create whose answer never arrives (13). The first project named
   // Dunsinane takes 13 seconds to insert — longer than the app's 10-second
