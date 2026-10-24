@@ -1,0 +1,17 @@
+Cause fix 15 — server test of f2f34d5 on the server code of a7338eb ("red before").
+  git restore --source=a7338eb -- server/routes/native/rehearsals.js \
+    server/services/rehearsals/rehearsalService.js server/utils/timezone.js
+  (server, Node 22.16.0) NODE_OPTIONS=--experimental-vm-modules jest __tests__/routes/rehearsalTimes.test.js
+  git restore --source=HEAD -- server
+
+  ✕ a date with 23:00–01:00 is two hours into the next morning (178 ms)
+  ✕ refuses with 400 a rehearsal ending before it starts, and writes nothing (33 ms)
+  ✕ refuses with 400 a date whose two times are the same (25 ms)
+  ✕ refuses an edit to an end before the start, and keeps the rehearsal as it was (28 ms)
+    Expected: 7200000     Received: -79200000   (legacy date/startTime/endTime: end on the start's date, −22 h)
+    Expected: 400         Received: 201         (ending before it starts was written; SQLite has no CHECK — PostgreSQL answers 500)
+    Expected: 400         Received: 201         (19:00–19:00 written as a zero-length rehearsal)
+    Expected: 400         Received: 200         (edit to an end before the start written)
+Tests: 4 failed, 4 total
+
+On f2f34d5: 4 passed (with rehearsalRoster, lifecycleAtomicity: 38 passed).
