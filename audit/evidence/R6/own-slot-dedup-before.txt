@@ -1,0 +1,59 @@
+Cause fix 15, review round 1, finding 1 — red before.
+Code: useAvailabilityData.ts at 308da83 (HEAD before the fix); tests: the new
+cases in useAvailabilityDataMultiDay.test.ts.
+Command: cd rehearsal-calendar-native && npx jest --selectProjects frontend src/features/availability/hooks/__tests__/useAvailabilityDataMultiDay.test.ts
+
+Summary of all failing tests
+FAIL src/features/availability/hooks/__tests__/useAvailabilityDataMultiDay.test.ts (23.999 s)
+  ● A multi-day calendar event, read in Jerusalem › a hand-entered slot past midnight › does not push out a slot of the next day with the same hours
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 6
+    + Received  + 1
+
+    - Array [
+    -   Object {
+    -     "end": "01:00",
+    -     "start": "00:00",
+    -   },
+    - ]
+    + Array []
+
+      169 |         const result = await load(data);
+      170 |         const next = result.current.availability['2026-09-11'];
+    > 171 |         expect(next.slots).toEqual([{ start: '00:00', end: '01:00' }]);
+          |                            ^
+      172 |
+      173 |         const { result: save } = renderHook(() => useAvailabilitySave());
+      174 |         expect(save.current.entriesForDay('2026-09-11', next)).toHaveLength(1);
+
+      at Object.<anonymous> (src/features/availability/hooks/__tests__/useAvailabilityDataMultiDay.test.ts:171:28)
+
+  ● A multi-day calendar event, read in Jerusalem › keeps a hand-entered slot with the same hours as a rehearsal
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 6
+    + Received  + 1
+
+    - Array [
+    -   Object {
+    -     "end": "22:00",
+    -     "start": "19:00",
+    -   },
+    - ]
+    + Array []
+
+      184 |     const result = await load([{ ...at, source: 'rehearsal' }, { ...at, source: 'manual' }]);
+      185 |     const day = result.current.availability['2026-09-12'];
+    > 186 |     expect(day.slots).toEqual([{ start: '19:00', end: '22:00' }]);
+          |                       ^
+      187 |     expect(imported(day)).toEqual(['19:00-22:00']);
+      188 |   });
+      189 |
+
+      at Object.<anonymous> (src/features/availability/hooks/__tests__/useAvailabilityDataMultiDay.test.ts:186:23)
+
+Test Suites: 1 failed, 78 passed, 79 total
+Tests:       2 failed, 790 passed, 792 total
