@@ -314,6 +314,8 @@ describe('useAvailabilitySave Hook', () => {
 
     it('saves a slot past midnight from Save, ending on the next day (CC06)', async () => {
       (availabilityAPI.saveDays as jest.Mock).mockResolvedValue({});
+      // A profile in UTC, so the instants read as the clock times entered.
+      setProfileTimezone('UTC');
       const { result } = renderHook(() => useAvailabilitySave());
 
       let success = false;

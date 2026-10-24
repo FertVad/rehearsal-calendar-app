@@ -11,6 +11,7 @@ import { checkSchedulingConflicts } from '../../../../shared/utils/conflictDetec
 import { getSyncSettings } from '../../../../shared/utils/calendarStorage';
 import { syncRehearsalToCalendar } from '../../../../shared/services/calendar';
 import { Project, ProjectMember } from '../../../../shared/types';
+import { setProfileTimezone } from '../../../../shared/utils/time';
 
 // Mock dependencies
 jest.mock('../../../../shared/services/api');
@@ -128,6 +129,10 @@ describe('useAddRehearsalSubmit Hook', () => {
   });
 
   describe('Validation - End Time Before Start Time', () => {
+    // A profile in UTC, so the instants read as the clock times picked.
+    beforeEach(() => setProfileTimezone('UTC'));
+    afterEach(() => setProfileTimezone(null));
+
     it('an end before the start is the next morning, and is sent so (DF04)', async () => {
       (rehearsalsAPI.create as jest.Mock).mockResolvedValue({ data: { rehearsal: { id: '9' } } });
       // The form opened at 23:00: its end, two hours on, is 01:00 the next day.
