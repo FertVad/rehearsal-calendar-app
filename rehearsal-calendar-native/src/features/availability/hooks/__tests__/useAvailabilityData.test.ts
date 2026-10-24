@@ -221,7 +221,7 @@ describe('useAvailabilityData Hook', () => {
   });
 
   describe('Deduplication Logic', () => {
-    it('should prioritize rehearsal slots over manual slots with same time range', async () => {
+    it('should prioritize rehearsal slots over imported slots with same time range', async () => {
       const consoleLog = jest.spyOn(console, 'log').mockImplementation();
 
       const mockData = [
@@ -229,7 +229,7 @@ describe('useAvailabilityData Hook', () => {
           startsAt: '2025-12-29T10:00:00Z',
           endsAt: '2025-12-29T12:00:00Z',
           type: 'busy',
-          source: 'manual',
+          source: 'apple_calendar',
         },
         {
           startsAt: '2025-12-29T10:00:00Z',
@@ -249,9 +249,9 @@ describe('useAvailabilityData Hook', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // One survives the deduplication, and it is the rehearsal's — which the
-      // user did not type, so it belongs with the read-only rows rather than
-      // among the hours a save writes back.
+      // One survives the deduplication, and it is the rehearsal's. Only
+      // read-only rows are deduplicated: a hand-entered one with the same hours
+      // stays among the slots a save writes back (useAvailabilityDataMultiDay).
       const day = result.current.availability['2025-12-29'];
       expect(day.slots).toHaveLength(0);
       expect(day.importedSlots).toHaveLength(1);
@@ -259,7 +259,7 @@ describe('useAvailabilityData Hook', () => {
 
       // Should log the deduplication
       expect(consoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping duplicate manual slot')
+        expect.stringContaining('Skipping duplicate apple_calendar slot')
       );
 
       consoleLog.mockRestore();

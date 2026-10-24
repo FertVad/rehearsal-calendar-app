@@ -241,6 +241,7 @@ export default function AddRehearsalScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.rehearsals.startTime}</Text>
             <TouchableOpacity
+              testID="rehearsal-start-time"
               style={styles.pickerButton}
               onPress={form.openStartTimePicker}
             >

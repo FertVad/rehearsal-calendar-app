@@ -200,31 +200,36 @@ export const useAvailabilityData = () => {
         }
       }
 
-      // DEDUPLICATION: Remove duplicate time slots (prioritize rehearsal > manual)
-      // If same time range exists with different sources, keep only rehearsal
+      // DEDUPLICATION: a range shown twice is shown once — but only among rows
+      // that are read-only here. The person's own rows are what a save of the
+      // day writes back, replacing the day, so one hidden behind another row
+      // with the same hours was deleted by the next save (cause fix 15, review
+      // round 1): a slot of the 11th at 00:00–01:00 pushed out by the morning
+      // of the 10th's overnight slot, or a slot matching a rehearsal's hours.
       for (const dateStr in serverData) {
         const slots = serverData[dateStr];
+        const isOwn = (slot: typeof slots[number]) => !slot.source || slot.source === 'manual';
         const uniqueSlots: typeof slots = [];
         const seenTimeRanges = new Set<string>();
 
-        // First pass: add all rehearsal slots
+        // First pass: rehearsals and the person's own rows, all of them
         for (const slot of slots) {
-          if (slot.source === 'rehearsal') {
+          if (slot.source === 'rehearsal' || isOwn(slot)) {
             const key = `${slot.startTime}-${slot.endTime}`;
             uniqueSlots.push(slot);
             seenTimeRanges.add(key);
           }
         }
 
-        // Second pass: add manual/other slots only if time range not already covered by rehearsal
+        // Second pass: other read-only rows, only if their range is not shown yet
         for (const slot of slots) {
-          if (slot.source !== 'rehearsal') {
+          if (slot.source !== 'rehearsal' && !isOwn(slot)) {
             const key = `${slot.startTime}-${slot.endTime}`;
             if (!seenTimeRanges.has(key)) {
               uniqueSlots.push(slot);
               seenTimeRanges.add(key);
             } else {
-              logger.debug(`[useAvailabilityData] Skipping duplicate ${slot.source} slot on ${dateStr} ${key} (covered by rehearsal)`);
+              logger.debug(`[useAvailabilityData] Skipping duplicate ${slot.source} slot on ${dateStr} ${key} (already shown)`);
             }
           }
         }

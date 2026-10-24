@@ -1,0 +1,135 @@
+# A rehearsal made in the form from 23:00 to 01:00 runs into the next morning
+# (cause fix 15: DF04). The form put the end on the start's day, so 01:00 came
+# before 23:00 and the form refused it; now the end says "next day", the
+# rehearsal is saved ending the next morning, and it opens again as it was.
+# Irina Arkadina is alone in a project of her own, so nobody else's days move.
+#
+# The times are set on the picker's wheels: each one is a single element whose
+# text is its value ("11 o’clock", "PM"), and a tap on the row just below or
+# above the middle turns it by one. These points are the Rehearsly E2E
+# simulator's (iPhone 16): the hour wheel is at x 133, the AM/PM wheel at
+# x 253, the middle row at y 705, one row is 31 points.
+appId: ${APP_ID}
+name: A rehearsal made from 23:00 to 01:00 ends the next morning
+tags:
+  - calendar
+  - rehearsals
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${ARKADINA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+# Start: 11 PM. A later start moves the end two hours on — here 01:00.
+- tapOn:
+    id: rehearsal-start-time
+- extendedWaitUntil:
+    visible: "Select Start Time"
+    timeout: 10000
+- repeat:
+    times: 30
+    while:
+      notVisible: "11 o’clock"
+    commands:
+      - tapOn:
+          point: "133,736"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "AM"
+    commands:
+      - tapOn:
+          point: "253,736"
+      - waitForAnimationToEnd
+- assertVisible: "PM"
+- tapOn: "Done"
+# A picker opened while the last one is still sliding away is drawn but not
+# in the accessibility tree, so the next waits for this one to be gone.
+- extendedWaitUntil:
+    notVisible: "Select Start Time"
+    timeout: 10000
+- waitForAnimationToEnd
+# End: 1 AM. Started at 22:00 or later, the form keeps an end already past
+# midnight, so then it is set on its own wheels too.
+- runFlow:
+    when:
+      notVisible:
+        id: rehearsal-end-time
+        text: ".*01:00.*"
+    commands:
+      - tapOn:
+          id: rehearsal-end-time
+      - extendedWaitUntil:
+          visible: "Select End Time"
+          timeout: 10000
+      - repeat:
+          times: 30
+          while:
+            notVisible: "1 o’clock"
+          commands:
+            - tapOn:
+                point: "133,736"
+            - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible: "PM"
+          commands:
+            - tapOn:
+                point: "253,673"
+            - waitForAnimationToEnd
+      - assertVisible: "AM"
+      - tapOn: "Done"
+      - extendedWaitUntil:
+          notVisible: "Select End Time"
+          timeout: 10000
+- assertVisible:
+    id: rehearsal-start-time
+    text: ".*23:00.*"
+- assertVisible:
+    id: rehearsal-end-time
+    text: ".*01:00.*"
+- assertVisible:
+    id: rehearsal-ends-next-day
+- takeScreenshot: 25-form-ends-next-day
+- tapOn: "e.g. Act II run-through"
+- inputText: "Lakeside night"
+- scrollUntilVisible:
+    element:
+      id: rehearsal-submit
+    direction: DOWN
+- tapOn:
+    id: rehearsal-submit
+- extendedWaitUntil:
+    visible: "Rehearsal created"
+    timeout: 15000
+- tapOn: "OK"
+# Saved ending the next morning: the card gives the end its own date.
+- tapOn: "Calendar, tab.*"
+- scrollUntilVisible:
+    element: ".*23:00 — .*, 01:00.*Lakeside night.*"
+    direction: DOWN
+    timeout: 30000
+# Opened again, it is the same 23:00 to 01:00 the next day.
+- tapOn: ".*23:00 — .*, 01:00.*Lakeside night.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-time
+      text: "23:00 — .*, 01:00"
+    timeout: 15000
+- takeScreenshot: 25-reopened

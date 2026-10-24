@@ -162,6 +162,33 @@ describe('A multi-day calendar event, read in Jerusalem', () => {
       // The device's zone writes it here; the instants are what must match.
       expect(Date.parse(entry.endsAt) - Date.parse(entry.startsAt)).toBe(2 * 60 * 60 * 1000);
     });
+
+    // Review round 1: the morning's copy took the place of a slot of the 11th
+    // entered on its own for the same hours, and the next save of the 11th —
+    // which replaces the day with what the editor holds — deleted it.
+    it('does not push out a slot of the next day with the same hours', async () => {
+      // 11 September 00:00 → 01:00 local, entered on the 11th.
+      const MORNING = { ...OVERNIGHT, startsAt: '2026-09-10T21:00:00.000Z', endsAt: '2026-09-10T22:00:00.000Z' };
+      for (const data of [[OVERNIGHT, MORNING], [MORNING, OVERNIGHT]]) {
+        const result = await load(data);
+        const next = result.current.availability['2026-09-11'];
+        expect(next.slots).toEqual([{ start: '00:00', end: '01:00' }]);
+
+        const { result: save } = renderHook(() => useAvailabilitySave());
+        expect(save.current.entriesForDay('2026-09-11', next)).toHaveLength(1);
+      }
+    });
+  });
+
+  // The day is saved as the editor holds it, so a slot of the person's own is
+  // never hidden behind another row with the same hours: hidden, it was gone
+  // at the next save of that day.
+  it('keeps a hand-entered slot with the same hours as a rehearsal', async () => {
+    const at = { startsAt: '2026-09-12T16:00:00.000Z', endsAt: '2026-09-12T19:00:00.000Z', type: 'busy', isAllDay: false };
+    const result = await load([{ ...at, source: 'rehearsal' }, { ...at, source: 'manual' }]);
+    const day = result.current.availability['2026-09-12'];
+    expect(day.slots).toEqual([{ start: '19:00', end: '22:00' }]);
+    expect(imported(day)).toEqual(['19:00-22:00']);
   });
 
   it('covers every day of a multi-day whole-day entry', async () => {

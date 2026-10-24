@@ -152,6 +152,56 @@ export async function probeR6Availability({ connectionString, control, allowedPo
     assert.equal((await call('DELETE', '/api/native/availability/2030-05-05')).status, 200);
     assert.deepEqual(await manualOn('2030-05-05'), []);
     contracts.push('the bulk save and the day delete of older apps work behind the same lock');
+
+    // A rehearsal is an interval (cause fix 15: DF04). The older format's
+    // 23:00–01:00 runs into the next morning, in the project's zone, and so do
+    // the busy slots it books; a range that is not one is a 400 before any
+    // write — it used to reach the schema's CHECK and come back as a 500.
+    const project = await call('POST', '/api/native/projects', { name: 'Intervals' });
+    assert.equal(project.status, 201);
+    const projectId = Number(project.body.project.id);
+    await control.query(`UPDATE r0_fixture.native_projects SET timezone = 'Europe/Berlin' WHERE id = $1`, [projectId]);
+    const rehearsalRows = async () => (await control.query(`SELECT id, starts_at, ends_at FROM r0_fixture.native_rehearsals
+      WHERE project_id = $1 ORDER BY id`, [projectId])).rows.map((row) => ({
+      id: Number(row.id), from: row.starts_at.toISOString(), to: row.ends_at.toISOString() }));
+    const bookedRows = async () => (await control.query(`SELECT external_event_id, starts_at, ends_at
+      FROM r0_fixture.native_user_availability WHERE user_id = $1 AND source = 'rehearsal' ORDER BY id`, [userId])).rows
+      .map((row) => ({ rehearsal: Number(row.external_event_id), from: row.starts_at.toISOString(), to: row.ends_at.toISOString() }));
+    const rehearsalsRoute = `/api/native/projects/${projectId}/rehearsals`;
+
+    const overnight = await call('POST', rehearsalsRoute,
+      { title: 'Night run', date: '2030-07-02', startTime: '23:00', endTime: '01:00', participant_ids: [userId] });
+    assert.equal(overnight.status, 201, JSON.stringify(overnight.body));
+    const nightId = Number(overnight.body.rehearsal.id);
+    // 2 July 23:00 to 3 July 01:00 in Berlin (UTC+2 in summer).
+    const night = { id: nightId, from: '2030-07-02T21:00:00.000Z', to: '2030-07-02T23:00:00.000Z' };
+    assert.deepEqual(await rehearsalRows(), [night], 'DF04: 23:00–01:00 is two hours into the next morning');
+    assert.deepEqual(await bookedRows(), [{ rehearsal: nightId, from: night.from, to: night.to }]);
+    contracts.push('the older date format\'s 23:00–01:00 is stored and booked into the next morning in the project\'s zone (DF04)');
+
+    const refusals = [
+      { startsAt: '2030-07-05T23:00:00.000Z', endsAt: '2030-07-05T01:00:00.000Z' },
+      { startsAt: '2030-07-05T19:00:00.000Z', endsAt: '2030-07-05T19:00:00.000Z' },
+      { date: '2030-07-05', startTime: '19:00', endTime: '19:00' },
+    ];
+    for (const times of refusals) {
+      const refusedRun = await call('POST', rehearsalsRoute, { title: 'Not one', participant_ids: [userId], ...times });
+      assert.equal(refusedRun.status, 400, JSON.stringify(times));
+      assert.equal(refusedRun.body.code, 'TIME_RANGE_INVALID');
+    }
+    assert.deepEqual(await rehearsalRows(), [night], 'a refused rehearsal must write no row');
+    assert.deepEqual(await bookedRows(), [{ rehearsal: nightId, from: night.from, to: night.to }],
+      'a refused rehearsal must book no busy slot');
+    contracts.push('a rehearsal ending at or before its start is a 400 TIME_RANGE_INVALID and writes nothing');
+
+    const refusedEdit = await call('PUT', `${rehearsalsRoute}/${nightId}`,
+      { startsAt: '2030-07-02T23:00:00.000Z', endsAt: '2030-07-02T21:00:00.000Z', participant_ids: [userId] });
+    assert.equal(refusedEdit.status, 400);
+    assert.equal(refusedEdit.body.code, 'TIME_RANGE_INVALID');
+    assert.deepEqual(await rehearsalRows(), [night], 'a refused edit must keep the rehearsal as it was');
+    assert.deepEqual(await bookedRows(), [{ rehearsal: nightId, from: night.from, to: night.to }],
+      'a refused edit must keep its busy slots');
+    contracts.push('an edit to an end before the start is a 400 TIME_RANGE_INVALID and keeps the rehearsal and its slots');
   } finally {
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });
     await database.closeDatabase();

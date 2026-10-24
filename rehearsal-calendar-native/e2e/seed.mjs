@@ -83,6 +83,9 @@ export const PEOPLE = {
   // What runs past midnight: a rehearsal from 23:00 yesterday to 01:00 today
   // (23), and a busy slot of her own from 23:00 to 01:00 later on (24).
   zarechnaya: { email: 'zarechnaya@e2e.test', firstName: 'Nina', lastName: 'Zarechnaya', onboarded: true },
+  // Makes a rehearsal from 23:00 to 01:00 in the form (23), alone in a project
+  // of her own.
+  arkadina: { email: 'arkadina@e2e.test', firstName: 'Irina', lastName: 'Arkadina', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -214,6 +217,14 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
     [nightId, ids.zarechnaya]);
+  // Arkadina's (23), made as the server makes a project: the sign-ins are spent.
+  const { rows: [lake] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Lake Theatre', 'By the lake', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+    [lake.id, ids.arkadina]);
   // Made in this order: the Estate is the newer, so the form opens on it.
   await project('Pishchik Mill', 'Flour', [], 'pishchik');
   await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
