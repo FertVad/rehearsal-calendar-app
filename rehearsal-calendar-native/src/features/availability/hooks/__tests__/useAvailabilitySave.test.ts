@@ -204,6 +204,9 @@ describe('useAvailabilitySave Hook', () => {
       expect(validation.isValid).toBe(false);
       expect(validation.errorTitle).toBe('Cannot Save');
       expect(validation.errorMessage).toContain('End must be after start');
+      // The day it names is the day edited, not the one before: '2025-12-29'
+      // read as UTC midnight is the 28th in New York (jest.config.js).
+      expect(validation.errorMessage).toContain('(December 29, 2025)');
     });
 
     it('should fail validation for overlapping slots', () => {

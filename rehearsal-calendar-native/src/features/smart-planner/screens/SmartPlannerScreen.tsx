@@ -33,9 +33,12 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const { projects } = useProjects();
   const { t, language } = useI18n();
 
+  // Calendar dates of the profile's zone. Not new Date('YYYY-MM-DD'): that is
+  // UTC midnight, and the local getters below read it as the day before
+  // anywhere behind UTC.
   const formatDateRange = useCallback((startDate: string, endDate: string): string => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = parseDateString(startDate);
+    const end = parseDateString(endDate);
 
     const locale = getDateLocale(language);
     const options: Intl.DateTimeFormatOptions = { month: 'short' };

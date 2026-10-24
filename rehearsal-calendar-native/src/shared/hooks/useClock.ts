@@ -33,10 +33,16 @@ const POLL_MS = 30 * 1000;
  * steps of `stepMinutes` of its day: the value changes only when the step, the
  * date or the zone changes, so a screen recomputes when there is something new
  * to show and not every tick.
+ *
+ * The instant is kept with the zone it was read for. A new zone reads the clock
+ * again: the one kept moves only with the step, so for `useToday` it can be the
+ * morning's, and in a zone behind that is still yesterday.
  */
 export function useNow(stepMinutes = 1): Date {
   const timezone = useTimezone();
-  const [instant, setInstant] = useState(() => new Date());
+  const [read, setRead] = useState(() => ({ zone: timezone, instant: new Date() }));
+  if (read.zone !== timezone) setRead({ zone: timezone, instant: new Date() });
+  const instant = read.zone === timezone ? read.instant : new Date();
   const zone = useRef(timezone);
   zone.current = timezone;
 
@@ -51,7 +57,7 @@ export function useNow(stepMinutes = 1): Date {
       const next = step(date);
       if (next !== current) {
         current = next;
-        setInstant(date);
+        setRead({ zone: zone.current, instant: date });
       }
     };
     const timer = setInterval(look, POLL_MS);

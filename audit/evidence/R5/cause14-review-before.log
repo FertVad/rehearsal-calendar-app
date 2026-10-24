@@ -1,0 +1,28 @@
+Cause fix 14, review round 1 (Astra) — Jest red before, on 14dda81's client
+(the new tests, the code not yet changed).
+
+$ npx jest --selectProjects frontend src/shared/utils/__tests__/oneTimezone.test.tsx src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx
+
+FAIL src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx
+  ● The range under the period (cause fix 14) › names the profile's days, not the device's
+
+    Unable to find an element with text: 1-7 Jan
+            31 Dec - 6 Jan
+                Thu, Jan 1
+                ...
+    > 147 |     expect(screen.getByText('1-7 Jan')).toBeTruthy();
+
+FAIL src/shared/utils/__tests__/oneTimezone.test.tsx (12.074 s)
+  ● "today" › is read afresh when the zone changes hours after the app opened
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "2026-10-16"
+    Received: "2026-10-15"
+
+      102 |     act(() => setProfileTimezone('America/New_York'));
+      103 |
+    > 104 |     expect(result.current).toBe('2026-10-16');
+
+Test Suites: 2 failed, 77 passed, 79 total
+Tests:       2 failed, 784 passed, 786 total

@@ -19,8 +19,8 @@ import type { ProjectsStackParamList, ProjectDetailNavigation } from '../../../n
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
-import { parseDateString } from '../../../shared/utils/time';
-import { useToday } from '../../../shared/hooks/useClock';
+import { onClockOf, parseDateString } from '../../../shared/utils/time';
+import { useTimezone, useToday } from '../../../shared/hooks/useClock';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -58,6 +58,8 @@ interface Rehearsal {
   id: string;
   title: string;
   scene?: string;
+  startsAt?: string;
+  endsAt?: string;
   date: string;
   time: string;
   endTime?: string;
@@ -184,21 +186,25 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
     generateInviteLink(projectId, project.name);
   };
 
-  // The server dates the rehearsals in the profile's zone; today is the same
-  // zone's (DF01).
+  // Dated and timed in the profile's zone, as today is (DF01). From the
+  // instants, here: the server's date and time are in the zone it knew when it
+  // answered, and this screen stays open while the profile changes the zone —
+  // it kept the old zone's hours (cause fix 14, review).
   const today = useToday();
+  const timezone = useTimezone();
 
   // Memoize split rehearsals into upcoming and past to avoid re-sorting on every render
   const { upcomingRehearsals, pastRehearsals } = useMemo(() => {
-    const upcoming = rehearsals
+    const shown = rehearsals.map(r => onClockOf(r, timezone));
+    const upcoming = shown
       .filter(r => r.date >= today)
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-    const past = rehearsals
+    const past = shown
       .filter(r => r.date < today)
       .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
 
     return { upcomingRehearsals: upcoming, pastRehearsals: past };
-  }, [rehearsals, today]);
+  }, [rehearsals, today, timezone]);
 
   const handleMemberPress = useCallback((member: Member) => {
     // Only allow admins to manage members, and can't manage owner

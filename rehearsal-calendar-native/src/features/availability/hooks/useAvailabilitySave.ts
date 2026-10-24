@@ -3,7 +3,7 @@ import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayState } from '../types';
 import { validateSlot, slotsOverlap } from '../utils';
 import { getDateLocale } from '../../../shared/utils/locale';
-import { addDays, dateTimeToISOInTimezone } from '../../../shared/utils/time';
+import { addDays, dateTimeToISOInTimezone, parseDateString } from '../../../shared/utils/time';
 import { useTimezone } from '../../../shared/hooks/useClock';
 
 import { logger } from '../../../shared/utils/logger';
@@ -96,7 +96,7 @@ export const useAvailabilitySave = () => {
           const slotValidation = validateSlot(slot);
 
           if (!slotValidation.isValid) {
-            const dateObj = new Date(date);
+            const dateObj = parseDateString(date);
             const locale = getDateLocale(language);
             const formattedDate = dateObj.toLocaleDateString(locale, {
               day: 'numeric',
@@ -120,7 +120,7 @@ export const useAvailabilitySave = () => {
             const overlaps = slotsOverlap(slot1, slot2);
 
             if (overlaps) {
-              const dateObj = new Date(date);
+              const dateObj = parseDateString(date);
               const locale = getDateLocale(language);
               const formattedDate = dateObj.toLocaleDateString(locale, {
                 day: 'numeric',

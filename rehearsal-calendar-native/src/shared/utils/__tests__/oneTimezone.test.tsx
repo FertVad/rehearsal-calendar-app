@@ -87,6 +87,23 @@ describe('"today"', () => {
     expect(result.current).toBe('2026-10-16');
   });
 
+  it('is read afresh when the zone changes hours after the app opened', () => {
+    // Opened at 00:30 UTC on 16 October: 03:30 in Tel Aviv, the 16th. Nine and
+    // a half hours on, still the 16th there, so nothing moved since. Now
+    // New York is chosen, where it is 06:00 on the 16th — not 20:30 on the
+    // 15th, which is where the morning's instant stood in New York.
+    jest.useFakeTimers({ now: new Date('2026-10-16T00:30:00Z') });
+    const { result } = renderHook(() => useToday());
+    expect(result.current).toBe('2026-10-16');
+
+    act(() => {
+      jest.advanceTimersByTime(9.5 * 60 * 60 * 1000);
+    });
+    act(() => setProfileTimezone('America/New_York'));
+
+    expect(result.current).toBe('2026-10-16');
+  });
+
   it('reads the hour on the profile\'s clock', () => {
     jest.useFakeTimers({ now: evening });
     const { result } = renderHook(() => useNow());

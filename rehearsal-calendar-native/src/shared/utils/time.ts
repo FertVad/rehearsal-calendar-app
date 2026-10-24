@@ -237,6 +237,25 @@ export const isoToTimeStringInTimezone = (
 };
 
 /**
+ * A rehearsal's date and hours on the clock of `timezone`, read from its
+ * instants. The server's own `date`, `time` and `endTime` are in the zone the
+ * profile had when it answered; a screen left open across a change of zone
+ * kept showing them (cause fix 14, review). Kept only for a row with no instants.
+ */
+export const onClockOf = <T extends { startsAt?: string; endsAt?: string; date?: string; time?: string; endTime?: string }>(
+  rehearsal: T,
+  timezone: string
+): T => {
+  if (!rehearsal.startsAt) return rehearsal;
+  return {
+    ...rehearsal,
+    date: isoToDateStringInTimezone(rehearsal.startsAt, timezone),
+    time: isoToTimeStringInTimezone(rehearsal.startsAt, timezone),
+    endTime: rehearsal.endsAt ? isoToTimeStringInTimezone(rehearsal.endsAt, timezone) : rehearsal.endTime,
+  };
+};
+
+/**
  * Convert local date/time in user's timezone to ISO 8601 timestamp (UTC)
  *
  * @param dateStr - Date in YYYY-MM-DD format

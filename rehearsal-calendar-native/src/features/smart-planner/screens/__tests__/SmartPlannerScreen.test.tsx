@@ -136,6 +136,18 @@ describe('DP01 — roster reload within the same project (R5-01)', () => {
   });
 });
 
+describe('The range under the period (cause fix 14)', () => {
+  it('names the profile\'s days, not the device\'s', async () => {
+    // Today is 1 January in the profile's zone; the device is in New York
+    // (jest.config.js), behind UTC. '2026-01-01' read as UTC midnight is
+    // 31 December there.
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+
+    expect(screen.getByText('1-7 Jan')).toBeTruthy();
+  });
+});
+
 describe('DP01 — member selection follows the project', () => {
   it('member filter shows exactly the new project\'s count after switching', async () => {
     // Project A has 3 members, project B has 2. After switching, the filter
