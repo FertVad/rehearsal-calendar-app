@@ -234,19 +234,6 @@ calendars new ids, and rows imported under the old ones stay until "remove all
 imported" is pressed. It needs signing out of iCloud and back in, and costs
 extra busy hours the person can see and clear.
 
-### Saving one rehearsal exports it outside the sync's queue
-
-Every sync run — automatic, a pull, "Synchronize" — and "remove all" go through
-one queue (`services/calendarSync.ts`, cause fix 18). Saving a rehearsal
-(`useAddRehearsalSubmit`) and deleting one (`CalendarScreen`) still write that
-one event straight away, beside it. For the two to collide, an automatic run
-has to fetch the rehearsals in the moment between the save reaching the server
-and its event being written, and then the export's own duplicate search has to
-miss the event the save just made: at worst a second copy of one event in the
-person's own calendar. Left alone on the bar (a rare coincidence, minor
-and visible): the fix is to send these two through `runCalendarWork` as well,
-with the save waiting on a run already going.
-
 ### Android App Links wait for an Android release (IC01)
 
 `assetlinks.json` carries a placeholder where the app's signing fingerprint
