@@ -1,0 +1,14 @@
+# T-207 check, green: the same tap through tap-and-see.yaml. The first press
+# leaves no result, the subflow says so to the run and taps once more: the
+# flow passes, and the run prints one tap taken again.
+appId: ${APP_ID}
+name: T-207 check 2 - the same tap through tap-and-see
+---
+- runFlow:
+    file: planner-partial.yaml
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP_ID: members-toggle-all
+      SEE: "All Members"
+      WAIT_MS: 5000

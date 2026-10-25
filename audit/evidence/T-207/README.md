@@ -46,23 +46,51 @@ not in Metro.
 - `README.md`, `red-before.txt` rewritten; `green-after.txt` keeps the first
   round's checks, corrected.
 
-## Not fixed - needs a decision
+## The owner's decision (25.10.2026, 12:23) and the fix
 
-Within the task's rules (no retries, no raised limits) the flake has no fix in
-this repository: the touch is lost below the app, and the tool that should
-catch it does not. What would fix it, each a decision for the owner:
+Within the task's rules the flake had no fix in this repository, and that was
+put to the owner. The decision: a tap may be taken again, by one shared
+mechanism only, checked, at most once, with no pauses and no longer waits, and
+every second tap printed by the run.
 
-1. Taps whose effect a flow waits for are taken again when the effect does not
-   come - the way `sign-in-form.yaml` already does for the login fields (a
-   subflow "tap X until Y shows", used in place of the bare taps). The tap on
-   "Apple Calendar" is safe to repeat (`handleSelectProvider` only turns sync
-   on again).
-2. A Maestro whose tap check works (or `retryTapIfNoChange` that can see "no
-   change"), or an Xcode/simulator without the race.
+- `e2e/subflows/tap-and-see.yaml`: tap (`TAP_ID` or `TAP`), wait for `SEE` for
+  the flow's own `WAIT_MS`; if it is not there, report it
+  (`e2e/scripts/tap-again.js` -> the mailbox -> `e2e/out/taps-again.log`), tap
+  once more, wait for `SEE` again - which must come.
+- `e2e/run.mjs` prints `[e2e] taps taken again (tap-and-see.yaml): N` and each
+  one after the flows.
+- Flow 30's tap on "Apple Calendar" goes through it (a second tap only turns
+  sync on again, `handleSelectProvider`). Flows 27-29 tapped + up to three
+  times until "Mark Busy" showed: now through it too. The `retry` blocks of
+  sign-in and flows 11-12 retype text after a slow first keyboard - typing,
+  not a lost tap - and stay; flow 07's toggle and the pickers' steps in 26-27
+  tap until a state, by design.
+- The rule and the cause are in `docs/e2e.md`, "A lost tap".
+
+`tap-and-see-check.txt`: the mechanism on a tap whose first press leaves no
+result, made so on purpose (Olga Stage's planner, two of three selected:
+"Select All" first selects all, only the second clears to "All Members").
+Red: the bare tap-and-wait flow 30 used fails. Green: through tap-and-see it
+passes, one second tap printed. Bound: a result that never comes - two taps,
+no third, the flow fails.
+
+`after.txt`: flows 30, 27, 28, 29 through it, all passed.
+
+## On "red before" (review 1)
+
+A tap lost by the simulator cannot be had on demand - nine runs of flow 30,
+writes into e2e/out, load on every core and 48 taps after a banner did not
+lose one (`red-before.txt`). What proves the failure is the logs kept from
+the runs that had it: the red run's tap was dropped in backboardd
+(`red-run-timeline.txt`), 83 taps were dropped the same way across the kept
+runs, and Maestro reported every one of them done (`lost-taps.txt`). The
+failure the fix answers - a tap with no result, then a wait for it - is shown
+red and green on purpose in `tap-and-see-check.txt`.
 
 The bug flow 30 guards (cause fix 17) has not come back: every finished run of
-flow 30 this round (110324, 112454 x3, 115003 x3) exported after the failed import ("[Sync] ✅ Export completed" in metro.log,
-"Exported rehearsals: 1" asserted).
+flow 30 (110324, 112454 x3, 115003 x3, 130533) exported after the failed
+import ("[Sync] ✅ Export completed" in metro.log, "Exported rehearsals: 1"
+asserted).
 
 ## Tools (all in this folder, run from the root of the tree)
 
