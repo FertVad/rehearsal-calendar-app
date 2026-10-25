@@ -17,12 +17,17 @@ tags:
     visible: ".*Garden debate.*"
     timeout: 30000
 - assertVisible: ".*Lecture on progress.*"
+# Held open, until the release below however long the steps take (T-206). A
+# plain hold lets the answer go after nine seconds; on a slow simulator the
+# pull, the filter and the pick took longer, the spinner closed under the
+# dropdown, and the tap meant for Eternal Student landed below it.
 - runScript:
     file: ../scripts/hold-answers.js
     env:
       MAIL_URL: ${MAIL_URL}
       METHOD: GET
       PATH: "^/api/native/rehearsals/batch$"
+      OPEN: "1"
 # Pull to refresh: "All Projects" asked again, its answer held.
 - swipe:
     start: 50%, 25%

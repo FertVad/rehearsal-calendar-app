@@ -37,7 +37,9 @@
  * hearing anything (iOS counts them from the last byte), so the change is
  * still on its way when the next person has signed in (flow 22). On release
  * the request goes to the server and its body ends the answer; the status was
- * already sent, so this is for a change whose outcome the flow does not read.
+ * already sent, so this is for a change whose outcome the flow does not read,
+ * or for a read the server answers 200: it is asked without If-None-Match, so
+ * a read gets its body, never a 304 (flow 17, T-206).
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -93,7 +95,11 @@ function holdOpen(request, response, hold) {
   const onRelease = () => {
     if (done) return;
     stop();
-    const forward = http.request({ host: '127.0.0.1', port: inner.address().port, method: request.method, path: request.url, headers: request.headers }, (answer) => {
+    // Asked without its conditions: the 200 is already sent, so a read must get
+    // its body back, not a 304 with none to the copy the app has cached — the
+    // app then read an empty answer, not the late one (T-206).
+    const { 'if-none-match': _etag, 'if-modified-since': _since, ...headers } = request.headers;
+    const forward = http.request({ host: '127.0.0.1', port: inner.address().port, method: request.method, path: request.url, headers }, (answer) => {
       const body = [];
       answer.on('data', (chunk) => body.push(chunk));
       answer.on('end', () => {

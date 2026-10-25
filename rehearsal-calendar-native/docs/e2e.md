@@ -136,7 +136,15 @@ its connection open until release, three minutes at most: the answer begins at
 once (200, JSON) and a space follows every two seconds, so the app — whose ten
 seconds count from the last byte heard — does not give up while a flow signs
 out and back in (flow 22). The server's own status cannot follow, so this is
-for a change whose outcome the flow does not read. `revoke-sessions.js` ends every
+for a change whose outcome the flow does not read, or for a read the server
+answers 200: it is asked without `If-None-Match`, so it gets its body back,
+never a 304 to the app's cached copy (flow 17).
+
+An answer held while a flow takes several steps is held `OPEN`: the nine
+seconds of a plain hold are a clock the steps race. Flow 17 held its "All
+Projects" answer that way through a pull, the filter and a pick; on a slow
+simulator the answer went before the pick, the spinner closed and the content
+moved up under the tap, which then missed the option (T-206). `revoke-sessions.js` ends every
 session of an account, as its other device logging out would (flow 15).
 
 The seed signs in only the people it acts as: the server takes twenty

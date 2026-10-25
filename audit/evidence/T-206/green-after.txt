@@ -1,0 +1,23 @@
+T-206 green after: flow 17 with OPEN hold, server-with-mailbox.mjs fix.
+
+--- flow 17 five times (OPEN hold, before the server fix; run cut at the tool's 10 min after r5)
+npm run e2e -- e2e/repro/r1.yaml ... e2e/repro/r5.yaml e2e/repro/slow-open.yaml e2e/repro/slow-plain.yaml
+[Passed] Calendar filter against a late answer r1 (1m 40s)
+[Passed] Calendar filter against a late answer r2 (57s)
+[Passed] Calendar filter against a late answer r3 (1m 3s)
+[Passed] Calendar filter against a late answer r4 (1m 1s)
+[Passed] Calendar filter against a late answer r5 (59s)
+
+--- final tree, flow 17 three times and the slow simulator
+npm run e2e -- e2e/repro/r1.yaml e2e/repro/r2.yaml e2e/repro/r3.yaml e2e/repro/slow-open.yaml
+[Passed] Calendar filter against a late answer r1 (1m 46s)
+[Passed] Calendar filter against a late answer r2 (57s)
+[Passed] Calendar filter against a late answer r3 (54s)
+[Passed] T-206 slow simulator, open hold (1m 5s)
+4/4 Flows Passed in 4m 43s
+
+--- final tree, flow 22 (the other OPEN hold) and flow 17
+npm run e2e -- e2e/flows/22-switch-account-change-on-its-way.yaml e2e/flows/17-filter-late-answer.yaml
+[Passed] Switch accounts - a change on its way (2m)
+[Passed] Calendar filter against a late answer (1m 1s)
+2/2 Flows Passed in 3m 1s
