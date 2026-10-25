@@ -1,0 +1,163 @@
+Cause fix 17 — red before.
+
+Tests from fe11e12 run against the code of 9274bc3 (the six files of the fix
+put back with `git restore --source=9274bc3 -- <files>`; the tests stay as in
+fe11e12). Node 22, `npx jest --selectProjects frontend --silent --verbose
+--runTestsByPath <files>`, lines filtered to results and checks.
+
+Files of the fix restored:
+  src/shared/services/calendar/export.ts
+  src/shared/hooks/useAutoCalendarSync.ts
+  src/features/calendar/hooks/useCalendarSync.ts
+  src/features/profile/screens/CalendarSyncSettingsScreen.tsx
+  src/shared/utils/calendarStorage.ts
+  src/i18n/translations/calendarSync.ts  (see the screen run below)
+
+== services, hooks ==
+
+FAIL frontend src/shared/services/calendar/__tests__/syncOutcome.test.ts (17.091 s)
+    ✕ a lookup that failed is not "the reader deleted it" (160 ms)
+    ✓ the calendar's own "no such event" still recreates it (9 ms)
+    ✕ a search that could not read the calendar creates no second copy (32 ms)
+    ✕ is counted as failed, not as the old event exported (20 ms)
+    ✕ keeps the mapping it has (8 ms)
+    ✕ brings it up to date rather than taking it as it is (6 ms)
+    ✕ fails, rather than reporting the move done (18 ms)
+    ✕ leaves the mapping on the old copy, so the next run can still remove it (9 ms)
+    ✓ the next run adopts the copy it made instead of making another (40 ms)
+    ✕ keeps the mapping of the event still in the calendar (67 ms)
+    ✕ is not stamped by a run in which something failed (10 ms)
+    ✕ is stamped by a run with no failure, once (8 ms)
+    ✕ is not stamped by one rehearsal written on its own (10 ms)
+  ● Reading an event (EX04) › a lookup that failed is not "the reader deleted it"
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Expected number of calls: 0
+    Received number of calls: 1
+    > 65 |     expect(removeEventMapping).not.toHaveBeenCalled();
+  ● Reading an event (EX04) › a search that could not read the calendar creates no second copy
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Expected number of calls: 0
+    Received number of calls: 1
+    > 87 |     expect(Calendar.createEventAsync).not.toHaveBeenCalled();
+  ● An update that failed (EX03) › is counted as failed, not as the old event exported
+    expect(received).toBe(expected) // Object.is equality
+    Expected: 0
+    Received: 1
+    > 104 |     expect(result.success).toBe(0);
+  ● An update that failed (EX03) › keeps the mapping it has
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Expected number of calls: 0
+    Received number of calls: 1
+    > 111 |     expect(removeEventMapping).not.toHaveBeenCalled();
+  ● Adopting an event of ours that another device wrote › brings it up to date rather than taking it as it is
+    (updateEventAsync never called: its first call is undefined at line 131)
+  ● Moving to another calendar when the old copy cannot be removed (EX02) › fails, rather than reporting the move done
+    expect(received).rejects.toThrow()
+    Received promise resolved instead of rejected
+    > 146 |     await expect(syncRehearsalToCalendar(rehearsal, 'work')).rejects.toThrow('read-only');
+  ● Moving to another calendar when the old copy cannot be removed (EX02) › leaves the mapping on the old copy, so the next run can still remove it
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Expected number of calls: 0
+    Received number of calls: 1
+    > 152 |     expect(saveEventMapping).not.toHaveBeenCalled();
+  ● "Remove all exported" with one event that will not go (EX02) › keeps the mapping of the event still in the calendar
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Expected number of calls: 0
+    Received number of calls: 1
+    > 189 |     expect(clearAllMappings).not.toHaveBeenCalled();
+  ● "Last export" (EO06) › is not stamped by a run in which something failed
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Expected number of calls: 0
+    Received number of calls: 2
+    > 199 |     expect(updateLastExportTime).not.toHaveBeenCalled();
+  ● "Last export" (EO06) › is stamped by a run with no failure, once
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+    Expected number of calls: 1
+    Received number of calls: 3
+    > 205 |     expect(updateLastExportTime).toHaveBeenCalledTimes(1);
+  ● "Last export" (EO06) › is not stamped by one rehearsal written on its own
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Expected number of calls: 0
+    Received number of calls: 1
+    > 211 |     expect(updateLastExportTime).not.toHaveBeenCalled();
+
+FAIL frontend src/shared/services/calendar/__tests__/exportFailures.test.ts (19.256 s)
+    (8 of 9 pass; the changed one:)
+    ✕ leaves the old copy alone if the new one could not be made (13 ms)
+  ● When the reader picks a different export calendar › leaves the old copy alone if the new one could not be made
+    expect(received).rejects.toThrow()
+    Received promise resolved instead of rejected
+    > 128 |     await expect(syncRehearsalToCalendar(rehearsals[0], 'work')).rejects.toThrow();
+
+FAIL frontend src/shared/hooks/__tests__/useAutoCalendarSync.test.ts (19.713 s)
+    (16 of 18 pass; the new ones:)
+    ✕ a failed import still lets the export run (5 ms)
+    ✕ mappings that could not be fetched for the import still let the export run (6 ms)
+  ● One direction failing (EO02) › a failed import still lets the export run
+    expect(jest.fn()).toHaveBeenCalled()
+    Expected number of calls: >= 1
+    Received number of calls:    0
+    > 314 |     expect(syncAllRehearsals).toHaveBeenCalled();
+  ● One direction failing (EO02) › mappings that could not be fetched for the import still let the export run
+    expect(jest.fn()).toHaveBeenCalled()
+    Expected number of calls: >= 1
+    Received number of calls:    0
+    > 324 |     expect(syncAllRehearsals).toHaveBeenCalled();
+
+FAIL frontend src/features/calendar/hooks/__tests__/useCalendarSync.test.ts (9.7 s)
+    (28 of 33 pass; the new ones:)
+      ✕ shows the last export the sync recorded (61 ms)
+      ✕ does not call a run with failures a success, nor stamp it (64 ms)
+      ✕ counts what could not be removed as still exported, and says it failed (59 ms)
+      ✕ does not mark as synced an import that could not read a calendar (55 ms)
+      ✕ shows the last import the sync recorded (55 ms)
+  ● … › Sync All Rehearsals › shows the last export the sync recorded
+    Expected: "2026-10-25T10:00:00.000Z"
+    Received: "2026-10-25T03:57:42.221Z"
+    > 413 |       expect(result.current.settings.lastExportTime).toBe('2026-10-25T10:00:00.000Z');
+  ● … › Sync All Rehearsals › does not call a run with failures a success, nor stamp it
+    Expected: "error"
+    Received: "success"
+    > 437 |       expect(result.current.syncStatus).toBe('error');
+  ● … › Remove All Exported Events › counts what could not be removed as still exported, and says it failed
+    Expected: "error"
+    Received: "success"
+    > 515 |       expect(result.current.syncStatus).toBe('error');
+  ● … › Import Now › does not mark as synced an import that could not read a calendar
+    Received: "2026-10-25T03:57:42.635Z"
+    > 650 |       expect(result.current.settings.lastImportTime).toBeNull();
+  ● … › Import Now › shows the last import the sync recorded
+    Expected: "2026-10-25T10:00:00.000Z"
+    Received: "2026-10-25T03:57:42.690Z"
+    > 682 |       expect(result.current.settings.lastImportTime).toBe('2026-10-25T10:00:00.000Z');
+
+== screen ==
+
+With the old translations the suite does not compile (the two new strings are
+not in the type), so this run keeps the translations file of fe11e12 — new
+strings only, no logic — and the old screen and hook.
+
+FAIL frontend src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.test.tsx (9.359 s)
+  ✓ says "synced" when nothing failed (248 ms)
+  ✕ does not say "synced" when rehearsals could not be written (14 ms)
+  ✕ does not say "synced" when a calendar could not be read (9 ms)
+  ✕ still exports when the import fails (11 ms)
+  ● does not say "synced" when rehearsals could not be written
+    Expected: "Sync error"
+    Received: "Synced successfully"
+    > 85 |   expect(title).toBe(t.calendarSync.syncError);
+  ● does not say "synced" when a calendar could not be read
+    Expected: "Sync error"
+    Received: "Synced successfully"
+    > 94 |   expect(title).toBe(t.calendarSync.syncError);
+  ● still exports when the import fails
+    Expected number of calls: >= 1
+    Received number of calls:    0
+    > 103 |   expect(mockSync.syncAll).toHaveBeenCalled();
+Tests:       3 failed, 1 passed, 4 total
+
+Green on the old code, as expected: the calendar's own not-found recreating
+(already so), the next run adopting by mark (the old code also adopted), and
+"synced" when nothing failed.
+
+After `git restore --source=HEAD -- <files>`: all of the above pass on fe11e12.
