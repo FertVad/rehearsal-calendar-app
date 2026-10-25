@@ -17,6 +17,9 @@ const KEYS = {
   // the last sync reported.
   IMPORT_COUNT: 'calendar-import-count',
   SYNC_SETTINGS: 'calendar-sync-settings',
+  // Exported events already decided to be taken back, whose removal has not
+  // gone through yet: the old copy of a move to another calendar (EX02).
+  EXPORT_LEFTOVERS: 'calendar-export-leftovers',
 };
 
 
@@ -149,6 +152,43 @@ export async function clearAllMappings(): Promise<void> {
     logger.error('[CalendarStorage] Failed to clear mappings:', error);
     throw error;
   }
+}
+
+/**
+ * ============================================================================
+ * Leftover exported events (calendar eventId → rehearsalId)
+ * ============================================================================
+ *
+ * A move to another calendar holds two copies of one rehearsal's event until
+ * the old one is removed, and the mapping can name only one. The old copy is
+ * written here before the mapping moves to the new one, and leaves only once
+ * the calendar has confirmed it gone. Every export pass and "remove all" take
+ * these back, so neither copy is ever left with nothing pointing at it.
+ *
+ * The device's, not the account's: an event this app put in this phone's
+ * calendar and has already decided to remove.
+ */
+
+export async function addLeftoverEvent(eventId: string, rehearsalId: string): Promise<void> {
+  await updateStored<Record<string, { rehearsalId: string }>>(
+    KEYS.EXPORT_LEFTOVERS,
+    (leftovers) => ({ ...leftovers, [eventId]: { rehearsalId: String(rehearsalId) } }),
+    {}
+  );
+}
+
+export async function removeLeftoverEvent(eventId: string): Promise<void> {
+  await updateStored<Record<string, { rehearsalId: string }>>(
+    KEYS.EXPORT_LEFTOVERS,
+    ({ [eventId]: _removed, ...rest }) => rest,
+    {}
+  );
+}
+
+/** Throws when the list cannot be read: that is not the same as none. */
+export async function getLeftoverEvents(): Promise<Record<string, { rehearsalId: string }>> {
+  const stored = await AsyncStorage.getItem(KEYS.EXPORT_LEFTOVERS);
+  return stored ? JSON.parse(stored) : {};
 }
 
 /**

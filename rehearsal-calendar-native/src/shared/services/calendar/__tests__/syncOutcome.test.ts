@@ -27,9 +27,22 @@ jest.mock('../../../utils/calendarMappings', () => ({
   removeEventMapping: jest.fn().mockResolvedValue(undefined),
   clearAllMappings: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('../../../utils/calendarStorage', () => ({
-  updateLastExportTime: jest.fn().mockResolvedValue(undefined),
-}));
+// The leftover list as the real one keeps it: a map in storage.
+jest.mock('../../../utils/calendarStorage', () => {
+  const leftovers: Record<string, { rehearsalId: string }> = {};
+  return {
+    __leftovers: leftovers,
+    updateLastExportTime: jest.fn().mockResolvedValue(undefined),
+    addLeftoverEvent: jest.fn(async (eventId: string, rehearsalId: string) => {
+      leftovers[eventId] = { rehearsalId: String(rehearsalId) };
+    }),
+    removeLeftoverEvent: jest.fn(async (eventId: string) => {
+      delete leftovers[eventId];
+    }),
+    getLeftoverEvents: jest.fn(async () => ({ ...leftovers })),
+  };
+});
+const leftovers: Record<string, unknown> = jest.requireMock('../../../utils/calendarStorage').__leftovers;
 
 const rehearsal = {
   id: '1',
@@ -45,6 +58,7 @@ const notFound = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  for (const eventId of Object.keys(leftovers)) delete leftovers[eventId];
   (checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
   (getEventMapping as jest.Mock).mockResolvedValue({ eventId: 'e1', calendarId: 'cal-1' });
   (Calendar.getEventAsync as jest.Mock).mockResolvedValue({ id: 'e1', title: 'stale' });
@@ -136,35 +150,129 @@ describe('Adopting an event of ours that another device wrote', () => {
 });
 
 describe('Moving to another calendar when the old copy cannot be removed (EX02)', () => {
+  // The mappings as the device keeps them: one per rehearsal, written by
+  // saveEventMapping, gone with removeEventMapping, read by both lookups.
+  let mappings: Record<string, { eventId: string; calendarId: string }>;
+  const inCalendar = new Set<string>();
+
   beforeEach(() => {
-    (getEventMapping as jest.Mock).mockResolvedValue({ eventId: 'old-event', calendarId: 'personal' });
-    (Calendar.getEventAsync as jest.Mock).mockResolvedValue({ id: 'old-event' });
+    mappings = { '1': { eventId: 'old-event', calendarId: 'personal' } };
+    inCalendar.clear();
+    inCalendar.add('old-event');
+    (getEventMapping as jest.Mock).mockImplementation(async (id: string) => mappings[id] ?? null);
+    (getAllMappings as jest.Mock).mockImplementation(async () => ({ ...mappings }));
+    (saveEventMapping as jest.Mock).mockImplementation(async (id: string, eventId: string, calendarId: string) => {
+      mappings[id] = { eventId, calendarId };
+    });
+    (removeEventMapping as jest.Mock).mockImplementation(async (id: string) => {
+      delete mappings[id];
+    });
+    (Calendar.getEventAsync as jest.Mock).mockImplementation(async (id: string) => (inCalendar.has(id) ? { id } : null));
+    (Calendar.createEventAsync as jest.Mock).mockImplementation(async () => {
+      inCalendar.add('new-event');
+      return 'new-event';
+    });
     (Calendar.deleteEventAsync as jest.Mock).mockRejectedValue(new Error('Calendar is read-only'));
   });
+
+  const accessBack = () =>
+    (Calendar.deleteEventAsync as jest.Mock).mockImplementation(async (id: string) => {
+      inCalendar.delete(id);
+    });
 
   it('fails, rather than reporting the move done', async () => {
     await expect(syncRehearsalToCalendar(rehearsal, 'work')).rejects.toThrow('read-only');
   });
 
-  it('leaves the mapping on the old copy, so the next run can still remove it', async () => {
+  it('keeps both copies within reach: the mapping on the new one, the old one to take back', async () => {
     await syncRehearsalToCalendar(rehearsal, 'work').catch(() => {});
 
-    expect(saveEventMapping).not.toHaveBeenCalled();
-    expect(removeEventMapping).not.toHaveBeenCalled();
+    expect(mappings['1']).toEqual({ eventId: 'new-event', calendarId: 'work' });
+    expect(Object.keys(leftovers)).toEqual(['old-event']);
   });
 
-  it('the next run adopts the copy it made instead of making another', async () => {
+  it('then "remove all" removes both copies', async () => {
+    // The review's case: access comes back and the reader removes everything.
+    // With the mapping on the old copy alone, the old copy went, the result
+    // said 1 of 1, and the new copy stayed with its alarm and nothing to reach it.
     await syncRehearsalToCalendar(rehearsal, 'work').catch(() => {});
-    (Calendar.deleteEventAsync as jest.Mock).mockResolvedValue(undefined);
-    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
-      { id: 'new-event', url: 'rehearsalapp://rehearsal/1', title: 'Rehearsal: Гамлет', startDate: rehearsal.startsAt, endDate: rehearsal.endsAt },
-    ]);
+    accessBack();
 
-    await syncRehearsalToCalendar(rehearsal, 'work');
+    const result = await removeAllExportedEvents();
 
+    expect([...inCalendar]).toEqual([]);
+    expect(result).toMatchObject({ success: 2, failed: 0 });
+    expect(mappings).toEqual({});
+    expect(leftovers).toEqual({});
+  });
+
+  it('the next export pass takes the old copy back and makes no third', async () => {
+    await syncRehearsalToCalendar(rehearsal, 'work').catch(() => {});
+    accessBack();
+
+    const result = await syncAllRehearsals([rehearsal], 'work');
+
+    expect(result).toMatchObject({ success: 1, failed: 0 });
     expect(Calendar.createEventAsync).toHaveBeenCalledTimes(1);
-    expect(Calendar.deleteEventAsync).toHaveBeenLastCalledWith('old-event');
-    expect(saveEventMapping).toHaveBeenCalledWith('1', 'new-event', 'work', expect.any(Number));
+    expect([...inCalendar]).toEqual(['new-event']);
+    expect(leftovers).toEqual({});
+  });
+
+  it('a pass in which the old copy still will not go is not a success', async () => {
+    await syncRehearsalToCalendar(rehearsal, 'work').catch(() => {});
+
+    const result = await syncAllRehearsals([rehearsal], 'work');
+
+    expect(result.failed).toBe(1);
+    expect(updateLastExportTime).not.toHaveBeenCalled();
+    expect(Object.keys(leftovers)).toEqual(['old-event']);
+  });
+});
+
+describe('The events of cancelled rehearsals, taken back by the export pass (EO06)', () => {
+  const second = { ...rehearsal, id: '2' };
+  const mapped = {
+    '1': { eventId: 'e1', calendarId: 'cal-1' },
+    '2': { eventId: 'e2', calendarId: 'cal-1' },
+    '3': { eventId: 'e3', calendarId: 'cal-1' },
+  };
+
+  beforeEach(() => {
+    (getEventMapping as jest.Mock).mockImplementation(async (id: string) => mapped[id as keyof typeof mapped] ?? null);
+    (Calendar.getEventAsync as jest.Mock).mockImplementation(async (id: string) => ({
+      id, title: 'Rehearsal: Гамлет', startDate: rehearsal.startsAt, endDate: rehearsal.endsAt,
+    }));
+  });
+
+  it('removes the event of a rehearsal no longer there, and only that one', async () => {
+    const result = await syncAllRehearsals([rehearsal, { ...rehearsal, id: '3' }], 'cal-1', undefined, mapped, undefined, { removeOthers: true });
+
+    expect(Calendar.deleteEventAsync).toHaveBeenCalledTimes(1);
+    expect(Calendar.deleteEventAsync).toHaveBeenCalledWith('e2');
+    expect(removeEventMapping).toHaveBeenCalledWith('2', expect.any(Number));
+    expect(result).toMatchObject({ success: 2, failed: 0 });
+    expect(updateLastExportTime).toHaveBeenCalledTimes(1);
+  });
+
+  it('one that will not go keeps its mapping, the rest still go — and the pass is no success', async () => {
+    // The review's case: the cancelled rehearsal's event could not be removed,
+    // the other rehearsal exported, and "last export" was stamped all the same.
+    (Calendar.deleteEventAsync as jest.Mock).mockImplementation(async (id: string) => {
+      if (id === 'e2') throw new Error('Calendar is read-only');
+    });
+
+    const result = await syncAllRehearsals([rehearsal], 'cal-1', undefined, mapped, undefined, { removeOthers: true });
+
+    expect(Calendar.deleteEventAsync).toHaveBeenCalledWith('e3');
+    expect(removeEventMapping).not.toHaveBeenCalledWith('2', expect.anything());
+    expect(result).toMatchObject({ success: 1, failed: 1 });
+    expect(updateLastExportTime).not.toHaveBeenCalled();
+  });
+
+  it('leaves every mapping alone unless told the list is every rehearsal', async () => {
+    await syncAllRehearsals([second], 'cal-1', undefined, mapped);
+
+    expect(Calendar.deleteEventAsync).not.toHaveBeenCalled();
   });
 });
 

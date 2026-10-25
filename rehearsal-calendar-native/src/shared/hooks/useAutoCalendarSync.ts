@@ -15,7 +15,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSyncSettings } from '../utils/calendarStorage';
-import { importCalendarEventsToAvailability, syncAllRehearsals, unsyncRehearsal } from '../services/calendar';
+import { importCalendarEventsToAvailability, syncAllRehearsals } from '../services/calendar';
 import { getAllMappings } from '../utils/calendarMappings';
 import { projectsAPI, rehearsalsAPI } from '../services/api';
 import { assertSession, sessionWork, SessionEndedError, SessionStamp } from '../services/session';
@@ -96,36 +96,37 @@ async function exportRehearsalsIfDue(
   // Safe against a bad answer because both requests above throw rather than
   // returning nothing, so an empty list really is empty — someone who has left
   // every project should indeed keep no exported events.
-  // Fetched once, for both halves of the work below.
   //
-  // This is what let the ten-minute interval go. The export used to ask the
-  // server which event belonged to each rehearsal separately — twenty
-  // rehearsals, twenty requests, every trip to the foreground — and the
-  // interval existed to keep that from happening constantly. Its cost was also
-  // its consequence: somebody else's edit did not reach the calendar until the
-  // reader thought to pull down. One request answers for all of them.
+  // Taken back by the export pass itself (`removeOthers`), as steps of the same
+  // result. This hook used to do it first and only log what would not go, so
+  // a pass that left a cancelled rehearsal's event behind stamped "last
+  // export" all the same (EO06).
+  //
+  // The mappings are fetched once, for both halves of the work. This is what
+  // let the ten-minute interval go. The export used to ask the server which
+  // event belonged to each rehearsal separately — twenty rehearsals, twenty
+  // requests, every trip to the foreground — and the interval existed to keep
+  // that from happening constantly. Its cost was also its consequence:
+  // somebody else's edit did not reach the calendar until the reader thought
+  // to pull down. One request answers for all of them.
   const mappings = knownMappings ?? (await getAllMappings(session));
 
   // What was read above is this session's; the writes below are too, or none.
   assertSession(session);
-  await reconcileDeletedRehearsals(
+  const result = await syncAllRehearsals(
+    rehearsals,
+    settings.exportCalendarId,
+    undefined,
+    mappings,
     session,
-    rehearsals.map((r: { id: string }) => String(r.id)),
-    mappings
+    { removeOthers: true }
   );
-
-  if (rehearsals.length === 0) {
-    logger.debug('[AutoSync] No rehearsals to export');
-    return;
-  }
-
-  const result = await syncAllRehearsals(rehearsals, settings.exportCalendarId, undefined, mappings, session);
   logger.debug('[AutoSync] Export completed:', result);
 
-  // Only a run that wrote everything counts as done — and syncAllRehearsals
-  // is the one that says so, stamping "last export" itself only then (EO06).
+  // Only a pass with no failure counts as done — and syncAllRehearsals is the
+  // one that says so, stamping "last export" itself only then (EO06).
   if (result.failed > 0) {
-    logger.warn(`[AutoSync] ${result.failed} rehearsals failed to export - will retry`);
+    logger.warn(`[AutoSync] ${result.failed} export steps failed - will retry`);
   }
 }
 
@@ -145,37 +146,6 @@ async function eachDirection(name: string, work: () => Promise<void>): Promise<v
   } catch (error) {
     if (error instanceof SessionEndedError) throw error;
     logger.error(`[AutoSync] Error during auto-${name}:`, error);
-  }
-}
-
-/**
- * Delete the calendar event of every rehearsal we hold a mapping for that is
- * not in `liveRehearsalIds`.
- *
- * Failures are per-rehearsal on purpose: one event that cannot be removed —
- * the calendar is gone, permission was revoked — must not stop the rest, and
- * must not lose the mapping either, or the event becomes unreachable. So a
- * failure leaves the mapping alone and the next sync tries again.
- */
-async function reconcileDeletedRehearsals(
-  session: SessionStamp,
-  liveRehearsalIds: string[],
-  mappings: Record<string, { eventId: string; calendarId: string }>
-): Promise<void> {
-  const live = new Set(liveRehearsalIds);
-  const stale = Object.keys(mappings).filter((rehearsalId) => !live.has(String(rehearsalId)));
-
-  if (stale.length === 0) return;
-
-  logger.info(`[AutoSync] Removing ${stale.length} exported events for deleted rehearsals`);
-
-  for (const rehearsalId of stale) {
-    try {
-      await unsyncRehearsal(rehearsalId, session);
-    } catch (error) {
-      if (error instanceof SessionEndedError) throw error;
-      logger.error(`[AutoSync] Could not remove the event for rehearsal ${rehearsalId}:`, error);
-    }
   }
 }
 

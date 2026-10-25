@@ -12,10 +12,15 @@ import {
   removeEventMapping,
   getAllMappings,
 } from '../../utils/calendarMappings';
-import { updateLastExportTime } from '../../utils/calendarStorage';
+import {
+  addLeftoverEvent,
+  getLeftoverEvents,
+  removeLeftoverEvent,
+  updateLastExportTime,
+} from '../../utils/calendarStorage';
 import { logger } from '../../utils/logger';
 import { appTimezone } from '../../utils/time';
-import { assertSession, currentSession, sessionWork, SessionStamp } from '../session';
+import { assertSession, currentSession, sessionWork, SessionEndedError, SessionStamp } from '../session';
 
 /**
  * Check if event exists in calendar
@@ -441,18 +446,26 @@ async function syncOneRehearsal(
       // duplicate search looks only in the calendar being written to, so the
       // old copy cannot be adopted as the new one.
       //
-      // The mapping moves last, once the old copy is confirmed gone. It used to
-      // point at the new copy first and log a failed removal as a warning, so
-      // the old one stayed in the calendar with nothing left to reach it, and
-      // the run said done (EX02). Now the failure fails this rehearsal and the
-      // mapping still names the old copy: the next run removes it, adopting the
-      // new copy by its mark rather than making a third.
+      // Both copies are accounted for at every step (EX02). The move used to
+      // point the mapping at the new copy and log a failed removal of the old
+      // one as a warning, which left the old one with nothing to reach it; then
+      // it kept the mapping on the old copy, which left the new one so instead
+      // — "remove all" took the old copy and reported done, and the new one
+      // stayed with its alarm. Now the old copy goes on the list of events to
+      // take back (calendarStorage, leftovers) before the mapping moves to the
+      // new one, and leaves the list only once the calendar confirms it gone.
+      // A failed removal fails this rehearsal; the next export pass, or
+      // "remove all", tries it again.
       if (mapping.calendarId && mapping.calendarId !== calendarId) {
         logger.info(`[CalendarSync] Moving rehearsal ${rehearsal.id} to calendar ${calendarId}`);
         const movedId = await placeEvent(rehearsal, calendarId, session);
         if (!movedId) throw new Error('The calendar did not create the event');
-        if (eventExists) await deleteCalendarEvent(mapping.eventId, session);
+        if (eventExists) {
+          assertSession(session);
+          await addLeftoverEvent(mapping.eventId, rehearsal.id);
+        }
         await saveEventMapping(rehearsal.id, movedId, calendarId, session);
+        if (eventExists) await takeBackLeftover(mapping.eventId, session);
         return;
       }
 
@@ -527,6 +540,48 @@ async function unsyncOneRehearsal(session: SessionStamp, rehearsalId: string): P
   }
 }
 
+/** Remove one leftover copy; it leaves the list only once it is gone. */
+async function takeBackLeftover(eventId: string, session: SessionStamp): Promise<void> {
+  await deleteCalendarEvent(eventId, session);
+  assertSession(session);
+  await removeLeftoverEvent(eventId);
+}
+
+/**
+ * One step of a batch: what failed is counted and said, and only the end of
+ * the session stops the run. The one place a batch turns a failure into its
+ * result, for every kind of step it takes.
+ */
+async function step(
+  result: BatchSyncResult,
+  what: string,
+  work: () => Promise<void>
+): Promise<boolean> {
+  try {
+    await work();
+    return true;
+  } catch (error: any) {
+    if (error instanceof SessionEndedError) throw error;
+    result.failed++;
+    result.errors.push(`${what}: ${error?.message || 'Unknown error'}`);
+    logger.error(`[CalendarSync] ${what} failed:`, error);
+    return false;
+  }
+}
+
+/** Every leftover copy taken back, each a step of `result`. */
+async function takeBackLeftovers(session: SessionStamp, result: BatchSyncResult): Promise<number> {
+  let removed = 0;
+  let leftovers: Record<string, { rehearsalId: string }> = {};
+  await step(result, 'Leftover events', async () => {
+    leftovers = await getLeftoverEvents();
+  });
+  for (const eventId of Object.keys(leftovers)) {
+    if (await step(result, `Event ${eventId}`, () => takeBackLeftover(eventId, session))) removed++;
+  }
+  return removed;
+}
+
 /**
  * Export all rehearsals to calendar
  * Returns: { success: number, failed: number, errors: string[] }
@@ -537,23 +592,59 @@ export function syncAllRehearsals(
   onProgress?: (current: number, total: number) => void,
   /** All of this user's mappings, when the caller already holds them. */
   knownMappings?: Record<string, { eventId: string; calendarId: string }>,
-  session?: SessionStamp
+  session?: SessionStamp,
+  /**
+   * `rehearsals` is every rehearsal the person is on, so the event of any
+   * other mapping is a cancelled one's and is taken back in this same pass.
+   */
+  { removeOthers = false }: { removeOthers?: boolean } = {}
 ): Promise<BatchSyncResult> {
-  return sessionWork((stamp) => syncRehearsals(stamp, rehearsals, calendarId, onProgress, knownMappings), session);
+  return sessionWork(
+    (stamp) => syncRehearsals(stamp, rehearsals, calendarId, onProgress, knownMappings, removeOthers),
+    session
+  );
 }
 
+/**
+ * One export pass: what it takes back and what it writes, in one result.
+ *
+ * The automatic sync removed the events of cancelled rehearsals before calling
+ * this and only logged what it could not remove, so a pass with an event left
+ * behind still stamped "last export" (EO06). Everything the pass does is a step
+ * of the same result now — the leftover copies of a move, the cancelled
+ * rehearsals' events, the live ones — and the stamp needs all of it.
+ * `success` counts the rehearsals written; `failed`, any step.
+ */
 async function syncRehearsals(
   session: SessionStamp,
   rehearsals: RehearsalWithProject[],
   calendarId: string,
-  onProgress?: (current: number, total: number) => void,
-  knownMappings?: Record<string, { eventId: string; calendarId: string }>
+  onProgress: ((current: number, total: number) => void) | undefined,
+  knownMappings: Record<string, { eventId: string; calendarId: string }> | undefined,
+  removeOthers: boolean
 ): Promise<BatchSyncResult> {
   const result: BatchSyncResult = {
     success: 0,
     failed: 0,
     errors: [],
   };
+
+  await takeBackLeftovers(session, result);
+
+  if (removeOthers) {
+    const mappings = knownMappings ?? (await getAllMappings(session));
+    knownMappings = mappings;
+    const live = new Set(rehearsals.map((rehearsal) => String(rehearsal.id)));
+    const cancelled = Object.keys(mappings).filter((rehearsalId) => !live.has(String(rehearsalId)));
+    if (cancelled.length > 0) {
+      logger.info(`[CalendarSync] Removing ${cancelled.length} exported events for deleted rehearsals`);
+    }
+    // One at a time, each its own step: an event that will not go keeps its
+    // mapping, and the next pass tries again.
+    for (const rehearsalId of cancelled) {
+      await step(result, `Rehearsal ${rehearsalId}`, () => unsyncRehearsal(rehearsalId, session));
+    }
+  }
 
   const total = rehearsals.length;
   const BATCH_SIZE = 10; // Process 10 rehearsals in parallel
@@ -564,30 +655,22 @@ async function syncRehearsals(
     assertSession(session);
 
     // Process batch in parallel
+    const mappings = knownMappings;
     const results = await Promise.allSettled(
       batch.map(rehearsal =>
-        syncRehearsalToCalendar(
-          rehearsal,
-          calendarId,
-          knownMappings ? knownMappings[rehearsal.id] ?? null : undefined,
-          session
+        step(result, rehearsal.projectName, () =>
+          syncRehearsalToCalendar(
+            rehearsal,
+            calendarId,
+            mappings ? mappings[rehearsal.id] ?? null : undefined,
+            session
+          )
         )
       )
     );
     // A step that stopped with the session stops the whole run, not one row.
     assertSession(session);
-
-    // Collect results
-    results.forEach((res, idx) => {
-      const rehearsal = batch[idx];
-      if (res.status === 'fulfilled') {
-        result.success++;
-      } else {
-        result.failed++;
-        result.errors.push(`${rehearsal.projectName}: ${res.reason?.message || 'Unknown error'}`);
-        logger.error(`[CalendarSync] Failed to sync rehearsal ${rehearsal.id}:`, res.reason);
-      }
-    });
+    result.success += results.filter((res) => res.status === 'fulfilled' && res.value).length;
 
     // Report progress
     if (onProgress) {
@@ -634,6 +717,10 @@ async function removeExportedEvents(
       errors: [],
     };
 
+    // The leftover copies of a move first, each one an event of the count: the
+    // other copy of the same rehearsal is the one its mapping names (EX02).
+    result.success += await takeBackLeftovers(session, result);
+
     const total = rehearsalIds.length;
     const BATCH_SIZE = 10; // Delete 10 events in parallel
 
@@ -646,30 +733,20 @@ async function removeExportedEvents(
 
       // Delete batch in parallel
       const results = await Promise.allSettled(
-        batchIds.map(async rehearsalId => {
+        batchIds.map(rehearsalId => {
           const eventId = mappings[rehearsalId].eventId;
-          // Try to delete event from calendar
-          await deleteCalendarEvent(eventId, session);
-          // Remove mapping from DB + AsyncStorage — only now that the event
-          // is confirmed gone. An event the calendar no longer has counts as
-          // gone: iOS deletes a missing event without complaint.
-          await removeEventMapping(rehearsalId, session);
+          return step(result, `Event ${eventId}`, async () => {
+            // Try to delete event from calendar
+            await deleteCalendarEvent(eventId, session);
+            // Remove mapping from DB + AsyncStorage — only now that the event
+            // is confirmed gone. An event the calendar no longer has counts as
+            // gone: iOS deletes a missing event without complaint.
+            await removeEventMapping(rehearsalId, session);
+          });
         })
       );
       assertSession(session);
-
-      // Collect results
-      results.forEach((res, idx) => {
-        const rehearsalId = batchIds[idx];
-        const mapping = mappings[rehearsalId];
-        if (res.status === 'fulfilled') {
-          result.success++;
-        } else {
-          result.failed++;
-          result.errors.push(`Event ${mapping.eventId}: ${res.reason?.message || 'Unknown error'}`);
-          logger.error(`[CalendarSync] Failed to delete event ${mapping.eventId}:`, res.reason);
-        }
-      });
+      result.success += results.filter((res) => res.status === 'fulfilled' && res.value).length;
 
       // Report progress
       if (onProgress) {

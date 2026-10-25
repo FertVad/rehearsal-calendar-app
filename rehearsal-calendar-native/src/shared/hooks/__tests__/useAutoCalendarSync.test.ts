@@ -16,7 +16,7 @@
 import { AppState } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
 import { useAutoCalendarSync, runAutoSync } from '../useAutoCalendarSync';
-import { importCalendarEventsToAvailability, syncAllRehearsals, unsyncRehearsal } from '../../services/calendar';
+import { importCalendarEventsToAvailability, syncAllRehearsals } from '../../services/calendar';
 import { getAllMappings } from '../../utils/calendarMappings';
 import { getSyncSettings } from '../../utils/calendarStorage';
 import { rehearsalsAPI } from '../../services/api';
@@ -24,7 +24,6 @@ import { rehearsalsAPI } from '../../services/api';
 jest.mock('../../services/calendar', () => ({
   importCalendarEventsToAvailability: jest.fn().mockResolvedValue({ success: 0, failed: 0 }),
   syncAllRehearsals: jest.fn().mockResolvedValue({ success: 0, failed: 0 }),
-  unsyncRehearsal: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../../utils/calendarMappings', () => ({ getAllMappings: jest.fn().mockResolvedValue({}) }));
@@ -159,6 +158,11 @@ describe('Opening the app from nothing', () => {
 });
 
 describe('Taking back the events of rehearsals that no longer exist', () => {
+  // The organiser's own device deletes its event at the moment of deletion.
+  // Everyone else keeps theirs, with an alarm, for a call that does not exist
+  // — and nothing could reach it until this pass. The export pass takes them
+  // back itself, as steps of its own result (EO06); what it removes and what
+  // it keeps is pinned in syncOutcome.test.ts.
   const mapped = (ids: string[]) =>
     Object.fromEntries(ids.map((id) => [id, { eventId: `evt-${id}`, calendarId: 'c1', lastSynced: '' }]));
 
@@ -174,39 +178,23 @@ describe('Taking back the events of rehearsals that no longer exist', () => {
     });
   };
 
-  it('removes the event of a rehearsal that was cancelled', async () => {
-    // The organiser's own device deletes its event at the moment of deletion.
-    // Everyone else keeps theirs, with an alarm, for a call that does not exist
-    // — and nothing could reach it until this pass.
+  it('hands the export pass every live rehearsal, to take back the rest', async () => {
     await runExport(['1', '3'], ['1', '2', '3']);
 
-    expect(unsyncRehearsal).toHaveBeenCalledTimes(1);
-    expect(unsyncRehearsal).toHaveBeenCalledWith('2', expect.any(Number));
+    expect(syncAllRehearsals).toHaveBeenCalledTimes(1);
+    const [rehearsals, calendarId, , mappings, , options] = (syncAllRehearsals as jest.Mock).mock.calls[0];
+    expect(rehearsals.map((r: { id: string }) => r.id)).toEqual(['1', '3']);
+    expect(calendarId).toBe('cal-export');
+    expect(Object.keys(mappings)).toEqual(['1', '2', '3']);
+    expect(options).toEqual({ removeOthers: true });
   });
 
-  it('leaves the events of rehearsals that still exist', async () => {
-    await runExport(['1', '2'], ['1', '2']);
-
-    expect(unsyncRehearsal).not.toHaveBeenCalled();
-  });
-
-  it('removes every event once the last rehearsal is gone', async () => {
+  it('runs the pass once the last rehearsal is gone too', async () => {
     // An empty list from a request that succeeded is an empty list. Both calls
     // throw rather than returning nothing, so this cannot be a failed fetch.
     await runExport([], ['1', '2']);
 
-    expect(unsyncRehearsal).toHaveBeenCalledTimes(2);
-  });
-
-  it('carries on when one event cannot be removed', async () => {
-    // A calendar deleted on the device, or permission revoked. The rest must
-    // still be cleaned, and the failed one keeps its mapping so the next sync
-    // can try again rather than leaving the event unreachable.
-    (unsyncRehearsal as jest.Mock).mockRejectedValueOnce(new Error('calendar gone'));
-
-    await runExport([], ['1', '2']);
-
-    expect(unsyncRehearsal).toHaveBeenCalledTimes(2);
+    expect(syncAllRehearsals).toHaveBeenCalledWith([], 'cal-export', undefined, mapped(['1', '2']), expect.any(Number), { removeOthers: true });
   });
 });
 
@@ -255,7 +243,7 @@ describe('Exporting soon after the last export', () => {
       await result.current.performAutoSync();
     });
 
-    expect(unsyncRehearsal).toHaveBeenCalledWith('7', expect.any(Number));
+    expect(syncAllRehearsals).toHaveBeenCalledWith([], 'cal-export', undefined, expect.objectContaining({ '7': expect.anything() }), expect.any(Number), { removeOthers: true });
   });
 
   it('asks for the mappings once, not once per rehearsal', async () => {
@@ -340,7 +328,7 @@ describe('A push arriving while the app is open', () => {
       await runAutoSync();
     });
 
-    expect(unsyncRehearsal).toHaveBeenCalledWith('7', expect.any(Number));
+    expect(syncAllRehearsals).toHaveBeenCalledWith([], 'cal-export', undefined, expect.objectContaining({ '7': expect.anything() }), expect.any(Number), { removeOthers: true });
   });
 
   it('shares the lock, so an extra caller causes no extra run', async () => {
