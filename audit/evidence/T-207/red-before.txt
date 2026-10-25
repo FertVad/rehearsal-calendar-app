@@ -1,0 +1,45 @@
+T-207 - red before. metro.config.js put back to the base (e78a10a):
+  git restore --source=e78a10a -- metro.config.js
+  node --test e2e/__tests__/metro-watch.test.mjs
+
+TAP version 13
+# Subtest: a screenshot Maestro writes into e2e/out is not a change to Metro; the app's files are
+not ok 1 - a screenshot Maestro writes into e2e/out is not a change to Metro; the app's files are
+  ---
+  duration_ms: 651.965584
+  type: 'test'
+  location: '/Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/__tests__/metro-watch.test.mjs:56:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    files written into e2e/out reached Metro as changes
+    + actual - expected
+
+    + [
+    +   '/Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/out/artifacts/metro-watch-24193/step-033-tapOnElement-Allow_Full_Access.png',
+    +   '/Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/out/artifacts/metro-watch-24193/step-033-tapOnElement-Allow_Full_Access.json'
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  operator: 'deepStrictEqual'
+  ...
+1..1
+# tests 1
+# pass 0
+# fail 1
+
+------------------------------------------------------------------------
+Same base config, on the simulator:
+  npm run e2e -- e2e/flows/30-sync-import-fails-export-runs.yaml
+  [Passed] A sync whose import fails still exports (2m 6s)
+  (artifacts e2e/out/artifacts/2026-10-25_095332, not in git)
+
+The flow passed this time (the lost tap needs the touch to land as the banner
+window goes), but the screenshots Maestro took of the WARNED steps show the
+cause on every one of them:
+  step-028-tapOnElement-Not_Now.png            "Refreshing..." banner over the calendar
+  step-033-tapOnElement-Allow_Full_Access.png  "Refreshing..." banner over Calendar Sync,
+                                               the step right before the tap on Apple Calendar
+The red run of T-117 (e2e/out/artifacts/2026-10-25_081811) has the same banner
+on its step-033 screenshot, 0.6 s before the lost tap.

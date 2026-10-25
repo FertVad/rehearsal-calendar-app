@@ -1,0 +1,29 @@
+T-207 - green after (HEAD f14c44d, metro.config.js restored from HEAD).
+
+node --test e2e/__tests__/metro-watch.test.mjs
+  ok 1 - a screenshot Maestro writes into e2e/out is not a change to Metro; the app's files are
+  # tests 1  # pass 1  # fail 0
+
+npm run e2e -- e2e/flows/30-sync-import-fails-export-runs.yaml
+  [Passed] A sync whose import fails still exports (1m 40s)
+  1/1 Flow Passed in 1m 40s
+  (artifacts e2e/out/artifacts/2026-10-25_100126, not in git)
+  step-028 / step-033 screenshots: no "Refreshing..." banner.
+
+The bug flow 30 guards (cause fix 17: a failed import skipped the export) has
+not come back - metro.log of that run:
+  [CalendarSync] Enabled apple calendar sync: Calendar
+  [useCalendarSync] Import failed: {"code": "ECONNABORTED", "message": "timeout of 10000ms exceeded", ...}
+  [Sync] ❌ Import failed: ...
+  [Sync] ✅ Export completed: {"errors": [], "failed": 0, "success": 1}
+and the flow asserted "Sync error" with "Exported rehearsals: 1".
+
+Other checks:
+  npm run check:secrets   pass (1096 files, 0 findings)
+  npm run type-check      clean
+  npx jest --selectProjects frontend   82 suites, 839 tests passed
+  e2e/__tests__ (lock, watchdog, http, metro-watch): 11 pass, 1 fail -
+    lock.test.mjs "what a dead run left running is stopped before the lock is
+    taken" fails on its own too; lock.mjs / lock.test.mjs are not touched here.
+  npm test: stops at the secret scanner CLI regressions (3 of 33 fail, the
+    tests on .env-like file names); scripts/ is not touched here.
