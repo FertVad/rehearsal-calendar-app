@@ -1,0 +1,78 @@
+Cause fix 18 (T-118) - green after, Jest.
+Source: the fix in the working tree on auto/main (base 4608443).
+Command (rehearsal-calendar-native, Node 22):
+  npx jest --selectProjects frontend --silent --verbose \
+    src/shared/hooks/__tests__/useAutoCalendarSync.test.ts \
+    src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.onePath.test.tsx \
+    src/features/onboarding/screens/__tests__/CalendarSyncScreen.test.tsx \
+    src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.test.tsx \
+    src/features/calendar/hooks/__tests__/useCalendarSync.test.ts
+Output, filtered (grep -E "✓|✕|Tests:|^FAIL|^PASS", times removed):
+
+PASS frontend src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.test.tsx
+  ✓ says "synced" when nothing failed
+  ✓ does not say "synced" when rehearsals could not be written
+  ✓ does not say "synced" when a calendar could not be read
+  ✓ names both when the import fails and the export runs
+  ✓ says when the export could not run
+PASS frontend src/features/onboarding/screens/__tests__/CalendarSyncScreen.test.tsx
+  ✓ does not show the calendar connected when its choice could not be saved
+  ✓ shows the calendar connected once its choice is saved
+  ✓ shows a calendar connected earlier as connected on coming back
+PASS frontend src/shared/hooks/__tests__/useAutoCalendarSync.test.ts
+    ✓ does not listen unless asked to
+    ✓ listens when asked, which is what the tab bar does
+    ✓ syncs when the app comes forward
+    ✓ registers one listener however many screens use the hook
+    ✓ is shared between separate mounts, not one lock each
+    ✓ syncs on a cold launch, not only on a return from the background
+    ✓ does not sync on mount for a screen that only wants the manual functions
+    ✓ hands the export pass every live rehearsal, to take back the rest
+    ✓ runs the pass once the last rehearsal is gone too
+    ✓ takes back what was exported, rather than stopping at "no projects"
+    ✓ go one at a time, however many are waiting
+    ✓ waits its turn instead of being dropped
+    ✓ no longer holds back, so someone else's edit arrives on opening the app
+    ✓ asks for the mappings once, not once per rehearsal
+    ✓ a failed import still lets the export run
+    ✓ mappings that could not be fetched for the import still let the export run
+    ✓ can bring the calendar in line without the hook
+    ✓ shares the lock, so an extra caller causes no extra run
+PASS frontend src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.onePath.test.tsx
+  ✓ exports each rehearsal under its own title (EO05)
+    ✓ cannot be changed until the whole run is over
+    ✓ are not written past: sync turned off is not exported to
+    ✓ keeps the stamp the sync wrote after the screen read its settings
+    ✓ from the hook changes only what it names
+PASS frontend src/features/calendar/hooks/__tests__/useCalendarSync.test.ts
+      ✓ should initialize with no permission
+      ✓ should initialize with permission and load calendars
+      ✓ should load synced count from storage
+      ✓ should load imported count from storage
+      ✓ should request and grant permissions
+      ✓ should handle denied permissions
+      ✓ should update settings and save to storage
+      ✓ leaves the settings shown as they were when the save fails
+      ✓ should sync single rehearsal
+      ✓ should throw error when no permission
+      ✓ should throw error when no calendar selected
+      ✓ should handle sync errors
+      ✓ should unsync (remove) rehearsal from calendar
+      ✓ should throw error when no permission
+      ✓ asks the app's sync for a run, as a pull does
+      ✓ is busy from the first step of a run to its last, whoever started it
+      ✓ shows the last export the sync recorded, once the run ends
+      ✓ keeps the last known count when the new one cannot be read, rather than showing none
+      ✓ should remove all exported events
+      ✓ should call progress callback
+      ✓ counts what could not be removed as still exported, and says it failed
+      ✓ should check if rehearsal is synced
+      ✓ should return false when check fails
+      ✓ should remove all imported availability slots
+      ✓ should call progress callback during clear
+      ✓ should throw error when no permission
+      ✓ should handle clear errors
+Tests:       58 passed, 58 total
+
+Whole frontend project, same tree: Test Suites: 84 passed, 84 total; Tests: 844 passed, 844 total.
+npx tsc --noEmit -p . : no errors.
