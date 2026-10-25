@@ -283,6 +283,8 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
               setIsRemoving(true);
               const result = await removeAll();
               logger.debug('[Sync] Removed exported events:', result);
+              // Signed out before its turn: nothing was done, and nobody to tell.
+              if (!result) return;
 
               // removeAll reports failures rather than throwing, and this said
               // "done" whatever came back — including a run where every single

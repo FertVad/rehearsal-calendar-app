@@ -13,8 +13,7 @@ import {
   formatDateToTimeString,
   isEmptyClockRange,
 } from '../../../shared/utils/time';
-import { getSyncSettings } from '../../../shared/utils/calendarStorage';
-import { syncRehearsalToCalendar } from '../../../shared/services/calendar';
+import { exportRehearsal } from '../../../shared/services/calendarSync';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 import { useTimezone } from '../../../shared/hooks/useClock';
@@ -119,48 +118,26 @@ export function useAddRehearsalSubmit({
         savedRehearsal = response.data.rehearsal;
       }
 
-      // Auto-sync to calendar if export is enabled
-      try {
-        const syncSettings = await getSyncSettings();
-        logger.debug('[AddRehearsal] 🔍 Checking calendar sync settings:', {
-          exportEnabled: syncSettings.exportEnabled,
-          exportCalendarId: syncSettings.exportCalendarId,
-          savedRehearsalId: savedRehearsal?.id,
+      // Its event, in the sync's queue: after a run already going, which may
+      // have read the rehearsal as it was before this save and would write
+      // the old time back over the new one. The queue reads the export
+      // settings when its turn comes; the save does not wait for it.
+      if (savedRehearsal?.id) {
+        exportRehearsal({
+          id: savedRehearsal.id,
+          projectId: localSelectedProject!.id,
+          projectName: localSelectedProject!.name,
+          startsAt: rehearsalData.startsAt,
+          endsAt: rehearsalData.endsAt,
+          location: rehearsalData.location,
+          // Without this the event is written the moment the rehearsal is
+          // saved and carries no name, so it reads "Rehearsal: <project>"
+          // until some later sync corrects it.
+          title: rehearsalData.title,
+        }).catch((syncError) => {
+          // Don't fail the whole operation if sync fails, just log it
+          logger.error('[AddRehearsal] ❌ Failed to auto-sync to calendar:', syncError);
         });
-
-        if (syncSettings.exportEnabled && syncSettings.exportCalendarId && savedRehearsal?.id) {
-          logger.debug('[AddRehearsal] ✅ All conditions met, syncing to calendar...');
-          const rehearsalWithProject = {
-            id: savedRehearsal.id,
-            projectId: localSelectedProject!.id,
-            projectName: localSelectedProject!.name,
-            startsAt: rehearsalData.startsAt,
-            endsAt: rehearsalData.endsAt,
-            location: rehearsalData.location,
-            // Without this the event is written the moment the rehearsal is
-            // saved and carries no name, so it reads "Rehearsal: <project>"
-            // until some later sync corrects it.
-            title: rehearsalData.title,
-          };
-
-          logger.debug('[AddRehearsal] 📤 Calling syncRehearsalToCalendar with:', {
-            rehearsalId: rehearsalWithProject.id,
-            projectName: rehearsalWithProject.projectName,
-            calendarId: syncSettings.exportCalendarId,
-          });
-
-          await syncRehearsalToCalendar(rehearsalWithProject, syncSettings.exportCalendarId);
-          logger.debug('[AddRehearsal] ✅ Calendar sync successful!');
-        } else {
-          logger.debug('[AddRehearsal] ⚠️ Calendar sync skipped. Reasons:', {
-            exportNotEnabled: !syncSettings.exportEnabled,
-            noCalendarSelected: !syncSettings.exportCalendarId,
-            noRehearsalId: !savedRehearsal?.id,
-          });
-        }
-      } catch (syncError) {
-        // Don't fail the whole operation if sync fails, just log it
-        logger.error('[AddRehearsal] ❌ Failed to auto-sync to calendar:', syncError);
       }
 
       // Success message based on mode

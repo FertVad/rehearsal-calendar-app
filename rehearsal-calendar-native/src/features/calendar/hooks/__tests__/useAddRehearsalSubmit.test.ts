@@ -8,16 +8,16 @@ import { Alert } from 'react-native';
 import { useAddRehearsalSubmit } from '../useAddRehearsalSubmit';
 import { rehearsalsAPI } from '../../../../shared/services/api';
 import { checkSchedulingConflicts } from '../../../../shared/utils/conflictDetection';
-import { getSyncSettings } from '../../../../shared/utils/calendarStorage';
-import { syncRehearsalToCalendar } from '../../../../shared/services/calendar';
+import { exportRehearsal } from '../../../../shared/services/calendarSync';
 import { Project, ProjectMember } from '../../../../shared/types';
 import { setProfileTimezone } from '../../../../shared/utils/time';
 
 // Mock dependencies
 jest.mock('../../../../shared/services/api');
 jest.mock('../../../../shared/utils/conflictDetection');
-jest.mock('../../../../shared/utils/calendarStorage');
-jest.mock('../../../../shared/services/calendar');
+jest.mock('../../../../shared/services/calendarSync', () => ({
+  exportRehearsal: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('expo-calendar');
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
@@ -96,10 +96,7 @@ describe('useAddRehearsalSubmit Hook', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (getSyncSettings as jest.Mock).mockResolvedValue({
-      exportEnabled: false,
-      exportCalendarId: null,
-    });
+    (exportRehearsal as jest.Mock).mockResolvedValue(undefined);
     (checkSchedulingConflicts as jest.Mock).mockReturnValue({
       hasConflicts: false,
       fullyBusy: [],
@@ -395,12 +392,9 @@ describe('useAddRehearsalSubmit Hook', () => {
   });
 
   describe('Calendar Auto-Sync', () => {
-    it('should sync to calendar when export is enabled', async () => {
-      (getSyncSettings as jest.Mock).mockResolvedValue({
-        exportEnabled: true,
-        exportCalendarId: 'cal123',
-      });
-
+    // The event goes through the sync's queue, which reads the export settings
+    // in its turn (services/calendarSync.ts, calendarQueue.test.ts).
+    it('hands the saved rehearsal to the sync\'s queue', async () => {
       (rehearsalsAPI.create as jest.Mock).mockResolvedValue({
         data: { rehearsal: { id: 'r1' } },
       });
@@ -413,48 +407,21 @@ describe('useAddRehearsalSubmit Hook', () => {
         await result.current.handleSubmit();
       });
 
-      expect(syncRehearsalToCalendar).toHaveBeenCalledWith(
+      expect(exportRehearsal).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'r1',
           projectId: '1',
           projectName: 'Band Project',
-        }),
-        'cal123'
+        })
       );
-    });
-
-    it('should not sync when export is disabled', async () => {
-      (getSyncSettings as jest.Mock).mockResolvedValue({
-        exportEnabled: false,
-        exportCalendarId: null,
-      });
-
-      (rehearsalsAPI.create as jest.Mock).mockResolvedValue({
-        data: { rehearsal: { id: 'r1' } },
-      });
-
-      const { result } = renderHook(() =>
-        useAddRehearsalSubmit(defaultProps)
-      );
-
-      await act(async () => {
-        await result.current.handleSubmit();
-      });
-
-      expect(syncRehearsalToCalendar).not.toHaveBeenCalled();
     });
 
     it('should not fail if sync fails', async () => {
-      (getSyncSettings as jest.Mock).mockResolvedValue({
-        exportEnabled: true,
-        exportCalendarId: 'cal123',
-      });
-
       (rehearsalsAPI.create as jest.Mock).mockResolvedValue({
         data: { rehearsal: { id: 'r1' } },
       });
 
-      (syncRehearsalToCalendar as jest.Mock).mockRejectedValue(
+      (exportRehearsal as jest.Mock).mockRejectedValue(
         new Error('Sync failed')
       );
 

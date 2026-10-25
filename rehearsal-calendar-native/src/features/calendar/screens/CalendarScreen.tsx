@@ -21,7 +21,7 @@ import { rehearsalOnDate } from '../../../shared/utils/rehearsalDays';
 import { useRehearsals } from '../hooks';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { calendarScreenStyles as styles } from '../styles';
-import { unsyncRehearsal } from '../../../shared/services/calendar';
+import { unexportRehearsal } from '../../../shared/services/calendarSync';
 
 import { logger } from '../../../shared/utils/logger';
 export default function CalendarScreen() {
@@ -152,13 +152,13 @@ export default function CalendarScreen() {
             try {
               await rehearsalsAPI.delete(projectId, rehearsalId);
 
-              // Auto-unsync from calendar if it was synced
-              try {
-                await unsyncRehearsal(rehearsalId);
-              } catch (syncError) {
+              // Its event, in the sync's queue: after a run already going,
+              // which may have read the rehearsal before it was deleted and
+              // would put the event back.
+              unexportRehearsal(rehearsalId).catch((syncError) => {
                 // Don't fail the whole operation if unsync fails
                 logger.error('[CalendarScreen] Failed to unsync from calendar:', syncError);
-              }
+              });
 
               // Force refetch rehearsals after deletion (bypass cache)
               await fetchRehearsals(true);

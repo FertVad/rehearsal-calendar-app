@@ -20,9 +20,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../utils/logger';
 import { getSyncSettings } from '../utils/calendarStorage';
 import { getAllMappings } from '../utils/calendarMappings';
-import { importCalendarEventsToAvailability, syncAllRehearsals } from './calendar';
+import {
+  importCalendarEventsToAvailability,
+  removeAllExportedEvents,
+  removeAllImportedSlots,
+  syncAllRehearsals,
+  syncRehearsalToCalendar,
+  unsyncRehearsal,
+} from './calendar';
 import { projectsAPI, rehearsalsAPI } from './api';
-import { assertSession, sessionWork, SessionEndedError, SessionStamp } from './session';
+import { assertSession, currentSession, sessionWork, SessionEndedError, SessionStamp } from './session';
 import type {
   BatchSyncResult,
   CalendarSyncSettings,
@@ -159,6 +166,19 @@ async function syncOnce(session: SessionStamp): Promise<SyncRun> {
  * replaces let every waiter wait for the same run and then start together, so
  * two pulls during an automatic run became two exports at once, each reading
  * the same mappings and writing its own (EO03).
+ *
+ * Every writer of the person's calendar and of their imported events goes
+ * through here: a sync run, the event of a rehearsal just saved or deleted,
+ * "remove all". The two of a saved rehearsal used to be written beside the
+ * queue, so a run that had read the rehearsals before the save wrote the old
+ * time back over the new one, or put back the event of one just deleted
+ * (review of cause fix 18). In the queue the save's own write comes after.
+ *
+ * The work is the session's it was asked in, stamped when it joins the queue.
+ * Stamped only when its turn came, a "remove all" confirmed behind a run that
+ * hung, then a sign-out and a sign-in as someone else, ran as the next person
+ * and took their events away (review of cause fix 18). Work whose session has
+ * ended by its turn does not start: it rejects with SessionEndedError.
  */
 let queue: Promise<unknown> = Promise.resolve();
 let pending = 0; // waiting or running
@@ -170,12 +190,52 @@ function setPending(change: number): void {
   if (wasRunning !== pending > 0) listeners.forEach((listener) => listener(pending > 0));
 }
 
-/** Calendar work that must not overlap a sync — "remove all", for one. */
-export function runCalendarWork<T>(work: () => Promise<T>): Promise<T> {
+/** Calendar work, as the session asking for it, after what is ahead of it. */
+export function runCalendarWork<T>(work: (session: SessionStamp) => Promise<T>): Promise<T> {
+  const session = currentSession();
   setPending(1);
-  const run = queue.then(work);
+  const run = queue.then(() => sessionWork(work, session));
   queue = run.then(() => undefined, () => undefined);
   return run.finally(() => setPending(-1));
+}
+
+/** The same, resolving to null for work whose session ended: nothing was done. */
+function runForSession<T>(work: (session: SessionStamp) => Promise<T>): Promise<T | null> {
+  return runCalendarWork(work).catch((error) => {
+    if (error instanceof SessionEndedError) return null;
+    throw error;
+  });
+}
+
+/**
+ * The event of a rehearsal just saved, written in its turn, to the calendar
+ * the settings name by then — nothing if exporting is off by then.
+ */
+export async function exportRehearsal(rehearsal: RehearsalWithProject): Promise<void> {
+  await runForSession(async (session) => {
+    const calendarId = exportCalendar(await getSyncSettings());
+    if (!calendarId) return;
+    await syncRehearsalToCalendar(rehearsal, calendarId, undefined, session);
+  });
+}
+
+/** The event of a rehearsal just deleted, taken back in its turn. */
+export async function unexportRehearsal(rehearsalId: string): Promise<void> {
+  await runForSession((session) => unsyncRehearsal(rehearsalId, session));
+}
+
+/** "Remove all exported", in its turn. Null: the session ended first. */
+export function removeExportedEvents(
+  onProgress?: (current: number, total: number) => void
+): Promise<BatchSyncResult | null> {
+  return runForSession((session) => removeAllExportedEvents(onProgress, session));
+}
+
+/** "Clear all imported", in its turn. Null: the session ended first. */
+export function removeImportedEvents(
+  onProgress?: (current: number, total: number) => void
+): Promise<ImportResult | null> {
+  return runForSession((session) => removeAllImportedSlots(onProgress, session));
 }
 
 /** Whether calendar work is running or waiting. */
@@ -230,13 +290,6 @@ export async function runCalendarSync(trigger: 'auto' | 'manual'): Promise<SyncR
     lastAutomaticRun = now;
   }
 
-  return runCalendarWork(async () => {
-    try {
-      return await sessionWork(syncOnce);
-    } catch (error) {
-      // Ended with its session: nothing more is written, and that is no error.
-      if (error instanceof SessionEndedError) return null;
-      throw error;
-    }
-  });
+  // Ended with its session: nothing more is written, and that is no error.
+  return runForSession(syncOnce);
 }

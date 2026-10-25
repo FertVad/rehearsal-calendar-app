@@ -6,7 +6,7 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useCalendarSync } from '../useCalendarSync';
 import * as calendar from '../../../../shared/services/calendar';
 import * as calendarStorage from '../../../../shared/utils/calendarStorage';
-import { runCalendarSync, runCalendarWork } from '../../../../shared/services/calendarSync';
+import { runCalendarSync } from '../../../../shared/services/calendarSync';
 
 // Mock dependencies
 jest.mock('../../../../shared/services/calendar');
@@ -21,7 +21,11 @@ const mockSyncListeners = new Set<(running: boolean) => void>();
 jest.mock('../../../../shared/services/calendarSync', () => ({
   isCalendarSyncRunning: () => false,
   runCalendarSync: jest.fn().mockResolvedValue(null),
-  runCalendarWork: jest.fn((work: () => Promise<unknown>) => work()),
+  // In the queue: here, straight to the writer.
+  removeExportedEvents: jest.fn((onProgress?: unknown) =>
+    jest.requireMock('../../../../shared/services/calendar').removeAllExportedEvents(onProgress)),
+  removeImportedEvents: jest.fn((onProgress?: unknown) =>
+    jest.requireMock('../../../../shared/services/calendar').removeAllImportedSlots(onProgress)),
   subscribeCalendarSync: (listener: (running: boolean) => void) => {
     mockSyncListeners.add(listener);
     return () => mockSyncListeners.delete(listener);
@@ -194,178 +198,6 @@ describe('useCalendarSync - Export (App → Calendar)', () => {
       });
 
       expect(result.current.settings.exportEnabled).toBe(false);
-    });
-  });
-
-  describe('Sync Rehearsal', () => {
-    it('should sync single rehearsal', async () => {
-      (calendar.checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
-      (calendarStorage.getSyncSettings as jest.Mock).mockResolvedValue({
-        exportEnabled: true,
-        exportCalendarId: 'cal-123',
-        lastExportTime: null,
-        importEnabled: false,
-        importCalendarIds: [],
-        importInterval: 'manual',
-        lastImportTime: null,
-      });
-      (calendar.syncRehearsalToCalendar as jest.Mock).mockResolvedValue('event-123');
-      (calendarStorage.getSyncedRehearsalsCount as jest.Mock).mockResolvedValue(1);
-
-      const { result } = renderHook(() => useCalendarSync());
-
-      await waitFor(() => {
-        expect(result.current.settings.exportCalendarId).toBe('cal-123');
-      });
-
-      const mockRehearsal = {
-        id: '1',
-        title: 'Band Practice',
-        startsAt: '2025-12-29T18:00:00Z',
-        endsAt: '2025-12-29T20:00:00Z',
-        location: 'Studio A',
-        projectName: 'My Band',
-      };
-
-      await act(async () => {
-        await result.current.syncRehearsal(mockRehearsal as any);
-      });
-
-      expect(calendar.syncRehearsalToCalendar).toHaveBeenCalledWith(mockRehearsal, 'cal-123');
-      expect(result.current.syncStatus).toBe('success');
-      expect(result.current.syncedCount).toBe(1);
-    });
-
-    it('should throw error when no permission', async () => {
-      (calendar.checkCalendarPermissions as jest.Mock).mockResolvedValue(false);
-
-      const { result } = renderHook(() => useCalendarSync());
-
-      await waitFor(() => {
-        expect(result.current.hasPermission).toBe(false);
-      });
-
-      const mockRehearsal = {
-        id: '1',
-        title: 'Band Practice',
-      };
-
-      await expect(
-        act(async () => {
-          await result.current.syncRehearsal(mockRehearsal as any);
-        })
-      ).rejects.toThrow('Calendar permission not granted');
-    });
-
-    it('should throw error when no calendar selected', async () => {
-      (calendar.checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
-      (calendar.getDeviceCalendars as jest.Mock).mockResolvedValue([]);
-      (calendarStorage.getSyncSettings as jest.Mock).mockResolvedValue({
-        exportEnabled: false,
-        exportCalendarId: null,
-        lastExportTime: null,
-        importEnabled: false,
-        importCalendarIds: [],
-        importInterval: 'manual',
-        lastImportTime: null,
-      });
-
-      const { result } = renderHook(() => useCalendarSync());
-
-      await waitFor(() => {
-        expect(result.current.hasPermission).toBe(true);
-        expect(result.current.settings.exportCalendarId).toBe(null);
-      });
-
-      const mockRehearsal = {
-        id: '1',
-        title: 'Band Practice',
-      };
-
-      await expect(
-        act(async () => {
-          await result.current.syncRehearsal(mockRehearsal as any);
-        })
-      ).rejects.toThrow('No calendar selected');
-    });
-
-    it('should handle sync errors', async () => {
-      (calendar.checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
-      (calendarStorage.getSyncSettings as jest.Mock).mockResolvedValue({
-        exportEnabled: true,
-        exportCalendarId: 'cal-123',
-        lastExportTime: null,
-        importEnabled: false,
-        importCalendarIds: [],
-        importInterval: 'manual',
-        lastImportTime: null,
-      });
-      (calendar.syncRehearsalToCalendar as jest.Mock).mockRejectedValue(
-        new Error('Calendar API error')
-      );
-
-      const { result } = renderHook(() => useCalendarSync());
-
-      await waitFor(() => {
-        expect(result.current.settings.exportCalendarId).toBe('cal-123');
-      });
-
-      const mockRehearsal = {
-        id: '1',
-        title: 'Band Practice',
-      };
-
-      let error: any;
-      await act(async () => {
-        try {
-          await result.current.syncRehearsal(mockRehearsal as any);
-        } catch (e) {
-          error = e;
-        }
-      });
-
-      expect(error).toBeDefined();
-      expect(error.message).toBe('Calendar API error');
-      expect(result.current.syncStatus).toBe('error');
-      expect(result.current.syncError).toBe('Calendar API error');
-    });
-  });
-
-  describe('Unsync Rehearsal', () => {
-    it('should unsync (remove) rehearsal from calendar', async () => {
-      (calendar.checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
-      (calendar.unsyncRehearsal as jest.Mock).mockResolvedValue(undefined);
-      (calendarStorage.getSyncedRehearsalsCount as jest.Mock).mockResolvedValue(0);
-
-      const { result } = renderHook(() => useCalendarSync());
-
-      await waitFor(() => {
-        expect(result.current.hasPermission).toBe(true);
-      });
-
-      await act(async () => {
-        await result.current.unsync('1');
-      });
-
-      expect(calendar.unsyncRehearsal).toHaveBeenCalledWith('1');
-      expect(result.current.syncStatus).toBe('success');
-      expect(result.current.syncedCount).toBe(0);
-    });
-
-    it('should throw error when no permission', async () => {
-      (calendar.checkCalendarPermissions as jest.Mock).mockResolvedValue(false);
-
-      const { result } = renderHook(() => useCalendarSync());
-
-      await waitFor(() => {
-        expect(result.current.hasPermission).toBe(false);
-      });
-
-      await expect(
-        act(async () => {
-          await result.current.unsync('1');
-        })
-      ).rejects.toThrow('Calendar permission not granted');
     });
   });
 

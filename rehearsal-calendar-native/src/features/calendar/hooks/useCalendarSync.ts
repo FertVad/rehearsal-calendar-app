@@ -7,22 +7,18 @@ import { logger } from '../../../shared/utils/logger';
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
 import {
   requestCalendarPermissions,
   checkCalendarPermissions,
   getDeviceCalendars,
   getDefaultCalendar,
-  syncRehearsalToCalendar,
-  unsyncRehearsal,
-  removeAllExportedEvents,
   BatchSyncResult,
-  removeAllImportedSlots,
 } from '../../../shared/services/calendar';
 import {
   isCalendarSyncRunning,
+  removeExportedEvents,
+  removeImportedEvents,
   runCalendarSync,
-  runCalendarWork,
   subscribeCalendarSync,
   SyncRun,
 } from '../../../shared/services/calendarSync';
@@ -36,7 +32,6 @@ import {
 import {
   DeviceCalendar,
   CalendarSyncSettings,
-  RehearsalWithProject,
   SyncStatus,
   ImportResult,
 } from '../../../shared/types/calendar';
@@ -196,69 +191,17 @@ export function useCalendarSync() {
     }
   };
 
-  /**
-   * Sync single rehearsal
-   */
-  const syncRehearsal = useCallback(async (rehearsal: RehearsalWithProject) => {
-    if (!hasPermission) {
-      throw new Error('Calendar permission not granted');
-    }
-
-    if (!settings.exportCalendarId) {
-      throw new Error('No calendar selected');
-    }
-
-    setSyncStatus('syncing');
-    setSyncError(null);
-
-    try {
-      await syncRehearsalToCalendar(rehearsal, settings.exportCalendarId);
-      setSyncStatus('success');
-
-      // Update synced count
-      const count = await getSyncedRehearsalsCount();
-      setSyncedCount(count);
-      // One rehearsal written is not the calendar in line: no "last export".
-    } catch (error: any) {
-      logger.error('[useCalendarSync] Sync rehearsal failed:', error);
-      setSyncStatus('error');
-      setSyncError(error.message);
-      throw error;
-    }
-  }, [hasPermission, settings]);
+  // One rehearsal's event is written by the save and the delete themselves,
+  // through the sync's queue (services/calendarSync.ts). The hook's own copies,
+  // with the calendar of the last render and beside the queue, are gone.
 
   /**
-   * Unsync single rehearsal (remove from calendar)
-   */
-  const unsync = useCallback(async (rehearsalId: string) => {
-    if (!hasPermission) {
-      throw new Error('Calendar permission not granted');
-    }
-
-    setSyncStatus('syncing');
-    setSyncError(null);
-
-    try {
-      await unsyncRehearsal(rehearsalId);
-      setSyncStatus('success');
-
-      // Update synced count
-      const count = await getSyncedRehearsalsCount();
-      setSyncedCount(count);
-    } catch (error: any) {
-      logger.error('[useCalendarSync] Unsync rehearsal failed:', error);
-      setSyncStatus('error');
-      setSyncError(error.message);
-      throw error;
-    }
-  }, [hasPermission]);
-
-  /**
-   * Remove all exported events
+   * Remove all exported events. Null: the person signed out before its turn
+   * came, and nothing was done.
    */
   const removeAll = useCallback(async (
     onProgress?: (current: number, total: number) => void
-  ): Promise<BatchSyncResult> => {
+  ): Promise<BatchSyncResult | null> => {
     if (!hasPermission) {
       throw new Error('Calendar permission not granted');
     }
@@ -268,8 +211,13 @@ export function useCalendarSync() {
 
     try {
       // In the sync's queue: an export pass running alongside would put back
-      // what this takes away.
-      const result = await runCalendarWork(() => removeAllExportedEvents(onProgress));
+      // what this takes away. As the person who confirmed it, whoever is
+      // signed in when its turn comes.
+      const result = await removeExportedEvents(onProgress);
+      if (!result) {
+        setSyncStatus('idle');
+        return null;
+      }
 
       reportBatch(result);
 
@@ -298,12 +246,12 @@ export function useCalendarSync() {
   }, []);
 
   /**
-   * Remove all imported availability slots
-   * Phase 2: Clear imported events
+   * Remove all imported availability slots, in the sync's queue: an import
+   * running alongside would put them back. Null: the session ended first.
    */
   const clearImported = useCallback(async (
     onProgress?: (current: number, total: number) => void
-  ): Promise<ImportResult> => {
+  ): Promise<ImportResult | null> => {
     if (!hasPermission) {
       throw new Error('Calendar permission not granted');
     }
@@ -312,12 +260,12 @@ export function useCalendarSync() {
     setImportError(null);
 
     try {
-      const result = await removeAllImportedSlots(onProgress);
+      const result = await removeImportedEvents(onProgress);
 
       setIsImporting(false);
 
       // Update imported count
-      setImportedCount(0);
+      if (result) setImportedCount(0);
 
       return result;
     } catch (error: any) {
@@ -346,8 +294,6 @@ export function useCalendarSync() {
     requestPermissions,
     updateSettings,
     synchronize,
-    syncRehearsal,
-    unsync,
     removeAll,
     isSynced,
     refresh: init, // Re-initialize
