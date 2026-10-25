@@ -95,6 +95,10 @@ export const PEOPLE = {
   // Makes a rehearsal from 23:00 to 01:00 in the form (26), alone in a project
   // of her own.
   arkadina: { email: 'arkadina@e2e.test', firstName: 'Irina', lastName: 'Arkadina', onboarded: true },
+  // Syncs with the phone's calendar while the import's answer does not come
+  // (30): one rehearsal of his own, so the export has something to write, and
+  // nobody else's days take his imported events.
+  medvedenko: { email: 'medvedenko@e2e.test', firstName: 'Semyon', lastName: 'Medvedenko', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -226,6 +230,12 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
     [nightId, ids.zarechnaya]);
+  // Medvedenko (30) too, the same way.
+  const { id: schoolId } = await project('Village School', 'Lessons', [], 'gaev');
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+    [schoolId, ids.medvedenko]);
   // Arkadina's (26), made as the server makes a project: the sign-ins are spent.
   const { rows: [lake] } = await client.query(
     `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
@@ -285,6 +295,7 @@ export async function seed({ client, apiUrl, timezone }) {
     linen: await rehearsal(kitchenId, 'Linen count', 4, 12, 13, ['gaev', 'dasha'], 'gaev'),
     // Both in the small hours in Tel Aviv, where the simulator (run.mjs) is
     // still on the day before: dated by the device, today's would be yesterday's.
+    lesson: await rehearsal(schoolId, 'Lesson plan', 2, 16, 17, ['gaev', 'medvedenko'], 'gaev'),
     midnight: await rehearsal(roundsId, 'Midnight call', 0, [0, 30], 1, ['chebutykin'], 'gaev', CHOSEN_ZONE),
     watch: await rehearsal(roundsId, 'Night watch', 1, 2, 3, ['chebutykin'], 'gaev', CHOSEN_ZONE),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
