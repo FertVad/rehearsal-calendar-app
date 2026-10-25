@@ -96,6 +96,39 @@ the same, nothing on screen could tell them apart. Honolulu has no summer time
 and is not in the profile's list, so the zone picker names it at the top as
 the device's (flow 23).
 
+## A lost tap
+
+The simulator loses about one tap in 250, and Maestro does not notice. For
+each tap XCTest makes a virtual digitizer and plays the touch at once; when
+backboardd is busy it matches the new device late, the first event gets there
+before it, and it ends up with two touch states for one digitizer: the touch
+down goes to one, the lift to the other, and the touch is cancelled
+(`device-simulator.log`: "we already have a service for senderID", then
+"didn't see a previous touch down ... skipping event"). In the logs kept on
+25.10.2026: 83 lost taps in 20 606, in 27 flows and a probe, with and without Metro
+watching `e2e/out`. Maestro 2.11 said "Something have changed in the UI" after
+every one of 9 198 taps, the lost ones too, so its own tap-again never runs
+(T-207; `audit/evidence/T-207`, `touch-scan.mjs` counts them in any run's
+artifacts). Most were the first tap of sign-in, which types inside `retry`;
+flow 30 failed on one at "Apple Calendar".
+
+It is below the app, and cannot be made to happen on demand. The rule:
+
+- A tap whose result the flow waits for, where a lost tap has failed or can
+  fail a flow, goes through `e2e/subflows/tap-and-see.yaml` with `TAP_ID` (an
+  id) or `TAP` (a text), `SEE` (the text it brings on screen) and `WAIT_MS`
+  (the wait the flow had anyway). It taps and waits; if `SEE` is not there it
+  taps once more - never more - and waits again, and then `SEE` must come.
+  No pause, no longer wait.
+- Only for a tap that may be taken twice: the second comes when the first left
+  no trace on screen, but a first that landed late would be repeated.
+- Every second tap is printed at the end of the run - `[e2e] taps taken again
+  (tap-and-see.yaml): N` and a line for each (`e2e/scripts/tap-again.js` tells
+  the mailbox, which writes `e2e/out/taps-again.log`) - so how often it
+  happens stays in sight. Many of them means something else is losing taps.
+- Typing is not a tap: the sign-in fields and flows 11-12 type inside `retry`
+  because the first keyboard after a cold launch is slow, and that stays.
+
 ## The seed
 
 `e2e/seed.mjs`. Accounts are inserted with confirmed addresses (registration
@@ -203,5 +236,8 @@ so that switch needs no rework.
   07); a flow that needs another selection makes it itself.
 - A list item under the tab bar, or still scrolling, takes no tap: bring it
   into view with `scrollUntilVisible` (`centerElement: true`) first.
+- A tap the flow then waits on the result of, where a lost tap has failed a
+  flow, goes through `e2e/subflows/tap-and-see.yaml` (see "A lost tap"), not
+  a `repeat` or `retry` of its own.
 - Docker Desktop idles its VM; the runner wakes it with a long-timeout call
   before anything else.

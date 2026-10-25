@@ -45,10 +45,14 @@ tags:
 - extendedWaitUntil:
     visible: ".*Apple Calendar.*"
     timeout: 15000
-- tapOn: ".*Apple Calendar.*"
-- extendedWaitUntil:
-    visible: ".*Synchronize.*"
-    timeout: 10000
+# Taken once more if the simulator lost it (T-207); a second tap only turns
+# sync on again.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Apple Calendar.*"
+      SEE: ".*Synchronize.*"
+      WAIT_MS: 10000
 # The import's answer does not come within the app's ten seconds.
 - runScript:
     file: ../scripts/hold-answers.js

@@ -40,6 +40,14 @@
  * already sent, so this is for a change whose outcome the flow does not read,
  * or for a read the server answers 200: it is asked without If-None-Match, so
  * a read gets its body, never a 304 (flow 17, T-206).
+ *
+ * And it keeps count of the taps the flows had to take again:
+ *
+ *   GET /tap-again?tap=<what>&see=<what>   e2e/subflows/tap-and-see.yaml did not
+ *                                          see the result of a tap and tapped
+ *                                          once more; a line in
+ *                                          e2e/out/taps-again.log, which run.mjs
+ *                                          prints after the flows (T-207)
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -50,12 +58,14 @@ import { capturedEmails } from '../server/services/email/transport.js';
 import app from '../server/server.js';
 
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
+const TAPS_AGAIN = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'taps-again.log');
 
 assert.equal(process.env.EMAIL_TRANSPORT, 'capture-for-tests', 'The e2e server keeps its mail in memory, never sends it');
 assert.equal(process.env.MAIL_HOST, '127.0.0.1', 'The mailbox answers on 127.0.0.1 only');
 
 fs.rmSync(MAIL, { recursive: true, force: true });
 fs.mkdirSync(MAIL, { recursive: true });
+fs.rmSync(TAPS_AGAIN, { force: true });
 const keep = capturedEmails.push.bind(capturedEmails);
 capturedEmails.push = (...messages) => {
   for (const [index, message] of messages.entries()) {
@@ -186,6 +196,12 @@ http.createServer((request, response) => {
     holds = [];
     answers.forEach((release) => release());
     return answer(200, { released: answers.length });
+  }
+  if (request.method === 'GET' && url.pathname === '/tap-again') {
+    const line = `${new Date().toISOString()}  tapped "${url.searchParams.get('tap')}" again: no "${url.searchParams.get('see')}" after the first tap`;
+    console.log(`[e2e] ${line}`);
+    fs.appendFileSync(TAPS_AGAIN, `${line}\n`);
+    return answer(200, { logged: true });
   }
   if (request.method !== 'GET' || url.pathname !== '/code') return answer(404, { error: 'not here' });
   const to = (url.searchParams.get('to') || '').trim().toLowerCase();

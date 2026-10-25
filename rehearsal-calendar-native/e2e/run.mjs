@@ -501,6 +501,20 @@ async function main() {
   } catch {
     process.exitCode = 1;
   }
+  reportTapsAgain();
+}
+
+/**
+ * The taps e2e/subflows/tap-and-see.yaml took a second time, its result not
+ * on screen after the first: the simulator loses about one tap in 250 and
+ * Maestro reports it done (docs/e2e.md, T-207). Printed every run, so how often
+ * it happens stays in sight.
+ */
+function reportTapsAgain() {
+  const log = path.join(OUT, 'taps-again.log');
+  const lines = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').split('\n').filter(Boolean) : [];
+  step(`taps taken again (tap-and-see.yaml): ${lines.length}`);
+  for (const line of lines) step(`  ${line}`);
 }
 
 main()
