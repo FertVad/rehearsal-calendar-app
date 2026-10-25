@@ -29,6 +29,9 @@ beforeEach(() => {
   (Calendar.getEventAsync as jest.Mock).mockResolvedValue({ id: 'e1' });
   (Calendar.updateEventAsync as jest.Mock).mockResolvedValue(undefined);
   (Calendar.createEventAsync as jest.Mock).mockResolvedValue('new-event');
+  // The search reads the calendar; one that cannot be read now fails the step
+  // instead of passing for empty (cause fix 17), so it is given an answer.
+  (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([]);
 });
 
 describe('Calendar access revoked in Settings', () => {
@@ -118,10 +121,11 @@ describe('When the reader picks a different export calendar', () => {
   });
 
   it('leaves the old copy alone if the new one could not be made', async () => {
-    // Better one event in the wrong calendar than none at all.
+    // Better one event in the wrong calendar than none at all — and said so,
+    // not reported as moved.
     (Calendar.createEventAsync as jest.Mock).mockResolvedValue(null);
 
-    await syncRehearsalToCalendar(rehearsals[0], 'work');
+    await expect(syncRehearsalToCalendar(rehearsals[0], 'work')).rejects.toThrow();
 
     expect(Calendar.deleteEventAsync).not.toHaveBeenCalled();
   });

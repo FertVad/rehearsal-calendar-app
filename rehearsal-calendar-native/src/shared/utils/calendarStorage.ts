@@ -225,9 +225,13 @@ export async function saveSyncSettings(
  */
 export async function updateLastExportTime(): Promise<void> {
   try {
-    const settings = await getSyncSettings();
-    settings.lastExportTime = new Date().toISOString();
-    await saveSyncSettings(settings);
+    // Through the queue, like the import's stamp below: the two land in the
+    // same object in the same run.
+    await updateStored<CalendarSyncSettings>(
+      KEYS.SYNC_SETTINGS,
+      (settings) => ({ ...settings, lastExportTime: new Date().toISOString() }),
+      {} as CalendarSyncSettings
+    );
   } catch (error) {
     logger.error('[CalendarStorage] Failed to update last export time:', error);
     throw error;

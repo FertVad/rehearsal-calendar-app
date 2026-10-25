@@ -42,6 +42,9 @@ export interface CalendarSyncTranslations {
   removeAllSuccess: string;
   /** Some events could not be removed — say how many rather than claiming success. */
   removeAllPartial: (removed: number, failed: number) => string;
+  /** A sync with failures says what did not get through, not "synced". */
+  importIncomplete: (calendars: number) => string;
+  exportIncomplete: (rehearsals: number) => string;
   syncError: string;
   exportError: string;
   exportErrorMessage: string;
@@ -161,6 +164,8 @@ inCalendar: (count: number) => `В календаре: ${count}`,
     removeSuccess: 'Успешно удалено',
     removeAllSuccess: 'Все репетиции удалены из календаря',
     removeAllPartial: (removed: number, failed: number) => `Удалено: ${removed}. Не удалось удалить: ${failed} — эти события остались в календаре.`,
+    importIncomplete: (calendars: number) => `Не удалось прочитать календарей: ${calendars}.`,
+    exportIncomplete: (rehearsals: number) => `Не удалось записать в календарь репетиций: ${rehearsals}.`,
     syncError: 'Ошибка синхронизации',
     exportError: 'Ошибка экспорта',
     exportErrorMessage: 'Не удалось экспортировать репетиции',
@@ -282,6 +287,8 @@ inCalendar: (count: number) => `In the calendar: ${count}`,
     removeSuccess: 'Removed successfully',
     removeAllSuccess: 'All rehearsals removed from calendar',
     removeAllPartial: (removed: number, failed: number) => `Removed: ${removed}. Could not remove: ${failed} — those events are still in the calendar.`,
+    importIncomplete: (calendars: number) => `Calendars that could not be read: ${calendars}.`,
+    exportIncomplete: (rehearsals: number) => `Rehearsals that could not be written to the calendar: ${rehearsals}.`,
     syncError: 'Sync error',
     exportError: 'Export Error',
     exportErrorMessage: 'Failed to export rehearsals',
@@ -403,6 +410,8 @@ inCalendar: (count: number) => `En el calendario: ${count}`,
     removeSuccess: 'Eliminado correctamente',
     removeAllSuccess: 'Todos los ensayos eliminados del calendario',
     removeAllPartial: (removed: number, failed: number) => `Eliminados: ${removed}. No se pudieron eliminar: ${failed} — esos eventos siguen en el calendario.`,
+    importIncomplete: (calendars: number) => `Calendarios que no se pudieron leer: ${calendars}.`,
+    exportIncomplete: (rehearsals: number) => `Ensayos que no se pudieron escribir en el calendario: ${rehearsals}.`,
     syncError: 'Error de sincronización',
     exportError: 'Error de exportación',
     exportErrorMessage: 'No se pudieron exportar los ensayos',
@@ -524,6 +533,8 @@ inCalendar: (count: number) => `Im Kalender: ${count}`,
     removeSuccess: 'Erfolgreich entfernt',
     removeAllSuccess: 'Alle Proben aus dem Kalender entfernt',
     removeAllPartial: (removed: number, failed: number) => `Entfernt: ${removed}. Nicht entfernt: ${failed} — diese Termine stehen noch im Kalender.`,
+    importIncomplete: (calendars: number) => `Kalender, die nicht gelesen werden konnten: ${calendars}.`,
+    exportIncomplete: (rehearsals: number) => `Proben, die nicht in den Kalender geschrieben werden konnten: ${rehearsals}.`,
     syncError: 'Synchronisationsfehler',
     exportError: 'Exportfehler',
     exportErrorMessage: 'Proben konnten nicht exportiert werden',

@@ -374,23 +374,54 @@ describe('useCalendarSync - Export (App → Calendar)', () => {
       expect(result.current.syncedCount).toBe(2);
     });
 
-    it('should update last export time after sync all', async () => {
+    // "Last export" is the sync's to stamp, and only for a run with no failure
+    // (export.ts). The hook used to stamp it again after every run, so one in
+    // which every write failed showed "synced just now" (EO06).
+    const exportSettings = {
+      exportEnabled: true,
+      exportCalendarId: 'cal-123',
+      lastExportTime: null,
+      importEnabled: false,
+      importCalendarIds: [],
+      importInterval: 'manual',
+      lastImportTime: null,
+    };
+
+    it('shows the last export the sync recorded', async () => {
       (calendar.checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
-      (calendarStorage.getSyncSettings as jest.Mock).mockResolvedValue({
-        exportEnabled: true,
-        exportCalendarId: 'cal-123',
-        lastExportTime: null,
-        importEnabled: false,
-        importCalendarIds: [],
-        importInterval: 'manual',
-        lastImportTime: null,
-      });
-      (calendar.syncAllRehearsals as jest.Mock).mockResolvedValue({
-        succeeded: 1,
-        failed: 0,
-        total: 1,
+      (calendarStorage.getSyncSettings as jest.Mock).mockResolvedValue(exportSettings);
+      (calendar.syncAllRehearsals as jest.Mock).mockImplementation(async () => {
+        (calendarStorage.getSyncSettings as jest.Mock).mockResolvedValue({
+          ...exportSettings,
+          lastExportTime: '2026-10-25T10:00:00.000Z',
+        });
+        return { success: 1, failed: 0, errors: [] };
       });
       (calendarStorage.getSyncedRehearsalsCount as jest.Mock).mockResolvedValue(1);
+
+      const { result } = renderHook(() => useCalendarSync());
+
+      await waitFor(() => {
+        expect(result.current.settings.exportCalendarId).toBe('cal-123');
+      });
+
+      await act(async () => {
+        await result.current.syncAll([{ id: '1', title: 'Rehearsal 1' }] as any);
+      });
+
+      expect(result.current.syncStatus).toBe('success');
+      expect(result.current.settings.lastExportTime).toBe('2026-10-25T10:00:00.000Z');
+    });
+
+    it('does not call a run with failures a success, nor stamp it', async () => {
+      (calendar.checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
+      (calendarStorage.getSyncSettings as jest.Mock).mockResolvedValue(exportSettings);
+      (calendar.syncAllRehearsals as jest.Mock).mockResolvedValue({
+        success: 0,
+        failed: 2,
+        errors: ['Гамлет: Calendar is read-only', 'Гамлет: Calendar is read-only'],
+      });
+      (calendarStorage.getSyncedRehearsalsCount as jest.Mock).mockResolvedValue(0);
       (calendarStorage.saveSyncSettings as jest.Mock).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useCalendarSync());
@@ -399,14 +430,16 @@ describe('useCalendarSync - Export (App → Calendar)', () => {
         expect(result.current.settings.exportCalendarId).toBe('cal-123');
       });
 
-      const mockRehearsals = [{ id: '1', title: 'Rehearsal 1' }];
-
       await act(async () => {
-        await result.current.syncAll(mockRehearsals as any);
+        await result.current.syncAll([{ id: '1' }, { id: '2' }] as any);
       });
 
-      expect(calendarStorage.saveSyncSettings).toHaveBeenCalled();
-      expect(result.current.settings.lastExportTime).toBeTruthy();
+      expect(result.current.syncStatus).toBe('error');
+      expect(result.current.syncError).toContain('read-only');
+      expect(result.current.settings.lastExportTime).toBeNull();
+      expect(calendarStorage.saveSyncSettings).not.toHaveBeenCalledWith(
+        expect.objectContaining({ lastExportTime: expect.any(String) })
+      );
     });
   });
 
@@ -457,6 +490,30 @@ describe('useCalendarSync - Export (App → Calendar)', () => {
       });
 
       expect(calendar.removeAllExportedEvents).toHaveBeenCalledWith(onProgress);
+    });
+
+    it('counts what could not be removed as still exported, and says it failed', async () => {
+      // Those events are still in the calendar and keep their mappings (EX02).
+      (calendar.checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
+      (calendar.removeAllExportedEvents as jest.Mock).mockResolvedValue({
+        success: 3,
+        failed: 2,
+        errors: ['Event e4: read-only', 'Event e5: read-only'],
+      });
+
+      const { result } = renderHook(() => useCalendarSync());
+
+      await waitFor(() => {
+        expect(result.current.hasPermission).toBe(true);
+      });
+
+      (calendarStorage.getSyncedRehearsalsCount as jest.Mock).mockResolvedValue(2);
+      await act(async () => {
+        await result.current.removeAll();
+      });
+
+      expect(result.current.syncStatus).toBe('error');
+      expect(result.current.syncedCount).toBe(2);
     });
   });
 
@@ -568,11 +625,14 @@ describe('useCalendarSync - Import (Calendar → App)', () => {
       );
     });
 
-    it('should update last import time after import', async () => {
+    it('does not mark as synced an import that could not read a calendar', async () => {
+      // The import names an unreadable calendar as failed and leaves "last
+      // import" alone (import.ts). The hook then stamped it anyway (EI02).
       (calendar.importCalendarEventsToAvailability as jest.Mock).mockResolvedValue({
-        succeeded: 3,
-        failed: 0,
-        total: 3,
+        success: 3,
+        failed: 1,
+        skipped: 0,
+        errors: ['1 calendar(s) could not be read'],
       });
       (calendarStorage.getImportedEventsCount as jest.Mock).mockResolvedValue(3);
       (calendarStorage.saveSyncSettings as jest.Mock).mockResolvedValue(undefined);
@@ -587,8 +647,40 @@ describe('useCalendarSync - Import (Calendar → App)', () => {
         await result.current.importNow();
       });
 
-      expect(calendarStorage.saveSyncSettings).toHaveBeenCalled();
-      expect(result.current.settings.lastImportTime).toBeTruthy();
+      expect(result.current.settings.lastImportTime).toBeNull();
+      expect(result.current.importError).toContain('could not be read');
+      expect(calendarStorage.saveSyncSettings).not.toHaveBeenCalledWith(
+        expect.objectContaining({ lastImportTime: expect.any(String) })
+      );
+    });
+
+    it('shows the last import the sync recorded', async () => {
+      (calendar.importCalendarEventsToAvailability as jest.Mock).mockImplementation(async () => {
+        (calendarStorage.getSyncSettings as jest.Mock).mockResolvedValue({
+          exportEnabled: false,
+          exportCalendarId: null,
+          lastExportTime: null,
+          importEnabled: true,
+          importCalendarIds: ['cal-1', 'cal-2'],
+          importInterval: 'manual',
+          lastImportTime: '2026-10-25T10:00:00.000Z',
+        });
+        return { success: 3, failed: 0, skipped: 0, errors: [] };
+      });
+      (calendarStorage.getImportedEventsCount as jest.Mock).mockResolvedValue(3);
+
+      const { result } = renderHook(() => useCalendarSync());
+
+      await waitFor(() => {
+        expect(result.current.settings.importEnabled).toBe(true);
+      });
+
+      await act(async () => {
+        await result.current.importNow();
+      });
+
+      expect(result.current.settings.lastImportTime).toBe('2026-10-25T10:00:00.000Z');
+      expect(result.current.importError).toBeNull();
     });
 
     it('should throw error when no permission', async () => {

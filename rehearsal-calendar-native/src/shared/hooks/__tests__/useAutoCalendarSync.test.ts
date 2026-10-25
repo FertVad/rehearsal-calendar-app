@@ -16,7 +16,7 @@
 import { AppState } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
 import { useAutoCalendarSync, runAutoSync } from '../useAutoCalendarSync';
-import { importCalendarEventsToAvailability, unsyncRehearsal } from '../../services/calendar';
+import { importCalendarEventsToAvailability, syncAllRehearsals, unsyncRehearsal } from '../../services/calendar';
 import { getAllMappings } from '../../utils/calendarMappings';
 import { getSyncSettings } from '../../utils/calendarStorage';
 import { rehearsalsAPI } from '../../services/api';
@@ -283,6 +283,47 @@ describe('Exporting soon after the last export', () => {
   });
 });
 
+
+describe('One direction failing (EO02)', () => {
+  // The import and the export share nothing but the mappings, so neither's
+  // failure is a reason to skip the other. The import ran in the same try as
+  // the export's caller, and an error there skipped the export entirely —
+  // under a comment saying it would not.
+  beforeEach(() => {
+    (getSyncSettings as jest.Mock).mockResolvedValue({
+      importEnabled: true,
+      exportEnabled: true,
+      importCalendarIds: ['cal-1'],
+      exportCalendarId: 'cal-export',
+      lastImportTime: null,
+      lastExportTime: null,
+    });
+    (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({
+      data: { rehearsals: [{ id: '1', startsAt: '', endsAt: '' }] },
+    });
+    (getAllMappings as jest.Mock).mockResolvedValue({});
+  });
+
+  it('a failed import still lets the export run', async () => {
+    (importCalendarEventsToAvailability as jest.Mock).mockRejectedValueOnce(new Error('HTTP 500'));
+
+    await act(async () => {
+      await runAutoSync();
+    });
+
+    expect(syncAllRehearsals).toHaveBeenCalled();
+  });
+
+  it('mappings that could not be fetched for the import still let the export run', async () => {
+    (getAllMappings as jest.Mock).mockRejectedValueOnce(new Error('Calendar mappings unavailable'));
+
+    await act(async () => {
+      await runAutoSync();
+    });
+
+    expect(syncAllRehearsals).toHaveBeenCalled();
+  });
+});
 
 describe('A push arriving while the app is open', () => {
   it('can bring the calendar in line without the hook', async () => {

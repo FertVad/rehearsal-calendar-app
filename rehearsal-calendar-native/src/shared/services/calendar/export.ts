@@ -11,12 +11,11 @@ import {
   getEventMapping,
   removeEventMapping,
   getAllMappings,
-  clearAllMappings,
 } from '../../utils/calendarMappings';
 import { updateLastExportTime } from '../../utils/calendarStorage';
 import { logger } from '../../utils/logger';
 import { appTimezone } from '../../utils/time';
-import { assertSession, currentSession, sessionWork, SessionEndedError, SessionStamp } from '../session';
+import { assertSession, currentSession, sessionWork, SessionStamp } from '../session';
 
 /**
  * Check if event exists in calendar
@@ -62,6 +61,12 @@ async function readEvent(eventId: string): Promise<Calendar.Event | null> {
   //
   // Returns the event rather than a boolean so the caller can compare it
   // against the rehearsal and skip a write that would change nothing.
+  //
+  // Three answers, not two: the event (there), null (the calendar said there is
+  // no such event) and a throw (it could not be asked). The lookup itself
+  // caught everything after the permission check and said "gone", so a native
+  // failure between the two — the calendar busy, an account re-authorising —
+  // still destroyed the mapping and wrote a second copy (EX04).
   const hasPermission = await checkCalendarPermissions();
   if (!hasPermission) {
     throw new Error('Calendar permission not granted');
@@ -70,9 +75,22 @@ async function readEvent(eventId: string): Promise<Calendar.Event | null> {
   try {
     const event = await Calendar.getEventAsync(eventId);
     return event ?? null;
-  } catch {
-    return null;
+  } catch (error) {
+    if (isEventNotFound(error)) return null;
+    throw error;
   }
+}
+
+/**
+ * The calendar's own "there is no such event", and nothing else.
+ *
+ * iOS raises EventNotFoundException from getEventAsync — code
+ * `ERR_EVENT_NOT_FOUND`, reason "Event with id … could not be found". Every
+ * other failure means the question went unanswered.
+ */
+function isEventNotFound(error: unknown): boolean {
+  const { code, message } = (error ?? {}) as { code?: string; message?: string };
+  return code === 'ERR_EVENT_NOT_FOUND' || /^Event with id .* could not be found/.test(message || '');
 }
 
 /**
@@ -112,60 +130,62 @@ const eventTitleFor = (rehearsal: RehearsalWithProject) =>
 /** '' means "no location", whatever the platform or our own API called it. */
 const locationKey = (value?: string | null) => (value ?? '').trim();
 
+/**
+ * The event already standing for this rehearsal in `calendarId`, if any.
+ *
+ * Throws when the calendar cannot be read: "nothing found" is an answer only
+ * when the search ran. It used to return null on any failure, and the caller
+ * then created a second copy beside the one it could not see (EX04).
+ */
 async function findDuplicateEvent(
   rehearsal: RehearsalWithProject,
   calendarId: string,
   startDate: Date,
   endDate: Date
-): Promise<string | null> {
-  try {
-    // Search in a narrow time window (±1 day) for performance
-    const searchStart = new Date(startDate);
-    searchStart.setDate(searchStart.getDate() - 1);
-    const searchEnd = new Date(endDate);
-    searchEnd.setDate(searchEnd.getDate() + 1);
+): Promise<{ event: Calendar.Event; marked: boolean } | null> {
+  // Search in a narrow time window (±1 day) for performance
+  const searchStart = new Date(startDate);
+  searchStart.setDate(searchStart.getDate() - 1);
+  const searchEnd = new Date(endDate);
+  searchEnd.setDate(searchEnd.getDate() + 1);
 
-    const events = await Calendar.getEventsAsync([calendarId], searchStart, searchEnd);
+  const events = await Calendar.getEventsAsync([calendarId], searchStart, searchEnd);
 
-    // Find event with matching properties
-    // Exact first: an event we wrote carries the rehearsal it belongs to.
-    const byId = events.find(
-      (event) => rehearsalIdFromUrl((event as { url?: string }).url) === String(rehearsal.id)
-    );
-    if (byId) {
-      logger.debug(`[CalendarSync] Matched event ${byId.id} by rehearsal id`);
-      return byId.id;
-    }
-
-    // Events written before the id was recorded have nothing to match on but
-    // their contents. Kept for those, and for a reader who cleared the URL.
-    //
-    // An event that names a *different* rehearsal is excluded outright: the
-    // mark is proof of what it belongs to, and two rehearsals of one project
-    // starting in the same minute look identical to everything else here.
-    const duplicateEvent = events.find(event => {
-      if (rehearsalIdFromUrl((event as { url?: string }).url)) return false;
-
-      const titleMatch =
-        event.title === eventTitleFor(rehearsal) ||
-        event.title === `Rehearsal: ${rehearsal.projectName}`;
-      const startMatch = Math.abs(new Date(event.startDate).getTime() - startDate.getTime()) < 60000; // Within 1 minute
-      const endMatch = Math.abs(new Date(event.endDate).getTime() - endDate.getTime()) < 60000;
-      const locationMatch = locationKey(event.location) === locationKey(rehearsal.location);
-
-      return titleMatch && startMatch && endMatch && locationMatch;
-    });
-
-    if (duplicateEvent) {
-      logger.warn(`[CalendarSync] Found duplicate event: ${duplicateEvent.id}`);
-      return duplicateEvent.id;
-    }
-
-    return null;
-  } catch (error) {
-    logger.error('[CalendarSync] Error searching for duplicates:', error);
-    return null;
+  // Find event with matching properties
+  // Exact first: an event we wrote carries the rehearsal it belongs to.
+  const byId = events.find(
+    (event) => rehearsalIdFromUrl((event as { url?: string }).url) === String(rehearsal.id)
+  );
+  if (byId) {
+    logger.debug(`[CalendarSync] Matched event ${byId.id} by rehearsal id`);
+    return { event: byId, marked: true };
   }
+
+  // Events written before the id was recorded have nothing to match on but
+  // their contents. Kept for those, and for a reader who cleared the URL.
+  //
+  // An event that names a *different* rehearsal is excluded outright: the
+  // mark is proof of what it belongs to, and two rehearsals of one project
+  // starting in the same minute look identical to everything else here.
+  const duplicateEvent = events.find(event => {
+    if (rehearsalIdFromUrl((event as { url?: string }).url)) return false;
+
+    const titleMatch =
+      event.title === eventTitleFor(rehearsal) ||
+      event.title === `Rehearsal: ${rehearsal.projectName}`;
+    const startMatch = Math.abs(new Date(event.startDate).getTime() - startDate.getTime()) < 60000; // Within 1 minute
+    const endMatch = Math.abs(new Date(event.endDate).getTime() - endDate.getTime()) < 60000;
+    const locationMatch = locationKey(event.location) === locationKey(rehearsal.location);
+
+    return titleMatch && startMatch && endMatch && locationMatch;
+  });
+
+  if (duplicateEvent) {
+    logger.warn(`[CalendarSync] Found duplicate event: ${duplicateEvent.id}`);
+    return { event: duplicateEvent, marked: false };
+  }
+
+  return null;
 }
 
 /**
@@ -176,6 +196,27 @@ export async function createCalendarEvent(
   rehearsal: RehearsalWithProject,
   calendarId: string,
   session: SessionStamp = currentSession()
+): Promise<string | null> {
+  const eventId = await placeEvent(rehearsal, calendarId, session);
+  if (eventId) {
+    // Save mapping to database + AsyncStorage
+    logger.debug('[CalendarSync] 💾 Saving event mapping...');
+    await saveEventMapping(rehearsal.id, eventId, calendarId, session);
+    logger.debug('[CalendarSync] ✅ Mapping saved successfully');
+  }
+  return eventId;
+}
+
+/**
+ * Puts the rehearsal's event in `calendarId` — the one already there, brought
+ * up to date, or a new one — and returns its id without recording it. The
+ * caller decides when the mapping may point at it: a move records it only once
+ * the old copy is confirmed gone.
+ */
+async function placeEvent(
+  rehearsal: RehearsalWithProject,
+  calendarId: string,
+  session: SessionStamp
 ): Promise<string | null> {
   try {
     logger.debug('[CalendarSync] 📅 createCalendarEvent called:', {
@@ -198,12 +239,19 @@ export async function createCalendarEvent(
 
     // Check for duplicate events (prevents creating duplicates after AsyncStorage loss)
     logger.debug('[CalendarSync] 🔍 Checking for duplicate events...');
-    const duplicateEventId = await findDuplicateEvent(rehearsal, calendarId, startDate, endDate);
-    if (duplicateEventId) {
+    const duplicate = await findDuplicateEvent(rehearsal, calendarId, startDate, endDate);
+    if (duplicate) {
+      const duplicateEventId = duplicate.event.id;
       logger.info(`[CalendarSync] Using existing event ${duplicateEventId} instead of creating duplicate`);
       logger.debug('[CalendarSync] ♻️ Found duplicate, using existing event:', duplicateEventId);
-      // Save mapping to existing event
-      await saveEventMapping(rehearsal.id, duplicateEventId, calendarId, session);
+      // An event of ours is adopted with what the rehearsal says now. Found by
+      // its mark it may be stale — another device wrote it before the time
+      // changed — and adopting it as it was reported the export done with the
+      // old time in the calendar (EX03). One matched by its contents already
+      // says what the rehearsal says.
+      if (duplicate.marked && !eventMatchesRehearsal(duplicate.event, rehearsal)) {
+        await updateCalendarEvent(duplicateEventId, rehearsal, session);
+      }
       return duplicateEventId;
     }
 
@@ -249,11 +297,6 @@ export async function createCalendarEvent(
     assertSession(session);
     const eventId = await Calendar.createEventAsync(calendarId, eventDetails);
     logger.debug('[CalendarSync] ✅ Event created with ID:', eventId);
-
-    // Save mapping to database + AsyncStorage
-    logger.debug('[CalendarSync] 💾 Saving event mapping...');
-    await saveEventMapping(rehearsal.id, eventId, calendarId, session);
-    logger.debug('[CalendarSync] ✅ Mapping saved successfully');
 
     logger.info(`[CalendarSync] Created event ${eventId} for rehearsal ${rehearsal.id}`);
     return eventId;
@@ -397,17 +440,19 @@ async function syncOneRehearsal(
       // so a failure leaves the event where it was rather than nowhere. The
       // duplicate search looks only in the calendar being written to, so the
       // old copy cannot be adopted as the new one.
+      //
+      // The mapping moves last, once the old copy is confirmed gone. It used to
+      // point at the new copy first and log a failed removal as a warning, so
+      // the old one stayed in the calendar with nothing left to reach it, and
+      // the run said done (EX02). Now the failure fails this rehearsal and the
+      // mapping still names the old copy: the next run removes it, adopting the
+      // new copy by its mark rather than making a third.
       if (mapping.calendarId && mapping.calendarId !== calendarId) {
         logger.info(`[CalendarSync] Moving rehearsal ${rehearsal.id} to calendar ${calendarId}`);
-        const movedId = await createCalendarEvent(rehearsal, calendarId, session);
-        if (movedId) {
-          try {
-            await deleteCalendarEvent(mapping.eventId, session);
-          } catch (error) {
-            if (error instanceof SessionEndedError) throw error;
-            logger.warn('[CalendarSync] Moved the event but could not remove the old copy:', error);
-          }
-        }
+        const movedId = await placeEvent(rehearsal, calendarId, session);
+        if (!movedId) throw new Error('The calendar did not create the event');
+        if (eventExists) await deleteCalendarEvent(mapping.eventId, session);
+        await saveEventMapping(rehearsal.id, movedId, calendarId, session);
         return;
       }
 
@@ -417,22 +462,18 @@ async function syncOneRehearsal(
       }
 
       if (eventExists) {
-        // Update existing event
+        // Update existing event.
+        //
+        // A failed update is a failure, not a sign the event is gone — it was
+        // read a moment ago. Treating it as "recreate" dropped the mapping and
+        // let the duplicate search adopt this same event, unchanged, so the
+        // run reported success with the old time in the calendar (EX03).
         logger.info(`[CalendarSync] Rehearsal ${rehearsal.id} already synced, updating...`);
         logger.debug('[CalendarSync] 📝 Updating existing event...');
-        try {
-          await updateCalendarEvent(mapping.eventId, rehearsal, session);
-          // Update lastSynced timestamp
-          await saveEventMapping(rehearsal.id, mapping.eventId, mapping.calendarId, session);
-          logger.debug('[CalendarSync] ✅ Event updated successfully');
-        } catch (error) {
-          if (error instanceof SessionEndedError) throw error;
-          // Update failed, event might be deleted - recreate
-          logger.warn(`[CalendarSync] Update failed for event ${mapping.eventId}, recreating...`);
-          logger.debug('[CalendarSync] ⚠️ Update failed, recreating event...');
-          await removeEventMapping(rehearsal.id, session);
-          await createCalendarEvent(rehearsal, calendarId, session);
-        }
+        await updateCalendarEvent(mapping.eventId, rehearsal, session);
+        // Update lastSynced timestamp
+        await saveEventMapping(rehearsal.id, mapping.eventId, mapping.calendarId, session);
+        logger.debug('[CalendarSync] ✅ Event updated successfully');
       } else {
         // Event was deleted from calendar - recreate and update mapping
         logger.warn(`[CalendarSync] Event ${mapping.eventId} no longer exists, recreating...`);
@@ -448,8 +489,8 @@ async function syncOneRehearsal(
       logger.debug('[CalendarSync] ✅ New event created:', eventId);
     }
 
-    assertSession(session);
-    await updateLastExportTime();
+    // No "last export" stamp here: one rehearsal written is not the calendar
+    // in line. The run over all of them stamps it, and only when none failed.
     logger.debug('[CalendarSync] ✅ syncRehearsalToCalendar completed successfully');
   } catch (error) {
     logger.error('[CalendarSync] Failed to sync rehearsal:', error);
@@ -554,8 +595,14 @@ async function syncRehearsals(
     }
   }
 
+  // The one writer of "last export", and only for a run with no failure. It
+  // was stamped whatever came back, so a run where every write failed told the
+  // settings screen the calendar was synced just now (EO06). The callers used
+  // to stamp it too; they read it from here now.
   assertSession(session);
-  await updateLastExportTime();
+  if (result.failed === 0) {
+    await updateLastExportTime();
+  }
 
   logger.info(`[CalendarSync] Batch sync complete: ${result.success} success, ${result.failed} failed`);
   return result;
@@ -603,7 +650,9 @@ async function removeExportedEvents(
           const eventId = mappings[rehearsalId].eventId;
           // Try to delete event from calendar
           await deleteCalendarEvent(eventId, session);
-          // Remove mapping from DB + AsyncStorage
+          // Remove mapping from DB + AsyncStorage — only now that the event
+          // is confirmed gone. An event the calendar no longer has counts as
+          // gone: iOS deletes a missing event without complaint.
           await removeEventMapping(rehearsalId, session);
         })
       );
@@ -628,9 +677,10 @@ async function removeExportedEvents(
       }
     }
 
-    // Clear all remaining mappings (in case some deletions failed)
-    await clearAllMappings(session);
-
+    // What failed keeps its mapping. This used to clear every remaining one
+    // "in case some deletions failed" — exactly the events still in the
+    // calendar, which nothing could find again afterwards (EX02). Kept, the
+    // next "remove all" tries them again.
     logger.info(`[CalendarSync] Remove all complete: ${result.success} success, ${result.failed} failed`);
     return result;
   } catch (error) {

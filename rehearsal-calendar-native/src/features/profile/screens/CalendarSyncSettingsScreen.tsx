@@ -339,20 +339,34 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       return;
     }
 
-    try {
-      logger.debug('[Sync] ✅ Starting synchronization...');
-      logger.debug('[Sync] 📊 Current settings:', {
-        exportEnabled: settings?.exportEnabled,
-        exportCalendarId: settings?.exportCalendarId,
-        importEnabled: settings?.importEnabled,
-        importCalendarIds: settings?.importCalendarIds,
-      });
+    logger.debug('[Sync] ✅ Starting synchronization...');
+    logger.debug('[Sync] 📊 Current settings:', {
+      exportEnabled: settings?.exportEnabled,
+      exportCalendarId: settings?.exportCalendarId,
+      importEnabled: settings?.importEnabled,
+      importCalendarIds: settings?.importCalendarIds,
+    });
 
-      // Import calendar events
-      logger.debug('[Sync] 📥 Starting import from calendar...');
+    // The two directions are independent: a failed import used to skip the
+    // export altogether, and a run with failures in either was announced as
+    // "Synced successfully" with the counts of what did get through. Each
+    // direction now runs, and what failed is said.
+    const problems: string[] = [];
+
+    // Import calendar events
+    logger.debug('[Sync] 📥 Starting import from calendar...');
+    let imported = 0;
+    try {
       const importResult = await importNow();
       logger.debug('[Sync] ✅ Import completed:', importResult);
+      imported = importResult.success;
+      if (importResult.failed > 0) problems.push(t.calendarSync.importIncomplete(importResult.failed));
+    } catch (error: any) {
+      logger.error('[Sync] ❌ Import failed:', error);
+      problems.push(error?.message || t.calendarSync.syncError);
+    }
 
+    try {
       // Export rehearsals to calendar
       logger.debug('[Sync] 📤 Starting export to calendar...');
       logger.debug('[Sync] 📊 Projects available:', projects.length);
@@ -378,6 +392,10 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
 
       if (allRehearsals.length === 0) {
         logger.debug('[Sync] ⚠️ No rehearsals found to sync');
+        if (problems.length > 0) {
+          Alert.alert(t.calendarSync.syncError || 'Sync Error', problems.join('\n'));
+          return;
+        }
         Alert.alert(
           t.calendarSync.syncSuccess || 'Sync Complete',
           'No rehearsals found to sync. Create some rehearsals first!'
@@ -389,19 +407,22 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       const syncResult = await syncAll(allRehearsals);
       logger.debug('[Sync] ✅ Export completed:', syncResult);
 
-      // Show success message
-      Alert.alert(
-        t.calendarSync.syncSuccess || 'Sync Complete',
-        // The real counts. `syncResult?.success || allRehearsals.length` read
-        // zero as "no answer" and fell back to the total, so the one run where
-        // nothing exported at all was reported as everything exporting.
-        `${t.calendarSync.imported || 'Imported'}: ${importResult.success}\n${t.calendarSync.exportedRehearsals || 'Rehearsals exported'}: ${syncResult?.success ?? 0}`
-      );
+      if (syncResult.failed > 0) problems.push(t.calendarSync.exportIncomplete(syncResult.failed));
+
+      // The real counts. `syncResult?.success || allRehearsals.length` read
+      // zero as "no answer" and fell back to the total, so the one run where
+      // nothing exported at all was reported as everything exporting.
+      const counts = `${t.calendarSync.imported || 'Imported'}: ${imported}\n${t.calendarSync.exportedRehearsals || 'Rehearsals exported'}: ${syncResult?.success ?? 0}`;
+      if (problems.length > 0) {
+        Alert.alert(t.calendarSync.syncError || 'Sync Error', `${counts}\n\n${problems.join('\n')}`);
+      } else {
+        Alert.alert(t.calendarSync.syncSuccess || 'Sync Complete', counts);
+      }
     } catch (error: any) {
       logger.error('[Sync] ❌ Error during synchronization:', error);
       Alert.alert(
         t.calendarSync.syncError || 'Sync Error',
-        error.message || 'Failed to synchronize calendars'
+        [...problems, error.message || 'Failed to synchronize calendars'].join('\n')
       );
     }
   };

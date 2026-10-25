@@ -14,7 +14,7 @@ import { logger } from '../../shared/utils/logger';
 import { useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getSyncSettings, saveSyncSettings } from '../utils/calendarStorage';
+import { getSyncSettings } from '../utils/calendarStorage';
 import { importCalendarEventsToAvailability, syncAllRehearsals, unsyncRehearsal } from '../services/calendar';
 import { getAllMappings } from '../utils/calendarMappings';
 import { projectsAPI, rehearsalsAPI } from '../services/api';
@@ -122,23 +122,29 @@ async function exportRehearsalsIfDue(
   const result = await syncAllRehearsals(rehearsals, settings.exportCalendarId, undefined, mappings, session);
   logger.debug('[AutoSync] Export completed:', result);
 
-  // Only a run that wrote everything counts as done.
-  //
-  // syncAllRehearsals reports failures rather than throwing, and this stamp was
-  // written regardless — which is worse here than in the import, because the
-  // ten-minute interval above reads it. A wholly failed export therefore
-  // announced success and then refused to try again for ten minutes. Leaving
-  // the stamp alone makes the next trip to the foreground retry.
-  if (result.failed === 0) {
-    // Re-read rather than reusing `settings`, which was fetched before the
-    // import ran and stamped its own timestamp into the same object.
-    assertSession(session);
-    await saveSyncSettings({
-      ...(await getSyncSettings()),
-      lastExportTime: new Date().toISOString(),
-    });
-  } else {
+  // Only a run that wrote everything counts as done — and syncAllRehearsals
+  // is the one that says so, stamping "last export" itself only then (EO06).
+  if (result.failed > 0) {
     logger.warn(`[AutoSync] ${result.failed} rehearsals failed to export - will retry`);
+  }
+}
+
+/**
+ * One direction of a sync, on its own.
+ *
+ * The import and the export read different things and write different things,
+ * so neither's failure is a reason to skip the other. The automatic run had
+ * the import, and the mappings it fetched, in the same try as the export's
+ * caller: a server error on the import, or on the mappings, jumped straight to
+ * the outer catch and the export never ran (EO02). Each direction goes through
+ * this instead; only the end of the session stops the run.
+ */
+async function eachDirection(name: string, work: () => Promise<void>): Promise<void> {
+  try {
+    await work();
+  } catch (error) {
+    if (error instanceof SessionEndedError) throw error;
+    logger.error(`[AutoSync] Error during auto-${name}:`, error);
   }
 }
 
@@ -262,14 +268,19 @@ export async function runAutoSync(): Promise<void> {
 
     await runExclusively(() => sessionWork(async (session) => {
     try {
-      // Check if we should import
-      const importSettings = await shouldImportNow();
-      if (importSettings) {
+      await eachDirection('import', async () => {
+        // Check if we should import
+        const importSettings = await shouldImportNow();
+        if (!importSettings) {
+          logger.debug('[AutoSync] No import needed at this time');
+          return;
+        }
         logger.debug('[AutoSync] Auto-importing calendar events');
         // Fetched once for both halves — the import needs it to leave our own
         // exported rehearsals alone, the export to match event to rehearsal.
         // Every step below runs as this run's session, handed down — never the
-        // session current when the step starts (ES01).
+        // session current when the step starts (ES01). If it cannot be had, the
+        // export asks for it again itself.
         sharedMappings = await getAllMappings(session);
         const result = await importCalendarEventsToAvailability(
           importSettings.importCalendarIds,
@@ -278,22 +289,16 @@ export async function runAutoSync(): Promise<void> {
           session
         );
         logger.debug('[AutoSync] Auto-import completed:', result);
-      } else {
-        logger.debug('[AutoSync] No import needed at this time');
-      }
+      });
 
-      // A failed import should not stop the export, and the other way round.
-      try {
+      await eachDirection('export', async () => {
         assertSession(session);
         await exportRehearsalsIfDue(session, false, sharedMappings);
-      } catch (error) {
-        if (error instanceof SessionEndedError) throw error;
-        logger.error('[AutoSync] Error during auto-export:', error);
-      }
+      });
     } catch (error) {
       // Ended with its session: nothing more is written, and that is no error.
       if (error instanceof SessionEndedError) return;
-      logger.error('[AutoSync] Error during auto-import:', error);
+      throw error;
     }
     }), { waitForTurn: false });
 }
@@ -365,13 +370,10 @@ export function useAutoCalendarSync({ syncOnForeground = false }: AutoSyncOption
       });
 
       // Pull-to-refresh means "now", so the export ignores its own timer.
-      try {
+      await eachDirection('export', async () => {
         sharedMappings = await getAllMappings(session);
         await exportRehearsalsIfDue(session, true, sharedMappings);
-      } catch (error) {
-        if (error instanceof SessionEndedError) throw error;
-        logger.error('[AutoSync] Force sync - export failed:', error);
-      }
+      });
       assertSession(session);
 
       // Only check if import is enabled

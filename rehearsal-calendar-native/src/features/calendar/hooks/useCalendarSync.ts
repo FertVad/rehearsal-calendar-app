@@ -159,6 +159,30 @@ export function useCalendarSync() {
   }, [settings]);
 
   /**
+   * The settings as the sync left them.
+   *
+   * "Last export" and "last import" are stamped by the sync itself, and only
+   * for a run with no failure (export.ts, import.ts). This hook stamped them
+   * again after every run, whatever came back, so a run that failed showed
+   * "synced just now" (EI02, EO06). It reads them instead — and the screen,
+   * which writes whole settings objects from this state, then cannot write an
+   * older stamp back over a newer one.
+   */
+  const reloadSettings = useCallback(async () => {
+    setSettings(await getSyncSettings());
+  }, []);
+
+  /** A batch is a success only if nothing in it failed. */
+  const reportBatch = (result: BatchSyncResult) => {
+    if (result.failed > 0) {
+      setSyncStatus('error');
+      setSyncError((result.errors ?? []).join('\n') || null);
+    } else {
+      setSyncStatus('success');
+    }
+  };
+
+  /**
    * Sync single rehearsal
    */
   const syncRehearsal = useCallback(async (rehearsal: RehearsalWithProject) => {
@@ -180,16 +204,14 @@ export function useCalendarSync() {
       // Update synced count
       const count = await getSyncedRehearsalsCount();
       setSyncedCount(count);
-
-      // Update last export time
-      await updateSettings({ lastExportTime: new Date().toISOString() });
+      // One rehearsal written is not the calendar in line: no "last export".
     } catch (error: any) {
       logger.error('[useCalendarSync] Sync rehearsal failed:', error);
       setSyncStatus('error');
       setSyncError(error.message);
       throw error;
     }
-  }, [hasPermission, settings, updateSettings]);
+  }, [hasPermission, settings]);
 
   /**
    * Unsync single rehearsal (remove from calendar)
@@ -242,14 +264,14 @@ export function useCalendarSync() {
         onProgress
       );
 
-      setSyncStatus('success');
+      // Failures come back counted, not thrown; a run with any is not a success.
+      reportBatch(result);
 
       // Update synced count
       const count = await getSyncedRehearsalsCount();
       setSyncedCount(count);
 
-      // Update last export time
-      await updateSettings({ lastExportTime: new Date().toISOString() });
+      await reloadSettings();
 
       return result;
     } catch (error: any) {
@@ -258,7 +280,7 @@ export function useCalendarSync() {
       setSyncError(error.message);
       throw error;
     }
-  }, [hasPermission, settings, updateSettings]);
+  }, [hasPermission, settings, reloadSettings]);
 
   /**
    * Remove all exported events
@@ -276,10 +298,10 @@ export function useCalendarSync() {
     try {
       const result = await removeAllExportedEvents(onProgress);
 
-      setSyncStatus('success');
+      reportBatch(result);
 
-      // Update synced count
-      setSyncedCount(0);
+      // What could not be removed keeps its mapping, and is still counted.
+      setSyncedCount(result.failed ? await getSyncedRehearsalsCount() : 0);
 
       return result;
     } catch (error: any) {
@@ -327,13 +349,14 @@ export function useCalendarSync() {
       );
 
       setIsImporting(false);
+      // A calendar that could not be read is counted as failed, not thrown.
+      if (result.failed > 0) setImportError(result.errors.join('\n'));
 
       // Update imported count
       await getImportedEventsCount().then(setImportedCount, (error) =>
         logger.warn('[useCalendarSync] Could not read the imported count:', error));
 
-      // Update last import time
-      await updateSettings({ lastImportTime: new Date().toISOString() });
+      await reloadSettings();
 
       return result;
     } catch (error: any) {
@@ -342,7 +365,7 @@ export function useCalendarSync() {
       setImportError(error.message);
       throw error;
     }
-  }, [hasPermission, settings, updateSettings]);
+  }, [hasPermission, settings, reloadSettings]);
 
   /**
    * Remove all imported availability slots
