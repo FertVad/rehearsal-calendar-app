@@ -1,45 +1,75 @@
-T-207 - red before. metro.config.js put back to the base (e78a10a):
-  git restore --source=e78a10a -- metro.config.js
-  node --test e2e/__tests__/metro-watch.test.mjs
+T-207 - "red before": attempts to make flow 30 fail on the base config
+(metro.config.js of e78a10a, e2e/out watched by Metro), 25.10.2026.
 
-TAP version 13
-# Subtest: a screenshot Maestro writes into e2e/out is not a change to Metro; the app's files are
-not ok 1 - a screenshot Maestro writes into e2e/out is not a change to Metro; the app's files are
-  ---
-  duration_ms: 651.965584
-  type: 'test'
-  location: '/Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/__tests__/metro-watch.test.mjs:56:1'
-  failureType: 'testCodeFailure'
-  error: |-
-    files written into e2e/out reached Metro as changes
-    + actual - expected
-
-    + [
-    +   '/Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/out/artifacts/metro-watch-24193/step-033-tapOnElement-Allow_Full_Access.png',
-    +   '/Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/e2e/out/artifacts/metro-watch-24193/step-033-tapOnElement-Allow_Full_Access.json'
-    + ]
-    - []
-
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  operator: 'deepStrictEqual'
-  ...
-1..1
-# tests 1
-# pass 0
-# fail 1
+  git restore --source=e78a10a -- rehearsal-calendar-native/metro.config.js
+  ... runs below ...
+  git restore --source=HEAD -- rehearsal-calendar-native/metro.config.js
 
 ------------------------------------------------------------------------
-Same base config, on the simulator:
-  npm run e2e -- e2e/flows/30-sync-import-fails-export-runs.yaml
-  [Passed] A sync whose import fails still exports (2m 6s)
-  (artifacts e2e/out/artifacts/2026-10-25_095332, not in git)
+1. The watcher test (first round, still holds): e2e/__tests__/metro-watch.test.mjs
+   on the base config - a screenshot and a hierarchy written into e2e/out
+   reach Metro as changes:
 
-The flow passed this time (the lost tap needs the touch to land as the banner
-window goes), but the screenshots Maestro took of the WARNED steps show the
-cause on every one of them:
-  step-028-tapOnElement-Not_Now.png            "Refreshing..." banner over the calendar
-  step-033-tapOnElement-Allow_Full_Access.png  "Refreshing..." banner over Calendar Sync,
-                                               the step right before the tap on Apple Calendar
-The red run of T-117 (e2e/out/artifacts/2026-10-25_081811) has the same banner
-on its step-033 screenshot, 0.6 s before the lost tap.
+   not ok 1 - a screenshot Maestro writes into e2e/out is not a change to Metro; the app's files are
+     files written into e2e/out reached Metro as changes
+     + [ '.../e2e/out/artifacts/metro-watch-24193/step-033-tapOnElement-Allow_Full_Access.png',
+     +   '.../e2e/out/artifacts/metro-watch-24193/step-033-tapOnElement-Allow_Full_Access.json' ]
+     - []
+
+------------------------------------------------------------------------
+2. Flow 30 alone, first round (09:53):
+   npm run e2e -- e2e/flows/30-sync-import-fails-export-runs.yaml
+   [Passed] A sync whose import fails still exports (2m 6s)
+
+3. Flow 30 with Maestro's writes multiplied (11:03): a .png and a .json into
+   e2e/out/artifacts every 700 ms while the flow runs.
+   node audit/evidence/T-207/churn-e2e.mjs
+   [Passed] A sync whose import fails still exports (1m 53s)
+   1/1 Flow Passed in 1m 53s
+   [churn] 526 pairs written into e2e/out/artifacts/churn-49384 every 700 ms
+   [churn] e2e exit 0
+   Device log: 62 app scene changes (the banner, again and again; its step-033
+   screenshot shows "Refreshing..." over Calendar Sync), one digitizer
+   registered twice, no tap lost.
+
+4. Flow 30 three times in one run (11:24):
+   node audit/evidence/T-207/repeat-e2e.mjs 3
+   [Passed] A sync whose import fails still exports r1 (1m 39s)
+   [Passed] A sync whose import fails still exports r2 (1m 13s)
+   [Passed] A sync whose import fails still exports r3 (1m 14s)
+   3/3 Flows Passed in 4m 6s
+   r1: the banner put the app's scene to foreground before "Apple Calendar"
+   (11:27:04.0 and 11:27:04.9), the tap 11:27:06.5 landed.
+
+5. The banner pair 24 times per flow, twice (11:34): takeScreenshot into
+   e2e/out (what the WARNED step did), then a tab tap and its screen asserted.
+   node audit/evidence/T-207/repeat-e2e.mjs 2 ../audit/evidence/T-207/banner-taps.yaml
+   [Passed] T-207 taps right after the run writes a screenshot r1 (3m 9s)
+   [Passed] T-207 taps right after the run writes a screenshot r2 (2m 42s)
+   2/2 Flows Passed in 5m 51s
+   Device log r1: an app scene change 0.1 s after every screenshot (the
+   banner), 48 taps right after one - none registered twice, none lost.
+
+6. Flow 30 three more times (11:50), and twice with every core of the host
+   busy (8 busy threads, 11:59):
+   node audit/evidence/T-207/load-e2e.mjs 0 3     -> 3/3 Flows Passed in 4m 8s
+   node audit/evidence/T-207/load-e2e.mjs 8 2     -> r1 [Passed] (3m 7s); r2 cut
+                                                     at the 10-minute limit
+                                                     of the command (exit 143)
+
+Base config: 9 runs of flow 30 and 48 banner-then-tap pairs, no failure, no
+lost tap after a banner. The failure did not come back on the base config, by
+repetition, by the banner made constant, or by load.
+
+------------------------------------------------------------------------
+What this says about the first round's cause. It said: the banner window
+going away cancels the tap. The device logs do not bear that out:
+- the tap of the red run was not cancelled by a window; backboardd registered
+  XCTest's digitizer for that tap twice and dropped the touch
+  (red-run-timeline.txt);
+- that happens in every kind of flow, with and without the banner - the run
+  at 10:18, with e2e/out no longer watched, lost its login tap the same way
+  (lost-taps.txt);
+- with the banner up and down around every tap (3, 5) no tap was lost.
+The banner is not the cause of the flake, and making e2e/out unwatched does
+not fix it.

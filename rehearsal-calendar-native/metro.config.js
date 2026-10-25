@@ -14,9 +14,9 @@ const config = getDefaultConfig(__dirname);
 // What the run itself writes — e2e/out, where Maestro puts its screenshots
 // while the flows run — is not watched either. Each file there was a change to
 // Metro, so an HMR "update-start", and the app put up and took down its
-// "Refreshing..." banner, a window of its own, over the screen under test: a
-// tap that landed as it went was lost (T-207). The app's own files are still
-// watched, so an edit still reaches the app.
+// "Refreshing..." banner, a window of its own, over the screen under test and
+// in its screenshots (T-207). The app's own files are still watched, so an edit
+// still reaches the app.
 if (process.env.REHEARSLY_E2E === '1') {
   const root = path.resolve(__dirname).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   config.resolver.blockList = [].concat(

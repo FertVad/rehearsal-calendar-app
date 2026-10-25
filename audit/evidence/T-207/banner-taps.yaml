@@ -1,0 +1,54 @@
+# T-207 reproduction under load: what flow 30 met once, many times over.
+#
+# In flow 30 Maestro wrote the screenshot of a WARNED step into e2e/out, and
+# the tap right after it ("Apple Calendar") was lost. Here the same pair is
+# repeated: takeScreenshot writes into e2e/out the way the WARNED step did,
+# then a tab is tapped and its screen must show. On a Metro that watches
+# e2e/out every screenshot is an HMR update and the "Refreshing..." window;
+# on one that does not, it is nothing.
+#
+#   node audit/evidence/T-207/repeat-e2e.mjs 1 ../audit/evidence/T-207/banner-taps.yaml
+# or: npm run e2e -- ../audit/evidence/T-207/banner-taps.yaml (from rehearsal-calendar-native)
+appId: ${APP_ID}
+name: T-207 taps right after the run writes a screenshot
+---
+- runFlow:
+    file: ../../../rehearsal-calendar-native/e2e/subflows/sign-in.yaml
+    env:
+      EMAIL: ${MEDVEDENKO_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- repeat:
+    times: 12
+    commands:
+      - takeScreenshot: t207-artifact
+      - extendedWaitUntil:
+          visible: ".*Refreshing.*"
+          timeout: 3000
+          optional: true
+      - tapOn:
+          id: tab-projects
+      - extendedWaitUntil:
+          visible:
+            id: project-card
+          timeout: 10000
+      - takeScreenshot: t207-artifact
+      - extendedWaitUntil:
+          visible: ".*Refreshing.*"
+          timeout: 3000
+          optional: true
+      - tapOn:
+          id: tab-calendar
+      - extendedWaitUntil:
+          visible:
+            id: calendar-filter
+          timeout: 10000

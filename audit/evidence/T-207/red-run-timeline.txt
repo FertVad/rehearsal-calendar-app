@@ -1,0 +1,63 @@
+T-207 - the red run of T-117 (e2e/out/artifacts/2026-10-25_081811, flow
+"A sync whose import fails still exports"), Maestro's commands and the
+simulator's touch handling on one clock:
+
+  node audit/evidence/T-207/timeline.mjs \
+    "rehearsal-calendar-native/e2e/out/artifacts/2026-10-25_081811/A sync whose import fails still exports"
+  (Define/Apply/Erase/Input lines left out)
+
+08:34:38.682  maestro  Launch app "${APP_ID}" with clear state and clear keychain
+08:35:19.870  device   app scene unspecified -> foreground
+08:35:20.066  device   app scene unspecified -> foreground
+08:35:22.843  maestro  Retry 3 times
+08:35:22.845  maestro  Tap on id: login-email
+08:35:24.124  device   app scene unspecified -> foreground
+08:35:24.291  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+08:35:33.039  maestro  Tap on id: login-password
+08:35:34.567  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+08:35:43.593  maestro  Tap on id: login-submit
+08:35:46.807  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+08:35:47.231  maestro  Tap on (Optional) "Not Now"
+08:35:49.104  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+08:35:55.077  maestro  Tap on (Optional) "Not Now"
+08:35:55.085  device   app scene unspecified -> foreground
+08:35:56.996  device   app scene unspecified -> foreground
+08:35:57.041  maestro  Tap on id: tab-profile
+08:35:58.349  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+08:36:00.652  maestro  Tap on ".*Calendar Sync.*"
+08:36:02.724  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+08:36:02.725  maestro  Tap on (Optional) "Grant Access"
+08:36:10.244  maestro  Tap on (Optional) "Allow Full Access"
+08:36:10.254  device   app scene unspecified -> foreground
+08:36:10.985  maestro  Assert that ".*Apple Calendar.*" is visible
+08:36:11.142  maestro  Tap on ".*Apple Calendar.*"
+08:36:11.817  device   tap digitizer registered twice
+08:36:11.820  device   touch dropped (move/lift with no touch down)
+08:36:12.558  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+08:36:12.560  maestro  Assert that ".*Synchronize.*" is visible      -> failed
+
+The lost tap in the simulator's own log (device-simulator.log; testmanagerd
+lines are on the simulator's clock, Pacific/Honolulu, 10 h behind):
+
+20:36:11.772654  testmanagerd  Synthesizing event: Touch down at 196.0, 315.0 / Touch up offset=0.10s
+20:36:11.775004  testmanagerd  Recap event action playback initiated
+08:36:11.783226  backboardd    Connection added: ... process:testmanagerd
+08:36:11.795529  backboardd    Service added: IOHIDService id:0x1016c10000131 ... transport:Recap
+20:36:11.811866  testmanagerd  new virtual service <RCPVirtualHIDService> touchscreen digitizer
+08:36:11.815569  backboardd    unknown senderID: 0x1016C10000131          <- the first event, before the service is matched
+08:36:11.816848  backboardd    digitizer attached (sender 1016C10000131)
+08:36:11.817357  backboardd    we already have a service for senderID:1016C10000131
+08:36:11.817533  backboardd    init: <BKDirectTouchState: 0x10e135260 ...>
+08:36:11.817597  backboardd    *** unknown digitizer <BKIOHIDService: 0x107fb3000 ...>
+08:36:11.817829  backboardd    init: <BKDirectTouchState: 0x10e136a00 ...>   <- a second touch state, same sender
+08:36:11.817876  backboardd    touch down without previous range event: 2
+08:36:11.820181  backboardd    didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+   ... (every move and the lift skipped the same way)
+08:36:12.039816  backboardd    cancel -- digitizer did disappear: <BKDirectTouchState: 0x10e136a00; ... touching ...>
+
+A tap that lands, two taps earlier (08:36:01.8, "Calendar Sync"): Service added
+08:36:01.836778, cache sender info 08:36:01.837501 - 0.7 ms later, one
+BKDirectTouchState, touch down, "presence: none" on the lift. Here the service
+was matched 20 ms after it was added, the first event got there first, and
+backboardd made two touch states for one digitizer: the touch down went to one,
+the lift to the other, and the touch was cancelled.

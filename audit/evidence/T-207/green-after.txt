@@ -1,4 +1,9 @@
-T-207 - green after (HEAD f14c44d, metro.config.js restored from HEAD).
+T-207 - first round's checks (HEAD f14c44d, metro.config.js restored from HEAD).
+
+Correction after review 1: these show that e2e/out is no longer watched and
+that flow 30 passed once; they do not show the flake gone. The base config
+passes flow 30 just as well (red-before.txt), and taps are lost with e2e/out
+unwatched too (lost-taps.txt). See README.md.
 
 node --test e2e/__tests__/metro-watch.test.mjs
   ok 1 - a screenshot Maestro writes into e2e/out is not a change to Metro; the app's files are

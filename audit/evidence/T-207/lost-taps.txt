@@ -1,0 +1,50 @@
+T-207 - lost taps in every simulator log Maestro has kept in this tree
+(e2e/out/artifacts, 11.10 - 25.10.2026, full runs and single flows, both Metro
+configs):
+
+  node audit/evidence/T-207/touch-scan.mjs
+
+  914 flow logs, 20606 digitizers attached (one per tap), 157 registered twice, 83 taps lost
+
+Every lost tap is in a flow with a digitizer registered twice; about half the
+taps whose digitizer was registered twice were lost. They are spread over 28
+different flow names (one a probe), most often the first tap of sign-in (login-email), which
+sign-in-form.yaml types and checks inside "retry", so those flows still passed.
+
+Maestro's own check of a tap (did the screen change? if not, tap again) never
+saw one of them:
+
+  grep -rh screenshotBasedTap e2e/out/artifacts --include=maestro.log
+  9198 Try tapping at (x, y) using hierarchy based logic for wait
+  9198 Something have changed in the UI judging by view hierarchy. Proceed.
+
+Not once "nothing changed" in 9198 taps, the lost ones included.
+
+25.10.2026 (lines of the scan; "s after" is the time since the app's last
+scene change, "tap N" how many taps came between):
+
+2026-10-25_011604  A trip from the calendar shows on a day marked free: registered twice 2 (12.87s/tap 0, 1.09s/tap 0), taps lost 1
+2026-10-25_012921  A trip from the calendar shows on a day marked free: registered twice 1 (12.97s/tap 1), taps lost 1
+2026-10-25_013638  A calendar event shows beside a row with the same hours: registered twice 3 (18.52s/tap 1, 1.46s/tap 0, 24.80s/tap 10), taps lost 1
+2026-10-25_014939  A rehearsal made from 23:00 to 01:00 ends the next morning: registered twice 1 (12.47s/tap 0), taps lost 1
+2026-10-25_025613  A rehearsal made from 23:00 to 01:00 ends the next morning: registered twice 1 (18.60s/tap 1), taps lost 1
+2026-10-25_042015  Calendar filter against a late answer: registered twice 1 (13.52s/tap 0), taps lost 1
+2026-10-25_042953  Calendar filter against a late answer r1: registered twice 1 (13.61s/tap 0), taps lost 1
+2026-10-25_045746  A rehearsal made from 23:00 to 01:00 ends the next morning: registered twice 2 (20.02s/tap 1, 23.06s/tap 10), taps lost 1
+2026-10-25_074729  A sync whose import fails still exports: registered twice 1 (13.91s/tap 1), taps lost 1   (login-email, retried)
+2026-10-25_075358  A sync whose import fails still exports: registered twice 1 (13.02s/tap 1), taps lost 1   (login-email, retried)
+2026-10-25_081811  A rehearsal made from 23:00 to 01:00 ends the next morning: registered twice 1 (9.72s/tap 0), taps lost 1
+2026-10-25_081811  A sync whose import fails still exports: registered twice 1 (1.56s/tap 1), taps lost 1   (Apple Calendar - THE RED RUN)
+2026-10-25_090421  A rehearsal made from 23:00 to 01:00 ends the next morning: registered twice 1 (9.95s/tap 1), taps lost 1
+2026-10-25_095332  A sync whose import fails still exports: registered twice 1 (32.84s/tap 10), taps lost 0
+2026-10-25_101803  A rehearsal made from 23:00 to 01:00 ends the next morning: registered twice 1 (9.30s/tap 0), taps lost 1   (login-email; run after f14c44d, e2e/out not watched)
+2026-10-25_110324  A sync whose import fails still exports: registered twice 1 (0.79s/tap 0), app scene changes 62, taps lost 0   (base config + churn)
+2026-10-25_112454  A sync whose import fails still exports r1: registered twice 1 (0.68s/tap 0), taps lost 0   (base config)
+
+Of the 157 double registrations, 140 were on the first or second tap after the
+app's scene went "unspecified -> foreground" (a window of the app's coming up:
+launch, keyboard, alert, the "Refreshing..." banner). The race is in
+backboardd; a window change before the tap makes it likelier, it does not make
+it happen: the 2026-10-25_101803 run, with e2e/out no longer watched (no
+banner), lost its login tap the same way, and the banner stress runs below
+(48 taps right after a banner) lost none.
