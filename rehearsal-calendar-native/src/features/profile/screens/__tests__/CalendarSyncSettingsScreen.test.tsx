@@ -29,13 +29,12 @@ jest.mock('../../../../shared/components', () => {
       { onPress: disabled || loading ? undefined : onPress, disabled: disabled || loading }, React.createElement(Text, null, title)),
   };
 });
-jest.mock('../../../../shared/services/api', () => ({
-  rehearsalsAPI: {
-    getBatch: jest.fn().mockResolvedValue({
-      data: { rehearsals: [{ id: 'r1', projectId: 'p1', projectName: 'Гамлет', startsAt: '', endsAt: '' }] },
-    }),
-  },
-}));
+
+// What the app's one sync reports of a run (services/calendarSync.ts).
+const run = (
+  imported: any = { status: 'done', result: { success: 2, failed: 0, skipped: 0, errors: [] } },
+  exported: any = { status: 'done', result: { success: 1, failed: 0, errors: [], rehearsals: 1 } }
+) => ({ import: imported, export: exported });
 
 const calendar = { id: 'cal-1', title: 'Home', allowsModifications: true, source: { name: 'iCloud', type: 'caldav' } };
 
@@ -60,8 +59,7 @@ beforeEach(() => {
     updateSettings: jest.fn(),
     removeAll: jest.fn(),
     refresh: jest.fn(),
-    importNow: jest.fn().mockResolvedValue({ success: 2, failed: 0, skipped: 0, errors: [] }),
-    syncAll: jest.fn().mockResolvedValue({ success: 1, failed: 0, errors: [] }),
+    synchronize: jest.fn().mockResolvedValue(run()),
   });
 });
 
@@ -78,7 +76,8 @@ it('says "synced" when nothing failed', async () => {
 });
 
 it('does not say "synced" when rehearsals could not be written', async () => {
-  mockSync.syncAll.mockResolvedValue({ success: 0, failed: 2, errors: ['Гамлет: read-only'] });
+  mockSync.synchronize.mockResolvedValue(run(undefined,
+    { status: 'done', result: { success: 0, failed: 2, errors: ['Гамлет: read-only'], rehearsals: 2 } }));
 
   const [title, message] = await synchronize();
 
@@ -87,7 +86,8 @@ it('does not say "synced" when rehearsals could not be written', async () => {
 });
 
 it('does not say "synced" when a calendar could not be read', async () => {
-  mockSync.importNow.mockResolvedValue({ success: 2, failed: 1, skipped: 0, errors: ['1 calendar(s) could not be read'] });
+  mockSync.synchronize.mockResolvedValue(run(
+    { status: 'done', result: { success: 2, failed: 1, skipped: 0, errors: ['1 calendar(s) could not be read'] } }));
 
   const [title, message] = await synchronize();
 
@@ -95,12 +95,23 @@ it('does not say "synced" when a calendar could not be read', async () => {
   expect(message).toContain(t.calendarSync.importIncomplete(1));
 });
 
-it('still exports when the import fails', async () => {
-  mockSync.importNow.mockRejectedValue(new Error('Network Error'));
+it('names both when the import fails and the export runs', async () => {
+  // That the export runs at all is the sync's (useAutoCalendarSync.test.ts,
+  // "One direction failing"); the screen reports what each came to.
+  mockSync.synchronize.mockResolvedValue(run({ status: 'failed', error: 'Network Error' }));
 
   const [title, message] = await synchronize();
 
-  expect(mockSync.syncAll).toHaveBeenCalled();
   expect(title).toBe(t.calendarSync.syncError);
   expect(message).toContain('Network Error');
+  expect(message).toContain(`${t.calendarSync.exportedRehearsals}: 1`);
+});
+
+it('says when the export could not run', async () => {
+  mockSync.synchronize.mockResolvedValue(run(undefined, { status: 'failed', error: 'Request timed out' }));
+
+  const [title, message] = await synchronize();
+
+  expect(title).toBe(t.calendarSync.syncError);
+  expect(message).toContain('Request timed out');
 });

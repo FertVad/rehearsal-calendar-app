@@ -14,12 +14,12 @@
  * rather than being one lock per mount.
  */
 import { AppState } from 'react-native';
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useAutoCalendarSync, runAutoSync } from '../useAutoCalendarSync';
 import { importCalendarEventsToAvailability, syncAllRehearsals } from '../../services/calendar';
 import { getAllMappings } from '../../utils/calendarMappings';
 import { getSyncSettings } from '../../utils/calendarStorage';
-import { rehearsalsAPI } from '../../services/api';
+import { projectsAPI, rehearsalsAPI } from '../../services/api';
 
 jest.mock('../../services/calendar', () => ({
   importCalendarEventsToAvailability: jest.fn().mockResolvedValue({ success: 0, failed: 0 }),
@@ -198,6 +198,77 @@ describe('Taking back the events of rehearsals that no longer exist', () => {
   });
 });
 
+
+describe('Leaving the last project (EO01)', () => {
+  it('takes back what was exported, rather than stopping at "no projects"', async () => {
+    // A successful answer of no projects is the same as no rehearsals: every
+    // event this device exported belongs to nothing now. The run returned the
+    // moment it saw the empty list, before the pass that takes them back.
+    (getSyncSettings as jest.Mock).mockResolvedValue({
+      importEnabled: false,
+      exportEnabled: true,
+      importCalendarIds: [],
+      exportCalendarId: 'cal-export',
+      lastImportTime: null,
+      lastExportTime: null,
+    });
+    (projectsAPI.getUserProjects as jest.Mock).mockResolvedValueOnce({ data: { projects: [] } });
+    (getAllMappings as jest.Mock).mockResolvedValue({
+      '7': { eventId: 'evt-7', calendarId: 'cal-export', lastSynced: '' },
+    });
+
+    await act(async () => {
+      await runAutoSync();
+    });
+
+    expect(syncAllRehearsals).toHaveBeenCalledWith([], 'cal-export', undefined, expect.objectContaining({ '7': expect.anything() }), expect.any(Number), { removeOthers: true });
+  });
+});
+
+describe('Runs waiting their turn (EO03)', () => {
+  it('go one at a time, however many are waiting', async () => {
+    // Two pulls arriving while the automatic run was going both waited for the
+    // same run to end, and then both started — two exports at once, each
+    // reading the same mappings and writing its own.
+    (getSyncSettings as jest.Mock).mockResolvedValue({
+      importEnabled: true,
+      exportEnabled: true,
+      importCalendarIds: ['cal-1'],
+      exportCalendarId: 'cal-export',
+      lastImportTime: null,
+      lastExportTime: null,
+    });
+    let release!: () => void;
+    (importCalendarEventsToAvailability as jest.Mock).mockImplementationOnce(
+      () => new Promise((resolve) => { release = () => resolve({ success: 0, failed: 0 }); })
+    );
+    let running = 0;
+    let most = 0;
+    (syncAllRehearsals as jest.Mock).mockImplementation(async () => {
+      running++;
+      most = Math.max(most, running);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      running--;
+      return { success: 0, failed: 0, errors: [] };
+    });
+
+    try {
+      const { result } = renderHook(() => useAutoCalendarSync());
+      await act(async () => {
+        const automatic = runAutoSync();
+        await waitFor(() => expect(importCalendarEventsToAvailability).toHaveBeenCalled());
+        const pulls = [result.current.forceSync(), result.current.forceSync()];
+        release();
+        await Promise.all([automatic, ...pulls]);
+      });
+
+      expect(syncAllRehearsals).toHaveBeenCalledTimes(3);
+      expect(most).toBe(1);
+    } finally {
+      (syncAllRehearsals as jest.Mock).mockResolvedValue({ success: 0, failed: 0 });
+    }
+  });
+});
 
 describe('A pull-to-refresh while something else is syncing', () => {
   it('waits its turn instead of being dropped', async () => {

@@ -1,0 +1,90 @@
+# A sync's settings stay as they are until the sync is over (cause fix 18,
+# EO04). Semyon Medvedenko turns on sync with the phone's calendar and presses
+# Synchronize while the answer with his rehearsals is slow to come. The screen
+# ran its own copy of the sync: once its import was done it showed nothing
+# running — the button said "Synchronize" again and Auto Sync could be
+# switched off — while its export still waited, and then wrote to the
+# calendar all the same. Now the run is busy from its first step to its last:
+# the button spins, the switch does not move, and sync is still on after.
+#
+# The sync screen has no test ids but the switch's; the rest is found by its
+# English labels.
+appId: ${APP_ID}
+name: Sync settings stay put while a sync runs
+tags:
+  - calendar
+  - profile
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MEDVEDENKO_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element: ".*Calendar Sync.*"
+    direction: DOWN
+    centerElement: true
+- tapOn: ".*Calendar Sync.*"
+# Calendar access, where the app has not been given it yet.
+- tapOn:
+    text: "Grant Access"
+    optional: true
+- tapOn:
+    text: "Allow Full Access"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*Apple Calendar.*"
+    timeout: 15000
+# Taken once more if the simulator lost it (T-207); a second tap only turns
+# sync on again.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Apple Calendar.*"
+      SEE: ".*Synchronize.*"
+      WAIT_MS: 10000
+# His rehearsals' answer waits, its connection open, until the release below.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "^/api/native/rehearsals/batch$"
+      OPEN: "1"
+- tapOn: ".*Synchronize.*"
+# The run is going while the export waits: the button spins rather than
+# offering itself again.
+- extendedWaitUntil:
+    notVisible: ".*Synchronize.*"
+    timeout: 10000
+- assertNotVisible: ".*Synchronize.*"
+# Switching sync off now does nothing: the run is still going.
+- tapOn:
+    id: calendar-sync-toggle
+- assertNotVisible: ".*Synchronize.*"
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+- extendedWaitUntil:
+    visible: "Synced successfully"
+    timeout: 30000
+- assertVisible: ".*Exported rehearsals: 1.*"
+- takeScreenshot: 31-sync-settings-locked-while-running
+- tapOn: "OK"
+# Sync is still on, as it was when the run began.
+- extendedWaitUntil:
+    visible: ".*Synchronize.*"
+    timeout: 10000

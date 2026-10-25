@@ -14,13 +14,11 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
-import { useProjects } from '../../../contexts/ProjectContext';
 import { GlassButton } from '../../../shared/components';
 import { styles } from '../styles/calendarSyncSettingsScreenStyles';
 import { useCalendarSync } from '../../calendar/hooks/useCalendarSync';
 import { formatLastSync } from '../../../shared/utils/formatLastSync';
-import { DeviceCalendar, RehearsalWithProject } from '../../../shared/types/calendar';
-import { rehearsalsAPI } from '../../../shared/services/api';
+import { CalendarSyncSettings, DeviceCalendar } from '../../../shared/types/calendar';
 
 type CalendarSyncSettingsScreenProps = NativeStackScreenProps<any, 'CalendarSyncSettings'>;
 
@@ -28,7 +26,6 @@ type CalendarProvider = 'google' | 'apple' | null;
 
 export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncSettingsScreenProps) {
   const { t } = useI18n();
-  const { projects } = useProjects();
   const {
     hasPermission,
     calendars,
@@ -36,27 +33,25 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     isSyncing,
     requestPermissions,
     updateSettings,
-    syncAll,
+    synchronize,
     removeAll,
-    refresh,
     isImporting,
-    importNow,
     syncedCount,
   } = useCalendarSync();
 
+  // Which provider's calendars are listed — the screen's own choice until a
+  // calendar of it is saved. Whether sync is on, and with which calendar, is
+  // what the settings say, not what was last tapped: a save that failed left
+  // the tap on screen (HP05, cause fix 18).
   const [selectedProvider, setSelectedProvider] = useState<CalendarProvider>(null);
-  const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
-  const [syncEnabled, setSyncEnabled] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  const syncEnabled = settings.exportEnabled && settings.importEnabled;
+  const selectedCalendarId = settings.exportCalendarId;
 
-  // Determine current provider and calendar from settings
+  // Determine current provider from settings
   useEffect(() => {
     if (settings && calendars.length > 0) {
-      const isEnabled = settings.exportEnabled && settings.importEnabled;
-      setSyncEnabled(isEnabled);
-
       if (settings.exportCalendarId) {
-        setSelectedCalendarId(settings.exportCalendarId);
         const selectedCal = calendars.find(c => c.id === settings.exportCalendarId);
         if (selectedCal) {
           const provider = getCalendarProvider(selectedCal);
@@ -184,8 +179,6 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       return;
     }
 
-    setSelectedProvider(provider);
-
     // Always start with the first calendar of the new provider — using
     // selectedCalendarId here would carry over the previous provider's ID
     // and the useEffect would snap selectedProvider back to that provider.
@@ -196,39 +189,43 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     // "I picked one calendar to sync with"
     const importCalendarIds = [exportCalendarId];
 
-    setSelectedCalendarId(exportCalendarId);
-
     // Auto-enable sync
-    setSyncEnabled(true);
-    await updateSettings({
+    if (await save({
       exportEnabled: true,
       exportCalendarId,
       importEnabled: true,
       importCalendarIds,
       importInterval: 'always',
-      lastExportTime: settings?.lastExportTime || null,
-      lastImportTime: settings?.lastImportTime || null,
-    });
-
-    logger.debug(`[CalendarSync] Enabled ${provider} calendar sync: ${exportCalendar.title}`);
+    })) {
+      setSelectedProvider(provider);
+      logger.debug(`[CalendarSync] Enabled ${provider} calendar sync: ${exportCalendar.title}`);
+    }
   };
 
   const handleSelectCalendar = async (calendarId: string) => {
-    setSelectedCalendarId(calendarId);
-
-    await updateSettings({
-      exportEnabled: settings?.exportEnabled ?? true,
+    await save({
       exportCalendarId: calendarId,
-      importEnabled: settings?.importEnabled ?? true,
       // Import from the same calendar — single-calendar mode
       importCalendarIds: [calendarId],
-      importInterval: settings?.importInterval || 'always',
-      lastExportTime: settings?.lastExportTime || null,
-      lastImportTime: settings?.lastImportTime || null,
     });
 
     const cal = calendars.find(c => c.id === calendarId);
     logger.debug(`[CalendarSync] Calendar changed to: ${cal?.title}`);
+  };
+
+  /**
+   * Save the fields named, and only those. The stamps are the sync's: the
+   * screen used to send back the ones it had read, over newer ones (EO04).
+   * What could not be saved is said, and the screen stays as the settings are.
+   */
+  const save = async (patch: Partial<CalendarSyncSettings>): Promise<boolean> => {
+    try {
+      await updateSettings(patch);
+      return true;
+    } catch (error: any) {
+      Alert.alert(t.common.error, error?.message || t.calendarSync.syncError);
+      return false;
+    }
   };
 
   const handleToggleSync = async (enabled: boolean) => {
@@ -246,8 +243,6 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       return;
     }
 
-    setSyncEnabled(enabled);
-
     if (enabled && selectedProvider) {
       // Re-enabling sync: keep previously selected calendar if any,
       // otherwise default to first available from the provider.
@@ -256,25 +251,20 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       const calendar = providerCalendars.find(c => c.id === previousId) || providerCalendars[0];
 
       if (calendar) {
-        await updateSettings({
+        await save({
           exportEnabled: true,
           exportCalendarId: calendar.id,
           importEnabled: true,
           importCalendarIds: [calendar.id],
           importInterval: 'always',
-          lastExportTime: settings?.lastExportTime || null,
-          lastImportTime: settings?.lastImportTime || null,
         });
       }
     } else {
-      await updateSettings({
+      await save({
         exportEnabled: false,
-        exportCalendarId: settings?.exportCalendarId || null,
         importEnabled: false,
         importCalendarIds: [],
         importInterval: 'manual',
-        lastExportTime: settings?.lastExportTime || null,
-        lastImportTime: settings?.lastImportTime || null,
       });
     }
   };
@@ -347,83 +337,59 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       importCalendarIds: settings?.importCalendarIds,
     });
 
+    // The one sync of the app, as the automatic run and a pull do it — with
+    // the settings as they are when each direction gets to them, and after any
+    // run already going (cause fix 18). This screen used to run its own copy.
+    //
     // The two directions are independent: a failed import used to skip the
     // export altogether, and a run with failures in either was announced as
     // "Synced successfully" with the counts of what did get through. Each
-    // direction now runs, and what failed is said.
-    const problems: string[] = [];
-
-    // Import calendar events
-    logger.debug('[Sync] 📥 Starting import from calendar...');
-    let imported = 0;
+    // direction runs, and what failed is said.
+    let run;
     try {
-      const importResult = await importNow();
-      logger.debug('[Sync] ✅ Import completed:', importResult);
-      imported = importResult.success;
-      if (importResult.failed > 0) problems.push(t.calendarSync.importIncomplete(importResult.failed));
-    } catch (error: any) {
-      logger.error('[Sync] ❌ Import failed:', error);
-      problems.push(error?.message || t.calendarSync.syncError);
-    }
-
-    try {
-      // Export rehearsals to calendar
-      logger.debug('[Sync] 📤 Starting export to calendar...');
-      logger.debug('[Sync] 📊 Projects available:', projects.length);
-      const projectIds = projects.map(p => p.id);
-      logger.debug('[Sync] 🔍 Fetching rehearsals for projects:', projectIds);
-
-      const response = await rehearsalsAPI.getBatch(projectIds);
-      logger.debug('[Sync] 📋 API response:', {
-        hasData: !!response.data,
-        rehearsalsCount: response.data?.rehearsals?.length || 0,
-      });
-
-      const allRehearsals: RehearsalWithProject[] = (response.data.rehearsals || []).map((r: any) => ({
-        id: r.id,
-        projectId: r.projectId,
-        projectName: r.projectName,
-        startsAt: r.startsAt,
-        endsAt: r.endsAt,
-        location: r.location,
-      }));
-
-      logger.debug('[Sync] 📊 Rehearsals to sync:', allRehearsals.length);
-
-      if (allRehearsals.length === 0) {
-        logger.debug('[Sync] ⚠️ No rehearsals found to sync');
-        if (problems.length > 0) {
-          Alert.alert(t.calendarSync.syncError || 'Sync Error', problems.join('\n'));
-          return;
-        }
-        Alert.alert(
-          t.calendarSync.syncSuccess || 'Sync Complete',
-          'No rehearsals found to sync. Create some rehearsals first!'
-        );
-        return;
-      }
-
-      logger.debug('[Sync] 🚀 Calling syncAll with', allRehearsals.length, 'rehearsals');
-      const syncResult = await syncAll(allRehearsals);
-      logger.debug('[Sync] ✅ Export completed:', syncResult);
-
-      if (syncResult.failed > 0) problems.push(t.calendarSync.exportIncomplete(syncResult.failed));
-
-      // The real counts. `syncResult?.success || allRehearsals.length` read
-      // zero as "no answer" and fell back to the total, so the one run where
-      // nothing exported at all was reported as everything exporting.
-      const counts = `${t.calendarSync.imported || 'Imported'}: ${imported}\n${t.calendarSync.exportedRehearsals || 'Rehearsals exported'}: ${syncResult?.success ?? 0}`;
-      if (problems.length > 0) {
-        Alert.alert(t.calendarSync.syncError || 'Sync Error', `${counts}\n\n${problems.join('\n')}`);
-      } else {
-        Alert.alert(t.calendarSync.syncSuccess || 'Sync Complete', counts);
-      }
+      run = await synchronize();
     } catch (error: any) {
       logger.error('[Sync] ❌ Error during synchronization:', error);
+      Alert.alert(t.calendarSync.syncError || 'Sync Error', error?.message || 'Failed to synchronize calendars');
+      return;
+    }
+    // Ended with the session: there is nobody to tell.
+    if (!run) return;
+    logger.debug('[Sync] ✅ Run completed:', run);
+
+    const problems: string[] = [];
+    let imported = 0;
+    if (run.import.status === 'done') {
+      imported = run.import.result.success;
+      if (run.import.result.failed > 0) problems.push(t.calendarSync.importIncomplete(run.import.result.failed));
+    } else if (run.import.status === 'failed') {
+      problems.push(run.import.error || t.calendarSync.syncError);
+    }
+
+    let exported = 0;
+    if (run.export.status === 'done') {
+      exported = run.export.result.success;
+      if (run.export.result.failed > 0) problems.push(t.calendarSync.exportIncomplete(run.export.result.failed));
+    } else if (run.export.status === 'failed') {
+      problems.push(run.export.error || t.calendarSync.syncError);
+    }
+
+    if (run.export.status === 'done' && run.export.result.rehearsals === 0 && problems.length === 0) {
       Alert.alert(
-        t.calendarSync.syncError || 'Sync Error',
-        [...problems, error.message || 'Failed to synchronize calendars'].join('\n')
+        t.calendarSync.syncSuccess || 'Sync Complete',
+        'No rehearsals found to sync. Create some rehearsals first!'
       );
+      return;
+    }
+
+    // The real counts. `syncResult?.success || allRehearsals.length` read
+    // zero as "no answer" and fell back to the total, so the one run where
+    // nothing exported at all was reported as everything exporting.
+    const counts = `${t.calendarSync.imported || 'Imported'}: ${imported}\n${t.calendarSync.exportedRehearsals || 'Rehearsals exported'}: ${exported}`;
+    if (problems.length > 0) {
+      Alert.alert(t.calendarSync.syncError || 'Sync Error', `${counts}\n\n${problems.join('\n')}`);
+    } else {
+      Alert.alert(t.calendarSync.syncSuccess || 'Sync Complete', counts);
     }
   };
 
@@ -476,6 +442,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                   <Text style={styles.settingLabel}>{t.calendarSync.autoSync}</Text>
                 </View>
                 <Switch
+                  testID="calendar-sync-toggle"
                   value={syncEnabled}
                   onValueChange={handleToggleSync}
                   trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.purple }}
