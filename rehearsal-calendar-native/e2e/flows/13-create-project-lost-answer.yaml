@@ -47,7 +47,14 @@ tags:
 # Both requests are done by now, whatever the server made of them. Reopened,
 # the app lists what the server holds.
 - launchApp
-- tapOn: "Projects, tab.*"
+# A tap the simulator loses is taken once more (T-207): the run of 25.10.2026
+# 21:34 lost this one, and the flow waited on the calendar for the cards.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-projects
+      SEE: ".*Dunsinane.*"
+      WAIT_MS: 15000
 # He is in no other project: every card is a Dunsinane, and there is one.
 - extendedWaitUntil:
     visible:
