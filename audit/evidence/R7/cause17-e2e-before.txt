@@ -1,0 +1,50 @@
+Cause fix 17 — flow 30, red before and green after.
+
+Flow: rehearsal-calendar-native/e2e/flows/30-sync-import-fails-export-runs.yaml
+(commit cdd6e65, with Medvedenko's account, project and rehearsal in
+e2e/seed.mjs). Medvedenko turns on sync with the simulator's calendar and
+presses Synchronize while the answer to POST /api/native/availability/imported/sync
+is held for 40 s (hold-answers.js, MS 40000) — past the app's ten seconds, so
+the import fails as with no network.
+
+== Before: the files of the fix put back as they were before it ==
+
+git restore --source=9274bc3 -- \
+  src/shared/services/calendar/export.ts \
+  src/shared/hooks/useAutoCalendarSync.ts \
+  src/features/calendar/hooks/useCalendarSync.ts \
+  src/features/profile/screens/CalendarSyncSettingsScreen.tsx \
+  src/shared/utils/calendarStorage.ts \
+  src/i18n/translations/calendarSync.ts
+npm run e2e -- e2e/flows/30-sync-import-fails-export-runs.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] A sync whose import fails still exports (1m 51s) (Assertion is false: ".*Exported rehearsals: 1.*" is visible)
+
+1/1 Flow Failed
+
+On screen at the failed check (step-040 screenshot): an alert "Sync error"
+with "timeout of 10000ms exceeded" and nothing else — the failed import
+jumped past the export, and the rehearsal never reached the calendar.
+
+Then: git restore --source=HEAD -- <the same files>
+
+== After: the code as committed (4921180 on top of fe11e12) ==
+
+npm run e2e -- e2e/flows/30-sync-import-fails-export-runs.yaml
+
+[e2e] running the flows
+[Passed] A sync whose import fails still exports (2m 14s)
+1/1 Flow Passed in 2m 14s
+
+On screen (30-sync-import-fails-export-runs screenshot): "Sync error",
+"Imported: 0", "Exported rehearsals: 1", "timeout of 10000ms exceeded".
