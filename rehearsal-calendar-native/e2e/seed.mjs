@@ -99,6 +99,11 @@ export const PEOPLE = {
   // (30): one rehearsal of his own, so the export has something to write, and
   // nobody else's days take his imported events.
   medvedenko: { email: 'medvedenko@e2e.test', firstName: 'Semyon', lastName: 'Medvedenko', onboarded: true },
+  // Sixty notifications, more than a page: the newest fifty read, the ten
+  // before them not (33).
+  anfisa: { email: 'anfisa@e2e.test', firstName: 'Anfisa', lastName: 'Nurse', onboarded: true },
+  // Two unread, an inbox that does not load and a "read" that does not land (34).
+  ferapont: { email: 'ferapont@e2e.test', firstName: 'Ferapont', lastName: 'Watchman', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -382,6 +387,29 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual', NULL),
             ($1, $4::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-early-train')`,
     [ids.shamrayev, localInstant(5, 23), localInstant(6, 1), localInstant(6, 0)]);
+
+  // Inboxes written as the server records a notification, a minute apart and
+  // to the millisecond as it writes them: sign-ins are spent, and sixty
+  // rehearsals for one would weigh on everyone's calendars (33, 34).
+  const notify = async (key, notices) => {
+    const now = Date.now();
+    for (const [n, { title, read }] of notices.entries()) {
+      const at = new Date(now - (notices.length - n) * 60_000).toISOString();
+      await client.query(
+        `INSERT INTO native_notifications (user_id, type, title, body, data, sent_at, created_at, read_at)
+         VALUES ($1, 'rehearsal_updated', $2, 'The Prozorov house', '{}', $3, $3, $4)`,
+        [ids[key], title, at, read ? at : null]);
+    }
+  };
+  // Oldest first: the Samovar is the oldest of all, past the first page.
+  await notify('anfisa', Array.from({ length: 60 }, (_, n) => ({
+    title: n === 0 ? 'Samovar polished' : `House notice ${n + 1}`,
+    read: n >= 10,
+  })));
+  await notify('ferapont', [
+    { title: 'Papers from the council', read: false },
+    { title: 'Bread delivery', read: false },
+  ]);
 
   // A create whose answer never arrives (13). The first project named
   // Dunsinane takes 13 seconds to insert — longer than the app's 10-second

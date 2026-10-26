@@ -1,0 +1,31 @@
+# Every notification, however old (cause fix 21: NI01). Anfisa has sixty: the
+# newest fifty read, the ten before them not, the Samovar the oldest of all.
+# The old screen read the newest fifty and stopped there: the unread ones were
+# in the database and nowhere on screen, and with every card shown read
+# "Mark all read" was hidden, though the bell still counted ten.
+appId: ${APP_ID}
+name: Inbox older pages
+tags:
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${ANFISA_EMAIL}
+- tapOn: "Notifications"
+- extendedWaitUntil:
+    visible: ".*House notice 60.*"
+    timeout: 15000
+# Down to the oldest: the next pages come as the list ends.
+- scrollUntilVisible:
+    element: ".*Samovar polished.*"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: 33-oldest-notification
+# The count is the whole inbox's, not the first page's.
+- assertVisible: "Mark all read"
+- tapOn: "Mark all read"
+- extendedWaitUntil:
+    notVisible: "Mark all read"
+    timeout: 10000
+- takeScreenshot: 33-all-read
