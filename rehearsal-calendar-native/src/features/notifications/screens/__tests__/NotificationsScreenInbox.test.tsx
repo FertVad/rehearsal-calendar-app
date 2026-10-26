@@ -114,6 +114,50 @@ describe('older pages (NI01)', () => {
     expect(screen.getByText('Notice 1')).toBeTruthy();
     expect(screen.queryByTestId('inbox-more')).toBeNull();
   });
+
+  // Review: sixty read, then fifty-one new. The newest page ends at 62, above
+  // the cards shown; 61 was in neither, and with the old cursor gone it could
+  // not be reached.
+  it('reaches the ones between a newest page and the cards shown', async () => {
+    const newer = (id: number) => ({ ...item(id, false), createdAt: new Date(Date.now() + id * 1000).toISOString() });
+    const newerRange = (from: number, to: number) => {
+      const out = [];
+      for (let id = from; id >= to; id--) out.push(newer(id));
+      return out;
+    };
+    mockList
+      .mockResolvedValueOnce(page(range(60, 11), 'c-11'))
+      .mockResolvedValueOnce(page(range(10, 1)))
+      .mockResolvedValueOnce(page(newerRange(111, 62), 'c-62'))
+      .mockResolvedValueOnce(page([newer(61), ...range(60, 12)], 'c-12'));
+    const screen = await open();
+    await waitFor(() => expect(screen.getByText('Notice 60')).toBeTruthy());
+    await act(async () => { fireEvent.press(screen.getByTestId('inbox-more')); });
+
+    await act(async () => { mockFocus.run?.(); });
+    await act(async () => { fireEvent.press(screen.getByTestId('inbox-more')); });
+
+    expect(mockList).toHaveBeenLastCalledWith('c-62');
+    expect(screen.getByText('Notice 111')).toBeTruthy();
+    expect(screen.getByText('Notice 61')).toBeTruthy();
+  });
+});
+
+describe('"Mark all read" before the list has come (review)', () => {
+  it('shows the cards the server has, not "Nothing yet"', async () => {
+    mockUnread.unreadCount = 1;
+    let answer!: (value: unknown) => void;
+    mockList
+      .mockReturnValueOnce(new Promise((done) => { answer = done; }))
+      .mockResolvedValueOnce(page([item(2)]));
+    const screen = await open();
+
+    await act(async () => { await screen.getByLabelText('Mark all read').props.onPress(); });
+    await act(async () => { answer(page([item(2, false)])); });
+
+    await waitFor(() => expect(screen.getByText('Notice 2')).toBeTruthy());
+    expect(screen.queryByText('Nothing yet')).toBeNull();
+  });
 });
 
 describe('a load that fails (NI05)', () => {
@@ -170,6 +214,49 @@ describe('a "read" the server did not take (NI02)', () => {
     await act(async () => { fail(false); });
 
     expect(mockUnread.markRead).toHaveBeenCalledWith([2]);
+    expect(screen.getByLabelText('Mark all read')).toBeTruthy();
+  });
+
+  // Review: a card opened on a slow connection, then "Mark all read" that went
+  // through. The first read failing late put the card back unread, though the
+  // server had it read.
+  it('does not take back a card a later "Mark all read" has read', async () => {
+    mockList.mockResolvedValueOnce(page([item(2, false)]));
+    let fail!: (ok: boolean) => void;
+    mockUnread.markRead.mockReturnValueOnce(new Promise((done) => { fail = done; }));
+    // The count has not heard of either read yet, so the button stays.
+    mockUnread.unreadCount = 1;
+    const screen = await open();
+    await waitFor(() => expect(screen.getByLabelText('Mark all read')).toBeTruthy());
+
+    await act(async () => { fireEvent.press(screen.getByText('Notice 2')); });
+    await act(async () => { await screen.getByLabelText('Mark all read').props.onPress(); });
+    // "Mark all read" has answered: nothing unread on the server.
+    mockUnread.unreadCount = 0;
+    screen.rerender(<NotificationsScreen />);
+    await act(async () => { fail(false); });
+
+    expect(mockUnread.markAllRead).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText('Mark all read')).toBeNull();
+  });
+
+  it('takes it back when the later "Mark all read" failed too', async () => {
+    mockList.mockResolvedValueOnce(page([item(2, false)]));
+    let fail!: (ok: boolean) => void;
+    mockUnread.markRead.mockReturnValueOnce(new Promise((done) => { fail = done; }));
+    mockUnread.markAllRead.mockResolvedValueOnce(false);
+    mockUnread.unreadCount = 1;
+    const screen = await open();
+    await waitFor(() => expect(screen.getByLabelText('Mark all read')).toBeTruthy());
+
+    await act(async () => { fireEvent.press(screen.getByText('Notice 2')); });
+    await act(async () => { await screen.getByLabelText('Mark all read').props.onPress(); });
+    // Only the card can bring the button back now.
+    mockUnread.unreadCount = 0;
+    screen.rerender(<NotificationsScreen />);
+    expect(screen.queryByLabelText('Mark all read')).toBeNull();
+    await act(async () => { fail(false); });
+
     expect(screen.getByLabelText('Mark all read')).toBeTruthy();
   });
 });

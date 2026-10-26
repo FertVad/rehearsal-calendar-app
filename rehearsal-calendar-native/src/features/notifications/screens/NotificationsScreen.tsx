@@ -23,6 +23,7 @@ import { notificationsAPI } from '../../../shared/services/api';
 import { useUnread } from '../../../contexts/UnreadContext';
 import { logger } from '../../../shared/utils/logger';
 import { useRequestOrder } from '../../../shared/hooks/useSession';
+import { currentSession, isCurrentSession } from '../../../shared/services/session';
 import { styles } from '../styles/notificationsScreenStyles';
 import {
   emptyInbox,
@@ -69,29 +70,57 @@ export default function NotificationsScreen() {
   // or the read one as unread: reads and changes on this screen go in one order
   // (useRequestOrder), and such a read's answer is dropped (NI04, review). Only
   // `change` sends one.
+  //
+  // A dropped read is read again once no change is on its way. Dropped and no
+  // more, the first load of a screen where "Mark all read" was pressed in time
+  // left it saying "Nothing yet" over an inbox that had cards (review).
   const order = useRequestOrder();
+  const changesOut = useRef(0);
+  const readLater = useRef(false);
+  const loadRef = useRef<() => void>(() => {});
+  const readAgain = useCallback(() => {
+    if (changesOut.current > 0) readLater.current = true;
+    else loadRef.current();
+  }, []);
   const change = useCallback(
-    <T,>(send: () => Promise<T>): Promise<T> => order.write(() => send()),
+    async <T,>(send: () => Promise<T>): Promise<T> => {
+      changesOut.current += 1;
+      try {
+        return await order.write(() => send());
+      } finally {
+        changesOut.current -= 1;
+        if (changesOut.current === 0 && readLater.current) {
+          readLater.current = false;
+          loadRef.current();
+        }
+      }
+    },
     [order]
   );
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
+    const asked = currentSession();
     const answer = order.beginRead();
+    let landed = true;
     try {
       const res = await notificationsAPI.list();
       if (answer()) {
         setInbox((prev) => withFirstPage(prev, pageOf(res.data)));
         setLoadError(false);
-      }
+      } else landed = false;
     } catch (err) {
       logger.warn('[Notifications] Could not load:', err);
       if (answer()) setLoadError(true);
+      else landed = false;
     } finally {
-      setLoading(false);
+      // The spinner stays while the read is still to be made again.
+      if (landed) setLoading(false);
       setRefreshing(false);
     }
-  }, [order]);
+    if (!landed && isCurrentSession(asked)) readAgain();
+  }, [order, readAgain]);
+  loadRef.current = () => { load(); };
 
   // The page after the last one read: on reaching the end of the list, or on
   // the button under it (NI01).
@@ -119,21 +148,47 @@ export default function NotificationsScreen() {
   // A "read" shows at once and is taken back if the server did not take it
   // (NI02): the cards used to stay read on screen while the server, and the
   // count, still had them unread.
-  const unmark = useCallback(
-    (ids: Set<number>) => setItems((prev) => prev.map((n) => (ids.has(n.id) ? { ...n, read: false } : n))),
-    [setItems]
-  );
+  //
+  // Taken back only if nothing else read the card meanwhile: each card keeps
+  // the reads on their way that cover it, and whether one of them landed. A
+  // card opened on a slow connection and then "Mark all read" that went
+  // through: the first read failing late put the card back unread, though the
+  // server had it read (review).
+  const marks = useRef(new Map<number, { out: number; landed: boolean }>());
+  const markShown = useCallback(async (ids: number[], send: () => Promise<boolean>) => {
+    for (const id of ids) {
+      const mark = marks.current.get(id) ?? { out: 0, landed: false };
+      mark.out += 1;
+      marks.current.set(id, mark);
+    }
+    const covered = new Set(ids);
+    setItems((prev) => prev.map((n) => (covered.has(n.id) ? { ...n, read: true } : n)));
+
+    const ok = await change(send);
+    const back = new Set<number>();
+    for (const id of ids) {
+      const mark = marks.current.get(id);
+      if (!mark) continue;
+      mark.out -= 1;
+      if (ok) mark.landed = true;
+      if (mark.out > 0) continue;
+      marks.current.delete(id);
+      if (!mark.landed) back.add(id);
+    }
+    if (back.size > 0) {
+      setItems((prev) => prev.map((n) => (back.has(n.id) ? { ...n, read: false } : n)));
+    }
+    return ok;
+  }, [change, setItems]);
 
   // The whole inbox, by name — the pages not loaded too. The badge follows the
-  // count the server reports back.
+  // count the server reports back. It covers the cards shown unread and those
+  // whose own read is still on its way.
   const markEverythingRead = useCallback(async () => {
-    const wereUnread = new Set(items.filter((n) => !n.read).map((n) => n.id));
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-    const ok = await change(() => markAllRead());
-    if (ok) return;
-    unmark(wereUnread);
-    Alert.alert(t.common.error, t.notifications.markReadError);
-  }, [items, markAllRead, change, setItems, unmark, t]);
+    const ids = items.filter((n) => !n.read || marks.current.has(n.id)).map((n) => n.id);
+    const ok = await markShown(ids, () => markAllRead());
+    if (!ok) Alert.alert(t.common.error, t.notifications.markReadError);
+  }, [items, markAllRead, markShown, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -145,12 +200,7 @@ export default function NotificationsScreen() {
     // Opening it is reading it. Without this the count stayed lit after the user
     // had plainly dealt with the thing. It opens at once; if the server did not
     // take the "read", the card is unread again when the reader comes back.
-    if (!item.read) {
-      setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
-      change(() => markRead([item.id])).then((ok) => {
-        if (!ok) unmark(new Set([item.id]));
-      });
-    }
+    if (!item.read) markShown([item.id], () => markRead([item.id]));
 
     const rehearsalId = item.relatedType === 'rehearsal' ? item.relatedId : null;
     const projectId = item.data?.projectId ?? (item.relatedType === 'project' ? item.relatedId : null);

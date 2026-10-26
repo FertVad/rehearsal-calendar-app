@@ -48,12 +48,21 @@ function isOlder(a: NotificationItem, b: NotificationItem): boolean {
  * last card it is what the server holds now; the older pages already read stay
  * below it, so coming back from a notification far down does not cut the list
  * to the first page.
+ *
+ * Only if the page reaches them, though: a card of the page already on screen.
+ * With a page's worth of new ones since, the page ends above the cards shown,
+ * and what lies between was in neither — kept below it, with the old cursor,
+ * it could not be reached at all (review). Then the list starts again from the
+ * page, and the older ones come again page by page.
  */
 export function withFirstPage(inbox: Inbox, page: InboxPage): Inbox {
+  const fresh = { items: page.notifications, nextCursor: page.nextCursor };
   const last = page.notifications[page.notifications.length - 1];
-  if (!last || page.nextCursor === null) return { items: page.notifications, nextCursor: page.nextCursor };
+  if (!last || page.nextCursor === null) return fresh;
+  const shown = new Set(inbox.items.map((n) => n.id));
+  if (!page.notifications.some((n) => shown.has(n.id))) return fresh;
   const below = inbox.items.filter((n) => isOlder(n, last));
-  if (below.length === 0) return { items: page.notifications, nextCursor: page.nextCursor };
+  if (below.length === 0) return fresh;
   return { items: [...page.notifications, ...below], nextCursor: inbox.nextCursor };
 }
 

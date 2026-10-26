@@ -51,6 +51,8 @@ function deferred() {
   return { promise, resolve };
 }
 
+beforeEach(() => mockList.mockReset());
+
 it('does not bring back a card deleted while a load was out', async () => {
   mockList.mockResolvedValueOnce({ data: { notifications: [item(1, 'Act I moved'), item(2, 'Dress cancelled')] } });
   const screen = render(<NotificationsScreen />);
@@ -58,8 +60,11 @@ it('does not bring back a card deleted while a load was out', async () => {
   await waitFor(() => expect(screen.getByText('Dress cancelled')).toBeTruthy());
 
   // A pull reads the list; before it answers, the card is deleted.
+  // The dropped read is made again (review), and finds the list after it.
   const stale = deferred();
-  mockList.mockReturnValueOnce(stale.promise);
+  mockList
+    .mockReturnValueOnce(stale.promise)
+    .mockResolvedValueOnce({ data: { notifications: [item(1, 'Act I moved')] } });
   await act(async () => { mockFocus.run?.(); });
   const deletes = screen.getAllByLabelText('Delete');
   await act(async () => { deletes[1].props.onPress(); });
@@ -67,6 +72,7 @@ it('does not bring back a card deleted while a load was out', async () => {
 
   await act(async () => { stale.resolve({ data: { notifications: [item(1, 'Act I moved'), item(2, 'Dress cancelled')] } }); });
 
+  expect(mockList).toHaveBeenCalledTimes(3);
   expect(screen.queryByText('Dress cancelled')).toBeNull();
   expect(screen.getByText('Act I moved')).toBeTruthy();
 });
@@ -82,7 +88,9 @@ it('does not make cards unread again after "Mark all read" while a load was out'
   const markAll = await waitFor(() => screen.getByLabelText('Mark all read'));
 
   const stale = deferred();
-  mockList.mockReturnValueOnce(stale.promise);
+  mockList
+    .mockReturnValueOnce(stale.promise)
+    .mockResolvedValueOnce({ data: { notifications: [item(1, 'Act I moved')] } });
   await act(async () => { mockFocus.run?.(); });
   await act(async () => { await markAll.props.onPress(); });
   expect(screen.queryByLabelText('Mark all read')).toBeNull();
@@ -106,12 +114,15 @@ it('does not bring back a card when a load answers while its deletion is on its 
   const deletes = screen.getAllByLabelText('Delete');
   await act(async () => { deletes[1].props.onPress(); });
 
-  mockList.mockResolvedValueOnce({ data: { notifications: [item(1, 'Act I moved'), item(2, 'Dress cancelled')] } });
+  mockList
+    .mockResolvedValueOnce({ data: { notifications: [item(1, 'Act I moved'), item(2, 'Dress cancelled')] } })
+    .mockResolvedValueOnce({ data: { notifications: [item(1, 'Act I moved')] } });
   await act(async () => { mockFocus.run?.(); });
   expect(screen.queryByText('Dress cancelled')).toBeNull();
 
   await act(async () => { removing.resolve(true); });
 
+  expect(mockList).toHaveBeenCalledTimes(3);
   expect(screen.queryByText('Dress cancelled')).toBeNull();
   expect(screen.getByText('Act I moved')).toBeTruthy();
 });
@@ -128,7 +139,9 @@ it('keeps cards read when a load answers while "Mark all read" is on its way', a
   let pressed!: Promise<void>;
   act(() => { pressed = markAll.props.onPress(); });
 
-  mockList.mockResolvedValueOnce({ data: { notifications: [unread(1, 'Act I moved')] } });
+  mockList
+    .mockResolvedValueOnce({ data: { notifications: [unread(1, 'Act I moved')] } })
+    .mockResolvedValueOnce({ data: { notifications: [item(1, 'Act I moved')] } });
   await act(async () => { mockFocus.run?.(); });
 
   await act(async () => { marking.resolve(true); await pressed; });
