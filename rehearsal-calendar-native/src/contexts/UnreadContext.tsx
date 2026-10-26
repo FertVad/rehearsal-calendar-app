@@ -5,7 +5,7 @@ import { notificationsAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
 import { useAuth } from './AuthContext';
 import { useRequestOrder, useSession, useSessionState } from '../shared/hooks/useSession';
-import { isCurrentSession } from '../shared/services/session';
+import { currentSession, isCurrentSession } from '../shared/services/session';
 
 // Survives a restart, so the count does not begin at nought every launch — and
 // so it can be shown at all when the server cannot be reached. One per person:
@@ -19,7 +19,8 @@ interface UnreadContextValue {
   /**
    * Marks these read; an empty list marks nothing. Every change answers whether
    * the server took it, so a screen that showed it at once can take it back
-   * (cause fix 21: NI02).
+   * (cause fix 21: NI02). False only while the session that asked lasts: after
+   * a sign-out there is nobody to take it back for.
    */
   markRead: (ids: number[]) => Promise<boolean>;
   /** The whole inbox, asked for by name — the loaded page and the rest (NI06). */
@@ -102,9 +103,12 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
   // Every change answers with the count it leaves behind, and with whether it
   // happened at all. One way for all four: marking read used to swallow its
   // failure and fulfil like a success, and the inbox declared the cards read
-  // while the server still had them unread (NI02).
+  // while the server still had them unread (NI02). A refusal that comes after
+  // the session that asked has ended is nobody's to hear: its "could not" went
+  // up over the next person's screen.
   const change = useCallback(
     async (what: string, send: () => Promise<{ data?: { unreadCount?: number } }>) => {
+      const asked = currentSession();
       try {
         await order.write(async (answer) => {
           const res = await send();
@@ -113,7 +117,7 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
         return true;
       } catch (error) {
         logger.warn(`[Unread] Could not ${what}:`, error);
-        return false;
+        return !isCurrentSession(asked);
       }
     },
     [order, remember]
