@@ -48,10 +48,43 @@ export type PushRegistration =
   | 'failed';
 
 /**
+ * What this device last came to, for the session: one value that every
+ * registration writes and the profile reads ('unknown' until the first
+ * attempt has ended, and again once the session is over).
+ *
+ * The profile used to keep its own copy, read from the system permission when
+ * it was focused: a token the server refused read as registered again after
+ * a tab change, and an answer given in Settings was not seen until the next
+ * one (review of cause fix 20).
+ */
+export type PushDeviceState = PushRegistration | 'unknown';
+
+let deviceState: PushDeviceState = 'unknown';
+const deviceListeners = new Set<() => void>();
+
+function setDeviceState(state: PushDeviceState) {
+  if (state === deviceState) return;
+  deviceState = state;
+  deviceListeners.forEach((listener) => listener());
+}
+
+export function getPushDeviceState(): PushDeviceState {
+  return deviceState;
+}
+
+/** For useSyncExternalStore. */
+export function subscribePushDeviceState(listener: () => void): () => void {
+  deviceListeners.add(listener);
+  return () => {
+    deviceListeners.delete(listener);
+  };
+}
+
+/**
  * The one place that registers this device. Only `ask` may show the system
  * prompt, and only the person's own action passes it: the onboarding screen's
- * Allow and the profile's switch (`askAndRegisterPush`). Everything else runs
- * in the background and never asks (`registerPushIfAllowed`).
+ * Allow and the profile (`askAndRegisterPush`). The session's own attempts
+ * run in the background and never ask (`keepPushRegistered`).
  *
  * iOS shows that prompt once: a refusal can only be undone in Settings. The
  * notifications hook used to ask whenever a signed-in user with notifications
@@ -108,22 +141,14 @@ async function registerPush(ask: boolean): Promise<PushRegistration> {
 }
 
 /** The person asked for notifications: may show the system prompt. */
-export function askAndRegisterPush(): Promise<PushRegistration> {
-  return registerPush(true);
-}
-
-/**
- * Register only if permission is already granted — never shows a prompt.
- *
- * Logging out deletes the token row on the server, so a session that appears
- * — login, or a restored one — puts it back (`keepPushRegistered`).
- */
-export function registerPushIfAllowed(): Promise<PushRegistration> {
-  return registerPush(false);
+export async function askAndRegisterPush(): Promise<PushRegistration> {
+  const result = await registerPush(true);
+  setDeviceState(result);
+  return result;
 }
 
 /** Whether this device can receive push right now, without asking. */
-export async function pushPermission(): Promise<'granted' | 'denied' | 'unsupported'> {
+async function pushPermission(): Promise<'granted' | 'denied' | 'unsupported'> {
   if (!Device.isDevice) return 'unsupported';
   try {
     const { status } = await Notifications.getPermissionsAsync();
@@ -136,37 +161,50 @@ export async function pushPermission(): Promise<'granted' | 'denied' | 'unsuppor
 /**
  * Keeps this device registered for the session that is on: registers at once
  * and, until it has, again each time the app comes forward. Returns the stop.
+ * Never shows a prompt. Logging out deletes the token row on the server, so a
+ * session that appears — login, or a restored one — puts it back.
  *
  * It registered once per session and gave up on any failure, so a sign-in
  * made on a bad connection left the device without notifications for the
  * whole session, silently (GC03). Coming forward is also when a permission
- * granted in Settings is first seen. One attempt at a time; a simulator stops
- * it, as nothing there can register.
+ * granted in Settings is first seen — and one taken back there: a registered
+ * device then only reads the permission, and is 'denied' once it is gone, to
+ * be registered again when it returns. One attempt at a time; a simulator
+ * stops it, as nothing there can register. What each attempt comes to is the
+ * device's state (`getPushDeviceState`); the end of the session clears it.
  */
 export function keepPushRegistered(): () => void {
-  let done = false;
+  let stopped = false;
   let running = false;
 
-  const attempt = () => {
-    if (done || running) return;
+  const attempt = async () => {
+    if (stopped || running || deviceState === 'unsupported') return;
     running = true;
-    registerPushIfAllowed()
-      .then((result) => {
-        if (result === 'registered' || result === 'unsupported') done = true;
-      })
-      .finally(() => {
-        running = false;
-      });
+    try {
+      if (deviceState === 'registered') {
+        const permission = await pushPermission();
+        if (!stopped && permission !== 'granted') setDeviceState('denied');
+      } else {
+        // An attempt that ends after its session has must not speak for the
+        // next one.
+        const result = await registerPush(false);
+        if (!stopped) setDeviceState(result);
+      }
+    } finally {
+      running = false;
+    }
   };
 
+  setDeviceState('unknown');
   attempt();
   const subscription = AppState.addEventListener('change', (state) => {
     if (state === 'active') attempt();
   });
 
   return () => {
-    done = true;
+    stopped = true;
     subscription.remove();
+    setDeviceState('unknown');
   };
 }
 

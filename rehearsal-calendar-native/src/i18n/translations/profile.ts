@@ -42,6 +42,8 @@ export interface ProfileTranslations {
   pushDeniedMessage: string;
   pushUnsupported: string;
   pushFailed: string;
+  pushNotAllowedHere: string;
+  pushNotRegisteredHere: string;
   openSettings: string;
   languageError: string;
   timezoneError: string;
@@ -113,6 +115,8 @@ export const ru = {
     pushDeniedMessage: 'Разрешите уведомления для Rehearsly в настройках телефона.',
     pushUnsupported: 'Это устройство не может получать push-уведомления.',
     pushFailed: 'Не удалось включить уведомления на этом устройстве. Проверьте соединение и попробуйте ещё раз.',
+    pushNotAllowedHere: 'На этом телефоне уведомления не разрешены. Нажмите, чтобы разрешить.',
+    pushNotRegisteredHere: 'Этот телефон ещё не подключён к уведомлениям. Нажмите, чтобы попробовать ещё раз.',
     openSettings: 'Открыть настройки',
     languageError: 'Не удалось изменить язык',
     timezoneError: 'Не удалось обновить часовой пояс',
@@ -184,6 +188,8 @@ export const en = {
     pushDeniedMessage: 'Allow notifications for Rehearsly in your phone settings.',
     pushUnsupported: 'This device cannot receive push notifications.',
     pushFailed: 'Could not turn on notifications on this device. Check your connection and try again.',
+    pushNotAllowedHere: 'Notifications are not allowed on this phone. Tap to allow.',
+    pushNotRegisteredHere: 'This phone is not set up for notifications yet. Tap to try again.',
     openSettings: 'Open Settings',
     languageError: 'Failed to change language',
     timezoneError: 'Failed to update timezone',
@@ -255,6 +261,8 @@ export const es = {
     pushDeniedMessage: 'Permite las notificaciones de Rehearsly en los ajustes del teléfono.',
     pushUnsupported: 'Este dispositivo no puede recibir notificaciones push.',
     pushFailed: 'No se pudieron activar las notificaciones en este dispositivo. Comprueba la conexión e inténtalo de nuevo.',
+    pushNotAllowedHere: 'Las notificaciones no están permitidas en este teléfono. Toca para permitirlas.',
+    pushNotRegisteredHere: 'Este teléfono aún no está listo para recibir notificaciones. Toca para intentarlo de nuevo.',
     openSettings: 'Abrir ajustes',
     languageError: 'No se pudo cambiar el idioma',
     timezoneError: 'No se pudo actualizar la zona horaria',
@@ -326,6 +334,8 @@ export const de = {
     pushDeniedMessage: 'Erlaube Benachrichtigungen für Rehearsly in den Einstellungen des Telefons.',
     pushUnsupported: 'Dieses Gerät kann keine Push-Benachrichtigungen empfangen.',
     pushFailed: 'Benachrichtigungen konnten auf diesem Gerät nicht aktiviert werden. Prüfe die Verbindung und versuche es erneut.',
+    pushNotAllowedHere: 'Benachrichtigungen sind auf diesem Telefon nicht erlaubt. Tippe, um sie zu erlauben.',
+    pushNotRegisteredHere: 'Dieses Telefon ist noch nicht für Benachrichtigungen eingerichtet. Tippe, um es erneut zu versuchen.',
     openSettings: 'Einstellungen öffnen',
     languageError: 'Sprache konnte nicht geändert werden',
     timezoneError: 'Zeitzone konnte nicht aktualisiert werden',

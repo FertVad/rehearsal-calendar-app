@@ -123,8 +123,10 @@ tags:
 # The old switch showed the account's setting alone — on for every account —
 # though nothing on this phone could be notified. Turning it on again saved the
 # setting, ignored that registering had come to nothing and buzzed success; a
-# refused permission and a lost connection went the same way. Now it reads off
-# here, and turning it on says why it stays off.
+# refused permission and a lost connection went the same way. Its first fix
+# read off without the permission, so on such a phone the account's setting
+# could not be turned off at all. Now the switch is the account's setting, and
+# what this phone came to is said below it, the same after a tab change.
 # The profile is still scrolled to the timezone, below the switch.
 - tapOn:
     id: tab-profile
@@ -134,7 +136,31 @@ tags:
     direction: UP
     centerElement: true
 - waitForAnimationToEnd
+- assertVisible:
+    id: profile-notifications
+    checked: true
+- assertVisible:
+    id: profile-notifications-device
+    text: ".*This device cannot receive push notifications.*"
 - takeScreenshot: 23-switch-before
+# Another tab and back: still said.
+- tapOn:
+    id: tab-calendar
+- tapOn:
+    id: tab-profile
+- assertVisible:
+    id: profile-notifications-device
+    text: ".*This device cannot receive push notifications.*"
+# Off, though nothing was ever allowed here: saved, nothing left to say.
+- tapOn:
+    id: profile-notifications
+- extendedWaitUntil:
+    notVisible:
+      id: profile-notifications-device
+    timeout: 10000
+- assertVisible:
+    id: profile-notifications
+    checked: false
 # On: the phone says it cannot, and nothing reads as done.
 - runFlow:
     file: ../subflows/tap-and-see.yaml

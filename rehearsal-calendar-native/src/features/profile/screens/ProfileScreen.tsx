@@ -1,9 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, FlatList, Alert } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -14,7 +13,12 @@ import { AppModal } from '../../../shared/components/AppModal';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
-import { askAndRegisterPush, pushPermission, unregisterPushToken } from '../../../shared/services/notifications';
+import {
+  askAndRegisterPush,
+  getPushDeviceState,
+  subscribePushDeviceState,
+  unregisterPushToken,
+} from '../../../shared/services/notifications';
 import { explainPushRegistration } from '../../../shared/utils/pushAlert';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
@@ -50,23 +54,25 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     await logout();
   };
 
-  // The switch is on only when this phone can be notified: the account's
-  // setting and the system permission both. It used to show the setting alone,
-  // which every account starts with on — so after "Later" in onboarding it read
-  // on while nothing had been allowed, and there was no way back to the prompt
-  // but turning it off and on again (cause fix 20, GC01).
-  const [deviceReady, setDeviceReady] = useState(true);
-  useFocusEffect(
-    useCallback(() => {
-      let live = true;
-      pushPermission().then((permission) => {
-        if (live) setDeviceReady(permission === 'granted');
-      });
-      return () => {
-        live = false;
-      };
-    }, [])
-  );
+  // The switch is the account's setting, for every device; below it, what
+  // this phone came to, as the session last found it (cause fix 20). The
+  // switch used to read off whenever the system permission was missing —
+  // then the setting could not be turned off without allowing push first,
+  // while other devices went on being notified — and its "can be notified"
+  // was the permission read on focus, so a token the server refused read as
+  // registered again after a tab change, and an answer given in Settings was
+  // not seen until the next one (review of cause fix 20; GC01, GC02).
+  const deviceState = useSyncExternalStore(subscribePushDeviceState, getPushDeviceState);
+  const deviceNotice =
+    !notificationsEnabled
+      ? null
+      : deviceState === 'denied'
+        ? t.profile.pushNotAllowedHere
+        : deviceState === 'failed'
+          ? t.profile.pushNotRegisteredHere
+          : deviceState === 'unsupported'
+            ? t.profile.pushUnsupported
+            : null;
 
   const handleNotificationsToggle = async (value: boolean) => {
     hapticLight();
@@ -78,11 +84,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         // The device first: the setting is saved only once this phone can be
         // notified. It used to be saved, the result of registering ignored, and
         // success reported over a refusal or a lost connection (GC02).
-        setDeviceReady(true);
         const result = await askAndRegisterPush();
         if (result !== 'registered') {
           setNotificationsEnabled(before);
-          setDeviceReady(false);
           explainPushRegistration(result, t);
           return;
         }
@@ -98,6 +102,16 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       // Revert state on error
       setNotificationsEnabled(before);
     }
+  };
+
+  // The setting is on and this phone is not notified: ask again from here —
+  // the prompt if it was never shown ("Later"), the way to Settings if it was
+  // refused, one more try after a lost connection.
+  const handleRegisterThisDevice = async () => {
+    hapticLight();
+    const result = await askAndRegisterPush();
+    if (result === 'registered') hapticSuccess();
+    else explainPushRegistration(result, t);
   };
 
   const handleLanguageSelect = async (newLanguage: Language) => {
@@ -262,12 +276,27 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <Switch
               testID="profile-notifications"
-              value={notificationsEnabled && deviceReady}
+              value={notificationsEnabled}
               onValueChange={handleNotificationsToggle}
               trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.purple }}
               thumbColor={Colors.text.inverse}
             />
           </View>
+          {deviceNotice && (
+            <TouchableOpacity
+              testID="profile-notifications-device"
+              style={styles.settingItem}
+              disabled={deviceState === 'unsupported'}
+              onPress={handleRegisterThisDevice}
+            >
+              <View style={styles.settingLeft}>
+                <View style={[styles.settingIcon, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                  <Ionicons name="alert-circle" size={20} color={Colors.accent.yellow} />
+                </View>
+                <Text style={[styles.settingValue, { flex: 1 }]}>{deviceNotice}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
 
           {/* Language */}
           <TouchableOpacity
