@@ -1,0 +1,54 @@
+T-119, cause fix 19 (EX01) — red before.
+
+Fix commit: e4b8b88. Base: 9822109.
+Files of the fix returned to the base, the tests kept from the fix:
+  git restore --source=9822109 -- src/shared/services/calendar/export.ts src/shared/services/calendar/import.ts
+  (ownMark.ts stays on disk; the old code does not import it)
+Run (rehearsal-calendar-native):
+  npx jest --selectProjects frontend --silent --testPathPatterns 'exportOwnership|importScope'
+Then:
+  git restore --source=HEAD -- src/shared/services/calendar/export.ts src/shared/services/calendar/import.ts
+
+Output (filtered to results: grep -E "^(FAIL|PASS)|✓|✕|●|Tests:|Expected|Received"):
+
+FAIL frontend src/shared/services/calendar/__tests__/exportOwnership.test.ts (13.143 s)
+  ● Finding the event for a rehearsal with no mapping › does not take the reader's own event that matches it in every field
+    Expected: "new-event"
+    Received: "personal-event"
+  ● Finding the event for a rehearsal with no mapping › takes one of ours from before the URL, and gives it the mark
+  ● A mapping that points at an event that is not ours › a changed rehearsal does not rewrite it; the rehearsal gets its own event
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● A mapping that points at an event that is not ours › a move to another calendar leaves it where it is
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● A mapping that points at an event that is not ours › a cancelled rehearsal does not delete it, and lets the mapping go
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● A mapping that points at an event that is not ours › "remove all exported" does not delete it
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● A mapping that points at an event that is not ours › nor does an event that names another rehearsal
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● A mapping that points at an event that is not ours › a leftover copy that is not ours is not deleted either
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● Our own events are still ours › one from before the URL that already matches is rewritten once, to carry the mark
+FAIL frontend src/shared/services/calendar/__tests__/importScope.test.ts (13.157 s)
+  ● What a sync sends › knows ours from before the URL by the export's own rule, not by how it reads (cause fix 19)
+    - Expected  - 0
+    + Received  + 1
+Tests:       10 failed, 11 passed, 21 total
+
+The two "takes one of ours from before the URL" / "rewritten once" tests fail
+with "TypeError: undefined is not iterable" on mock.calls[0]: the old code
+adopted the unmarked event and never wrote the mark into it.
+Green in exportOwnership on the old code: the two "our own events are deleted
+with their rehearsal" guards (the old code deleted everything). importScope:
+the 7 old tests green.
+
+After the restore to HEAD (e4b8b88), same command:
+PASS frontend src/shared/services/calendar/__tests__/exportOwnership.test.ts (20.234 s)
+PASS frontend src/shared/services/calendar/__tests__/importScope.test.ts (20.418 s)
+Tests:       21 passed, 21 total
