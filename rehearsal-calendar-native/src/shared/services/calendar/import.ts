@@ -17,7 +17,6 @@ import {
   setImportedEventsCount,
   updateLastImportTime,
 } from '../../utils/calendarStorage';
-import { getAllMappings } from '../../utils/calendarMappings';
 import { listDeviceCalendarIds } from './deviceCalendars';
 import { MarkedEvent, ownMarkOf } from './ownMark';
 import { availabilityAPI } from '../api';
@@ -174,27 +173,18 @@ function occurrenceKey(event: Calendar.Event): string {
 export function importCalendarEventsToAvailability(
   calendarIds: string[],
   onProgress?: (current: number, total: number) => void,
-  /**
-   * The exported-rehearsal mappings, when the caller already holds them.
-   *
-   * The export needs the same list, so a sync fetched it twice — once here to
-   * know which events are our own rehearsals and must not be imported as busy
-   * time, once there to know which event belongs to which rehearsal.
-   */
-  knownMappings?: Record<string, { eventId: string; calendarId: string }>,
   /** The session of the work this is a step of; the current one otherwise. */
   session?: SessionStamp
 ): Promise<ImportResult> {
   // The session's work (ES01): the calendars were read for the person signed
   // in when it began, and their hours go to that person's account or nowhere.
-  return sessionWork((stamp) => importForSession(stamp, calendarIds, onProgress, knownMappings), session);
+  return sessionWork((stamp) => importForSession(stamp, calendarIds, onProgress), session);
 }
 
 async function importForSession(
   session: SessionStamp,
   calendarIds: string[],
-  onProgress?: (current: number, total: number) => void,
-  knownMappings?: Record<string, { eventId: string; calendarId: string }>
+  onProgress?: (current: number, total: number) => void
 ): Promise<ImportResult> {
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, errors: [] };
 
@@ -205,21 +195,18 @@ async function importForSession(
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 365);
 
-    const [{ byCalendar, failedCalendarIds }, device, exportedMappings] = await Promise.all([
+    const [{ byCalendar, failedCalendarIds }, device] = await Promise.all([
       fetchCalendarEvents(calendarIds, startDate, endDate),
       deviceCalendarIds(calendarIds),
-      knownMappings ? Promise.resolve(knownMappings) : getAllMappings(session),
     ]);
 
-    // Our own rehearsals are left out, recognised two ways. An event we
-    // exported carries the rehearsal it stands for in its URL, which means the
-    // same thing on every device — whereas a mapping holds the event id, which
-    // is local to the phone that made it. One written before the URL is
-    // recognised by the app's signature in its notes — the export's own rule
-    // (ownMark.ts) — and the mapping is still consulted as well.
-    const exportedEventIds = new Set(Object.values(exportedMappings).map(m => m.eventId));
-    const isOurRehearsal = (event: Calendar.Event) =>
-      ownMarkOf(event as MarkedEvent) !== null || exportedEventIds.has(event.id);
+    // Our own rehearsals are left out, by the export's own rule (ownMark.ts):
+    // the rehearsal in the URL, or the app's signature in the notes of one
+    // written before the URL. A mapping proves nothing: the old guess left
+    // mappings on the reader's own entries, and one taken as proof here kept
+    // that entry's hours out of the sync until a sync after the export had let
+    // it go (review of cause fix 19).
+    const isOurRehearsal = (event: Calendar.Event) => ownMarkOf(event as MarkedEvent) !== null;
 
     let total = 0;
     const calendars = [...byCalendar].map(([calendarId, events]) => {

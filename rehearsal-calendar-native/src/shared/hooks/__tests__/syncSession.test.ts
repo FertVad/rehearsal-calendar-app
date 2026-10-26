@@ -103,7 +103,9 @@ beforeEach(() => {
   (Calendar.createEventAsync as jest.Mock).mockResolvedValue('new-event');
 });
 
-it('sends no calendar of the first person once the mappings come back after the change (ES01)', async () => {
+it('sends nothing as the second person once the mappings come back after the change (ES01)', async () => {
+  // Only the export asks for the mappings now; the import knows our own events
+  // by their mark (review of cause fix 19), so it has run by then.
   const running = runAutoSync();
   await tick();
   expect(mockLateMappings.answer).toBeDefined();
@@ -114,8 +116,7 @@ it('sends no calendar of the first person once the mappings come back after the 
   await running;
 
   expect(mockSent.filter((request) => request.session !== firstPersons)).toEqual([]);
-  expect(calendarStorage.setImportedEventsCount).not.toHaveBeenCalled();
-  expect(calendarStorage.updateLastImportTime).not.toHaveBeenCalled();
+  expect(calendarStorage.updateLastExportTime).not.toHaveBeenCalled();
 });
 
 it('neither creates the event nor records its mapping when the account changed during the search for a copy (ES01)', async () => {

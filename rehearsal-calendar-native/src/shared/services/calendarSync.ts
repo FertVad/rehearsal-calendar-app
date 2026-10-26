@@ -37,8 +37,6 @@ import type {
   RehearsalWithProject,
 } from '../types/calendar';
 
-type Mappings = Record<string, { eventId: string; calendarId: string }>;
-
 /** What one direction of a run came to. */
 export type DirectionOutcome<T> =
   | { status: 'off' } // not switched on: nothing was done
@@ -88,8 +86,7 @@ function exportCalendar(settings: CalendarSyncSettings): string | null {
  * empty list really is empty.
  */
 async function exportRehearsals(
-  session: SessionStamp,
-  knownMappings: Mappings | undefined
+  session: SessionStamp
 ): Promise<(BatchSyncResult & { rehearsals: number }) | null> {
   if (!exportCalendar(await getSyncSettings())) return null;
 
@@ -98,8 +95,7 @@ async function exportRehearsals(
   const res = projectIds.length > 0 ? await rehearsalsAPI.getBatch(projectIds) : null;
   const rehearsals = (res?.data?.rehearsals || []).map(toRehearsalWithProject);
 
-  // Fetched once for both halves, when the import has them.
-  const mappings = knownMappings ?? (await getAllMappings(session));
+  const mappings = await getAllMappings(session);
 
   // The settings as they are now, not as they were when the run began: a run
   // waits on the network, and sync may have been switched off or pointed at
@@ -142,19 +138,15 @@ async function eachDirection<T>(name: string, work: () => Promise<T | null>): Pr
 }
 
 async function syncOnce(session: SessionStamp): Promise<SyncRun> {
-  let mappings: Mappings | undefined;
-
   const imported = await eachDirection('Import', async () => {
     const settings = await getSyncSettings();
     if (!settings.importEnabled || settings.importCalendarIds.length === 0) return null;
-    // The import needs them to leave our own exported rehearsals alone, the
-    // export to match event to rehearsal. Every step runs as this run's
-    // session, handed down (ES01). If they cannot be had, the export asks again.
-    mappings = await getAllMappings(session);
-    return importCalendarEventsToAvailability(settings.importCalendarIds, undefined, mappings, session);
+    // Every step runs as this run's session, handed down (ES01). The import
+    // knows our own events by their mark, so it needs no mappings.
+    return importCalendarEventsToAvailability(settings.importCalendarIds, undefined, session);
   });
 
-  const exported = await eachDirection('Export', () => exportRehearsals(session, mappings));
+  const exported = await eachDirection('Export', () => exportRehearsals(session));
 
   return { import: imported, export: exported };
 }

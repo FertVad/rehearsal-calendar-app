@@ -344,7 +344,7 @@ describe('Exporting soon after the last export', () => {
 
 
 describe('One direction failing (EO02)', () => {
-  // The import and the export share nothing but the mappings, so neither's
+  // The import and the export share nothing, so neither's
   // failure is a reason to skip the other. The import ran in the same try as
   // the export's caller, and an error there skipped the export entirely —
   // under a comment saying it would not.
@@ -373,14 +373,15 @@ describe('One direction failing (EO02)', () => {
     expect(syncAllRehearsals).toHaveBeenCalled();
   });
 
-  it('mappings that could not be fetched for the import still let the export run', async () => {
+  it('mappings that could not be fetched fail the export, not the import', async () => {
     (getAllMappings as jest.Mock).mockRejectedValueOnce(new Error('Calendar mappings unavailable'));
 
     await act(async () => {
       await runAutoSync();
     });
 
-    expect(syncAllRehearsals).toHaveBeenCalled();
+    expect(importCalendarEventsToAvailability).toHaveBeenCalled();
+    expect(syncAllRehearsals).not.toHaveBeenCalled();
   });
 });
 

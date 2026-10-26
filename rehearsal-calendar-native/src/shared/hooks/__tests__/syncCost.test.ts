@@ -80,19 +80,10 @@ describe('One sync with nothing to do', () => {
   });
 
   it('asks for the mappings exactly once', async () => {
-    // The import wants them to leave our own exported rehearsals alone, the
-    // export to match event to rehearsal. Same data, and it used to be fetched
-    // twice. Sharing is safe because nothing on the import path writes to them.
+    // Only the export wants them, to match event to rehearsal; the import knows
+    // our own events by their mark (review of cause fix 19).
     await runOneSync();
     expect((getAllMappings as jest.Mock).mock.calls).toHaveLength(1);
-  });
-
-  it('hands the same mappings to the import', async () => {
-    await runOneSync();
-
-    const [, , knownMappings] = (importCalendarEventsToAvailability as jest.Mock).mock.calls[0];
-    expect(knownMappings).toBeDefined();
-    expect(Object.keys(knownMappings)).toContain('1');
   });
 
   it('does one import and one export, not one per rehearsal', async () => {
