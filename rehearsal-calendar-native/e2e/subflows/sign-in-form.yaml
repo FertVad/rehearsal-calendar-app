@@ -11,6 +11,11 @@ appId: ${APP_ID}
 # before it is there goes nowhere; the inputs do not report focus to wait on.
 # So: type, check it landed — the password by its number of dots — and try
 # again if not.
+#
+# The form opens empty, so only a try after the first erases what the one
+# before left: eraseText takes about three seconds a field, and with a sign-in
+# in every flow it cost the full run three minutes of its 45.
+- evalScript: ${output.signInTries = 0}
 - retry:
     maxRetries: 3
     commands:
@@ -18,11 +23,17 @@ appId: ${APP_ID}
           id: login-email
       - waitForAnimationToEnd:
           timeout: 3000
-      - eraseText
+      - evalScript: ${output.signInTries += 1}
+      - runFlow:
+          when:
+            true: ${output.signInTries > 1}
+          commands:
+            - eraseText
       - inputText: ${EMAIL}
       - assertVisible:
           id: login-email
           text: ${EMAIL}
+- evalScript: ${output.signInTries = 0}
 - retry:
     maxRetries: 3
     commands:
@@ -30,7 +41,12 @@ appId: ${APP_ID}
           id: login-password
       - waitForAnimationToEnd:
           timeout: 3000
-      - eraseText
+      - evalScript: ${output.signInTries += 1}
+      - runFlow:
+          when:
+            true: ${output.signInTries > 1}
+          commands:
+            - eraseText
       - inputText: ${PASSWORD}
       - assertVisible:
           id: login-password

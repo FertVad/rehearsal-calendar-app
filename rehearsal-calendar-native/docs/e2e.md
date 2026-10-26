@@ -239,6 +239,13 @@ or fifteen minutes, a task runs `smoke` and the tags of what it touched, the
 whole set runs when shared code changes and every night; the tags are there
 so that switch needs no rework.
 
+The supervisor gives a full run 45 minutes, setup included (about four), and
+stops it after them — exit 143, every flow passed or not. At 32 flows the run
+took 41 (cause fix 20). A step every flow takes is paid 30 times over: the
+subflows wait for nothing they do not need — the sign-in erases a field only
+on a second try, and `tap-and-see.yaml` asks whether the result is there, not
+whether it has gone, which waited seven seconds every time.
+
 ## Writing flows
 
 - Sign in through `e2e/subflows/sign-in.yaml` (`env: { EMAIL: ... }`). It
