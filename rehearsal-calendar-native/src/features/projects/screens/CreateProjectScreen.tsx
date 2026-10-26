@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
   TextInput,
   Alert,
   FlatList,
@@ -22,6 +21,7 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { createProjectScreenStyles as styles } from '../styles';
+import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 
@@ -169,9 +169,8 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
       </KeyboardAvoidingView>
 
       {/* Timezone Picker Modal */}
-      <Modal
+      <AppModal
         visible={timezonePickerVisible}
-        transparent
         animationType="slide"
         onRequestClose={() => setTimezonePickerVisible(false)}
       >
@@ -214,7 +213,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
             />
           </View>
         </ModalSheet>
-      </Modal>
+      </AppModal>
     </SafeAreaView>
   );
 }

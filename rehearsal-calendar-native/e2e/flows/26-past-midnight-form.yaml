@@ -36,7 +36,13 @@ tags:
 - extendedWaitUntil:
     visible: "Add Rehearsal"
     timeout: 10000
-# Start: 11 PM. A later start moves the end two hours on — here 01:00.
+# Start: 11 PM, then the end: 1 AM, each on its own picker. Both are opened
+# whatever the hour of the run. The form starts at the hour it is; started
+# at 22:00 its end, 00:00, is already past midnight and stays when the start
+# moves, so only a run at 22:xx needed the end's picker - and that second
+# picker of the form was drawn but not in the accessibility tree: React
+# Native's Modal left every second sheet a screen presented out of it (T-208,
+# AppModal). The flow failed at 22:xx and passed at every other hour.
 - tapOn:
     id: rehearsal-start-time
 - extendedWaitUntil:
@@ -59,45 +65,34 @@ tags:
       - waitForAnimationToEnd
 - assertVisible: "PM"
 - tapOn: "Done"
-# A picker opened while the last one is still sliding away is drawn but not
-# in the accessibility tree, so the next waits for this one to be gone.
 - extendedWaitUntil:
     notVisible: "Select Start Time"
     timeout: 10000
-- waitForAnimationToEnd
-# End: 1 AM. Started at 22:00 or later, the form keeps an end already past
-# midnight, so then it is set on its own wheels too.
-- runFlow:
-    when:
-      notVisible:
-        id: rehearsal-end-time
-        text: ".*01:00.*"
+- tapOn:
+    id: rehearsal-end-time
+- extendedWaitUntil:
+    visible: "Select End Time"
+    timeout: 10000
+- repeat:
+    times: 30
+    while:
+      notVisible: "1 o’clock"
     commands:
       - tapOn:
-          id: rehearsal-end-time
-      - extendedWaitUntil:
-          visible: "Select End Time"
-          timeout: 10000
-      - repeat:
-          times: 30
-          while:
-            notVisible: "1 o’clock"
-          commands:
-            - tapOn:
-                point: "133,736"
-            - waitForAnimationToEnd
-      - runFlow:
-          when:
-            visible: "PM"
-          commands:
-            - tapOn:
-                point: "253,673"
-            - waitForAnimationToEnd
-      - assertVisible: "AM"
-      - tapOn: "Done"
-      - extendedWaitUntil:
-          notVisible: "Select End Time"
-          timeout: 10000
+          point: "133,736"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "PM"
+    commands:
+      - tapOn:
+          point: "253,673"
+      - waitForAnimationToEnd
+- assertVisible: "AM"
+- tapOn: "Done"
+- extendedWaitUntil:
+    notVisible: "Select End Time"
+    timeout: 10000
 - assertVisible:
     id: rehearsal-start-time
     text: ".*23:00.*"

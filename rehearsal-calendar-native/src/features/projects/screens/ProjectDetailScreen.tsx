@@ -9,7 +9,6 @@ import {
   Alert,
   FlatList,
   RefreshControl,
-  Modal,
 } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +17,7 @@ import { Colors } from '../../../shared/constants/colors';
 import type { ProjectsStackParamList, ProjectDetailNavigation } from '../../../navigation';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
+import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
 import { parseDateString } from '../../../shared/utils/time';
 import { useTimezone, useToday } from '../../../shared/hooks/useClock';
@@ -617,9 +617,8 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       </ScrollView>
 
       {/* Member Management Modal */}
-      <Modal
+      <AppModal
         visible={!!selectedMember}
-        transparent
         animationType="fade"
         onRequestClose={() => setSelectedMember(null)}
       >
@@ -681,7 +680,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
             </View>
           </View>
         </ModalSheet>
-      </Modal>
+      </AppModal>
     </SafeAreaView>
   );
 }

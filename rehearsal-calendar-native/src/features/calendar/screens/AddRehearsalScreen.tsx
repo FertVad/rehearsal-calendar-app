@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-  Modal,
   FlatList,
   KeyboardAvoidingView,
   Keyboard,
@@ -25,6 +24,7 @@ import { getDateLocale } from '../../../shared/utils/locale';
 import { ActorSelector } from '../components/ActorSelector';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
+import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
 import { useParticipantSeed } from '../hooks/useParticipantSeed';
 import { addRehearsalScreenStyles as styles } from '../styles';
@@ -350,9 +350,8 @@ export default function AddRehearsalScreen() {
       />
 
       {/* Project Picker Modal */}
-      <Modal
+      <AppModal
         visible={form.showProjectPicker}
-        transparent
         animationType="slide"
         onRequestClose={() => form.setShowProjectPicker(false)}
       >
@@ -421,7 +420,7 @@ export default function AddRehearsalScreen() {
             </TouchableOpacity>
           </View>
         </ModalSheet>
-      </Modal>
+      </AppModal>
     </SafeAreaView>
   );
 }

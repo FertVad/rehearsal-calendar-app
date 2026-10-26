@@ -11,7 +11,7 @@ interface ModalSheetProps {
 }
 
 /**
- * What goes directly inside a `Modal`: the dimmed area that closes the sheet
+ * What goes directly inside an `AppModal`: the dimmed area that closes the sheet
  * when tapped, and the sheet itself on top of it.
  *
  * The tappable area sits behind the sheet, never around it. A touchable

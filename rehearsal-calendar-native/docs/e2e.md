@@ -129,6 +129,21 @@ It is below the app, and cannot be made to happen on demand. The rule:
 - Typing is not a tap: the sign-in fields and flows 11-12 type inside `retry`
   because the first keyboard after a cold launch is slow, and that stays.
 
+## A sheet opened twice
+
+React Native's `Modal` presents a view controller from the screen it is on,
+and on iOS the second one a screen presents is not in the accessibility tree:
+the sheet is drawn, the screenshot shows it, and Maestro finds nothing on the
+screen at all, the sheet or what is behind it. A picker opened again, the end
+time after the start, the timezone list after one look: each failed every
+time, animation or not; the first sheet of another screen was whole (T-208,
+probes in `audit/evidence/T-208`). VoiceOver reads the same tree. So no screen
+shows `Modal`: every sheet and dialog goes in `AppModal`, which on iOS puts it
+in a full-window overlay that presents nothing, and keeps `Modal` on Android
+(`modalBackdrops.test.ts` holds it). Flow 26 had met it only when run at
+22:xx, the one hour its form needed the end's picker too; it now opens both
+at any hour.
+
 ## The seed
 
 `e2e/seed.mjs`. Accounts are inserted with confirmed addresses (registration

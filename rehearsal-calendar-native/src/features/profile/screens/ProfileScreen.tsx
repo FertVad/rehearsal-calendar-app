@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, Modal, FlatList, Alert } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, FlatList, Alert } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -10,6 +10,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import type { Language } from '../../../i18n/translations';
 import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/components';
+import { AppModal } from '../../../shared/components/AppModal';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
@@ -358,9 +359,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       </ScrollView>
 
       {/* Timezone Selection Modal */}
-      <Modal
+      <AppModal
         visible={timezoneModalVisible}
-        transparent
         animationType="slide"
         onRequestClose={() => setTimezoneModalVisible(false)}
       >
@@ -400,12 +400,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             />
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Language Selection Modal */}
-      <Modal
+      <AppModal
         visible={languageModalVisible}
-        transparent
         animationType="slide"
         onRequestClose={() => setLanguageModalVisible(false)}
       >
@@ -446,12 +445,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Week Start Selection Modal */}
-      <Modal
+      <AppModal
         visible={weekStartModalVisible}
-        transparent
         animationType="slide"
         onRequestClose={() => setWeekStartModalVisible(false)}
       >
@@ -492,12 +490,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Delete Account Confirmation Modal */}
-      <Modal
+      <AppModal
         visible={deleteAccountModalVisible}
-        transparent
         animationType="fade"
         onRequestClose={() => setDeleteAccountModalVisible(false)}
       >
@@ -554,7 +551,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           </View>
         </View>
-      </Modal>
+      </AppModal>
     </SafeAreaView>
   );
 }

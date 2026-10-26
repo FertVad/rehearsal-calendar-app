@@ -28,6 +28,7 @@ module.exports = {
         // Mock React Native modules
         '^react-native$': '<rootDir>/src/__tests__/__mocks__/react-native.js',
         '^react-native-calendars$': '<rootDir>/src/__tests__/__mocks__/react-native-calendars.js',
+        '^react-native-screens$': '<rootDir>/src/__tests__/__mocks__/react-native-screens.js',
         '^@expo/vector-icons$': '<rootDir>/src/__tests__/__mocks__/expo-vector-icons.js',
         '^expo-clipboard$': '<rootDir>/src/__tests__/__mocks__/expo-clipboard.js',
         '^expo-calendar$': '<rootDir>/src/__tests__/__mocks__/expo-calendar.js',
