@@ -1,0 +1,47 @@
+# T-208 probe: a Modal opened and closed on the profile tab, then the first
+# picker of the rehearsal form — another screen presents it.
+appId: ${APP_ID}
+name: T-208 probe - modal then another screen's modal
+---
+- runFlow:
+    file: subflows/sign-in.yaml
+    env:
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element: ".*Tel Aviv \\(UTC\\+2\\).*"
+    direction: DOWN
+    centerElement: true
+- tapOn: ".*Tel Aviv \\(UTC\\+2\\).*"
+- extendedWaitUntil:
+    visible: "Select Timezone"
+    timeout: 10000
+- tapOn: "Close"
+- extendedWaitUntil:
+    notVisible: "Select Timezone"
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- tapOn:
+    id: rehearsal-start-time
+- extendedWaitUntil:
+    visible: "Select Start Time"
+    timeout: 10000
+- takeScreenshot: probe-other-screen

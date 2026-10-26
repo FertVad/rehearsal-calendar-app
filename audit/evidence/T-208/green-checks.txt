@@ -1,0 +1,27 @@
+On f9abfc5 (same tree as the commit), Node 22:
+
+$ npm run type-check            -> tsc --noEmit, no errors
+$ npm run check:secrets         -> {"summary":"pass","mode":"worktree","files":1130,"findings":0,"errors":0}
+$ npx jest --selectProjects frontend --silent
+Tests:       845 passed, 845 total
+
+Two earlier full runs each had one different failure, both passing alone and
+neither rendering a sheet - load-dependent, not this change:
+  useAvailabilityDataMultiDay.test.ts "does not push out a slot of the next day with the same hours" (alone: 14/14)
+  CalendarSyncSettingsScreen.onePath.test.tsx "exports each rehearsal under its own title (EO05)" (alone: passes)
+
+$ npx jest --selectProjects frontend --silent --testPathPatterns "clockRange|useAddRehearsalSubmit|useAddRehearsalForm"
+Tests:       57 passed, 57 total          (DF04 guards)
+
+Flows with sheets, on the fix:
+$ npm run e2e -- e2e/flows/02-create-project-from-rehearsal-form.yaml e2e/flows/23-profile-timezone.yaml e2e/flows/27-past-midnight-morning-slot.yaml
+[Passed] Create a project from the rehearsal form (1m 25s)
+[Passed] The profile's timezone, not the device's (1m 40s)
+[Passed] A morning slot of his own outlives a save of the morning (1m 52s)
+3/3 Flows Passed in 4m 58s
+$ npm run e2e -- e2e/flows/03-create-project.yaml e2e/flows/16-switch-account-unread-language.yaml e2e/flows/19-chosen-project-deleted.yaml e2e/flows/25-past-midnight-availability.yaml
+[Passed] Create a project (1m 26s)
+[Passed] Switch accounts - count and language (1m 27s)
+[Passed] Chosen project deleted (1m 9s)
+[Passed] A busy slot past midnight is one slot, on both days (1m 13s)
+4/4 Flows Passed in 5m 15s
