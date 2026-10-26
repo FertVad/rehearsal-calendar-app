@@ -16,8 +16,14 @@ interface UnreadContextValue {
   unreadCount: number;
   /** Ask the server again — after a push arrives, or the app comes forward. */
   refresh: () => Promise<void>;
-  /** Without ids, marks the whole inbox. */
-  markRead: (ids?: number[]) => Promise<void>;
+  /**
+   * Marks these read; an empty list marks nothing. Every change answers whether
+   * the server took it, so a screen that showed it at once can take it back
+   * (cause fix 21: NI02).
+   */
+  markRead: (ids: number[]) => Promise<boolean>;
+  /** The whole inbox, asked for by name — the loaded page and the rest (NI06). */
+  markAllRead: () => Promise<boolean>;
   /** Deleting an unread one lowers the count, so it goes through here too. */
   remove: (id: number) => Promise<boolean>;
   removeAll: () => Promise<boolean>;
@@ -93,43 +99,42 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
     }
   }, [order, remember]);
 
-  // Every change answers with the count it leaves behind.
+  // Every change answers with the count it leaves behind, and with whether it
+  // happened at all. One way for all four: marking read used to swallow its
+  // failure and fulfil like a success, and the inbox declared the cards read
+  // while the server still had them unread (NI02).
   const change = useCallback(
-    (send: () => Promise<{ data?: { unreadCount?: number } }>) =>
-      order.write(async (answer) => {
-        const res = await send();
-        if (answer()) remember(res.data?.unreadCount ?? 0);
-      }),
+    async (what: string, send: () => Promise<{ data?: { unreadCount?: number } }>) => {
+      try {
+        await order.write(async (answer) => {
+          const res = await send();
+          if (answer()) remember(res.data?.unreadCount ?? 0);
+        });
+        return true;
+      } catch (error) {
+        logger.warn(`[Unread] Could not ${what}:`, error);
+        return false;
+      }
+    },
     [order, remember]
   );
 
-  const markRead = useCallback(async (ids?: number[]) => {
-    try {
-      await change(() => notificationsAPI.markRead(ids));
-    } catch (error) {
-      logger.warn('[Unread] Could not mark as read:', error);
-    }
-  }, [change]);
-
-  const remove = useCallback(async (id: number) => {
-    try {
-      await change(() => notificationsAPI.remove(id));
-      return true;
-    } catch (error) {
-      logger.warn('[Unread] Could not delete:', error);
-      return false;
-    }
-  }, [change]);
-
-  const removeAll = useCallback(async () => {
-    try {
-      await change(() => notificationsAPI.removeAll());
-      return true;
-    } catch (error) {
-      logger.warn('[Unread] Could not clear the inbox:', error);
-      return false;
-    }
-  }, [change]);
+  const markRead = useCallback(
+    (ids: number[]) => change('mark as read', () => notificationsAPI.markRead(ids)),
+    [change]
+  );
+  const markAllRead = useCallback(
+    () => change('mark the inbox read', () => notificationsAPI.markAllRead()),
+    [change]
+  );
+  const remove = useCallback(
+    (id: number) => change('delete', () => notificationsAPI.remove(id)),
+    [change]
+  );
+  const removeAll = useCallback(
+    () => change('clear the inbox', () => notificationsAPI.removeAll()),
+    [change]
+  );
 
   // The badge is not set at the call sites; it follows the count. Six places
   // used to set it, which is six chances for it to disagree with the bell.
@@ -151,8 +156,8 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
   }, [signedIn, session]);
 
   const value = useMemo(
-    () => ({ unreadCount, refresh, markRead, remove, removeAll }),
-    [unreadCount, refresh, markRead, remove, removeAll]
+    () => ({ unreadCount, refresh, markRead, markAllRead, remove, removeAll }),
+    [unreadCount, refresh, markRead, markAllRead, remove, removeAll]
   );
 
   return <UnreadContext.Provider value={value}>{children}</UnreadContext.Provider>;

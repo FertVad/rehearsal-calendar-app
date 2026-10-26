@@ -14,14 +14,18 @@ import { changeOwner, resetSessionForTests } from '../../shared/services/session
 
 const mockUnreadCount = jest.fn();
 const mockMarkRead = jest.fn();
+const mockMarkAllRead = jest.fn();
 const mockRemove = jest.fn();
 const mockRemoveAll = jest.fn();
 const mockSetBadge = jest.fn();
+// What markRead answered, call by call.
+const mockResults: unknown[] = [];
 
 jest.mock('../../shared/services/api', () => ({
   notificationsAPI: {
     unreadCount: (...args: any[]) => mockUnreadCount(...args),
     markRead: (...args: any[]) => mockMarkRead(...args),
+    markAllRead: (...args: any[]) => mockMarkAllRead(...args),
     remove: (...args: any[]) => mockRemove(...args),
     removeAll: (...args: any[]) => mockRemoveAll(...args),
   },
@@ -49,17 +53,17 @@ const mockAuth: { user: { id: number } | null } = { user: { id: 1 } };
 jest.mock('../AuthContext', () => ({ useAuth: () => mockAuth }));
 
 function Probe() {
-  const { unreadCount, refresh, markRead, remove, removeAll } = useUnread();
+  const { unreadCount, refresh, markRead, markAllRead, remove, removeAll } = useUnread();
   return (
     <>
       <Text testID="count">{String(unreadCount)}</Text>
       <TouchableOpacity testID="refresh" onPress={() => refresh()}>
         <Text>refresh</Text>
       </TouchableOpacity>
-      <TouchableOpacity testID="read-all" onPress={() => markRead()}>
+      <TouchableOpacity testID="read-all" onPress={() => markAllRead()}>
         <Text>all</Text>
       </TouchableOpacity>
-      <TouchableOpacity testID="read-one" onPress={() => markRead([7])}>
+      <TouchableOpacity testID="read-one" onPress={async () => { mockResults.push(await markRead([7])); }}>
         <Text>one</Text>
       </TouchableOpacity>
       <TouchableOpacity testID="remove-one" onPress={() => remove(7)}>
@@ -83,6 +87,8 @@ beforeEach(() => {
   for (const k of Object.keys(mockStorage)) delete mockStorage[k];
   mockUnreadCount.mockReset().mockResolvedValue({ data: { unreadCount: 3 } });
   mockMarkRead.mockReset().mockResolvedValue({ data: { unreadCount: 0 } });
+  mockMarkAllRead.mockReset().mockResolvedValue({ data: { unreadCount: 0 } });
+  mockResults.length = 0;
   mockRemove.mockReset().mockResolvedValue({ data: { unreadCount: 2 } });
   mockRemoveAll.mockReset().mockResolvedValue({ data: { unreadCount: 0 } });
   mockSetBadge.mockReset();
@@ -174,7 +180,8 @@ describe('Unread count', () => {
     fireEvent.press(getByTestId('read-all'));
 
     await waitFor(() => expect(getByTestId('count').props.children).toBe('0'));
-    expect(mockMarkRead).toHaveBeenCalledWith(undefined);
+    expect(mockMarkAllRead).toHaveBeenCalledWith();
+    expect(mockMarkRead).not.toHaveBeenCalled();
   });
 
   it('marks one by id and takes what remains', async () => {
@@ -185,6 +192,18 @@ describe('Unread count', () => {
 
     await waitFor(() => expect(getByTestId('count').props.children).toBe('2'));
     expect(mockMarkRead).toHaveBeenCalledWith([7]);
+  });
+
+  // A failed "read" fulfilled like a success, and the inbox showed the cards
+  // read while the server still had them unread (cause fix 21: NI02).
+  it('reports whether marking read actually happened', async () => {
+    mockMarkRead.mockRejectedValueOnce(new Error('offline'));
+    const { getByTestId } = renderProbe();
+
+    await act(async () => { fireEvent.press(getByTestId('read-one')); });
+    await act(async () => { fireEvent.press(getByTestId('read-one')); });
+
+    expect(mockResults).toEqual([false, true]);
   });
 
   it('keeps the last known count when the request fails', async () => {
@@ -281,7 +300,7 @@ describe('Unread count across accounts (NI03)', () => {
   // of the previous person still on its way kept the next person's count at 0.
   it('shows the next person their count while the previous one\'s change is on its way', async () => {
     const marking = held<any>();
-    mockMarkRead.mockReturnValueOnce(marking.promise);
+    mockMarkAllRead.mockReturnValueOnce(marking.promise);
     const { getByTestId } = renderProbe();
     fireEvent.press(getByTestId('read-all'));
 
@@ -323,7 +342,7 @@ describe('Unread count and late answers (NI04)', () => {
   // answered first and the 0 of "Read all" was then dropped as older.
   it('keeps the count of a mark-all when a read answers while it is on its way', async () => {
     const marking = held<any>();
-    mockMarkRead.mockReturnValueOnce(marking.promise);
+    mockMarkAllRead.mockReturnValueOnce(marking.promise);
     mockUnreadCount.mockResolvedValueOnce({ data: { unreadCount: 5 } });
     const { getByTestId } = renderProbe();
 
@@ -339,7 +358,7 @@ describe('Unread count and late answers (NI04)', () => {
     const one = held<any>();
     const all = held<any>();
     mockRemove.mockReturnValueOnce(one.promise);
-    mockMarkRead.mockReturnValueOnce(all.promise);
+    mockMarkAllRead.mockReturnValueOnce(all.promise);
     const { getByTestId } = renderProbe();
 
     fireEvent.press(getByTestId('remove-one'));

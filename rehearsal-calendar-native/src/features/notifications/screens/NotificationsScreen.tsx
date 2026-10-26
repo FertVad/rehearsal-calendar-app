@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -24,19 +24,15 @@ import { useUnread } from '../../../contexts/UnreadContext';
 import { logger } from '../../../shared/utils/logger';
 import { useRequestOrder } from '../../../shared/hooks/useSession';
 import { styles } from '../styles/notificationsScreenStyles';
+import {
+  emptyInbox,
+  pageOf,
+  withFirstPage,
+  withNextPage,
+  type Inbox,
+  type NotificationItem,
+} from '../inboxPages';
 import type { AppNavigation } from '../../../navigation';
-
-interface NotificationItem {
-  id: number;
-  type: string;
-  title: string;
-  body: string;
-  data: { rehearsalId?: number | string; projectId?: number | string };
-  relatedType: 'rehearsal' | 'project' | null;
-  relatedId: number | null;
-  read: boolean;
-  createdAt: string;
-}
 
 /** Matches the notification type to the icon the rest of the app uses for it. */
 function iconFor(type: string): keyof typeof Ionicons.glyphMap {
@@ -52,11 +48,22 @@ function iconFor(type: string): keyof typeof Ionicons.glyphMap {
 export default function NotificationsScreen() {
   const navigation = useNavigation<AppNavigation<'Notifications'>>();
   const { t } = useI18n();
-  const { markRead, remove, removeAll } = useUnread();
+  const { unreadCount, markRead, markAllRead, remove, removeAll } = useUnread();
 
-  const [items, setItems] = useState<NotificationItem[]>([]);
+  const [inbox, setInbox] = useState<Inbox>(emptyInbox);
+  const items = inbox.items;
+  const setItems = useCallback(
+    (next: (prev: NotificationItem[]) => NotificationItem[]) =>
+      setInbox((prev) => ({ ...prev, items: next(prev.items) })),
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+  // The last read of the list failed (NI05). An empty list said "Nothing yet"
+  // when the server had not been reached at all.
+  const [loadError, setLoadError] = useState(false);
 
   // A list read while a change was on its way may still hold the deleted card,
   // or the read one as unread: reads and changes on this screen go in one order
@@ -73,22 +80,60 @@ export default function NotificationsScreen() {
     const answer = order.beginRead();
     try {
       const res = await notificationsAPI.list();
-      if (answer()) setItems(res.data.notifications || []);
+      if (answer()) {
+        setInbox((prev) => withFirstPage(prev, pageOf(res.data)));
+        setLoadError(false);
+      }
     } catch (err) {
       logger.warn('[Notifications] Could not load:', err);
+      if (answer()) setLoadError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [order]);
 
-  // Reading the inbox is what marks it read — this screen is the only place the
-  // notifications can be read at all, so arriving here is the acknowledgement.
-  // The badge follows the count the server reports back.
+  // The page after the last one read: on reaching the end of the list, or on
+  // the button under it (NI01).
+  const loadMore = useCallback(async () => {
+    const cursor = inbox.nextCursor;
+    if (!cursor || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    const answer = order.beginRead();
+    try {
+      const res = await notificationsAPI.list(cursor);
+      if (answer()) {
+        setInbox((prev) => withNextPage(prev, pageOf(res.data), cursor));
+        setLoadError(false);
+      }
+    } catch (err) {
+      logger.warn('[Notifications] Could not load more:', err);
+      if (answer()) setLoadError(true);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [inbox.nextCursor, order]);
+
+  // A "read" shows at once and is taken back if the server did not take it
+  // (NI02): the cards used to stay read on screen while the server, and the
+  // count, still had them unread.
+  const unmark = useCallback(
+    (ids: Set<number>) => setItems((prev) => prev.map((n) => (ids.has(n.id) ? { ...n, read: false } : n))),
+    [setItems]
+  );
+
+  // The whole inbox, by name — the pages not loaded too. The badge follows the
+  // count the server reports back.
   const markEverythingRead = useCallback(async () => {
-    await change(() => markRead());
+    const wereUnread = new Set(items.filter((n) => !n.read).map((n) => n.id));
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-  }, [markRead, change]);
+    const ok = await change(() => markAllRead());
+    if (ok) return;
+    unmark(wereUnread);
+    Alert.alert(t.common.error, t.notifications.markReadError);
+  }, [items, markAllRead, change, setItems, unmark, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -98,10 +143,13 @@ export default function NotificationsScreen() {
 
   const openTarget = async (item: NotificationItem) => {
     // Opening it is reading it. Without this the count stayed lit after the user
-    // had plainly dealt with the thing.
+    // had plainly dealt with the thing. It opens at once; if the server did not
+    // take the "read", the card is unread again when the reader comes back.
     if (!item.read) {
-      await change(() => markRead([item.id]));
       setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
+      change(() => markRead([item.id])).then((ok) => {
+        if (!ok) unmark(new Set([item.id]));
+      });
     }
 
     const rehearsalId = item.relatedType === 'rehearsal' ? item.relatedId : null;
@@ -132,7 +180,9 @@ export default function NotificationsScreen() {
     return t.notifications.daysAgo(Math.floor(hours / 24));
   };
 
-  const hasUnread = items.some((n) => !n.read);
+  // The count is the whole inbox's; the cards are only the pages read so far
+  // (NI01). Older ones unread under fifty read ones hid the button.
+  const hasUnread = unreadCount > 0 || items.some((n) => !n.read);
 
   const deleteOne = async (item: NotificationItem) => {
     // Gone from the list first: the row has already slid away under the
@@ -166,12 +216,12 @@ export default function NotificationsScreen() {
         onPress: async () => {
           // Same care as a single row: emptied on screen at once, and put back
           // in full if the server never heard about it.
-          const before = items;
-          setItems([]);
+          const before = inbox;
+          setInbox(emptyInbox);
 
           const ok = await change(() => removeAll());
           if (!ok) {
-            setItems(before);
+            setInbox(before);
             Alert.alert(t.common.error, t.notifications.deleteError);
           }
         },
@@ -272,12 +322,45 @@ export default function NotificationsScreen() {
               tintColor={Colors.accent.purple}
             />
           }
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          // A refresh that failed leaves the cards it had, and says so.
+          ListHeaderComponent={
+            loadError && items.length > 0 ? (
+              <Text testID="inbox-load-error" style={styles.loadErrorBanner}>
+                {t.notifications.loadError}
+              </Text>
+            ) : null
+          }
+          // Reaching the end loads the next page by itself; the button is for
+          // when it did not — it failed, or a change on its way set it aside.
+          ListFooterComponent={
+            inbox.nextCursor ? (
+              loadingMore ? (
+                <ActivityIndicator style={styles.more} color={Colors.accent.purple} />
+              ) : (
+                <TouchableOpacity testID="inbox-more" style={styles.more} onPress={loadMore}>
+                  <Text style={styles.moreText}>{t.notifications.showOlder}</Text>
+                </TouchableOpacity>
+              )
+            ) : null
+          }
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="notifications-off-outline" size={48} color={Colors.text.tertiary} />
-              <Text style={styles.emptyTitle}>{t.notifications.empty}</Text>
-              <Text style={styles.emptyHint}>{t.notifications.emptyHint}</Text>
-            </View>
+            loadError ? (
+              <View style={styles.empty}>
+                <Ionicons name="cloud-offline-outline" size={48} color={Colors.text.tertiary} />
+                <Text style={styles.emptyTitle}>{t.notifications.loadError}</Text>
+                <TouchableOpacity testID="inbox-retry" style={styles.more} onPress={() => load()}>
+                  <Text style={styles.moreText}>{t.common.retry}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.empty}>
+                <Ionicons name="notifications-off-outline" size={48} color={Colors.text.tertiary} />
+                <Text style={styles.emptyTitle}>{t.notifications.empty}</Text>
+                <Text style={styles.emptyHint}>{t.notifications.emptyHint}</Text>
+              </View>
+            )
           }
         />
       )}

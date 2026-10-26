@@ -496,15 +496,20 @@ export const calendarSyncAPI = {
 
 // Notifications API (the inbox — what was sent, and what is still unread)
 export const notificationsAPI = {
-  list: (limit = 50, offset = 0) =>
-    api.get('/native/notifications', { params: { limit, offset } }),
+  // One page, newest first. `cursor` is the `nextCursor` of the page before;
+  // the answer's own is null on the last page (cause fix 21: NI01).
+  list: (cursor?: string | null) =>
+    api.get('/native/notifications', { params: cursor ? { cursor } : {} }),
 
   unreadCount: () => api.get('/native/notifications/unread-count'),
 
-  // No ids marks the whole inbox. Answers with the count that remains, so the
-  // badge can be set without asking again.
-  markRead: (ids?: number[]) =>
-    api.post('/native/notifications/read', ids ? { ids } : {}),
+  // Both answer with the count that remains, so the badge can be set without
+  // asking again. A list marks only what it names, an empty one nothing; the
+  // whole inbox is asked for by name (NI06).
+  markRead: (ids: number[]) =>
+    api.post('/native/notifications/read', { ids }),
+  markAllRead: () =>
+    api.post('/native/notifications/read', { all: true }),
 
   remove: (id: number) => api.delete(`/native/notifications/${id}`),
 

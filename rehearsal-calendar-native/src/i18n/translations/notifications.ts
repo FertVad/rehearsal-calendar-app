@@ -9,6 +9,9 @@ export interface NotificationsTranslations {
   clearAllConfirmBody: string;
   loadError: string;
   deleteError: string;
+  markReadError: string;
+  /** Under the last card, while there are older ones to load. */
+  showOlder: string;
   /** Relative age of a notification. */
   justNow: string;
   minutesAgo: (minutes: number) => string;
@@ -27,6 +30,8 @@ export const ru: { notifications: NotificationsTranslations } = {
     clearAllConfirm: 'Очистить уведомления?',
     clearAllConfirmBody: 'Список будет пуст. Отменить это нельзя.',
     deleteError: 'Не удалось удалить',
+    markReadError: 'Не удалось отметить прочитанным',
+    showOlder: 'Показать более ранние',
     loadError: 'Не удалось загрузить уведомления',
     justNow: 'только что',
     minutesAgo: (minutes: number) => `${minutes} мин назад`,
@@ -46,6 +51,8 @@ export const en: { notifications: NotificationsTranslations } = {
     clearAllConfirm: 'Clear notifications?',
     clearAllConfirmBody: 'The list will be empty. This cannot be undone.',
     deleteError: 'Could not delete',
+    markReadError: 'Could not mark as read',
+    showOlder: 'Show older',
     loadError: 'Could not load notifications',
     justNow: 'just now',
     minutesAgo: (minutes: number) => `${minutes} min ago`,
@@ -65,6 +72,8 @@ export const es: { notifications: NotificationsTranslations } = {
     clearAllConfirm: '¿Vaciar las notificaciones?',
     clearAllConfirmBody: 'La lista quedará vacía. Esto no se puede deshacer.',
     deleteError: 'No se pudo eliminar',
+    markReadError: 'No se pudo marcar como leída',
+    showOlder: 'Mostrar anteriores',
     loadError: 'No se pudieron cargar las notificaciones',
     justNow: 'ahora mismo',
     minutesAgo: (minutes: number) => `hace ${minutes} min`,
@@ -84,6 +93,8 @@ export const de: { notifications: NotificationsTranslations } = {
     clearAllConfirm: 'Mitteilungen leeren?',
     clearAllConfirmBody: 'Die Liste wird leer sein. Das lässt sich nicht rückgängig machen.',
     deleteError: 'Konnte nicht gelöscht werden',
+    markReadError: 'Konnte nicht als gelesen markiert werden',
+    showOlder: 'Ältere anzeigen',
     loadError: 'Mitteilungen konnten nicht geladen werden',
     justNow: 'gerade eben',
     minutesAgo: (minutes: number) => `vor ${minutes} Min`,

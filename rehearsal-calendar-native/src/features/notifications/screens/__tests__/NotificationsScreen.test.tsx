@@ -16,9 +16,9 @@ jest.mock('../../../../shared/services/api', () => ({
   notificationsAPI: { list: (...args: any[]) => mockList(...args) },
 }));
 const mockRemove = jest.fn((_id: number) => Promise.resolve(true));
-const mockMarkRead = jest.fn((_ids?: number[]) => Promise.resolve() as Promise<unknown>);
+const mockMarkAllRead = jest.fn(() => Promise.resolve(true) as Promise<unknown>);
 jest.mock('../../../../contexts/UnreadContext', () => ({
-  useUnread: () => ({ markRead: mockMarkRead, remove: mockRemove, removeAll: jest.fn() }),
+  useUnread: () => ({ unreadCount: 0, markRead: jest.fn(), markAllRead: mockMarkAllRead, remove: mockRemove, removeAll: jest.fn() }),
 }));
 jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: jest.requireActual('../../../../i18n/translations').en }),
@@ -124,14 +124,14 @@ it('keeps cards read when a load answers while "Mark all read" is on its way', a
   const markAll = await waitFor(() => screen.getByLabelText('Mark all read'));
 
   const marking = deferred();
-  mockMarkRead.mockReturnValueOnce(marking.promise);
+  mockMarkAllRead.mockReturnValueOnce(marking.promise);
   let pressed!: Promise<void>;
   act(() => { pressed = markAll.props.onPress(); });
 
   mockList.mockResolvedValueOnce({ data: { notifications: [unread(1, 'Act I moved')] } });
   await act(async () => { mockFocus.run?.(); });
 
-  await act(async () => { marking.resolve(undefined); await pressed; });
+  await act(async () => { marking.resolve(true); await pressed; });
 
   expect(screen.queryByLabelText('Mark all read')).toBeNull();
 });
