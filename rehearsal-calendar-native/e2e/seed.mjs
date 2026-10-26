@@ -110,9 +110,6 @@ export const PEOPLE = {
   tuzenbach: { email: 'tuzenbach@e2e.test', firstName: 'Nikolai', lastName: 'Tuzenbach', onboarded: true },
   // Marks all read and signs out before it reaches the server (37).
   solyony: { email: 'solyony@e2e.test', firstName: 'Vasily', lastName: 'Solyony', onboarded: true },
-  // Turns notifications on in the profile on a phone that cannot receive them
-  // (33); the account's setting starts on, as every account's does.
-  polonius: { email: 'polonius@e2e.test', firstName: 'Lord', lastName: 'Polonius', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };

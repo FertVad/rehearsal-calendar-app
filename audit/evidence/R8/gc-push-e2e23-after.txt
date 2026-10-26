@@ -1,0 +1,13 @@
+# Cause fix 20 (GC01, GC02, GC03) - the switch's steps in e2e flow 23, green after
+# Tree: b8d5a0f (the fix) + flow 33's steps at the end of flow 23, polonius out of the seed.
+# Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/23-profile-timezone.yaml
+# Date: 2026-10-26
+
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] The profile's timezone, not the device's (2m 47s)
+
+1/1 Flow Passed in 2m 48s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
