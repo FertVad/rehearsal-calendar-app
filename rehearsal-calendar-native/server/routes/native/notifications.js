@@ -14,22 +14,30 @@ import {
   countUnread,
   markRead,
   deleteNotifications,
+  parseCursor,
 } from '../../services/notifications/notificationStore.js';
 import { logger } from '../../utils/logger.js';
 
 const router = Router();
 
 /**
- * GET /api/native/notifications
- * The caller's own inbox, newest first, with the unread count.
+ * GET /api/native/notifications?limit=&cursor=
+ * One page of the caller's own inbox, newest first, with the unread count of
+ * the whole of it. `nextCursor` asks for the page after this one, and is null
+ * on the last (cause fix 21: NI01). Without a cursor, the newest page.
  */
 router.get('/', requireAuth, asyncHandler(async (req, res) => {
   try {
-    const { limit, offset } = req.query;
-    const notifications = await listNotifications(req.userId, { limit, offset });
+    const { limit, cursor } = req.query;
+    const after = cursor === undefined ? null : parseCursor(cursor);
+    if (cursor !== undefined && !after) {
+      return res.status(400).json({ error: 'Invalid cursor' });
+    }
+
+    const { notifications, nextCursor } = await listNotifications(req.userId, { limit, cursor: after });
     const unreadCount = await countUnread(req.userId);
 
-    res.json({ notifications, unreadCount });
+    res.json({ notifications, unreadCount, nextCursor });
   } catch (err) {
     logger.error('[Notifications] List failed:', err);
     res.status(500).json({ error: 'Failed to load notifications' });
@@ -50,20 +58,36 @@ router.get('/unread-count', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 /**
+ * What a POST /read body asks to mark: a list of ids, or 'all'. Null for a body
+ * that says neither plainly.
+ *
+ * The whole inbox is asked for by name, `{ all: true }`, and a list — empty
+ * too — covers only what it names (cause fix 21: NI06): `{ ids: [] }` used to
+ * mark everything. `{}` still means the whole inbox, as the builds already on
+ * phones send it for "Mark all read".
+ */
+function readScope(body) {
+  const { ids, all } = body || {};
+  if (all !== undefined) return all === true && ids === undefined ? 'all' : null;
+  if (ids === undefined) return 'all';
+  const valid = Array.isArray(ids) && ids.every((id) => Number.isSafeInteger(id) && id > 0);
+  return valid ? ids : null;
+}
+
+/**
  * POST /api/native/notifications/read
- * Body: { ids: number[] } to mark those, or {} for the whole inbox.
+ * Body: { ids: number[] } to mark those, or { all: true } for the whole inbox.
  * Answers with the unread count that remains, so the client can set the badge
  * without a second round trip.
  */
 router.post('/read', requireAuth, asyncHandler(async (req, res) => {
   try {
-    const { ids } = req.body || {};
-
-    if (ids !== undefined && !Array.isArray(ids)) {
-      return res.status(400).json({ error: 'ids must be an array' });
+    const scope = readScope(req.body);
+    if (!scope) {
+      return res.status(400).json({ error: 'Send ids as a list of notification ids, or all: true' });
     }
 
-    const unreadCount = await markRead(req.userId, ids);
+    const unreadCount = await markRead(req.userId, scope);
     res.json({ success: true, unreadCount });
   } catch (err) {
     logger.error('[Notifications] Mark read failed:', err);
@@ -103,7 +127,7 @@ router.delete('/:id', requireAuth, asyncHandler(async (req, res) => {
  */
 router.delete('/', requireAuth, asyncHandler(async (req, res) => {
   try {
-    const { deleted, unreadCount } = await deleteNotifications(req.userId);
+    const { deleted, unreadCount } = await deleteNotifications(req.userId, 'all');
     res.json({ success: true, deleted, unreadCount });
   } catch (err) {
     logger.error('[Notifications] Delete all failed:', err);
