@@ -64,12 +64,17 @@ router.get('/unread-count', requireAuth, asyncHandler(async (req, res) => {
  * The whole inbox is asked for by name, `{ all: true }`, and a list — empty
  * too — covers only what it names (cause fix 21: NI06): `{ ids: [] }` used to
  * mark everything. `{}` still means the whole inbox, as the builds already on
- * phones send it for "Mark all read".
+ * phones send it for "Mark all read" — that body exactly: a list, or an object
+ * with any other key (`[1]`, `{ id: 1 }`), names neither and is refused
+ * (review), where it used to fall through to "all".
  */
 function readScope(body) {
-  const { ids, all } = body || {};
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) return null;
+  const keys = Object.keys(body);
+  if (keys.length === 0) return 'all';
+  if (keys.some((key) => key !== 'ids' && key !== 'all')) return null;
+  const { ids, all } = body;
   if (all !== undefined) return all === true && ids === undefined ? 'all' : null;
-  if (ids === undefined) return 'all';
   const valid = Array.isArray(ids) && ids.every((id) => Number.isSafeInteger(id) && id > 0);
   return valid ? ids : null;
 }

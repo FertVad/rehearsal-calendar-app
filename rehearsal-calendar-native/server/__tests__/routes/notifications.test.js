@@ -209,6 +209,11 @@ describe('Notification inbox', () => {
       ['ids that are not whole', { ids: [1.5] }],
       ['both all and ids', { all: true, ids: [1] }],
       ['all that is not true', { all: 'yes' }],
+      // Only `{}` is the old builds' "all"; nothing else falls through to it.
+      ['an empty list for a body', []],
+      ['a list of ids for a body', [1]],
+      ['a key it does not know', { id: 1 }],
+      ['ids beside a key it does not know', { ids: [1], also: 'all' }],
     ])('refuses %s, marking nothing', async (_, body) => {
       await send([testData.adminId]);
 
