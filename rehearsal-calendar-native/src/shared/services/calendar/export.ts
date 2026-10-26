@@ -19,6 +19,7 @@ import {
   updateLastExportTime,
 } from '../../utils/calendarStorage';
 import { logger } from '../../utils/logger';
+import { eventNotesFor, eventUrlFor, isOwnEventOf, LEGACY, MarkedEvent, ownMarkOf } from './ownMark';
 import { appTimezone } from '../../utils/time';
 import { assertSession, currentSession, sessionWork, SessionEndedError, SessionStamp } from '../session';
 
@@ -34,13 +35,16 @@ import { assertSession, currentSession, sessionWork, SessionEndedError, SessionS
  * event is being read anyway to check it still exists.
  */
 function eventMatchesRehearsal(
-  event: { title?: string; startDate?: string | Date; endDate?: string | Date; location?: string | null; timeZone?: string | null },
+  event: MarkedEvent & { title?: string; startDate?: string | Date; endDate?: string | Date; location?: string | null; timeZone?: string | null },
   rehearsal: RehearsalWithProject
 ): boolean {
   const sameMoment = (a?: string | Date, b?: string | Date) =>
     a !== undefined && b !== undefined && new Date(a).getTime() === new Date(b).getTime();
 
   return (
+    // An event of ours without the mark — written before it existed — is
+    // rewritten once so that it carries it, and is found by it from then on.
+    ownMarkOf(event) === String(rehearsal.id) &&
     event.title === eventTitleFor(rehearsal) &&
     sameMoment(event.startDate, rehearsal.startsAt) &&
     sameMoment(event.endDate, rehearsal.endsAt) &&
@@ -99,33 +103,6 @@ function isEventNotFound(error: unknown): boolean {
 }
 
 /**
- * Find duplicate event in calendar by matching properties
- */
-/**
- * The rehearsal an exported event stands for, written into the event's URL.
- *
- * The event carried nothing identifying it: every rehearsal of a project got
- * the same title and the same notes, so a second device — which sees the same
- * iCloud calendar but addresses its events by a different local id — had to
- * guess which event was which from the title, the start time and the location.
- * Two rehearsals of one project starting in the same minute were
- * indistinguishable, and one without a location matched nothing at all.
- *
- * The URL rather than the notes: an event has no hidden field on iOS, so the
- * mark is visible either way, and a link at least takes the reader to the
- * rehearsal instead of showing them an identifier for nothing. The scheme is
- * the app's own — `rehearsalapp`, already registered and already routed — and
- * navigation resolves it to the details screen. iOS only, which is what this
- * ships on; where the URL is absent the heuristic below still answers.
- */
-const eventUrlFor = (rehearsalId: string) => `rehearsalapp://rehearsal/${rehearsalId}`;
-
-const rehearsalIdFromUrl = (url?: string | null): string | null => {
-  const match = /^rehearsalapp:\/\/rehearsal\/(.+)$/.exec(url || '');
-  return match ? match[1] : null;
-};
-
-/**
  * What to call the event. The rehearsal's own name when it has one — most do
  * not, and then the project is the only useful thing to show.
  */
@@ -147,7 +124,7 @@ async function findDuplicateEvent(
   calendarId: string,
   startDate: Date,
   endDate: Date
-): Promise<{ event: Calendar.Event; marked: boolean } | null> {
+): Promise<Calendar.Event | null> {
   // Search in a narrow time window (±1 day) for performance
   const searchStart = new Date(startDate);
   searchStart.setDate(searchStart.getDate() - 1);
@@ -156,24 +133,20 @@ async function findDuplicateEvent(
 
   const events = await Calendar.getEventsAsync([calendarId], searchStart, searchEnd);
 
-  // Find event with matching properties
   // Exact first: an event we wrote carries the rehearsal it belongs to.
-  const byId = events.find(
-    (event) => rehearsalIdFromUrl((event as { url?: string }).url) === String(rehearsal.id)
-  );
+  const byId = events.find((event) => ownMarkOf(event) === String(rehearsal.id));
   if (byId) {
     logger.debug(`[CalendarSync] Matched event ${byId.id} by rehearsal id`);
-    return { event: byId, marked: true };
+    return byId;
   }
 
-  // Events written before the id was recorded have nothing to match on but
-  // their contents. Kept for those, and for a reader who cleared the URL.
-  //
-  // An event that names a *different* rehearsal is excluded outright: the
-  // mark is proof of what it belongs to, and two rehearsals of one project
-  // starting in the same minute look identical to everything else here.
+  // An event of ours written before the id was recorded says which rehearsal
+  // it is only by its contents. Only such an event: one without the app's
+  // signature is the reader's own, however exactly it matches (EX01). One that
+  // names a *different* rehearsal is not legacy either — two rehearsals of one
+  // project starting in the same minute look identical to everything else.
   const duplicateEvent = events.find(event => {
-    if (rehearsalIdFromUrl((event as { url?: string }).url)) return false;
+    if (ownMarkOf(event) !== LEGACY) return false;
 
     const titleMatch =
       event.title === eventTitleFor(rehearsal) ||
@@ -187,7 +160,7 @@ async function findDuplicateEvent(
 
   if (duplicateEvent) {
     logger.warn(`[CalendarSync] Found duplicate event: ${duplicateEvent.id}`);
-    return { event: duplicateEvent, marked: false };
+    return duplicateEvent;
   }
 
   return null;
@@ -246,15 +219,14 @@ async function placeEvent(
     logger.debug('[CalendarSync] 🔍 Checking for duplicate events...');
     const duplicate = await findDuplicateEvent(rehearsal, calendarId, startDate, endDate);
     if (duplicate) {
-      const duplicateEventId = duplicate.event.id;
+      const duplicateEventId = duplicate.id;
       logger.info(`[CalendarSync] Using existing event ${duplicateEventId} instead of creating duplicate`);
       logger.debug('[CalendarSync] ♻️ Found duplicate, using existing event:', duplicateEventId);
       // An event of ours is adopted with what the rehearsal says now. Found by
       // its mark it may be stale — another device wrote it before the time
       // changed — and adopting it as it was reported the export done with the
-      // old time in the calendar (EX03). One matched by its contents already
-      // says what the rehearsal says.
-      if (duplicate.marked && !eventMatchesRehearsal(duplicate.event, rehearsal)) {
+      // old time in the calendar (EX03). One from before the mark gains it.
+      if (!eventMatchesRehearsal(duplicate, rehearsal)) {
         await updateCalendarEvent(duplicateEventId, rehearsal, session);
       }
       return duplicateEventId;
@@ -265,7 +237,7 @@ async function placeEvent(
       startDate,
       endDate,
       location: rehearsal.location || undefined,
-      notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
+      notes: eventNotesFor(rehearsal.projectName),
       url: eventUrlFor(rehearsal.id),
       // Say which zone the times mean, on both paths.
       //
@@ -331,7 +303,7 @@ export async function updateCalendarEvent(
       startDate: new Date(rehearsal.startsAt),
       endDate: new Date(rehearsal.endsAt),
       location: rehearsal.location || undefined,
-      notes: `Project: ${rehearsal.projectName}\n\nCreated via Rehearsly`,
+      notes: eventNotesFor(rehearsal.projectName),
       // Also on update, so events written before this gain the mark.
       url: eventUrlFor(rehearsal.id),
       timeZone: appTimezone(),
@@ -433,6 +405,17 @@ async function syncOneRehearsal(
       const eventExists = existing !== null;
       logger.debug('[CalendarSync] 🔍 Event exists in calendar?', eventExists);
 
+      // The mapping points at an event that is not ours for this rehearsal —
+      // the reader's own, adopted by the old guess by contents, or another
+      // rehearsal's. It is left as it is; only the mapping goes, and the
+      // rehearsal gets an event of its own (EX01).
+      if (existing && !isOwnEventOf(existing, rehearsal.id)) {
+        logger.warn(`[CalendarSync] Event ${mapping.eventId} is not ours for rehearsal ${rehearsal.id}, letting it go`);
+        await removeEventMapping(rehearsal.id, session);
+        await createCalendarEvent(rehearsal, calendarId, session);
+        return;
+      }
+
       // The reader picked a different calendar in settings.
       //
       // The update below writes to whichever calendar the event already lives
@@ -465,7 +448,7 @@ async function syncOneRehearsal(
           await addLeftoverEvent(mapping.eventId, rehearsal.id);
         }
         await saveEventMapping(rehearsal.id, movedId, calendarId, session);
-        if (eventExists) await takeBackLeftover(mapping.eventId, session);
+        if (eventExists) await takeBackLeftover(mapping.eventId, rehearsal.id, session);
         return;
       }
 
@@ -527,8 +510,7 @@ async function unsyncOneRehearsal(session: SessionStamp, rehearsalId: string): P
       return;
     }
 
-    // Delete calendar event
-    await deleteCalendarEvent(mapping.eventId, session);
+    await removeOwnEvent(mapping.eventId, rehearsalId, session);
 
     // Remove mapping
     await removeEventMapping(rehearsalId, session);
@@ -540,9 +522,30 @@ async function unsyncOneRehearsal(session: SessionStamp, rehearsalId: string): P
   }
 }
 
-/** Remove one leftover copy; it leaves the list only once it is gone. */
-async function takeBackLeftover(eventId: string, session: SessionStamp): Promise<void> {
+/**
+ * The rehearsal's event out of the calendar, if it is ours — the only way the
+ * export removes an event (EX01).
+ *
+ * A mapping or a leftover is only an id: one the old guess by contents gave
+ * the reader's own event, or one from another device that means some other
+ * event here. Removing by id alone deleted whatever it named. Read first, the
+ * event goes only when it carries the mark; an event that is not ours stays,
+ * and one already gone is gone. Either way the caller may let the id go.
+ */
+async function removeOwnEvent(eventId: string, rehearsalId: string, session: SessionStamp): Promise<void> {
+  const event = await readEvent(eventId);
+  assertSession(session);
+  if (!event) return;
+  if (!isOwnEventOf(event, rehearsalId)) {
+    logger.warn(`[CalendarSync] Event ${eventId} is not ours for rehearsal ${rehearsalId}, left in the calendar`);
+    return;
+  }
   await deleteCalendarEvent(eventId, session);
+}
+
+/** Remove one leftover copy; it leaves the list only once it is gone. */
+async function takeBackLeftover(eventId: string, rehearsalId: string, session: SessionStamp): Promise<void> {
+  await removeOwnEvent(eventId, rehearsalId, session);
   assertSession(session);
   await removeLeftoverEvent(eventId);
 }
@@ -576,8 +579,8 @@ async function takeBackLeftovers(session: SessionStamp, result: BatchSyncResult)
   await step(result, 'Leftover events', async () => {
     leftovers = await getLeftoverEvents();
   });
-  for (const eventId of Object.keys(leftovers)) {
-    if (await step(result, `Event ${eventId}`, () => takeBackLeftover(eventId, session))) removed++;
+  for (const [eventId, { rehearsalId }] of Object.entries(leftovers)) {
+    if (await step(result, `Event ${eventId}`, () => takeBackLeftover(eventId, rehearsalId, session))) removed++;
   }
   return removed;
 }
@@ -736,11 +739,10 @@ async function removeExportedEvents(
         batchIds.map(rehearsalId => {
           const eventId = mappings[rehearsalId].eventId;
           return step(result, `Event ${eventId}`, async () => {
-            // Try to delete event from calendar
-            await deleteCalendarEvent(eventId, session);
+            // Ours only (EX01); one the calendar no longer has counts as gone.
+            await removeOwnEvent(eventId, rehearsalId, session);
             // Remove mapping from DB + AsyncStorage — only now that the event
-            // is confirmed gone. An event the calendar no longer has counts as
-            // gone: iOS deletes a missing event without complaint.
+            // is confirmed gone, or confirmed not ours.
             await removeEventMapping(rehearsalId, session);
           });
         })

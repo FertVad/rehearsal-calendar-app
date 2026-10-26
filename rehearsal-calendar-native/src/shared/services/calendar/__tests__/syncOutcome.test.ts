@@ -61,7 +61,10 @@ beforeEach(() => {
   for (const eventId of Object.keys(leftovers)) delete leftovers[eventId];
   (checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
   (getEventMapping as jest.Mock).mockResolvedValue({ eventId: 'e1', calendarId: 'cal-1' });
-  (Calendar.getEventAsync as jest.Mock).mockResolvedValue({ id: 'e1', title: 'stale' });
+  // Event eN is the export of rehearsal N, and carries its mark (cause fix 19).
+  (Calendar.getEventAsync as jest.Mock).mockImplementation(async (id: string) => ({
+    id, title: 'stale', url: `rehearsalapp://rehearsal/${id.slice(1)}`,
+  }));
   (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([]);
   (Calendar.updateEventAsync as jest.Mock).mockResolvedValue(undefined);
   (Calendar.createEventAsync as jest.Mock).mockResolvedValue('new-event');
@@ -167,7 +170,9 @@ describe('Moving to another calendar when the old copy cannot be removed (EX02)'
     (removeEventMapping as jest.Mock).mockImplementation(async (id: string) => {
       delete mappings[id];
     });
-    (Calendar.getEventAsync as jest.Mock).mockImplementation(async (id: string) => (inCalendar.has(id) ? { id } : null));
+    (Calendar.getEventAsync as jest.Mock).mockImplementation(async (id: string) =>
+      inCalendar.has(id) ? { id, url: 'rehearsalapp://rehearsal/1' } : null
+    );
     (Calendar.createEventAsync as jest.Mock).mockImplementation(async () => {
       inCalendar.add('new-event');
       return 'new-event';
@@ -241,6 +246,7 @@ describe('The events of cancelled rehearsals, taken back by the export pass (EO0
     (getEventMapping as jest.Mock).mockImplementation(async (id: string) => mapped[id as keyof typeof mapped] ?? null);
     (Calendar.getEventAsync as jest.Mock).mockImplementation(async (id: string) => ({
       id, title: 'Rehearsal: Гамлет', startDate: rehearsal.startsAt, endDate: rehearsal.endsAt,
+      url: `rehearsalapp://rehearsal/${id.slice(1)}`,
     }));
   });
 

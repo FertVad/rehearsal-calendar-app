@@ -19,6 +19,7 @@ import {
 } from '../../utils/calendarStorage';
 import { getAllMappings } from '../../utils/calendarMappings';
 import { listDeviceCalendarIds } from './deviceCalendars';
+import { MarkedEvent, ownMarkOf } from './ownMark';
 import { availabilityAPI } from '../api';
 import { logger } from '../../utils/logger';
 import { formatDateToString } from '../../utils/time';
@@ -213,12 +214,12 @@ async function importForSession(
     // Our own rehearsals are left out, recognised two ways. An event we
     // exported carries the rehearsal it stands for in its URL, which means the
     // same thing on every device — whereas a mapping holds the event id, which
-    // is local to the phone that made it. The mapping is still consulted, for
-    // events written before the mark existed.
+    // is local to the phone that made it. One written before the URL is
+    // recognised by the app's signature in its notes — the export's own rule
+    // (ownMark.ts) — and the mapping is still consulted as well.
     const exportedEventIds = new Set(Object.values(exportedMappings).map(m => m.eventId));
     const isOurRehearsal = (event: Calendar.Event) =>
-      /^rehearsalapp:\/\/rehearsal\//.test((event as { url?: string }).url || '') ||
-      exportedEventIds.has(event.id);
+      ownMarkOf(event as MarkedEvent) !== null || exportedEventIds.has(event.id);
 
     let total = 0;
     const calendars = [...byCalendar].map(([calendarId, events]) => {

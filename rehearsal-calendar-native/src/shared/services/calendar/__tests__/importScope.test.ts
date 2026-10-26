@@ -104,6 +104,17 @@ describe('What a sync sends', () => {
     expect(sent().calendars[0].events.map((e: { key: string }) => e.key)).toEqual(['theirs']);
   });
 
+  it('knows ours from before the URL by the export\'s own rule, not by how it reads (cause fix 19)', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
+      event('ours', 'work', { title: 'Rehearsal: Гамлет', notes: 'Project: Гамлет\n\nCreated via Rehearsly' }),
+      event('theirs', 'work', { title: 'Rehearsal: Гамлет', notes: 'Bring the score' }),
+    ]);
+
+    await importCalendarEventsToAvailability(['work']);
+
+    expect(sent().calendars[0].events.map((e: { key: string }) => e.key)).toEqual(['theirs']);
+  });
+
   it('names the local dates it read, so the server compares whole days as dates (R7-02)', async () => {
     await importCalendarEventsToAvailability(['work']);
 

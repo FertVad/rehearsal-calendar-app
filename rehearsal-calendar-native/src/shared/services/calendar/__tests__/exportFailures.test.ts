@@ -26,7 +26,8 @@ const rehearsals = [
 beforeEach(() => {
   jest.clearAllMocks();
   (getEventMapping as jest.Mock).mockResolvedValue({ eventId: 'e1', calendarId: 'cal-1' });
-  (Calendar.getEventAsync as jest.Mock).mockResolvedValue({ id: 'e1' });
+  // The export of rehearsal 1, with its mark (cause fix 19).
+  (Calendar.getEventAsync as jest.Mock).mockResolvedValue({ id: 'e1', url: 'rehearsalapp://rehearsal/1' });
   (Calendar.updateEventAsync as jest.Mock).mockResolvedValue(undefined);
   (Calendar.createEventAsync as jest.Mock).mockResolvedValue('new-event');
   // The search reads the calendar; one that cannot be read now fails the step
@@ -101,7 +102,7 @@ describe('When the reader picks a different export calendar', () => {
   beforeEach(() => {
     (checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
     (getEventMapping as jest.Mock).mockResolvedValue({ eventId: 'old-event', calendarId: 'personal' });
-    (Calendar.getEventAsync as jest.Mock).mockResolvedValue({ id: 'old-event' });
+    (Calendar.getEventAsync as jest.Mock).mockResolvedValue({ id: 'old-event', url: 'rehearsalapp://rehearsal/1' });
     (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([]);
     (Calendar.createEventAsync as jest.Mock).mockResolvedValue('new-event');
     (Calendar.deleteEventAsync as jest.Mock).mockResolvedValue(undefined);
