@@ -203,6 +203,16 @@ that claims people for the *new* time in the milliseconds between the two has
 those claims released too, and the next run reminds them again: one extra
 push. Left for cause fix 10, which removes the gap rather than narrowing it.
 
+### An inbox page can skip a row written with microseconds by something other than the server
+
+The inbox is paged by the place the last row holds, `(created_at, id)` (cause
+fix 21). The cursor carries `created_at` to the millisecond, as JavaScript
+reads it; PostgreSQL keeps microseconds. The server writes every notification
+with a millisecond time, so for its rows the two are the same. A row inserted
+by hand with `NOW()`, in the same millisecond as others, could fall between two
+pages and not be shown. Left alone: nothing in the app writes such rows, and a
+cursor with microseconds would need the database to hand the time back as text.
+
 ### Migration 013 needs the push-token keys under their original names
 
 The migrator recognises a schema from before 013 by what its push-token keys do

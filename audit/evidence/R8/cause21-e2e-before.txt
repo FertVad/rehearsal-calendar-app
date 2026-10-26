@@ -1,0 +1,52 @@
+# Cause fix 21 (T-121), e2e: red before, green after.
+# The fix's files put back as they were at e32b0ad (client and server):
+#   git restore --source=e32b0ad -- src/contexts/UnreadContext.tsx src/shared/services/api.ts \
+#     src/features/notifications/screens/NotificationsScreen.tsx \
+#     src/features/notifications/styles/notificationsScreenStyles.ts src/i18n/translations/notifications.ts \
+#     server/routes/native/notifications.js server/services/notifications/notificationStore.js
+# one flow per run, then git restore --source=HEAD -- <the same files>.
+# Maestro's JVM "sun.misc.Unsafe" warnings dropped from the output.
+
+## Flow 33 (NI01), before
+$ npm run e2e -- e2e/flows/33-inbox-older-pages.yaml
+[e2e] running the flows
+Waiting for flows to complete...
+[Failed] Inbox older pages (2m 16s) (No visible element found: ".*Samovar polished.*")
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+## Flow 34 (NI05, NI02), before
+$ npm run e2e -- e2e/flows/34-inbox-load-and-read-fail.yaml
+[e2e] running the flows
+Waiting for flows to complete...
+[Failed] Inbox load and read fail (1m 55s) (Assertion is false: "Could not load notifications" is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+## Flow 34's "read" half alone (NI02), before
+# Flow 34 stops at its first half on the old code. Its second half — the same
+# steps from the hold of POST /read on, opened without the load's hold — was
+# run as a temporary flow (e2e/flows/34b-red-only-read.yaml, deleted after):
+# sign in Ferapont, open the inbox, hold POST ^/api/native/notifications/read$
+# (BEFORE 1, MS 40000), tap-and-see "Mark all read" -> "Could not mark as read"
+# (25 s), tap OK, assert "Mark all read".
+$ npm run e2e -- e2e/flows/34b-red-only-read.yaml
+[e2e] running the flows
+Waiting for flows to complete...
+[Failed] Inbox read fail (red-before probe) (2m 7s) (Element not found: Text matching regex: Mark all read)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-10-26T15:16:57.073Z  tapped "Mark all read" again: no "Could not mark as read" after the first tap
+# No error in 25 seconds, and the button gone: the old screen declared the
+# cards read though the request never reached the server.
+
+## After (HEAD with the fix)
+$ npm run e2e -- e2e/flows/33-inbox-older-pages.yaml
+[Passed] Inbox older pages (2m 31s)
+1/1 Flow Passed in 2m 31s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/34-inbox-load-and-read-fail.yaml
+[Passed] Inbox load and read fail (2m 10s)
+1/1 Flow Passed in 2m 10s
+[e2e] taps taken again (tap-and-see.yaml): 0
