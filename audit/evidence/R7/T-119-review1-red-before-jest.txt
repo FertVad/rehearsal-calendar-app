@@ -1,0 +1,44 @@
+T-119, review 1 - red before. Base: 5696fff (import.ts as committed in e4b8b88), only the new test added.
+Command (in rehearsal-calendar-native):
+npx jest --selectProjects frontend --runTestsByPath src/shared/services/calendar/__tests__/importScope.test.ts
+
+    ✓ diffs and deletes nothing itself: that is the server's, within this device's calendars (EI01, EI04) (8 ms)
+    ✓ sends the hours and nothing that says what the events are (6 ms)
+    ✓ leaves our own rehearsals out, even when the stored id means nothing here (7 ms)
+    ✓ knows ours from before the URL by the export's own rule, not by how it reads (cause fix 19) (6 ms)
+    ✕ imports an unmarked event even when a mapping points at it (review of cause fix 19) (15 ms)
+    ✓ names the local dates it read, so the server compares whole days as dates (R7-02) (6 ms)
+    ✓ keys each occurrence of a recurring event by when it starts (3 ms)
+  A calendar that could not be read (EI02)
+    ✓ is named unreadable, so the server keeps its rows, and the sync is not called a success (34 ms)
+    ✓ stamps the sync when every calendar was read (7 ms)
+  Removing everything imported (EI03)
+    ✓ asks the server even when this phone holds no record of what it imported (3 ms)
+
+  ● What a sync sends › imports an unmarked event even when a mapping points at it (review of cause fix 19)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 1
+
+    - Array [
+    -   "personal",
+    - ]
+    + Array []
+
+      127 |     await importCalendarEventsToAvailability(['work']);
+      128 |
+    > 129 |     expect(sent().calendars[0].events.map((e: { key: string }) => e.key)).toEqual(['personal']);
+          |                                                                           ^
+      130 |   });
+      131 |
+      132 |   it('names the local dates it read, so the server compares whole days as dates (R7-02)', async () => {
+
+      at Object.<anonymous> (src/shared/services/calendar/__tests__/importScope.test.ts:129:75)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 10 passed, 11 total
+Snapshots:   0 total
+Time:        12.583 s
+Ran all test suites within paths "src/shared/services/calendar/__tests__/importScope.test.ts".
