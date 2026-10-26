@@ -10,8 +10,11 @@
 // ${OPEN}, when "1", holds the request as BEFORE does and keeps its connection
 // open until release, so the app does not give up on it however long the flow
 // takes.
+// ${ONCE}, when "1", holds only the next matching request; the ones after it
+// go through.
 const wait = typeof MS === 'undefined' ? '' : '&ms=' + MS;
 const before = typeof BEFORE === 'undefined' ? '' : '&before=' + BEFORE;
 const open = typeof OPEN === 'undefined' ? '' : '&open=' + OPEN;
-const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait + before + open);
+const once = typeof ONCE === 'undefined' ? '' : '&once=' + ONCE;
+const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait + before + open + once);
 if (!response.ok) throw new Error('hold answered ' + response.status + ': ' + response.body);

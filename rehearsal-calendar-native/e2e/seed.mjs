@@ -104,6 +104,12 @@ export const PEOPLE = {
   anfisa: { email: 'anfisa@e2e.test', firstName: 'Anfisa', lastName: 'Nurse', onboarded: true },
   // Two unread, an inbox that does not load and a "read" that does not land (34).
   ferapont: { email: 'ferapont@e2e.test', firstName: 'Ferapont', lastName: 'Watchman', onboarded: true },
+  // Marks all read before his inbox has come (35).
+  kulygin: { email: 'kulygin@e2e.test', firstName: 'Fyodor', lastName: 'Kulygin', onboarded: true },
+  // Opens one on a slow connection, then marks all read on a good one (36).
+  tuzenbach: { email: 'tuzenbach@e2e.test', firstName: 'Nikolai', lastName: 'Tuzenbach', onboarded: true },
+  // Marks all read and signs out before it reaches the server (37).
+  solyony: { email: 'solyony@e2e.test', firstName: 'Vasily', lastName: 'Solyony', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -410,6 +416,12 @@ export async function seed({ client, apiUrl, timezone }) {
     { title: 'Papers from the council', read: false },
     { title: 'Bread delivery', read: false },
   ]);
+  await notify('kulygin', [{ title: 'Gymnasium council', read: false }]);
+  await notify('tuzenbach', [
+    { title: 'Brickworks shift', read: false },
+    { title: 'Name-day toast', read: false },
+  ]);
+  await notify('solyony', [{ title: 'Duel at noon', read: false }]);
 
   // A create whose answer never arrives (13). The first project named
   // Dunsinane takes 13 seconds to insert — longer than the app's 10-second

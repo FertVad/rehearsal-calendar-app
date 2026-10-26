@@ -41,6 +41,18 @@
  * or for a read the server answers 200: it is asked without If-None-Match, so
  * a read gets its body, never a 304 (flow 17, T-206).
  *
+ * With `&once=1` only the next matching request is held, and the ones after it
+ * go through: a read on a slow connection and the change after it on a good
+ * one (flow 36). A request held `before` says how the server answered it on
+ * release, so a flow's log shows a refusal for what it was (flow 37).
+ *
+ * It writes notifications as the server records them, to show an inbox that
+ * grew while it was open (flow 33):
+ *
+ *   GET /notify?to=<address>&count=<n>&title=<t>   n notifications for that
+ *                                                  account, oldest first,
+ *                                                  titled "<t> 1" to "<t> n"
+ *
  * And it keeps count of the taps the flows had to take again:
  *
  *   GET /tap-again?tap=<what>&see=<what>   e2e/subflows/tap-and-see.yaml did not
@@ -55,6 +67,8 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { capturedEmails } from '../server/services/email/transport.js';
+import db from '../server/database/db.js';
+import { recordNotifications } from '../server/services/notifications/notificationStore.js';
 import app from '../server/server.js';
 
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
@@ -136,6 +150,7 @@ function holdAnswer(request, response, handle) {
   holds = holds.filter((hold) => hold.until > Date.now());
   const hold = holds.find((candidate) => candidate.method === request.method && candidate.path.test(pathname));
   if (!hold) return handle();
+  if (hold.once) holds = holds.filter((candidate) => candidate !== hold);
   if (hold.open) return holdOpen(request, response, hold);
   let released = false;
   const release = (then) => () => {
@@ -148,6 +163,9 @@ function holdAnswer(request, response, handle) {
   let onRelease;
   let limit;
   if (hold.before) {
+    response.on('finish', () => {
+      console.log(`[e2e] released ${request.method} ${pathname}: the server answered ${response.statusCode}`);
+    });
     onRelease = release(handle);
     limit = setTimeout(onRelease, hold.limitMs);
     held.add(onRelease);
@@ -188,8 +206,25 @@ http.createServer((request, response) => {
     const open = url.searchParams.get('open') === '1';
     const limitMs = open ? OPEN_LIMIT_MS : Math.min(Number(url.searchParams.get('ms')) || HOLD_LIMIT_MS, HOLD_WINDOW_MS);
     const before = url.searchParams.get('before') === '1';
-    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, until: Date.now() + HOLD_WINDOW_MS });
+    const once = url.searchParams.get('once') === '1';
+    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
+  }
+  if (request.method === 'GET' && url.pathname === '/notify') {
+    const to = (url.searchParams.get('to') || '').trim().toLowerCase();
+    const count = Number(url.searchParams.get('count'));
+    const title = url.searchParams.get('title') || 'Notice';
+    if (!Number.isInteger(count) || count < 1 || count > 200) return answer(400, { error: 'count is 1 to 200' });
+    (async () => {
+      const user = await db.get('SELECT id FROM native_users WHERE email = $1', [to]);
+      if (!user) return answer(404, { error: `no account ${to}` });
+      for (let n = 1; n <= count; n++) {
+        await recordNotifications([user.id], { title: `${title} ${n}`, body: 'The Prozorov house', data: { type: 'rehearsal_updated' } });
+      }
+      console.log(`[e2e] recorded ${count} notifications for ${to}`);
+      return answer(200, { recorded: count });
+    })().catch((error) => answer(500, { error: String(error) }));
+    return;
   }
   if (request.method === 'GET' && url.pathname === '/release') {
     const answers = [...held];
