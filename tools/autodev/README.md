@@ -50,6 +50,12 @@ with what failed (`lib/flakes.mjs`). An e2e run that exits 75 is the machine,
 not the task: no attempt is counted, and the checks run again in 15 minutes,
 then hourly.
 
+**The e2e limit grows with the flows**: ten minutes of setup and two and a
+half per flow (`e2eLimitMs` in `lib/checks.mjs`). A fixed 45 minutes was
+outgrown on 26.10.2026 — 34 flows passed in 45m 55s and were killed and called
+red, and two tasks were sent to fix flows that passed. A check stopped by its
+limit says so in its tail and never counts as passed.
+
 **Checks wait while the machine is short of memory.** At macOS memory
 pressure warning or worse (`kern.memorystatus_vm_pressure_level` ≥ 2) the
 checks are put off, with the reason in STATUS.md and one notification: on an
