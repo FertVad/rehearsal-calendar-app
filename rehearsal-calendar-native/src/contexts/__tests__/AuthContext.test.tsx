@@ -61,7 +61,7 @@ const mockSyncPreferences = jest.fn((..._args: any[]) => Promise.resolve());
 jest.mock('../../shared/utils/storage', () => ({ syncUserPreferences: (...args: any[]) => mockSyncPreferences(...args) }));
 jest.mock('../../shared/services/notifications', () => ({
   unregisterPushToken: jest.fn(() => Promise.resolve()),
-  syncPushTokenIfGranted: jest.fn(() => Promise.resolve()),
+  keepPushRegistered: jest.fn(() => () => undefined),
 }));
 jest.mock('../../shared/utils/calendarMappings', () => ({ resetConnectionCache: jest.fn() }));
 

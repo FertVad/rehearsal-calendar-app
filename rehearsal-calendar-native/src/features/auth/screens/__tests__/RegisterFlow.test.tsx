@@ -33,7 +33,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 jest.mock('../../../../shared/utils/storage', () => ({ syncUserPreferences: jest.fn(() => Promise.resolve()) }));
 jest.mock('../../../../shared/services/notifications', () => ({
   unregisterPushToken: jest.fn(() => Promise.resolve()),
-  syncPushTokenIfGranted: jest.fn(() => Promise.resolve()),
+  keepPushRegistered: jest.fn(() => () => undefined),
 }));
 jest.mock('../../../../shared/utils/calendarMappings', () => ({ resetConnectionCache: jest.fn() }));
 jest.mock('../../../../contexts/I18nContext', () => ({

@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
 import { syncUserPreferences } from '../shared/utils/storage';
-import { unregisterPushToken, syncPushTokenIfGranted } from '../shared/services/notifications';
+import { unregisterPushToken, keepPushRegistered } from '../shared/services/notifications';
 import { resetConnectionCache } from '../shared/utils/calendarMappings';
 import { AuthFlowError, toAuthFlowError, DeliveryOutcome } from '../features/auth/utils/authErrors';
 import { normalizeEmail } from '../features/auth/utils/accountRules';
@@ -99,7 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // once, when the answer's turn to write comes (see writeSession).
   const signInAttempt = useRef(0);
   const hasTimezoneSynced = useRef(false);
-  const hasPushSynced = useRef(false);
 
   // Calendar sync state lives on the device (export/import mappings, picked
   // calendars, last-sync timestamps). Wipe it only when a *different* user
@@ -269,23 +268,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // how the owner's own account ended up with no device registered.
   //
   // It never prompts: if permission was refused, this does nothing and asking
-  // stays where the user expects to be asked.
+  // stays where the user expects to be asked. A failed attempt is tried again
+  // when the app comes forward (GC03); a change to the user's fields is the
+  // same session and starts nothing.
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) {
-      hasPushSynced.current = false;
-      return;
-    }
-    if (hasPushSynced.current) return;
-    hasPushSynced.current = true;
-
-    syncPushTokenIfGranted()
-      .then((token) => {
-        if (token) logger.info('[Auth] Push token re-registered for this device');
-      })
-      .catch((err) => {
-        logger.warn('[Auth] Push token sync failed:', err?.message);
-      });
-  }, [user]);
+    if (userId === undefined) return;
+    return keepPushRegistered();
+  }, [userId]);
 
   // The profile's zone is the person's choice and the device never overwrites
   // it (owner's decision, 16.10.2026). This wrote the device's zone over it at

@@ -5,7 +5,7 @@
 
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from './api';
 import { logger } from '../utils/logger';
@@ -32,50 +32,63 @@ try {
 }
 
 /**
- * Register for push notifications and save token to backend
- * @returns {Promise<string | null>} Push token or null if failed
+ * What registering this device came to (cause fix 20). It used to be a token
+ * or null, and null meant a refusal, a simulator and a dropped connection
+ * alike — so the profile took each of them for success (GC02), and nothing
+ * could tell a failure worth trying again from an answer (GC03).
  */
-export async function registerForPushNotifications(): Promise<string | null> {
+export type PushRegistration =
+  /** Permission granted and the token is on the server. */
+  | 'registered'
+  /** The system permission is not granted: refused, or never asked. */
+  | 'denied'
+  /** This device cannot receive push at all (a simulator). */
+  | 'unsupported'
+  /** Permission granted, but the token did not reach the server. */
+  | 'failed';
+
+/**
+ * The one place that registers this device. Only `ask` may show the system
+ * prompt, and only the person's own action passes it: the onboarding screen's
+ * Allow and the profile's switch (`askAndRegisterPush`). Everything else runs
+ * in the background and never asks (`registerPushIfAllowed`).
+ *
+ * iOS shows that prompt once: a refusal can only be undone in Settings. The
+ * notifications hook used to ask whenever a signed-in user with notifications
+ * on mounted the tabs, so "Later" on the onboarding screen was answered by the
+ * same prompt a moment later (GC01).
+ */
+async function registerPush(ask: boolean): Promise<PushRegistration> {
+  if (!Device.isDevice) {
+    logger.debug('[Notifications] Push notifications only work on physical devices');
+    return 'unsupported';
+  }
+
+  let status: string;
   try {
-    // Check if running on physical device
-    if (!Device.isDevice) {
-      logger.debug('[Notifications] Push notifications only work on physical devices');
-      return null;
+    status = (await Notifications.getPermissionsAsync()).status;
+    if (status !== 'granted' && ask) {
+      status = (await Notifications.requestPermissionsAsync()).status;
     }
+  } catch (error) {
+    logger.warn('[Notifications] Could not read the push permission:', error);
+    return 'failed';
+  }
+  if (status !== 'granted') return 'denied';
 
-    // Request permissions
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      logger.debug('[Notifications] Permission denied');
-      return null;
-    }
-
-    // Get Expo push token
+  try {
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: EXPO_PROJECT_ID,
     });
-
     const token = tokenData.data;
-    logger.debug('[Notifications] Push token obtained');
 
-    // Get device info
     const deviceType = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
     const deviceName = Device.modelName || 'Unknown Device';
 
-    // Register token with backend
+    // The endpoint upserts on (user, device), so registering again is cheap.
     await authAPI.registerPushToken(token, deviceType, deviceName);
-
-    // Save token locally
     await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
 
-    // Configure Android notification channel
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('rehearsal-notifications', {
         name: 'Rehearsal Notifications',
@@ -87,55 +100,74 @@ export async function registerForPushNotifications(): Promise<string | null> {
     }
 
     logger.debug('[Notifications] Registration successful');
-    return token;
+    return 'registered';
   } catch (error) {
-    logger.error('[Notifications] Registration error:', error);
-    return null;
+    logger.warn('[Notifications] Could not register the push token:', error);
+    return 'failed';
+  }
+}
+
+/** The person asked for notifications: may show the system prompt. */
+export function askAndRegisterPush(): Promise<PushRegistration> {
+  return registerPush(true);
+}
+
+/**
+ * Register only if permission is already granted — never shows a prompt.
+ *
+ * Logging out deletes the token row on the server, so a session that appears
+ * — login, or a restored one — puts it back (`keepPushRegistered`).
+ */
+export function registerPushIfAllowed(): Promise<PushRegistration> {
+  return registerPush(false);
+}
+
+/** Whether this device can receive push right now, without asking. */
+export async function pushPermission(): Promise<'granted' | 'denied' | 'unsupported'> {
+  if (!Device.isDevice) return 'unsupported';
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted' ? 'granted' : 'denied';
+  } catch {
+    return 'denied';
   }
 }
 
 /**
- * Re-register the device with the backend, but only if permission is already
- * granted — this never shows a prompt.
+ * Keeps this device registered for the session that is on: registers at once
+ * and, until it has, again each time the app comes forward. Returns the stop.
  *
- * Logging out deletes the token row on the server, and nothing used to put it
- * back: registration happened only on the onboarding screen and the profile
- * toggle. So signing out and back in stopped every notification, permanently
- * and silently, while the profile still read "enabled" because that switch
- * reflects a flag on the user rather than whether a device is registered.
- *
- * Call this whenever a user appears — login, or a restored session. It is
- * cheap and idempotent: the endpoint upserts on (user, device).
+ * It registered once per session and gave up on any failure, so a sign-in
+ * made on a bad connection left the device without notifications for the
+ * whole session, silently (GC03). Coming forward is also when a permission
+ * granted in Settings is first seen. One attempt at a time; a simulator stops
+ * it, as nothing there can register.
  */
-export async function syncPushTokenIfGranted(): Promise<string | null> {
-  try {
-    if (!Device.isDevice) return null;
+export function keepPushRegistered(): () => void {
+  let done = false;
+  let running = false;
 
-    // getPermissionsAsync, not requestPermissionsAsync: asking belongs to
-    // onboarding and the profile toggle, where the user is expecting it. iOS
-    // only shows the system prompt once, so spending it here would be worse
-    // than useless.
-    const { status } = await Notifications.getPermissionsAsync();
-    if (status !== 'granted') return null;
+  const attempt = () => {
+    if (done || running) return;
+    running = true;
+    registerPushIfAllowed()
+      .then((result) => {
+        if (result === 'registered' || result === 'unsupported') done = true;
+      })
+      .finally(() => {
+        running = false;
+      });
+  };
 
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: EXPO_PROJECT_ID,
-    });
-    const token = tokenData.data;
+  attempt();
+  const subscription = AppState.addEventListener('change', (state) => {
+    if (state === 'active') attempt();
+  });
 
-    const deviceType = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
-    const deviceName = Device.modelName || 'Unknown Device';
-
-    await authAPI.registerPushToken(token, deviceType, deviceName);
-    await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
-
-    return token;
-  } catch (error) {
-    // Never surfaced: this runs in the background on every launch, and a
-    // failure here must not interrupt anything.
-    logger.warn('[Notifications] Could not re-register push token:', error);
-    return null;
-  }
+  return () => {
+    done = true;
+    subscription.remove();
+  };
 }
 
 /**

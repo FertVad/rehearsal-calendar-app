@@ -14,7 +14,8 @@ import { AppModal } from '../../../shared/components/AppModal';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
-import { registerForPushNotifications, unregisterPushToken } from '../../../shared/services/notifications';
+import { askAndRegisterPush, pushPermission, unregisterPushToken } from '../../../shared/services/notifications';
+import { explainPushRegistration } from '../../../shared/utils/pushAlert';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
@@ -49,18 +50,45 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     await logout();
   };
 
+  // The switch is on only when this phone can be notified: the account's
+  // setting and the system permission both. It used to show the setting alone,
+  // which every account starts with on — so after "Later" in onboarding it read
+  // on while nothing had been allowed, and there was no way back to the prompt
+  // but turning it off and on again (cause fix 20, GC01).
+  const [deviceReady, setDeviceReady] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      let live = true;
+      pushPermission().then((permission) => {
+        if (live) setDeviceReady(permission === 'granted');
+      });
+      return () => {
+        live = false;
+      };
+    }, [])
+  );
+
   const handleNotificationsToggle = async (value: boolean) => {
     hapticLight();
+    const before = notificationsEnabled;
     setNotificationsEnabled(value);
 
     try {
-      // Update database
-      await updateUser({ notificationsEnabled: value });
-
-      // Register or unregister push token
       if (value) {
-        await registerForPushNotifications();
+        // The device first: the setting is saved only once this phone can be
+        // notified. It used to be saved, the result of registering ignored, and
+        // success reported over a refusal or a lost connection (GC02).
+        setDeviceReady(true);
+        const result = await askAndRegisterPush();
+        if (result !== 'registered') {
+          setNotificationsEnabled(before);
+          setDeviceReady(false);
+          explainPushRegistration(result, t);
+          return;
+        }
+        await updateUser({ notificationsEnabled: true });
       } else {
+        await updateUser({ notificationsEnabled: false });
         await unregisterPushToken();
       }
 
@@ -68,7 +96,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     } catch (err: any) {
       Alert.alert(t.profile.errorTitle, err.message || t.profile.notificationError);
       // Revert state on error
-      setNotificationsEnabled(!value);
+      setNotificationsEnabled(before);
     }
   };
 
@@ -234,7 +262,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <Switch
               testID="profile-notifications"
-              value={notificationsEnabled}
+              value={notificationsEnabled && deviceReady}
               onValueChange={handleNotificationsToggle}
               trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.purple }}
               thumbColor={Colors.text.inverse}

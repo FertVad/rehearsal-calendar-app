@@ -38,6 +38,11 @@ export interface ProfileTranslations {
   avatarHint: string;
   errorTitle: string;
   notificationError: string;
+  pushDeniedTitle: string;
+  pushDeniedMessage: string;
+  pushUnsupported: string;
+  pushFailed: string;
+  openSettings: string;
   languageError: string;
   timezoneError: string;
   weekStartError: string;
@@ -104,6 +109,11 @@ export const ru = {
     avatarHint: 'Аватар генерируется автоматически на основе вашего email',
     errorTitle: 'Ошибка',
     notificationError: 'Не удалось изменить настройки уведомлений',
+    pushDeniedTitle: 'Уведомления запрещены',
+    pushDeniedMessage: 'Разрешите уведомления для Rehearsly в настройках телефона.',
+    pushUnsupported: 'Это устройство не может получать push-уведомления.',
+    pushFailed: 'Не удалось включить уведомления на этом устройстве. Проверьте соединение и попробуйте ещё раз.',
+    openSettings: 'Открыть настройки',
     languageError: 'Не удалось изменить язык',
     timezoneError: 'Не удалось обновить часовой пояс',
     weekStartError: 'Не удалось обновить начало недели',
@@ -170,6 +180,11 @@ export const en = {
     avatarHint: 'Avatar is automatically generated based on your email',
     errorTitle: 'Error',
     notificationError: 'Failed to update notification settings',
+    pushDeniedTitle: 'Notifications are not allowed',
+    pushDeniedMessage: 'Allow notifications for Rehearsly in your phone settings.',
+    pushUnsupported: 'This device cannot receive push notifications.',
+    pushFailed: 'Could not turn on notifications on this device. Check your connection and try again.',
+    openSettings: 'Open Settings',
     languageError: 'Failed to change language',
     timezoneError: 'Failed to update timezone',
     weekStartError: 'Failed to update week start day',
@@ -236,6 +251,11 @@ export const es = {
     avatarHint: 'El avatar se genera automáticamente a partir de tu correo',
     errorTitle: 'Error',
     notificationError: 'No se pudieron actualizar los ajustes de notificaciones',
+    pushDeniedTitle: 'Las notificaciones no están permitidas',
+    pushDeniedMessage: 'Permite las notificaciones de Rehearsly en los ajustes del teléfono.',
+    pushUnsupported: 'Este dispositivo no puede recibir notificaciones push.',
+    pushFailed: 'No se pudieron activar las notificaciones en este dispositivo. Comprueba la conexión e inténtalo de nuevo.',
+    openSettings: 'Abrir ajustes',
     languageError: 'No se pudo cambiar el idioma',
     timezoneError: 'No se pudo actualizar la zona horaria',
     weekStartError: 'No se pudo actualizar el inicio de la semana',
@@ -302,6 +322,11 @@ export const de = {
     avatarHint: 'Der Avatar wird automatisch aus deiner E-Mail-Adresse erstellt',
     errorTitle: 'Fehler',
     notificationError: 'Benachrichtigungseinstellungen konnten nicht aktualisiert werden',
+    pushDeniedTitle: 'Benachrichtigungen sind nicht erlaubt',
+    pushDeniedMessage: 'Erlaube Benachrichtigungen für Rehearsly in den Einstellungen des Telefons.',
+    pushUnsupported: 'Dieses Gerät kann keine Push-Benachrichtigungen empfangen.',
+    pushFailed: 'Benachrichtigungen konnten auf diesem Gerät nicht aktiviert werden. Prüfe die Verbindung und versuche es erneut.',
+    openSettings: 'Einstellungen öffnen',
     languageError: 'Sprache konnte nicht geändert werden',
     timezoneError: 'Zeitzone konnte nicht aktualisiert werden',
     weekStartError: 'Wochenbeginn konnte nicht aktualisiert werden',

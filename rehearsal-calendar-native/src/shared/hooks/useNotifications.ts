@@ -7,7 +7,6 @@ import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
-import { registerForPushNotifications } from '../services/notifications';
 import { runAutoSync } from './useAutoCalendarSync';
 import { emitDataChanged } from '../utils/dataChanged';
 import { hapticMedium } from '../utils/haptics';
@@ -30,18 +29,11 @@ export function useNotifications() {
   const appStateListener = useRef<{ remove: () => void } | undefined>(undefined);
 
   useEffect(() => {
-    // Only register if user is logged in and notifications are enabled
-    if (user && user.notificationsEnabled) {
-      registerForPushNotifications()
-        .then((token) => {
-          if (token) {
-            logger.debug('[useNotifications] Registered for push notifications');
-          }
-        })
-        .catch((error) => {
-          logger.error('[useNotifications] Registration failed:', error);
-        });
-    }
+    // Registering the device is not done here. This asked for the system
+    // permission whenever the tabs mounted for someone with notifications on —
+    // so "Later" on the onboarding screen was answered by the very prompt it
+    // put off (GC01). The session keeps the device registered without asking
+    // (AuthContext, keepPushRegistered); only the person's own action asks.
 
     // Listen for notifications received while app is foregrounded
     try {
