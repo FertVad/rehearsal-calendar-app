@@ -1,0 +1,60 @@
+Cause fix 21, review items 1-3: the newest page above the cards shown, "Mark
+all read" before the first list, a late failed read after a later one landed.
+
+Red before: the tests of 3cfe7c2 run against the screen's files as they were
+at 20180d1:
+
+  cd rehearsal-calendar-native
+  git restore --source=20180d1 -- src/features/notifications/inboxPages.ts \
+    src/features/notifications/screens/NotificationsScreen.tsx
+  npx jest --selectProjects frontend --silent --verbose --runTestsByPath \
+    src/features/notifications/screens/__tests__/NotificationsScreen.test.tsx \
+    src/features/notifications/screens/__tests__/NotificationsScreenInbox.test.tsx
+  git restore --source=HEAD -- src/features/notifications/inboxPages.ts \
+    src/features/notifications/screens/NotificationsScreen.tsx
+
+Output (lines with results):
+
+  ✕ does not bring back a card deleted while a load was out (827 ms)
+  ✓ does not make cards unread again after "Mark all read" while a load was out (21 ms)
+  ✕ does not bring back a card when a load answers while its deletion is on its way (46 ms)
+  ✓ keeps cards read when a load answers while "Mark all read" is on its way (31 ms)
+  ● does not bring back a card deleted while a load was out
+    Expected number of calls: 3
+    Received number of calls: 2
+  ● does not bring back a card when a load answers while its deletion is on its way
+    Expected number of calls: 3
+    Received number of calls: 2
+    ✓ reaches the notifications past the first page (863 ms)
+    ✓ offers "Mark all read" while older ones are unread, though every card shown is read (164 ms)
+    ✓ keeps the older pages when the newest is read again (246 ms)
+    ✕ reaches the ones between a newest page and the cards shown (321 ms)
+    ✕ shows the cards the server has, not "Nothing yet" (1015 ms)
+    ✓ says it could not load, not that there is nothing (21 ms)
+    ✓ keeps the cards it had, and says the refresh failed (22 ms)
+    ✓ puts the cards back unread and says so when "Mark all read" fails (11 ms)
+    ✓ puts the card back unread when opening it could not mark it read (19 ms)
+    ✕ does not take back a card a later "Mark all read" has read (18195 ms)
+    ✓ takes it back when the later "Mark all read" failed too (24 ms)
+  ● older pages (NI01) › reaches the ones between a newest page and the cards shown
+    Unable to find an element with testID: inbox-more
+  ● "Mark all read" before the list has come (review) › shows the cards the server has, not "Nothing yet"
+    Unable to find an element with text: Notice 2
+  ● a "read" the server did not take (NI02) › does not take back a card a later "Mark all read" has read
+    expect(received).toBeNull()
+    Received: {"_fiber": {... "elementType": "TouchableOpacity" ...}}   (the "Mark all read" button)
+Test Suites: 2 failed, 2 total
+Tests:       5 failed, 10 passed, 15 total
+
+Item 1: after 111..62 over 60..1 the old merge kept the old cursor (null),
+so there was no "Show older" and 61 could not be reached.
+Item 2: the first list, dropped for "Mark all read", was not read again:
+"Nothing yet" over a card the server had.
+Item 3: the card opened first came back unread when its read failed after
+"Mark all read" had gone through, and brought the button back with it.
+The two NI04 tests in NotificationsScreen.test.tsx now also say the dropped
+read is made again (3 calls; the old screen made 2). "takes it back when the
+later 'Mark all read' failed too" passes on both: it holds that the new rule
+still takes a card back when nothing read it.
+
+On 3cfe7c2: 15 of 15 pass.

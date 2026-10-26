@@ -187,6 +187,19 @@ out and back in (flow 22). The server's own status cannot follow, so this is
 for a change whose outcome the flow does not read, or for a read the server
 answers 200: it is asked without `If-None-Match`, so it gets its body back,
 never a 304 to the app's cached copy (flow 17).
+`ONCE: "1"` holds only the next matching request and lets the ones after it
+through: a read on a slow connection, then a change on a good one (flow 36).
+A request held `BEFORE` puts the server's status in `server.log` on release
+("the server answered 401"), so a flow that needs a real refusal shows it had
+one: a sign-out ends the tokens, and a change released after it is refused
+(flow 37). From the tap to the release must fit in the app's ten seconds, or
+the app gives up first and the failure is a timeout; bring the next controls
+into view before the tap.
+
+An inbox that grows while the app is open: `e2e/scripts/notify.js` with
+`MAIL_URL`, `EMAIL`, `COUNT` and `TITLE` records `COUNT` notifications through
+the server's own `recordNotifications`, titled "`TITLE` 1" (the oldest) to
+"`TITLE` `COUNT`" (flow 33).
 
 An answer held while a flow takes several steps is held `OPEN`: the nine
 seconds of a plain hold are a clock the steps race. Flow 17 held its "All
