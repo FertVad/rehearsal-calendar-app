@@ -233,6 +233,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <Text style={styles.settingLabel}>{t.profile.notifications}</Text>
             </View>
             <Switch
+              testID="profile-notifications"
               value={notificationsEnabled}
               onValueChange={handleNotificationsToggle}
               trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.purple }}
