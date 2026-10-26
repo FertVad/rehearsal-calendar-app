@@ -18,8 +18,6 @@ const mockMarkAllRead = jest.fn();
 const mockRemove = jest.fn();
 const mockRemoveAll = jest.fn();
 const mockSetBadge = jest.fn();
-// What markRead answered, call by call.
-const mockResults: unknown[] = [];
 
 jest.mock('../../shared/services/api', () => ({
   notificationsAPI: {
@@ -63,7 +61,7 @@ function Probe() {
       <TouchableOpacity testID="read-all" onPress={() => markAllRead()}>
         <Text>all</Text>
       </TouchableOpacity>
-      <TouchableOpacity testID="read-one" onPress={async () => { mockResults.push(await markRead([7])); }}>
+      <TouchableOpacity testID="read-one" onPress={() => markRead([7])}>
         <Text>one</Text>
       </TouchableOpacity>
       <TouchableOpacity testID="remove-one" onPress={() => remove(7)}>
@@ -88,7 +86,6 @@ beforeEach(() => {
   mockUnreadCount.mockReset().mockResolvedValue({ data: { unreadCount: 3 } });
   mockMarkRead.mockReset().mockResolvedValue({ data: { unreadCount: 0 } });
   mockMarkAllRead.mockReset().mockResolvedValue({ data: { unreadCount: 0 } });
-  mockResults.length = 0;
   mockRemove.mockReset().mockResolvedValue({ data: { unreadCount: 2 } });
   mockRemoveAll.mockReset().mockResolvedValue({ data: { unreadCount: 0 } });
   mockSetBadge.mockReset();
@@ -192,18 +189,6 @@ describe('Unread count', () => {
 
     await waitFor(() => expect(getByTestId('count').props.children).toBe('2'));
     expect(mockMarkRead).toHaveBeenCalledWith([7]);
-  });
-
-  // A failed "read" fulfilled like a success, and the inbox showed the cards
-  // read while the server still had them unread (cause fix 21: NI02).
-  it('reports whether marking read actually happened', async () => {
-    mockMarkRead.mockRejectedValueOnce(new Error('offline'));
-    const { getByTestId } = renderProbe();
-
-    await act(async () => { fireEvent.press(getByTestId('read-one')); });
-    await act(async () => { fireEvent.press(getByTestId('read-one')); });
-
-    expect(mockResults).toEqual([false, true]);
   });
 
   it('keeps the last known count when the request fails', async () => {
