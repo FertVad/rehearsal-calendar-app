@@ -23,14 +23,16 @@ tags:
     centerElement: true
 - waitForAnimationToEnd
 - tapOn: ".*Accounts review.*"
+# Her row's label is her name, with the icon's glyph after it where the row
+# names nothing itself.
 - extendedWaitUntil:
-    visible: "Polina Andreyevna"
+    visible: "Polina Andreyevna.*"
     timeout: 15000
 - extendedWaitUntil:
     visible: "0/2"
     timeout: 10000
 # Her own row is the toggle; a toggle is not taken twice (docs/e2e.md).
-- tapOn: "Polina Andreyevna"
+- tapOn: "Polina Andreyevna.*"
 - extendedWaitUntil:
     notVisible: "0/2"
     timeout: 10000

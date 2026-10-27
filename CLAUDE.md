@@ -664,7 +664,7 @@ Two rules it exists to enforce:
 Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWORD` env var.
 
 **Features**:
-- User stats (total, new this week/month, churn rates)
+- User stats (total, new this week/month, not signed in for 30 days — sign-ins, not use: a session renews without one)
 - Users table with pagination
 - Transactions table with pagination
 - Bug reports table with inline status management
@@ -676,7 +676,7 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 
 **API Endpoints**:
 - `POST /admin/api/login` — authenticate with password
-- `GET /admin/api/stats` — aggregate stats (users, subs, revenue, churn, usage)
+- `GET /admin/api/stats` — aggregate stats: `users`, `signIns` (`notInLast30Days`, `rate`; a never-signed-in user counts from registration), `usage`
 - `GET /admin/api/users` — paginated user list
 - `GET /admin/api/bug-reports` — paginated bug reports (sorted: new → in_progress → fixed)
 - `PATCH /admin/api/bug-reports/:id/status` — update bug report status (new/in_progress/fixed)
