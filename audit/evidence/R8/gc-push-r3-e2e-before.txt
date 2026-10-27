@@ -1,0 +1,41 @@
+Cause fix 20, review 3 - red before: e2e flow 38 on the code before review 2's fix
+Date: 2026-10-27, Rehearsly E2E simulator (iPhone 16), Maestro 2.11.0
+
+Files put back (the fix c83855b's app files, as at be9eb44):
+$ git restore --source=be9eb44 -- src/features/profile/screens/ProfileScreen.tsx src/shared/services/notifications.ts
+
+$ npm run e2e -- e2e/flows/38-switch-account-push-answer-late.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/38-switch-account-push-answer-late.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Switch accounts - a push registration answered late (2m 13s) (Assertion is false: id: profile-notifications is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+server.log (the local server, e2e/out):
+657:[e2e] holding the request POST /api/native/push-tokens, its connection open
+660:[e2e] released POST /api/native/push-tokens: the server answered 401
+
+The failing step is the flow's last: Andrei's profile after the relaunch,
+read from the server - `profile-notifications` with `checked: false`.
+Screenshot 38-andrei-after-her-answer (e2e/out/artifacts/2026-10-27_094140):
+the Notifications switch ON for Andrei Prozorov, and under it "This device
+cannot receive push notifications." He never touched the switch; it was off
+in the seed and off on his screen before the release. Natasha's answer, come
+after her sign-out, saved "notifications on" with his credentials.
+
+Files put back:
+$ git restore --source=HEAD -- src/features/profile/screens/ProfileScreen.tsx src/shared/services/notifications.ts
