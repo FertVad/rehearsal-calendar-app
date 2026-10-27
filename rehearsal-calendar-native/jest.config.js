@@ -20,7 +20,7 @@ module.exports = {
         }],
       },
       transformIgnorePatterns: [
-        'node_modules/(?!(react-native|@react-native|expo|@expo|expo-clipboard|react-native-calendars|@react-navigation/routers)/)',
+        'node_modules/(?!(react-native|@react-native|expo|@expo|expo-clipboard|react-native-calendars|@react-navigation/routers|@react-navigation/core)/)',
       ],
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
       moduleNameMapper: {
@@ -43,6 +43,8 @@ module.exports = {
         // copy is an ES module, which the server's --experimental-vm-modules run
         // refuses to require; the TypeScript source it ships compiles like ours.
         '^@react-navigation/routers$': '<rootDir>/node_modules/@react-navigation/routers/src/index.tsx',
+        // The real link parser, the same way: what state a link opens.
+        '^@react-navigation/core/getStateFromPath$': '<rootDir>/node_modules/@react-navigation/core/src/getStateFromPath.tsx',
       },
       setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
       collectCoverageFrom: [

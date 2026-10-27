@@ -1,6 +1,6 @@
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
-import { Platform, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { NavigationContainer, useNavigation, useNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
+import { View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { NavigationContainer, useNavigation, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +28,7 @@ import {
   PlannerNavigator,
   ProfileNavigator,
 } from './stacks';
+import { linking } from './linking';
 import type { TabParamList, AppStackParamList, AppNavigation } from './types';
 
 // Re-export types for consumers
@@ -58,42 +59,6 @@ const useActionSheet = () => {
     throw new Error('useActionSheet must be used within ActionSheetProvider');
   }
   return context;
-};
-
-const prefix = Linking.createURL('/');
-
-const localhostPrefix = Platform.OS === 'android'
-  ? 'http://10.0.2.2:3001'
-  : 'http://localhost:3001';
-
-const linking: LinkingOptions<AppStackParamList> = {
-  prefixes: [
-    prefix,
-    'rehearsalapp://',
-    'https://rehearsly.me',
-    // Kept so links handed out before the domain move still resolve
-    'https://server-fertvads-projects.vercel.app',
-    localhostPrefix
-  ],
-  config: {
-    screens: {
-      MainTabs: {
-        path: 'tabs',
-        screens: {
-          Calendar: 'calendar',
-          Projects: 'projects',
-          Planner: 'planner',
-          Profile: 'profile',
-        },
-      },
-      JoinProject: 'invite/:code',
-      // What an exported calendar event points at. The event carries this URL
-      // so a second device can tell which rehearsal it is — the id has to live
-      // in a field iOS shows, since events have no hidden one, so it may as
-      // well take the reader somewhere.
-      RehearsalDetails: 'rehearsal/:rehearsalId',
-    },
-  },
 };
 
 const AppStack = createNativeStackNavigator<AppStackParamList>();

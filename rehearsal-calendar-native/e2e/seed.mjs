@@ -41,6 +41,9 @@ export const PEOPLE = {
   orsino: { email: 'orsino@e2e.test', firstName: 'Duke', lastName: 'Orsino', onboarded: true },
   viola: { email: 'viola@e2e.test', firstName: 'Viola', lastName: 'Messina', onboarded: true },
   sebastian: { email: 'sebastian@e2e.test', firstName: 'Sebastian', lastName: 'Messina', onboarded: false },
+  // Launched by the same invite, signs in and turns it down (43): never joins,
+  // so Viola's and Sebastian's flows find the project as they expect.
+  antonio: { email: 'antonio@e2e.test', firstName: 'Antonio', lastName: 'Captain', onboarded: true },
   // The availability editor (10): marks of his own, in no project, so nothing
   // another flow books lands on his days.
   treplev: { email: 'treplev@e2e.test', firstName: 'Konstantin', lastName: 'Treplev', onboarded: true },
