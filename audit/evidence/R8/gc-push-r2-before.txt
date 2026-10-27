@@ -1,0 +1,30 @@
+Cause fix 20, review 2 (T-120): a late answer to turning push on must not reach the next account.
+Code: be9eb44 (cause fix 20 with its first review, as carried onto auto/main), with the new test only.
+Command: cd rehearsal-calendar-native && npx jest --selectProjects frontend --forceExit src/features/profile/screens/__tests__/ProfileScreen.pushSession.test.tsx
+
+FAIL frontend src/features/profile/screens/__tests__/ProfileScreen.pushSession.test.tsx (76.289 s)
+  ✕ a late answer to Anna's switch changes neither Boris's setting nor this device's state (review 2) (1282 ms)
+
+  ● a late answer to Anna's switch changes neither Boris's setting nor this device's state (review 2)
+
+    expect(jest.fn()).not.toHaveBeenCalledWith(...expected)
+
+    Expected: not {"notificationsEnabled": true}
+
+    Number of calls: 1
+
+      120 |   await act(async () => {});
+      121 |
+    > 122 |   expect(mockApi.updateMe).not.toHaveBeenCalledWith({ notificationsEnabled: true });
+          |                                ^
+      123 |   expect(auth.user).toMatchObject({ id: 8, notificationsEnabled: false });
+      124 |   expect(getPushDeviceState()).toBe('failed');
+      125 | });
+
+      at Object.<anonymous> (src/features/profile/screens/__tests__/ProfileScreen.pushSession.test.tsx:122:32)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        77.974 s, estimated 90 s
+Ran all test suites matching src/features/profile/screens/__tests__/ProfileScreen.pushSession.test.tsx.
