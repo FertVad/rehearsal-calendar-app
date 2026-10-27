@@ -20,7 +20,7 @@ module.exports = {
         }],
       },
       transformIgnorePatterns: [
-        'node_modules/(?!(react-native|@react-native|expo|@expo|expo-clipboard|react-native-calendars|@react-navigation/routers|@react-navigation/core)/)',
+        'node_modules/(?!(react-native|@react-native|expo|@expo|expo-clipboard|react-native-calendars|@react-navigation/routers|@react-navigation/core|@react-navigation/native/src)/)',
       ],
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
       moduleNameMapper: {
@@ -45,6 +45,9 @@ module.exports = {
         '^@react-navigation/routers$': '<rootDir>/node_modules/@react-navigation/routers/src/index.tsx',
         // The real link parser, the same way: what state a link opens.
         '^@react-navigation/core/getStateFromPath$': '<rootDir>/node_modules/@react-navigation/core/src/getStateFromPath.tsx',
+        // And how a container takes the link the app was launched by.
+        '^@react-navigation/native/useLinking$': '<rootDir>/node_modules/@react-navigation/native/src/useLinking.native.tsx',
+        '^@react-navigation/native/useThenable$': '<rootDir>/node_modules/@react-navigation/native/src/useThenable.tsx',
       },
       setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
       collectCoverageFrom: [

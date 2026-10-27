@@ -6,7 +6,9 @@
 # container of its own, so the app's is mounted afresh after signing in, and a
 # fresh container builds its first state from the link the app was launched
 # by — the invitation alone, with nothing under it for Cancel to go back to.
-# The links now open over the calendar (navigation/linking.ts, linking.test).
+# The links now open over the calendar (navigation/linking.ts, linking.test),
+# and the launch link only once: signing out and in again does not bring the
+# invitation back (launchLink.test).
 # The other invite flows open their link in an app already running.
 appId: ${APP_ID}
 name: Invite link at a cold start, turned down
@@ -53,6 +55,42 @@ tags:
 - assertNotVisible:
     id: join-project-name
 - takeScreenshot: 43-invite-cancelled
+# Signed out and in again without opening a link: the invitation turned down
+# stays turned down. Each sign-in mounts the app's container afresh, and each
+# one read the launch link again (navigation/linking.ts, launchLink.test).
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-logout
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-logout
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${ANTONIO_EMAIL}
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: calendar-today
+    timeout: 20000
+# Given the time an invitation takes to open, to be sure none does.
+- extendedWaitUntil:
+    visible:
+      id: join-project-name
+    timeout: 5000
+    optional: true
+- assertNotVisible:
+    id: join-project-name
+- takeScreenshot: 43-invite-not-again
 # Closed again, still signed in, and launched by an invite nobody issued.
 - stopApp
 - runFlow:

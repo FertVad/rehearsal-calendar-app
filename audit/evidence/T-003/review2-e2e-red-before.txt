@@ -1,0 +1,27 @@
+T-003 review round 2: src/navigation/linking.ts at 8ec2e7b (git restore --source=HEAD), flow 43 extended.
+$ npm run e2e -- e2e/flows/43-invite-cold-start-close.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/43-invite-cold-start-close.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Invite link at a cold start, turned down (2m 23s) (Assertion is false: id: calendar-today is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Where it failed (e2e/out/artifacts/2026-10-27_174447/Invite link at a cold start, turned down/):
+takeScreenshot/43-invite-cold-start.png and 43-invite-cancelled.png were taken - Cancel
+went back to the calendar. Then signed out and in again as Antonio, without opening a
+link: screenshots/step-071-assertCondition-calendar-today.png shows "Project Invitation -
+Twelfth Night" with Join / Cancel again instead of the calendar.
