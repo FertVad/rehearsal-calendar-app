@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { e2eFlowsFor, e2eLimitMs, failedFlows, pruneArtifacts, runChecks, stopChecks } from '../lib/checks.mjs';
+import { e2eFlowsFor, e2eLimitMs, failedFlows, maestroRuns, pruneArtifacts, runChecks, stopChecks } from '../lib/checks.mjs';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autodev-checks-'));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -224,4 +224,18 @@ test('lost again on the second run is red, with both runs in what failed', async
   assert.equal(fs.readFileSync(path.join(app, 'calls.txt'), 'utf8').trim().split('\n').length, 2);
   assert.equal(e2e.failures.filter((line) => line.includes('05-inbox.yaml — maestro.DeviceUnreachableException')).length, 2);
   assert.match(e2e.tail, /драйвер Maestro/);
+});
+
+test('a folder beside the Maestro runs is not taken for the newest run', () => {
+  // 27.10.2026: an empty metro-watch-48323 in the reviewer's tree sorted after
+  // every dated run, so the control run's red flow kept no screenshots, and
+  // pruning counted it as one of the five newest.
+  const out = path.join(dir, 'stray', 'e2e', 'out');
+  const runs = ['2026-10-01_010000', '2026-10-02_010000', '2026-10-03_010000', '2026-10-04_010000',
+    '2026-10-05_010000', '2026-10-06_010000'];
+  for (const run of [...runs, 'metro-watch-48323']) fs.mkdirSync(path.join(out, 'artifacts', run), { recursive: true });
+  assert.deepEqual(maestroRuns(out), runs);
+  pruneArtifacts(out);
+  assert.deepEqual(fs.readdirSync(path.join(out, 'artifacts')).sort(), [...runs.slice(1), 'metro-watch-48323']);
+  assert.deepEqual(maestroRuns(path.join(dir, 'stray', 'none')), []);
 });

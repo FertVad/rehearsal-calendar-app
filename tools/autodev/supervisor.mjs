@@ -34,7 +34,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runClaude, runCodex, stopAgents } from './lib/agents.mjs';
-import { failedFlows, runChecks, runE2e, stopChecks } from './lib/checks.mjs';
+import { failedFlows, maestroRuns, runChecks, runE2e, stopChecks } from './lib/checks.mjs';
 import { parseDiff, pauseReasons, reasonKind, unapproved } from './lib/guard.mjs';
 import { MEMORY, waitFor, waitOver } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
@@ -553,7 +553,7 @@ function keepFailedRun(name, checksLog, offset, run, tree = WORKTREE) {
       try { fs.copyFileSync(path.join(out, file), path.join(dir, file)); } catch { /* not written */ }
     }
     try {
-      const runs = fs.readdirSync(path.join(out, 'artifacts')).sort();
+      const runs = maestroRuns(out);
       if (runs.length && tree === WORKTREE) {
         fs.writeFileSync(path.join(dir, 'maestro-artifacts.txt'), `${path.join('rehearsal-calendar-native', 'e2e', 'out', 'artifacts', runs.at(-1))}\n`);
       } else if (runs.length) {

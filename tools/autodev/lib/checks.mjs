@@ -97,6 +97,17 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const KEEP_POINTED_MS = 3 * DAY_MS;
 const KEEP_FAILED_MS = 14 * DAY_MS;
 
+/**
+ * Maestro's runs under `out` (an app's e2e/out), oldest first: the folders
+ * named for the time they started. Anything else there is not a run — an
+ * empty metro-watch-48323 sorted after all of them on 27.10.2026.
+ */
+export function maestroRuns(out) {
+  try {
+    return fs.readdirSync(path.join(out, 'artifacts')).filter((name) => /^\d{4}-\d{2}-\d{2}_\d{6}$/.test(name)).sort();
+  } catch { return []; }
+}
+
 /** Removes old Maestro artifacts and kept red runs under `out` (an app's e2e/out); the paths removed, relative to it. */
 export function pruneArtifacts(out, now = Date.now()) {
   const removed = [];
@@ -114,8 +125,7 @@ export function pruneArtifacts(out, now = Date.now()) {
       try { keep.add(path.basename(fs.readFileSync(path.join(dir, 'maestro-artifacts.txt'), 'utf8').trim())); } catch { /* none named */ }
     }
   }
-  let runs = [];
-  try { runs = fs.readdirSync(path.join(out, 'artifacts')).sort(); } catch { return removed; }
+  const runs = maestroRuns(out);
   for (const run of runs.slice(-KEEP_RUNS)) keep.add(run);
   for (const run of runs.filter((name) => !keep.has(name))) {
     fs.rmSync(path.join(out, 'artifacts', run), { recursive: true, force: true });
