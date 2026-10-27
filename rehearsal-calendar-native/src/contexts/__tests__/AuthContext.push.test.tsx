@@ -9,10 +9,11 @@
  */
 import React from 'react';
 import { AppState, Text } from 'react-native';
-import { render, act, waitFor } from '@testing-library/react-native';
+import { render, act } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
 import { AuthProvider, useAuth } from '../AuthContext';
 import { resetSessionForTests } from '../../shared/services/session';
+import { getPushDeviceState, subscribePushDeviceState, type PushDeviceState } from '../../shared/services/notifications';
 
 const mockApi = {
   getMe: jest.fn(),
@@ -49,6 +50,29 @@ const comeForward = async () => {
   await act(async () => { appStateHandlers.forEach((handler) => handler('active')); });
 };
 
+// The attempt itself, not a time: settles once a registration has come to
+// `state`. `waitFor` gave the whole sign-in and registration its one second,
+// and under the full suite's load the chain did not fit in it (27.10.2026).
+// Taken before the attempt is started, so its end cannot be missed. React
+// runs what the chain schedules only between turns of `act`, so it is given
+// turns until the attempt has ended — as many as it takes, however slow. Each
+// turn lets timers run too: an attempt that never ends fails on Jest's own
+// timeout instead of holding the event loop.
+const comesTo = (state: PushDeviceState) => {
+  const attempt = { ended: false };
+  const stop = subscribePushDeviceState(() => {
+    if (getPushDeviceState() !== state) return;
+    stop();
+    attempt.ended = true;
+  });
+  return attempt;
+};
+const settled = async (attempt: { ended: boolean }) => {
+  while (!attempt.ended) {
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+  }
+};
+
 beforeEach(() => {
   Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
   Object.values(mockApi).forEach((fn) => fn.mockReset());
@@ -67,12 +91,15 @@ beforeEach(() => {
 
 it('registers again when the app comes forward after a failed start, and stops once it has (GC03)', async () => {
   mockApi.registerPushToken.mockRejectedValueOnce(new Error('Network Error')).mockResolvedValue({ data: {} });
+  const failed = comesTo('failed');
   render(<AuthProvider><Probe /></AuthProvider>);
-  await waitFor(() => expect(mockApi.registerPushToken).toHaveBeenCalledTimes(1));
-  await act(async () => {});
+  await settled(failed);
+  expect(mockApi.registerPushToken).toHaveBeenCalledTimes(1);
 
+  const registered = comesTo('registered');
   await comeForward();
-  await waitFor(() => expect(mockApi.registerPushToken).toHaveBeenCalledTimes(2));
+  await settled(registered);
+  expect(mockApi.registerPushToken).toHaveBeenCalledTimes(2);
   expect(mockStorage['@push_token']).toBe('mock-token');
 
   await comeForward();
@@ -84,22 +111,26 @@ it('registers again when the app comes forward after a failed start, and stops o
 it('registers once the permission is granted in Settings, never asking itself', async () => {
   (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
   mockApi.registerPushToken.mockResolvedValue({ data: {} });
+  const denied = comesTo('denied');
   render(<AuthProvider><Probe /></AuthProvider>);
-  await waitFor(() => expect(auth.user?.id).toBe(7));
-  await act(async () => {});
+  await settled(denied);
   expect(mockApi.registerPushToken).not.toHaveBeenCalled();
 
   (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+  const registered = comesTo('registered');
   await comeForward();
-  await waitFor(() => expect(mockApi.registerPushToken).toHaveBeenCalledTimes(1));
+  await settled(registered);
+  expect(mockApi.registerPushToken).toHaveBeenCalledTimes(1);
   expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
 });
 
 it('a change to the user is the same session and registers nothing new', async () => {
   mockApi.registerPushToken.mockResolvedValue({ data: {} });
   mockApi.updateMe.mockResolvedValue({ data: { user: { ...USER, firstName: 'Anya' } } });
+  const registered = comesTo('registered');
   render(<AuthProvider><Probe /></AuthProvider>);
-  await waitFor(() => expect(mockApi.registerPushToken).toHaveBeenCalledTimes(1));
+  await settled(registered);
+  expect(mockApi.registerPushToken).toHaveBeenCalledTimes(1);
   await act(async () => { await auth.updateUser({ firstName: 'Anya' }); });
   await act(async () => {});
   expect(mockApi.registerPushToken).toHaveBeenCalledTimes(1);
