@@ -120,6 +120,9 @@ export const PEOPLE = {
   sorin: { email: 'sorin@e2e.test', firstName: 'Pyotr', lastName: 'Sorin', onboarded: true },
   polina: { email: 'polina@e2e.test', firstName: 'Polina', lastName: 'Andreyevna', onboarded: true },
   yakov: { email: 'yakov@e2e.test', firstName: 'Yakov', lastName: 'Workman', onboarded: true },
+  // An admin of her project who is not on its rehearsal, opening it by link
+  // before her projects have come (42).
+  charlotta: { email: 'charlotta@e2e.test', firstName: 'Charlotta', lastName: 'Ivanovna', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -287,9 +290,9 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
     [roundsId, ids.chebutykin]);
 
-  // Cause fix 22 (39–41): Gaev's projects, each person put in as the join
-  // does — the sign-ins are spent. Polina is an admin of hers, so her details
-  // show the count.
+  // Cause fix 22 (39–42): Gaev's projects, each person put in as the join
+  // does — the sign-ins are spent. Polina and Charlotta are admins of theirs,
+  // so their details show the count.
   const joined = async (name, description, key, role = 'member') => {
     const { id } = await project(name, description, [], 'gaev');
     await client.query(
@@ -301,6 +304,7 @@ export async function seed({ client, apiUrl, timezone }) {
   const sorinEstateId = await joined('Sorin Estate', 'By the lake', 'sorin');
   const accountsId = await joined('Estate Accounts', 'The ledgers', 'polina', 'admin');
   const lighthouseId = await joined('Lighthouse', 'The night shift', 'yakov');
+  const ballId = await joined('Estate Ball', 'The ballroom', 'charlotta', 'admin');
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -350,6 +354,8 @@ export async function seed({ client, apiUrl, timezone }) {
     // Today, and the other day of this week he picks in the strip (41).
     lamp: await rehearsal(lighthouseId, 'Lamp trimming', 0, 12, 13, ['gaev', 'yakov'], 'gaev'),
     boat: await rehearsal(lighthouseId, 'Boat repair', otherDayThisWeek(), 12, 13, ['gaev', 'yakov'], 'gaev'),
+    // Gaev's alone: Charlotta, its project's admin, is not on it — "0/1" (42).
+    ball: await rehearsal(ballId, 'Ball rehearsal', 2, 12, 13, ['gaev'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),

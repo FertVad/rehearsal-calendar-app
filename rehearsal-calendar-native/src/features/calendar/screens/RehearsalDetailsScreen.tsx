@@ -1,5 +1,5 @@
 import { logger } from '../../../shared/utils/logger';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -91,10 +91,20 @@ export default function RehearsalDetailsScreen() {
   const [loading, setLoading] = useState(false);
   const ownId = user ? String(user.id) : null;
 
-  // The counts are an admin's, as the calendar's list gives them (adminStats):
-  // read when the answer lands, which may be after the projects have come.
-  const isAdminRef = useRef(isAdmin);
-  isAdminRef.current = isAdmin;
+  // The counts are an admin's, as the calendar's list gives them (adminStats),
+  // and the answer and the project list come in either order: opened from a
+  // notification, the participants may answer before the list says "admin",
+  // and an admin who is not on the rehearsal has no calendar row to fill the
+  // count in. So the answer's count waits here, with the writer of the read
+  // that brought it, until both are known — the writer still drops it if a tap
+  // has landed since (review).
+  const [answeredCounts, setAnsweredCounts] = useState<{
+    write: ReturnType<typeof beginRead>;
+    counts: Record<string, AdminStats>;
+  } | null>(null);
+  useEffect(() => {
+    if (isAdmin && answeredCounts) answeredCounts.write({}, answeredCounts.counts);
+  }, [isAdmin, answeredCounts]);
 
   // Who is on it, and what the others answered. This person's own mark and
   // the counts are not kept here: they are SeenContext's, the one store the
@@ -105,6 +115,7 @@ export default function RehearsalDetailsScreen() {
   // mark back sent it again; a failed tap was undone in the store and stayed
   // here; the count after a tap was the store's from before it (DD01).
   useEffect(() => {
+    setAnsweredCounts(null);
     if (!rehearsal) {
       setParticipants([]);
       return;
@@ -133,12 +144,13 @@ export default function RehearsalDetailsScreen() {
         })));
         const own = all.find((p) => String(p.userId) === ownId);
         const counts: AdminStats | undefined = res.data.stats;
-        primeSeen(
-          own ? { [rehearsalId]: own.response === 'yes' ? 'yes' : null } : {},
-          counts && isAdminRef.current
-            ? { [rehearsalId]: { confirmed: counts.confirmed, invited: counts.invited } }
-            : {}
-        );
+        primeSeen(own ? { [rehearsalId]: own.response === 'yes' ? 'yes' : null } : {});
+        if (counts) {
+          setAnsweredCounts({
+            write: primeSeen,
+            counts: { [rehearsalId]: { confirmed: counts.confirmed, invited: counts.invited } },
+          });
+        }
       })
       .catch((err: any) => {
         logger.error('Failed to load participants:', err);

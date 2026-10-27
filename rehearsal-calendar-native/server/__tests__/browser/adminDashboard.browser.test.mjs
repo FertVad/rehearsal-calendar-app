@@ -190,6 +190,23 @@ test('production CSP loads admin assets, blocks inline execution and preserves p
   assert.notEqual(nonce(nonceResponse.headers()['content-security-policy']), nonce(policy));
 });
 
+// The figure counts sign-ins: a session renews itself without one, so a user
+// who has not signed in for a month may be using the app every day. Its card
+// says what it counts and what it does not, rather than "churn" (H03).
+test('the sign-in figure is named for sign-ins, not churn or inactivity', { timeout: 30000 }, async t => {
+  const { page, errors } = await fixture(t);
+  await waitForDashboard(page);
+  const figure = page.locator('#stats-cards .card').nth(1);
+  assert.equal(await figure.locator('.card-label').textContent(), 'No sign-in for 30 days');
+  assert.equal(await figure.locator('.card-value').textContent(), '10%');
+  const note = await figure.locator('.card-sub').textContent();
+  assert.match(note, /^Users: 6 /);
+  assert.match(note, /not a measure of use/);
+  const cards = (await page.locator('#stats-cards').textContent()).toLowerCase();
+  assert.doesNotMatch(cards, /churn|inactive/);
+  assert.deepEqual(errors, []);
+});
+
 test('login, pagination, status, refresh, empty states and logout work under production CSP', { timeout: 30000 }, async t => {
   const { page, state, errors } = await fixture(t, { signedIn: false });
   await page.locator('#login-screen').waitFor({ state: 'visible' });

@@ -22,8 +22,10 @@ jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: require('../../../../i18n/translations').translations.en, language: 'en' }),
 }));
 let isAdmin = false;
+// Empty until the list has loaded: opened from a notification, it may come late.
+let projectsLoaded = true;
 jest.mock('../../../../contexts/ProjectContext', () => ({
-  useProjects: () => ({ projects: [{ id: 'p1', name: 'Hamlet', is_admin: isAdmin }] }),
+  useProjects: () => ({ projects: projectsLoaded ? [{ id: 'p1', name: 'Hamlet', is_admin: isAdmin }] : [] }),
 }));
 jest.mock('../../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 7, timezone: 'UTC' } }) }));
 jest.mock('../../../../shared/services/api', () => ({
@@ -55,13 +57,14 @@ function Card() {
 }
 
 const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+const tree = () => (
+  <SeenProvider>
+    <Card />
+    <RehearsalDetailsScreen />
+  </SeenProvider>
+);
 async function open() {
-  const screen = render(
-    <SeenProvider>
-      <Card />
-      <RehearsalDetailsScreen />
-    </SeenProvider>
-  );
+  const screen = render(tree());
   await settle();
   await settle();
   return screen;
@@ -73,6 +76,7 @@ const seenEyes = (screen: ReturnType<typeof render>) =>
 beforeEach(() => {
   jest.clearAllMocks();
   isAdmin = false;
+  projectsLoaded = true;
   (rehearsalsAPI.getById as jest.Mock).mockResolvedValue({
     data: {
       rehearsal: {
@@ -126,6 +130,23 @@ describe('Rehearsal details: one "seen" model (DD01)', () => {
     await settle();
 
     expect(respond).toHaveBeenCalledWith('r1', 'yes');
+    expect(screen.getByText('1/2')).toBeTruthy();
+  });
+
+  it('shows the count when the projects come after the participants (review)', async () => {
+    // Opened from a notification by an admin who is not on the rehearsal: the
+    // participants answer lands before the project list says "admin", and the
+    // calendar has nothing to fill the count in with.
+    isAdmin = true;
+    projectsLoaded = false;
+    answer('no', 'yes');
+    const screen = await open();
+    expect(screen.queryByText('1/2')).toBeNull();
+
+    projectsLoaded = true;
+    screen.rerender(tree());
+    await settle();
+
     expect(screen.getByText('1/2')).toBeTruthy();
   });
 

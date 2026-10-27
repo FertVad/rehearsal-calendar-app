@@ -156,7 +156,9 @@ invite code the seed returns (`TWELFTH_INVITE`) — the server's own, as it
 issued it — and `${<KEY>_DAY}` for each day it names (`MARK_DAY`, a local
 `YYYY-MM-DD`), and `${<KEY>_TIME}` for each time it computes (`WATCH_TOKYO_TIME`,
 an `HH:mm`), and `${<KEY>_LABEL}` for each text it computes (`WEEK_CHOSEN_LABEL`,
-the planner's week as its header names it). Times are local to the machine,
+the planner's week as its header names it), and `${<KEY>_REHEARSAL}` for each
+rehearsal's id (`BALL_REHEARSAL`, for a link `rehearsalapp://rehearsal/<id>`,
+flow 42). Times are local to the machine,
 which is every profile's zone but Chebutykin's, whose are in his; the
 simulator's is another (see above).
 
