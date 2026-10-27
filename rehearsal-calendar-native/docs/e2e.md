@@ -275,6 +275,11 @@ whether it has gone, which waited seven seconds every time.
   report focus, so there is nothing else to wait on. It also dismisses iOS's
   "Save Password?" sheet, which covers the screen. A flow that acts before
   signing in launches the app itself and then runs `sign-in-form.yaml`.
+- Maestro's `launchApp` grants the app every permission unless it is given
+  `permissions:`, so the sign-in subflow's launch leaves calendar access
+  granted. A flow that needs iOS to ask — and to be answered by the flow —
+  launches with `permissions: { all: unset }` and then runs
+  `sign-in-form.yaml` (flow 09-onboarding refuses the calendar's prompt).
 - Open a link through `e2e/subflows/open-link.yaml` (`env: { LINK: ... }`): iOS
   asks 'Open in "Rehearsly"?' first, and it answers.
 - Find controls by `testID` (`id:` in Maestro), not by their English label.

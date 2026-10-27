@@ -123,8 +123,12 @@ export const PEOPLE = {
   // An admin of her project who is not on its rehearsal, opening it by link
   // before her projects have come (42).
   charlotta: { email: 'charlotta@e2e.test', firstName: 'Charlotta', lastName: 'Ivanovna', onboarded: true },
-  // Has not been through onboarding yet.
+  // Neither has been through onboarding yet. One goes through it to the end
+  // (09-onboarding), after which it is never shown to her again; the other
+  // connects a calendar in it and comes back to the step (32), and needs it
+  // still there whichever of the two runs first.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
+  perdita: { email: 'perdita@e2e.test', firstName: 'Perdita', lastName: 'Shepherd', onboarded: false },
 };
 
 const pad = (n) => String(n).padStart(2, '0');

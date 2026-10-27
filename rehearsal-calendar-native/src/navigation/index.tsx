@@ -410,14 +410,22 @@ export default function Navigation() {
     );
   }
 
+  // Each stage gets a container of its own. One container kept the state of
+  // the navigator it held, and the next one mounted under it took that over,
+  // keeping every route whose name it also had: onboarding's Notifications
+  // step became the app's inbox, so finishing onboarding opened an empty inbox
+  // instead of the calendar (T-003).
+  const stage = !isAuthenticated ? 'auth' : shouldShowOnboarding ? 'onboarding' : 'app';
+
   return (
     <NavigationContainer
+      key={stage}
       ref={navigationRef}
-      linking={isAuthenticated && !shouldShowOnboarding ? linking : undefined}
+      linking={stage === 'app' ? linking : undefined}
     >
-      {!isAuthenticated ? (
+      {stage === 'auth' ? (
         <AuthNavigator />
-      ) : shouldShowOnboarding ? (
+      ) : stage === 'onboarding' ? (
         <OnboardingNavigator />
       ) : (
         <AppNavigator />
