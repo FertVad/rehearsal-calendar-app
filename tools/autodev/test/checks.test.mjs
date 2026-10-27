@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { runChecks, stopChecks } from '../lib/checks.mjs';
+import { e2eLimitMs, runChecks, stopChecks } from '../lib/checks.mjs';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autodev-checks-'));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -54,4 +54,18 @@ test('stopping the supervisor stops a check in flight', async () => {
   stopChecks();
   const result = await pending;
   assert.equal(result.steps.at(-1).signal, 'SIGTERM');
+});
+
+test('the e2e limit grows with the flows: 34 that passed in 46 minutes are not cut off', () => {
+  // T-121, 26.10.2026: "34/34 Flows Passed in 45m 55s", killed at a fixed 45 minutes and called red.
+  assert.ok(e2eLimitMs(34) > 50 * 60 * 1000);
+  assert.ok(e2eLimitMs(60) > e2eLimitMs(34));
+});
+
+test('a check stopped by its limit says so, and is not passed off as a failed change', async () => {
+  const result = await runChecks({ root: path.join(dir, 'tree'), changedFiles: appChange, node: bin('e', 'trap "exit 0" TERM; while :; do sleep 0.1; done'), log: path.join(dir, 'e.log'), env, e2eLimit: 300 });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.equal(result.ok, false);
+  assert.equal(e2e.timedOut, true);
+  assert.match(e2e.tail, /не уложились в лимит/);
 });

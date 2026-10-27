@@ -15,6 +15,22 @@ const TAIL_LINES = 80;
 // e2e/run.mjs: the machine was not ready — not the change (docs/e2e.md).
 const E2E_NOT_READY = 75;
 
+// A fixed e2e limit was outgrown: on 26.10.2026 "34/34 Flows Passed in 45m
+// 55s" was killed at 45 minutes and called red, and T-120 and T-121 were sent
+// to fix flows that passed. The limit is the setup plus an allowance per flow,
+// so it grows with the suite.
+const E2E_SETUP_MS = 10 * 60 * 1000;
+const E2E_PER_FLOW_MS = 150 * 1000;
+
+/** How long an e2e run of `flowCount` flows may take. */
+export function e2eLimitMs(flowCount) {
+  return E2E_SETUP_MS + flowCount * E2E_PER_FLOW_MS;
+}
+
+function countFlows(app) {
+  try { return fs.readdirSync(path.join(app, 'e2e', 'flows')).filter((f) => f.endsWith('.yaml')).length; } catch { return 0; }
+}
+
 // Checks still running, stopped with the supervisor (stopChecks): the e2e
 // run tears its environment down on SIGTERM.
 const running = new Set();
@@ -51,13 +67,21 @@ function run(name, command, args, { cwd, env, log, timeoutMs }) {
     };
     child.stdout.on('data', keep);
     child.stderr.on('data', keep);
-    const timer = setTimeout(() => child.kill('SIGTERM'), timeoutMs);
+    // Stopped by its limit is neither passed — e2e/run.mjs tears down and may
+    // exit 0 — nor a failure of the change, and the tail says which it was.
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, timeoutMs);
     child.on('close', (code, signal) => {
       running.delete(child);
       clearTimeout(timer);
       if (partial) add(partial);
+      if (timedOut) {
+        const note = `[autodev] ${name}: не уложились в лимит ${Math.round(timeoutMs / 60000)} мин — остановлено по времени, это не результат проверки`;
+        add(note);
+        out.write(`${note}\n`);
+      }
       out.end();
-      resolve({ name, ok: code === 0, code, signal, tail: lines.slice(-TAIL_LINES).join('\n'), failures });
+      resolve({ name, ok: code === 0 && !timedOut, code, signal, timedOut, tail: lines.slice(-TAIL_LINES).join('\n'), failures });
     });
   });
 }
@@ -73,7 +97,7 @@ export function checksFor(changedFiles) {
  * @param root the worktree
  * @returns {{ok: boolean, steps: {name, ok, code, tail, environment?}[]}}
  */
-export async function runChecks({ root, changedFiles, node, log, env }) {
+export async function runChecks({ root, changedFiles, node, log, env, e2eLimit }) {
   const app = path.join(root, 'rehearsal-calendar-native');
   const want = checksFor(changedFiles);
   const steps = [];
@@ -90,7 +114,7 @@ export async function runChecks({ root, changedFiles, node, log, env }) {
     if (!step.ok) return { ok: false, steps };
   }
   if (want.e2e) {
-    const step = await run('e2e', node, ['e2e/run.mjs'], opts(45 * 60 * 1000));
+    const step = await run('e2e', node, ['e2e/run.mjs'], opts(e2eLimit ?? e2eLimitMs(countFlows(app))));
     step.environment = step.code === E2E_NOT_READY;
     steps.push(step);
     if (!step.ok) return { ok: false, steps };
