@@ -1,5 +1,5 @@
 # An admin's count in a rehearsal's details comes whichever answers first,
-# the participants or the projects (cause fix 22: DD01, review). Charlotta is
+# the participants or the projects (cause fix 22: DD01, review). Olga is
 # the admin of Estate Ball and not on its "Ball rehearsal", so her calendar
 # has nothing to give the count; she opens it by link while her projects are
 # still on their way. The participants come first, when nothing yet says she
@@ -25,7 +25,7 @@ tags:
 - runFlow:
     file: ../subflows/sign-in-form.yaml
     env:
-      EMAIL: ${CHARLOTTA_EMAIL}
+      EMAIL: ${OLGA_EMAIL}
 - extendedWaitUntil:
     visible:
       id: calendar-filter
