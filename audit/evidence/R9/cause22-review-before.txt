@@ -1,0 +1,79 @@
+Cause fix 22, review: red before. Fix in b17167e; reviewed code 4df84e7 (da5a408);
+base before cause fix 22 b22183c.
+
+=== 1. DD01: the count when the projects come after the participants ===
+
+--- Jest, new test, on the reviewed screen (4df84e7) ---
+$ cd rehearsal-calendar-native && npx jest --selectProjects frontend --testPathPatterns RehearsalDetailsScreen -t "projects come after"
+
+  ● Rehearsal details: one "seen" model (DD01) › shows the count when the projects come after the participants (review)
+
+    Unable to find an element with text: 1/2
+
+      148 |     await settle();
+      149 |
+    > 150 |     expect(screen.getByText('1/2')).toBeTruthy();
+          |                   ^
+
+      at Object.<anonymous> (src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx:150:19)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 skipped, 5 total
+
+--- Jest, on the fix (b17167e) ---
+PASS frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx
+  Rehearsal details: one "seen" model (DD01)
+    ✓ takes the mark back when opened before the calendar primed the store
+    ✓ puts its own row back when the tap fails, as the card is put back
+    ✓ shows the server's count after the tap, not the one from before it
+    ✓ shows the count when the projects come after the participants (review)
+    ✓ keeps the others as the server gave them
+Tests:       5 passed, 5 total
+
+--- e2e 42, the screen restored from 4df84e7 ---
+$ git restore --source=4df84e7 -- src/features/calendar/screens/RehearsalDetailsScreen.tsx
+$ npm run e2e -- e2e/flows/42-details-count-projects-late.yaml
+[Failed] Details count when the projects come late (2m 15s) (Assertion is false: "0/1" is visible)
+1/1 Flow Failed
+
+--- e2e 42, the screen restored from b22183c (before cause fix 22) ---
+[Passed] Details count when the projects come late (1m 41s)
+1/1 Flow Passed in 1m 42s
+
+--- e2e 42 and 40 on the fix (git restore --source=HEAD) ---
+[Passed] Details count when the projects come late (1m 34s)
+1/1 Flow Passed in 1m 35s
+40-details-seen-one-model: 1/1 Flow Passed in 2m 20s
+
+The flow asserts "0/1" absent before the release, so a pass shows the
+participants did answer before the projects.
+
+=== 2. H03: the figure on screen is named for sign-ins ===
+
+--- Browser, the old dashboard (b22183c) fed the old API shape (churn) ---
+$ git restore --source=b22183c -- server/public/admin/dashboard.js
+  (the fixture's stats given churn: { users: { rate: 10, inactiveLast30Days: 6 } } as well, for this run only)
+$ cd server && node --test --test-name-pattern="sign-in figure" __tests__/browser/adminDashboard.browser.test.mjs
+not ok 1 - the sign-in figure is named for sign-ins, not churn or inactivity
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'User Churn (30 days)'
+    - 'No sign-in for 30 days'
+# pass 0
+# fail 1
+
+--- Browser, the old dashboard (b22183c) against the new contract (signIns only) ---
+not ok 1 - the sign-in figure is named for sign-ins, not churn or inactivity
+  error: |-
+    locator.textContent: Timeout 5000ms exceeded.
+      - waiting for locator('#stats-cards .card').nth(1).locator('.card-label')
+# pass 0
+# fail 1
+
+--- Browser, on the fix (both admin browser files) ---
+$ node --test __tests__/browser/adminDashboard.browser.test.mjs __tests__/browser/adminFailures.browser.test.mjs
+ok 3 - the sign-in figure is named for sign-ins, not churn or inactivity
+# pass 23
+# fail 0
