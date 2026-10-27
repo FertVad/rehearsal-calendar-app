@@ -1,0 +1,55 @@
+T-210 green after. Test with bcrypt.hash(PASSWORD, 4), same machine and load as red-before.txt.
+
+$ node audit/evidence/T-210/load-repro.mjs 5 3 __tests__/routes/authLogin.test.js __tests__/routes/providerSignIn.test.js __tests__/routes/passwordReset.test.js __tests__/routes/signInMethods.test.js __tests__/routes/emailChange.test.js
+cores 8, burners 24, files __tests__/routes/authLogin.test.js __tests__/routes/providerSignIn.test.js __tests__/routes/passwordReset.test.js __tests__/routes/signInMethods.test.js __tests__/routes/emailChange.test.js
+--- round 1: exit 0, 39.5 s
+PASS __tests__/routes/passwordReset.test.js (12.367 s)
+PASS __tests__/routes/emailChange.test.js (8.093 s)
+PASS __tests__/routes/providerSignIn.test.js (5.783 s)
+PASS __tests__/routes/authLogin.test.js
+PASS __tests__/routes/signInMethods.test.js
+Tests:       54 passed, 54 total
+--- round 2: exit 0, 38.0 s
+PASS __tests__/routes/passwordReset.test.js (12.41 s)
+PASS __tests__/routes/emailChange.test.js (8.666 s)
+PASS __tests__/routes/providerSignIn.test.js (6.451 s)
+PASS __tests__/routes/signInMethods.test.js
+PASS __tests__/routes/authLogin.test.js
+Tests:       54 passed, 54 total
+--- round 3: exit 0, 36.9 s
+PASS __tests__/routes/passwordReset.test.js (10.615 s)
+PASS __tests__/routes/emailChange.test.js (8.379 s)
+PASS __tests__/routes/providerSignIn.test.js (5.654 s)
+PASS __tests__/routes/authLogin.test.js
+PASS __tests__/routes/signInMethods.test.js (6.223 s)
+Tests:       54 passed, 54 total
+--- round 4: exit 1, 44.0 s
+PASS __tests__/routes/passwordReset.test.js (12.221 s)
+PASS __tests__/routes/emailChange.test.js (10.239 s)
+FAIL __tests__/routes/signInMethods.test.js (10.089 s)
+● lists the password of a new registration
+thrown: "Exceeded timeout of 5000 ms for a test.
+PASS __tests__/routes/providerSignIn.test.js (7.398 s)
+PASS __tests__/routes/authLogin.test.js
+Tests:       1 failed, 53 passed, 54 total
+--- round 5: exit 0, 37.7 s
+PASS __tests__/routes/signInMethods.test.js (6.25 s)
+PASS __tests__/routes/passwordReset.test.js (9.237 s)
+PASS __tests__/routes/emailChange.test.js (8.431 s)
+PASS __tests__/routes/providerSignIn.test.js (8.383 s)
+PASS __tests__/routes/authLogin.test.js
+Tests:       54 passed, 54 total
+
+authLogin: 5 of 5 loaded runs green, no longer listed as slow (under 5 s for
+the whole file). Round 4's signInMethods failure is a different test, outside
+T-210: see README.md.
+
+Alone, verbose:
+    ✓ signs in a password account (106 ms)
+    ✓ rejects a wrong password with 401 (23 ms)
+    ✓ answers an OAuth-only account with 401, not 500 (8 ms)
+    ✓ gives the same response for an OAuth-only account as for an unknown address (19 ms)
+    ✓ stops password sign-in from working (40 ms)
+    ✓ clears the stored credential rather than only the provider row (2 ms)
+    ✓ refuses to unlink the last remaining method (50 ms)
+Tests:       7 passed, 7 total

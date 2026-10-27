@@ -64,7 +64,10 @@ beforeAll(async () => {
   ({ unlinkAuthProvider } = await import('../../utils/accountLinking.js'));
   const authRouter = (await import('../../routes/auth.js')).default;
 
-  const hash = await bcrypt.hash(PASSWORD, 10);
+  // Cost 4, as in the other route tests: login compares at whatever cost the
+  // hash carries. Production's 10 took a second of this hook's five under load
+  // and timed it out (T-210).
+  const hash = await bcrypt.hash(PASSWORD, 4);
   passwordUserId = testDb.run(
     `INSERT INTO native_users (email, password_hash, first_name) VALUES (?, ?, ?)`,
     ['password-user@test.com', hash, 'Password']
