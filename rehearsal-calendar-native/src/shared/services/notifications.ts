@@ -8,6 +8,7 @@ import * as Device from 'expo-device';
 import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from './api';
+import { currentSession, isCurrentSession, type SessionStamp } from './session';
 import { logger } from '../utils/logger';
 
 const PUSH_TOKEN_KEY = '@push_token';
@@ -59,6 +60,14 @@ export type PushRegistration =
  */
 export type PushDeviceState = PushRegistration | 'unknown';
 
+/**
+ * What a registration came to for its caller: 'ended' when the session it was
+ * begun in is over — signed out, or somebody else signed in — before it came
+ * back. Such an answer is nobody's to hear: it is not this device's state, and
+ * it saves no setting.
+ */
+export type PushAttempt = PushRegistration | 'ended';
+
 let deviceState: PushDeviceState = 'unknown';
 const deviceListeners = new Set<() => void>();
 
@@ -66,6 +75,20 @@ function setDeviceState(state: PushDeviceState) {
   if (state === deviceState) return;
   deviceState = state;
   deviceListeners.forEach((listener) => listener());
+}
+
+/**
+ * The one rule for every registration, the person's and the session's own:
+ * what it came to is written as this device's state only while the session it
+ * was begun in is on (session.ts). Only the background attempt kept to it, so
+ * the profile's answer, come after a change of account, was written as the
+ * next person's device state and saved as their setting (review 2 of cause
+ * fix 20).
+ */
+function settle(session: SessionStamp, result: PushAttempt): PushAttempt {
+  if (result === 'ended' || !isCurrentSession(session)) return 'ended';
+  setDeviceState(result);
+  return result;
 }
 
 export function getPushDeviceState(): PushDeviceState {
@@ -90,8 +113,11 @@ export function subscribePushDeviceState(listener: () => void): () => void {
  * notifications hook used to ask whenever a signed-in user with notifications
  * on mounted the tabs, so "Later" on the onboarding screen was answered by the
  * same prompt a moment later (GC01).
+ *
+ * The token goes to the server only while `session` is on: the request carries
+ * whoever's credentials are there by then.
  */
-async function registerPush(ask: boolean): Promise<PushRegistration> {
+async function registerPush(ask: boolean, session: SessionStamp): Promise<PushAttempt> {
   if (!Device.isDevice) {
     logger.debug('[Notifications] Push notifications only work on physical devices');
     return 'unsupported';
@@ -118,6 +144,7 @@ async function registerPush(ask: boolean): Promise<PushRegistration> {
     const deviceType = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
     const deviceName = Device.modelName || 'Unknown Device';
 
+    if (!isCurrentSession(session)) return 'ended';
     // The endpoint upserts on (user, device), so registering again is cheap.
     await authAPI.registerPushToken(token, deviceType, deviceName);
     await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
@@ -140,11 +167,14 @@ async function registerPush(ask: boolean): Promise<PushRegistration> {
   }
 }
 
-/** The person asked for notifications: may show the system prompt. */
-export async function askAndRegisterPush(): Promise<PushRegistration> {
-  const result = await registerPush(true);
-  setDeviceState(result);
-  return result;
+/**
+ * The person asked for notifications: may show the system prompt. 'ended' if
+ * the session it was asked in is over by the answer: the caller then does
+ * nothing more — no setting saved, nothing said.
+ */
+export async function askAndRegisterPush(): Promise<PushAttempt> {
+  const session = currentSession();
+  return settle(session, await registerPush(true, session));
 }
 
 /** Whether this device can receive push right now, without asking. */
@@ -174,6 +204,9 @@ async function pushPermission(): Promise<'granted' | 'denied' | 'unsupported'> {
  * device's state (`getPushDeviceState`); the end of the session clears it.
  */
 export function keepPushRegistered(): () => void {
+  // The session this keeps the device registered for; an attempt that ends
+  // after it must not speak for the next one (settle).
+  const session = currentSession();
   let stopped = false;
   let running = false;
 
@@ -183,12 +216,10 @@ export function keepPushRegistered(): () => void {
     try {
       if (deviceState === 'registered') {
         const permission = await pushPermission();
-        if (!stopped && permission !== 'granted') setDeviceState('denied');
+        if (!stopped && permission !== 'granted') settle(session, 'denied');
       } else {
-        // An attempt that ends after its session has must not speak for the
-        // next one.
-        const result = await registerPush(false);
-        if (!stopped) setDeviceState(result);
+        const result = await registerPush(false, session);
+        if (!stopped) settle(session, result);
       }
     } finally {
       running = false;

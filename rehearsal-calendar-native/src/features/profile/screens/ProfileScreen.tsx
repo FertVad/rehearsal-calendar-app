@@ -85,6 +85,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         // notified. It used to be saved, the result of registering ignored, and
         // success reported over a refusal or a lost connection (GC02).
         const result = await askAndRegisterPush();
+        // Answered after the session it was asked in: the next person's
+        // setting is not this one's to save (review 2 of cause fix 20).
+        if (result === 'ended') return;
         if (result !== 'registered') {
           setNotificationsEnabled(before);
           explainPushRegistration(result, t);
@@ -110,6 +113,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const handleRegisterThisDevice = async () => {
     hapticLight();
     const result = await askAndRegisterPush();
+    if (result === 'ended') return;
     if (result === 'registered') hapticSuccess();
     else explainPushRegistration(result, t);
   };
