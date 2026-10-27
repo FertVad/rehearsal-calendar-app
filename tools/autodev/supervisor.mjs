@@ -34,7 +34,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runClaude, runCodex, stopAgents } from './lib/agents.mjs';
-import { failedFlows, maestroRuns, runChecks, runE2e, stopChecks } from './lib/checks.mjs';
+import { failedFlows, maestroRuns, runChecks, runE2e, SEED_FILE, stopChecks } from './lib/checks.mjs';
 import { parseDiff, pauseReasons, reasonKind, unapproved } from './lib/guard.mjs';
 import { MEMORY, waitFor, waitOver } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
@@ -480,7 +480,8 @@ async function check(state, task, t) {
   }
   note(task, `проверки: запущены (${files.length} файлов)`);
   const runAll = async () => {
-    const result = await runChecks({ root: WORKTREE, changedFiles: files, taskText: `${task.title}\n${task.body}`, node: NODE, log: path.join(LOGS, `${task.id}-checks.log`), env: ENV });
+    const seed = changes[SEED_FILE];
+    const result = await runChecks({ root: WORKTREE, changedFiles: files, taskText: `${task.title}\n${task.body}`, seedLines: seed ? [...seed.added, ...seed.removed] : [], node: NODE, log: path.join(LOGS, `${task.id}-checks.log`), env: ENV });
     note(task, `проверки: ${result.steps.map((s) => `${s.name} ${s.ok ? 'PASS' : 'FAIL'}${s.flows ? ` (${flowsNote(s.flows)}${s.driverLost ? `; драйвер Maestro терялся — ${s.driverLost} прогнаны ещё раз` : ''})` : ''}`).join(', ')}`);
     return result;
   };

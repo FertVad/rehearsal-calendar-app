@@ -239,3 +239,22 @@ test('a folder beside the Maestro runs is not taken for the newest run', () => {
   assert.deepEqual(fs.readdirSync(path.join(out, 'artifacts')).sort(), [...runs.slice(1), 'metro-watch-48323']);
   assert.deepEqual(maestroRuns(path.join(dir, 'stray', 'none')), []);
 });
+
+test('a person changed in the seed brings the flows that sign in as them', () => {
+  // T-122 gave flow 42 a second `charlotta` in the seed and made her admin of
+  // a newer project; flow 20, hers, then opened the form on the wrong one, and
+  // only the control run saw it (T-211).
+  const app = path.join(dir, 'seed-people', 'rehearsal-calendar-native');
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(app, rel)), { recursive: true }); fs.writeFileSync(path.join(app, rel), text); };
+  write('e2e/flows/01-login.yaml', '- runFlow:\n    env:\n      EMAIL: ${OLGA_EMAIL}\n');
+  write('e2e/flows/20-save.yaml', '- runFlow:\n    env:\n      EMAIL: ${CHARLOTTA_EMAIL}\n');
+  write('e2e/flows/31-late.yaml', '- openLink: ${LATE_ANSWER_REHEARSAL}\n');
+  write('e2e/flows/42-count.yaml', '- runFlow:\n    env:\n      EMAIL: ${OLGA_EMAIL}\n');
+  const seedLines = [
+    "  charlotta: { email: 'charlotta@e2e.test', firstName: 'Charlotta', onboarded: true },",
+    '  // Olga is named only in a comment here.',
+    "    late_answer: await rehearsal(ballId, 'Ball rehearsal', 2, 12, 13, ['gaev'], 'gaev'),",
+  ];
+  assert.deepEqual(e2eFlowsFor({ app, changedFiles: ['rehearsal-calendar-native/e2e/flows/42-count.yaml', 'rehearsal-calendar-native/e2e/seed.mjs'], seedLines }),
+    ['e2e/flows/20-save.yaml', 'e2e/flows/31-late.yaml', 'e2e/flows/42-count.yaml']);
+});
