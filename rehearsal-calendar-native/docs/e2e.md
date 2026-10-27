@@ -110,7 +110,8 @@ watching `e2e/out`. Maestro 2.11 said "Something have changed in the UI" after
 every one of 9 198 taps, the lost ones too, so its own tap-again never runs
 (T-207; `audit/evidence/T-207`, `touch-scan.mjs` counts them in any run's
 artifacts). Most were the first tap of sign-in, which types inside `retry`;
-flow 30 failed on one at "Apple Calendar".
+flow 30 failed on one at "Apple Calendar", flow 11 at "Change password and
+sign in" and, under load, at "Forgot password?" (T-209).
 
 It is below the app, and cannot be made to happen on demand. The rule:
 

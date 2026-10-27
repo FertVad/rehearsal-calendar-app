@@ -1,0 +1,24 @@
+T-209 - "green after": flow 11 with its three waited-on taps through
+e2e/subflows/tap-and-see.yaml, 27.10.2026.
+
+1. Three times with every core busy (8 busy threads, 11:31):
+   node audit/evidence/T-207/load-e2e.mjs 8 3 e2e/flows/11-password-reset.yaml
+   r1, r2 passed (tab-create asserted twice in each: signed in by the reset,
+   then by the new password from a fresh install); r3 cut by the command's
+   10-minute limit, no failed command in it. No tap taken again: every SEE
+   was on screen after the first tap.
+
+2. Alone, as the supervisor runs it:
+   cd rehearsal-calendar-native && npm run e2e -- e2e/flows/11-password-reset.yaml
+   [Passed] Password reset by emailed code (1m 45s)
+   1/1 Flow Passed in 1m 45s
+   [e2e] taps taken again (tap-and-see.yaml): 0
+
+3. Client unit tests (the whole frontend project ran, the screen's tests in it):
+   cd rehearsal-calendar-native && npx jest --selectProjects frontend ResetPasswordScreen --silent
+   Test Suites: 93 passed, 93 total
+   Tests:       883 passed, 883 total
+
+The second tap itself, on a press that leaves no result, is checked red and
+green in audit/evidence/T-207/tap-and-see-check.txt; a lost tap cannot be had
+on demand, so it is not repeated here.
