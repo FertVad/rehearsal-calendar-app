@@ -248,12 +248,15 @@ fix 14: "today" after a change of zone hours after the app opened).
 Every flow carries `tags:` naming the parts of the app it walks through —
 `smoke`, `auth`, `calendar`, `projects`, `rehearsals`, `seen`,
 `notifications`, `planner`, and new ones as flows need them (`availability`,
-`invite`, `profile`). For now every check runs the whole set: six flows take
-about five minutes, and a change in shared code — the API client, the
-session, navigation — can break any of them. When a full run grows past ten
-or fifteen minutes, a task runs `smoke` and the tags of what it touched, the
-whole set runs when shared code changes and every night; the tags are there
-so that switch needs no rework.
+`invite`, `profile`). A task's checks run the flows it touches, not the
+whole set — 37 flows took 46 minutes on every check (owner, 27.10.2026): the
+flows it changed, those running a subflow or script it changed, and those its
+statement names as `e2e/flows/<file>.yaml`; with none of these, the sign-in
+flow. The whole set runs every night on the reviewed code and once more when
+the queue is done, and a flow red there comes back as a task of its own
+(`tools/autodev/lib/nightly.mjs`). A change in shared code — the API client,
+the session, navigation — can break any flow, so run the ones it reaches
+before handing it in: `npm run e2e -- e2e/flows/<flow>.yaml …`.
 
 The supervisor gives a full run 45 minutes, setup included (about four), and
 stops it after them — exit 143, every flow passed or not. At 32 flows the run
