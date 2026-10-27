@@ -1,0 +1,115 @@
+# Turning notifications on belongs to the person who did it (cause fix 20,
+# review 3). Natasha turns them on; her phone's registration is on its way —
+# the server has not answered the token — and she signs out; Andrei signs in
+# on the same app, notifications off. Then her answer comes. The old app saved
+# "notifications on" when it came, whoever was signed in by then: Andrei's
+# setting, with his credentials, though he never touched the switch. Now an
+# answer that comes after its session has ended is nobody's: his stays off.
+#
+# A simulator cannot receive push, and registering there stops before the
+# server, so this launch plays a phone (e2e/device): the permission granted,
+# a token made up, and the rest — the server, the answer, the app — real.
+appId: ${APP_ID}
+name: Switch accounts - a push registration answered late
+tags:
+  - auth
+  - notifications
+  - profile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    arguments:
+      rehearslyPushDevice: "1"
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${NATASHA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-notifications
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: profile-notifications
+    checked: false
+# Her token is on its way, the connection open, until the release. Only her
+# switch's request: the one her sign-in made has long been answered, and
+# Andrei's own goes through.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: POST
+      PATH: "^/api/native/push-tokens$"
+      OPEN: "1"
+      ONCE: "1"
+- tapOn:
+    id: profile-notifications
+- assertVisible:
+    id: profile-notifications
+    checked: true
+- takeScreenshot: 38-natasha-turns-on
+- scrollUntilVisible:
+    element:
+      id: profile-logout
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-logout
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${ANDREI_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-notifications
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: profile-notifications
+    checked: false
+# Her answer comes now — and it was held: a flow with no late answer proves
+# nothing.
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EXPECT: "1"
+# The old app saved the setting the moment her answer came; the switch on
+# screen was drawn before and does not follow. Three seconds for it to land,
+# as flow 22 gives his change, then what the server keeps for Andrei.
+- extendedWaitUntil:
+    visible:
+      id: profile-notifications
+      checked: true
+    timeout: 3000
+    optional: true
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-notifications
+    direction: DOWN
+    centerElement: true
+- takeScreenshot: 38-andrei-after-her-answer
+- assertVisible:
+    id: profile-notifications
+    checked: false

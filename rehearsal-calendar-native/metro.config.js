@@ -24,6 +24,24 @@ if (process.env.REHEARSLY_E2E === '1') {
     new RegExp(`^${root}[\\\\/]\\.env[^\\\\/]*$`),
     new RegExp(`^${root}[\\\\/]e2e[\\\\/]out[\\\\/]`),
   );
+
+  // A simulator cannot receive push, so registering stops before the server
+  // and no flow could hold its answer. e2e/device stands in for expo-device
+  // and expo-notifications — the real ones unless a flow launches the app as
+  // a phone (e2e/device/pushDevice.js; cause fix 20, review 3). Imports from
+  // e2e/device itself get the real modules.
+  const device = path.join(__dirname, 'e2e', 'device');
+  const standIns = {
+    'expo-device': path.join(device, 'expo-device.js'),
+    'expo-notifications': path.join(device, 'expo-notifications.js'),
+  };
+  const resolveRequest = config.resolver.resolveRequest;
+  config.resolver.resolveRequest = (context, moduleName, platform) => {
+    if (standIns[moduleName] && !context.originModulePath.startsWith(device + path.sep)) {
+      return { type: 'sourceFile', filePath: standIns[moduleName] };
+    }
+    return (resolveRequest ?? context.resolveRequest)(context, moduleName, platform);
+  };
 }
 
 module.exports = config;

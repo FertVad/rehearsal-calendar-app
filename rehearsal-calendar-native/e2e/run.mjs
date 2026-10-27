@@ -400,6 +400,9 @@ async function main() {
       CRON_SECRET: randomBytes(32).toString('base64'),
       BASE_URL: `http://${API_HOST}:${API_PORT}`,
       EMAIL_TRANSPORT: 'capture-for-tests',
+      // A flow that plays a phone puts a push token on this server
+      // (e2e/device); a send to it must not reach Expo. Nothing listens here.
+      EXPO_BASE_URL: 'http://127.0.0.1:9',
       MAIL_HOST: API_HOST,
       MAIL_PORT: String(MAIL_PORT),
     },

@@ -110,6 +110,10 @@ export const PEOPLE = {
   tuzenbach: { email: 'tuzenbach@e2e.test', firstName: 'Nikolai', lastName: 'Tuzenbach', onboarded: true },
   // Marks all read and signs out before it reaches the server (37).
   solyony: { email: 'solyony@e2e.test', firstName: 'Vasily', lastName: 'Solyony', onboarded: true },
+  // One turns notifications on, and her phone's answer comes only once he has
+  // signed in after her (38): both with notifications off.
+  natasha: { email: 'natasha@e2e.test', firstName: 'Natasha', lastName: 'Ivanovna', onboarded: true, notifications: false },
+  andrei: { email: 'andrei@e2e.test', firstName: 'Andrei', lastName: 'Prozorov', onboarded: true, notifications: false },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -181,9 +185,10 @@ export async function seed({ client, apiUrl, timezone }) {
   const ids = {};
   for (const [key, person] of Object.entries(PEOPLE)) {
     const { rows } = await client.query(
-      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [person.email, hash, person.firstName, person.lastName, timezone, person.locale ?? 'en', person.onboarded]);
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [person.email, hash, person.firstName, person.lastName, timezone, person.locale ?? 'en', person.onboarded,
+        person.notifications ?? true]);
     ids[key] = rows[0].id;
     await client.query(
       `INSERT INTO native_email_identities (user_id, email, status, verified_at, verified_by)

@@ -196,6 +196,21 @@ one: a sign-out ends the tokens, and a change released after it is refused
 the app gives up first and the failure is a timeout; bring the next controls
 into view before the tap.
 
+`EXPECT` on `release-answers.js` is how many answers must have been held: a
+flow whose point is a late answer fails when there was none (flow 38).
+
+A simulator cannot receive push: registering ends at `!Device.isDevice`,
+before the permission and the server. A flow that needs the server's answer to
+a token launches the app as a phone — `launchApp` with `arguments: {
+rehearslyPushDevice: "1" }`. In an e2e bundle `metro.config.js` puts
+`e2e/device` in place of `expo-device` and `expo-notifications`: the real
+modules, and with that argument (iOS puts launch arguments among the user
+defaults, which `Settings` reads) a device, the permission granted and a token
+made on the spot — Expo's servers are never asked, and the server's
+`EXPO_BASE_URL` is a closed local port, so nothing is sent to one. Without it
+the app is the simulator it is (flow 23). The app's own code has no hook for
+it (flow 38).
+
 An inbox that grows while the app is open: `e2e/scripts/notify.js` with
 `MAIL_URL`, `EMAIL`, `COUNT` and `TITLE` records `COUNT` notifications through
 the server's own `recordNotifications`, titled "`TITLE` 1" (the oldest) to
