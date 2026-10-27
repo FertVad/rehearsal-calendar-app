@@ -118,7 +118,7 @@ test('the flows a Maestro report failed, by file', () => {
       <failure>Assertion is false</failure>
     </testcase>
   </testsuite>`;
-  assert.deepEqual(failedFlows(junit), [{ file: 'e2e/flows/22-calendar-filter.yaml', name: 'Calendar filter against a late answer' }]);
+  assert.deepEqual(failedFlows(junit), [{ file: 'e2e/flows/22-calendar-filter.yaml', name: 'Calendar filter against a late answer', reason: 'Assertion is false' }]);
   assert.deepEqual(failedFlows(''), []);
 });
 
@@ -144,5 +144,21 @@ test('old Maestro artifacts go; the newest and those a recent red run points at 
   assert.deepEqual(fs.readdirSync(path.join(out, 'failed')).sort(), ['T-110-week', 'T-121-recent']);
   assert.ok(removed.includes(path.join('failed', 'T-108-old')));
   assert.deepEqual(pruneArtifacts(path.join(dir, 'prune', 'nothing-here'), now), []);
+});
+
+test('a flow failed by an exception says why, from the report', async () => {
+  // T-120, 27.10.2026: "[Failed] Switch accounts on a running app (44s)" — the
+  // simulator was gone, and only junit.xml said so.
+  const app = appTree('reason');
+  const folder = path.join(dir, 'reason-bin');
+  fs.mkdirSync(folder);
+  fs.writeFileSync(path.join(folder, 'npm'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  const junit = `<testsuite><testcase name="Sign in" file="e2e/flows/01-login.yaml" status="ERROR"><failure>maestro.DeviceUnreachableException: Device became unreachable during deviceInfo\n\tat maestro.drivers.IOSDriver</failure></testcase></testsuite>`;
+  fs.writeFileSync(path.join(folder, 'node'), `#!/bin/sh\nmkdir -p e2e/out\ncat > e2e/out/junit.xml <<'XML'\n${junit}\nXML\necho "[Failed] Sign in (13s)"\nexit 1\n`, { mode: 0o755 });
+  const result = await runChecks({ root: path.dirname(app), changedFiles: ['rehearsal-calendar-native/src/App.tsx'], node: path.join(folder, 'node'), log: path.join(dir, 'reason.log'), env });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  const line = '[e2e] failed: e2e/flows/01-login.yaml — maestro.DeviceUnreachableException: Device became unreachable during deviceInfo';
+  assert.ok(e2e.failures.includes(line));
+  assert.match(e2e.tail, /DeviceUnreachableException/);
 });
 
