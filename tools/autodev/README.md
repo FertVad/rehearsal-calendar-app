@@ -64,6 +64,14 @@ second time a `Нестабильный тест`, either first in the queue and
 flows, so its checks run them. A run the machine spoiled — not ready, asleep,
 out of time — is tried again after an hour. The last one is in `STATUS.md`.
 
+**Flows the Maestro driver never ran are run again**, once, in a run of
+their own: when every red flow of a run says `DeviceUnreachableException`,
+the XCTest driver on the simulator was lost and none of them was checked.
+On 27.10.2026 it exited 28 minutes into T-120's run, the 25 flows after it
+failed at their first command, and the same code passed 37/37 next time — a
+developer session went on proving that. A flow that failed by itself keeps
+the run red, and so does a driver lost again.
+
 **The e2e limit grows with the flows**: ten minutes of setup and two and a
 half per flow (`e2eLimitMs`). A fixed 45 minutes was outgrown on 26.10.2026 —
 34 flows passed in 45m 55s and were killed and called red, and two tasks were

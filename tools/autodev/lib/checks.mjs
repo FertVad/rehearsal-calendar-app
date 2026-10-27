@@ -15,6 +15,8 @@ import { isFailureLine } from './flakes.mjs';
 const TAIL_LINES = 80;
 // e2e/run.mjs: the machine was not ready — not the change (docs/e2e.md).
 const E2E_NOT_READY = 75;
+/** Maestro's report for a flow its driver on the simulator could no longer reach. */
+const DRIVER_LOST = /DeviceUnreachableException/;
 
 // A fixed e2e limit was outgrown: on 26.10.2026 "34/34 Flows Passed in 45m
 // 55s" was killed at 45 minutes and called red, and T-120 and T-121 were sent
@@ -191,24 +193,47 @@ export function checksFor(changedFiles) {
 export async function runE2e({ root, node, log, env, flows = [], limitMs }) {
   const app = path.join(root, 'rehearsal-calendar-native');
   pruneArtifacts(path.join(app, 'e2e', 'out'));
-  const count = flows.length || listFlows(app).length;
-  const started = Date.now();
-  const step = await run('e2e', node, ['e2e/run.mjs', ...flows], { cwd: app, env, log, timeoutMs: limitMs ?? e2eLimitMs(count) });
-  step.environment = step.code === E2E_NOT_READY;
-  // Maestro prints a flow that failed by an exception without its reason —
-  // "[Failed] Sign in (13s)" — and T-120's 25 flows lost with the simulator
-  // read like 25 failures of the app. The report has it.
-  if (!step.ok) {
-    const junit = path.join(app, 'e2e', 'out', 'junit.xml');
-    try {
-      if (fs.statSync(junit).mtimeMs >= started) {
-        const lines = failedFlows(fs.readFileSync(junit, 'utf8')).map((flow) => `[e2e] failed: ${flow.file} — ${flow.reason || 'причина не указана'}`);
-        step.failures.push(...lines);
-        step.tail = [step.tail, ...lines].join('\n');
-      }
-    } catch { /* no report from this run */ }
+  const all = flows.length ? flows : listFlows(app);
+  const once = async (only, timeoutMs) => {
+    const started = Date.now();
+    const step = await run('e2e', node, ['e2e/run.mjs', ...only], { cwd: app, env, log, timeoutMs });
+    step.environment = step.code === E2E_NOT_READY;
+    step.lost = [];
+    // Maestro prints a flow that failed by an exception without its reason —
+    // "[Failed] Sign in (13s)" — and T-120's 25 flows lost with the simulator
+    // read like 25 failures of the app. The report has it.
+    if (!step.ok) {
+      const junit = path.join(app, 'e2e', 'out', 'junit.xml');
+      try {
+        if (fs.statSync(junit).mtimeMs >= started) {
+          const failed = failedFlows(fs.readFileSync(junit, 'utf8'));
+          const lines = failed.map((flow) => `[e2e] failed: ${flow.file} — ${flow.reason || 'причина не указана'}`);
+          step.failures.push(...lines);
+          step.tail = [step.tail, ...lines].join('\n');
+          if (failed.length && failed.every((flow) => DRIVER_LOST.test(flow.reason))) step.lost = failed.map((flow) => flow.file);
+        }
+      } catch { /* no report from this run */ }
+    }
+    return step;
+  };
+  let step = await once(flows, limitMs ?? e2eLimitMs(all.length));
+  // The flows the driver never ran have no verdict, so they run again, once,
+  // in a run of their own — which starts a new driver. T-120, 27.10.2026: the
+  // XCTest runner on the simulator exited 28 minutes in, the 25 flows after it
+  // failed at their first command, and the same code passed 37/37 next time;
+  // a developer session went on proving the change had nothing to do with it.
+  // A flow that failed by itself keeps the run red.
+  if (step.lost.length && !step.timedOut && !step.environment) {
+    const first = step;
+    const note = `[e2e] драйвер Maestro на симуляторе потерян: ${first.lost.length} сценариев не выполнены — прогоняю их ещё раз отдельно`;
+    fs.appendFileSync(log, `${note}\n`);
+    step = await once(first.lost, e2eLimitMs(first.lost.length));
+    step.failures.unshift(...first.failures, note);
+    step.tail = [note, step.tail].join('\n');
+    step.driverLost = first.lost.length;
   }
-  step.flows = flows.length ? flows : listFlows(app);
+  delete step.lost;
+  step.flows = all;
   return step;
 }
 

@@ -481,7 +481,7 @@ async function check(state, task, t) {
   note(task, `проверки: запущены (${files.length} файлов)`);
   const runAll = async () => {
     const result = await runChecks({ root: WORKTREE, changedFiles: files, taskText: `${task.title}\n${task.body}`, node: NODE, log: path.join(LOGS, `${task.id}-checks.log`), env: ENV });
-    note(task, `проверки: ${result.steps.map((s) => `${s.name} ${s.ok ? 'PASS' : 'FAIL'}${s.flows ? ` (${flowsNote(s.flows)})` : ''}`).join(', ')}`);
+    note(task, `проверки: ${result.steps.map((s) => `${s.name} ${s.ok ? 'PASS' : 'FAIL'}${s.flows ? ` (${flowsNote(s.flows)}${s.driverLost ? `; драйвер Maestro терялся — ${s.driverLost} прогнаны ещё раз` : ''})` : ''}`).join(', ')}`);
     return result;
   };
   const machineOnly = (result) => {
@@ -650,7 +650,7 @@ async function fullE2e(state, queueEmpty) {
   const spoiled = (step) => (step.timedOut ? 'не уложились в лимит' : step.environment ? 'машина не готова' : sleptSince(now) ? 'машина спала' : null);
 
   const whole = await runE2e({ root: REVIEW_TREE, node: NODE, log, env: ENV });
-  if (whole.ok) return finish({ ok: true, flows: whole.flows.length }, `зелёный, сценариев: ${whole.flows.length}`);
+  if (whole.ok) return finish({ ok: true, flows: whole.flows.length }, `зелёный, сценариев: ${whole.flows.length}${whole.driverLost ? `; драйвер Maestro терялся — ${whole.driverLost} прогнаны ещё раз` : ''}`);
   if (spoiled(whole)) return finish({ machine: true }, `${spoiled(whole)} — повторю через час`);
   const red = failedFlows(readText(junit));
   const kept = keepFailedRun(`full-e2e-${head.slice(0, 7)}`, log, offset, { steps: [whole] }, REVIEW_TREE);
