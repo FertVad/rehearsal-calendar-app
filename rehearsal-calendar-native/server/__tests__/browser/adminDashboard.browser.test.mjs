@@ -34,11 +34,11 @@ async function fixture(t, { csp = true, payload = false, signedIn = true } = {})
   const state = { empty: false, unauthorized: false, requests: [], statuses: new Map() };
   const stats = payload ? {
     users: { total: html, newThisWeek: svg, newThisMonth: link },
-    churn: { users: { rate: html, inactiveLast30Days: svg } },
+    signIns: { rate: html, notInLast30Days: svg },
     usage: { projects: html, rehearsals: link },
   } : {
     users: { total: 61, newThisWeek: 3, newThisMonth: 5 },
-    churn: { users: { rate: 10, inactiveLast30Days: 6 } },
+    signIns: { rate: 10, notInLast30Days: 6 },
     usage: { projects: 2, rehearsals: 4 },
   };
   const users = payload ? [user] : Array.from({ length: 61 }, (_, i) => ({

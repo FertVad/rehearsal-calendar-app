@@ -243,7 +243,7 @@
   function loadStats() {
     return loadSection(sections.stats, 0, '/stats', data => isObject(data)
       && hasFields(data.users, ['total', 'newThisWeek', 'newThisMonth'])
-      && isObject(data.churn) && hasFields(data.churn.users, ['rate', 'inactiveLast30Days'])
+      && hasFields(data.signIns, ['rate', 'notInLast30Days'])
       && hasFields(data.usage, ['projects', 'rehearsals']), data => {
       const users = card('Users', data.users.total);
       const summary = element('div', 'card-sub');
@@ -252,10 +252,12 @@
         element('span', '', '+' + data.users.newThisMonth), ' this month',
       );
       users.append(summary);
-      const churn = card('User Churn (30 days)', data.churn.users.rate + '%', 'card-churn');
-      churn.append(element('div', 'card-sub', 'Inactive users: ' + data.churn.users.inactiveLast30Days));
+      // Sign-ins, not use: a session renews itself without one (H03).
+      const signIns = card('No sign-in for 30 days', data.signIns.rate + '%', 'card-churn');
+      signIns.append(element('div', 'card-sub', 'Users: ' + data.signIns.notInLast30Days
+        + ' (sessions renew without signing in: not a measure of use)'));
       const container = document.getElementById('stats-cards');
-      container.replaceChildren(users, churn,
+      container.replaceChildren(users, signIns,
         card('Projects', data.usage.projects), card('Rehearsals', data.usage.rehearsals));
       container.classList.remove('hidden');
     });

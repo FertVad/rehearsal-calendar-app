@@ -13,6 +13,11 @@ import { hapticMedium } from '../../../shared/utils/haptics';
 interface WeeklyCalendarProps {
   rehearsals: Rehearsal[];
   onDaySelect: (date: string) => void;
+  /**
+   * "Today": the day shown goes back to today and moves with it again, at
+   * midnight and with the profile's zone — what it is before any day is picked.
+   */
+  onShowToday: () => void;
   onDayLongPress?: (date: string) => void;
   selectedDate: string;
 }
@@ -36,7 +41,7 @@ const WEEK_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md * 2; // Account fo
 const INITIAL_WEEKS = 105; // ~1 year on each side
 const CENTER_INDEX = Math.floor(INITIAL_WEEKS / 2);
 
-export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
+export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
   const { t, language } = useI18n();
   const weekStartDay = useWeekStart();
   const flatListRef = useRef<FlatList>(null);
@@ -133,15 +138,18 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     }
   }, [currentWeekIndex, weeks.length]);
 
-  // Navigate to today's week
+  // Today's day, not only its week: this scrolled the strip back and left the
+  // day picked before selected, so the list under it went on showing that day,
+  // likely in a week no longer on screen (DD03). Today's week is the centre one.
   const handleGoToToday = useCallback(() => {
     hapticMedium();
+    onShowToday();
     flatListRef.current?.scrollToIndex({
       index: CENTER_INDEX,
       animated: true,
     });
     setCurrentWeekIndex(CENTER_INDEX);
-  }, []);
+  }, [onShowToday]);
 
   // Render a single week
   const renderWeek = useCallback(({ item }: { item: WeekData }) => (
@@ -153,6 +161,9 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
           return (
             <TouchableOpacity
               key={day.date}
+              testID={`calendar-day-${day.date}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
               style={[
                 styles.dayCell,
                 day.isToday && styles.dayToday,
@@ -218,7 +229,12 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     <View style={styles.container}>
       {/* Header with month/year and today button */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleGoToToday} style={styles.todayButton}>
+        <TouchableOpacity
+          onPress={handleGoToToday}
+          style={styles.todayButton}
+          testID="calendar-today"
+          accessibilityRole="button"
+        >
           <Text style={styles.todayButtonText}>{t.calendar.todayButton}</Text>
         </TouchableOpacity>
 

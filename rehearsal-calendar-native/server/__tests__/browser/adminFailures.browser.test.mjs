@@ -80,7 +80,7 @@ async function fixture(t, { plans = {}, ignoreAbort = false } = {}) {
     req.body.password === PASSWORD ? { token: TOKEN } : { error: 'Wrong password' }));
   app.get('/admin/api/stats', reply('stats', () => ({
     users: { total: state.label === 'Original' ? 61 : 99, newThisWeek: 3, newThisMonth: 5 },
-    churn: { users: { rate: 10, inactiveLast30Days: 6 } },
+    signIns: { rate: 10, notInLast30Days: 6 },
     usage: { projects: 2, rehearsals: 4 },
   })));
   app.get('/admin/api/users', reply('users', req => {

@@ -189,6 +189,13 @@ export async function checkSchemaHttp({ connectionString, control, allowedPorts,
     for (const route of ['/admin/api/stats', '/admin/api/users']) {
       assert.equal((await request(route, { token: admin.body.token })).status, 200, route);
     }
+    // Sign-ins, counted on PostgreSQL's timestamps: the joiner signed in today,
+    // and with no sign-in since a registration 40 days old counts (H03).
+    const signIns = async () => (await request('/admin/api/stats', { token: admin.body.token })).body.signIns;
+    const before = (await signIns()).notInLast30Days;
+    await control.query(`UPDATE ${schema}.native_users SET last_login_at = NULL, created_at = NOW() - INTERVAL '40 days'
+      WHERE id = $1`, [joinerId]);
+    assert.equal((await signIns()).notInLast30Days, before + 1);
     assert.equal((await request(`/api/native/projects/${projectId}/members/${joinerId}`, { method: 'DELETE', token })).status, 200);
     assert.equal(Number((await control.query(`SELECT count(*) FROM ${schema}.native_rehearsal_responses
       WHERE user_id=$1`, [joinerId])).rows[0].count), 0);

@@ -1,0 +1,40 @@
+# A past rehearsal keeps its title on its project's page (cause fix 22: BC03).
+# The page wrote its past rehearsals out apart from the upcoming ones, named
+# by `scene`, a field no server sends: "Old monologue", three days ago, read
+# "Rehearsal", with its start time alone. Sorin is in his project alone, and
+# it has only that one.
+appId: ${APP_ID}
+name: A past rehearsal keeps its title
+tags:
+  - projects
+  - rehearsals
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${SORIN_EMAIL}
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Sorin Estate.*"
+    timeout: 10000
+- waitForAnimationToEnd
+# On its name, as in flow 19: his only project, listed first.
+- tapOn:
+    point: "25%,23%"
+- extendedWaitUntil:
+    visible:
+      id: past-rehearsals-toggle
+    timeout: 15000
+- tapOn:
+    id: past-rehearsals-toggle
+# One button, its texts one label: the title and the interval, as an upcoming
+# one reads.
+- scrollUntilVisible:
+    element: "(?s)(?=.*Old monologue)(?=.*12:00 — 13:00).*"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- takeScreenshot: 39-past-rehearsal-title

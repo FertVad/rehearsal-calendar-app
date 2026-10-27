@@ -114,6 +114,12 @@ export const PEOPLE = {
   // signed in after her (38): both with notifications off.
   natasha: { email: 'natasha@e2e.test', firstName: 'Natasha', lastName: 'Ivanovna', onboarded: true, notifications: false },
   andrei: { email: 'andrei@e2e.test', firstName: 'Andrei', lastName: 'Prozorov', onboarded: true, notifications: false },
+  // Cause fix 22, one flow each: a past rehearsal on his project's page (39);
+  // an admin who marks her own rehearsal seen in its details (40); a day picked
+  // in the strip, then "Today" (41).
+  sorin: { email: 'sorin@e2e.test', firstName: 'Pyotr', lastName: 'Sorin', onboarded: true },
+  polina: { email: 'polina@e2e.test', firstName: 'Polina', lastName: 'Andreyevna', onboarded: true },
+  yakov: { email: 'yakov@e2e.test', firstName: 'Yakov', lastName: 'Workman', onboarded: true },
   // Has not been through onboarding yet.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
 };
@@ -157,6 +163,14 @@ function zoneOffset(zone, instant) {
 export function zoneInstant(zone, offset, hours, minutes = 0) {
   const wall = Date.parse(`${zoneDate(zone, offset)}T${pad(hours)}:${pad(minutes)}:00Z`);
   return new Date(wall - zoneOffset(zone, wall - zoneOffset(zone, wall))).toISOString();
+}
+
+/**
+ * Another day of this week, as the calendar's strip shows it — from Monday,
+ * everyone's default: tomorrow, or yesterday on a Sunday (41).
+ */
+export function otherDayThisWeek() {
+  return new Date().getDay() === 0 ? -1 : 1;
 }
 
 /**
@@ -273,6 +287,21 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
     [roundsId, ids.chebutykin]);
 
+  // Cause fix 22 (39–41): Gaev's projects, each person put in as the join
+  // does — the sign-ins are spent. Polina is an admin of hers, so her details
+  // show the count.
+  const joined = async (name, description, key, role = 'member') => {
+    const { id } = await project(name, description, [], 'gaev');
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, $3, 'active', NOW(), NOW())`,
+      [id, ids[key], role]);
+    return id;
+  };
+  const sorinEstateId = await joined('Sorin Estate', 'By the lake', 'sorin');
+  const accountsId = await joined('Estate Accounts', 'The ledgers', 'polina', 'admin');
+  const lighthouseId = await joined('Lighthouse', 'The night shift', 'yakov');
+
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
     const [hours, minutes = 0] = Array.isArray(time) ? time : [time];
@@ -314,6 +343,13 @@ export async function seed({ client, apiUrl, timezone }) {
     lesson: await rehearsal(schoolId, 'Lesson plan', 2, 16, 17, ['gaev', 'medvedenko'], 'gaev'),
     midnight: await rehearsal(roundsId, 'Midnight call', 0, [0, 30], 1, ['chebutykin'], 'gaev', CHOSEN_ZONE),
     watch: await rehearsal(roundsId, 'Night watch', 1, 2, 3, ['chebutykin'], 'gaev', CHOSEN_ZONE),
+    // Three days ago: on his project's page, under the past ones (39).
+    monologue: await rehearsal(sorinEstateId, 'Old monologue', -3, 12, 13, ['gaev', 'sorin'], 'gaev'),
+    // Hers and Gaev's, neither seen: "0/2" until she marks it (40).
+    review: await rehearsal(accountsId, 'Accounts review', 2, 12, 13, ['gaev', 'polina'], 'gaev'),
+    // Today, and the other day of this week he picks in the strip (41).
+    lamp: await rehearsal(lighthouseId, 'Lamp trimming', 0, 12, 13, ['gaev', 'yakov'], 'gaev'),
+    boat: await rehearsal(lighthouseId, 'Boat repair', otherDayThisWeek(), 12, 13, ['gaev', 'yakov'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),
@@ -362,6 +398,8 @@ export async function seed({ client, apiUrl, timezone }) {
     evening: localDate(5), morning: localDate(6),
     // The middle of Dorn's trip (28), marked free by hand.
     trip: localDate(4),
+    // Yakov's day in the strip, and today (41).
+    picked: localDate(otherDayThisWeek()), today: localDate(0),
   };
   await call(apiUrl, 'PUT', '/native/availability/days', {
     token: await token('treplev'),

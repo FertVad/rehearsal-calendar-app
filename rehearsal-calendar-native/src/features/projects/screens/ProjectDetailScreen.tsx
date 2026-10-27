@@ -59,7 +59,6 @@ interface Member {
 interface Rehearsal extends RehearsalInterval {
   id: string;
   title: string;
-  scene?: string;
   date: string;
   time: string;
   endTime?: string;
@@ -79,9 +78,57 @@ export function formatDate(dateStr: string, language: string): string {
   return formatted.replace(/\.$/, '');
 }
 
+/**
+ * One rehearsal in the project's lists, upcoming or past alike.
+ *
+ * The two lists used to be written out twice, and drifted: the past one read
+ * only `scene` — a field no server has sent since titles came — so every past
+ * rehearsal was called "Rehearsal", and it showed the start time alone where
+ * the upcoming one shows the interval (BC03). Past only greys it out.
+ */
+export function RehearsalRow({ rehearsal, onPress, past = false }: {
+  rehearsal: Rehearsal;
+  onPress: (rehearsalId: string) => void;
+  past?: boolean;
+}) {
+  const { t, language } = useI18n();
+  return (
+    <TouchableOpacity
+      style={[styles.rehearsalCard, past && styles.pastCard]}
+      onPress={() => onPress(rehearsal.id)}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.rehearsalDate, past && styles.pastDate]}>
+        <Text style={[styles.rehearsalDateText, past && styles.pastDateText]}>
+          {formatDate(rehearsal.date, language)}
+        </Text>
+      </View>
+      <View style={styles.rehearsalInfo}>
+        <Text style={[styles.rehearsalTitle, past && styles.pastText]} numberOfLines={1}>
+          {rehearsal.title || t.calendar.rehearsal}
+        </Text>
+        <View style={styles.rehearsalMeta}>
+          <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
+          <Text style={styles.rehearsalTime}>
+            {rehearsalTimeLabel(rehearsal, getDateLocale(language))}
+          </Text>
+        </View>
+        {rehearsal.location ? (
+          <View style={styles.rehearsalMeta}>
+            <Ionicons name="location-outline" size={12} color={Colors.text.tertiary} />
+            <Text style={styles.rehearsalLocation} numberOfLines={1}>
+              {rehearsal.location}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function ProjectDetailScreen({ route, navigation }: ProjectDetailScreenProps) {
   const { projectId } = route.params;
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const { refreshProjects } = useProjects();
 
   const [project, setProject] = useState<Project | null>(null);
@@ -468,37 +515,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
           ) : upcomingExpanded ? (
             <View style={styles.rehearsalsList}>
               {upcomingRehearsals.map(rehearsal => (
-                <TouchableOpacity
-                  key={rehearsal.id}
-                  style={styles.rehearsalCard}
-                  onPress={() => openRehearsal(rehearsal.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.rehearsalDate}>
-                    <Text style={styles.rehearsalDateText}>{formatDate(rehearsal.date, language)}</Text>
-                  </View>
-                  <View style={styles.rehearsalInfo}>
-                    {/* `scene` predates the title field and is never written
-                        to; keep reading it so any legacy row still renders. */}
-                    <Text style={styles.rehearsalTitle} numberOfLines={1}>
-                      {rehearsal.title || rehearsal.scene || t.calendar.rehearsal}
-                    </Text>
-                    <View style={styles.rehearsalMeta}>
-                      <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
-                      <Text style={styles.rehearsalTime}>
-                        {rehearsalTimeLabel(rehearsal, getDateLocale(language))}
-                      </Text>
-                    </View>
-                    {rehearsal.location && (
-                      <View style={styles.rehearsalMeta}>
-                        <Ionicons name="location-outline" size={12} color={Colors.text.tertiary} />
-                        <Text style={styles.rehearsalLocation} numberOfLines={1}>
-                          {rehearsal.location}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
+                <RehearsalRow key={rehearsal.id} rehearsal={rehearsal} onPress={openRehearsal} />
               ))}
             </View>
           ) : null}
@@ -511,6 +528,9 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
               style={styles.sectionHeader}
               onPress={() => setPastExpanded(prev => !prev)}
               activeOpacity={0.7}
+              testID="past-rehearsals-toggle"
+              accessibilityRole="button"
+              accessibilityState={{ expanded: pastExpanded }}
             >
               <Ionicons name="time" size={20} color={Colors.text.tertiary} />
               <Text style={[styles.sectionTitle, styles.pastTitle]}>{t.projects.pastRehearsals}</Text>
@@ -525,29 +545,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
             {pastExpanded && (
               <View style={styles.rehearsalsList}>
                 {pastRehearsals.map(rehearsal => (
-                  <TouchableOpacity
-                    key={rehearsal.id}
-                    style={[styles.rehearsalCard, styles.pastCard]}
-                    onPress={() => openRehearsal(rehearsal.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.rehearsalDate, styles.pastDate]}>
-                      <Text style={[styles.rehearsalDateText, styles.pastDateText]}>
-                        {formatDate(rehearsal.date, language)}
-                      </Text>
-                    </View>
-                    <View style={styles.rehearsalInfo}>
-                      <Text style={[styles.rehearsalTitle, styles.pastText]} numberOfLines={1}>
-                        {rehearsal.scene || t.calendar.rehearsal}
-                      </Text>
-                      <View style={styles.rehearsalMeta}>
-                        <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
-                        <Text style={styles.rehearsalTime}>
-                          {rehearsal.time.substring(0, 5)}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
+                  <RehearsalRow key={rehearsal.id} rehearsal={rehearsal} onPress={openRehearsal} past />
                 ))}
               </View>
             )}

@@ -28,26 +28,31 @@ router.get('/api/stats', requireAdmin, asyncHandler(async (_req, res) => {
       totalUsers,
       newWeek,
       newMonth,
-      inactiveUsers,
+      notSignedIn,
       totalProjects,
       totalRehearsals,
     ] = await Promise.all([
       db.get('SELECT COUNT(*) as count FROM native_users'),
       db.get('SELECT COUNT(*) as count FROM native_users WHERE created_at >= $1', [weekAgo.toISOString()]),
       db.get('SELECT COUNT(*) as count FROM native_users WHERE created_at >= $1', [monthAgo.toISOString()]),
+      // Who has not signed in for 30 days — and that is all it can say. This
+      // was "churn", "inactive users", but a sign-in is not use: the app renews
+      // its session without one for months, and nothing records use, so people
+      // in the app every day counted as gone. Someone who never signed in
+      // since registering counts from the registration; they were left out (H03).
       db.get(`
         SELECT COUNT(*) as count
         FROM native_users
-        WHERE last_login_at IS NOT NULL AND last_login_at < $1
+        WHERE COALESCE(last_login_at, created_at) < $1
       `, [monthAgo.toISOString()]),
       db.get('SELECT COUNT(*) as count FROM native_projects'),
       db.get('SELECT COUNT(*) as count FROM native_rehearsals'),
     ]);
 
     const totalUsersCount = Number(totalUsers.count);
-    const inactiveCount = Number(inactiveUsers.count);
-    const churnUsersRate = totalUsersCount > 0
-      ? Math.round((inactiveCount / totalUsersCount) * 1000) / 10
+    const notSignedInCount = Number(notSignedIn.count);
+    const notSignedInRate = totalUsersCount > 0
+      ? Math.round((notSignedInCount / totalUsersCount) * 1000) / 10
       : 0;
 
     res.json({
@@ -56,11 +61,9 @@ router.get('/api/stats', requireAdmin, asyncHandler(async (_req, res) => {
         newThisWeek: Number(newWeek.count),
         newThisMonth: Number(newMonth.count),
       },
-      churn: {
-        users: {
-          inactiveLast30Days: inactiveCount,
-          rate: churnUsersRate,
-        },
+      signIns: {
+        notInLast30Days: notSignedInCount,
+        rate: notSignedInRate,
       },
       usage: {
         projects: Number(totalProjects.count),

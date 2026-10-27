@@ -1,0 +1,56 @@
+# A rehearsal's details and its card read one "seen" (cause fix 22: DD01).
+# Details kept a copy of its own — its row and its count from the
+# participants it loaded — while the toggle worked from the app's one store;
+# after a tap the count was the store's from before the tap. Polina is an
+# admin of her project, on "Accounts review" with Gaev, neither seen: "0/2".
+# Marked in its details, it reads "1/2" there and on the card.
+appId: ${APP_ID}
+name: Details and the card read one seen mark
+tags:
+  - rehearsals
+  - seen
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${POLINA_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Accounts review.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element: ".*Accounts review.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn: ".*Accounts review.*"
+- extendedWaitUntil:
+    visible: "Polina Andreyevna"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "0/2"
+    timeout: 10000
+# Her own row is the toggle; a toggle is not taken twice (docs/e2e.md).
+- tapOn: "Polina Andreyevna"
+- extendedWaitUntil:
+    notVisible: "0/2"
+    timeout: 10000
+- assertVisible: "1/2"
+- assertVisible:
+    id: own-seen-toggle
+    selected: true
+- takeScreenshot: 40-details-one-of-two
+- tapOn: "Close"
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      below: ".*Accounts review.*"
+    direction: DOWN
+    centerElement: true
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      below: ".*Accounts review.*"
+      selected: true
+      text: "1/2"
+    timeout: 10000
+- takeScreenshot: 40-card-one-of-two

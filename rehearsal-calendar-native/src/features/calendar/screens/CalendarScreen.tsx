@@ -34,6 +34,8 @@ export default function CalendarScreen() {
   // midnight, and when the profile's zone changes.
   const [pickedDate, setSelectedDate] = useState<string | null>(null);
   const selectedDate = pickedDate ?? today;
+  // "Today" puts it back to that: today, and moving with it (DD03).
+  const showToday = useCallback(() => setSelectedDate(null), []);
   const [filterExpanded, setFilterExpanded] = useState(false);
 
 
@@ -337,6 +339,7 @@ export default function CalendarScreen() {
         <WeeklyCalendar
           rehearsals={rehearsals}
           onDaySelect={setSelectedDate}
+          onShowToday={showToday}
           onDayLongPress={handleDayLongPress}
           selectedDate={selectedDate}
         />
