@@ -56,13 +56,22 @@ export function flakeTitle(steps) {
   return `Нестабильный тест: ${flakeName(steps)}`;
 }
 
+/**
+ * The e2e flows a task's checks must run, listed by path: the supervisor runs
+ * those its text names (checks.e2eFlowsFor), so a fix made in the app, not in
+ * the flow, is still checked by the flow that failed.
+ */
+export function flowsSection(flows) {
+  return flows.length ? `\nСценарии e2e этой задачи — супервизор прогонит их в её проверках:\n${flows.map((f) => `- ${f.file}${f.name ? ` — ${f.name}` : ''}`).join('\n')}\n` : '';
+}
+
 /** The task's markdown, "## T-2NN Нестабильный тест: …" and what to do. */
-export function flakeTask({ id, task, head, steps, evidence, when }) {
+export function flakeTask({ id, task, head, steps, evidence, when, source, flows = [] }) {
   const excerpt = steps.map((step) => `### ${step.name} (код ${step.code})\n${failureExcerpt(failureText(step))}`).join('\n\n');
   return `## ${id} ${flakeTitle(steps)}
 
-Источник: проверки супервизора на задаче ${task.id}, коммит ${head.slice(0, 7)}, ${when}. Тест упал, а повторный прогон тех же коммитов прошёл: он нестабилен, задача ${task.id} тут ни при чём.
-
+${source ?? `Источник: проверки супервизора на задаче ${task.id}, коммит ${head.slice(0, 7)}, ${when}. Тест упал, а повторный прогон тех же коммитов прошёл: он нестабилен, задача ${task.id} тут ни при чём.`}
+${flowsSection(flows)}
 Что упало:
 \`\`\`
 ${excerpt}
@@ -81,5 +90,12 @@ export function insertAfter(tasksMarkdown, afterId, block) {
   const next = rest.search(/^## T-\d{3,}\b/m);
   if (next < 0) return `${tasksMarkdown.trimEnd()}\n\n${block}`;
   const at = start + 1 + next;
+  return `${tasksMarkdown.slice(0, at)}${block}\n${tasksMarkdown.slice(at)}`;
+}
+
+/** Puts a task block right before task `beforeId`'s block — first in the queue. */
+export function insertBefore(tasksMarkdown, beforeId, block) {
+  const at = tasksMarkdown.search(new RegExp(`^## ${beforeId}\\b`, 'm'));
+  if (at < 0) return `${tasksMarkdown.trimEnd()}\n\n${block}`;
   return `${tasksMarkdown.slice(0, at)}${block}\n${tasksMarkdown.slice(at)}`;
 }

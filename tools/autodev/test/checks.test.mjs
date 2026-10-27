@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { e2eLimitMs, runChecks, stopChecks } from '../lib/checks.mjs';
+import { e2eFlowsFor, e2eLimitMs, failedFlows, pruneArtifacts, runChecks, stopChecks } from '../lib/checks.mjs';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autodev-checks-'));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -69,3 +69,80 @@ test('a check stopped by its limit says so, and is not passed off as a failed ch
   assert.equal(e2e.timedOut, true);
   assert.match(e2e.tail, /не уложились в лимит/);
 });
+
+/** An app tree with flows and subflows that run each other the way the real ones do. */
+function appTree(name) {
+  const app = path.join(dir, name, 'rehearsal-calendar-native');
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(app, rel)), { recursive: true }); fs.writeFileSync(path.join(app, rel), text); };
+  write('e2e/flows/01-login.yaml', '- runFlow:\n    file: ../subflows/sign-in.yaml\n');
+  write('e2e/flows/05-inbox.yaml', '- runFlow:\n    file: ../subflows/sign-in.yaml\n');
+  write('e2e/flows/30-sync.yaml', '- runFlow:\n    file: ../subflows/tap-and-see.yaml\n');
+  write('e2e/subflows/sign-in.yaml', '- runFlow:\n    file: sign-in-form.yaml\n');
+  write('e2e/subflows/sign-in-form.yaml', '- tapOn: Sign in\n');
+  write('e2e/subflows/tap-and-see.yaml', '- runScript:\n    file: ../scripts/tap-again.js\n');
+  write('e2e/scripts/tap-again.js', '');
+  return app;
+}
+
+test("a task's checks run its own flows, not the whole set", () => {
+  // Owner, 27.10.2026: the task's flows on each task, the whole set at night.
+  const app = appTree('pick');
+  const at = (rel) => `rehearsal-calendar-native/${rel}`;
+  const pick = (changedFiles, taskText) => e2eFlowsFor({ app, changedFiles, taskText });
+  assert.deepEqual(pick([at('e2e/flows/30-sync.yaml'), at('src/App.tsx')]), ['e2e/flows/30-sync.yaml']);
+  // A subflow reaches the flows that run it, through another subflow too.
+  assert.deepEqual(pick([at('e2e/subflows/sign-in-form.yaml')]), ['e2e/flows/01-login.yaml', 'e2e/flows/05-inbox.yaml']);
+  assert.deepEqual(pick([at('e2e/scripts/tap-again.js')]), ['e2e/flows/30-sync.yaml']);
+  // Named in the task by path: a fix made in the app is checked by the flow that failed.
+  assert.deepEqual(pick([at('src/App.tsx')], 'Сценарии:\n- e2e/flows/05-inbox.yaml — Inbox\n- e2e/flows/99-gone.yaml'), ['e2e/flows/05-inbox.yaml']);
+  // The app changed and no flow is the task's: it starts and somebody signs in.
+  assert.deepEqual(pick([at('src/App.tsx')]), ['e2e/flows/01-login.yaml']);
+});
+
+test('the e2e run is given only the chosen flows, and says which', async () => {
+  const app = appTree('run');
+  const folder = path.join(dir, 'run-bin');
+  fs.mkdirSync(folder);
+  fs.writeFileSync(path.join(folder, 'npm'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  fs.writeFileSync(path.join(folder, 'node'), '#!/bin/sh\necho "ran: $*"\n', { mode: 0o755 });
+  const result = await runChecks({ root: path.dirname(app), changedFiles: ['rehearsal-calendar-native/e2e/flows/05-inbox.yaml'], node: path.join(folder, 'node'), log: path.join(dir, 'run.log'), env });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.match(e2e.tail, /^ran: e2e\/run\.mjs e2e\/flows\/05-inbox\.yaml$/m);
+  assert.deepEqual(e2e.flows, ['e2e/flows/05-inbox.yaml']);
+});
+
+test('the flows a Maestro report failed, by file', () => {
+  const junit = `<testsuite tests="3" failures="1">
+    <testcase id="Inbox" name="Inbox" classname="Inbox" file="e2e/flows/05-inbox.yaml" time="51.3" status="SUCCESS"></testcase>
+    <testcase id="Calendar filter against a late answer" name="Calendar filter against a late answer" file="e2e/flows/22-calendar-filter.yaml" time="85" status="ERROR">
+      <failure>Assertion is false</failure>
+    </testcase>
+  </testsuite>`;
+  assert.deepEqual(failedFlows(junit), [{ file: 'e2e/flows/22-calendar-filter.yaml', name: 'Calendar filter against a late answer' }]);
+  assert.deepEqual(failedFlows(''), []);
+});
+
+test('old Maestro artifacts go; the newest and those a recent red run points at stay', () => {
+  // 27.10.2026: 207 runs, 34 GB, 8 GB left on the disk.
+  const out = path.join(dir, 'prune', 'e2e', 'out');
+  const runs = ['2026-10-01_010000', '2026-10-02_010000', '2026-10-03_010000', '2026-10-04_010000',
+    '2026-10-05_010000', '2026-10-06_010000', '2026-10-07_010000', '2026-10-08_010000'];
+  for (const run of runs) fs.mkdirSync(path.join(out, 'artifacts', run, 'Inbox'), { recursive: true });
+  const now = Date.now();
+  const kept = (name, days, run) => {
+    const at = path.join(out, 'failed', name);
+    fs.mkdirSync(at, { recursive: true });
+    fs.writeFileSync(path.join(at, 'maestro-artifacts.txt'), `rehearsal-calendar-native/e2e/out/artifacts/${run}\n`);
+    const when = new Date(now - days * 24 * 60 * 60 * 1000);
+    fs.utimesSync(at, when, when);
+  };
+  kept('T-121-recent', 1, runs[0]);
+  kept('T-110-week', 7, runs[1]);
+  kept('T-108-old', 20, runs[2]);
+  const removed = pruneArtifacts(out, now);
+  assert.deepEqual(fs.readdirSync(path.join(out, 'artifacts')).sort(), [runs[0], ...runs.slice(3)]);
+  assert.deepEqual(fs.readdirSync(path.join(out, 'failed')).sort(), ['T-110-week', 'T-121-recent']);
+  assert.ok(removed.includes(path.join('failed', 'T-108-old')));
+  assert.deepEqual(pruneArtifacts(path.join(dir, 'prune', 'nothing-here'), now), []);
+});
+

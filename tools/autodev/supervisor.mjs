@@ -34,13 +34,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runClaude, runCodex, stopAgents } from './lib/agents.mjs';
-import { runChecks, stopChecks } from './lib/checks.mjs';
+import { failedFlows, runChecks, runE2e, stopChecks } from './lib/checks.mjs';
 import { parseDiff, pauseReasons, reasonKind, unapproved } from './lib/guard.mjs';
 import { MEMORY, waitFor, waitOver } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
 import { appendReport, loadState, parseDecisions, parseTasks, saveState, writeAtomic } from './lib/store.mjs';
 import { auditTasks, taskMarkdown } from './lib/audit.mjs';
-import { flakeTask, flakeTitle, insertAfter, nextFlakeId } from './lib/flakes.mjs';
+import { flakeTask, flakeTitle, insertAfter, insertBefore, nextFlakeId } from './lib/flakes.mjs';
+import { NIGHT, fullE2eDue, regressionTask, regressionTitle } from './lib/nightly.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..');
@@ -190,8 +191,13 @@ function writeStatus(state, now) {
       ? `**Ждём: ${state.waitNote}.** Повтор в ${new Date(state.waitUntil).toLocaleString('ru-RU')}.`
       : `**Ждём сброса лимита ${state.waitingFor}** до ${new Date(state.waitUntil).toLocaleString('ru-RU')}; потом продолжим ту же сессию.`);
   }
+  const full = state.fullE2eRunning;
+  if (full) lines.push(`**Сейчас идёт ${full.kind} полный прогон e2e** на ${full.head.slice(0, 7)}, начат ${new Date(full.at).toLocaleString('ru-RU')}; задачи ждут его.`);
   if (task) lines.push(`Сейчас: **${state.current}** ${tasksById[state.current]?.title ?? ''} — фаза ${task.phase}${task.round ? `, ревью круг ${task.round}` : ''}.`);
   else if (!paused) lines.push(now ?? 'Очередь пуста.');
+  const last = state.fullE2e;
+  lines.push('', last ? `Последний полный прогон e2e: ${last.kind}, ${new Date(last.at).toLocaleString('ru-RU')}, ${last.head.slice(0, 7)} — ${last.ok ? `зелёный (${last.flows})` : last.machine ? 'не состоялся по вине машины' : `красный, в очереди ${last.queued?.join(', ')}`}.`
+    : `Полного прогона e2e ещё не было: он идёт ночью (с ${NIGHT.from}:00) и когда очередь пуста.`);
   lines.push('', '## Последнее', '', ...events.map((e) => `- ${e}`));
   const deferred = Object.entries(state.tasks).filter(([, t]) => t.phase === 'deferred');
   if (deferred.length) lines.push('', '## Отложено (очередь шла дальше)', '', ...deferred.map(([id, t]) => `- ${id}: ${t.deferReason}. Начать заново — \`${id}: продолжить\`, на ревью с её коммитами — \`${id}: на ревью\` в DECISIONS.md.`));
@@ -474,8 +480,8 @@ async function check(state, task, t) {
   }
   note(task, `проверки: запущены (${files.length} файлов)`);
   const runAll = async () => {
-    const result = await runChecks({ root: WORKTREE, changedFiles: files, node: NODE, log: path.join(LOGS, `${task.id}-checks.log`), env: ENV });
-    note(task, `проверки: ${result.steps.map((s) => `${s.name} ${s.ok ? 'PASS' : 'FAIL'}`).join(', ')}`);
+    const result = await runChecks({ root: WORKTREE, changedFiles: files, taskText: `${task.title}\n${task.body}`, node: NODE, log: path.join(LOGS, `${task.id}-checks.log`), env: ENV });
+    note(task, `проверки: ${result.steps.map((s) => `${s.name} ${s.ok ? 'PASS' : 'FAIL'}${s.flows ? ` (${flowsNote(s.flows)})` : ''}`).join(', ')}`);
     return result;
   };
   const machineOnly = (result) => {
@@ -494,11 +500,12 @@ async function check(state, task, t) {
   // task of its own (lib/flakes.mjs). Three hit T-109 in a day.
   if (!checks.ok && !machineOnly(checks)) {
     const first = checks;
-    const kept = keepFailedRun(task, checksLog, logOffset, first);
+    const kept = keepFailedRun(task.id, checksLog, logOffset, first);
     note(task, `проверки: красные — повторяю на тех же коммитах, чтобы отличить нестабильный тест; логи красного прогона — ${kept}`);
     checks = await runAll();
     if (checks.ok) {
-      const id = queueFlake(task, head, first.steps.filter((s) => !s.ok && !s.environment), kept);
+      const id = queueFlake(state, task, head, first.steps.filter((s) => !s.ok && !s.environment), kept,
+        { flows: failedFlows(readText(path.join(WORKTREE, kept, 'junit.xml'))) });
       note(task, `проверки: на повторе зелёные — тест нестабилен, задача ни при чём; он поставлен в очередь как ${id}`);
     }
   }
@@ -530,43 +537,150 @@ async function check(state, task, t) {
  * A red run's logs, kept where the developer can read them — in its own tree,
  * under e2e/out (not in git) — before the rerun overwrites them. T-203's
  * developer could reach neither the supervisor's log, outside its tree, nor
- * the server log of the failed e2e run, gone with the rerun. The path,
- * relative to the tree.
+ * the server log of the failed e2e run, gone with the rerun. `tree` is where
+ * it ran: a full run in the reviewer's tree brings over the failed flows'
+ * screenshots. The path, relative to the developer's tree.
  */
-function keepFailedRun(task, checksLog, offset, run) {
-  const rel = path.join('rehearsal-calendar-native', 'e2e', 'out', 'failed', `${task.id}-${new Date().toISOString().replace(/[:.]/g, '-')}`);
+function keepFailedRun(name, checksLog, offset, run, tree = WORKTREE) {
+  const rel = path.join('rehearsal-calendar-native', 'e2e', 'out', 'failed', `${name}-${new Date().toISOString().replace(/[:.]/g, '-')}`);
   const dir = path.join(WORKTREE, rel);
   fs.mkdirSync(dir, { recursive: true });
   try { fs.writeFileSync(path.join(dir, 'checks.log'), fs.readFileSync(checksLog).subarray(offset)); } catch { /* no log */ }
   // The e2e environment's own logs only when e2e ran red here; older ones would mislead.
   if (run.steps.some((step) => step.name === 'e2e' && !step.ok)) {
-    const out = path.join(WORKTREE, 'rehearsal-calendar-native', 'e2e', 'out');
-    for (const name of ['server.log', 'metro.log', 'migrate.log', 'seed.json', 'junit.xml']) {
-      try { fs.copyFileSync(path.join(out, name), path.join(dir, name)); } catch { /* not written */ }
+    const out = path.join(tree, 'rehearsal-calendar-native', 'e2e', 'out');
+    for (const file of ['server.log', 'metro.log', 'migrate.log', 'seed.json', 'junit.xml']) {
+      try { fs.copyFileSync(path.join(out, file), path.join(dir, file)); } catch { /* not written */ }
     }
     try {
       const runs = fs.readdirSync(path.join(out, 'artifacts')).sort();
-      if (runs.length) fs.writeFileSync(path.join(dir, 'maestro-artifacts.txt'), `${path.join('rehearsal-calendar-native', 'e2e', 'out', 'artifacts', runs.at(-1))}\n`);
+      if (runs.length && tree === WORKTREE) {
+        fs.writeFileSync(path.join(dir, 'maestro-artifacts.txt'), `${path.join('rehearsal-calendar-native', 'e2e', 'out', 'artifacts', runs.at(-1))}\n`);
+      } else if (runs.length) {
+        fs.mkdirSync(path.join(dir, 'artifacts'));
+        for (const flow of failedFlows(readText(path.join(out, 'junit.xml')))) {
+          try { fs.renameSync(path.join(out, 'artifacts', runs.at(-1), flow.name), path.join(dir, 'artifacts', flow.name)); } catch { /* none for it */ }
+        }
+        fs.writeFileSync(path.join(dir, 'maestro-artifacts.txt'), `${path.join(rel, 'artifacts')}\n`);
+      }
     } catch { /* none */ }
   }
   return rel;
 }
 
-/** Queues a flaky test as a task right after `task`; the same test again is not queued twice. Its id. */
-function queueFlake(task, head, steps, kept) {
+function evidenceLine(kept, steps) {
+  return `Логи красного прогона — в рабочем дереве, не в git: ${kept}/ — checks.log (вывод проверок)${steps.some((s) => s.name === 'e2e') ? ', server.log, metro.log, junit.xml и в maestro-artifacts.txt — папка Maestro со скриншотами и логом устройства' : ''}.`;
+}
+
+/**
+ * Puts a task the supervisor found next in the queue: after the current
+ * task, or before the first one not started. The same title still open gets
+ * `again` as a note instead; one done is queued anew — what it fixed is back.
+ * Its id.
+ */
+function queueTask(state, title, block, again) {
   const file = path.join(DIR, 'TASKS.md');
   const text = fs.readFileSync(file, 'utf8');
-  const title = flakeTitle(steps);
-  const known = parseTasks(text).find((queued) => queued.title === title);
+  const tasks = parseTasks(text);
+  const known = tasks.find((queued) => queued.title === title && state.tasks[queued.id]?.phase !== 'done');
   if (known) {
-    note(known, `снова упал в проверках ${task.id} (${head.slice(0, 7)})`);
+    note(known, again);
     return known.id;
   }
   const id = nextFlakeId(text);
-  const evidence = `Логи красного прогона — в рабочем дереве, не в git: ${kept}/ — checks.log (вывод проверок)${steps.some((s) => s.name === 'e2e') ? ', server.log, metro.log, junit.xml и в maestro-artifacts.txt — папка Maestro со скриншотами и логом устройства' : ''}.`;
-  const block = flakeTask({ id, task, head, steps, evidence, when: stamp() });
-  writeAtomic(file, insertAfter(text, task.id, block));
+  const first = tasks.find((queued) => !['done', 'skipped', 'deferred'].includes(state.tasks[queued.id]?.phase));
+  writeAtomic(file, state.current ? insertAfter(text, state.current, block(id))
+    : first ? insertBefore(text, first.id, block(id)) : `${text.trimEnd()}\n\n${block(id)}`);
   return id;
+}
+
+/** Queues a flaky test as a task; `task` is the one whose checks it hit, none for the full run. Its id. */
+function queueFlake(state, task, head, steps, kept, extra = {}) {
+  return queueTask(state, flakeTitle(steps),
+    (id) => flakeTask({ id, task, head, steps, evidence: evidenceLine(kept, steps), when: stamp(), ...extra }),
+    `снова упал в ${task ? `проверках ${task.id}` : 'полном прогоне e2e'} (${head.slice(0, 7)})`);
+}
+
+function readText(file) {
+  try { return fs.readFileSync(file, 'utf8'); } catch { return ''; }
+}
+
+/** The flows a run took, short: their names up to four, the count past that. */
+function flowsNote(flows) {
+  const names = flows.map((flow) => path.basename(flow, '.yaml'));
+  return names.length > 4 ? `сценариев: ${names.length}` : names.join(', ');
+}
+
+/**
+ * The whole e2e set on the reviewed code (owner, 27.10.2026): a night run,
+ * and a control run when the queue is done (nightly.fullE2eDue). In the
+ * reviewer's tree, so the developer's work in progress is not touched, and
+ * between steps, so nothing else runs. Red flows run again on their own: red
+ * twice, auto/main is broken; green the second time, a flaky test. Either is
+ * a task first in the queue. True when it ran.
+ */
+async function fullE2e(state, queueEmpty) {
+  // Between steps nothing runs: a run still marked was cut off with the process.
+  delete state.fullE2eRunning;
+  const current = state.current ? state.tasks[state.current] : null;
+  // The reviewed code: under a task, the commit it started from.
+  const head = current?.base && current.phase !== 'adopt' ? current.base : git(WORKTREE, 'rev-parse', 'HEAD');
+  const now = Date.now();
+  if (!fullE2eDue({ last: state.fullE2e, head, now, hour: new Date(now).getHours(), queueEmpty })) return false;
+  if (memoryPressure() >= 2) return false; // like the checks, it waits for memory; tried again next step
+  const kind = queueEmpty ? 'контрольный' : 'ночной';
+  state.fullE2eRunning = { head, kind, at: new Date(now).toISOString() };
+  const finish = (result, text) => {
+    state.fullE2e = { head, at: state.fullE2eRunning.at, kind, lastGreen: result.ok ? head : state.fullE2e?.lastGreen, ...result };
+    delete state.fullE2eRunning;
+    note(null, `${kind} полный прогон e2e на ${head.slice(0, 7)}: ${text}`);
+    return true;
+  };
+  try {
+    git(REVIEW_TREE, 'checkout', '--detach', '--quiet', head);
+  } catch (error) {
+    return finish({ machine: true }, `дерево ревью не переключилось (${String(error.message).split('\n')[0]}) — повторю через час`);
+  }
+  saveState(STATE, state);
+  writeStatus(state);
+  note(null, `${kind} полный прогон e2e: запущен на ${head.slice(0, 7)}`);
+  const log = path.join(LOGS, 'full-e2e.log');
+  const offset = fs.existsSync(log) ? fs.statSync(log).size : 0;
+  const junit = path.join(REVIEW_TREE, 'rehearsal-calendar-native', 'e2e', 'out', 'junit.xml');
+  const spoiled = (step) => (step.timedOut ? 'не уложились в лимит' : step.environment ? 'машина не готова' : sleptSince(now) ? 'машина спала' : null);
+
+  const whole = await runE2e({ root: REVIEW_TREE, node: NODE, log, env: ENV });
+  if (whole.ok) return finish({ ok: true, flows: whole.flows.length }, `зелёный, сценариев: ${whole.flows.length}`);
+  if (spoiled(whole)) return finish({ machine: true }, `${spoiled(whole)} — повторю через час`);
+  const red = failedFlows(readText(junit));
+  const kept = keepFailedRun(`full-e2e-${head.slice(0, 7)}`, log, offset, { steps: [whole] }, REVIEW_TREE);
+  let still = red;
+  if (red.length) {
+    note(null, `${kind} полный прогон e2e: красных сценариев ${red.length} — прогоняю их ещё раз отдельно`);
+    const again = await runE2e({ root: REVIEW_TREE, node: NODE, log, env: ENV, flows: red.map((flow) => flow.file) });
+    if (!again.ok && spoiled(again)) return finish({ machine: true }, `повтор красных: ${spoiled(again)} — повторю через час`);
+    const redAgain = again.ok ? [] : failedFlows(readText(junit));
+    // Red again before any flow ran says nothing about them: all count as red.
+    still = again.ok ? [] : redAgain.length ? red.filter((flow) => redAgain.some((r) => r.file === flow.file)) : red;
+  }
+  const flaky = red.filter((flow) => !still.includes(flow));
+  const linesOf = (flows) => whole.failures.filter((line) => flows.some((flow) => line.includes(`[Failed] ${flow.name} (`)));
+  const queued = [];
+  if (still.length || !red.length) {
+    const failures = red.length ? linesOf(still) : whole.failures.length ? whole.failures : whole.tail.split('\n');
+    queued.push(queueTask(state, regressionTitle(still),
+      (id) => regressionTask({ id, kind, head, lastGreen: state.fullE2e?.lastGreen, flows: still, failures, evidence: evidenceLine(kept, [whole]), when: stamp() }),
+      `снова красный в полном прогоне e2e (${head.slice(0, 7)})`));
+  }
+  if (flaky.length) {
+    const step = { name: 'e2e', code: whole.code, tail: '', failures: linesOf(flaky) };
+    queued.push(queueFlake(state, null, head, [step], kept, {
+      flows: flaky,
+      source: `Источник: ${kind} полный прогон e2e на auto/main ${head.slice(0, 7)}, ${stamp()}. Сценарий упал, а отдельный повтор прошёл: он нестабилен.`,
+    }));
+  }
+  return finish({ ok: false, red: still.map((flow) => flow.file), flaky: flaky.map((flow) => flow.file), queued },
+    `красный — ${still.length ? `сломано: ${still.length}` : ''}${still.length && flaky.length ? ', ' : ''}${flaky.length ? `нестабильно: ${flaky.length}` : ''}${!red.length ? 'упал до сценариев' : ''}; в очереди ${queued.join(', ')}; логи — ${kept}`);
 }
 
 async function review(state, task, t) {
@@ -830,6 +944,8 @@ async function step() {
   applyDecisions(state);
 
   if (fs.existsSync(path.join(DIR, 'STOP'))) { saveState(STATE, state); writeStatus(state); return IDLE_MS; }
+  // Before the waits: a night spent waiting out a limit is a night the set can run.
+  if (await fullE2e(state, false)) { saveState(STATE, state); writeStatus(state); return 0; }
   if (!waitOver(state, Date.now(), memoryPressure)) {
     saveState(STATE, state); writeStatus(state);
     return Math.min(state.waitUntil - Date.now(), state.waitingFor === MEMORY ? MEMORY_POLL_MS : IDLE_MS);
@@ -851,6 +967,7 @@ async function step() {
       }
     }
     const next = pending(queue);
+    if (!next && await fullE2e(state, true)) { saveState(STATE, state); writeStatus(state); return 0; }
     if (!next) { saveState(STATE, state); writeStatus(state, 'Очередь пуста: в аудите не осталось несделанных правок, а в AUTODEV/TASKS.md — задач.'); return IDLE_MS; }
     state.current = next.id;
     if (!state.tasks[next.id]) {

@@ -50,11 +50,30 @@ with what failed (`lib/flakes.mjs`). An e2e run that exits 75 is the machine,
 not the task: no attempt is counted, and the checks run again in 15 minutes,
 then hourly.
 
+**A task's checks run its own e2e flows; the whole set runs at night**
+(owner, 27.10.2026 — 37 flows took 46 minutes, every check of every task).
+The task's flows are those it changed, those running a subflow or script it
+changed (through other subflows too), and those its text names as
+`e2e/flows/<file>.yaml`; with none of these, the sign-in flow
+(`e2eFlowsFor` in `lib/checks.mjs`). The whole set runs on the reviewed code —
+the commit the current task started from — in the reviewer's tree, between
+steps: once a night from 01:00 to 06:00 when auto/main has moved, and as the
+control run when the queue is done (`lib/nightly.mjs`). Red flows run again on
+their own: red twice is a `T-2NN Полный e2e красный: …` task, green the
+second time a `Нестабильный тест`, either first in the queue and naming its
+flows, so its checks run them. A run the machine spoiled — not ready, asleep,
+out of time — is tried again after an hour. The last one is in `STATUS.md`.
+
 **The e2e limit grows with the flows**: ten minutes of setup and two and a
-half per flow (`e2eLimitMs` in `lib/checks.mjs`). A fixed 45 minutes was
-outgrown on 26.10.2026 — 34 flows passed in 45m 55s and were killed and called
-red, and two tasks were sent to fix flows that passed. A check stopped by its
-limit says so in its tail and never counts as passed.
+half per flow (`e2eLimitMs`). A fixed 45 minutes was outgrown on 26.10.2026 —
+34 flows passed in 45m 55s and were killed and called red, and two tasks were
+sent to fix flows that passed. A check stopped by its limit says so in its
+tail and never counts as passed.
+
+**Old e2e artifacts are removed before each run** (`pruneArtifacts`): the
+five newest Maestro runs stay, and those a red run kept in the last three
+days points at; kept red runs go after two weeks. On 27.10.2026 the
+developer's tree held 207 runs, 34 GB, with 8 GB left on the disk.
 
 **Checks wait while the machine is short of memory.** At macOS memory
 pressure warning or worse (`kern.memorystatus_vm_pressure_level` ≥ 2) the
@@ -89,8 +108,8 @@ never fires twice.
   `../reh_app-auto-review` (detached, the reviewer's). `node_modules` are links
   to the main tree's. Only `auto/main` is pushed; nothing is merged.
 - The checks are its own, not an agent's: secrets, types and every test; the
-  e2e flows when the app changed (with the main tree's built app, `E2E_APP`);
-  the PostgreSQL harness when the server did.
+  task's e2e flows when the app changed (with the main tree's built app,
+  `E2E_APP`); the PostgreSQL harness when the server did.
 - Claude is the newest Claude Code on the machine (the VS Code extension's,
   which updates itself; the npm install only as a fallback) on the model the
   owner chose in `~/.claude/settings.json` — the one key read from there,

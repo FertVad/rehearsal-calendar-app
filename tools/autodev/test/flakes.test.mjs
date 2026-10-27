@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { failureExcerpt, flakeName, flakeTask, insertAfter, nextFlakeId } from '../lib/flakes.mjs';
+import { failureExcerpt, flakeName, flakeTask, insertAfter, insertBefore, nextFlakeId } from '../lib/flakes.mjs';
 import { parseTasks } from '../lib/store.mjs';
 
 // The tails the checks really gave on 2026-10-10.
@@ -85,3 +85,20 @@ test('an e2e run that failed before any flow is named by what it said', () => {
   assert.equal(flakeName([{ name: 'e2e', tail }]), 'e2e до сценариев: fetch failed');
   assert.match(failureExcerpt(tail), /^\[e2e\] fetch failed$/);
 });
+
+test('a flaky flow from the full run says where it came from and names its flows', () => {
+  const step = { name: 'e2e', code: 1, tail: '', failures: ['[Failed] Inbox late read after mark all (1m 2s) (Assertion is false)'] };
+  const block = flakeTask({ id: 'T-210', task: null, head: 'ef717df1234', steps: [step], evidence: 'x', when: 'y',
+    source: 'Источник: ночной полный прогон e2e на auto/main ef717df.', flows: [{ file: 'e2e/flows/36-inbox-late-read.yaml', name: 'Inbox late read after mark all' }] });
+  const [task] = parseTasks(block);
+  assert.equal(task.title, 'Нестабильный тест: Inbox late read after mark all');
+  assert.match(task.body, /^Источник: ночной полный прогон/);
+  assert.match(task.body, /- e2e\/flows\/36-inbox-late-read\.yaml — Inbox late read after mark all/);
+});
+
+test('a task found between tasks goes before the first one not started', () => {
+  const queue = '# Очередь\n\n## T-120 Done one\n\nx\n\n## T-122 Next\n\ny\n';
+  const ids = parseTasks(insertBefore(queue, 'T-122', '## T-209 Red\n\nz\n')).map((task) => task.id);
+  assert.deepEqual(ids, ['T-120', 'T-209', 'T-122']);
+});
+
