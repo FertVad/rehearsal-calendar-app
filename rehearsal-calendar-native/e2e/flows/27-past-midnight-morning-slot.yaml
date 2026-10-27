@@ -47,6 +47,10 @@ tags:
     direction: DOWN
     centerElement: true
     timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MORNING_DAY}
 - tapOn:
     id: day-${MORNING_DAY}
 - extendedWaitUntil:
@@ -103,6 +107,10 @@ tags:
     direction: DOWN
     centerElement: true
     timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MORNING_DAY}
 - tapOn:
     id: day-${MORNING_DAY}
 # His 00:00–01:00 is still there, the hour he added after it, and the night's

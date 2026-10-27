@@ -264,6 +264,13 @@ so that switch needs no rework.
   07); a flow that needs another selection makes it itself.
 - A list item under the tab bar, or still scrolling, takes no tap: bring it
   into view with `scrollUntilVisible` (`centerElement: true`) first.
+- `centerElement` can carry an item past the middle, under what sits above the
+  list: clipped, but on screen, so Maestro counts it visible and taps what
+  covers it. Which day goes under depends on the date of the run. A day of the
+  availability editor is tapped after `e2e/subflows/day-in-reach.yaml`
+  (`env: { DAY: ... }`), which waits for the list to rest and draws the day
+  down below the legend (`availability-legend`). A day earlier than the one in
+  view is looked for `UP` (flow 10).
 - A tap the flow then waits on the result of, where a lost tap has failed a
   flow, goes through `e2e/subflows/tap-and-see.yaml` (see "A lost tap"), not
   a `repeat` or `retry` of its own.

@@ -42,8 +42,12 @@ tags:
     direction: DOWN
     centerElement: true
     timeout: 30000
-# A tap while the list still glides only stops it; it is tapped once it rests.
-- waitForAnimationToEnd
+# A tap while the list still glides only stops it, and one under the legend
+# lands on the legend; it is tapped once it rests below it.
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MORNING_DAY}
 - tapOn:
     id: day-${MORNING_DAY}
 # The night's end and the event, each with where it came from.

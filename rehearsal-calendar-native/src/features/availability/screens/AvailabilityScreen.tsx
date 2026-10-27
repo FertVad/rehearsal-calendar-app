@@ -189,7 +189,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       )}
 
       {/* Legend */}
-      <View style={[
+      <View testID="availability-legend" style={[
         styles.legend,
         !lastSyncTime && { justifyContent: 'center' }
       ]}>

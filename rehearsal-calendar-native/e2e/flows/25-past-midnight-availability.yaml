@@ -37,6 +37,10 @@ tags:
     direction: DOWN
     centerElement: true
     timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${EVENING_DAY}
 # The evening's slot, whole.
 - tapOn:
     id: day-${EVENING_DAY}
@@ -73,6 +77,10 @@ tags:
     direction: DOWN
     centerElement: true
     timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MORNING_DAY}
 - tapOn:
     id: day-${MORNING_DAY}
 - extendedWaitUntil:
@@ -84,6 +92,16 @@ tags:
 # The evening still ends at 01:00 the next day.
 - tapOn:
     id: day-${MORNING_DAY}
+# The evening is the day before, so above, perhaps under the legend.
+- scrollUntilVisible:
+    element:
+      id: day-${EVENING_DAY}
+    direction: UP
+    centerElement: true
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${EVENING_DAY}
 - tapOn:
     id: day-${EVENING_DAY}
 - extendedWaitUntil:

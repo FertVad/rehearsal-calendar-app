@@ -1,0 +1,33 @@
+# A day of the availability editor, already found by `scrollUntilVisible`,
+# brought to where a tap takes it.
+#
+#   env: DAY - the day, YYYY-MM-DD (its cell is `day-${DAY}`)
+#
+# `centerElement` swipes once more when the day was found off the middle, and
+# that swipe can carry it past the middle, up under the header and the legend.
+# The list is clipped there, but the cell keeps its place on screen, so Maestro
+# counts it visible and its tap lands on the header. Where a day sits after the
+# first swipe depends on the date of the run: on 27 October 2026 the morning of
+# flows 25, 27 and 29, 2 November, went under the legend; on the 26th, 1
+# November, it did not. So once the list rests, the day is drawn down by short,
+# slow swipes - no glide past it - until it is below the legend.
+appId: ${APP_ID}
+---
+- waitForAnimationToEnd
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: day-${DAY}
+        below:
+          id: availability-legend
+    commands:
+      - swipe:
+          start: 50%, 45%
+          end: 50%, 60%
+          duration: 1000
+      - waitForAnimationToEnd
+- assertVisible:
+    id: day-${DAY}
+    below:
+      id: availability-legend

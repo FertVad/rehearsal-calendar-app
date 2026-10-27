@@ -37,12 +37,17 @@ tags:
       EMAIL: ${TREPLEV_EMAIL}
       PASSWORD: ${PASSWORD}
       DAY: ${OTHER_DAY}
-# MARK_DAY: busy for hours, the default 10:00-18:00.
+# MARK_DAY: busy for hours, the default 10:00-18:00. It is three days before
+# OTHER_DAY, so above it, and off the top once OTHER_DAY is in November.
 - scrollUntilVisible:
     element:
       id: day-${MARK_DAY}
-    direction: DOWN
+    direction: UP
     centerElement: true
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MARK_DAY}
 - tapOn:
     id: day-${MARK_DAY}
 - tapOn:
@@ -101,6 +106,10 @@ tags:
       id: day-${MARK_DAY}
     direction: UP
     centerElement: true
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MARK_DAY}
 - tapOn:
     id: day-${MARK_DAY}
 - extendedWaitUntil:
