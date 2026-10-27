@@ -1,0 +1,215 @@
+T-210, review 1: paired runs with their sources recorded. 27.10.2026, same
+machine (8 cores), load: 24 busy loops (3 per core). Made with ab-repro.mjs:
+each pair runs the test as it is in the named commit (written as a temporary
+sibling file, removed afterwards) and the working-tree test, one in-band Jest
+run each, alternating which goes first.
+
+Sources:
+  708b61d3a143608dc22dfa379ead50eb98fba1e7  base of T-210; authLogin.test.js blob 95a093e
+                                            (the same blob as in 20d3580, the checks' red run:
+                                            git rev-parse 20d3580:<path> = 95a093ec62fbb6ad37a804857fff3efb2072c8d9)
+  e3c9b9ad0404190510e3de3428e01fdf9c029023  first T-210 fix (cost 4); blob 2b09baa
+  working tree on e3c9b9a                   this fix (modules at top level); blob 23df641,
+                                            committed as the review-1 commit on top of e3c9b9a
+
+== A. 708b61d against e3c9b9a: cost 4 does not remove it ==
+
+$ node audit/evidence/T-210/ab-repro.mjs 708b61d 16 3
+HEAD e3c9b9ad0404190510e3de3428e01fdf9c029023
+diff from HEAD: none
+before: __tests__/routes/authLoginBefore.test.js = 708b61d (708b61d3a143608dc22dfa379ead50eb98fba1e7):__tests__/routes/authLogin.test.js, blob 95a093ec62fbb6ad37a804857fff3efb2072c8d9
+after:  __tests__/routes/authLogin.test.js as on disk, blob 2b09baafb0804ff36ea2d2f30ac7f18414a9022b
+cores 8, burners 24, pairs 16
+--- pair 1
+before exit 0, 15.1 s, 0 failed
+after  exit 0, 11.7 s, 0 failed
+--- pair 2
+after  exit 0, 14.0 s, 0 failed
+before exit 1, 16.2 s, 7 failed, hook timed out
+--- pair 3
+before exit 0, 17.2 s, 0 failed
+after  exit 0, 11.7 s, 0 failed
+--- pair 4
+after  exit 0, 11.5 s, 0 failed
+before exit 0, 16.3 s, 0 failed
+--- pair 5
+before exit 0, 15.5 s, 0 failed
+after  exit 1, 17.9 s, 7 failed, hook timed out
+--- pair 6
+after  exit 1, 24.8 s, 7 failed, hook timed out
+before exit 1, 25.4 s, 7 failed, hook timed out
+--- pair 7
+before exit 0, 9.1 s, 0 failed
+after  exit 0, 11.6 s, 0 failed
+--- pair 8
+after  exit 0, 6.5 s, 0 failed
+before exit 1, 15.1 s, 7 failed, hook timed out
+--- pair 9
+before exit 0, 7.5 s, 0 failed
+after  exit 0, 6.0 s, 0 failed
+--- pair 10
+after  exit 0, 7.2 s, 0 failed
+before exit 0, 7.8 s, 0 failed
+--- pair 11
+before exit 0, 12.0 s, 0 failed
+after  exit 0, 5.5 s, 0 failed
+--- pair 12
+after  exit 0, 5.0 s, 0 failed
+before exit 0, 10.0 s, 0 failed
+--- pair 13
+before exit 0, 9.8 s, 0 failed
+after  exit 1, 15.4 s, 7 failed, hook timed out
+--- pair 14
+after  exit 0, 6.8 s, 0 failed
+before exit 0, 14.5 s, 0 failed
+--- pair 15
+before exit 0, 7.4 s, 0 failed
+after  exit 0, 11.6 s, 0 failed
+--- pair 16
+after  exit 1, 13.3 s, 7 failed, hook timed out
+before exit 0, 12.2 s, 0 failed
+=== red: before 3 of 16, after 4 of 16
+
+(An earlier run of the same pair, before the script alternated the order and
+with before always first: before 2 of 14, after 0 of 14. With the order
+alternated the difference is gone.)
+
+== B. 708b61d against this fix, run 1 ==
+
+The "diff from HEAD: none" line of this run is wrong: the script's exclude
+pathspec hid the modified test. The blob line is right: 23df641 is not HEAD's
+2b09baa. The script was fixed and the pair run again (run 2).
+
+$ node audit/evidence/T-210/ab-repro.mjs 708b61d 18 3
+HEAD e3c9b9ad0404190510e3de3428e01fdf9c029023
+diff from HEAD: none
+before: __tests__/routes/authLoginBefore.test.js = 708b61d (708b61d3a143608dc22dfa379ead50eb98fba1e7):__tests__/routes/authLogin.test.js, blob 95a093ec62fbb6ad37a804857fff3efb2072c8d9
+after:  __tests__/routes/authLogin.test.js as on disk, blob 23df6411a656479ab80776c5aab8db35617be734
+cores 8, burners 24, pairs 18
+--- pair 1
+before exit 0, 7.8 s, 0 failed
+after  exit 0, 5.1 s, 0 failed
+--- pair 2
+after  exit 0, 14.7 s, 0 failed
+before exit 0, 8.2 s, 0 failed
+--- pair 3
+before exit 0, 8.6 s, 0 failed
+after  exit 0, 5.8 s, 0 failed
+--- pair 4
+after  exit 0, 8.1 s, 0 failed
+before exit 0, 11.4 s, 0 failed
+--- pair 5
+before exit 0, 7.5 s, 0 failed
+after  exit 0, 6.8 s, 0 failed
+--- pair 6
+after  exit 0, 6.0 s, 0 failed
+before exit 0, 8.9 s, 0 failed
+--- pair 7
+before exit 0, 7.8 s, 0 failed
+after  exit 0, 11.5 s, 0 failed
+--- pair 8
+after  exit 0, 5.6 s, 0 failed
+before exit 0, 11.4 s, 0 failed
+--- pair 9
+before exit 0, 15.2 s, 0 failed
+after  exit 0, 11.8 s, 0 failed
+--- pair 10
+after  exit 0, 13.6 s, 0 failed
+before exit 0, 15.4 s, 0 failed
+--- pair 11
+before exit 1, 17.7 s, 7 failed, hook timed out
+after  exit 0, 12.2 s, 0 failed
+--- pair 12
+after  exit 0, 13.0 s, 0 failed
+before exit 1, 23.3 s, 7 failed, hook timed out
+--- pair 13
+before exit 1, 20.4 s, 7 failed, hook timed out
+after  exit 0, 10.2 s, 0 failed
+--- pair 14
+after  exit 0, 14.2 s, 0 failed
+before exit 1, 13.0 s, 7 failed, hook timed out
+--- pair 15
+before exit 0, 8.7 s, 0 failed
+after  exit 0, 7.0 s, 0 failed
+--- pair 16
+after  exit 0, 7.6 s, 0 failed
+before exit 0, 7.6 s, 0 failed
+--- pair 17
+before exit 0, 7.3 s, 0 failed
+after  exit 0, 6.7 s, 0 failed
+--- pair 18
+after  exit 0, 13.6 s, 0 failed
+before exit 0, 8.1 s, 0 failed
+=== red: before 4 of 18, after 0 of 18
+
+== C. 708b61d against this fix, run 2 ==
+
+$ node audit/evidence/T-210/ab-repro.mjs 708b61d 18 3
+HEAD e3c9b9ad0404190510e3de3428e01fdf9c029023
+diff from HEAD: M rehearsal-calendar-native/server/__tests__/routes/authLogin.test.js
+before: __tests__/routes/authLoginBefore.test.js = 708b61d (708b61d3a143608dc22dfa379ead50eb98fba1e7):__tests__/routes/authLogin.test.js, blob 95a093ec62fbb6ad37a804857fff3efb2072c8d9
+after:  __tests__/routes/authLogin.test.js as on disk, blob 23df6411a656479ab80776c5aab8db35617be734
+cores 8, burners 24, pairs 18
+--- pair 1
+before exit 0, 14.3 s, 0 failed
+after  exit 0, 19.3 s, 0 failed
+--- pair 2
+after  exit 0, 6.0 s, 0 failed
+before exit 0, 13.0 s, 0 failed
+--- pair 3
+before exit 0, 7.5 s, 0 failed
+after  exit 0, 6.2 s, 0 failed
+--- pair 4
+after  exit 0, 13.3 s, 0 failed
+before exit 0, 11.1 s, 0 failed
+--- pair 5
+before exit 0, 8.1 s, 0 failed
+after  exit 0, 6.0 s, 0 failed
+--- pair 6
+after  exit 0, 7.3 s, 0 failed
+before exit 0, 10.6 s, 0 failed
+--- pair 7
+before exit 0, 9.4 s, 0 failed
+after  exit 0, 5.7 s, 0 failed
+--- pair 8
+after  exit 0, 7.2 s, 0 failed
+before exit 0, 8.4 s, 0 failed
+--- pair 9
+before exit 0, 8.0 s, 0 failed
+after  exit 0, 10.3 s, 0 failed
+--- pair 10
+after  exit 0, 7.0 s, 0 failed
+before exit 0, 9.0 s, 0 failed
+--- pair 11
+before exit 0, 14.8 s, 0 failed
+after  exit 0, 11.6 s, 0 failed
+--- pair 12
+after  exit 0, 14.4 s, 0 failed
+before exit 0, 15.3 s, 0 failed
+--- pair 13
+before exit 1, 16.5 s, 7 failed, hook timed out
+after  exit 0, 12.4 s, 0 failed
+--- pair 14
+after  exit 0, 11.0 s, 0 failed
+before exit 0, 16.4 s, 0 failed
+--- pair 15
+before exit 0, 14.3 s, 0 failed
+after  exit 0, 11.2 s, 0 failed
+--- pair 16
+after  exit 0, 12.7 s, 0 failed
+before exit 0, 15.9 s, 0 failed
+--- pair 17
+before exit 0, 9.2 s, 0 failed
+after  exit 0, 5.7 s, 0 failed
+--- pair 18
+after  exit 0, 7.5 s, 0 failed
+before exit 0, 8.0 s, 0 failed
+=== red: before 1 of 18, after 0 of 18
+
+== Summary ==
+
+708b61d (cost 10, modules in the hook):  red 3/16 (A), 4/18 (B), 1/18 (C), every time
+                                         the checks' 7 failures, hook at 5000 ms.
+e3c9b9a (cost 4, modules in the hook):   red 4/16 (A), as often as 708b61d.
+this fix (modules at top level):         red 0/18 (B), 0/18 (C), including the pairs
+                                         where 708b61d timed out next to it in the same load.
