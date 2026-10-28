@@ -34,6 +34,8 @@ const FLOWS = 'e2e/flows';
 const APP = 'rehearsal-calendar-native/';
 /** Run when a change touches the app and none of the flows: it starts, and somebody signs in. */
 export const SMOKE_FLOW = `${FLOWS}/01-login.yaml`;
+/** The e2e seed, as a changed file is named. */
+export const SEED_FILE = `${APP}e2e/seed.mjs`;
 
 function listFlows(app) {
   try { return fs.readdirSync(path.join(app, FLOWS)).filter((f) => f.endsWith('.yaml')).sort().map((f) => `${FLOWS}/${f}`); } catch { return []; }
@@ -50,7 +52,7 @@ const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  * None of them, the sign-in flow. Paths relative to the app; empty when the
  * tree has no flows, and e2e/run.mjs then runs whatever it finds.
  */
-export function e2eFlowsFor({ app, changedFiles, taskText = '' }) {
+export function e2eFlowsFor({ app, changedFiles, taskText = '', seedLines = [] }) {
   const all = listFlows(app);
   if (!all.length) return [];
   const changed = changedFiles.filter((f) => f.startsWith(APP)).map((f) => f.slice(APP.length));
@@ -67,6 +69,18 @@ export function e2eFlowsFor({ app, changedFiles, taskText = '' }) {
     }
   }
   if (helpers.size) for (const flow of all) if (uses(readText(path.join(app, flow)))) picked.add(flow);
+  // What the seed holds is shared: T-122 gave flow 42 a second `charlotta`
+  // and made her admin of a newer project, and flow 20, hers, opened the form
+  // on the wrong one — seen only by the control run (T-211). A flow names a
+  // seeded person, invite, day, time, label or rehearsal as ${CHARLOTTA_EMAIL};
+  // the seed's changed lines, comments aside, name the ones touched.
+  const touched = new Set(seedLines.flatMap((line) => line.replace(/\/\/.*$/, '').match(/[A-Za-z][A-Za-z0-9_]*/g) ?? []).map((word) => word.toLowerCase()));
+  if (touched.size) {
+    for (const flow of all) {
+      const keys = [...readText(path.join(app, flow)).matchAll(/\$\{([A-Z][A-Z0-9_]*?)_(?:EMAIL|INVITE|DAY|TIME|LABEL|REHEARSAL)\}/g)].map(([, key]) => key.toLowerCase());
+      if (keys.some((key) => touched.has(key))) picked.add(flow);
+    }
+  }
   for (const [name] of taskText.matchAll(/e2e\/flows\/[\w.-]+\.yaml/g)) if (all.includes(name)) picked.add(name);
   if (!picked.size && all.includes(SMOKE_FLOW)) picked.add(SMOKE_FLOW);
   return all.filter((flow) => picked.has(flow));
@@ -97,6 +111,17 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const KEEP_POINTED_MS = 3 * DAY_MS;
 const KEEP_FAILED_MS = 14 * DAY_MS;
 
+/**
+ * Maestro's runs under `out` (an app's e2e/out), oldest first: the folders
+ * named for the time they started. Anything else there is not a run — an
+ * empty metro-watch-48323 sorted after all of them on 27.10.2026.
+ */
+export function maestroRuns(out) {
+  try {
+    return fs.readdirSync(path.join(out, 'artifacts')).filter((name) => /^\d{4}-\d{2}-\d{2}_\d{6}$/.test(name)).sort();
+  } catch { return []; }
+}
+
 /** Removes old Maestro artifacts and kept red runs under `out` (an app's e2e/out); the paths removed, relative to it. */
 export function pruneArtifacts(out, now = Date.now()) {
   const removed = [];
@@ -114,8 +139,7 @@ export function pruneArtifacts(out, now = Date.now()) {
       try { keep.add(path.basename(fs.readFileSync(path.join(dir, 'maestro-artifacts.txt'), 'utf8').trim())); } catch { /* none named */ }
     }
   }
-  let runs = [];
-  try { runs = fs.readdirSync(path.join(out, 'artifacts')).sort(); } catch { return removed; }
+  const runs = maestroRuns(out);
   for (const run of runs.slice(-KEEP_RUNS)) keep.add(run);
   for (const run of runs.filter((name) => !keep.has(name))) {
     fs.rmSync(path.join(out, 'artifacts', run), { recursive: true, force: true });
@@ -242,7 +266,7 @@ export async function runE2e({ root, node, log, env, flows = [], limitMs }) {
  * @param taskText the task's statement, for the flows it names
  * @returns {{ok: boolean, steps: {name, ok, code, tail, environment?, flows?}[]}}
  */
-export async function runChecks({ root, changedFiles, taskText, node, log, env, e2eLimit }) {
+export async function runChecks({ root, changedFiles, taskText, seedLines, node, log, env, e2eLimit }) {
   const app = path.join(root, 'rehearsal-calendar-native');
   const want = checksFor(changedFiles);
   const steps = [];
@@ -259,7 +283,7 @@ export async function runChecks({ root, changedFiles, taskText, node, log, env, 
     if (!step.ok) return { ok: false, steps };
   }
   if (want.e2e) {
-    const flows = e2eFlowsFor({ app, changedFiles, taskText });
+    const flows = e2eFlowsFor({ app, changedFiles, taskText, seedLines });
     const step = await runE2e({ root, node, log, env, flows, limitMs: e2eLimit });
     steps.push(step);
     if (!step.ok) return { ok: false, steps };
