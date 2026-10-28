@@ -7,23 +7,24 @@ import { logger } from '../../../shared/utils/logger';
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
 import {
   requestCalendarPermissions,
   checkCalendarPermissions,
   getDeviceCalendars,
   getDefaultCalendar,
-  syncRehearsalToCalendar,
-  unsyncRehearsal,
-  syncAllRehearsals,
-  removeAllExportedEvents,
   BatchSyncResult,
-  importCalendarEventsToAvailability,
-  removeAllImportedSlots,
 } from '../../../shared/services/calendar';
 import {
+  isCalendarSyncRunning,
+  removeExportedEvents,
+  removeImportedEvents,
+  runCalendarSync,
+  subscribeCalendarSync,
+  SyncRun,
+} from '../../../shared/services/calendarSync';
+import {
   getSyncSettings,
-  saveSyncSettings,
+  updateSyncSettings,
   isRehearsalSynced,
   getSyncedRehearsalsCount,
   getImportedEventsCount,
@@ -31,7 +32,6 @@ import {
 import {
   DeviceCalendar,
   CalendarSyncSettings,
-  RehearsalWithProject,
   SyncStatus,
   ImportResult,
 } from '../../../shared/types/calendar';
@@ -58,10 +58,25 @@ export function useCalendarSync() {
   const [importError, setImportError] = useState<string | null>(null);
   const [importedCount, setImportedCount] = useState(0);
 
+  // A sync run anywhere in the app — this screen's, a pull, the automatic one.
+  const [runActive, setRunActive] = useState(isCalendarSyncRunning);
+
   // Initialize
   useEffect(() => {
     init();
   }, []);
+
+  // What a run leaves behind — its stamps, the counts — is read once it ends,
+  // whoever started it.
+  useEffect(() => subscribeCalendarSync((running) => {
+    setRunActive(running);
+    if (running) return;
+    getSyncSettings().then(setSettings);
+    getSyncedRehearsalsCount().then(setSyncedCount, (error) =>
+      logger.warn('[useCalendarSync] Could not read the synced count:', error));
+    getImportedEventsCount().then(setImportedCount, (error) =>
+      logger.warn('[useCalendarSync] Could not read the imported count:', error));
+  }), []);
 
   const init = async () => {
     try {
@@ -77,9 +92,10 @@ export function useCalendarSync() {
       const count = await getSyncedRehearsalsCount();
       setSyncedCount(count);
 
-      // Load import count (Phase 2)
-      const imported = await getImportedEventsCount();
-      setImportedCount(imported);
+      // Load import count (Phase 2). One that cannot be read leaves the last
+      // known count standing rather than reading as none.
+      await getImportedEventsCount().then(setImportedCount, (error) =>
+        logger.warn('[useCalendarSync] Could not read the imported count:', error));
 
       // If has permission, load calendars
       if (permission) {
@@ -88,7 +104,7 @@ export function useCalendarSync() {
         // DEBUG: Log all calendars found
         logger.debug('[DEBUG] 📅 Total calendars found:', deviceCalendars.length);
         deviceCalendars.forEach((cal, index) => {
-          console.log(`[DEBUG] Calendar ${index + 1}:`, {
+          logger.debug(`[DEBUG] Calendar ${index + 1}:`, {
             title: cal.title,
             source: cal.source?.name || 'Unknown',
             type: cal.source?.type || 'N/A',
@@ -103,14 +119,12 @@ export function useCalendarSync() {
         if (!savedSettings.exportCalendarId && deviceCalendars.length > 0) {
           const defaultCal = await getDefaultCalendar();
           if (defaultCal) {
-            const updated = { ...savedSettings, exportCalendarId: defaultCal.id };
-            await saveSyncSettings(updated);
-            setSettings(updated);
+            setSettings(await updateSyncSettings({ exportCalendarId: defaultCal.id }));
           }
         }
       }
     } catch (error) {
-      console.error('[useCalendarSync] Init failed:', error);
+      logger.error('[useCalendarSync] Init failed:', error);
     }
   };
 
@@ -130,141 +144,64 @@ export function useCalendarSync() {
         // Set default calendar
         const defaultCal = await getDefaultCalendar();
         if (defaultCal) {
-          const updated = { ...settings, exportCalendarId: defaultCal.id };
-          await saveSyncSettings(updated);
-          setSettings(updated);
+          setSettings(await updateSyncSettings({ exportCalendarId: defaultCal.id }));
         }
       }
 
       return granted;
     } catch (error) {
-      console.error('[useCalendarSync] Request permission failed:', error);
+      logger.error('[useCalendarSync] Request permission failed:', error);
       return false;
     }
-  }, [settings]);
+  }, []);
 
   /**
-   * Update settings
+   * Change the settings named, and show them once saved.
+   *
+   * A patch on the stored settings (calendarStorage.updateSyncSettings), not
+   * this state with the change on top: that copy was the last render's, and
+   * writing it whole put back the "last import" the sync had stamped since
+   * (EO04). The state is set from what was saved and only once it was; a save
+   * that fails throws and leaves it as it was (HP05).
    */
   const updateSettings = useCallback(async (newSettings: Partial<CalendarSyncSettings>) => {
     try {
-      const updated = { ...settings, ...newSettings };
-      await saveSyncSettings(updated);
-      setSettings(updated);
+      setSettings(await updateSyncSettings(newSettings));
     } catch (error) {
-      console.error('[useCalendarSync] Update settings failed:', error);
+      logger.error('[useCalendarSync] Update settings failed:', error);
       throw error;
     }
-  }, [settings]);
+  }, []);
 
   /**
-   * Sync single rehearsal
+   * Both directions now — the one sync of the app, as a pull-to-refresh and
+   * the automatic run do it (services/calendarSync.ts). It waits for a run
+   * already going. "Last export" and "last import" are stamped by the sync
+   * itself, only for a run with no failure, and read back when it ends.
    */
-  const syncRehearsal = useCallback(async (rehearsal: RehearsalWithProject) => {
-    if (!hasPermission) {
-      throw new Error('Calendar permission not granted');
-    }
+  const synchronize = useCallback((): Promise<SyncRun | null> => runCalendarSync('manual'), []);
 
-    if (!settings.exportCalendarId) {
-      throw new Error('No calendar selected');
-    }
-
-    setSyncStatus('syncing');
-    setSyncError(null);
-
-    try {
-      await syncRehearsalToCalendar(rehearsal, settings.exportCalendarId);
-      setSyncStatus('success');
-
-      // Update synced count
-      const count = await getSyncedRehearsalsCount();
-      setSyncedCount(count);
-
-      // Update last export time
-      await updateSettings({ lastExportTime: new Date().toISOString() });
-    } catch (error: any) {
-      console.error('[useCalendarSync] Sync rehearsal failed:', error);
+  /** A batch is a success only if nothing in it failed. */
+  const reportBatch = (result: BatchSyncResult) => {
+    if (result.failed > 0) {
       setSyncStatus('error');
-      setSyncError(error.message);
-      throw error;
+      setSyncError((result.errors ?? []).join('\n') || null);
+    } else {
+      setSyncStatus('success');
     }
-  }, [hasPermission, settings, updateSettings]);
+  };
+
+  // One rehearsal's event is written by the save and the delete themselves,
+  // through the sync's queue (services/calendarSync.ts). The hook's own copies,
+  // with the calendar of the last render and beside the queue, are gone.
 
   /**
-   * Unsync single rehearsal (remove from calendar)
-   */
-  const unsync = useCallback(async (rehearsalId: string) => {
-    if (!hasPermission) {
-      throw new Error('Calendar permission not granted');
-    }
-
-    setSyncStatus('syncing');
-    setSyncError(null);
-
-    try {
-      await unsyncRehearsal(rehearsalId);
-      setSyncStatus('success');
-
-      // Update synced count
-      const count = await getSyncedRehearsalsCount();
-      setSyncedCount(count);
-    } catch (error: any) {
-      console.error('[useCalendarSync] Unsync rehearsal failed:', error);
-      setSyncStatus('error');
-      setSyncError(error.message);
-      throw error;
-    }
-  }, [hasPermission]);
-
-  /**
-   * Sync all rehearsals
-   */
-  const syncAll = useCallback(async (
-    rehearsals: RehearsalWithProject[],
-    onProgress?: (current: number, total: number) => void
-  ): Promise<BatchSyncResult> => {
-    if (!hasPermission) {
-      throw new Error('Calendar permission not granted');
-    }
-
-    if (!settings.exportCalendarId) {
-      throw new Error('No calendar selected');
-    }
-
-    setSyncStatus('syncing');
-    setSyncError(null);
-
-    try {
-      const result = await syncAllRehearsals(
-        rehearsals,
-        settings.exportCalendarId,
-        onProgress
-      );
-
-      setSyncStatus('success');
-
-      // Update synced count
-      const count = await getSyncedRehearsalsCount();
-      setSyncedCount(count);
-
-      // Update last export time
-      await updateSettings({ lastExportTime: new Date().toISOString() });
-
-      return result;
-    } catch (error: any) {
-      console.error('[useCalendarSync] Sync all failed:', error);
-      setSyncStatus('error');
-      setSyncError(error.message);
-      throw error;
-    }
-  }, [hasPermission, settings, updateSettings]);
-
-  /**
-   * Remove all exported events
+   * Remove all exported events. Null: the person signed out before its turn
+   * came, and nothing was done.
    */
   const removeAll = useCallback(async (
     onProgress?: (current: number, total: number) => void
-  ): Promise<BatchSyncResult> => {
+  ): Promise<BatchSyncResult | null> => {
     if (!hasPermission) {
       throw new Error('Calendar permission not granted');
     }
@@ -273,16 +210,23 @@ export function useCalendarSync() {
     setSyncError(null);
 
     try {
-      const result = await removeAllExportedEvents(onProgress);
+      // In the sync's queue: an export pass running alongside would put back
+      // what this takes away. As the person who confirmed it, whoever is
+      // signed in when its turn comes.
+      const result = await removeExportedEvents(onProgress);
+      if (!result) {
+        setSyncStatus('idle');
+        return null;
+      }
 
-      setSyncStatus('success');
+      reportBatch(result);
 
-      // Update synced count
-      setSyncedCount(0);
+      // What could not be removed keeps its mapping, and is still counted.
+      setSyncedCount(result.failed ? await getSyncedRehearsalsCount() : 0);
 
       return result;
     } catch (error: any) {
-      console.error('[useCalendarSync] Remove all failed:', error);
+      logger.error('[useCalendarSync] Remove all failed:', error);
       setSyncStatus('error');
       setSyncError(error.message);
       throw error;
@@ -296,60 +240,18 @@ export function useCalendarSync() {
     try {
       return await isRehearsalSynced(rehearsalId);
     } catch (error) {
-      console.error('[useCalendarSync] Check sync status failed:', error);
+      logger.error('[useCalendarSync] Check sync status failed:', error);
       return false;
     }
   }, []);
 
   /**
-   * Import calendar events as availability slots
-   * Phase 2: Calendar → App
-   */
-  const importNow = useCallback(async (
-    onProgress?: (current: number, total: number) => void
-  ): Promise<ImportResult> => {
-    if (!hasPermission) {
-      throw new Error('Calendar permission not granted');
-    }
-
-    if (!settings.importEnabled || settings.importCalendarIds.length === 0) {
-      throw new Error('Import not enabled or no calendars selected');
-    }
-
-    setIsImporting(true);
-    setImportError(null);
-
-    try {
-      const result = await importCalendarEventsToAvailability(
-        settings.importCalendarIds,
-        onProgress
-      );
-
-      setIsImporting(false);
-
-      // Update imported count
-      const count = await getImportedEventsCount();
-      setImportedCount(count);
-
-      // Update last import time
-      await updateSettings({ lastImportTime: new Date().toISOString() });
-
-      return result;
-    } catch (error: any) {
-      console.error('[useCalendarSync] Import failed:', error);
-      setIsImporting(false);
-      setImportError(error.message);
-      throw error;
-    }
-  }, [hasPermission, settings, updateSettings]);
-
-  /**
-   * Remove all imported availability slots
-   * Phase 2: Clear imported events
+   * Remove all imported availability slots, in the sync's queue: an import
+   * running alongside would put them back. Null: the session ended first.
    */
   const clearImported = useCallback(async (
     onProgress?: (current: number, total: number) => void
-  ): Promise<ImportResult> => {
+  ): Promise<ImportResult | null> => {
     if (!hasPermission) {
       throw new Error('Calendar permission not granted');
     }
@@ -358,16 +260,16 @@ export function useCalendarSync() {
     setImportError(null);
 
     try {
-      const result = await removeAllImportedSlots(onProgress);
+      const result = await removeImportedEvents(onProgress);
 
       setIsImporting(false);
 
       // Update imported count
-      setImportedCount(0);
+      if (result) setImportedCount(0);
 
       return result;
     } catch (error: any) {
-      console.error('[useCalendarSync] Clear imported failed:', error);
+      logger.error('[useCalendarSync] Clear imported failed:', error);
       setIsImporting(false);
       setImportError(error.message);
       throw error;
@@ -382,15 +284,16 @@ export function useCalendarSync() {
     syncStatus,
     syncError,
     syncedCount,
-    isSyncing: syncStatus === 'syncing',
+    // A run is busy from its first step to its last, whoever started it: the
+    // screen's own import used to end and leave its controls open while the
+    // export still waited on the network (EO04).
+    isSyncing: syncStatus === 'syncing' || runActive,
     lastSyncTime: settings.lastExportTime,
 
     // Export Functions
     requestPermissions,
     updateSettings,
-    syncRehearsal,
-    unsync,
-    syncAll,
+    synchronize,
     removeAll,
     isSynced,
     refresh: init, // Re-initialize
@@ -402,7 +305,6 @@ export function useCalendarSync() {
     lastImportTime: settings.lastImportTime,
 
     // Import Functions (Phase 2)
-    importNow,
     clearImported,
   };
 }

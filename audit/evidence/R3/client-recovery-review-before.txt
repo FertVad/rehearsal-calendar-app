@@ -1,0 +1,50 @@
+T-130, review by Astra (CHANGES): red before.
+New and changed tests run on the code of 93f8754 (the fix of src/ set aside,
+the tests kept). Command, from rehearsal-calendar-native:
+
+npx jest --selectProjects frontend --runTestsByPath \
+  src/contexts/__tests__/AuthContext.test.tsx \
+  src/features/auth/utils/__tests__/authErrors.test.ts \
+  src/shared/services/__tests__/api.timeout.test.ts \
+  src/features/profile/screens/__tests__/EditProfileScreen.test.tsx
+
+Output (failures and summary; stack lines left out):
+
+FAIL frontend src/shared/services/__tests__/api.timeout.test.ts (36.069 s)
+  ● register waits for the emails it sends and for the request itself
+    Received has value: undefined
+  ● resendVerification waits for the emails it sends and for the request itself
+    Received has value: undefined
+  ● requestPasswordReset waits for the emails it sends and for the request itself
+    Received has value: undefined
+  ● requestEmailChange waits for the emails it sends and for the request itself
+    Received has value: undefined
+  ● confirmEmailChange waits for the emails it sends and for the request itself
+    Received has value: undefined
+FAIL frontend src/features/profile/screens/__tests__/EditProfileScreen.test.tsx
+  ● Test suite failed to run
+    src/features/profile/screens/__tests__/EditProfileScreen.test.tsx:66:78 - error TS2339: Property 'noConnection' does not exist on type 'AuthTranslations'.
+FAIL frontend src/features/auth/utils/__tests__/authErrors.test.ts
+  ● Test suite failed to run
+    src/features/auth/utils/__tests__/authErrors.test.ts:52:54 - error TS2339: Property 'noConnection' does not exist on type 'AuthTranslations'.
+    src/features/auth/utils/__tests__/authErrors.test.ts:53:98 - error TS2339: Property 'requestFailed' does not exist on type 'AuthTranslations'.
+    src/features/auth/utils/__tests__/authErrors.test.ts:54:104 - error TS2339: Property 'requestFailed' does not exist on type 'AuthTranslations'.
+    src/features/auth/utils/__tests__/authErrors.test.ts:55:94 - error TS2339: Property 'requestFailed' does not exist on type 'AuthTranslations'.
+    src/features/auth/utils/__tests__/authErrors.test.ts:56:61 - error TS2339: Property 'requestFailed' does not exist on type 'AuthTranslations'.
+    src/features/auth/utils/__tests__/authErrors.test.ts:58:14 - error TS7053: Element implicitly has an 'any' type because expression of type '"noConnection" | "requestFailed"' can't be used to index type 'AuthTranslations'.
+    src/features/auth/utils/__tests__/authErrors.test.ts:59:37 - error TS7053: Element implicitly has an 'any' type because expression of type '"noConnection" | "requestFailed"' can't be used to index type 'AuthTranslations'.
+    src/features/auth/utils/__tests__/authErrors.test.ts:59:59 - error TS7053: Element implicitly has an 'any' type because expression of type '"noConnection" | "requestFailed"' can't be used to index type 'AuthTranslations'.
+FAIL frontend src/contexts/__tests__/AuthContext.test.tsx (41.709 s)
+  ● stays signed out when a change answers after the sign-out
+    Expected: "none"
+    Received: "7"
+  ● a sign-out waits for a change already writing, then clears it
+    Expected: "new-access"
+    Received: "old-access"
+  ● stays signed out when a profile update answers after the sign-out
+    Expected: "none"
+    Received: "7"
+Test Suites: 4 failed, 4 total
+Tests:       8 failed, 23 passed, 31 total
+
+After the fix (same command): Test Suites: 4 passed; Tests: 45 passed.

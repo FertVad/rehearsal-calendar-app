@@ -6,16 +6,15 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
-  Modal,
-  Pressable,
-  Platform,
   Animated,
   Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import type { AppNavigation } from '../../../navigation';
+import { useToday } from '../../../shared/hooks/useClock';
+import { endsNextDay } from '../../../shared/utils/time';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Spacing } from '../../../shared/constants/colors';
 import { CalendarMonth, EditorHeader, ModeInfo } from '../components';
 import { DayMode } from '../types';
@@ -30,9 +29,10 @@ import {
 } from '../hooks';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
+import { PickerModal } from '../../../shared/components/PickerModal';
 
 type AvailabilityScreenProps = {
-  navigation: any;
+  navigation: AppNavigation<'MarkBusy'>;
 };
 
 export default function AvailabilityScreen({ navigation }: AvailabilityScreenProps) {
@@ -46,7 +46,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     saving,
     setSaving,
     hasChanges,
-    setHasChanges,
+    changed,
+    markChanged,
+    markSaved,
+    markSettled,
     getDayState,
     loadAvailability,
     loadFailed,
@@ -68,19 +71,28 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // Auto-sync hook for calendar import
   const { performAutoSync, forceSync } = useAutoCalendarSync();
 
-  const months = useMemo(() => generateMonths(7), []);
+  // The date in the profile's zone, turning at its midnight — the UTC one called
+  // this evening past behind UTC and refused it (review CC01), the device's
+  // disagreed with the days the hours are read into (cause fix 14).
+  const today = useToday();
+
+  const months = useMemo(() => generateMonths(7, today), [today]);
 
   // Editor hook for selection, validation, time picker, and slot editing
   const editor = useAvailabilityEditor({
     availability,
     setAvailability,
-    setHasChanges,
+    markChanged,
+    markSettled,
+    today,
     getDayState,
     months,
   });
 
   const [refreshing, setRefreshing] = useState(false);
-  const today = new Date().toISOString().split('T')[0];
+  // The past-date action applies to the past days of the selection, whichever
+  // day was tapped first (review CC04).
+  const selectionHasPast = editor.selectedDates.some((date) => date < today);
 
   // Load last sync time on mount
   useEffect(() => {
@@ -96,7 +108,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   );
 
   const handleSave = async () => {
-    await saveAvailability(availability, today, language, t, setSaving, setHasChanges);
+    const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
+    // A slot past midnight shows on the next day as read from the server, so
+    // a saved change to it is read back rather than left to the next visit.
+    if (saved) loadAvailability();
     // Drop the selection so it is obvious the batch was committed; the sheet
     // stays open because marking several days in a row is the common case.
     editor.clearSelection();
@@ -145,6 +160,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             tab root there is nothing to go back to and the button is hidden. */}
         {navigation.canGoBack() && (
           <TouchableOpacity
+            testID="availability-close"
             onPress={() => navigation.goBack()}
             accessibilityRole="button"
             accessibilityLabel={t.common.cancel}
@@ -173,7 +189,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       )}
 
       {/* Legend */}
-      <View style={[
+      <View testID="availability-legend" style={[
         styles.legend,
         !lastSyncTime && { justifyContent: 'center' }
       ]}>
@@ -261,7 +277,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
         <ScrollView style={styles.bottomSheetContent} showsVerticalScrollIndicator={false}>
           {/* Warning for past dates */}
-          {editor.selectedDate && editor.selectedDate < today && (
+          {selectionHasPast && (
             <View style={styles.pastDateWarning}>
               <Ionicons name="information-circle" size={20} color={Colors.accent.yellow} />
               <Text style={styles.pastDateWarningText}>
@@ -271,7 +287,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           )}
 
           {/* Delete button for past dates */}
-          {editor.selectedDate && editor.selectedDate < today && (
+          {selectionHasPast && (
             <TouchableOpacity
               style={styles.deletePastDateButton}
               onPress={() => {
@@ -302,6 +318,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           <>
           <View style={styles.modeSelector}>
             <TouchableOpacity
+              testID="mode-free"
+              accessibilityState={{ selected: shownMode === 'free' }}
               style={[
                 styles.modeButton,
                 shownMode === 'free' && styles.modeButtonActive,
@@ -323,6 +341,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="mode-custom"
+              accessibilityState={{ selected: shownMode === 'custom' }}
               style={[
                 styles.modeButton,
                 shownMode === 'custom' && styles.modeButtonActive,
@@ -344,6 +364,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="mode-busy"
+              accessibilityState={{ selected: shownMode === 'busy' }}
               style={[
                 styles.modeButton,
                 shownMode === 'busy' && styles.modeButtonActive,
@@ -374,7 +396,11 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
               {editor.validationError && (
                 <View style={styles.validationError}>
                   <Ionicons name="warning" size={18} color={Colors.accent.red} />
-                  <Text style={styles.validationErrorText}>{editor.validationError}</Text>
+                  <Text style={styles.validationErrorText}>
+                    {editor.validationError === 'overlap'
+                      ? t.availability.slotsOverlap
+                      : t.availability.slotSameStartEnd}
+                  </Text>
                 </View>
               )}
 
@@ -384,6 +410,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                     <View style={styles.timeInput}>
                       <Text style={styles.timeLabel}>{t.availability.from}</Text>
                       <TouchableOpacity
+                        testID={`slot-${index}-start`}
                         style={styles.timeButton}
                         onPress={() => editor.openTimePicker(index, 'start')}
                       >
@@ -397,17 +424,27 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                     <View style={styles.timeInput}>
                       <Text style={styles.timeLabel}>{t.availability.to}</Text>
                       <TouchableOpacity
+                        testID={`slot-${index}-end`}
                         style={styles.timeButton}
                         onPress={() => editor.openTimePicker(index, 'end')}
                       >
                         <Text style={styles.timeValue}>{slot.end}</Text>
-                        <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
+                        {/* An end before the start is the next morning, and says so. */}
+                        {endsNextDay(slot.start, slot.end) ? (
+                          <Text style={styles.importedSource} testID={`slot-${index}-next-day`}>
+                            {t.availability.nextDay}
+                          </Text>
+                        ) : (
+                          <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
+                        )}
                       </TouchableOpacity>
                     </View>
                   </View>
 
                   {selectedDayState.slots.length > 1 && (
                     <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel={t.common.delete}
                       style={styles.removeSlotButton}
                       onPress={() => editor.removeSlot(index)}
                     >
@@ -437,7 +474,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
               {selectedDayState.importedSlots.map((slot, index) => (
                 <View key={`imported-${index}`} style={styles.importedRow}>
                   <Ionicons
-                    name={slot.source === 'rehearsal' ? 'people-outline' : 'calendar-outline'}
+                    name={slot.source === 'rehearsal' ? 'people-outline'
+                      : slot.source === 'previous_day' ? 'moon-outline' : 'calendar-outline'}
                     size={16}
                     color={Colors.text.tertiary}
                   />
@@ -447,7 +485,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                   <Text style={styles.importedSource}>
                     {slot.source === 'rehearsal'
                       ? t.availability.fromRehearsal
-                      : t.availability.fromDeviceCalendar}
+                      : slot.source === 'previous_day'
+                        ? t.availability.fromPreviousDay
+                        : t.availability.fromDeviceCalendar}
                   </Text>
                 </View>
               ))}
@@ -470,6 +510,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         {hasChanges && (
           <View style={styles.sheetSaveBar}>
             <TouchableOpacity
+              testID="availability-save"
               style={[styles.sheetSaveButton, saving && styles.sheetSaveButtonDisabled]}
               onPress={handleSave}
               disabled={saving}
@@ -488,44 +529,16 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         )}
       </Animated.View>
 
-      {/* Time Picker Modal */}
-      {editor.showTimePicker && (
-        <Modal
-          visible={editor.showTimePicker}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => editor.setShowTimePicker(false)}
-        >
-          <Pressable
-            style={styles.timePickerOverlay}
-            onPress={() => editor.setShowTimePicker(false)}
-          >
-            <Pressable style={styles.timePickerContainer} onPress={e => e.stopPropagation()}>
-              <View style={styles.timePickerHeader}>
-                <TouchableOpacity onPress={() => editor.setShowTimePicker(false)}>
-                  <Text style={styles.timePickerCancel}>{t.common.cancel}</Text>
-                </TouchableOpacity>
-                <Text style={styles.timePickerTitle}>
-                  {editor.editingSlot?.field === 'start' ? t.availability.startTime : t.availability.endTime}
-                </Text>
-                <TouchableOpacity onPress={editor.confirmTimePicker}>
-                  <Text style={styles.timePickerDone}>{t.common.done}</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={editor.tempTime}
-                mode="time"
-                display="spinner"
-                onChange={(event, date) => {
-                  if (date) editor.setTempTime(date);
-                }}
-                locale={language}
-                textColor={Colors.text.primary}
-              />
-            </Pressable>
-          </Pressable>
-        </Modal>
-      )}
+      {/* Time Picker Modal — Cancel keeps the slot's time (usePickerDraft) */}
+      <PickerModal
+        visible={editor.showTimePicker}
+        onClose={editor.closeTimePicker}
+        value={editor.timePickerValue}
+        onConfirm={editor.confirmTimePicker}
+        mode="time"
+        title={editor.editingSlot?.field === 'start' ? t.availability.startTime : t.availability.endTime}
+        language={language}
+      />
     </SafeAreaView>
   );
 }

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Modal,
   TextInput,
   StyleSheet,
   Alert,
@@ -16,6 +15,7 @@ import { useNavigationState } from '@react-navigation/native';
 import { useI18n } from '../../contexts/I18nContext';
 import { bugReportsAPI } from '../services/api';
 import { Colors } from '../constants/colors';
+import { AppModal } from './AppModal';
 
 export function BetaBanner() {
   const { t } = useI18n();
@@ -62,9 +62,8 @@ export function BetaBanner() {
         </TouchableOpacity>
       </View>
 
-      <Modal
+      <AppModal
         visible={modalVisible}
-        transparent
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
@@ -75,7 +74,7 @@ export function BetaBanner() {
           <View style={styles.modal}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.betaBanner.bugReport}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -101,7 +100,7 @@ export function BetaBanner() {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </Modal>
+      </AppModal>
     </>
   );
 }

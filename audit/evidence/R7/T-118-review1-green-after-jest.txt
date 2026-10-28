@@ -1,0 +1,21 @@
+T-118 review 1, findings 1 and 2: Jest, green after.
+Command: npx jest --selectProjects frontend --runTestsByPath src/shared/services/__tests__/calendarQueue.test.ts --verbose
+Code: e597c62.
+
+PASS frontend src/shared/services/__tests__/calendarQueue.test.ts (11.393 s)
+  Work waiting behind a run
+    ✓ "remove all" confirmed by one person does not run as the next one (236 ms)
+  The event of a rehearsal just saved
+    ✓ is written after a run already going, not under it (90 ms)
+    ✓ is not written when exporting is off (26 ms)
+  Who writes to the calendar
+    ✓ nothing outside the services imports a writer: it goes through the queue (47 ms)
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+
+The suites of the sync, run together on e597c62 (--runTestsByPath calendarQueue,
+useCalendarSync, useAddRehearsalSubmit, CalendarSyncScreen,
+CalendarSyncSettingsScreen, CalendarSyncSettingsScreen.onePath,
+useAutoCalendarSync, syncCost):
+Test Suites: 8 passed, 8 total
+Tests:       85 passed, 85 total

@@ -1,0 +1,58 @@
+{
+  "verifiedAt": "2026-09-18T19:01:05.742875+00:00",
+  "sourceCommit": "e6b06b6e88da7f8db4a7e72e458b49190827e3ca",
+  "sourceTree": "9a88eb079758eee9bb5c3b54d6cda9cf791f6055",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "postgres": "15.13",
+  "postgresImage": "sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0",
+  "environment": "env -i; explicit Node22 PATH; synthetic JWT_SECRET; owned Chromium cache reused; owned local Docker PostgreSQL; .env not loaded",
+  "ownedContainersAfterRun": 0,
+  "production": "NOT_RUN",
+  "physicalDevice": "N/A for ID01 server issuance contract; H02 DEV-15 remains NOT_RUN",
+  "findingStatus": "VERIFIED",
+  "ownedBrowserCacheAfterRun": "retained for continuing stages",
+  "results": {
+    "before": {
+      "exitCode": 1,
+      "failedTests": 1,
+      "sourceCommit": "33dd698313266359b00e43f81316b85d3bd9bf4e",
+      "scope": "initial custom TTL reproducer against unchanged middleware"
+    },
+    "after": {
+      "exitCode": 0,
+      "suites": 2,
+      "passedTests": 59
+    },
+    "checkFinal": {
+      "exitCode": 0,
+      "jestSuites": 84,
+      "jestTests": 1201,
+      "adminBrowserTests": 4,
+      "adminFailureBrowserTests": 18,
+      "inviteBrowserTests": 11,
+      "persistedTests": 6
+    },
+    "postgresFinal": {
+      "exitCode": 0,
+      "passedScenarios": [
+        "controls",
+        "A02",
+        "B03",
+        "B04",
+        "H04"
+      ],
+      "knownDefects": [
+        "F01",
+        "B02",
+        "D01"
+      ],
+      "externalConnections": 0
+    }
+  }
+}

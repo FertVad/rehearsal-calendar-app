@@ -1,0 +1,15 @@
+Cause fix 20, review 2 (T-120): the push tests after the fix (notifications.ts, ProfileScreen.tsx).
+Command: cd rehearsal-calendar-native && npx jest --selectProjects frontend --forceExit src/features/profile/screens/__tests__/ProfileScreen.push src/contexts/__tests__/AuthContext.push src/shared/hooks/__tests__/useNotifications.push
+(filtered: grep -E '^(PASS|FAIL)|^Tests:|✕|●')
+
+PASS frontend src/contexts/__tests__/AuthContext.push.test.tsx (264.987 s)
+  ● Console
+PASS frontend src/shared/hooks/__tests__/useNotifications.push.test.tsx (265.102 s)
+  ● Console
+PASS frontend src/features/profile/screens/__tests__/ProfileScreen.pushSession.test.tsx (271.393 s)
+  ● Console
+PASS frontend src/features/profile/screens/__tests__/ProfileScreen.push.test.tsx (271.807 s)
+  ● Console
+Tests:       13 passed, 13 total
+
+("● Console" is the react-test-renderer deprecation notice every screen test prints.)

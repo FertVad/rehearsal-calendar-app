@@ -1,0 +1,60 @@
+# Onboarding shows the calendar that was saved, not the one last tapped
+# (cause fix 18, HP05). Perdita, new here, connects the phone's calendar in
+# onboarding, goes back a step and comes forward again. The step kept the
+# choice in its own state: set before the save, kept when the save failed,
+# and gone when the step was opened again — it said "mark your time by hand"
+# with sync switched on. Now it shows what the settings say, once saved.
+#
+# A save that fails cannot be made to happen on the simulator; that half is
+# pinned by Jest (CalendarSyncScreen.test.tsx). The onboarding has no test ids
+# but Skip; the rest is found by its English labels.
+appId: ${APP_ID}
+name: Onboarding shows the calendar that was saved
+tags:
+  - calendar
+  - onboarding
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${PERDITA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Get Started"
+      SEE: "Your availability"
+      WAIT_MS: 10000
+# Calendar access, where the app has not been given it yet.
+- tapOn:
+    text: "Grant Access"
+    optional: true
+- tapOn:
+    text: "Allow Full Access"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*Apple Calendar.*"
+    timeout: 15000
+# Its one calendar is picked and saved; a second tap only saves it again.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Apple Calendar.*"
+      SEE: ".*Busy hours will come across on their own.*"
+      WAIT_MS: 10000
+- tapOn: "Back"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Get Started"
+      SEE: "Your availability"
+      WAIT_MS: 10000
+# Back on the step: the calendar saved is the one shown as connected.
+- extendedWaitUntil:
+    visible: ".*Busy hours will come across on their own.*"
+    timeout: 10000
+- assertNotVisible: ".*Until you do, everyone sees you as free.*"
+- takeScreenshot: 32-onboarding-calendar-as-saved

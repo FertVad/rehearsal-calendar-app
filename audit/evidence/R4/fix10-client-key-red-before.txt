@@ -1,0 +1,26 @@
+Cause fix 10 — the create form's Idempotency-Key: red before (client).
+Test: rehearsal-calendar-native/src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts at 7cde64f.
+Client files restored from 9ed5d83 (server key done, client not yet sending it)
+for the run, then restored from HEAD:
+  src/features/calendar/hooks/useAddRehearsalSubmit.ts, src/shared/services/api.ts
+Command (from rehearsal-calendar-native):
+  npx jest --selectProjects frontend src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts --silent -t "Idempotency-Key"
+Failure headlines and assertion lines; stack frames stripped.
+
+  ● useAddRehearsalSubmit Hook › Idempotency-Key of a create › a retry of the same form after a failure sends the same key
+    Matcher error: received value must be a string
+    Received has value: undefined
+    > 537 |       expect(first).toMatch(/^[A-Za-z0-9_-]{16,100}$/);
+  ● useAddRehearsalSubmit Hook › Idempotency-Key of a create › a changed form is a new create, with a new key
+    Expected: not undefined
+    > 553 |       expect(second).not.toBe(first);
+  ● useAddRehearsalSubmit Hook › Idempotency-Key of a create › after a success, the next create is a new one even if it asks the same
+    Expected: not undefined
+    > 564 |       expect(second).not.toBe(first);
+
+(The same run also reported TS2554 in ProjectContext.tsx and rehearsalFlow.test.ts:
+the partial restore put the old two-argument api.ts under the new callers. Those
+suites are not part of this check.)
+
+On 7cde64f: useAddRehearsalSubmit, AddRehearsalScreen and rehearsalFlow — all
+pass (702/702 in the run that included them); tsc --noEmit — clean.

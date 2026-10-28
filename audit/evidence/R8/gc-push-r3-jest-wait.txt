@@ -1,0 +1,42 @@
+Cause fix 20, review 3 - AuthContext.push.test.tsx waits for the registration, not for a second
+Date: 2026-10-27
+
+The supervisor's run of 27.10 06:58 (e2e/out/failed/T-120-2026-10-27T04-58-13-256Z/checks.log):
+FAIL src/contexts/__tests__/AuthContext.push.test.tsx
+  ● a change to the user is the same session and registers nothing new
+    Expected number of calls: 1
+    Received number of calls: 0
+    > 102 |   await waitFor(() => expect(mockApi.registerPushToken).toHaveBeenCalledTimes(1));
+Passed on a rerun of the same commits: `waitFor` gives the sign-in and the
+registration one second, and under the full suite's load the chain did not fit.
+
+Made on demand - the same load as a late answer: the sign-in's `getMe` answered
+1.5 s late, everything else unchanged.
+
+1) The committed test (c69a2a1), in a temporary copy with that one line changed
+$ npx jest --selectProjects frontend --runTestsByPath src/contexts/__tests__/AuthContext.pushSlowProbe.test.tsx
+  ● a change to the user is the same session and registers nothing new
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+    Expected number of calls: 1
+    Received number of calls: 0
+    > 54 |   await waitFor(() => expect(mockApi.registerPushToken).toHaveBeenCalledTimes(1));
+Tests:       1 failed, 1 total
+(the supervisor's failure, made at will; the copy was deleted)
+
+2) The new test, with the same 1.5 s late `getMe` (temporarily)
+$ npx jest --selectProjects frontend --runTestsByPath src/contexts/__tests__/AuthContext.push.test.tsx
+Tests:       3 passed, 3 total
+
+3) The new test as committed, with the other push suites
+$ npx jest --selectProjects frontend --runTestsByPath src/contexts/__tests__/AuthContext.push.test.tsx \
+    src/features/profile/screens/__tests__/ProfileScreen.pushSession.test.tsx \
+    src/features/profile/screens/__tests__/ProfileScreen.push.test.tsx \
+    src/shared/hooks/__tests__/useNotifications.push.test.tsx src/contexts/__tests__/AuthContext.test.tsx
+PASS frontend src/contexts/__tests__/AuthContext.push.test.tsx (54.137 s)
+PASS frontend src/shared/hooks/__tests__/useNotifications.push.test.tsx (55.388 s)
+PASS frontend src/features/profile/screens/__tests__/ProfileScreen.pushSession.test.tsx (57.623 s)
+PASS frontend src/contexts/__tests__/AuthContext.test.tsx (58.388 s)
+PASS frontend src/features/profile/screens/__tests__/ProfileScreen.push.test.tsx (58.545 s)
+Tests:       47 passed, 47 total
+
+$ npm run type-check  -> tsc --noEmit, no errors

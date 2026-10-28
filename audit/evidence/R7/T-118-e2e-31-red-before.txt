@@ -1,0 +1,49 @@
+Cause fix 18 (T-118) - e2e flow 31, red before.
+Source: e774950 with the fix's source files put back as they were at 4608443:
+  git restore --source=4608443 -- src/shared/utils/calendarStorage.ts \
+    src/shared/hooks/useAutoCalendarSync.ts src/features/calendar/hooks/useCalendarSync.ts \
+    src/features/profile/screens/CalendarSyncSettingsScreen.tsx \
+    src/features/onboarding/screens/CalendarSyncScreen.tsx
+  and on the old CalendarSyncSettingsScreen.tsx only testID="calendar-sync-toggle" added
+  to the Switch, which the flow finds it by (the new src/shared/services/calendarSync.ts
+  stays in the tree, unused by the old code). Afterwards: git restore --source=HEAD -- <the same files>.
+Command (rehearsal-calendar-native, Node 22):
+  npm run e2e -- e2e/flows/31-sync-settings-locked-while-running.yaml
+Output (tail):
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/31-sync-settings-locked-while-running.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.oracle.truffle.api.dsl.InlineSupport$UnsafeField (file:/Users/vadimfertik/.maestro/lib/truffle-api-24.2.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.oracle.truffle.api.dsl.InlineSupport$UnsafeField
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[Failed] Sync settings stay put while a sync runs (2m 54s) (Assertion is false: ".*Synchronize.*" is not visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The step it failed at (e2e/out/artifacts/2026-10-25_195256/.../logs/maestro.log):
+19:56:24.150 Run ../scripts/hold-answers.js RUNNING
+19:56:24.593 Run ../scripts/hold-answers.js COMPLETED
+19:56:24.594 Tap on ".*Synchronize.*" RUNNING
+19:56:26.688 Tap on ".*Synchronize.*" COMPLETED
+19:56:26.688 Assert that ".*Synchronize.*" is not visible RUNNING
+19:56:36.923 [ERROR] CommandFailed: Assertion is false: ".*Synchronize.*" is not visible
+And the server (e2e/out/server.log:656):
+[e2e] holding the request GET /api/native/rehearsals/batch, its connection open
+
+So: the export was still waiting for the rehearsals, and for all ten seconds the old
+screen offered "Synchronize" again — its import was over, nothing showed as running,
+and the Auto Sync switch beside it was open to change (EO04).

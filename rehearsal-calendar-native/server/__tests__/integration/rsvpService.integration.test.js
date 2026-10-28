@@ -130,11 +130,9 @@ describe('Seen toggle', () => {
     ).rejects.toThrow(/yes.*no/i);
   });
 
-  // Slots are otherwise booked only when a rehearsal is created or edited, but
-  // a row here is what puts someone on it — and an admin sees rehearsals they
-  // are not on, with the eye live on every card. One tap used to add them to
-  // the call with no busy time booked, leaving them free in the planner during
-  // their own rehearsal until somebody happened to edit it again.
+  // An answer used to upsert, so a tap from someone with no row put them on the
+  // call (review D02) and needed a busy slot booked on the side. An answer now
+  // changes the answer of someone already on the rehearsal and nothing else.
   const busySlotsFor = (userId) =>
     testDb.all(
       `SELECT starts_at, ends_at FROM native_user_availability
@@ -142,30 +140,25 @@ describe('Seen toggle', () => {
       [userId, String(rehearsalId)]
     );
 
-  it('books the busy time for someone the tap has just added', async () => {
+  it('refuses an answer from someone who is not on the rehearsal, and writes nothing', async () => {
+    await expect(respondToRehearsal(rehearsalId, outsider, 'yes', null, projectId))
+      .rejects.toMatchObject({ status: 403, code: 'NOT_ON_REHEARSAL' });
+
+    expect(await getUserResponse(rehearsalId, outsider)).toBeNull();
     expect(busySlotsFor(outsider)).toHaveLength(0);
-
-    await respondToRehearsal(rehearsalId, outsider, 'yes', null, projectId);
-
-    const slots = busySlotsFor(outsider);
-    expect(slots).toHaveLength(1);
-    expect(slots[0].starts_at).toBe('2026-09-14T10:00:00.000Z');
-    expect(slots[0].ends_at).toBe('2026-09-14T13:00:00.000Z');
+    expect((await getRehearsalResponses(rehearsalId)).stats).toEqual({ confirmed: 0, invited: 2 });
   });
 
-  it('does not book a second slot when the same person taps again', async () => {
-    await respondToRehearsal(rehearsalId, outsider, 'yes', null, projectId);
-    await respondToRehearsal(rehearsalId, outsider, 'no', null, projectId);
-    await respondToRehearsal(rehearsalId, outsider, 'yes', null, projectId);
-
-    expect(busySlotsFor(outsider)).toHaveLength(1);
-  });
-
-  it('leaves the busy time in place when the mark is taken back', async () => {
-    await respondToRehearsal(rehearsalId, outsider, 'yes', null, projectId);
-    await respondToRehearsal(rehearsalId, outsider, 'no', null, projectId);
+  it('leaves the busy time alone when the mark is taken back', async () => {
+    testDb.run(
+      `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, source, external_event_id, title)
+       VALUES (?, ?, ?, 'busy', 'rehearsal', ?, 'Rehearsal')`,
+      [member, '2026-09-14T10:00:00.000Z', '2026-09-14T13:00:00.000Z', String(rehearsalId)]
+    );
+    await respondToRehearsal(rehearsalId, member, 'yes', null, projectId);
+    await respondToRehearsal(rehearsalId, member, 'no', null, projectId);
 
     // 'no' means invited and not yet seen, so they are still on the call.
-    expect(busySlotsFor(outsider)).toHaveLength(1);
+    expect(busySlotsFor(member)).toHaveLength(1);
   });
 });

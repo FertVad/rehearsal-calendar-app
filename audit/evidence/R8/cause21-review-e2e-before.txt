@@ -1,0 +1,55 @@
+Cause fix 21, review items 1-4: e2e red before, green after.
+
+Flows (rehearsal-calendar-native/e2e/flows):
+  33-inbox-older-pages.yaml               extended: 1 + 50 new while open, pull, scroll to the 1   (item 1)
+  35-inbox-mark-all-before-list.yaml      new: "Mark all read" before the list came                 (item 2)
+  36-inbox-late-read-after-mark-all.yaml  new: a card's read fails late after "Mark all read" landed (item 3)
+  37-inbox-refused-after-sign-out.yaml    new: "Mark all read" refused (401) after sign-out          (item 4)
+Harness: server-with-mailbox.mjs gains `once=1` holds, a log line with the
+status of a request held `before`, and GET /notify (notifications recorded by
+the server's own recordNotifications on the disposable database);
+e2e/scripts/notify.js; seed people kulygin, tuzenbach, solyony.
+
+--- Red: items 1-3, screen files as at 20180d1 ---
+  git restore --source=20180d1 -- src/features/notifications/inboxPages.ts \
+    src/features/notifications/screens/NotificationsScreen.tsx
+  npm run e2e -- e2e/flows/33-inbox-older-pages.yaml
+    [Failed] Inbox older pages (3m 38s) (No visible element found: ".*Lamp lit late 1.*")
+    1/1 Flow Failed
+  npm run e2e -- e2e/flows/35-inbox-mark-all-before-list.yaml e2e/flows/36-inbox-late-read-after-mark-all.yaml
+    [Failed] Inbox mark all before the list (2m 8s) (Assertion is false: ".*Gymnasium council.*" is visible)
+    [Failed] Inbox late read after mark all (1m 1s) (Assertion is false: "Mark all read" is not visible)
+    2/2 Flows Failed
+  git restore --source=HEAD -- (the same two files)
+  35's failure screenshot (artifacts 2026-10-27_012033, step-037): the inbox
+  says "Nothing yet" while the server has Kulygin's card.
+
+--- Red: item 4, src/contexts/UnreadContext.tsx as at c09635f (before 20180d1) ---
+  git restore --source=c09635f -- src/contexts/UnreadContext.tsx
+  npm run e2e -- e2e/flows/37-inbox-refused-after-sign-out.yaml
+    [Failed] Inbox change refused after sign-out (2m 27s) (Assertion is false: "Could not mark as read" is not visible)
+    1/1 Flow Failed
+  server log:
+    [e2e] holding the request POST /api/native/notifications/read
+    [e2e] released POST /api/native/notifications/read: the server answered 401
+  git restore --source=HEAD -- src/contexts/UnreadContext.tsx
+
+A first version of 37 scrolled to "Log out" after the tap (13.6 s for the
+scroll alone): the app gave up at ten seconds while still signed in, and the
+alert was a timeout's, not a refusal's. The flow now brings "Log out" into
+view first; from the tap to the release is inside the ten seconds, and the
+server's 401 is in the log above and in the green run below.
+
+--- Green, on the fixed code ---
+  [Passed] Inbox older pages (3m 10s)
+  [Passed] Inbox mark all before the list (1m 28s)
+  [Passed] Inbox late read after mark all (1m 11s)
+  [Passed] Inbox change refused after sign-out (2m 4s)
+    [e2e] released POST /api/native/notifications/read: the server answered 401
+  Neighbours on the same code:
+  [Passed] Inbox against a late answer (18)
+  [Passed] Inbox deletion on its way (21)
+  [Passed] Inbox load and read fail (34)
+  [Passed] Switch accounts - a change on its way (22)
+  [Passed] Inbox (05)
+  taps taken again (tap-and-see.yaml): 0 in every run.

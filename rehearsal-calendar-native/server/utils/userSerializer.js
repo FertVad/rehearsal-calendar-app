@@ -28,4 +28,9 @@ function serializeUser(dbUser) {
   };
 }
 
-export { serializeUser };
+// What serializeUser reads, plus the version a new session is signed with.
+// Read in the transaction that checked the proof, under its lock (R3-06).
+const SESSION_USER_COLUMNS = `id, email, first_name, last_name, phone, avatar_url, timezone, locale,
+  notifications_enabled, email_notifications, week_start_day, onboarding_completed, created_at, token_version`;
+
+export { serializeUser, SESSION_USER_COLUMNS };

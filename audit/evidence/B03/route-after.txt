@@ -1,0 +1,91 @@
+Running one project: backend
+(node:79371) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS backend rehearsal-calendar-native/server/__tests__/routes/membersAvailabilityBudget.test.js
+  ● Console
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+PASS backend rehearsal-calendar-native/server/__tests__/services/memberAvailabilityRateLimit.test.js
+PASS backend rehearsal-calendar-native/server/__tests__/routes/membersAvailabilityRange.test.js
+  ● Console
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: Asia/Tokyo
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+    console.log
+      [DEBUG] [Availability API] User ID 1 requesting availability, timezone: Asia/Tokyo
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+
+Test Suites: 3 passed, 3 total
+Tests:       55 passed, 55 total
+Snapshots:   0 total
+Time:        1.154 s
+Ran all test suites within paths "rehearsal-calendar-native/server/__tests__/routes/membersAvailabilityBudget.test.js", "rehearsal-calendar-native/server/__tests__/routes/membersAvailabilityRange.test.js", "rehearsal-calendar-native/server/__tests__/services/memberAvailabilityRateLimit.test.js".

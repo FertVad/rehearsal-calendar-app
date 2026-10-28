@@ -1,0 +1,23 @@
+Source: e6b06b6e88da7f8db4a7e72e458b49190827e3ca
+Base: 33dd698313266359b00e43f81316b85d3bd9bf4e
+Node: /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node
+
+Final full check, cwd rehearsal-calendar-native, actual exit0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin NODE_ENV=test JWT_SECRET=id01-isolated-test-secret PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-continuous-browser.s8CVco npm run check > ../audit/evidence/ID01/check-final.txt 2>&1
+
+Final full PostgreSQL, cwd repository root, actual exit0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin node rehearsal-calendar-native/server/scripts/r0-postgres.mjs > audit/evidence/ID01/postgres-final.txt 2>&1
+Owned disposable PostgreSQL only; no .env/server.js/production startup.
+
+Focused tests, cwd rehearsal-calendar-native/server, env-i Node22/test synthetic credentials:
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --runTestsByPath __tests__/middleware/tokenTtl.test.js
+Before: initial custom-TTL reproducer, actual exit1 with1 expected failure at base.
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --runTestsByPath __tests__/middleware/tokenTtl.test.js __tests__/routes/tokenRefreshTtl.test.js
+After: actual exit0,2suites59tests. Both rerun in final check after source commit.
+Real signing/verification; middleware DB mocked for no-call assertions. HTTP
+fixture executes real createApp/auth/SQLite SQL; sockets only to owned loopback.
+Controlled Date.now covers exact expiry without wall-clock sleeps.
+
+Browser cache installed at H02 and retained for following stages. Local-test
+escalation covers listeners/Chromium/Docker, not production. No .env, live DB,
+Vercel env, provider requests, deployment or reminders used.

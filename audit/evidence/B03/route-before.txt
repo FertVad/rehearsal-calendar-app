@@ -1,0 +1,302 @@
+Running one project: backend
+(node:77537) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+  console.error
+    [Availability] Error getting members availability: Error: B03_SAFE_EXPANSION_TRIPWIRE
+        at Date.<anonymous> (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/routes/membersAvailabilityBudget.test.js:36:36)
+        at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:397:39
+        at Date.<anonymous> (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:404:13)
+        at Date.mockConstructor (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:148:19)
+        at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/routes/native/members.js:38:28
+        at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/middleware/asyncHandler.js:6:27
+
+      264 |     res.json({ availability });
+      265 |   } catch (error) {
+    > 266 |     console.error('[Availability] Error getting members availability:', error);
+          |             ^
+      267 |     res.status(500).json({ error: 'Failed to get members availability' });
+      268 |   }
+      269 | }));
+
+      at server/routes/native/members.js:266:13
+      at server/middleware/asyncHandler.js:6:27
+
+  console.log
+    [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+  console.log
+    [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+  console.log
+    [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+  console.log
+    [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+  console.log
+    [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+  console.error
+    [Availability] Error getting members availability: TypeError: SQLite3 can only bind numbers, strings, bigints, buffers, and null
+        at Object.all (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/integration/setup.js:264:36)
+        at Object.<anonymous> (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:794:25)
+        at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:397:39
+        at Object.<anonymous> (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:404:13)
+        at Object.mockConstructor [as all] (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:148:19)
+        at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/routes/native/members.js:136:42
+
+      264 |     res.json({ availability });
+      265 |   } catch (error) {
+    > 266 |     console.error('[Availability] Error getting members availability:', error);
+          |             ^
+      267 |     res.status(500).json({ error: 'Failed to get members availability' });
+      268 |   }
+      269 | }));
+
+      at server/routes/native/members.js:266:13
+
+  console.log
+    [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+  console.log
+    [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+  console.error
+    [Availability] Error getting members availability: TypeError: userIds.split is not a function
+        at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/routes/native/members.js:69:10
+
+      264 |     res.json({ availability });
+      265 |   } catch (error) {
+    > 266 |     console.error('[Availability] Error getting members availability:', error);
+          |             ^
+      267 |     res.status(500).json({ error: 'Failed to get members availability' });
+      268 |   }
+      269 | }));
+
+      at server/routes/native/members.js:266:13
+
+  console.log
+    [DEBUG] [Availability API] User ID 1 requesting availability, timezone: UTC
+
+      at Object.debug (server/utils/logger.js:18:15)
+
+  console.error
+    [Availability] Error getting members availability: TypeError: SQLite3 can only bind numbers, strings, bigints, buffers, and null
+        at Object.all (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/__tests__/integration/setup.js:264:36)
+        at Object.<anonymous> (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:794:25)
+        at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:397:39
+        at Object.<anonymous> (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:404:13)
+        at Object.mockConstructor [as all] (/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/jest-mock/build/index.js:148:19)
+        at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/routes/native/members.js:136:42
+
+      264 |     res.json({ availability });
+      265 |   } catch (error) {
+    > 266 |     console.error('[Availability] Error getting members availability:', error);
+          |             ^
+      267 |     res.status(500).json({ error: 'Failed to get members availability' });
+      268 |   }
+      269 | }));
+
+      at server/routes/native/members.js:266:13
+
+FAIL backend rehearsal-calendar-native/server/__tests__/routes/membersAvailabilityBudget.test.js
+  ✕ rejects the original 0001..9999 attack before expanding dates (1299 ms)
+  ✕ rejects ambiguous/malformed input {"endDate": "2026-03-01", "startDate": "2026-03-02"} before business reads (58 ms)
+  ✕ rejects ambiguous/malformed input {"date": "2026-02-30"} before business reads (6 ms)
+  ✕ rejects ambiguous/malformed input {"date": "2026-2-01"} before business reads (5 ms)
+  ✕ rejects ambiguous/malformed input {"date": "0000-01-01"} before business reads (6 ms)
+  ✕ rejects ambiguous/malformed input {"date": [Array]} before business reads (8 ms)
+  ✕ rejects ambiguous/malformed input {"date": "2026-01-01", "endDate": "2026-01-02", "startDate": "2026-01-01"} before business reads (3 ms)
+  ✕ rejects ambiguous/malformed input {"date": "2026-01-01", "userIds": "1garbage"} before business reads (3 ms)
+  ✕ rejects ambiguous/malformed input {"date": "2026-01-01", "userIds": [Array]} before business reads (7 ms)
+  ✕ rejects ambiguous/malformed input {"date": "2026-01-01", "excludeRehearsalId": [Object]} before business reads (3 ms)
+
+  ● rejects the original 0001..9999 attack before expanding dates
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 500
+
+      39 |   const all = jest.spyOn(db, 'all');
+      40 |   const response = await query({ startDate: '0001-01-01', endDate: '9999-12-31' });
+    > 41 |   expect(response.status).toBe(400);
+         |                           ^
+      42 |   expect(conversions).toBeLessThanOrEqual(2);
+      43 |   expect(all).not.toHaveBeenCalled();
+      44 |   expect((await request(app).get('/api/health')).status).toBe(200);
+
+      at Object.<anonymous> (server/__tests__/routes/membersAvailabilityBudget.test.js:41:27)
+
+  ● rejects ambiguous/malformed input {"endDate": "2026-03-01", "startDate": "2026-03-02"} before business reads
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 200
+
+      58 |   const all = jest.spyOn(db, 'all');
+      59 |   const response = await query(params);
+    > 60 |   expect(response.status).toBe(400);
+         |                           ^
+      61 |   expect(all).not.toHaveBeenCalled();
+      62 | });
+      63 |
+
+      at server/__tests__/routes/membersAvailabilityBudget.test.js:60:27
+
+  ● rejects ambiguous/malformed input {"date": "2026-02-30"} before business reads
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 200
+
+      58 |   const all = jest.spyOn(db, 'all');
+      59 |   const response = await query(params);
+    > 60 |   expect(response.status).toBe(400);
+         |                           ^
+      61 |   expect(all).not.toHaveBeenCalled();
+      62 | });
+      63 |
+
+      at server/__tests__/routes/membersAvailabilityBudget.test.js:60:27
+
+  ● rejects ambiguous/malformed input {"date": "2026-2-01"} before business reads
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 200
+
+      58 |   const all = jest.spyOn(db, 'all');
+      59 |   const response = await query(params);
+    > 60 |   expect(response.status).toBe(400);
+         |                           ^
+      61 |   expect(all).not.toHaveBeenCalled();
+      62 | });
+      63 |
+
+      at server/__tests__/routes/membersAvailabilityBudget.test.js:60:27
+
+  ● rejects ambiguous/malformed input {"date": "0000-01-01"} before business reads
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 200
+
+      58 |   const all = jest.spyOn(db, 'all');
+      59 |   const response = await query(params);
+    > 60 |   expect(response.status).toBe(400);
+         |                           ^
+      61 |   expect(all).not.toHaveBeenCalled();
+      62 | });
+      63 |
+
+      at server/__tests__/routes/membersAvailabilityBudget.test.js:60:27
+
+  ● rejects ambiguous/malformed input {"date": [Array]} before business reads
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 500
+
+      58 |   const all = jest.spyOn(db, 'all');
+      59 |   const response = await query(params);
+    > 60 |   expect(response.status).toBe(400);
+         |                           ^
+      61 |   expect(all).not.toHaveBeenCalled();
+      62 | });
+      63 |
+
+      at server/__tests__/routes/membersAvailabilityBudget.test.js:60:27
+
+  ● rejects ambiguous/malformed input {"date": "2026-01-01", "endDate": "2026-01-02", "startDate": "2026-01-01"} before business reads
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 200
+
+      58 |   const all = jest.spyOn(db, 'all');
+      59 |   const response = await query(params);
+    > 60 |   expect(response.status).toBe(400);
+         |                           ^
+      61 |   expect(all).not.toHaveBeenCalled();
+      62 | });
+      63 |
+
+      at server/__tests__/routes/membersAvailabilityBudget.test.js:60:27
+
+  ● rejects ambiguous/malformed input {"date": "2026-01-01", "userIds": "1garbage"} before business reads
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 200
+
+      58 |   const all = jest.spyOn(db, 'all');
+      59 |   const response = await query(params);
+    > 60 |   expect(response.status).toBe(400);
+         |                           ^
+      61 |   expect(all).not.toHaveBeenCalled();
+      62 | });
+      63 |
+
+      at server/__tests__/routes/membersAvailabilityBudget.test.js:60:27
+
+  ● rejects ambiguous/malformed input {"date": "2026-01-01", "userIds": [Array]} before business reads
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 500
+
+      58 |   const all = jest.spyOn(db, 'all');
+      59 |   const response = await query(params);
+    > 60 |   expect(response.status).toBe(400);
+         |                           ^
+      61 |   expect(all).not.toHaveBeenCalled();
+      62 | });
+      63 |
+
+      at server/__tests__/routes/membersAvailabilityBudget.test.js:60:27
+
+  ● rejects ambiguous/malformed input {"date": "2026-01-01", "excludeRehearsalId": [Object]} before business reads
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 500
+
+      58 |   const all = jest.spyOn(db, 'all');
+      59 |   const response = await query(params);
+    > 60 |   expect(response.status).toBe(400);
+         |                           ^
+      61 |   expect(all).not.toHaveBeenCalled();
+      62 | });
+      63 |
+
+      at server/__tests__/routes/membersAvailabilityBudget.test.js:60:27
+
+Test Suites: 1 failed, 1 total
+Tests:       10 failed, 10 total
+Snapshots:   0 total
+Time:        2.381 s
+Ran all test suites within paths "rehearsal-calendar-native/server/__tests__/routes/membersAvailabilityBudget.test.js".

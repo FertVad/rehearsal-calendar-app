@@ -1,0 +1,68 @@
+{
+  "verifiedAt": "2026-09-18T18:34:41.860468+00:00",
+  "sourceCommit": "7ab1e414c73374df9bbd6c3cafd5a4029f4cc293",
+  "sourceTree": "f73cab2193a00bcaef7f39c2c2c986aeb0ea2c94",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "postgres": "15.13",
+  "postgresImage": "sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0",
+  "environment": "env -i; explicit Node22 PATH; synthetic JWT_SECRET; owned Chromium cache reused; owned local Docker PostgreSQL; .env not loaded",
+  "ownedContainersAfterRun": 0,
+  "production": "NOT_RUN",
+  "physicalDevice": "N/A for H04 admin web contract; H02 DEV-15 remains NOT_RUN",
+  "findingStatus": "VERIFIED",
+  "ownedBrowserCacheAfterRun": "retained for continuing stages",
+  "results": {
+    "browserBefore": {
+      "exitCode": 1,
+      "failedTests": 2,
+      "sourceCommit": "23510b07a5b95789a76d01553307e104477cd1b7",
+      "scope": "initial diagnostic version"
+    },
+    "apiBefore": {
+      "exitCode": 1,
+      "failedTests": 2,
+      "filteredTests": 28,
+      "sourceCommit": "23510b07a5b95789a76d01553307e104477cd1b7"
+    },
+    "browserAfter": {
+      "exitCode": 0,
+      "passedTests": 18,
+      "scope": "pre-commit final browser suite"
+    },
+    "apiAfter": {
+      "exitCode": 0,
+      "passedTests": 30
+    },
+    "checkFinal": {
+      "exitCode": 0,
+      "jestSuites": 80,
+      "jestTests": 1072,
+      "adminBrowserTests": 4,
+      "adminFailureBrowserTests": 18,
+      "inviteBrowserTests": 11,
+      "persistedTests": 6
+    },
+    "postgresFinal": {
+      "exitCode": 0,
+      "passedScenarios": [
+        "controls",
+        "A02",
+        "B03",
+        "B04",
+        "H04"
+      ],
+      "knownDefects": [
+        "F01",
+        "B02",
+        "D01"
+      ],
+      "externalConnections": 0
+    }
+  }
+}

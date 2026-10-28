@@ -18,53 +18,55 @@ import {
   closeIntegrationDb,
 } from '../integration/setup.js';
 
-let testDb;
 let app;
-let request;
-let unlinkAuthProvider;
 
 const PASSWORD = 'correct-horse-battery';
 let passwordUserId;
 let oauthUserId;
-let bcrypt;
+
+// The modules load here, at the top of the file, not in beforeAll: loading
+// express, supertest and the auth route graph takes from a fraction of a second
+// to several on a loaded machine, and inside the hook it ran against the hook's
+// 5 s and timed it out (T-210). The hook keeps only the fixtures.
+
+// native_auth_providers comes from setupIntegrationDb, matching production.
+const testDb = await setupIntegrationDb();
+
+jest.unstable_mockModule('../../database/db.js', () => ({
+  default: testDb,
+  isPostgres: false,
+  initDatabase: async () => testDb,
+  testConnection: async () => true,
+}));
+
+const noop = async () => ({ sent: 0, failed: 0, errors: [] });
+jest.unstable_mockModule('../../services/notifications/pushNotificationService.js', () => ({
+  getUserPushTokens: async () => [],
+  sendPushNotification: noop,
+  notifyRehearsalCreated: noop,
+  notifyRehearsalUpdated: noop,
+  notifyRehearsalDeleted: noop,
+  notifyMemberResponse: noop,
+  notifyMemberJoined: noop,
+  notifyAdminAppointed: noop,
+  notifyRoleChanged: noop,
+  notifyMemberRemoved: noop,
+  notifyProjectDeleted: noop,
+  notifyRehearsal24h: noop,
+  notifyRehearsal1h: noop,
+  notifyPaymentFailed: noop,
+}));
+
+const express = (await import('express')).default;
+const request = (await import('supertest')).default;
+const bcrypt = (await import('bcrypt')).default;
+const { unlinkAuthProvider } = await import('../../utils/accountLinking.js');
+const authRouter = (await import('../../routes/auth.js')).default;
 
 beforeAll(async () => {
-  testDb = await setupIntegrationDb();
-
-  // native_auth_providers comes from setupIntegrationDb, matching production.
-
-  jest.unstable_mockModule('../../database/db.js', () => ({
-    default: testDb,
-    isPostgres: false,
-    initDatabase: async () => testDb,
-    testConnection: async () => true,
-  }));
-
-  const noop = async () => ({ sent: 0, failed: 0, errors: [] });
-  jest.unstable_mockModule('../../services/notifications/pushNotificationService.js', () => ({
-    getUserPushTokens: async () => [],
-    sendPushNotification: noop,
-    notifyRehearsalCreated: noop,
-    notifyRehearsalUpdated: noop,
-    notifyRehearsalDeleted: noop,
-    notifyMemberResponse: noop,
-    notifyMemberJoined: noop,
-    notifyAdminAppointed: noop,
-    notifyRoleChanged: noop,
-    notifyMemberRemoved: noop,
-    notifyProjectDeleted: noop,
-    notifyRehearsal24h: noop,
-    notifyRehearsal1h: noop,
-    notifyPaymentFailed: noop,
-  }));
-
-  const express = (await import('express')).default;
-  request = (await import('supertest')).default;
-  bcrypt = (await import('bcrypt')).default;
-  ({ unlinkAuthProvider } = await import('../../utils/accountLinking.js'));
-  const authRouter = (await import('../../routes/auth.js')).default;
-
-  const hash = await bcrypt.hash(PASSWORD, 10);
+  // Cost 4, as in the other route tests: login compares at whatever cost the
+  // hash carries.
+  const hash = await bcrypt.hash(PASSWORD, 4);
   passwordUserId = testDb.run(
     `INSERT INTO native_users (email, password_hash, first_name) VALUES (?, ?, ?)`,
     ['password-user@test.com', hash, 'Password']
@@ -149,7 +151,7 @@ describe('unlinking the email provider', () => {
       .send({ email: 'password-user@test.com', password: PASSWORD });
     expect(before.status).toBe(200);
 
-    await unlinkAuthProvider(passwordUserId, 'email');
+    await unlinkAuthProvider(passwordUserId, 'email', 1);
 
     const after = await request(app)
       .post('/api/auth/login')
@@ -163,7 +165,7 @@ describe('unlinking the email provider', () => {
   });
 
   it('refuses to unlink the last remaining method', async () => {
-    await expect(unlinkAuthProvider(oauthUserId, 'google')).rejects.toThrow(
+    await expect(unlinkAuthProvider(oauthUserId, 'google', 1)).rejects.toThrow(
       'Cannot unlink the last authentication method'
     );
   });

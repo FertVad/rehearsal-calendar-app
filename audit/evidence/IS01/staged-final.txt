@@ -1,0 +1,1 @@
+{"summary":"pass","mode":"staged","files":604,"findings":0,"errors":0}

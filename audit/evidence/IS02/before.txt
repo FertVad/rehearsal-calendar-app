@@ -1,0 +1,57 @@
+(node:40771) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+  console.info
+    IS02 synthetic auth admissions by app: [ 20, 20 ]
+
+      at Object.<anonymous> (operationIpLimits.test.js:99:11)
+
+  console.info
+    IS02 synthetic admin admissions by app: [ 5, 5 ]
+
+      at Object.<anonymous> (operationIpLimits.test.js:119:11)
+
+FAIL ./operationIpLimits.test.js
+  ✕ two actual applications share the twenty-request auth budget for one IP (89 ms)
+  ✕ two actual applications share the five-request admin-login budget for one IP (26 ms)
+
+  ● two actual applications share the twenty-request auth budget for one IP
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 20
+    Received length: 40
+    Received array:  [400, 400, 400, 400, 400, 400, 400, 400, 400, 400, …]
+
+       98 |   expect(compareCall).not.toHaveBeenCalled();
+       99 |   console.info('IS02 synthetic auth admissions by app:', batches.map(batch => batch.filter(status => status === 400).length));
+    > 100 |   expect(batches.flat().filter(status => status === 400)).toHaveLength(20);
+          |                                                           ^
+      101 |   expect(batches.flat().filter(status => status === 429)).toHaveLength(20);
+      102 | });
+      103 |
+
+      at Object.<anonymous> (operationIpLimits.test.js:100:59)
+
+  ● two actual applications share the five-request admin-login budget for one IP
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 5
+    Received length: 10
+    Received array:  [401, 401, 401, 401, 401, 401, 401, 401, 401, 401]
+
+      118 |   expect(snapshot()).toEqual(before);
+      119 |   console.info('IS02 synthetic admin admissions by app:', batches.map(batch => batch.filter(status => status === 401).length));
+    > 120 |   expect(batches.flat().filter(status => status === 401)).toHaveLength(5);
+          |                                                           ^
+      121 |   expect(batches.flat().filter(status => status === 429)).toHaveLength(5);
+      122 |   expect(compareCall).toHaveBeenCalledTimes(5);
+      123 | });
+
+      at Object.<anonymous> (operationIpLimits.test.js:120:59)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 total
+Snapshots:   0 total
+Time:        0.646 s
+Ran all test suites.

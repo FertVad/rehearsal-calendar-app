@@ -1,0 +1,60 @@
+Red before: flow 06 on HEAD 392787c (server on HOST '::', app on http://localhost:3001/api),
+while another process binds port 3001 on the loopback addresses mid-flow.
+
+$ node audit/evidence/T-203/interloper.mjs e2e/flows/06-planner-to-rehearsal.yaml 15
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/06-planner-to-rehearsal.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[T-203 interloper 08:57:45.393] bound [::1]:3001 while the e2e server runs
+[T-203 interloper 08:57:45.401] bound [127.0.0.1]:3001 while the e2e server runs
+[T-203 interloper 08:57:53.496] accepted a connection on [::1]:3001 from port 54451; not answering
+[T-203 interloper 08:57:53.503]   got "POST /api/native/projects/1/rehearsals HTTP/1.1"
+[T-203 interloper 08:58:00.385] gone after 15s
+[Failed] From the planner to a rehearsal (2m 46s) (Assertion is false: "Rehearsal created" is visible)
+
+1/1 Flow Failed
+
+[T-203 interloper 08:58:29.660] e2e exit 1 after 484s
+
+The app's side (artifacts 2026-10-11_115436, device-simulator.log), next to the
+failure on T-130 (artifacts 2026-10-10_152418):
+
+                         T-130, 2026-10-10                          this run
+POST task                Task <…>.<15>                               Task <…>.<15>
+connection               new (C14), IPv6 on lo0                      new (C17), IPv6 on lo0
+sent                     15:29:49.911 "sent request, body S 124"     11:57:53.475 "sent request, body S 124"
+failed                   15:29:59.938 -1001, transaction 10468 ms    11:58:03.485 -1001, transaction 10014 ms
+app                      'Failed to save rehearsal:', [AxiosError: timeout of 10000ms exceeded]  (both)
+next requests            answered (next flow signed in)              answered (interloper gone)
+
+11:57:53.474035 Rehearsly[58639]: [C17.1.1 IPv6#8681c642.3001 in_progress socket-flow (satisfied (Path is satisfied), interface: lo0)] event: flow:start_connect @0.002s
+11:57:53.475411 Rehearsly[58639]: Task <09E431A3-…>.<15> sent request, body S 124
+11:58:03.485088 Rehearsly[58639]: Task <09E431A3-…>.<15> summary for task failure {transaction_duration_ms=10014, response_status=-1, connection=17, protocol="http/1.1", …}
+11:58:03.487056 Rehearsly[58639]: '[ERROR] Response Error: Network Error POST /native/projects/1/rehearsals', undefined
+11:58:03.490223 Rehearsly[58639]: 'Failed to save rehearsal:', [AxiosError: timeout of 10000ms exceeded]
+
+The kernel side alone (node audit/evidence/T-203/e2e-port-shadow.mjs 3901):
+
+ours: listening like e2e's server on {"address":"::","family":"IPv6","port":3901}
+theirs on ::1:3901: bound while ours is up
+  POST to [::1]:3901 -> NO ANSWER in 3 s (connected, request sent)
+  POST to [127.0.0.1]:3901 -> ours
+theirs on 127.0.0.1:3901: bound while ours is up
+  POST to [::1]:3901 -> ours
+  POST to [127.0.0.1]:3901 -> NO ANSWER in 3 s (connected, request sent)
+theirs on localhost:3901: bound while ours is up
+  POST to [::1]:3901 -> NO ANSWER in 3 s (connected, request sent)
+  POST to [127.0.0.1]:3901 -> ours
+theirs on 0.0.0.0:3901: refused (EADDRINUSE)
+after theirs exit: POST to [::1]:3901 -> ours

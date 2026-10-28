@@ -1,0 +1,10 @@
+-- After, Jest: fix files and test file at 23e4342 --
+-- cd rehearsal-calendar-native && npx jest src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx --silent --selectProjects frontend
+-- exit code 0; run 2026-10-11 --
+Running one project: frontend
+PASS frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx (9.413 s)
+
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        9.823 s, estimated 24 s

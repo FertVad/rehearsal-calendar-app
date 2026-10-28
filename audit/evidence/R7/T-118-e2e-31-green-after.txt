@@ -1,0 +1,28 @@
+Cause fix 18 (T-118) - e2e flow 31, green after.
+Source: the fix in the working tree on auto/main (base 4608443), before its commit.
+Command (rehearsal-calendar-native, Node 22):
+  npm run e2e -- e2e/flows/31-sync-settings-locked-while-running.yaml
+Output (tail):
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/31-sync-settings-locked-while-running.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.oracle.truffle.api.dsl.InlineSupport$UnsafeField (file:/Users/vadimfertik/.maestro/lib/truffle-api-24.2.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.oracle.truffle.api.dsl.InlineSupport$UnsafeField
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[Passed] Sync settings stay put while a sync runs (2m 28s)
+
+1/1 Flow Passed in 2m 28s
+
+[e2e] taps taken again (tap-and-see.yaml): 0

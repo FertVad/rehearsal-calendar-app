@@ -1,0 +1,35 @@
+Source: fd5f1eb6700e566d58cd818133e1ee867daa101d
+Base: 45007c4e10cdbcb3d1171d8fe9b1d29a59fd253f
+
+Final full check; cwd rehearsal-calendar-native; actual exit 0:
+env -i PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin HOME=/Users/vadimfertik NODE_ENV=test JWT_SECRET=b04-isolated-test-secret PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-b04-browser.tMkBZS npm run check > ../audit/evidence/B04/check-final.txt 2>&1
+Fresh owned browser cache; pinned Chromium downloaded automatically by required check.
+Owned cache removed after completion.
+
+Final PostgreSQL; cwd repository root; actual exit 0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node rehearsal-calendar-native/server/scripts/r0-postgres.mjs > audit/evidence/B04/postgres-final.txt 2>&1
+Runner supplies only its owned disposable DB URL and synthetic child environment.
+
+Focused PostgreSQL; cwd repository root; actual exit 0, before source commit:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node rehearsal-calendar-native/server/scripts/r0-postgres.mjs --b04-only > audit/evidence/B04/postgres-after.txt 2>&1
+
+Pruning negative control; actual exit 1, expected refreshed-row assertion:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node /private/tmp/reh-b04-prune-negative-99syxnsv/server/scripts/r0-postgres.mjs --b04-only > audit/evidence/B04/postgres-prune-negative-control.txt 2>&1
+Temporary source copy excluded .env*; dependencies/shared linked locally.
+Only mutation: removed outer `AND window_start < ${currentWindow}` from pruning DELETE.
+Tracked source untouched; temporary source copy and owned DB container removed.
+
+Original HTTP regression; cwd repository root; actual exit 1, expected 2 failures:
+env -i PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin HOME=/Users/vadimfertik NODE_ENV=test JWT_SECRET=b04-isolated-test-secret ADMIN_BROWSER_CHECK=0 NODE_OPTIONS=--experimental-vm-modules node rehearsal-calendar-native/node_modules/jest/bin/jest.js --config rehearsal-calendar-native/jest.config.js --selectProjects backend --runInBand --runTestsByPath rehearsal-calendar-native/server/__tests__/routes/inviteLimits.test.js
+At that time the diagnostic test had only the two original bypass regressions;
+application source was still base45007c4. Log: routes-before.txt.
+
+Focused after repair; cwd repository root; actual exit 0, 3 suites/79 tests:
+env -i PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin HOME=/Users/vadimfertik NODE_ENV=test JWT_SECRET=b04-isolated-test-secret ADMIN_BROWSER_CHECK=0 NODE_OPTIONS=--experimental-vm-modules node rehearsal-calendar-native/node_modules/jest/bin/jest.js --config rehearsal-calendar-native/jest.config.js --selectProjects backend --runInBand --runTestsByPath rehearsal-calendar-native/server/__tests__/routes/inviteLimits.test.js rehearsal-calendar-native/server/__tests__/routes/membershipNotifications.test.js rehearsal-calendar-native/server/__tests__/services/inviteRateLimit.test.js
+Log: routes-after.txt. Final source additionally asserts rate-limit headers;
+final full check covers these assertions and every committed source change.
+
+Initial sandbox loopback/Docker denials and a missing shared link in temporary
+negative-control setup were infrastructure/setup failures resolved before the
+recorded successful or expected-regression runs, not application regressions.
+No production URL, .env or server.js entrypoint was used. No schedules enabled.

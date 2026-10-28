@@ -1,0 +1,38 @@
+Cause fix 15, review round 1, finding 2 — e2e flow 25 (the rehearsal form,
+23:00 to 01:00, saved and opened again), red before and green after.
+
+Before. The form's files at the base a7338eb:
+  git restore --source=a7338eb -- src/features/calendar/hooks/useAddRehearsalForm.ts \
+    src/features/calendar/hooks/useAddRehearsalSubmit.ts \
+    src/features/calendar/hooks/useRehearsalAvailability.ts \
+    src/features/calendar/screens/AddRehearsalScreen.tsx \
+    src/features/calendar/styles/addRehearsalScreenStyles.ts
+with only testID="rehearsal-start-time" and testID="rehearsal-end-time" put
+back on the two time buttons (the flow finds them by id; they change nothing
+else). Then git restore --source=HEAD -- <the same files>.
+Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/25-past-midnight-form.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] A rehearsal made from 23:00 to 01:00 ends the next morning (2m 50s) (Assertion is false: id: rehearsal-ends-next-day is visible)
+
+1/1 Flow Failed
+
+The wheels were set to 23:00 and 01:00 and the base form said nothing of the
+next day: it read the end as 01:00 on the start's date.
+
+After (HEAD with the flow), same command:
+[Passed] A rehearsal made from 23:00 to 01:00 ends the next morning (2m 25s)
+
+1/1 Flow Passed in 2m 25s
+
+Screenshot 25-reopened: the rehearsal opened again reads
+"Saturday, October 24" / "23:00 — Oct 25, 01:00".

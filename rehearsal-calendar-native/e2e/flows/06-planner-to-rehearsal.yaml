@@ -1,0 +1,65 @@
+# A rehearsal planned in the planner is saved with the people the planner
+# planned it for, not the whole project (DP02, cause fix 7).
+appId: ${APP_ID}
+name: From the planner to a rehearsal
+tags:
+  - planner
+  - rehearsals
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- tapOn: "Planner, tab.*"
+- tapOn:
+    id: planner-project
+- tapOn: "Hamlet"
+- tapOn: "Expand.*"
+# Start from everyone and take two out. Arrival selects Hamlet's whole roster,
+# whichever project the planner opened on (DP01, cause fix 8;
+# 07-planner-project-switch shows it).
+- extendedWaitUntil:
+    visible: "4 of 4 selected"
+    timeout: 15000
+- tapOn: ".*Ophelia Bright"
+- tapOn: ".*Horatio Friend"
+- assertVisible: "2 of 4 selected"
+# The first slot offered, whichever day it falls on, brought to the middle of
+# the screen — under the tab bar or still moving, a tap misses it.
+- scrollUntilVisible:
+    element: "\\+ Add"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    text: "\\+ Add"
+    index: 0
+- extendedWaitUntil:
+    visible: "Selected: 2 of 4"
+    timeout: 15000
+- tapOn: "e.g. Act II run-through"
+- inputText: "Duel scene"
+- scrollUntilVisible:
+    element:
+      id: rehearsal-submit
+    direction: DOWN
+- tapOn:
+    id: rehearsal-submit
+- extendedWaitUntil:
+    visible: "Rehearsal created"
+    timeout: 15000
+- tapOn: "OK"
+- tapOn: "Calendar, tab.*"
+- scrollUntilVisible:
+    element: ".*Duel scene.*"
+    direction: DOWN
+- tapOn: ".*Duel scene.*"
+- extendedWaitUntil:
+    visible: "Participants"
+    timeout: 15000
+- assertVisible: "0/2"
+- assertVisible: "Anna Director.*"
+- assertVisible: "Hamlet Dane"
+- assertNotVisible: "Ophelia Bright"
+- assertNotVisible: "Horatio Friend"
+- takeScreenshot: 06-rehearsal-from-planner

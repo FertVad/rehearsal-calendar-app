@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { registerScreenStyles as styles } from '../styles';
+import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
+import { looksLikeEmail, meetsPasswordRule, normalizeEmail } from '../utils/accountRules';
 
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -25,23 +27,31 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { register, loading, error } = useAuth();
-  const { t } = useI18n();
+  const { register, busy, error, forgetPendingSignIn } = useAuth();
+  const { t, language } = useI18n();
+
+  // Leaving the form drops a registration still in flight: its late answer
+  // must not open a code screen nobody is looking at (review R3-24).
+  useEffect(() => () => forgetPendingSignIn(), [forgetPendingSignIn]);
 
   const validateForm = () => {
-    if (!email || !firstName || !password || !confirmPassword) {
+    if (!email.trim() || !firstName.trim() || !password || !confirmPassword) {
       Alert.alert(t.common.error, t.auth.fillAllFields);
       return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!looksLikeEmail(email)) {
       Alert.alert(t.common.error, t.auth.invalidEmail);
       return false;
     }
 
-    if (password.length < 6) {
-      Alert.alert(t.common.error, t.auth.passwordMinLength);
+    if (!meetsPasswordRule(password)) {
+      Alert.alert(t.common.error, t.auth.passwordRule);
+      return false;
+    }
+
+    if (firstName.trim().length > 100 || lastName.trim().length > 100) {
+      Alert.alert(t.common.error, t.auth.nameInvalid);
       return false;
     }
 
@@ -57,10 +67,22 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
     if (!validateForm()) return;
 
     try {
-      await register(email, password, firstName, lastName || undefined);
-      // Navigation handled by AuthProvider
-    } catch (err: any) {
-      Alert.alert(t.auth.registerError, err.message);
+      // No session yet: the account waits for the code just emailed (R3).
+      const created = await register(email, password, firstName, lastName || undefined, language);
+      if (!created) return; // left the form before the answer came
+      navigation.navigate('VerifyEmail', { email: created.email, delivery: created.delivery });
+    } catch (err) {
+      if (err instanceof AuthFlowError && err.code === 'EMAIL_TAKEN') {
+        // Sign in, or — when someone else registered the address — take it back
+        // with a code to the mailbox (R3 contract).
+        Alert.alert(t.auth.emailTakenTitle, t.auth.emailTakenMessage, [
+          { text: t.common.cancel, style: 'cancel' },
+          { text: t.auth.loginButton, onPress: () => navigation.popTo('Login') },
+          { text: t.auth.resetPassword, onPress: () => navigation.navigate('ResetPassword', { email: normalizeEmail(email) }) },
+        ]);
+        return;
+      }
+      Alert.alert(t.auth.registerError, authErrorMessage(t, err));
     }
   };
 
@@ -148,7 +170,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
 
             {error && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.errorText}>{authErrorMessage(t, error)}</Text>
               </View>
             )}
 
@@ -156,13 +178,19 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
               title={t.auth.registerButton}
               onPress={handleRegister}
               variant="purple"
-              loading={loading}
+              loading={busy}
               style={styles.registerButton}
             />
 
             <GlassButton
               title={t.auth.alreadyHaveAccount}
-              onPress={() => navigation.navigate('Login')}
+              onPress={() => {
+                // Back to Login while a registration is in flight: its answer
+                // must open nothing. The form stays mounted under navigate(),
+                // so leaving is said here, not left to the unmount (R3-28).
+                forgetPendingSignIn();
+                navigation.popTo('Login');
+              }}
               variant="glass"
               style={styles.loginButton}
             />

@@ -1,0 +1,32 @@
+# R7 import client — the new tests against the code at a0bffc2
+# import.ts, calendarStorage.ts, api.ts, useCalendarSync.ts and types/calendar.ts taken from HEAD (a0bffc2);
+# ts-jest diagnostics off so the old modules load and the tests fail on behaviour, not on missing exports.
+# Expected to pass on the old code: the legacy-record fallback of the imported count (a compatibility path).
+
+  ● A calendar that could not be read (EI02) › is named unreadable, so the server keeps its rows, and the sync is not called a success
+  ● A calendar that could not be read (EI02) › stamps the sync when every calendar was read
+  ● Removing everything imported (EI03) › asks the server even when this phone holds no record of what it imported
+  ● The imported count the sync screen shows › is forgotten with the old record when everything imported is removed
+  ● The imported count the sync screen shows › is what the server reported on the last sync
+  ● The imported count the sync screen shows › that cannot be read is an error, not none
+  ● useCalendarSync - Import (Calendar → App) › Import Now › keeps the last known count when the new one cannot be read, rather than showing none
+  ● What a sync sends › diffs and deletes nothing itself: that is the server's, within this device's calendars (EI01, EI04)
+  ● What a sync sends › each calendar it read, by id, with the events it holds — and every calendar on the device
+  ● What a sync sends › keys each occurrence of a recurring event by when it starts
+  ● What a sync sends › leaves our own rehearsals out, even when the stored id means nothing here
+  ● What a sync sends › sends the hours and nothing that says what the events are
+
+Test Suites: 3 failed, 3 total
+Tests:       12 failed, 33 passed, 45 total
+
+# ES02 — mappingScope.test.ts against calendarMappings.ts and api.ts from HEAD (a0bffc2), diagnostics off.
+# Expected to pass on the old code: 'picks the newest by when it was synced, not by where the server listed it' —
+# the old fold kept the last row listed, which that test puts last. With the first test, where the newest
+# is listed first, the pair requires the choice not to depend on the order.
+
+  ● Deleting the mappings › removing everything exported does so for this phone's calendars, in one request
+  ● Deleting the mappings › unsyncing one rehearsal names this phone's calendars, so the other phone keeps its own
+  ● Reading the mappings › answers for one rehearsal the same way
+  ● Reading the mappings › takes this phone's newest mapping of a rehearsal, never another phone's
+
+Tests:       4 failed, 1 passed, 5 total

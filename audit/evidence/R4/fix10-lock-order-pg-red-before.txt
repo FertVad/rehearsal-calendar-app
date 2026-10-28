@@ -1,0 +1,43 @@
+Cause fix 10, review round 1, item 1 — red before: R4_LIFECYCLE races on PostgreSQL 15.13
+Test: rehearsal-calendar-native/server/__tests__/postgres/r4Lifecycle.mjs at c689277 (unchanged in both runs)
+Command (from rehearsal-calendar-native/server): npm run test:r0-postgres -- --r4-only
+Stack traces and pg error fields of the expected injected failures trimmed.
+
+=== Run 1: members.js, projects.js, rehearsals.js, rehearsalService.js restored from 977fd94 ===
+git restore --source=977fd94 -- routes/native/members.js routes/native/projects.js routes/native/rehearsals.js services/rehearsals/rehearsalService.js
+
+{"scenario":"controls","outcome":"PASS",...,"externalConnections":0}
+{"scenario":"D01","outcome":"PASS",...,"externalConnections":0}
+Error creating project: error: R4_INJECTED_FAILURE
+Error creating rehearsal: error: R4_INJECTED_FAILURE
+Error updating rehearsal: error: R4_INJECTED_FAILURE
+Error removing member: error: R4_INJECTED_FAILURE
+Error deleting rehearsal: error: R4_INJECTED_FAILURE
+AssertionError [ERR_ASSERTION]: B01: a member removed while a rehearsal was being created is not left on it
+
+1 !== 0
+
+R0 cleanup: owned disposable container removed
+AssertionError [ERR_ASSERTION]: R4_LIFECYCLE probe failed unexpectedly
+1 !== 0
+
+=== Run 2: only projects.js restored from 977fd94 (the rehearsal writers already lock) ===
+git restore --source=977fd94 -- routes/native/projects.js
+
+{"scenario":"D01","outcome":"PASS",...,"externalConnections":0}
+Error creating project: error: R4_INJECTED_FAILURE
+Error creating rehearsal: error: R4_INJECTED_FAILURE
+Error updating rehearsal: error: R4_INJECTED_FAILURE
+Error removing member: error: R4_INJECTED_FAILURE
+Error deleting rehearsal: error: R4_INJECTED_FAILURE
+Error deleting project: error: R4_INJECTED_FAILURE
+AssertionError [ERR_ASSERTION]: B02: a rehearsal created while the project was deleted leaves no busy slot
+
+1 !== 0
+
+R0 cleanup: owned disposable container removed
+AssertionError [ERR_ASSERTION]: R4_LIFECYCLE probe failed unexpectedly
+1 !== 0
+
+=== After git restore --source=HEAD (c689277) ===
+D01+R4_LIFECYCLE REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.

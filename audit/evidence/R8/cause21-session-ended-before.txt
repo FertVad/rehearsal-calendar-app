@@ -1,0 +1,71 @@
+Cause fix 21, after the supervisor's e2e: a refused change of a session that has ended
+Base: c09635f (src/contexts/UnreadContext.tsx as committed), new test in
+src/contexts/__tests__/UnreadContextMarkRead.test.tsx
+
+$ git restore --source=HEAD -- src/contexts/UnreadContext.tsx
+$ npx jest --selectProjects frontend --testPathPatterns 'UnreadContextMarkRead'
+
+    [WARN] [Unread] Could not mark as read: {
+      name: 'SessionEndedError',
+      message: 'The session this work belonged to has ended',
+    }
+
+FAIL frontend src/contexts/__tests__/UnreadContextMarkRead.test.tsx (16.895 s)
+  ✓ answers false when the server did not take it, true when it did (778 ms)
+  ✕ does not answer false to the next person when the session that asked has ended (36 ms)
+
+  ● does not answer false to the next person when the session that asked has ended
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+    -   true,
+    +   false,
+      ]
+
+      69 |   });
+      70 |
+    > 71 |   expect(answers).toEqual([true]);
+         |                   ^
+      72 | });
+      73 |
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+
+With the fix: the same file 2 of 2 PASS; client Jest 89 suites, 866 tests PASS;
+tsc --noEmit PASS; check:secrets 0 findings.
+
+---------------------------------------------------------------------------
+The supervisor's e2e run (e2e/out/artifacts/2026-10-26_184210), 3 of 34 failed,
+read flow by flow. Same commits (c09635f) as the run just before it
+(2026-10-26_174317): 34 of 34 PASS. Run 2 ran slower throughout
+(flow 22: 178 s against 100 s, flow 17: 83 s against 59 s).
+
+- 17 "Calendar filter against a late answer": after the pick, the app's
+  GET /native/projects/9/rehearsals ran out its 10 s (metro.log:
+  "timeout of 10000ms exceeded", path /native/projects/9/rehearsals), while
+  the server log shows both requests answered with "Lecture on progress".
+  No inbox code on this path.
+- 22 "Switch accounts - a change on its way": Dasha's sign-in tapped, the form
+  stayed with an empty password, no error, no request error logged by the app;
+  Yepikhodov's "Mark all read" was still held open (released later: 401 under
+  the open hold's 200, so the app never read it as a failure). No
+  "[Unread] Could not ..." line in that run after flow 34's expected one.
+- 29 "A calendar event shows beside a row with the same hours": the tap on the
+  day landed, no sheet opened ("Already on this day" not visible); no inbox
+  code on this path.
+
+Each passed again on its own on c09635f: 17 alone (2m 3s), 22 and 29 together
+(2m 19s, 1m 2s). With the fix: 17 and 22 PASS (2m 12s, 1m 57s), 29 and 34
+PASS (2m 16s, 1m 21s).
+
+Reading flow 22 found the defect above: in the field (no open hold) a sign-out
+bumps token_version, the previous person's "Mark all read" comes back 401,
+the API client rejects it as SessionEndedError, markAllRead answered false and
+the inbox put up "Could not mark as read" over the next person's screen. The
+deletions had the same path before cause fix 21; the one change path now
+answers false only while the session that asked lasts.

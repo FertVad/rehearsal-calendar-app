@@ -1,0 +1,38 @@
+{
+  "date": "2026-09-17",
+  "branch": "codex/systematic-repair",
+  "baseCommit": "0f655e2",
+  "state": "uncommitted working tree",
+  "verificationRuntime": {
+    "node": "20.19.2",
+    "playwright": "1.62.1",
+    "chrome": "148.0.7778.167"
+  },
+  "results": {
+    "backendBefore": "30 suites / 338 tests PASS",
+    "backendAfter": "31 suites / 344 tests PASS",
+    "browserBefore": "FAIL: API data created 13 HTML elements",
+    "browserAfter": "4 tests PASS",
+    "storedBrowser": "6 tests PASS (5 stored-data browser paths + API authorization)",
+    "npmNodeMismatch": "FAIL: Node ABI mismatch; corrected by explicit Node 20 PATH; both npm scripts then PASS"
+  },
+  "sha256": {
+    "rehearsal-calendar-native/server/server.js": "b8a9b426d872ba2f98900d1ca902755d04d9807fc678c4c4d8ebccaf9940fde6",
+    "rehearsal-calendar-native/server/package.json": "2938f8fc95104594bfde54430fd23ebfc200d1f6888b972ce4fefe02c34875f7",
+    "rehearsal-calendar-native/server/package-lock.json": "9316e1aafb80078192c7f95f63d17f434291eccae04f4dd2569dea99917df6c1",
+    "rehearsal-calendar-native/server/routes/admin/dashboardPage.js": "48654405cb446e10f9c93bc3a4ed90969ba43866e77020ab4d924c90d4c38fd6",
+    "rehearsal-calendar-native/server/middleware/securityHeaders.js": "1c9f046e10cc40175893238ada4155cf9e243ea8d16a682244586f4f1f54e1a1",
+    "rehearsal-calendar-native/server/public/admin/dashboard.js": "6dfb938fe040fb4a7f610afe4145e688e2bceb7c94bbc14ea7c702602af160c4",
+    "rehearsal-calendar-native/server/public/admin/dashboard.css": "67e68aed6cec76367a09d5e5e7ff76a1ab7f08b348916f95906e75e1887ffad4",
+    "rehearsal-calendar-native/server/__tests__/browser/adminDashboard.browser.test.mjs": "6f1e6339853ff861f397c144e8c6bb833ae98c9968621b6b68df4ac71415dec5",
+    "rehearsal-calendar-native/server/__tests__/browser/README.md": "a76b42a074f94eafa5bae3afa78c968b65ee3c0c5c5722ffdadfbaf1579f76dd",
+    "rehearsal-calendar-native/server/__tests__/integration/adminStoredContent.test.js": "5d8aa78c65bafd2bc9ffa7ae421c47c8456a1da82957c50841a7f645cb3d5634",
+    "audit/evidence/H01/browser-before.txt": "0e7f81157ed4fc5ce0a6d185d0f362d9961d4a7237861e9bb47f470daaba27ea",
+    "audit/evidence/H01/browser-after.txt": "83d6c524548bde022a58b953f9a5a7771632cc4ec0724fd404d71d0453bbfe0d",
+    "audit/evidence/H01/stored-browser.txt": "0d41ce5f0e19d4b05335db9f14c2eb5f035f85e5c3b0da35bf4e36f7ca5499fa",
+    "audit/evidence/H01/backend-before.txt": "9b4065cec3b2026f8771cf26544449c1f2a5b92556821e8b3b254b8ce95dae29",
+    "audit/evidence/H01/backend-after.txt": "2d74cdff62f57f7d60f393600fee88960acbe77356c0c0c362e06d2a75322a8d",
+    "audit/evidence/H01/npm-node-mismatch.txt": "c1d564d76ee040c4436187ff1ebfa5d1c3c98a88308100012773d033e0a08d63",
+    "audit/evidence/H01/dashboard.png": "1ec0af346e104867e468453f0b77d6c79e04d42cc657cb482a3c79f35a77546b"
+  }
+}

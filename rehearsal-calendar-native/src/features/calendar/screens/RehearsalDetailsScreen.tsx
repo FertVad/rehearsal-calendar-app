@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { getDateLocale } from '../../../shared/utils/locale';
@@ -21,13 +21,15 @@ import { useSeen } from '../../../contexts/SeenContext';
 import { Rehearsal, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDateLocalized } from '../../../shared/utils/time';
+import { rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
+import type { AppNavigation, AppStackParamList } from '../../../navigation';
 
 interface Participant {
   userId: string;
   firstName: string;
   lastName: string;
+  /** As loaded; this person's own row reads the store instead. */
   hasSeen: boolean;
-  hasResponded: boolean;
 }
 
 interface AdminStats {
@@ -48,14 +50,15 @@ interface AdminStats {
  */
 
 export default function RehearsalDetailsScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const navigation = useNavigation<AppNavigation<'RehearsalDetails'>>();
+  const route = useRoute<RouteProp<AppStackParamList, 'RehearsalDetails'>>();
   const rehearsalId: string = String(route.params?.rehearsalId ?? '');
 
   const { t, language } = useI18n();
   const { user } = useAuth();
+  const userTimezone = user?.timezone || 'UTC';
   const { projects } = useProjects();
-  const { toggleSeen, statsFor } = useSeen();
+  const { responseFor, statsFor, isResponding, toggleSeen, beginRead } = useSeen();
 
   const [rehearsal, setRehearsal] = useState<Rehearsal | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -68,7 +71,8 @@ export default function RehearsalDetailsScreen() {
     rehearsalsAPI
       .getById(rehearsalId)
       .then((res: any) => {
-        if (alive) setRehearsal(res.data.rehearsal);
+        // Days and times from the interval, as the calendar reads them.
+        if (alive) setRehearsal(rehearsalInZone(res.data.rehearsal, userTimezone));
       })
       .catch((err: any) => {
         logger.warn('[RehearsalDetails] Could not load:', err);
@@ -78,111 +82,119 @@ export default function RehearsalDetailsScreen() {
     return () => {
       alive = false;
     };
-  }, [rehearsalId]);
+  }, [rehearsalId, userTimezone]);
 
   const project = rehearsal ? projects.find(p => p.id === rehearsal.projectId) || null : null;
   const isAdmin = project?.is_admin || false;
   const onClose = () => navigation.goBack();
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(false);
-  const [respondingUserId, setRespondingUserId] = useState<string | null>(null);
+  const ownId = user ? String(user.id) : null;
 
-  // Load participants
+  // The counts are an admin's, as the calendar's list gives them (adminStats),
+  // and the answer and the project list come in either order: opened from a
+  // notification, the participants may answer before the list says "admin",
+  // and an admin who is not on the rehearsal has no calendar row to fill the
+  // count in. So the answer's count waits here, with the writer of the read
+  // that brought it, until both are known — the writer still drops it if a tap
+  // has landed since (review).
+  const [answeredCounts, setAnsweredCounts] = useState<{
+    write: ReturnType<typeof beginRead>;
+    counts: Record<string, AdminStats>;
+  } | null>(null);
   useEffect(() => {
+    if (isAdmin && answeredCounts) answeredCounts.write({}, answeredCounts.counts);
+  }, [isAdmin, answeredCounts]);
+
+  // Who is on it, and what the others answered. This person's own mark and
+  // the counts are not kept here: they are SeenContext's, the one store the
+  // cards read and the toggle writes. Details used to keep a second copy — its
+  // own row and count from this answer, the toggle working from the store's —
+  // and the two drifted: opened from a notification before the calendar had
+  // primed the store, "seen" here was "not seen" there, and a tap to take the
+  // mark back sent it again; a failed tap was undone in the store and stayed
+  // here; the count after a tap was the store's from before it (DD01).
+  useEffect(() => {
+    setAnsweredCounts(null);
     if (!rehearsal) {
       setParticipants([]);
-      setStats(null);
       return;
     }
+    let alive = true;
+    const rehearsalId = rehearsal.id;
+    // Begun before the request: a tap on the way meanwhile keeps its mark (HN02).
+    const primeSeen = beginRead();
+    setLoading(true);
 
-    const loadParticipants = async () => {
-      setLoading(true);
-      try {
-        const res = await rehearsalsAPI.getResponses(rehearsal.id);
-
-        if (res.data.allParticipants) {
-          const participantsList = res.data.allParticipants.map((p: any) => ({
-            userId: p.userId,
-            firstName: p.firstName,
-            lastName: p.lastName,
-            hasSeen: p.response === 'yes',
-            hasResponded: p.response === 'yes', // 'no' means invited but not responded (same UI as not responded)
-          }));
-          setParticipants(participantsList);
-
-          // Calculate stats
-          const confirmed = participantsList.filter((p: Participant) => p.hasSeen).length;
-          const invited = participantsList.length;
-          setStats({ confirmed, invited });
-        } else {
+    rehearsalsAPI
+      .getResponses(rehearsalId)
+      .then((res: any) => {
+        if (!alive) return;
+        const all: any[] | undefined = res.data.allParticipants;
+        if (!all) {
           logger.warn('[RehearsalDetails] Response had no allParticipants');
+          return;
         }
-      } catch (err) {
-        console.error('Failed to load participants:', err);
-      } finally {
-        setLoading(false);
-      }
+        setParticipants(all.map((p) => ({
+          userId: String(p.userId),
+          firstName: p.firstName,
+          lastName: p.lastName,
+          // 'no' is "invited, not seen yet", the same as no answer.
+          hasSeen: p.response === 'yes',
+        })));
+        const own = all.find((p) => String(p.userId) === ownId);
+        const counts: AdminStats | undefined = res.data.stats;
+        primeSeen(own ? { [rehearsalId]: own.response === 'yes' ? 'yes' : null } : {});
+        if (counts) {
+          setAnsweredCounts({
+            write: primeSeen,
+            counts: { [rehearsalId]: { confirmed: counts.confirmed, invited: counts.invited } },
+          });
+        }
+      })
+      .catch((err: any) => {
+        logger.error('Failed to load participants:', err);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+
+    return () => {
+      alive = false;
     };
+  }, [rehearsal, beginRead, ownId]);
 
-    loadParticipants();
-  }, [rehearsal]);
+  const stats = rehearsal ? statsFor(rehearsal.id) : undefined;
+  const ownSeen = rehearsal ? responseFor(rehearsal.id) === 'yes' : false;
+  const ownResponding = rehearsal ? isResponding(rehearsal.id) : false;
 
-  const handleParticipantToggle = async (participant: Participant) => {
-    // Only allow users to toggle their own status
-    if (!user || participant.userId !== user.id.toString()) {
-      return;
-    }
-
-    setRespondingUserId(participant.userId);
+  const handleOwnToggle = () => {
+    if (!rehearsal || ownResponding) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    // The store owns the toggle and every card in the app reads from it, so the
-    // list behind this sheet updates without being told.
-    const wasSeen = participant.hasSeen;
-    setParticipants(prev => prev.map(p =>
-      p.userId === participant.userId
-        ? { ...p, hasSeen: !wasSeen, hasResponded: true }
-        : p
-    ));
-
-    await toggleSeen(rehearsal!.id);
-
-    // The counts shown here come from the same place the cards read.
-    const fresh = statsFor(rehearsal!.id);
-    if (fresh) setStats(fresh);
-
-    setRespondingUserId(null);
+    // The store turns its own mark, the one this row shows, and undoes it if
+    // the server refuses: the row, the count and every card follow.
+    toggleSeen(rehearsal.id);
   };
 
   const renderParticipant = ({ item }: { item: Participant }) => {
     const displayName = `${item.firstName}${item.lastName ? ' ' + item.lastName : ''}`;
-    const isCurrentUser = user && item.userId === user.id.toString();
-    const isThisParticipantResponding = respondingUserId === item.userId;
-
-    let iconName: any;
-    let iconColor: string;
-
-    if (!item.hasResponded) {
-      iconName = 'help-circle-outline';
-      iconColor = Colors.text.tertiary;
-    } else if (item.hasSeen) {
-      iconName = 'eye';
-      iconColor = Colors.accent.blue;
-    } else {
-      iconName = 'eye-off-outline';
-      iconColor = Colors.text.tertiary;
-    }
+    const isCurrentUser = item.userId === ownId;
+    const seen = isCurrentUser ? ownSeen : item.hasSeen;
+    const responding = isCurrentUser && ownResponding;
 
     const content = (
       <View style={styles.participantItem}>
         <View style={styles.participantInfo}>
           <Text style={styles.participantName}>{displayName}</Text>
         </View>
-        {isThisParticipantResponding ? (
+        {responding ? (
           <ActivityIndicator size="small" color={Colors.accent.purple} />
         ) : (
-          <Ionicons name={iconName} size={20} color={iconColor} />
+          <Ionicons
+            name={seen ? 'eye' : 'eye-off-outline'}
+            size={20}
+            color={seen ? Colors.accent.blue : Colors.text.tertiary}
+          />
         )}
       </View>
     );
@@ -191,8 +203,12 @@ export default function RehearsalDetailsScreen() {
       return (
         <Pressable
           key={item.userId}
-          onPress={() => handleParticipantToggle(item)}
-          disabled={isThisParticipantResponding}
+          testID="own-seen-toggle"
+          accessibilityRole="button"
+          accessibilityLabel={displayName}
+          accessibilityState={{ selected: seen, disabled: responding }}
+          onPress={handleOwnToggle}
+          disabled={responding}
         >
           {content}
         </Pressable>
@@ -207,7 +223,7 @@ export default function RehearsalDetailsScreen() {
       <View style={styles.fill}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t.calendar.rehearsal}</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color={Colors.text.secondary} />
           </TouchableOpacity>
         </View>
@@ -252,7 +268,7 @@ export default function RehearsalDetailsScreen() {
             <Text style={styles.headerTitle} numberOfLines={2}>
               {rehearsal.title || t.calendar.rehearsal}
             </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={Colors.text.secondary} />
             </TouchableOpacity>
           </View>
@@ -268,9 +284,8 @@ export default function RehearsalDetailsScreen() {
             {/* Time */}
             <View style={styles.detailRow}>
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
-              <Text style={styles.detailText}>
-                {rehearsal.time?.substring(0, 5) || ''}
-                {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
+              <Text style={styles.detailText} testID="rehearsal-details-time">
+                {rehearsalTimeLabel(rehearsal, locale)}
               </Text>
             </View>
 
@@ -301,7 +316,7 @@ export default function RehearsalDetailsScreen() {
               {isAdmin && stats && (
                 <View style={styles.statBadge}>
                   <Ionicons name="eye" size={16} color={Colors.accent.blue} />
-                  <Text style={styles.statText}>
+                  <Text style={styles.statText} testID="rehearsal-details-seen-count">
                     {stats.confirmed}/{stats.invited}
                   </Text>
                 </View>

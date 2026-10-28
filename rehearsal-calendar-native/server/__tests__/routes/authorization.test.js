@@ -82,6 +82,9 @@ afterAll(() => {
   closeIntegrationDb();
 });
 
+// Statuses are asserted with the body beside them: on 2026-10-10 one full run
+// got 401 for the outsider where 403 was due, and five reruns could not
+// repeat it. Which of the three 401s it was is in the body next time.
 const tokenFor = (userId) => generateTokens(userId, 1).accessToken;
 const auth = (userId) => ['Authorization', `Bearer ${tokenFor(userId)}`];
 
@@ -89,14 +92,14 @@ describe('Route authorization', () => {
   describe('Unauthenticated access', () => {
     it('rejects a request with no token', async () => {
       const res = await request(app).get(`/api/native/projects/${testData.projectId}/members`);
-      expect(res.status).toBe(401);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 401 });
     });
 
     it('rejects a malformed token', async () => {
       const res = await request(app)
         .get(`/api/native/projects/${testData.projectId}/members`)
         .set('Authorization', 'Bearer not-a-real-token');
-      expect(res.status).toBe(401);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 401 });
     });
   });
 
@@ -105,14 +108,14 @@ describe('Route authorization', () => {
       const res = await request(app)
         .get(`/api/native/projects/${testData.projectId}`)
         .set(...auth(outsiderId));
-      expect(res.status).toBe(403);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 403 });
     });
 
     it('cannot read members availability', async () => {
       const res = await request(app)
         .get(`/api/native/projects/${testData.projectId}/members/availability?date=2026-01-01`)
         .set(...auth(outsiderId));
-      expect(res.status).toBe(403);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 403 });
     });
 
     it('cannot promote anyone', async () => {
@@ -120,7 +123,7 @@ describe('Route authorization', () => {
         .put(`/api/native/projects/${testData.projectId}/members/${testData.memberId}/role`)
         .set(...auth(outsiderId))
         .send({ role: 'admin' });
-      expect(res.status).toBe(403);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 403 });
     });
   });
 
@@ -130,7 +133,7 @@ describe('Route authorization', () => {
         .put(`/api/native/projects/${testData.projectId}/members/${testData.adminId}/role`)
         .set(...auth(testData.memberId))
         .send({ role: 'member' });
-      expect(res.status).toBe(403);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 403 });
     });
 
     it('cannot promote themselves', async () => {
@@ -138,7 +141,7 @@ describe('Route authorization', () => {
         .put(`/api/native/projects/${testData.projectId}/members/${testData.memberId}/role`)
         .set(...auth(testData.memberId))
         .send({ role: 'admin' });
-      expect(res.status).toBe(403);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 403 });
 
       const membership = testDb.get(
         'SELECT role FROM native_project_members WHERE project_id = ? AND user_id = ?',
@@ -151,7 +154,7 @@ describe('Route authorization', () => {
       const res = await request(app)
         .delete(`/api/native/projects/${testData.projectId}/members/${testData.adminId}`)
         .set(...auth(testData.memberId));
-      expect(res.status).toBe(403);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 403 });
     });
   });
 
@@ -160,7 +163,7 @@ describe('Route authorization', () => {
       const res = await request(app)
         .delete(`/api/native/projects/${testData.projectId}/members/${testData.adminId}`)
         .set(...auth(testData.adminId));
-      expect(res.status).toBe(403);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 403 });
     });
 
     it('refuses to change the owner\'s role', async () => {
@@ -168,7 +171,7 @@ describe('Route authorization', () => {
         .put(`/api/native/projects/${testData.projectId}/members/${testData.adminId}/role`)
         .set(...auth(testData.adminId))
         .send({ role: 'member' });
-      expect(res.status).toBe(403);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 403 });
     });
   });
 
@@ -194,7 +197,7 @@ describe('Route authorization', () => {
         )
         .set(...auth(testData.memberId));
 
-      expect(res.status).toBe(200);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 200 });
       const returnedIds = res.body.availability.map((entry) => String(entry.userId));
       expect(returnedIds).not.toContain(String(outsiderId));
     });
@@ -207,7 +210,7 @@ describe('Route authorization', () => {
         )
         .set(...auth(testData.memberId));
 
-      expect(res.status).toBe(200);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 200 });
       expect(JSON.stringify(res.body)).not.toContain('outsider@test.com');
     });
 
@@ -219,7 +222,7 @@ describe('Route authorization', () => {
         )
         .set(...auth(testData.memberId));
 
-      expect(res.status).toBe(200);
+      expect({ status: res.status, body: res.body }).toMatchObject({ status: 200 });
       const returnedIds = res.body.availability.map((entry) => String(entry.userId));
       expect(returnedIds).toContain(String(testData.memberId));
     });

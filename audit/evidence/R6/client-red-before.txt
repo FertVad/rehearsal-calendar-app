@@ -1,0 +1,8 @@
+{"case":"control","exit":0,"load":false,"tests":"Tests:       125 passed, 125 total","result":"PASS"}
+{"case":"CC05 sends every day","exit":1,"load":false,"tests":"Tests:       2 failed, 123 passed, 125 total","result":"PASS"}
+{"case":"CC03 counters read after the answer","exit":1,"load":false,"tests":"Tests:       1 failed, 124 passed, 125 total","result":"PASS"}
+{"case":"CC02 reload overwrites drafts","exit":1,"load":false,"tests":"Tests:       1 failed, 124 passed, 125 total","result":"PASS"}
+{"case":"CC02 offline copy overwrites drafts","exit":1,"load":false,"tests":"Tests:       1 failed, 124 passed, 125 total","result":"PASS"}
+{"case":"CC03 save clears newer edits","exit":1,"load":false,"tests":"Tests:       1 failed, 124 passed, 125 total","result":"PASS"}
+{"case":"CC04 deletes every selected day","exit":1,"load":false,"tests":"Tests:       1 failed, 124 passed, 125 total","result":"PASS"}
+{"case":"edit does not mark its days","exit":1,"load":false,"tests":"Tests:       1 failed, 124 passed, 125 total","result":"PASS"}

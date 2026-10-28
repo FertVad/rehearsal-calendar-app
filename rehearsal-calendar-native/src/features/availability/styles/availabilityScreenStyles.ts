@@ -299,39 +299,6 @@ export const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
     color: Colors.accent.purple,
   },
-  timePickerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  timePickerContainer: {
-    backgroundColor: Colors.bg.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 20,
-  },
-  timePickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.glass.border,
-  },
-  timePickerTitle: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
-  timePickerCancel: {
-    fontSize: FontSize.base,
-    color: Colors.text.secondary,
-  },
-  timePickerDone: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.accent.purple,
-  },
   validationError: {
     flexDirection: 'row',
     alignItems: 'center',

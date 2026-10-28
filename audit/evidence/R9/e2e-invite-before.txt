@@ -1,0 +1,60 @@
+-- Red-before, e2e (T-302): HN01 seen on screen, flows 08 and 09 --
+-- Flows: rehearsal-calendar-native/e2e/flows/08-invite-before-sign-in.yaml (viola@e2e.test, onboarded,
+--        link opened on the sign-in screen) and 09-invite-during-onboarding.yaml (sebastian@e2e.test,
+--        not onboarded, link opened on onboarding's first step). Twelfth Night, owner orsino@e2e.test,
+--        is theirs alone in e2e/seed.mjs; the invite code is the server's (short, capitals).
+-- Link: rehearsalapp://invite/<code>, through e2e/subflows/open-link.yaml (Maestro openLink, then
+--       iOS's 'Open in "Rehearsly"?' answered).
+-- Flows, seed and testIDs uncommitted on top of 3017290 --
+
+== Run 1: the fix taken out whole ==
+-- git restore --source=2409dca -- src/navigation/index.tsx   (2409dca = 1712675^, before fix 9;
+--   inviteCodeFromUrl came later, in 647860a, into this same file) --
+-- Afterwards: git restore --source=HEAD -- src/navigation/index.tsx --
+-- Run 2026-10-11 16:04, artifacts e2e/out/artifacts/2026-10-11_160437, seeded code ZXBHXET7 --
+-- Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/08-invite-before-sign-in.yaml e2e/flows/09-invite-during-onboarding.yaml --
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/08-invite-before-sign-in.yaml e2e/flows/09-invite-during-onboarding.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Invite link before sign-in (1m 44s) (Assertion is false: "Twelfth Night", id: join-project-name is visible)
+[Failed] Invite link during onboarding (1m 12s) (Assertion is false: "Twelfth Night", id: join-project-name is visible)
+
+2/2 Flows Failed
+
+-- Screenshots step-030 (08) and step-036 (09), read --
+Both: the calendar, "Rehearsals show up once you are in a project". No invitation screen.
+
+-- Reading --
+/invite\/([a-f0-9]+)/ finds nothing in invite/ZXBHXET7: the link is never queued,
+signed in or not. This is the parsing half of the fix.
+
+== Run 2: the new parsing, the old navigation ==
+-- Same 2409dca file, with only its match line replaced, by hand and not committed:
+--   const inviteMatch = url.match(/invite\/([a-f0-9]+)/); if (inviteMatch) { const code = inviteMatch[1];
+--   ->  const code = require('../shared/utils/inviteCode').inviteCodeFromUrl(url); if (code) {
+-- Afterwards: git restore --source=HEAD -- src/navigation/index.tsx --
+-- Run 2026-10-11 16:12, same command --
+
+Waiting for flows to complete...
+[Passed] Invite link before sign-in (1m 48s)
+[Failed] Invite link during onboarding (1m 12s) (Assertion is false: "Twelfth Night", id: join-project-name is visible)
+
+1/2 Flow Failed
+
+-- Reading --
+Read whole, the code reaches the old handlers. Viola is past onboarding, so the
+old "after sign-in" timer finds the app stack and 08 passes. Sebastian's link
+arrives while he is signed in, so the old handler navigates at once, into the
+onboarding stack, which has no JoinProject: dropped. After "Skip" there is
+nothing left to open (HN01, the navigation half). Flow 09 guards it on its own.

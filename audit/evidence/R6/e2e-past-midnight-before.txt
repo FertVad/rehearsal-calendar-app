@@ -1,0 +1,33 @@
+Cause fix 15 — e2e flows 23 and 24 on the client code of a7338eb ("red before").
+The fix's 23 client files put back with git restore --source=a7338eb; seed, flows
+and server as in f2f34d5 (the seed writes through startsAt/endsAt, which the old
+server stored correctly too). Afterwards git restore --source=HEAD.
+
+$ npm run e2e -- e2e/flows/23-past-midnight.yaml
+  (run when 23 and 24 were still one flow; its first step is today's flow 23 unchanged)
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] What runs past midnight is on both days (1m 51s) (Assertion is false: ".*23:00 — .*, 01:00.*Night run.*" is visible)
+
+1/1 Flow Failed
+  -> DD02: today's list does not have "Night run" (23:00 yesterday – 01:00 today);
+     a later screenshot of the old app shows the strip's badge on yesterday only.
+
+$ npm run e2e -- e2e/flows/24-past-midnight-availability.yaml
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] A busy slot past midnight is one slot, on both days (2m 29s) (Assertion is false: "01:00.*", id: slot-0-end is visible)
+
+1/1 Flow Failed
+  -> CC06: the evening's own slot reads "23:00 → 23:59" (screenshot
+     step-039-assertCondition-0100.png): cut at midnight on load, and saved back so.

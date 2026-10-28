@@ -1,0 +1,51 @@
+IS02 CI browser cleanup follow-up — independent review record
+Date: 2026-09-19
+Source: 573608cd47c24a605ccae00be0161545619caae7
+Tree: a0b9b38b6dff5db2b37bf40e08522e939b2f1dfd
+
+The browser implementation author records the separately delivered read-only
+reviews from root and the adapter agent. This record does not claim that the
+implementation author independently reviewed their own change.
+
+Independently reviewed files:
+- server/__tests__/browser/adminDashboard.browser.test.mjs
+- server/__tests__/browser/ownedFixture.mjs
+- server/__tests__/browser/ownedFixture.test.mjs
+Root also owns/reviewed mandatory server/scripts/test.mjs wiring and browser README.
+
+Both reviewers reported no blocking findings. The adapter review verified:
+- Cleanup is registered before listen/newContext can fail.
+- Browser context closes before the HTTP server; context failure or timeout
+  still attempts owned server cleanup.
+- Socket tracking starts before listen and covers idle preconnect sockets;
+  cleanup touches only connections accepted by that fixture.
+- Cleanup failures propagate through AggregateError. Promise.race observes late
+  rejections, and repeated server close shares one completion promise.
+- The regression uses an actual net.Socket and HTTP server, rather than a
+  fabricated HTTP-close result. Failure propagation and a stalled context
+  cleanup are also covered.
+- Existing DOM/CSP assertions remain intact; cleanup does not manufacture a
+  successful test result or silently skip a browser launch.
+
+Root verified the source diff and wired the three helper cases into the same
+mandatory dashboard stage as the four original DOM/CSP cases. Required job names
+and application runtime are unchanged by this follow-up.
+
+Evidence bounds:
+The old source hook really remained pending behind an actual idle preconnect
+and produced the desired exit1 before guaranteed cleanup. The local corrected
+target ran 7/7 PASS, actual exit0, 3325.93925ms on Node22.16.0/pinned Chromium1234.
+The first missing-cache launch failure is preserved, not omitted or relabeled.
+The completed remote run proves 1259 Jest tests and the first browser test passed,
+then the second browser test or cleanup stalled until the existing20m deadline.
+It does not prove which Chromium connection was held. The reproduced lifecycle
+defect is a plausible cause; a new remote PASS remains PENDING.
+
+No duplicate tests were run by either independent reviewer. Root's full exact-source
+runs on573608c later completed exit0: scanner33,88suites/1270Jest, dashboard7,
+admin-errors18,invite11,persisted6; fullPostgreSQL controls/A02/B03/B04/H04/IS02/
+R2_ADAPTER14/R2_STARTUP/F05 PASS, F01/B02/D01 remain known defects. Their actual
+logs are shared under ../R2-foundation/check-final.txt and postgres-final.txt.
+This also verifies the mandatory runner wiring. New remote CI remains PENDING.
+No production, deployment, environment-file or application-entrypoint access
+was part of this follow-up. Historical IS02 evidence/manifests remain unchanged.

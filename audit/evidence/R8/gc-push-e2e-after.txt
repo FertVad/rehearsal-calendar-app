@@ -1,0 +1,17 @@
+# Cause fix 20 (GC01, GC02, GC03) - e2e flow 33, green after
+# Tree: ef1decb (the fix) + the flow and the seed's polonius.
+# Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/33-profile-push-not-registered.yaml
+# Date: 2026-10-26
+
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] The notifications switch tells what this phone gets (1m 30s)
+
+1/1 Flow Passed in 1m 30s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+# Screenshot 33-cannot-receive: alert "Notifications / This device cannot
+# receive push notifications. / OK" over the profile; after OK the switch
+# reads off (assertVisible id profile-notifications, checked: false).

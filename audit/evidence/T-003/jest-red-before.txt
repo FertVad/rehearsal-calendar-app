@@ -1,0 +1,39 @@
+$ npx jest --selectProjects frontend --testPathPatterns stageState   (src/navigation/index.tsx as at 4d37dcb)
+
+  ✕ gives the app a container onboarding never held (T-003) (307 ms)
+  ✕ gives each stage its own container, from sign-in to the app (T-003) (17 ms)
+  ● gives the app a container onboarding never held (T-003)
+    expect(received).toHaveLength(expected)
+    Expected length: 2
+    Received length: 1
+    Received array:  [["onboarding"]]
+      106 |   rerender(<Navigation />);
+      107 |
+    > 108 |   expect(containers).toHaveLength(2);
+          |                      ^
+      109 |   expect(containers[0]).toEqual(['onboarding']);
+      110 |   expect(containers[1]).toEqual([]);
+      111 | });
+      at Object.<anonymous> (src/navigation/__tests__/stageState.test.tsx:108:22)
+  ● gives each stage its own container, from sign-in to the app (T-003)
+    expect(received).toEqual(expected) // deep equality
+    - Expected  - 3
+    + Received  + 0
+      Array [
+        Array [
+          "auth",
+    -   ],
+    -   Array [
+          "onboarding",
+        ],
+    -   Array [],
+      ]
+      119 |   rerender(<Navigation />);
+      120 |
+    > 121 |   expect(containers).toEqual([['auth'], ['onboarding'], []]);
+          |                      ^
+      122 | });
+      123 |
+      at Object.<anonymous> (src/navigation/__tests__/stageState.test.tsx:121:22)
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 total

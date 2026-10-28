@@ -33,9 +33,10 @@ npm run check:secrets        # Check for exposed secrets/API keys
 ```bash
 cd rehearsal-calendar-native/server
 
-# Development
-npm start                    # Start server (production)
-npm run dev                  # Start server with --watch (auto-reload)
+# Development: explicitly provide an isolated PostgreSQL target first.
+# server/.env is not loaded automatically; it contains production credentials.
+npm start                    # Start the HTTP listener; DB initializes on demand
+npm run dev                  # Same contract, with --watch
 
 # Database
 npm run migrate              # Apply pending migrations (see Database section)
@@ -56,7 +57,7 @@ cd rehearsal-calendar-native/server && npm run dev
 cd rehearsal-calendar-native && npm start
 
 # Terminal 3: iOS Simulator (optional)
-# Open ios/rehearsalcalendarnative.xcworkspace in Xcode and press ⌘R
+# Open ios/Rehearsly.xcworkspace in Xcode and press ⌘R
 ```
 
 ## Architecture Overview
@@ -133,17 +134,19 @@ server/public/
   folder is needed and would otherwise omit it.
 
 ### Database
-- **Development**: SQLite (`native_database.db`)
-- **Production**: PostgreSQL (Neon.tech)
-- **Tables**: fourteen, all prefixed `native_*`. Six were dropped from
-  production on 2026-09-05 with nothing reading any of them: the four payment
-  leftovers (`native_subscription_plans`, `native_user_subscriptions`,
-  `native_payment_transactions`, `native_allpay_webhook_events`), and two dead
-  ones — `native_rehearsal_participants`, the predecessor of
-  `native_rehearsal_responses`, and `native_activity_log`, which was never
-  written to. Their rows were dumped before the drop.
+- **Server runtime, development and production**: PostgreSQL only. There is no SQLite fallback.
+- **SQLite**: isolated test fixtures only; they do not prove PostgreSQL behavior.
+- **Canonical schema**: twenty-three `native_*` application tables: thirteen domain
+  tables, six shared-budget tables, two for email address proof (group 010),
+  one for push tickets awaiting their receipts (group 011) and one for the
+  idempotency keys of creates (group 012).
+  Migration history is separate. Retired
+  payment/activity/participant tables are not created by fresh provisioning.
+  Actual production catalog and migration history have not been inspected here.
 - **Schema**: [rehearsal-calendar-native/server/database/init-native-schema.sql](rehearsal-calendar-native/server/database/init-native-schema.sql)
-- **Note**: SQLite uses `1`/`0` for booleans in dev, PostgreSQL uses `TRUE`/`FALSE` in production
+- **Note**: runtime SQL uses PostgreSQL types and constraints; fixture SQL conversion is test-only.
+- **Runtime/lifecycle and safe local startup**: [server runtime contract](rehearsal-calendar-native/docs/server-runtime.md).
+- **Provisioning**: [explicit schema/migration contract](rehearsal-calendar-native/docs/server-migrations.md); no automatic startup/deployment migrations.
 
 ## Critical Patterns & Conventions
 
@@ -163,7 +166,7 @@ const userId = req.user.id;  // req.user is undefined!
 // ✅ RECOMMENDED - PostgreSQL parameterized queries
 await db.all('SELECT * FROM users WHERE id = $1 AND status = $2', [userId, 'active']);
 
-// ⚠️ WORKS BUT AVOID - SQLite syntax (auto-converted but less clear)
+// Legacy question-mark placeholders are translated by the PostgreSQL adapter
 await db.all('SELECT * FROM users WHERE id = ? AND status = ?', [userId, 'active']);
 ```
 
@@ -198,9 +201,13 @@ All dates/times use **ISO 8601 with timezone** (TIMESTAMPTZ in PostgreSQL):
 `DATE(starts_at AT TIME ZONE $tz)` lands on the previous day at every negative
 offset — saving one day deletes its neighbour and leaves the original standing.
 Read all-day rows in UTC and timed rows in the user's zone, in the same query if
-it comes to that. The client version of the mistake is `new Date('2026-09-10')`,
-which prints as 9 September in New York; use `parseDateString` from
-`shared/utils/time.ts`.
+it comes to that — `deleteManualDay` in `server/services/availability/manualDays.js`
+is the one place the server picks a day's rows. The client version of the
+mistake is `new Date('2026-09-10')`, which prints as 9 September in New York; use
+`parseDateString` from `shared/utils/time.ts`. And "today" is never
+`new Date().toISOString().split('T')[0]` — that is the UTC date; use `useToday`
+or `useNow` from `shared/hooks/useClock.ts`, which also move on at midnight and
+when the app returns to the foreground.
 
 ### 4. Availability Types & Sources
 ```javascript
@@ -239,11 +246,18 @@ const newStatus = currentStatus === 'yes' ? null : 'yes';   // UI state
 const serverStatus = currentStatus === 'yes' ? 'no' : 'yes'; // wire value
 ```
 
-The backend **upserts** the row (`ON CONFLICT ... DO UPDATE`); it never deletes.
-Sending anything other than `'yes'`/`'no'` throws.
+The backend **updates** the caller's existing row and never creates or deletes
+one: answering is not a way onto a rehearsal. Someone not on it gets 404 (or
+403 `NOT_ON_REHEARSAL` for an admin, who can see it); anything other than
+`'yes'`/`'no'` is a 400.
 
-**Having a row at all is what puts you on the rehearsal.** `'no'` means invited
-and not yet seen — not declined. So editing a rehearsal must keep existing
+**Having a row at all is what puts you on the rehearsal** — a row of someone who
+is still an active member of the project. Who is on a rehearsal is decided in
+one place, [roster.js](rehearsal-calendar-native/server/services/rehearsals/roster.js):
+every read joins the row to the membership, so a leftover row puts nobody in
+announcements, reminders or busy slots, and a test fails if anything else in
+the server names `native_rehearsal_responses`. `'no'` means invited and not yet
+seen — not declined. So editing a rehearsal must keep existing
 answers and add newcomers as `'no'`; wiping the rows and reinserting everyone as
 `'yes'` marks the whole cast as having seen a rehearsal at the exact moment it
 changed, and dropping a `'no'` row removes that person from the call.
@@ -285,8 +299,8 @@ const { t, language, changeLanguage } = useI18n();
 // Dynamic strings (functions)
 <Text>{t.rehearsals.selectedCount(3, 10)}</Text>  // "Selected: 3 of 10"
 
-// Localized dates
-date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US')
+// Localized dates — all four languages, from one place
+date.toLocaleDateString(getDateLocale(language))   // shared/utils/locale.ts
 ```
 
 ### 8. Authorize the ids, not only the caller
@@ -309,10 +323,11 @@ const unknown = participantIds.filter((id) => !allowed.includes(id));
 if (unknown.length) return res.status(400).json({ error: 'Not project members' });
 ```
 
-This is the shape of the `?userIds=` IDOR fixed in `d8b6660`, and it is still
-live in two more places: a project admin can write busy slots into a stranger's
-personal calendar, and an ordinary member can put themselves on a rehearsal they
-were never invited to by calling `respond`.
+This is the shape of the `?userIds=` IDOR fixed in `d8b6660`. The roster had it
+in two more places — a project admin could write busy slots into a stranger's
+personal calendar, and an ordinary member could put themselves on a rehearsal by
+calling `respond` — closed in R4 by `checkParticipants` and `answer` in
+[roster.js](rehearsal-calendar-native/server/services/rehearsals/roster.js).
 
 **Authorize before the work, not after.** A range that comes from a request gets
 an explicit cap before anything is expanded from it. `GET
@@ -371,6 +386,19 @@ Switching accounts is the severe case, and it is not a display bug: a calendar
 sync that began under one account finishes its writes under the next one's
 token, so one person's private hours land in another person's availability.
 
+The mechanism is `src/shared/services/session.ts` (cause fix 12). Only the
+AuthContext changes the owner (`changeOwner`), and every change ends the
+session: provider state is held with `useSessionState` (the next person starts
+empty, a write from an earlier session is dropped), an answer goes through
+`useLatestRequest` (only the newest question of the live session lands), state
+that is both read and changed goes through `useRequestOrder` (a change is on
+its way from send to answer, and a read that answers in that time or began
+before it ended does not land), and work that writes in the person's name — the
+calendar sync — runs as `sessionWork`, which the change of owner waits for
+before writing the next tokens and which calls `assertSession` before each
+write. Only the server's refusal of the refresh token ends a session from the
+API client; no network keeps it.
+
 ### 12. "Not in my list" is not a reason to delete
 
 A client sees one device, one page, one cached snapshot. The server holds all of
@@ -378,10 +406,12 @@ them. Replacement and deletion are scoped by a key both sides name — the day,
 the device connection, an explicit set of ids — never by absence from whatever
 the client happens to be holding.
 
-Two live examples: Save posts the whole availability snapshot, so a day loaded an
-hour ago overwrites the edit somebody made since; and calendar import diffs the
-phone's events against *every* imported row of that user, so syncing on the
-second phone deletes what the first one imported.
+Save used to post the whole availability snapshot, so a day loaded an hour ago
+overwrote the edit somebody made since; it now names the days it changed
+(`PUT /availability/days`, R6). Calendar import diffed the phone's events
+against *every* imported row of the user, so syncing on the second phone
+deleted what the first one had imported; it now names the device's calendars
+and the server reconciles inside them (`POST /availability/imported/sync`, R7).
 
 ## Key Features & Implementation
 
@@ -399,9 +429,26 @@ Analyzes member availability and recommends optimal rehearsal times:
 
 Bi-directional sync with iOS/Google Calendar:
 - **Export**: Rehearsals → device calendar events (batch processing, 10 parallel)
-- **Import**: Calendar events → user availability (chunks of 50)
-- Mappings live on the server (`/native/calendar-sync/mappings`), with
-  AsyncStorage as a local cache
+- **Import**: Calendar events → user availability, one request per sync,
+  reconciled on the server (`POST /availability/imported/sync`,
+  `server/services/availability/importScope.js`)
+- Mappings live on the server (`/native/calendar-sync/mappings`), one per
+  device calendar, with AsyncStorage as a local cache
+
+**Everything is scoped to this device's calendars.** A calendar id is the
+device's own, so an imported row or an export mapping recorded under one
+belongs to the device that has it — the list comes from `deviceCalendars.ts`.
+A sync names every calendar on the device, the ones it read and the ones it
+could not; the server replaces rows only inside the calendars read, in one
+transaction, keeps the unreadable ones, and never touches calendars it was not
+told about, which are other devices'. The scope is in the key the server
+composes, `cal:<calendar>|<event>`. The window read carries its instants and
+the local dates they cover, and `readBy` in `importScope.js` is the one rule
+for what it covers: a whole day by its dates, never by the instants; what the
+read had to return goes when missing, what only touches an edge stays. Export mappings are read and deleted the
+same way, newest per rehearsal. On Android calendar ids are row numbers shared
+between phones, so an installation id has to join the scope before Android
+ships (known-issues).
 
 **Auto Sync runs both ways.** Saving a rehearsal exports that one immediately,
 but only on the device that saved it — so without the export half of the
@@ -410,18 +457,20 @@ calendar but the organiser's. The export runs on foreground alongside the
 import, on its own ten-minute timer because each rehearsal costs a mapping
 lookup; pull-to-refresh ignores that timer.
 
-**Import skips what we exported.** Rehearsal events are excluded by their
-mapping ids, otherwise a rehearsal would count as busy twice — once as itself
-and once as an imported event.
+**Import skips what we exported.** Rehearsal events are excluded by the
+`rehearsalapp://rehearsal/` link the export puts on them, and by this device's
+mapping ids for events written before the link existed; otherwise a rehearsal
+would count as busy twice — once as itself and once as an imported event.
 
 **Deleting the event in the phone's calendar does not stick.** The next sync
 sees the mapping has no event and recreates it: the rehearsal is the source of
 truth, the calendar a mirror. The only ways out are deleting the rehearsal or
 "remove all exported" on the sync screen.
 
-**Only hours cross over, never what the events are.** Imported slots are titled
-generically on purpose — see `IMPORTED_SLOT_TITLE` in `calendar/import.ts`. The
-onboarding and the landing both promise this.
+**Only hours cross over, never what the events are.** The app sends each
+event's key and times and nothing else; the server titles the rows
+generically — `IMPORTED_TITLE` in `importScope.js`. A calendar's id crosses
+over as an opaque scope. The onboarding and the landing both promise this.
 
 ### Payments
 
@@ -472,14 +521,57 @@ minutes and both sending `Authorization: Bearer $CRON_SECRET`:
 
 Running both is safe, and that is by design — see the claim below.
 
+**Both are switched off since 2026-09-12**, so no reminders go out: a ping every
+fifteen minutes kept the Neon compute awake and ran through its allowance (see
+the workflow's header). Turning one back on is the owner's decision, and after
+R8 it needs migration 011 (`native_push_tickets`) applied first.
+
 **The windows are deliberately wide** — 12–24h ahead for the day-before
 reminder, 0–1h for the hour-before — because no free scheduler is punctual.
 They used to be narrow bands (23–24h, 50–70min) that only worked under a
 metronome: one missed run and a rehearsal crossed the band and was never
 announced. Widening is free because each send is *claimed* in
-`native_push_reminders` (unique on `rehearsal_id, reminder_type`) before the
-push goes out, so overlapping schedulers cannot double-send, and a failed push
-releases the claim so the next run retries.
+`native_push_reminders` (unique on `rehearsal_id, user_id, reminder_type`), so
+overlapping schedulers cannot double-send.
+
+**Each rehearsal is reminded in one transaction** (R8,
+`remindRehearsal`): the rehearsal is locked `FOR SHARE` provided it is still due
+for this reminder — the same window the run found it in, never the start time
+the run read, which comes back through JavaScript to the millisecond while
+PostgreSQL keeps microseconds — the people not yet told are claimed in one statement, the
+push goes out, and whoever no device took — Expo down, every device refusing —
+has their claim and inbox row removed before the commit. A run that stops
+half-way commits nothing, so nobody is left claimed and untold; a move of the
+rehearsal waits for a send in flight or makes the run skip it; a second
+scheduler waits on the first one's claim. Someone with no device at all counts
+as told — the inbox row is the delivery.
+
+**Nothing waits on Expo without a deadline.** Every send and receipts request
+goes through `expoTransport` — `node:http` with no connection pool, because
+fetch's pool reconnected behind the caller's back after an abort — whose
+deadline covers the whole exchange and destroys the connection; a send that
+runs out of time releases its people for the next run. A run stops starting rehearsals after its budget, and each reminder
+transaction sets `idle_in_transaction_session_timeout`, so a stalled process
+cannot keep the rehearsal locked: PostgreSQL ends the transaction itself.
+
+**A reminder says when the rehearsal starts**, not "tomorrow" or "in 1
+hour": today, tomorrow or the date, and the time, in each reader's own zone
+and language (`reminderText.js`, R8 GR04), from the row the transaction holds.
+The windows are wide, so fixed words were false whenever a run was late. A
+reader whose zone is UTC — never synced — or not a real zone sees "UTC" next to
+the time.
+
+**A failed run answers 500**, with the counts and what failed: due rehearsals
+that could not be read, a rehearsal whose transaction failed, people whose
+devices all refused, receipts that could not be read or tickets not kept. A
+quiet night and a broken query used to both answer 200 with zeros. Both
+schedulers alarm on the status.
+
+**Receipts are read at the start of every run.** Each accepted push leaves its
+Expo ticket in `native_push_tickets`; fifteen minutes on its receipt is read,
+and one saying the device is not registered removes that token — unless it was
+registered again after the send. A ticket whose receipt Expo no longer holds
+(about a day) is dropped.
 
 Auth is fail-closed — without `CRON_SECRET` the endpoint answers 503 rather than
 running unauthenticated.
@@ -503,9 +595,13 @@ nowhere in the app to re-read what you were told.
 Each push carries the id of that recipient's own row, so tapping one marks
 exactly that notification read rather than guessing.
 
-**Delivery is still not tracked.** Expo's tickets say it accepted the message;
-the receipts that say whether a phone got it are never fetched. `sent` means
-accepted, not delivered.
+**Accepted is not delivered.** `sendPushNotification` answers per person —
+`delivered` (Expo accepted it for one of their devices), `undelivered` (they
+have devices and none took it), `unreachable` (no device: the inbox row is the
+delivery) — and throws when the database fails rather than answer "nobody".
+Whether the phone then got it is in the receipt, read by the reminder cron
+(above) and used only to drop dead tokens; nothing shows a person their
+delivery state.
 
 ### The Rehearsal Details Sheet
 
@@ -568,7 +664,7 @@ Two rules it exists to enforce:
 Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWORD` env var.
 
 **Features**:
-- User stats (total, new this week/month, churn rates)
+- User stats (total, new this week/month, not signed in for 30 days — sign-ins, not use: a session renews without one)
 - Users table with pagination
 - Transactions table with pagination
 - Bug reports table with inline status management
@@ -580,7 +676,7 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 
 **API Endpoints**:
 - `POST /admin/api/login` — authenticate with password
-- `GET /admin/api/stats` — aggregate stats (users, subs, revenue, churn, usage)
+- `GET /admin/api/stats` — aggregate stats: `users`, `signIns` (`notInLast30Days`, `rate`; a never-signed-in user counts from registration), `usage`
 - `GET /admin/api/users` — paginated user list
 - `GET /admin/api/bug-reports` — paginated bug reports (sorted: new → in_progress → fixed)
 - `PATCH /admin/api/bug-reports/:id/status` — update bug report status (new/in_progress/fixed)
@@ -677,7 +773,7 @@ Server must listen on `0.0.0.0:3001` (not `127.0.0.1`) for physical device acces
 
 ### 5. Xcode Build Configuration
 Ensure Xcode scheme uses **Debug** build configuration (not Release):
-- File: `ios/rehearsalcalendarnative.xcodeproj/xcshareddata/xcschemes/rehearsalcalendarnative.xcscheme`
+- File: `ios/Rehearsly.xcodeproj/xcshareddata/xcschemes/Rehearsly.xcscheme`
 - Check: `LaunchAction` should have `buildConfiguration = "Debug"`
 - Symptom if wrong: `__DEV__` returns false, app connects to production server
 
@@ -694,8 +790,36 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
 
 **Key Points:**
 - OAuth tokens are verified server-side to prevent forgery
-- Accounts are automatically linked by email if user already exists
-- New users are created with OAuth provider details (name, avatar, email)
+- An account is joined or created only through an address the provider says it
+  verified, trimmed and lower-cased (`signInWithProvider` in `accountLinking.js`)
+- That proof for an account whose address nobody had proven — a pending
+  registration, or one from before email confirmation, linked now or long ago —
+  confirms the address and revokes every session, live code and push device,
+  password or not, and removes a password if there is one (`passwordRevoked:
+  true`): otherwise whoever registered someone else's address first keeps a way
+  into the owner's account
+- A password reset (`/auth/password-reset/*`, emailed code) is the same kind of
+  proof: it revokes every session, live code and push device, verifies the
+  address and sets the new password. The request answers 202 alike with and
+  without an account
+- Changing the sign-in address (`/auth/me/email/change`, then `/confirm`) needs a
+  code to the current address and a code to the new one, and the password when
+  there is one. A password alone is not proof: a session can set a first one and
+  unlink Google/Apple. `PUT /me` refuses a new email
+- In the app: `ResetPasswordScreen` (from sign-in and from a taken address at
+  registration) and `ChangeEmailScreen` (from the profile, where the address is
+  read only). Both write a session only through `startSession` in
+  `AuthContext`; the address and password rules are in
+  `features/auth/utils/accountRules.ts`, counted as the server counts them
+- A pending account gets no session: login, refresh, Google/Apple and the auth
+  middleware all refuse it
+- The middleware checks the session version before the handler, outside any
+  lock. A handler that changes credentials or the account (`PUT /me`,
+  `DELETE /me`, logout, unlink, push-device registration) checks again with
+  `lockSession` under the user row lock, or a request admitted just before a
+  revocation acts after it. `lockSession` takes `FOR NO KEY UPDATE`, so foreign
+  keys pointing at the user do not wait for it — `FOR UPDATE` deadlocked
+  account deletion against rehearsal slot rebuilds
 - Check `native_auth_providers` table for account linking status
 - Supports multiple providers per user (can link both Google and Apple to same account)
 
@@ -754,15 +878,74 @@ next.setUTCMinutes(next.getUTCMinutes() + 15);
 it selects rehearsals due soon. An in-process `node-cron` schedule cannot replace
 it: Vercel functions do not stay resident, so the schedule never fires.
 
+### 9. `loading` in AuthContext Unmounts the Whole Navigator
+❌ **Problem**: a sign-in form's request bounces the person back to Login, or a
+screen reached after it (the email code) never appears
+✅ **Fix**: forms use `busy` from `useAuth()`; `loading` is only the session
+restore at start
+
+While `loading` is true, `RootNavigator` renders a spinner instead of the
+`NavigationContainer`, so a request that toggles it unmounts the auth stack
+and remounts it at its first route. Logout and account deletion still use it —
+they end signed out anyway.
+
+### 10. A date or time picker goes through `PickerModal`
+❌ **Problem**: Cancel in a picker keeps the value the wheel was turned to
+✅ **Fix**: `PickerModal` (with `usePickerDraft`) holds a draft and calls
+`onConfirm` on Done only; Cancel, a tap outside and back leave the owner's value
+
+Every turn of the wheel used to reach the owner, so Cancel was Done (HC02).
+Do not put a `DateTimePicker` in a screen directly — there is one picker, and
+the rehearsal form and the availability editor both use it.
+
+### 12. A sheet in a `Modal` goes through `ModalSheet`
+❌ **Problem**: VoiceOver reads a whole sheet as one button, and a tap on the
+sheet's title closes it
+✅ **Fix**: `<ModalSheet overlayStyle={…} onClose={…}>` directly inside the
+`Modal`; it puts the closing area *behind* the sheet
+
+A touchable wrapped around a sheet makes iOS present everything in it as a
+single element — six sheets were built that way, and neither VoiceOver nor the
+e2e flows could reach a project, a member action or a picker's Done.
+`modalBackdrops.test.ts` refuses a touchable as the first child of a `Modal`.
+
+### 13. Every control can be found without looking at it
+- **An icon-only button has an `accessibilityLabel`** (and
+  `accessibilityRole="button"`): VoiceOver reads nothing on it otherwise, and a
+  flow can only tap it by screen position. `iconButtonLabels.test.ts`.
+- **A ScrollView on a screen with a text input sets
+  `keyboardShouldPersistTaps="handled"`**: without it the first tap with the
+  keyboard up only hides the keyboard — "Create" did nothing on the new-project
+  form. `keyboardTaps.test.ts`.
+- What a flow needs to find carries a `testID` (`id:` in Maestro); see
+  [e2e.md](rehearsal-calendar-native/docs/e2e.md).
+
+### 11. Navigation is typed; a route is never cast
+❌ **Problem**: a button navigates to a route that is not there and nothing
+happens — no error, no screen
+✅ **Fix**: `useNavigation<…>()` with a type from `navigation/types.ts`, never
+`<any>`, `as any` or a `@ts-ignore` above a `navigate()`
+
+The nesting — app stack, tabs, a stack per tab — is written down there with
+`NavigatorScreenParams`, and screens that leave their own stack have composite
+types (`CalendarScreenNavigation`, `ProjectDetailNavigation`, `AppNavigation`).
+"Create project" in the rehearsal form asked the Projects tab for a screen it
+does not have, behind a `useNavigation<any>()` (R9-03). `typedNavigation.test.ts`
+refuses any cast in navigation; `registeredRoutes.test.tsx` requires each
+navigator to register exactly what its param list declares — add a screen to
+both or the tests fail.
+
 ## Environment Setup
 
 ### Required Environment Variables
 
-**server/.env** (Backend)
+**Process environment** (Backend). Optional local files must be explicitly selected
+with an absolute `SERVER_ENV_FILE` path. Do not select this repository's
+`server/.env` for development: it contains the production database target.
 ```env
 NODE_ENV=development
 PORT=3001
-DATABASE_URL=postgresql://...   # PostgreSQL connection string (production)
+DATABASE_URL=postgresql://...   # Explicit target; use isolated PostgreSQL locally
 JWT_SECRET=<generate-with-openssl-rand-base64-32>  # REQUIRED in production
 
 # OAuth Configuration (Google Sign-In)
@@ -797,36 +980,41 @@ EXPO_PUBLIC_API_URL=http://192.168.1.100:3001/api  # Override API URL if needed
 
 ### Database Initialization
 
-`scripts/migrate.js` applies each file in `server/migrations/` once, recording
-it in `native_migrations`. It picks `-postgres.sql` / `-sqlite.sql` variants by
-engine and otherwise runs everything, in filename order — **prefix new
-migrations with a number** so that order is explicit.
+PostgreSQL is the only server database. Use the explicit migration CLI described
+in [server migrations](rehearsal-calendar-native/docs/server-migrations.md).
+It does not discover `.env`; supply process settings or an explicitly selected
+absolute `SERVER_ENV_FILE`. `DATABASE_URL` / `POSTGRES_URL` must target the
+intended database; `MIGRATION_SCHEMA` selects an existing application schema
+(default `public`). The local `server/.env` is production and is not a test input.
 
 ```bash
 cd rehearsal-calendar-native/server
-npm run migrate -- --dry     # what is pending
-npm run migrate              # apply it
+npm run migrate -- --help       # no environment loading or database access
+npm run migrate -- --dry        # read-only inspection, including absent history
+npm run migrate -- --fresh      # reviewed canonical snapshot, EMPTY schema only
+npm run migrate -- --adopt rehearsly-pg-domain13-v1
+npm run migrate -- --apply      # only approved steps from verified history
 ```
 
-**A new environment needs a baseline first.** The runner refuses to touch a
-database with no record of its own, because four of these migrations drop
-columns or rewrite data and were applied by hand long ago — re-running them
-would break a live database.
+Choose the applicable operation after reviewing dry output. `--adopt` records a
+checked existing schema; it does not run business SQL. `--apply` is a separate
+operation. `--baseline` is rejected: marking every historical file as executed
+would hide missing constraints. Historical SQL files are not auto-discovered or
+executed in filename order. Their old ledger remains untouched evidence. Never
+run those files by hand: the date conversions cast in the session zone and the
+OAuth backfill duplicates on rerun (see `server/migrations/README.md`).
 
-```bash
-# Database that already has the schema (production, an existing dev copy)
-npm run migrate -- --baseline    # records every current file as done, runs none
+Every write invocation uses one PostgreSQL transaction for schema changes,
+postconditions and the new `native_schema_history`, a transaction advisory lock
+and bounded target-table locks. A failure before COMMIT rolls back that batch;
+an uncertain COMMIT outcome requires inspection, not automatic replay.
+Unsupported legacy shapes and duplicate imported keys fail without deleting data.
+Fresh and supported upgrades are verified on disposable PostgreSQL by required CI.
 
-# Empty database
-psql "$DATABASE_URL" -f database/init-native-schema.sql
-npm run migrate -- --baseline
-```
-
-Production was baselined on 2026-08-26 with 17 files.
-
-**Deliberately not wired into deployment**: Vercel starts many instances at
-once and they would race each other. A schema change is something someone
-decides and then watches.
+Migrations are **not wired into startup or deployment**. Production inspection,
+adoption, migration and deployment require the owner's separate decision under
+[the access rules](audit/PRODUCTION_ACCESS.md). Actual production schema/history
+cannot be inferred from a local fixture or an old claim that baseline ran.
 
 ## Testing
 
@@ -846,6 +1034,10 @@ obvious the moment a request went through the router: the calendar import
 deleting hand-entered availability, and a removed member keeping access to a
 project's rehearsals. Both live in what the handler *decides*, not in what the
 SQL does.
+
+**Jest runs in `America/New_York`** (`jest.config.js`). A date-only value read
+as an instant — `new Date('2026-09-10')` — is the day before only west of UTC;
+east of it (this machine) and in UTC CI the mistake passes every test.
 
 The SQLite harness in `__tests__/integration/setup.js` translates the
 PostgreSQL dialect the routes are written in. It covers only the constructs
@@ -868,6 +1060,35 @@ npm test                    # Run all tests
 npm run test:coverage       # With coverage
 ```
 
+### End-to-End (Maestro)
+```bash
+cd rehearsal-calendar-native
+npm run e2e                 # flows in e2e/flows on the "Rehearsly E2E" simulator
+npm run e2e:up              # stay up for Maestro MCP / Studio until Ctrl-C
+```
+Everything is local and thrown away: a PostgreSQL container, the server with an
+environment built from nothing, its own Metro, a Debug build, a seed made
+through the API. See [e2e.md](rehearsal-calendar-native/docs/e2e.md).
+
+**Setting `EXPO_PUBLIC_API_URL` does not decide where a dev build talks.** In
+development Expo bundles the project's `.env` files and lets them win over the
+environment, and this checkout's `.env` names production. The runner keeps
+`.env*` out of its bundle (`REHEARSLY_E2E=1` in `metro.config.js`), refuses a
+bundle carrying any other address, and stops everything if the app reports
+one. Never point the simulator app at a Metro the runner did not start.
+
+## Autonomous Development
+
+`tools/autodev/supervisor.mjs` runs Claude Code (developer) and Codex ("Astra",
+reviewer) through the owner's queue in `AUTODEV/TASKS.md`: develop → guard →
+checks → review (≤ 2 rounds) → push of `auto/main`, in its own worktrees
+(`../reh_app-auto`, `../reh_app-auto-review`). It waits out subscription limits
+and continues the same session; it pauses the whole queue for the owner on
+migrations, auth, `.env`, production, keys, red checks after three attempts or
+no agreement after two rounds. Reports, one per task, and `STATUS.md` are in
+`AUTODEV/` (not in git). See [tools/autodev/README.md](tools/autodev/README.md).
+Codex gets no model or reasoning flags; Claude a whitelist with `dontAsk`.
+
 ## Documentation
 
 Key documentation files:
@@ -881,6 +1102,6 @@ Key documentation files:
 
 **Frontend**: React Native 0.81.5, Expo SDK 54, TypeScript, React Navigation 7.x
 **Backend**: Node.js 18+, Express.js 4.21.2, JWT authentication
-**Database**: PostgreSQL (production), SQLite (development)
+**Database**: PostgreSQL server runtime; SQLite isolated test fixtures only
 **Testing**: Jest, @testing-library/react-native
 **Languages**: Russian, English, Spanish, German (full i18n support). A new key goes into the interface and all four locale blocks in `src/i18n/translations/` — the type will not compile otherwise.

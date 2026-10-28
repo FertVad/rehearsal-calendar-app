@@ -1,0 +1,726 @@
+{
+  "formatVersion": 1,
+  "schemaId": "rehearsly-pg-current-v1",
+  "postgresCatalogMajor": 15,
+  "bootstrapSha256": "48284687247da9559e196a0175f427fd39c997fab04f2356de2f7ab204217cf9",
+  "tables": [
+    {
+      "name": "native_auth_providers",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"last_used_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"provider_email","type":"varchar","typeSchema":"pg_catalog","modifier":259,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"provider_metadata","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"provider_type","type":"varchar","typeSchema":"pg_catalog","modifier":24,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"provider_user_id","type":"varchar","typeSchema":"pg_catalog","modifier":259,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["provider_type"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((provider_type)::text = ANY ((ARRAY['email'::character varying, 'google'::character varying, 'apple'::character varying])::text[]))"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["provider_email"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["provider_type","provider_user_id"],"options":[0,0],"operatorClasses":["pg_catalog.text_ops","pg_catalog.text_ops"],"collations":["pg_catalog.default","pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["provider_type","provider_user_id"],"options":[0,0],"operatorClasses":["pg_catalog.text_ops","pg_catalog.text_ops"],"collations":["pg_catalog.default","pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_bug_reports",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"message","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"screen","type":"varchar","typeSchema":"pg_catalog","modifier":259,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"status","type":"varchar","typeSchema":"pg_catalog","modifier":24,"notNull":false,"generated":"","defaultExpression":"'new'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_calendar_connections",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"access_token","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"calendar_id","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"calendar_name","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"device_calendar_id","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"device_calendar_name","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"last_sync_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"provider","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"refresh_token","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"sync_direction","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"'both'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"sync_enabled","type":"bool","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"true","collationSchema":null,"collation":null},
+        {"name":"sync_token","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"token_expires_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["calendar_id","device_calendar_id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((calendar_id IS NOT NULL) OR (device_calendar_id IS NOT NULL))"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["device_calendar_id"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_calendar_event_mappings",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"connection_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"event_type","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"external_event_etag","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"external_event_id","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"internal_event_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"last_sync_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"last_sync_direction","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["connection_id"],"foreignSchema":"@target","foreignTable":"native_calendar_connections","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["connection_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["event_type","internal_event_id"],"options":[0,0],"operatorClasses":["pg_catalog.text_ops","pg_catalog.int4_ops"],"collations":["pg_catalog.default",null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["external_event_id"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_email_codes",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"attempts","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"0","collationSchema":null,"collation":null},
+        {"name":"code_hash","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"consumed_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"email","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"expires_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"failed_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"purpose","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"sent_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["attempts"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((attempts >= 0) AND (attempts <= 5))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["code_hash"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(code_hash ~ '^[0-9a-f]{64}$'::text)"},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["purpose"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(purpose = ANY (ARRAY['verify'::text, 'reset'::text, 'change'::text, 'confirm'::text]))"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id","purpose","created_at"],"options":[0,0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.text_ops","pg_catalog.timestamptz_ops"],"collations":[null,"pg_catalog.default",null],"included":[]},
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":"(consumed_at IS NULL)","keys":["user_id","purpose"],"options":[0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.text_ops"],"collations":[null,"pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_email_identities",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"email","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"status","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"verified_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"verified_by","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["status","verified_at","verified_by"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((status = 'verified'::text) = ((verified_at IS NOT NULL) AND (verified_by IS NOT NULL)))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["status"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(status = ANY (ARRAY['pending'::text, 'verified'::text]))"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["verified_by"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(verified_by = ANY (ARRAY['code'::text, 'google'::text, 'apple'::text]))"}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_idempotency_keys",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"fingerprint","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"idempotency_key","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"operation","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"response","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id","idempotency_key"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id","idempotency_key"],"options":[0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.text_ops"],"collations":[null,"pg_catalog.default"],"included":[]}
+      ]
+    },
+    {
+      "name": "native_invite_account_rate_limits",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"request_count","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"window_start","type":"int8","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["request_count"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((request_count >= 1) AND (request_count <= 21))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["window_start"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((window_start >= 0) AND ((window_start % (60)::bigint) = 0))"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_invite_ip_rate_limit_gate",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"key_count","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(id = 1)"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["key_count"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((key_count >= 0) AND (key_count <= 10000))"},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_invite_ip_rate_limits",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"ip_key","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"request_count","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"window_start","type":"int8","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["ip_key"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((length(ip_key) = 64) AND (length(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(ip_key, '0'::text, ''::text), '1'::text, ''::text), '2'::text, ''::text), '3'::text, ''::text), '4'::text, ''::text), '5'::text, ''::text), '6'::text, ''::text), '7'::text, ''::text), '8'::text, ''::text), '9'::text, ''::text), 'a'::text, ''::text), 'b'::text, ''::text), 'c'::text, ''::text), 'd'::text, ''::text), 'e'::text, ''::text), 'f'::text, ''::text)) = 0))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["request_count"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((request_count >= 1) AND (request_count <= 21))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["window_start"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((window_start >= 0) AND ((window_start % (60)::bigint) = 0))"},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["ip_key"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["window_start"],"options":[0],"operatorClasses":["pg_catalog.int8_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["ip_key"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]}
+      ]
+    },
+    {
+      "name": "native_member_availability_rate_limits",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"request_count","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"window_start","type":"int8","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["request_count"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((request_count >= 1) AND (request_count <= 61))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["window_start"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((window_start >= 0) AND ((window_start % (60)::bigint) = 0))"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_notifications",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"body","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"data","type":"jsonb","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"read_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"related_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"related_type","type":"varchar","typeSchema":"pg_catalog","modifier":24,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"sent_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"title","type":"varchar","typeSchema":"pg_catalog","modifier":259,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"type","type":"varchar","typeSchema":"pg_catalog","modifier":54,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":"(read_at IS NULL)","keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id","created_at"],"options":[0,3],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.timestamptz_ops"],"collations":[null,null],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_operation_ip_rate_limit_gates",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"key_count","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"operation","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["key_count"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(((key_count >= 0) AND (key_count <= 10000)) AND (key_count = key_count))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["operation"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(operation = ANY (ARRAY['auth'::text, 'admin_login'::text]))"},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["operation"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["operation"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]}
+      ]
+    },
+    {
+      "name": "native_operation_ip_rate_limits",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"ip_key","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"operation","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"request_count","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"reset_at","type":"int8","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["ip_key"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((length(ip_key) = 64) AND (length(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(ip_key, '0'::text, ''::text), '1'::text, ''::text), '2'::text, ''::text), '3'::text, ''::text), '4'::text, ''::text), '5'::text, ''::text), '6'::text, ''::text), '7'::text, ''::text), '8'::text, ''::text), '9'::text, ''::text), 'a'::text, ''::text), 'b'::text, ''::text), 'c'::text, ''::text), 'd'::text, ''::text), 'e'::text, ''::text), 'f'::text, ''::text)) = 0))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["operation"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(operation = ANY (ARRAY['auth'::text, 'admin_login'::text]))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["request_count","operation"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((request_count = request_count) AND (((operation = 'auth'::text) AND ((request_count >= 1) AND (request_count <= 21))) OR ((operation = 'admin_login'::text) AND ((request_count >= 1) AND (request_count <= 6)))))"},
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["reset_at"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((reset_at >= 0) AND (reset_at = reset_at))"},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["operation","ip_key"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["operation","reset_at","ip_key"],"options":[0,0,0],"operatorClasses":["pg_catalog.text_ops","pg_catalog.int8_ops","pg_catalog.text_ops"],"collations":["pg_catalog.default",null,"pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["operation","ip_key"],"options":[0,0],"operatorClasses":["pg_catalog.text_ops","pg_catalog.text_ops"],"collations":["pg_catalog.default","pg_catalog.default"],"included":[]}
+      ]
+    },
+    {
+      "name": "native_project_members",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"character_name","type":"varchar","typeSchema":"pg_catalog","modifier":104,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"expires_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"invite_code","type":"varchar","typeSchema":"pg_catalog","modifier":36,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"invited_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"joined_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"project_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"role","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"'member'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"status","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"'active'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["project_id"],"foreignSchema":"@target","foreignTable":"native_projects","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["project_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id","project_id"],"options":[0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.int4_ops"],"collations":[null,null],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_projects",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"color","type":"varchar","typeSchema":"pg_catalog","modifier":11,"notNull":false,"generated":"","defaultExpression":"'#A855F7'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"description","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"end_date","type":"date","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"invite_code","type":"varchar","typeSchema":"pg_catalog","modifier":36,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"invite_created_by","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"invite_expires_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"name","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"premiere_date","type":"date","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"start_date","type":"date","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"status","type":"varchar","typeSchema":"pg_catalog","modifier":24,"notNull":false,"generated":"","defaultExpression":"'active'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"timezone","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"'UTC'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["invite_created_by"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"n","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["invite_code"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_push_reminders",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"rehearsal_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"reminder_type","type":"varchar","typeSchema":"pg_catalog","modifier":14,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"sent_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["rehearsal_id"],"foreignSchema":"@target","foreignTable":"native_rehearsals","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["rehearsal_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["sent_at"],"options":[0],"operatorClasses":["pg_catalog.timestamptz_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["rehearsal_id","user_id","reminder_type"],"options":[0,0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.int4_ops","pg_catalog.text_ops"],"collations":[null,null,"pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_push_tickets",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"device_token","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"ticket_id","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["ticket_id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["ticket_id"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["created_at"],"options":[0],"operatorClasses":["pg_catalog.timestamptz_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_push_tokens",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"device_name","type":"varchar","typeSchema":"pg_catalog","modifier":104,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"device_token","type":"varchar","typeSchema":"pg_catalog","modifier":259,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"device_type","type":"varchar","typeSchema":"pg_catalog","modifier":24,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"last_active_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["device_token"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_rehearsal_responses",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"notes","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"rehearsal_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"response","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["response"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((response)::text = ANY ((ARRAY['yes'::character varying, 'no'::character varying, 'maybe'::character varying, 'pending'::character varying])::text[]))"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["rehearsal_id"],"foreignSchema":"@target","foreignTable":"native_rehearsals","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["rehearsal_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["rehearsal_id","user_id"],"options":[0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.int4_ops"],"collations":[null,null],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_rehearsals",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"created_by","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"description","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"ends_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"is_all_day","type":"bool","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"false","collationSchema":null,"collation":null},
+        {"name":"location","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"location_address","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"location_notes","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"parent_rehearsal_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"project_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"recurrence_rule","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"starts_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"status","type":"varchar","typeSchema":"pg_catalog","modifier":24,"notNull":false,"generated":"","defaultExpression":"'scheduled'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"title","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["ends_at","starts_at"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(ends_at > starts_at)"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["created_by"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"n","matchType":"s","expression":null},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["project_id"],"foreignSchema":"@target","foreignTable":"native_projects","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["ends_at"],"options":[0],"operatorClasses":["pg_catalog.timestamptz_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["is_all_day"],"options":[0],"operatorClasses":["pg_catalog.bool_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["project_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["starts_at","ends_at"],"options":[0,0],"operatorClasses":["pg_catalog.timestamptz_ops","pg_catalog.timestamptz_ops"],"collations":[null,null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["starts_at"],"options":[0],"operatorClasses":["pg_catalog.timestamptz_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_user_availability",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"ends_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"external_event_id","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"is_all_day","type":"bool","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"false","collationSchema":null,"collation":null},
+        {"name":"notes","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"recurrence_rule","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"source","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"'manual'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"starts_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"title","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"type","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"'busy'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"user_id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["ends_at","starts_at"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"(ends_at > starts_at)"},
+        {"kind":"f","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["user_id"],"foreignSchema":"@target","foreignTable":"native_users","foreignColumns":["id"],"onUpdate":"a","onDelete":"c","matchType":"s","expression":null},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["ends_at"],"options":[0],"operatorClasses":["pg_catalog.timestamptz_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["is_all_day"],"options":[0],"operatorClasses":["pg_catalog.bool_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["starts_at","ends_at"],"options":[0,0],"operatorClasses":["pg_catalog.timestamptz_ops","pg_catalog.timestamptz_ops"],"collations":[null,null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["starts_at"],"options":[0],"operatorClasses":["pg_catalog.timestamptz_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id","starts_at","ends_at"],"options":[0,0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.timestamptz_ops","pg_catalog.timestamptz_ops"],"collations":[null,null,null],"included":[]},
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]},
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["user_id","external_event_id","source"],"options":[0,0,0],"operatorClasses":["pg_catalog.int4_ops","pg_catalog.text_ops","pg_catalog.text_ops"],"collations":[null,"pg_catalog.default","pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    },
+    {
+      "name": "native_users",
+      "kind": "r",
+      "persistence": "p",
+      "rowSecurity": false,
+      "forceRowSecurity": false,
+      "partition": false,
+      "inheritance": false,
+      "userTriggers": false,
+      "rules": false,
+      "columns": [
+        {"name":"avatar_url","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"created_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"email","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"email_notifications","type":"bool","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"true","collationSchema":null,"collation":null},
+        {"name":"first_name","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"id","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"owned-int4-generator","collationSchema":null,"collation":null},
+        {"name":"last_login_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"last_name","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"locale","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"'en'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"notifications_enabled","type":"bool","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"true","collationSchema":null,"collation":null},
+        {"name":"onboarding_completed","type":"bool","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"false","collationSchema":null,"collation":null},
+        {"name":"password_hash","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"phone","type":"varchar","typeSchema":"pg_catalog","modifier":54,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"push_token","type":"text","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":"pg_catalog","collation":"default"},
+        {"name":"telegram_id","type":"int8","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":null,"collationSchema":null,"collation":null},
+        {"name":"timezone","type":"varchar","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"'UTC'::character varying","collationSchema":"pg_catalog","collation":"default"},
+        {"name":"token_version","type":"int4","typeSchema":"pg_catalog","modifier":-1,"notNull":true,"generated":"","defaultExpression":"1","collationSchema":null,"collation":null},
+        {"name":"updated_at","type":"timestamptz","typeSchema":"pg_catalog","modifier":-1,"notNull":false,"generated":"","defaultExpression":"transaction-timestamp","collationSchema":null,"collation":null},
+        {"name":"week_start_day","type":"varchar","typeSchema":"pg_catalog","modifier":14,"notNull":false,"generated":"","defaultExpression":"'monday'::character varying","collationSchema":"pg_catalog","collation":"default"}
+      ],
+      "constraints": [
+        {"kind":"c","validated":true,"deferrable":false,"deferred":false,"noInherit":false,"columns":["week_start_day"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":"((week_start_day)::text = ANY ((ARRAY['monday'::character varying, 'sunday'::character varying])::text[]))"},
+        {"kind":"p","validated":true,"deferrable":false,"deferred":false,"noInherit":true,"columns":["id"],"foreignSchema":null,"foreignTable":null,"foreignColumns":[],"onUpdate":" ","onDelete":" ","matchType":" ","expression":null}
+      ],
+      "indexes": [
+        {"method":"btree","unique":false,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["week_start_day"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":false,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["email"],"options":[0],"operatorClasses":["pg_catalog.text_ops"],"collations":["pg_catalog.default"],"included":[]},
+        {"method":"btree","unique":true,"primary":true,"immediate":true,"valid":true,"ready":true,"nullsNotDistinct":false,"predicate":null,"keys":["id"],"options":[0],"operatorClasses":["pg_catalog.int4_ops"],"collations":[null],"included":[]}
+      ]
+    }
+  ]
+}

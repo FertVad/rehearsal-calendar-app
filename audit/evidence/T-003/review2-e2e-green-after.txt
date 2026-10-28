@@ -1,0 +1,21 @@
+T-003 review round 2: with the fix (navigation/linking.ts reads the launch link once per launch).
+$ npm run e2e -- e2e/flows/43-invite-cold-start-close.yaml e2e/flows/08-invite-before-sign-in.yaml e2e/flows/09-invite-during-onboarding.yaml e2e/flows/14-switch-account.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Invite link at a cold start, turned down (2m 32s)
+[Passed] Invite link before sign-in (50s)
+[Passed] Invite link during onboarding (53s)
+[Passed] Switch accounts on a running app (1m 41s)
+
+4/4 Flows Passed in 5m 57s
+
+[e2e] taps taken again (tap-and-see.yaml): 0

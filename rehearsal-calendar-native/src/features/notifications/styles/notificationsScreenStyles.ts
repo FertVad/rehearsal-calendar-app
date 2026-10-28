@@ -129,4 +129,21 @@ export const styles = StyleSheet.create({
   loading: {
     paddingTop: Spacing.xxl * 3,
   },
+  loadErrorBanner: {
+    marginBottom: Spacing.sm,
+    fontSize: FontSize.sm,
+    textAlign: 'center',
+    color: Colors.accent.red,
+  },
+  // Under the last card: the next page, or another try at the first.
+  more: {
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  moreText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.purple,
+  },
 });

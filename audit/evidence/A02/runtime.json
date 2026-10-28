@@ -1,0 +1,25 @@
+{
+  "verifiedAt": "2026-09-18T16:07:24.018Z",
+  "sourceCommit": "7e1eefa035443478a04257a8069df9a960e2f829",
+  "sourceTree": "f6521b2c6e89951044c11cd5d462ff6ff7dcfdf7",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "postgres": "15.13",
+  "postgresImage": "sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0",
+  "environment": "env -i; explicit Node PATH; isolated browser cache; local Docker context; .env not loaded",
+  "ownedContainersAfterRun": 0,
+  "results": {
+    "authBefore": 1,
+    "postgresBefore": 1,
+    "boundaryAfter": 0,
+    "httpAfter": 0,
+    "postgresAfter": 0,
+    "checkFinal": 0,
+    "postgresFinal": 0
+  }
+}

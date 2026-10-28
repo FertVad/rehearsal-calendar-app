@@ -1,0 +1,44 @@
+-- Red-before, e2e (T-301): DP01 seen on screen, counter and slots --
+-- Flow: rehearsal-calendar-native/e2e/flows/07-planner-project-switch.yaml (T-301 version,
+--       own projects from e2e/seed.mjs: Three Sisters (3 people), The Bear (2 people)) --
+-- Fix files put back to 9fd6f64 (base before the fix on auto/main):
+--   git restore --source=9fd6f64 -- src/features/smart-planner/hooks/useSmartPlanner.ts
+--                                    src/features/smart-planner/screens/SmartPlannerScreen.tsx
+-- Afterwards: git restore --source=HEAD -- <same files> --
+-- Run 2026-10-11 14:17, artifacts e2e/out/artifacts/2026-10-11_141717 --
+-- Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/07-planner-project-switch.yaml --
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/07-planner-project-switch.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Planner follows the project (2m 17s) (Assertion is false: "2 of 2 selected" is visible)
+
+1/1 Flow Failed
+exit code 1
+
+-- screen-hierarchy/step-032-assertCondition-2_of_2_selected.json, counts of matching texts --
+   2 "3 of 2 selected"
+   4 "All available"
+(no "Busy: ..." text on the screen)
+
+-- screenshots/step-032-assertCondition-2_of_2_selected.png, read --
+Project selector: The Bear. Members: "3 of 2 selected". Recommendations:
+Sun, Oct 11 — 1 slot, 14:30-23:00 All available; Mon, Oct 12 — 3 slots.
+
+-- Reading --
+Three Sisters was set to "3 of 3 selected". Switching to The Bear kept Three
+Sisters' three IDs: the counter read "3 of 2 selected" for 15 s. The slots were
+planned for the one person in both projects, the director: Mon, Oct 12 had
+3 slots, and Grigory Smirnov — The Bear's, busy 10:00-14:00 that day — was not
+counted. With the fix the same day has 5 slots, one "10:00-14:00 Busy: Grigory
+Smirnov" (run 2026-10-11_141032, screenshot 07-planner-the-bear.png).

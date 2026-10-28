@@ -1,0 +1,37 @@
+Red before: the lifecycle test of invitePage.browser.test.mjs as in 712995b
+(CDP listener attached after page.goto), run alone on Chromium 151.0.7922.34.
+Command: cd rehearsal-calendar-native/server && node --test <old test, fixture reduced to the steps it uses>
+
+TAP version 13
+# Subtest: visibility changes and page restoration cancel a pending second automatic scheme attempt
+not ok 1 - visibility changes and page restoration cancel a pending second automatic scheme attempt
+  ---
+  duration_ms: 6838.787917
+  type: 'test'
+  failureType: 'testCodeFailure'
+  error: 'The operation was aborted'
+  code: 'ABORT_ERR'
+  name: 'AbortError'
+  stack: |-
+    AbortSignal.abortListener (node:events:1005:14)
+    [nodejs.internal.kHybridDispatch] (node:internal/event_target:827:20)
+    AbortSignal.dispatchEvent (node:internal/event_target:762:26)
+    runAbort (node:internal/abort_controller:486:10)
+    abortSignal (node:internal/abort_controller:457:3)
+    Timeout._onTimeout (node:internal/abort_controller:153:7)
+    listOnTimeout (node:internal/timers:588:17)
+    process.processTimers (node:internal/timers:523:7)
+  ...
+1..1
+# tests 1
+# pass 0
+# fail 1
+
+Full old file, same run conditions: 10 of 11 pass, "not ok 10 - visibility changes
+and page restoration ..." with error 'The operation was aborted' (as in the
+supervisor run on 712995b).
+
+Probe (CDP session opened before page.goto, paused clock): the exp:// request
+arrives 12 ms after load, before runFor(1) can fire anything; the 500 ms
+rehearsalapp:// attempt waits for the clock. A listener attached after goto
+therefore never sees the first attempt.

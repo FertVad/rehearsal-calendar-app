@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { CalendarScreenNavigation } from '../../../navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
@@ -14,19 +15,27 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useUnread } from '../../../contexts/UnreadContext';
 import { getDateLocale } from '../../../shared/utils/locale';
-import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
+import { addDays, formatDateLocalized } from '../../../shared/utils/time';
+import { useToday } from '../../../shared/hooks/useClock';
+import { rehearsalOnDate } from '../../../shared/utils/rehearsalDays';
 import { useRehearsals } from '../hooks';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { calendarScreenStyles as styles } from '../styles';
-import { unsyncRehearsal } from '../../../shared/services/calendar';
+import { unexportRehearsal } from '../../../shared/services/calendarSync';
 
+import { logger } from '../../../shared/utils/logger';
 export default function CalendarScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<CalendarScreenNavigation>();
   const { projects } = useProjects();
   const { t, language } = useI18n();
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return formatDateToString(new Date());
-  });
+  // Today in the profile's zone, the one rehearsals are dated in (DF01).
+  const today = useToday();
+  // Until a day is picked, the day shown is today, and moves with it: at
+  // midnight, and when the profile's zone changes.
+  const [pickedDate, setSelectedDate] = useState<string | null>(null);
+  const selectedDate = pickedDate ?? today;
+  // "Today" puts it back to that: today, and moving with it (DD03).
+  const showToday = useCallback(() => setSelectedDate(null), []);
   const [filterExpanded, setFilterExpanded] = useState(false);
 
 
@@ -119,7 +128,7 @@ export default function CalendarScreen() {
     const rehearsal = rehearsals.find(r => r.id === rehearsalId);
 
     if (!rehearsal) {
-      console.error('[CalendarScreen] Rehearsal not found:', rehearsalId);
+      logger.error('[CalendarScreen] Rehearsal not found:', rehearsalId);
       Alert.alert(t.common.error, 'Rehearsal not found');
       return;
     }
@@ -128,7 +137,7 @@ export default function CalendarScreen() {
     const projectId = rehearsal.projectId || (rehearsal as any)?.project_id;
 
     if (!projectId) {
-      console.error('[CalendarScreen] projectId missing for rehearsal:', rehearsalId, rehearsal);
+      logger.error('[CalendarScreen] projectId missing for rehearsal:', rehearsalId, rehearsal);
       Alert.alert(t.common.error, 'Cannot delete: project ID is missing');
       return;
     }
@@ -145,20 +154,20 @@ export default function CalendarScreen() {
             try {
               await rehearsalsAPI.delete(projectId, rehearsalId);
 
-              // Auto-unsync from calendar if it was synced
-              try {
-                await unsyncRehearsal(rehearsalId);
-              } catch (syncError) {
+              // Its event, in the sync's queue: after a run already going,
+              // which may have read the rehearsal before it was deleted and
+              // would put the event back.
+              unexportRehearsal(rehearsalId).catch((syncError) => {
                 // Don't fail the whole operation if unsync fails
-                console.error('[CalendarScreen] Failed to unsync from calendar:', syncError);
-              }
+                logger.error('[CalendarScreen] Failed to unsync from calendar:', syncError);
+              });
 
               // Force refetch rehearsals after deletion (bypass cache)
               await fetchRehearsals(true);
 
               Alert.alert(t.common.success, t.rehearsals.deleteSuccess);
             } catch (err: any) {
-              console.error('[CalendarScreen] Failed to delete rehearsal:', err);
+              logger.error('[CalendarScreen] Failed to delete rehearsal:', err);
               const errorMessage = err.response?.data?.error || err.message || t.rehearsals.createError;
               Alert.alert(t.common.error, errorMessage);
             }
@@ -179,21 +188,16 @@ export default function CalendarScreen() {
     setFilterExpanded(false);
   };
 
-  // Get rehearsals for selected date (defaults to today)
+  // The rehearsals on the selected day (defaults to today): the ones starting
+  // on it, and the ones running into it from the day before (DD02), in the
+  // order they start.
   const selectedDateRehearsals = useMemo(() => {
     return rehearsals
-      .filter(r => r.date === selectedDate)
-      .sort((a, b) => {
-        if (a.time && b.time) {
-          return a.time.localeCompare(b.time);
-        }
-        return 0;
-      });
+      .filter(r => rehearsalOnDate(r, selectedDate))
+      .sort((a, b) => (a.startsAt || '').localeCompare(b.startsAt || ''));
   }, [rehearsals, selectedDate]);
 
   const upcomingRehearsals = useMemo(() => {
-    const today = formatDateToString(new Date());
-
     // After the day being shown above, and never in the past.
     //
     // This compared against today alone, which is only the same thing while
@@ -215,14 +219,11 @@ export default function CalendarScreen() {
         }
         return 0;
       });
-  }, [rehearsals, selectedDate]);
+  }, [rehearsals, selectedDate, today]);
 
   // Get relative date label (Today, Tomorrow, or formatted date)
   const getRelativeDateLabel = (dateStr: string) => {
-    const today = formatDateToString(new Date());
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = formatDateToString(tomorrow);
+    const tomorrowStr = addDays(today, 1);
 
     if (dateStr === today) return t.common.today;
     if (dateStr === tomorrowStr) return t.calendar.tomorrow || 'Tomorrow';
@@ -251,6 +252,7 @@ export default function CalendarScreen() {
         <View style={styles.filterContainer}>
           <TouchableOpacity
             style={styles.filterButton}
+            testID="calendar-filter"
             onPress={() => setFilterExpanded(!filterExpanded)}
           >
             <Ionicons name="funnel-outline" size={18} color={Colors.accent.purple} />
@@ -282,7 +284,7 @@ export default function CalendarScreen() {
               color={unreadCount > 0 ? Colors.accent.purple : Colors.text.secondary}
             />
             {unreadCount > 0 && (
-              <View style={styles.bellBadge}>
+              <View style={styles.bellBadge} testID="unread-badge">
                 <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
               </View>
             )}
@@ -312,6 +314,7 @@ export default function CalendarScreen() {
             {projects.map(project => (
               <TouchableOpacity
                 key={project.id}
+                testID="calendar-filter-option"
                 style={[
                   styles.filterOption,
                   filterProjectId === project.id && styles.filterOptionSelected
@@ -336,6 +339,7 @@ export default function CalendarScreen() {
         <WeeklyCalendar
           rehearsals={rehearsals}
           onDaySelect={setSelectedDate}
+          onShowToday={showToday}
           onDayLongPress={handleDayLongPress}
           selectedDate={selectedDate}
         />
@@ -345,7 +349,7 @@ export default function CalendarScreen() {
           <SmartPlannerButton
             adminProjects={adminProjects}
             onPress={(projectId) => {
-              // @ts-ignore - Navigate to Planner tab, which is in parent TabNavigator
+              // The Planner tab's own stack, beside this one.
               navigation.navigate('Planner', { screen: 'SmartPlanner', params: { projectId } });
             }}
           />

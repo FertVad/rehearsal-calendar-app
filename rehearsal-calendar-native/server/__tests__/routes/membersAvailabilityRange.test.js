@@ -87,12 +87,15 @@ const busy = (startsAt, endsAt, { allDay = false, source = 'manual' } = {}) =>
 
 const auth = (userId) => ['Authorization', `Bearer ${generateTokens(userId, 1).accessToken}`];
 
+// The status is asserted with the body beside it: on 2026-10-11 a valid token
+// got 401 here, answered by another process (loopbackSupertest.js). Should a
+// status ever be wrong again, the body says who answered and why.
 const fetchRange = async (startDate, endDate) => {
   const res = await request(app)
     .get(`/api/native/projects/${testData.projectId}/members/availability`)
     .query({ startDate, endDate })
     .set(...auth(testData.adminId));
-  expect(res.status).toBe(200);
+  expect({ status: res.status, body: res.body }).toMatchObject({ status: 200 });
   const forMember = res.body.availability.find((a) => Number(a.userId) === Number(testData.memberId));
   return forMember?.dates ?? [];
 };
@@ -105,6 +108,7 @@ const rawFor = async (startDate, endDate, userId) => {
     .get(`/api/native/projects/${testData.projectId}/members/availability`)
     .query({ startDate, endDate })
     .set(...auth(testData.adminId));
+  expect({ status: res.status, body: res.body }).toMatchObject({ status: 200 });
   return res.body.availability.find((a) => Number(a.userId) === Number(userId));
 };
 

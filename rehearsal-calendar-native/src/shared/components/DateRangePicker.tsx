@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { getDateLocale } from '../../shared/utils/locale';
 import { formatDateToString, parseDateString } from '../utils/time';
+import { calendarRangeDays } from '../utils/memberAvailabilityLimits';
+import { AppModal } from './AppModal';
+import { ModalSheet } from './ModalSheet';
 
 interface DateRangePickerProps {
   visible: boolean;
@@ -13,6 +16,7 @@ interface DateRangePickerProps {
   initialStartDate?: Date;
   initialEndDate?: Date;
   minDate?: Date;
+  maxDays?: number;
 }
 
 // Configure locales for react-native-calendars
@@ -39,6 +43,7 @@ export function DateRangePicker({
   initialStartDate,
   initialEndDate,
   minDate,
+  maxDays,
 }: DateRangePickerProps) {
   const { t, language } = useI18n();
 
@@ -56,11 +61,20 @@ export function DateRangePicker({
   );
 
   const minDateStr = minDate ? formatDateToString(minDate) : undefined;
+  const rangeDays = startDate && endDate ? calendarRangeDays(startDate, endDate) : null;
+  const rangeError = startDate && endDate
+    ? rangeDays === null
+      ? t.common.invalidDateRange
+      : maxDays !== undefined && rangeDays > maxDays
+        ? t.common.dateRangeTooLong(maxDays)
+        : null
+    : null;
 
   const markedDates = useMemo(() => {
     const marked: { [key: string]: any } = {};
 
-    if (!startDate) return marked;
+    // A rejected selection must never enter the day-by-day marking loop.
+    if (!startDate || rangeError) return marked;
 
     // Mark start date
     marked[startDate] = {
@@ -102,7 +116,7 @@ export function DateRangePicker({
     }
 
     return marked;
-  }, [startDate, endDate]);
+  }, [startDate, endDate, rangeError]);
 
   const handleDayPress = (day: DateData) => {
     if (!startDate || (startDate && endDate)) {
@@ -125,7 +139,7 @@ export function DateRangePicker({
   };
 
   const handleConfirm = () => {
-    if (startDate && endDate) {
+    if (startDate && endDate && !rangeError) {
       onConfirm(parseDateString(startDate), parseDateString(endDate));
       onClose();
     }
@@ -140,20 +154,20 @@ export function DateRangePicker({
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
-    const date = new Date(dateStr);
+    // A calendar date, not an instant: new Date('2026-09-10') is the 9th west of UTC.
+    const date = parseDateString(dateStr);
     const locale = getDateLocale(language);
     return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
   };
 
   return (
-    <Modal
+    <AppModal
       visible={visible}
-      transparent={true}
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={handleCancel}>
-        <Pressable style={styles.container} onPress={(e) => e.stopPropagation()}>
+      <ModalSheet overlayStyle={styles.overlay} onClose={handleCancel}>
+        <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>{t.common.selectPeriod}</Text>
           </View>
@@ -171,6 +185,8 @@ export function DateRangePicker({
               <Text style={styles.dateValue}>{formatDate(endDate)}</Text>
             </View>
           </View>
+
+          {rangeError && <Text accessibilityRole="alert" style={{ color: Colors.accent.red }}>{rangeError}</Text>}
 
           <Calendar
             onDayPress={handleDayPress}
@@ -202,18 +218,18 @@ export function DateRangePicker({
               <Text style={styles.cancelButtonText}>{t.common.cancel}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.button, styles.confirmButton, !endDate && styles.disabledButton]}
+              style={[styles.button, styles.confirmButton, (!endDate || !!rangeError) && styles.disabledButton]}
               onPress={handleConfirm}
-              disabled={!endDate}
+              disabled={!endDate || !!rangeError}
             >
               <Text style={[styles.confirmButtonText, !endDate && styles.disabledButtonText]}>
                 {t.common.done}
               </Text>
             </TouchableOpacity>
           </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        </View>
+      </ModalSheet>
+    </AppModal>
   );
 }
 

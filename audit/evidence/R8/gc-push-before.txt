@@ -1,0 +1,51 @@
+# Cause fix 20 (GC01, GC02, GC03) - Jest, red before
+# Tree: ef1decb with the fix's files put back as at a8c249d:
+#   git restore --source=a8c249d -- src/contexts/AuthContext.tsx \
+#     src/features/onboarding/screens/NotificationsScreen.tsx \
+#     src/features/profile/screens/ProfileScreen.tsx \
+#     src/shared/hooks/useNotifications.ts src/shared/services/notifications.ts
+# Command: cd rehearsal-calendar-native && npx jest --selectProjects frontend --silent --verbose \
+#   --testPathPatterns 'AuthContext.push|ProfileScreen.push|useNotifications.push'
+# Date: 2026-10-26. Six fail (the defects), three pass (regression guards that held before too).
+
+FAIL frontend src/shared/hooks/__tests__/useNotifications.push.test.tsx
+  ✕ does not ask when the tabs mount for someone with notifications on (GC01)
+  ✓ "Later" asks nothing; "Allow" asks once
+  ● does not ask when the tabs mount for someone with notifications on (GC01)
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Expected number of calls: 0
+    Received number of calls: 1
+    > 62 |   expect(requestPermissions).not.toHaveBeenCalled();
+FAIL frontend src/features/profile/screens/__tests__/ProfileScreen.push.test.tsx
+  ✕ says a refused permission, offers Settings, and saves nothing (GC02)
+  ✕ says a token the server never got, and leaves the switch off (GC02)
+  ✓ saves the setting once the device is registered
+  ✕ reads off while nothing is allowed on this phone, though the account setting is on (GC01)
+  ● says a refused permission, offers Settings, and saves nothing (GC02)
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+    Expected: "Notifications are not allowed", "Allow notifications for Rehearsly in your phone settings.", ArrayContaining [ObjectContaining {"text": "Open Settings"}]
+    Number of calls: 0
+  ● says a token the server never got, and leaves the switch off (GC02)
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+    Expected: "Error", "Could not turn on notifications on this device. Check your connection and try again."
+    Number of calls: 0
+  ● reads off while nothing is allowed on this phone, though the account setting is on (GC01)
+    expect(received).toBe(expected) // Object.is equality
+    Expected: false
+    Received: true
+FAIL frontend src/contexts/__tests__/AuthContext.push.test.tsx
+  ✕ registers again when the app comes forward after a failed start, and stops once it has (GC03)
+  ✕ registers once the permission is granted in Settings, never asking itself
+  ✓ a change to the user is the same session and registers nothing new
+  ● registers again when the app comes forward after a failed start, and stops once it has (GC03)
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+    Expected number of calls: 2
+    Received number of calls: 1
+  ● registers once the permission is granted in Settings, never asking itself
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+    Expected number of calls: 1
+    Received number of calls: 0
+Test Suites: 3 failed, 3 total
+Tests:       6 failed, 3 passed, 9 total
+
+# After (ef1decb): Tests: 9 passed, 9 total.

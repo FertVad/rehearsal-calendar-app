@@ -1,0 +1,14 @@
+CI read-only: gh run view 35427268043 --job 105855264453 --log
+Saved unmodified completed log; job exceeded its existing 20-minute deadline. No cancellation or rerun was requested.
+
+Before source edit, from repository root:
+env -i PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node /private/tmp/reh-is02-ci-followup-before.mjs
+Actual exit: 1. Actual original extracted cleanup hook stayed pending with an owned preconnect, context callback not reached. Finally released the socket/server.
+
+After source edit, from rehearsal-calendar-native/server:
+env -i PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-continuous-browser.s8CVco /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node --test __tests__/browser/ownedFixture.test.mjs __tests__/browser/adminDashboard.browser.test.mjs
+Actual exit: 0. Seven tests passed, no skipped/cancelled tests, total3325.93925ms. Local pinned Chromium1234, Node22.16.0, isolated loopback only.
+
+The first local after invocation omitted PLAYWRIGHT_BROWSERS_PATH; its four browser hooks failed because the default cache had no executable. Three cleanup tests passed. Preserved as first-local-launch-failure.txt; no install/download or assertion changes were used.
+
+Scope: test fixture only. No application/runtime source or DOM/CSP assertion changes. No production/environment-file/server-entrypoint access. A future remote pass is still required; this local run does not prove the exact Chromium connection that stalled the earlier Linux job.

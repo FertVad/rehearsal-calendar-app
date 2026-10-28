@@ -25,6 +25,8 @@ jest.mock('axios', () => {
 
 import axios from 'axios';
 
+const KEY = 'flow-test-key-000001';
+
 describe('Rehearsal Flow Integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -48,12 +50,12 @@ describe('Rehearsal Flow Integration', () => {
       const projectResponse = await projectsAPI.createProject({
         name: 'Band Project',
         timezone: 'America/New_York',
-      });
+      }, KEY);
 
       expect(axios.post).toHaveBeenCalledWith('/native/projects', {
         name: 'Band Project',
         timezone: 'America/New_York',
-      });
+      }, { headers: { 'Idempotency-Key': KEY } });
       expect(projectResponse.data.project).toEqual(mockProject);
 
       // Step 2: Create Rehearsal
@@ -74,13 +76,13 @@ describe('Rehearsal Flow Integration', () => {
         startsAt: '2025-12-29T18:00:00Z',
         endsAt: '2025-12-29T20:00:00Z',
         location: 'Studio A',
-      });
+      }, KEY);
 
       expect(axios.post).toHaveBeenCalledWith('/native/projects/1/rehearsals', {
         startsAt: '2025-12-29T18:00:00Z',
         endsAt: '2025-12-29T20:00:00Z',
         location: 'Studio A',
-      });
+      }, { headers: { 'Idempotency-Key': KEY } });
       expect(rehearsalResponse.data.rehearsal).toEqual(mockRehearsal);
 
       // Step 3: RSVP to Rehearsal
@@ -150,7 +152,7 @@ describe('Rehearsal Flow Integration', () => {
           startsAt: '2025-12-29T20:00:00Z',
           endsAt: '2025-12-29T18:00:00Z', // Invalid: before start
           location: 'Studio A',
-        })
+        }, KEY)
       ).rejects.toEqual({
         response: {
           status: 400,
@@ -266,7 +268,7 @@ describe('Rehearsal Flow Integration', () => {
           startsAt: '2025-12-29T18:00:00Z',
           endsAt: '2025-12-29T20:00:00Z',
           participant_ids: ['5'],
-        })
+        }, KEY)
       ).rejects.toMatchObject({
         response: {
           status: 409,
@@ -305,7 +307,7 @@ describe('Rehearsal Flow Integration', () => {
         startsAt: '2025-12-29T18:00:00Z',
         endsAt: '2025-12-29T20:00:00Z',
         participant_ids: ['5', '6'],
-      });
+      }, KEY);
 
       expect(response.data.rehearsal).toEqual(mockRehearsal);
       expect(response.data.warnings).toEqual(mockWarnings);
@@ -388,7 +390,7 @@ describe('Rehearsal Flow Integration', () => {
         rehearsalsAPI.create('1', {
           startsAt: '2025-12-29T18:00:00Z',
           endsAt: '2025-12-29T20:00:00Z',
-        })
+        }, KEY)
       ).rejects.toMatchObject({
         response: {
           status: 500,

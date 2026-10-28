@@ -1,0 +1,82 @@
+T-204 — why every test of invitePage.browser.test.mjs could time out.
+Probes: scheme-navigation-probe{1,2,3}.mjs and scheme-navigation-probe-timers.mjs
+in this directory. To rerun, copy one
+to rehearsal-calendar-native/server/__tests__/browser/ and run `node <file>`.
+Playwright 1.62.1 (playwright-core/lib/coreBundle.js), headless Chromium.
+
+1. Each scheme attempt is a real navigation that Chromium aborts.
+   probe1, one verbose run of the page with ?expoHost (the 300 ms real wait
+   shows the first attempt starts without any clock command):
+
+     390ms page load
+     401ms requestedNavigation exp://127.0.0.1:8081/--/invite/ABCDEFGH (scriptInitiated)
+     406ms request exp://127.0.0.1:8081/--/invite/ABCDEFGH nav=true
+     408ms requestfailed exp://127.0.0.1:8081/--/invite/ABCDEFGH net::ERR_ABORTED
+     416ms goto resolved, page clock 2026-09-18T12:00:01.000Z
+     723ms real wait done
+     771ms requestedNavigation rehearsalapp://invite/ABCDEFGH (scriptInitiated)
+     798ms request rehearsalapp://invite/ABCDEFGH nav=true
+     805ms requestfailed rehearsalapp://invite/ABCDEFGH net::ERR_ABORTED
+     805ms runFor resolved, page clock 2026-09-18T12:00:04.000Z
+
+   From requestedNavigation until requestfailed Playwright keeps a pending
+   document on the frame (frameRequestedNavigation -> _setPendingDocument).
+
+2. The paused clock still runs zero-delay timers, so the page's first attempt
+   (setTimeout(..., 0) in invite.js) starts at a moment the test does not
+   control. scheme-navigation-probe-timers.mjs (page script replaced by three
+   timers), the same with clock.install+pauseAt and with pauseAt alone:
+
+     before runFor [t0 2026-09-18T12:00:01.000Z complete, afterLoad0]
+     after runFor  [t0 2026-09-18T12:00:01.000Z complete, afterLoad0, t1]
+
+   t0/afterLoad0 (0 ms) ran on their own; t1 (1 ms) waited for runFor.
+
+3. A clock command issued while that navigation is pending is dropped without
+   an error. clock.runFor -> safeNonStallingEvaluateInAllFrames ->
+   raceAgainstEvaluationStallingEvents throws "Frame is currently attempting a
+   navigation" when the frame has a pending document, and
+   safeNonStallingEvaluateInAllFrames swallows it. probe1, 80 runs without
+   ?expoHost, 5 failed, all like this one:
+
+     run 32: FAIL locator.click: Timeout 5000ms exceeded.
+       311ms goto resolved, page clock 2026-09-18T12:00:01.000Z
+       315ms requestedNavigation rehearsalapp://invite/ABCDEFGH (scriptInitiated)
+       322ms request rehearsalapp://invite/ABCDEFGH nav=true
+       325ms requestfailed rehearsalapp://invite/ABCDEFGH net::ERR_ABORTED
+       329ms runFor resolved, page clock 2026-09-18T12:00:01.000Z
+       376ms after runFor manual visible=false
+
+   runFor(3000) resolved but the page clock did not move, the fallback never
+   appeared, and the click waited 5 s for a visible #openButton — the
+   "locator.click … element is not visible" failures (Expo links, untrusted
+   codes, manual activation). With ?expoHost: 3 of 60 runs, same picture.
+
+4. An attempt that starts before `load` cancels the load event, so page.goto
+   (waitUntil "load") times out — the failures under machine load (malformed
+   Expo host, manual activation, timed fallback). probe2: invite.js replaced
+   by an image that holds back load for 300 ms and a zero-delay
+   location.assign('rehearsalapp://…'):
+
+     348 request http://127.0.0.1:50767/slow.png
+     359 request rehearsalapp://invite/ABCDEFGH
+     359 requestfailed rehearsalapp://invite/ABCDEFGH net::ERR_ABORTED
+     5009 page.goto: Timeout 5000ms exceeded.
+     Call log:
+       - navigating to "http://127.0.0.1:50767/invite/ABCDEFGH", waiting until "load"
+
+   The same call log as the T-203 failure of 11.10 07:35.
+
+5. Fix: the init script records the attempts from the Navigation API
+   `navigate` event and cancels them, like it already does for anchor clicks.
+   probe3 — all four attempts are seen and cancelable, and no scheme request
+   reaches Chromium (no `request` line for exp:/rehearsalapp:):
+
+     manual visible true
+     [{"url":"exp://127.0.0.1:8081/--/invite/ABCDEFGH","cancelable":true,"userInitiated":false},
+      {"url":"rehearsalapp://invite/ABCDEFGH","cancelable":true,"userInitiated":false},
+      {"url":"exp://127.0.0.1:8081/--/invite/ABCDEFGH","cancelable":true,"userInitiated":true},
+      {"url":"rehearsalapp://invite/ABCDEFGH","cancelable":true,"userInitiated":true}]
+
+Not the cause: the fixture listens on 127.0.0.1 and the browser goes to
+http://127.0.0.1:<port> (the T-203 `::` / 127.0.0.1 mismatch does not apply).

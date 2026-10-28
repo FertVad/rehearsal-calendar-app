@@ -1,0 +1,50 @@
+-- After, e2e (T-301, review P2): flow 07 under a director of its own, fix files at HEAD (ec9c0b4) --
+
+-- Run 1: 2026-10-11 15:09, artifacts e2e/out/artifacts/2026-10-11_150913 --
+-- Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/07-planner-project-switch.yaml --
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/07-planner-project-switch.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Planner follows the project (2m 35s)
+
+1/1 Flow Passed in 2m 35s
+exit code 0
+
+-- Run 2: 2026-10-11 15:16, artifacts e2e/out/artifacts/2026-10-11_151614 --
+-- 06 and 07 on one database, 06 first (it books the shared director's rehearsal tomorrow) --
+-- Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml e2e/flows/07-planner-project-switch.yaml --
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/06-planner-to-rehearsal.yaml e2e/flows/07-planner-project-switch.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] From the planner to a rehearsal (2m 15s)
+[Passed] Planner follows the project (1m 6s)
+
+2/2 Flows Passed in 3m 21s
+exit code 0
+
+-- Reading --
+Both runs were before 22:30, when 06's slot is not tomorrow; the isolation does
+not rest on the hour: 06 books director@e2e.test, who is in neither Three
+Sisters nor The Bear, so nothing 06 creates is in 07's slots at any time.

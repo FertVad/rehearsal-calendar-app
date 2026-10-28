@@ -1,0 +1,40 @@
+# Cause fix 11 (G01) — red before, real PostgreSQL 15.13
+# Source: 3cbdfa3ae8187eeb34bb630b58dea11ffd16cfc4 (handler, snapshot, catalog, manifest as at base),
+# plus only the new PG scenario __tests__/postgres/r4PushToken.mjs and its wiring in probe.mjs / r0-postgres.mjs.
+# Command: npm --prefix rehearsal-calendar-native/server run test:r0-postgres -- --r4-push-token-only
+# Stack frames ("    at ...") and blank lines removed.
+# Two registrations of one token at once (the first caught mid-insert): both rows survive, users 1 and 2.
+
+> rehearsal-calendar-backend@1.0.0 test:r0-postgres
+> node scripts/r0-postgres.mjs --r4-push-token-only
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:58966","database":"r0_test","schema":"diagnostic subset plus separately provisioned canonical fresh/upgrade fixtures"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+AssertionError [ERR_ASSERTION]: G01: one push token, one owner — the later registration
++ actual - expected
+  [
++   1,
+    2
+  ]
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [ 1, 2 ],
+  expected: [ 2 ],
+  operator: 'deepStrictEqual'
+}
+Node.js v22.16.0
+R0 cleanup: owned disposable container removed
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+AssertionError [ERR_ASSERTION]: R4_PUSH_TOKEN probe failed unexpectedly
+1 !== 0
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual'
+}
+Node.js v22.16.0

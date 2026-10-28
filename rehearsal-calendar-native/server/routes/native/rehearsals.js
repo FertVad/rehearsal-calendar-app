@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { logger } from '../../utils/logger.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
@@ -12,6 +13,7 @@ import {
   updateRehearsal,
   deleteRehearsal,
   getRehearsalById,
+  RehearsalTimesInvalid,
 } from '../../services/rehearsals/rehearsalService.js';
 import {
   respondToRehearsal,
@@ -19,6 +21,8 @@ import {
   getUserResponse,
 } from '../../services/rehearsals/rsvpService.js';
 import { fullName } from '../../utils/names.js';
+import { rosterOf, viewerOf, RosterRefused } from '../../services/rehearsals/roster.js';
+import { idempotencyKeyOf, IdempotencyRefused } from '../../services/idempotency.js';
 import {
   notifyRehearsalCreated,
   notifyRehearsalUpdated,
@@ -29,7 +33,7 @@ import {
 const router = Router();
 
 // GET /api/native/rehearsals/batch?projectIds=1,2,3 - Get rehearsals for multiple projects (Performance optimization)
-router.get('/batch', requireAuth, async (req, res) => {
+router.get('/batch', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectIds } = req.query;
@@ -52,10 +56,10 @@ router.get('/batch', requireAuth, async (req, res) => {
     console.error('[Batch Rehearsals] Error:', error);
     res.status(500).json({ error: 'Failed to fetch rehearsals' });
   }
-});
+}));
 
 // GET /api/native/projects/:projectId/rehearsals - Get rehearsals where user is invited
-router.get('/:projectId/rehearsals', requireAuth, async (req, res) => {
+router.get('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -79,10 +83,10 @@ router.get('/:projectId/rehearsals', requireAuth, async (req, res) => {
     console.error('[ROUTE] Error fetching rehearsals:', error);
     res.status(500).json({ error: 'Failed to fetch rehearsals' });
   }
-});
+}));
 
 // POST /api/native/projects/:projectId/rehearsals - Create a new rehearsal
-router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
+router.post('/:projectId/rehearsals', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -94,20 +98,20 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Only admins can create rehearsals' });
     }
 
-    const rehearsal = await createRehearsal(projectId, userId, req.body);
+    const { rehearsal, replayed } = await createRehearsal(projectId, userId, req.body, idempotencyKeyOf(req));
+
+    // A repeat of a create that already happened: the same answer, and the
+    // people on it were told the first time.
+    if (replayed) return res.status(201).json({ rehearsal });
 
     // Tell the people who are on this rehearsal, not the whole project.
     //
-    // The roster is native_rehearsal_responses, and the app only ever shows a
-    // rehearsal to someone who has a row there. Notifying everyone announced
-    // rehearsals that never appeared in the recipient's calendar and could not
-    // be opened from the notification either.
+    // The app only ever shows a rehearsal to the people on it (roster.js).
+    // Notifying everyone announced rehearsals that never appeared in the
+    // recipient's calendar and could not be opened from the notification either.
     try {
       const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
-      const members = await db.all(
-        'SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?',
-        [rehearsal.id]
-      );
+      const members = await rosterOf(db, rehearsal.id);
 
       // Everyone on it except whoever scheduled it — they were there. This used
       // to be done inside the notifier, against a created_by the service did
@@ -121,16 +125,19 @@ router.post('/:projectId/rehearsals', requireAuth, async (req, res) => {
 
     res.status(201).json({ rehearsal });
   } catch (error) {
+    if (error instanceof RosterRefused || error instanceof IdempotencyRefused || error instanceof RehearsalTimesInvalid) {
+      return res.status(error.status).json(error.body);
+    }
     console.error('Error creating rehearsal:', error);
     if (error.message === 'Invalid date format' || error.message.includes('are required')) {
       return res.status(400).json({ error: error.message });
     }
     res.status(500).json({ error: 'Failed to create rehearsal' });
   }
-});
+}));
 
 // PUT /api/native/projects/:projectId/rehearsals/:rehearsalId - Update a rehearsal
-router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) => {
+router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId, rehearsalId } = req.params;
@@ -151,15 +158,17 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
 
     const updatedRehearsal = await updateRehearsal(rehearsalId, projectId, req.body);
 
+    // Deleted between the check above and the edit.
+    if (!updatedRehearsal) {
+      return res.status(404).json({ error: 'Rehearsal not found' });
+    }
+
     // The roster, not the project — see the note on creation. Participants are
     // already settled by this point, so newcomers to the rehearsal are included
     // and anyone dropped from it is not.
     try {
       const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
-      const members = await db.all(
-        'SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?',
-        [updatedRehearsal.id]
-      );
+      const members = await rosterOf(db, updatedRehearsal.id);
 
       // What actually changed, not what the request happened to carry. The app
       // sends the whole form on save, so listing every field that arrived meant
@@ -186,16 +195,19 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) 
 
     res.json({ rehearsal: updatedRehearsal });
   } catch (error) {
+    if (error instanceof RosterRefused || error instanceof RehearsalTimesInvalid) {
+      return res.status(error.status).json(error.body);
+    }
     console.error('Error updating rehearsal:', error);
     if (error.message === 'Invalid date format' || error.message.includes('are required')) {
       return res.status(400).json({ error: error.message });
     }
     res.status(500).json({ error: 'Failed to update rehearsal' });
   }
-});
+}));
 
 // DELETE /api/native/projects/:projectId/rehearsals/:rehearsalId - Delete a rehearsal
-router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, res) => {
+router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId, rehearsalId } = req.params;
@@ -216,12 +228,9 @@ router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, re
 
     // The roster, read BEFORE deletion — those rows go with the rehearsal.
     const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
-    const members = await db.all(
-      'SELECT user_id FROM native_rehearsal_responses WHERE rehearsal_id = ?',
-      [rehearsal.id]
-    );
+    const members = await rosterOf(db, rehearsal.id);
 
-    await deleteRehearsal(rehearsalId);
+    await deleteRehearsal(rehearsalId, projectId);
 
     // Send push notifications after deletion
     try {
@@ -240,10 +249,10 @@ router.delete('/:projectId/rehearsals/:rehearsalId', requireAuth, async (req, re
     console.error('Error deleting rehearsal:', error);
     res.status(500).json({ error: 'Failed to delete rehearsal' });
   }
-});
+}));
 
 // POST /api/native/rehearsals/:rehearsalId/respond - RSVP to a rehearsal
-router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
+router.post('/:rehearsalId/respond', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { rehearsalId } = req.params;
@@ -256,14 +265,14 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    // Check if user is a member
-    const membership = await checkUserMembership(rehearsal.project_id, userId);
-
-    if (!membership) {
-      return res.status(403).json({ error: 'Access denied' });
+    // Someone who may not see it gets the same answer as for one that does not
+    // exist. Seeing is not enough to answer: an admin not on it is refused by
+    // the service, which never puts anyone on a rehearsal (roster.js).
+    if (!(await viewerOf(db, rehearsal, userId))) {
+      return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    const stats = await respondToRehearsal(rehearsalId, userId, response, notes, rehearsal.project_id);
+    const stats = await respondToRehearsal(rehearsalId, userId, response, notes);
 
     // Send push notifications to admins when member responds
     if (response === 'yes') {
@@ -288,16 +297,14 @@ router.post('/:rehearsalId/respond', requireAuth, async (req, res) => {
 
     res.json(stats);
   } catch (error) {
+    if (error instanceof RosterRefused) return res.status(error.status).json(error.body);
     console.error('Error responding to rehearsal:', error);
-    if (error.message === 'Invalid response value. Must be "yes" or null.') {
-      return res.status(400).json({ error: error.message });
-    }
     res.status(500).json({ error: 'Failed to update response' });
   }
-});
+}));
 
 // GET /api/native/rehearsals/:rehearsalId/responses - Get all responses for a rehearsal
-router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
+router.get('/:rehearsalId/responses', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { rehearsalId } = req.params;
@@ -309,11 +316,10 @@ router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    // Check if user is a member
-    const membership = await checkUserMembership(rehearsal.project_id, userId);
-
-    if (!membership) {
-      return res.status(403).json({ error: 'Access denied' });
+    // Visible to whoever may see the rehearsal itself, and to nobody else — the
+    // cast of a rehearsal is not for project members who are not on it.
+    if (!(await viewerOf(db, rehearsal, userId))) {
+      return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
     const result = await getRehearsalResponses(rehearsalId);
@@ -323,7 +329,7 @@ router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
     console.error('Error fetching responses:', error);
     res.status(500).json({ error: 'Failed to fetch responses' });
   }
-});
+}));
 
 // GET /api/native/rehearsals/:rehearsalId - One rehearsal, by id
 //
@@ -334,7 +340,7 @@ router.get('/:rehearsalId/responses', requireAuth, async (req, res) => {
 // A rehearsal the caller may not see answers 404, the same as one that does not
 // exist: telling the two apart would confirm that a given id belongs to someone
 // else's project.
-router.get('/:rehearsalId', requireAuth, async (req, res) => {
+router.get('/:rehearsalId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const rehearsal = await getRehearsalById(req.params.rehearsalId, req.userId);
 
@@ -347,10 +353,10 @@ router.get('/:rehearsalId', requireAuth, async (req, res) => {
     logger.error('[Rehearsals] Fetch by id failed:', error);
     res.status(500).json({ error: 'Failed to fetch rehearsal' });
   }
-});
+}));
 
 // GET /api/native/rehearsals/:rehearsalId/my-response - Get user's response
-router.get('/:rehearsalId/my-response', requireAuth, async (req, res) => {
+router.get('/:rehearsalId/my-response', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { rehearsalId } = req.params;
@@ -362,11 +368,10 @@ router.get('/:rehearsalId/my-response', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    // Check if user is a member
-    const membership = await checkUserMembership(rehearsal.project_id, userId);
-
-    if (!membership) {
-      return res.status(403).json({ error: 'Access denied' });
+    // Visible to whoever may see the rehearsal itself, and to nobody else — the
+    // cast of a rehearsal is not for project members who are not on it.
+    if (!(await viewerOf(db, rehearsal, userId))) {
+      return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
     const response = await getUserResponse(rehearsalId, userId);
@@ -376,6 +381,6 @@ router.get('/:rehearsalId/my-response', requireAuth, async (req, res) => {
     console.error('Error fetching user response:', error);
     res.status(500).json({ error: 'Failed to fetch response' });
   }
-});
+}));
 
 export default router;

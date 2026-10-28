@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../../shared/constants/colors';
 import { Rehearsal, Project } from '../../../shared/types';
-import { formatDateLocalized, formatDateToString } from '../../../shared/utils/time';
+import { addDays, formatDateLocalized } from '../../../shared/utils/time';
+import { useToday } from '../../../shared/hooks/useClock';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
@@ -33,7 +33,6 @@ export default function TodayRehearsals({
   onOpenRehearsal,
 }: TodayRehearsalsProps) {
   const { t, language } = useI18n();
-  const navigation = useNavigation<any>();
   const [syncedRehearsals, setSyncedRehearsals] = useState<Record<string, boolean>>({});
 
   // Memoize project lookup to avoid repeated searches (MUST be before early returns!)
@@ -63,17 +62,13 @@ export default function TodayRehearsals({
   }, [rehearsalIds, rehearsals]);
 
   // Get date label (Сегодня, Завтра, or formatted date)
+  const today = useToday();
   const dateLabel = useMemo(() => {
-    const today = formatDateToString(new Date());
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = formatDateToString(tomorrow);
-
     if (selectedDate === today) return t.common.today;
-    if (selectedDate === tomorrowStr) return t.calendar.tomorrow;
+    if (selectedDate === addDays(today, 1)) return t.calendar.tomorrow;
     const locale = getDateLocale(language);
     return formatDateLocalized(selectedDate, { day: 'numeric', month: 'long', weekday: 'long' }, locale);
-  }, [selectedDate, t, language]);
+  }, [selectedDate, today, t, language]);
 
   if (loading) {
     return (

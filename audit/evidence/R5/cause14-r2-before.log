@@ -1,0 +1,33 @@
+Cause fix 14, review round 2 (Astra) — Jest red before for the availability
+editor's error date: useAvailabilitySave.ts from 14dda81, the test from HEAD
+(0fbc0af). The run went over the whole frontend project.
+
+$ npx jest --selectProjects frontend src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts
+
+Summary of all failing tests
+FAIL src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts (38.012 s)
+  ● useAvailabilitySave Hook › validateAvailability › should fail validation for invalid slot
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "(December 29, 2025)"
+    Received string:    "Error (December 28, 2025):·
+    End must be after start·
+    Please fix the slot"
+
+      207 |       // The day it names is the day edited, not the one before: '2025-12-29'
+      208 |       // read as UTC midnight is the 28th in New York (jest.config.js).
+    > 209 |       expect(validation.errorMessage).toContain('(December 29, 2025)');
+          |                                       ^
+      210 |     });
+      211 |
+      212 |     it('should fail validation for overlapping slots', () => {
+
+      at Object.<anonymous> (src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts:209:39)
+
+
+Test Suites: 1 failed, 78 passed, 79 total
+Tests:       1 failed, 785 passed, 786 total
+Snapshots:   0 total
+Time:        258.804 s
+Ran all test suites.

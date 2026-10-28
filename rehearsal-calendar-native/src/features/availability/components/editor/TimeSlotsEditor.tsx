@@ -35,7 +35,7 @@ export default function TimeSlotsEditor({
           <Text style={styles.validationErrorText}>
             {validationError === 'overlap'
               ? t.availability.slotsOverlap
-              : t.availability.slotEndBeforeStart}
+              : t.availability.slotSameStartEnd}
           </Text>
         </View>
       )}
@@ -70,6 +70,8 @@ export default function TimeSlotsEditor({
 
           {slots.length > 1 && (
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t.common.delete}
               style={styles.removeSlotButton}
               onPress={() => onRemoveSlot(index)}
             >

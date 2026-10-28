@@ -1,0 +1,56 @@
+{
+  "verifiedAt": "2026-09-18T18:14:43.750906+00:00",
+  "sourceCommit": "df6fd0111111bd4f8b36a2e797cb0cccda563b25",
+  "sourceTree": "68f4e4dbcc070bb89f8b09733fe9f2b7b5b92335",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "postgres": "15.13",
+  "postgresImage": "sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0",
+  "environment": "env -i; explicit Node22 PATH; synthetic JWT_SECRET; fresh isolated Chromium cache; owned local Docker PostgreSQL; .env not loaded",
+  "ownedContainersAfterRun": 0,
+  "production": "NOT_RUN",
+  "physicalDevice": "NOT_RUN: DEV-15 mandatory",
+  "findingStatus": "READY_FOR_CHECK",
+  "ownedBrowserCacheAfterRun": "retained for continuing stages",
+  "results": {
+    "browserBefore": {
+      "exitCode": 1,
+      "failedTests": 9,
+      "sourceRouteCommit": "1d0142babc5e1b9f6f70d9440dc55942a8f07493",
+      "scope": "initial diagnostic version"
+    },
+    "browserAfter": {
+      "exitCode": 0,
+      "passedTests": 11,
+      "scope": "pre-commit final browser suite"
+    },
+    "checkFinal": {
+      "exitCode": 0,
+      "jestSuites": 79,
+      "jestTests": 1042,
+      "adminBrowserTests": 4,
+      "inviteBrowserTests": 11,
+      "persistedTests": 6
+    },
+    "postgresFinal": {
+      "exitCode": 0,
+      "passedScenarios": [
+        "controls",
+        "A02",
+        "B03",
+        "B04"
+      ],
+      "knownDefects": [
+        "F01",
+        "B02",
+        "D01"
+      ],
+      "externalConnections": 0
+    }
+  }
+}

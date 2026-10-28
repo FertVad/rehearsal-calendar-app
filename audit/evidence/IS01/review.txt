@@ -1,0 +1,67 @@
+Independent IS01 review — 2026-09-19
+
+Result: no remaining blockers within the documented scanner contract.
+
+Reviewed the final scanner, compatibility wrapper, exception policy, synthetic
+CLI assertions, application/server npm wiring, required CI command and README.
+No production environment file, production entrypoint, deployment, provider or
+production database was opened or invoked. This reviewer ran only disposable
+synthetic repositories, not the real repository scanner.
+
+Validation inspected and performed:
+- Independently ran the earlier synthetic CLI matrix: 29/29 PASS, exit 0.
+- Reviewed the final expanded suite and after.txt: 33/33 PASS, exit 0.
+- Independently reran the new ancestor replacement regression: 1/1 PASS, exit 0.
+- Independently reproduced the original ancestor race against the unchanged CLI
+  and repeated that probe after the repair: changed from an outside-content
+  finding (exit 1) to FILE_CHANGED_DURING_SCAN (exit 2, zero files/findings).
+- Reviewed git diff --check: clean.
+
+The review found and resolved a worktree path race. Originally realpath checked
+ancestry before lstat/open; replacing a directory with an outside symlink in
+that interval let both lstat and open accept the same outside inode. The repair
+captures the expected inode before path validation, compares the opened file to
+that inode, and revalidates ancestry and current path identity before reading.
+The new CLI regression performs a deterministic synthetic filesystem mutation
+and separately observes reads of the outside inode. It requires the mutation
+barrier to fire, outsideReadAttempts=0 and exit 2; failure after reading does not
+satisfy the test.
+
+The worktree guarantee is deliberately bounded: identity/path checks detect
+common replacements, but Node path APIs do not supply an atomic filesystem
+snapshot or complete protection against a hostile process rearranging the
+filesystem concurrently. README states this limit and directs commit checking
+to immutable staged blobs. This is not an openat-equivalent guarantee.
+
+Other reviewed contracts:
+- Missing/unreadable/corrupt/unsupported source, conflicts, policy errors and Git
+  failures cannot produce PASS. The final sensitive-name/conflict test requires
+  the finding and the incomplete-scan error without opening source contents.
+- JSON diagnostics contain paths/lines/rule IDs and fixed error codes, not source
+  values or Git stderr. Unusual filenames are NUL-delimited and safely encoded.
+- Staged contents and an internal staged exception policy use their indexed
+  blob identities; unstaged policy edits cannot approve staged credentials.
+- Exceptions require an exact path, rule and full logical-line SHA256. Changing
+  the line, path or matching another rule is not covered. No blanket exclusions.
+- Application check executes the actual scanner; required Application checks CI
+  runs that same command. Normal app/server tests run synthetic regressions
+  independently of Jest filters. Explicit precommit uses staged scanning and is
+  accurately documented as a command, not an automatically installed Git hook.
+
+All 21 original exceptions were independently checked against their full-line
+hashes; each matched exactly one line in its declared file. Origins: eleven
+explicit env-i/NODE_ENV=test historical fixture commands; three CLAUDE URL/empty
+assignment placeholders; two historical quotations of detector regexes; three
+.env.example template/empty assignments; one injected synthetic dependency error;
+and one Docker argument concatenating a fresh randomBytes password for an owned
+disposable PostgreSQL fixture. The referenced existing source/evidence files had
+no diff against HEAD; historical evidence was not rewritten to hide findings.
+
+The additional 22nd exception was independently verified too: the exact line in
+audit/evidence/IS01/commands.txt is an env-i/NODE_ENV=test full-check command with
+an explicit synthetic IS01 fixture signing secret. Its hash matches one line.
+No actual secret value is stored in the exception policy or this review.
+
+The final source commit and executed runtime provenance belong in runtime.json
+and the manifest after the source commit is created; no provisional source hash
+is asserted here.

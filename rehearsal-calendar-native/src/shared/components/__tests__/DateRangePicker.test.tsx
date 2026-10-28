@@ -11,7 +11,7 @@
  * - Disabled state when no end date
  */
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import { DateRangePicker } from '../DateRangePicker';
 
 // Mock dependencies
@@ -20,6 +20,8 @@ jest.mock('../../../contexts/I18nContext', () => ({
     t: {
       common: {
         selectPeriod: 'Выберите период',
+        invalidDateRange: 'Invalid date range',
+        dateRangeTooLong: (days: number) => `Maximum ${days} days`,
         from: 'От',
         to: 'До',
         cancel: 'Отмена',
@@ -235,7 +237,8 @@ describe('DateRangePicker Component', () => {
 
   describe('Min Date Constraint', () => {
     it('should pass minDate to Calendar component', () => {
-      const minDate = new Date('2025-12-20');
+      // The 20th here, not midnight UTC — that is the 19th west of UTC.
+      const minDate = new Date(2025, 11, 20);
 
       const { UNSAFE_getByType } = render(
         <DateRangePicker
@@ -275,6 +278,8 @@ describe('DateRangePicker Component', () => {
         t: {
           common: {
             selectPeriod: 'Выберите период',
+            invalidDateRange: 'Invalid date range',
+            dateRangeTooLong: (days: number) => `Maximum ${days} days`,
             from: 'От',
             to: 'До',
             cancel: 'Отмена',
@@ -301,6 +306,31 @@ describe('DateRangePicker Component', () => {
   });
 
   describe('Edge Cases', () => {
+    it('rejects an oversized custom range before marking dates or confirming it', () => {
+      const view = render(
+        <DateRangePicker visible onClose={mockOnClose} onConfirm={mockOnConfirm}
+          maxDays={90} initialStartDate={new Date(2026, 0, 1)}
+          initialEndDate={new Date(9999, 11, 31)} />
+      );
+      expect(view.getByText('Maximum 90 days')).toBeTruthy();
+      const calendar = view.UNSAFE_getByType(require('react-native-calendars').Calendar);
+      expect(calendar.props.markedDates).toEqual({});
+      fireEvent.press(view.getByText('Готово'));
+      expect(mockOnConfirm).not.toHaveBeenCalled();
+      expect(mockOnClose).not.toHaveBeenCalled();
+
+      // The user can immediately replace the rejected selection with a valid
+      // 90-day inclusive range; the boundary itself remains usable.
+      act(() => calendar.props.onDayPress({ dateString: '2026-01-01' }));
+      act(() => view.UNSAFE_getByType(require('react-native-calendars').Calendar)
+        .props.onDayPress({ dateString: '2026-03-31' }));
+      expect(view.queryByText('Maximum 90 days')).toBeNull();
+      expect(Object.keys(view.UNSAFE_getByType(require('react-native-calendars').Calendar)
+        .props.markedDates)).toHaveLength(90);
+      fireEvent.press(view.getByText('Готово'));
+      expect(mockOnConfirm).toHaveBeenCalledTimes(1);
+    });
+
     it('should handle undefined initial dates', () => {
       const { getByText, getAllByText } = render(
         <DateRangePicker

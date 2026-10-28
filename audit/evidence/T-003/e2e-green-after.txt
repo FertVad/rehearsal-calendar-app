@@ -1,0 +1,26 @@
+After the fix (each stage its own NavigationContainer, src/navigation/index.tsx).
+
+$ npm run e2e -- e2e/flows/09-onboarding.yaml e2e/flows/09-invite-during-onboarding.yaml e2e/flows/32-onboarding-calendar-as-saved.yaml
+[Passed] Onboarding to the end, nothing granted (2m 30s)
+[Passed] Invite link during onboarding (49s)
+[Passed] Onboarding shows the calendar that was saved (47s)
+
+3/3 Flows Passed in 4m 6s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/01-login.yaml e2e/flows/08-invite-before-sign-in.yaml e2e/flows/14-switch-account.yaml e2e/flows/09-onboarding.yaml
+[Passed] Sign in (1m 34s)
+[Passed] Invite link before sign-in (47s)
+[Passed] Switch accounts on a running app (1m 49s)
+[Passed] Onboarding to the end, nothing granted (1m 41s)
+
+4/4 Flows Passed in 5m 51s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+09-onboarding-done.png: the calendar ("Today", the week strip, "Nothing
+today"), the tab bar, no onboarding. The flow then opens the app again and
+installs it afresh and signs in: the calendar both times, no "Welcome!".
+
+$ npx jest --selectProjects frontend --testPathPatterns "stageState|pendingInvite|registeredRoutes"
+Test Suites: 3 passed, 3 total
+Tests:       14 passed, 14 total

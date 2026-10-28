@@ -1,6 +1,7 @@
 export interface CommonTranslations {
   save: string;
   cancel: string;
+  retry: string;
   back: string;
   delete: string;
   add: string;
@@ -17,6 +18,8 @@ export interface CommonTranslations {
   clear: string;
   change: string;
   selectPeriod: string;
+  invalidDateRange: string;
+  dateRangeTooLong: (maxDays: number) => string;
   from: string;
   to: string;
   done: string;
@@ -69,6 +72,7 @@ export const ru = {
   common: {
     save: 'Сохранить',
     cancel: 'Отмена',
+    retry: 'Повторить',
     back: 'Назад',
     delete: 'Удалить',
     add: 'Добавить',
@@ -85,6 +89,8 @@ export const ru = {
     clear: 'Очистить',
     change: 'Сменить',
     selectPeriod: 'Выберите период',
+    invalidDateRange: 'Выберите корректные даты начала и окончания.',
+    dateRangeTooLong: (maxDays: number) => `Выберите период не длиннее ${maxDays} дней, включая первый и последний день.`,
     from: 'От:',
     to: 'До:',
     done: 'Готово',
@@ -138,6 +144,7 @@ export const en = {
   common: {
     save: 'Save',
     cancel: 'Cancel',
+    retry: 'Try again',
     back: 'Back',
     delete: 'Delete',
     add: 'Add',
@@ -154,6 +161,8 @@ export const en = {
     clear: 'Clear',
     change: 'Change',
     selectPeriod: 'Select Period',
+    invalidDateRange: 'Choose valid start and end dates.',
+    dateRangeTooLong: (maxDays: number) => `Choose a range of up to ${maxDays} days, including the first and last day.`,
     from: 'From:',
     to: 'To:',
     done: 'Done',
@@ -207,6 +216,7 @@ export const es = {
   common: {
     save: 'Guardar',
     cancel: 'Cancelar',
+    retry: 'Reintentar',
     back: 'Atrás',
     delete: 'Eliminar',
     add: 'Añadir',
@@ -223,6 +233,8 @@ export const es = {
     clear: 'Limpiar',
     change: 'Cambiar',
     selectPeriod: 'Seleccionar período',
+    invalidDateRange: 'Elige fechas de inicio y fin válidas.',
+    dateRangeTooLong: (maxDays: number) => `Elige un período de hasta ${maxDays} días, incluidos el primero y el último.`,
     from: 'Desde:',
     to: 'Hasta:',
     done: 'Listo',
@@ -276,6 +288,7 @@ export const de = {
   common: {
     save: 'Speichern',
     cancel: 'Abbrechen',
+    retry: 'Erneut versuchen',
     back: 'Zurück',
     delete: 'Löschen',
     add: 'Hinzufügen',
@@ -292,6 +305,8 @@ export const de = {
     clear: 'Löschen',
     change: 'Ändern',
     selectPeriod: 'Zeitraum auswählen',
+    invalidDateRange: 'Wähle gültige Start- und Enddaten.',
+    dateRangeTooLong: (maxDays: number) => `Wähle einen Zeitraum von höchstens ${maxDays} Tagen, einschließlich des ersten und letzten Tages.`,
     from: 'Von:',
     to: 'Bis:',
     done: 'Fertig',

@@ -1,0 +1,66 @@
+# A change refused after its session ended says nothing to the next screen
+# (cause fix 21, after the supervisor's e2e). Solyony marks his inbox read on a
+# slow connection and signs out before it reaches the server. Signing out
+# ends his tokens, so the server refuses it (the run's log: "released POST
+# /api/native/notifications/read: the server answered 401"). The old app put
+# "Could not mark as read" up over the sign-in screen. Flow 22 cannot show
+# this: its open connection answers 200 before the server has said anything.
+#
+# From the tap to the release must stay inside the app's ten seconds, or the
+# app gives up on the request while he is still signed in. So "Log out" is
+# brought into view first; the profile keeps its scroll.
+appId: ${APP_ID}
+name: Inbox change refused after sign-out
+tags:
+  - auth
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${SOLYONY_EMAIL}
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-logout
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: tab-calendar
+- tapOn: "Notifications"
+- extendedWaitUntil:
+    visible: ".*Duel at noon.*"
+    timeout: 15000
+# Held before the server: it is handled on the release, after the sign-out.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: POST
+      PATH: "^/api/native/notifications/read$"
+      BEFORE: "1"
+      MS: "30000"
+- tapOn: "Mark all read"
+- tapOn: "Back"
+- tapOn:
+    id: tab-profile
+- tapOn:
+    id: profile-logout
+- extendedWaitUntil:
+    visible:
+      id: login-submit
+    timeout: 20000
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+# The refusal has come back; nobody is told about it.
+- extendedWaitUntil:
+    visible: "Could not mark as read"
+    timeout: 12000
+    optional: true
+- assertNotVisible: "Could not mark as read"
+- assertVisible:
+    id: login-submit
+- takeScreenshot: 37-sign-in-untouched

@@ -1,0 +1,10 @@
+# From a fresh install, signs in as ${EMAIL} and lands on the calendar.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- runFlow:
+    file: sign-in-form.yaml
+    env:
+      EMAIL: ${EMAIL}

@@ -1,0 +1,17 @@
+# GR04 (cause fix 6): reminderScheduler.integration.test.js as now, with pushNotificationService.js, reminderScheduler.js and i18n/pushNotifications.js from bb3d96f (before the fix).
+# reminderText.test.js is not run here: its module does not exist before the fix, so it could only fail to load.
+
+  ● Rehearsal reminders › what a reminder says (GR04) › a rehearsal moved inside the window after the run read it is worded at its new time
+  ● Rehearsal reminders › what a reminder says (GR04) › caught ten minutes before the start, the hour-before reminder says when, not "in 1 hour"
+  ● Rehearsal reminders › what a reminder says (GR04) › thirteen hours ahead, each reader is told the rehearsal's own time, in their own zone and language
+Tests:       3 failed, 33 passed, 36 total
+
+  ● Rehearsal reminders › what a reminder says (GR04) › thirteen hours ahead, each reader is told the rehearsal's own time, in their own zone and language
+    Expected: "Репетиция сегодня в 22:00"
+    Received: "Репетиция завтра"
+  ● Rehearsal reminders › what a reminder says (GR04) › caught ten minutes before the start, the hour-before reminder says when, not "in 1 hour"
+    Expected: "Скоро репетиция: сегодня в 9:10"
+    Received: "Репетиция через 1 час"
+  ● Rehearsal reminders › what a reminder says (GR04) › a rehearsal moved inside the window after the run read it is worded at its new time
+    Expected: "Rehearsal today at 9:30 PM UTC"
+    Received: "Rehearsal tomorrow"

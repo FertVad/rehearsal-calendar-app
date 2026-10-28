@@ -1,0 +1,72 @@
+Cause fix 22 (DD01, DD03, BC03, H03) — red before.
+Fix commit: da5a408. Base: b22183c.
+Sources of the fix put back as at b22183c:
+  src/features/calendar/screens/RehearsalDetailsScreen.tsx
+  src/features/calendar/screens/CalendarScreen.tsx
+  src/features/calendar/components/WeeklyCalendar.tsx
+  src/features/projects/screens/ProjectDetailScreen.tsx
+  server/routes/admin.js
+  server/public/admin/dashboard.js
+Tests, seed and flows as at da5a408. Node 22.
+
+== Jest, client (npx jest --selectProjects frontend --silent <3 files>; key lines) ==
+FAIL frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx (15.844 s)
+  ● Rehearsal details: one "seen" model (DD01) › takes the mark back when opened before the calendar primed the store
+    Expected: "yes"
+    Received: "null"
+    > 94 |     expect(screen.getByTestId('card').props.children).toBe('yes');
+  ● Rehearsal details: one "seen" model (DD01) › puts its own row back when the tap fails, as the card is put back
+    Expected: 0
+    Received: 1
+    > 115 |     expect(seenEyes(screen)).toBe(0);
+  ● Rehearsal details: one "seen" model (DD01) › shows the server's count after the tap, not the one from before it
+    Unable to find an element with text: 1/2
+    > 129 |     expect(screen.getByText('1/2')).toBeTruthy();
+FAIL frontend src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx (16.223 s)
+  ● names a past rehearsal by its title and times it as an upcoming one is
+    Unable to find an element with text: Old monologue
+    > 68 |   expect(screen.getByText('Old monologue')).toBeTruthy();
+FAIL frontend src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx
+  ● Test suite failed to run
+    src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx:32:9 - error TS2322: Type '{ rehearsals: never[]; onDaySelect: Dispatch<SetStateAction<string | null>>; onShowToday: () => void; selectedDate: string; }' is not assignable to type 'IntrinsicAttributes & WeeklyCalendarProps'.
+      Property 'onShowToday' does not exist on type 'IntrinsicAttributes & WeeklyCalendarProps'.
+Test Suites: 3 failed, 3 total
+Tests:       4 failed, 1 passed, 5 total
+
+(The strip had no way to select today at all: the test does not compile. Its
+red on screen is flow 41 below. "keeps the others as the server gave them"
+stays green: it guards what did not change.)
+
+== Jest, server (cd server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/adminStats.test.js --silent) ==
+FAIL __tests__/routes/adminStats.test.js
+  ● names sign-ins, not use, and counts those who never signed in since registering
+    Expected: {"notInLast30Days": 2, "rate": 50}
+    Received: undefined
+    > 85 |   expect(response.body.signIns).toEqual({ notInLast30Days: 2, rate: 50 });
+Tests:       1 failed, 1 total
+
+== e2e (npm run e2e -- e2e/flows/39-… 40-… 41-…) ==
+For the run, the old screens got the flows' testIDs and nothing else:
+  WeeklyCalendar day cell: testID calendar-day-<date>, accessibilityState selected
+  WeeklyCalendar Today button: testID calendar-today
+  ProjectDetailScreen past header: testID past-rehearsals-toggle
+(git diff b22183c on those files showed only these attribute lines.)
+
+[Failed] A past rehearsal keeps its title (1m 48s) (No visible element found: "(?s)(?=.*Old monologue)(?=.*12:00 — 13:00).*")
+[Failed] Today selects today (1m 10s) (Assertion is false: ".*Lamp trimming.*" is visible)
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-10-27T10:46:17.624Z  tapped "id calendar-today" again: no ".*Lamp trimming.*" after the first tap
+
+Flow 40 failed in that run before the defect, on "Polina Andreyevna": the old
+row has no label of its own and reads her name with the icon's glyph after
+it. The flow now matches "Polina Andreyevna.*"; run again on the old code:
+[Failed] Details and the card read one seen mark (1m 39s) (Assertion is false: "0/2" is not visible)
+1/1 Flow Failed
+
+== After (sources at da5a408) ==
+[Passed] A past rehearsal keeps its title (1m 6s)
+[Passed] Details and the card read one seen mark (1m 9s)
+[Passed] Today selects today (40s)
+3/3 Flows Passed in 2m 56s
+Flow 40 with "Polina Andreyevna.*", again: [Passed] (1m 45s)
+Jest: RehearsalDetailsScreen 4/4, ProjectDetailScreen 1/1, WeeklyCalendar 1/1, adminStats 1/1 PASS.

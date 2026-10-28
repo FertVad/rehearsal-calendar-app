@@ -1,0 +1,33 @@
+Green after: the same run with the fix (e2e/run.mjs: server HOST 127.0.0.1,
+app on http://127.0.0.1:3001/api).
+
+$ node audit/evidence/T-203/interloper.mjs e2e/flows/06-planner-to-rehearsal.yaml 15
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/06-planner-to-rehearsal.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[T-203 interloper 09:05:54.265] bound [::1]:3001 while the e2e server runs
+[T-203 interloper 09:05:54.279] could not bind [127.0.0.1]:3001: EADDRINUSE
+[T-203 interloper 09:06:09.265] gone after 15s
+[Passed] From the planner to a rehearsal (2m 22s)
+
+1/1 Flow Passed in 2m 22s
+
+[T-203 interloper 09:06:24.264] e2e exit 0 after 435s
+
+The create went out while the interloper held ::1:3001 (12:05:54–12:06:09
+local), on a new connection to the server's own address (artifacts
+2026-10-11_120228, device-simulator.log):
+
+12:06:02.595711 Rehearsly[61552]: [C15 IPv4#29891c9b:3001 in_progress socket-flow (satisfied (Path is satisfied), interface: lo0)] event: flow:start_connect @0.001s
+12:06:02.597981 Rehearsly[61552]: Task <63697EF9-…>.<15> sent request, body S 124

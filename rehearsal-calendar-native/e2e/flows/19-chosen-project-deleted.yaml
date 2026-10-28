@@ -1,0 +1,72 @@
+# A deleted project is not offered again (cause fix 12: BC02). Pishchik runs
+# two projects, and the rehearsal form opens on the newer, the Estate, which
+# becomes his chosen project. He deletes it. The old app kept the chosen
+# project as a copy of the object, and the form opened on the deleted Estate;
+# now the choice is read from the list as it is, and it falls to the Mill.
+appId: ${APP_ID}
+name: Chosen project deleted
+tags:
+  - projects
+  - rehearsals
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${PISHCHIK_EMAIL}
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-project
+      text: ".*Pishchik Estate.*"
+    timeout: 15000
+- tapOn: "Cancel"
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Pishchik Estate.*"
+    timeout: 10000
+- waitForAnimationToEnd
+# On its name: the middle of the card is its Invite button. The Estate is the
+# newer, listed first.
+- tapOn:
+    point: "25%,23%"
+- extendedWaitUntil:
+    notVisible: "My Projects"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: project-delete
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- tapOn:
+    id: project-delete
+- extendedWaitUntil:
+    visible: "Delete Project?"
+    timeout: 10000
+- tapOn:
+    text: "Delete Project"
+    below: "Delete Project\\?"
+- extendedWaitUntil:
+    visible: "Project successfully deleted"
+    timeout: 15000
+- tapOn: "OK"
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-project
+      text: ".*Pishchik Mill.*"
+    timeout: 10000
+- assertNotVisible:
+    id: rehearsal-project
+    text: ".*Pishchik Estate.*"
+- takeScreenshot: 19-form-on-a-project-that-exists

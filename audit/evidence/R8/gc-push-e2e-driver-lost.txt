@@ -1,0 +1,71 @@
+Cause fix 20 (T-120) - the supervisor's e2e on 9cba8f4, 27.10.2026: 25/37 failed.
+What failed, and why it is not the change.
+
+1. Every one of the 25 failures is the same, from rehearsal-calendar-native/e2e/out/junit.xml:
+
+   <failure>maestro.DeviceUnreachableException: Device became unreachable during deviceInfo
+   (x25; flows 13..37, every flow after the first one to fail; 01..12 passed)
+
+   No assertion of any flow failed.
+
+2. Maestro's iOS driver (the XCTest runner on the simulator) exited mid-flow 13,
+   at 07:40:54, 28 minutes into the run.
+   artifacts/2026-10-27_071229/xctest_runner_2026-10-27_071242.log:
+
+   19:40:54.539766 [Done] View hierarchy snapshot for Application 'com.rehearsal.app'
+   19:40:54.541989 [Default] Flushing outgoing messages to the IDE with timeout 600.00s
+   19:40:54.554688 [FlyingFox] <127.0.0.1> request: POST /deviceInfo
+   19:41:01.123722 maestro-driver-iosUITests-Runner[46508:...] [Default] Running tests...
+   Restarting after unexpected exit, crash, or test timeout; ...
+
+   The simulator's log for flow 13 (device-simulator.log):
+
+   locationd: "RBS #dic AppMonitor received Termination", "pid":37203,
+     "bundleId":dev.mobile.maestro-driver-iosUITests.xctrunner, "isUserKill":0
+   SpringBoard: [app<dev.mobile.maestro-driver-iosUITests.xctrunner>:37203]
+     Process exited: <RBSProcessExitContext| voluntary>.
+
+   The process that exited is the driver (pid 37203), not the app
+   (com.rehearsal.app was still running and answered the hierarchy snapshot
+   just before). The restarted driver never answered Maestro, so every later
+   flow failed within 10-45 s, at its first command.
+
+3. The flow it died in, 13 (a create tapped again after its answer was lost),
+   creates a project: no push, no profile, no session change. The app's push
+   code does nothing on the simulator: registerForPushNotifications and
+   pushPermissionState return at `!Device.isDevice` ('unsupported') before any
+   permission or server call (notifications.ts:121, :182); the metro log shows
+   "[Notifications] Push notifications only work on physical devices" once per
+   sign-in, and nothing repeating.
+
+4. The same driver exit is in one earlier run on this machine,
+   failed/T-120-2026-10-26T08-01-55-522Z (09:57:40, 15 minutes in, during
+   flow 20 after flow 33 passed: the same DeviceUnreachableException for every
+   flow after it). Two exits at two different flows, 15 and 28 minutes in.
+   The machine was also slow this run: flow 01 took 2m 19s.
+
+5. The flows again, on 9cba8f4 (no code changed), one per command, 27.10.2026:
+
+   npm run e2e -- e2e/flows/13-create-project-lost-answer.yaml
+   [Passed] A create tapped again after its answer was lost makes one project (1m 59s)
+   1/1 Flow Passed in 1m 59s
+   [e2e] taps taken again (tap-and-see.yaml): 0
+
+   npm run e2e -- e2e/flows/23-profile-timezone.yaml
+   [Passed] The profile's timezone, not the device's (2m 20s)
+   1/1 Flow Passed in 2m 20s
+   [e2e] taps taken again (tap-and-see.yaml): 0
+
+   npm run e2e -- e2e/flows/14-switch-account.yaml
+   [Passed] Switch accounts on a running app (2m 33s)
+   1/1 Flow Passed in 2m 33s
+   [e2e] taps taken again (tap-and-see.yaml): 0
+
+   (13 and 23 in one command did not finish within the tool's 10 minutes on
+   this machine: exit 143, no result.)
+
+6. Why the run said 1 and not 75: e2e/run.mjs gives 75 only for the steps before
+   Maestro (EnvironmentError); a failed `maestro test` is always 1, whatever
+   the failure. A driver lost mid-run reads as the change's failure. Telling
+   them apart (e.g. DeviceUnreachableException in junit.xml -> 75) is a change
+   to the e2e runner, outside this task: left to the owner.

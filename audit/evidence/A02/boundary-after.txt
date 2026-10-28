@@ -1,0 +1,30 @@
+Running one project: backend
+(node:64727) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS backend rehearsal-calendar-native/server/__tests__/middleware/authFailure.test.js
+  ● Console
+
+    console.warn
+      ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+         Generate a secret: openssl rand -base64 32
+         Add to server/.env: JWT_SECRET=<your-secret>
+
+      14 |     );
+      15 |   } else {
+    > 16 |     console.warn(
+         |             ^
+      17 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      18 |       '   Generate a secret: openssl rand -base64 32\n' +
+      19 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at server/middleware/jwtMiddleware.js:16:13
+      at server/__tests__/middleware/authFailure.test.js:6:47
+
+PASS backend rehearsal-calendar-native/server/__tests__/middleware/asyncBoundary.test.js
+PASS backend rehearsal-calendar-native/server/__tests__/asyncRoutes.test.js
+
+Test Suites: 3 passed, 3 total
+Tests:       38 passed, 38 total
+Snapshots:   0 total
+Time:        0.763 s, estimated 1 s
+Ran all test suites within paths "rehearsal-calendar-native/server/__tests__/middleware/authFailure.test.js", "rehearsal-calendar-native/server/__tests__/middleware/asyncBoundary.test.js", "rehearsal-calendar-native/server/__tests__/asyncRoutes.test.js".

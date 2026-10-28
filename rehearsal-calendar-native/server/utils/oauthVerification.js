@@ -8,6 +8,7 @@
 import { OAuth2Client } from 'google-auth-library';
 import appleSignin from 'apple-signin-auth';
 import { acceptedGoogleAudiences } from '../constants/googleClients.js';
+import { readAppleAuthConfig, AppleAuthUnavailableError, AppleTokenVerificationError } from '../config/appleAuth.js';
 
 /**
  * The `aud` a token claims, read without verifying anything — for the log line
@@ -99,10 +100,17 @@ export async function verifyGoogleToken(idToken) {
  * @throws {Error} If token is invalid or verification fails
  */
 export async function verifyAppleToken(idToken) {
+  const config = readAppleAuthConfig();
+  // An absent audience disables jsonwebtoken's audience check. Refuse before
+  // entering the verifier (including its JWKS transport) or account linking.
+  if (!config.enabled) throw new AppleAuthUnavailableError();
+
   try {
     // Verify the Apple ID token
     const appleIdTokenClaims = await appleSignin.verifyIdToken(idToken, {
-      audience: process.env.APPLE_CLIENT_ID,
+      audience: config.audiences,
+      algorithms: ['RS256'],
+      issuer: 'https://appleid.apple.com',
       ignoreExpiration: false, // Enforce token expiration
     });
 
@@ -119,9 +127,11 @@ export async function verifyAppleToken(idToken) {
       emailVerified: appleIdTokenClaims.email_verified === 'true' || appleIdTokenClaims.email_verified === true,
       // Name and avatar not provided in token - must come from client on first sign-in
     };
-  } catch (error) {
-    console.error('[OAuth] Apple token verification failed:', error.message);
-    throw new Error('Failed to verify Apple token: ' + error.message);
+  } catch {
+    // Driver/library messages may contain token claims or configured audience
+    // values. Keep both diagnostics and the application error independent of
+    // those details, while retaining a typed rejection for the HTTP boundary.
+    console.error('[OAuth] Apple token verification failed');
+    throw new AppleTokenVerificationError();
   }
 }
-

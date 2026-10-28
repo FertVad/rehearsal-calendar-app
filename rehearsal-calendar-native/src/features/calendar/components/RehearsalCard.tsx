@@ -8,6 +8,9 @@ import { Rehearsal } from '../../../shared/types';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useSeen } from '../../../contexts/SeenContext';
+import { getDateLocale } from '../../../shared/utils/locale';
+import { rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
+import type { AppNavigation } from '../../../navigation';
 
 interface RehearsalCardProps {
   rehearsal: Rehearsal;
@@ -40,8 +43,8 @@ export default function RehearsalCard({
   onPress,
   onDelete,
 }: RehearsalCardProps) {
-  const { t } = useI18n();
-  const navigation = useNavigation<any>();
+  const { t, language } = useI18n();
+  const navigation = useNavigation<AppNavigation>();
 
   // Read straight from the store. These used to arrive as five props threaded
   // from the screen through every list in between, which is why a second list
@@ -74,9 +77,8 @@ export default function RehearsalCard({
             <View style={styles.upcomingContent}>
               <View style={styles.upcomingTimeRow}>
                 <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
-                <Text style={styles.upcomingTime}>
-                  {rehearsal.time?.substring(0, 5) || ''}
-                  {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
+                <Text style={styles.upcomingTime} testID="rehearsal-card-time">
+                  {rehearsalTimeLabel(rehearsal, getDateLocale(language))}
                 </Text>
                 {isSynced && (
                   <Ionicons name="calendar" size={14} color={Colors.accent.green} />
@@ -116,6 +118,8 @@ export default function RehearsalCard({
                 <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
               </View>
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={t.common.delete}
                 onPress={(e) => {
                   e?.stopPropagation();
                   onDelete(rehearsal.id);
@@ -125,6 +129,8 @@ export default function RehearsalCard({
                 <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
               </TouchableOpacity>
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={t.common.edit}
                 onPress={(e) => {
                   e?.stopPropagation();
                   navigation.navigate('AddRehearsal', {
@@ -143,6 +149,12 @@ export default function RehearsalCard({
 
       <View style={styles.seenSection}>
         <Pressable
+          testID="seen-toggle"
+          // Only an icon and a count: VoiceOver read nothing here.
+          accessibilityRole="button"
+          accessibilityLabel={t.rehearsals.markSeen}
+          accessibilityState={{ selected: currentResponse === 'yes', disabled: responding }}
+          accessibilityValue={seenLabel ? { text: seenLabel } : undefined}
           style={styles.seenButton}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

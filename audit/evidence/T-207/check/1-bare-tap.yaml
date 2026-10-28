@@ -1,0 +1,13 @@
+# T-207 check, red: the way flow 30 tapped "Apple Calendar" - one tap, then
+# wait for its result. The first tap leaves no result (planner-partial.yaml),
+# as a lost one does: the flow fails.
+appId: ${APP_ID}
+name: T-207 check 1 - a bare tap whose first press is lost
+---
+- runFlow:
+    file: planner-partial.yaml
+- tapOn:
+    id: members-toggle-all
+- extendedWaitUntil:
+    visible: "All Members"
+    timeout: 5000

@@ -1,0 +1,10 @@
+(node:17519) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS __tests__/middleware/tokenTtl.test.js
+PASS __tests__/routes/tokenRefreshTtl.test.js
+
+Test Suites: 2 passed, 2 total
+Tests:       59 passed, 59 total
+Snapshots:   0 total
+Time:        1.026 s
+Ran all test suites within paths "__tests__/middleware/tokenTtl.test.js", "__tests__/routes/tokenRefreshTtl.test.js".

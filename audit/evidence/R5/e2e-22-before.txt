@@ -1,0 +1,37 @@
+T-112, cause fix 12, review round 4 — e2e 22, red before.
+Code: rehearsal-calendar-native/src/shared/hooks/useSession.ts restored from 1fbbc47
+(git restore --source=1fbbc47 -- src/shared/hooks/useSession.ts); flow, seed and
+e2e server as committed. Restored to HEAD afterwards.
+
+$ npm run e2e -- e2e/flows/22-switch-account-change-on-its-way.yaml
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/22-switch-account-change-on-its-way.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E
+[e2e] running the flows
+[Failed] Switch accounts - a change on its way (2m 45s) (Assertion is false: id: unread-badge is visible)
+
+1/1 Flow Failed
+
+Fails at step 55, "His change is still on its way, and her count is on her
+bell" — before the release: Dasha's bell has no badge (screenshot
+step-055-assertCondition-unread-badge.png).
+
+e2e/out/server.log:
+[e2e] holding the request POST /api/native/notifications/read, its connection open
+(no "released" line: the flow failed before the release; the request was still open)
+
+e2e/out/metro.log, from Yepikhodov's inbox to Dasha's calendar:
+ LOG  [DEBUG] Request: POST /native/notifications/read undefined      <- his change, held open
+ LOG  [DEBUG] Request: POST /auth/logout undefined
+ LOG  [DEBUG] Response: 200 POST /auth/logout
+ LOG  [DEBUG] Request: POST /auth/login undefined                     <- Dasha
+ LOG  [DEBUG] Response: 200 POST /auth/login
+ LOG  [DEBUG] Request: GET /native/notifications/unread-count undefined
+ LOG  [DEBUG] Response: 200 GET /native/notifications/unread-count     <- her count (2), dropped
+ (no "Response: ... POST /native/notifications/read": his change still on its way, no app timeout)

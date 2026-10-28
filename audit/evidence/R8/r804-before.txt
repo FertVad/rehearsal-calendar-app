@@ -1,0 +1,15 @@
+# R8-04 and the UTC aliases: expoTransport.test.js and reminderText.test.js as now, with pushNotificationService.js and reminderText.js from cd451fb (dc82278 code).
+# The three transport crashes are TypeErrors thrown in the response handler, outside the promise; the 'list' answer is the new envelope check.
+
+  ● A time that is not the reader's local time says so › a stored zone that is UTC by another name (Etc/GMT) is marked too
+  ● A time that is not the reader's local time says so › a stored zone that is UTC by another name (Etc/UTC) is marked too
+  ● A time that is not the reader's local time says so › a stored zone that is UTC by another name (utc) is marked too
+  ● Answers that fail the request, and nothing else › a receipts request answered with null is a rejection (R8-04)
+  ● Answers that fail the request, and nothing else › a send answered with a 200 of null is a rejection
+  ● Answers that fail the request, and nothing else › a send answered with a 200 that is a list is a rejection
+  ● Answers that fail the request, and nothing else › a send answered with a 503 whose errors are not a list is a rejection
+
+    TypeError: (result.errors || []).map is not a function
+    TypeError: Cannot read properties of null (reading 'errors')
+
+Tests:       7 failed, 22 passed, 29 total

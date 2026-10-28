@@ -1,0 +1,27 @@
+H04 review, 2026-09-18
+Source: 7ab1e414c73374df9bbd6c3cafd5a4029f4cc293
+
+Independent backend/runner review (h02_review): no blocking defects. Positive
+int4 matches checked-in SERIAL schema; UPDATE RETURNING supported by actual PG
+and SQLite adapters; input/auth rejection precedes SQL; real trigger rollback,
+exact independent snapshots, idempotent status and404 checked. Mandatory full
+runner/CI wiring includes H04 and preserves the postgres-a02 job ID.
+
+Independent UI review (h04_api, who did not implement the UI): no blocker or
+actionable regression in dashboard.js, HTML/CSS or18-scenario browser fixture.
+Checked request sequences/session epochs, stale retention/correct Retry offset,
+401 cleanup, cross-tab shared-token preservation, reconciliation only with the
+matching returned row, completed-feedback pruning. Confirmed tests cover late
+responses despite ineffective cancellation, same-token login, committed/lost
+PATCH, wrong-page reload and real cross-tab events. Review did not claim to
+rerun root's final check.
+
+Root review found and requested three corrections before source commit:
+wrong-page successful GET could clear unknown mutation; completed saved notices
+accumulated; other-tab logout left old DOM. UI fixes and three new cases cover
+all three. Root viewed both PNGs: errors/Retry/stale and unknown-write/reload
+are visible/readable without covering report data. Safe text nodes/CSP retained.
+
+Root final verification: npm run check exit0,80suites1072Jest +4H01browser
++18H04browser +11invite +6persisted; disposablePG full exit0, repaired
+A02/B03/B04/H04PASS, F01/B02/D01known and unchanged. No production access.

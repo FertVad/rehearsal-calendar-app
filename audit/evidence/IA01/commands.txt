@@ -1,0 +1,25 @@
+Source: 0dc7666b6f66c049d436bbe5c384102e0fb6aca7
+Base: 7588ab861518c0c3988ad07443e9e5c4a71059ae
+Node: /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node
+
+Final full check, cwd rehearsal-calendar-native, actual exit0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin NODE_ENV=test JWT_SECRET=ia01-isolated-test-secret PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-continuous-browser.s8CVco npm run check > ../audit/evidence/IA01/check-final.txt 2>&1
+
+Final full PostgreSQL, cwd repository root, actual exit0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin node rehearsal-calendar-native/server/scripts/r0-postgres.mjs > audit/evidence/IA01/postgres-final.txt 2>&1
+Owned disposable PostgreSQL; no .env/server.js/production startup.
+
+Focused tests, cwd rehearsal-calendar-native/server, env-i Node22/test synthetic credentials:
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand __tests__/utils/appleAudience.test.js
+After: actual exit0,42tests. Before: missing/empty testNamePattern selection,
+actual exit1 with2expected failures against old wrapper at base (see log footer).
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --runTestsByPath __tests__/routes/appleAuth.test.js
+Before: initial2-case suite, actual exit1. After: expanded28-case suite, actual exit0.
+Both suites rerun in final check after source commit. Verifier is actual locked
+apple-signin-auth/jsonwebtoken with generated RSA/JWKS; only JWKS transport is
+synthetic. Utility sockets denied; HTTP suite permits only its owned loopback port.
+
+Browser cache was installed at H02, reused and retained for following stages.
+Local HTTP/browser/Docker final checks used approved escalation; no production,
+Apple provider network or Vercel environment requests. Public Neon pricing was
+read independently for the requested estimate; that does not connect to a DB.

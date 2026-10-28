@@ -3,98 +3,65 @@ import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayState } from '../types';
 import { validateSlot, slotsOverlap } from '../utils';
 import { getDateLocale } from '../../../shared/utils/locale';
+import { clockRangeEndDate, dateTimeToOffsetISOInTimezone, parseDateString } from '../../../shared/utils/time';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
+import { logger } from '../../../shared/utils/logger';
 /**
  * Hook for saving availability data
  * Handles validation and data transformation for API
  */
 export const useAvailabilitySave = () => {
-  /**
-   * Create ISO timestamp from date and time in user's timezone
-   */
-  const createTimestamp = (dateStr: string, timeStr: string): string => {
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const [hours, minutes] = timeStr.split(':').map(Number);
-
-    const isoDateTimeStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-    const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-
-    const offsetMinutes = -localDate.getTimezoneOffset();
-    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
-    const offsetMins = Math.abs(offsetMinutes) % 60;
-    const offsetSign = offsetMinutes >= 0 ? '+' : '-';
-    const offsetStr = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
-
-    return `${isoDateTimeStr}${offsetStr}`;
-  };
+  // The day's hours are the profile's zone's, as they were read
+  // (useAvailabilityData) and as the server keys the day. They went out with the
+  // device's offset, so where the two differed a slot saved moved by the
+  // difference — or onto another day (cause fix 14).
+  const timezone = useTimezone();
 
   /**
-   * Convert local availability format to API format.
-   * Skips past dates — they are immutable and re-sending them is what
-   * triggered the chk_availability_time_order bug for legacy bad data.
+   * The date and time in the profile's zone, with its offset: the text names
+   * the day the slot is saved under, as the server checks (cause fix 15,
+   * review 2).
    */
-  const prepareEntriesForAPI = (
-    availability: AvailabilityData,
-    today?: string
-  ): Array<{ startsAt: string; endsAt: string; type: 'available' | 'busy' | 'tentative'; isAllDay?: boolean }> => {
-    const entries: Array<{
-      startsAt: string;
-      endsAt: string;
-      type: 'available' | 'busy' | 'tentative';
-      isAllDay?: boolean;
-    }> = [];
+  const createTimestamp = (dateStr: string, timeStr: string): string =>
+    dateTimeToOffsetISOInTimezone(dateStr, timeStr, timezone);
 
-    for (const [date, state] of Object.entries(availability)) {
-      if (today && date < today) continue;
-      let type: 'available' | 'busy' | 'tentative' = 'available';
+  type Entry = { startsAt: string; endsAt: string; type: 'available' | 'busy'; isAllDay: boolean };
 
-      if (state.mode === 'free') {
-        type = 'available';
-        entries.push({
-          startsAt: `${date}T00:00:00.000Z`,
-          endsAt: `${date}T23:59:59.999Z`,
-          type,
-          isAllDay: true,
-        });
-      } else if (state.mode === 'busy') {
-        type = 'busy';
-        entries.push({
-          startsAt: `${date}T00:00:00.000Z`,
-          endsAt: `${date}T23:59:59.999Z`,
-          type,
-          isAllDay: true,
-        });
-      } else if (state.mode === 'custom') {
-        type = 'busy';
-        for (const slot of state.slots) {
-          // Detect midnight crossing: if end <= start as HH:MM, end belongs to
-          // the next calendar day (e.g. 23:00–00:30 or 22:00–01:00).
-          const startMinutes = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
-          const endMinutes = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
-          const endsNextDay = endMinutes <= startMinutes;
-
-          let endDate = date;
-          if (endsNextDay) {
-            const next = new Date(`${date}T00:00:00`);
-            next.setDate(next.getDate() + 1);
-            const y = next.getFullYear();
-            const m = String(next.getMonth() + 1).padStart(2, '0');
-            const d = String(next.getDate()).padStart(2, '0');
-            endDate = `${y}-${m}-${d}`;
-          }
-
-          entries.push({
-            startsAt: createTimestamp(date, slot.start),
-            endsAt: createTimestamp(endDate, slot.end),
-            type,
-            isAllDay: false,
-          });
-        }
-      }
+  /**
+   * One day's entries as the server stores them. A day with no state — emptied
+   * by the person — has none, which clears it on save.
+   */
+  const entriesForDay = (date: string, state: DayState | undefined): Entry[] => {
+    if (!state) return [];
+    if (state.mode === 'free' || state.mode === 'busy') {
+      return [{
+        startsAt: `${date}T00:00:00.000Z`,
+        endsAt: `${date}T23:59:59.999Z`,
+        type: state.mode === 'free' ? 'available' : 'busy',
+        isAllDay: true,
+      }];
     }
-
-    return entries;
+    // A slot is an interval starting on its day; an end before the start is
+    // the next morning (clockRangeEndDate, cause fix 15). The server files it
+    // under the day it starts.
+    return state.slots.map((slot) => ({
+      startsAt: createTimestamp(date, slot.start),
+      endsAt: createTimestamp(clockRangeEndDate(date, slot.start, slot.end), slot.end),
+      type: 'busy' as const,
+      isAllDay: false,
+    }));
   };
+
+  /**
+   * Every day's entries, in one list. Skips past dates — they are immutable
+   * and re-sending them is what triggered the chk_availability_time_order bug
+   * for legacy bad data.
+   */
+  const prepareEntriesForAPI = (availability: AvailabilityData, today?: string): Entry[] =>
+    Object.entries(availability)
+      .filter(([date]) => !today || date >= today)
+      .flatMap(([date, state]) => entriesForDay(date, state));
 
   /**
    * Validate availability data before saving
@@ -124,7 +91,7 @@ export const useAvailabilitySave = () => {
           const slotValidation = validateSlot(slot);
 
           if (!slotValidation.isValid) {
-            const dateObj = new Date(date);
+            const dateObj = parseDateString(date);
             const locale = getDateLocale(language);
             const formattedDate = dateObj.toLocaleDateString(locale, {
               day: 'numeric',
@@ -135,7 +102,7 @@ export const useAvailabilitySave = () => {
             return {
               isValid: false,
               errorTitle: t.availability.cannotSave,
-              errorMessage: `${t.common.error} (${formattedDate}):\n\n${slotValidation.error}\n\n${t.availability.invalidSlot}`,
+              errorMessage: `${t.common.error} (${formattedDate}):\n\n${t.availability.slotSameStartEnd}\n\n${t.availability.invalidSlot}`,
             };
           }
         }
@@ -148,7 +115,7 @@ export const useAvailabilitySave = () => {
             const overlaps = slotsOverlap(slot1, slot2);
 
             if (overlaps) {
-              const dateObj = new Date(date);
+              const dateObj = parseDateString(date);
               const locale = getDateLocale(language);
               const formattedDate = dateObj.toLocaleDateString(locale, {
                 day: 'numeric',
@@ -171,19 +138,31 @@ export const useAvailabilitySave = () => {
   };
 
   /**
-   * Save availability data to server
+   * Save the days the person changed — only those, each by name, each replaced
+   * by exactly what it now holds (review CC05). The whole snapshot used to go,
+   * so a day loaded an hour ago overwrote what had been saved to it since.
+   *
+   * The counters are read before the request and handed back afterwards: a day
+   * edited while the save was out keeps a newer counter and stays unsaved
+   * (review CC03). Past days cannot be saved and stop counting as changed.
    */
-  const saveAvailability = async (
-    availability: AvailabilityData,
-    today: string,
-    language: string,
-    t: any,
-    setSaving: (saving: boolean) => void,
-    setHasChanges: (hasChanges: boolean) => void
-  ): Promise<boolean> => {
+  const saveAvailability = async ({ availability, changed, today, language, t, setSaving, markSaved }: {
+    availability: AvailabilityData;
+    changed: Record<string, number>;
+    today: string;
+    language: string;
+    t: any;
+    setSaving: (saving: boolean) => void;
+    markSaved: (sent: Record<string, number>) => void;
+  }): Promise<boolean> => {
+    const sent = { ...changed };
+    const dates = Object.keys(sent).filter((date) => date >= today).sort();
     try {
-      // Validate
-      const validation = validateAvailability(availability, today, language, t);
+      const touched: AvailabilityData = {};
+      for (const date of dates) {
+        if (availability[date]) touched[date] = availability[date];
+      }
+      const validation = validateAvailability(touched, today, language, t);
       if (!validation.isValid) {
         Alert.alert(validation.errorTitle!, validation.errorMessage!, [
           { text: t.availability.understood },
@@ -192,16 +171,15 @@ export const useAvailabilitySave = () => {
       }
 
       setSaving(true);
+      if (dates.length > 0) {
+        await availabilityAPI.saveDays(dates.map((date) => ({ date, entries: entriesForDay(date, availability[date]) })));
+      }
 
-      // Prepare and send (past dates excluded — they're immutable)
-      const entries = prepareEntriesForAPI(availability, today);
-      await availabilityAPI.bulkSet(entries);
-
-      setHasChanges(false);
+      markSaved(sent);
       Alert.alert(t.rehearsals.success, t.availability.saved);
       return true;
     } catch (err: any) {
-      console.error('Failed to save availability:', err);
+      logger.error('Failed to save availability:', err);
       Alert.alert(t.common.error, err.response?.data?.error || t.availability.saveError);
       return false;
     } finally {
@@ -211,6 +189,7 @@ export const useAvailabilitySave = () => {
 
   return {
     saveAvailability,
+    entriesForDay,
     prepareEntriesForAPI,
     validateAvailability,
   };

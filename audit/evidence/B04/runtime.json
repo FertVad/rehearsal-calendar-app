@@ -1,0 +1,67 @@
+{
+  "verifiedAt": "2026-09-18T17:27:12.916952+00:00",
+  "sourceCommit": "fd5f1eb6700e566d58cd818133e1ee867daa101d",
+  "sourceTree": "f3ff2cb5bd46a79a1162881736856aa5cf2d00f9",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "postgres": "15.13",
+  "postgresImage": "sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0",
+  "environment": "env -i; explicit Node22 PATH; synthetic JWT_SECRET; fresh isolated Chromium cache; owned local Docker PostgreSQL; .env not loaded",
+  "results": {
+    "routeBefore": {
+      "sourceCommit": "45007c4e10cdbcb3d1171d8fe9b1d29a59fd253f",
+      "exitCode": 1,
+      "failedTests": 2,
+      "purpose": "expected original bypass regression, diagnostic two-test version"
+    },
+    "routeAfter": {
+      "exitCode": 0,
+      "passedTests": 79,
+      "passedSuites": 3,
+      "scope": "pre-commit focused run; final source adds header assertions"
+    },
+    "postgresAfter": {
+      "exitCode": 0,
+      "passedScenarios": [
+        "controls",
+        "B04"
+      ],
+      "scope": "pre-commit focused run"
+    },
+    "pruneNegativeControl": {
+      "exitCode": 1,
+      "expectedFailure": "refreshed row lost after removing only outer DELETE expiry predicate in temporary copy"
+    },
+    "checkFinal": {
+      "exitCode": 0,
+      "jestSuites": 79,
+      "jestTests": 1046,
+      "browserTests": 4,
+      "persistedTests": 6
+    },
+    "postgresFinal": {
+      "exitCode": 0,
+      "passedScenarios": [
+        "controls",
+        "A02",
+        "B03",
+        "B04"
+      ],
+      "knownDefects": [
+        "F01",
+        "B02",
+        "D01"
+      ],
+      "externalConnections": 0
+    }
+  },
+  "ownedContainersAfterRun": 0,
+  "ownedBrowserCacheAfterRun": "removed",
+  "production": "NOT_RUN",
+  "physicalDevice": "NOT_RUN"
+}

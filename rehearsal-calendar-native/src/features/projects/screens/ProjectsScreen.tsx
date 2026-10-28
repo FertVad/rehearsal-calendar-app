@@ -10,9 +10,10 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useInviteLink } from '../hooks';
 import { projectsScreenStyles as styles } from '../styles';
+import type { ProjectsScreenNavigation } from '../../../navigation';
 
 export default function ProjectsScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<ProjectsScreenNavigation>();
   const { projects, selectedProject, setSelectedProject, loading, error } = useProjects();
   const { generateInviteLink, generatingFor } = useInviteLink();
   const { t, language } = useI18n();
@@ -43,6 +44,8 @@ export default function ProjectsScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>{t.projects.title}</Text>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t.projects.createProject}
             style={styles.addButton}
             onPress={handleCreateProject}
           >
@@ -88,6 +91,7 @@ export default function ProjectsScreen() {
               return (
                 <TouchableOpacity
                   key={project.id}
+                  testID="project-card"
                   style={[
                     styles.projectCard,
                     isSelected && styles.projectCardSelected,

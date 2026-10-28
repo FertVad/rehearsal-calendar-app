@@ -23,7 +23,7 @@ import { availabilityAPI } from '../../../../shared/services/api';
 // The hook animates the editor panel open on mount. Nothing here is about the
 // animation, and the test renderer hands back no driver for it.
 jest.mock('../../../../shared/services/api', () => ({
-  availabilityAPI: { delete: jest.fn() },
+  availabilityAPI: { saveDays: jest.fn() },
 }));
 
 jest.spyOn(Animated, 'spring').mockReturnValue({
@@ -33,8 +33,10 @@ jest.spyOn(Animated, 'spring').mockReturnValue({
 } as unknown as Animated.CompositeAnimation);
 
 const DATE = '2026-09-08';
+const TODAY = '2026-09-20';
+const LATER = '2026-09-28';
 
-const setup = (initial: AvailabilityData = {}, setHasChanges = jest.fn()) => {
+const setup = (initial: AvailabilityData = {}, markChanged = jest.fn(), markSettled = jest.fn()) => {
   let availability: AvailabilityData = { ...initial };
 
   const setAvailability = jest.fn((updater: (prev: AvailabilityData) => AvailabilityData) => {
@@ -48,7 +50,9 @@ const setup = (initial: AvailabilityData = {}, setHasChanges = jest.fn()) => {
     useAvailabilityEditor({
       availability,
       setAvailability,
-      setHasChanges,
+      markChanged,
+      markSettled,
+      today: TODAY,
       getDayState,
       months: [{ year: 2026, month: 8, key: '2026-8' }],
     })
@@ -59,8 +63,21 @@ const setup = (initial: AvailabilityData = {}, setHasChanges = jest.fn()) => {
     hook.result.current.handleDayPress(2026, 8, 8, () => DATE);
   });
 
-  return { hook, day: () => availability[DATE] };
+  return { hook, day: () => availability[DATE], state: () => availability };
 };
+
+describe('What an edit marks as changed', () => {
+  it('marks the selected days, and only them', () => {
+    const markChanged = jest.fn();
+    const { hook } = setup({}, markChanged);
+
+    act(() => {
+      hook.result.current.handleModeChange('busy');
+    });
+
+    expect(markChanged).toHaveBeenCalledWith([DATE]);
+  });
+});
 
 describe('Choosing a mode', () => {
   it('leaves no slots behind when the day is marked free', () => {
@@ -158,23 +175,22 @@ describe('Adding hours', () => {
   });
 });
 
-describe('Deleting the marks on a past date', () => {
-  // It used to drop them from local state and stop. The save deliberately skips
-  // past dates and the bulk endpoint only clears dates the payload names, so a
-  // past date was in neither: the marks vanished, nothing was said, and they
-  // were all back on the next visit to the tab.
+describe('Deleting the marks on past dates', () => {
+  // It used to drop them from local state and stop; then to delete every
+  // selected date one request at a time — the future ones included, when the
+  // selection mixed the two — and to mark the whole screen saved (review CC04).
   beforeEach(() => {
-    (availabilityAPI.delete as jest.Mock).mockReset().mockResolvedValue({});
+    (availabilityAPI.saveDays as jest.Mock).mockReset().mockResolvedValue({});
   });
 
-  it('asks the server to delete each selected date', async () => {
+  it('clears the selected past days on the server, in one request', async () => {
     const { hook } = setup({ [DATE]: { mode: 'busy', slots: [] } });
 
     await act(async () => {
       await hook.result.current.deletePastDates(() => {});
     });
 
-    expect(availabilityAPI.delete).toHaveBeenCalledWith(DATE);
+    expect(availabilityAPI.saveDays).toHaveBeenCalledWith([{ date: DATE, entries: [] }]);
   });
 
   it('removes them from the screen once the server agreed', async () => {
@@ -188,9 +204,7 @@ describe('Deleting the marks on a past date', () => {
   });
 
   it('leaves the screen alone when the server refused', async () => {
-    // Better a mark that is still there than a screen quietly disagreeing with
-    // the server.
-    (availabilityAPI.delete as jest.Mock).mockRejectedValue(new Error('offline'));
+    (availabilityAPI.saveDays as jest.Mock).mockRejectedValue(new Error('offline'));
     const { hook, day } = setup({ [DATE]: { mode: 'busy', slots: [] } });
 
     let reported: unknown;
@@ -204,16 +218,28 @@ describe('Deleting the marks on a past date', () => {
     expect(day()).toBeDefined();
   });
 
-  it('leaves nothing unsaved behind', async () => {
-    // The deletion has already happened on the server, so there is nothing for
-    // a later Save to do — and the panel holding the Save bar has just closed.
-    const setHasChanges = jest.fn();
-    const { hook } = setup({ [DATE]: { mode: 'busy', slots: [] } }, setHasChanges);
+  it('touches only the past days of a mixed selection (review CC04)', async () => {
+    const { hook, state } = setup({ [DATE]: { mode: 'busy', slots: [] }, [LATER]: { mode: 'busy', slots: [] } });
+    act(() => {
+      hook.result.current.handleDayPress(2026, 8, 28, () => LATER);
+    });
 
     await act(async () => {
       await hook.result.current.deletePastDates(() => {});
     });
 
-    expect(setHasChanges).toHaveBeenLastCalledWith(false);
+    expect(availabilityAPI.saveDays).toHaveBeenCalledWith([{ date: DATE, entries: [] }]);
+    expect(state()[LATER]).toEqual({ mode: 'busy', slots: [] });
+  });
+
+  it('settles only the deleted days, leaving other unsaved edits unsaved (review CC04)', async () => {
+    const markSettled = jest.fn();
+    const { hook } = setup({ [DATE]: { mode: 'busy', slots: [] } }, jest.fn(), markSettled);
+
+    await act(async () => {
+      await hook.result.current.deletePastDates(() => {});
+    });
+
+    expect(markSettled).toHaveBeenCalledWith([DATE]);
   });
 });

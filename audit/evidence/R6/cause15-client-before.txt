@@ -1,0 +1,58 @@
+Cause fix 15 — client tests of f2f34d5 on the client code of a7338eb ("red before").
+The fix's client files (23, non-test) put back with
+  git restore --source=a7338eb -- <files>
+then, from rehearsal-calendar-native:
+  npx jest --selectProjects frontend --runTestsByPath \
+    src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts \
+    src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts \
+    src/features/availability/hooks/__tests__/useAvailabilityDataMultiDay.test.ts \
+    src/features/calendar/hooks/__tests__/useRehearsals.test.ts \
+    src/__tests__/availabilityValidation.test.ts
+then git restore --source=HEAD.
+
+FAIL frontend src/features/calendar/hooks/__tests__/useRehearsals.test.ts
+  ● useRehearsals Hook › transformRehearsal › a rehearsal past midnight carries its last day
+    - Expected  - 3
+    + Received  + 2            (no endDate: the rehearsal is on its start day only — DD02)
+FAIL frontend src/__tests__/availabilityValidation.test.ts
+  ● Availability Validation Utils › validateSlot - A) start and end › should reject slot where start equals end
+    Expected: "sameStartEnd"   Received: "endBeforeStart"   (key renamed with the rule)
+  ● Availability Validation Utils › validateSlot - A) start and end › should accept a slot past midnight, its end on the next day
+    Expected: true             Received: false              (CC06)
+  ● Availability Validation Utils › validateSlots - D) edge cases › a slot past midnight takes the rest of the evening
+    Expected: "overlap"        Received: "endBeforeStart"   (CC06)
+  ● Availability Validation Utils › validateSlots - comprehensive validation › should reject when first slot is invalid
+    Expected: "sameStartEnd"   Received: "endBeforeStart"   (key renamed with the rule)
+FAIL frontend src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts
+  ● useAvailabilitySave Hook › validateAvailability › should fail validation for invalid slot
+    Expected substring: "End cannot be the same as start"
+    Received string:    "Error (December 28, 2025):·endBeforeStart…"   (the raw key, not text)
+  ● useAvailabilitySave Hook › validateAvailability › an overnight slot is valid, and overlaps the evening it takes (CC06)
+    Expected: true             Received: false
+  ● useAvailabilitySave Hook › saveAvailability — the changed days, by name › saves a slot past midnight from Save, ending on the next day (CC06)
+    Expected: true             Received: false              (Save refused 23:00–01:00; nothing sent)
+FAIL frontend src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts
+  ● useAddRehearsalSubmit Hook › Validation - End Time Before Start Time › an end before the start is the next morning, and is sent so (DF04)
+    Expected: "1", ObjectContaining {"endsAt": "2026-01-01T01:00:00.000Z", "startsAt": "2025-12-31T23:00:00.000Z"}, Anything
+    Received: "1", {"endsAt": "2025-12-31T01:00:00.000Z", … "startsAt": "2025-12-31T23:00:00.000Z" …}
+  ● useAddRehearsalSubmit Hook › Validation - End Time Before Start Time › only the clock counts: an end Date on the start day before the start is still the next morning
+    Expected: "1", ObjectContaining {"endsAt": "2025-12-30T00:30:00.000Z", "startsAt": "2025-12-29T22:00:00.000Z"}, Anything
+    (create never called: the form refused it as "end before start")
+FAIL frontend src/features/availability/hooks/__tests__/useAvailabilityDataMultiDay.test.ts
+  ● A multi-day calendar event, read in Jerusalem › a hand-entered slot past midnight › is one slot of the day it starts, whole
+    - Expected  - 1
+    + Received  + 1            (23:00–23:59, cut at midnight)
+  ● A multi-day calendar event, read in Jerusalem › a hand-entered slot past midnight › shows its morning on the next day, read-only
+    - Expected  - 1
+    + Received  + 6            (00:00–01:00 as an editable slot of her own)
+  ● A multi-day calendar event, read in Jerusalem › a hand-entered slot past midnight › saved back unchanged, is the same interval
+    Expected: 7200000          Received: 3540000            (saved back ending at 23:59)
+
+Tests: 13 failed, 89 passed, 102 total
+
+Also red on the old code, at compile time (the contract they test did not exist):
+  useRehearsalAvailability.test.ts — TS2554: Expected 4-5 arguments, but got 6 (no next-day fetch)
+  useAddRehearsalForm.test.ts      — TS2339: Property 'endsNextDay' does not exist
+  clockRange.test.ts               — TS2305: '../time' has no exported member 'endsNextDay', 'clockRangeToISO', …
+
+On f2f34d5 the same files: 8 suites green (65 + 85 tests in two batches, see the report).

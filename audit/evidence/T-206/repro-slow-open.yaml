@@ -1,0 +1,51 @@
+# T-206: flow 17 as a slow simulator runs it - ten seconds between the pull
+# and the pick of the filter - with the hold the flow has now (held open until
+# the release).
+# Run from rehearsal-calendar-native/e2e/repro/.
+appId: ${APP_ID}
+name: T-206 slow simulator, open hold
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${TROFIMOV_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Garden debate.*"
+    timeout: 30000
+- assertVisible: ".*Lecture on progress.*"
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "^/api/native/rehearsals/batch$"
+      OPEN: "1"
+- swipe:
+    start: 50%, 25%
+    end: 50%, 75%
+# The slow simulator: ten seconds pass before the next step.
+- extendedWaitUntil:
+    visible: "T-206 nothing has this text"
+    timeout: 10000
+    optional: true
+- tapOn:
+    id: calendar-filter
+- tapOn:
+    id: calendar-filter-option
+    text: "Eternal Student"
+- extendedWaitUntil:
+    notVisible: ".*Garden debate.*"
+    timeout: 10000
+- assertVisible: ".*Lecture on progress.*"
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: ".*Garden debate.*"
+    timeout: 4000
+    optional: true
+- assertNotVisible: ".*Garden debate.*"
+- assertVisible: ".*Lecture on progress.*"

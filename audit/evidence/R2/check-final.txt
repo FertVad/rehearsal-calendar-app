@@ -1,0 +1,651 @@
+source=eb24c624cc5a3f8a1d1fea9698d50f8641524ec1 node=v22.16.0
+
+> rehearsal-calendar-native@1.0.0 check:secrets
+> bash scripts/check-secrets.sh
+
+{"summary":"pass","mode":"worktree","files":717,"findings":0,"errors":0}
+check:secrets exit=0
+
+> rehearsal-calendar-native@1.0.0 type-check
+> tsc --noEmit
+
+type-check exit=0
+
+> rehearsal-calendar-native@1.0.0 test
+> node server/scripts/test.mjs all --silent
+
+[tests] Running mandatory secret scanner CLI regressions with synthetic fixtures.
+TAP version 13
+# Subtest: JWT assignment with 20 characters is a finding
+ok 1 - JWT assignment with 20 characters is a finding
+  ---
+  duration_ms: 573.641667
+  type: 'test'
+  ...
+# Subtest: missing indexed regular file is an incomplete scan
+ok 2 - missing indexed regular file is an incomplete scan
+  ---
+  duration_ms: 149.544667
+  type: 'test'
+  ...
+# Subtest: empty index and ordinary text both pass
+ok 3 - empty index and ordinary text both pass
+  ---
+  duration_ms: 180.951084
+  type: 'test'
+  ...
+# Subtest: all existing credential families report rule, path and exact line without values
+ok 4 - all existing credential families report rule, path and exact line without values
+  ---
+  duration_ms: 102.971959
+  type: 'test'
+  ...
+# Subtest: length thresholds preserve 19/20 and 7/8 boundaries
+ok 5 - length thresholds preserve 19/20 and 7/8 boundaries
+  ---
+  duration_ms: 796.226375
+  type: 'test'
+  ...
+# Subtest: filenames survive spaces, tabs, newlines, colon, leading dash and Unicode
+ok 6 - filenames survive spaces, tabs, newlines, colon, leading dash and Unicode
+  ---
+  duration_ms: 109.9975
+  type: 'test'
+  ...
+# Subtest: root and subdirectory invocation scan the same complete tracked scope
+ok 7 - root and subdirectory invocation scan the same complete tracked scope
+  ---
+  duration_ms: 296.109458
+  type: 'test'
+  ...
+# Subtest: Markdown, arbitrary examples and scanner-looking source names remain in scope
+ok 8 - Markdown, arbitrary examples and scanner-looking source names remain in scope
+  ---
+  duration_ms: 109.755875
+  type: 'test'
+  ...
+# Subtest: forbidden environment and key filenames are detected before missing content is opened
+ok 9 - forbidden environment and key filenames are detected before missing content is opened
+  ---
+  duration_ms: 106.907458
+  type: 'test'
+  ...
+# Subtest: forbidden staged filename is reported without reading its corrupt object
+ok 10 - forbidden staged filename is reported without reading its corrupt object
+  ---
+  duration_ms: 126.4545
+  type: 'test'
+  ...
+# Subtest: ignored and untracked synthetic credentials are outside tracked scope
+ok 11 - ignored and untracked synthetic credentials are outside tracked scope
+  ---
+  duration_ms: 108.774875
+  type: 'test'
+  ...
+# Subtest: binary bytes do not hide ASCII credentials or disturb line numbers
+ok 12 - binary bytes do not hide ASCII credentials or disturb line numbers
+  ---
+  duration_ms: 108.5065
+  type: 'test'
+  ...
+# Subtest: staged and worktree snapshots are independent in both directions
+ok 13 - staged and worktree snapshots are independent in both directions
+  ---
+  duration_ms: 413.802166
+  type: 'test'
+  ...
+# Subtest: staged deletion is not read in either mode
+ok 14 - staged deletion is not read in either mode
+  ---
+  duration_ms: 200.424834
+  type: 'test'
+  ...
+# Subtest: staged object missing and corrupt content produce incomplete-scan errors
+ok 15 - staged object missing and corrupt content produce incomplete-scan errors
+  ---
+  duration_ms: 218.328042
+  type: 'test'
+  ...
+# Subtest: unreadable or replaced indexed regular files fail closed
+ok 16 - unreadable or replaced indexed regular files fail closed
+  ---
+  duration_ms: 170.219083
+  type: 'test'
+  ...
+# Subtest: oversized regular file fails closed while the small staged snapshot remains readable
+ok 17 - oversized regular file fails closed while the small staged snapshot remains readable
+  ---
+  duration_ms: 199.161375
+  type: 'test'
+  ...
+# Subtest: scan errors take precedence over findings
+ok 18 - scan errors take precedence over findings
+  ---
+  duration_ms: 107.466833
+  type: 'test'
+  ...
+# Subtest: unknown, conflicting and repeated arguments are errors
+ok 19 - unknown, conflicting and repeated arguments are errors
+  ---
+  duration_ms: 166.567625
+  type: 'test'
+  ...
+# Subtest: nonrepository and failed Git executable are errors
+ok 20 - nonrepository and failed Git executable are errors
+  ---
+  duration_ms: 774.450666
+  type: 'test'
+  ...
+# Subtest: unmerged index stages are unsupported rather than partially scanned
+ok 21 - unmerged index stages are unsupported rather than partially scanned
+  ---
+  duration_ms: 258.987792
+  type: 'test'
+  ...
+# Subtest: tracked symlinks and gitlinks are unsupported in both modes
+ok 22 - tracked symlinks and gitlinks are unsupported in both modes
+  ---
+  duration_ms: 488.589583
+  type: 'test'
+  ...
+# Subtest: sensitive filenames still report unsupported and unmerged index errors without content reads
+ok 23 - sensitive filenames still report unsupported and unmerged index errors without content reads
+  ---
+  duration_ms: 406.15125
+  type: 'test'
+  ...
+# Subtest: worktree symlink replacement cannot escape the tracked regular path
+ok 24 - worktree symlink replacement cannot escape the tracked regular path
+  ---
+  duration_ms: 278.734292
+  type: 'test'
+  ...
+# Subtest: ancestor replacement during validation is rejected before any external inode read
+ok 25 - ancestor replacement during validation is rejected before any external inode read
+  ---
+  duration_ms: 117.614583
+  type: 'test'
+  ...
+# Subtest: exceptions require the exact path, rule and complete normalized line
+ok 26 - exceptions require the exact path, rule and complete normalized line
+  ---
+  duration_ms: 415.25875
+  type: 'test'
+  ...
+# Subtest: exception for one rule cannot silence another credential on the same line
+ok 27 - exception for one rule cannot silence another credential on the same line
+  ---
+  duration_ms: 109.421458
+  type: 'test'
+  ...
+# Subtest: staged scan uses indexed policy when the CLI is inside the scanned repository
+ok 28 - staged scan uses indexed policy when the CLI is inside the scanned repository
+  ---
+  duration_ms: 602.995458
+  type: 'test'
+  ...
+# Subtest: bare carriage return remains part of exception line identity
+ok 29 - bare carriage return remains part of exception line identity
+  ---
+  duration_ms: 265.160917
+  type: 'test'
+  ...
+# Subtest: exception hashes use raw line bytes including Unicode and invalid UTF-8
+ok 30 - exception hashes use raw line bytes including Unicode and invalid UTF-8
+  ---
+  duration_ms: 301.719125
+  type: 'test'
+  ...
+# Subtest: exception policy JSON is scanned when tracked
+ok 31 - exception policy JSON is scanned when tracked
+  ---
+  duration_ms: 120.104625
+  type: 'test'
+  ...
+# Subtest: oversized exception policies fail closed in external and staged tool bundles
+ok 32 - oversized exception policies fail closed in external and staged tool bundles
+  ---
+  duration_ms: 252.707333
+  type: 'test'
+  ...
+# Subtest: missing, malformed and ambiguous exception policies fail closed
+ok 33 - missing, malformed and ambiguous exception policies fail closed
+  ---
+  duration_ms: 990.28175
+  type: 'test'
+  ...
+1..33
+# tests 33
+# suites 0
+# pass 33
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9689.015709
+[browser] Preparing the Chromium version pinned by Playwright.
+Downloading Chrome for Testing 151.0.7922.34 (playwright chromium v1234) from https://cdn.playwright.dev/builds/cft/151.0.7922.34/mac-arm64/chrome-mac-arm64.zip
+|                                                                                |   0% of 178.7 MiB
+|■■■■■■■■                                                                        |  10% of 178.7 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 178.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 178.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 178.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 178.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 178.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 178.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 178.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 178.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 178.7 MiB
+Chrome for Testing 151.0.7922.34 (playwright chromium v1234) downloaded to /Users/vadimfertik/Library/Caches/ms-playwright/chromium-1234
+Downloading FFmpeg (playwright ffmpeg v1011) from https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-mac-arm64.zip
+|                                                                                |   1% of 1 MiB
+|■■■■■■■■                                                                        |  10% of 1 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  51% of 1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 1 MiB
+FFmpeg (playwright ffmpeg v1011) downloaded to /Users/vadimfertik/Library/Caches/ms-playwright/ffmpeg-1011
+Downloading Chrome Headless Shell 151.0.7922.34 (playwright chromium-headless-shell v1234) from https://cdn.playwright.dev/builds/cft/151.0.7922.34/mac-arm64/chrome-headless-shell-mac-arm64.zip
+|                                                                                |   0% of 94.7 MiB
+|■■■■■■■■                                                                        |  10% of 94.7 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 94.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 94.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 94.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 94.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 94.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 94.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 94.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 94.7 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 94.7 MiB
+Chrome Headless Shell 151.0.7922.34 (playwright chromium-headless-shell v1234) downloaded to /Users/vadimfertik/Library/Caches/ms-playwright/chromium_headless_shell-1234
+[tests] Running Jest. Command-line filters apply only to this stage.
+(node:65036) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS backend server/__tests__/startup/runtimeStartup.test.js (11.328 s)
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityData.test.ts
+PASS frontend src/features/calendar/hooks/__tests__/useCalendarSync.test.ts
+PASS frontend src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts
+PASS frontend src/features/calendar/components/__tests__/TodayRehearsals.test.tsx
+PASS frontend src/features/calendar/components/__tests__/ActorSelector.test.tsx
+PASS frontend src/features/calendar/hooks/__tests__/useTimeRecommendations.test.ts
+PASS backend server/__tests__/routes/operationIpLimits.test.js
+PASS backend server/__tests__/routes/appleAuth.test.js
+PASS backend server/__tests__/routes/inviteLimits.test.js
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityDataAllDay.test.ts
+PASS frontend src/contexts/__tests__/UnreadContext.test.tsx
+PASS backend server/__tests__/routes/tokenRefreshTtl.test.js
+PASS backend server/__tests__/services/inviteRateLimit.test.js
+PASS backend server/__tests__/routes/membersAvailabilityBudget.test.js
+PASS backend server/__tests__/utils/appleAudience.test.js
+PASS backend server/__tests__/services/operationIpRateLimit.test.js
+PASS backend server/__tests__/routes/authLogin.test.js
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityDataMultiDay.test.ts
+PASS backend server/__tests__/errorHttp.test.js
+PASS frontend src/features/smart-planner/hooks/__tests__/useSmartPlannerLimits.test.ts
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityOffline.test.ts
+PASS backend server/__tests__/middleware/tokenTtl.test.js
+PASS backend server/__tests__/routes/rehearsalNotifications.test.js
+PASS frontend src/features/calendar/hooks/__tests__/useAddRehearsalForm.test.ts
+PASS backend server/__tests__/routes/adminStatus.test.js
+PASS backend server/__tests__/adminHttp.test.js
+PASS backend server/__tests__/routes/membersAvailabilityRange.test.js
+PASS backend server/__tests__/routes/notifications.test.js
+PASS backend server/__tests__/integration/adminStoredContent.test.js
+PASS backend server/__tests__/routes/availabilityBulk.test.js
+PASS backend server/__tests__/routes/memberRemoval.test.js
+PASS backend server/__tests__/routes/membershipNotifications.test.js
+PASS backend server/__tests__/routes/accountDeletionCleanup.test.js
+PASS backend server/__tests__/routes/authorization.test.js
+PASS frontend src/contexts/__tests__/SeenContext.test.tsx
+PASS backend server/__tests__/asyncRoutes.test.js
+PASS frontend src/features/calendar/hooks/__tests__/useRehearsals.test.ts
+PASS backend server/__tests__/integration/rehearsalParticipants.integration.test.js
+PASS frontend src/features/availability/components/editor/__tests__/TimeSlotsEditor.test.tsx
+PASS backend server/__tests__/appImport.test.js
+PASS backend server/__tests__/routes/pushTokenOwnership.test.js
+PASS backend server/__tests__/routes/rehearsalById.test.js
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts
+PASS frontend src/features/projects/hooks/__tests__/useInviteLink.test.ts
+PASS frontend src/shared/hooks/__tests__/useAutoCalendarSync.test.ts
+PASS backend server/__tests__/services/memberAvailabilityRateLimit.test.js
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityEditor.test.ts
+PASS backend server/__tests__/routes/projectDeletionCleanup.test.js
+PASS backend server/__tests__/integration/invites.integration.test.js
+PASS backend server/__tests__/routes/calendarMappingLookup.test.js
+PASS frontend src/features/smart-planner/components/__tests__/MemberFilter.test.tsx
+PASS frontend src/shared/components/__tests__/DateRangePicker.test.tsx
+PASS backend server/__tests__/routes/projectsInviteCode.test.js
+PASS backend server/__tests__/routes/htmlEscaping.test.js
+PASS backend server/__tests__/timezone.test.js
+PASS backend server/__tests__/integration/rsvp.integration.test.js
+PASS backend server/__tests__/middleware/asyncBoundary.test.js
+PASS frontend src/features/smart-planner/utils/__tests__/slotGenerator.test.ts
+PASS backend server/__tests__/middleware/jwtMiddleware.test.js
+PASS frontend src/__tests__/availabilityValidation.test.ts
+PASS backend server/__tests__/integration/projects.integration.test.js
+PASS backend server/__tests__/integration/reminderScheduler.integration.test.js
+PASS frontend src/shared/utils/__tests__/time.timezone.test.ts
+PASS backend server/__tests__/middleware/authFailure.test.js
+PASS backend server/__tests__/utils/names.test.js
+PASS frontend src/shared/services/calendar/__tests__/exportMatching.test.ts
+PASS backend server/__tests__/utils/googleAudience.test.js
+PASS backend server/__tests__/middleware/operationIpRateLimit.test.js
+PASS frontend src/__tests__/integration/rehearsalFlow.test.ts
+PASS frontend src/__tests__/integration/availabilityFlow.test.ts
+PASS frontend src/shared/services/calendar/__tests__/importScope.test.ts
+PASS backend server/__tests__/integration/calendarSync.integration.test.js
+PASS backend server/__tests__/integration/availability.integration.test.js
+PASS frontend src/features/availability/components/editor/__tests__/ModeSelector.test.tsx
+PASS backend server/__tests__/integration/rehearsals.integration.test.js
+PASS backend server/__tests__/integration/rsvpService.integration.test.js
+PASS frontend src/shared/services/calendar/__tests__/exportFailures.test.ts
+PASS frontend src/shared/hooks/__tests__/syncCost.test.ts
+PASS frontend src/shared/utils/__tests__/connectionCache.test.ts
+PASS backend server/__tests__/database/transaction.test.js
+PASS backend server/__tests__/utils/mailTokens.test.js
+PASS frontend src/features/smart-planner/utils/__tests__/availabilityMerger.test.ts
+PASS frontend src/__tests__/integration/authFlow.test.ts
+PASS frontend src/i18n/__tests__/plurals.test.ts
+PASS frontend src/shared/utils/__tests__/calendarStorageWrites.test.ts
+PASS frontend src/features/availability/utils/__tests__/displayedMode.test.ts
+PASS frontend src/shared/utils/__tests__/dataChanged.test.ts
+
+Test Suites: 88 passed, 88 total
+Tests:       1270 passed, 1270 total
+Snapshots:   0 total
+Time:        32.981 s, estimated 67 s
+[browser] Running mandatory admin DOM/CSP regression tests.
+TAP version 13
+# [admin-browser] untrusted admin API values remain literal text, even without CSP: fixture: starting
+# [admin-browser] untrusted admin API values remain literal text, even without CSP: fixture: document loaded
+# [admin-browser] untrusted admin API values remain literal text, even without CSP: cleanup: closing browser context
+# [admin-browser] untrusted admin API values remain literal text, even without CSP: cleanup: closing owned HTTP connections
+# [admin-browser] untrusted admin API values remain literal text, even without CSP: cleanup: complete
+# [admin-browser] production CSP loads admin assets, blocks inline execution and preserves per-response nonces: fixture: starting
+# Subtest: untrusted admin API values remain literal text, even without CSP
+ok 1 - untrusted admin API values remain literal text, even without CSP
+  ---
+  duration_ms: 5668.92025
+  type: 'test'
+  ...
+# [admin-browser] production CSP loads admin assets, blocks inline execution and preserves per-response nonces: fixture: document loaded
+# [admin-browser] production CSP loads admin assets, blocks inline execution and preserves per-response nonces: cleanup: closing browser context
+# [admin-browser] production CSP loads admin assets, blocks inline execution and preserves per-response nonces: cleanup: closing owned HTTP connections
+# [admin-browser] production CSP loads admin assets, blocks inline execution and preserves per-response nonces: cleanup: complete
+# [admin-browser] login, pagination, status, refresh, empty states and logout work under production CSP: fixture: starting
+# Subtest: production CSP loads admin assets, blocks inline execution and preserves per-response nonces
+ok 2 - production CSP loads admin assets, blocks inline execution and preserves per-response nonces
+  ---
+  duration_ms: 158.42275
+  type: 'test'
+  ...
+# [admin-browser] login, pagination, status, refresh, empty states and logout work under production CSP: fixture: document loaded
+# [admin-browser] login, pagination, status, refresh, empty states and logout work under production CSP: cleanup: closing browser context
+# [admin-browser] login, pagination, status, refresh, empty states and logout work under production CSP: cleanup: closing owned HTTP connections
+# [admin-browser] login, pagination, status, refresh, empty states and logout work under production CSP: cleanup: complete
+# [admin-browser] 401 returns to login and removes the stored credential: fixture: starting
+# Subtest: login, pagination, status, refresh, empty states and logout work under production CSP
+ok 3 - login, pagination, status, refresh, empty states and logout work under production CSP
+  ---
+  duration_ms: 1123.144625
+  type: 'test'
+  ...
+# [admin-browser] 401 returns to login and removes the stored credential: fixture: document loaded
+# [admin-browser] 401 returns to login and removes the stored credential: cleanup: closing browser context
+# [admin-browser] 401 returns to login and removes the stored credential: cleanup: closing owned HTTP connections
+# [admin-browser] 401 returns to login and removes the stored credential: cleanup: complete
+# Subtest: 401 returns to login and removes the stored credential
+ok 4 - 401 returns to login and removes the stored credential
+  ---
+  duration_ms: 213.378125
+  type: 'test'
+  ...
+# Subtest: context cleanup precedes server closure and releases an actual idle preconnect
+ok 5 - context cleanup precedes server closure and releases an actual idle preconnect
+  ---
+  duration_ms: 7.785167
+  type: 'test'
+  ...
+# Subtest: context cleanup failure still closes the owned server and fails the test boundary
+ok 6 - context cleanup failure still closes the owned server and fails the test boundary
+  ---
+  duration_ms: 2.2055
+  type: 'test'
+  ...
+# Subtest: a stalled context cleanup has a deadline and still closes the owned server
+ok 7 - a stalled context cleanup has a deadline and still closes the owned server
+  ---
+  duration_ms: 51.201042
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7511.82175
+[browser] Running mandatory admin error/retry/session regression tests.
+TAP version 13
+# Subtest: initial GET 500 stops loading and offers a visible section error and retry
+ok 1 - initial GET 500 stops loading and offers a visible section error and retry
+  ---
+  duration_ms: 342.987083
+  type: 'test'
+  ...
+# Subtest: failed PATCH reports an unconfirmed change and does not silently reload reports
+ok 2 - failed PATCH reports an unconfirmed change and does not silently reload reports
+  ---
+  duration_ms: 252.864209
+  type: 'test'
+  ...
+# Subtest: each section recovers from an initial failure through its own Retry button
+ok 3 - each section recovers from an initial failure through its own Retry button
+  ---
+  duration_ms: 849.478833
+  type: 'test'
+  ...
+# Subtest: network, non-JSON, invalid JSON and malformed successful GET responses show retryable errors
+ok 4 - network, non-JSON, invalid JSON and malformed successful GET responses show retryable errors
+  ---
+  duration_ms: 1311.397791
+  type: 'test'
+  ...
+# Subtest: failed refresh preserves each confirmed section, labels it stale and retries only that section
+ok 5 - failed refresh preserves each confirmed section, labels it stale and retries only that section
+  ---
+  duration_ms: 554.441125
+  type: 'test'
+  ...
+# Subtest: failed users and reports pagination retain the confirmed page and Retry targets the failed offset
+ok 6 - failed users and reports pagination retain the confirmed page and Retry targets the failed offset
+  ---
+  duration_ms: 451.002375
+  type: 'test'
+  ...
+# Subtest: late pagination responses cannot overwrite a newer Refresh even when cancellation is ineffective
+ok 7 - late pagination responses cannot overwrite a newer Refresh even when cancellation is ineffective
+  ---
+  duration_ms: 791.2655
+  type: 'test'
+  ...
+# Subtest: PATCH transport, HTTP, JSON and acknowledgement failures retain the confirmed status without retrying
+ok 8 - PATCH transport, HTTP, JSON and acknowledgement failures retain the confirmed status without retrying
+  ---
+  duration_ms: 1571.244959
+  type: 'test'
+  ...
+# Subtest: a pending PATCH disables its row and commits the status only after a successful acknowledgement
+ok 9 - a pending PATCH disables its row and commits the status only after a successful acknowledgement
+  ---
+  duration_ms: 270.266042
+  type: 'test'
+  ...
+# Subtest: a committed PATCH with a lost response stays unconfirmed until an explicit report reload
+ok 10 - a committed PATCH with a lost response stays unconfirmed until an explicit report reload
+  ---
+  duration_ms: 292.977459
+  type: 'test'
+  ...
+# Subtest: an acknowledged PATCH followed by a failed GET reports saved status and a stale list separately
+ok 11 - an acknowledged PATCH followed by a failed GET reports saved status and a stale list separately
+  ---
+  duration_ms: 310.670583
+  type: 'test'
+  ...
+# Subtest: current-session GET and PATCH 401 responses sign out and remove the old dashboard data
+ok 12 - current-session GET and PATCH 401 responses sign out and remove the old dashboard data
+  ---
+  duration_ms: 550.708125
+  type: 'test'
+  ...
+# Subtest: late prior-session GET success cannot repopulate data after logout and a new login with the same token
+ok 13 - late prior-session GET success cannot repopulate data after logout and a new login with the same token
+  ---
+  duration_ms: 446.061083
+  type: 'test'
+  ...
+# Subtest: late prior-session 401 cannot clear a new login even when it reuses the identical token
+ok 14 - late prior-session 401 cannot clear a new login even when it reuses the identical token
+  ---
+  duration_ms: 467.128542
+  type: 'test'
+  ...
+# Subtest: a late prior-session PATCH acknowledgement cannot start a refresh in the new session
+ok 15 - a late prior-session PATCH acknowledgement cannot start a refresh in the new session
+  ---
+  duration_ms: 448.653792
+  type: 'test'
+  ...
+# Subtest: reading another reports page cannot resolve an unconfirmed write to a row absent from that page
+ok 16 - reading another reports page cannot resolve an unconfirmed write to a row absent from that page
+  ---
+  duration_ms: 388.590041
+  type: 'test'
+  ...
+# Subtest: completed success feedback does not accumulate across subsequent writes or reads
+ok 17 - completed success feedback does not accumulate across subsequent writes or reads
+  ---
+  duration_ms: 413.978917
+  type: 'test'
+  ...
+# Subtest: real cross-tab logout and login clear old data while preserving the new shared session and ignoring old replies
+ok 18 - real cross-tab logout and login clear old data while preserving the new shared session and ignoring old replies
+  ---
+  duration_ms: 605.036875
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10625.614542
+[browser] Running mandatory invite fallback/CSP regression tests.
+TAP version 13
+# ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+#    Generate a secret: openssl rand -base64 32
+#    Set JWT_SECRET in the process environment or an explicit SERVER_ENV_FILE
+# Subtest: real invite route retains strict CSP, styling and the timed fallback
+ok 1 - real invite route retains strict CSP, styling and the timed fallback
+  ---
+  duration_ms: 280.966583
+  type: 'test'
+  ...
+# Subtest: manual mouse and keyboard activation preserve the short invite path under CSP
+ok 2 - manual mouse and keyboard activation preserve the short invite path under CSP
+  ---
+  duration_ms: 157.258625
+  type: 'test'
+  ...
+# Subtest: manual mouse and keyboard activation preserve the legacy 32-hex invite path under CSP
+ok 3 - manual mouse and keyboard activation preserve the legacy 32-hex invite path under CSP
+  ---
+  duration_ms: 141.332125
+  type: 'test'
+  ...
+# Subtest: manual native link remains usable when JavaScript is disabled
+ok 4 - manual native link remains usable when JavaScript is disabled
+  ---
+  duration_ms: 103.406375
+  type: 'test'
+  ...
+# Subtest: manual native link remains usable when JavaScript is unavailable
+ok 5 - manual native link remains usable when JavaScript is unavailable
+  ---
+  duration_ms: 110.510291
+  type: 'test'
+  ...
+# Subtest: Expo links preserve their encoded invite path and retain a native app link
+ok 6 - Expo links preserve their encoded invite path and retain a native app link
+  ---
+  duration_ms: 166.275584
+  type: 'test'
+  ...
+# Subtest: untrusted invite codes remain encoded data without creating or executing markup
+ok 7 - untrusted invite codes remain encoded data without creating or executing markup
+  ---
+  duration_ms: 133.528
+  type: 'test'
+  ...
+# Subtest: malformed or repeated Expo host parameters cannot change the native fallback
+ok 8 - malformed or repeated Expo host parameters cannot change the native fallback
+  ---
+  duration_ms: 638.586208
+  type: 'test'
+  ...
+# Subtest: Russian browser language localizes the status, fallback and both manual links
+ok 9 - Russian browser language localizes the status, fallback and both manual links
+  ---
+  duration_ms: 111.363667
+  type: 'test'
+  ...
+# Subtest: visibility changes and page restoration cancel a pending second automatic scheme attempt
+ok 10 - visibility changes and page restoration cancel a pending second automatic scheme attempt
+  ---
+  duration_ms: 426.488125
+  type: 'test'
+  ...
+# Subtest: the page policy still blocks injected inline scripts and event handlers
+ok 11 - the page policy still blocks injected inline scripts and event handlers
+  ---
+  duration_ms: 120.114625
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3420.003958
+[browser] Running mandatory persisted-content DOM/CSP regression tests.
+(node:65527) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS __tests__/integration/adminStoredContent.test.js
+  Admin stored text through authenticated writes and real database reads
+    ✓ preserves image handler in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (287 ms)
+    ✓ preserves SVG handler in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (221 ms)
+    ✓ preserves table/script delimiters in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (217 ms)
+    ✓ preserves literal markup, entities and Unicode in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (233 ms)
+    ✓ returns legacy email text literally when a report author has no name [persisted data -> real API -> Chromium DOM/CSP] (212 ms)
+    ✓ requires user authentication for writes and admin authentication for reads (8 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        1.936 s
+Ran all test suites within paths "__tests__/integration/adminStoredContent.test.js".
+test exit=0

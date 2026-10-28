@@ -1,0 +1,25 @@
+[93m[4mUnused files[24m[39m (5)
+server/public/admin/dashboard.js
+server/public/i18n.js
+server/public/legal.js
+server/scripts/migrate.js
+server/utils/mailer.js
+[93m[4mUnused devDependencies[24m[39m (1)
+node:path:1288
+    validateString(to, 'to');
+    ^
+
+TypeError [ERR_INVALID_ARG_TYPE]: The "to" argument must be of type string. Received undefined
+    at Object.relative (node:path:1288:5)
+    at relative (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/knip/dist/util/path.js:9:52)
+    at getIssueLine (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/knip/dist/reporters/util/util.js:16:68)
+    at logIssueRecord (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/knip/dist/reporters/compact.js:10:21)
+    at default (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/knip/dist/reporters/compact.js:33:21)
+    at runReporters (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/knip/dist/util/reporter.js:17:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async run (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/knip/dist/cli.js:54:9)
+    at async file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/node_modules/knip/dist/cli.js:96:1 {
+  code: 'ERR_INVALID_ARG_TYPE'
+}
+
+Node.js v20.19.2

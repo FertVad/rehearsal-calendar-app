@@ -1,0 +1,32 @@
+# Cause fix 20 (GC01, GC02, GC03) - e2e flow 33, red before
+# Tree: the fix's files put back as at a8c249d (the switch's testID only):
+#   git restore --source=a8c249d -- src/contexts/AuthContext.tsx \
+#     src/features/onboarding/screens/NotificationsScreen.tsx \
+#     src/features/profile/screens/ProfileScreen.tsx \
+#     src/shared/hooks/useNotifications.ts src/shared/services/notifications.ts
+# Flow and seed at the fix (e2e/flows/33-profile-push-not-registered.yaml, polonius in e2e/seed.mjs).
+# Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/33-profile-push-not-registered.yaml
+# Date: 2026-10-26
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/33-profile-push-not-registered.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] The notifications switch tells what this phone gets (1m 54s) (Assertion is false: ".*This device cannot receive push notifications.*" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-10-26T06:57:18.020Z  tapped "id profile-notifications" again: no ".*This device cannot receive push notifications.*" after the first tap
+
+# The old profile turned the switch off and on with no word: the second tap is
+# tap-and-see's own, taken because the first left no message on screen.

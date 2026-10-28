@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
   TextInput,
   Alert,
   FlatList,
@@ -22,6 +21,9 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { createProjectScreenStyles as styles } from '../styles';
+import { AppModal } from '../../../shared/components/AppModal';
+import { ModalSheet } from '../../../shared/components/ModalSheet';
+import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 
 type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
 
@@ -38,6 +40,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
   );
   const [timezonePickerVisible, setTimezonePickerVisible] = useState(false);
   const [creating, setCreating] = useState(false);
+  const idempotency = useIdempotencyKey();
 
   const getTimezoneLabel = (value: string) => getTzLabel(value, language);
 
@@ -49,15 +52,21 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
     setCreating(true);
     try {
+      const name = projectName.trim();
+      const description = projectDescription.trim() || undefined;
+      // The same form sent again after a lost answer gets the project the
+      // first try made, not a second one (useIdempotencyKey).
       const newProject = await createProject(
-        projectName.trim(),
-        projectDescription.trim() || undefined,
+        idempotency.keyFor({ name, description, projectTimezone }),
+        name,
+        description,
         projectTimezone,
       );
+      idempotency.settle();
 
       // Close the modal and drop the user straight into the new project
       // so they can invite members / set up rehearsals without an extra tap.
-      navigation.navigate('MainTabs' as any, {
+      navigation.navigate('MainTabs', {
         screen: 'Projects',
         params: {
           screen: 'ProjectDetail',
@@ -79,14 +88,14 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>{t.projects.createProject}</Text>
           <View style={styles.headerRight} />
         </View>
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Project Name */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.projects.projectName}</Text>
@@ -160,21 +169,16 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
       </KeyboardAvoidingView>
 
       {/* Timezone Picker Modal */}
-      <Modal
+      <AppModal
         visible={timezonePickerVisible}
-        transparent
         animationType="slide"
         onRequestClose={() => setTimezonePickerVisible(false)}
       >
-        <TouchableOpacity
-          style={styles.timezoneModalOverlay}
-          activeOpacity={1}
-          onPress={() => setTimezonePickerVisible(false)}
-        >
+        <ModalSheet overlayStyle={styles.timezoneModalOverlay} onClose={() => setTimezonePickerVisible(false)}>
           <View style={styles.timezoneModalContent}>
             <View style={styles.timezoneModalHeader}>
               <Text style={styles.timezoneModalTitle}>{t.projects.selectTimezone}</Text>
-              <TouchableOpacity onPress={() => setTimezonePickerVisible(false)}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => setTimezonePickerVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -208,8 +212,8 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
               style={styles.timezoneList}
             />
           </View>
-        </TouchableOpacity>
-      </Modal>
+        </ModalSheet>
+      </AppModal>
     </SafeAreaView>
   );
 }

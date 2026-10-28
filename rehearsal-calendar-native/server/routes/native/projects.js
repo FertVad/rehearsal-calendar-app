@@ -1,13 +1,16 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
 import { notifyProjectDeleted } from '../../services/notifications/pushNotificationService.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
+import { idempotencyKeyOf, IdempotencyRefused, once } from '../../services/idempotency.js';
+import { lockProject } from '../../services/rehearsals/projectLock.js';
 
 const router = Router();
 
 // GET /api/native/projects - Get user's projects
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const accountId = req.userId;
 
@@ -51,12 +54,12 @@ router.get('/', requireAuth, async (req, res) => {
     console.error('Error fetching projects:', error);
     res.status(500).json({ error: 'Failed to fetch projects' });
   }
-});
+}));
 
 // POST /api/native/projects - Create new project
 // Free for everyone: the paid tier is gone. If money is ever taken it goes
 // through App Store in-app purchase — see docs/app-store-release.md
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const accountId = req.userId;
     const { name, description, timezone } = req.body;
@@ -65,40 +68,47 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Project name is required' });
     }
 
-    // Create project in native_projects table
+    // The project and its owner, one transaction (R4: B02). Committed apart, a
+    // failure between them left a project nobody owns — nobody could see,
+    // delete or hand it on. A repeat with the same key gets the same project
+    // back instead of a second one (services/idempotency.js).
+    const key = idempotencyKeyOf(req);
     const projectTimezone = timezone || DEFAULT_TIMEZONE;
-    const newProject = await db.get(
-      'INSERT INTO native_projects (name, description, timezone, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING *',
-      [name, description || null, projectTimezone]
-    );
-
-    const projectId = newProject.id;
-
-    // Add creator as owner member
-    await db.run(
-      'INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at) VALUES ($1, $2, $3, $4, NOW(), NOW())',
-      [projectId, accountId, 'owner', 'active']
-    );
-
-    res.status(201).json({
-      project: {
-        id: String(newProject.id),
-        name: newProject.name,
-        description: newProject.description || '',
-        timezone: newProject.timezone || DEFAULT_TIMEZONE,
+    const { response: project } = await db.transaction((tx) => once(tx, {
+      userId: accountId,
+      key,
+      operation: 'project.create',
+      request: req.body,
+    }, async () => {
+      const created = await tx.get(
+        'INSERT INTO native_projects (name, description, timezone, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING *',
+        [name, description || null, projectTimezone]
+      );
+      await tx.run(
+        'INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at) VALUES ($1, $2, $3, $4, NOW(), NOW())',
+        [created.id, accountId, 'owner', 'active']
+      );
+      return {
+        id: String(created.id),
+        name: created.name,
+        description: created.description || '',
+        timezone: created.timezone || DEFAULT_TIMEZONE,
         is_admin: true,
-        created_at: newProject.created_at,
-        updated_at: newProject.updated_at,
-      },
-    });
+        created_at: created.created_at,
+        updated_at: created.updated_at,
+      };
+    }));
+
+    res.status(201).json({ project });
   } catch (error) {
+    if (error instanceof IdempotencyRefused) return res.status(error.status).json(error.body);
     console.error('Error creating project:', error);
     res.status(500).json({ error: 'Failed to create project' });
   }
-});
+}));
 
 // GET /api/native/projects/:projectId - Get single project
-router.get('/:projectId', requireAuth, async (req, res) => {
+router.get('/:projectId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const accountId = req.userId;
     const projectId = req.params.projectId;
@@ -135,10 +145,10 @@ router.get('/:projectId', requireAuth, async (req, res) => {
     console.error('Error fetching project:', error);
     res.status(500).json({ error: 'Failed to fetch project' });
   }
-});
+}));
 
 // DELETE /api/native/projects/:projectId - Delete project
-router.delete('/:projectId', requireAuth, async (req, res) => {
+router.delete('/:projectId', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { projectId } = req.params;
@@ -181,16 +191,26 @@ router.delete('/:projectId', requireAuth, async (req, res) => {
     // returns availability with no source filter, so those hours would make
     // someone look unavailable in every other project's planner, forever.
     //
-    // Must run before the project, or the subselect has nothing left to find.
-    await db.run(
-      `DELETE FROM native_user_availability
-       WHERE source = 'rehearsal'
-       AND external_event_id IN (SELECT CAST(id AS TEXT) FROM native_rehearsals WHERE project_id = $1)`,
-      [projectId]
-    );
+    // Must run before the project, or the subselect has nothing left to find —
+    // and in the same transaction (R4: B02): committed alone, a failure of the
+    // delete below left every rehearsal standing with nobody busy for it.
+    //
+    // The project row is locked first (projectLock.js): a rehearsal still being
+    // created is committed before the slots are looked for, not cascaded away
+    // afterwards with its slots left behind.
+    await db.transaction(async (tx) => {
+      await lockProject(tx, projectId, 'delete');
 
-    // Delete project (CASCADE will automatically delete all related data)
-    await db.run('DELETE FROM native_projects WHERE id = $1', [projectId]);
+      await tx.run(
+        `DELETE FROM native_user_availability
+         WHERE source = 'rehearsal'
+         AND external_event_id IN (SELECT CAST(id AS TEXT) FROM native_rehearsals WHERE project_id = $1)`,
+        [projectId]
+      );
+
+      // Delete project (CASCADE will automatically delete all related data)
+      await tx.run('DELETE FROM native_projects WHERE id = $1', [projectId]);
+    });
 
     // Send push notifications to all members
     if (members.length > 0) {
@@ -210,6 +230,6 @@ router.delete('/:projectId', requireAuth, async (req, res) => {
     console.error('Error deleting project:', error);
     res.status(500).json({ error: 'Failed to delete project' });
   }
-});
+}));
 
 export default router;

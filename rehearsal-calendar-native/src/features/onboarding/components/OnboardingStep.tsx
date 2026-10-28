@@ -44,6 +44,7 @@ export default function OnboardingStep({
         <View style={styles.headerSpacer} />
         {onSkip && (
           <TouchableOpacity
+            testID="onboarding-skip"
             onPress={() => {
               hapticLight();
               onSkip();

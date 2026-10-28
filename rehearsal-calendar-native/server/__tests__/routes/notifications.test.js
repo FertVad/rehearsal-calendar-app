@@ -173,6 +173,121 @@ describe('Notification inbox', () => {
     expect(res.status).toBe(400);
   });
 
+  // The whole inbox is asked for by name (cause fix 21: NI06). An empty list
+  // named nothing and marked everything, the unseen ones included.
+  describe('what "read" covers', () => {
+    it('marks nothing for an empty list', async () => {
+      await send([testData.adminId]);
+      await send([testData.adminId]);
+
+      const res = await request(app)
+        .post('/api/native/notifications/read')
+        .set(...auth(testData.adminId))
+        .send({ ids: [] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.unreadCount).toBe(2);
+      const after = await request(app).get('/api/native/notifications').set(...auth(testData.adminId));
+      expect(after.body.notifications.every((n) => !n.read)).toBe(true);
+    });
+
+    it('marks the whole inbox when asked for all', async () => {
+      await send([testData.adminId]);
+      await send([testData.adminId]);
+
+      const res = await request(app)
+        .post('/api/native/notifications/read')
+        .set(...auth(testData.adminId))
+        .send({ all: true });
+
+      expect(res.status).toBe(200);
+      expect(res.body.unreadCount).toBe(0);
+    });
+
+    it.each([
+      ['ids that are not ids', { ids: ['1; DROP', 2] }],
+      ['ids that are not whole', { ids: [1.5] }],
+      ['both all and ids', { all: true, ids: [1] }],
+      ['all that is not true', { all: 'yes' }],
+      // Only `{}` is the old builds' "all"; nothing else falls through to it.
+      ['an empty list for a body', []],
+      ['a list of ids for a body', [1]],
+      ['a key it does not know', { id: 1 }],
+      ['ids beside a key it does not know', { ids: [1], also: 'all' }],
+    ])('refuses %s, marking nothing', async (_, body) => {
+      await send([testData.adminId]);
+
+      const res = await request(app)
+        .post('/api/native/notifications/read')
+        .set(...auth(testData.adminId))
+        .send(body);
+
+      expect(res.status).toBe(400);
+      const after = await request(app).get('/api/native/notifications').set(...auth(testData.adminId));
+      expect(after.body.unreadCount).toBe(1);
+    });
+
+    it('deletes nothing for an empty list', async () => {
+      await send([testData.adminId]);
+
+      const { deleted } = await store.deleteNotifications(testData.adminId, []);
+
+      expect(deleted).toBe(0);
+      const after = await request(app).get('/api/native/notifications').set(...auth(testData.adminId));
+      expect(after.body.notifications).toHaveLength(1);
+    });
+  });
+
+  // Page after page to the oldest (cause fix 21: NI01). The app read only the
+  // newest fifty and had no way to the rest.
+  describe('pages', () => {
+    const page = (userId, query) =>
+      request(app).get('/api/native/notifications').query(query).set(...auth(userId));
+
+    it('walks to the oldest, each once, in order', async () => {
+      // A fan-out writes its rows in the same millisecond: only the id orders them.
+      for (const title of ['1', '2', '3', '4', '5']) await send([testData.adminId], { title });
+
+      const seen = [];
+      let cursor;
+      for (let n = 0; n < 5; n++) {
+        const res = await page(testData.adminId, { limit: 2, ...(cursor ? { cursor } : {}) });
+        expect(res.status).toBe(200);
+        seen.push(...res.body.notifications.map((item) => item.title));
+        cursor = res.body.nextCursor;
+        if (!cursor) break;
+      }
+
+      expect(seen).toEqual(['5', '4', '3', '2', '1']);
+      expect(cursor).toBeNull();
+    });
+
+    it('says there is no more when the page holds the last', async () => {
+      await send([testData.adminId]);
+
+      const res = await page(testData.adminId, { limit: 2 });
+      expect(res.body.notifications).toHaveLength(1);
+      expect(res.body.nextCursor).toBeNull();
+    });
+
+    it('skips nothing when one on an earlier page is deleted', async () => {
+      for (const title of ['1', '2', '3', '4']) await send([testData.adminId], { title });
+
+      const first = await page(testData.adminId, { limit: 2 });
+      await request(app)
+        .delete(`/api/native/notifications/${first.body.notifications[0].id}`)
+        .set(...auth(testData.adminId));
+      const second = await page(testData.adminId, { limit: 2, cursor: first.body.nextCursor });
+
+      expect(second.body.notifications.map((item) => item.title)).toEqual(['2', '1']);
+    });
+
+    it('refuses a cursor it did not issue', async () => {
+      const res = await page(testData.adminId, { cursor: 'tomorrow' });
+      expect(res.status).toBe(400);
+    });
+  });
+
   describe('deleting', () => {
     it('removes one and says what is left unread', async () => {
       await send([testData.adminId]);

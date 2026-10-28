@@ -1,0 +1,46 @@
+Running one project: backend
+(node:86772) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL backend rehearsal-calendar-native/server/__tests__/routes/inviteLimits.test.js
+  ✕ the legacy join address cannot escape the 20-request IP budget (61 ms)
+  ✕ canonical preview and legacy redemption consume the same IP budget (22 ms)
+
+  ● the legacy join address cannot escape the 20-request IP budget
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 429
+    Received: 404
+
+      47 |   const before = get.mock.calls.filter(wasInviteLookup).length;
+      48 |   const response = await http('/api/native/projects/ZZZZZZZZ/join', { method: 'post' });
+    > 49 |   expect(response.status).toBe(429);
+         |                           ^
+      50 |   expect(get.mock.calls.filter(wasInviteLookup)).toHaveLength(before);
+      51 |   expect(run.mock.calls.some(([sql]) => /INSERT INTO native_project_members|UPDATE native_project_members/.test(sql))).toBe(false);
+      52 | });
+
+      at Object.<anonymous> (server/__tests__/routes/inviteLimits.test.js:49:27)
+
+  ● canonical preview and legacy redemption consume the same IP budget
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 429
+    Received: 404
+
+      59 |   const before = get.mock.calls.filter(wasInviteLookup).length;
+      60 |   const response = await http('/api/native/projects/ZZZZZZZZ/join', { method: 'post' });
+    > 61 |   expect(response.status).toBe(429);
+         |                           ^
+      62 |   expect(get.mock.calls.filter(wasInviteLookup)).toHaveLength(before);
+      63 |   expect(Number(response.headers['retry-after'])).toBeGreaterThanOrEqual(1);
+      64 |   expect(Number(response.headers['retry-after'])).toBeLessThanOrEqual(60);
+
+      at Object.<anonymous> (server/__tests__/routes/inviteLimits.test.js:61:27)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 total
+Snapshots:   0 total
+Time:        0.827 s
+Ran all test suites within paths "rehearsal-calendar-native/server/__tests__/routes/inviteLimits.test.js".

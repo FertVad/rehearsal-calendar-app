@@ -1,0 +1,64 @@
+# A tap whose result the flow waits for, taken once more if the simulator lost
+# it (T-207). The simulator drops about one tap in 250 - backboardd registers
+# XCTest's digitizer for that tap twice and cancels the touch - and Maestro
+# reports every tap done, so the flow would wait for a result that never comes
+# (docs/e2e.md, "A lost tap").
+#
+#   env: TAP_ID (an id) or TAP (a text, regex) - what to tap
+#        SEE     - a text (regex) the tap brings on screen
+#        WAIT_MS - how long the flow already waited for it
+#
+# Tap, wait for SEE; if it is not there, say so to the run (e2e/scripts/
+# tap-again.js, printed after the flows) and tap once more - never more - and
+# wait for SEE again, which must come. Only for a tap that can be taken twice
+# without harm: the second comes only when the first left no trace on screen.
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      true: ${typeof TAP_ID !== 'undefined'}
+    commands:
+      - tapOn:
+          id: ${TAP_ID}
+- runFlow:
+    when:
+      true: ${typeof TAP_ID === 'undefined'}
+    commands:
+      - tapOn: ${TAP}
+- extendedWaitUntil:
+    visible: ${SEE}
+    timeout: ${WAIT_MS}
+    optional: true
+# Asked as "is it there", not "is it gone": notVisible waits seven seconds for
+# SEE to leave, so every tap that worked paid them, and a SEE that leaves of
+# itself within them was tapped a second time.
+- evalScript: ${output.tapSeen = false}
+- runFlow:
+    when:
+      visible: ${SEE}
+    commands:
+      - evalScript: ${output.tapSeen = true}
+- runFlow:
+    when:
+      true: ${!output.tapSeen}
+    commands:
+      - runScript:
+          file: ../scripts/tap-again.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+            TAP: "${typeof TAP_ID !== 'undefined' ? 'id ' + TAP_ID : TAP}"
+            SEE: ${SEE}
+      - runFlow:
+          when:
+            true: ${typeof TAP_ID !== 'undefined'}
+          commands:
+            - tapOn:
+                id: ${TAP_ID}
+      - runFlow:
+          when:
+            true: ${typeof TAP_ID === 'undefined'}
+          commands:
+            - tapOn: ${TAP}
+- extendedWaitUntil:
+    visible: ${SEE}
+    timeout: ${WAIT_MS}

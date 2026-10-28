@@ -1,0 +1,31 @@
+Working directory: /private/tmp/reh-r2-legacy-implementation
+
+Historical source capture (read/copy only):
+git -C /Users/vadimfertik/Desktop/reh_app rev-parse HEAD
+actual stdout: aa00ffd5874b3b5e4c402b42b120ceb876e637e2
+Three original files copied from rehearsal-calendar-native/server/migrations/
+into historical/: 001-add-oauth-providers.sql,
+migrate-rehearsals-to-timestamptz.sql, migrate-availability-to-timestamptz.sql.
+Source bytes/hashes retained. No old runner was imported or executed.
+
+Actual before invocation:
+env -i PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin:/usr/sbin:/sbin /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node --unhandled-rejections=strict runner.mjs --before > before.txt 2>&1
+actual exit: 1
+desired assertion summary: 1 control passed; 4 regressions failed
+cleanup: owned temporary PostgreSQL removed
+
+Syntax checks:
+node --check runner.mjs
+node --check forward/draftTransition.mjs
+node --check tests/after.mjs
+actual exit: 0
+
+Actual after invocation:
+env -i PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin:/usr/sbin:/sbin /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node --unhandled-rejections=strict runner.mjs --after > after-first.txt 2>&1
+actual exit: 0
+desired assertion summary: 26 passed; 0 failed
+cleanup: owned temporary PostgreSQL removed
+after.txt is an exact copy of this first passing after-first.txt; no second run claimed.
+
+No Docker image pull, production URL, .env, repository entrypoint, old runner,
+remote workflow, deployment, reminder schedule or production migration used.

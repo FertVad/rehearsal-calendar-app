@@ -1,0 +1,5 @@
+
+> rehearsal-calendar-native@1.0.0 test
+> node server/scripts/test.mjs all
+
+[tests] ENOENT: no such file or directory, access '/private/tmp/reh-h01-clean.mBtJ2S/nonexistent-chromium'

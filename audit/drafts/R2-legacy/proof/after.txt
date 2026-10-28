@@ -1,0 +1,30 @@
+{"harness":"FM01/FM02 draft","mode":"--after","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","ownedLoopback":true,"historicalCaptureCommit":"aa00ffd5874b3b5e4c402b42b120ceb876e637e2","hashes":{"historical/001-add-oauth-providers.sql":"32cd36a97d571a757c16177dce46fa395cc77d25b2412379a3d734673971e010","historical/migrate-availability-to-timestamptz.sql":"d3831869791c531bb5f25da753d4447213968914e01f68e0348b2f0f7d7a249f","historical/migrate-rehearsals-to-timestamptz.sql":"abead4aa9db43253e2168243ea5f6d6f3a95289aa5fe403f33ce66fba9a15325","forward/draftTransition.mjs":"be716327656195d5ee8d384e56fd8b991a87a6e2ceed781475b681e8a36a78b1","forward/fm01-utc-instants-v1.sql":"cc629e939d06dc2d0df2e595b13da906c0d603c62dee6cd356b5ceea5eb52a18","forward/fm02-email-backfill-v1.sql":"f2456fbdb56f5323daa68a5a1b94ade6b8f5796442d91bf8bd94d188cff1d816","tests/after.mjs":"3046a064e816a5b41cca5bf9c721520392664aa3c8fae56758f4d398712dd2c7","tests/before.mjs":"dd80a9dbaf85caeed871ce7bf2b0fc31038021596a19ecf0e0cc416f49e54591","tests/fixture.mjs":"8d01f96be5b526156b6d1af4fc2826b96231e54b36083cca08e7ce792a72b864"}}
+{"name":"FM01 explicit SQL preserves UTC epochs/source/precision under UTC","outcome":"PASS"}
+{"name":"FM01 explicit SQL preserves UTC epochs/source/precision under Asia/Jerusalem","outcome":"PASS"}
+{"name":"FM01 explicit SQL preserves UTC epochs/source/precision under America/Los_Angeles","outcome":"PASS"}
+{"name":"FM01 start_filled refuses unchanged","outcome":"PASS"}
+{"name":"FM01 end_filled refuses unchanged","outcome":"PASS"}
+{"name":"FM01 both_filled refuses unchanged","outcome":"PASS"}
+{"name":"FM01 bad_type refuses unchanged","outcome":"PASS"}
+{"name":"FM01 equal_time refuses unchanged","outcome":"PASS"}
+{"name":"FM01 null_flag refuses unchanged","outcome":"PASS"}
+{"name":"FM01 infinite refuses unchanged","outcome":"PASS"}
+{"name":"FM01 hour24 refuses unchanged","outcome":"PASS"}
+{"name":"FM01 data and DDL roll back on post-SQL pre-history failure","outcome":"PASS"}
+{"name":"FM01 source mutation detected and rolled back by SQL preservation check","outcome":"PASS"}
+{"name":"FM01 missing target schema drift is not silently repaired after history","outcome":"PASS"}
+{"name":"FM02 real password bytes, existing registry and OAuth identities preserved; repeat does not heal unlink","outcome":"PASS"}
+{"name":"FM02 duplicates refuses with full pre-state preserved","outcome":"PASS"}
+{"name":"FM02 subject refuses with full pre-state preserved","outcome":"PASS"}
+{"name":"FM02 stale refuses with full pre-state preserved","outcome":"PASS"}
+{"name":"FM02 mismatch refuses with full pre-state preserved","outcome":"PASS"}
+{"name":"FM02 wrong_index refuses with full pre-state preserved","outcome":"PASS"}
+{"name":"FM02 long_email refuses with full pre-state preserved","outcome":"PASS"}
+{"name":"FM02 index, inserted rows and history roll back together and recover","outcome":"PASS"}
+{"name":"FM02 two migration callers serialize and explicit busy retry is unchanged","outcome":"PASS"}
+{"name":"FM02 index arbitrates actual INSERT races without migration advisory lock","outcome":"PASS"}
+{"name":"FM02 locks user writes through postcondition and commit, then releases them","outcome":"PASS"}
+{"name":"FM01 held writer causes bounded lock refusal with no target/history writes","outcome":"PASS"}
+{"passed":26,"failed":0,"outcome":"PASS"}
+{"mode":"--after","actualExit":0,"signal":null}
+Cleanup: owned temporary PostgreSQL removed

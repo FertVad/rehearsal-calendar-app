@@ -1,0 +1,68 @@
+{
+  "verifiedAt": "2026-09-18T18:48:19.797737+00:00",
+  "sourceCommit": "0dc7666b6f66c049d436bbe5c384102e0fb6aca7",
+  "sourceTree": "b7e2443c3de0afd76c1ec7c563749962aa023321",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "postgres": "15.13",
+  "postgresImage": "sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0",
+  "environment": "env -i; explicit Node22 PATH; synthetic JWT_SECRET; owned Chromium cache reused; owned local Docker PostgreSQL; .env not loaded",
+  "ownedContainersAfterRun": 0,
+  "production": "NOT_RUN",
+  "physicalDevice": "NOT_RUN: real Apple/provider/device not part of offline cryptographic proof; H02 DEV-15 still required",
+  "findingStatus": "READY_FOR_CHECK",
+  "ownedBrowserCacheAfterRun": "retained for continuing stages",
+  "results": {
+    "cryptoBefore": {
+      "exitCode": 1,
+      "failedTests": 2,
+      "scope": "missing/empty audience filtered real-crypto reproducer",
+      "sourceCommit": "7588ab861518c0c3988ad07443e9e5c4a71059ae"
+    },
+    "httpBefore": {
+      "exitCode": 1,
+      "failedTests": 2,
+      "scope": "initial HTTP reproducer, linked synthetic user and wrong-app real RSA token",
+      "sourceCommit": "7588ab861518c0c3988ad07443e9e5c4a71059ae"
+    },
+    "cryptoAfter": {
+      "exitCode": 0,
+      "passedTests": 42
+    },
+    "httpAfter": {
+      "exitCode": 0,
+      "passedTests": 28
+    },
+    "checkFinal": {
+      "exitCode": 0,
+      "jestSuites": 82,
+      "jestTests": 1142,
+      "adminBrowserTests": 4,
+      "adminFailureBrowserTests": 18,
+      "inviteBrowserTests": 11,
+      "persistedTests": 6
+    },
+    "postgresFinal": {
+      "exitCode": 0,
+      "passedScenarios": [
+        "controls",
+        "A02",
+        "B03",
+        "B04",
+        "H04"
+      ],
+      "knownDefects": [
+        "F01",
+        "B02",
+        "D01"
+      ],
+      "externalConnections": 0
+    }
+  },
+  "deploymentConfiguration": "NOT_RUN: mandatory OPS-IA01"
+}

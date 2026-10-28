@@ -59,6 +59,8 @@ export interface RehearsalsTranslations {
   loadAvailabilityError: string;
   projectNotSelected: string;
   endTimeError: string;
+  /** Beside an end time that is on the day after the start. */
+  endsNextDay: string;
   scheduleConflict: string;
   scheduleConflictMessage: string;
   createAnyway: string;
@@ -66,7 +68,13 @@ export interface RehearsalsTranslations {
   rehearsalCreated: string;
   rehearsalUpdated: string;
   updateError: string;
+  loadRehearsalError: string;
+  participantsLeft: string;
+  participantsLoading: string;
+  availabilityChecking: string;
   seenError: string;
+  /** The eye on a rehearsal, for VoiceOver: it is only an icon. */
+  markSeen: string;
   noProjects: string;
   noAdminProjects: string;
   createNewProject: string;
@@ -151,7 +159,8 @@ needProject: 'Репетиции появятся, когда вы окажет�
     loadMembersError: 'Не удалось загрузить участников проекта',
     loadAvailabilityError: 'Не удалось загрузить доступность участников',
     projectNotSelected: 'Выберите проект для создания репетиции',
-    endTimeError: 'Время окончания должно быть позже времени начала',
+    endTimeError: 'Время окончания не может совпадать со временем начала',
+    endsNextDay: 'следующего дня',
     scheduleConflict: '⚠️ Конфликт расписания',
     scheduleConflictMessage: 'Вы уверены, что хотите создать репетицию?',
     createAnyway: 'Создать всё равно',
@@ -159,7 +168,12 @@ needProject: 'Репетиции появятся, когда вы окажет�
     rehearsalCreated: 'Репетиция создана',
     rehearsalUpdated: 'Репетиция успешно обновлена',
     updateError: 'Не удалось обновить репетицию',
+    loadRehearsalError: 'Не удалось загрузить репетицию. Проверьте соединение и попробуйте ещё раз.',
+    participantsLeft: 'Кто-то из выбранных участников больше не в проекте. Откройте форму заново и сохраните ещё раз.',
+    participantsLoading: 'Участники проекта ещё загружаются. Подождите секунду и сохраните снова.',
+    availabilityChecking: 'Занятость участников на этот день ещё проверяется. Подождите секунду и сохраните снова.',
     seenError: 'Не удалось отметить просмотр',
+    markSeen: 'Отметить просмотренным',
     noProjects: 'Нет проектов',
     noAdminProjects: 'Нет проектов, где вы являетесь администратором',
     createNewProject: 'Создать новый проект',
@@ -244,7 +258,8 @@ needProject: 'Rehearsals show up once you are in a project',
     loadMembersError: 'Failed to load project members',
     loadAvailabilityError: 'Failed to load member availability',
     projectNotSelected: 'Select a project to create a rehearsal',
-    endTimeError: 'End time must be after start time',
+    endTimeError: 'End time cannot be the same as start time',
+    endsNextDay: 'next day',
     scheduleConflict: '⚠️ Schedule Conflict',
     scheduleConflictMessage: 'Are you sure you want to create this rehearsal?',
     createAnyway: 'Create Anyway',
@@ -252,7 +267,12 @@ needProject: 'Rehearsals show up once you are in a project',
     rehearsalCreated: 'Rehearsal created',
     rehearsalUpdated: 'Rehearsal updated successfully',
     updateError: 'Failed to update rehearsal',
+    loadRehearsalError: 'Could not load the rehearsal. Check your connection and try again.',
+    participantsLeft: 'Someone you selected is no longer in the project. Open the form again and save once more.',
+    participantsLoading: 'The project members are still loading. Wait a moment and save again.',
+    availabilityChecking: "The participants' availability for this day is still being checked. Wait a moment and save again.",
     seenError: 'Could not mark it as seen',
+    markSeen: 'Mark as seen',
     noProjects: 'No projects',
     noAdminProjects: 'No projects where you are an administrator',
     createNewProject: 'Create New Project',
@@ -337,7 +357,8 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     loadMembersError: 'No se pudieron cargar los miembros del proyecto',
     loadAvailabilityError: 'No se pudo cargar la disponibilidad de los miembros',
     projectNotSelected: 'Selecciona un proyecto para crear un ensayo',
-    endTimeError: 'La hora de fin debe ser posterior a la de inicio',
+    endTimeError: 'La hora de fin no puede ser igual a la de inicio',
+    endsNextDay: 'día siguiente',
     scheduleConflict: '⚠️ Conflicto de horario',
     scheduleConflictMessage: '¿Seguro que quieres crear este ensayo?',
     createAnyway: 'Crear de todos modos',
@@ -345,7 +366,12 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     rehearsalCreated: 'Ensayo creado',
     rehearsalUpdated: 'Ensayo actualizado correctamente',
     updateError: 'No se pudo actualizar el ensayo',
+    loadRehearsalError: 'No se pudo cargar el ensayo. Comprueba la conexión e inténtalo de nuevo.',
+    participantsLeft: 'Alguien que seleccionaste ya no está en el proyecto. Abre el formulario de nuevo y guarda otra vez.',
+    participantsLoading: 'Los miembros del proyecto aún se están cargando. Espera un momento y guarda de nuevo.',
+    availabilityChecking: 'Aún se está comprobando la disponibilidad de los participantes para este día. Espera un momento y guarda de nuevo.',
     seenError: 'No se pudo marcar como visto',
+    markSeen: 'Marcar como visto',
     noProjects: 'No hay proyectos',
     noAdminProjects: 'No hay proyectos en los que seas administrador',
     createNewProject: 'Crear nuevo proyecto',
@@ -430,7 +456,8 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     loadMembersError: 'Projektmitglieder konnten nicht geladen werden',
     loadAvailabilityError: 'Verfügbarkeit der Mitglieder konnte nicht geladen werden',
     projectNotSelected: 'Wähle ein Projekt aus, um eine Probe zu erstellen',
-    endTimeError: 'Die Endzeit muss nach der Startzeit liegen',
+    endTimeError: 'Die Endzeit darf nicht gleich der Startzeit sein',
+    endsNextDay: 'am nächsten Tag',
     scheduleConflict: '⚠️ Terminkonflikt',
     scheduleConflictMessage: 'Möchtest du diese Probe wirklich erstellen?',
     createAnyway: 'Trotzdem erstellen',
@@ -438,7 +465,12 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     rehearsalCreated: 'Probe erstellt',
     rehearsalUpdated: 'Probe erfolgreich aktualisiert',
     updateError: 'Probe konnte nicht aktualisiert werden',
+    loadRehearsalError: 'Die Probe konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut.',
+    participantsLeft: 'Jemand, den du ausgewählt hast, ist nicht mehr im Projekt. Öffne das Formular erneut und speichere noch einmal.',
+    participantsLoading: 'Die Projektmitglieder werden noch geladen. Warte einen Moment und speichere erneut.',
+    availabilityChecking: 'Die Verfügbarkeit der Teilnehmenden für diesen Tag wird noch geprüft. Warte einen Moment und speichere erneut.',
     seenError: 'Konnte nicht als gesehen markiert werden',
+    markSeen: 'Als gesehen markieren',
     noProjects: 'Keine Projekte',
     noAdminProjects: 'Keine Projekte, in denen du Administrator bist',
     createNewProject: 'Neues Projekt erstellen',

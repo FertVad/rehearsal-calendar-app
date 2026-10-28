@@ -1,0 +1,58 @@
+Cause fix 16 (C04) - red before: the new tests of useAvailabilityData.test.ts
+against useAvailabilityData.ts of 77f3b32 (the base, before the fix).
+
+Command (rehearsal-calendar-native):
+  npx jest --selectProjects frontend --silent useAvailabilityData.test
+
+FAIL frontend src/features/availability/hooks/__tests__/useAvailabilityData.test.ts
+  ● useAvailabilityData Hook › Deduplication Logic › keeps a calendar event with the same hours as a rehearsal, rehearsal first
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 0
+
+    @@ -2,11 +2,6 @@
+        ObjectContaining {
+          "end": "12:00",
+          "source": "rehearsal",
+          "start": "10:00",
+        },
+    -   ObjectContaining {
+    -     "end": "12:00",
+    -     "source": "apple_calendar",
+    -     "start": "10:00",
+    -   },
+      ]
+
+  ● useAvailabilityData Hook › Deduplication Logic › keeps a calendar event with the hours of the night before's end
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 0
+
+    @@ -2,11 +2,6 @@
+        ObjectContaining {
+          "end": "01:00",
+          "source": "previous_day",
+          "start": "00:00",
+        },
+    -   ObjectContaining {
+    -     "end": "01:00",
+    -     "source": "google_calendar",
+    -     "start": "00:00",
+    -   },
+      ]
+
+  ● useAvailabilityData Hook › Deduplication Logic › shows one of two rows that say the same thing
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+    Expected: StringContaining "Skipping duplicate slot on 2025-12-29 apple_calendar|busy|10:00-12:00"
+    (the old code logged the duplicate by hours only; the row count of 1 held)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 15 passed, 18 total
+
+The first two are the finding: a read-only row of another source with the same
+hours was dropped. The third only names the new key in the log line.

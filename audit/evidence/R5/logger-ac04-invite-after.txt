@@ -1,0 +1,15 @@
+AC04 review (Astra, P2) / cause fix 13 — after. Fix: one more SECRET_TEXT rule in src/shared/utils/logger.ts
+(the segment after /invite/ is redacted in any text, so in the message and in LoggedError.path alike).
+Command: npx jest --selectProjects frontend --forceExit --verbose --runTestsByPath src/shared/utils/__tests__/logger.test.ts src/shared/services/__tests__/api.log.test.ts
+(filtered to result lines; exit code 0)
+
+PASS frontend src/shared/services/__tests__/api.log.test.ts (20.2 s)
+  ✓ logs a network failure of joinProject without the invite code (22 ms)
+PASS frontend src/shared/utils/__tests__/logger.test.ts (20.502 s)
+    ✓ logs a failed request as a typed summary without its body or headers (55 ms)
+    ✓ applies the same rule to warn, info and debug (6 ms)
+    ✓ keeps an invite code out of a path, in the message and in LoggedError.path (7 ms)
+    ✓ redacts credential fields and token-shaped strings anywhere in a plain value (4 ms)
+    ✓ keeps a plain error readable and survives a cycle (5 ms)
+    ✓ finds no direct console call (327 ms)
+Tests:       7 passed, 7 total

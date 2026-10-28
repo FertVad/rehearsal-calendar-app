@@ -1,0 +1,76 @@
+{
+  "verifiedAt": "2026-09-19T07:20:52.810152+00:00",
+  "sourceCommit": "573608cd47c24a605ccae00be0161545619caae7",
+  "sourceTree": "a0b9b38b6dff5db2b37bf40e08522e939b2f1dfd",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "postgres": "15.13",
+  "postgresImage": "sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0",
+  "environment": "env -i; explicit Node22 PATH; synthetic settings; owned Chromium cache, SQLite fixtures and disposable loopback Docker PostgreSQL. Copied known entrypoint runs only in isolated children; checkout server.js and server/.env never loaded.",
+  "production": "NOT_RUN; deployment smoke/configuration gates remain pending",
+  "findingStatus": {
+    "F03": "VERIFIED locally",
+    "F05": "VERIFIED locally",
+    "R2": "IN_PROGRESS"
+  },
+  "ownedBrowserCacheAfterRun": "retained for continuing stages",
+  "ownedDockerAfterRun": "removed",
+  "runtimeSourceCommit": "986acbd0cc72435b36a0f0c9e89396944606252b",
+  "results": {
+    "beforeAdapter": {
+      "exitCode": 1,
+      "failedAssertions": 3,
+      "sourceCommit": "66246511b33062912679c9c3ea9289e1ccc05a51"
+    },
+    "beforeStartup": {
+      "exitCode": 1,
+      "failedTests": 3,
+      "scope": "copied source/protocol refusal owned fixture"
+    },
+    "focusedStartup": {
+      "exitCode": 0,
+      "tests": 11
+    },
+    "focusedF05": {
+      "exitCode": 0,
+      "scope": "actual PostgreSQL and HTTP consumers"
+    },
+    "checkFinal": {
+      "exitCode": 0,
+      "scannerTests": 33,
+      "jestSuites": 88,
+      "jestTests": 1270,
+      "adminBrowserTests": 4,
+      "browserCleanupTests": 3,
+      "adminFailureBrowserTests": 18,
+      "inviteBrowserTests": 11,
+      "persistedTests": 6
+    },
+    "postgresFinal": {
+      "exitCode": 0,
+      "passed": [
+        "controls",
+        "A02",
+        "B03",
+        "B04",
+        "H04",
+        "IS02",
+        "R2_ADAPTER",
+        "R2_STARTUP",
+        "F05"
+      ],
+      "adapterContracts": 14,
+      "knownDefectsReproduced": [
+        "F01",
+        "B02",
+        "D01"
+      ],
+      "externalConnections": 0
+    }
+  }
+}

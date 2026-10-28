@@ -1,0 +1,25 @@
+Source: df6fd0111111bd4f8b36a2e797cb0cccda563b25
+Base: 1d0142babc5e1b9f6f70d9440dc55942a8f07493
+Node: /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node
+
+Final full check, cwd rehearsal-calendar-native, actual exit0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin NODE_ENV=test JWT_SECRET=h02-isolated-test-secret PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-continuous-browser.s8CVco INVITE_BROWSER_SCREENSHOT=/Users/vadimfertik/Desktop/reh_app/audit/evidence/H02/invite-desktop.png npm run check > ../audit/evidence/H02/check-final.txt 2>&1
+
+Final full PostgreSQL, cwd repository root, actual exit0:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin node rehearsal-calendar-native/server/scripts/r0-postgres.mjs > audit/evidence/H02/postgres-final.txt 2>&1
+Owned disposable PostgreSQL only; no .env/server.js/production startup.
+
+Focused browser, cwd repository root:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin NODE_ENV=test JWT_SECRET=h02-isolated-test-secret PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-continuous-browser.s8CVco node --test rehearsal-calendar-native/server/__tests__/browser/invitePage.browser.test.mjs
+Before: actual exit1, nine expected failures with original app route at base.
+After: actual exit0,11tests including subsequent RU/lifecycle assertions.
+Final full check reruns these11tests on committed source. Manual scheme default
+navigation is suppressed by the fixture after recording trusted activation.
+
+Browser cache prepared in a freshly owned temporary directory with:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-continuous-browser.s8CVco npm --prefix rehearsal-calendar-native/server run test:browser:install
+Actual exit0; cache intentionally retained for following authorized stages.
+
+Initial sandbox loopback/Docker denials resolved by local-test escalation.
+A preliminary CDP assertion needed to await asynchronous event delivery;
+corrected test is included in after/final runs. No production defect inferred.

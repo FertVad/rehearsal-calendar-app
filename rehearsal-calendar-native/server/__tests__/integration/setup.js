@@ -82,7 +82,9 @@ export async function setupIntegrationDb() {
       is_all_day BOOLEAN DEFAULT 0,
       source TEXT DEFAULT 'manual',
       external_event_id TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      -- As in the canonical schema; the import sync stamps it (importScope.js).
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     -- One row per imported calendar event (migration 005). Hand-entered rows
@@ -138,7 +140,7 @@ export async function setupIntegrationDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       connection_id INTEGER NOT NULL REFERENCES native_calendar_connections(id) ON DELETE CASCADE,
       event_type TEXT NOT NULL,
-      internal_event_id TEXT NOT NULL,
+      internal_event_id INTEGER NOT NULL,
       external_event_id TEXT NOT NULL,
       last_sync_direction TEXT,
       last_sync_at DATETIME,
@@ -181,6 +183,47 @@ export async function setupIntegrationDb() {
       CHECK (provider_type IN ('email', 'google', 'apple'))
     );
 
+    -- Group 010 (R3): proof of an address and one-time email codes. Mirrors
+    -- migrations/010-email-verification.sql; times are ISO strings here.
+    CREATE TABLE native_email_identities (
+      user_id INTEGER PRIMARY KEY REFERENCES native_users(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending', 'verified')),
+      verified_at DATETIME,
+      verified_by TEXT CHECK (verified_by IN ('code', 'google', 'apple')),
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CHECK ((status = 'verified') = (verified_at IS NOT NULL AND verified_by IS NOT NULL))
+    );
+    CREATE TABLE native_email_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+      purpose TEXT NOT NULL CHECK (purpose IN ('verify', 'reset', 'change', 'confirm')),
+      email TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+      expires_at DATETIME NOT NULL,
+      consumed_at DATETIME,
+      sent_at DATETIME,
+      failed_at DATETIME,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE UNIQUE INDEX idx_email_codes_live ON native_email_codes (user_id, purpose) WHERE consumed_at IS NULL;
+
+    -- Devices that receive this person's pushes. A Google/Apple sign-in that
+    -- proves an unproven address removes them with the sessions (R3-12).
+    CREATE TABLE native_push_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+      device_token VARCHAR(255) NOT NULL,
+      device_type VARCHAR(20),
+      device_name VARCHAR(100),
+      last_active_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (device_token)
+    );
+
     -- Push reminders already sent. The unique pair is what stops a rehearsal
     -- being announced twice when two schedulers overlap.
     CREATE TABLE native_push_reminders (
@@ -198,6 +241,12 @@ export async function setupIntegrationDb() {
 
   // Execute schema
   testDb.exec(schema);
+  // Exercise the real portable migration rather than duplicating limiter DDL.
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/007-member-availability-rate-limit.sql'), 'utf8'));
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/008-invite-rate-limits.sql'), 'utf8'));
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/009-operation-ip-rate-limits.sql'), 'utf8'));
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/011-push-tickets.sql'), 'utf8'));
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/012-idempotency-keys.sql'), 'utf8'));
 
   // Translate the PostgreSQL dialect our routes are written in into something
   // SQLite can parse. Only the constructs actually used in the codebase are
@@ -234,6 +283,13 @@ export async function setupIntegrationDb() {
         .replace(/\?::(date|timestamptz|timestamp)\b/gi, '?')
         // NOW() → SQLite's equivalent
         .replace(/\bNOW\(\)/gi, "CURRENT_TIMESTAMP")
+        // Row locks: SQLite has one writer, so there is nothing to lock. What
+        // FOR UPDATE or FOR SHARE buys against a second connection is proven on
+        // PostgreSQL.
+        .replace(/\s+FOR\s+(?:(?:NO\s+KEY\s+)?UPDATE|SHARE)\b/gi, '')
+        // SET LOCAL tunes the PostgreSQL session for one transaction — a
+        // timeout, a lock wait — and SQLite has nothing to tune.
+        .replace(/^\s*SET\s+LOCAL\s+[\s\S]*$/i, 'SELECT 1')
     );
 
     // better-sqlite3 binds only numbers, strings, bigints, buffers and null, so
@@ -291,6 +347,12 @@ export async function setupIntegrationDb() {
  */
 export function clearIntegrationDb() {
   if (testDb) {
+    testDb.exec('DELETE FROM native_idempotency_keys');
+    testDb.exec('DELETE FROM native_operation_ip_rate_limits');
+    testDb.exec('UPDATE native_operation_ip_rate_limit_gates SET key_count = 0');
+    testDb.exec('DELETE FROM native_invite_account_rate_limits');
+    testDb.exec('DELETE FROM native_invite_ip_rate_limits');
+    testDb.exec('UPDATE native_invite_ip_rate_limit_gate SET key_count = 0 WHERE id = 1');
     testDb.exec('DELETE FROM native_calendar_event_mappings');
     testDb.exec('DELETE FROM native_calendar_connections');
     testDb.exec('DELETE FROM native_notifications');
@@ -357,4 +419,3 @@ export async function seedTestData(db) {
     projectId: project.lastInsertId,
   };
 }
-

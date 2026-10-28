@@ -1,0 +1,21 @@
+AC04 review (Astra, P2) / cause fix 13 — red before. Base: 2f76652 (src/shared/utils/logger.ts as of f847b3e),
+new tests: src/shared/utils/__tests__/logger.test.ts (invite code case),
+src/shared/services/__tests__/api.log.test.ts (real response interceptor, network failure of joinProject).
+Command: npx jest --selectProjects frontend --forceExit --verbose --runTestsByPath src/shared/utils/__tests__/logger.test.ts src/shared/services/__tests__/api.log.test.ts
+(filtered to result lines; exit code 1)
+
+FAIL frontend src/shared/services/__tests__/api.log.test.ts (12.407 s)
+  ✕ logs a network failure of joinProject without the invite code (23 ms)
+    Expected substring: not "ABCD2345"
+    Received string:        "\"[ERROR] Response Error: Network Error POST /native/invite/ABCD2345/join\" "
+FAIL frontend src/shared/utils/__tests__/logger.test.ts (12.682 s)
+    ✓ logs a failed request as a typed summary without its body or headers (90 ms)
+    ✓ applies the same rule to warn, info and debug (2 ms)
+    ✕ keeps an invite code out of a path, in the message and in LoggedError.path (3 ms)
+    ✓ redacts credential fields and token-shaped strings anywhere in a plain value (4 ms)
+    ✓ keeps a plain error readable and survives a cycle (3 ms)
+    ✓ finds no direct console call (307 ms)
+  ● logger keeps credentials out of the journal › keeps an invite code out of a path, in the message and in LoggedError.path
+    Expected substring: not "ABCD2345"
+    Received string:        "[ERROR] Response Error: Network Error POST /native/invite/ABCD2345/join {\"name\":\"AxiosError\",\"message\":\"Network Error\",\"code\":\"ERR_NETWORK\",\"method\":\"POST\",\"path\":\"/native/invite/ABCD2345/join\"}
+Tests:       2 failed, 5 passed, 7 total

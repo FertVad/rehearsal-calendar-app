@@ -1,0 +1,33 @@
+R2 foundation adapter/F05 integration review — 2026-09-19
+Reviewer: h04_api (adapter author; independent lifecycle review performed separately by h04_ui).
+Review scope: actual F05 HTTP test and runner dispatch; adapter lifecycle documentation; two exact scanner exceptions.
+Verdict: no blocking findings in this scope. Core unchanged during this review.
+
+Evidence observed, not rerun by this review:
+- postgres-focused.txt: fourteen actual PostgreSQL adapter contracts plus seven healthy copied-entrypoint checks PASS; externalConnections=0; owned container cleanup recorded.
+- f05-http-after.txt: controls and actual F05 HTTP consumers PASS; externalConnections=0; owned container cleanup recorded.
+- before-adapter.txt copied byte-for-byte from the original private runner log; two affected-row failures and unexpected SQLite fallback failure are preserved. Its recorded source hash matches old db.js at 66246511b33062912679c9c3ea9289e1ccc05a51.
+Before-log SHA256: 8fee2fa40b3dd5da5c624ba951cf30dc19f5d7c80f0add7c71af6749c391ba26
+
+F05 observations:
+- All four existing changes consumers run through real routes, real PostgreSQL adapter, real SQL and independently read committed rows.
+- Batch update covers0/1/N; deletion covers0/N plus one-row delete-all and repeats. Manual rows and another user's rows remain unchanged.
+- Missing-provider unlink returns404 without mutation; existing provider unlinks; the last-provider guard still refuses.
+- The synthetic provider table has a uniqueness constraint. This sequential regression does not establish production schema uniqueness or concurrent unlink safety.
+- F05 is selected by --f05-only, --r2-foundation-only, --security-only and the default full runner. Existing expected-unfixed diagnostic cases remain.
+
+Lifecycle documentation is consistent with the implementation and actual tests: no SQLite fallback, pure adapter import, candidate publication after a real probe, bounded pool/acquisition/probe, issued transaction drain, no blanket business-query deadline and no forced callback cancellation. Suggested clarification sent to root: isPostgres stays true while issued PostgreSQL scopes drain, becomes false after close completion; new admissions are already refused.
+
+Exact exception review:
+{"path":"CLAUDE.md","line":770,"rule":"database-url","lineSha256":"b9be4b91166f065130a649b895b4795b599e8efbb2a9ffd3526c585cdfd8a205"}
+{"path":"audit/evidence/R2-foundation/commands.txt","line":6,"rule":"jwt-secret","lineSha256":"bbc8e26b2b8cf9591bd2bf9a3d1aee1ea43c87bf72f168f8cca4491234bea461"}
+The CLAUDE.md fingerprint replaces the previous fingerprint of the same ellipsis-only connection template; only its explanatory comment changed. The command exception covers a newly authored env-i test command with an explicit synthetic signing value, scoped to that full line and rule. No unknown findings were baselined; no broad exclusions were added.
+
+Reviewed source snapshots (working tree before root source commit):
+{"path":"rehearsal-calendar-native/server/database/db.js","sha256":"11ee8f4209665fd87d299b701056154863d86560662ef3d6d448c94006c7d187"}
+{"path":"rehearsal-calendar-native/server/__tests__/postgres/adapterContract.mjs","sha256":"13e9a172df8e5a5fdebb648ae7f919e5b16b007b466183b17c217c3eb08ac911"}
+{"path":"rehearsal-calendar-native/server/__tests__/postgres/f05.mjs","sha256":"e6606a7f3322739f8c8aad438262b7c8d031c28f45fce303a098cfd2bdec6dc7"}
+{"path":"rehearsal-calendar-native/server/__tests__/postgres/probe.mjs","sha256":"1d048eeb3c500d766c28f44f81af19de6be1e0001fab2dba850bdce1ebca7850"}
+{"path":"rehearsal-calendar-native/server/scripts/r0-postgres.mjs","sha256":"266a9dea114fc95b828d4bb90086be1b5a5b9260b3b674c8290986708c26f5e6"}
+
+Limits: local owned PostgreSQL15 and copied startup fixtures only. No production access, credentials, deployment, migration ledger, quota, provider requests or live deployment verification. Fresh-schema and migration work remains separate.

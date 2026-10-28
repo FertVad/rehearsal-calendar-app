@@ -77,14 +77,15 @@ beforeAll(async () => {
   request = (await import('supertest')).default;
   ({ generateTokens } = await import('../../middleware/jwtMiddleware.js'));
 
-  const invitesRouter = (await import('../../routes/native/invites.js')).default;
+  const projectInvitesRouter = (await import('../../routes/native/projectInvites.js')).default;
+  const inviteRedemptionRouter = (await import('../../routes/native/inviteRedemption.js')).default;
   const membersRouter = (await import('../../routes/native/members.js')).default;
 
   app = express();
   app.use(express.json());
   app.use('/api/native/projects', membersRouter);
-  app.use('/api/native/projects', invitesRouter);
-  app.use('/api/native/invite', invitesRouter);
+  app.use('/api/native/projects', projectInvitesRouter);
+  app.use('/api/native/invite', inviteRedemptionRouter);
 });
 
 afterAll(() => closeIntegrationDb());

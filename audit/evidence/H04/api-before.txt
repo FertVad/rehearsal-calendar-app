@@ -1,0 +1,74 @@
+(node:5904) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL __tests__/routes/adminStatus.test.js
+  admin bug-report status contract
+    ✕ missing report returns 404 instead of claiming success (12 ms)
+    ✕ malformed report ID returns 400 before database work (2 ms)
+    ○ skipped invalid ID 0 cannot issue database work
+    ○ skipped invalid ID -1 cannot issue database work
+    ○ skipped invalid ID 1.5 cannot issue database work
+    ○ skipped invalid ID 1e0 cannot issue database work
+    ○ skipped invalid ID 01 cannot issue database work
+    ○ skipped invalid ID +1 cannot issue database work
+    ○ skipped invalid ID  1 cannot issue database work
+    ○ skipped invalid ID 1  cannot issue database work
+    ○ skipped invalid ID 2147483648 cannot issue database work
+    ○ skipped invalid ID 9007199254740993 cannot issue database work
+    ○ skipped invalid body null cannot issue database work
+    ○ skipped invalid body [] cannot issue database work
+    ○ skipped invalid body {} cannot issue database work
+    ○ skipped invalid body {"status":null} cannot issue database work
+    ○ skipped invalid body {"status":false} cannot issue database work
+    ○ skipped invalid body {"status":1} cannot issue database work
+    ○ skipped invalid body {"status":["fixed"]} cannot issue database work
+    ○ skipped invalid body {"status":{}} cannot issue database work
+    ○ skipped invalid body {"status":""} cannot issue database work
+    ○ skipped invalid body {"status":"FIXED"} cannot issue database work
+    ○ skipped invalid body {"status":"fixed "} cannot issue database work
+    ○ skipped authentication rejects unusable credentials before ID/body validation
+    ○ skipped authentication rejects unusable credentials before ID/body validation
+    ○ skipped authentication rejects unusable credentials before ID/body validation
+    ○ skipped authentication rejects unusable credentials before ID/body validation
+    ○ skipped all statuses, repeated status and int4 boundary update only the selected status
+    ○ skipped a report deleted after it was displayed returns 404 with no other writes
+    ○ skipped a failing real SQL trigger returns generic 500, rolls back and recovers
+
+  ● admin bug-report status contract › missing report returns 404 instead of claiming success
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 200
+
+      106 |     const before = snapshot();
+      107 |     const response = await patch('999');
+    > 108 |     expect(response.status).toBe(404);
+          |                             ^
+      109 |     expect(response.body).toEqual({ error: 'Bug report not found' });
+      110 |     expect(snapshot()).toEqual(before);
+      111 |   });
+
+      at Object.toBe (__tests__/routes/adminStatus.test.js:108:29)
+
+  ● admin bug-report status contract › malformed report ID returns 400 before database work
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 200
+
+      114 |     const before = snapshot();
+      115 |     const response = await patch('1x');
+    > 116 |     expect(response.status).toBe(400);
+          |                             ^
+      117 |     expect(calls).toEqual([]);
+      118 |     expect(snapshot()).toEqual(before);
+      119 |   });
+
+      at Object.toBe (__tests__/routes/adminStatus.test.js:116:29)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 28 skipped, 30 total
+Snapshots:   0 total
+Time:        0.411 s, estimated 1 s
+Ran all test suites matching __tests__/routes/adminStatus.test.js with tests matching "missing report|malformed report ID".

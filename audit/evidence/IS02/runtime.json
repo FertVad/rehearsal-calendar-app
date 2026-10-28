@@ -1,0 +1,91 @@
+{
+  "verifiedAt": "2026-09-19T06:36:50.004293+00:00",
+  "sourceCommit": "61ced139d1055150298b204c20a4ddd807967d77",
+  "sourceTree": "5226fbd653f9d563c38d5c02d7b3e36dd39d6dec",
+  "firstSourceCommit": "bc0184e93ba8732882204aa0db46cb479d511913",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "postgres": "15.13",
+  "postgresImage": "sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0",
+  "environment": "env -i; explicit Node22 PATH; synthetic signing environment; owned Chromium cache; SQLite fixtures and disposable loopback Docker PostgreSQL; .env/server.js never loaded",
+  "production": "NOT_RUN; OPS-IS02 deployment condition pending",
+  "physicalDevice": "H02 DEV-15 remains NOT_RUN",
+  "findingStatus": "READY_FOR_CHECK",
+  "ownedBrowserCacheAfterRun": "retained for continuing stages",
+  "ownedDockerAfterRun": "removed",
+  "results": {
+    "before": {
+      "exitCode": 1,
+      "failedTests": 2,
+      "sourceCommit": "4044e3d86ea98e5c3ac92a8094b6940207eee365",
+      "scope": "unchanged createApp on initial reproducer, two apps admitted40auth/10admin; intervening a67d671 docs only"
+    },
+    "focusedAfter": {
+      "exitCode": 0,
+      "suites": 5,
+      "tests": 91
+    },
+    "appBoundaryAfter": {
+      "exitCode": 0,
+      "suites": 4,
+      "tests": 19
+    },
+    "firstSourceCheck": {
+      "exitCode": 1,
+      "passedTests": 1258,
+      "failedTests": 1,
+      "sourceCommit": "bc0184e93ba8732882204aa0db46cb479d511913",
+      "reason": "native SQLite error from previous Jest VM; actual rejection not recognized by rejects.toThrow; browser stages not run"
+    },
+    "matcherPairAfter": {
+      "exitCode": 0,
+      "suites": 2,
+      "tests": 50,
+      "scope": "exact code/message assertion; rollback snapshots/gate/recovery retained"
+    },
+    "checkFinal": {
+      "exitCode": 0,
+      "scannerTests": 33,
+      "jestSuites": 87,
+      "jestTests": 1259,
+      "adminBrowserTests": 4,
+      "adminFailureBrowserTests": 18,
+      "inviteBrowserTests": 11,
+      "persistedTests": 6
+    },
+    "postgresFinal": {
+      "exitCode": 0,
+      "passed": [
+        "controls",
+        "A02",
+        "B03",
+        "B04",
+        "H04",
+        "IS02"
+      ],
+      "knownDefectsReproduced": [
+        "F01",
+        "B02",
+        "D01"
+      ],
+      "externalConnections": 0
+    },
+    "postgresFirstSource": {
+      "exitCode": 0,
+      "sourceCommit": "bc0184e93ba8732882204aa0db46cb479d511913"
+    },
+    "postgresFocused": {
+      "exitCode": 0,
+      "passed": [
+        "controls",
+        "IS02"
+      ],
+      "scope": "earlier same runtime source before final commit"
+    }
+  }
+}

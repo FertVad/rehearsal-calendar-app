@@ -1,0 +1,83 @@
+{
+  "recordedDate": "2026-09-19",
+  "sourceCommit": "573608cd47c24a605ccae00be0161545619caae7",
+  "sourceTree": "a0b9b38b6dff5db2b37bf40e08522e939b2f1dfd",
+  "baseCommit": "986acbd0cc72435b36a0f0c9e89396944606252b",
+  "scope": "Browser test fixture, three cleanup regressions and mandatory runner wiring; no application/runtime change in this follow-up",
+  "node": "v22.16.0",
+  "platform": "darwin",
+  "arch": "arm64",
+  "playwright": "1.62.1",
+  "chromiumRevision": "1234",
+  "chromiumVersionFromPinnedMetadata": "151.0.7922.34",
+  "environment": "env -i; explicit Node22 PATH and previously prepared pinned Chromium cache; owned loopback HTTP servers and browser contexts only",
+  "originalRemoteRun": {
+    "runId": 35427268043,
+    "checkJobId": 105855264453,
+    "headCommit": "66246511b33062912679c9c3ea9289e1ccc05a51",
+    "conclusion": "cancelled",
+    "reason": "Existing 20-minute job timeout; no agent cancellation",
+    "completedAt": "2026-09-19T07:01:17Z",
+    "jestSuitesPassed": 87,
+    "jestTestsPassed": 1259,
+    "adminDomCspTestsReportedPassed": 1,
+    "lastSuccessfulBrowserTestAt": "2026-09-19T06:43:08.612Z",
+    "postgresJobConclusion": "success",
+    "scopeLimit": "Log localizes the stall to the second admin browser test or cleanup; it does not identify the exact Chromium socket"
+  },
+  "results": {
+    "before": {
+      "exitCode": 1,
+      "originalBrowserTestSha256": "6f1e6339853ff861f397c144e8c6bb833ae98c9968621b6b68df4ac71415dec5",
+      "originalHookExecuted": true,
+      "actualOwnedPreconnect": true,
+      "cleanupSettledWithin250ms": false,
+      "contextReached": false,
+      "cleanupAfterObservation": "Owned socket and server released"
+    },
+    "firstLocalAfterLaunch": {
+      "exitCode": 1,
+      "helperTestsPassed": 3,
+      "browserHooksFailed": 4,
+      "reason": "PLAYWRIGHT_BROWSERS_PATH omitted; default cache lacked the executable",
+      "preservedLog": "first-local-launch-failure.txt"
+    },
+    "targetedAfter": {
+      "exitCode": 0,
+      "testsPassed": 7,
+      "originalDomCspTests": 4,
+      "cleanupRegressionTests": 3,
+      "testsFailed": 0,
+      "testsSkipped": 0,
+      "testsCancelled": 0,
+      "durationMs": 3325.93925,
+      "testedFilesMatchSourceCommit": true,
+      "scopeLimit": "Targeted files were tested before commit and match that source; mandatory runner wiring is also covered by the later full exact-source check"
+    },
+    "fullExactSourceCheck": {
+      "exitCode": 0,
+      "sourceCommit": "573608cd47c24a605ccae00be0161545619caae7",
+      "scannerTests": 33,
+      "jestSuites": 88,
+      "jestTests": 1270,
+      "dashboardAndCleanupTests": 7,
+      "adminErrorTests": 18,
+      "inviteTests": 11,
+      "persistedContentTests": 6,
+      "sharedLog": "../R2-foundation/check-final.txt"
+    },
+    "fullExactSourcePostgres": {
+      "exitCode": 0,
+      "sourceCommit": "573608cd47c24a605ccae00be0161545619caae7",
+      "passed": ["controls", "A02", "B03", "B04", "H04", "IS02", "R2_ADAPTER", "R2_STARTUP", "F05"],
+      "adapterContracts": 14,
+      "knownDefectsReproduced": ["F01", "B02", "D01"],
+      "sharedLog": "../R2-foundation/postgres-final.txt"
+    },
+    "newRemoteCi": "PENDING"
+  },
+  "independentReview": "Root and adapter agent found no blockers; recorded in independent-review.txt",
+  "production": "NOT_RUN",
+  "deployment": "NOT_RUN",
+  "historicIs02Manifest": "UNCHANGED"
+}

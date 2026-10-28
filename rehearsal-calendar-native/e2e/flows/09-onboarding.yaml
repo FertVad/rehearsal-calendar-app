@@ -1,0 +1,112 @@
+# A new member goes through onboarding to the end without giving the app
+# anything the system asks for, lands on the calendar, and is not shown
+# onboarding again — not when the app is opened again, not on a fresh install
+# (T-003). Nina Newcomer has not been through it; no other flow signs her in.
+#
+# It found the end going to the inbox: onboarding and the app shared one
+# navigation container, and the app stack took over onboarding's state, whose
+# last step but one, Notifications, is also the name of the app's inbox. Each
+# stage now has a container of its own (navigation/index.tsx, stageState.test).
+#
+# Maestro's launchApp grants every permission unless told otherwise, so the
+# app is launched with them unset: the calendar step then has to ask, and iOS
+# asks, and she refuses. The notifications step is passed by "Not now" — a
+# simulator would not show that prompt anyway (docs/e2e.md, push).
+appId: ${APP_ID}
+name: Onboarding to the end, nothing granted
+tags:
+  - onboarding
+  - auth
+  - calendar
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: unset
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${NEWCOMER_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- assertVisible: "Welcome!"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Get Started"
+      SEE: "Your availability"
+      WAIT_MS: 10000
+# Calendar: the app has no access, asks, and is refused.
+- tapOn: "Grant Access"
+- extendedWaitUntil:
+    visible: "Don’t Allow|Don't Allow"
+    timeout: 10000
+- takeScreenshot: 09-onboarding-calendar-prompt
+- tapOn: "Don’t Allow|Don't Allow"
+# The app says it has none and stays on the step, which tells her to mark her
+# time by hand.
+- extendedWaitUntil:
+    visible: "OK"
+    timeout: 10000
+- tapOn: "OK"
+- assertVisible: "Grant Access"
+- assertVisible: ".*Until you do, everyone sees you as free.*"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Next"
+      SEE: "Not now"
+      WAIT_MS: 10000
+# Notifications: not now.
+- assertVisible: "Notifications"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Not now"
+      SEE: "Week Start Day"
+      WAIT_MS: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Next"
+      SEE: "Today"
+      WAIT_MS: 15000
+# The calendar, and onboarding gone.
+- assertVisible:
+    id: calendar-today
+- assertNotVisible:
+    id: onboarding-skip
+- takeScreenshot: 09-onboarding-done
+# Opened again, still signed in: straight to the calendar.
+- stopApp
+- launchApp:
+    permissions:
+      all: unset
+- extendedWaitUntil:
+    visible:
+      id: calendar-today
+    timeout: 30000
+- assertNotVisible:
+    id: onboarding-skip
+- assertNotVisible: "Welcome!"
+# A fresh install, signed in again: the server kept it.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: unset
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${NEWCOMER_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-today
+    timeout: 30000
+- assertNotVisible:
+    id: onboarding-skip
+- assertNotVisible: "Welcome!"
+- takeScreenshot: 09-onboarding-not-again

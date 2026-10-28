@@ -1,0 +1,114 @@
+{
+  "date": "2026-09-24",
+  "branch": "claude/systematic-repair",
+  "baseCommit": "aa00ffd5874b3b5e4c402b42b120ceb876e637e2",
+  "wipCommit": "dd886ea",
+  "wipNote": "previous agent R2 work committed unchanged; first review boundary",
+  "sourceCommit": "eb24c624cc5a3f8a1d1fea9698d50f8641524ec1",
+  "sourceTree": "00c2e731552293462204ec39e48c218fb4535253",
+  "state": "Exact committed source PASS locally on Node 22.16.0 and PostgreSQL 15.13; production NOT_RUN",
+  "runtime": {
+    "node": "v22.16.0",
+    "npm": "10.9.2",
+    "platform": "darwin",
+    "arch": "arm64",
+    "macOS": "26.3.1",
+    "postgres": "15.13",
+    "postgresImage": "sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0",
+    "environment": "disposable loopback Docker PostgreSQL per run; old tooling extracted from aa00ffd into temp roots without .env; DATABASE_URL/POSTGRES_URL/SERVER_ENV_FILE removed before importing the app; server/.env never read"
+  },
+  "commands": {
+    "beforeAfter": "node audit/evidence/R2/before-after.mjs > audit/evidence/R2/before-after.txt",
+    "mutations": "node audit/evidence/R2/mutations.mjs > audit/evidence/R2/mutations.txt",
+    "postgresCI": "npm --prefix rehearsal-calendar-native/server run test:r0-postgres -- --security-only > audit/evidence/R2/postgres-security.txt",
+    "check": "cd rehearsal-calendar-native && npm run check:secrets && npm run type-check && npm test -- --silent (npm run check with --silent passed to Jest)"
+  },
+  "results": {
+    "beforeAfter": {
+      "exit": 0,
+      "checks": 59,
+      "failures": 0
+    },
+    "mutations": {
+      "exit": 0,
+      "mutations": 6,
+      "caught": 5,
+      "control": "PASS"
+    },
+    "postgresCI": {
+      "exit": 0,
+      "scenarios": [
+        "controls",
+        "A02",
+        "B03",
+        "B04",
+        "H04",
+        "IS02",
+        "R2_ADAPTER",
+        "R2_STARTUP",
+        "F05",
+        "R2_SCHEMA",
+        "R2_MIGRATIONS"
+      ]
+    },
+    "check": {
+      "exit": 0,
+      "secrets": "pass",
+      "typeCheck": "pass",
+      "scannerTests": "33/33",
+      "jest": "88 suites, 1270 tests",
+      "browser": "7+18+11",
+      "storedContent": "6/6"
+    }
+  },
+  "findingStatus": {
+    "F01": "VERIFIED locally",
+    "F02": "VERIFIED locally",
+    "FT01": "VERIFIED locally",
+    "FT02": "VERIFIED locally",
+    "FM01": "READY_FOR_CHECK (fail-closed PASS; production data condition NOT_RUN, OPS-R2-DATA)",
+    "FM02": "READY_FOR_CHECK (fail-closed PASS; production data condition NOT_RUN, OPS-R2-DATA)"
+  },
+  "production": "NOT_RUN: no production access, inspection, adoption or deployment",
+  "sha256": {
+    ".github/workflows/check.yml": "2080620a3eb92d1fe63253d3f8f6cf3f35375d9b15be3bec890d2851a8773d64",
+    "CLAUDE.md": "20b0d03b4aea1323ca154278371361ed342e103979b2154269d1c326f0a85c5e",
+    "audit/HANDOFF_CLAUDE.md": "2b8a57d7722bed900a5dd3141e7d6705605857c3d51e7419af6a99fe0f8d098b",
+    "audit/REMEDIATION_STATUS.md": "6dcfbcf5b6f690aeb337d50ddc14380d6f9f3777ca8f3b09cff003a2f2e1dde8",
+    "audit/evidence/R2-schema/commands-schema.md": "882a84ae06f9b74ef57e520e887fbd6e29ecc77edac118eac31bebfd751f884f",
+    "audit/evidence/R2-schema/focused-schema-after.txt": "b5a4d868501247ef11fe2c53124f82116d1e7639ddeda7362dffe476b36f8526",
+    "audit/evidence/R2-schema/focused-schema-before-trigger-review.txt": "d41647e3c9e097886fd443eb1f840a3f3adf891645d494cc683e4726e285fc73",
+    "audit/evidence/R2-schema/implementation-note.md": "9c7b0d8a307b796cf3388a447c986bfb86f7af65d6b82cd25222b3991e9491ef",
+    "rehearsal-calendar-native/docs/server-migrations.md": "c1aacf92b9ec0d368bb741b17ceeaa8e4298594a64c518255b4b8da5fb6672ed",
+    "rehearsal-calendar-native/docs/server-runtime.md": "7d42794c1bdae69128fed0b9817a209ffc790047cdf6bcfb300369d717688702",
+    "rehearsal-calendar-native/scripts/secret-scan-exceptions.json": "6e6e854189ee15769c3d0df90037b0f0b0ba8d6ac3d24ca58b0a4744b36a3a49",
+    "rehearsal-calendar-native/server/__tests__/postgres/README.md": "625e72b048a6aa2a894aeed27e88db2a7c6ec43f7399fbd3704085b391c066ea",
+    "rehearsal-calendar-native/server/__tests__/postgres/probe.mjs": "dc5251c64a8230e797a6b6a91dd51a541b9b7580fc47b88047f33b95b1cc5d7c",
+    "rehearsal-calendar-native/server/__tests__/postgres/r2Migrations.mjs": "c5d2765c6b9c87e43e7d179a64205eea2344cd5b142fbf8c7d6b543037631664",
+    "rehearsal-calendar-native/server/__tests__/postgres/r2Schema.mjs": "9eaac78c15537f22edaf244aeae862c07728e328956370618cc94afa4ff1ee7b",
+    "rehearsal-calendar-native/server/__tests__/postgres/r2SchemaHttp.mjs": "cfc293a4e097eaa328e38ceeec714c537ba22748509baddb8b586b1a072a1b87",
+    "rehearsal-calendar-native/server/database/init-native-schema.sql": "5274f742fe74ff7ea4b8fdfedec604d9efb5f8c5ab0d5b048617d16177272324",
+    "rehearsal-calendar-native/server/database/migrations/artifacts.mjs": "221567db993831a164b94ece6b04894743fa04235e23951482c2d20787833a27",
+    "rehearsal-calendar-native/server/database/migrations/cli.mjs": "7bad6917bfb16177141dc807a2f10490981d5779c4776f55cf851c7376c28ca7",
+    "rehearsal-calendar-native/server/database/migrations/core.mjs": "62af61890d14878c4486a180212047d9b29d55f608c87cf55dd6d1fa48c69470",
+    "rehearsal-calendar-native/server/database/migrations/errors.mjs": "e6aa24349f9e0ea9294b2aa9be47db5595f839c0243c164c95b91b66b1195c36",
+    "rehearsal-calendar-native/server/database/migrations/history.mjs": "d9879c6104c22b3030949e202bbc8e83e5501db131827c8ffa16919c1b26a9ba",
+    "rehearsal-calendar-native/server/database/migrations/sql.mjs": "ba70bf8dacc846ff23cef26f3b1853677ffd279dff7aa700644b06bc3c13e578",
+    "rehearsal-calendar-native/server/database/schema/README.md": "fbdd8826f009c977f2d28f6e04abee3aefb5f15b42b049099a0104ac2e836c91",
+    "rehearsal-calendar-native/server/database/schema/availability-conflict-key-v1.sql": "9bac959563d488e931f6dc1486f8098499a84cf192a0cdb3d81cf99e40110088",
+    "rehearsal-calendar-native/server/database/schema/catalog.json": "3ab87c79f5fc7bd5b251d572525c2e0744f2b51def173345aadc0350ccc04b14",
+    "rehearsal-calendar-native/server/database/schema/inspect.mjs": "23596d3532956bb9d25e7178ceca7a2a067e394c29be0a24c90cacd79250b56c",
+    "rehearsal-calendar-native/server/database/schema/manifest.mjs": "28d0f8cafd1420f4bd5087d99aa199345ad4f03c4bfe413a253fa14fd20a3ee4",
+    "rehearsal-calendar-native/server/migrations/README.md": "6fb232328c121426045ca20db82848d7bc393b5dd70ed4db53f789a880b13e2a",
+    "rehearsal-calendar-native/server/package-lock.json": "b9d63b288116f56ecd66cb4df6f4b245f9cc4e354102846de03d2e7c591accf1",
+    "rehearsal-calendar-native/server/package.json": "b758756ee153f1eb90640e915c9f1fbf3dd8e02d6d6435dcae25a89a4ded408f",
+    "rehearsal-calendar-native/server/scripts/migrate.js": "1e5b28837b0b123f4cfec9daa748b676c8ffb802b97ee639bd03f4d3c788e1eb",
+    "rehearsal-calendar-native/server/scripts/r0-postgres.mjs": "bac9e4d3b1b0882b1c87d7fd6cb42011fdc93fe480835960909c5359d39a123f",
+    "audit/evidence/R2/before-after.mjs": "d74787ec0a8dc8e4ea4e377f5a0fe182fb0f7726b484cd686d4d2bc93d552d22",
+    "audit/evidence/R2/mutations.mjs": "d1458215cdb419337cdfce03e9bacc3c423ad15accc1c3eed5349d8571404c3c",
+    "audit/evidence/R2/before-after.txt": "26c315e433464bd7e989b47790d61d2e12bfbc09ed9379107f6f764f3045dcc0",
+    "audit/evidence/R2/mutations.txt": "058b99618682e4ef89b736434b3f097964ed35aff04f8da673a48caf3a0d29da",
+    "audit/evidence/R2/postgres-security.txt": "7d177ba5728006a7a340f09793accd9fa3e14186b9fe85b284941c2eea9e981f",
+    "audit/evidence/R2/check-final.txt": "d07bc44d44bd4c643db056919358c849b52c6756d8a32783e60c422fa9dbbd26"
+  }
+}

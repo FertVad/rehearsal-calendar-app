@@ -8,27 +8,12 @@ import { Alert } from 'react-native';
 import { useAvailabilitySave } from '../useAvailabilitySave';
 import { availabilityAPI } from '../../../../shared/services/api';
 import { AvailabilityData } from '../../types';
+import { setProfileTimezone } from '../../../../shared/utils/time';
 
 // Mock dependencies
+// The slot rules are the real ones: a copy of them here kept testing the old
+// rule after the editor had promised overnight slots (CC06).
 jest.mock('../../../../shared/services/api');
-jest.mock('../../utils', () => ({
-  validateSlot: jest.fn((slot) => {
-    if (!slot.start || !slot.end) {
-      return { isValid: false, error: 'Missing time' };
-    }
-    if (slot.start >= slot.end) {
-      return { isValid: false, error: 'End must be after start' };
-    }
-    return { isValid: true };
-  }),
-  slotsOverlap: jest.fn((slot1, slot2) => {
-    const start1 = slot1.start;
-    const end1 = slot1.end;
-    const start2 = slot2.start;
-    const end2 = slot2.end;
-    return start1 < end2 && start2 < end1;
-  }),
-}));
 jest.mock('react-native/Libraries/Alert/Alert', () => ({
   alert: jest.fn(),
 }));
@@ -46,6 +31,7 @@ describe('useAvailabilitySave Hook', () => {
       saveError: 'Failed to save',
       cannotSave: 'Cannot Save',
       invalidSlot: 'Please fix the slot',
+      slotSameStartEnd: 'End cannot be the same as start',
       slotsOverlap: 'Slots overlap',
       fixSlots: 'Please fix overlapping slots',
       understood: 'OK',
@@ -120,9 +106,38 @@ describe('useAvailabilitySave Hook', () => {
       expect(entries).toHaveLength(2);
       expect(entries[0].type).toBe('busy');
       expect(entries[0].isAllDay).toBe(false);
-      expect(entries[0].startsAt).toContain('2025-12-29');
-      expect(entries[0].startsAt).toContain('10:00');
-      expect(entries[1].startsAt).toContain('14:00');
+      // No profile zone yet: the device's, New York (jest.config.js).
+      expect(new Date(entries[0].startsAt).toISOString()).toBe('2025-12-29T15:00:00.000Z');
+      expect(new Date(entries[1].startsAt).toISOString()).toBe('2025-12-29T19:00:00.000Z');
+    });
+
+    it('saves the hours in the profile\'s zone, not the device\'s (cause fix 14)', () => {
+      // Tel Aviv chosen, the phone in New York: 10:00 is Tel Aviv's 10:00, as
+      // the day was read and as the server keys it. It went out with the
+      // device's offset: seven hours later than marked, in December.
+      setProfileTimezone('Asia/Jerusalem');
+      const { result } = renderHook(() => useAvailabilitySave());
+
+      const entries = result.current.prepareEntriesForAPI({
+        '2025-12-29': { mode: 'custom', slots: [{ start: '10:00', end: '12:00' }] },
+      });
+
+      expect(new Date(entries[0].startsAt).toISOString()).toBe('2025-12-29T08:00:00.000Z');
+      expect(new Date(entries[0].endsAt).toISOString()).toBe('2025-12-29T10:00:00.000Z');
+    });
+
+    it('names the day a morning slot is saved under, east of UTC too (cause fix 15, review 2)', () => {
+      // The server takes a slot only under the day its start names
+      // (manualDays.js). Sent in UTC, Tel Aviv's 00:00 on the 29th read as the
+      // 28th, and the morning could not be saved at all.
+      setProfileTimezone('Asia/Jerusalem');
+      const { result } = renderHook(() => useAvailabilitySave());
+
+      const [entry] = result.current.entriesForDay('2025-12-29', { mode: 'custom', slots: [{ start: '00:00', end: '01:00' }] });
+
+      expect(entry.startsAt.slice(0, 10)).toBe('2025-12-29');
+      expect(new Date(entry.startsAt).toISOString()).toBe('2025-12-28T22:00:00.000Z');
+      expect(new Date(entry.endsAt).toISOString()).toBe('2025-12-28T23:00:00.000Z');
     });
 
     it('should handle multiple dates', () => {
@@ -174,7 +189,7 @@ describe('useAvailabilitySave Hook', () => {
       const availability: AvailabilityData = {
         '2025-12-29': {
           mode: 'custom',
-          slots: [{ start: '12:00', end: '10:00' }], // Invalid: end before start
+          slots: [{ start: '12:00', end: '12:00' }], // Invalid: no time between them
         },
       };
 
@@ -187,7 +202,26 @@ describe('useAvailabilitySave Hook', () => {
 
       expect(validation.isValid).toBe(false);
       expect(validation.errorTitle).toBe('Cannot Save');
-      expect(validation.errorMessage).toContain('End must be after start');
+      expect(validation.errorMessage).toContain('End cannot be the same as start');
+      // The day it names is the day edited, not the one before: '2025-12-29'
+      // read as UTC midnight is the 28th in New York (jest.config.js).
+      expect(validation.errorMessage).toContain('(December 29, 2025)');
+    });
+
+    it('an overnight slot is valid, and overlaps the evening it takes (CC06)', () => {
+      const { result } = renderHook(() => useAvailabilitySave());
+      const valid = result.current.validateAvailability(
+        { '2025-12-29': { mode: 'custom', slots: [{ start: '23:00', end: '01:00' }] } },
+        '2025-12-01', 'en', mockT
+      );
+      expect(valid.isValid).toBe(true);
+
+      const overlapping = result.current.validateAvailability(
+        { '2025-12-29': { mode: 'custom', slots: [{ start: '22:00', end: '02:00' }, { start: '23:00', end: '23:30' }] } },
+        '2025-12-01', 'en', mockT
+      );
+      expect(overlapping.isValid).toBe(false);
+      expect(overlapping.errorMessage).toContain('Slots overlap');
     });
 
     it('should fail validation for overlapping slots', () => {
@@ -259,206 +293,130 @@ describe('useAvailabilitySave Hook', () => {
     });
   });
 
-  describe('saveAvailability', () => {
-    it('should save availability successfully', async () => {
-      (availabilityAPI.bulkSet as jest.Mock).mockResolvedValue({});
+  // Only the days the person changed go out, each named, each replaced by
+  // exactly what it now holds. The whole snapshot used to go, so a day loaded
+  // an hour ago overwrote what had been saved to it since (review CC05).
+  describe('saveAvailability — the changed days, by name', () => {
+    const save = (result: any, availability: AvailabilityData, changed: Record<string, number>,
+      markSaved = jest.fn()) => result.current.saveAvailability({
+      availability, changed, today: '2025-12-01', language: 'en', t: mockT, setSaving: mockSetSaving, markSaved,
+    });
 
+    it('sends only the changed days, each by name', async () => {
+      (availabilityAPI.saveDays as jest.Mock).mockResolvedValue({});
       const { result } = renderHook(() => useAvailabilitySave());
-
-      const availability: AvailabilityData = {
-        '2025-12-29': {
-          mode: 'custom',
-          slots: [{ start: '10:00', end: '12:00' }],
-        },
-      };
+      const markSaved = jest.fn();
 
       let success = false;
       await act(async () => {
-        success = await result.current.saveAvailability(
-          availability,
-          '2025-12-01',
-          'en',
-          mockT,
-          mockSetSaving,
-          mockSetHasChanges
-        );
+        success = await save(result, {
+          '2025-12-29': { mode: 'custom', slots: [{ start: '10:00', end: '12:00' }] },
+          '2025-12-30': { mode: 'busy', slots: [] },
+        }, { '2025-12-29': 1 }, markSaved);
       });
 
       expect(success).toBe(true);
+      expect(availabilityAPI.saveDays).toHaveBeenCalledWith([
+        { date: '2025-12-29', entries: [expect.objectContaining({ type: 'busy', isAllDay: false })] },
+      ]);
+      expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
+      expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 1 });
       expect(mockSetSaving).toHaveBeenCalledWith(true);
-      expect(mockSetSaving).toHaveBeenCalledWith(false);
-      expect(mockSetHasChanges).toHaveBeenCalledWith(false);
-      expect(availabilityAPI.bulkSet).toHaveBeenCalled();
+      expect(mockSetSaving).toHaveBeenLastCalledWith(false);
       expect(Alert.alert).toHaveBeenCalledWith('Success', 'Availability saved');
     });
 
-    it('should not save if validation fails', async () => {
+    it('saves a slot past midnight from Save, ending on the next day (CC06)', async () => {
+      (availabilityAPI.saveDays as jest.Mock).mockResolvedValue({});
+      // A profile in UTC, so the instants read as the clock times entered.
+      setProfileTimezone('UTC');
       const { result } = renderHook(() => useAvailabilitySave());
-
-      const availability: AvailabilityData = {
-        '2025-12-29': {
-          mode: 'custom',
-          slots: [{ start: '12:00', end: '10:00' }], // Invalid
-        },
-      };
 
       let success = false;
       await act(async () => {
-        success = await result.current.saveAvailability(
-          availability,
-          '2025-12-01',
-          'en',
-          mockT,
-          mockSetSaving,
-          mockSetHasChanges
-        );
+        success = await save(result, {
+          '2025-12-31': { mode: 'custom', slots: [{ start: '23:00', end: '01:00' }] },
+        }, { '2025-12-31': 1 });
       });
 
-      expect(success).toBe(false);
-      expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Cannot Save',
-        expect.stringContaining('End must be after start'),
-        expect.any(Array)
-      );
+      expect(success).toBe(true);
+      const [[days]] = (availabilityAPI.saveDays as jest.Mock).mock.calls;
+      expect(days).toHaveLength(1);
+      const [entry] = days[0].entries;
+      expect(entry.startsAt.slice(0, 16)).toBe('2025-12-31T23:00');
+      // Across the year, too: the end is on the first of January.
+      expect(entry.endsAt.slice(0, 16)).toBe('2026-01-01T01:00');
+      expect(Date.parse(entry.endsAt) - Date.parse(entry.startsAt)).toBe(2 * 60 * 60 * 1000);
     });
 
-    it('should handle API errors', async () => {
-      (availabilityAPI.bulkSet as jest.Mock).mockRejectedValue(
-        new Error('Network error')
-      );
-
+    it('sends a day the person emptied as an empty list', async () => {
+      (availabilityAPI.saveDays as jest.Mock).mockResolvedValue({});
       const { result } = renderHook(() => useAvailabilitySave());
 
-      const availability: AvailabilityData = {
-        '2025-12-29': {
-          mode: 'busy',
-          slots: [],
-        },
-      };
+      await act(async () => { await save(result, {}, { '2025-12-29': 1 }); });
 
-      let success = false;
+      expect(availabilityAPI.saveDays).toHaveBeenCalledWith([{ date: '2025-12-29', entries: [] }]);
+    });
+
+    it('marks saved the versions it sent, not those it finds after the answer (review CC03)', async () => {
+      let finish!: () => void;
+      (availabilityAPI.saveDays as jest.Mock).mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
+      const { result } = renderHook(() => useAvailabilitySave());
+      const markSaved = jest.fn();
+      const changed: Record<string, number> = { '2025-12-29': 3 };
+
+      let pending!: Promise<boolean>;
+      act(() => { pending = save(result, { '2025-12-29': { mode: 'busy', slots: [] } }, changed, markSaved); });
+      changed['2025-12-29'] = 4;
+      await act(async () => { finish(); await pending; });
+
+      expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 3 });
+    });
+
+    it('leaves out days already past, and stops counting them as unsaved', async () => {
+      (availabilityAPI.saveDays as jest.Mock).mockResolvedValue({});
+      const { result } = renderHook(() => useAvailabilitySave());
+      const markSaved = jest.fn();
+
       await act(async () => {
-        success = await result.current.saveAvailability(
-          availability,
-          '2025-12-01',
-          'en',
-          mockT,
-          mockSetSaving,
-          mockSetHasChanges
-        );
+        await save(result, { '2025-11-30': { mode: 'busy', slots: [] }, '2025-12-29': { mode: 'busy', slots: [] } },
+          { '2025-11-30': 1, '2025-12-29': 2 }, markSaved);
+      });
+
+      expect(availabilityAPI.saveDays).toHaveBeenCalledWith([expect.objectContaining({ date: '2025-12-29' })]);
+      expect(markSaved).toHaveBeenCalledWith({ '2025-11-30': 1, '2025-12-29': 2 });
+    });
+
+    it('does not save if validation fails', async () => {
+      const { result } = renderHook(() => useAvailabilitySave());
+      const markSaved = jest.fn();
+
+      let success = true;
+      await act(async () => {
+        success = await save(result, { '2025-12-29': { mode: 'custom', slots: [{ start: '14:00', end: '14:00' }] } },
+          { '2025-12-29': 1 }, markSaved);
       });
 
       expect(success).toBe(false);
-      expect(mockSetSaving).toHaveBeenCalledWith(false); // Should reset saving state
-      // Falls back to generic error message when no response.data.error
+      expect(availabilityAPI.saveDays).not.toHaveBeenCalled();
+      expect(markSaved).not.toHaveBeenCalled();
+      expect(Alert.alert).toHaveBeenCalledWith('Cannot Save', expect.any(String), expect.any(Array));
+    });
+
+    it('keeps the days unsaved and says so when the server refuses', async () => {
+      (availabilityAPI.saveDays as jest.Mock).mockRejectedValue(new Error('Network error'));
+      const { result } = renderHook(() => useAvailabilitySave());
+      const markSaved = jest.fn();
+
+      let success = true;
+      await act(async () => {
+        success = await save(result, { '2025-12-29': { mode: 'busy', slots: [] } }, { '2025-12-29': 1 }, markSaved);
+      });
+
+      expect(success).toBe(false);
+      expect(markSaved).not.toHaveBeenCalled();
       expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to save');
-    });
-
-    it('should show API error message when available', async () => {
-      (availabilityAPI.bulkSet as jest.Mock).mockRejectedValue({
-        response: {
-          data: {
-            error: 'Invalid date format',
-          },
-        },
-      });
-
-      const { result } = renderHook(() => useAvailabilitySave());
-
-      const availability: AvailabilityData = {
-        '2025-12-29': {
-          mode: 'busy',
-          slots: [],
-        },
-      };
-
-      await act(async () => {
-        await result.current.saveAvailability(
-          availability,
-          '2025-12-01',
-          'en',
-          mockT,
-          mockSetSaving,
-          mockSetHasChanges
-        );
-      });
-
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Invalid date format');
-    });
-
-    it('should reset saving state even on error', async () => {
-      (availabilityAPI.bulkSet as jest.Mock).mockRejectedValue(
-        new Error('Network error')
-      );
-
-      const { result } = renderHook(() => useAvailabilitySave());
-
-      const availability: AvailabilityData = {
-        '2025-12-29': {
-          mode: 'busy',
-          slots: [],
-        },
-      };
-
-      await act(async () => {
-        await result.current.saveAvailability(
-          availability,
-          '2025-12-01',
-          'en',
-          mockT,
-          mockSetSaving,
-          mockSetHasChanges
-        );
-      });
-
-      expect(mockSetSaving).toHaveBeenCalledWith(true);
-      expect(mockSetSaving).toHaveBeenCalledWith(false);
-    });
-  });
-
-  describe('Localization', () => {
-    it('should format date in Russian when language is ru', () => {
-      const { result } = renderHook(() => useAvailabilitySave());
-
-      const availability: AvailabilityData = {
-        '2025-12-29': {
-          mode: 'custom',
-          slots: [{ start: '12:00', end: '10:00' }], // Invalid
-        },
-      };
-
-      const validation = result.current.validateAvailability(
-        availability,
-        '2025-12-01',
-        'ru', // Russian
-        mockT
-      );
-
-      expect(validation.isValid).toBe(false);
-      // Date should be formatted in Russian locale
-      expect(validation.errorMessage).toBeDefined();
-    });
-
-    it('should format date in English when language is en', () => {
-      const { result } = renderHook(() => useAvailabilitySave());
-
-      const availability: AvailabilityData = {
-        '2025-12-29': {
-          mode: 'custom',
-          slots: [{ start: '12:00', end: '10:00' }], // Invalid
-        },
-      };
-
-      const validation = result.current.validateAvailability(
-        availability,
-        '2025-12-01',
-        'en', // English
-        mockT
-      );
-
-      expect(validation.isValid).toBe(false);
-      expect(validation.errorMessage).toBeDefined();
+      expect(mockSetSaving).toHaveBeenLastCalledWith(false);
     });
   });
 });

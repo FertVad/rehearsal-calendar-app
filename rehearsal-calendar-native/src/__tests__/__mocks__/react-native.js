@@ -22,6 +22,9 @@ const ScrollView = mockComponent('ScrollView');
 const Image = mockComponent('Image');
 const TextInput = mockComponent('TextInput');
 const ActivityIndicator = mockComponent('ActivityIndicator');
+// The sign-in screens lay out inside these two.
+const SafeAreaView = mockComponent('SafeAreaView');
+const KeyboardAvoidingView = mockComponent('KeyboardAvoidingView');
 
 // TouchableOpacity needs special handling for disabled state
 const TouchableOpacity = React.forwardRef((props, ref) => {
@@ -188,6 +191,8 @@ module.exports = {
   Image,
   TextInput,
   ActivityIndicator,
+  SafeAreaView,
+  KeyboardAvoidingView,
   Modal,
 
   // Whether the app is in the foreground.
@@ -223,9 +228,17 @@ module.exports = {
 
   // Additional utilities
   findNodeHandle: jest.fn(),
+  useWindowDimensions: () => ({ width: 375, height: 812 }),
   Animated: {
-    Value: jest.fn(),
-    timing: jest.fn(),
+    // AppModal moves its content with one; a timing ends at once.
+    Value: class {
+      constructor(value) { this.value = value; }
+      setValue(value) { this.value = value; }
+      interpolate() { return this; }
+    },
+    timing: jest.fn((value, { toValue }) => ({
+      start: (done) => { value.value = toValue; if (done) done({ finished: true }); },
+    })),
     spring: jest.fn(),
     View: View,
     Text: Text,

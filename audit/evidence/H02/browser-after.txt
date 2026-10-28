@@ -1,0 +1,76 @@
+TAP version 13
+# Subtest: real invite route retains strict CSP, styling and the timed fallback
+ok 1 - real invite route retains strict CSP, styling and the timed fallback
+  ---
+  duration_ms: 784.373875
+  type: 'test'
+  ...
+# Subtest: manual mouse and keyboard activation preserve the short invite path under CSP
+ok 2 - manual mouse and keyboard activation preserve the short invite path under CSP
+  ---
+  duration_ms: 184.924542
+  type: 'test'
+  ...
+# Subtest: manual mouse and keyboard activation preserve the legacy 32-hex invite path under CSP
+ok 3 - manual mouse and keyboard activation preserve the legacy 32-hex invite path under CSP
+  ---
+  duration_ms: 166.458083
+  type: 'test'
+  ...
+# Subtest: manual native link remains usable when JavaScript is disabled
+ok 4 - manual native link remains usable when JavaScript is disabled
+  ---
+  duration_ms: 113.20025
+  type: 'test'
+  ...
+# Subtest: manual native link remains usable when JavaScript is unavailable
+ok 5 - manual native link remains usable when JavaScript is unavailable
+  ---
+  duration_ms: 119.137917
+  type: 'test'
+  ...
+# Subtest: Expo links preserve their encoded invite path and retain a native app link
+ok 6 - Expo links preserve their encoded invite path and retain a native app link
+  ---
+  duration_ms: 179.203708
+  type: 'test'
+  ...
+# Subtest: untrusted invite codes remain encoded data without creating or executing markup
+ok 7 - untrusted invite codes remain encoded data without creating or executing markup
+  ---
+  duration_ms: 149.537667
+  type: 'test'
+  ...
+# Subtest: malformed or repeated Expo host parameters cannot change the native fallback
+ok 8 - malformed or repeated Expo host parameters cannot change the native fallback
+  ---
+  duration_ms: 911.678541
+  type: 'test'
+  ...
+# Subtest: Russian browser language localizes the status, fallback and both manual links
+ok 9 - Russian browser language localizes the status, fallback and both manual links
+  ---
+  duration_ms: 122.201334
+  type: 'test'
+  ...
+# Subtest: visibility changes and page restoration cancel a pending second automatic scheme attempt
+ok 10 - visibility changes and page restoration cancel a pending second automatic scheme attempt
+  ---
+  duration_ms: 457.799625
+  type: 'test'
+  ...
+# Subtest: the page policy still blocks injected inline scripts and event handlers
+ok 11 - the page policy still blocks injected inline scripts and event handlers
+  ---
+  duration_ms: 132.76625
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4583.605792

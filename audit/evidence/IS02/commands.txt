@@ -1,0 +1,39 @@
+Base: a67d6715165fa1056b145a2d9d93d70a643baeca
+Source: 61ced139d1055150298b204c20a4ddd807967d77
+First runtime source: bc0184e93ba8732882204aa0db46cb479d511913
+Node: /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/node
+
+Final full check, cwd rehearsal-calendar-native:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin NODE_ENV=test JWT_SECRET=is02-isolated-test-secret PLAYWRIGHT_BROWSERS_PATH=/private/tmp/reh-continuous-browser.s8CVco npm run check > ../audit/evidence/IS02/check-final.txt 2>&1
+
+Final full PostgreSQL, cwd repository root:
+env -i HOME=/Users/vadimfertik PATH=/Users/vadimfertik/.nvm/versions/node/v22.16.0/bin:/usr/bin:/bin node rehearsal-calendar-native/server/scripts/r0-postgres.mjs > audit/evidence/IS02/postgres-final.txt 2>&1
+
+Focused real PostgreSQL, same env-i Node22, repository root:
+node rehearsal-calendar-native/server/scripts/r0-postgres.mjs --is02-only
+Actual exit0: controls + IS02, independent workers, observed lock races,
+SQLSTATE55P03/57014, ownership cleanup. See postgres-after.txt.
+
+Focused app assembly/public/error checks, same env-i Node22/test/synthetic
+signing environment as full check, cwd rehearsal-calendar-native/server:
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --runTestsByPath __tests__/appImport.test.js __tests__/asyncRoutes.test.js __tests__/adminHttp.test.js __tests__/errorHttp.test.js
+Actual exit0, 4 suites / 19 tests; app-boundary-after.txt.
+
+Baseline runs the initial two-case operationIpLimits Jest fixture from owned
+/private/tmp/reh-is02-http against unchanged createApp at4044e3d; actualexit1,
+auth admitted20+20 and admin5+5 across two apps, business snapshots unchanged.
+The intervening a67d671 commit changes only IS01 documentation/evidence.
+
+No .env or server.js. All DB/listener/Docker targets are owned isolated fixtures;
+provider/production requests are forbidden. Existing reminder schedules stay off.
+
+First exact-source full run failed one native SQLite error matcher; preserved
+check-first-source-failure.txt and postgres-first-source.txt (PG exit0).
+The diagnostic pair used temporary error metadata instrumentation (not shipped)
+on bc0184e and reproduced SQLITE_CONSTRAINT_TRIGGER currentRealmError:false;
+matcher-diagnostic.txt. After exact-code/message assertion, same pair passed
+50/50, matcher-after.txt. Commands use root Jest backend with runInBand and
+runTestsByPath server/__tests__/routes/operationIpLimits.test.js followed by
+server/__tests__/services/operationIpRateLimit.test.js. Focused five-suite
+rerun after the matcher patch passed91; after.txt. Final full commands above
+ran on61ced139 and both returned exit0. No historical manifest was rewritten.

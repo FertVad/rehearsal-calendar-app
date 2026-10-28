@@ -1,0 +1,68 @@
+Cause fix 18 (T-118) - red before, Jest.
+Source: auto/main at 4608443 (the code before the fix), with only the new tests added:
+  src/shared/hooks/__tests__/useAutoCalendarSync.test.ts (EO01, EO03 added)
+  src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.onePath.test.tsx (new: EO04, EO05)
+  src/features/onboarding/screens/__tests__/CalendarSyncScreen.test.tsx (new: HP05)
+Command (rehearsal-calendar-native, Node 22):
+  npx jest --selectProjects frontend --silent --verbose <the three files>
+Output, filtered to results and reasons (grep -E "✓|✕|Tests:|^FAIL|^PASS|^  ● |Expected:|Received:|Unable to find"):
+
+FAIL frontend src/shared/hooks/__tests__/useAutoCalendarSync.test.ts (13.001 s)
+    ✓ does not listen unless asked to (635 ms)
+    ✓ listens when asked, which is what the tab bar does (12 ms)
+    ✓ syncs when the app comes forward (6 ms)
+    ✓ registers one listener however many screens use the hook (9 ms)
+    ✓ is shared between separate mounts, not one lock each (4 ms)
+    ✓ syncs on a cold launch, not only on a return from the background (5 ms)
+    ✓ does not sync on mount for a screen that only wants the manual functions (3 ms)
+    ✓ hands the export pass every live rehearsal, to take back the rest (5 ms)
+    ✓ runs the pass once the last rehearsal is gone too (4 ms)
+    ✕ takes back what was exported, rather than stopping at "no projects" (8 ms)
+    ✕ go one at a time, however many are waiting (70 ms)
+    ✓ waits its turn instead of being dropped (13 ms)
+    ✓ no longer holds back, so someone else's edit arrives on opening the app (5 ms)
+    ✓ asks for the mappings once, not once per rehearsal (7 ms)
+    ✓ a failed import still lets the export run (7 ms)
+    ✓ mappings that could not be fetched for the import still let the export run (6 ms)
+    ✓ can bring the calendar in line without the hook (4 ms)
+    ✓ shares the lock, so an extra caller causes no extra run (6 ms)
+  ● Leaving the last project (EO01) › takes back what was exported, rather than stopping at "no projects"
+    Expected: [], "cal-export", undefined, ObjectContaining {"7": Anything}, Any<Number>, {"removeOthers": true}
+  ● Runs waiting their turn (EO03) › go one at a time, however many are waiting
+    Expected: 1
+    Received: 2
+FAIL frontend src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.onePath.test.tsx (13.124 s)
+  ✕ exports each rehearsal under its own title (EO05) (490 ms)
+    ✕ cannot be changed until the whole run is over (94 ms)
+    ✕ are not written past: sync turned off is not exported to (96 ms)
+    ✕ keeps the stamp the sync wrote after the screen read its settings (72 ms)
+    ✕ from the hook changes only what it names (64 ms)
+  ● exports each rehearsal under its own title (EO05)
+    Expected: "Act II"
+    Received: undefined
+  ● Settings changed while a sync runs (EO04) › cannot be changed until the whole run is over
+    Expected: true
+    Received: false
+  ● Settings changed while a sync runs (EO04) › are not written past: sync turned off is not exported to
+  ● A change of settings (EO04) › keeps the stamp the sync wrote after the screen read its settings
+    Received: null
+  ● A change of settings (EO04) › from the hook changes only what it names
+    Received: null
+FAIL frontend src/features/onboarding/screens/__tests__/CalendarSyncScreen.test.tsx (21.509 s)
+  ✕ does not show the calendar connected when its choice could not be saved (8099 ms)
+  ✓ shows the calendar connected once its choice is saved (64 ms)
+  ✕ shows a calendar connected earlier as connected on coming back (1061 ms)
+  ● does not show the calendar connected when its choice could not be saved
+    Received: {"_fiber": {... "elementType": "Text" ...}}   (the "connected" text is on screen)
+  ● shows a calendar connected earlier as connected on coming back
+    Unable to find an element with text: Busy hours will come across on their own. Where the calendar does not cover everything, mark the rest in the app, on th
+Tests:       9 failed, 17 passed, 26 total
+
+Reason of each, in full output:
+  EO01  syncAllRehearsals never called: the run returned at "No projects - nothing to export".
+  EO03  most concurrent export passes = 2: both waiting pulls started when the automatic run ended.
+  EO05  the manual export's rehearsals carry no title.
+  EO04  the Auto Sync switch is enabled between the import and the export; switched off there,
+        the export still ran (syncAllRehearsals called once); a change of calendar wrote
+        lastImportTime back to null, from the screen's and the hook's copy of the settings.
+  HP05  "connected" shown after the save failed; nothing connected on coming back to the step.

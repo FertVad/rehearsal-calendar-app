@@ -1,0 +1,13 @@
+{"harness":"F03/F05 adapter","mode":"--before","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","sourceSha256":"28f68673b2623b213c7b8553068eb8bbcce97abdc15cc8e965b647a99186930b","ownedLoopback":true}
+{"observation":"ordinary affected rows","independentUpdated":2,"reportedUpdated":null,"reportedAbsent":null}
+{"check":"ordinary run reports affected rows for insert/update/delete0/conflict0","result":"FAIL","errorCode":"ERR_ASSERTION"}
+{"observation":"transaction affected rows","independentUpdated":3,"reportedUpdated":null,"reportedDeleted":null}
+{"check":"scoped run reports exact update/delete count on the real transaction","result":"FAIL","errorCode":"ERR_ASSERTION"}
+{"scenario":"counts-before","failures":2,"deniedConnections":0}
+{"scenario":"counts-before","actualExit":1}
+{"observation":"old missing-URL initialization","sqliteCreated":true,"adapterPublished":true,"isPostgres":false}
+{"check":"missing runtime URL refuses before local SQLite creation","result":"FAIL","errorCode":"ERR_ASSERTION"}
+{"scenario":"fallback-before","failures":1,"deniedConnections":0}
+{"scenario":"fallback-before","actualExit":1}
+{"mode":"--before","failedScenarios":2,"result":"FAIL"}
+Cleanup: owned temporary PostgreSQL removed

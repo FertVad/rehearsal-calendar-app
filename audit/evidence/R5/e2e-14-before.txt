@@ -1,0 +1,21 @@
+Cause fix 12 — e2e flow 14 (switch accounts on a running app), red before.
+Production files of the fix restored from ce1a4fb (git restore --source=ce1a4fb -- <16 files of 1a4071a>);
+flow, seed and testID profile-logout from 20724bd. Restored from HEAD afterwards.
+Command (rehearsal-calendar-native): npm run e2e -- e2e/flows/14-switch-account.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Failed] Switch accounts on a running app (3m 35s) (Assertion is false: id: seen-toggle, Below ".*Orchard walk.*", not selected is visible)
+1/1 Flow Failed
+
+Screenshot at the failing step (e2e/out/artifacts/2026-10-15_203600/.../step-061-assertCondition-seen-toggle.png):
+signed in as Lopakhin, "Orchard walk" (The Cherry Orchard, tomorrow 12:00–14:00) shows the filled
+"seen" eye — Ranevskaya's mark, which he never made (HN03; the refresh did not clear it, HN02).
+The flow stops there, before the rehearsal-form step (BC01), which is covered by
+ProjectContext.test.tsx in cause12-before.log.

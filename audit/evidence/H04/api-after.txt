@@ -1,0 +1,40 @@
+(node:6031) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS __tests__/routes/adminStatus.test.js
+  admin bug-report status contract
+    ✓ missing report returns 404 instead of claiming success (13 ms)
+    ✓ malformed report ID returns 400 before database work (2 ms)
+    ✓ invalid ID 0 cannot issue database work (2 ms)
+    ✓ invalid ID -1 cannot issue database work (3 ms)
+    ✓ invalid ID 1.5 cannot issue database work (3 ms)
+    ✓ invalid ID 1e0 cannot issue database work (2 ms)
+    ✓ invalid ID 01 cannot issue database work (4 ms)
+    ✓ invalid ID +1 cannot issue database work (4 ms)
+    ✓ invalid ID  1 cannot issue database work (3 ms)
+    ✓ invalid ID 1  cannot issue database work (1 ms)
+    ✓ invalid ID 2147483648 cannot issue database work (2 ms)
+    ✓ invalid ID 9007199254740993 cannot issue database work (2 ms)
+    ✓ invalid body null cannot issue database work (1 ms)
+    ✓ invalid body [] cannot issue database work (2 ms)
+    ✓ invalid body {} cannot issue database work (2 ms)
+    ✓ invalid body {"status":null} cannot issue database work (1 ms)
+    ✓ invalid body {"status":false} cannot issue database work (1 ms)
+    ✓ invalid body {"status":1} cannot issue database work (2 ms)
+    ✓ invalid body {"status":["fixed"]} cannot issue database work (1 ms)
+    ✓ invalid body {"status":{}} cannot issue database work (2 ms)
+    ✓ invalid body {"status":""} cannot issue database work (1 ms)
+    ✓ invalid body {"status":"FIXED"} cannot issue database work (1 ms)
+    ✓ invalid body {"status":"fixed "} cannot issue database work (2 ms)
+    ✓ authentication rejects unusable credentials before ID/body validation (1 ms)
+    ✓ authentication rejects unusable credentials before ID/body validation (1 ms)
+    ✓ authentication rejects unusable credentials before ID/body validation (3 ms)
+    ✓ authentication rejects unusable credentials before ID/body validation (3 ms)
+    ✓ all statuses, repeated status and int4 boundary update only the selected status (7 ms)
+    ✓ a report deleted after it was displayed returns 404 with no other writes (1 ms)
+    ✓ a failing real SQL trigger returns generic 500, rolls back and recovers (3 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       30 passed, 30 total
+Snapshots:   0 total
+Time:        0.476 s, estimated 1 s
+Ran all test suites matching __tests__/routes/adminStatus.test.js.

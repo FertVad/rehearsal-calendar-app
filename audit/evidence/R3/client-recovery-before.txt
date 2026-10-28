@@ -1,0 +1,48 @@
+# T-130 — «красное до»: тесты экранов сброса пароля и смены адреса на прежнем коде
+# Дерево: df256d0 + новые строки переводов (auth.ts, profile.ts) + новые тесты; экраны, контекст, api, навигация — из df256d0.
+# Команда (из rehearsal-calendar-native):
+#   npx jest --selectProjects frontend --silent src/features/profile/screens/__tests__ \
+#     src/features/auth/screens/__tests__/LoginScreen.test.tsx src/features/auth/screens/__tests__/RegisterScreen.test.tsx \
+#     src/features/auth/screens/__tests__/ResetPasswordScreen.test.tsx src/contexts/__tests__/AuthContext.test.tsx
+# Вывод сокращён до строк FAIL, имён тестов и причин падения (без цветов и стека).
+
+FAIL frontend src/features/auth/screens/__tests__/LoginScreen.test.tsx (41.669 s)
+  ● opens the reset with the address already typed
+    Unable to find an element with text: Forgot password?
+  ● opens the reset with an empty address when none was typed
+    Unable to find an element with text: Forgot password?
+FAIL frontend src/features/profile/screens/__tests__/EditProfileScreen.test.tsx (43.386 s)
+  ● shows the address without a field for it, and opens the change screen (HP01)
+    Unable to find an element with text: anna@example.com
+  ● clears a last name with an empty string and never sends the address (HP02, HP01)
+    - Expected
+    + Received
+    +   "email": "anna@example.com",
+    -   "lastName": "",
+    +   "lastName": undefined,
+FAIL frontend src/features/auth/screens/__tests__/ResetPasswordScreen.test.tsx
+  ● Test suite failed to run
+    src/features/auth/screens/__tests__/ResetPasswordScreen.test.tsx:12:33 - error TS2307: Cannot find module '../ResetPasswordScreen' or its corresponding type declarations.
+FAIL frontend src/features/profile/screens/__tests__/ChangeEmailScreen.test.tsx
+  ● Test suite failed to run
+    src/features/profile/screens/__tests__/ChangeEmailScreen.test.tsx:14:31 - error TS2307: Cannot find module '../ChangeEmailScreen' or its corresponding type declarations.
+FAIL frontend src/contexts/__tests__/AuthContext.test.tsx
+  ● Test suite failed to run
+    src/contexts/__tests__/AuthContext.test.tsx:367:48 - error TS2339: Property 'requestPasswordReset' does not exist on type 'AuthContextType'.
+    src/contexts/__tests__/AuthContext.test.tsx:376:38 - error TS2339: Property 'resetPassword' does not exist on type 'AuthContextType'.
+    src/contexts/__tests__/AuthContext.test.tsx:388:32 - error TS2339: Property 'resetPassword' does not exist on type 'AuthContextType'.
+    src/contexts/__tests__/AuthContext.test.tsx:399:48 - error TS2339: Property 'resetPassword' does not exist on type 'AuthContextType'.
+    src/contexts/__tests__/AuthContext.test.tsx:399:115 - error TS7006: Parameter 'error' implicitly has an 'any' type.
+    src/contexts/__tests__/AuthContext.test.tsx:417:49 - error TS2339: Property 'requestEmailChange' does not exist on type 'AuthContextType'.
+    src/contexts/__tests__/AuthContext.test.tsx:426:38 - error TS2551: Property 'confirmEmailChange' does not exist on type 'AuthContextType'. Did you mean 'confirmEmail'?
+    src/contexts/__tests__/AuthContext.test.tsx:439:48 - error TS2551: Property 'confirmEmailChange' does not exist on type 'AuthContextType'. Did you mean 'confirmEmail'?
+    src/contexts/__tests__/AuthContext.test.tsx:439:94 - error TS7006: Parameter 'error' implicitly has an 'any' type.
+FAIL frontend src/features/auth/screens/__tests__/RegisterScreen.test.tsx (67.13 s)
+  ● counts the password in characters like the server, not in UTF-16 units
+    Expected: "Ошибка", "Пароль: от 8 символов и не длиннее 72 байт — это 72 латинские буквы или около 36 русских."
+  ● offers both sign-in and a password reset for a taken address (R3 contract)
+    - Expected  - 1
+    + Received  + 0
+    -   "Восстановить пароль",
+Test Suites: 6 failed, 6 total
+Tests:       6 failed, 7 passed, 13 total

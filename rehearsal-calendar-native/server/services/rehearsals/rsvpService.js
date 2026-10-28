@@ -1,67 +1,33 @@
 import { logger } from '../../utils/logger.js';
 import db from '../../database/db.js';
 import { fullName } from '../../utils/names.js';
-import { ensureRehearsalSlot } from './slotService.js';
+import { answer, rosterStats, rosterWithNames, placeOnRoster, RosterRefused } from './roster.js';
 
 /**
- * Respond to a rehearsal (seen system: toggle between 'yes' and 'no')
- * @param {number} rehearsalId - Rehearsal ID
- * @param {number} userId - User ID
- * @param {string} response - 'yes' (seen) or 'no' (unseen)
- * @param {string|null} notes - Optional notes
- * @param {number} projectId - Project ID for calculating stats
- * @returns {Promise<object>} - Updated rehearsal stats (confirmed, invited)
+ * Mark a rehearsal seen ('yes') or not yet seen ('no').
+ *
+ * Changes the answer of someone already on the rehearsal and nothing else. It
+ * used to upsert: an answer from someone with no row put them on the call, so a
+ * member could add themselves to a rehearsal they were never invited to by
+ * knowing its id (review D02). Now an answer from anyone not on it is refused
+ * and writes nothing (roster.js).
+ *
+ * @returns {Promise<{confirmed: number, invited: number}>} the rehearsal's counts
  */
-export async function respondToRehearsal(rehearsalId, userId, response, notes = null, projectId) {
-  if (response === 'yes' || response === 'no') {
-    // Update response (upsert)
-    await db.run(
-      `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, notes)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (rehearsal_id, user_id)
-       DO UPDATE SET response = $3, notes = $4, updated_at = NOW()`,
-      [rehearsalId, userId, response, notes]
-    );
-
-    // A row here is what puts someone on the rehearsal, and this endpoint
-    // writes one — an admin sees rehearsals they are not on, and the eye is
-    // live on every card, so a single tap adds them to the call. Slots are
-    // otherwise booked only on create and edit, so without this they would read
-    // free in the planner during their own rehearsal until somebody happened to
-    // edit it again.
-    await ensureRehearsalSlot(rehearsalId, userId);
-
-    // Update rehearsal timestamp
-    await db.run(
-      'UPDATE native_rehearsals SET updated_at = NOW() WHERE id = $1',
-      [rehearsalId]
-    );
-  } else {
-    throw new Error('Invalid response value. Must be "yes" or "no".');
+export async function respondToRehearsal(rehearsalId, userId, response, notes = null) {
+  if (response !== 'yes' && response !== 'no') {
+    throw new RosterRefused(400, 'RESPONSE_INVALID', 'response must be "yes" or "no"');
   }
+  await answer(db, rehearsalId, userId, response, notes ?? null);
 
-  // Get current stats: count responses only from active project members
-  const responsesCount = await db.get(
-    `SELECT
-       COUNT(*) as total_responses,
-       COUNT(CASE WHEN r.response = 'yes' THEN 1 END) as confirmed
-     FROM native_rehearsal_responses r
-     JOIN native_project_members pm ON pm.user_id = r.user_id AND pm.project_id = $2
-     WHERE r.rehearsal_id = $1 AND pm.status = 'active'`,
-    [rehearsalId, projectId]
-  );
+  // Update rehearsal timestamp
+  await db.run('UPDATE native_rehearsals SET updated_at = NOW() WHERE id = $1', [rehearsalId]);
 
   // `invited` is the people on THIS rehearsal, which is what the list endpoint
   // and the participants screen both report. Counting the whole project here
   // made the number jump the moment you tapped — 2 of 5 became 3 of 8 — and
   // snap back on the next refresh.
-  const confirmed = Number(responsesCount.confirmed) || 0;
-  const invited = Number(responsesCount.total_responses) || 0;
-
-  return {
-    confirmed,
-    invited,
-  };
+  return (await rosterStats(db, [Number(rehearsalId)])).get(Number(rehearsalId)) || { confirmed: 0, invited: 0 };
 }
 
 /**
@@ -80,26 +46,8 @@ export async function getRehearsalResponses(rehearsalId) {
     return { responses: [], allParticipants: [] };
   }
 
-  // Get only invited participants who are still active members of the project
-  const allParticipants = await db.all(
-    `SELECT
-      u.id as user_id,
-      u.first_name,
-      u.last_name,
-      -- Email deliberately not selected: the participant list shows names
-      -- only, and there is no reason to hand every project member the
-      -- addresses of everyone else.
-      r.response,
-      r.notes,
-      r.created_at,
-      r.updated_at
-     FROM native_rehearsal_responses r
-     JOIN native_users u ON r.user_id = u.id
-     JOIN native_project_members pm ON pm.user_id = u.id AND pm.project_id = $2
-     WHERE r.rehearsal_id = $1 AND pm.status = 'active'
-     ORDER BY u.first_name, u.last_name`,
-    [rehearsalId, rehearsal.project_id]
-  );
+  // The people on it who are still active members of the project (roster.js).
+  const allParticipants = await rosterWithNames(db, rehearsalId);
 
   // Calculate stats
   const confirmed = allParticipants.filter((p) => p.response === 'yes').length;
@@ -144,10 +92,7 @@ export async function getRehearsalResponses(rehearsalId) {
  * @returns {Promise<object|null>} - User's response or null
  */
 export async function getUserResponse(rehearsalId, userId) {
-  const response = await db.get(
-    'SELECT * FROM native_rehearsal_responses WHERE rehearsal_id = $1 AND user_id = $2',
-    [rehearsalId, userId]
-  );
+  const response = await placeOnRoster(db, rehearsalId, userId);
 
   if (!response) {
     return null;

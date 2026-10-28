@@ -1,0 +1,118 @@
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:53728","database":"r0_test","schema":"diagnostic subset; production bootstrap is probed separately"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+{"scenario":"F01","outcome":"KNOWN_DEFECT_REPRODUCED","sqlState":"42601","expectation":"Production bootstrap must work on PostgreSQL; current file fails at AUTOINCREMENT"}
+{"scenario":"B02","outcome":"KNOWN_DEFECT_REPRODUCED","status":500,"orphanProjects":1,"expectation":"Failed project creation must roll back its first write"}
+Error creating project: error: R0_INJECTED_SECOND_WRITE
+    at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async query (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/database/db.js:139:14)
+    at async Object.run (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/database/db.js:122:22)
+    at async file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/routes/native/projects.js:79:5 {
+  length: 143,
+  severity: 'ERROR',
+  code: 'P0001',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'PL/pgSQL function reject_second_write() line 2 at RAISE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_exec.c',
+  line: '3905',
+  routine: 'exec_stmt_raise'
+}
+{"scenario":"D01","outcome":"KNOWN_DEFECT_REPRODUCED","status":201,"outsiderInvitations":1,"outsiderBusyRows":1,"expectation":"Reject a participant outside the project before any write"}
+{"scenario":"A02","outcome":"PASS","contracts":["auth DB rejection returns bounded generic 500 for GET/POST","health survives DB fault; authorized traffic recovers","no application row changes during failures","pre-try availability DB failure returns bounded generic 500; process alive","malformed availability entries400 through both public mounts","real bcrypt malformed passwords400/wrong401/correct200+usable admin token"],"externalConnections":0}
+[ERROR] Request failed: { status: 500, code: '42P01' }
+[ERROR] Request failed: { status: 500, code: '42P01' }
+[ERROR] Request failed: { status: 500, code: '42703' }
+{"scenario":"B03","outcome":"PASS","contracts":["actual additive migration applied twice to an isolated owned fixture","auth first; strict scalar/calendar/date-range400; huge range then health200","active membership403 before business reads and shared-rate consumption","real TIMESTAMPTZ timezone/midnight/all-day/exclusion/hasData200; outsider intersection","timezone and all-day projections crossing into year10000 preserve busy time in requested year9999","100-member and 3100-member-day boundaries; real SQL101-row roster sentinel","real SQL5001-row record sentinel; 5000-record200; expanded-range and UTF8-byte422 without partial data","two HTTP app instances share exactly60 admissions;429+Retry-After; another user independent","expired shared window reset without wait; missing limiter storage503, health200 and recovery","no business row changes during invalid input, denied access or limiter storage failures"],"externalConnections":0}
+{"scenario":"B04","outcome":"PASS","contracts":["actual migration008 applied twice only to an owned isolated PostgreSQL fixture","canonical preview and both join aliases share20/IP/min across two real app instances","concurrent same-IP burst admits exactly20; mixed alias/code rotation cannot reset budget","rotated-IP concurrent join burst admits exactly20/account/min; other account independent","HEAD preview, IPv4-mapped aliases and IPv6 /56 rotation obey the same shared IP budget","unauthenticated401 consumes IP only; denied requests stop before all invite/member/notification work","invalid/oversized code404 before inviteSQL but after shared IP/account budgets","short and legacy32hex exact matches; expired410; real join/reactivation and owner inbox persistence","canonical and legacy management CRUD and admin guards; protected project detail; publicHTML noDB","expired windows reset without wait;10000-key cap;bounded64-row pruning;concurrent final-slot gate consistency","observed PostgreSQL lock wait: concurrent refresh survives pruning with original budget and exact gate count","each missing rate-storage table503, generic error, health200, rollback and recovery","complete business-row snapshots unchanged after denied requests, exhaustion and storage faults"],"externalConnections":0}
+{"scenario":"H04","outcome":"PASS","contracts":["real admin login and authentication before database work","positive int4 IDs and enum statuses: malformed400 without SQL or writes","missing/deleted reports404; real UPDATE RETURNING changes only selected status","all statuses and repeated status200; largest positive int4 ID supported","trigger side writes roll back; unavailable table500; generic errors and health survive","independent all-business-row snapshots and successful storage recovery"],"externalConnections":0}
+[ERROR] Request failed: { status: 400 }
+[Admin] Update bug report status error: error: H04_INTERNAL_STORAGE_DETAIL
+    at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async query (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/database/db.js:139:14)
+    at async Object.get (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/database/db.js:126:15)
+    at async file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/routes/admin.js:170:20 {
+  length: 144,
+  severity: 'ERROR',
+  code: 'P0001',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'PL/pgSQL function h04_reject_status() line 4 at RAISE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_exec.c',
+  line: '3905',
+  routine: 'exec_stmt_raise'
+}
+[Admin] Update bug report status error: error: relation "native_bug_reports" does not exist
+    at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async query (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/database/db.js:139:14)
+    at async Object.get (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/database/db.js:126:15)
+    at async file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/routes/admin.js:170:20 {
+  length: 116,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '8',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1392',
+  routine: 'parserOpenTable'
+}
+{"scenario":"IS02","outcome":"PASS","contracts":["owned cold worker exits on parent IPC disconnect; normal/error cleanup cannot silently pass","separate worker processes share exact20 auth/5 admin admissions and saturated counters; cold restart preserves denial","real migration009 idempotence with nonzero rows, checked constraints and exact independent gate counts","established-key contention, anchored DB deadlines and immediate expired-row reuse","gate lock timeout preserves existing-key access and recovers without account SQL","observed row-lock ordering preserves newer deadline/count against an older admission statement","observed prune/refresh lock race retains refreshed key, count and exact cardinality","concurrent final10000th slot, separate namespace capacity and exactly64-of65 expired rows pruned","real trigger failure rolls back prune+allocation+gate; real statement timeout rolls back counter and recovers","all denial/store-fault business snapshots unchanged; valid auth/admin tokens authorize actual routes"],"externalConnections":0}
+{"check":"pure import, invalid config, no local file and inert state","result":"PASS"}
+{"check":"configured PostgreSQL connection failure closes candidate without fallback","result":"PASS"}
+{"observation":"owned PG SELECT1 response withheld after execution","independentlyObserved":true,"elapsedMs":2012,"socketDestroyed":true}
+{"check":"actual in-flight SELECT1 read timeout discards candidate and permits retry","result":"PASS"}
+{"check":"simultaneous init shares actual candidate pool and published adapter","result":"PASS"}
+{"observation":"ordinary affected rows","independentUpdated":2,"reportedUpdated":2,"reportedAbsent":0}
+{"check":"ordinary run reports affected rows for insert/update/delete0/conflict0","result":"PASS"}
+{"observation":"transaction affected rows","independentUpdated":3,"reportedUpdated":3,"reportedDeleted":1}
+{"check":"scoped run reports exact update/delete count on the real transaction","result":"PASS"}
+{"observation":"actual socket handoff failure","permanentObserversAtHandoff":1}
+{"check":"real socket failure during acquire handoff cannot be unhandled","result":"PASS"}
+{"check":"rollback and expired handle; caught statement error never becomes success","result":"PASS"}
+{"check":"failed rollback discards actual closed connection and recovers","result":"PASS"}
+{"check":"leased idle backend failure is observed and releases once","result":"PASS"}
+{"observation":"actual pg-pool saturation","maxClients":10,"rejectedWaiters":100,"queueAfter":0,"elapsedMs":2003}
+{"check":"real max10/queue100/acquisition2s removes waiters with no late write","result":"PASS"}
+{"check":"close stops new calls, drains issued transaction, expires old handles, reinitializes","result":"PASS"}
+{"check":"close waits for queued acquisition refusal after issued leases finish","result":"PASS"}
+{"check":"close before init and during pre-probe lease never publishes stale state","result":"PASS"}
+{"scenario":"R2_ADAPTER","outcome":"PASS","contracts":["pure import, invalid config, no local file and inert state","configured PostgreSQL connection failure closes candidate without fallback","actual in-flight SELECT1 read timeout discards candidate and permits retry","simultaneous init shares actual candidate pool and published adapter","ordinary run reports affected rows for insert/update/delete0/conflict0","scoped run reports exact update/delete count on the real transaction","real socket failure during acquire handoff cannot be unhandled","rollback and expired handle; caught statement error never becomes success","failed rollback discards actual closed connection and recovers","leased idle backend failure is observed and releases once","real max10/queue100/acquisition2s removes waiters with no late write","close stops new calls, drains issued transaction, expires old handles, reinitializes","close waits for queued acquisition refusal after issued leases finish","close before init and during pre-probe lease never publishes stale state"],"externalConnections":0}
+{"scenario":"R2_STARTUP","outcome":"PASS","checks":7,"sourceEntryCopied":true,"publicRequestsBeforeDatabaseConnection":7,"explicitEnvironmentBeforeJwtCapture":true,"actualPasswordLogin":true,"actualAuthenticatedProfile":true,"actualReadinessQueryObserved":true,"externalConnections":0}
+{"scenario":"F05","outcome":"PASS","contracts":["real HTTP update/delete counts0/1/N match committed rows","repeat deletes report0; manual and other-user rows unchanged","missing provider404/no writes; existing provider200; last-method guard retained"],"externalConnections":0}
+[Auth] Unlink provider error: Error: Auth provider not found
+    at unlinkAuthProvider (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/utils/accountLinking.js:206:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/routes/auth.js:551:5
+[Auth] Unlink provider error: Error: Cannot unlink the last authentication method
+    at unlinkAuthProvider (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/utils/accountLinking.js:196:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/routes/auth.js:551:5
+R0 HARNESS PASS: controls and repaired A02/B03/B04/H04/IS02/R2 foundation contracts passed; B02/D01/F01 remain known failing application contracts, NOT fixes.
+R0 cleanup: owned disposable container removed

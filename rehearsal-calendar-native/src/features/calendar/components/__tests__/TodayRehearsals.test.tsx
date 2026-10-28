@@ -30,6 +30,7 @@ jest.mock('../../../../contexts/SeenContext', () => ({
 
 import TodayRehearsals from '../TodayRehearsals';
 import { Rehearsal, Project, RSVPStatus } from '../../../../shared/types';
+import { formatDateToString } from '../../../../shared/utils/time';
 
 // Mock dependencies
 jest.mock('../../../../contexts/I18nContext', () => ({
@@ -37,6 +38,11 @@ jest.mock('../../../../contexts/I18nContext', () => ({
     t: {
       common: {
         today: 'Today',
+        delete: 'Delete',
+        edit: 'Edit',
+      },
+      rehearsals: {
+        markSeen: 'Mark as seen',
       },
       calendar: {
         tomorrow: 'Tomorrow',
@@ -146,18 +152,15 @@ describe('TodayRehearsals Component', () => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   describe('Loading State', () => {
     it('should display loading indicator when loading is true', () => {
-      // Mock date to match selectedDate
-      const mockDate = new Date('2025-12-28T12:00:00');
-      jest.spyOn(global, 'Date').mockImplementation(((...args: any[]) => {
-        if (args.length === 0) {
-          return mockDate;
-        }
-        return new (jest.requireActual('util').types.isDate(args[0]) ? Date : Object)(
-          ...args
-        ) as any;
-      }) as any);
+      // The clock on the selected date. Not a spy on Date: left in place it
+      // broke every Date made after it, in this test and the next.
+      jest.useFakeTimers({ now: new Date('2025-12-28T12:00:00') });
 
       const { getByText, UNSAFE_getByType } = render(
         <TodayRehearsals
@@ -430,8 +433,9 @@ describe('TodayRehearsals Component', () => {
 
   describe('Date Label', () => {
     it('should show "Today" for today\'s date', () => {
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      // The local date, as the card reads it: the UTC one is tomorrow every
+      // evening west of UTC.
+      const todayStr = formatDateToString(new Date());
 
       const { getByText } = render(
         <TodayRehearsals
@@ -450,7 +454,7 @@ describe('TodayRehearsals Component', () => {
     it('should show "Tomorrow" for tomorrow\'s date', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      const tomorrowStr = formatDateToString(tomorrow);
 
       const { getByText } = render(
         <TodayRehearsals

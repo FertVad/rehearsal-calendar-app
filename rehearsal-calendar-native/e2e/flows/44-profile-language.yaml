@@ -1,0 +1,124 @@
+# The language chosen in the profile (T-005). Vershinina switches to Russian:
+# the tabs speak it at once, after a restart, and after she signs out, the app
+# is cleared and she signs in again — the account keeps it, not the phone.
+# Then back to English. Flow 16 is the other half: another account's language
+# on a running app.
+#
+# The first try at this flow (T-001) failed on two things outside the app. A
+# tab is one accessibility element, labelled "Календарь, tab, 1 of 5" by React
+# Navigation, and Maestro matches the whole label: "Календарь" alone never
+# matched. And the picker opened a second time was a second React Native
+# Modal on the screen, which iOS leaves out of the accessibility tree, so
+# "English" was drawn and not found (T-208, every sheet is an AppModal since).
+appId: ${APP_ID}
+name: The profile's language, kept by the account
+tags:
+  - profile
+  - auth
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${VERSHININA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Calendar, tab.*"
+    timeout: 30000
+- tapOn:
+    id: tab-profile
+- extendedWaitUntil:
+    visible:
+      id: profile-language
+      text: ".*English.*"
+    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Русский"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-ru
+      SEE: "Календарь, tab.*"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: tab-calendar
+    text: "Календарь, tab.*"
+- assertVisible:
+    id: tab-projects
+    text: "Проекты, tab.*"
+- assertVisible:
+    id: tab-profile
+    text: "Профиль, tab.*"
+- assertVisible:
+    id: profile-language
+    text: ".*Русский.*"
+- takeScreenshot: 44-russian
+
+# A restart, nothing cleared: still Russian.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Календарь, tab.*"
+    timeout: 30000
+- assertVisible:
+    id: tab-projects
+    text: "Проекты, tab.*"
+- takeScreenshot: 44-russian-after-restart
+
+# Signed out, the app cleared, signed in again: Russian, from her account.
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-logout
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-logout
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${VERSHININA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Календарь, tab.*"
+    timeout: 30000
+- assertVisible:
+    id: tab-profile
+    text: "Профиль, tab.*"
+- takeScreenshot: 44-russian-from-account
+
+# Back to English.
+- tapOn:
+    id: tab-profile
+- extendedWaitUntil:
+    visible:
+      id: profile-language
+      text: ".*Русский.*"
+    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "English"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-en
+      SEE: "Calendar, tab.*"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: tab-projects
+    text: "Projects, tab.*"
+- assertVisible:
+    id: profile-language
+    text: ".*English.*"
+- takeScreenshot: 44-english-again

@@ -1,71 +1,92 @@
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import { logger } from '../utils/logger.js';
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../database/db.js';
-import { generateTokens, verifyToken, requireAuth } from '../middleware/jwtMiddleware.js';
+import { generateTokens, verifyToken, requireAuth, lockSession, SESSION_REVOKED } from '../middleware/jwtMiddleware.js';
 import { serializeUser } from '../utils/userSerializer.js';
 import { verifyGoogleToken, verifyAppleToken } from '../utils/oauthVerification.js';
-import { findOrCreateOAuthUser, getUserAuthProviders, unlinkAuthProvider } from '../utils/accountLinking.js';
+import { AppleAuthUnavailableError, AppleTokenVerificationError } from '../config/appleAuth.js';
+import { signInWithProvider, ProviderSignInRefused, getUserAuthProviders, unlinkAuthProvider, recordPasswordMethod } from '../utils/accountLinking.js';
+import { InputError, inputErrorBody, registrationInput, profileUpdates, checkPassword, normalizeEmail } from '../utils/accountInput.js';
+import { emailTransport } from '../services/email/transport.js';
+import { issueCode, deliverCode } from '../services/email/codes.js';
+import { identityOf, isVerified, markPending } from '../services/email/identity.js';
 import { notifyProjectDeleted } from '../services/notifications/pushNotificationService.js';
+import { lockProject } from '../services/rehearsals/projectLock.js';
 
 const router = Router();
 
-// Register new user
-router.post('/register', async (req, res) => {
+// Register new user.
+//
+// A registration proves nothing about the address, so it creates a pending
+// account and sends a code; the session comes from POST /verify-email with the
+// code and the same password (A01). Without that, whoever registered someone
+// else's address first shared the account once its owner signed in with
+// Google or Apple.
+router.post('/register', asyncHandler(async (req, res) => {
   try {
-    const { email, password, timezone } = req.body;
-    const firstName = typeof req.body.firstName === 'string' ? req.body.firstName.trim() : req.body.firstName;
-    const lastName = typeof req.body.lastName === 'string' ? req.body.lastName.trim() : req.body.lastName;
+    // An app from before R3 cannot enter a code. It gets a message it shows as
+    // is, instead of "Registration failed" over an account it had created.
+    if (req.body?.verification !== 'code') {
+      return res.status(400).json({ error: 'Update Rehearsly to create an account', code: 'CLIENT_UPGRADE_REQUIRED' });
+    }
+    let input;
+    try {
+      input = registrationInput(req.body);
+    } catch (error) {
+      if (error instanceof InputError) return res.status(400).json(inputErrorBody(error));
+      throw error;
+    }
+    const { email, password, firstName, lastName, timezone, locale } = input;
 
-    if (!email || !password || !firstName) {
-      return res.status(400).json({ error: 'Email, password and first name are required' });
+    // No way to send the code: refuse before creating an account nobody can confirm.
+    const transport = emailTransport();
+    if (!transport.available) {
+      return res.status(503).json({ error: 'Email is not available right now', code: 'EMAIL_UNAVAILABLE' });
     }
 
-    // Check if user already exists
-    const existing = await db.get('SELECT id FROM native_users WHERE email = $1', [email]);
-    if (existing) {
-      return res.status(409).json({ error: 'User with this email already exists' });
-    }
-
-    // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
+    const now = new Date();
+    let created;
+    try {
+      // The user, their password method (A04), the pending address and the
+      // code commit together, or none of them do.
+      created = await db.transaction(async (tx) => {
+        if (await tx.get('SELECT id FROM native_users WHERE email = $1', [email])) return null;
+        const result = await tx.run(
+          `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [email, passwordHash, firstName, lastName, timezone, locale]
+        );
+        const userId = result.lastInsertId;
+        await recordPasswordMethod(tx, userId);
+        await markPending(tx, { userId, email, now });
+        return issueCode(tx, { userId, purpose: 'verify', email, now });
+      });
+    } catch (error) {
+      // Two registrations of one address at once: the loser meets the unique key.
+      if (error?.code !== '23505') throw error;
+      created = null;
+    }
+    if (!created) {
+      return res.status(409).json({ error: 'An account with this email already exists', code: 'EMAIL_TAKEN' });
+    }
 
-    // Insert user with device timezone if provided
-    const result = await db.run(
-      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, last_login_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())`,
-      [email, passwordHash, firstName, lastName || null, timezone || null]
-    );
-
-    const userId = result.lastInsertId;
-
-    // New users start with token_version = 1 (DB default)
-    const { accessToken, refreshToken } = generateTokens(userId, 1);
-
-    // Get user data
-    const user = await db.get(
-      `SELECT id, email, first_name, last_name, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day,
-              onboarding_completed
-       FROM native_users WHERE id = $1`,
-      [userId]
-    );
-
-    res.json({
-      user: serializeUser(user),
-      accessToken,
-      refreshToken,
-    });
+    const delivery = await deliverCode({ db, transport, codeId: created.id, to: email, code: created.code,
+      purpose: 'verify', locale });
+    res.status(201).json({ status: 'verification_required', email, delivery });
   } catch (err) {
     console.error('[Auth] Registration error:', err);
     res.status(500).json({ error: 'Failed to register user' });
   }
-});
+}));
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', asyncHandler(async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = normalizeEmail(req.body.email);
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -97,6 +118,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    // A registration whose code was never entered gets no session. Said only
+    // after the right password, so it tells a stranger nothing.
+    if ((await identityOf(db, user.id))?.status === 'pending') {
+      return res.status(403).json({ error: 'Confirm your email address first', code: 'EMAIL_NOT_VERIFIED', email: user.email });
+    }
+
     // Update last login
     await db.run('UPDATE native_users SET last_login_at = NOW() WHERE id = $1', [user.id]);
 
@@ -112,10 +139,27 @@ router.post('/login', async (req, res) => {
     console.error('[Auth] Login error:', err);
     res.status(500).json({ error: 'Failed to login' });
   }
-});
+}));
+
+// Google and Apple sign-in. Linking, the rule for an unproven password and
+// the session row are decided in one locked transaction (accountLinking.js);
+// the tokens are signed after it commits.
+function providerSession(res, signedIn) {
+  const { accessToken, refreshToken } = generateTokens(signedIn.user.id, signedIn.user.token_version);
+  res.json({
+    user: serializeUser(signedIn.user),
+    accessToken,
+    refreshToken,
+    isNewUser: signedIn.isNewUser,
+    linked: signedIn.linked, // Indicates if account was linked to existing user
+    // The password on this account was never proven to be the owner's and is
+    // gone, with every other session: the app says so and offers a reset.
+    passwordRevoked: signedIn.passwordRevoked,
+  });
+}
 
 // Google OAuth Login/Register
-router.post('/google', async (req, res) => {
+router.post('/google', asyncHandler(async (req, res) => {
   try {
     const { idToken } = req.body;
 
@@ -127,11 +171,10 @@ router.post('/google', async (req, res) => {
     const googleUser = await verifyGoogleToken(idToken);
 
     if (!googleUser.emailVerified) {
-      return res.status(400).json({ error: 'Email not verified by Google' });
+      return res.status(400).json({ error: 'Email not verified by Google', code: 'PROVIDER_EMAIL_UNVERIFIED' });
     }
 
-    // Find or create user, link accounts if email matches
-    const { userId, isNewUser, linked } = await findOrCreateOAuthUser({
+    providerSession(res, await signInWithProvider({
       provider: 'google',
       providerUserId: googleUser.providerUserId,
       email: googleUser.email,
@@ -139,46 +182,20 @@ router.post('/google', async (req, res) => {
       firstName: googleUser.firstName,
       lastName: googleUser.lastName,
       avatarUrl: googleUser.avatarUrl,
-    });
-
-    // Update last login
-    await db.run(
-      'UPDATE native_users SET last_login_at = $1 WHERE id = $2',
-      [new Date().toISOString(), userId]
-    );
-
-    // Fetch token version and generate JWT tokens
-    const versionRow = await db.get('SELECT token_version FROM native_users WHERE id = $1', [userId]);
-    const { accessToken, refreshToken } = generateTokens(userId, versionRow?.token_version);
-
-    // Get user data
-    const user = await db.get(
-      `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day,
-              onboarding_completed, created_at
-       FROM native_users WHERE id = $1`,
-      [userId]
-    );
-
-    res.json({
-      user: serializeUser(user),
-      accessToken,
-      refreshToken,
-      isNewUser,
-      linked, // Indicates if account was linked to existing user
-    });
+    }));
   } catch (err) {
+    if (err instanceof ProviderSignInRefused) return res.status(err.status).json(err.body);
     console.error('[Auth] Google OAuth error:', err);
     res.status(500).json({ error: 'Google authentication failed' });
   }
-});
+}));
 
 // Apple Sign-In Login/Register
-router.post('/apple', async (req, res) => {
+router.post('/apple', asyncHandler(async (req, res) => {
   try {
-    const { idToken, user } = req.body; // Apple sends user data only on first sign-in
+    const { idToken, user } = req.body || {}; // Apple sends user data only on first sign-in
 
-    if (!idToken) {
+    if (typeof idToken !== 'string' || !idToken.trim()) {
       return res.status(400).json({ error: 'ID token is required' });
     }
 
@@ -189,8 +206,7 @@ router.post('/apple', async (req, res) => {
     const firstName = user?.givenName || user?.name?.givenName || user?.firstName || 'User';
     const lastName = user?.familyName || user?.name?.familyName || user?.lastName || '';
 
-    // Find or create user, link accounts if email matches
-    const { userId, isNewUser, linked } = await findOrCreateOAuthUser({
+    providerSession(res, await signInWithProvider({
       provider: 'apple',
       providerUserId: appleUser.providerUserId,
       email: appleUser.email,
@@ -198,42 +214,22 @@ router.post('/apple', async (req, res) => {
       firstName,
       lastName,
       avatarUrl: null, // Apple doesn't provide avatars
-    });
-
-    // Update last login
-    await db.run(
-      'UPDATE native_users SET last_login_at = $1 WHERE id = $2',
-      [new Date().toISOString(), userId]
-    );
-
-    // Fetch token version and generate JWT tokens
-    const versionRow = await db.get('SELECT token_version FROM native_users WHERE id = $1', [userId]);
-    const { accessToken, refreshToken } = generateTokens(userId, versionRow?.token_version);
-
-    // Get user data
-    const user_data = await db.get(
-      `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day,
-              onboarding_completed, created_at
-       FROM native_users WHERE id = $1`,
-      [userId]
-    );
-
-    res.json({
-      user: serializeUser(user_data),
-      accessToken,
-      refreshToken,
-      isNewUser,
-      linked,
-    });
+    }));
   } catch (err) {
+    if (err instanceof AppleAuthUnavailableError) {
+      return res.status(503).json({ error: 'Apple sign-in is unavailable' });
+    }
+    if (err instanceof AppleTokenVerificationError) {
+      return res.status(401).json({ error: 'Apple authentication failed' });
+    }
+    if (err instanceof ProviderSignInRefused) return res.status(err.status).json(err.body);
     console.error('[Auth] Apple OAuth error:', err);
     res.status(500).json({ error: 'Apple authentication failed' });
   }
-});
+}));
 
 // Refresh access token
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', asyncHandler(async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
@@ -256,6 +252,10 @@ router.post('/refresh', async (req, res) => {
     if (tokenVer < dbVersion) {
       return res.status(401).json({ error: 'Session revoked' });
     }
+    // A pending account is never issued tokens; if one appears, it is not renewed.
+    if ((await identityOf(db, decoded.userId))?.status === 'pending') {
+      return res.status(403).json({ error: 'Confirm your email address first', code: 'EMAIL_NOT_VERIFIED' });
+    }
 
     // Generate new tokens with current version
     const tokens = generateTokens(decoded.userId, dbVersion);
@@ -265,10 +265,10 @@ router.post('/refresh', async (req, res) => {
     console.error('[Auth] Refresh error:', err);
     res.status(500).json({ error: 'Failed to refresh token' });
   }
-});
+}));
 
 // Get current user info
-router.get('/me', requireAuth, async (req, res) => {
+router.get('/me', requireAuth, asyncHandler(async (req, res) => {
   try {
     const user = await db.get(
       `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
@@ -289,100 +289,93 @@ router.get('/me', requireAuth, async (req, res) => {
     console.error('[Auth] Get me error:', err);
     res.status(500).json({ error: 'Failed to get user info' });
   }
-});
+}));
 
-// Whitelist of allowed fields for user updates (security)
-// A name typed on a phone keyboard often carries a trailing space — the
-// autocomplete adds one. Stored as "Ginger " and "Rode " it reappears as
-// "Ginger  Rode " everywhere the two are joined, so it is cut off here rather
-// than worked around at each display.
-const trimName = (value) => (typeof value === 'string' ? value.trim() : value);
-
-const ALLOWED_USER_FIELDS = {
-  firstName: { dbColumn: 'first_name', validate: null, transform: trimName },
-  lastName: { dbColumn: 'last_name', validate: null, transform: trimName },
-  phone: { dbColumn: 'phone', validate: null },
-  timezone: { dbColumn: 'timezone', validate: null },
-  locale: { dbColumn: 'locale', validate: null },
-  notificationsEnabled: { dbColumn: 'notifications_enabled', validate: null },
-  emailNotifications: { dbColumn: 'email_notifications', validate: null },
-  weekStartDay: {
-    dbColumn: 'week_start_day',
-    validate: (value) => {
-      if (value !== 'monday' && value !== 'sunday') {
-        throw new Error('weekStartDay must be either "monday" or "sunday"');
-      }
-    }
-  },
-  onboardingCompleted: { dbColumn: 'onboarding_completed', validate: null },
-  password: {
-    dbColumn: 'password_hash',
-    validate: null,
-    transform: async (value) => await bcrypt.hash(value, 10)
-  }
-};
-
-// Update current user info
-router.put('/me', requireAuth, async (req, res) => {
+// Update current user info.
+//
+// Profile fields are checked by accountInput.js. Two fields need more than a
+// column write: a password change must prove the current password when there
+// is one, and an email change needs the address confirmed — so a different
+// email is refused here instead of being dropped while the app reports it
+// saved (HP01). The app sends the unchanged address with every save, which is
+// fine.
+router.put('/me', requireAuth, asyncHandler(async (req, res) => {
   try {
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
-    let passwordChanged = false;
+    let updates;
+    try {
+      updates = profileUpdates(req.body);
+      if (req.body.password !== undefined) checkPassword(req.body.password);
+    } catch (error) {
+      if (error instanceof InputError) return res.status(400).json(inputErrorBody(error));
+      throw error;
+    }
+    const passwordChange = req.body.password !== undefined;
 
-    // Process only whitelisted fields
-    for (const [apiField, config] of Object.entries(ALLOWED_USER_FIELDS)) {
-      const value = req.body[apiField];
+    const current = await db.get('SELECT email FROM native_users WHERE id = $1', [req.userId]);
+    if (!current) return res.status(404).json({ error: 'User not found' });
 
-      if (value === undefined) continue;
-
-      // Run field-specific validation if exists
-      if (config.validate) {
-        try {
-          config.validate(value);
-        } catch (err) {
-          return res.status(400).json({ error: err.message });
-        }
-      }
-
-      // Transform value if needed (e.g., hash password)
-      const finalValue = config.transform ? await config.transform(value) : value;
-
-      updates.push(`${config.dbColumn} = $${paramIndex++}`);
-      values.push(finalValue);
-
-      if (apiField === 'password') passwordChanged = true;
+    if (req.body.email !== undefined && (typeof req.body.email !== 'string'
+        || req.body.email.trim().toLowerCase() !== String(current.email).trim().toLowerCase())) {
+      return res.status(400).json({ error: 'Changing the email address needs confirmation of the new address',
+        code: 'EMAIL_CHANGE_REQUIRES_VERIFICATION', field: 'email' });
     }
 
-    if (updates.length === 0) {
+    if (updates.length === 0 && !passwordChange) {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    // Password change revokes all existing sessions
-    if (passwordChanged) {
-      updates.push('token_version = token_version + 1');
+    // The password is checked and replaced under the user row lock, with its
+    // sign-in method recorded in the same transaction.
+    const saved = await db.transaction(async (tx) => {
+      const locked = await lockSession(tx, req, 'email, password_hash');
+      if (!locked) return { revoked: true };
+      if (passwordChange) {
+        // A stolen session must not be enough to replace the password and keep
+        // the account. An account without one (OAuth only) may set its first,
+        // but only on an address someone has proven: a first password is the
+        // one thing that outlasts every session.
+        if (locked.password_hash) {
+          const proof = req.body.currentPassword;
+          if (typeof proof !== 'string' || !(await bcrypt.compare(proof, locked.password_hash))) return { refused: true };
+        } else if (!isVerified(await identityOf(tx, req.userId), locked.email)) {
+          return { unverified: true };
+        }
+        updates.push(['password_hash', await bcrypt.hash(req.body.password, 10)]);
+      }
+
+      const assignments = updates.map(([column], index) => `${column} = $${index + 1}`);
+      // Password change revokes all existing sessions
+      if (passwordChange) assignments.push('token_version = token_version + 1');
+      assignments.push('updated_at = NOW()');
+      await tx.run(
+        `UPDATE native_users SET ${assignments.join(', ')} WHERE id = $${updates.length + 1}`,
+        [...updates.map(([, value]) => value), req.userId]
+      );
+      if (passwordChange) await recordPasswordMethod(tx, req.userId);
+      // Read under the lock, so a new session carries the version this change
+      // set, not one a later revocation set after COMMIT (R3-06).
+      return { user: await tx.get(
+        `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
+                notifications_enabled, email_notifications, week_start_day,
+                onboarding_completed, token_version
+         FROM native_users WHERE id = $1`,
+        [req.userId]
+      ) };
+    });
+    if (saved.revoked) return res.status(401).json(SESSION_REVOKED);
+    if (saved.refused) {
+      return res.status(403).json({ error: 'Current password is incorrect', code: 'CURRENT_PASSWORD_INVALID',
+        field: 'currentPassword' });
     }
-
-    updates.push(`updated_at = NOW()`);
-    values.push(req.userId);
-
-    await db.run(
-      `UPDATE native_users SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
-      values
-    );
-
-    // Get updated user
-    const user = await db.get(
-      `SELECT id, email, first_name, last_name, phone, avatar_url, timezone, locale,
-              notifications_enabled, email_notifications, week_start_day,
-              onboarding_completed, token_version
-       FROM native_users WHERE id = $1`,
-      [req.userId]
-    );
+    if (saved.unverified) {
+      return res.status(403).json({ error: 'Confirm your email address before setting a password',
+        code: 'EMAIL_NOT_VERIFIED', field: 'password' });
+    }
+    const { user } = saved;
 
     // If password changed, issue fresh tokens so this device stays logged in
     const response = { user: serializeUser(user) };
-    if (passwordChanged) {
+    if (passwordChange) {
       const tokens = generateTokens(user.id, user.token_version);
       response.accessToken = tokens.accessToken;
       response.refreshToken = tokens.refreshToken;
@@ -393,24 +386,27 @@ router.put('/me', requireAuth, async (req, res) => {
     console.error('[Auth] Update me error:', err);
     res.status(500).json({ error: 'Failed to update user info' });
   }
-});
+}));
 
 // Logout — revoke all sessions for this user
-router.post('/logout', requireAuth, async (req, res) => {
+router.post('/logout', requireAuth, asyncHandler(async (req, res) => {
   try {
+    // Only a session that is still current bumps the version. One revoked
+    // while this request waited is gone already, and bumping again would sign
+    // out whoever revoked it (review R3-09).
     await db.run(
-      'UPDATE native_users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1',
-      [req.userId]
+      'UPDATE native_users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1 AND token_version <= $2',
+      [req.userId, req.tokenVersion]
     );
     res.json({ success: true });
   } catch (err) {
     console.error('[Auth] Logout error:', err);
     res.status(500).json({ error: 'Failed to logout' });
   }
-});
+}));
 
 // Delete account with cascade cleanup
-router.delete('/me', requireAuth, async (req, res) => {
+router.delete('/me', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -419,6 +415,9 @@ router.delete('/me', requireAuth, async (req, res) => {
     // the ROLLBACK below would then discard a bystander's write instead of this
     // request's. Everything inside uses `tx`.
     const orphanedProjects = await db.transaction(async (tx) => {
+      // A session revoked while this request waited deletes nothing (R3-09).
+      if (!(await lockSession(tx, req))) return null;
+
       // The projects that go with the account.
       //
       // Everything this person owns, whoever else administers it, and nobody
@@ -456,6 +455,11 @@ router.delete('/me', requireAuth, async (req, res) => {
 
       // Delete orphaned projects (CASCADE will handle rehearsals, members, etc.)
       for (const project of orphaned) {
+        // Before anything is read or cleared, as every project deletion does:
+        // a rehearsal being created now commits first, and its slots are
+        // among those cleared below (projectLock.js).
+        if (!(await lockProject(tx, project.id, 'delete'))) continue;
+
         // Who is losing this project. Read before the delete takes the rows,
         // and kept for the notification that goes out after the commit — these
         // people are about to find a project missing with nothing to explain it.
@@ -488,6 +492,7 @@ router.delete('/me', requireAuth, async (req, res) => {
 
       return orphaned;
     });
+    if (orphanedProjects === null) return res.status(401).json(SESSION_REVOKED);
 
     // Outside the transaction, and each one on its own: the account is already
     // gone, so a push that fails must not read as a deletion that failed.
@@ -508,10 +513,10 @@ router.delete('/me', requireAuth, async (req, res) => {
     console.error('[Auth] Delete account error:', err);
     res.status(500).json({ error: 'Failed to delete account' });
   }
-});
+}));
 
 // Get linked auth providers for current user
-router.get('/me/providers', requireAuth, async (req, res) => {
+router.get('/me/providers', requireAuth, asyncHandler(async (req, res) => {
   try {
     const providers = await getUserAuthProviders(req.userId);
 
@@ -528,10 +533,10 @@ router.get('/me/providers', requireAuth, async (req, res) => {
     console.error('[Auth] Get providers error:', err);
     res.status(500).json({ error: 'Failed to get auth providers' });
   }
-});
+}));
 
 // Unlink auth provider (only if user has another auth method)
-router.delete('/me/providers/:provider', requireAuth, async (req, res) => {
+router.delete('/me/providers/:provider', requireAuth, asyncHandler(async (req, res) => {
   try {
     const { provider } = req.params;
 
@@ -540,13 +545,15 @@ router.delete('/me/providers/:provider', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Invalid provider type' });
     }
 
-    await unlinkAuthProvider(req.userId, provider);
+    await unlinkAuthProvider(req.userId, provider, req.tokenVersion);
 
     res.json({
       message: `${provider} provider unlinked successfully`,
     });
   } catch (err) {
     console.error('[Auth] Unlink provider error:', err);
+
+    if (err.message === 'Session revoked') return res.status(401).json(SESSION_REVOKED);
 
     if (err.message === 'Cannot unlink the last authentication method') {
       return res.status(400).json({ error: err.message });
@@ -558,6 +565,6 @@ router.delete('/me/providers/:provider', requireAuth, async (req, res) => {
 
     res.status(500).json({ error: 'Failed to unlink provider' });
   }
-});
+}));
 
 export default router;

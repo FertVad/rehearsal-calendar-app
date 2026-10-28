@@ -1,0 +1,210 @@
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import { fileURLToPath } from 'node:url';
+import { inspectSchema } from '../../database/schema/inspect.mjs';
+import { manifest } from '../../database/schema/manifest.mjs';
+import { loadArtifacts, runMigrations } from '../../database/migrations/core.mjs';
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function eventually(check, timeoutMs = 4000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) { if (await check()) return; await sleep(10); }
+  throw new Error('Synthetic barrier deadline exceeded');
+}
+
+// The editor's save on PostgreSQL (R6, cause fix 2: CC05, C02, C03): what the
+// SQLite harness cannot show — two saves of one still-empty day by the same
+// person at the same moment. Without the per-person lock both deleted nothing
+// and both inserted, and the day held both versions. The barrier holds the
+// availability table from the control connection until both saves are seen
+// waiting, so the two are made to meet rather than hoped to.
+export async function probeR6Availability({ connectionString, control, allowedPorts }) {
+  const artifacts = await loadArtifacts(manifest, fileURLToPath(new URL('../../', import.meta.url)));
+  assert.equal((await runMigrations({ connectionString, schema: 'r0_fixture', request: { mode: 'fresh' },
+    artifacts, inspectSchema })).outcome, 'applied');
+  const database = await import('../../database/db.js');
+  const { createApp } = await import('../../app.js');
+  const { generateTokens } = await import('../../middleware/jwtMiddleware.js');
+  await database.initDatabase({ connectionString });
+  const server = await new Promise((resolve, reject) => {
+    const listener = createApp().listen(0, '127.0.0.1', () => resolve(listener));
+    listener.once('error', reject);
+  });
+  allowedPorts.add(server.address().port);
+  const contracts = [];
+  let forwardedFor = 10;
+  const userId = (await control.query(`INSERT INTO r0_fixture.native_users (email, first_name, timezone)
+    VALUES ('days@fixture.invalid', 'Days', 'UTC') RETURNING id`)).rows[0].id;
+  const token = generateTokens(userId, 1).accessToken;
+  const call = (method, route, body, as = token) => new Promise((resolve, reject) => {
+    const bytes = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
+    const req = http.request({ hostname: '127.0.0.1', port: server.address().port, path: route, method,
+      headers: { Connection: 'close', 'Content-Type': 'application/json', 'X-Forwarded-For': `198.51.100.${forwardedFor++}`,
+        Authorization: `Bearer ${as}`, ...(bytes ? { 'Content-Length': bytes.length } : {}) } }, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.once('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(Buffer.concat(chunks).toString()) }); }
+        catch (error) { reject(error); }
+      });
+    });
+    req.once('error', reject);
+    req.setTimeout(10000, () => req.destroy(new Error('R6 availability request timed out')));
+    req.end(bytes);
+  });
+  const manualOn = async (date) => (await control.query(
+    `SELECT starts_at, ends_at, type FROM r0_fixture.native_user_availability
+     WHERE user_id = $1 AND source = 'manual' AND DATE(starts_at AT TIME ZONE 'UTC') = $2 ORDER BY starts_at`,
+    [userId, date])).rows.map((row) => ({ from: row.starts_at.toISOString(), to: row.ends_at.toISOString(), type: row.type }));
+  const busy = (date, from, to) => ({ startsAt: `${date}T${from}:00+00:00`, endsAt: `${date}T${to}:00+00:00`, type: 'busy', isAllDay: false });
+  // pg_stat_activity is a snapshot taken once; it is cleared before each look.
+  const waitingOnLocks = async () => {
+    await control.query('SELECT pg_catalog.pg_stat_clear_snapshot()');
+    return Number((await control.query(`SELECT count(*) FROM pg_catalog.pg_stat_activity
+      WHERE datname = current_database() AND wait_event_type = 'Lock' AND pid <> pg_backend_pid()`)).rows[0].count);
+  };
+
+  try {
+    // The days named, and only they; an imported event on the day stays.
+    await control.query(`INSERT INTO r0_fixture.native_user_availability (user_id, starts_at, ends_at, type, source, external_event_id)
+      VALUES ($1, '2030-05-01T06:00:00Z', '2030-05-01T07:00:00Z', 'busy', 'apple_calendar', 'ev-1'),
+             ($1, '2030-05-02T06:00:00Z', '2030-05-02T07:00:00Z', 'busy', 'manual', NULL)`, [userId]);
+    const saved = await call('PUT', '/api/native/availability/days',
+      { days: [{ date: '2030-05-01', entries: [busy('2030-05-01', '10:00', '12:00')] }] });
+    assert.equal(saved.status, 200);
+    assert.deepEqual(saved.body, { success: true, days: ['2030-05-01'] });
+    assert.deepEqual(await manualOn('2030-05-01'),
+      [{ from: '2030-05-01T10:00:00.000Z', to: '2030-05-01T12:00:00.000Z', type: 'busy' }]);
+    assert.equal((await manualOn('2030-05-02')).length, 1, 'a day not named must be left alone');
+    assert.equal(Number((await control.query(`SELECT count(*) FROM r0_fixture.native_user_availability
+      WHERE user_id = $1 AND source = 'apple_calendar'`, [userId])).rows[0].count), 1);
+    contracts.push('named days replaced on PostgreSQL, others and imported rows left alone');
+
+    // Refused whole: the good day in the same request is not written either.
+    const refused = await call('PUT', '/api/native/availability/days', { days: [
+      { date: '2030-05-02', entries: [] },
+      { date: '2030-05-03', entries: [{ startsAt: '2030-05-03T10:00:00+00:00', type: 'busy' }] },
+    ] });
+    assert.equal(refused.status, 400);
+    assert.equal(refused.body.code, 'AVAILABILITY_INVALID');
+    assert.equal((await manualOn('2030-05-02')).length, 1, 'C02: nothing may be written before the refusal');
+    contracts.push('a request with one bad slot refused whole: nothing deleted (C02)');
+
+    // Two saves of one still-empty day, both seen waiting, then let go together.
+    await control.query('BEGIN');
+    await control.query('LOCK TABLE r0_fixture.native_user_availability IN SHARE MODE');
+    const settled = Promise.allSettled([
+      call('PUT', '/api/native/availability/days', { days: [{ date: '2030-05-04', entries: [busy('2030-05-04', '10:00', '11:00')] }] }),
+      call('PUT', '/api/native/availability/days', { days: [{ date: '2030-05-04', entries: [busy('2030-05-04', '14:00', '15:00')] }] }),
+    ]);
+    try { await eventually(async () => (await waitingOnLocks()) === 2); }
+    catch (error) { await control.query('ROLLBACK'); await settled; throw error; }
+    await control.query('COMMIT');
+    const outcomes = await settled;
+    for (const outcome of outcomes) {
+      if (outcome.status === 'rejected') throw outcome.reason;
+      assert.equal(outcome.value.status, 200);
+    }
+    const day = await manualOn('2030-05-04');
+    assert.equal(day.length, 1, 'C03: two concurrent saves of one day must leave one of them, not both');
+    assert.ok(['2030-05-04T10:00:00.000Z', '2030-05-04T14:00:00.000Z'].includes(day[0].from));
+    contracts.push('two concurrent saves of one empty day, both seen waiting: the day holds one of them (C03)');
+
+    // A whole day is a calendar date, stored at that date's UTC bounds and read
+    // in UTC; a timed slot is read in the person's own zone. Read in the zone,
+    // a whole day behind UTC lands on the day before, so saving one day kept
+    // its old version and deleted its neighbour (C01, cause fix 3).
+    const newYork = (await control.query(`INSERT INTO r0_fixture.native_users (email, first_name, timezone)
+      VALUES ('new-york@fixture.invalid', 'NY', 'America/New_York') RETURNING id`)).rows[0].id;
+    await control.query(`INSERT INTO r0_fixture.native_user_availability (user_id, starts_at, ends_at, type, source, is_all_day)
+      VALUES ($1, '2030-06-09T00:00:00Z', '2030-06-09T23:59:59.999Z', 'available', 'manual', TRUE),
+             ($1, '2030-06-10T00:00:00Z', '2030-06-10T23:59:59.999Z', 'available', 'manual', TRUE),
+             ($1, '2030-06-11T00:00:00Z', '2030-06-11T23:59:59.999Z', 'available', 'manual', TRUE),
+             ($1, '2030-06-11T02:00:00Z', '2030-06-11T03:00:00Z', 'busy', 'manual', FALSE)`, [newYork]);
+    const nySaved = await call('PUT', '/api/native/availability/days', { days: [{ date: '2030-06-10', entries: [
+      { startsAt: '2030-06-10T00:00:00.000Z', endsAt: '2030-06-10T23:59:59.999Z', type: 'busy', isAllDay: true }] }] },
+      generateTokens(newYork, 1).accessToken);
+    assert.equal(nySaved.status, 200);
+    const nyRows = (await control.query(`SELECT starts_at, type, is_all_day FROM r0_fixture.native_user_availability
+      WHERE user_id = $1 ORDER BY starts_at`, [newYork])).rows
+      .map((row) => `${row.starts_at.toISOString()} ${row.type}${row.is_all_day ? ' all-day' : ''}`);
+    assert.deepEqual(nyRows, [
+      '2030-06-09T00:00:00.000Z available all-day',
+      '2030-06-10T00:00:00.000Z busy all-day',
+      '2030-06-11T00:00:00.000Z available all-day',
+    ], 'C01: behind UTC, saving 10 June must replace 10 June (and its 22:00 slot) and leave 9 and 11 June alone');
+    contracts.push('behind UTC a whole day is replaced on its own date and a late-evening slot on the local one; the neighbours stay (C01)');
+
+    // Older apps' hand-entered saves through /bulk meet the same check first
+    // (review R6-01): a slot without an end is refused and the day kept.
+    const legacyRefused = await call('POST', '/api/native/availability/bulk',
+      { entries: [{ startsAt: '2030-05-02T13:00:00+00:00', type: 'busy' }] });
+    assert.equal(legacyRefused.status, 400);
+    assert.equal(legacyRefused.body.code, 'AVAILABILITY_INVALID');
+    assert.equal((await manualOn('2030-05-02')).length, 1, 'C02: the legacy manual save must refuse a missing end before deleting');
+    contracts.push('the legacy bulk save refuses a hand-entered slot without an end and keeps the day (C02, R6-01)');
+
+    // Older apps: the bulk save and the day delete take the same lock and work.
+    const bulk = await call('POST', '/api/native/availability/bulk',
+      { entries: [{ startsAt: '2030-05-05T09:00:00+00:00', endsAt: '2030-05-05T10:00:00+00:00', type: 'busy' }] });
+    assert.equal(bulk.status, 200);
+    assert.equal((await manualOn('2030-05-05')).length, 1);
+    assert.equal((await call('DELETE', '/api/native/availability/2030-05-05')).status, 200);
+    assert.deepEqual(await manualOn('2030-05-05'), []);
+    contracts.push('the bulk save and the day delete of older apps work behind the same lock');
+
+    // A rehearsal is an interval (cause fix 15: DF04). The older format's
+    // 23:00–01:00 runs into the next morning, in the project's zone, and so do
+    // the busy slots it books; a range that is not one is a 400 before any
+    // write — it used to reach the schema's CHECK and come back as a 500.
+    const project = await call('POST', '/api/native/projects', { name: 'Intervals' });
+    assert.equal(project.status, 201);
+    const projectId = Number(project.body.project.id);
+    await control.query(`UPDATE r0_fixture.native_projects SET timezone = 'Europe/Berlin' WHERE id = $1`, [projectId]);
+    const rehearsalRows = async () => (await control.query(`SELECT id, starts_at, ends_at FROM r0_fixture.native_rehearsals
+      WHERE project_id = $1 ORDER BY id`, [projectId])).rows.map((row) => ({
+      id: Number(row.id), from: row.starts_at.toISOString(), to: row.ends_at.toISOString() }));
+    const bookedRows = async () => (await control.query(`SELECT external_event_id, starts_at, ends_at
+      FROM r0_fixture.native_user_availability WHERE user_id = $1 AND source = 'rehearsal' ORDER BY id`, [userId])).rows
+      .map((row) => ({ rehearsal: Number(row.external_event_id), from: row.starts_at.toISOString(), to: row.ends_at.toISOString() }));
+    const rehearsalsRoute = `/api/native/projects/${projectId}/rehearsals`;
+
+    const overnight = await call('POST', rehearsalsRoute,
+      { title: 'Night run', date: '2030-07-02', startTime: '23:00', endTime: '01:00', participant_ids: [userId] });
+    assert.equal(overnight.status, 201, JSON.stringify(overnight.body));
+    const nightId = Number(overnight.body.rehearsal.id);
+    // 2 July 23:00 to 3 July 01:00 in Berlin (UTC+2 in summer).
+    const night = { id: nightId, from: '2030-07-02T21:00:00.000Z', to: '2030-07-02T23:00:00.000Z' };
+    assert.deepEqual(await rehearsalRows(), [night], 'DF04: 23:00–01:00 is two hours into the next morning');
+    assert.deepEqual(await bookedRows(), [{ rehearsal: nightId, from: night.from, to: night.to }]);
+    contracts.push('the older date format\'s 23:00–01:00 is stored and booked into the next morning in the project\'s zone (DF04)');
+
+    const refusals = [
+      { startsAt: '2030-07-05T23:00:00.000Z', endsAt: '2030-07-05T01:00:00.000Z' },
+      { startsAt: '2030-07-05T19:00:00.000Z', endsAt: '2030-07-05T19:00:00.000Z' },
+      { date: '2030-07-05', startTime: '19:00', endTime: '19:00' },
+    ];
+    for (const times of refusals) {
+      const refusedRun = await call('POST', rehearsalsRoute, { title: 'Not one', participant_ids: [userId], ...times });
+      assert.equal(refusedRun.status, 400, JSON.stringify(times));
+      assert.equal(refusedRun.body.code, 'TIME_RANGE_INVALID');
+    }
+    assert.deepEqual(await rehearsalRows(), [night], 'a refused rehearsal must write no row');
+    assert.deepEqual(await bookedRows(), [{ rehearsal: nightId, from: night.from, to: night.to }],
+      'a refused rehearsal must book no busy slot');
+    contracts.push('a rehearsal ending at or before its start is a 400 TIME_RANGE_INVALID and writes nothing');
+
+    const refusedEdit = await call('PUT', `${rehearsalsRoute}/${nightId}`,
+      { startsAt: '2030-07-02T23:00:00.000Z', endsAt: '2030-07-02T21:00:00.000Z', participant_ids: [userId] });
+    assert.equal(refusedEdit.status, 400);
+    assert.equal(refusedEdit.body.code, 'TIME_RANGE_INVALID');
+    assert.deepEqual(await rehearsalRows(), [night], 'a refused edit must keep the rehearsal as it was');
+    assert.deepEqual(await bookedRows(), [{ rehearsal: nightId, from: night.from, to: night.to }],
+      'a refused edit must keep its busy slots');
+    contracts.push('an edit to an end before the start is a 400 TIME_RANGE_INVALID and keeps the rehearsal and its slots');
+  } finally {
+    await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });
+    await database.closeDatabase();
+  }
+  return { outcome: 'PASS', contracts };
+}

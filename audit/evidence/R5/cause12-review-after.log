@@ -1,0 +1,42 @@
+Cause fix 12, review round — after.
+Production files and tests at 62173fd. Same command as cause12-review-before.log.
+Output filtered: test lines and totals kept.
+
+PASS frontend src/shared/hooks/__tests__/syncSession.test.ts (41.655 s)
+  ✓ sends no calendar of the first person once the mappings come back after the change (ES01) (419 ms)
+  ✓ neither creates the event nor records its mapping when the account changed during the search for a copy (ES01) (332 ms)
+  ✓ runs to the end while the account stays (160 ms)
+PASS frontend src/shared/services/__tests__/api.refresh.test.ts (42.059 s)
+  ✓ keeps the session when the refresh cannot reach the server (AC01) (57 ms)
+  ✓ keeps the session when the server fails the refresh with its own error (AC01) (16 ms)
+  ✓ reports the session over when the server refuses the refresh token (AC02) (25 ms)
+  ✓ retries with the new pair after a refresh (19 ms)
+  ✓ spends the refresh token once when two requests are refused together (67 ms)
+  ✓ does not refresh or retry a request of a session that has ended (6 ms)
+  ✓ sends a request of an ended session with nobody's token (ES01) (6 ms)
+  ✓ leaves a refused password at sign-in alone: no session was sent (22 ms)
+PASS frontend src/features/notifications/screens/__tests__/NotificationsScreen.test.tsx (43.176 s)
+  ✓ does not bring back a card deleted while a load was out (419 ms)
+  ✓ does not make cards unread again after "Mark all read" while a load was out (43 ms)
+PASS frontend src/features/calendar/hooks/__tests__/seenOrder.test.tsx (43.492 s)
+  ✓ keeps a mark put on after the list was asked for (HN02) (229 ms)
+  ✓ keeps a mark put on while the list was out and the tap was on its way (21 ms)
+  ✓ takes off a mark taken back elsewhere when nothing was tapped here (20 ms)
+PASS frontend src/features/calendar/hooks/__tests__/useRehearsals.test.ts (43.794 s)
+      ✓ should fetch rehearsals from all projects using batch endpoint (117 ms)
+      ✓ keeps the chosen project's rehearsals when the earlier filter answers last (DF06) (23 ms)
+      ✓ should handle empty rehearsals array (12 ms)
+      ✓ should fetch rehearsals for specific project (14 ms)
+      ✓ should not fetch admin stats for non-admin projects (15 ms)
+      ✓ should only fetch RSVP for upcoming rehearsals (10 ms)
+      ✓ should clear rehearsals when no projects (10 ms)
+      ✓ ends the loading when the last project goes while a load is out (13 ms)
+      ✓ should handle API errors gracefully (7 ms)
+      ✓ should handle RSVP fetch errors without failing (7 ms)
+      ✓ should set loading state during fetch (34 ms)
+      ✓ should transform ISO timestamps to legacy format (12 ms)
+      ✓ should keep legacy format if already present (8 ms)
+Test Suites: 5 passed, 5 total
+Tests:       29 passed, 29 total
+
+Whole client (npx jest --selectProjects frontend): 75 suites, 742 tests PASS; type-check 0.

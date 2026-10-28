@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,22 +8,25 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-  Modal,
   FlatList,
   KeyboardAvoidingView,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { hapticMedium, hapticSuccess } from '../../../shared/utils/haptics';
-import { AppStackParamList } from '../../../navigation';
+import type { AppStackParamList, AppNavigation } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { ActorSelector } from '../components/ActorSelector';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
+import { AppModal } from '../../../shared/components/AppModal';
+import { ModalSheet } from '../../../shared/components/ModalSheet';
+import { useParticipantSeed } from '../hooks/useParticipantSeed';
 import { addRehearsalScreenStyles as styles } from '../styles';
 import {
   useRehearsalMembers,
@@ -38,7 +41,7 @@ type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
 
 export default function AddRehearsalScreen() {
   const route = useRoute<RouteType>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<AppNavigation<'AddRehearsal'>>();
   const { projects, selectedProject, setSelectedProject } = useProjects();
   const { t, language } = useI18n();
 
@@ -51,14 +54,17 @@ export default function AddRehearsalScreen() {
   });
 
   // Data loading hooks
-  const { members, loading: loadingMembers } = useRehearsalMembers(form.localSelectedProject, t);
-  const { memberAvailability, loading: loadingAvailability } = useRehearsalAvailability(
+  const membersLoad = useRehearsalMembers(form.localSelectedProject);
+  const { members, loading: loadingMembers } = membersLoad;
+  const availabilityLoad = useRehearsalAvailability(
     form.localSelectedProject,
     form.date,
     form.selectedMemberIds,
     t,
-    form.isEditMode ? form.rehearsalId : undefined
+    form.isEditMode ? form.rehearsalId : undefined,
+    form.endsNextDay
   );
+  const { memberAvailability, loading: loadingAvailability } = availabilityLoad;
 
   // Submit logic hook
   const { loading, handleSubmit } = useAddRehearsalSubmit({
@@ -69,23 +75,42 @@ export default function AddRehearsalScreen() {
     title: form.title,
     location: form.location,
     selectedMemberIds: form.selectedMemberIds,
+    participantsSettled: form.participantsSettled,
+    membersFailed: membersLoad.failed,
+    reloadMembers: membersLoad.reload,
     members,
     memberAvailability,
+    availabilityReady: availabilityLoad.ready,
+    availabilityFailed: availabilityLoad.failed,
+    reloadAvailability: availabilityLoad.reload,
     resetForm: form.resetForm,
     t,
     isEditMode: form.isEditMode,
     rehearsalId: form.rehearsalId,
   });
 
-  // Auto-select all participants when members are loaded
+  // Who a new rehearsal starts with: the planner's people, or everyone (DP02).
+  const memberIds = useMemo(() => members.map(m => m.userId), [members]);
+  useParticipantSeed({
+    isEditMode: form.isEditMode,
+    projectId: form.localSelectedProject?.id,
+    memberIds,
+    membersReady: membersLoad.ready,
+    participantsSettled: form.participantsSettled,
+    plannedProjectId: route.params?.projectId,
+    plannedMemberIds: route.params?.prefilledMemberIds,
+    startParticipants: form.startParticipants,
+  });
+
+  // A project whose members could not be loaded says so, with a way to try
+  // again; until then nothing is saved (useAddRehearsalSubmit).
   useEffect(() => {
-    if (!form.isEditMode &&
-        members.length > 0 &&
-        form.selectedMemberIds.length === 0 &&
-        !loadingMembers) {
-      form.setSelectedMemberIds(members.map(m => m.userId));
-    }
-  }, [members, loadingMembers, form.isEditMode]);
+    if (!membersLoad.failed) return;
+    Alert.alert(t.common.error, t.rehearsals.loadMembersError, [
+      { text: t.common.cancel, style: 'cancel' },
+      { text: t.common.retry, onPress: membersLoad.reload },
+    ]);
+  }, [membersLoad.failed]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -138,8 +163,11 @@ export default function AddRehearsalScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.rehearsals.project}</Text>
             <TouchableOpacity
+              testID="rehearsal-project"
               style={styles.pickerButton}
               onPress={() => form.setShowProjectPicker(true)}
+              // A rehearsal that exists stays in its project (review R9-01).
+              disabled={form.isEditMode}
             >
               <Ionicons name="folder-outline" size={20} color={Colors.accent.purple} />
               <Text style={[
@@ -213,6 +241,7 @@ export default function AddRehearsalScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.rehearsals.startTime}</Text>
             <TouchableOpacity
+              testID="rehearsal-start-time"
               style={styles.pickerButton}
               onPress={form.openStartTimePicker}
             >
@@ -225,11 +254,18 @@ export default function AddRehearsalScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.rehearsals.endTime}</Text>
             <TouchableOpacity
+              testID="rehearsal-end-time"
               style={styles.pickerButton}
               onPress={form.openEndTimePicker}
             >
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.pickerButtonText}>{formatDateToTimeString(form.endTime)}</Text>
+              {/* An end before the start is the next morning, and says so. */}
+              {form.endsNextDay && (
+                <Text style={styles.nextDayText} testID="rehearsal-ends-next-day">
+                  {t.rehearsals.endsNextDay}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -253,6 +289,7 @@ export default function AddRehearsalScreen() {
 
           {/* Submit Button */}
           <TouchableOpacity
+            testID="rehearsal-submit"
             style={[styles.submitButton, (loading || form.loadingRehearsal) && styles.submitButtonDisabled]}
             onPress={() => {
               hapticSuccess();
@@ -284,7 +321,7 @@ export default function AddRehearsalScreen() {
         visible={form.showDatePicker}
         onClose={() => form.setShowDatePicker(false)}
         value={form.date}
-        onChange={form.handleDateChange}
+        onConfirm={form.handleDateChange}
         mode="date"
         title={t.rehearsals.selectDate}
         language={getDateLocale(language)}
@@ -295,7 +332,7 @@ export default function AddRehearsalScreen() {
         visible={form.showStartTimePicker}
         onClose={() => form.setShowStartTimePicker(false)}
         value={form.startTime}
-        onChange={form.handleStartTimeChange}
+        onConfirm={form.handleStartTimeChange}
         mode="time"
         title={t.rehearsals.selectStartTime}
         language={getDateLocale(language)}
@@ -306,28 +343,23 @@ export default function AddRehearsalScreen() {
         visible={form.showEndTimePicker}
         onClose={() => form.setShowEndTimePicker(false)}
         value={form.endTime}
-        onChange={form.handleEndTimeChange}
+        onConfirm={form.handleEndTimeChange}
         mode="time"
         title={t.rehearsals.selectEndTime}
         language={getDateLocale(language)}
       />
 
       {/* Project Picker Modal */}
-      <Modal
+      <AppModal
         visible={form.showProjectPicker}
-        transparent
         animationType="slide"
         onRequestClose={() => form.setShowProjectPicker(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => form.setShowProjectPicker(false)}
-        >
+        <ModalSheet overlayStyle={styles.modalOverlay} onClose={() => form.setShowProjectPicker(false)}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.rehearsals.selectProject}</Text>
-              <TouchableOpacity onPress={() => form.setShowProjectPicker(false)}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => form.setShowProjectPicker(false)}>
                 <Ionicons name="close" size={24} color={Colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -387,8 +419,8 @@ export default function AddRehearsalScreen() {
               <Text style={styles.createProjectButtonText}>{t.rehearsals.createNewProject}</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </Modal>
+        </ModalSheet>
+      </AppModal>
     </SafeAreaView>
   );
 }

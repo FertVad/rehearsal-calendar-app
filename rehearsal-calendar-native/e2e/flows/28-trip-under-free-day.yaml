@@ -1,0 +1,63 @@
+# A trip from the phone's calendar shows on a day marked free by hand (cause
+# fix 15, review). Yevgeny Dorn's calendar has a whole-day trip over three
+# days, and he marked its middle day, TRIP_DAY, free all day. His free mark
+# went into the set the imported rows were dropped by, so the trip's day there
+# was dropped as a copy of it: the day read "Free", with nothing from his
+# calendar on it, while everyone else's planner counted the trip. Now the day
+# reads busy and shows the trip. Only he is on his days.
+appId: ${APP_ID}
+name: A trip from the calendar shows on a day marked free
+tags:
+  - availability
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DORN_EMAIL}
+# The calendar first. iOS's "Save Password?" sheet can come later than the
+# sign-in waits for it, over the tab bar; it is let go here too.
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+# A tap the simulator loses is taken once more (T-207).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
+- tapOn: "Mark Busy"
+# The day is busy on the calendar, not free.
+- scrollUntilVisible:
+    element:
+      id: day-${TRIP_DAY}
+      text: ".*, Busy"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+# A tap while the list still glides only stops it, and one under the legend
+# lands on the legend; it is tapped once it rests below it.
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${TRIP_DAY}
+- tapOn:
+    id: day-${TRIP_DAY}
+# And the trip is on it, from his calendar.
+- extendedWaitUntil:
+    visible: "Already on this day"
+    timeout: 10000
+- assertVisible: "All day"
+- assertVisible: "from calendar"
+- assertVisible:
+    id: mode-busy
+    selected: true
+- takeScreenshot: 28-trip-under-free-day

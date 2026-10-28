@@ -19,6 +19,8 @@ interface GlassButtonProps {
   loading?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  /** For end-to-end flows (e2e/flows), which find the button by it. */
+  testID?: string;
 }
 
 export default function GlassButton({
@@ -29,11 +31,13 @@ export default function GlassButton({
   loading = false,
   style,
   textStyle,
+  testID,
 }: GlassButtonProps) {
   if (variant === 'purple') {
     return (
       <TouchableOpacity
         style={[styles.purpleButton, disabled && styles.disabled, style]}
+        testID={testID}
         onPress={onPress}
         disabled={disabled || loading}
         activeOpacity={0.8}
@@ -56,6 +60,7 @@ export default function GlassButton({
 
   return (
     <TouchableOpacity
+      testID={testID}
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.7}

@@ -17,6 +17,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { loginScreenStyles as styles } from '../styles';
+import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
+import { normalizeEmail } from '../utils/accountRules';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useGoogleAuth, getGoogleIdToken } from '../../../shared/services/googleAuth';
 import { signInWithApple, isAppleAuthAvailable } from '../../../shared/services/appleAuth';
@@ -29,7 +31,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
-  const { login, loginWithGoogle, loginWithApple, loading, error } = useAuth();
+  const { login, loginWithGoogle, loginWithApple, busy, error } = useAuth();
   const { t } = useI18n();
 
   // Google OAuth
@@ -56,8 +58,13 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     try {
       await login(email, password);
       // Navigation handled by AuthProvider
-    } catch (err: any) {
-      Alert.alert(t.auth.loginError, err.message);
+    } catch (err) {
+      // The password was right, the address still waits for its code (R3).
+      if (err instanceof AuthFlowError && err.code === 'EMAIL_NOT_VERIFIED') {
+        navigation.navigate('VerifyEmail', { email: err.details.email ?? email.trim().toLowerCase() });
+        return;
+      }
+      Alert.alert(t.auth.loginError, authErrorMessage(t, err));
     }
   };
 
@@ -83,7 +90,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
       // Navigation handled by AuthProvider
     } catch (err: any) {
-      Alert.alert(t.auth.googleSignInError, err.message);
+      Alert.alert(t.auth.googleSignInError, authErrorMessage(t, err));
     } finally {
       setGoogleLoading(false);
     }
@@ -105,7 +112,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
       // Navigation handled by AuthProvider
     } catch (err: any) {
-      Alert.alert(t.auth.appleSignInError, err.message);
+      Alert.alert(t.auth.appleSignInError, authErrorMessage(t, err));
     } finally {
       setAppleLoading(false);
     }
@@ -130,6 +137,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t.auth.email}</Text>
               <TextInput
+                testID="login-email"
                 style={styles.input}
                 placeholder={t.auth.emailPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
@@ -144,6 +152,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t.auth.password}</Text>
               <TextInput
+                testID="login-password"
                 style={styles.input}
                 placeholder={t.auth.passwordPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
@@ -156,16 +165,25 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
             {error && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.errorText}>{authErrorMessage(t, error)}</Text>
               </View>
             )}
 
             <GlassButton
+              testID="login-submit"
               title={t.auth.loginButton}
               onPress={handleLogin}
               variant="purple"
-              loading={loading}
+              loading={busy}
               style={styles.loginButton}
+            />
+
+            <GlassButton
+              testID="login-forgot-password"
+              title={t.auth.forgotPassword}
+              onPress={() => navigation.navigate('ResetPassword', { email: normalizeEmail(email) })}
+              variant="glass"
+              style={styles.registerButton}
             />
 
             <GlassButton
@@ -187,7 +205,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 title={t.auth.signInWithGoogle}
                 onPress={() => promptAsync()}
                 loading={googleLoading}
-                disabled={!request || loading || googleLoading}
+                disabled={!request || busy || googleLoading}
                 style={styles.oauthButton}
               />
 

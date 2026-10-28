@@ -1,0 +1,83 @@
+T-210, review 1: where the hook's time goes, and the runs that showed the first
+fix (cost 4) was not the cause. 27.10.2026, 8 cores, load-repro.mjs (it now
+prints HEAD, the working-tree diff and each file's blob before the rounds).
+
+== 1. Single-file runs (load-repro.mjs, 24 busy loops) ==
+
+Old test (blob 95a093e = 708b61d's, restored with
+`git restore --source=708b61d -- <test>`):
+
+$ node audit/evidence/T-210/load-repro.mjs 6 3 __tests__/routes/authLogin.test.js
+HEAD e3c9b9ad0404190510e3de3428e01fdf9c029023
+diff from HEAD: M rehearsal-calendar-native/server/__tests__/routes/authLogin.test.js
+blob 95a093ec62fbb6ad37a804857fff3efb2072c8d9 __tests__/routes/authLogin.test.js
+rounds 1-5: PASS (file 12.1, 5.8, <5, 7.7, 5.3 s)
+--- round 6: exit 1, 14.9 s
+FAIL __tests__/routes/authLogin.test.js (8.508 s)
+● POST /auth/login › signs in a password account
+thrown: "Exceeded timeout of 5000 ms for a hook.
+● POST /auth/login › rejects a wrong password with 401
+● POST /auth/login › answers an OAuth-only account with 401, not 500
+● POST /auth/login › gives the same response for an OAuth-only account as for an unknown address
+● unlinking the email provider › stops password sign-in from working
+● unlinking the email provider › clears the stored credential rather than only the provider row
+● unlinking the email provider › refuses to unlink the last remaining method
+Tests:       7 failed, 7 total
+
+Same blob, 15 rounds: red 0 of 15. Same blob, 32 busy loops, 8 rounds: red 0 of 8.
+
+Test at e3c9b9a (blob 2b09baa, cost 4), same command, 21 rounds:
+
+$ node audit/evidence/T-210/load-repro.mjs 21 3 __tests__/routes/authLogin.test.js
+HEAD e3c9b9ad0404190510e3de3428e01fdf9c029023
+diff from HEAD: none
+blob 2b09baafb0804ff36ea2d2f30ac7f18414a9022b __tests__/routes/authLogin.test.js
+rounds 1-12: PASS
+--- round 13: exit 1, 20.3 s   FAIL, the same 7, "Exceeded timeout of 5000 ms for a hook."
+--- round 16: exit 1, 18.2 s   FAIL, the same 7, hook
+--- round 17: exit 1, 21.7 s   FAIL, the same 7, hook
+--- round 21: exit 1, 15.3 s   FAIL, the same 7, hook
+=== red 4 of 21
+
+The load rose during that run (rounds 13 on took twice as long), so it was not
+a fair comparison; ab-runs.txt section A is the fair one and agrees: cost 4
+fails as often as cost 10.
+
+signInMethods.test.js (same imports in its hook, no fixture hash), 12 rounds:
+red 0 of 12, file times up to 23.4 s.
+
+== 2. The hook step by step (probe-login.test.js.txt, probe-methods.test.js.txt:
+copies of the two hooks that print each step as it ends; temporary, run as
+__tests__/routes/zzProbe*.test.js and moved here) ==
+
+$ node audit/evidence/T-210/load-repro.mjs 6 3 __tests__/routes/zzProbeLogin.test.js __tests__/routes/zzProbeMethods.test.js
+HEAD e3c9b9ad0404190510e3de3428e01fdf9c029023
+blob c27990d1a16cc7372532d082193f8ea68fdd5797 __tests__/routes/zzProbeLogin.test.js
+blob 90c5838d6b788cd4ee21ee3b095ff437a49e5ae2 __tests__/routes/zzProbeMethods.test.js
+
+hook total, ms (first file of the Jest run marked *):
+round   login (authLogin's hook)   methods (signInMethods' hook)
+1       6009 *                     2185
+2       1377 *                     1451
+3       5787 *                     2481
+4       10317 *                    8868
+5       1160 *                     2534
+6       1051                       4497 *
+
+Round 4, step by step:
+PROBE login express: +1444 ms   supertest: +1015 ms   bcrypt: +1667 ms
+PROBE login accountLinking: +611 ms   routes/auth: +5412 ms   hash 4: +28 ms
+PROBE methods express: +3439 ms   supertest: +4148 ms   bcrypt: +708 ms
+PROBE methods routes/auth: +452 ms
+Round 1: login bcrypt import +2815 ms, routes/auth +1630 ms, hash 4 +586 ms.
+Round 6: login express +142 ms, routes/auth +636 ms (second file, warm).
+
+Every step is module loading, and each swings from tens of milliseconds to
+seconds with the load; whichever file goes first pays more. The fixture hash
+is noise beside it (cost 4: 5-586 ms; cost 10 under load about 1 s, section 1 of
+red-before.txt). signInMethods' hook, the same pattern, reached 8.9 s, so 5 s
+was no budget for it either. The real signInMethods was green in all 12 runs of
+section 1; why it has escaped so far was not established here.
+
+(Sections 1 and 2 are condensed from the terminal output: passing rounds and
+probe lines are summarised, failing rounds are quoted as printed.)

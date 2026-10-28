@@ -3,16 +3,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../shared/services/api';
 import { logger } from '../shared/utils/logger';
 import { syncUserPreferences } from '../shared/utils/storage';
-import { unregisterPushToken, syncPushTokenIfGranted } from '../shared/services/notifications';
+import { unregisterPushToken, keepPushRegistered } from '../shared/services/notifications';
 import { resetConnectionCache } from '../shared/utils/calendarMappings';
+import { AuthFlowError, toAuthFlowError, DeliveryOutcome } from '../features/auth/utils/authErrors';
+import { normalizeEmail } from '../features/auth/utils/accountRules';
+import { changeOwner, restoreOwner, onSessionExpired } from '../shared/services/session';
+import { deviceTimezone, setProfileTimezone } from '../shared/utils/time';
 
-function getDeviceTimezone(): string | undefined {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  } catch {
-    return undefined;
-  }
-}
+/** What the profile may change in place. The address is not here: it takes a code to each address. */
+type ProfileUpdate = Parameters<typeof authAPI.updateMe>[0];
 
 interface User {
   id: number;
@@ -20,7 +19,6 @@ interface User {
   firstName: string;
   lastName?: string;
   phone?: string;
-  telegramId?: number;
   avatarUrl?: string;
   timezone?: string;
   locale?: string;
@@ -33,32 +31,81 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  /** Restoring the session at start; the navigator waits on it. */
   loading: boolean;
+  /** A sign-in form's request in flight. The screen stays mounted meanwhile. */
+  busy: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName: string, lastName?: string) => Promise<void>;
-  loginWithTelegram: (telegramData: any) => Promise<void>;
+  /** Creates an unconfirmed account: no session until confirmEmail (R3). */
+  /** null when the person left before the answer came: nothing to show. */
+  register: (email: string, password: string, firstName: string, lastName?: string, locale?: string)
+    => Promise<{ email: string; delivery: DeliveryOutcome } | null>;
+  /** The address waiting for its code, for the confirmation screen. */
+  pendingEmail: string | null;
+  confirmEmail: (code: string) => Promise<void>;
+  resendConfirmation: () => Promise<DeliveryOutcome | null>;
+  /** Leave the confirmation: an answer not yet writing writes nothing; one already writing finishes. */
+  forgetPendingSignIn: () => void;
+  /** Asks for a reset code; the answer is the same with or without an account. Returns the normalized address. */
+  requestPasswordReset: (email: string) => Promise<string>;
+  /** A confirmed reset is a sign-in; leaving before its answer writes nothing (forgetPendingSignIn). */
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
+  /** Codes to the new and the current address; what happened to each email. */
+  requestEmailChange: (newEmail: string, currentPassword?: string)
+    => Promise<{ newAddress: DeliveryOutcome; currentAddress: DeliveryOutcome }>;
+  /** Moves the account to the new address and writes the session the server replaced. */
+  confirmEmailChange: (code: string, currentCode: string) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<{ linked: boolean }>;
   loginWithApple: (idToken: string, user?: any) => Promise<{ linked: boolean }>;
   logout: () => Promise<void>;
-  updateUser: (data: Partial<User>) => Promise<void>;
+  updateUser: (data: ProfileUpdate) => Promise<void>;
   deleteAccount: () => Promise<{ deletedProjects: number }>;
-  error: string | null;
+  /** The last failure, kept whole so the screens can say it in the app's language. */
+  error: AuthFlowError | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// What a started session writes, and what a failed write takes back.
+const CREDENTIALS = ['accessToken', 'refreshToken', 'cachedUser'];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
+  // The profile's zone is the app's (time.ts). The calendar export reads it
+  // outside React, so it is written with the user, before anything renders or
+  // runs with the new one.
+  const setUser = useCallback((next: User | null) => {
+    setProfileTimezone(next?.timezone);
+    setUserState(next);
+  }, []);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuthFlowError | null>(null);
+  // Separate from `loading`: the navigator replaces everything with a spinner
+  // while `loading` is true, so a form toggling it was unmounted mid-request —
+  // a failed registration landed back on Login, and the code screen could
+  // never be reached.
+  const [busy, setBusy] = useState(false);
+  // The credentials of a registration or sign-in waiting for its email code.
+  // In memory only: confirming needs the password again, and it is never
+  // written anywhere. A restarted app asks to sign in again.
+  const pendingSignIn = useRef<{ email: string; password: string } | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  // Each sign-in attempt takes a number. A newer attempt, leaving the flow, or
+  // signing out makes older ones stale, and a stale answer writes nothing — no tokens, no
+  // user, no pending address (review R3-24; CLAUDE.md 11). Without it a
+  // confirmation answered after the person had left the code screen signed
+  // them in anyway, over another account's newer sign-in. The number is asked
+  // once, when the answer's turn to write comes (see writeSession).
+  const signInAttempt = useRef(0);
   const hasTimezoneSynced = useRef(false);
-  const hasPushSynced = useRef(false);
 
   // Calendar sync state lives on the device (export/import mappings, picked
   // calendars, last-sync timestamps). Wipe it only when a *different* user
   // signs in on the same device — otherwise the same user logging back in
   // would see their sync UI reset to defaults.
+  // It runs only inside a sign-in that has committed (writeSession), so a wipe
+  // is never left behind by an attempt that then does not happen (review R3-31).
   const reconcileDeviceState = useCallback(async (newUser: User) => {
     const newUserId = String(newUser.id);
     const lastOwner = await AsyncStorage.getItem('calendar-sync-owner');
@@ -66,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await AsyncStorage.multiRemove([
         'calendar-export-mappings',
         'calendar-import-tracking',
+        'calendar-import-count',
         'calendar-sync-settings',
         // The last availability that loaded, kept so a start with no network is
         // not blank. It is the previous person's.
@@ -81,6 +129,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     await AsyncStorage.setItem('calendar-sync-owner', newUserId);
   }, []);
+
+  const rememberPendingSignIn = useCallback((email: string, password: string) => {
+    pendingSignIn.current = { email, password };
+    setPendingEmail(email);
+  }, []);
+
+  const forgetPendingSignIn = useCallback(() => {
+    signInAttempt.current += 1;
+    pendingSignIn.current = null;
+    setPendingEmail(null);
+    setBusy(false);
+  }, []);
+
+  const beginAttempt = useCallback(() => {
+    signInAttempt.current += 1;
+    setError(null);
+    setBusy(true);
+    return signInAttempt.current;
+  }, []);
+  const isCurrent = (attempt: number) => attempt === signInAttempt.current;
+  const endAttempt = useCallback((attempt: number) => {
+    if (attempt === signInAttempt.current) setBusy(false);
+  }, []);
+
+  // Session writes run one at a time: a newer attempt starts writing only after
+  // an older one has finished. Interleaved, two sign-ins mixed each other's
+  // tokens and calendar state (review R3-29).
+  const sessionWrites = useRef<Promise<unknown>>(Promise.resolve());
+
+  // Every way in ends here. The attempt is asked once, when its turn to write
+  // comes: that is where the sign-in commits. Before it, leaving cancels the
+  // sign-in and nothing is written. After it, the sign-in runs to the end even
+  // if the person leaves — the server has already spent the code and issued the
+  // session, and a half-done sign-in cannot be undone: the wipe of another
+  // account's device state is not reversible (review R3-31). The credentials
+  // go last, so a failure at any step leaves no session behind to be restored
+  // at the next start (review R3-30). Returns whether the session started.
+  const writeSession = useCallback(async (data: { user: User; accessToken: string; refreshToken: string }, attempt: number) => {
+    if (attempt !== signInAttempt.current) return false;
+    // Another person's session ends here, and its work — a calendar sync —
+    // finishes under its own tokens before these are written (ES01).
+    await changeOwner(data.user.id);
+    await reconcileDeviceState(data.user);
+    // Sync user preferences (timezone, locale, weekStartDay)
+    await syncUserPreferences(data.user);
+    await AsyncStorage.removeItem('lastLogoutTime');
+    try {
+      await AsyncStorage.multiSet([
+        ['accessToken', data.accessToken],
+        ['refreshToken', data.refreshToken],
+        ['cachedUser', JSON.stringify(data.user)],
+      ]);
+    } catch (error) {
+      // A write refused part-way may have stored some of them.
+      await AsyncStorage.multiRemove(CREDENTIALS).catch(() => undefined);
+      throw error;
+    }
+    pendingSignIn.current = null;
+    setPendingEmail(null);
+    setUser(data.user);
+    return true;
+  }, [reconcileDeviceState, setUser]);
+
+  // Everything that writes or clears the session takes its turn here.
+  const inTurn = useCallback(<T,>(write: () => Promise<T>) => {
+    const run = sessionWrites.current.then(write);
+    sessionWrites.current = run.catch(() => undefined);
+    return run;
+  }, []);
+
+  const startSession = useCallback((data: { user: User; accessToken: string; refreshToken: string }, attempt: number) =>
+    inTurn(() => writeSession(data, attempt)), [inTurn, writeSession]);
 
   const loadUser = useCallback(async () => {
     try {
@@ -99,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('User data not found in response');
       }
 
+      restoreOwner(user.id);
       await reconcileDeviceState(user);
       setUser(user);
       // Cache user data for offline use
@@ -121,7 +242,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const cachedUser = await AsyncStorage.getItem('cachedUser');
           if (cachedUser) {
-            setUser(JSON.parse(cachedUser));
+            const cached = JSON.parse(cachedUser);
+            restoreOwner(cached.id);
+            setUser(cached);
           }
         } catch {
           // No cached user - will show login screen
@@ -129,7 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-  }, [reconcileDeviceState]);
+  }, [reconcileDeviceState, setUser]);
 
   // Load user from storage on mount
   useEffect(() => {
@@ -145,25 +268,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // how the owner's own account ended up with no device registered.
   //
   // It never prompts: if permission was refused, this does nothing and asking
-  // stays where the user expects to be asked.
+  // stays where the user expects to be asked. A failed attempt is tried again
+  // when the app comes forward (GC03); a change to the user's fields is the
+  // same session and starts nothing.
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) {
-      hasPushSynced.current = false;
-      return;
-    }
-    if (hasPushSynced.current) return;
-    hasPushSynced.current = true;
+    if (userId === undefined) return;
+    return keepPushRegistered();
+  }, [userId]);
 
-    syncPushTokenIfGranted()
-      .then((token) => {
-        if (token) logger.info('[Auth] Push token re-registered for this device');
-      })
-      .catch((err) => {
-        logger.warn('[Auth] Push token sync failed:', err?.message);
-      });
-  }, [user]);
-
-  // Auto-sync device timezone on login/restore
+  // The profile's zone is the person's choice and the device never overwrites
+  // it (owner's decision, 16.10.2026). This wrote the device's zone over it at
+  // every sign-in and start, so a zone picked in the profile was gone by the
+  // next launch (review HP04), and a flight moved every rehearsal's time.
+  //
+  // The device's zone is only the starting value: registration sends it, and
+  // an account that has none of its own takes it here once — one created
+  // through Google or Apple, which the server makes with its default, or one
+  // from before the zone was kept.
+  const createdBySignIn = useRef<number | null>(null);
   useEffect(() => {
     if (!user) {
       hasTimezoneSynced.current = false;
@@ -173,217 +296,261 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     hasTimezoneSynced.current = true;
 
-    const deviceTimezone = getDeviceTimezone();
-    if (!deviceTimezone || user.timezone === deviceTimezone) return;
+    const unchosen = !user.timezone || createdBySignIn.current === user.id;
+    createdBySignIn.current = null;
+    const device = deviceTimezone();
+    if (!unchosen || !device || user.timezone === device) return;
 
-    // Silently sync timezone in background
-    authAPI.updateMe({ timezone: deviceTimezone })
+    const session = signInAttempt.current;
+    authAPI.updateMe({ timezone: device })
       .then(response => {
+        // Answered after a sign-out: not this session's to write (see logout).
+        if (session !== signInAttempt.current) return;
         const updatedUser = response.data.user;
         setUser(updatedUser);
         AsyncStorage.setItem('cachedUser', JSON.stringify(updatedUser));
         syncUserPreferences(updatedUser);
-        logger.info(`[Auth] Auto-synced timezone: ${user.timezone || 'none'} → ${deviceTimezone}`);
+        logger.info(`[Auth] The account's first timezone: ${device}`);
       })
       .catch(err => {
-        logger.warn('[Auth] Failed to auto-sync timezone:', err?.message);
+        logger.warn('[Auth] Failed to set the first timezone:', err?.message);
       });
-  }, [user]);
+  }, [user, setUser]);
 
   const login = useCallback(async (email: string, password: string) => {
+    const attempt = beginAttempt();
     try {
-      setError(null);
-      setLoading(true);
-
       const response = await authAPI.login(email, password);
-      const { user, accessToken, refreshToken } = response.data;
-
-      // Save tokens, cache user, and clear any stale logout timestamp
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken],
-        ['cachedUser', JSON.stringify(user)],
-      ]);
-      await AsyncStorage.removeItem('lastLogoutTime');
-      await reconcileDeviceState(user);
-      // Sync user preferences (timezone, locale, weekStartDay)
-      await syncUserPreferences(user);
-
-      setUser(user);
+      await startSession(response.data, attempt);
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Login failed';
-      setError(message);
-      throw new Error(message);
+      if (!isCurrent(attempt)) return;
+      const failure = toAuthFlowError(err, 'Login failed');
+      if (failure.code === 'EMAIL_NOT_VERIFIED') {
+        // The password was right; the address still waits for its code.
+        rememberPendingSignIn(failure.details.email ?? email.trim().toLowerCase(), password);
+      } else {
+        setError(failure);
+      }
+      throw failure;
     } finally {
-      setLoading(false);
+      endAttempt(attempt);
     }
-  }, []);
+  }, [beginAttempt, endAttempt, startSession, rememberPendingSignIn]);
 
-  const register = useCallback(async (email: string, password: string, firstName: string, lastName?: string) => {
+  const register = useCallback(async (email: string, password: string, firstName: string, lastName?: string, locale?: string) => {
+    const attempt = beginAttempt();
     try {
-      setError(null);
-      setLoading(true);
-
-      const deviceTimezone = getDeviceTimezone();
-      const response = await authAPI.register(email, password, firstName, lastName, deviceTimezone);
-      const { user, accessToken, refreshToken } = response.data;
-
-      // Save tokens, cache user, and clear any stale logout timestamp
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken],
-        ['cachedUser', JSON.stringify(user)],
-      ]);
-      await AsyncStorage.removeItem('lastLogoutTime');
-      await reconcileDeviceState(user);
-      // Sync user preferences (timezone, locale, weekStartDay)
-      await syncUserPreferences(user);
-
-      setUser(user);
+      const response = await authAPI.register(email, password, firstName, lastName, deviceTimezone(), locale);
+      if (!isCurrent(attempt)) return null;
+      const created = { email: response.data.email as string, delivery: response.data.delivery as DeliveryOutcome };
+      rememberPendingSignIn(created.email, password);
+      return created;
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Registration failed';
-      setError(message);
-      throw new Error(message);
+      if (!isCurrent(attempt)) return null;
+      const failure = toAuthFlowError(err, 'Registration failed');
+      // A taken address gets its own answer on the screen, not this line.
+      if (failure.code !== 'EMAIL_TAKEN') setError(failure);
+      throw failure;
     } finally {
-      setLoading(false);
+      endAttempt(attempt);
     }
-  }, []);
+  }, [beginAttempt, endAttempt, rememberPendingSignIn]);
 
-  const loginWithTelegram = useCallback(async (telegramData: any) => {
+  const confirmEmail = useCallback(async (code: string) => {
+    const pending = pendingSignIn.current;
+    if (!pending) throw new AuthFlowError('Sign in again to confirm your address', 'SIGN_IN_AGAIN');
+    const attempt = beginAttempt();
     try {
-      setError(null);
-      setLoading(true);
-
-      const response = await authAPI.loginWithTelegram(telegramData);
-      const { user, accessToken, refreshToken } = response.data;
-
-      // Save tokens, cache user, and clear any stale logout timestamp
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken],
-        ['cachedUser', JSON.stringify(user)],
-      ]);
-      await AsyncStorage.removeItem('lastLogoutTime');
-      await reconcileDeviceState(user);
-
-      setUser(user);
+      const response = await authAPI.verifyEmail(pending.email, pending.password, code);
+      await startSession(response.data, attempt);
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Telegram login failed';
-      setError(message);
-      throw new Error(message);
+      if (!isCurrent(attempt)) return;
+      throw toAuthFlowError(err, 'Confirmation failed');
     } finally {
-      setLoading(false);
+      endAttempt(attempt);
+    }
+  }, [beginAttempt, endAttempt, startSession]);
+
+  const resendConfirmation = useCallback(async () => {
+    const pending = pendingSignIn.current;
+    if (!pending) throw new AuthFlowError('Sign in again to confirm your address', 'SIGN_IN_AGAIN');
+    const attempt = beginAttempt();
+    try {
+      const response = await authAPI.resendVerification(pending.email, pending.password);
+      if (!isCurrent(attempt)) return null;
+      return response.data.delivery as DeliveryOutcome;
+    } catch (err: any) {
+      if (!isCurrent(attempt)) return null;
+      throw toAuthFlowError(err, 'Could not send the code');
+    } finally {
+      endAttempt(attempt);
+    }
+  }, [beginAttempt, endAttempt]);
+
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const address = normalizeEmail(email);
+    try {
+      await authAPI.requestPasswordReset(address);
+      return address;
+    } catch (err: any) {
+      throw toAuthFlowError(err, 'Could not send the code');
     }
   }, []);
+
+  // The emailed code proves the mailbox, and the server answers with a session:
+  // a sign-in like a confirmed registration, through the same write.
+  const resetPassword = useCallback(async (email: string, code: string, newPassword: string) => {
+    const attempt = beginAttempt();
+    try {
+      const response = await authAPI.confirmPasswordReset(normalizeEmail(email), code, newPassword);
+      await startSession(response.data, attempt);
+    } catch (err: any) {
+      if (!isCurrent(attempt)) return;
+      throw toAuthFlowError(err, 'Password reset failed');
+    } finally {
+      endAttempt(attempt);
+    }
+  }, [beginAttempt, endAttempt, startSession]);
+
+  const requestEmailChange = useCallback(async (newEmail: string, currentPassword?: string) => {
+    try {
+      const response = await authAPI.requestEmailChange(normalizeEmail(newEmail), currentPassword);
+      return response.data.delivery as { newAddress: DeliveryOutcome; currentAddress: DeliveryOutcome };
+    } catch (err: any) {
+      throw toAuthFlowError(err, 'Could not send the codes');
+    }
+  }, []);
+
+  // A confirmed change revokes every session of the account, this one's too,
+  // and answers with the pair that works now. It is written through the same
+  // path as a sign-in, and leaving the screen does not cancel it — no screen
+  // calls forgetPendingSignIn here: the old pair is already dead, so not
+  // writing the new one would sign the person out. Signing out does cancel it
+  // (see endSession).
+  const confirmEmailChange = useCallback(async (code: string, currentCode: string) => {
+    const attempt = beginAttempt();
+    try {
+      const response = await authAPI.confirmEmailChange(code, currentCode);
+      await startSession(response.data, attempt);
+    } catch (err: any) {
+      if (!isCurrent(attempt)) return;
+      throw toAuthFlowError(err, 'Could not change the address');
+    } finally {
+      endAttempt(attempt);
+    }
+  }, [beginAttempt, endAttempt, startSession]);
 
   const loginWithGoogle = useCallback(async (idToken: string) => {
+    const attempt = beginAttempt();
     try {
-      setError(null);
-      setLoading(true);
-
       const response = await authAPI.loginWithGoogle(idToken);
-      const { user, accessToken, refreshToken, linked } = response.data;
+      if (response.data.isNewUser) createdBySignIn.current = response.data.user.id;
+      const started = await startSession(response.data, attempt);
 
-      // Save tokens, cache user, and clear any stale logout timestamp
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken],
-        ['cachedUser', JSON.stringify(user)],
-      ]);
-      await AsyncStorage.removeItem('lastLogoutTime');
-      await reconcileDeviceState(user);
-      // Sync user preferences (timezone, locale, weekStartDay)
-      await syncUserPreferences(user);
-
-      setUser(user);
-
-      return { linked: linked || false };
+      return { linked: started && Boolean(response.data.linked) };
     } catch (err: any) {
-      console.error('[Auth] Google login error:', err);
-      console.error('[Auth] Error response:', err.response?.data);
-      console.error('[Auth] Error status:', err.response?.status);
-      const message = err.response?.data?.error || 'Google sign-in failed';
-      setError(message);
-      throw new Error(message);
+      if (!isCurrent(attempt)) return { linked: false };
+      // Status and the server's message are in the logged summary; the
+      // request, with the ID token in its body, is not.
+      logger.error('[Auth] Google login error:', err);
+      const failure = toAuthFlowError(err, 'Google sign-in failed');
+      setError(failure);
+      throw failure;
     } finally {
-      setLoading(false);
+      endAttempt(attempt);
     }
-  }, []);
+  }, [beginAttempt, endAttempt, startSession]);
 
   const loginWithApple = useCallback(async (idToken: string, user?: any) => {
+    const attempt = beginAttempt();
     try {
-      setError(null);
-      setLoading(true);
-
       const response = await authAPI.loginWithApple(idToken, user);
-      const { user: userData, accessToken, refreshToken, linked } = response.data;
+      if (response.data.isNewUser) createdBySignIn.current = response.data.user.id;
+      const started = await startSession(response.data, attempt);
 
-      // Save tokens, cache user, and clear any stale logout timestamp
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken],
-        ['cachedUser', JSON.stringify(userData)],
-      ]);
-      await AsyncStorage.removeItem('lastLogoutTime');
-      await reconcileDeviceState(userData);
-      // Sync user preferences (timezone, locale, weekStartDay)
-      await syncUserPreferences(userData);
-
-      setUser(userData);
-
-      return { linked: linked || false };
+      return { linked: started && Boolean(response.data.linked) };
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Apple sign-in failed';
-      setError(message);
-      throw new Error(message);
+      if (!isCurrent(attempt)) return { linked: false };
+      const failure = toAuthFlowError(err, 'Apple sign-in failed');
+      setError(failure);
+      throw failure;
     } finally {
-      setLoading(false);
+      endAttempt(attempt);
     }
-  }, []);
+  }, [beginAttempt, endAttempt, startSession]);
 
+  // Signing out ends the session for every answer still on its way: the
+  // attempt number moves on, so a sign-in, a confirmed address change or a
+  // profile update answered later writes nothing back (review of T-130: the
+  // person had to sign out twice). The clearing takes its turn behind a write
+  // already under way — that one has committed and runs to the end — so it
+  // removes that write too, and tells the server with the pair that works now.
   const logout = useCallback(async () => {
+    forgetPendingSignIn();
+    setLoading(true);
     try {
-      setLoading(true);
+      await inTurn(async () => {
+        // The session ends first: its state is dropped and its answers with
+        // it, and a calendar sync under way stops before anything below.
+        await changeOwner(null);
 
-      // Order matters: dropping the push token needs a *valid* access token,
-      // and /auth/logout bumps token_version, which invalidates it. Revoking
-      // first would leave the token in the database and keep delivering this
-      // user's notifications to a signed-out device.
-      await unregisterPushToken();
+        // Order matters: dropping the push token needs a *valid* access token,
+        // and /auth/logout bumps token_version, which invalidates it. Revoking
+        // first would leave the token in the database and keep delivering this
+        // user's notifications to a signed-out device.
+        await unregisterPushToken();
 
-      // Revoke all sessions server-side (best-effort; ignore if offline)
-      try {
-        await authAPI.logout();
-      } catch (err) {
-        logger.warn('Server logout failed (continuing with local cleanup):', err);
-      }
+        // Revoke all sessions server-side (best-effort; ignore if offline)
+        try {
+          await authAPI.logout();
+        } catch (err) {
+          logger.warn('Server logout failed (continuing with local cleanup):', err);
+        }
 
-      // Set flag to ignore stale deep links
-      await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
+        // Set flag to ignore stale deep links
+        await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
 
-      // Clear user-bound data but keep device-bound calendar sync state
-      // and the language preference. If a *different* user signs back in,
-      // reconcileDeviceState wipes the calendar state on the way in.
-      await AsyncStorage.multiRemove([
-        'accessToken',
-        'refreshToken',
-        'cachedUser',
-        'weekStartDay',
-        'timezone',
-      ]);
+        // Clear user-bound data but keep device-bound calendar sync state
+        // and the language preference. If a *different* user signs back in,
+        // reconcileDeviceState wipes the calendar state on the way in.
+        await AsyncStorage.multiRemove([
+          'accessToken',
+          'refreshToken',
+          'cachedUser',
+          'weekStartDay',
+          'timezone',
+        ]);
 
-      setUser(null);
+        setUser(null);
+      });
     } catch (err) {
       logger.error('Logout error:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [forgetPendingSignIn, inTurn, setUser]);
 
-  const updateUser = useCallback(async (data: Partial<User>) => {
+  // The server refused the session for good — revoked by a sign-out or a new
+  // password elsewhere (AC02). Signed out here too, without asking the server:
+  // there is no session left to tell it about. The navigator opens sign-in.
+  useEffect(() => onSessionExpired(() => {
+    logger.info('[Auth] The session was refused; signing out');
+    forgetPendingSignIn();
+    inTurn(async () => {
+      await changeOwner(null);
+      await AsyncStorage.multiRemove(CREDENTIALS);
+      setUser(null);
+    }).catch((err) => logger.error('Clearing a refused session failed:', err));
+  }), [forgetPendingSignIn, inTurn, setUser]);
+
+  const updateUser = useCallback(async (data: ProfileUpdate) => {
+    // An answer after a sign-out, or after a newer session was written, is
+    // about a session that is gone: it writes nothing (see logout).
+    const session = signInAttempt.current;
     try {
       setError(null);
       const response = await authAPI.updateMe(data);
+      if (session !== signInAttempt.current) return;
       const updatedUser = response.data.user;
       setUser(updatedUser);
       // Update cached user data
@@ -391,11 +558,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Sync user preferences (timezone, locale, weekStartDay)
       await syncUserPreferences(updatedUser);
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Update failed';
-      setError(message);
-      throw new Error(message);
+      if (session !== signInAttempt.current) return;
+      const failure = toAuthFlowError(err, 'Update failed');
+      setError(failure);
+      // Whole, with its code: the screen says it in the person's language.
+      throw failure;
     }
-  }, []);
+  }, [setUser]);
 
   const deleteAccount = useCallback(async () => {
     try {
@@ -405,6 +574,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Call delete account API
       const response = await authAPI.deleteMe();
       const { deletedProjects } = response.data;
+      // The session is over, as at a sign-out: nothing answered later writes it back.
+      forgetPendingSignIn();
+      await changeOwner(null);
 
       // Set flag to ignore stale deep links
       await AsyncStorage.setItem('lastLogoutTime', Date.now().toString());
@@ -419,23 +591,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { deletedProjects: deletedProjects || 0 };
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Failed to delete account';
-      setError(message);
-      throw new Error(message);
+      const failure = toAuthFlowError(err, 'Failed to delete account');
+      setError(failure);
+      throw new Error(failure.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [forgetPendingSignIn, setUser]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
+        busy,
         isAuthenticated: !!user,
         login,
         register,
-        loginWithTelegram,
+        pendingEmail,
+        confirmEmail,
+        resendConfirmation,
+        forgetPendingSignIn,
+        requestPasswordReset,
+        resetPassword,
+        requestEmailChange,
+        confirmEmailChange,
         loginWithGoogle,
         loginWithApple,
         logout,

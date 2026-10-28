@@ -1,0 +1,54 @@
+# A cast member marks a rehearsal seen, and the director's count moves: the
+# answer reaches the server and is counted against the rehearsal's own roster
+# of four (CLAUDE.md, "Seen System").
+appId: ${APP_ID}
+name: Mark a rehearsal seen
+tags:
+  - rehearsals
+  - seen
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${HAMLET_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*"
+    timeout: 30000
+# The toggle of that card: other flows may have put rehearsals before it, and
+# then it sits under the tab bar (flow 06's "Duel scene" takes the first slot
+# offered — late in the day, tomorrow morning). Bring it to the middle first.
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      below: ".*Act I run-through.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    id: seen-toggle
+    below: ".*Act I run-through.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      below: ".*Act I run-through.*"
+      selected: true
+    timeout: 10000
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      below: ".*Act I run-through.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- assertVisible:
+    id: seen-toggle
+    below: ".*Act I run-through.*"
+    text: "1/4"
+- takeScreenshot: 04-director-sees-one-of-four

@@ -1,0 +1,27 @@
+T-003 review: e2e/flows/43-invite-cold-start-close.yaml on the code under review
+(src/navigation/index.tsx restored from b4b1e5d — its own linking config, no
+initialRouteName), then restored back.
+
+$ git restore --source=b4b1e5d -- src/navigation/index.tsx
+$ npm run e2e -- e2e/flows/43-invite-cold-start-close.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Invite link at a cold start, turned down (1m 55s) (Assertion is false: id: calendar-today is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The failing step is the first wait for calendar-today, right after "Cancel"
+(screen-hierarchy step-040-assertCondition-calendar-today.json): the invitation,
+launched cold and opened after the sign-in (screenshot 43-invite-cold-start
+taken), stayed on screen; 43-invite-cancelled was never reached.

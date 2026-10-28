@@ -1,0 +1,26 @@
+# The inbox holds what this person was told about — the rehearsals they are on,
+# not the whole project's — and a notification opens its rehearsal.
+appId: ${APP_ID}
+name: Inbox
+tags:
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${HAMLET_EMAIL}
+- tapOn: "Notifications"
+- extendedWaitUntil:
+    visible: ".*Act I run-through scheduled.*"
+    timeout: 15000
+- assertVisible: ".*Full dress scheduled.*"
+# Hamlet is not on this one, so he was not told about it.
+- assertNotVisible: ".*Ophelia scenes.*"
+- tapOn: ".*Act I run-through scheduled.*"
+- extendedWaitUntil:
+    visible: "Participants"
+    timeout: 15000
+- assertVisible: "Act I run-through"
+- assertVisible: "18:00 — 21:00"
+- assertVisible: "Ophelia Bright"
+- takeScreenshot: 05-rehearsal-from-notification

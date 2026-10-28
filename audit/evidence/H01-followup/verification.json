@@ -1,0 +1,23 @@
+{
+  "sourceCommit": "c43a0dfc32f8fbc23d66bea6c9cfbfaa6abeafdd",
+  "sourceTree": "dab334a263055be80e7909e1e4297938be9d3cb5",
+  "verifiedAt": "2026-09-18T15:37:57.284Z",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "gitStatusAfterRestore": "clean",
+  "restoredRendererSha256": "6dfb938fe040fb4a7f610afe4145e688e2bceb7c94bbc14ea7c702602af160c4",
+  "environment": "env -i; only explicit PATH and isolated PLAYWRIGHT_BROWSERS_PATH; no .env, production credentials or executable override",
+  "results": {
+    "installRoot": 0,
+    "installServer": 0,
+    "cleanCheck": 0,
+    "mutationNpmTest": 1,
+    "missingBrowserOverride": 1,
+    "restoredServerNpmTest": 0
+  }
+}

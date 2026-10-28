@@ -1,0 +1,36 @@
+Cause fix 15, review round 2, finding 2 — e2e red before.
+Flow: e2e/flows/27-past-midnight-morning-slot.yaml (tags: availability).
+Seed: Trigorin, busy 23:00 EVENING_DAY -> 01:00 MORNING_DAY and 00:00 -> 01:00
+MORNING_DAY, both his own (manual).
+Code: useAvailabilityData.ts restored from a261084 (308da83, the first commit
+of the fix, carried onto auto/main):
+  git restore --source=a261084 -- rehearsal-calendar-native/src/features/availability/hooks/useAvailabilityData.ts
+The save's day naming (dateTimeToOffsetISOInTimezone) stayed fixed, so the
+save goes through and what fails is the morning slot alone.
+Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/27-past-midnight-morning-slot.yaml
+Afterwards: git restore --source=HEAD -- rehearsal-calendar-native/src/features/availability/hooks/useAvailabilityData.ts
+
+The run's own output was lost: the command limit (10 minutes) ended it while
+the stand was being taken down, after the flow had finished. The result is
+Maestro's, from e2e/out/artifacts/2026-10-24_202008/<flow>/commands.json:
+
+  63 commands COMPLETED, 2 WARNED (optional "Not Now"), 1 FAILED:
+  step 066 assertVisible { id: slot-0-start, text: "00:00.*" }
+    "message" : "Assertion is false: \"00:00.*\", id: slot-0-start is visible"
+
+What the screen held at that step (screenshots/step-066-assertCondition-0000.png),
+MORNING_DAY reopened after Save:
+  Busy time: 10:00 -> 11:00 (slot 0, the hour he added)
+  Already on this day: 00:00 – 01:00, from the day before
+  His own 00:00 -> 01:00: gone. Hidden behind the night's end on loading, it
+  was not in what the editor held, and the save of the day replaced it.
+
+Green, the same flow on the fixed code (run 2026-10-24_194029, junit):
+  <testsuite name="Test Suite" device="Rehearsly E2E - iOS 26.5 - 0E96462E-BD5B-4C19-9847-8E63D550B36E" tests="1" failures="0" time="176.342" timestamp="2026-10-24T19:41:34">
+  <testcase id="A morning slot of his own outlives a save of the morning" ... file="e2e/flows/27-past-midnight-morning-slot.yaml" time="176.236" status="SUCCESS">
+  Last screenshot 27-morning-slot-kept: 00:00 -> 01:00 and 10:00 -> 11:00 his
+  own, 00:00 – 01:00 from the day before.
+
+Before the fix of the save's day naming the same flow stopped at Save with
+"Error / Availability is not valid" (AVAILABILITY_INVALID, NOT_ON_THIS_DAY):
+run 2026-10-24_185641, step 062 — see morning-slot-day-before.txt.

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
-import { Platform, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { NavigationContainer, useNavigation, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { Colors } from '../shared/constants/colors';
 import { hapticLight, hapticMedium } from '../shared/utils/haptics';
+import { inviteCodeFromUrl } from '../shared/utils/inviteCode';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
 import { useNotifications } from '../shared/hooks/useNotifications';
 import { BetaBanner } from '../shared/components/BetaBanner';
@@ -27,7 +28,8 @@ import {
   PlannerNavigator,
   ProfileNavigator,
 } from './stacks';
-import type { TabParamList, AppStackParamList } from './types';
+import { linking } from './linking';
+import type { TabParamList, AppStackParamList, AppNavigation } from './types';
 
 // Re-export types for consumers
 export type {
@@ -38,6 +40,11 @@ export type {
   ProfileStackParamList,
   TabParamList,
   AppStackParamList,
+  CalendarScreenNavigation,
+  SmartPlannerNavigation,
+  ProjectsScreenNavigation,
+  ProjectDetailNavigation,
+  AppNavigation,
 } from './types';
 
 // Context for ActionSheet state
@@ -54,42 +61,6 @@ const useActionSheet = () => {
   return context;
 };
 
-const prefix = Linking.createURL('/');
-
-const localhostPrefix = Platform.OS === 'android'
-  ? 'http://10.0.2.2:3001'
-  : 'http://localhost:3001';
-
-const linking: any = {
-  prefixes: [
-    prefix,
-    'rehearsalapp://',
-    'https://rehearsly.me',
-    // Kept so links handed out before the domain move still resolve
-    'https://server-fertvads-projects.vercel.app',
-    localhostPrefix
-  ],
-  config: {
-    screens: {
-      MainTabs: {
-        path: 'tabs',
-        screens: {
-          Calendar: 'calendar',
-          Projects: 'projects',
-          Planner: 'planner',
-          Profile: 'profile',
-        },
-      },
-      JoinProject: 'invite/:code',
-      // What an exported calendar event points at. The event carries this URL
-      // so a second device can tell which rehearsal it is — the id has to live
-      // in a field iOS shows, since events have no hidden one, so it may as
-      // well take the reader somewhere.
-      RehearsalDetails: 'rehearsal/:rehearsalId',
-    },
-  },
-};
-
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 const AppTabs = createBottomTabNavigator<TabParamList>();
 
@@ -97,9 +68,13 @@ const AppTabs = createBottomTabNavigator<TabParamList>();
 const EmptyCreateScreen = () => <View />;
 
 // Custom tab button component for the center "+" button
-const CreateTabButton = React.memo(({ onPress }: { onPress: () => void }) => {
+// The "+" is only an icon, so it says what it is: VoiceOver read nothing here.
+const CreateTabButton = React.memo(({ onPress, label }: { onPress: () => void; label: string }) => {
   return (
     <TouchableOpacity
+      testID="tab-create"
+      accessibilityRole="button"
+      accessibilityLabel={label}
       style={tabButtonStyles.container}
       onPress={() => {
         hapticMedium();
@@ -135,7 +110,7 @@ const tabButtonStyles = StyleSheet.create({
 
 // Wrapper component to handle ActionSheet navigation
 function ActionSheetWrapper() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<AppNavigation<'MainTabs'>>();
   const { showActionSheet, setShowActionSheet } = useActionSheet();
   const { language } = useI18n();
 
@@ -188,8 +163,8 @@ function TabNavigator() {
   }, [setShowActionSheet]);
 
   const renderCreateButton = useCallback(() => (
-    <CreateTabButton onPress={handleCreatePress} />
-  ), [handleCreatePress]);
+    <CreateTabButton onPress={handleCreatePress} label={t.actionSheet.title} />
+  ), [handleCreatePress, t]);
 
   return (
     <>
@@ -226,6 +201,7 @@ function TabNavigator() {
           component={CalendarNavigator}
           options={{
             tabBarLabel: t.nav.calendar,
+            tabBarButtonTestID: 'tab-calendar',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="calendar-outline" size={size} color={color} />
             ),
@@ -236,6 +212,7 @@ function TabNavigator() {
           component={ProjectsNavigator}
           options={{
             tabBarLabel: t.nav.projects,
+            tabBarButtonTestID: 'tab-projects',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="people-outline" size={size} color={color} />
             ),
@@ -254,6 +231,7 @@ function TabNavigator() {
           component={PlannerNavigator}
           options={{
             tabBarLabel: t.nav.planner,
+            tabBarButtonTestID: 'tab-planner',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="bar-chart-outline" size={size} color={color} />
             ),
@@ -264,6 +242,7 @@ function TabNavigator() {
           component={ProfileNavigator}
           options={{
             tabBarLabel: t.nav.profile,
+            tabBarButtonTestID: 'tab-profile',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person-circle-outline" size={size} color={color} />
             ),
@@ -295,7 +274,7 @@ function AppNavigator() {
         />
         <AppStack.Screen
           name="MarkBusy"
-          component={AvailabilityScreen as any}
+          component={AvailabilityScreen}
           options={{ presentation: 'modal' }}
         />
         <AppStack.Screen
@@ -342,22 +321,20 @@ function AppNavigator() {
 export default function Navigation() {
   const { user, isAuthenticated, loading } = useAuth();
   const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
-  const navigationRef = React.useRef<any>(null);
+  const navigationRef = useNavigationContainerRef<AppStackParamList>();
 
   const shouldShowOnboarding = isAuthenticated && !user?.onboardingCompleted;
 
-  // Handle deep links for unauthenticated users
+  // Every invite link, whenever it arrives, only queues its code. Opening it is
+  // the job of the one effect below. Navigating straight from here reached the
+  // auth or onboarding stack whenever it was showing — neither has JoinProject,
+  // so the call was dropped and the invite lost (HN01). The code is read by the
+  // server's own format, whole — never a prefix of it.
   useEffect(() => {
-    const handleUrl = async (url: string) => {
-      const inviteMatch = url.match(/invite\/([a-f0-9]+)/);
-      if (inviteMatch) {
-        const code = inviteMatch[1];
-
-        if (isAuthenticated && navigationRef.current) {
-          navigationRef.current.navigate('JoinProject', { code });
-        } else {
-          setPendingInviteCode(code);
-        }
+    const handleUrl = (url: string) => {
+      const code = inviteCodeFromUrl(url);
+      if (code) {
+        setPendingInviteCode(code);
       }
     };
 
@@ -374,17 +351,21 @@ export default function Navigation() {
     return () => {
       subscription.remove();
     };
-  }, [isAuthenticated]);
+  }, []);
 
-  // Navigate to invite when user logs in
+  // The queued invite is opened only once the app stack — the one that has
+  // JoinProject — is mounted: signed in and past onboarding. Until then the
+  // code waits, and is cleared only by the navigation that opens it.
+  const appStackMounted = isAuthenticated && !shouldShowOnboarding;
   useEffect(() => {
-    if (isAuthenticated && pendingInviteCode && navigationRef.current) {
-      setTimeout(() => {
-        navigationRef.current?.navigate('JoinProject', { code: pendingInviteCode });
-        setPendingInviteCode(null);
-      }, 500);
-    }
-  }, [isAuthenticated, pendingInviteCode]);
+    if (!appStackMounted || !pendingInviteCode) return;
+    const timer = setTimeout(() => {
+      if (!navigationRef.current) return;
+      navigationRef.current.navigate('JoinProject', { code: pendingInviteCode });
+      setPendingInviteCode(null);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [appStackMounted, pendingInviteCode, navigationRef]);
 
   if (loading) {
     return (
@@ -394,14 +375,22 @@ export default function Navigation() {
     );
   }
 
+  // Each stage gets a container of its own. One container kept the state of
+  // the navigator it held, and the next one mounted under it took that over,
+  // keeping every route whose name it also had: onboarding's Notifications
+  // step became the app's inbox, so finishing onboarding opened an empty inbox
+  // instead of the calendar (T-003).
+  const stage = !isAuthenticated ? 'auth' : shouldShowOnboarding ? 'onboarding' : 'app';
+
   return (
     <NavigationContainer
+      key={stage}
       ref={navigationRef}
-      linking={isAuthenticated && !shouldShowOnboarding ? linking : undefined}
+      linking={stage === 'app' ? linking : undefined}
     >
-      {!isAuthenticated ? (
+      {stage === 'auth' ? (
         <AuthNavigator />
-      ) : shouldShowOnboarding ? (
+      ) : stage === 'onboarding' ? (
         <OnboardingNavigator />
       ) : (
         <AppNavigator />

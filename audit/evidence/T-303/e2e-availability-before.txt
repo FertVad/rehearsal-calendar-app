@@ -1,0 +1,40 @@
+T-303 red-before: flow 10-availability-days on the client before cause fix 2.
+Base: e41e0e1 plus T-303's flow, seed, runner and testIDs (uncommitted at the time).
+Restored from 89d0467~1 (before 89d0467):
+  src/features/availability/hooks/useAvailabilityData.ts
+  src/features/availability/hooks/useAvailabilityEditor.ts
+  src/features/availability/hooks/useAvailabilitySave.ts
+  src/features/availability/screens/AvailabilityScreen.tsx
+then: node audit/evidence/T-303/old-screen-testids.mjs src/features/availability/screens/AvailabilityScreen.tsx
+  (7 controls given the flow's testIDs; diff against 89d0467~1 is only those attributes)
+Kept current: src/shared/services/api.ts (still has bulkSet, used by the old save)
+and the server (still serves /bulk for older apps; the seed needs PUT /days).
+Command: npm run e2e -- e2e/flows/10-availability-days.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/10-availability-days.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.oracle.truffle.api.dsl.InlineSupport$UnsafeField (file:/Users/vadimfertik/.maestro/lib/truffle-api-24.2.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.oracle.truffle.api.dsl.InlineSupport$UnsafeField
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[Failed] Availability saves the day it changed (2m 55s) (Assertion is false: ".*, Free", id: day-2026-10-17 is visible)
+
+1/1 Flow Failed
+
+Failure screenshot (e2e/out/artifacts/2026-10-11_170924/.../step-051-assertCondition-,_Free.png):
+2026-10-14 (MARK_DAY) has the yellow Partial dot; 2026-10-17 (OTHER_DAY), marked
+free through the API while the editor was open, shows the red Busy dot again —
+the old save posted the whole loaded snapshot to /bulk and put the busy day back.
+
+Afterwards: git restore --source=HEAD -- the four files above (the screen's testIDs re-applied as in the commit).

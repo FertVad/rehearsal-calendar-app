@@ -1,0 +1,38 @@
+{
+  "date": "2026-09-24",
+  "branch": "claude/systematic-repair",
+  "finding": "outside the audit: demo seed (whole-day form, implicit .env, committed password)",
+  "beforeCommit": "90b6105",
+  "sourceCommit": "daa981a32ccc4b9386e08189b937ca5368f1b132",
+  "sourceTree": "b5520c91593064513ea71de3e68c087162135458",
+  "runtime": {
+    "node": "v22.16.0",
+    "postgres": "15.13",
+    "zone": "Asia/Jerusalem"
+  },
+  "commands": {
+    "beforeAfter": "node audit/evidence/seed-demo/before-after.mjs > audit/evidence/seed-demo/before-after.txt",
+    "redBefore": "old seed-demo.mjs from 90b6105 in place; NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/seedDemo.test.js -t \"never discovers\" -> 1 failed (Expected 0, Received 1)",
+    "unit": "cd rehearsal-calendar-native/server && npm run test:unit -- --silent"
+  },
+  "results": {
+    "beforeAfter": {
+      "exit": 0,
+      "checks": 12,
+      "failures": 0
+    },
+    "seedDemoTest": {
+      "after": "3/3",
+      "before": "target test fails"
+    },
+    "serverJest": "51 suites, 745 tests, exit 0"
+  },
+  "production": "NOT_RUN: password rotation and reseed are owner actions (OPS-DEMO-PASSWORD, OPS-DEMO-RESEED)",
+  "sha256": {
+    "rehearsal-calendar-native/server/scripts/seed-demo.mjs": "0ef7bd86da0112d9ce109c48558daa233307a423616c2ad895d507314c7793a1",
+    "rehearsal-calendar-native/server/scripts/demoDates.mjs": "6b8b8b58e03d51ebffb079719d94a42cfacdf7fda32ccd32809cb80aa32fc5e6",
+    "rehearsal-calendar-native/server/__tests__/seedDemo.test.js": "f772ebf8c82af532cad9a8ec94749ec7c368b00e3e26c2a9e69cced1c71db9fb",
+    "audit/evidence/seed-demo/before-after.mjs": "bfde03894fa72a248b200a68c14639a2fb2b3a5241f12c1efbd22d8ea4d43be0",
+    "audit/evidence/seed-demo/before-after.txt": "edc4f887c5d6151706ffb67cfdfc00f923a01f8e166c034fd3936344d2f96e21"
+  }
+}

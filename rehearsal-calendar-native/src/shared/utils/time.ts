@@ -88,6 +88,53 @@ export const minutesToTime = (minutes: number): string => {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 };
 
+const DAY_MINUTES = 24 * 60;
+
+// =============================================================================
+// CLOCK RANGES (cause fix 15)
+//
+// A rehearsal and a busy slot are intervals, not a date with two times. Every
+// form picks a date, a start and an end on the clock; this is the one rule that
+// turns those into an interval, for every form that has them:
+//
+// - an end after the start is on the same day: 10:00–18:00;
+// - an end before the start is on the next day: 23:00–01:00 runs two hours into
+//   the next morning, 22:00–00:00 ends at midnight;
+// - an end equal to the start is no range at all — zero hours, or a whole day,
+//   and nobody can tell which.
+//
+// The end used to be put on the start's date whatever it said, so 23:00–01:00
+// went out ending before it began (DF04) and the editor's next-day branch was
+// refused before it ran (CC06).
+// =============================================================================
+
+/** Start and end are the same moment on the clock: not a range. */
+export const isEmptyClockRange = (start: string, end: string): boolean =>
+  timeToMinutes(start) === timeToMinutes(end);
+
+/** The end is on the day after the start. */
+export const endsNextDay = (start: string, end: string): boolean =>
+  timeToMinutes(end) < timeToMinutes(start);
+
+/** The date the end of a range starting on `date` falls on. */
+export const clockRangeEndDate = (date: string, start: string, end: string): string =>
+  endsNextDay(start, end) ? addDays(date, 1) : date;
+
+/**
+ * The range as minutes from the start day's midnight: [start, end), with an end
+ * on the next day past 24:00. Two ranges of one day compare on this axis, and a
+ * range of the next day sits on it shifted by a day (`dayOffset` 1).
+ */
+export const clockRangeMinutes = (start: string, end: string, dayOffset = 0): [number, number] => {
+  const from = timeToMinutes(start) + dayOffset * DAY_MINUTES;
+  const to = timeToMinutes(end) + dayOffset * DAY_MINUTES;
+  return [from, endsNextDay(start, end) ? to + DAY_MINUTES : to];
+};
+
+/** Two half-open minute ranges share time; touching ends do not. */
+export const minuteRangesOverlap = (a: [number, number], b: [number, number]): boolean =>
+  a[0] < b[1] && b[0] < a[1];
+
 /**
  * Format YYYY-MM-DD string to localized date string (e.g., "25 ноября, понедельник").
  */
@@ -104,11 +151,89 @@ export const formatDateLocalized = (
   return date.toLocaleDateString(locale, options);
 };
 
+/**
+ * The calendar date `days` after `dateStr` ('YYYY-MM-DD'), stepped in UTC for
+ * the reason datesBetween gives.
+ */
+export const addDays = (dateStr: string, days: number): string => {
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().split('T')[0];
+};
+
 // =============================================================================
 // TIMEZONE-AWARE FUNCTIONS (using date-fns-tz)
 // =============================================================================
 
-import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime, format, formatInTimeZone } from 'date-fns-tz';
+
+// -----------------------------------------------------------------------------
+// One zone in the app: the profile's (cause fix 14, owner's decision 16.10.2026)
+// -----------------------------------------------------------------------------
+//
+// The zone is the one the person chose. Registration starts it at the device's;
+// after that only the profile changes it — a flight does not. Everything the
+// app shows or sends is read in it: rehearsal times, "today" and the day's
+// bounds, busy hours, the planner, the events written to the phone's calendar.
+// The server reads the same zone for reminder texts and a day's bounds.
+//
+// The client used to date rehearsals in the profile's zone and take "today",
+// the form's pickers and busy hours from the device's, so where the two differed
+// a past rehearsal counted as upcoming and an edit saved unchanged moved the
+// rehearsal by the difference (review DF01). And sign-in put the device's zone
+// back over the one chosen (review HP04).
+//
+// The native pickers and Date's local getters speak the device's zone, so what
+// they show is a wall clock (wallClockIn): a Date whose local fields read what a
+// clock in the profile's zone reads. It is never an instant; it becomes one only
+// through dateTimeToISOInTimezone with the same zone.
+
+/** The device's IANA zone; registration's default and nothing more. */
+export const deviceTimezone = (): string | undefined => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+/** The zone a profile's setting means: its own, or the device's while it has none. */
+export const timezoneOf = (profileTimezone?: string | null): string =>
+  profileTimezone || deviceTimezone() || 'UTC';
+
+// The signed-in profile's zone. AuthContext writes it together with the user,
+// so the screens (useTimezone, useClock.ts) and code outside React — the
+// calendar export — read one value.
+let profileTimezone: string | null = null;
+const timezoneListeners = new Set<() => void>();
+
+export const setProfileTimezone = (zone?: string | null): void => {
+  const next = zone || null;
+  if (next === profileTimezone) return;
+  profileTimezone = next;
+  timezoneListeners.forEach((listener) => listener());
+};
+
+export const onAppTimezone = (listener: () => void): (() => void) => {
+  timezoneListeners.add(listener);
+  return () => {
+    timezoneListeners.delete(listener);
+  };
+};
+
+/** The app's zone: the profile's, the device's only while the profile has none. */
+export const appTimezone = (): string => timezoneOf(profileTimezone);
+
+/**
+ * What a clock in `timezone` reads at `at`, as a Date whose local fields say it:
+ * for the pickers, formatDateToString and formatDateToTimeString. Not an instant.
+ */
+export const wallClockIn = (timezone: string, at: Date | string = new Date()): Date =>
+  toZonedTime(at, timezone);
+
+/** The date in `timezone` at `at`, 'YYYY-MM-DD'. */
+export const todayIn = (timezone: string, at: Date = new Date()): string =>
+  formatDateToString(wallClockIn(timezone, at));
 
 /**
  * Convert ISO 8601 timestamp (UTC) to date string in user's timezone
@@ -159,6 +284,25 @@ export const isoToTimeStringInTimezone = (
 };
 
 /**
+ * A rehearsal's date and hours on the clock of `timezone`, read from its
+ * instants. The server's own `date`, `time` and `endTime` are in the zone the
+ * profile had when it answered; a screen left open across a change of zone
+ * kept showing them (cause fix 14, review). Kept only for a row with no instants.
+ */
+export const onClockOf = <T extends { startsAt?: string; endsAt?: string; date?: string; time?: string; endTime?: string }>(
+  rehearsal: T,
+  timezone: string
+): T => {
+  if (!rehearsal.startsAt) return rehearsal;
+  return {
+    ...rehearsal,
+    date: isoToDateStringInTimezone(rehearsal.startsAt, timezone),
+    time: isoToTimeStringInTimezone(rehearsal.startsAt, timezone),
+    endTime: rehearsal.endsAt ? isoToTimeStringInTimezone(rehearsal.endsAt, timezone) : rehearsal.endTime,
+  };
+};
+
+/**
  * Convert local date/time in user's timezone to ISO 8601 timestamp (UTC)
  *
  * @param dateStr - Date in YYYY-MM-DD format
@@ -181,14 +325,59 @@ export const dateTimeToISOInTimezone = (
 ): string => {
   const [year, month, day] = dateStr.split('-').map(Number);
   const [hours, minutes] = timeStr.split(':').map(Number);
+  const pad = (n: number) => String(n).padStart(2, '0');
 
-  // Create a date object representing the local time (not UTC!)
-  const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-
-  // Convert from local time in specified timezone to UTC
-  const utcDate = fromZonedTime(localDate, timezone);
+  // Read as text, not through a device-local Date: an hour the device's clocks
+  // skip (its own spring-forward night) exists in another zone all the same.
+  const utcDate = fromZonedTime(
+    `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`,
+    timezone
+  );
 
   return utcDate.toISOString();
+};
+
+/**
+ * The same instant as dateTimeToISOInTimezone, written as the clock in
+ * `timezone` reads it, with its offset: "2026-01-21T00:30:00.000+03:00". Its
+ * text names the date it was entered on, which the server files a busy slot
+ * under; in UTC an early-morning slot east of UTC named the day before and was
+ * refused (cause fix 15, review 2).
+ */
+export const dateTimeToOffsetISOInTimezone = (
+  dateStr: string,
+  timeStr: string,
+  timezone: string
+): string =>
+  formatInTimeZone(dateTimeToISOInTimezone(dateStr, timeStr, timezone), timezone, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
+
+/** A clock range on a date as the interval it is, in a timezone (the rule above). */
+export const clockRangeToISO = (
+  dateStr: string,
+  start: string,
+  end: string,
+  timezone: string
+): { startsAt: string; endsAt: string } => ({
+  startsAt: dateTimeToISOInTimezone(dateStr, start, timezone),
+  endsAt: dateTimeToISOInTimezone(clockRangeEndDate(dateStr, start, end), end, timezone),
+});
+
+/**
+ * The calendar dates an interval covers in a timezone, first to last. An end at
+ * exactly midnight closes the day before; it does not put the interval on the
+ * next day too.
+ */
+export const intervalDates = (
+  startsAt: string,
+  endsAt: string,
+  timezone: string
+): { first: string; last: string } => {
+  const first = isoToDateStringInTimezone(startsAt, timezone);
+  let last = isoToDateStringInTimezone(endsAt, timezone);
+  if (last > first && isoToTimeStringInTimezone(endsAt, timezone) === '00:00') {
+    last = addDays(last, -1);
+  }
+  return { first, last: last < first ? first : last };
 };
 
 /**

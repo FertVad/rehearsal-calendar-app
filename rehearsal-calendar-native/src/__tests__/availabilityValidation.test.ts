@@ -32,22 +32,20 @@ describe('Availability Validation Utils', () => {
     });
   });
 
-  describe('validateSlot - A) end <= start validation', () => {
+  describe('validateSlot - A) start and end', () => {
     it('should reject slot where start equals end', () => {
       const slot: TimeSlot = { start: '14:00', end: '14:00' };
       const result = validateSlot(slot);
 
       expect(result.isValid).toBe(false);
       expect(result.error).toBeDefined();
-      expect(result.error).toBe('endBeforeStart');
+      expect(result.error).toBe('sameStartEnd');
     });
 
-    it('should reject slot where start is after end', () => {
-      const slot: TimeSlot = { start: '16:00', end: '14:00' };
-      const result = validateSlot(slot);
-
-      expect(result.isValid).toBe(false);
-      expect(result.error).toBeDefined();
+    // Cause fix 15 (CC06): an end before the start is the next morning.
+    it('should accept a slot past midnight, its end on the next day', () => {
+      expect(validateSlot({ start: '23:00', end: '01:00' }).isValid).toBe(true);
+      expect(validateSlot({ start: '22:00', end: '00:00' }).isValid).toBe(true);
     });
 
     it('should accept slot where start is before end', () => {
@@ -153,12 +151,17 @@ describe('Availability Validation Utils', () => {
       expect(result.isValid).toBe(true);
     });
 
-    it('should reject single invalid slot (start >= end)', () => {
-      const slots: TimeSlot[] = [{ start: '12:00', end: '10:00' }];
+    it('should reject single invalid slot (start == end)', () => {
+      const slots: TimeSlot[] = [{ start: '12:00', end: '12:00' }];
       const result = validateSlots(slots);
 
       expect(result.isValid).toBe(false);
       expect(result.error).toBeDefined();
+    });
+
+    it('a slot past midnight takes the rest of the evening', () => {
+      expect(validateSlots([{ start: '22:00', end: '02:00' }, { start: '23:00', end: '23:30' }]).error).toBe('overlap');
+      expect(validateSlots([{ start: '18:00', end: '22:00' }, { start: '22:00', end: '02:00' }]).isValid).toBe(true);
     });
 
     it('should accept multiple non-overlapping slots', () => {
@@ -193,7 +196,7 @@ describe('Availability Validation Utils', () => {
       const result = validateSlots(slots);
 
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('endBeforeStart');
+      expect(result.error).toBe('sameStartEnd');
     });
 
     it('should reject when middle slot is invalid', () => {

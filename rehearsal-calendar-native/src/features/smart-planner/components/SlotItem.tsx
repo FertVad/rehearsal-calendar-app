@@ -52,7 +52,7 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
       <View style={[styles.indicator, { backgroundColor: getCategoryColor() }]} />
       <View style={styles.content}>
         <Text style={styles.time}>{formatTimeRange()}</Text>
-        <Text style={styles.status}>{getStatusText()}</Text>
+        <Text testID={`planner-slot-${slot.date}`} style={styles.status}>{getStatusText()}</Text>
       </View>
       {canCreateRehearsal && (
         <TouchableOpacity

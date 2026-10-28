@@ -1,0 +1,39 @@
+T-206 red before: flow 17 as it was at 1151041 (plain hold), five times in one run.
+cd rehearsal-calendar-native
+npm run e2e -- e2e/repro/r1.yaml e2e/repro/r2.yaml e2e/repro/r3.yaml e2e/repro/r4.yaml e2e/repro/r5.yaml
+(r1..r5 each `runFlow: ../flows/17-filter-late-answer.yaml`; artifacts 2026-10-25_034110)
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Passed] Calendar filter against a late answer r1 (1m 30s)
+[Failed] Calendar filter against a late answer r2 (1m 5s) (Assertion is false: ".*Garden debate.*" is not visible)
+[Passed] Calendar filter against a late answer r3 (1m)
+[Passed] Calendar filter against a late answer r4 (1m)
+[Passed] Calendar filter against a late answer r5 (1m 1s)
+
+1/5 Flow Failed
+
+r2, maestro.log:
+03:44:26.984 Swipe from (50%, 25%) to (50%, 75%) in 400 ms RUNNING
+03:44:31.513 Swipe ... COMPLETED
+03:44:33.384 refreshElementUntilStable: Element is still moving (null -> Bounds(x=20, y=177, width=299, height=45))
+03:44:34.089 Try tapping at (169, 199)                       <- calendar-filter
+03:44:35.259 Tap on id: calendar-filter COMPLETED
+03:44:37.393 Tap aimed via trusted pre-wait hierarchy (null settle, no recent scroll)
+03:44:37.402 Try tapping at (196, 342)                       <- "Eternal Student", 10.4 s after the swipe
+03:44:38.225 Tap on "Eternal Student", id: calendar-filter-option COMPLETED
+03:44:48.985 CommandFailed: Assertion is false: ".*Garden debate.*" is not visible
+
+r2 hierarchy at the failure (step-034): spinner gone, content 60 pt up, dropdown open
+  calendar-filter                 [20,117][319,161]
+  calendar-filter-option Garden   [21,219][372,261]
+  calendar-filter-option Eternal  [21,261][372,303]   <- the tap at y=342 is below it
+
+Original red (T-116, artifacts 2026-10-25_020939): swipe 02:28:00.464, tap on
+"Eternal Student" 02:28:09.911 (9.45 s), filter 177 at the tap, 166 at the failure.

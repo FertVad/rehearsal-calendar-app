@@ -11,6 +11,7 @@
  * else's busy time.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Calendar from 'expo-calendar';
 import { getOrCreateConnection, resetConnectionCache, getAllMappings } from '../calendarMappings';
 import { calendarSyncAPI } from '../../services/api';
 
@@ -100,6 +101,7 @@ describe('Asking for all the mappings', () => {
 
   beforeEach(async () => {
     await AsyncStorage.removeItem('calendar-export-mappings');
+    (Calendar.getCalendarsAsync as jest.Mock).mockResolvedValue([{ id: 'personal' }]);
   });
 
   it('answers from the server when it can', async () => {

@@ -1,0 +1,52 @@
+{
+  "verifiedAt": "2026-09-18T16:54:50.859490+00:00",
+  "sourceCommit": "e0a0edee44d438902fd35c501f81a89766566d5b",
+  "sourceTree": "8de38ca060da45b394373d5145699681e1bc29cb",
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "macOS": "26.3.1",
+  "playwright": "1.62.1",
+  "chromium": "151.0.7922.34",
+  "postgres": "15.13",
+  "postgresImage": "sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0",
+  "environment": "env -i; explicit Node22 PATH; synthetic JWT_SECRET; isolated Chromium cache; owned local Docker PostgreSQL; .env not loaded",
+  "results": {
+    "routeBefore": {
+      "sourceRoute": "67ae44da3f30946963da10dcb7a055ed5e2eb4fe",
+      "exitCode": 1,
+      "failedTests": 10,
+      "purpose": "safe expected regression failure, uncommitted diagnostic test"
+    },
+    "routeAfter": {
+      "exitCode": 0,
+      "passedTests": 55,
+      "scope": "pre-commit focused run; final source adds two fallback tests"
+    },
+    "checkFinal": {
+      "exitCode": 0,
+      "jestSuites": 77,
+      "jestTests": 975,
+      "browserTests": 4,
+      "persistedTests": 6
+    },
+    "postgresFinal": {
+      "exitCode": 0,
+      "passedScenarios": [
+        "controls",
+        "A02",
+        "B03"
+      ],
+      "knownDefects": [
+        "F01",
+        "B02",
+        "D01"
+      ],
+      "externalConnections": 0
+    }
+  },
+  "ownedContainersAfterRun": 0,
+  "production": "NOT_RUN",
+  "physicalDevice": "NOT_RUN"
+}

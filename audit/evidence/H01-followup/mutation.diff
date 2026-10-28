@@ -1,0 +1,13 @@
+diff --git a/rehearsal-calendar-native/server/public/admin/dashboard.js b/rehearsal-calendar-native/server/public/admin/dashboard.js
+index 78d9e3e..3f6fdbf 100644
+--- a/rehearsal-calendar-native/server/public/admin/dashboard.js
++++ b/rehearsal-calendar-native/server/public/admin/dashboard.js
+@@ -13,7 +13,7 @@
+   function element(tag, className, text) {
+     const node = document.createElement(tag);
+     if (className) node.className = className;
+-    if (text !== undefined) node.textContent = text;
++    if (text !== undefined) node.innerHTML = text;
+     return node;
+   }
+ 

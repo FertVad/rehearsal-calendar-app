@@ -9,22 +9,31 @@ import {
   Alert,
   FlatList,
   RefreshControl,
-  Modal,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
-import { ProjectsStackParamList } from '../../../navigation';
+import type { ProjectsStackParamList, ProjectDetailNavigation } from '../../../navigation';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
-import { formatDateToString as formatDateToStringUtil } from '../../../shared/utils/time';
+import { AppModal } from '../../../shared/components/AppModal';
+import { ModalSheet } from '../../../shared/components/ModalSheet';
+import { parseDateString } from '../../../shared/utils/time';
+import { useTimezone, useToday } from '../../../shared/hooks/useClock';
+import { getDateLocale } from '../../../shared/utils/locale';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
 import * as Clipboard from 'expo-clipboard';
 import { useInviteLink } from '../hooks';
+import type { Rehearsal as RehearsalInterval } from '../../../shared/types';
+import { lastDateOf, rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
 
-type ProjectDetailScreenProps = NativeStackScreenProps<ProjectsStackParamList, 'ProjectDetail'>;
+import { logger } from '../../../shared/utils/logger';
+type ProjectDetailScreenProps = {
+  route: RouteProp<ProjectsStackParamList, 'ProjectDetail'>;
+  navigation: ProjectDetailNavigation;
+};
 
 interface Project {
   id: string;
@@ -47,10 +56,9 @@ interface Member {
   joinedAt: string;
 }
 
-interface Rehearsal {
+interface Rehearsal extends RehearsalInterval {
   id: string;
   title: string;
-  scene?: string;
   date: string;
   time: string;
   endTime?: string;
@@ -58,10 +66,11 @@ interface Rehearsal {
   status: string;
 }
 
-// Helper to format date with locale support
-function formatDate(dateStr: string, locale: string): string {
-  const date = new Date(dateStr);
-  const formatted = date.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', {
+// A rehearsal's calendar date, in the reader's language. Not new Date(dateStr):
+// that reads '2026-09-10' as UTC midnight, the 9th anywhere west of UTC.
+export function formatDate(dateStr: string, language: string): string {
+  const date = parseDateString(dateStr);
+  const formatted = date.toLocaleDateString(getDateLocale(language), {
     day: 'numeric',
     month: 'short',
   });
@@ -69,12 +78,57 @@ function formatDate(dateStr: string, locale: string): string {
   return formatted.replace(/\.$/, '');
 }
 
-// Use shared utility
-const formatDateToString = formatDateToStringUtil;
+/**
+ * One rehearsal in the project's lists, upcoming or past alike.
+ *
+ * The two lists used to be written out twice, and drifted: the past one read
+ * only `scene` — a field no server has sent since titles came — so every past
+ * rehearsal was called "Rehearsal", and it showed the start time alone where
+ * the upcoming one shows the interval (BC03). Past only greys it out.
+ */
+export function RehearsalRow({ rehearsal, onPress, past = false }: {
+  rehearsal: Rehearsal;
+  onPress: (rehearsalId: string) => void;
+  past?: boolean;
+}) {
+  const { t, language } = useI18n();
+  return (
+    <TouchableOpacity
+      style={[styles.rehearsalCard, past && styles.pastCard]}
+      onPress={() => onPress(rehearsal.id)}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.rehearsalDate, past && styles.pastDate]}>
+        <Text style={[styles.rehearsalDateText, past && styles.pastDateText]}>
+          {formatDate(rehearsal.date, language)}
+        </Text>
+      </View>
+      <View style={styles.rehearsalInfo}>
+        <Text style={[styles.rehearsalTitle, past && styles.pastText]} numberOfLines={1}>
+          {rehearsal.title || t.calendar.rehearsal}
+        </Text>
+        <View style={styles.rehearsalMeta}>
+          <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
+          <Text style={styles.rehearsalTime}>
+            {rehearsalTimeLabel(rehearsal, getDateLocale(language))}
+          </Text>
+        </View>
+        {rehearsal.location ? (
+          <View style={styles.rehearsalMeta}>
+            <Ionicons name="location-outline" size={12} color={Colors.text.tertiary} />
+            <Text style={styles.rehearsalLocation} numberOfLines={1}>
+              {rehearsal.location}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function ProjectDetailScreen({ route, navigation }: ProjectDetailScreenProps) {
   const { projectId } = route.params;
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const { refreshProjects } = useProjects();
 
   const [project, setProject] = useState<Project | null>(null);
@@ -109,7 +163,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       setRehearsals(rehearsalsRes.data.rehearsals || []);
       setIsOwner(projectData.is_owner);
     } catch (err) {
-      console.error('Failed to fetch project data:', err);
+      logger.error('Failed to fetch project data:', err);
       Alert.alert(t.common.error, t.projects.fetchError);
     } finally {
       setLoading(false);
@@ -160,10 +214,10 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
     }
   };
 
-  // RehearsalDetails lives in the root stack rather than this one. navigate
-  // bubbles up to find it, which the types available here cannot express.
+  // RehearsalDetails lives in the app stack rather than this one; navigate
+  // goes up to it.
   const openRehearsal = (rehearsalId: string) => {
-    (navigation as any).navigate('RehearsalDetails', { rehearsalId: String(rehearsalId) });
+    navigation.navigate('RehearsalDetails', { rehearsalId: String(rehearsalId) });
   };
 
   const handleCopyCode = async () => {
@@ -179,18 +233,27 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
     generateInviteLink(projectId, project.name);
   };
 
+  // Dated and timed in the profile's zone, as today is (DF01). From the
+  // instants, here: the server's date and time are in the zone it knew when it
+  // answered, and this screen stays open while the profile changes the zone —
+  // it kept the old zone's hours (cause fix 14, review).
+  const today = useToday();
+  const timezone = useTimezone();
+
   // Memoize split rehearsals into upcoming and past to avoid re-sorting on every render
   const { upcomingRehearsals, pastRehearsals } = useMemo(() => {
-    const today = formatDateToString(new Date());
-    const upcoming = rehearsals
-      .filter(r => r.date >= today)
+    // Days and times from the interval, as the calendar reads them (cause fix
+    // 15): a rehearsal still running into today is not past yet.
+    const shown = rehearsals.map(r => rehearsalInZone(r, timezone));
+    const upcoming = shown
+      .filter(r => (lastDateOf(r) ?? r.date) >= today)
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-    const past = rehearsals
-      .filter(r => r.date < today)
+    const past = shown
+      .filter(r => (lastDateOf(r) ?? r.date) < today)
       .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
 
     return { upcomingRehearsals: upcoming, pastRehearsals: past };
-  }, [rehearsals]);
+  }, [rehearsals, today, timezone]);
 
   const handleMemberPress = useCallback((member: Member) => {
     // Only allow admins to manage members, and can't manage owner
@@ -369,7 +432,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.title} numberOfLines={1}>{project.name}</Text>
@@ -452,38 +515,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
           ) : upcomingExpanded ? (
             <View style={styles.rehearsalsList}>
               {upcomingRehearsals.map(rehearsal => (
-                <TouchableOpacity
-                  key={rehearsal.id}
-                  style={styles.rehearsalCard}
-                  onPress={() => openRehearsal(rehearsal.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.rehearsalDate}>
-                    <Text style={styles.rehearsalDateText}>{formatDate(rehearsal.date, language)}</Text>
-                  </View>
-                  <View style={styles.rehearsalInfo}>
-                    {/* `scene` predates the title field and is never written
-                        to; keep reading it so any legacy row still renders. */}
-                    <Text style={styles.rehearsalTitle} numberOfLines={1}>
-                      {rehearsal.title || rehearsal.scene || t.calendar.rehearsal}
-                    </Text>
-                    <View style={styles.rehearsalMeta}>
-                      <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
-                      <Text style={styles.rehearsalTime}>
-                        {rehearsal.time.substring(0, 5)}
-                        {rehearsal.endTime && ` - ${rehearsal.endTime.substring(0, 5)}`}
-                      </Text>
-                    </View>
-                    {rehearsal.location && (
-                      <View style={styles.rehearsalMeta}>
-                        <Ionicons name="location-outline" size={12} color={Colors.text.tertiary} />
-                        <Text style={styles.rehearsalLocation} numberOfLines={1}>
-                          {rehearsal.location}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
+                <RehearsalRow key={rehearsal.id} rehearsal={rehearsal} onPress={openRehearsal} />
               ))}
             </View>
           ) : null}
@@ -496,6 +528,9 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
               style={styles.sectionHeader}
               onPress={() => setPastExpanded(prev => !prev)}
               activeOpacity={0.7}
+              testID="past-rehearsals-toggle"
+              accessibilityRole="button"
+              accessibilityState={{ expanded: pastExpanded }}
             >
               <Ionicons name="time" size={20} color={Colors.text.tertiary} />
               <Text style={[styles.sectionTitle, styles.pastTitle]}>{t.projects.pastRehearsals}</Text>
@@ -510,29 +545,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
             {pastExpanded && (
               <View style={styles.rehearsalsList}>
                 {pastRehearsals.map(rehearsal => (
-                  <TouchableOpacity
-                    key={rehearsal.id}
-                    style={[styles.rehearsalCard, styles.pastCard]}
-                    onPress={() => openRehearsal(rehearsal.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.rehearsalDate, styles.pastDate]}>
-                      <Text style={[styles.rehearsalDateText, styles.pastDateText]}>
-                        {formatDate(rehearsal.date, language)}
-                      </Text>
-                    </View>
-                    <View style={styles.rehearsalInfo}>
-                      <Text style={[styles.rehearsalTitle, styles.pastText]} numberOfLines={1}>
-                        {rehearsal.scene || t.calendar.rehearsal}
-                      </Text>
-                      <View style={styles.rehearsalMeta}>
-                        <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
-                        <Text style={styles.rehearsalTime}>
-                          {rehearsal.time.substring(0, 5)}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
+                  <RehearsalRow key={rehearsal.id} rehearsal={rehearsal} onPress={openRehearsal} past />
                 ))}
               </View>
             )}
@@ -590,6 +603,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
           <View style={styles.section}>
             <TouchableOpacity
               style={styles.deleteButton}
+              testID="project-delete"
               onPress={handleDeleteProject}
               activeOpacity={0.7}
             >
@@ -601,17 +615,12 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       </ScrollView>
 
       {/* Member Management Modal */}
-      <Modal
+      <AppModal
         visible={!!selectedMember}
-        transparent
         animationType="fade"
         onRequestClose={() => setSelectedMember(null)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setSelectedMember(null)}
-        >
+        <ModalSheet overlayStyle={styles.modalOverlay} onClose={() => setSelectedMember(null)}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.projects.manageMember}</Text>
@@ -668,8 +677,8 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
               </TouchableOpacity>
             </View>
           </View>
-        </TouchableOpacity>
-      </Modal>
+        </ModalSheet>
+      </AppModal>
     </SafeAreaView>
   );
 }

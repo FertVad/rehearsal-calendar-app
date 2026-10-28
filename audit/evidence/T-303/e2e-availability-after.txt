@@ -1,0 +1,28 @@
+T-303 after: flow 10-availability-days on the current client (cause fix 2 in place),
+the files as committed in T-303.
+Command: npm run e2e -- e2e/flows/10-availability-days.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/10-availability-days.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.oracle.truffle.api.dsl.InlineSupport$UnsafeField (file:/Users/vadimfertik/.maestro/lib/truffle-api-24.2.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.oracle.truffle.api.dsl.InlineSupport$UnsafeField
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[Passed] Availability saves the day it changed (2m 21s)
+
+1/1 Flow Passed in 2m 21s
+
+Green twice (2m 17s before the red-before run, 2m 21s after restoring HEAD).
+Final screenshot 10-availability-days.png: 2026-10-14 Partial 10:00 -> 18:00,
+13 and 15 unmarked, 2026-10-17 Free.

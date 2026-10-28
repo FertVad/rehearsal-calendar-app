@@ -1,0 +1,220 @@
+(node:49902) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS __tests__/routes/appleAuth.test.js
+  ● Console
+
+    console.error
+      [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+    console.error
+      [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+    console.error
+      [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+    console.error
+      [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+    console.error
+      [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+    console.error
+      [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+    console.error
+      [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+    console.error
+      [OAuth] Apple token verification failed
+
+      132 |     // values. Keep both diagnostics and the application error independent of
+      133 |     // those details, while retaining a typed rejection for the HTTP boundary.
+    > 134 |     console.error('[OAuth] Apple token verification failed');
+          |             ^
+      135 |     throw new AppleTokenVerificationError();
+      136 |   }
+      137 | }
+
+      at error (utils/oauthVerification.js:134:13)
+      at routes/auth.js:188:23
+
+    console.info
+      [INFO] [AccountLinking] OAuth provider apple already linked to user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.info
+      [INFO] [AccountLinking] OAuth provider apple already linked to user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+    console.error
+      [Auth] Apple OAuth error: SqliteError { code: 'SQLITE_CONSTRAINT_TRIGGER' }
+
+      236 |       return res.status(401).json({ error: 'Apple authentication failed' });
+      237 |     }
+    > 238 |     console.error('[Auth] Apple OAuth error:', err);
+          |             ^
+      239 |     res.status(500).json({ error: 'Apple authentication failed' });
+      240 |   }
+      241 | }));
+
+      at error (routes/auth.js:238:13)
+
+    console.info
+      [INFO] [AccountLinking] OAuth provider apple already linked to user 1
+
+      at Object.info (utils/logger.js:27:15)
+
+PASS __tests__/routes/operationIpLimits.test.js
+  ● Console
+
+    console.info
+      IS02 synthetic auth admissions by app: [ 20, 0 ]
+
+      at Object.info (__tests__/routes/operationIpLimits.test.js:131:11)
+
+    console.info
+      IS02 synthetic admin admissions by app: [ 5, 0 ]
+
+      at Object.info (__tests__/routes/operationIpLimits.test.js:153:11)
+
+    console.error
+      [ERROR] Request failed: { status: 400 }
+
+      46 |       }
+      47 |     } else {
+    > 48 |       console.error(`[ERROR] ${message}`, error, ...args);
+         |               ^
+      49 |     }
+      50 |   },
+      51 | };
+
+      at Object.error (utils/logger.js:48:15)
+      at error (middleware/errorHandler.js:14:10)
+      at Layer.handle_error (node_modules/express/lib/router/layer.js:71:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:326:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (node_modules/express/lib/router/index.js:326:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (node_modules/express/lib/router/index.js:326:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (node_modules/express/lib/router/index.js:326:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (node_modules/express/lib/router/index.js:326:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (node_modules/express/lib/router/index.js:326:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Layer.handle_error (node_modules/express/lib/router/layer.js:67:12)
+      at trim_prefix (node_modules/express/lib/router/index.js:326:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/body-parser/lib/read.js:130:7
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+PASS __tests__/services/operationIpRateLimit.test.js
+PASS __tests__/routes/tokenRefreshTtl.test.js
+PASS __tests__/middleware/operationIpRateLimit.test.js
+
+Test Suites: 5 passed, 5 total
+Tests:       91 passed, 91 total
+Snapshots:   0 total
+Time:        2.163 s, estimated 3 s
+Ran all test suites matching __tests__/routes/operationIpLimits.test.js|__tests__/services/operationIpRateLimit.test.js|__tests__/middleware/operationIpRateLimit.test.js|__tests__/routes/appleAuth.test.js|__tests__/routes/tokenRefreshTtl.test.js.

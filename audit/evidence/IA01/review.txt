@@ -1,0 +1,18 @@
+IA01 independent review, 2026-09-18
+Source: 0dc7666b6f66c049d436bbe5c384102e0fb6aca7
+
+Reviewer h04_ui did not implement IA01. Read all core/config/route/startup/docs
+changes, actual 42 core and 28 HTTP assertions/logs plus both 2-case expected-failure
+baselines. No actionable blocker found. Guard precedes verifier/JWKS; allowed
+string audience remains literal exact comparison, not RegExp. Explicit RS256,
+Apple issuer and expiry retained. Typed 503/401 are separate from storage 500;
+input 400 precedes verifier. Startup only diagnoses optional provider availability.
+Google/admin/nativeJWT issuance unchanged. HTTP fixtures use actual createApp,
+RSA/JWKS/library/SQLite. Denial snapshots/no SQL, real issued JWT and /me 200,
+trigger failure 500/recovery and disabled-provider other routes are meaningful.
+Reviewer did not duplicate root's final execution or claim production evidence.
+
+Root final execution: npm run check actual exit 0: 82 suites / 1142 Jest + 4/18/11/6 browser;
+full owned PG actual exit 0 with existing repaired contracts PASS and known 3 defects.
+OPS-IA01 remains NOT_RUN until human confirms production configuration and its
+active deployment binding. No .env/server.js/provider/production access.

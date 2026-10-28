@@ -1,0 +1,30 @@
+Cause fix 15, review round 2 — red before: a morning slot east of UTC names
+the day before, and the server refuses it (NOT_ON_THIS_DAY, manualDays.js).
+Found by flow 27: Save answered "Availability is not valid".
+Code: useAvailabilitySave.ts at a289956 (HEAD before the fix; createTimestamp
+sent UTC since 19e0842, cause fix 14); test: the new case in
+useAvailabilitySave.test.ts.
+Command: cd rehearsal-calendar-native && npx jest --selectProjects frontend --silent --testPathPatterns 'useAvailabilitySave.test' -t 'morning slot'
+
+Running one project: frontend
+FAIL frontend src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts (12.492 s)
+  ● useAvailabilitySave Hook › prepareEntriesForAPI › names the day a morning slot is saved under, east of UTC too (cause fix 15, review 2)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "2025-12-29"
+    Received: "2025-12-28"
+
+      136 |       const [entry] = result.current.entriesForDay('2025-12-29', { mode: 'custom', slots: [{ start: '00:00', end: '01:00' }] });
+      137 |
+    > 138 |       expect(entry.startsAt.slice(0, 10)).toBe('2025-12-29');
+          |                                           ^
+      139 |       expect(new Date(entry.startsAt).toISOString()).toBe('2025-12-28T22:00:00.000Z');
+      140 |       expect(new Date(entry.endsAt).toISOString()).toBe('2025-12-28T23:00:00.000Z');
+      141 |     });
+
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 18 skipped, 19 total
+Snapshots:   0 total
+Time:        13.136 s, estimated 78 s

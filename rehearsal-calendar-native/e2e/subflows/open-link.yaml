@@ -1,0 +1,13 @@
+# Opens ${LINK} in the app, as a tapped link would. iOS first asks
+# 'Open in "Rehearsly"?' over the app; the alert is the system's, so it is
+# answered by its label.
+appId: ${APP_ID}
+---
+- openLink: ${LINK}
+- extendedWaitUntil:
+    visible: "Open"
+    timeout: 10000
+    optional: true
+- tapOn:
+    text: "Open"
+    optional: true

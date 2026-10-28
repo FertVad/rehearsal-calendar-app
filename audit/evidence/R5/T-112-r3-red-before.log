@@ -1,0 +1,60 @@
+Cause fix 12, review round 3 - red before.
+Base: 1fbbc47 (useSession.ts as of that commit), tests of this round added.
+Command: cd rehearsal-calendar-native && npx jest --selectProjects frontend src/shared/hooks/__tests__/requestOrder.test.ts src/contexts/__tests__/UnreadContext.test.tsx
+
+Summary of all failing tests
+FAIL src/contexts/__tests__/UnreadContext.test.tsx (25.487 s)
+  ● Unread count across accounts (NI03) › shows the next person their count while the previous one's change is on its way
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "8"
+    Received: "0"
+
+      290 |     mockUnreadCount.mockResolvedValueOnce({ data: { unreadCount: 8 } });
+      291 |     await act(async () => { fireEvent.press(getByTestId('refresh')); });
+    > 292 |     expect(getByTestId('count').props.children).toBe('8');
+          |                                                 ^
+      293 |
+      294 |     await act(async () => { marking.resolve({ data: { unreadCount: 0 } }); });
+      295 |     expect(getByTestId('count').props.children).toBe('8');
+
+
+FAIL src/shared/hooks/__tests__/requestOrder.test.ts (11.037 s)
+  ● sessions › lands the next session's read while the previous session's change is on its way
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      176 |
+      177 |     await changeOwner('u2');
+    > 178 |     expect(order.beginRead()()).toBe(true);
+          |                                 ^
+      179 |
+      180 |     sent.resolve();
+      181 |     await writing;
+
+
+  ● sessions › lands the next session's read after the previous session's change has ended
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      193 |     await writing;
+      194 |
+    > 195 |     expect(answer()).toBe(true);
+          |                      ^
+      196 |     expect(order.beginRead()()).toBe(true);
+      197 |   });
+      198 | });
+
+
+Test Suites: 2 failed, 76 passed, 78 total
+Tests:       3 failed, 766 passed, 769 total
+Snapshots:   0 total
+Time:        90.882 s
+Ran all test suites.

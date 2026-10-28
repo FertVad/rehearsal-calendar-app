@@ -1,0 +1,235 @@
+Running one project: backend
+  console.warn
+    ⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.
+       Generate a secret: openssl rand -base64 32
+       Add to server/.env: JWT_SECRET=<your-secret>
+
+      13 |     );
+      14 |   } else {
+    > 15 |     console.warn(
+         |             ^
+      16 |       '⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.\n' +
+      17 |       '   Generate a secret: openssl rand -base64 32\n' +
+      18 |       '   Add to server/.env: JWT_SECRET=<your-secret>'
+
+      at server/middleware/jwtMiddleware.js:15:13
+      at server/__tests__/middleware/authFailure.test.js:6:47
+
+(node:63412) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL backend rehearsal-calendar-native/server/__tests__/middleware/authFailure.test.js
+  ✕ auth DB rejection is forwarded once, not rejected or misclassified as invalid credentials (6 ms)
+  ✕ admin login rejects missing body before invoking bcrypt (2 ms)
+  ✕ admin login rejects null body before invoking bcrypt
+  ✕ admin login rejects missing password before invoking bcrypt
+  ✕ admin login rejects null password before invoking bcrypt (1 ms)
+  ✕ admin login rejects numeric password before invoking bcrypt
+  ✕ admin login rejects object password before invoking bcrypt
+  ✕ admin login rejects array password before invoking bcrypt (1 ms)
+  ✕ admin login rejects boolean password before invoking bcrypt (1 ms)
+  ✕ admin login rejects empty password before invoking bcrypt (3 ms)
+  ✕ unexpected bcrypt rejection reaches the error boundary instead of returning 401
+  ✕ plaintext compatibility login uses the same malformed-input contract (1 ms)
+
+  ● auth DB rejection is forwarded once, not rejected or misclassified as invalid credentials
+
+    expect(received).toBeUndefined()
+
+    Received: [Error: synthetic database failure]
+
+      35 |   let escaped;
+      36 |   await authenticateToken(req, res, next).catch(error => { escaped = error; });
+    > 37 |   expect(escaped).toBeUndefined();
+         |                   ^
+      38 |   expect(next).toHaveBeenCalledTimes(1);
+      39 |   expect(next).toHaveBeenCalledWith(failure);
+      40 |   expect(res.status).not.toHaveBeenCalled();
+
+      at Object.<anonymous> (server/__tests__/middleware/authFailure.test.js:37:19)
+
+  ● admin login rejects missing body before invoking bcrypt
+
+    expect(received).toBeUndefined()
+
+    Received: [TypeError: Cannot destructure property 'password' of 'req.body' as it is undefined.]
+
+      53 |   let escaped;
+      54 |   await adminLogin({ body }, res, next).catch(error => { escaped = error; });
+    > 55 |   expect(escaped).toBeUndefined();
+         |                   ^
+      56 |   expect(res.status).toHaveBeenCalledWith(400);
+      57 |   expect(res.json).toHaveBeenCalledWith({ error: expect.any(String) });
+      58 |   expect(compare).not.toHaveBeenCalled();
+
+      at server/__tests__/middleware/authFailure.test.js:55:19
+
+  ● admin login rejects null body before invoking bcrypt
+
+    expect(received).toBeUndefined()
+
+    Received: [TypeError: Cannot destructure property 'password' of 'req.body' as it is null.]
+
+      53 |   let escaped;
+      54 |   await adminLogin({ body }, res, next).catch(error => { escaped = error; });
+    > 55 |   expect(escaped).toBeUndefined();
+         |                   ^
+      56 |   expect(res.status).toHaveBeenCalledWith(400);
+      57 |   expect(res.json).toHaveBeenCalledWith({ error: expect.any(String) });
+      58 |   expect(compare).not.toHaveBeenCalled();
+
+      at server/__tests__/middleware/authFailure.test.js:55:19
+
+  ● admin login rejects missing password before invoking bcrypt
+
+    expect(received).toBeUndefined()
+
+    Received: [Error: data and hash arguments required]
+
+      53 |   let escaped;
+      54 |   await adminLogin({ body }, res, next).catch(error => { escaped = error; });
+    > 55 |   expect(escaped).toBeUndefined();
+         |                   ^
+      56 |   expect(res.status).toHaveBeenCalledWith(400);
+      57 |   expect(res.json).toHaveBeenCalledWith({ error: expect.any(String) });
+      58 |   expect(compare).not.toHaveBeenCalled();
+
+      at server/__tests__/middleware/authFailure.test.js:55:19
+
+  ● admin login rejects null password before invoking bcrypt
+
+    expect(received).toBeUndefined()
+
+    Received: [Error: data and hash arguments required]
+
+      53 |   let escaped;
+      54 |   await adminLogin({ body }, res, next).catch(error => { escaped = error; });
+    > 55 |   expect(escaped).toBeUndefined();
+         |                   ^
+      56 |   expect(res.status).toHaveBeenCalledWith(400);
+      57 |   expect(res.json).toHaveBeenCalledWith({ error: expect.any(String) });
+      58 |   expect(compare).not.toHaveBeenCalled();
+
+      at server/__tests__/middleware/authFailure.test.js:55:19
+
+  ● admin login rejects numeric password before invoking bcrypt
+
+    expect(received).toBeUndefined()
+
+    Received: [Error: data and hash must be strings]
+
+      53 |   let escaped;
+      54 |   await adminLogin({ body }, res, next).catch(error => { escaped = error; });
+    > 55 |   expect(escaped).toBeUndefined();
+         |                   ^
+      56 |   expect(res.status).toHaveBeenCalledWith(400);
+      57 |   expect(res.json).toHaveBeenCalledWith({ error: expect.any(String) });
+      58 |   expect(compare).not.toHaveBeenCalled();
+
+      at server/__tests__/middleware/authFailure.test.js:55:19
+
+  ● admin login rejects object password before invoking bcrypt
+
+    expect(received).toBeUndefined()
+
+    Received: [Error: data and hash must be strings]
+
+      53 |   let escaped;
+      54 |   await adminLogin({ body }, res, next).catch(error => { escaped = error; });
+    > 55 |   expect(escaped).toBeUndefined();
+         |                   ^
+      56 |   expect(res.status).toHaveBeenCalledWith(400);
+      57 |   expect(res.json).toHaveBeenCalledWith({ error: expect.any(String) });
+      58 |   expect(compare).not.toHaveBeenCalled();
+
+      at server/__tests__/middleware/authFailure.test.js:55:19
+
+  ● admin login rejects array password before invoking bcrypt
+
+    expect(received).toBeUndefined()
+
+    Received: [Error: data and hash must be strings]
+
+      53 |   let escaped;
+      54 |   await adminLogin({ body }, res, next).catch(error => { escaped = error; });
+    > 55 |   expect(escaped).toBeUndefined();
+         |                   ^
+      56 |   expect(res.status).toHaveBeenCalledWith(400);
+      57 |   expect(res.json).toHaveBeenCalledWith({ error: expect.any(String) });
+      58 |   expect(compare).not.toHaveBeenCalled();
+
+      at server/__tests__/middleware/authFailure.test.js:55:19
+
+  ● admin login rejects boolean password before invoking bcrypt
+
+    expect(received).toBeUndefined()
+
+    Received: [Error: data and hash must be strings]
+
+      53 |   let escaped;
+      54 |   await adminLogin({ body }, res, next).catch(error => { escaped = error; });
+    > 55 |   expect(escaped).toBeUndefined();
+         |                   ^
+      56 |   expect(res.status).toHaveBeenCalledWith(400);
+      57 |   expect(res.json).toHaveBeenCalledWith({ error: expect.any(String) });
+      58 |   expect(compare).not.toHaveBeenCalled();
+
+      at server/__tests__/middleware/authFailure.test.js:55:19
+
+  ● admin login rejects empty password before invoking bcrypt
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 400
+    Received: 401
+
+    Number of calls: 1
+
+      54 |   await adminLogin({ body }, res, next).catch(error => { escaped = error; });
+      55 |   expect(escaped).toBeUndefined();
+    > 56 |   expect(res.status).toHaveBeenCalledWith(400);
+         |                      ^
+      57 |   expect(res.json).toHaveBeenCalledWith({ error: expect.any(String) });
+      58 |   expect(compare).not.toHaveBeenCalled();
+      59 |   expect(next).not.toHaveBeenCalled();
+
+      at server/__tests__/middleware/authFailure.test.js:56:22
+
+  ● unexpected bcrypt rejection reaches the error boundary instead of returning 401
+
+    expect(received).toBeUndefined()
+
+    Received: [Error: synthetic bcrypt failure]
+
+      67 |   let escaped;
+      68 |   await adminLogin({ body: { password: 'a02-test-password' } }, res, next).catch(error => { escaped = error; });
+    > 69 |   expect(escaped).toBeUndefined();
+         |                   ^
+      70 |   expect(next).toHaveBeenCalledTimes(1);
+      71 |   expect(next).toHaveBeenCalledWith(failure);
+      72 |   expect(res.status).not.toHaveBeenCalled();
+
+      at Object.<anonymous> (server/__tests__/middleware/authFailure.test.js:69:19)
+
+  ● plaintext compatibility login uses the same malformed-input contract
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 400
+    Received: 401
+
+    Number of calls: 1
+
+      79 |   const res = response();
+      80 |   await adminLogin({ body: { password: {} } }, res, jest.fn());
+    > 81 |   expect(res.status).toHaveBeenCalledWith(400);
+         |                      ^
+      82 | });
+      83 |
+
+      at Object.<anonymous> (server/__tests__/middleware/authFailure.test.js:81:22)
+
+Test Suites: 1 failed, 1 total
+Tests:       12 failed, 12 total
+Snapshots:   0 total
+Time:        0.552 s
+Ran all test suites within paths "rehearsal-calendar-native/server/__tests__/middleware/authFailure.test.js".

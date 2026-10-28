@@ -1,0 +1,57 @@
+# R9-03: typedNavigation.test.ts and the updated useAddRehearsalForm.test.ts, run against the app at a684f6b (before the fix); ts-jest diagnostics off.
+# Every listed site is one the type check could not see; three are the @ts-ignore'd navigations, one of them the dead 'Create project' button.
+
++ Received  + 24
+
+- Array []
++ Array [
++   "features/availability/screens/AvailabilityScreen.tsx:33 — navigation typed as any",
++   "features/calendar/components/RehearsalCard.tsx:44 — a navigation hook with no param list",
++   "features/calendar/components/TodayRehearsals.tsx:36 — a navigation hook with no param list",
++   "features/calendar/hooks/useAddRehearsalForm.ts:264 — a type check switched off above a navigation",
++   "features/calendar/screens/AddRehearsalScreen.tsx:43 — a navigation hook with no param list",
++   "features/calendar/screens/CalendarScreen.tsx:24 — a navigation hook with no param list",
++   "features/calendar/screens/CalendarScreen.tsx:348 — a type check switched off above a navigation",
++   "features/calendar/screens/RehearsalDetailsScreen.tsx:51 — a navigation hook with no param list",
++   "features/calendar/screens/RehearsalDetailsScreen.tsx:52 — a navigation hook with no param list",
++   "features/notifications/screens/NotificationsScreen.tsx:51 — a navigation hook with no param list",
++   "features/projects/screens/CreateProjectScreen.tsx:60 — a route name cast to any",
++   "features/projects/screens/ProjectDetailScreen.tsx:166 — navigation typed as any",
++   "features/projects/screens/ProjectsScreen.tsx:15 — a navigation hook with no param list",
++   "features/smart-planner/screens/SmartPlannerScreen.tsx:398 — a type check switched off above a navigation",
++   "navigation/index.tsx:63 — navigation typed as any",
++   "navigation/index.tsx:138 — a navigation hook with no param list",
++   "navigation/index.tsx:298 — a screen registered as any",
++   "navigation/index.tsx:345 — navigation typed as any",
++   "shared/hooks/useNotifications.ts:22 — a navigation hook with no param list",
++   "shared/hooks/useNotifications.ts:160 — a route name cast to any",
++   "shared/hooks/useNotifications.ts:178 — a route name cast to any",
++   "shared/hooks/useNotifications.ts:182 — a route name cast to any",
++ ]
+
+  ● useAddRehearsalForm Hook › Project Selection › should open create project screen
+Expected: "CreateProject"
+Received: "Projects", {"screen": "CreateProject"}
+
+Tests:       2 failed, 21 passed, 23 total
+
+# And the type check, with typed navigation, on the call as it was (navigation.navigate('Projects', { screen: 'CreateProject' })):
+src/features/calendar/hooks/useAddRehearsalForm.ts(266,25): error TS2345: Argument of type '["Projects", { screen: "CreateProject"; }]' is not assignable to parameter of type '[screen: "Notifications", params?: undefined, options?: { merge?: boolean | undefined; pop?: boolean | undefined; } | undefined] | [screen: "MainTabs", params?: NavigatorScreenParams<TabParamList> | undefined, options?: { ...; } | undefined] | ... 4 more ... | [screen: ...]'.
+  Type '["Projects", { screen: "CreateProject"; }]' is not assignable to type '[screen: "AddRehearsal", params: { projectId?: string | undefined; rehearsalId?: string | undefined; prefilledDate?: string | undefined; prefilledTime?: string | undefined; prefilledEndTime?: string | undefined; prefilledMemberIds?: string[] | undefined; }, options?: { ...; } | undefined]'.
+    Type at position 0 in source is not compatible with type at position 0 in target.
+      Type '"Projects"' is not assignable to type '"AddRehearsal"'.
+
+# registeredRoutes.test.tsx at a684f6b: the navigators register what the param lists declare (the screen existed), and the form's action through React Navigation's StackRouter is unhandled — null.
+  ✓ every navigator registers exactly the screens its param list declares (6 ms)
+  ✕ "Create project" in the rehearsal form opens a screen the app stack has (R9-03) (4 ms)
+    Received: null
+Tests:       1 failed, 1 passed, 2 total
+
+# The same test on the fixed code with the CreateProject screen taken out of the app stack (a declared, unregistered route): both fail.
+  ✕ every navigator registers exactly the screens its param list declares (10 ms)
+  ✕ "Create project" in the rehearsal form opens a screen the app stack has (R9-03) (4 ms)
+    - Expected  - 1
+    + Received  + 1
+    -   "AddRehearsal, CreateProject, JoinProject, MainTabs, MarkBusy, Notifications, RehearsalDetails",
+    +   "AddRehearsal, JoinProject, MainTabs, MarkBusy, Notifications, RehearsalDetails",
+Tests:       2 failed, 2 total

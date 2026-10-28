@@ -1,3 +1,4 @@
+import { asyncHandler } from '../../middleware/asyncHandler.js';
 /**
  * Push Tokens Routes
  * Endpoints for registering and managing push notification tokens
@@ -6,7 +7,7 @@
 import express from 'express';
 import { Expo } from 'expo-server-sdk';
 import db from '../../database/db.js';
-import { requireAuth } from '../../middleware/jwtMiddleware.js';
+import { requireAuth, lockSession, SESSION_REVOKED } from '../../middleware/jwtMiddleware.js';
 import { logger } from '../../utils/logger.js';
 
 const router = express.Router();
@@ -15,7 +16,7 @@ const router = express.Router();
  * POST /api/native/push-tokens
  * Register or update a push notification token
  */
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { deviceToken, deviceType, deviceName } = req.body;
@@ -39,35 +40,39 @@ router.post('/', requireAuth, async (req, res) => {
     // invalidates this one, a refresh can fail, and signing out with no network
     // swallows the error and proceeds. The old row survives all three.
     //
-    // The unique key is (user_id, device_token), so without this the next
-    // person's login inserts a *second* row against the same token instead of
-    // moving it, and `getUserPushTokens` keeps handing it to the previous
-    // owner. Their lock screen then carries someone else's project names,
-    // rehearsal titles and members' names — unopenable, since the fetch by id
-    // 404s for a non-member, and invisible to the person whose notifications
-    // are going astray.
-    await db.run(
-      'DELETE FROM native_push_tokens WHERE device_token = ? AND user_id != ?',
-      [deviceToken, userId]
-    );
-
-    // One upsert rather than SELECT-then-INSERT.
+    // So registering moves the token to whoever registers it, or the previous
+    // owner's pushes — project names, rehearsal titles, members' names — keep
+    // landing on a lock screen that is now someone else's.
     //
-    // Registration is triggered from more than one place — app start, the
-    // profile toggle, the onboarding screen — and two of them can overlap. Both
-    // requests then found no row, both inserted, and the second hit the unique
-    // index on (user_id, device_token) and came back as a 500 to a user who had
-    // done nothing wrong. Which is exactly what happened on 2026-08-26.
-    await db.run(
-      `INSERT INTO native_push_tokens (user_id, device_token, device_type, device_name, last_active_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (user_id, device_token)
-       DO UPDATE SET last_active_at = EXCLUDED.last_active_at,
-                     updated_at = EXCLUDED.updated_at,
-                     device_type = EXCLUDED.device_type,
-                     device_name = EXCLUDED.device_name`,
-      [userId, deviceToken, deviceType, deviceName, now, now, now]
-    );
+    // The token is unique on its own (migration 013, G01), and this is one
+    // upsert on it. A delete of the other holders followed by an upsert on
+    // (user_id, device_token) did the same one request at a time, but two at
+    // once — an account switch with the previous session's late registration
+    // still in flight — each deleted before the other had inserted, and both
+    // rows stayed. Now the later request waits for the earlier one's row and
+    // takes it; overlapping registrations by the same person (app start, the
+    // profile toggle, onboarding — a 500 on 2026-08-26) land on the same row.
+    //
+    // The write and the session check share one transaction. A session
+    // revoked while this request waited — the owner's Google or Apple sign-in
+    // taking the account back — registers nothing: the device would keep
+    // receiving the account's notifications (review R3-12).
+    const registered = await db.transaction(async (tx) => {
+      if (!(await lockSession(tx, req))) return false;
+      await tx.run(
+        `INSERT INTO native_push_tokens (user_id, device_token, device_type, device_name, last_active_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (device_token)
+         DO UPDATE SET user_id = EXCLUDED.user_id,
+                       last_active_at = EXCLUDED.last_active_at,
+                       updated_at = EXCLUDED.updated_at,
+                       device_type = EXCLUDED.device_type,
+                       device_name = EXCLUDED.device_name`,
+        [userId, deviceToken, deviceType, deviceName, now, now, now]
+      );
+      return true;
+    });
+    if (!registered) return res.status(401).json(SESSION_REVOKED);
 
     logger.info(`[PushToken] Registered token for user ${userId}`);
 
@@ -76,13 +81,13 @@ router.post('/', requireAuth, async (req, res) => {
     logger.error('[PushToken] Registration error:', err);
     res.status(500).json({ error: 'Failed to register push token' });
   }
-});
+}));
 
 /**
  * DELETE /api/native/push-tokens
  * Unregister a push notification token (logout)
  */
-router.delete('/', requireAuth, async (req, res) => {
+router.delete('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
     const { deviceToken } = req.body;
@@ -102,13 +107,13 @@ router.delete('/', requireAuth, async (req, res) => {
     logger.error('[PushToken] Unregister error:', err);
     res.status(500).json({ error: 'Failed to unregister push token' });
   }
-});
+}));
 
 /**
  * GET /api/native/push-tokens
  * Get all push tokens for current user (debug)
  */
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -122,6 +127,6 @@ router.get('/', requireAuth, async (req, res) => {
     logger.error('[PushToken] Get tokens error:', err);
     res.status(500).json({ error: 'Failed to get push tokens' });
   }
-});
+}));
 
 export default router;

@@ -1,0 +1,74 @@
+# A sync whose import fails still exports, and says it failed (cause fix 17,
+# EO02, EI02). Semyon Medvedenko turns on sync with the phone's calendar and
+# presses Synchronize while the import's answer does not come, as with no
+# network. The screen ran the import and the export in one try: the failed
+# import jumped past the export, so his rehearsal never reached the calendar,
+# and the error said nothing of it. Now the export runs anyway, and the
+# result names both: the rehearsal exported, and what failed.
+#
+# The sync screen has no test ids; it is found by its English labels.
+appId: ${APP_ID}
+name: A sync whose import fails still exports
+tags:
+  - calendar
+  - profile
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MEDVEDENKO_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element: ".*Calendar Sync.*"
+    direction: DOWN
+    centerElement: true
+- tapOn: ".*Calendar Sync.*"
+# Calendar access, where the app has not been given it yet.
+- tapOn:
+    text: "Grant Access"
+    optional: true
+- tapOn:
+    text: "Allow Full Access"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*Apple Calendar.*"
+    timeout: 15000
+# Taken once more if the simulator lost it (T-207); a second tap only turns
+# sync on again.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Apple Calendar.*"
+      SEE: ".*Synchronize.*"
+      WAIT_MS: 10000
+# The import's answer does not come within the app's ten seconds.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: POST
+      PATH: "^/api/native/availability/imported/sync$"
+      MS: "40000"
+- tapOn: ".*Synchronize.*"
+- extendedWaitUntil:
+    visible: "Sync error"
+    timeout: 40000
+# The export ran all the same, and the result says so.
+- assertVisible: ".*Exported rehearsals: 1.*"
+- takeScreenshot: 30-sync-import-fails-export-runs
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}

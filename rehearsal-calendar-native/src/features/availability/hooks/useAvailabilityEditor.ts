@@ -12,7 +12,12 @@ const DEFAULT_SLOT: TimeSlot = { start: '10:00', end: '18:00' };
 interface UseAvailabilityEditorProps {
   availability: Record<string, DayState>;
   setAvailability: (updater: (prev: Record<string, DayState>) => Record<string, DayState>) => void;
-  setHasChanges: (value: boolean) => void;
+  /** These days now differ from what was saved. */
+  markChanged: (dates: string[]) => void;
+  /** These days are settled on the server, whatever was drafted for them. */
+  markSettled: (dates: string[]) => void;
+  /** The local calendar date; earlier days are past. */
+  today: string;
   getDayState: (date: string) => DayState;
   months: Array<{ year: number; month: number; key: string }>;
 }
@@ -20,17 +25,19 @@ interface UseAvailabilityEditorProps {
 export function useAvailabilityEditor({
   availability,
   setAvailability,
-  setHasChanges,
+  markChanged,
+  markSettled,
+  today,
   getDayState,
   months,
 }: UseAvailabilityEditorProps) {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Time picker state
+  // Time picker state. The picker holds its own draft and hands back only a
+  // confirmed time (PickerModal, usePickerDraft).
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [editingSlot, setEditingSlot] = useState<{ index: number; field: 'start' | 'end' } | null>(null);
-  const [tempTime, setTempTime] = useState(new Date());
 
   // Animation for bottom panel
   const panelAnimation = useRef(new Animated.Value(0)).current;
@@ -101,43 +108,21 @@ export function useAvailabilityEditor({
   // Time picker handlers
   const openTimePicker = (slotIndex: number, field: 'start' | 'end') => {
     if (!selectedDate) return;
-
-    const state = getDayState(selectedDate);
-    const timeStr = state.slots[slotIndex][field];
-    const date = parseTimeString(timeStr);
-
-    setTempTime(date);
     setEditingSlot({ index: slotIndex, field });
     setShowTimePicker(true);
   };
 
-  const handleTimeChange = (event: any, date?: Date, platform: 'ios' | 'android' = 'ios') => {
-    if (platform === 'android') {
-      setShowTimePicker(false);
-    }
+  // The time the picker opens on: the slot's own.
+  const editingTime = selectedDate && editingSlot
+    ? getDayState(selectedDate).slots[editingSlot.index]?.[editingSlot.field]
+    : undefined;
+  const timePickerValue = editingTime ? parseTimeString(editingTime) : new Date();
 
-    if (date && editingSlot && selectedDates.length > 0) {
-      const timeStr = formatDateToTimeString(date);
+  const closeTimePicker = () => setShowTimePicker(false);
 
-      setAvailability(prev =>
-        applyToSelectedDates(prev, selectedDates, getDayState, (currentState) => ({
-          ...currentState,
-          slots: currentState.slots.map((slot, i) =>
-            i === editingSlot.index ? { ...slot, [editingSlot.field]: timeStr } : slot
-          ),
-        }))
-      );
-      setHasChanges(true);
-    }
-
-    if (platform === 'ios' && event.type === 'set') {
-      setShowTimePicker(false);
-    }
-  };
-
-  const confirmTimePicker = () => {
+  const confirmTimePicker = (picked: Date) => {
     if (editingSlot && selectedDates.length > 0) {
-      const timeStr = formatDateToTimeString(tempTime);
+      const timeStr = formatDateToTimeString(picked);
 
       setAvailability(prev =>
         applyToSelectedDates(prev, selectedDates, getDayState, (currentState) => ({
@@ -147,9 +132,8 @@ export function useAvailabilityEditor({
           ),
         }))
       );
-      setHasChanges(true);
+      markChanged(selectedDates);
     }
-    setShowTimePicker(false);
   };
 
   const handleModeChange = (mode: DayMode) => {
@@ -172,7 +156,7 @@ export function useAvailabilityEditor({
             : [],
       }))
     );
-    setHasChanges(true);
+    markChanged(selectedDates);
   };
 
   const addSlot = () => {
@@ -190,7 +174,7 @@ export function useAvailabilityEditor({
         slots: [...currentState.slots, { ...DEFAULT_SLOT }],
       }))
     );
-    setHasChanges(true);
+    markChanged(selectedDates);
   };
 
   const removeSlot = (index: number) => {
@@ -202,27 +186,27 @@ export function useAvailabilityEditor({
         slots: currentState.slots.filter((_, i) => i !== index),
       }))
     );
-    setHasChanges(true);
+    markChanged(selectedDates);
   };
 
   /**
    * Delete the marks on the selected past dates, on the server as well as here.
    *
-   * It used to drop them from local state and stop. Nothing else could rescue
-   * that: the save deliberately skips past dates, and the bulk endpoint only
-   * clears dates the payload names, so a past date was in neither. The marks
-   * vanished, no error was shown, and they were all back on the next visit to
-   * the tab.
+   * Only the past ones: the action is offered when the selection has any, and it
+   * used to delete every selected date, the future ones included (review CC04).
+   * One request for all of them, and only they are settled afterwards — it used
+   * to mark the whole screen saved, so other unsaved edits looked saved and
+   * were lost on the next load.
    *
    * Nothing is removed locally unless the server agreed, so a failure leaves
    * the screen telling the truth rather than a comfortable fiction.
    */
   const deletePastDates = async (onComplete: (error?: unknown) => void) => {
-    const dates = [...selectedDates];
+    const dates = selectedDates.filter((date) => date < today);
     if (dates.length === 0) return;
 
     try {
-      await Promise.all(dates.map((date) => availabilityAPI.delete(date)));
+      await availabilityAPI.saveDays(dates.map((date) => ({ date, entries: [] })));
     } catch (error) {
       onComplete(error);
       return;
@@ -233,8 +217,7 @@ export function useAvailabilityEditor({
       dates.forEach(date => delete updated[date]);
       return updated;
     });
-    // Nothing is left unsaved: the deletion has already happened on the server.
-    setHasChanges(false);
+    markSettled(dates);
     clearSelection();
     onComplete();
   };
@@ -249,15 +232,13 @@ export function useAvailabilityEditor({
     flatListRef,
     // Time picker
     showTimePicker,
-    setShowTimePicker,
+    closeTimePicker,
     editingSlot,
-    tempTime,
-    setTempTime,
+    timePickerValue,
     // Handlers
     handleDayPress,
     clearSelection,
     openTimePicker,
-    handleTimeChange,
     confirmTimePicker,
     handleModeChange,
     addSlot,

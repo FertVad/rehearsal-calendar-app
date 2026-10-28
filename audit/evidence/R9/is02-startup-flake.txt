@@ -1,0 +1,110 @@
+T-201: PG check IS02 failed with "IS02 worker startup timed out" (supervisor
+checks for T-109 on fc2adf2, 10.10.2026 10:35; tests and e2e of the same commit
+green). IS02 forks an owned worker (is02-worker.mjs) that imports
+server/app.js cold and must report readiness within 8000 ms; the probe starts
+five such workers (two pools, one disconnect probe, two cold restarts).
+
+fc2adf2 predates e727ff2 ("the app imports date-fns-tz by subpath", T-202), so
+the failing run still imported the date-fns-tz root and with it the whole
+date-fns barrel. Same cause as the runtimeStartup flake: the cold app import.
+
+Measurement: is02.mjs temporarily recorded each worker's fork->ready time and
+returned it as startupMs (not committed). Machine: 8 cores, Node v22.16.0,
+PostgreSQL 15.13 in the harness's owned container.
+
+Idle, `npm run test:r0-postgres -- --is02-only`:
+  old utils/timezone.js (import from 'date-fns-tz'):   5128 5013 4862 5684 4865 ms  (PASS, up to 71% of 8000)
+  current utils/timezone.js ('date-fns-tz/fromZonedTime'): 1348 1279 1713 1276 1146 ms  (PASS, up to 21%)
+
+Red before, under load: a scratch Jest file kept 4 of 8 cores busy (worker
+threads spinning) while it ran `npm run test:r0-postgres -- --is02-only` as a
+child; the 8000 ms wait unchanged, no retries. Scratch file content:
+
+  import { spawn } from 'node:child_process';
+  import { availableParallelism } from 'node:os';
+  import { Worker } from 'node:worker_threads';
+  const burners = Number(process.env.IS02_BURNERS || Math.ceil(availableParallelism() / 2));
+  test('IS02 under CPU load', async () => {
+    const workers = Array.from({ length: burners }, () =>
+      new Worker('const end = Date.now() + 600000; while (Date.now() < end) {}', { eval: true }));
+    try {
+      const output = await new Promise(resolve => {
+        const child = spawn('npm', ['run', 'test:r0-postgres', '--', process.env.IS02_MODE || '--is02-only'],
+          { cwd: process.cwd(), env: process.env });
+        let text = '';
+        child.stdout.on('data', chunk => { text += chunk; });
+        child.stderr.on('data', chunk => { text += chunk; });
+        child.on('exit', code => resolve(`exit=${code}\n${text}`));
+      });
+      console.log(`cores=${availableParallelism()} burners=${burners}\n${output}`);
+    } finally {
+      await Promise.all(workers.map(worker => worker.terminate()));
+    }
+  }, 600000);
+
+Command: cd rehearsal-calendar-native/server &&
+  NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/scratchIs02Load.test.js
+
+old utils/timezone.js, run 1:
+cores=8 burners=4
+exit=1
+"scenario":"controls","outcome":"PASS"
+Error: IS02 worker startup timed out
+AssertionError [ERR_ASSERTION]: IS02 probe failed unexpectedly
+
+old utils/timezone.js, run 2:
+cores=8 burners=4
+exit=1
+"scenario":"controls","outcome":"PASS"
+Error: IS02 worker startup timed out
+AssertionError [ERR_ASSERTION]: IS02 probe failed unexpectedly
+
+old utils/timezone.js, run 3:
+cores=8 burners=4
+exit=1
+"scenario":"controls","outcome":"PASS"
+Error: IS02 worker startup timed out
+AssertionError [ERR_ASSERTION]: IS02 probe failed unexpectedly
+
+(3/3 red with the supervisor's exact message.)
+
+current utils/timezone.js (HEAD e727ff2), same load, run 1:
+cores=8 burners=4
+exit=0
+"scenario":"controls","outcome":"PASS"
+"scenario":"IS02","outcome":"PASS"
+"startupMs":[2583,2384,2642,2622,2171]
+IS02 REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+
+run 2:
+cores=8 burners=4
+exit=0
+"scenario":"controls","outcome":"PASS"
+"scenario":"IS02","outcome":"PASS"
+"startupMs":[2377,2883,2190,2424,2533]
+IS02 REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+
+run 3:
+cores=8 burners=4
+exit=0
+"scenario":"controls","outcome":"PASS"
+"scenario":"IS02","outcome":"PASS"
+"startupMs":[2665,2624,2592,2277,2441]
+IS02 REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.
+
+(3/3 green, starts 2.2-2.9 s = at most 36% of 8000 ms.)
+
+Supervisor's file order, idle, `npm run test:r0-postgres -- --security-only`
+on HEAD: controls, A02, B03, B04, D01, H04, IS02 (startupMs
+1293 1712 1328 1256 1346), R2_ADAPTER all PASS; then R2_STARTUP fails at
+`fixture.events.some(event => event.type === 'imported' && event.defaultHandler)`
+- the sandbox here forbids child processes to read any .env (known, recorded
+under T-202 in REMEDIATION_R9.md); not IS02 and not this task.
+
+Guarded bug (bc0184e, one limiter budget shared by several app processes): the
+IS02 PASS runs above include "separate worker processes share exact20 auth/5
+admin admissions and saturated counters; cold restart preserves denial" - the
+bug has not returned.
+
+Not claimed: a machine with every core saturated (the session's sandbox did not
+allow that run) could still push five cold starts past 8 s.

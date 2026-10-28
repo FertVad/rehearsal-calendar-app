@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-19",
+  "ciRunId": 35429218754,
+  "ciHeadCommit": "8e206b250a5e8c3e8c47ca7b9fd80c9eaf32c6d8",
+  "sourceCommit": "573608cd47c24a605ccae00be0161545619caae7",
+  "sourceUnchangedAtCiHead": true,
+  "conclusion": "success",
+  "jobs": [
+    "check",
+    "postgres-a02"
+  ],
+  "production": "NOT_RUN",
+  "sha256": {
+    "audit/evidence/R2-foundation-ci/run.json": "ea4a659991a26f9aa1b8b0dd1b3b59f38802e6ef16b42c35a0a253f546951547",
+    "audit/evidence/R2-foundation-ci/checks-excerpt.txt": "ce8e2f5b2953df9414f8c15f8ac61017720e2cfea1ddb581da98fefab13bc7ee",
+    "audit/REMEDIATION_R2_FOUNDATION_CI.md": "c8e6c4ed610faed24a2cae136355e8954ecec757fa775a26282d9683d1087531"
+  }
+}

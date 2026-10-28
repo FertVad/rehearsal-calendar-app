@@ -1,0 +1,23 @@
+T-202 guard, red before: new __tests__/startup/importWeight.test.js against the
+old utils/timezone.js (`import { fromZonedTime, toZonedTime, formatInTimeZone }
+from 'date-fns-tz'`).
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/startup/importWeight.test.js
+FAIL __tests__/startup/importWeight.test.js
+  ✕ importing the app does not load the date-fns barrel (949 ms)
+
+  ● importing the app does not load the date-fns barrel
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "imported"
+    Received: "date-fns barrel imported from file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/date-fns-tz/dist/esm/_lib/tzIntlTimeZoneName/index.js"
+
+      33 |     cwd: server, env: { PATH: process.env.PATH }, encoding: 'utf8', timeout: 60000,
+      34 |   });
+    > 35 |   expect(result.stdout.trim().split('\n').at(-1)).toBe('imported');
+         |                                                   ^
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Time:        2.397 s

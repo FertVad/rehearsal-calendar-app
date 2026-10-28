@@ -1,0 +1,54 @@
+
+> rehearsal-calendar-backend@1.0.0 test:r0-postgres
+> node scripts/r0-postgres.mjs --a02-only
+
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:62816","database":"r0_test","schema":"diagnostic subset; production bootstrap is probed separately"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/pg-pool/index.js:45
+    Error.captureStackTrace(err)
+          ^
+
+error: relation "native_users" does not exist
+    at /Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.get (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/database/db.js:53:21)
+    at async authenticateToken (file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/middleware/jwtMiddleware.js:72:16) {
+  length: 111,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '27',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1392',
+  routine: 'parserOpenTable'
+}
+
+Node.js v22.16.0
+R0 cleanup: owned disposable container removed
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: A02 probe failed unexpectedly
+
+1 !== 0
+
+    at file:///Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/scripts/r0-postgres.mjs:68:12
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual'
+}
+
+Node.js v22.16.0

@@ -168,6 +168,10 @@ than answering it.
 What remains: cross-suite state inside a Jest worker, which would explain
 `rehearsalById.test.js` too and which nothing has yet demonstrated.
 
+A third suite joined on 2026-09-26: `signInMethods.test.js` failed once in a
+full server run, then passed on its own and in the two full runs after it
+(938 of 938). Same shape, same verdict — note it, do not chase it blind.
+
 Nineteen consecutive full runs across 2026-09-03 and 2026-09-05 were clean, so
 it is rare rather than gone. Leave the entry until something explains it, and do
 not chase it blind — that is how an afternoon disappears.
@@ -175,6 +179,78 @@ not chase it blind — that is how an afternoon disappears.
 Two of the fixed-since claims below were also settled by hand: the schema file
 now creates `native_notifications` and every other live table, and
 `character_name` is in it.
+
+### One day edited on two devices at once: the last save wins
+
+The availability editor saves only the days changed on this device
+(`PUT /availability/days`, R6), so an untouched day is never overwritten by an
+old copy of it. But if the same day is edited on two devices from two different
+loads, each save replaces the whole day, and the one saved last is what stays.
+The other edit has to be made again.
+
+Left alone on purpose, on the review's agreement (REVIEW_R6): it needs the same
+person to edit the same day on two devices without reloading, and it costs
+their own edit, which they can see. Fixing it takes a revision per day and a
+conflict answer the editor would have to show.
+
+### A reminder can go out twice when a rehearsal is moved at the moment it is sent
+
+Each rehearsal is reminded in one transaction that holds the rehearsal while
+it sends (R8), so a move waits for a send in flight and then releases its
+claims. But the edit itself is still two statements — the new time, then the
+release — until cause fix 10 makes saving a rehearsal one transaction. A run
+that claims people for the *new* time in the milliseconds between the two has
+those claims released too, and the next run reminds them again: one extra
+push. Left for cause fix 10, which removes the gap rather than narrowing it.
+
+### An inbox page can skip a row written with microseconds by something other than the server
+
+The inbox is paged by the place the last row holds, `(created_at, id)` (cause
+fix 21). The cursor carries `created_at` to the millisecond, as JavaScript
+reads it; PostgreSQL keeps microseconds. The server writes every notification
+with a millisecond time, so for its rows the two are the same. A row inserted
+by hand with `NOW()`, in the same millisecond as others, could fall between two
+pages and not be shown. Left alone: nothing in the app writes such rows, and a
+cursor with microseconds would need the database to hand the time back as text.
+
+### Migration 013 needs the push-token keys under their original names
+
+The migrator recognises a schema from before 013 by what its push-token keys do
+— unique on (user_id, device_token), a plain index on the token — not by what
+they are called, so `--adopt` passes even if someone has renamed them by hand.
+Migration 013 then drops them by name
+([013-push-token-owner.sql](../server/migrations/013-push-token-owner.sql):
+`native_push_tokens_user_id_device_token_key`, `idx_push_tokens_token`), and
+`--apply` fails on the missing name and rolls the whole run back. Nothing is
+half-applied; the run just stops.
+
+Left alone on the review's agreement: no known database has renamed them, and
+the failure is loud and complete. If it happens, rename the two objects back to
+those names and run `--apply` again.
+
+### Calendar sync needs an installation id before Android ships
+
+Imported rows and export mappings belong to the device's calendars (R7): a
+calendar id is the device's own, so what is recorded under it is that device's.
+On iOS that holds — the id is a UUID of that device. On Android it is the row
+number of the calendar (1, 2, 3…), the same on two phones of one person, so
+their imports would replace each other and their mappings merge again. Android
+is not released, so nobody is affected yet. Before it is, an installation id
+has to join the scope — in the imported key and in the calendar connection —
+alongside IC01 below.
+
+The same id would also settle a rarer iOS case: a full iCloud resync gives the
+calendars new ids, and rows imported under the old ones stay until "remove all
+imported" is pressed. It needs signing out of iCloud and back in, and costs
+extra busy hours the person can see and clear.
+
+### Android App Links wait for an Android release (IC01)
+
+`assetlinks.json` carries a placeholder where the app's signing fingerprint
+belongs. Android is not released, so nobody is affected yet. Add the fingerprint
+when it is released. This is audit finding IC01, deferred in
+`audit/TRIAGE_R4_R9.md`. The other R4–R9 findings are being fixed at their
+cause rather than listed here.
 
 ---
 
@@ -203,7 +279,7 @@ range being built through UTC.
 | [import.ts:58](../src/shared/services/calendar/import.ts#L58) | One calendar failing to read makes the import delete everything previously imported from it |
 | [export.ts:236](../src/shared/services/calendar/export.ts#L236) | Changing the export calendar keeps writing rehearsals to the old one |
 | [calendarMappings.ts:22](../src/shared/utils/calendarMappings.ts#L22) | The cached connection id survives a user switch, so the next user's mappings never reach the server |
-| [invites.js:188](../server/routes/native/invites.js#L188) | Invite codes are matched case-sensitively while the entry field disables auto-capitalisation, so a correctly dictated code typed in lowercase is rejected |
+| [inviteRedemption.js](../server/routes/native/inviteRedemption.js) | Invite codes are matched case-sensitively while the entry field disables auto-capitalisation, so a correctly dictated code typed in lowercase is rejected |
 | [useNotifications.ts:83](../src/shared/hooks/useNotifications.ts#L83) | `getLastNotificationResponseAsync` is re-read when the user object changes, replaying an already-handled tap |
 | [AvailabilityScreen.tsx:81](../src/features/availability/screens/AvailabilityScreen.tsx#L81) | `today` is the UTC date while the grid is built from local dates, so after local midnight the wrong day is ringed |
 

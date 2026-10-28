@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing } from '../../../../shared/constants/colors';
 import { useI18n } from '../../../../contexts/I18nContext';
 import { getDateLocale } from '../../../../shared/utils/locale';
+import { parseDateString } from '../../../../shared/utils/time';
 
 interface EditorHeaderProps {
   selectedCount: number;
@@ -23,7 +24,8 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
       <View style={styles.bottomSheetHeaderLeft}>
         <Text style={styles.bottomSheetTitle}>
           {selectedCount === 1 && selectedDate
-            ? new Date(selectedDate).toLocaleDateString(getDateLocale(language), {
+            // A calendar date, not an instant: new Date('2026-09-10') is the 9th west of UTC.
+            ? parseDateString(selectedDate).toLocaleDateString(getDateLocale(language), {
                 day: 'numeric',
                 month: 'long',
               })
@@ -35,7 +37,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
           </TouchableOpacity>
         )}
       </View>
-      <TouchableOpacity onPress={onClear}>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClear}>
         <Ionicons name="chevron-down" size={24} color={Colors.text.secondary} />
       </TouchableOpacity>
     </View>

@@ -1,0 +1,14 @@
+$ git restore --source=d780a18 -- <the 8 app files>
+$ npx jest --selectProjects frontend --testPathPatterns modalBackdrops
+  ✓ no Modal opens on a touchable wrapped around its sheet (734 ms)
+  ✕ nothing but AppModal shows React Native's Modal (T-208) (35 ms)
+    +   "features/calendar/screens/AddRehearsalScreen.tsx — imports Modal; show it in AppModal",
+    +   "features/profile/screens/ProfileScreen.tsx — imports Modal; show it in AppModal",
+    +   "features/projects/screens/CreateProjectScreen.tsx — imports Modal; show it in AppModal",
+    +   "features/projects/screens/ProjectDetailScreen.tsx — imports Modal; show it in AppModal",
+    +   "shared/components/BetaBanner.tsx — imports Modal; show it in AppModal",
+    +   "shared/components/CreateActionSheet.tsx — imports Modal; show it in AppModal",
+    +   "shared/components/DateRangePicker.tsx — imports Modal; show it in AppModal",
+    +   "shared/components/PickerModal.tsx — imports Modal; show it in AppModal",
+Tests:       1 failed, 1 passed, 2 total
+$ git restore --source=HEAD -- <the same files>

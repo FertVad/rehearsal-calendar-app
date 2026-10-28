@@ -1,0 +1,24 @@
+# A new project is created from the "+" sheet and opens with its creator as
+# the owner. The name is typed and "Create" pressed with the keyboard still up:
+# that tap used to only hide the keyboard.
+appId: ${APP_ID}
+name: Create a project
+tags:
+  - projects
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- tapOn:
+    id: tab-create
+- tapOn: "Create Project"
+- tapOn: "Enter name"
+- inputText: "Macbeth"
+- tapOn: "Create"
+- extendedWaitUntil:
+    visible: "Macbeth"
+    timeout: 15000
+- assertVisible: ".*Anna Director, Owner.*"
+- assertVisible: "No upcoming rehearsals"
+- takeScreenshot: 03-new-project

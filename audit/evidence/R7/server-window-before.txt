@@ -1,0 +1,26 @@
+# R7-02, server: availabilityImportSync.test.js as of a3e6bc8, with services/availability/importScope.js from 16c6723 (cause fix 4, first round).
+# New window contract, refused on the old code: 'a window without its dates', 'window dates that are not the dates of its instants', 'an event the read could not have returned'.
+# The defect itself: 'ahead of UTC…', 'behind UTC…', 'keeps an event that only touches the window…'.
+# Green on the old code on purpose: 'takes an event that only touches the window when the read did return it' — the old code took anything; the test guards against refusing too much.
+
+  ● A request with anything wrong in it changes nothing › refuses a window without its dates
+  ● A request with anything wrong in it changes nothing › refuses an event the read could not have returned
+  ● A request with anything wrong in it changes nothing › refuses window dates that are not the dates of its instants
+  ● The edges of the window (R7-02) › ahead of UTC, yesterday's whole day is not taken for read, and today's is
+  ● The edges of the window (R7-02) › behind UTC, the whole day after the window is not taken for read
+  ● The edges of the window (R7-02) › keeps an event that only touches the window when the read did not return it
+Tests:       6 failed, 17 passed, 23 total
+
+  ● The edges of the window (R7-02) › ahead of UTC, yesterday's whole day is not taken for read, and today's is
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 1
+
+    - Array [
+    -   "cal:A-work|oct-1",
+    - ]
+    + Array []
+
+      156 |

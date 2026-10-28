@@ -125,34 +125,20 @@ describe('useAddRehearsalForm Hook', () => {
   });
 
   describe('Form State Initialization - Edit Mode with rehearsalId', () => {
-    it('should enter edit mode when rehearsalId is provided', async () => {
-      const mockRehearsal = {
-        id: 'r1',
-        projectId: '1',
-        startsAt: '2025-12-29T14:00:00Z',
-        endsAt: '2025-12-29T16:00:00Z',
-        location: 'Studio A',
-      };
-
-      const mockResponses = [
-        { userId: 'user1', response: 'yes' },
-        { userId: 'user2', response: 'yes' },
-        { userId: 'user3', response: 'no' },
-      ];
-
-      (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({
-        data: { rehearsals: [mockRehearsal] },
+    // By id, not from the calendar batch: the batch is the caller's own
+    // calendar, so an admin who was not on a rehearsal could not open it for
+    // editing at all (review D04).
+    it('loads the rehearsal by id, so an admin who is not on it can edit it (review D04)', async () => {
+      (rehearsalsAPI.getById as jest.Mock).mockResolvedValue({
+        data: { rehearsal: { id: 'r1', projectId: '1', startsAt: '2025-12-29T14:00:00Z',
+          endsAt: '2025-12-29T16:00:00Z', location: 'Studio A' } },
       });
-
+      // The roster as the server reads it — people still in the project. 'no'
+      // means invited and not yet seen, so everyone listed stays selected.
       (rehearsalsAPI.getResponses as jest.Mock).mockResolvedValue({
-        data: { responses: mockResponses },
-      });
-
-      // The hook drops participants who have since left the project, so it
-      // asks for the current roster. Without this it sees an empty project
-      // and filters everyone out.
-      (projectsAPI.getMembers as jest.Mock).mockResolvedValue({
-        data: { members: [{ userId: 'user1' }, { userId: 'user2' }, { userId: 'user3' }] },
+        data: { allParticipants: [
+          { userId: 'user1', response: 'yes' }, { userId: 'user2', response: 'yes' }, { userId: 'user3', response: 'no' },
+        ] },
       });
 
       const { result } = renderHook(() =>
@@ -160,36 +146,37 @@ describe('useAddRehearsalForm Hook', () => {
           projects: mockProjects,
           selectedProject: null,
           setSelectedProject: mockSetSelectedProject,
-          routeParams: {
-            rehearsalId: 'r1',
-            projectId: '1',
-          },
+          routeParams: { rehearsalId: 'r1', projectId: '1' },
         })
       );
 
-      // Should start loading
       expect(result.current.loadingRehearsal).toBe(true);
       expect(result.current.isEditMode).toBe(true);
 
-      // Wait for async loading
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       });
 
-      // Should have loaded rehearsal data
+      expect(rehearsalsAPI.getById).toHaveBeenCalledWith('r1');
+      expect(rehearsalsAPI.getBatch).not.toHaveBeenCalled();
       expect(result.current.loadingRehearsal).toBe(false);
       expect(result.current.location).toBe('Studio A');
-      // Everyone with a response row is on the rehearsal — 'no' means invited
-      // and not yet seen, not declined. Leaving them unselected would drop
-      // them from the rehearsal on the next save.
       expect(result.current.selectedMemberIds).toEqual(['user1', 'user2', 'user3']);
     });
 
-    it('should show alert and go back if rehearsal not found', async () => {
-      (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({
-        data: { rehearsals: [] }, // Empty - rehearsal not found
-      });
-
+    // An edit sends the whole participant list, and an empty one clears the
+    // call. A form left open over a failed load could save exactly that
+    // (review DF03), so a form that could not load closes.
+    it.each([
+      ['the rehearsal', () => (rehearsalsAPI.getById as jest.Mock).mockRejectedValue({ response: { status: 404 } })],
+      ['its participants', () => {
+        (rehearsalsAPI.getById as jest.Mock).mockResolvedValue({
+          data: { rehearsal: { id: 'r1', projectId: '1', startsAt: '2025-12-29T14:00:00Z', endsAt: '2025-12-29T16:00:00Z' } },
+        });
+        (rehearsalsAPI.getResponses as jest.Mock).mockRejectedValue(new Error('offline'));
+      }],
+    ])('closes the form when %s could not be loaded (review DF03)', async (_what, arrange) => {
+      arrange();
       const mockGoBack = jest.fn();
       jest.spyOn(require('@react-navigation/native'), 'useNavigation').mockReturnValue({
         goBack: mockGoBack,
@@ -201,10 +188,7 @@ describe('useAddRehearsalForm Hook', () => {
           projects: mockProjects,
           selectedProject: null,
           setSelectedProject: mockSetSelectedProject,
-          routeParams: {
-            rehearsalId: 'r1',
-            projectId: '1',
-          },
+          routeParams: { rehearsalId: 'r1', projectId: '1' },
         })
       );
 
@@ -212,7 +196,7 @@ describe('useAddRehearsalForm Hook', () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Rehearsal not found');
+      expect(Alert.alert).toHaveBeenCalled();
       expect(mockGoBack).toHaveBeenCalled();
     });
   });
@@ -333,7 +317,7 @@ describe('useAddRehearsalForm Hook', () => {
       const newDate = new Date('2025-12-31');
 
       act(() => {
-        result.current.handleDateChange({}, newDate);
+        result.current.handleDateChange(newDate);
       });
 
       expect(result.current.date).toEqual(newDate);
@@ -352,11 +336,48 @@ describe('useAddRehearsalForm Hook', () => {
       const newStartTime = new Date(initialEndTime.getTime() + 1000); // 1 second after end
 
       act(() => {
-        result.current.handleStartTimeChange({}, newStartTime);
+        result.current.handleStartTimeChange(newStartTime);
       });
 
       // End time should be auto-adjusted to 2 hours after start
       expect(result.current.endTime.getTime()).toBeGreaterThan(newStartTime.getTime());
+    });
+
+    // Cause fix 15: the times are clock times, an end before the start the
+    // next morning.
+    describe('past midnight', () => {
+      const at = (h: number, m = 0) => new Date(2026, 8, 10, h, m);
+      const form = () => renderHook(() =>
+        useAddRehearsalForm({ projects: mockProjects, selectedProject: null, setSelectedProject: mockSetSelectedProject })
+      ).result;
+
+      it('a start moved past a same-day end takes the end two hours on — the next morning at 23:00', () => {
+        const result = form();
+        act(() => { result.current.setStartTime(at(18)); result.current.setEndTime(at(20)); });
+        act(() => { result.current.handleStartTimeChange(at(23)); });
+
+        expect(result.current.endTime.getHours()).toBe(1);
+        expect(result.current.endsNextDay).toBe(true);
+      });
+
+      it('an overnight rehearsal keeps its end when its start moves', () => {
+        const result = form();
+        act(() => { result.current.setStartTime(at(23)); result.current.setEndTime(at(1)); });
+        expect(result.current.endsNextDay).toBe(true);
+        act(() => { result.current.handleStartTimeChange(at(22)); });
+
+        expect(result.current.endTime.getHours()).toBe(1);
+        expect(result.current.endsNextDay).toBe(true);
+      });
+
+      it('a start landing on the end moves it on', () => {
+        const result = form();
+        act(() => { result.current.setStartTime(at(23)); result.current.setEndTime(at(1)); });
+        act(() => { result.current.handleStartTimeChange(at(1)); });
+
+        expect(result.current.endTime.getHours()).toBe(3);
+        expect(result.current.endsNextDay).toBe(false);
+      });
     });
   });
 
@@ -377,6 +398,59 @@ describe('useAddRehearsalForm Hook', () => {
       expect(mockSetSelectedProject).toHaveBeenCalledWith(mockProjects[0]);
       expect(result.current.showProjectPicker).toBe(false);
       expect(result.current.selectedMemberIds).toEqual([]); // Reset members
+      expect(result.current.participantsSettled).toBe(false);
+    });
+
+    // Review R9-01: picking the project already shown used to empty the
+    // participants — on an edit, the saved roster went out empty.
+    it('picking the project already shown keeps the participants', () => {
+      const { result } = renderHook(() =>
+        useAddRehearsalForm({
+          projects: mockProjects,
+          selectedProject: mockProjects[0],
+          setSelectedProject: mockSetSelectedProject,
+          routeParams: { projectId: '1' },
+        })
+      );
+      act(() => {
+        result.current.startParticipants('1', ['user1', 'user2']);
+      });
+
+      act(() => {
+        result.current.handleSelectProject(mockProjects[0]);
+      });
+
+      expect(result.current.selectedMemberIds).toEqual(['user1', 'user2']);
+      expect(result.current.participantsSettled).toBe(true);
+      expect(result.current.showProjectPicker).toBe(false);
+    });
+
+    it('an existing rehearsal stays in its project, and its roster is not touched', async () => {
+      (rehearsalsAPI.getById as jest.Mock).mockResolvedValue({
+        data: { rehearsal: { id: 'r1', projectId: '1', startsAt: '2025-12-29T14:00:00Z', endsAt: '2025-12-29T16:00:00Z' } },
+      });
+      (rehearsalsAPI.getResponses as jest.Mock).mockResolvedValue({ data: { allParticipants: [{ userId: 'user9' }] } });
+      const { result } = renderHook(() =>
+        useAddRehearsalForm({
+          projects: mockProjects,
+          selectedProject: null,
+          setSelectedProject: mockSetSelectedProject,
+          routeParams: { rehearsalId: 'r1', projectId: '1' },
+        })
+      );
+      expect(result.current.participantsSettled).toBe(false);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(result.current.participantsSettled).toBe(true);
+
+      act(() => {
+        result.current.handleSelectProject(mockProjects[2]);
+      });
+
+      expect(mockSetSelectedProject).not.toHaveBeenCalledWith(mockProjects[2]);
+      expect(result.current.localSelectedProject?.id).toBe('1');
+      expect(result.current.selectedMemberIds).toEqual(['user9']);
     });
 
     it('should open create project screen', () => {
@@ -398,7 +472,8 @@ describe('useAddRehearsalForm Hook', () => {
         result.current.handleCreateProject();
       });
 
-      expect(mockNavigate).toHaveBeenCalledWith('Projects', { screen: 'CreateProject' });
+      // On the app stack, beside the form; the Projects tab has no such screen (R9-03).
+      expect(mockNavigate).toHaveBeenCalledWith('CreateProject');
       expect(result.current.showProjectPicker).toBe(false);
     });
   });

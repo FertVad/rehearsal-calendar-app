@@ -1,0 +1,43 @@
+# Cause fix 21 (T-121), client: red before.
+# Tests of the fix (UnreadContextMarkRead.test.tsx, NotificationsScreenInbox.test.tsx)
+# run against the fix's client files put back as they were at e32b0ad:
+#   git restore --source=e32b0ad -- src/contexts/UnreadContext.tsx src/shared/services/api.ts \
+#     src/features/notifications/screens/NotificationsScreen.tsx \
+#     src/features/notifications/styles/notificationsScreenStyles.ts src/i18n/translations/notifications.ts
+#   npx jest --selectProjects frontend --silent src/contexts/__tests__/UnreadContextMarkRead.test.tsx \
+#     src/features/notifications/screens/__tests__/NotificationsScreenInbox.test.tsx
+# then git restore --source=HEAD -- <the same files>. Output filtered to the failure lines
+# (stack frames and rendered trees dropped).
+
+FAIL frontend src/contexts/__tests__/UnreadContextMarkRead.test.tsx (22.535 s)
+  ● answers false when the server did not take it, true when it did
+    - Expected  - 2
+    + Received  + 2
+    -   false,
+    -   true,
+    +   undefined,
+    +   undefined,
+    > 54 |   expect(answers).toEqual([false, true]);
+FAIL frontend src/features/notifications/screens/__tests__/NotificationsScreenInbox.test.tsx (36.432 s)
+  ● older pages (NI01) › reaches the notifications past the first page
+    Unable to find an element with testID: inbox-more
+    > 82 |     await act(async () => { fireEvent.press(screen.getByTestId('inbox-more')); });
+  ● older pages (NI01) › offers "Mark all read" while older ones are unread, though every card shown is read
+    Unable to find an element with accessibility label: Mark all read
+    > 95 |     await act(async () => { fireEvent.press(screen.getByLabelText('Mark all read')); });
+  ● older pages (NI01) › keeps the older pages when the newest is read again
+    Unable to find an element with testID: inbox-more
+    > 107 |     await act(async () => { fireEvent.press(screen.getByTestId('inbox-more')); });
+  ● a load that fails (NI05) › says it could not load, not that there is nothing
+    Unable to find an element with text: Could not load notifications
+    > 124 |     expect(screen.getByText('Could not load notifications')).toBeTruthy();
+  ● a load that fails (NI05) › keeps the cards it had, and says the refresh failed
+    Unable to find an element with text: Could not load notifications
+    > 143 |     expect(screen.getByText('Could not load notifications')).toBeTruthy();
+  ● a "read" the server did not take (NI02) › puts the cards back unread and says so when "Mark all read" fails
+    Expected: "Error", "Could not mark as read"
+    > 156 |     expect(Alert.alert).toHaveBeenCalledWith('Error', 'Could not mark as read');
+  ● a "read" the server did not take (NI02) › puts the card back unread when opening it could not mark it read
+    Received: {"_fiber": {"_debugHookTypes": null, ... "type": "TouchableOpacity", ...}}
+    > 168 |     expect(screen.queryByLabelText('Mark all read')).toBeNull();
+Tests:       8 failed, 8 total

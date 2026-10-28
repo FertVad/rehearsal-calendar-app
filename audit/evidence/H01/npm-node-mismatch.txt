@@ -1,0 +1,147 @@
+
+> rehearsal-calendar-backend@1.0.0 test:admin-stored-browser
+> ADMIN_BROWSER_CHECK=1 NODE_OPTIONS=--experimental-vm-modules jest --config ../jest.config.js --selectProjects backend --runInBand --runTestsByPath __tests__/integration/adminStoredContent.test.js
+
+Running one project: backend
+(node:84314) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL backend __tests__/integration/adminStoredContent.test.js
+  Admin stored text through authenticated writes and real database reads
+    ✕ preserves image handler in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (29 ms)
+    ✕ preserves SVG handler in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (2 ms)
+    ✕ preserves table/script delimiters in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (2 ms)
+    ✕ preserves literal markup, entities and Unicode in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP] (2 ms)
+    ✕ returns legacy email text literally when a report author has no name [persisted data -> real API -> Chromium DOM/CSP] (2 ms)
+    ✕ requires user authentication for writes and admin authentication for reads (3 ms)
+
+  ● Admin stored text through authenticated writes and real database reads › preserves image handler in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP]
+
+    The module '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/better-sqlite3/build/Release/better_sqlite3.node'
+    was compiled against a different Node.js version using
+    NODE_MODULE_VERSION 115. This version of Node.js requires
+    NODE_MODULE_VERSION 137. Please try re-compiling or re-installing
+    the module (for instance, using `npm rebuild` or `npm install`).
+
+      108 | beforeEach(async () => {
+      109 |   externalCall.mockClear();
+    > 110 |   sqlite = new Database(':memory:');
+          |            ^
+      111 |   sqlite.pragma('foreign_keys = ON');
+      112 |   sqlite.exec(`
+      113 |     CREATE TABLE native_users (
+
+      at Runtime._loadModule (server/node_modules/jest-runtime/build/index.js:940:29)
+      at bindings (server/node_modules/bindings/bindings.js:112:48)
+      at new Database (server/node_modules/better-sqlite3/lib/database.js:48:64)
+      at Object.<anonymous> (server/__tests__/integration/adminStoredContent.test.js:110:12)
+
+  ● Admin stored text through authenticated writes and real database reads › preserves SVG handler in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP]
+
+    The module '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/better-sqlite3/build/Release/better_sqlite3.node'
+    was compiled against a different Node.js version using
+    NODE_MODULE_VERSION 115. This version of Node.js requires
+    NODE_MODULE_VERSION 137. Please try re-compiling or re-installing
+    the module (for instance, using `npm rebuild` or `npm install`).
+
+      108 | beforeEach(async () => {
+      109 |   externalCall.mockClear();
+    > 110 |   sqlite = new Database(':memory:');
+          |            ^
+      111 |   sqlite.pragma('foreign_keys = ON');
+      112 |   sqlite.exec(`
+      113 |     CREATE TABLE native_users (
+
+      at Runtime._loadModule (server/node_modules/jest-runtime/build/index.js:940:29)
+      at bindings (server/node_modules/bindings/bindings.js:112:48)
+      at new Database (server/node_modules/better-sqlite3/lib/database.js:48:64)
+      at Object.<anonymous> (server/__tests__/integration/adminStoredContent.test.js:110:12)
+
+  ● Admin stored text through authenticated writes and real database reads › preserves table/script delimiters in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP]
+
+    The module '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/better-sqlite3/build/Release/better_sqlite3.node'
+    was compiled against a different Node.js version using
+    NODE_MODULE_VERSION 115. This version of Node.js requires
+    NODE_MODULE_VERSION 137. Please try re-compiling or re-installing
+    the module (for instance, using `npm rebuild` or `npm install`).
+
+      108 | beforeEach(async () => {
+      109 |   externalCall.mockClear();
+    > 110 |   sqlite = new Database(':memory:');
+          |            ^
+      111 |   sqlite.pragma('foreign_keys = ON');
+      112 |   sqlite.exec(`
+      113 |     CREATE TABLE native_users (
+
+      at Runtime._loadModule (server/node_modules/jest-runtime/build/index.js:940:29)
+      at bindings (server/node_modules/bindings/bindings.js:112:48)
+      at new Database (server/node_modules/better-sqlite3/lib/database.js:48:64)
+      at Object.<anonymous> (server/__tests__/integration/adminStoredContent.test.js:110:12)
+
+  ● Admin stored text through authenticated writes and real database reads › preserves literal markup, entities and Unicode in profile, report, database and admin JSON [persisted data -> real API -> Chromium DOM/CSP]
+
+    The module '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/better-sqlite3/build/Release/better_sqlite3.node'
+    was compiled against a different Node.js version using
+    NODE_MODULE_VERSION 115. This version of Node.js requires
+    NODE_MODULE_VERSION 137. Please try re-compiling or re-installing
+    the module (for instance, using `npm rebuild` or `npm install`).
+
+      108 | beforeEach(async () => {
+      109 |   externalCall.mockClear();
+    > 110 |   sqlite = new Database(':memory:');
+          |            ^
+      111 |   sqlite.pragma('foreign_keys = ON');
+      112 |   sqlite.exec(`
+      113 |     CREATE TABLE native_users (
+
+      at Runtime._loadModule (server/node_modules/jest-runtime/build/index.js:940:29)
+      at bindings (server/node_modules/bindings/bindings.js:112:48)
+      at new Database (server/node_modules/better-sqlite3/lib/database.js:48:64)
+      at Object.<anonymous> (server/__tests__/integration/adminStoredContent.test.js:110:12)
+
+  ● Admin stored text through authenticated writes and real database reads › returns legacy email text literally when a report author has no name [persisted data -> real API -> Chromium DOM/CSP]
+
+    The module '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/better-sqlite3/build/Release/better_sqlite3.node'
+    was compiled against a different Node.js version using
+    NODE_MODULE_VERSION 115. This version of Node.js requires
+    NODE_MODULE_VERSION 137. Please try re-compiling or re-installing
+    the module (for instance, using `npm rebuild` or `npm install`).
+
+      108 | beforeEach(async () => {
+      109 |   externalCall.mockClear();
+    > 110 |   sqlite = new Database(':memory:');
+          |            ^
+      111 |   sqlite.pragma('foreign_keys = ON');
+      112 |   sqlite.exec(`
+      113 |     CREATE TABLE native_users (
+
+      at Runtime._loadModule (server/node_modules/jest-runtime/build/index.js:940:29)
+      at bindings (server/node_modules/bindings/bindings.js:112:48)
+      at new Database (server/node_modules/better-sqlite3/lib/database.js:48:64)
+      at Object.<anonymous> (server/__tests__/integration/adminStoredContent.test.js:110:12)
+
+  ● Admin stored text through authenticated writes and real database reads › requires user authentication for writes and admin authentication for reads
+
+    The module '/Users/vadimfertik/Desktop/reh_app/rehearsal-calendar-native/server/node_modules/better-sqlite3/build/Release/better_sqlite3.node'
+    was compiled against a different Node.js version using
+    NODE_MODULE_VERSION 115. This version of Node.js requires
+    NODE_MODULE_VERSION 137. Please try re-compiling or re-installing
+    the module (for instance, using `npm rebuild` or `npm install`).
+
+      108 | beforeEach(async () => {
+      109 |   externalCall.mockClear();
+    > 110 |   sqlite = new Database(':memory:');
+          |            ^
+      111 |   sqlite.pragma('foreign_keys = ON');
+      112 |   sqlite.exec(`
+      113 |     CREATE TABLE native_users (
+
+      at Runtime._loadModule (server/node_modules/jest-runtime/build/index.js:940:29)
+      at bindings (server/node_modules/bindings/bindings.js:112:48)
+      at new Database (server/node_modules/better-sqlite3/lib/database.js:48:64)
+      at Object.<anonymous> (server/__tests__/integration/adminStoredContent.test.js:110:12)
+
+Test Suites: 1 failed, 1 total
+Tests:       6 failed, 6 total
+Snapshots:   0 total
+Time:        1.904 s
+Ran all test suites within paths "__tests__/integration/adminStoredContent.test.js".

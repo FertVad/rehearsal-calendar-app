@@ -6,6 +6,10 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useAvailabilityData } from '../useAvailabilityData';
 import { availabilityAPI } from '../../../../shared/services/api';
+import { setProfileTimezone } from '../../../../shared/utils/time';
+
+// The profile's zone, as AuthContext sets it with the user.
+beforeEach(() => setProfileTimezone('UTC'));
 
 // Mock dependencies
 jest.mock('../../../../shared/services/api');
@@ -207,8 +211,8 @@ describe('useAvailabilityData Hook', () => {
       });
 
       expect(consoleError).toHaveBeenCalledWith(
-        'Failed to load availability:',
-        expect.any(Error)
+        '[ERROR] Failed to load availability:',
+        expect.objectContaining({ name: 'Error', message: 'Network error' })
       );
       expect(result.current.availability).toEqual({});
 
@@ -217,15 +221,16 @@ describe('useAvailabilityData Hook', () => {
   });
 
   describe('Deduplication Logic', () => {
-    it('should prioritize rehearsal slots over manual slots with same time range', async () => {
-      const consoleLog = jest.spyOn(console, 'log').mockImplementation();
-
+    // A row is the same row only by source, kind and hours (cause fix 16). By
+    // the hours alone, a calendar event at a rehearsal's hours went under the
+    // rehearsal, and the day said nothing of the event (review C04).
+    it('keeps a calendar event with the same hours as a rehearsal, rehearsal first', async () => {
       const mockData = [
         {
           startsAt: '2025-12-29T10:00:00Z',
           endsAt: '2025-12-29T12:00:00Z',
           type: 'busy',
-          source: 'manual',
+          source: 'apple_calendar',
         },
         {
           startsAt: '2025-12-29T10:00:00Z',
@@ -245,17 +250,73 @@ describe('useAvailabilityData Hook', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // One survives the deduplication, and it is the rehearsal's — which the
-      // user did not type, so it belongs with the read-only rows rather than
-      // among the hours a save writes back.
       const day = result.current.availability['2025-12-29'];
       expect(day.slots).toHaveLength(0);
-      expect(day.importedSlots).toHaveLength(1);
-      expect(day.importedSlots?.[0]).toMatchObject({ source: 'rehearsal' });
+      expect(day.importedSlots).toEqual([
+        expect.objectContaining({ source: 'rehearsal', start: '10:00', end: '12:00' }),
+        expect.objectContaining({ source: 'apple_calendar', start: '10:00', end: '12:00' }),
+      ]);
+    });
 
-      // Should log the deduplication
+    // The morning a slot of the night before ends: a calendar event of the same
+    // hours went under "from the day before", so dropping that slot looked like
+    // freeing the morning while the event, which the planner counts, stayed.
+    it('keeps a calendar event with the hours of the night before\'s end', async () => {
+      const mockData = [
+        {
+          startsAt: '2025-12-28T23:00:00Z',
+          endsAt: '2025-12-29T01:00:00Z',
+          type: 'busy',
+          source: 'manual',
+        },
+        {
+          startsAt: '2025-12-29T00:00:00Z',
+          endsAt: '2025-12-29T01:00:00Z',
+          type: 'busy',
+          source: 'google_calendar',
+        },
+      ];
+
+      (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
+        data: mockData,
+      });
+
+      const { result } = renderHook(() => useAvailabilityData());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      const morning = result.current.availability['2025-12-29'];
+      expect(morning.slots).toHaveLength(0);
+      expect(morning.importedSlots).toEqual([
+        expect.objectContaining({ source: 'previous_day', start: '00:00', end: '01:00' }),
+        expect.objectContaining({ source: 'google_calendar', start: '00:00', end: '01:00' }),
+      ]);
+    });
+
+    it('shows one of two rows that say the same thing', async () => {
+      const consoleLog = jest.spyOn(console, 'log').mockImplementation();
+
+      const event = {
+        startsAt: '2025-12-29T10:00:00Z',
+        endsAt: '2025-12-29T12:00:00Z',
+        type: 'busy',
+        source: 'apple_calendar',
+      };
+      (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
+        data: [event, { ...event }],
+      });
+
+      const { result } = renderHook(() => useAvailabilityData());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.availability['2025-12-29'].importedSlots).toHaveLength(1);
       expect(consoleLog).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping duplicate manual slot')
+        expect.stringContaining('Skipping duplicate slot on 2025-12-29 apple_calendar|busy|10:00-12:00')
       );
 
       consoleLog.mockRestore();
@@ -451,7 +512,7 @@ describe('useAvailabilityData Hook', () => {
       expect(result.current.availability).toEqual(newAvailability);
     });
 
-    it('should track hasChanges flag', async () => {
+    it('has changes while any day is marked changed', async () => {
       (availabilityAPI.getAll as jest.Mock).mockResolvedValue({
         data: [],
       });
@@ -465,10 +526,16 @@ describe('useAvailabilityData Hook', () => {
       expect(result.current.hasChanges).toBe(false);
 
       act(() => {
-        result.current.setHasChanges(true);
+        result.current.markChanged(['2025-12-30']);
       });
 
       expect(result.current.hasChanges).toBe(true);
+
+      act(() => {
+        result.current.markSettled(['2025-12-30']);
+      });
+
+      expect(result.current.hasChanges).toBe(false);
     });
 
     it('should track saving flag', async () => {

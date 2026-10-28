@@ -6,7 +6,8 @@ import { Colors, FontSize, BorderRadius } from '../../../shared/constants/colors
 import { useI18n } from '../../../contexts/I18nContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
-import { registerForPushNotifications } from '../../../shared/services/notifications';
+import { askAndRegisterPush } from '../../../shared/services/notifications';
+import { explainPushRegistration } from '../../../shared/utils/pushAlert';
 import { hapticLight } from '../../../shared/utils/haptics';
 import type { OnboardingStackParamList } from '../navigation/OnboardingNavigator';
 
@@ -25,19 +26,20 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
   const { skipOnboarding } = useOnboarding();
   const [asking, setAsking] = useState(false);
 
+  // "Later" asks nothing, now or after onboarding: nothing in the background
+  // shows the prompt (cause fix 20, GC01). The profile's switch is where it is
+  // asked for later.
   const goOn = () => navigation.navigate('WeekStart');
 
   const handleAllow = async () => {
     hapticLight();
     setAsking(true);
-    try {
-      await registerForPushNotifications();
-    } catch {
-      // A refusal is an answer, not a failure — carry on either way.
-    } finally {
-      setAsking(false);
-      goOn();
-    }
+    const result = await askAndRegisterPush();
+    setAsking(false);
+    // A refusal is an answer, not a failure — carry on either way. A failure
+    // to register is said, so nobody leaves believing they will be notified.
+    if (result === 'failed') explainPushRegistration(result, t);
+    goOn();
   };
 
   return (
