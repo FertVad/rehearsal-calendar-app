@@ -129,6 +129,11 @@ export const PEOPLE = {
   olga: { email: 'olga@e2e.test', firstName: 'Olga', lastName: 'Prozorova', onboarded: true },
   // Changes her language to Russian in the profile and back (44).
   vershinina: { email: 'vershinina@e2e.test', firstName: 'Masha', lastName: 'Vershinina', onboarded: true },
+  // Sonya marks herself busy tomorrow, and Voynitsky, who runs their project,
+  // sees it in his planner (45). Nobody else in it, so nothing another flow
+  // books lands on their days.
+  voynitsky: { email: 'voynitsky@e2e.test', firstName: 'Ivan', lastName: 'Voynitsky', onboarded: true },
+  sonya: { email: 'sonya@e2e.test', firstName: 'Sonya', lastName: 'Serebryakova', onboarded: true },
   // Neither has been through onboarding yet. One goes through it to the end
   // (09-onboarding), after which it is never shown to her again; the other
   // connects a calendar in it and comes back to the step (32), and needs it
@@ -287,6 +292,14 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
     [lake.id, ids.arkadina]);
+  // Voynitsky's, with Sonya in it (45), the same way.
+  const { rows: [estate] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Uncle Vanya', 'The estate', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
+    [estate.id, ids.voynitsky, ids.sonya]);
   // Made in this order: the Estate is the newer, so the form opens on it.
   await project('Pishchik Mill', 'Flour', [], 'pishchik');
   await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
@@ -416,6 +429,8 @@ export async function seed({ client, apiUrl, timezone }) {
     trip: localDate(4),
     // Yakov's day in the strip, and today (41).
     picked: localDate(otherDayThisWeek()), today: localDate(0),
+    // The day Sonya marks busy, and the one after it, which stays free (45).
+    tomorrow: localDate(1), after_tomorrow: localDate(2),
   };
   await call(apiUrl, 'PUT', '/native/availability/days', {
     token: await token('treplev'),

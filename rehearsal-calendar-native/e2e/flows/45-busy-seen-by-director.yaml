@@ -1,0 +1,111 @@
+# What an actor marks busy is what their director plans around (T-006). Sonya
+# Serebryakova marks tomorrow busy 10:00-18:00 in the editor and signs out;
+# Voynitsky, who runs Uncle Vanya, signs in on the same app and opens its
+# planner: tomorrow's slots name her as busy, the day after does not. Flow 07
+# reads busy times the seed wrote, flow 10 the editor's own save; this is the
+# whole way from one person's screen to the other's. Nobody else is in their
+# project, so nothing another flow books lands on their days.
+appId: ${APP_ID}
+name: Busy marked by an actor, seen by the director
+tags:
+  - availability
+  - planner
+  - auth
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${SONYA_EMAIL}
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${TOMORROW_DAY}
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${TOMORROW_DAY}
+- tapOn:
+    id: day-${TOMORROW_DAY}
+# Busy for hours, the default 10:00-18:00.
+- tapOn:
+    id: mode-custom
+- extendedWaitUntil:
+    visible:
+      id: slot-0-start
+      text: "10:00.*"
+    timeout: 10000
+- assertVisible:
+    id: slot-0-end
+    text: "18:00.*"
+- tapOn:
+    id: availability-save
+- extendedWaitUntil:
+    visible: "Availability saved"
+    timeout: 15000
+- tapOn: "OK"
+- assertNotVisible:
+    id: availability-save
+- tapOn:
+    id: availability-close
+# Signed out from the profile: the app stays running.
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-logout
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-logout
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${VOYNITSKY_EMAIL}
+# His one project: the planner opens on it, the whole roster selected.
+- tapOn: "Planner, tab.*"
+- extendedWaitUntil:
+    visible:
+      id: planner-project
+      text: ".*Uncle Vanya.*"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "2 of 2 selected"
+    timeout: 15000
+# Each slot's line says who is busy and carries its day: a card is not the
+# parent of its text in the iOS tree, so `childOf` a card finds nothing.
+# Tomorrow names her.
+- scrollUntilVisible:
+    element:
+      id: planner-slot-${TOMORROW_DAY}
+      text: "Busy: .*Sonya Serebryakova.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- takeScreenshot: 45-planner-tomorrow
+# The day after: everyone free, nobody named.
+- scrollUntilVisible:
+    element:
+      id: planner-slot-${AFTER_TOMORROW_DAY}
+      text: "All available"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- assertNotVisible:
+    id: planner-slot-${AFTER_TOMORROW_DAY}
+    text: "Busy: .*"
+- takeScreenshot: 45-planner-day-after
+# Today, when the workday has slots left in it: nobody named either.
+- scrollUntilVisible:
+    element:
+      id: planner-slot-${TODAY_DAY}
+    direction: UP
+    timeout: 20000
+    optional: true
+- assertNotVisible:
+    id: planner-slot-${TODAY_DAY}
+    text: "Busy: .*"
