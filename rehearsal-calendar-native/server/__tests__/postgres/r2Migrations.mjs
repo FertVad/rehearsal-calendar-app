@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { readFile, mkdtemp, mkdir, copyFile, writeFile, symlink, rm } from 'node:fs/promises';
+import { readFile, mkdtemp, mkdir, copyFile, writeFile, symlink, realpath, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import pg from 'pg';
@@ -348,7 +349,9 @@ export async function probeR2Migrations({ connectionString, control }) {
     });
     await check('copied actual CLI uses explicit environment, fresh canonical artifacts and readable duplicate dry diagnostics', async () => {
       const sourceRoot = fileURLToPath(new URL('../../', import.meta.url));
-      const fixture = await mkdtemp('/private/tmp/reh-migration-cli-');
+      // The system's temp folder, as its real path: /private/tmp exists only
+      // on macOS, and CI runs Linux. The guard below compares paths as written.
+      const fixture = await realpath(await mkdtemp(path.join(tmpdir(), 'reh-migration-cli-')));
       try {
         // The runner's code, plus every artifact the real manifest names.
         const { manifest: realManifest } = await import('../../database/schema/manifest.mjs');
