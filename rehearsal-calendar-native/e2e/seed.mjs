@@ -127,6 +127,8 @@ export const PEOPLE = {
   // before her projects have come (42).
   // Not Charlotta, whose form (20) opens on her newest project.
   olga: { email: 'olga@e2e.test', firstName: 'Olga', lastName: 'Prozorova', onboarded: true },
+  // Changes her language to Russian in the profile and back (44).
+  vershinina: { email: 'vershinina@e2e.test', firstName: 'Masha', lastName: 'Vershinina', onboarded: true },
   // Neither has been through onboarding yet. One goes through it to the end
   // (09-onboarding), after which it is never shown to her again; the other
   // connects a calendar in it and comes back to the step (32), and needs it

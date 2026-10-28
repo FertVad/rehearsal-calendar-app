@@ -1,0 +1,26 @@
+# Probe (T-005, not kept): T-001's match on the tab, the whole label "Календарь".
+# Was run from e2e/flows (its subflow path is relative to that folder).
+appId: ${APP_ID}
+name: probe T-001 tab label
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${VERSHININA_EMAIL}
+- tapOn:
+    id: tab-profile
+- tapOn:
+    id: profile-language
+- tapOn:
+    id: language-ru
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Календарь, tab.*"
+    timeout: 10000
+- takeScreenshot: probe-russian
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Календарь"
+    timeout: 10000

@@ -285,6 +285,9 @@ whether it has gone, which waited seven seconds every time.
 - Find controls by `testID` (`id:` in Maestro), not by their English label.
 - A touchable card is one accessibility element labelled with all of its text:
   match a part of it as a regex, `".*Act I run-through.*"`.
+- A tab is labelled `"<label>, tab, N of M"`, and `text:` must match all of
+  it: `id: tab-calendar` with `text: "Календарь, tab.*"`, never `"Календарь"`
+  alone (T-001 failed on it; flow 44).
 - `EXPO_PUBLIC_E2E=1` (set by the runner) silences the development warning
   toasts, which sit over the tab bar.
 - Maestro does not run the flows in file order, and they share one database:

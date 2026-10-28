@@ -304,6 +304,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
           {/* Language */}
           <TouchableOpacity
+            testID="profile-language"
             style={styles.settingItem}
             onPress={() => { hapticLight(); setLanguageModalVisible(true); }}
           >
@@ -484,6 +485,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                 return (
                   <TouchableOpacity
                     key={option.value}
+                    testID={`language-${option.value}`}
                     style={[
                       styles.timezoneItem,
                       isSelected && styles.timezoneItemSelected,
