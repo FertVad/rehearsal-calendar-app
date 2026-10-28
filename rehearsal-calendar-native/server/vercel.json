@@ -2,7 +2,9 @@
   "version": 2,
   "git": {
     "deploymentEnabled": {
-      "codex/systematic-repair": false
+      "codex/systematic-repair": false,
+      "claude/systematic-repair": false,
+      "auto/main": false
     }
   },
   "builds": [
