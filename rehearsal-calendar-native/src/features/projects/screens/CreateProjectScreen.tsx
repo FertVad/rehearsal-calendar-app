@@ -66,13 +66,18 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
       // Close the modal and drop the user straight into the new project
       // so they can invite members / set up rehearsals without an extra tap.
+      // `pop: true` goes back to the MainTabs under the form; without it a
+      // copy was pushed over the form, and swiping the project away showed the
+      // form again (T-007). `initial: false` puts the project over the list
+      // when the Projects tab has not been opened yet, so back is the list.
       navigation.navigate('MainTabs', {
         screen: 'Projects',
         params: {
           screen: 'ProjectDetail',
           params: { projectId: newProject.id },
+          initial: false,
         },
-      });
+      }, { pop: true });
     } catch (err: any) {
       Alert.alert(t.common.error, err.message || t.projects.createError);
     } finally {

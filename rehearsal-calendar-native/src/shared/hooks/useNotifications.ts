@@ -149,6 +149,10 @@ export function useNotifications() {
    * navigator" and the tap does nothing at all: every notification in the app
    * was inert.
    *
+   * A modal screen may be open over the tabs; `pop: true` closes it and goes
+   * back to them, where navigating without it pushed a copy of MainTabs over
+   * the modal (T-007). `initial: false`: over the projects list, even when
+   * the tab has not been opened yet.
    */
   const openProject = (projectId: string | number) => {
     navigation.navigate('MainTabs', {
@@ -156,8 +160,9 @@ export function useNotifications() {
       params: {
         screen: 'ProjectDetail',
         params: { projectId: String(projectId) },
+        initial: false,
       },
-    });
+    }, { pop: true });
   };
 
   /**
@@ -173,7 +178,7 @@ export function useNotifications() {
   };
 
   const openProjectsList = () => {
-    navigation.navigate('MainTabs', { screen: 'Projects' });
+    navigation.navigate('MainTabs', { screen: 'Projects' }, { pop: true });
   };
 
   const handleNotificationNavigation = (data: any) => {

@@ -212,12 +212,13 @@ export default function NotificationsScreen() {
       return;
     }
 
+    // The project is in the tabs under the inbox: back to them, not a copy
+    // pushed on top, and over the projects list (T-007).
     if (projectId) {
-      navigation.goBack();
       navigation.navigate('MainTabs', {
         screen: 'Projects',
-        params: { screen: 'ProjectDetail', params: { projectId: String(projectId) } },
-      });
+        params: { screen: 'ProjectDetail', params: { projectId: String(projectId) }, initial: false },
+      }, { pop: true });
     }
   };
 

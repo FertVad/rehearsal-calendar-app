@@ -935,6 +935,17 @@ refuses any cast in navigation; `registeredRoutes.test.tsx` requires each
 navigator to register exactly what its param list declares — add a screen to
 both or the tests fail.
 
+**Leaving a modal screen for the tabs goes back to the `MainTabs` under it,
+never to a copy.** In React Navigation 7 `navigate` to a route lower in the
+stack but not on top pushes a new one unless told `{ pop: true }`: "Create" on
+the new-project form opened the project in a second `MainTabs` presented over
+the form, going back showed the form again, and "Create" made a second project
+(T-007). So every `navigate('MainTabs', …)` from a modal screen or a push tap
+passes `{ pop: true }` (or uses `popTo`); the tabs open the screen named in the
+changed params themselves. A screen deep in a tab's stack gets `initial: false`
+next to its `screen`, so a tab not opened yet starts at its list and back is
+the list. `backToTabs.test.tsx` holds it against the real stack router.
+
 ## Environment Setup
 
 ### Required Environment Variables

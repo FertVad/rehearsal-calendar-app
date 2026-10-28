@@ -1,0 +1,46 @@
+# A project once created leaves its form behind (T-007). Banquo creates
+# Inverness, it opens, and he goes back from it: his projects list, with Inverness
+# on it once. "Create" opened the project in a copy of the tabs pushed over the
+# form, so the swipe took the copy away and showed the form again, still
+# filled in, and "Create" there made a second project. Now the form is closed
+# and the project opens in the tabs under it, over the projects list.
+appId: ${APP_ID}
+name: Back from a new project is the projects list, not the form
+tags:
+  - projects
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${BANQUO_EMAIL}
+- tapOn:
+    id: tab-create
+- tapOn: "Create Project"
+- tapOn: "Enter name"
+- inputText: "Inverness"
+- tapOn: "Create"
+- extendedWaitUntil:
+    visible: ".*Banquo Lochaber, Owner.*"
+    timeout: 15000
+- takeScreenshot: 46-project-opened
+# Back from the project. Maestro's swipe from the edge is not taken as the
+# back gesture, so the project's own back button; both leave the same screen.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Back"
+      SEE: "My Projects"
+      WAIT_MS: 10000
+# The form's own fields are not there, under the list or anywhere.
+- assertNotVisible: "Project Name"
+- assertNotVisible: "Enter name"
+# He is in no other project: the one card is Inverness.
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Inverness.*"
+    timeout: 15000
+- assertNotVisible:
+    id: project-card
+    index: 1
+- takeScreenshot: 46-projects-list

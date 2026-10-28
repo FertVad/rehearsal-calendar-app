@@ -134,6 +134,9 @@ export const PEOPLE = {
   // books lands on their days.
   voynitsky: { email: 'voynitsky@e2e.test', firstName: 'Ivan', lastName: 'Voynitsky', onboarded: true },
   sonya: { email: 'sonya@e2e.test', firstName: 'Sonya', lastName: 'Serebryakova', onboarded: true },
+  // Creates a project and swipes it away (46): in no project, so the one card
+  // on his list is the one he made.
+  banquo: { email: 'banquo@e2e.test', firstName: 'Banquo', lastName: 'Lochaber', onboarded: true },
   // Neither has been through onboarding yet. One goes through it to the end
   // (09-onboarding), after which it is never shown to her again; the other
   // connects a calendar in it and comes back to the step (32), and needs it
