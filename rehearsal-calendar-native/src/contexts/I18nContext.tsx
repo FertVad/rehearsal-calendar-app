@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Language, Translations, translations } from '../i18n/translations';
+import { onAccountLanguage } from '../shared/utils/storage';
 
+import { logger } from '../shared/utils/logger';
 interface I18nContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -27,7 +29,7 @@ export function I18nProvider({ children }: I18nProviderProps) {
         setLanguageState(saved as Language);
       }
     } catch (error) {
-      console.warn('Failed to load language preference:', error);
+      logger.warn('Failed to load language preference:', error);
     } finally {
       setLoading(false);
     }
@@ -38,12 +40,18 @@ export function I18nProvider({ children }: I18nProviderProps) {
     loadLanguage();
   }, [loadLanguage]);
 
+  // The signed-in account's language, whenever its preferences are written —
+  // at sign-in, at start, after a profile change (HC01).
+  useEffect(() => onAccountLanguage((locale) => {
+    if (locale in translations) setLanguageState(locale as Language);
+  }), []);
+
   const setLanguage = useCallback(async (lang: Language) => {
     try {
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
       setLanguageState(lang);
     } catch (error) {
-      console.warn('Failed to save language preference:', error);
+      logger.warn('Failed to save language preference:', error);
     }
   }, []);
 

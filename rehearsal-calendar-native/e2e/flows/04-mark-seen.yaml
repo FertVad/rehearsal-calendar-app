@@ -14,7 +14,16 @@ tags:
 - extendedWaitUntil:
     visible: ".*Act I run-through.*"
     timeout: 30000
-# The toggle of that card: other flows may have put rehearsals before it.
+# The toggle of that card: other flows may have put rehearsals before it, and
+# then it sits under the tab bar (flow 06's "Duel scene" takes the first slot
+# offered — late in the day, tomorrow morning). Bring it to the middle first.
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      below: ".*Act I run-through.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
 - tapOn:
     id: seen-toggle
     below: ".*Act I run-through.*"
@@ -31,6 +40,13 @@ tags:
 - extendedWaitUntil:
     visible: ".*Act I run-through.*"
     timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      below: ".*Act I run-through.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
 - assertVisible:
     id: seen-toggle
     below: ".*Act I run-through.*"

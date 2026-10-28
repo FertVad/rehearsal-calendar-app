@@ -1,0 +1,67 @@
+T-209 - "red before": flow 11 "Password reset by emailed code" on the old flow
+(e2e/flows/11-password-reset.yaml of 697875f), 27.10.2026.
+
+  git restore --source=HEAD~1 -- rehearsal-calendar-native/e2e/flows/11-password-reset.yaml
+  ... runs below ...
+  git restore --source=HEAD -- rehearsal-calendar-native/e2e/flows/11-password-reset.yaml
+
+Tools are T-207's (audit/evidence/T-207), run from the root of the tree.
+
+------------------------------------------------------------------------
+1. The supervisor's red run (T-121 checks, 20180d1, 26.10 22:50 local;
+   artifacts e2e/out/artifacts/2026-10-26_224010, not in git).
+
+   node audit/evidence/T-207/timeline.mjs "rehearsal-calendar-native/e2e/out/artifacts/2026-10-26_224010/Password reset by emailed code"
+   ...
+   22:49:59.377  maestro  Hide Keyboard
+   22:50:07.194  maestro  Take screenshot 11-reset-code-and-password
+   22:50:07.359  maestro  Tap on id: reset-submit
+   22:50:08.559  device   tap digitizer registered twice
+   22:50:08.574  device   touch dropped (move/lift with no touch down)
+   22:50:09.338  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+   22:50:09.340  maestro  Assert that (Optional) "Not Now" is visible
+   22:50:19.884  maestro  Tap on (Optional) "Not Now"
+   22:50:20.356  maestro  Assert that id: tab-create is visible
+   -> [Failed] Assertion is false: id: tab-create is visible
+
+   device-simulator.log at the tap: "*** already have a main display digitizer",
+   "*** unknown digitizer", "touch down without previous range event: 2", ten
+   times "didn't see a previous touch down or range-in event for pathIndex:2;
+   skipping event", then "cancel -- digitizer did disappear ... canceling paths".
+   The screen hierarchy at the failure still has the code (659646) and 17 dots
+   in both password fields and "Change password and sign in" - the form was
+   whole, the press never reached the button (no error under it either).
+
+   node audit/evidence/T-207/touch-scan.mjs
+   2026-10-26_224010  Password reset by emailed code: digitizers 19, registered twice 1 (...), app scene changes 6, taps lost 1
+       lost 22:50:08.574 -> Something have changed in the UI judging by view hierarchy. Proceed.
+
+------------------------------------------------------------------------
+2. The old flow five times in one run (11:10):
+   node audit/evidence/T-207/repeat-e2e.mjs 5 e2e/flows/11-password-reset.yaml
+   r1, r2, r3 passed (tab-create asserted twice in each); r4, r5 cut by the
+   command's 10-minute limit (r4: "Failed to get app binary directory" at its
+   launch as the run was killed - the machine, not the flow).
+
+3. The old flow three times with every core busy (8 busy threads, 11:20):
+   node audit/evidence/T-207/load-e2e.mjs 8 3 e2e/flows/11-password-reset.yaml
+   r1 FAILED, r2 and r3 passed.
+
+   node audit/evidence/T-207/timeline.mjs "rehearsal-calendar-native/e2e/out/artifacts/2026-10-27_112039/Password reset by emailed code r1"
+   11:22:05.483  maestro  Assert that id: login-forgot-password is visible
+   11:22:18.098  maestro  Tap on id: login-forgot-password
+   11:22:19.966  device   tap digitizer registered twice
+   11:22:19.977  device   touch dropped (move/lift with no touch down)
+   11:22:20.757  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+   11:22:20.758  maestro  Retry 3 times
+   11:22:20.765  maestro  Tap on id: reset-email
+   11:22:40.256  maestro    retry command
+   ...
+   11:22:41.896  maestro    retryCommand: Max retries (3) reached. Commands failed.
+   -> CommandFailed: Element not found: Id matching regex: reset-email
+
+   The same lost tap as the red run, on the flow's first tap instead of its
+   last: the app stayed on the sign-in screen, Maestro called the tap done.
+
+Old flow: 5 finished runs, 1 red, on a lost tap - the cause of the
+supervisor's red run, reproduced.

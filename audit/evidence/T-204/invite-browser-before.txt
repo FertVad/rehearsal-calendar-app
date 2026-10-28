@@ -1,0 +1,55 @@
+T-204 — red before: server/__tests__/browser/invitePage.browser.test.mjs unchanged,
+commit b4b96c8 (auto/main), Playwright 1.62.1, headless Chromium, macOS 25.3.0.
+Runner: audit/evidence/T-204/repeat-invite-browser.mjs — the whole file, in its
+own order, as `npm test` runs it (`node --test` from rehearsal-calendar-native/server).
+
+$ node audit/evidence/T-204/repeat-invite-browser.mjs 20
+run 1: exit 0, 11 pass, 0 fail
+run 2: exit 0, 11 pass, 0 fail
+run 3: exit 0, 11 pass, 0 fail
+run 4: exit 0, 11 pass, 0 fail
+run 5: exit 0, 11 pass, 0 fail
+run 6: exit 1, 10 pass, 1 fail
+  not ok: manual mouse and keyboard activation preserve the short invite path under CSP — locator.click: Timeout 5000ms exceeded.
+run 7: exit 0, 11 pass, 0 fail
+run 8: exit 0, 11 pass, 0 fail
+run 9: exit 0, 11 pass, 0 fail
+run 10: exit 0, 11 pass, 0 fail
+run 11: exit 0, 11 pass, 0 fail
+run 12: exit 0, 11 pass, 0 fail
+run 13: exit 0, 11 pass, 0 fail
+run 14: exit 0, 11 pass, 0 fail
+run 15: exit 0, 11 pass, 0 fail
+run 16: exit 0, 11 pass, 0 fail
+run 17: exit 0, 11 pass, 0 fail
+run 18: exit 0, 11 pass, 0 fail
+run 19: exit 0, 11 pass, 0 fail
+run 20: exit 0, 11 pass, 0 fail
+
+1 of 20 runs failed
+  1× manual mouse and keyboard activation preserve the short invite path under CSP — locator.click: Timeout 5000ms exceeded.
+
+$ node audit/evidence/T-204/repeat-invite-browser.mjs 12 8      # 8 busy threads on 8 cores
+node v22.16.0, 8 cores, 8 busy threads
+run 1: exit 0, 11 pass, 0 fail
+run 2: exit 1, 10 pass, 1 fail
+  not ok: malformed or repeated Expo host parameters cannot change the native fallback — page.goto: Timeout 5000ms exceeded.
+run 3: exit 0, 11 pass, 0 fail
+run 4: exit 0, 11 pass, 0 fail
+run 5: exit 0, 11 pass, 0 fail
+run 6: exit 0, 11 pass, 0 fail
+run 7: exit 1, 10 pass, 1 fail
+  not ok: malformed or repeated Expo host parameters cannot change the native fallback — page.goto: Timeout 5000ms exceeded.
+run 8: exit 1, 10 pass, 1 fail
+  not ok: manual mouse and keyboard activation preserve the legacy 32-hex invite path under CSP — page.goto: Timeout 5000ms exceeded.
+run 9: exit 0, 11 pass, 0 fail
+run 10: exit 1, 10 pass, 1 fail
+  not ok: real invite route retains strict CSP, styling and the timed fallback — page.goto: Timeout 5000ms exceeded.
+run 11: exit 1, 10 pass, 1 fail
+  not ok: malformed or repeated Expo host parameters cannot change the native fallback — page.goto: Timeout 5000ms exceeded.
+run 12: exit 0, 11 pass, 0 fail
+
+5 of 12 runs failed
+  3× malformed or repeated Expo host parameters cannot change the native fallback — page.goto: Timeout 5000ms exceeded.
+  1× manual mouse and keyboard activation preserve the legacy 32-hex invite path under CSP — page.goto: Timeout 5000ms exceeded.
+  1× real invite route retains strict CSP, styling and the timed fallback — page.goto: Timeout 5000ms exceeded.

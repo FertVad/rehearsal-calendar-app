@@ -1,0 +1,32 @@
+// T-210 temporary probe: signInMethods.test.js's beforeAll with marks.
+process.env.EMAIL_CODE_SECRET = 'sign-in-methods-test-secret';
+process.env.EMAIL_TRANSPORT = 'capture-for-tests';
+import { jest } from '@jest/globals';
+import { setupIntegrationDb, closeIntegrationDb } from '../integration/setup.js';
+
+const t0 = performance.now();
+let last = t0;
+const mark = (label) => {
+  const now = performance.now();
+  process.stdout.write(`PROBE methods ${label}: +${Math.round(now - last)} ms (at ${Math.round(now - t0)})\n`);
+  last = now;
+};
+
+beforeAll(async () => {
+  mark('hook start');
+  const testDb = await setupIntegrationDb();
+  mark('db');
+  jest.unstable_mockModule('../../database/db.js', () => ({
+    default: testDb, isPostgres: false, initDatabase: async () => testDb, testConnection: async () => true,
+  }));
+  await import('express'); mark('express');
+  await import('supertest'); mark('supertest');
+  await import('bcrypt'); mark('bcrypt');
+  await import('../../middleware/jwtMiddleware.js'); mark('jwtMiddleware');
+  await import('../../services/email/transport.js'); mark('transport');
+  await import('../../routes/auth.js'); mark('routes/auth');
+  await import('../../routes/emailVerification.js'); mark('emailVerification');
+}, 60000);
+
+afterAll(() => closeIntegrationDb());
+it('probe', () => {});

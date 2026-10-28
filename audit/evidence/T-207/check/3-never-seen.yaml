@@ -1,0 +1,14 @@
+# T-207 check, the bound: a result that never comes. tap-and-see.yaml taps
+# twice - once more, never again - and the flow fails on the result; the run
+# prints one tap taken again.
+appId: ${APP_ID}
+name: T-207 check 3 - a result that never comes
+---
+- runFlow:
+    file: planner-partial.yaml
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP_ID: members-toggle-all
+      SEE: "Nothing of the kind"
+      WAIT_MS: 3000

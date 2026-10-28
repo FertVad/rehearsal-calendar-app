@@ -1,0 +1,43 @@
+Cause fix 15, review round 3: red before for flow 28 (a trip from the
+phone's calendar on a day marked free by hand).
+
+Base: 948a407 (before a289956, the fix that keeps own rows outside
+deduplication). The fix's file put back as it was there:
+
+  git restore --source=948a407 -- src/features/availability/hooks/useAvailabilityData.ts
+  npm run e2e -- e2e/flows/28-trip-under-free-day.yaml
+
+Seed: Dorn (dorn@e2e.test) has a whole-day google_calendar trip over local
+days +3..+5 and the middle day, +4 (2026-10-29 on this run), marked free all
+day by hand (manual, available, is_all_day).
+
+Output (tail):
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] A trip from the calendar shows on a day marked free (2m 2s) (No visible element found: ".*, Busy", id: day-2026-10-29)
+
+1/1 Flow Failed
+
+The trip's row of that day was dropped as a copy of the free mark's
+00:00-23:59, so the day was not busy on the calendar (it read "Free", as the
+Jest test useAvailabilityDataMultiDay "a trip from the phone across a day
+marked free by hand" shows on the same base), and nothing from the calendar
+was on it.
+
+After: git restore --source=HEAD -- src/features/availability/hooks/useAvailabilityData.ts
+
+  npm run e2e -- e2e/flows/28-trip-under-free-day.yaml
+  [Passed] A trip from the calendar shows on a day marked free (2m 10s)
+  1/1 Flow Passed in 2m 10s
+
+The day reads "<day>, Busy"; tapped, its panel shows "Already on this day",
+"All day", "from calendar", and the Busy mode selected.

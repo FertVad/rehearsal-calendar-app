@@ -20,7 +20,7 @@ module.exports = {
         }],
       },
       transformIgnorePatterns: [
-        'node_modules/(?!(react-native|@react-native|expo|@expo|expo-clipboard|react-native-calendars|@react-navigation/routers)/)',
+        'node_modules/(?!(react-native|@react-native|expo|@expo|expo-clipboard|react-native-calendars|@react-navigation/routers|@react-navigation/core|@react-navigation/native/src)/)',
       ],
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
       moduleNameMapper: {
@@ -28,6 +28,7 @@ module.exports = {
         // Mock React Native modules
         '^react-native$': '<rootDir>/src/__tests__/__mocks__/react-native.js',
         '^react-native-calendars$': '<rootDir>/src/__tests__/__mocks__/react-native-calendars.js',
+        '^react-native-screens$': '<rootDir>/src/__tests__/__mocks__/react-native-screens.js',
         '^@expo/vector-icons$': '<rootDir>/src/__tests__/__mocks__/expo-vector-icons.js',
         '^expo-clipboard$': '<rootDir>/src/__tests__/__mocks__/expo-clipboard.js',
         '^expo-calendar$': '<rootDir>/src/__tests__/__mocks__/expo-calendar.js',
@@ -42,6 +43,11 @@ module.exports = {
         // copy is an ES module, which the server's --experimental-vm-modules run
         // refuses to require; the TypeScript source it ships compiles like ours.
         '^@react-navigation/routers$': '<rootDir>/node_modules/@react-navigation/routers/src/index.tsx',
+        // The real link parser, the same way: what state a link opens.
+        '^@react-navigation/core/getStateFromPath$': '<rootDir>/node_modules/@react-navigation/core/src/getStateFromPath.tsx',
+        // And how a container takes the link the app was launched by.
+        '^@react-navigation/native/useLinking$': '<rootDir>/node_modules/@react-navigation/native/src/useLinking.native.tsx',
+        '^@react-navigation/native/useThenable$': '<rootDir>/node_modules/@react-navigation/native/src/useThenable.tsx',
       },
       setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
       collectCoverageFrom: [
@@ -59,6 +65,11 @@ module.exports = {
       testMatch: ['<rootDir>/server/**/*.(test|spec).(js)'],
       transform: {}, // No transform needed - using native ES modules
       moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
+      // The app listens on 127.0.0.1, where supertest sends; on the wildcard
+      // another process could take the request (loopbackSupertest.js).
+      moduleNameMapper: {
+        '^supertest$': '<rootDir>/server/__tests__/loopbackSupertest.js',
+      },
       collectCoverageFrom: [
         'server/**/*.{js}',
         '!server/**/__tests__/__mocks__/**',

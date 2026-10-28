@@ -1,0 +1,34 @@
+# "Today" in the week strip selects today (cause fix 22: DD03). It only
+# scrolled the strip back to today's week: the day picked before stayed
+# selected and the list under the strip went on showing it. Yakov has "Lamp
+# trimming" today and "Boat repair" on the other day of this week he picks
+# (tomorrow, or yesterday on a Sunday); with that day picked, today's is
+# nowhere on the screen.
+appId: ${APP_ID}
+name: Today selects today
+tags:
+  - calendar
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${YAKOV_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Lamp trimming.*"
+    timeout: 30000
+- tapOn:
+    id: calendar-day-${PICKED_DAY}
+- extendedWaitUntil:
+    notVisible: ".*Lamp trimming.*"
+    timeout: 10000
+- assertVisible: ".*Boat repair.*"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-today
+      SEE: ".*Lamp trimming.*"
+      WAIT_MS: 10000
+- assertVisible:
+    id: calendar-day-${TODAY_DAY}
+    selected: true
+- takeScreenshot: 41-today-selected

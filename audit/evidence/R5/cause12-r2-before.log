@@ -1,0 +1,44 @@
+# Cause fix 12, review round 2 — red before (HN02/NI04: a read during an unfinished write)
+# Code: 1aa1bd5 (auto/main, T-112 carried over); new tests only.
+# npx jest seenOrder NotificationsScreen.test UnreadContext.test --selectProjects frontend --verbose
+# Order in each red test: the write begins -> the read answers -> the write succeeds.
+FAIL frontend src/features/calendar/hooks/__tests__/seenOrder.test.tsx
+  ✓ keeps a mark put on after the list was asked for (HN02)
+  ✓ keeps a mark put on while the list was out and the tap was on its way
+  ✕ keeps a mark when the list answers while the tap is still on its way
+  ✓ takes off a mark taken back elsewhere when nothing was tapped here
+    Expected: "yes"
+    Received: null
+    > 90 |   expect(result.current.seen.responseFor('r1')).toBe('yes');
+FAIL frontend src/contexts/__tests__/UnreadContext.test.tsx
+    ✓ starts at zero and asks nobody until told
+    ✓ leaves the app icon alone until it knows a real number
+    ✓ comes back with the last count it knew, before asking anyone
+    ✓ shows the stored count when the server cannot be reached
+    ✓ prefers the server to what it had stored
+    ✓ takes the number the server reports
+    ✓ sets the app icon badge to the same number
+    ✓ moves the count when the inbox is marked read
+    ✓ marks one by id and takes what remains
+    ✓ keeps the last known count when the request fails
+    ✓ lowers the count when an unread one is deleted
+    ✓ reports whether the deletion actually happened
+    ✓ empties the count when the inbox is cleared
+    ✓ survives a server answer with no number in it
+    ✓ shows the next person none of the previous one's count
+    ✓ writes nothing when the previous person's answer comes after the change
+    ✓ keeps the count of a mark-all that finished after a slower read began
+    ✕ keeps the count of a mark-all when a read answers while it is on its way
+    ✓ takes the answer of the change sent last, whichever answers first
+  ● Unread count and late answers (NI04) › keeps the count of a mark-all when a read answers while it is on its way
+    Expected: "0"
+    Received: "5"
+    > 312 |     expect(getByTestId('count').props.children).toBe('0');
+FAIL frontend src/features/notifications/screens/__tests__/NotificationsScreen.test.tsx
+  ✓ does not bring back a card deleted while a load was out
+  ✓ does not make cards unread again after "Mark all read" while a load was out
+  ✕ does not bring back a card when a load answers while its deletion is on its way
+  ✓ keeps cards read when a load answers while "Mark all read" is on its way
+    expect(element).toBeNull() — the deleted card "Dress cancelled" is on screen
+    > 110 |   expect(screen.queryByText('Dress cancelled')).toBeNull();
+Tests:       3 failed, 24 passed, 27 total

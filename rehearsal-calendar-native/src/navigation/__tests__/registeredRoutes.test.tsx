@@ -53,6 +53,7 @@ function mockScreen() { return { __esModule: true, default: () => null }; }
 jest.mock('../../features/auth/screens/LoginScreen', mockScreen);
 jest.mock('../../features/auth/screens/RegisterScreen', mockScreen);
 jest.mock('../../features/auth/screens/VerifyEmailScreen', mockScreen);
+jest.mock('../../features/auth/screens/ResetPasswordScreen', mockScreen);
 jest.mock('../../features/calendar/screens/CalendarScreen', mockScreen);
 jest.mock('../../features/calendar/screens/AddRehearsalScreen', mockScreen);
 jest.mock('../../features/calendar/screens/RehearsalDetailsScreen', mockScreen);
@@ -63,6 +64,7 @@ jest.mock('../../features/projects/screens/CreateProjectScreen', mockScreen);
 jest.mock('../../features/profile/screens/ProfileScreen', mockScreen);
 jest.mock('../../features/profile/screens/CalendarSyncSettingsScreen', mockScreen);
 jest.mock('../../features/profile/screens/EditProfileScreen', mockScreen);
+jest.mock('../../features/profile/screens/ChangeEmailScreen', mockScreen);
 jest.mock('../../features/smart-planner/screens/SmartPlannerScreen', mockScreen);
 jest.mock('../../features/smart-planner/screens/SmartPlannerTabScreen', mockScreen);
 jest.mock('../../features/availability/screens/AvailabilityScreen', mockScreen);
@@ -91,7 +93,7 @@ jest.mock('../../shared/services/api', () => ({ rehearsalsAPI: {}, projectsAPI: 
 
 // Each param list, key for key; the type check refuses a missing or extra one.
 const DECLARED = [
-  { Login: true, Register: true, VerifyEmail: true } satisfies Record<keyof AuthStackParamList, true>,
+  { Login: true, Register: true, VerifyEmail: true, ResetPassword: true } satisfies Record<keyof AuthStackParamList, true>,
   { Welcome: true, CalendarSync: true, Notifications: true, WeekStart: true } satisfies Record<keyof OnboardingStackParamList, true>,
   { MainTabs: true, Notifications: true, RehearsalDetails: true, JoinProject: true, MarkBusy: true, CreateProject: true,
     AddRehearsal: true } satisfies Record<keyof AppStackParamList, true>,
@@ -99,7 +101,7 @@ const DECLARED = [
   { CalendarMain: true } satisfies Record<keyof CalendarStackParamList, true>,
   { ProjectsMain: true, ProjectDetail: true } satisfies Record<keyof ProjectsStackParamList, true>,
   { PlannerMain: true, SmartPlanner: true } satisfies Record<keyof PlannerStackParamList, true>,
-  { ProfileMain: true, CalendarSyncSettings: true, EditProfile: true } satisfies Record<keyof ProfileStackParamList, true>,
+  { ProfileMain: true, CalendarSyncSettings: true, EditProfile: true, ChangeEmail: true } satisfies Record<keyof ProfileStackParamList, true>,
 ].map((list) => Object.keys(list).sort().join(', '));
 
 beforeAll(() => {

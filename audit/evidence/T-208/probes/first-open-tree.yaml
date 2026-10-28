@@ -1,0 +1,30 @@
+# T-208 probe: the tree of a Modal opened the first time, dumped by failing.
+appId: ${APP_ID}
+name: T-208 probe - first open tree
+---
+- runFlow:
+    file: subflows/sign-in.yaml
+    env:
+      EMAIL: ${CHEBUTYKIN_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element: ".*Tel Aviv \\(UTC\\+2\\).*"
+    direction: DOWN
+    centerElement: true
+- tapOn: ".*Tel Aviv \\(UTC\\+2\\).*"
+- extendedWaitUntil:
+    visible: "Select Timezone"
+    timeout: 10000
+- assertVisible: "T-208 dump the tree here"

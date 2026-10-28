@@ -1,0 +1,72 @@
+# The next person sees their own count while the previous person's change is
+# still on its way (cause fix 12, review 3). Yepikhodov marks his inbox read on
+# a slow connection — the request has not reached the server — and signs out;
+# Dasha signs in on the same app with two unread. The old app kept one order
+# of reads and changes for the life of the app: his change on its way dropped
+# her reads, and once it ended it still counted as newer than them, so her bell
+# showed nothing. (The number inside the badge is part of the bell button, which
+# iOS reads as one element; the badge itself is what can be seen.)
+appId: ${APP_ID}
+name: Switch accounts - a change on its way
+tags:
+  - auth
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${YEPIKHODOV_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: unread-badge
+    timeout: 30000
+- tapOn: "Notifications"
+- extendedWaitUntil:
+    visible: ".*Guitar song.*"
+    timeout: 15000
+# His "mark all read" stays on its way, the connection open, until the
+# release: the app does not give up on it while Dasha signs in.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: POST
+      PATH: "^/api/native/notifications/read$"
+      OPEN: "1"
+- tapOn: "Mark all read"
+- tapOn: "Back"
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-logout
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-logout
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${DASHA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+# His change is still on its way, and her count is on her bell.
+- extendedWaitUntil:
+    visible:
+      id: unread-badge
+    timeout: 15000
+- takeScreenshot: 22-dasha-own-count
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+# His change has landed — on his inbox, not on her bell.
+- extendedWaitUntil:
+    notVisible:
+      id: unread-badge
+    timeout: 3000
+    optional: true
+- assertVisible:
+    id: unread-badge

@@ -1,0 +1,34 @@
+T-112, cause fix 12, review round 4 — e2e 22, after.
+Code: working tree on cbf023a's useSession.ts (HEAD), with the flow, seed and
+e2e server of this round. Run together with flows 16 and 21 (the same count
+and inbox, and the same hold mechanism).
+
+$ npm run e2e -- e2e/flows/22-switch-account-change-on-its-way.yaml e2e/flows/16-switch-account-unread-language.yaml e2e/flows/21-inbox-delete-on-its-way.yaml
+Waiting for flows to complete...
+[Passed] Switch accounts - a change on its way (2m 15s)
+[Passed] Switch accounts - count and language (1m 18s)
+[Passed] Inbox deletion on its way (57s)
+
+3/3 Flows Passed in 4m 30s
+
+e2e/out/server.log:
+[e2e] holding the request POST /api/native/notifications/read, its connection open
+[e2e] released POST /api/native/notifications/read: the server answered 401
+[e2e] holding the answer to GET /api/native/notifications/unread-count
+[e2e] holding the request DELETE /api/native/notifications/28
+
+(401: Yepikhodov signed out before his change reached the server; his session's
+answer writes nothing on either session.)
+
+Single run of flow 22 alone, same code, e2e/out/metro.log — the order the
+review asks for, his change open until after her first read:
+ LOG  [DEBUG] Request: POST /native/notifications/read undefined      <- his change, held open
+ LOG  [DEBUG] Request: POST /auth/logout undefined
+ LOG  [DEBUG] Response: 200 POST /auth/logout
+ LOG  [DEBUG] Request: POST /auth/login undefined                     <- Dasha
+ LOG  [DEBUG] Response: 200 POST /auth/login
+ LOG  [DEBUG] Request: GET /native/notifications/unread-count undefined
+ LOG  [DEBUG] Response: 200 GET /native/notifications/unread-count     <- her count, shown
+ ...
+ LOG  [DEBUG] Response: 200 POST /native/notifications/read            <- his change ends, on release
+[Passed] Switch accounts - a change on its way (2m 8s)

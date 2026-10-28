@@ -1,0 +1,27 @@
+FAIL frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx (43.764 s)
+  ● DP01 — roster reload within the same project (R5-01) › drops removed members from selection when the roster reloads
+
+    expect(received).toBeNull()
+
+    Received: {"_fiber": {...}} -- Text node containing "3 of 2 selected" was present
+
+      131 |     //   simpleMembers, counts zero valid members, renders no slot buttons.
+      132 |     // With the fix: selectedMemberIds trimmed to [a1,a2] → "2 of 2 selected".
+    > 133 |     expect(screen.queryByText(/3 of 2/)).toBeNull();
+          |                                          ^
+      134 |   });
+      135 | });
+
+      at Object.<anonymous> (src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx:133:42)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        44.659 s
+
+-- Explanation --
+The test proves R5-01: after the roster reloads for the same project (a3 removed,
+members=[a1,a2]), selectedMemberIds was still [a1,a2,a3] because
+hasInitializedMembers.current === projectId caused the seeding effect to return
+early without reconciling. The filter summary showed "3 of 2 selected" —
+an impossible count that means zero valid members reach the slot generator.

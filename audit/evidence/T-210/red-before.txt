@@ -1,0 +1,93 @@
+T-210 red before. Old test (bcrypt.hash(PASSWORD, 10) in beforeAll), 27.10.2026.
+Machine: 8 cores. Load: load-repro.mjs, 24 busy-loop processes (3 per core),
+each round one in-band Jest run, as server/scripts/test.mjs runs the checks.
+
+== 1. Where the hook's time goes (timing probe, a copy of authLogin's beforeAll
+with marks; temporary, not committed; probe.test.js.txt) ==
+
+Alone, quiet machine (2 runs):
+PROBE db: 22 ms | express+supertest: 336 ms | bcrypt import: 129 ms | accountLinking: 40 ms | routes/auth: 431 ms | hash cost 10: 200 ms | hash cost 4: 3 ms
+PROBE db: 21 ms | express+supertest: 244 ms | bcrypt import: 117 ms | accountLinking: 50 ms | routes/auth: 429 ms | hash cost 10: 178 ms | hash cost 4: 3 ms
+
+Whole server suite --runInBand, quiet machine:
+PROBE db: 13 ms | express+supertest: 188 ms | bcrypt import: 102 ms | accountLinking: 13 ms | routes/auth: 209 ms | hash cost 10: 170 ms | hash cost 4: 2 ms
+
+$ node audit/evidence/T-210/load-repro.mjs 3 3 __tests__/routes/zzProbeAuthLogin.test.js __tests__/routes/authLogin.test.js
+cores 8, burners 24, files __tests__/routes/zzProbeAuthLogin.test.js __tests__/routes/authLogin.test.js
+--- round 1: exit 0, 19.4 s
+PROBE db: 85 ms | express+supertest: 809 ms | bcrypt import: 270 ms | accountLinking: 167 ms | routes/auth: 912 ms | hash cost 10: 912 ms | hash cost 4: 3 ms
+PASS __tests__/routes/zzProbeAuthLogin.test.js (5.526 s)
+PASS __tests__/routes/authLogin.test.js (9.621 s)
+Tests:       8 passed, 8 total
+--- round 2: exit 1, 23.9 s
+FAIL __tests__/routes/authLogin.test.js (9.997 s)
+● POST /auth/login › signs in a password account
+thrown: "Exceeded timeout of 5000 ms for a hook.
+● POST /auth/login › rejects a wrong password with 401
+● POST /auth/login › answers an OAuth-only account with 401, not 500
+● POST /auth/login › gives the same response for an OAuth-only account as for an unknown address
+● unlinking the email provider › stops password sign-in from working
+● unlinking the email provider › clears the stored credential rather than only the provider row
+● unlinking the email provider › refuses to unlink the last remaining method
+PROBE db: 82 ms | express+supertest: 1377 ms | bcrypt import: 537 ms | accountLinking: 66 ms | routes/auth: 1534 ms | hash cost 10: 1029 ms | hash cost 4: 26 ms
+PASS __tests__/routes/zzProbeAuthLogin.test.js (6.029 s)
+Tests:       7 failed, 1 passed, 8 total
+--- round 3: exit 1, 24.8 s
+FAIL __tests__/routes/authLogin.test.js (11.089 s)
+● POST /auth/login › signs in a password account
+thrown: "Exceeded timeout of 5000 ms for a hook.
+● POST /auth/login › rejects a wrong password with 401
+● POST /auth/login › answers an OAuth-only account with 401, not 500
+● POST /auth/login › gives the same response for an OAuth-only account as for an unknown address
+● unlinking the email provider › stops password sign-in from working
+● unlinking the email provider › clears the stored credential rather than only the provider row
+● unlinking the email provider › refuses to unlink the last remaining method
+PROBE db: 26 ms | express+supertest: 1458 ms | bcrypt import: 422 ms | accountLinking: 68 ms | routes/auth: 1325 ms | hash cost 10: 1066 ms | hash cost 4: 29 ms
+PASS __tests__/routes/zzProbeAuthLogin.test.js (5.843 s)
+Tests:       7 failed, 1 passed, 8 total
+
+== 2. authLogin next to the route tests with the same imports and cost-4
+hashes, same load ==
+
+$ node audit/evidence/T-210/load-repro.mjs 3 3 __tests__/routes/authLogin.test.js __tests__/routes/providerSignIn.test.js __tests__/routes/passwordReset.test.js __tests__/routes/signInMethods.test.js __tests__/routes/emailChange.test.js
+cores 8, burners 24, files __tests__/routes/authLogin.test.js __tests__/routes/providerSignIn.test.js __tests__/routes/passwordReset.test.js __tests__/routes/signInMethods.test.js __tests__/routes/emailChange.test.js
+--- round 1: exit 1, 70.0 s
+FAIL __tests__/routes/authLogin.test.js (9.494 s)
+● POST /auth/login › signs in a password account
+thrown: "Exceeded timeout of 5000 ms for a hook.
+● POST /auth/login › rejects a wrong password with 401
+● POST /auth/login › answers an OAuth-only account with 401, not 500
+● POST /auth/login › gives the same response for an OAuth-only account as for an unknown address
+● unlinking the email provider › stops password sign-in from working
+● unlinking the email provider › clears the stored credential rather than only the provider row
+● unlinking the email provider › refuses to unlink the last remaining method
+PASS __tests__/routes/passwordReset.test.js (16.657 s)
+PASS __tests__/routes/emailChange.test.js (15.567 s)
+PASS __tests__/routes/signInMethods.test.js (8.646 s)
+PASS __tests__/routes/providerSignIn.test.js (11.862 s)
+Tests:       7 failed, 47 passed, 54 total
+--- round 2: exit 1, 64.3 s
+FAIL __tests__/routes/authLogin.test.js (8.042 s)
+● POST /auth/login › signs in a password account
+thrown: "Exceeded timeout of 5000 ms for a hook.
+● POST /auth/login › rejects a wrong password with 401
+● POST /auth/login › answers an OAuth-only account with 401, not 500
+● POST /auth/login › gives the same response for an OAuth-only account as for an unknown address
+● unlinking the email provider › stops password sign-in from working
+● unlinking the email provider › clears the stored credential rather than only the provider row
+● unlinking the email provider › refuses to unlink the last remaining method
+PASS __tests__/routes/passwordReset.test.js (18.914 s)
+PASS __tests__/routes/emailChange.test.js (15.354 s)
+PASS __tests__/routes/providerSignIn.test.js (9.524 s)
+PASS __tests__/routes/signInMethods.test.js (7.808 s)
+Tests:       7 failed, 47 passed, 54 total
+--- round 3: exit 0, 62.4 s
+PASS __tests__/routes/authLogin.test.js (8.645 s)
+PASS __tests__/routes/passwordReset.test.js (18.914 s)
+PASS __tests__/routes/emailChange.test.js (15.302 s)
+PASS __tests__/routes/providerSignIn.test.js (11.238 s)
+PASS __tests__/routes/signInMethods.test.js (5.81 s)
+Tests:       54 passed, 54 total
+
+authLogin: 4 of 6 loaded runs red, always the beforeAll hook at 5000 ms, the
+same 7 failures as the checks' red run. Its neighbours: 0 of 3 red.

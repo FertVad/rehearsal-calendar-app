@@ -1,0 +1,24 @@
+-- After, e2e (T-301): fix files as on HEAD (9d7bb83 + 23e4342) --
+-- Flow: rehearsal-calendar-native/e2e/flows/07-planner-project-switch.yaml (T-301 version) --
+-- Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/07-planner-project-switch.yaml --
+-- exit code 0; run 2026-10-11 14:30, artifacts e2e/out/artifacts/2026-10-11_143008 --
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/07-planner-project-switch.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Planner follows the project (2m 13s)
+
+1/1 Flow Passed in 2m 13s
+
+-- Flow 06 (DP01 workaround removed), same code: --
+-- npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml → 1/1 Flow Passed in 3m 2s, exit 0 --

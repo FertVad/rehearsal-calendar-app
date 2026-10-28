@@ -1,0 +1,133 @@
+# A morning slot of his own outlives a save of the morning (cause fix 15,
+# review). Boris Trigorin is busy from 23:00 on EVENING_DAY to 01:00 on
+# MORNING_DAY, and from 00:00 to 01:00 on MORNING_DAY too, entered on its own.
+# The editor showed the night's end on the morning and hid his own slot with
+# the same hours behind it; a save of the morning writes back what the editor
+# holds, so adding an hour to the morning deleted 00:00–01:00 without a word.
+# Now the morning holds his slot and the night's end beside it, and both stay.
+# Only he is on his days.
+#
+# The end is set on the picker's wheels as flow 26 sets the form's: a tap on
+# the row below the middle (y 736) turns the hour wheel (x 133) on by one, a
+# tap on the row above (y 673) turns the AM/PM wheel (x 253) back to AM.
+appId: ${APP_ID}
+name: A morning slot of his own outlives a save of the morning
+tags:
+  - availability
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${TRIGORIN_EMAIL}
+# The calendar first. iOS's "Save Password?" sheet can come later than the
+# sign-in waits for it, over the tab bar; it is let go here too.
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+# A tap the simulator loses is taken once more (T-207).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: 5000
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${MORNING_DAY}
+      text: ".*, Partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MORNING_DAY}
+- tapOn:
+    id: day-${MORNING_DAY}
+- extendedWaitUntil:
+    visible: ".*00:00 – 01:00.*"
+    timeout: 10000
+- assertVisible: ".*from the day before.*"
+# An hour more in the morning: Add slot gives 10:00–18:00, its end goes to 11 AM.
+- tapOn: ".*Add slot.*"
+- tapOn:
+    id: "slot-[0-9]-end"
+    text: "18:00.*"
+- extendedWaitUntil:
+    visible: "End time"
+    timeout: 10000
+- repeat:
+    times: 30
+    while:
+      notVisible: "11 o’clock"
+    commands:
+      - tapOn:
+          point: "133,736"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "PM"
+    commands:
+      - tapOn:
+          point: "253,673"
+      - waitForAnimationToEnd
+- assertVisible: "AM"
+- tapOn: "Done"
+- extendedWaitUntil:
+    notVisible: "End time"
+    timeout: 10000
+- assertVisible:
+    id: "slot-[0-9]-end"
+    text: "11:00.*"
+- tapOn:
+    id: availability-save
+- extendedWaitUntil:
+    visible: "Availability saved"
+    timeout: 15000
+- tapOn: "OK"
+# Away and back: the editor loads from the server again.
+- tapOn:
+    id: availability-close
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${MORNING_DAY}
+      text: ".*, Partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MORNING_DAY}
+- tapOn:
+    id: day-${MORNING_DAY}
+# His 00:00–01:00 is still there, the hour he added after it, and the night's
+# end beside them.
+- extendedWaitUntil:
+    visible:
+      id: slot-0-start
+      text: "00:00.*"
+    timeout: 10000
+- assertVisible:
+    id: slot-0-end
+    text: "01:00.*"
+- assertVisible:
+    id: slot-1-start
+    text: "10:00.*"
+- assertVisible:
+    id: slot-1-end
+    text: "11:00.*"
+- assertVisible: ".*from the day before.*"
+- takeScreenshot: 27-morning-slot-kept

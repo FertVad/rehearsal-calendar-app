@@ -1,0 +1,202 @@
+Cause fix 10 (B01, B02, D03) — red before.
+Test: rehearsal-calendar-native/server/__tests__/routes/lifecycleAtomicity.test.js
+Code under test: d72ec20 (routes/native/{members,projects,rehearsals}.js, services/rehearsals/{rehearsalService,slotService}.js unchanged)
+Command (from rehearsal-calendar-native/server):
+  NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/lifecycleAtomicity.test.js --silent
+Stack frames ("    at ...") stripped; nothing else edited.
+
+FAIL __tests__/routes/lifecycleAtomicity.test.js
+  ● Removing a member (B01) › fails whole: they stay a member, on the rehearsal, with its busy slot
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  0
+
+    @@ -7,19 +7,10 @@
+            "project_id": 1,
+            "role": "owner",
+            "status": "active",
+            "user_id": 1,
+          },
+    -     Object {
+    -       "id": 2,
+    -       "invited_at": "2026-10-12 17:55:57",
+    -       "joined_at": "2026-10-12 17:55:57",
+    -       "project_id": 1,
+    -       "role": "member",
+    -       "status": "active",
+    -       "user_id": 2,
+    -     },
+        ],
+        "native_projects": Array [
+          Object {
+            "created_at": "2026-10-12 17:55:57",
+            "description": "A project for testing",
+    @@ -48,19 +39,10 @@
+            "notes": null,
+            "rehearsal_id": 1,
+            "response": "no",
+            "updated_at": "2026-10-12 17:55:58",
+            "user_id": 1,
+    -     },
+    -     Object {
+    -       "created_at": "2026-10-12 17:55:58",
+    -       "id": 2,
+    -       "notes": null,
+    -       "rehearsal_id": 1,
+    -       "response": "no",
+    -       "updated_at": "2026-10-12 17:55:58",
+    -       "user_id": 2,
+          },
+        ],
+        "native_rehearsals": Array [
+          Object {
+            "created_at": "2026-10-12 17:55:58",
+
+    > 134 |     expect(snapshot()).toEqual(before);
+
+  ● Removing a member (B01) › so the retry finds them and finishes the job
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+    > 143 |     expect((await remove()).status).toBe(200);
+
+  ● Creating a project (B02) › fails whole: no project is left without its owner
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  0
+    + Received  + 11
+
+    @@ -29,10 +29,21 @@
+            "invite_expires_at": null,
+            "name": "Test Project",
+            "timezone": "UTC",
+            "updated_at": "2026-10-12 17:55:57",
+          },
+    +     Object {
+    +       "created_at": "2026-10-12 17:55:58",
+    +       "description": null,
+    +       "id": 2,
+    +       "invite_code": null,
+    +       "invite_created_by": null,
+    +       "invite_expires_at": null,
+    +       "name": "Новый проект",
+    +       "timezone": "UTC",
+    +       "updated_at": "2026-10-12 17:55:58",
+    +     },
+        ],
+
+    > 158 |     expect(snapshot()).toEqual(before);
+
+  ● Deleting a project (B02) › fails whole: the busy slots stay with the rehearsals that still stand
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 16
+    + Received  +  1
+
+    -   "native_user_availability": Array [
+    -     Object {
+    -       "created_at": "2026-10-12 17:55:58",
+    -       "ends_at": "2030-03-10T19:00:00.000Z",
+    -       "external_event_id": "3",
+    -       "id": 5,
+    -       "is_all_day": 0,
+    -       "notes": null,
+    -       "source": "rehearsal",
+    -       "starts_at": "2030-03-10T17:00:00.000Z",
+    -       "title": null,
+    -       "type": "busy",
+    -       "updated_at": "2026-10-12 17:55:58",
+    -       "user_id": 1,
+    -     },
+    -   ],
+    +   "native_user_availability": Array [],
+
+    > 197 |     expect(snapshot()).toEqual(before);
+
+  ● Creating a rehearsal (D03) › fails whole: no rehearsal is left without its busy slots
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  2
+    + Received  + 35
+
+    -   "native_rehearsal_responses": Array [],
+    -   "native_rehearsals": Array [],
+    +   "native_rehearsal_responses": Array [
+    +     Object { "id": 7, "rehearsal_id": 5, "response": "no", "user_id": 1, ... },
+    +     Object { "id": 8, "rehearsal_id": 5, "response": "no", "user_id": 2, ... },
+    +   ],
+    +   "native_rehearsals": Array [
+    +     Object { "id": 5, "project_id": 1, "title": "Прогон",
+    +       "starts_at": "2030-03-10T17:00:00.000Z", "ends_at": "2030-03-10T19:00:00.000Z", ... },
+    +   ],
+        "native_user_availability": Array [],
+
+    > 217 |     expect(snapshot()).toEqual(before);
+
+  ● Creating a rehearsal (D03) › so a second try makes one rehearsal, not two
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 2
+
+    > 226 |     expect(count('native_rehearsals')).toBe(1);
+
+  ● Editing a rehearsal (D03) › fails whole: the old time, the old cast, their slots and claims all stay
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 22
+    + Received  +  5
+
+    -   "native_push_reminders": Array [
+    -     Object { "id": 3, "rehearsal_id": 8, "reminder_type": "24h", "user_id": 2, ... },
+    -   ],
+    +   "native_push_reminders": Array [],
+        "native_rehearsal_responses": Array [
+          Object { "id": 13, "rehearsal_id": 8, "user_id": 1, ... },
+    -     Object { "id": 14, "rehearsal_id": 8, "user_id": 2, ... },
+        ],
+        "native_rehearsals": Array [
+    -       "ends_at": "2030-03-10T19:00:00.000Z",
+    +       "ends_at": "2030-03-12T19:00:00.000Z",
+    -       "location": "Малая сцена",
+    +       "location": null,
+    -       "starts_at": "2030-03-10T17:00:00.000Z",
+    -       "title": "Прогон",
+    +       "starts_at": "2030-03-12T17:00:00.000Z",
+    +       "title": "Перенесён",
+        ],
+
+    > 244 |     expect(snapshot()).toEqual(before);
+
+  ● Deleting a rehearsal (D03) › fails whole: the cast and the busy slots stay with the rehearsal
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 50
+    + Received  +  2
+
+    -   "native_rehearsal_responses": Array [ (rows 19, 20 for rehearsal 10, users 1 and 2) ],
+    +   "native_rehearsal_responses": Array [],
+        "native_rehearsals": Array [ rehearsal 10 "Прогон" still present ],
+    -   "native_user_availability": Array [ (busy rows 14, 15, external_event_id "10", users 1 and 2) ],
+    +   "native_user_availability": Array [],
+
+    > 268 |     expect(snapshot()).toEqual(before);
+
+Test Suites: 1 failed, 1 total
+Tests:       8 failed, 4 passed, 12 total
+Snapshots:   0 total
+Time:        1.472 s, estimated 3 s
+
+Note: the long object diffs above are shortened with "..." for the unchanged
+timestamp/null columns; the assertion lines, counts and verdicts are verbatim.

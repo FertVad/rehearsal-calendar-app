@@ -1,0 +1,27 @@
+Cause fix 10, review round 1, item 2 — red before: e2e flow 13-create-project-lost-answer
+Flow: rehearsal-calendar-native/e2e/flows/13-create-project-lost-answer.yaml; seed hook in e2e/seed.mjs
+(the first insert of a project named Dunsinane sleeps 13 s; the app's request timeout is 10 s).
+Command (from rehearsal-calendar-native): npm run e2e -- e2e/flows/13-create-project-lost-answer.yaml
+
+=== Red: the client's create path restored from 9ed5d83 (before 7cde64f: no Idempotency-Key sent) ===
+git restore --source=9ed5d83 -- src/contexts/ProjectContext.tsx src/features/projects/screens/CreateProjectScreen.tsx src/shared/services/api.ts src/features/calendar/hooks/useAddRehearsalSubmit.ts
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] A create tapped again after its answer was lost makes one project (2m 30s) (Assertion is false: id: project-card, Index: 1 is not visible)
+
+1/1 Flow Failed
+
+The failing screenshot (e2e/out, not committed) shows "My Projects" with two Dunsinane cards.
+
+=== Green: git restore --source=HEAD, same command ===
+[Passed] A create tapped again after its answer was lost makes one project (3m 14s)
+1/1 Flow Passed in 3m 14s

@@ -13,6 +13,7 @@ import { emailTransport } from '../services/email/transport.js';
 import { issueCode, deliverCode } from '../services/email/codes.js';
 import { identityOf, isVerified, markPending } from '../services/email/identity.js';
 import { notifyProjectDeleted } from '../services/notifications/pushNotificationService.js';
+import { lockProject } from '../services/rehearsals/projectLock.js';
 
 const router = Router();
 
@@ -454,6 +455,11 @@ router.delete('/me', requireAuth, asyncHandler(async (req, res) => {
 
       // Delete orphaned projects (CASCADE will handle rehearsals, members, etc.)
       for (const project of orphaned) {
+        // Before anything is read or cleared, as every project deletion does:
+        // a rehearsal being created now commits first, and its slots are
+        // among those cleared below (projectLock.js).
+        if (!(await lockProject(tx, project.id, 'delete'))) continue;
+
         // Who is losing this project. Read before the delete takes the rows,
         // and kept for the notification that goes out after the commit — these
         // people are about to find a project missing with nothing to explain it.

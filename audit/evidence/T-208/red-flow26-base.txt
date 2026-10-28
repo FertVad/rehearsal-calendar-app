@@ -1,0 +1,25 @@
+$ git restore --source=d780a18 -- src/features/calendar/screens/AddRehearsalScreen.tsx src/features/profile/screens/ProfileScreen.tsx src/features/projects/screens/CreateProjectScreen.tsx src/features/projects/screens/ProjectDetailScreen.tsx src/shared/components/BetaBanner.tsx src/shared/components/CreateActionSheet.tsx src/shared/components/DateRangePicker.tsx src/shared/components/PickerModal.tsx
+$ npm run e2e -- e2e/flows/26-past-midnight-form.yaml   # 2026-10-26 ~03:58 IST, flow 26 as in f9abfc5
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/26-past-midnight-form.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] A rehearsal made from 23:00 to 01:00 ends the next morning (2m 13s) (Assertion is false: "Select End Time" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+$ git restore --source=HEAD -- <the same files>
+
+Before the flow change, on the original flow and code, the probes in probes/ failed the
+same way at 01:59, 02:07, 02:15 and 02:22 (see README).

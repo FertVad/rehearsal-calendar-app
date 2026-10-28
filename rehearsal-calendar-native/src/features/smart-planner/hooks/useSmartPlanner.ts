@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNow } from '../../../shared/hooks/useClock';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useNow, useTimezone } from '../../../shared/hooks/useClock';
 import { useI18n } from '../../../contexts/I18nContext';
 import { projectsAPI } from '../../../shared/services/api';
 import type { Project, ProjectMember } from '../../../shared/types';
@@ -31,9 +30,9 @@ export function useSmartPlanner({
   selectedCategories,
   selectedMemberIds,
 }: UseSmartPlannerProps) {
-  const { user } = useAuth();
   const { t } = useI18n();
-  const userTimezone = user?.timezone;
+  // The server answers in the profile's zone; a new zone is a new answer.
+  const userTimezone = useTimezone();
   const rangeDays = calendarRangeDays(startDate, endDate);
   const rangeError = rangeDays === null
     ? t.common.invalidDateRange
@@ -46,6 +45,7 @@ export function useSmartPlanner({
   const [error, setError] = useState<string | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [membersProjectId, setMembersProjectId] = useState<string | null>(null);
   const [memberAvailability, setMemberAvailability] = useState<MemberAvailability[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loadedRangeKey, setLoadedRangeKey] = useState<string | null>(null);
@@ -58,9 +58,16 @@ export function useSmartPlanner({
   // this the roster of the old project stays on screen for the length of the
   // request, and anything derived from it — the member filter, the slot
   // recommendations — describes the wrong project.
+  //
+  // membersProjectId is reset here too: anything that reads simpleMembers and
+  // needs to know which project those members belong to (e.g. the seeding
+  // effect in SmartPlannerScreen) must wait until membersProjectId equals the
+  // current projectId before acting — that is the only moment when the members
+  // state is confirmed to be for the right project.
   useEffect(() => {
     setProject(null);
     setMembers([]);
+    setMembersProjectId(null);
     setMemberAvailability([]);
   }, [projectId]);
 
@@ -109,6 +116,7 @@ export function useSmartPlanner({
 
         setProject(projectRes.data.project);
         setMembers(membersRes.data.members);
+        setMembersProjectId(projectId);
         setMemberAvailability(availabilityRes.data.availability);
         setLoadedRangeKey(rangeKey);
       } catch (err: any) {
@@ -238,6 +246,7 @@ export function useSmartPlanner({
     project,
     members,
     simpleMembers,
+    membersProjectId,
     membersWithoutData,
     allSlots,
     filteredSlots,

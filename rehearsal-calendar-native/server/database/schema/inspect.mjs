@@ -11,6 +11,7 @@ const budgetGroups = {
   '009': ['native_operation_ip_rate_limits', 'native_operation_ip_rate_limit_gates'],
   '010': ['native_email_identities', 'native_email_codes'],
   '011': ['native_push_tickets'],
+  '012': ['native_idempotency_keys'],
 };
 export const schemaTableNames = Object.freeze(descriptor.tables?.map(table => table.name) || []);
 const retiredTables = new Set(['native_subscription_plans', 'native_user_subscriptions',
@@ -128,6 +129,18 @@ export async function readCatalog(query, { schema }) {
 function isImportedKey(index) {
   return index.unique && !index.primary && index.keys.join('|') === 'user_id|external_event_id|source';
 }
+// Group 013 (R4: G01) is a key, not a table: native_push_tokens unique on the
+// token alone. Without it the table has its predecessor's shape — unique on
+// (user_id, device_token) with a plain index on the token — and nothing else.
+function isPushOwnerKey(index) {
+  return index.unique && !index.primary && index.keys.join('|') === 'device_token';
+}
+function pushTokenPredecessorIndexes(expected) {
+  const key = expected.indexes.find(isPushOwnerKey);
+  return [...expected.indexes.filter(index => !isPushOwnerKey(index)), { ...key, unique: false },
+    { ...key, keys: ['user_id', 'device_token'], options: [0, ...key.options],
+      operatorClasses: ['pg_catalog.int4_ops', ...key.operatorClasses], collations: [null, ...key.collations] }];
+}
 function equivalentIndex(actual, expected) {
   if (signature(actual) === signature(expected)) return true;
   // A valid unique index on exactly the same keys also serves a redundant
@@ -158,6 +171,13 @@ export function createSchemaInspector(expectedDescriptor) {
     }
     checkedNames.push(...expectedDescriptor.tables.map(table => table.name)
       .filter(name => !Object.values(budgetGroups).flat().includes(name)));
+    const pushOwnerKey = expectedByName.get('native_push_tokens').indexes.find(isPushOwnerKey);
+    const hasPushOwnerKey = byName.get('native_push_tokens')?.indexes
+      .some(index => equivalentIndex(index, pushOwnerKey)) === true;
+    if (hasPushOwnerKey) presentGroups.push('013');
+    else if (profile === 'rehearsly-pg-current-v1') add('BUDGET_GROUP_MISSING', '013');
+    const expectedIndexes = (name, expected) => name === 'native_push_tokens' && !hasPushOwnerKey
+      ? pushTokenPredecessorIndexes(expected) : expected.indexes;
     const availability = byName.get('native_user_availability');
     const importedKey = expectedByName.get('native_user_availability').indexes.find(isImportedKey);
     const hasImportedKey = availability?.indexes.some(index => equivalentIndex(index, importedKey)) === true;
@@ -220,16 +240,17 @@ export function createSchemaInspector(expectedDescriptor) {
       for (const constraint of table.constraints) {
         if (!expected.constraints.some(value => signature(value) === signature(constraint))) add('UNKNOWN_RESTRICTIVE_OBJECT', `${name}.constraint.${digest(constraint).slice(0,12)}`);
       }
-      for (const index of expected.indexes) {
+      const indexes = expectedIndexes(name, expected);
+      for (const index of indexes) {
         if (preImported && name === 'native_user_availability' && isImportedKey(index)) continue;
         if (!table.indexes.some(value => equivalentIndex(value, index))) add(isImportedKey(index) && name === 'native_user_availability'
           ? 'CONFLICT_TARGET_MISSING' : 'REQUIRED_INDEX_MISSING', `${name}.index.${digest(index).slice(0,12)}`);
       }
       for (const index of table.indexes) {
         if (!index.valid || !index.ready) add('INDEX_NOT_USABLE', `${name}.index.${digest(index).slice(0,12)}`);
-        if (index.unique && !expected.indexes.some(value => value.unique && equivalentIndex(index, value))) {
+        if (index.unique && !indexes.some(value => value.unique && equivalentIndex(index, value))) {
           add('UNKNOWN_RESTRICTIVE_OBJECT', `${name}.unique.${digest(index).slice(0,12)}`);
-        } else if (!index.unique && !expected.indexes.some(value => equivalentIndex(index, value))) {
+        } else if (!index.unique && !indexes.some(value => equivalentIndex(index, value))) {
           // An arbitrary expression/predicate/operator class can also change
           // writes. Accept only the named profile's reviewed index semantics.
           add('INDEX_UNEXPECTED', `${name}.index.${digest(index).slice(0,12)}`);

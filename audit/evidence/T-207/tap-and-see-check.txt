@@ -1,0 +1,35 @@
+T-207 - e2e/subflows/tap-and-see.yaml checked on a tap whose first press
+leaves no result, made on purpose (audit/evidence/T-207/check): Olga Stage's
+planner, two of three selected; the first tap on "Select All" selects all
+three, only the second clears the selection to "All Members". That is what a
+lost tap looks like to a flow, but every time.
+
+  cd rehearsal-calendar-native
+  npm run e2e -- ../audit/evidence/T-207/check/1-bare-tap.yaml \
+    ../audit/evidence/T-207/check/2-tap-and-see.yaml ../audit/evidence/T-207/check/3-never-seen.yaml
+
+[e2e] running the flows
+Waiting for flows to complete...
+[Failed] T-207 check 1 - a bare tap whose first press is lost (1m 25s) (Assertion is false: "All Members" is visible)
+[Passed] T-207 check 2 - the same tap through tap-and-see (1m 5s)
+[Failed] T-207 check 3 - a result that never comes (1m 4s) (Assertion is false: "Nothing of the kind" is visible)
+2/3 Flows Failed
+[e2e] taps taken again (tap-and-see.yaml): 2
+[e2e]   2026-10-25T11:00:39.444Z  tapped "id members-toggle-all" again: no "All Members" after the first tap
+[e2e]   2026-10-25T11:01:40.138Z  tapped "id members-toggle-all" again: no "Nothing of the kind" after the first tap
+
+1 (red, as flow 30 tapped "Apple Calendar"): one tap, then a wait - fails.
+2 (green): the same through tap-and-see - one more tap, printed; passes.
+3 (the bound, expected to fail): the result never comes - exactly one more
+  tap, then the flow fails on the result. Check 3's maestro.log, inside the
+  subflow (artifacts 2026-10-25_125720):
+
+13:01:33.979  Tap on id: ${TAP_ID} RUNNING
+13:01:35.363  Assert that (Optional) "${SEE}" is visible RUNNING
+13:01:39.214  Run flow when "${SEE}" is not visible RUNNING
+13:01:40.086  Run ../scripts/tap-again.js RUNNING
+13:01:40.172  Tap on id: ${TAP_ID} RUNNING
+13:01:41.552  Assert that "${SEE}" is visible RUNNING
+13:01:45.453  Assert that "${SEE}" is visible FAILED
+
+Two taps, no third, no pause: the waits are the flow's own (WAIT_MS).

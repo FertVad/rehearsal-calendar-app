@@ -34,11 +34,11 @@ async function fixture(t, { csp = true, payload = false, signedIn = true } = {})
   const state = { empty: false, unauthorized: false, requests: [], statuses: new Map() };
   const stats = payload ? {
     users: { total: html, newThisWeek: svg, newThisMonth: link },
-    churn: { users: { rate: html, inactiveLast30Days: svg } },
+    signIns: { rate: html, notInLast30Days: svg },
     usage: { projects: html, rehearsals: link },
   } : {
     users: { total: 61, newThisWeek: 3, newThisMonth: 5 },
-    churn: { users: { rate: 10, inactiveLast30Days: 6 } },
+    signIns: { rate: 10, notInLast30Days: 6 },
     usage: { projects: 2, rehearsals: 4 },
   };
   const users = payload ? [user] : Array.from({ length: 61 }, (_, i) => ({
@@ -188,6 +188,23 @@ test('production CSP loads admin assets, blocks inline execution and preserves p
   assert.equal(await page.evaluate(() => window.blockedScript), undefined);
   const nonce = value => value.match(/'nonce-([^']+)'/)[1];
   assert.notEqual(nonce(nonceResponse.headers()['content-security-policy']), nonce(policy));
+});
+
+// The figure counts sign-ins: a session renews itself without one, so a user
+// who has not signed in for a month may be using the app every day. Its card
+// says what it counts and what it does not, rather than "churn" (H03).
+test('the sign-in figure is named for sign-ins, not churn or inactivity', { timeout: 30000 }, async t => {
+  const { page, errors } = await fixture(t);
+  await waitForDashboard(page);
+  const figure = page.locator('#stats-cards .card').nth(1);
+  assert.equal(await figure.locator('.card-label').textContent(), 'No sign-in for 30 days');
+  assert.equal(await figure.locator('.card-value').textContent(), '10%');
+  const note = await figure.locator('.card-sub').textContent();
+  assert.match(note, /^Users: 6 /);
+  assert.match(note, /not a measure of use/);
+  const cards = (await page.locator('#stats-cards').textContent()).toLowerCase();
+  assert.doesNotMatch(cards, /churn|inactive/);
+  assert.deepEqual(errors, []);
 });
 
 test('login, pagination, status, refresh, empty states and logout work under production CSP', { timeout: 30000 }, async t => {

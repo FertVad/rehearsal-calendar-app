@@ -1,0 +1,67 @@
+# A create whose answer was lost, tapped again, makes one project (cause fix
+# 10: B02). Macduff creates Dunsinane; the seed makes the server take longer
+# than the app waits, so the app says it failed while the server commits the
+# project anyway. He taps Create again on the same form. The app sends the
+# key of the first try (and of a third, should the second be lost too), and
+# the server answers with the project it made:
+# reopened, the app lists Dunsinane once. Each tap used to make a project of
+# its own, and he found two.
+appId: ${APP_ID}
+name: A create tapped again after its answer was lost makes one project
+tags:
+  - projects
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MACDUFF_EMAIL}
+- tapOn:
+    id: tab-create
+- tapOn: "Create Project"
+- tapOn: "Enter name"
+- inputText: "Dunsinane"
+- tapOn: "Create"
+# The app stops waiting after ten seconds; the server is still at it.
+- extendedWaitUntil:
+    visible: ".*timeout.*"
+    timeout: 30000
+- takeScreenshot: 13-lost-answer
+- tapOn: "OK"
+- tapOn: "Create"
+# The second try waits on the first one's row until it commits
+# (services/idempotency.js). On a loaded machine the first commits late, and
+# the app gives up on the second too: he taps once more, as anyone would. Every
+# try carries the same key, so however many there are, there is one project.
+- extendedWaitUntil:
+    visible: ".*(Lord Macduff, Owner|timeout).*"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: ".*timeout.*"
+    commands:
+      - tapOn: "OK"
+      - tapOn: "Create"
+- extendedWaitUntil:
+    visible: ".*Lord Macduff, Owner.*"
+    timeout: 30000
+# Both requests are done by now, whatever the server made of them. Reopened,
+# the app lists what the server holds.
+- launchApp
+# A tap the simulator loses is taken once more (T-207): the run of 25.10.2026
+# 21:34 lost this one, and the flow waited on the calendar for the cards.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-projects
+      SEE: ".*Dunsinane.*"
+      WAIT_MS: 15000
+# He is in no other project: every card is a Dunsinane, and there is one.
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Dunsinane.*"
+    timeout: 15000
+- assertNotVisible:
+    id: project-card
+    index: 1
+- takeScreenshot: 13-one-project

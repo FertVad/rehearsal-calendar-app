@@ -624,6 +624,11 @@ Create a new project.
 - `description` (string, optional): Project description
 - `timezone` (string, optional): IANA timezone identifier (defaults to "Asia/Jerusalem")
 
+**Headers:**
+- `Idempotency-Key` (optional): 16–100 of `A-Z a-z 0-9 - _`. A repeat of the
+  same request with the same key creates nothing and answers `201` with the
+  project the first one made. See [Idempotent creates](#idempotent-creates).
+
 **Success Response (201):**
 ```json
 {
@@ -644,11 +649,37 @@ Create a new project.
   ```json
   { "error": "Project name is required" }
   ```
+- `400 Bad Request`, `code: "IDEMPOTENCY_KEY_INVALID"`: malformed `Idempotency-Key`
 - `401 Unauthorized`: Invalid or missing token
+- `422 Unprocessable Entity`, `code: "IDEMPOTENCY_KEY_REUSED"`: the key was already used for a different request; nothing is written
 
 **Notes:**
 - The user who creates the project automatically becomes the owner with admin privileges
-- A project member record is automatically created with role "owner"
+- The project and its owner's member record are written in one transaction: a project is never left without its owner
+
+##### Idempotent creates
+
+A create whose answer is lost — a timeout, a dropped connection — gets sent
+again. With an `Idempotency-Key` (project and rehearsal creation), the server
+records the key in the transaction that creates, together with the answer:
+- the same key and the same request again — `201` with the first answer,
+  nothing created, nobody notified again;
+- two requests with one key at once — the second waits for the first and
+  answers with its result (or creates, if the first failed);
+- the same key with a different request — `422 IDEMPOTENCY_KEY_REUSED`;
+- keys belong to the user and are kept for a day. Without a key every request
+  creates, as before.
+
+The app keeps one key per form while the request stays the same
+(`src/shared/hooks/useIdempotencyKey.ts`). The server side is
+`server/services/idempotency.js`, table `native_idempotency_keys` (migration 012).
+
+Creating, editing and deleting a rehearsal, removing a member and deleting a
+project each lock the project row first (`server/services/rehearsals/projectLock.js`):
+rehearsal writers share it, a removal or a project deletion takes it alone and
+waits for the writers in flight. A member removed while a rehearsal with them
+was being created is taken off it; a project deleted meanwhile takes that
+rehearsal's busy slots with it.
 
 ---
 
@@ -783,6 +814,10 @@ Create a new rehearsal for a project.
   member of the project, or the whole request is refused before anything is
   written (at most 500).
 
+**Headers:**
+- `Idempotency-Key` (optional): see [Idempotent creates](#idempotent-creates);
+  a repeat answers `201` with the rehearsal the first request made.
+
 **Success Response (201):**
 ```json
 {
@@ -813,13 +848,17 @@ Create a new rehearsal for a project.
   ```json
   { "error": "Participants must be active members of the project", "code": "NOT_PROJECT_MEMBERS", "userIds": [42] }
   ```
+- `400 Bad Request`, `code: "IDEMPOTENCY_KEY_INVALID"`: malformed `Idempotency-Key`
 - `403 Forbidden`: User is not an admin/owner
   ```json
   { "error": "Only admins can create rehearsals" }
   ```
+- `404 Not Found`, `code: "PROJECT_NOT_FOUND"`: the project was deleted while the request waited for it; nothing is written
+- `422 Unprocessable Entity`, `code: "IDEMPOTENCY_KEY_REUSED"`: the key was already used for a different request; nothing is written
 
 **Notes:**
 - Everyone on `participant_ids` is invited and has not seen it yet (`response: "no"`); each of them gets a busy availability slot for its time
+- The rehearsal, its roster and the busy slots are written in one transaction; so are an update (time, roster, slots, released reminder claims) and a delete
 - Who is on a rehearsal is decided in one place, `server/services/rehearsals/roster.js`
 - The old format (date/startTime/endTime) converts times to the project's timezone
 - Only users with "owner" or "admin" role can create rehearsals
@@ -887,7 +926,8 @@ that list — those who stay keep their answers, newcomers are added as `"no"`.
   ```
 
 **Notes:**
-- When a rehearsal time is updated, all associated availability slots are automatically updated
+- When a rehearsal time is updated, all associated availability slots are automatically updated, in the same transaction as the update itself
+- `404` also when the rehearsal is deleted while the update is on its way
 - Only affects availability slots that were created from this rehearsal
 
 ---

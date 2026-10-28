@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-  Modal,
   FlatList,
   KeyboardAvoidingView,
   Keyboard,
@@ -25,6 +24,7 @@ import { getDateLocale } from '../../../shared/utils/locale';
 import { ActorSelector } from '../components/ActorSelector';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
+import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
 import { useParticipantSeed } from '../hooks/useParticipantSeed';
 import { addRehearsalScreenStyles as styles } from '../styles';
@@ -56,13 +56,15 @@ export default function AddRehearsalScreen() {
   // Data loading hooks
   const membersLoad = useRehearsalMembers(form.localSelectedProject);
   const { members, loading: loadingMembers } = membersLoad;
-  const { memberAvailability, loading: loadingAvailability } = useRehearsalAvailability(
+  const availabilityLoad = useRehearsalAvailability(
     form.localSelectedProject,
     form.date,
     form.selectedMemberIds,
     t,
-    form.isEditMode ? form.rehearsalId : undefined
+    form.isEditMode ? form.rehearsalId : undefined,
+    form.endsNextDay
   );
+  const { memberAvailability, loading: loadingAvailability } = availabilityLoad;
 
   // Submit logic hook
   const { loading, handleSubmit } = useAddRehearsalSubmit({
@@ -78,6 +80,9 @@ export default function AddRehearsalScreen() {
     reloadMembers: membersLoad.reload,
     members,
     memberAvailability,
+    availabilityReady: availabilityLoad.ready,
+    availabilityFailed: availabilityLoad.failed,
+    reloadAvailability: availabilityLoad.reload,
     resetForm: form.resetForm,
     t,
     isEditMode: form.isEditMode,
@@ -236,6 +241,7 @@ export default function AddRehearsalScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.rehearsals.startTime}</Text>
             <TouchableOpacity
+              testID="rehearsal-start-time"
               style={styles.pickerButton}
               onPress={form.openStartTimePicker}
             >
@@ -248,11 +254,18 @@ export default function AddRehearsalScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.rehearsals.endTime}</Text>
             <TouchableOpacity
+              testID="rehearsal-end-time"
               style={styles.pickerButton}
               onPress={form.openEndTimePicker}
             >
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.pickerButtonText}>{formatDateToTimeString(form.endTime)}</Text>
+              {/* An end before the start is the next morning, and says so. */}
+              {form.endsNextDay && (
+                <Text style={styles.nextDayText} testID="rehearsal-ends-next-day">
+                  {t.rehearsals.endsNextDay}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -337,9 +350,8 @@ export default function AddRehearsalScreen() {
       />
 
       {/* Project Picker Modal */}
-      <Modal
+      <AppModal
         visible={form.showProjectPicker}
-        transparent
         animationType="slide"
         onRequestClose={() => form.setShowProjectPicker(false)}
       >
@@ -408,7 +420,7 @@ export default function AddRehearsalScreen() {
             </TouchableOpacity>
           </View>
         </ModalSheet>
-      </Modal>
+      </AppModal>
     </SafeAreaView>
   );
 }

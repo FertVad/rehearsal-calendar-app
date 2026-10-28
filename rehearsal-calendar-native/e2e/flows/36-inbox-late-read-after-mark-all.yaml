@@ -1,0 +1,44 @@
+# A read that fails late does not undo a later one that landed (cause fix 21,
+# review). Tuzenbach opens a notification on a slow connection — its "read"
+# does not get through — and then marks all read on a good one, which does.
+# When the first gave up, the old screen put that card back unread, and the
+# "Mark all read" button with it, though the server had everything read.
+appId: ${APP_ID}
+name: Inbox late read after mark all
+tags:
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${TUZENBACH_EMAIL}
+- tapOn: "Notifications"
+- extendedWaitUntil:
+    visible: ".*Name-day toast.*"
+    timeout: 15000
+# The next "read" only, past the app's ten seconds: it does not come back.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: POST
+      PATH: "^/api/native/notifications/read$"
+      BEFORE: "1"
+      MS: "30000"
+      ONCE: "1"
+- tapOn: ".*Brickworks shift.*"
+- tapOn: "Mark all read"
+- extendedWaitUntil:
+    notVisible: "Mark all read"
+    timeout: 10000
+# The first "read" gives up at ten seconds. The button would be back by then.
+- extendedWaitUntil:
+    visible: "Mark all read"
+    timeout: 20000
+    optional: true
+- assertNotVisible: "Mark all read"
+- takeScreenshot: 36-still-read
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}

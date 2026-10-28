@@ -1,0 +1,31 @@
+# Cause fix 11 (G01), migration 013 as a migrator step — red before, real PostgreSQL 15.13
+# Source: 5cbe4dd with database/migrations/artifacts.mjs, database/schema/inspect.mjs and
+# database/schema/manifest.mjs restored from 7a0bca2 (013 a standalone file, no group 013);
+# __tests__/postgres/r2Schema.mjs as in 5cbe4dd.
+# Command: npm --prefix rehearsal-calendar-native/server run test:r0-postgres -- --r2-schema-only
+# Stack frames removed. The previous inspector does not know group 013: a schema from before 013
+# is not "domain13 without 013" but an unknown shape, so it can be neither reported as missing a
+# group nor adopted and brought forward by --apply.
+
+{"scenario":"controls","outcome":"PASS",...}
+{"check":"actual fresh catalog","outcome":"PASS"}
+{"check":"missing conflict target","outcome":"PASS"}
+{"check":"same-name wrong key","outcome":"PASS"}
+{"check":"reserved nonunique name refuses repair preflight","outcome":"PASS"}
+{"check":"reserved name on wrong table refuses repair preflight","outcome":"PASS"}
+{"check":"reserved relation name refuses repair preflight","outcome":"PASS"}
+{"check":"partial conflict target","outcome":"PASS"}
+{"check":"deferrable conflict target","outcome":"PASS"}
+{"check":"NULLS NOT DISTINCT is not the manual-row contract","outcome":"PASS"}
+{"check":"old reminder unique still restrictive","outcome":"PASS"}
+AssertionError [ERR_ASSERTION]: push token without its one-owner key is missing group 013: [{"code":"INDEX_UNEXPECTED","objectId":"native_push_tokens.index.c17bc03e1886"},{"code":"REQUIRED_INDEX_MISSING","objectId":"native_push_tokens.index.de918d60d…
+  actual: false,
+  expected: true,
+AssertionError [ERR_ASSERTION]: R2_SCHEMA probe failed unexpectedly
+  actual: 1,
+  expected: 0,
+
+# After (5cbe4dd as committed): --r2-migrations-schema-only — R2_SCHEMA PASS (40 checks, catalogTables 23),
+# R2_MIGRATIONS PASS. The modern adoption fixture (predecessor push token shape, a token held twice)
+# adopts as domain13-pre-import-key, --apply runs every manifest step including 013-push-token-owner,
+# keeps the later holder, and the result has the fresh catalog's evidence hash.

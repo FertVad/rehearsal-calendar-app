@@ -1,0 +1,33 @@
+# T-207 check, setup: Olga Stage's planner on Three Sisters with two of its
+# three selected. From there the first tap on "Select All" selects all three
+# and only the second clears the selection ("All Members"): a tap whose
+# first press leaves no trace of the result waited for - what a tap the
+# simulator lost looks like to a flow, made on purpose.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/sign-in.yaml
+    env:
+      EMAIL: ${STAGE_EMAIL}
+- tapOn: "Planner, tab.*"
+- tapOn:
+    id: planner-project
+- tapOn: "Three Sisters"
+- extendedWaitUntil:
+    visible: "\\d+ of 3 selected"
+    timeout: 15000
+- repeat:
+    while:
+      notVisible: "3 of 3 selected"
+    times: 2
+    commands:
+      - tapOn:
+          id: members-toggle-all
+- assertVisible: "3 of 3 selected"
+- tapOn: ".*Expand.*"
+# The row reads ", Masha Prozorova" (its checkbox first); the line naming
+# who has no availability does not end with her name.
+- tapOn: ".*Masha Prozorova"
+- extendedWaitUntil:
+    visible: "2 of 3 selected"
+    timeout: 5000

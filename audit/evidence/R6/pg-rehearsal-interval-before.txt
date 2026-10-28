@@ -1,0 +1,42 @@
+Cause fix 15, review round 1, finding 3 — red before on disposable PostgreSQL.
+Probe: server/__tests__/postgres/r6Availability.mjs with the new rehearsal-interval contracts.
+Server files at the base a7338eb:
+  git restore --source=a7338eb -- services/rehearsals/rehearsalService.js utils/timezone.js routes/native/rehearsals.js
+Command: cd rehearsal-calendar-native/server && node scripts/r0-postgres.mjs --r6-only
+Afterwards: git restore --source=HEAD -- <the same files>
+(stack frames "at ..." left out)
+
+{"harness":"R0","node":"v22.16.0","postgres":"PostgreSQL 15.13 (Debian 15.13-1.pgdg120+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit","image":"sha256:b8e11f8a8b383e19589a086a78b10f9ca69a39d6c9dcdd9342a8697544e8b3a0","host":"127.0.0.1:56762","database":"r0_test","schema":"diagnostic subset plus separately provisioned canonical fresh/upgrade fixtures"}
+{"scenario":"controls","outcome":"PASS","controls":["health","project+owner","member403/no write","valid roster+busy+inbox","adapter rollback and commit checked on independent connection","admin CSP/assets"],"externalConnections":0}
+Error creating rehearsal: error: new row for relation "native_rehearsals" violates check constraint "native_rehearsals_check"
+  length: 415,
+  severity: 'ERROR',
+  code: '23514',
+  detail: 'Failing row contains (1, 1, Night run, null, 2030-07-02 21:00:00+00, 2030-07-01 23:00:00+00, null, 1, 2026-10-24 12:31:33.049156+00, 2026-10-24 12:31:33.049156+00, null, null, scheduled, null, null, f).',
+  schema: 'r0_fixture',
+  table: 'native_rehearsals',
+  constraint: 'native_rehearsals_check',
+  routine: 'ExecConstraints'
+}
+AssertionError [ERR_ASSERTION]: {"error":"Failed to create rehearsal"}
+
+500 !== 201
+
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 500,
+  expected: 201,
+  operator: 'strictEqual'
+}
+R0 cleanup: owned disposable container removed
+AssertionError [ERR_ASSERTION]: R6_AVAILABILITY probe failed unexpectedly
+1 !== 0
+
+The base stores 2 July 23:00 -> 01:00 (Berlin) as ending 1 July 23:00 UTC,
+before its start; PostgreSQL's CHECK refuses it and the request is a 500.
+The probe stops at this first contract; the refusal contracts after it would
+meet the same CHECK as a 500 instead of a 400 TIME_RANGE_INVALID.
+
+After (HEAD with the probe):
+{"scenario":"R6_AVAILABILITY","outcome":"PASS","contracts":[...,"the older date format's 23:00–01:00 is stored and booked into the next morning in the project's zone (DF04)","a rehearsal ending at or before its start is a 400 TIME_RANGE_INVALID and writes nothing","an edit to an end before the start is a 400 TIME_RANGE_INVALID and keeps the rehearsal and its slots"],"externalConnections":0}
+R6_AVAILABILITY REGRESSION PASS: controls and repaired contracts passed on real PostgreSQL.

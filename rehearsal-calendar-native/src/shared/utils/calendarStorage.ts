@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EventMapping, CalendarSyncSettings } from '../types/calendar';
 
+import { logger } from './logger';
 // Storage keys
 const KEYS = {
   EXPORT_MAPPINGS: 'calendar-export-mappings',
@@ -16,6 +17,9 @@ const KEYS = {
   // the last sync reported.
   IMPORT_COUNT: 'calendar-import-count',
   SYNC_SETTINGS: 'calendar-sync-settings',
+  // Exported events already decided to be taken back, whose removal has not
+  // gone through yet: the old copy of a move to another calendar (EX02).
+  EXPORT_LEFTOVERS: 'calendar-export-leftovers',
 };
 
 
@@ -35,7 +39,7 @@ const KEYS = {
  */
 const writeQueues = new Map<string, Promise<unknown>>();
 
-async function updateStored<T>(key: string, change: (current: T) => T, empty: T): Promise<void> {
+async function updateStored<T>(key: string, change: (current: T) => T, empty: T): Promise<T> {
   const previous = writeQueues.get(key) ?? Promise.resolve();
 
   const run = previous
@@ -45,13 +49,15 @@ async function updateStored<T>(key: string, change: (current: T) => T, empty: T)
     .then(async () => {
       const json = await AsyncStorage.getItem(key);
       const current: T = json ? JSON.parse(json) : empty;
-      await AsyncStorage.setItem(key, JSON.stringify(change(current)));
+      const next = change(current);
+      await AsyncStorage.setItem(key, JSON.stringify(next));
+      return next;
     });
 
   writeQueues.set(key, run);
 
   try {
-    await run;
+    return await run;
   } finally {
     if (writeQueues.get(key) === run) writeQueues.delete(key);
   }
@@ -86,7 +92,7 @@ export async function saveEventMapping(
       {}
     );
   } catch (error) {
-    console.error('[CalendarStorage] Failed to save event mapping:', error);
+    logger.error('[CalendarStorage] Failed to save event mapping:', error);
     throw error;
   }
 }
@@ -104,7 +110,7 @@ export async function getEventMapping(
     const mappings = JSON.parse(mappingsJson);
     return mappings[rehearsalId] || null;
   } catch (error) {
-    console.error('[CalendarStorage] Failed to get event mapping:', error);
+    logger.error('[CalendarStorage] Failed to get event mapping:', error);
     return null;
   }
 }
@@ -120,7 +126,7 @@ export async function removeEventMapping(rehearsalId: string): Promise<void> {
       {}
     );
   } catch (error) {
-    console.error('[CalendarStorage] Failed to remove event mapping:', error);
+    logger.error('[CalendarStorage] Failed to remove event mapping:', error);
     throw error;
   }
 }
@@ -133,7 +139,7 @@ export async function getAllMappings(): Promise<Record<string, EventMapping>> {
     const mappingsJson = await AsyncStorage.getItem(KEYS.EXPORT_MAPPINGS);
     return mappingsJson ? JSON.parse(mappingsJson) : {};
   } catch (error) {
-    console.error('[CalendarStorage] Failed to get all mappings:', error);
+    logger.error('[CalendarStorage] Failed to get all mappings:', error);
     return {};
   }
 }
@@ -145,9 +151,46 @@ export async function clearAllMappings(): Promise<void> {
   try {
     await AsyncStorage.removeItem(KEYS.EXPORT_MAPPINGS);
   } catch (error) {
-    console.error('[CalendarStorage] Failed to clear mappings:', error);
+    logger.error('[CalendarStorage] Failed to clear mappings:', error);
     throw error;
   }
+}
+
+/**
+ * ============================================================================
+ * Leftover exported events (calendar eventId → rehearsalId)
+ * ============================================================================
+ *
+ * A move to another calendar holds two copies of one rehearsal's event until
+ * the old one is removed, and the mapping can name only one. The old copy is
+ * written here before the mapping moves to the new one, and leaves only once
+ * the calendar has confirmed it gone. Every export pass and "remove all" take
+ * these back, so neither copy is ever left with nothing pointing at it.
+ *
+ * The device's, not the account's: an event this app put in this phone's
+ * calendar and has already decided to remove.
+ */
+
+export async function addLeftoverEvent(eventId: string, rehearsalId: string): Promise<void> {
+  await updateStored<Record<string, { rehearsalId: string }>>(
+    KEYS.EXPORT_LEFTOVERS,
+    (leftovers) => ({ ...leftovers, [eventId]: { rehearsalId: String(rehearsalId) } }),
+    {}
+  );
+}
+
+export async function removeLeftoverEvent(eventId: string): Promise<void> {
+  await updateStored<Record<string, { rehearsalId: string }>>(
+    KEYS.EXPORT_LEFTOVERS,
+    ({ [eventId]: _removed, ...rest }) => rest,
+    {}
+  );
+}
+
+/** Throws when the list cannot be read: that is not the same as none. */
+export async function getLeftoverEvents(): Promise<Record<string, { rehearsalId: string }>> {
+  const stored = await AsyncStorage.getItem(KEYS.EXPORT_LEFTOVERS);
+  return stored ? JSON.parse(stored) : {};
 }
 
 /**
@@ -156,65 +199,55 @@ export async function clearAllMappings(): Promise<void> {
  * ============================================================================
  */
 
+/** Stored settings with every field present (older ones lack the import half). */
+function completeSettings(settings: Partial<CalendarSyncSettings> = {}): CalendarSyncSettings {
+  return {
+    exportEnabled: settings.exportEnabled || false,
+    exportCalendarId: settings.exportCalendarId || null,
+    lastExportTime: settings.lastExportTime || null,
+    importEnabled: settings.importEnabled || false,
+    importCalendarIds: settings.importCalendarIds || [],
+    importInterval: settings.importInterval || 'manual',
+    lastImportTime: settings.lastImportTime || null,
+  };
+}
+
 /**
  * Get sync settings
  */
 export async function getSyncSettings(): Promise<CalendarSyncSettings> {
   try {
     const settingsJson = await AsyncStorage.getItem(KEYS.SYNC_SETTINGS);
-    if (!settingsJson) {
-      // Default settings
-      return {
-        // Export settings
-        exportEnabled: false,
-        exportCalendarId: null,
-        lastExportTime: null,
-        // Import settings
-        importEnabled: false,
-        importCalendarIds: [],
-        importInterval: 'manual',
-        lastImportTime: null,
-      };
-    }
-
-    const settings = JSON.parse(settingsJson);
-    // Ensure import settings exist (for backward compatibility)
-    return {
-      exportEnabled: settings.exportEnabled || false,
-      exportCalendarId: settings.exportCalendarId || null,
-      lastExportTime: settings.lastExportTime || null,
-      importEnabled: settings.importEnabled || false,
-      importCalendarIds: settings.importCalendarIds || [],
-      importInterval: settings.importInterval || 'manual',
-      lastImportTime: settings.lastImportTime || null,
-    };
+    return completeSettings(settingsJson ? JSON.parse(settingsJson) : {});
   } catch (error) {
-    console.error('[CalendarStorage] Failed to get sync settings:', error);
+    logger.error('[CalendarStorage] Failed to get sync settings:', error);
     // Return default settings on error
-    return {
-      // Export settings
-      exportEnabled: false,
-      exportCalendarId: null,
-      lastExportTime: null,
-      // Import settings
-      importEnabled: false,
-      importCalendarIds: [],
-      importInterval: 'manual',
-      lastImportTime: null,
-    };
+    return completeSettings();
   }
 }
 
 /**
- * Save sync settings
+ * Change the fields named, and only those; returns the settings as saved.
+ *
+ * The one way settings are written (cause fix 18). They used to be saved
+ * whole, from whatever copy the caller held — a screen's state from its last
+ * render — so a change of calendar wrote back the "last import" that copy had,
+ * over the one the sync had just stamped, and a sync holding an old copy could
+ * put back a setting switched off since (EO04). A patch on the stored value,
+ * queued with the sync's own stamps, leaves alone what it does not name.
+ * Throws when it cannot be saved: the caller must not show it as saved.
  */
-export async function saveSyncSettings(
-  settings: CalendarSyncSettings
-): Promise<void> {
+export async function updateSyncSettings(
+  patch: Partial<CalendarSyncSettings>
+): Promise<CalendarSyncSettings> {
   try {
-    await AsyncStorage.setItem(KEYS.SYNC_SETTINGS, JSON.stringify(settings));
+    return completeSettings(await updateStored<Partial<CalendarSyncSettings>>(
+      KEYS.SYNC_SETTINGS,
+      (settings) => ({ ...completeSettings(settings), ...patch }),
+      {}
+    ));
   } catch (error) {
-    console.error('[CalendarStorage] Failed to save sync settings:', error);
+    logger.error('[CalendarStorage] Failed to save sync settings:', error);
     throw error;
   }
 }
@@ -224,11 +257,15 @@ export async function saveSyncSettings(
  */
 export async function updateLastExportTime(): Promise<void> {
   try {
-    const settings = await getSyncSettings();
-    settings.lastExportTime = new Date().toISOString();
-    await saveSyncSettings(settings);
+    // Through the queue, like the import's stamp below: the two land in the
+    // same object in the same run.
+    await updateStored<CalendarSyncSettings>(
+      KEYS.SYNC_SETTINGS,
+      (settings) => ({ ...settings, lastExportTime: new Date().toISOString() }),
+      {} as CalendarSyncSettings
+    );
   } catch (error) {
-    console.error('[CalendarStorage] Failed to update last export time:', error);
+    logger.error('[CalendarStorage] Failed to update last export time:', error);
     throw error;
   }
 }
@@ -296,7 +333,7 @@ export async function updateLastImportTime(): Promise<void> {
       {} as CalendarSyncSettings
     );
   } catch (error) {
-    console.error('[CalendarStorage] Failed to update last import time:', error);
+    logger.error('[CalendarStorage] Failed to update last import time:', error);
     throw error;
   }
 }

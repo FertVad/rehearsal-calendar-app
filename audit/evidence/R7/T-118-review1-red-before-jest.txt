@@ -1,0 +1,60 @@
+T-118 review 1, findings 1 and 2: Jest, red before.
+Command: git restore --source=0990236 -- \
+           src/shared/services/calendarSync.ts \
+           src/features/calendar/hooks/useCalendarSync.ts \
+           src/features/calendar/hooks/useAddRehearsalSubmit.ts \
+           src/features/calendar/screens/CalendarScreen.tsx \
+           src/features/profile/screens/CalendarSyncSettingsScreen.tsx
+         npx jest --selectProjects frontend --runTestsByPath src/shared/services/__tests__/calendarQueue.test.ts
+         git restore --source=HEAD -- <the same files>
+Code: the code as the review found it (0990236); the new test file.
+Console noise (debug logs, react-test-renderer deprecation, stack frames) left out.
+
+FAIL frontend src/shared/services/__tests__/calendarQueue.test.ts (16.206 s)
+  Work waiting behind a run
+    ✕ "remove all" confirmed by one person does not run as the next one (317 ms)
+  The event of a rehearsal just saved
+    ✕ is written after a run already going, not under it (106 ms)
+    ✓ is not written when exporting is off (30 ms)
+  Who writes to the calendar
+    ✕ nothing outside the services imports a writer: it goes through the queue (60 ms)
+
+  ● Work waiting behind a run › "remove all" confirmed by one person does not run as the next one
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Expected number of calls: 0
+    Received number of calls: 1
+    1: undefined
+    > 111 |     expect(removeAllExportedEvents).not.toHaveBeenCalled();
+
+  ● The event of a rehearsal just saved › is written after a run already going, not under it
+    expect(received).toEqual(expected) // deep equality
+    - Expected  - 1
+    + Received  + 1
+      Array [
+        "run writes what it read",
+    -   "run done",
+        "save writes the new time",
+    +   "run done",
+      ]
+    > 166 |     expect(log).toEqual(['run writes what it read', 'run done', 'save writes the new time']);
+
+  ● Who writes to the calendar › nothing outside the services imports a writer: it goes through the queue
+    expect(received).toEqual(expected) // deep equality
+    - Expected  - 1
+    + Received  + 8
+    - Array []
+    + Array [
+    +   "features/calendar/hooks/useAddRehearsalSubmit.ts: syncRehearsalToCalendar",
+    +   "features/calendar/hooks/useCalendarSync.ts: syncRehearsalToCalendar",
+    +   "features/calendar/hooks/useCalendarSync.ts: unsyncRehearsal",
+    +   "features/calendar/hooks/useCalendarSync.ts: removeAllExportedEvents",
+    +   "features/calendar/hooks/useCalendarSync.ts: removeAllImportedSlots",
+    +   "features/calendar/screens/CalendarScreen.tsx: unsyncRehearsal",
+    + ]
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 1 passed, 4 total
+
+"is not written when exporting is off" passes on the old code too: it is a
+guard that the save, now handing its event to the queue, still writes nothing
+with exporting off - the old save checked that itself.

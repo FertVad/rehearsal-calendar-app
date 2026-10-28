@@ -11,6 +11,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useAvailabilityData } from '../useAvailabilityData';
 import { availabilityAPI } from '../../../../shared/services/api';
+import { setProfileTimezone } from '../../../../shared/utils/time';
+
+// The profile's zone, as AuthContext sets it with the user.
+beforeEach(() => setProfileTimezone('UTC'));
 
 jest.mock('../../../../shared/services/api');
 jest.mock('../../../../contexts/I18nContext', () => ({

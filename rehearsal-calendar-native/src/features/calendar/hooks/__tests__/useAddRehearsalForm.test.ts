@@ -342,6 +342,43 @@ describe('useAddRehearsalForm Hook', () => {
       // End time should be auto-adjusted to 2 hours after start
       expect(result.current.endTime.getTime()).toBeGreaterThan(newStartTime.getTime());
     });
+
+    // Cause fix 15: the times are clock times, an end before the start the
+    // next morning.
+    describe('past midnight', () => {
+      const at = (h: number, m = 0) => new Date(2026, 8, 10, h, m);
+      const form = () => renderHook(() =>
+        useAddRehearsalForm({ projects: mockProjects, selectedProject: null, setSelectedProject: mockSetSelectedProject })
+      ).result;
+
+      it('a start moved past a same-day end takes the end two hours on — the next morning at 23:00', () => {
+        const result = form();
+        act(() => { result.current.setStartTime(at(18)); result.current.setEndTime(at(20)); });
+        act(() => { result.current.handleStartTimeChange(at(23)); });
+
+        expect(result.current.endTime.getHours()).toBe(1);
+        expect(result.current.endsNextDay).toBe(true);
+      });
+
+      it('an overnight rehearsal keeps its end when its start moves', () => {
+        const result = form();
+        act(() => { result.current.setStartTime(at(23)); result.current.setEndTime(at(1)); });
+        expect(result.current.endsNextDay).toBe(true);
+        act(() => { result.current.handleStartTimeChange(at(22)); });
+
+        expect(result.current.endTime.getHours()).toBe(1);
+        expect(result.current.endsNextDay).toBe(true);
+      });
+
+      it('a start landing on the end moves it on', () => {
+        const result = form();
+        act(() => { result.current.setStartTime(at(23)); result.current.setEndTime(at(1)); });
+        act(() => { result.current.handleStartTimeChange(at(1)); });
+
+        expect(result.current.endTime.getHours()).toBe(3);
+        expect(result.current.endsNextDay).toBe(false);
+      });
+    });
   });
 
   describe('Project Selection', () => {

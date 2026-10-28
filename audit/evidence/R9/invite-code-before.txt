@@ -1,0 +1,137 @@
+HN01 review (P2): the invite link handler parsed /invite\/([a-f0-9]+)/ and lost
+the short codes the server issues (alphabet 23456789ABCDEFGHJKMNPQRSTVWXYZ,
+8 characters) and capital legacy hex codes.
+
+Tests: rehearsal-calendar-native/src/navigation/__tests__/pendingInvite.test.tsx
+from the fix commit, run against src/navigation/index.tsx at 2df2724 (unfixed).
+Command (in rehearsal-calendar-native):
+  npx jest --selectProjects frontend --silent --runTestsByPath src/navigation/__tests__/pendingInvite.test.tsx
+Stack-trace lines ("    at ...") removed.
+
+Running one project: frontend
+FAIL frontend src/navigation/__tests__/pendingInvite.test.tsx (8.058 s)
+  ● holds the invite code until onboarding completes, then navigates (HN01)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "JoinProject", {"code": "ABCDEFGH"}
+
+    Number of calls: 0
+
+      132 |     act(() => { jest.advanceTimersByTime(600); });
+      133 |
+    > 134 |     expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code: 'ABCDEFGH' });
+          |                          ^
+      135 |   } finally {
+      136 |     jest.useRealTimers();
+      137 |   }
+
+
+  ● holds an invite that arrives while onboarding is already showing (HN01)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      "JoinProject",
+      Object {
+    -   "code": "23KMNPQR",
+    +   "code": "23",
+      },
+
+    Number of calls: 1
+
+      156 |
+      157 |     expect(mockNavigate).toHaveBeenCalledTimes(1);
+    > 158 |     expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code: '23KMNPQR' });
+          |                          ^
+      159 |   } finally {
+      160 |     jest.useRealTimers();
+      161 |   }
+
+
+  ● queues a short code of capitals only whole and opens it after onboarding (HN01)
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 0
+
+      182 |     act(() => { jest.advanceTimersByTime(600); });
+      183 |
+    > 184 |     expect(mockNavigate).toHaveBeenCalledTimes(1);
+          |                          ^
+      185 |     expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code });
+      186 |   } finally {
+      187 |     jest.useRealTimers();
+
+
+  ● queues a short code starting with digits whole and opens it after onboarding (HN01)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      "JoinProject",
+      Object {
+    -   "code": "23KMNPQR",
+    +   "code": "23",
+      },
+
+    Number of calls: 1
+
+      183 |
+      184 |     expect(mockNavigate).toHaveBeenCalledTimes(1);
+    > 185 |     expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code });
+          |                          ^
+      186 |   } finally {
+      187 |     jest.useRealTimers();
+      188 |   }
+
+
+  ● queues a short code through Expo Go whole and opens it after onboarding (HN01)
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 0
+
+      182 |     act(() => { jest.advanceTimersByTime(600); });
+      183 |
+    > 184 |     expect(mockNavigate).toHaveBeenCalledTimes(1);
+          |                          ^
+      185 |     expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code });
+      186 |   } finally {
+      187 |     jest.useRealTimers();
+
+
+  ● queues a legacy code in capitals whole and opens it after onboarding (HN01)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      "JoinProject",
+      Object {
+    -   "code": "0123456789ABCDEF0123456789ABCDEF",
+    +   "code": "0123456789",
+      },
+
+    Number of calls: 1
+
+      183 |
+      184 |     expect(mockNavigate).toHaveBeenCalledTimes(1);
+    > 185 |     expect(mockNavigate).toHaveBeenCalledWith('JoinProject', { code });
+          |                          ^
+      186 |   } finally {
+      187 |     jest.useRealTimers();
+      188 |   }
+
+
+Test Suites: 1 failed, 1 total
+Tests:       6 failed, 4 passed, 10 total
+Snapshots:   0 total
+Time:        9.722 s

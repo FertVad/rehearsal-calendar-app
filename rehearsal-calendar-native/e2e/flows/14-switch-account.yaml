@@ -1,0 +1,83 @@
+# One person signs out and another signs in on the same running app: nothing
+# of the first one's stays (cause fix 12). The seen mark, the project list and
+# the chosen project lived in providers above the navigator, which a sign-out
+# does not unmount. Lopakhin saw Ranevskaya's mark on their shared rehearsal
+# as his own (HN03, HN02), and the rehearsal form opened on her project, which
+# he does not run (BC01).
+appId: ${APP_ID}
+name: Switch accounts on a running app
+tags:
+  - auth
+  - seen
+  - projects
+  - rehearsals
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${RANEVSKAYA_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Orchard walk.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      below: ".*Orchard walk.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    id: seen-toggle
+    below: ".*Orchard walk.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      below: ".*Orchard walk.*"
+      selected: true
+    timeout: 10000
+# Signed out from the profile, not by relaunching: the app stays running.
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-logout
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-logout
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${LOPAKHIN_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Orchard walk.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      below: ".*Orchard walk.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+# He has not marked it: her mark is not his.
+- assertVisible:
+    id: seen-toggle
+    below: ".*Orchard walk.*"
+    selected: false
+- takeScreenshot: 14-lopakhin-not-seen
+# The form opens on a project he runs, not on hers.
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-project
+      text: ".*Lopakhin Holdings.*"
+    timeout: 10000
+- assertNotVisible:
+    id: rehearsal-project
+    text: ".*The Cherry Orchard.*"
+- takeScreenshot: 14-lopakhin-form-project

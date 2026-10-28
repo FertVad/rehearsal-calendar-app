@@ -1,0 +1,40 @@
+# "Mark all read" pressed before the list has come (cause fix 21, review).
+# Kulygin has one unread, and the bell says so. His inbox's list is slow to
+# come, and he marks all read meanwhile: the old screen dropped the list that
+# came, as read before the change, and never asked again — "Nothing yet" over
+# an inbox with a card in it.
+appId: ${APP_ID}
+name: Inbox mark all before the list
+tags:
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${KULYGIN_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: unread-badge
+    timeout: 30000
+# The list stays on its way, the connection open, until the release.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "^/api/native/notifications$"
+      OPEN: "1"
+- tapOn: "Notifications"
+- tapOn: "Mark all read"
+- extendedWaitUntil:
+    notVisible: "Mark all read"
+    timeout: 10000
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+- extendedWaitUntil:
+    visible: ".*Gymnasium council.*"
+    timeout: 15000
+- assertNotVisible: "Nothing yet"
+- takeScreenshot: 35-list-after-mark-all

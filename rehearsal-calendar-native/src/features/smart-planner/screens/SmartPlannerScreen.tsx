@@ -20,7 +20,8 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { DateRangePicker } from '../../../shared/components/DateRangePicker';
-import { formatDateToString } from '../../../shared/utils/time';
+import { addDays, formatDateToString, parseDateString } from '../../../shared/utils/time';
+import { useToday } from '../../../shared/hooks/useClock';
 import { memberAvailabilityLimits } from '../../../shared/utils/memberAvailabilityLimits';
 import { smartPlannerScreenStyles as styles } from '../styles';
 
@@ -32,9 +33,12 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const { projects } = useProjects();
   const { t, language } = useI18n();
 
+  // Calendar dates of the profile's zone. Not new Date('YYYY-MM-DD'): that is
+  // UTC midnight, and the local getters below read it as the day before
+  // anywhere behind UTC.
   const formatDateRange = useCallback((startDate: string, endDate: string): string => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = parseDateString(startDate);
+    const end = parseDateString(endDate);
 
     const locale = getDateLocale(language);
     const options: Intl.DateTimeFormatOptions = { month: 'short' };
@@ -61,13 +65,12 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isProjectSelectorExpanded, setIsProjectSelectorExpanded] = useState(false);
 
+  // Today in the profile's zone: the planner's days are its days (cause fix 14).
+  const today = useToday();
+
   // Custom date range state
-  const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
-  const [customEndDate, setCustomEndDate] = useState<Date>(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 6);
-    return date;
-  });
+  const [customStartDate, setCustomStartDate] = useState<Date>(() => parseDateString(today));
+  const [customEndDate, setCustomEndDate] = useState<Date>(() => parseDateString(addDays(today, 6)));
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
 
   // Which project the current member selection was seeded for
@@ -81,27 +84,18 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   // early — offering slots on a day already past, tappable straight through to
   // scheduling a rehearsal in it — and lost its last day at the far end.
   const { startDate, endDate } = useMemo(() => {
-    const today = new Date();
-    const start = new Date(today);
-    const end = new Date(today);
-
     if (selectedPeriod === 'week') {
-      end.setDate(end.getDate() + 6); // 7 days total
-    } else if (selectedPeriod === 'month') {
-      end.setDate(end.getDate() + 29); // 30 days total
-    } else {
-      // custom period
-      return {
-        startDate: formatDateToString(customStartDate),
-        endDate: formatDateToString(customEndDate),
-      };
+      return { startDate: today, endDate: addDays(today, 6) }; // 7 days total
     }
-
+    if (selectedPeriod === 'month') {
+      return { startDate: today, endDate: addDays(today, 29) }; // 30 days total
+    }
+    // custom period
     return {
-      startDate: formatDateToString(start),
-      endDate: formatDateToString(end),
+      startDate: formatDateToString(customStartDate),
+      endDate: formatDateToString(customEndDate),
     };
-  }, [selectedPeriod, customStartDate, customEndDate]);
+  }, [selectedPeriod, customStartDate, customEndDate, today]);
 
   // Load data using hook
   const {
@@ -109,6 +103,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     error,
     project,
     simpleMembers,
+    membersProjectId,
     membersWithoutData,
     filteredSlots,
     slotsByDate,
@@ -135,25 +130,47 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
 
   const projectName = project?.name || t.common.loading;
 
-  // Select everyone by default, once per project.
+  // Select everyone by default on first load per project; keep the selection
+  // consistent with the roster on every subsequent reload.
   //
-  // The project can change without this screen unmounting (handleSelectProject
-  // only calls setParams), so a plain "did this run yet" flag would keep the
-  // previous project's member ids: the counter reads "7 of 5" and, worse, the
-  // recommendations get filtered by people who are not in this project.
-  // Re-seeding is keyed on the project instead, and the ids are dropped while
-  // the new roster is in flight — an empty selection means "everyone".
+  // Two separate concerns live here:
+  //
+  // 1. Project switch (DP01). The project can change without this screen
+  //    unmounting (handleSelectProject only calls setParams). When projectId
+  //    changes, useSmartPlanner resets membersProjectId to null and starts a
+  //    new load. Both the clearing effect (inside the hook) and this seeding
+  //    effect fire in the same render batch — but simpleMembers in that batch
+  //    still reflects the previous project's roster. The guard
+  //    `membersProjectId !== projectId` prevents seeding from stale data by
+  //    waiting until the hook confirms the members state is for the right
+  //    project. On first confirmed load the full roster is selected.
+  //
+  // 2. Roster reload within the same project (R5-01). When the date range
+  //    changes (period picker) the hook reloads without resetting
+  //    membersProjectId. If a member was removed between loads their ID stays
+  //    in selectedMemberIds; the slot generator receives an ID it cannot find
+  //    in simpleMembers, counts it as a missing member, and may produce no
+  //    usable slots. The reconciliation branch filters out IDs that are no
+  //    longer present — without touching manual deselections for members that
+  //    remain.
   useEffect(() => {
-    if (hasInitializedMembers.current === projectId) return;
+    if (membersProjectId !== projectId) return;
 
-    if (simpleMembers.length === 0) {
-      setSelectedMemberIds([]);
+    const validIds = new Set(simpleMembers.map(m => m.id));
+
+    if (hasInitializedMembers.current !== projectId) {
+      // First confirmed load for this project: start with everyone selected.
+      setSelectedMemberIds(simpleMembers.map(m => m.id));
+      hasInitializedMembers.current = projectId;
       return;
     }
 
-    setSelectedMemberIds(simpleMembers.map(m => m.id));
-    hasInitializedMembers.current = projectId;
-  }, [simpleMembers, projectId]);
+    // Same project, roster reloaded: drop IDs no longer in the project.
+    setSelectedMemberIds(prev => {
+      const next = prev.filter(id => validIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [simpleMembers, projectId, membersProjectId]);
 
   const handleSelectProject = useCallback((newProjectId: string) => {
     setIsProjectSelectorExpanded(false);
@@ -359,7 +376,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         onConfirm={handleDateRangeConfirm}
         initialStartDate={customStartDate}
         initialEndDate={customEndDate}
-        minDate={new Date()}
+        minDate={parseDateString(today)}
         maxDays={memberAvailabilityLimits.maxDays}
       />
       <ScrollView

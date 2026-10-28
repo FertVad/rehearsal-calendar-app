@@ -1,0 +1,31 @@
+R4 cause fix 10, review round 2 — account deletion and the project lock order (B02)
+Mutation: rehearsal-calendar-native/server/routes/auth.js restored from 3e53c40
+(no lockProject before an orphaned project's slots are cleared); probe
+__tests__/postgres/r4Lifecycle.mjs with the new account-deletion race.
+Command: cd rehearsal-calendar-native/server && node scripts/r0-postgres.mjs --r4-only
+PostgreSQL 15.13 (disposable container)
+
+{"scenario":"controls","outcome":"PASS",...}
+{"scenario":"D01","outcome":"PASS",...}
+AssertionError [ERR_ASSERTION]: B02: a rehearsal created while its project went with the owner's account leaves no busy slot
+1 !== 0
+    at Module.probeR4Lifecycle (file:///Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/server/__tests__/postgres/r4Lifecycle.mjs:242:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/server/__tests__/postgres/probe.mjs:60:17 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual'
+}
+Node.js v22.16.0
+R0 cleanup: owned disposable container removed
+AssertionError [ERR_ASSERTION]: R4_LIFECYCLE probe failed unexpectedly
+1 !== 0
+    at file:///Users/vadimfertik/Desktop/reh_app-auto/rehearsal-calendar-native/server/scripts/r0-postgres.mjs:95:12
+
+Every earlier contract of R4_LIFECYCLE passed before this one; the deletion
+returned 200 and cascaded the rehearsal, but the administrator kept its busy slot.
+
+With the fix (lockProject(tx, project.id, 'delete') before the slots are cleared):
+{"scenario":"R4_LIFECYCLE","outcome":"PASS", ... "an account deleted while another administrator creates a rehearsal in its project takes the project, the rehearsal and its busy slots together (B02)"]}

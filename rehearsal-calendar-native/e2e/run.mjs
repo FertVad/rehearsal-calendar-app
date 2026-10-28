@@ -15,7 +15,9 @@
  *   canonical schema goes in with `migrate --fresh`; seed.mjs fills it.
  * - The server: started with an environment built here from nothing — no
  *   SERVER_ENV_FILE, nothing inherited but PATH and HOME — so server/.env, which
- *   is production, cannot reach it; the database must be the container's.
+ *   is production, cannot reach it; the database must be the container's. Its
+ *   mail stays in its process (EMAIL_TRANSPORT=capture-for-tests), and
+ *   server-with-mailbox.mjs hands the codes to the flows on 127.0.0.1:3002.
  * - Metro: its own. The checkout's .env points the app at rehearsly.me, and in
  *   development Expo bundles .env files over the environment — a variable given
  *   to Metro does not reach the app while the file names another address. So
@@ -23,7 +25,7 @@
  *   (metro.config.js); the bundle is then searched for every address the app
  *   could read, and the app is not opened unless each is the local server. After
  *   that the address the app reports on start is watched, and the run stops if
- *   it is ever another. Ports 3001 and 8081 must be free: a server or Metro
+ *   it is ever another. Ports 3001, 3002 and 8081 must be free: a server or Metro
  *   already running there is not ours to reuse, and could be pointed anywhere.
  * - The app: a Debug build (Release talks to production) on a simulator of its
  *   own, "Rehearsly E2E", so no other simulator's data is touched.
@@ -66,7 +68,17 @@ const pg = createRequire(path.join(SERVER, 'package.json'))('pg');
 
 const API_PORT = 3001;
 const METRO_PORT = 8081;
-const API_URL = `http://localhost:${API_PORT}/api`;
+// One address, held by the server itself. On '::' with the app on localhost,
+// any process that came up later on ::1:3001 or 127.0.0.1:3001 — the kernel
+// lets a specific address share a port with the wildcard — got the app's new
+// connections and left them unanswered: a create timed out (T-203). Bound to
+// 127.0.0.1, the port is refused to anyone else there, and an IP address
+// leaves the simulator nothing else to try.
+const API_HOST = '127.0.0.1';
+const API_URL = `http://${API_HOST}:${API_PORT}/api`;
+// The codes the local server mailed, for the flows (server-with-mailbox.mjs).
+const MAIL_PORT = 3002;
+const MAIL_URL = `http://${API_HOST}:${MAIL_PORT}`;
 const BUNDLE_ID = 'com.rehearsal.app';
 const DEVICE = { name: 'Rehearsly E2E', type: 'com.apple.CoreSimulator.SimDeviceType.iPhone-16' };
 const MAESTRO = process.env.MAESTRO_BIN || path.join(os.homedir(), '.maestro', 'bin', 'maestro');
@@ -120,6 +132,28 @@ function background(name, command, args, options) {
   teardown.push(() => { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ } });
   child.once('exit', (code) => { if (!tornDown) console.error(`[e2e] ${name} exited (${code}) — see ${logFile}`); });
   return child;
+}
+
+/**
+ * The server's and Metro's logs, copied next to the flows' artifacts of the
+ * run that wrote them. e2e/out/server.log is rewritten by every run, so a
+ * failure the supervisor reran was left with no server side at all: a POST
+ * the server never answered could not be told from one it never got (T-203).
+ * Runs on teardown, after the server is stopped, so the copy is whole.
+ */
+function keepLogs(startedAt) {
+  return () => {
+    const artifacts = path.join(OUT, 'artifacts');
+    if (!fs.existsSync(artifacts)) return;
+    for (const run of fs.readdirSync(artifacts)) {
+      const dir = path.join(artifacts, run);
+      if (!fs.statSync(dir).isDirectory() || fs.statSync(dir).birthtimeMs < startedAt) continue;
+      for (const name of ['server.log', 'metro.log']) {
+        const log = path.join(OUT, name);
+        if (fs.existsSync(log)) fs.copyFileSync(log, path.join(dir, name));
+      }
+    }
+  };
 }
 
 async function waitFor(what, check, timeoutMs) {
@@ -293,6 +327,20 @@ function quietKeyboard(udid) {
     'DidShowContinuousPathIntroduction', '-bool', 'true');
 }
 
+/**
+ * The simulator's own zone, away from the machine's and so from everyone's
+ * profile (seed.mjs). The app shows the zone the person chose, never the
+ * device's (cause fix 14); with both the same, nothing on screen could tell
+ * them apart. Honolulu: no summer time, and absent from the profile's list, so
+ * the picker names it as the device's at the top. Set for the simulator's
+ * launchd, so the app inherits it at every launch; a reboot clears it.
+ */
+const SIMULATOR_ZONE = 'Pacific/Honolulu';
+
+function pinZone(udid) {
+  simctl('spawn', udid, 'launchctl', 'setenv', 'TZ', SIMULATOR_ZONE);
+}
+
 /** The e2e simulator, created on the newest iOS runtime the first time. */
 function simulator() {
   const { devices } = JSON.parse(simctl('list', 'devices', '--json'));
@@ -317,7 +365,9 @@ async function main() {
     if (PREBUILT) assert.ok(fs.existsSync(PREBUILT), `E2E_APP ${PREBUILT} does not exist`);
     lock = await takeLock(LOCK, { log: step });
     teardown.push(() => lock.release());
+    teardown.push(keepLogs(Date.now()));
     await requireFree(API_PORT, 'server');
+    await requireFree(MAIL_PORT, 'mailbox');
     await requireFree(METRO_PORT, 'Metro');
   });
 
@@ -335,22 +385,30 @@ async function main() {
   });
 
   step('starting the local server');
-  background('server', process.execPath, ['server.js'], {
+  // server.js through server-with-mailbox.mjs: the codes it mails stay in that
+  // process, and the flows read them from MAIL_URL.
+  background('server', process.execPath, [path.join(E2E, 'server-with-mailbox.mjs')], {
     cwd: SERVER,
     env: {
       PATH: process.env.PATH,
       HOME: os.homedir(),
       NODE_ENV: 'development',
       PORT: String(API_PORT),
-      // Both localhost addresses: the simulator may try either.
-      HOST: '::',
+      HOST: API_HOST,
       DATABASE_URL: databaseUrl,
       JWT_SECRET: randomBytes(32).toString('base64'),
       CRON_SECRET: randomBytes(32).toString('base64'),
-      BASE_URL: `http://localhost:${API_PORT}`,
+      BASE_URL: `http://${API_HOST}:${API_PORT}`,
+      EMAIL_TRANSPORT: 'capture-for-tests',
+      // A flow that plays a phone puts a push token on this server
+      // (e2e/device); a send to it must not reach Expo. Nothing listens here.
+      EXPO_BASE_URL: 'http://127.0.0.1:9',
+      MAIL_HOST: API_HOST,
+      MAIL_PORT: String(MAIL_PORT),
     },
   });
   await waitFor('the local server', async () => (await fetch(`${API_URL}/ready`)).ok, 30000);
+  await waitFor('the mailbox', async () => (await fetch(`${MAIL_URL}/code?to=`)).status === 404, 10000);
 
   step('seeding');
   const client = new pg.Client({ connectionString: databaseUrl });
@@ -404,6 +462,7 @@ async function main() {
       simctl('bootstatus', udid, '-b');
     }
     quietKeyboard(udid);
+    pinZone(udid);
     showSimulator(udid);
   });
 
@@ -423,7 +482,13 @@ async function main() {
   watchReportedAddress(udid);
 
   const variables = ['-e', `PASSWORD=${seeded.password}`, '-e', `APP_ID=${BUNDLE_ID}`,
-    ...Object.entries(seeded.people).flatMap(([key, person]) => ['-e', `${key.toUpperCase()}_EMAIL=${person.email}`])];
+    '-e', `API_URL=${API_URL}`, '-e', `MAIL_URL=${MAIL_URL}`,
+    ...Object.entries(seeded.people).flatMap(([key, person]) => ['-e', `${key.toUpperCase()}_EMAIL=${person.email}`]),
+    ...Object.entries(seeded.invites).flatMap(([key, code]) => ['-e', `${key.toUpperCase()}_INVITE=${code}`]),
+    ...Object.entries(seeded.days).flatMap(([key, date]) => ['-e', `${key.toUpperCase()}_DAY=${date}`]),
+    ...Object.entries(seeded.times).flatMap(([key, time]) => ['-e', `${key.toUpperCase()}_TIME=${time}`]),
+    ...Object.entries(seeded.labels).flatMap(([key, label]) => ['-e', `${key.toUpperCase()}_LABEL=${label}`]),
+    ...Object.entries(seeded.rehearsals).flatMap(([key, id]) => ['-e', `${key.toUpperCase()}_REHEARSAL=${id}`])];
 
   if (stayUp) {
     step(`up. Simulator ${udid}; server ${API_URL}; seed in ${path.join(OUT, 'seed.json')}`);
@@ -440,6 +505,20 @@ async function main() {
   } catch {
     process.exitCode = 1;
   }
+  reportTapsAgain();
+}
+
+/**
+ * The taps e2e/subflows/tap-and-see.yaml took a second time, its result not
+ * on screen after the first: the simulator loses about one tap in 250 and
+ * Maestro reports it done (docs/e2e.md, T-207). Printed every run, so how often
+ * it happens stays in sight.
+ */
+function reportTapsAgain() {
+  const log = path.join(OUT, 'taps-again.log');
+  const lines = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').split('\n').filter(Boolean) : [];
+  step(`taps taken again (tap-and-see.yaml): ${lines.length}`);
+  for (const line of lines) step(`  ${line}`);
 }
 
 main()

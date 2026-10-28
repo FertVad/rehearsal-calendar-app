@@ -6,9 +6,11 @@ import {
   isoToDateStringInTimezone,
   isoToTimeStringInTimezone,
   datesBetween,
+  addDays,
+  endsNextDay,
 } from '../../../shared/utils/time';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
 // The last availability that loaded, kept so a start with no network shows
 // something true rather than an empty screen.
@@ -88,9 +90,9 @@ export const useAvailabilityData = () => {
   // server, and nobody is being told anything different.
   const [loadFailed, setLoadFailed] = useState(false);
 
-  // ✅ Get user's timezone from AuthContext
-  const { user } = useAuth();
-  const userTimezone = user?.timezone || 'UTC';
+  // Busy hours are read in the profile's zone, the app's one (time.ts), and
+  // saved in it (useAvailabilitySave); the server keys a day on it too.
+  const userTimezone = useTimezone();
 
   const loadAvailability = useCallback(async () => {
     try {
@@ -124,7 +126,7 @@ export const useAvailabilityData = () => {
         // marked and 10 September free, and each save after a reload walked it
         // another day back. Nobody east of UTC ever saw it, which is why it
         // survived — the current users are all in Berlin, Moscow and Jerusalem.
-        const push = (dateStr: string, startTime: string, endTime: string) => {
+        const push = (dateStr: string, startTime: string, endTime: string, source = record.source) => {
           if (!startTime || !endTime) return;
           if (!serverData[dateStr]) serverData[dateStr] = [];
           serverData[dateStr].push({
@@ -132,7 +134,7 @@ export const useAvailabilityData = () => {
             endTime,
             type: record.type,
             isAllDay,
-            source: record.source,
+            source,
           });
         };
 
@@ -175,6 +177,18 @@ export const useAvailabilityData = () => {
           continue;
         }
 
+        // The person's own slot running past midnight is one slot of the day it
+        // starts on — that day edits and saves it, and the server files it
+        // there — and the next morning shows its end, read-only (cause fix 15).
+        // Cut into two own slots, saving the first day wrote it back as ending
+        // at 23:59, and the second day held a copy of the morning.
+        const ownRow = !record.source || record.source === 'manual';
+        if (ownRow && lastDate === addDays(firstDate, 1) && endsNextDay(startTime, endTime)) {
+          push(firstDate, startTime, endTime);
+          if (endTime !== '00:00') push(lastDate, '00:00', endTime, 'previous_day');
+          continue;
+        }
+
         push(firstDate, startTime, '23:59');
         for (const day of datesBetween(firstDate, lastDate).slice(1, -1)) {
           push(day, '00:00', '23:59');
@@ -186,32 +200,42 @@ export const useAvailabilityData = () => {
         }
       }
 
-      // DEDUPLICATION: Remove duplicate time slots (prioritize rehearsal > manual)
-      // If same time range exists with different sources, keep only rehearsal
+      // DEDUPLICATION: a row shown twice is shown once — and a row is the same
+      // row only when it says the same thing: the same source, the same kind,
+      // the same hours (cause fix 16). The hours alone made one of two different
+      // things vanish: a calendar event at a rehearsal's hours, or on the
+      // morning a slot of the night before ends, went under the other one, and
+      // the day said only "rehearsal" or "from the day before" — so dropping
+      // that slot looked like freeing the morning while the event, which
+      // everyone else's planner counts, stayed (review C04). The person's own
+      // rows are kept apart from it both ways:
+      // - none of them is dropped: a save of the day writes back what the
+      //   editor holds, so one hidden behind another row with the same hours
+      //   was deleted by the next save (cause fix 15, review round 1);
+      // - none of them drops a read-only row: a day marked free by hand in the
+      //   middle of a trip from the phone hid the trip's 00:00–23:59 behind the
+      //   free mark's, and the day read free while everyone else's planner
+      //   counted the trip (review round 2).
       for (const dateStr in serverData) {
         const slots = serverData[dateStr];
-        const uniqueSlots: typeof slots = [];
-        const seenTimeRanges = new Set<string>();
+        const isOwn = (slot: typeof slots[number]) => !slot.source || slot.source === 'manual';
+        const sameRow = (slot: typeof slots[number]) =>
+          `${slot.source}|${slot.type}|${slot.startTime}-${slot.endTime}`;
+        const uniqueSlots: typeof slots = slots.filter(isOwn);
+        const seen = new Set<string>();
 
-        // First pass: add all rehearsal slots
-        for (const slot of slots) {
-          if (slot.source === 'rehearsal') {
-            const key = `${slot.startTime}-${slot.endTime}`;
+        // Rehearsals first, then the other read-only rows
+        const readOnly = [
+          ...slots.filter((slot) => slot.source === 'rehearsal'),
+          ...slots.filter((slot) => slot.source !== 'rehearsal' && !isOwn(slot)),
+        ];
+        for (const slot of readOnly) {
+          const key = sameRow(slot);
+          if (!seen.has(key)) {
             uniqueSlots.push(slot);
-            seenTimeRanges.add(key);
-          }
-        }
-
-        // Second pass: add manual/other slots only if time range not already covered by rehearsal
-        for (const slot of slots) {
-          if (slot.source !== 'rehearsal') {
-            const key = `${slot.startTime}-${slot.endTime}`;
-            if (!seenTimeRanges.has(key)) {
-              uniqueSlots.push(slot);
-              seenTimeRanges.add(key);
-            } else {
-              console.log(`[useAvailabilityData] Skipping duplicate ${slot.source} slot on ${dateStr} ${key} (covered by rehearsal)`);
-            }
+            seen.add(key);
+          } else {
+            logger.debug(`[useAvailabilityData] Skipping duplicate slot on ${dateStr} ${key} (already shown)`);
           }
         }
 
@@ -246,8 +270,8 @@ export const useAvailabilityData = () => {
         const own = typedSlots.filter((s) => !s.source || s.source === 'manual');
 
         // The day's own declaration. The all-day row is searched for rather
-        // than assumed to be first: the deduplication above puts rehearsal rows
-        // in front, and a timed row can sort ahead of it anyway.
+        // than assumed to be first: the deduplication above reorders the rows,
+        // and a timed row can sort ahead of it anyway.
         const allDay = own.find((s) => s.isAllDay);
         let mode: DayMode = allDay ? (allDay.type === 'busy' ? 'busy' : 'free') : 'custom';
 
@@ -300,7 +324,7 @@ export const useAvailabilityData = () => {
         // A cache is not worth an error.
       });
     } catch (err) {
-      console.error('Failed to load availability:', err);
+      logger.error('Failed to load availability:', err);
       setLoadFailed(true);
 
       // Fall back to what was last seen, so the screen is not blank while the

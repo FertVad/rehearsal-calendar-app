@@ -1,0 +1,29 @@
+-- Red-before evidence for DP01 / pravka #8 --
+-- Source commit before fix: f9212b3^ (47037a4) --
+-- Test file run: src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx --
+-- Two tests written against unfixed code (47037a4); both failed as expected --
+
+FAIL frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx (12.804 s)
+  ● DP01 — member selection follows the project › member filter shows exactly the new project's count after switching
+
+    expect(received).toBeNull()
+    -- "3 of 2 selected" text was present in the DOM --
+    -- Proves: after switching A(3 members)→B(2 members), selectedMemberIds --
+    -- still carried [a1,a2,a3]; impossible count = stale seed from old project --
+
+  ● DP01 — member selection follows the project › member filter summary does not show more selected than there are members
+
+    expect(received).toBeNull()
+    -- Same root cause, second assertion --
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 total
+Time:        13.246 s
+
+-- After fix (f9212b3): both tests PASS --
+-- Tests pass: 2 passed, 2 total --
+
+Note: the original evidence file captured an earlier version of the first test
+that checked for slot buttons (toBeGreaterThan(0)) and was replaced with the
+summary-text check (/3 of 2/) before committing. The failing assertion shown
+above matches the committed test file exactly.

@@ -1,6 +1,7 @@
 // getText waits as long as it is told, whatever Node's fetch would have.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import http from 'node:http';
 import { getText } from '../http.mjs';
 
@@ -19,6 +20,16 @@ test('a slow answer is waited for within the deadline', async () => {
 
 test('past the deadline it fails and says how long it waited', async () => {
   await assert.rejects(getText(`${base}?delay=3000`, { deadlineMs: 200 }), (error) => error.code === 'DEADLINE' && /no complete answer within 0 min/.test(error.message));
+});
+
+// Waiting out Node's five minutes takes five minutes, too long for npm test:
+// audit/evidence/T-205/repro.mjs does that. Here only that run.mjs still asks
+// for the bundle through getText, not fetch.
+test('run.mjs reads the bundle with getText, not fetch', () => {
+  const source = readFileSync(new URL('../run.mjs', import.meta.url), 'utf8');
+  const bundleRequests = source.split('\n').filter((line) => line.includes('virtual-metro-entry.bundle'));
+  assert.ok(bundleRequests.length > 0);
+  for (const line of bundleRequests) assert.match(line, /getText\(/, line);
 });
 
 test('an error status is an error, with what was said', async () => {

@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { ActionSheetIOS, Platform, Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { ActionSheetIOS, Platform, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useI18n } from '../../contexts/I18nContext';
 import { Colors } from '../constants/colors';
 import { hapticLight } from '../../shared/utils/haptics';
+import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
 
 interface CreateActionSheetProps {
@@ -79,9 +80,8 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
 
   // Android fallback with Modal
   return (
-    <Modal
+    <AppModal
       visible={visible}
-      transparent
       animationType="fade"
       onRequestClose={onClose}
     >
@@ -123,7 +123,7 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
           </View>
         </View>
       </ModalSheet>
-    </Modal>
+    </AppModal>
   );
 };
 

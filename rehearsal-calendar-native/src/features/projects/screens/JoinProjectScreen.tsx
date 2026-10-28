@@ -15,10 +15,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';
 import { invitesAPI } from '../../../shared/services/api';
+import { inviteCodeFromUrl } from '../../../shared/utils/inviteCode';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { joinProjectScreenStyles as styles } from '../styles';
 
+import { logger } from '../../../shared/utils/logger';
 type JoinProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'JoinProject'>;
 
 export default function JoinProjectScreen({ route, navigation }: JoinProjectScreenProps) {
@@ -51,9 +53,8 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
     setError(null);
     setLoading(true);
     // Pasting the whole link is the likelier gesture than copying the code out
-    // of it, so take the last path segment when one is given.
-    const fromUrl = entered.match(/\/invite\/([^/?#\s]+)/i);
-    setCode(fromUrl ? fromUrl[1] : entered);
+    // of it, so take the code out of a link by the same rule as opened links.
+    setCode(inviteCodeFromUrl(entered) ?? entered);
   };
 
   const checkAndFetchInviteInfo = async () => {
@@ -75,7 +76,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
       // Proceed with fetching invite info
       await fetchInviteInfo();
     } catch (err) {
-      console.error('Error checking logout time:', err);
+      logger.error('Error checking logout time:', err);
       // If check fails, proceed anyway
       await fetchInviteInfo();
     }
@@ -225,7 +226,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
         <Text style={styles.title}>{t.projects.projectInvitation}</Text>
 
         <View style={styles.projectCard}>
-          <Text style={styles.projectName}>{projectInfo?.projectName}</Text>
+          <Text testID="join-project-name" style={styles.projectName}>{projectInfo?.projectName}</Text>
           {projectInfo?.projectDescription && (
             <Text style={styles.projectDescription}>
               {projectInfo.projectDescription}
@@ -239,6 +240,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
+            testID="join-project-submit"
             style={[styles.button, styles.primaryButton]}
             onPress={handleJoin}
             disabled={joining}

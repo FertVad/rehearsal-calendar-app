@@ -77,7 +77,7 @@ describe('Auth Flow Integration', () => {
         timezone: undefined,
         locale: undefined,
         verification: 'code',
-      });
+      }, expect.objectContaining({ timeout: expect.any(Number) }));
       expect(registerResponse.data.accessToken).toBeUndefined();
 
       // The emailed code, with the same password, starts the session. The

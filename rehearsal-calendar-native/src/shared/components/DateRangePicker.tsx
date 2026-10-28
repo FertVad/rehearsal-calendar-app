@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { getDateLocale } from '../../shared/utils/locale';
 import { formatDateToString, parseDateString } from '../utils/time';
 import { calendarRangeDays } from '../utils/memberAvailabilityLimits';
+import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
 
 interface DateRangePickerProps {
@@ -160,9 +161,8 @@ export function DateRangePicker({
   };
 
   return (
-    <Modal
+    <AppModal
       visible={visible}
-      transparent={true}
       animationType="fade"
       onRequestClose={onClose}
     >
@@ -229,7 +229,7 @@ export function DateRangePicker({
           </View>
         </View>
       </ModalSheet>
-    </Modal>
+    </AppModal>
   );
 }
 

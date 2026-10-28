@@ -7,7 +7,6 @@ import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
-import { registerForPushNotifications } from '../services/notifications';
 import { runAutoSync } from './useAutoCalendarSync';
 import { emitDataChanged } from '../utils/dataChanged';
 import { hapticMedium } from '../utils/haptics';
@@ -15,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useUnread } from '../../contexts/UnreadContext';
 import type { AppNavigation } from '../../navigation';
 
+import { logger } from '../utils/logger';
 /**
  * Hook for managing push notifications
  * Should be called once in the root component (App.tsx)
@@ -29,23 +29,16 @@ export function useNotifications() {
   const appStateListener = useRef<{ remove: () => void } | undefined>(undefined);
 
   useEffect(() => {
-    // Only register if user is logged in and notifications are enabled
-    if (user && user.notificationsEnabled) {
-      registerForPushNotifications()
-        .then((token) => {
-          if (token) {
-            console.log('[useNotifications] Registered with token:', token);
-          }
-        })
-        .catch((error) => {
-          console.error('[useNotifications] Registration failed:', error);
-        });
-    }
+    // Registering the device is not done here. This asked for the system
+    // permission whenever the tabs mounted for someone with notifications on —
+    // so "Later" on the onboarding screen was answered by the very prompt it
+    // put off (GC01). The session keeps the device registered without asking
+    // (AuthContext, keepPushRegistered); only the person's own action asks.
 
     // Listen for notifications received while app is foregrounded
     try {
       notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-        console.log('[useNotifications] Notification received:', notification);
+        logger.debug('[useNotifications] Notification received:', notification);
 
         // Trigger haptic feedback
         hapticMedium();
@@ -73,7 +66,7 @@ export function useNotifications() {
 
       // Listen for user interaction with notification
       responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log('[useNotifications] Notification tapped:', response);
+        logger.debug('[useNotifications] Notification tapped:', response);
 
         const data = response.notification.request.content.data;
 
@@ -108,11 +101,11 @@ export function useNotifications() {
             else refresh();
           })
           .catch((error) => {
-            console.log('[useNotifications] Could not read the launching notification:', error);
+            logger.debug('[useNotifications] Could not read the launching notification:', error);
           });
       }
     } catch (error) {
-      console.log('[useNotifications] Listener setup failed (expected on simulator):', error);
+      logger.debug('[useNotifications] Listener setup failed (expected on simulator):', error);
     }
 
     // The badge is the unread count from the server, refreshed whenever the app
@@ -144,7 +137,7 @@ export function useNotifications() {
           appStateListener.current.remove();
         }
       } catch (error) {
-        console.log('[useNotifications] Cleanup failed (expected on simulator):', error);
+        logger.debug('[useNotifications] Cleanup failed (expected on simulator):', error);
       }
     };
   }, [user, refresh, markRead]);
@@ -214,10 +207,10 @@ export function useNotifications() {
           break;
 
         default:
-          console.log('[useNotifications] Unknown notification type:', type);
+          logger.debug('[useNotifications] Unknown notification type:', type);
       }
     } catch (error) {
-      console.error('[useNotifications] Navigation error:', error);
+      logger.error('[useNotifications] Navigation error:', error);
     }
   };
 }

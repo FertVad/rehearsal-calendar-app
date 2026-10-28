@@ -3,12 +3,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
 import VerifyEmailScreen from '../features/auth/screens/VerifyEmailScreen';
+import ResetPasswordScreen from '../features/auth/screens/ResetPasswordScreen';
 import CalendarScreen from '../features/calendar/screens/CalendarScreen';
 import ProjectsScreen from '../features/projects/screens/ProjectsScreen';
 import ProjectDetailScreen from '../features/projects/screens/ProjectDetailScreen';
 import ProfileScreen from '../features/profile/screens/ProfileScreen';
 import CalendarSyncSettingsScreen from '../features/profile/screens/CalendarSyncSettingsScreen';
 import EditProfileScreen from '../features/profile/screens/EditProfileScreen';
+import ChangeEmailScreen from '../features/profile/screens/ChangeEmailScreen';
 import SmartPlannerScreen from '../features/smart-planner/screens/SmartPlannerScreen';
 import SmartPlannerTabScreen from '../features/smart-planner/screens/SmartPlannerTabScreen';
 import type {
@@ -31,6 +33,7 @@ export function AuthNavigator() {
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
       <AuthStack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+      <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
     </AuthStack.Navigator>
   );
 }
@@ -93,6 +96,11 @@ export function ProfileNavigator() {
       <ProfileStackNav.Screen
         name="EditProfile"
         component={EditProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <ProfileStackNav.Screen
+        name="ChangeEmail"
+        component={ChangeEmailScreen}
         options={{ headerShown: false }}
       />
 

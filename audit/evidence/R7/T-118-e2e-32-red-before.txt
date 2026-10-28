@@ -1,0 +1,33 @@
+T-118 review 1, finding 3 (HP05): e2e flow 32, red before.
+Command: git restore --source=4608443 -- src/features/onboarding/screens/CalendarSyncScreen.tsx
+         npm run e2e -- e2e/flows/32-onboarding-calendar-as-saved.yaml
+         git restore --source=HEAD -- src/features/onboarding/screens/CalendarSyncScreen.tsx
+Code: the onboarding step as before cause fix 18 (4608443), the rest as fixed.
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/32-onboarding-calendar-as-saved.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Onboarding shows the calendar that was saved (1m 57s) (Assertion is false: ".*Busy hours will come across on their own.*" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Where it failed (e2e/out/artifacts/2026-10-26_004054, commands.json): every step
+up to the last wait COMPLETED - the first tap on "Apple Calendar" showed
+"Busy hours will come across on their own" (tap-and-see saw it at once; no tap
+taken again), Back and Get Started reached the step again - and the wait after
+the return FAILED. The screenshot of that step
+(step-058-assertCondition-Busy_hours_will_come_acr.png) shows the step opened
+again with Apple Calendar not marked and "Mark your time on the Availability
+screen. Until you do, everyone sees you as free." with sync saved on.

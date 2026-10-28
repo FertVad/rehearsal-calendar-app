@@ -1,0 +1,36 @@
+Cause fix 16 (C04) - flow 29, red before and green after.
+
+Before: useAvailabilityData.ts put back as of 77f3b32
+  git restore --source=77f3b32 -- src/features/availability/hooks/useAvailabilityData.ts
+  npm run e2e -- e2e/flows/29-calendar-event-at-the-same-hours.yaml
+  git restore --source=HEAD -- src/features/availability/hooks/useAvailabilityData.ts
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/29-calendar-event-at-the-same-hours.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] A calendar event shows beside a row with the same hours (1m 49s) (Assertion is false: ".*from calendar.*" is visible)
+
+1/1 Flow Failed
+
+The morning showed only the night's end, "from the day before"; the event from
+his calendar at the same hours, 00:00-01:00, was dropped.
+
+After: the fix of bf9a24a
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/29-calendar-event-at-the-same-hours.yaml
+
+[e2e] running the flows
+[Passed] A calendar event shows beside a row with the same hours (2m 32s)
+
+1/1 Flow Passed in 2m 32s

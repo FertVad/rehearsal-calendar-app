@@ -3,30 +3,28 @@ import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayState } from '../types';
 import { validateSlot, slotsOverlap } from '../utils';
 import { getDateLocale } from '../../../shared/utils/locale';
+import { clockRangeEndDate, dateTimeToOffsetISOInTimezone, parseDateString } from '../../../shared/utils/time';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
+import { logger } from '../../../shared/utils/logger';
 /**
  * Hook for saving availability data
  * Handles validation and data transformation for API
  */
 export const useAvailabilitySave = () => {
+  // The day's hours are the profile's zone's, as they were read
+  // (useAvailabilityData) and as the server keys the day. They went out with the
+  // device's offset, so where the two differed a slot saved moved by the
+  // difference — or onto another day (cause fix 14).
+  const timezone = useTimezone();
+
   /**
-   * Create ISO timestamp from date and time in user's timezone
+   * The date and time in the profile's zone, with its offset: the text names
+   * the day the slot is saved under, as the server checks (cause fix 15,
+   * review 2).
    */
-  const createTimestamp = (dateStr: string, timeStr: string): string => {
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const [hours, minutes] = timeStr.split(':').map(Number);
-
-    const isoDateTimeStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-    const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-
-    const offsetMinutes = -localDate.getTimezoneOffset();
-    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
-    const offsetMins = Math.abs(offsetMinutes) % 60;
-    const offsetSign = offsetMinutes >= 0 ? '+' : '-';
-    const offsetStr = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
-
-    return `${isoDateTimeStr}${offsetStr}`;
-  };
+  const createTimestamp = (dateStr: string, timeStr: string): string =>
+    dateTimeToOffsetISOInTimezone(dateStr, timeStr, timezone);
 
   type Entry = { startsAt: string; endsAt: string; type: 'available' | 'busy'; isAllDay: boolean };
 
@@ -44,30 +42,15 @@ export const useAvailabilitySave = () => {
         isAllDay: true,
       }];
     }
-    return state.slots.map((slot) => {
-      // Detect midnight crossing: if end <= start as HH:MM, end belongs to
-      // the next calendar day (e.g. 23:00–00:30 or 22:00–01:00).
-      const startMinutes = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
-      const endMinutes = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
-      const endsNextDay = endMinutes <= startMinutes;
-
-      let endDate = date;
-      if (endsNextDay) {
-        const next = new Date(`${date}T00:00:00`);
-        next.setDate(next.getDate() + 1);
-        const y = next.getFullYear();
-        const m = String(next.getMonth() + 1).padStart(2, '0');
-        const d = String(next.getDate()).padStart(2, '0');
-        endDate = `${y}-${m}-${d}`;
-      }
-
-      return {
-        startsAt: createTimestamp(date, slot.start),
-        endsAt: createTimestamp(endDate, slot.end),
-        type: 'busy' as const,
-        isAllDay: false,
-      };
-    });
+    // A slot is an interval starting on its day; an end before the start is
+    // the next morning (clockRangeEndDate, cause fix 15). The server files it
+    // under the day it starts.
+    return state.slots.map((slot) => ({
+      startsAt: createTimestamp(date, slot.start),
+      endsAt: createTimestamp(clockRangeEndDate(date, slot.start, slot.end), slot.end),
+      type: 'busy' as const,
+      isAllDay: false,
+    }));
   };
 
   /**
@@ -108,7 +91,7 @@ export const useAvailabilitySave = () => {
           const slotValidation = validateSlot(slot);
 
           if (!slotValidation.isValid) {
-            const dateObj = new Date(date);
+            const dateObj = parseDateString(date);
             const locale = getDateLocale(language);
             const formattedDate = dateObj.toLocaleDateString(locale, {
               day: 'numeric',
@@ -119,7 +102,7 @@ export const useAvailabilitySave = () => {
             return {
               isValid: false,
               errorTitle: t.availability.cannotSave,
-              errorMessage: `${t.common.error} (${formattedDate}):\n\n${slotValidation.error}\n\n${t.availability.invalidSlot}`,
+              errorMessage: `${t.common.error} (${formattedDate}):\n\n${t.availability.slotSameStartEnd}\n\n${t.availability.invalidSlot}`,
             };
           }
         }
@@ -132,7 +115,7 @@ export const useAvailabilitySave = () => {
             const overlaps = slotsOverlap(slot1, slot2);
 
             if (overlaps) {
-              const dateObj = new Date(date);
+              const dateObj = parseDateString(date);
               const locale = getDateLocale(language);
               const formattedDate = dateObj.toLocaleDateString(locale, {
                 day: 'numeric',
@@ -196,7 +179,7 @@ export const useAvailabilitySave = () => {
       Alert.alert(t.rehearsals.success, t.availability.saved);
       return true;
     } catch (err: any) {
-      console.error('Failed to save availability:', err);
+      logger.error('Failed to save availability:', err);
       Alert.alert(t.common.error, err.response?.data?.error || t.availability.saveError);
       return false;
     } finally {

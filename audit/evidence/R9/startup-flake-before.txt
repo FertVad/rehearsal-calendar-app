@@ -1,0 +1,128 @@
+T-202: runtimeStartup.test.js flaky under the full-suite load (supervisor run on
+2df2724, 10.10.2026 11:09: "library import (VERCEL=false)", "an owned standalone
+child exits when its parent IPC channel closes", "process database configuration
+takes precedence ..." failed; the file took 69.318 s; a rerun passed).
+
+Where a child's start goes. Every startup test spawns a copied server and waits
+up to fixtureStartTimeoutMs = 6000 ms for it. Idle, one start takes 2.6-4.8 s
+(`jest __tests__/startup/runtimeStartup.test.js --verbose`: 2585..4811 ms per
+test). Per-module import time in a fresh `node` child, idle, from server/:
+
+  express 201   pg 37   bcrypt 120   jsonwebtoken 47   google-auth-library 131
+  apple-signin-auth 48   expo-server-sdk 17   helmet 2
+  date-fns/format 140   date-fns-tz/toZonedTime 84
+  date-fns-tz (root)  1825      <- after format and toZonedTime were loaded
+
+and the same child while the whole Jest suite was running:
+
+  express 1168   bcrypt 608   google-auth-library 694   date-fns/format 826
+  date-fns-tz (root)  9610
+
+The root of date-fns-tz loads format/formatters -> _lib/tzIntlTimeZoneName,
+which does `import { getDefaultOptions } from 'date-fns'`: the whole date-fns
+barrel (every function and locale index) for one getter. utils/timezone.js
+imports the root of date-fns-tz but uses only fromZonedTime. So about half of a
+server's cold import is a library barrel it never uses, and under load that
+alone exceeds the fixture's start wait.
+
+Red before (the old utils/timezone.js; the full Jest suite as the supervisor
+runs it, `cd rehearsal-calendar-native && npx jest --silent`).
+Note: this sandbox forbids any process to read a file named .env, so for the
+local runs (before and after) the fixture's explicitly selected file was written
+under a second name; the adjacent .env stayed. That change is not committed.
+
+Summary of all failing tests
+FAIL server/__tests__/startup/runtimeStartup.test.js (78.549 s)
+  ● library import (VERCEL=false) exports the app without listeners or database attempts
+    Owned child did not reach its expected state
+      at Timeout._onTimeout (server/__tests__/startup/entrypointFixture.mjs:178:70)
+  ● library import (VERCEL=true) exports the app without listeners or database attempts
+    Owned child did not reach its expected state
+  ● direct Vercel execution also leaves listener ownership to the platform
+    Owned child did not reach its expected state
+  ● direct standalone startup serves every public route without attempting an unavailable database
+    Owned child did not reach its expected state
+  ● an owned standalone child exits when its parent IPC channel closes
+    Owned child did not reach its expected state
+  ● failed initialization is shared, cached and cannot take public routes offline
+    Owned child did not reach its expected state
+  ● an owned stalled PostgreSQL handshake is bounded and not retried by following requests
+    Owned child did not reach its expected state
+  ● default startup ignores a synthetic adjacent .env unless explicitly selected
+    Owned child did not reach its expected state
+  ● an explicitly selected relative environment path is refused before database or listener startup
+    Owned child did not reach its expected state
+  ● an explicitly selected missing absolute environment path is refused before database or listener startup
+    Owned child did not reach its expected state
+  ● process database configuration takes precedence over the explicitly selected file
+    Owned child did not reach its expected state
+
+FAIL server/__tests__/routes/authLogin.test.js (6.407 s)
+  ● POST /auth/login › signs in a password account
+    thrown: "Exceeded timeout of 5000 ms for a hook." (beforeAll, imports the app)
+FAIL server/__tests__/routes/appleAuth.test.js (18.132 s)    [previous full run]
+  ● Apple missing configuration rejects ... (beforeAll: "Exceeded timeout of 5000 ms for a hook.")
+FAIL server/__tests__/services/expoTransport.test.js
+  ● ... a send answered with a 200 that is a list is a rejection
+    Received message: "Expo did not answer within 300 ms"
+
+Test Suites: 3 failed, 126 passed, 129 total
+Tests:       19 failed, 1642 passed, 1661 total
+Time:        150.228 s
+
+(The parallel `npx jest` above is heavier than the supervisor: scripts/test.mjs
+runs Jest --runInBand. The measurements and the A/B below use the supervisor's
+in-band order and an explicit, equal CPU load.)
+
+Child start time, measured in the fixture (wait lifted to 25 s for the
+measurement only), full suite `npx jest --runInBand`, nothing else running:
+
+  old utils/timezone.js:  3067 4929 2760 3132 4207 2642 3926 2669 2353 4186 2727 ms
+                          (up to 82% of the 6000 ms start wait); file 41.7 s
+  new utils/timezone.js:   664  690  710  991 1275 1219  870  702  298  297  752 ms
+                          (up to 21%); file 13.6 s
+
+A/B under the same load: a scratch Jest file keeps half of the cores busy for
+70 s in a second worker while runtimeStartup.test.js runs (`--maxWorkers=2`),
+the start wait at its committed 6000 ms:
+
+  old utils/timezone.js:
+FAIL __tests__/startup/runtimeStartup.test.js (71.925 s)
+  ✕ library import (VERCEL=false) exports the app without listeners or database attempts (6419 ms)
+  ✕ library import (VERCEL=true) exports the app without listeners or database attempts (6530 ms)
+  ✕ direct Vercel execution also leaves listener ownership to the platform (6439 ms)
+  ✕ direct standalone startup serves every public route without attempting an unavailable database (6531 ms)
+  ✕ an owned standalone child exits when its parent IPC channel closes (6417 ms)
+  ✕ failed initialization is shared, cached and cannot take public routes offline (6499 ms)
+  ✕ an owned stalled PostgreSQL handshake is bounded and not retried by following requests (6409 ms)
+  ✕ default startup ignores a synthetic adjacent .env unless explicitly selected (6565 ms)
+  ✕ an explicitly selected relative environment path is refused before database or listener startup (6431 ms)
+  ✕ an explicitly selected missing absolute environment path is refused before database or listener startup (6469 ms)
+  ✕ process database configuration takes precedence over the explicitly selected file (6333 ms)
+  (each: "Owned child did not reach its expected state")
+Tests:       11 failed, 1 passed, 12 total
+
+  new utils/timezone.js, same load, three runs:
+PASS __tests__/startup/runtimeStartup.test.js (31.668 s)
+  ✓ library import (VERCEL=false) exports the app without listeners or database attempts (3516 ms)
+  ✓ library import (VERCEL=true) exports the app without listeners or database attempts (2825 ms)
+  ✓ direct Vercel execution also leaves listener ownership to the platform (2821 ms)
+  ✓ direct standalone startup serves every public route without attempting an unavailable database (2701 ms)
+  ✓ an owned standalone child exits when its parent IPC channel closes (2664 ms)
+  ✓ failed initialization is shared, cached and cannot take public routes offline (2994 ms)
+  ✓ an owned stalled PostgreSQL handshake is bounded and not retried by following requests (4969 ms)
+  ✓ default startup ignores a synthetic adjacent .env unless explicitly selected (2965 ms)
+  ✓ an explicitly selected relative environment path is refused before database or listener startup (1307 ms)
+  ✓ an explicitly selected missing absolute environment path is refused before database or listener startup (1317 ms)
+  ✓ process database configuration takes precedence over the explicitly selected file (2786 ms)
+Tests:       12 passed, 12 total
+PASS __tests__/startup/runtimeStartup.test.js (32.38 s)
+PASS __tests__/startup/runtimeStartup.test.js (32.123 s)
+
+Full in-band suite with the new file: Tests: 1661 passed, 1661 total.
+Not claimed: a machine with every core saturated (checked on the old version
+only: 11/11 red) or the parallel `npx jest` (new version: 6/11 red, starts
+9.4-11.2 s) can still starve a child past 6 s; neither is the supervisor's run.
+
+Red before for the guard: new __tests__/startup/importWeight.test.js on the old
+utils/timezone.js - see startup-flake-guard-before.txt.

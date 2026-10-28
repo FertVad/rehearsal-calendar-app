@@ -8,8 +8,8 @@ import { rosterOf } from './roster.js';
  * @param {number} projectId - Project ID
  * @returns {Promise<string>} - IANA timezone string
  */
-export async function getProjectTimezone(projectId) {
-  const project = await db.get(
+export async function getProjectTimezone(projectId, conn = db) {
+  const project = await conn.get(
     'SELECT timezone FROM native_projects WHERE id = $1',
     [projectId]
   );
@@ -58,20 +58,20 @@ export async function bookRehearsalSlots(rehearsalId, projectId, startsAt, endsA
  * @param {number} projectId - Project ID
  * @param {string} startsAt - ISO 8601 timestamp
  * @param {string} endsAt - ISO 8601 timestamp
+ * @param {object} tx - The edit's transaction (rehearsalService.updateRehearsal)
  */
-export async function updateRehearsalSlots(rehearsalId, projectId, startsAt, endsAt) {
+export async function updateRehearsalSlots(rehearsalId, projectId, startsAt, endsAt, tx) {
   logger.debug(`[updateRehearsalSlots] START - Rehearsal ID: ${rehearsalId}, New time: ${startsAt} - ${endsAt}`);
 
-  // Both halves or neither. This is delete-then-reinsert, and a failure in
-  // between — a function timing out partway through a large cast, a connection
-  // dropping mid-loop — left the rehearsal standing with some or all of its
-  // participants carrying no busy row at all. Nothing retries, so they would
-  // have read free during their own rehearsal until somebody happened to edit
-  // it again.
-  await db.transaction(async (tx) => {
-    await deleteRehearsalSlots(rehearsalId, tx);
-    await bookRehearsalSlots(rehearsalId, projectId, startsAt, endsAt, tx);
-  });
+  // Both halves or neither, and together with the edit they belong to. This is
+  // delete-then-reinsert, and a failure in between — a function timing out
+  // partway through a large cast, a connection dropping mid-loop — left the
+  // rehearsal standing with some or all of its participants carrying no busy
+  // row at all. It used to have a transaction of its own, which kept the two
+  // halves together but not the slots with the new time and roster: a failure
+  // here left the rehearsal moved and its people busy at the old hour (R4: D03).
+  await deleteRehearsalSlots(rehearsalId, tx);
+  await bookRehearsalSlots(rehearsalId, projectId, startsAt, endsAt, tx);
 
   logger.debug(`[updateRehearsalSlots] DONE - Updated slots for rehearsal ${rehearsalId}`);
 }

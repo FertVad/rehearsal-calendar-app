@@ -54,7 +54,10 @@ const PEOPLE: Record<string, ReturnType<typeof member>[]> = {
 const getMembers = projectsAPI.getMembers as jest.Mock;
 const create = rehearsalsAPI.create as jest.Mock;
 const update = rehearsalsAPI.update as jest.Mock;
-const sentRoster = (call: jest.Mock) => call.mock.calls.at(-1)?.at(-1)?.participant_ids;
+// The body of the last request: create sends (project, body, key), update
+// (project, rehearsal, body).
+const sentRoster = (call: jest.Mock) =>
+  call.mock.calls.at(-1)?.find((arg: unknown) => typeof arg === 'object' && arg !== null)?.participant_ids;
 
 beforeEach(() => {
   jest.clearAllMocks();

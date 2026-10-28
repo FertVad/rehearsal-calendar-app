@@ -14,7 +14,12 @@
  */
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { useAvailabilityData } from '../useAvailabilityData';
+import { useAvailabilitySave } from '../useAvailabilitySave';
 import { availabilityAPI } from '../../../../shared/services/api';
+import { setProfileTimezone } from '../../../../shared/utils/time';
+
+// The profile's zone, as AuthContext sets it with the user.
+beforeEach(() => setProfileTimezone('Asia/Jerusalem'));
 
 jest.mock('../../../../shared/services/api');
 jest.mock('../../../../contexts/I18nContext', () => ({
@@ -121,6 +126,113 @@ describe('A multi-day calendar event, read in Jerusalem', () => {
     // Runs to the end of the 5th and stops there — the 6th gets nothing.
     expect(Object.keys(result.current.availability)).toEqual(['2026-09-05']);
     expect(imported(result.current.availability['2026-09-05'])).toEqual(['22:00-23:59']);
+  });
+
+  // Cause fix 15: the person's own slot past midnight is one slot of the day it
+  // starts on, the day that edits and saves it. Cut into 23:00–23:59 plus an
+  // own 00:00–01:00, saving that day wrote it back ending at 23:59.
+  describe('a hand-entered slot past midnight', () => {
+    // 10 September 23:00 → 11 September 01:00 local.
+    const OVERNIGHT = {
+      startsAt: '2026-09-10T20:00:00.000Z',
+      endsAt: '2026-09-10T22:00:00.000Z',
+      type: 'busy',
+      isAllDay: false,
+      source: 'manual',
+    };
+
+    it('is one slot of the day it starts, whole', async () => {
+      const result = await load([OVERNIGHT]);
+      expect(result.current.availability['2026-09-10'].slots).toEqual([{ start: '23:00', end: '01:00' }]);
+    });
+
+    it('shows its morning on the next day, read-only', async () => {
+      const result = await load([OVERNIGHT]);
+      const next = result.current.availability['2026-09-11'];
+      expect(next.slots).toEqual([]);
+      expect(next.importedSlots).toEqual([
+        expect.objectContaining({ start: '00:00', end: '01:00', source: 'previous_day' }),
+      ]);
+    });
+
+    it('saved back unchanged, is the same interval', async () => {
+      const result = await load([OVERNIGHT]);
+      const { result: save } = renderHook(() => useAvailabilitySave());
+      const [entry] = save.current.entriesForDay('2026-09-10', result.current.availability['2026-09-10']);
+      // The device's zone writes it here; the instants are what must match.
+      expect(Date.parse(entry.endsAt) - Date.parse(entry.startsAt)).toBe(2 * 60 * 60 * 1000);
+    });
+
+    // Review round 1: the morning's copy took the place of a slot of the 11th
+    // entered on its own for the same hours, and the next save of the 11th —
+    // which replaces the day with what the editor holds — deleted it.
+    it('does not push out a slot of the next day with the same hours', async () => {
+      // 11 September 00:00 → 01:00 local, entered on the 11th.
+      const MORNING = { ...OVERNIGHT, startsAt: '2026-09-10T21:00:00.000Z', endsAt: '2026-09-10T22:00:00.000Z' };
+      for (const data of [[OVERNIGHT, MORNING], [MORNING, OVERNIGHT]]) {
+        const result = await load(data);
+        const next = result.current.availability['2026-09-11'];
+        expect(next.slots).toEqual([{ start: '00:00', end: '01:00' }]);
+
+        const { result: save } = renderHook(() => useAvailabilitySave());
+        expect(save.current.entriesForDay('2026-09-11', next)).toHaveLength(1);
+      }
+    });
+  });
+
+  // The day is saved as the editor holds it, so a slot of the person's own is
+  // never hidden behind another row with the same hours: hidden, it was gone
+  // at the next save of that day.
+  it('keeps a hand-entered slot with the same hours as a rehearsal', async () => {
+    const at = { startsAt: '2026-09-12T16:00:00.000Z', endsAt: '2026-09-12T19:00:00.000Z', type: 'busy', isAllDay: false };
+    const result = await load([{ ...at, source: 'rehearsal' }, { ...at, source: 'manual' }]);
+    const day = result.current.availability['2026-09-12'];
+    expect(day.slots).toEqual([{ start: '19:00', end: '22:00' }]);
+    expect(imported(day)).toEqual(['19:00-22:00']);
+  });
+
+  // Review round 2: the person's own rows went into the set the imported ones
+  // were dropped by, so a day marked free in the middle of a trip read
+  // "free, nothing imported" — while everyone else's planner counts the trip.
+  describe('a trip from the phone across a day marked free by hand', () => {
+    // 10 September, free all day.
+    const FREE = {
+      startsAt: '2026-09-10T00:00:00.000Z',
+      endsAt: '2026-09-10T23:59:59.999Z',
+      type: 'available',
+      isAllDay: true,
+      source: 'manual',
+    };
+    const TRIPS = {
+      'whole days, 9 to 11 September': {
+        startsAt: '2026-09-09T00:00:00.000Z',
+        endsAt: '2026-09-11T23:59:59.999Z',
+        type: 'busy',
+        isAllDay: true,
+        source: 'google_calendar',
+      },
+      // 9 September 10:00 → 11 September 18:00 local.
+      'timed, 9 to 11 September': {
+        startsAt: '2026-09-09T07:00:00.000Z',
+        endsAt: '2026-09-11T15:00:00.000Z',
+        type: 'busy',
+        isAllDay: false,
+        source: 'apple_calendar',
+      },
+    };
+
+    for (const [name, trip] of Object.entries(TRIPS)) {
+      it(`shows the trip on the day marked free (${name})`, async () => {
+        for (const data of [[trip, FREE], [FREE, trip]]) {
+          const result = await load(data);
+          const day = result.current.availability['2026-09-10'];
+          expect(day.mode).toBe('custom');
+          expect(day.importedSlots).toEqual([
+            expect.objectContaining({ start: '00:00', end: '23:59', isAllDay: true }),
+          ]);
+        }
+      });
+    }
   });
 
   it('covers every day of a multi-day whole-day entry', async () => {

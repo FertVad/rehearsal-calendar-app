@@ -136,9 +136,10 @@ server/public/
 ### Database
 - **Server runtime, development and production**: PostgreSQL only. There is no SQLite fallback.
 - **SQLite**: isolated test fixtures only; they do not prove PostgreSQL behavior.
-- **Canonical schema**: twenty-two `native_*` application tables: thirteen domain
-  tables, six shared-budget tables, two for email address proof (group 010) and
-  one for push tickets awaiting their receipts (group 011).
+- **Canonical schema**: twenty-three `native_*` application tables: thirteen domain
+  tables, six shared-budget tables, two for email address proof (group 010),
+  one for push tickets awaiting their receipts (group 011) and one for the
+  idempotency keys of creates (group 012).
   Migration history is separate. Retired
   payment/activity/participant tables are not created by fresh provisioning.
   Actual production catalog and migration history have not been inspected here.
@@ -384,6 +385,19 @@ setRehearsals(data);
 Switching accounts is the severe case, and it is not a display bug: a calendar
 sync that began under one account finishes its writes under the next one's
 token, so one person's private hours land in another person's availability.
+
+The mechanism is `src/shared/services/session.ts` (cause fix 12). Only the
+AuthContext changes the owner (`changeOwner`), and every change ends the
+session: provider state is held with `useSessionState` (the next person starts
+empty, a write from an earlier session is dropped), an answer goes through
+`useLatestRequest` (only the newest question of the live session lands), state
+that is both read and changed goes through `useRequestOrder` (a change is on
+its way from send to answer, and a read that answers in that time or began
+before it ended does not land), and work that writes in the person's name — the
+calendar sync — runs as `sessionWork`, which the change of owner waits for
+before writing the next tokens and which calls `assertSession` before each
+write. Only the server's refusal of the refresh token ends a session from the
+API client; no network keeps it.
 
 ### 12. "Not in my list" is not a reason to delete
 
@@ -650,7 +664,7 @@ Two rules it exists to enforce:
 Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWORD` env var.
 
 **Features**:
-- User stats (total, new this week/month, churn rates)
+- User stats (total, new this week/month, not signed in for 30 days — sign-ins, not use: a session renews without one)
 - Users table with pagination
 - Transactions table with pagination
 - Bug reports table with inline status management
@@ -662,7 +676,7 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 
 **API Endpoints**:
 - `POST /admin/api/login` — authenticate with password
-- `GET /admin/api/stats` — aggregate stats (users, subs, revenue, churn, usage)
+- `GET /admin/api/stats` — aggregate stats: `users`, `signIns` (`notInLast30Days`, `rate`; a never-signed-in user counts from registration), `usage`
 - `GET /admin/api/users` — paginated user list
 - `GET /admin/api/bug-reports` — paginated bug reports (sorted: new → in_progress → fixed)
 - `PATCH /admin/api/bug-reports/:id/status` — update bug report status (new/in_progress/fixed)
@@ -792,6 +806,11 @@ Ensure Xcode scheme uses **Debug** build configuration (not Release):
   code to the current address and a code to the new one, and the password when
   there is one. A password alone is not proof: a session can set a first one and
   unlink Google/Apple. `PUT /me` refuses a new email
+- In the app: `ResetPasswordScreen` (from sign-in and from a taken address at
+  registration) and `ChangeEmailScreen` (from the profile, where the address is
+  read only). Both write a session only through `startSession` in
+  `AuthContext`; the address and password rules are in
+  `features/auth/utils/accountRules.ts`, counted as the server counts them
 - A pending account gets no session: login, refresh, Google/Apple and the auth
   middleware all refuse it
 - The middleware checks the session version before the handler, outside any

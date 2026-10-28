@@ -1,0 +1,22 @@
+Cause fix 12, review round — e2e red before, flows 18-20.
+App files of the fix restored from ce1a4fb, as in e2e-15-17-before.txt. Restored to HEAD afterwards.
+Command (rehearsal-calendar-native):
+npm run e2e -- e2e/flows/18-inbox-late-answer.yaml e2e/flows/19-chosen-project-deleted.yaml e2e/flows/20-save-before-availability.yaml
+Output filtered to the runner's steps and Maestro's results.
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Failed] Inbox against a late answer (1m 50s) (Assertion is false: "Mark all read" is not visible)
+[Failed] Chosen project deleted (1m 12s) (Assertion is false: ".*Pishchik Mill.*", id: rehearsal-project is visible)
+[Failed] Save before the availability is in (51s) (Assertion is false: ".*availability for this day is still being checked.*" is visible)
+3/3 Flows Failed
+
+NI04: after "Mark all read" the late list made a card unread again.
+BC02: the form opened on the deleted Pishchik Estate.
+DF05: the form saved with the day's availability still on its way.

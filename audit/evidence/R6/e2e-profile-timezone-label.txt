@@ -1,0 +1,24 @@
+Cause fix 15 (T-115): flow 23 (cause fix 14) against the project page's shared time label.
+
+RED - the supervisor's full e2e on 22be825, flow 23 unchanged ("02:00 - 03:00", a hyphen):
+[Failed] The profile's timezone, not the device's (1m 12s) (Assertion is false: "(?s)(?=.*Night watch)(?=.*02:00 - 03:00).*" is visible)
+1/27 Flow Failed
+
+Cause: since 04fe07d the project page's card shows its time through
+rehearsalTimeLabel (rehearsalDays.ts), the calendar card's label: "02:00 — 03:00"
+(an em dash), "23:00 — 11 Sep, 01:00" past midnight. Flow 23 still read the
+page's old " - ". Its assertNotVisible on "02:00 - 03:00" passed whatever the page showed.
+
+GREEN - flow 23 reads the em dash (assertVisible, extendedWaitUntil, assertNotVisible):
+$ npm run e2e -- e2e/flows/23-profile-timezone.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Passed] The profile's timezone, not the device's (2m 13s)
+
+1/1 Flow Passed in 2m 13s

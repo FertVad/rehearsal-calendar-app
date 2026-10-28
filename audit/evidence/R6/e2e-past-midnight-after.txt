@@ -1,0 +1,18 @@
+Cause fix 15 — e2e flows 23 and 24 on f2f34d5.
+
+$ npm run e2e -- e2e/flows/24-past-midnight-availability.yaml
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] A busy slot past midnight is one slot, on both days (4m 6s)
+
+1/1 Flow Passed in 4m 7s
+
+$ npm run e2e -- e2e/flows/23-past-midnight.yaml
+Waiting for flows to complete...
+[Passed] A rehearsal past midnight is on both days (1m 26s)
+
+1/1 Flow Passed in 1m 26s
+
+(Before the split, the single flow with both parts passed too: 1/1 in 1m 45s.)

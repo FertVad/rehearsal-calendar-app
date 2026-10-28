@@ -7,11 +7,16 @@ import { AppStackParamList } from '../../../navigation';
 import { Project, ProjectMember } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { checkSchedulingConflicts, formatConflictMessage } from '../../../shared/utils/conflictDetection';
-import { dateTimeToISOInTimezone, formatDateToString, formatDateToTimeString } from '../../../shared/utils/time';
-import { getSyncSettings } from '../../../shared/utils/calendarStorage';
-import { syncRehearsalToCalendar } from '../../../shared/services/calendar';
+import {
+  clockRangeToISO,
+  formatDateToString,
+  formatDateToTimeString,
+  isEmptyClockRange,
+} from '../../../shared/utils/time';
+import { exportRehearsal } from '../../../shared/services/calendarSync';
 import { TimeRange } from '../../../shared/utils/availability';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
+import { useTimezone } from '../../../shared/hooks/useClock';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
@@ -29,7 +34,11 @@ interface UseAddRehearsalSubmitProps {
   membersFailed: boolean;
   reloadMembers: () => void;
   members: ProjectMember[];
-  memberAvailability: Record<string, { timeRanges: TimeRange[] }>;
+  memberAvailability: Record<string, { timeRanges: TimeRange[]; nextDayRanges?: TimeRange[] }>;
+  /** The availability is for the day and people shown (useRehearsalAvailability). */
+  availabilityReady: boolean;
+  availabilityFailed: boolean;
+  reloadAvailability: () => void;
   resetForm: () => void;
   t: any;
   isEditMode: boolean;
@@ -49,6 +58,9 @@ export function useAddRehearsalSubmit({
   reloadMembers,
   members,
   memberAvailability,
+  availabilityReady,
+  availabilityFailed,
+  reloadAvailability,
   resetForm,
   t,
   isEditMode,
@@ -56,21 +68,26 @@ export function useAddRehearsalSubmit({
 }: UseAddRehearsalSubmitProps) {
   const navigation = useNavigation<NavigationType>();
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
-  const userTimezone = user?.timezone || 'UTC';
+  const idempotency = useIdempotencyKey();
+  const userTimezone = useTimezone();
 
   const saveRehearsal = async () => {
     setLoading(true);
 
     try {
-      // Convert date + time to ISO timestamps using user's timezone
-      const dateString = formatDateToString(date);
-      const startTimeString = formatDateToTimeString(startTime);
-      const endTimeString = formatDateToTimeString(endTime);
+      // The date and the two clock times as the interval they are, in the
+      // profile's zone, the one the form was filled in from (useAddRehearsalForm,
+      // review DF01): an end before the start is the next morning (DF04).
+      const { startsAt, endsAt } = clockRangeToISO(
+        formatDateToString(date),
+        formatDateToTimeString(startTime),
+        formatDateToTimeString(endTime),
+        userTimezone
+      );
 
       const rehearsalData = {
-        startsAt: dateTimeToISOInTimezone(dateString, startTimeString, userTimezone),
-        endsAt: dateTimeToISOInTimezone(dateString, endTimeString, userTimezone),
+        startsAt,
+        endsAt,
         // Optional: an untitled rehearsal is perfectly normal, so send
         // undefined rather than an empty string.
         title: title.trim() || undefined,
@@ -92,52 +109,35 @@ export function useAddRehearsalSubmit({
         );
         savedRehearsal = response.data.rehearsal || response.data;
       } else {
-        const response = await rehearsalsAPI.create(localSelectedProject!.id, rehearsalData);
+        // The same form sent again after a lost answer gets the rehearsal the
+        // first try made, not a second one (useIdempotencyKey).
+        const projectId = localSelectedProject!.id;
+        const response = await rehearsalsAPI.create(projectId, rehearsalData,
+          idempotency.keyFor({ projectId, rehearsalData }));
+        idempotency.settle();
         savedRehearsal = response.data.rehearsal;
       }
 
-      // Auto-sync to calendar if export is enabled
-      try {
-        const syncSettings = await getSyncSettings();
-        logger.debug('[AddRehearsal] 🔍 Checking calendar sync settings:', {
-          exportEnabled: syncSettings.exportEnabled,
-          exportCalendarId: syncSettings.exportCalendarId,
-          savedRehearsalId: savedRehearsal?.id,
+      // Its event, in the sync's queue: after a run already going, which may
+      // have read the rehearsal as it was before this save and would write
+      // the old time back over the new one. The queue reads the export
+      // settings when its turn comes; the save does not wait for it.
+      if (savedRehearsal?.id) {
+        exportRehearsal({
+          id: savedRehearsal.id,
+          projectId: localSelectedProject!.id,
+          projectName: localSelectedProject!.name,
+          startsAt: rehearsalData.startsAt,
+          endsAt: rehearsalData.endsAt,
+          location: rehearsalData.location,
+          // Without this the event is written the moment the rehearsal is
+          // saved and carries no name, so it reads "Rehearsal: <project>"
+          // until some later sync corrects it.
+          title: rehearsalData.title,
+        }).catch((syncError) => {
+          // Don't fail the whole operation if sync fails, just log it
+          logger.error('[AddRehearsal] ❌ Failed to auto-sync to calendar:', syncError);
         });
-
-        if (syncSettings.exportEnabled && syncSettings.exportCalendarId && savedRehearsal?.id) {
-          logger.debug('[AddRehearsal] ✅ All conditions met, syncing to calendar...');
-          const rehearsalWithProject = {
-            id: savedRehearsal.id,
-            projectId: localSelectedProject!.id,
-            projectName: localSelectedProject!.name,
-            startsAt: rehearsalData.startsAt,
-            endsAt: rehearsalData.endsAt,
-            location: rehearsalData.location,
-            // Without this the event is written the moment the rehearsal is
-            // saved and carries no name, so it reads "Rehearsal: <project>"
-            // until some later sync corrects it.
-            title: rehearsalData.title,
-          };
-
-          logger.debug('[AddRehearsal] 📤 Calling syncRehearsalToCalendar with:', {
-            rehearsalId: rehearsalWithProject.id,
-            projectName: rehearsalWithProject.projectName,
-            calendarId: syncSettings.exportCalendarId,
-          });
-
-          await syncRehearsalToCalendar(rehearsalWithProject, syncSettings.exportCalendarId);
-          logger.debug('[AddRehearsal] ✅ Calendar sync successful!');
-        } else {
-          logger.debug('[AddRehearsal] ⚠️ Calendar sync skipped. Reasons:', {
-            exportNotEnabled: !syncSettings.exportEnabled,
-            noCalendarSelected: !syncSettings.exportCalendarId,
-            noRehearsalId: !savedRehearsal?.id,
-          });
-        }
-      } catch (syncError) {
-        // Don't fail the whole operation if sync fails, just log it
-        console.error('[AddRehearsal] ❌ Failed to auto-sync to calendar:', syncError);
       }
 
       // Success message based on mode
@@ -159,7 +159,7 @@ export function useAddRehearsalSubmit({
         ]
       );
     } catch (error: any) {
-      console.error('Failed to save rehearsal:', error);
+      logger.error('Failed to save rehearsal:', error);
       const errorMessage = isEditMode
         ? t.rehearsals.updateError
         : t.rehearsals.createError;
@@ -184,7 +184,9 @@ export function useAddRehearsalSubmit({
       return;
     }
 
-    if (endTime <= startTime) {
+    // Only the clock times count: the form's Date objects carry whatever day
+    // they were made on, and an end before the start is the next day.
+    if (isEmptyClockRange(formatDateToTimeString(startTime), formatDateToTimeString(endTime))) {
       Alert.alert(t.common.error, t.rehearsals.endTimeError);
       return;
     }
@@ -200,6 +202,20 @@ export function useAddRehearsalSubmit({
         ]);
       } else {
         Alert.alert(t.common.error, t.rehearsals.participantsLoading);
+      }
+      return;
+    }
+
+    // The conflict check reads the availability of the day shown: one still
+    // loading, or failed, is not "nobody is busy" (DF05).
+    if (selectedMemberIds.length > 0 && !availabilityReady) {
+      if (availabilityFailed) {
+        Alert.alert(t.common.error, t.rehearsals.loadAvailabilityError, [
+          { text: t.common.cancel, style: 'cancel' },
+          { text: t.common.retry, onPress: reloadAvailability },
+        ]);
+      } else {
+        Alert.alert(t.common.error, t.rehearsals.availabilityChecking);
       }
       return;
     }

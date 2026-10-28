@@ -1,0 +1,63 @@
+# An inbox that could not be reached says so, and a "read" the server did not
+# take is taken back (cause fix 21: NI05, NI02). Ferapont has two unread. He
+# opens the inbox with no answer coming: the old screen said "Nothing yet". He
+# tries again and the cards are there; he marks them all read and that does
+# not reach the server either: the old screen showed them read, with no word
+# of it, while the server and the bell still had them unread.
+appId: ${APP_ID}
+name: Inbox load and read fail
+tags:
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${FERAPONT_EMAIL}
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "^/api/native/notifications$"
+      # Past the app's ten seconds: the list does not come at all, as offline.
+      MS: "40000"
+- tapOn: "Notifications"
+- extendedWaitUntil:
+    visible: "Could not load notifications"
+    timeout: 25000
+- assertNotVisible: "Nothing yet"
+- takeScreenshot: 34-could-not-load
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: inbox-retry
+      SEE: ".*Papers from the council.*"
+      WAIT_MS: 15000
+- assertVisible: ".*Bread delivery.*"
+# "Mark all read" goes nowhere: held on its way past the app's ten seconds.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: POST
+      PATH: "^/api/native/notifications/read$"
+      BEFORE: "1"
+      MS: "40000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Mark all read"
+      SEE: "Could not mark as read"
+      WAIT_MS: 25000
+- takeScreenshot: 34-could-not-mark-read
+- tapOn: "OK"
+# The cards are unread again, and the button with them.
+- assertVisible: "Mark all read"
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}

@@ -4,6 +4,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { hapticSuccess } from '../../../shared/utils/haptics';
 
+import { logger } from '../../../shared/utils/logger';
 export function useOnboarding() {
   const { updateUser } = useAuth();
   const { t } = useI18n();
@@ -16,15 +17,17 @@ export function useOnboarding() {
       hapticSuccess();
       // Navigation обновится автоматически через AuthContext
     } catch (error) {
-      console.error('Failed to complete onboarding:', error);
+      logger.error('Failed to complete onboarding:', error);
       throw error;
     } finally {
       setIsCompleting(false);
     }
   };
 
-  const skipOnboarding = async () => {
-    // Показать Alert перед завершением
+  const skipOnboarding = () => {
+    // Показать Alert перед завершением.
+    // Alert does not await its buttons: a throw here would be an unhandled
+    // rejection the user never sees (HP03), so the error is shown right here.
     Alert.alert(
       t.onboarding.skipTitle,
       t.onboarding.skipMessage,
@@ -32,7 +35,14 @@ export function useOnboarding() {
         {
           text: t.common.yes,
           onPress: async () => {
-            await completeOnboarding();
+            try {
+              await completeOnboarding();
+            } catch (error) {
+              Alert.alert(
+                t.common.error,
+                error instanceof Error ? error.message : String(error),
+              );
+            }
           },
         },
       ]

@@ -1,0 +1,57 @@
+Cause fix 21 (T-121), the supervisor's e2e of 27 October 2026: flows 10, 25, 27
+and 29 failed, none of them in the inbox. Their days are counted from the day of
+the run (e2e/seed.mjs: MARK_DAY today+3, EVENING_DAY today+5, MORNING_DAY and
+OTHER_DAY today+6); on the 27th the morning is 2 November, the first cell of
+November's second row, where on the 26th it was 1 November, a row above.
+
+Red before: flow 25 as it was (no e2e/subflows/day-in-reach.yaml), run alone
+on the 27th:
+
+$ npm --prefix rehearsal-calendar-native run e2e -- e2e/flows/25-past-midnight-availability.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] A busy slot past midnight is one slot, on both days (1m 54s) (Assertion is false: ".*00:00 – 01:00.*" is visible)
+
+1/1 Flow Failed
+
+Why, from Maestro's log of that run (e2e/out/artifacts/2026-10-27_035935):
+
+04:02:01.018 scrollUntilVisible: Element bounds: Bounds(x=20, y=580, width=47, height=47)
+04:02:01.035 Maestro.swipeFromCenter: Swiping UP from center
+04:02:04.577 scrollUntilVisible: Element bounds: Bounds(x=20, y=85, width=47, height=47)
+04:02:04.578 Scrolling DOWN until ".*, Partial", id: day-${MORNING_DAY} ... with centering enabled COMPLETED
+04:02:04.950 Tapping on element: ... resource-id=day-2026-11-02, bounds=[20,85][67,132]
+
+centerElement swiped once, from y 580 to y 85: under the header and the legend
+(the list begins below them, at about y 170). The list is clipped there, but
+the cell keeps its place on screen, so Maestro counted it visible and tapped
+the header; no day opened, and the screenshot shows November from the 9th on.
+Flows 27 and 29 tap the same morning the same way. Flow 10 then looks for
+MARK_DAY (30 October) scrolling DOWN from OTHER_DAY (2 November), centred the
+same way, and MARK_DAY is above, off the screen: "No visible element found:
+id: day-2026-10-30".
+
+Green after (e2e/subflows/day-in-reach.yaml after each scroll to a day; flow
+10 looks for MARK_DAY upwards), each run alone on the 27th:
+
+[Passed] A busy slot past midnight is one slot, on both days (2m 20s)
+[Passed] Availability saves the day it changed (2m)
+[Passed] A morning slot of his own outlives a save of the morning (3m)
+[Passed] A calendar event shows beside a row with the same hours (1m 51s)
+[Passed] A trip from the calendar shows on a day marked free (1m 43s)
+
+Flow 25's log after (e2e/out/artifacts/2026-10-27_040856): the same swipe left
+2 November under the legend, one slow swipe of the subflow drew it down, and
+the tap went to it:
+
+04:11:26.990 Repeat while id: day-${DAY}, Below id: availability-legend is not visible (up to 4 times) RUNNING
+04:11:28.161 Swipe from (50%, 45%) to (50%, 60%) in 1000 ms RUNNING
+04:11:39.620 Tapping on element: ... resource-id=day-2026-11-02, bounds=[20,209][67,256]

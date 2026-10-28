@@ -1,9 +1,11 @@
 import { logger } from '../../utils/logger.js';
 import db from '../../database/db.js';
-import { localToTimestamp, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
+import { localRangeToTimestamps, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
-import { ROSTER, viewerOf, rosterStats, checkParticipants, settleRoster, clearRoster } from './roster.js';
+import { ROSTER, viewerOf, rosterStats, checkParticipants, settleRoster, clearRoster, RosterRefused } from './roster.js';
+import { lockProject } from './projectLock.js';
+import { once } from '../idempotency.js';
 
 /**
  * Check if user is an active member of the project
@@ -270,44 +272,92 @@ export async function getRehearsalById(rehearsalId, userId) {
 }
 
 /**
- * Create a new rehearsal
- * @param {number} projectId - Project ID
- * @param {number} userId - User ID (creator)
- * @param {object} rehearsalData - Rehearsal data
- * @returns {Promise<object>} - Created rehearsal
+ * A rehearsal whose times are not an interval: unreadable, or ending where or
+ * before it starts. Refused with 400 before any write — the schema's CHECK
+ * (ends_at > starts_at) refused it too, but as a 500 (DF04).
  */
-export async function createRehearsal(projectId, userId, rehearsalData) {
-  logger.debug(`[createRehearsal] START - projectId: ${projectId}, userId: ${userId}`);
-  logger.debug(`[createRehearsal] rehearsalData:`, JSON.stringify(rehearsalData, null, 2));
+export class RehearsalTimesInvalid extends Error {
+  constructor() {
+    super('The rehearsal must end after it starts');
+    this.name = 'RehearsalTimesInvalid';
+    this.status = 400;
+  }
 
-  const { title, description, date, startTime, endTime, startsAt, endsAt, location, participant_ids } = rehearsalData;
+  get body() {
+    return { error: this.message, code: 'TIME_RANGE_INVALID' };
+  }
+}
 
-  // Everyone named must be an active member of this project, checked before
-  // anything is written; a list with anyone else is refused whole (roster.js).
-  const participantIds = await checkParticipants(db, projectId, participant_ids);
-
-  let startsAtISO, endsAtISO;
-
-  // Support both new format (startsAt/endsAt) and old format (date/startTime/endTime)
+/**
+ * The rehearsal's start and end as instants, from either request format:
+ * startsAt/endsAt, or the older date/startTime/endTime in the project's zone,
+ * where an end before the start is the next morning (localRangeToTimestamps).
+ * Either way the result is an interval, or the request is refused.
+ */
+async function rehearsalTimes(conn, projectId, { date, startTime, endTime, startsAt, endsAt }) {
+  let times;
   if (startsAt && endsAt) {
-    // New format: ISO timestamps
-    startsAtISO = startsAt;
-    endsAtISO = endsAt;
-    logger.debug(`[createRehearsal] Using new format - startsAt: ${startsAtISO}, endsAt: ${endsAtISO}`);
+    times = { startsAtISO: startsAt, endsAtISO: endsAt };
   } else if (date && startTime && endTime) {
-    // Old format: convert to ISO timestamps
-    const timezone = await getProjectTimezone(projectId);
+    const timezone = await getProjectTimezone(projectId, conn);
     const formattedDate = formatDateString(date);
     if (!formattedDate) {
       throw new Error('Invalid date format');
     }
-    startsAtISO = localToTimestamp(formattedDate, startTime, timezone);
-    endsAtISO = localToTimestamp(formattedDate, endTime, timezone);
-    logger.debug(`[createRehearsal] Using old format - startsAt: ${startsAtISO}, endsAt: ${endsAtISO}`);
+    times = localRangeToTimestamps(formattedDate, startTime, endTime, timezone);
   } else {
-    console.error(`[createRehearsal] ERROR - Neither format provided!`);
     throw new Error('Either (startsAt, endsAt) or (date, startTime, endTime) are required');
   }
+  const start = Date.parse(times.startsAtISO);
+  const end = Date.parse(times.endsAtISO);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) throw new RehearsalTimesInvalid();
+  return times;
+}
+
+/*
+ * Creating, editing and deleting a rehearsal are each one transaction (R4:
+ * D03). Each is several writes — the rehearsal, its roster, its people's busy
+ * slots, the reminders already claimed — and they used to commit one by one,
+ * so a failure half-way left the first of them standing: a rehearsal with no
+ * busy slots that a second tap then created again, or an edit that moved the
+ * rehearsal and kept everyone busy at the old hour. Notifications are sent by
+ * the routes after the commit, never from inside it.
+ */
+
+/**
+ * Create a new rehearsal — once per idempotency key (services/idempotency.js).
+ * @param {number} projectId - Project ID
+ * @param {number} userId - User ID (creator)
+ * @param {object} rehearsalData - Rehearsal data
+ * @param {string} [idempotencyKey] - The client's key for this create
+ * @returns {Promise<{ rehearsal: object, replayed: boolean }>} - The rehearsal,
+ *   and whether it was made by an earlier request with the same key
+ */
+export async function createRehearsal(projectId, userId, rehearsalData, idempotencyKey) {
+  logger.debug(`[createRehearsal] START - projectId: ${projectId}, userId: ${userId}`);
+
+  const { response, replayed } = await db.transaction((tx) => once(tx, {
+    userId,
+    key: idempotencyKey,
+    operation: 'rehearsal.create',
+    request: { projectId: String(projectId), rehearsalData },
+  }, () => insertRehearsal(tx, projectId, userId, rehearsalData)));
+  return { rehearsal: response, replayed };
+}
+
+async function insertRehearsal(tx, projectId, userId, rehearsalData) {
+  const { title, description, location, participant_ids } = rehearsalData;
+
+  // Before the roster is read: a removal or the project's deletion waits for
+  // this create, or this create for them (projectLock.js).
+  if (!(await lockProject(tx, projectId, 'write'))) {
+    throw new RosterRefused(404, 'PROJECT_NOT_FOUND', 'Project not found');
+  }
+
+  // Everyone named must be an active member of this project, checked before
+  // anything is written; a list with anyone else is refused whole (roster.js).
+  const participantIds = await checkParticipants(tx, projectId, participant_ids);
+  const { startsAtISO, endsAtISO } = await rehearsalTimes(tx, projectId, rehearsalData);
 
   logger.debug(`[createRehearsal] Inserting into database...`);
   logger.debug(`[createRehearsal] Parameters:`, {
@@ -321,7 +371,7 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
   });
 
   // Create rehearsal using new TIMESTAMPTZ columns
-  const newRehearsal = await db.get(
+  const newRehearsal = await tx.get(
     `INSERT INTO native_rehearsals (project_id, title, description, starts_at, ends_at, location, created_by, created_at, updated_at)
      VALUES ($1, $2, $3, $4::timestamptz, $5::timestamptz, $6, $7, NOW(), NOW())
      RETURNING *`,
@@ -340,7 +390,7 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
 
   // Everyone named is invited and has not seen it yet ('no').
   if (participantIds && participantIds.length > 0) {
-    await settleRoster(db, newRehearsal.id, participantIds);
+    await settleRoster(tx, newRehearsal.id, participantIds);
   }
 
   // Book slots in user availability for selected participants
@@ -349,7 +399,8 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
     newRehearsal.id,
     projectId,
     startsAtISO,
-    endsAtISO
+    endsAtISO,
+    tx
   );
   logger.debug(`[createRehearsal] Slots booked successfully`);
 
@@ -378,42 +429,34 @@ export async function createRehearsal(projectId, userId, rehearsalData) {
  * @param {number} rehearsalId - Rehearsal ID
  * @param {number} projectId - Project ID
  * @param {object} updateData - Update data
- * @returns {Promise<object>} - Updated rehearsal
+ * @returns {Promise<object|null>} - Updated rehearsal; null when it is gone
  */
 export async function updateRehearsal(rehearsalId, projectId, updateData) {
-  const { title, description, date, startTime, endTime, startsAt, endsAt, location, participant_ids } = updateData;
+  return db.transaction((tx) => editRehearsal(tx, rehearsalId, projectId, updateData));
+}
+
+async function editRehearsal(tx, rehearsalId, projectId, updateData) {
+  const { title, description, location, participant_ids } = updateData;
+
+  // As on creation (projectLock.js); the project gone means the rehearsal is.
+  if (!(await lockProject(tx, projectId, 'write'))) return null;
 
   // Checked before anything is written. undefined keeps the roster, [] clears it.
-  const participantIds = await checkParticipants(db, projectId, participant_ids);
+  const participantIds = await checkParticipants(tx, projectId, participant_ids);
+  const { startsAtISO, endsAtISO } = await rehearsalTimes(tx, projectId, updateData);
 
-  let startsAtISO, endsAtISO;
-
-  // Support both new format (startsAt/endsAt) and old format (date/startTime/endTime)
-  if (startsAt && endsAt) {
-    // New format: ISO timestamps
-    startsAtISO = startsAt;
-    endsAtISO = endsAt;
-  } else if (date && startTime && endTime) {
-    // Old format: convert to ISO timestamps
-    const timezone = await getProjectTimezone(projectId);
-    const formattedDate = formatDateString(date);
-    if (!formattedDate) {
-      throw new Error('Invalid date format');
-    }
-    startsAtISO = localToTimestamp(formattedDate, startTime, timezone);
-    endsAtISO = localToTimestamp(formattedDate, endTime, timezone);
-  } else {
-    throw new Error('Either (startsAt, endsAt) or (date, startTime, endTime) are required');
-  }
-
-  // Read before writing, so the release below can tell a move from a rename.
-  const existing = await db.get(
-    `SELECT starts_at FROM native_rehearsals WHERE id = $1 AND project_id = $2`,
+  // Read before writing, so the release below can tell a move from a rename;
+  // held until the commit, so a reminder run cannot claim people at the old
+  // time between the move and the release (R8: GR05).
+  const existing = await tx.get(
+    `SELECT starts_at FROM native_rehearsals WHERE id = $1 AND project_id = $2 FOR UPDATE`,
     [rehearsalId, projectId]
   );
+  // Deleted since the route found it: nothing to edit.
+  if (!existing) return null;
 
   // Update rehearsal using new TIMESTAMPTZ columns
-  const updatedRehearsal = await db.get(
+  const updatedRehearsal = await tx.get(
     `UPDATE native_rehearsals
      SET title = $1, description = $2, starts_at = $3::timestamptz, ends_at = $4::timestamptz, location = $5, updated_at = NOW()
      WHERE id = $6 AND project_id = $7
@@ -445,8 +488,8 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
   // it, holding the row as it sends (reminderScheduler.remindRehearsal): the
   // update above waits for a send in flight, and this release then takes its
   // claims too (R8: GR05).
-  if (existing && new Date(existing.starts_at).getTime() !== new Date(updatedRehearsal.starts_at).getTime()) {
-    await db.run(`DELETE FROM native_push_reminders WHERE rehearsal_id = $1`, [rehearsalId]);
+  if (new Date(existing.starts_at).getTime() !== new Date(updatedRehearsal.starts_at).getTime()) {
+    await tx.run(`DELETE FROM native_push_reminders WHERE rehearsal_id = $1`, [rehearsalId]);
   }
 
   // Participants first, slots second. bookRehearsalSlots reads the roster
@@ -457,7 +500,7 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
   // as on creation. Re-inserting everyone as 'yes' used to mark the whole cast
   // as having seen a rehearsal the moment it changed, the one time they have not.
   if (participantIds !== undefined) {
-    await settleRoster(db, rehearsalId, participantIds);
+    await settleRoster(tx, rehearsalId, participantIds);
   }
 
   // Rebuild the busy slots from the roster we just settled
@@ -465,7 +508,8 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
     rehearsalId,
     projectId,
     startsAtISO,
-    endsAtISO
+    endsAtISO,
+    tx
   );
 
   return {
@@ -486,20 +530,22 @@ export async function updateRehearsal(rehearsalId, projectId, updateData) {
  * @param {number} rehearsalId - Rehearsal ID
  * @returns {Promise<void>}
  */
-export async function deleteRehearsal(rehearsalId) {
+export async function deleteRehearsal(rehearsalId, projectId) {
   logger.debug(`[deleteRehearsal] START - Deleting rehearsal ID: ${rehearsalId}`);
 
-  // Delete booked slots first
-  logger.debug(`[deleteRehearsal] Step 1: Deleting availability slots...`);
-  await deleteRehearsalSlots(rehearsalId);
+  await db.transaction(async (tx) => {
+    // The project, then the rehearsal itself (projectLock.js): an edit in
+    // flight rebooks its slots and commits before these deletes look for them.
+    await lockProject(tx, projectId, 'write');
+    await tx.get('SELECT id FROM native_rehearsals WHERE id = $1 FOR UPDATE', [rehearsalId]);
 
-  // Delete RSVP responses
-  logger.debug(`[deleteRehearsal] Step 2: Deleting RSVP responses...`);
-  await clearRoster(db, rehearsalId);
-
-  // Delete rehearsal
-  logger.debug(`[deleteRehearsal] Step 3: Deleting rehearsal record...`);
-  await db.run('DELETE FROM native_rehearsals WHERE id = $1', [rehearsalId]);
+    // The busy slots are tied to the rehearsal by an id in text, which no
+    // foreign key cascades; the roster would go with the row, but goes
+    // explicitly, as on every other path (roster.js).
+    await deleteRehearsalSlots(rehearsalId, tx);
+    await clearRoster(tx, rehearsalId);
+    await tx.run('DELETE FROM native_rehearsals WHERE id = $1', [rehearsalId]);
+  });
 
   logger.debug(`[deleteRehearsal] DONE - Successfully deleted rehearsal ${rehearsalId}`);
 }

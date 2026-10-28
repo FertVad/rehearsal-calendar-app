@@ -5,9 +5,10 @@
 
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from './api';
+import { currentSession, isCurrentSession, type SessionStamp } from './session';
 import { logger } from '../utils/logger';
 
 const PUSH_TOKEN_KEY = '@push_token';
@@ -28,54 +29,126 @@ try {
     }),
   });
 } catch (error) {
-  console.log('[Notifications] Handler setup failed (expected on simulator):', error);
+  logger.debug('[Notifications] Handler setup failed (expected on simulator):', error);
 }
 
 /**
- * Register for push notifications and save token to backend
- * @returns {Promise<string | null>} Push token or null if failed
+ * What registering this device came to (cause fix 20). It used to be a token
+ * or null, and null meant a refusal, a simulator and a dropped connection
+ * alike — so the profile took each of them for success (GC02), and nothing
+ * could tell a failure worth trying again from an answer (GC03).
  */
-export async function registerForPushNotifications(): Promise<string | null> {
+export type PushRegistration =
+  /** Permission granted and the token is on the server. */
+  | 'registered'
+  /** The system permission is not granted: refused, or never asked. */
+  | 'denied'
+  /** This device cannot receive push at all (a simulator). */
+  | 'unsupported'
+  /** Permission granted, but the token did not reach the server. */
+  | 'failed';
+
+/**
+ * What this device last came to, for the session: one value that every
+ * registration writes and the profile reads ('unknown' until the first
+ * attempt has ended, and again once the session is over).
+ *
+ * The profile used to keep its own copy, read from the system permission when
+ * it was focused: a token the server refused read as registered again after
+ * a tab change, and an answer given in Settings was not seen until the next
+ * one (review of cause fix 20).
+ */
+export type PushDeviceState = PushRegistration | 'unknown';
+
+/**
+ * What a registration came to for its caller: 'ended' when the session it was
+ * begun in is over — signed out, or somebody else signed in — before it came
+ * back. Such an answer is nobody's to hear: it is not this device's state, and
+ * it saves no setting.
+ */
+export type PushAttempt = PushRegistration | 'ended';
+
+let deviceState: PushDeviceState = 'unknown';
+const deviceListeners = new Set<() => void>();
+
+function setDeviceState(state: PushDeviceState) {
+  if (state === deviceState) return;
+  deviceState = state;
+  deviceListeners.forEach((listener) => listener());
+}
+
+/**
+ * The one rule for every registration, the person's and the session's own:
+ * what it came to is written as this device's state only while the session it
+ * was begun in is on (session.ts). Only the background attempt kept to it, so
+ * the profile's answer, come after a change of account, was written as the
+ * next person's device state and saved as their setting (review 2 of cause
+ * fix 20).
+ */
+function settle(session: SessionStamp, result: PushAttempt): PushAttempt {
+  if (result === 'ended' || !isCurrentSession(session)) return 'ended';
+  setDeviceState(result);
+  return result;
+}
+
+export function getPushDeviceState(): PushDeviceState {
+  return deviceState;
+}
+
+/** For useSyncExternalStore. */
+export function subscribePushDeviceState(listener: () => void): () => void {
+  deviceListeners.add(listener);
+  return () => {
+    deviceListeners.delete(listener);
+  };
+}
+
+/**
+ * The one place that registers this device. Only `ask` may show the system
+ * prompt, and only the person's own action passes it: the onboarding screen's
+ * Allow and the profile (`askAndRegisterPush`). The session's own attempts
+ * run in the background and never ask (`keepPushRegistered`).
+ *
+ * iOS shows that prompt once: a refusal can only be undone in Settings. The
+ * notifications hook used to ask whenever a signed-in user with notifications
+ * on mounted the tabs, so "Later" on the onboarding screen was answered by the
+ * same prompt a moment later (GC01).
+ *
+ * The token goes to the server only while `session` is on: the request carries
+ * whoever's credentials are there by then.
+ */
+async function registerPush(ask: boolean, session: SessionStamp): Promise<PushAttempt> {
+  if (!Device.isDevice) {
+    logger.debug('[Notifications] Push notifications only work on physical devices');
+    return 'unsupported';
+  }
+
+  let status: string;
   try {
-    // Check if running on physical device
-    if (!Device.isDevice) {
-      console.log('[Notifications] Push notifications only work on physical devices');
-      return null;
+    status = (await Notifications.getPermissionsAsync()).status;
+    if (status !== 'granted' && ask) {
+      status = (await Notifications.requestPermissionsAsync()).status;
     }
+  } catch (error) {
+    logger.warn('[Notifications] Could not read the push permission:', error);
+    return 'failed';
+  }
+  if (status !== 'granted') return 'denied';
 
-    // Request permissions
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      console.log('[Notifications] Permission denied');
-      return null;
-    }
-
-    // Get Expo push token
+  try {
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: EXPO_PROJECT_ID,
     });
-
     const token = tokenData.data;
-    console.log('[Notifications] Push token:', token);
 
-    // Get device info
     const deviceType = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
     const deviceName = Device.modelName || 'Unknown Device';
 
-    // Register token with backend
+    if (!isCurrentSession(session)) return 'ended';
+    // The endpoint upserts on (user, device), so registering again is cheap.
     await authAPI.registerPushToken(token, deviceType, deviceName);
-
-    // Save token locally
     await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
 
-    // Configure Android notification channel
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('rehearsal-notifications', {
         name: 'Rehearsal Notifications',
@@ -86,56 +159,84 @@ export async function registerForPushNotifications(): Promise<string | null> {
       });
     }
 
-    console.log('[Notifications] Registration successful');
-    return token;
+    logger.debug('[Notifications] Registration successful');
+    return 'registered';
   } catch (error) {
-    console.error('[Notifications] Registration error:', error);
-    return null;
+    logger.warn('[Notifications] Could not register the push token:', error);
+    return 'failed';
   }
 }
 
 /**
- * Re-register the device with the backend, but only if permission is already
- * granted — this never shows a prompt.
- *
- * Logging out deletes the token row on the server, and nothing used to put it
- * back: registration happened only on the onboarding screen and the profile
- * toggle. So signing out and back in stopped every notification, permanently
- * and silently, while the profile still read "enabled" because that switch
- * reflects a flag on the user rather than whether a device is registered.
- *
- * Call this whenever a user appears — login, or a restored session. It is
- * cheap and idempotent: the endpoint upserts on (user, device).
+ * The person asked for notifications: may show the system prompt. 'ended' if
+ * the session it was asked in is over by the answer: the caller then does
+ * nothing more — no setting saved, nothing said.
  */
-export async function syncPushTokenIfGranted(): Promise<string | null> {
+export async function askAndRegisterPush(): Promise<PushAttempt> {
+  const session = currentSession();
+  return settle(session, await registerPush(true, session));
+}
+
+/** Whether this device can receive push right now, without asking. */
+async function pushPermission(): Promise<'granted' | 'denied' | 'unsupported'> {
+  if (!Device.isDevice) return 'unsupported';
   try {
-    if (!Device.isDevice) return null;
-
-    // getPermissionsAsync, not requestPermissionsAsync: asking belongs to
-    // onboarding and the profile toggle, where the user is expecting it. iOS
-    // only shows the system prompt once, so spending it here would be worse
-    // than useless.
     const { status } = await Notifications.getPermissionsAsync();
-    if (status !== 'granted') return null;
-
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: EXPO_PROJECT_ID,
-    });
-    const token = tokenData.data;
-
-    const deviceType = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
-    const deviceName = Device.modelName || 'Unknown Device';
-
-    await authAPI.registerPushToken(token, deviceType, deviceName);
-    await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
-
-    return token;
-  } catch (error) {
-    // Never surfaced: this runs in the background on every launch, and a
-    // failure here must not interrupt anything.
-    logger.warn('[Notifications] Could not re-register push token:', error);
-    return null;
+    return status === 'granted' ? 'granted' : 'denied';
+  } catch {
+    return 'denied';
   }
+}
+
+/**
+ * Keeps this device registered for the session that is on: registers at once
+ * and, until it has, again each time the app comes forward. Returns the stop.
+ * Never shows a prompt. Logging out deletes the token row on the server, so a
+ * session that appears — login, or a restored one — puts it back.
+ *
+ * It registered once per session and gave up on any failure, so a sign-in
+ * made on a bad connection left the device without notifications for the
+ * whole session, silently (GC03). Coming forward is also when a permission
+ * granted in Settings is first seen — and one taken back there: a registered
+ * device then only reads the permission, and is 'denied' once it is gone, to
+ * be registered again when it returns. One attempt at a time; a simulator
+ * stops it, as nothing there can register. What each attempt comes to is the
+ * device's state (`getPushDeviceState`); the end of the session clears it.
+ */
+export function keepPushRegistered(): () => void {
+  // The session this keeps the device registered for; an attempt that ends
+  // after it must not speak for the next one (settle).
+  const session = currentSession();
+  let stopped = false;
+  let running = false;
+
+  const attempt = async () => {
+    if (stopped || running || deviceState === 'unsupported') return;
+    running = true;
+    try {
+      if (deviceState === 'registered') {
+        const permission = await pushPermission();
+        if (!stopped && permission !== 'granted') settle(session, 'denied');
+      } else {
+        const result = await registerPush(false, session);
+        if (!stopped) settle(session, result);
+      }
+    } finally {
+      running = false;
+    }
+  };
+
+  setDeviceState('unknown');
+  attempt();
+  const subscription = AppState.addEventListener('change', (state) => {
+    if (state === 'active') attempt();
+  });
+
+  return () => {
+    stopped = true;
+    subscription.remove();
+    setDeviceState('unknown');
+  };
 }
 
 /**
@@ -153,10 +254,10 @@ export async function unregisterPushToken(): Promise<void> {
       // Remove from local storage
       await AsyncStorage.removeItem(PUSH_TOKEN_KEY);
 
-      console.log('[Notifications] Token unregistered');
+      logger.debug('[Notifications] Token unregistered');
     }
   } catch (error) {
-    console.error('[Notifications] Unregister error:', error);
+    logger.error('[Notifications] Unregister error:', error);
   }
 }
 

@@ -45,6 +45,9 @@ const existing = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/** What the export put in the notes before it put the rehearsal in the URL. */
+const LEGACY_NOTES = 'Project: Гамлет\n\nCreated via Rehearsly';
+
 beforeEach(() => {
   jest.clearAllMocks();
   (checkCalendarPermissions as jest.Mock).mockResolvedValue(true);
@@ -76,8 +79,11 @@ describe('An event iCloud already delivered', () => {
   });
 
   it('is still adopted when it predates the mark, by its contents', async () => {
-    // Events written before this have no URL. They must keep working.
-    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([existing()]);
+    // Events written before this have no URL. They must keep working — those
+    // the export wrote, which end the notes with its signature; the reader's
+    // own look the same otherwise and are not adopted (cause fix 19,
+    // exportOwnership.test.ts).
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([existing({ notes: LEGACY_NOTES })]);
 
     const id = await createCalendarEvent(rehearsal(), 'cal-1');
 
@@ -91,7 +97,7 @@ describe('An event iCloud already delivered', () => {
       jest.clearAllMocks();
       (Calendar.createEventAsync as jest.Mock).mockResolvedValue('new-event');
       (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
-        existing({ location: platformEmpty }),
+        existing({ location: platformEmpty, notes: LEGACY_NOTES }),
       ]);
 
       await createCalendarEvent(rehearsal({ location: null }), 'cal-1');
@@ -133,6 +139,6 @@ describe('What a new event carries', () => {
   it('is recorded against the rehearsal for this device', async () => {
     await createCalendarEvent(rehearsal(), 'cal-1');
 
-    expect(saveEventMapping).toHaveBeenCalledWith('42', 'new-event', 'cal-1');
+    expect(saveEventMapping).toHaveBeenCalledWith('42', 'new-event', 'cal-1', expect.any(Number));
   });
 });

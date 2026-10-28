@@ -6,10 +6,11 @@ an empty, explicitly selected application schema and commits DDL, verified
 postconditions and the new history record in one transaction. The snapshot has
 no table drops, historical data conversion or implicit environment loading.
 
-The snapshot defines 22 application tables: 13 domain tables, the six tables
+The snapshot defines 23 application tables: 13 domain tables, the six tables
 of the approved 007/008/009 budget groups, the two of group 010 (email
-address proof, R3) and the one of group 011 (push tickets awaiting their
-receipts, R8). It supplies the availability conflict
+address proof, R3), the one of group 011 (push tickets awaiting their
+receipts, R8) and the one of group 012 (idempotency keys of creates, R4).
+It supplies the availability conflict
 key, notification indexes and other historical structural postconditions that
 the old mixed-dialect bootstrap omitted. Fresh `provider_metadata` is TEXT;
 `native_bug_reports.created_at` and other instant columns are TIMESTAMPTZ.
@@ -17,11 +18,11 @@ No existing column is silently cast to those types.
 
 ## Named profiles
 
-- `rehearsly-pg-current-v1`: all 22 tables, required constraints/indexes, and
+- `rehearsly-pg-current-v1`: all 23 tables, required constraints/indexes, and
   consistent budget gate rows. Fresh and adoption are both allowed.
 - `rehearsly-pg-domain13-v1`: the complete modern domain schema, with each budget
   group either wholly absent or fully compatible. After adoption, an explicit
-  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011 order.
+  `--apply` installs the missing approved groups in 007, 008, 009, 010, 011, 012, 013 order.
 - `rehearsly-pg-domain13-pre-import-key-v1`: the same modern predecessor, except
   that the availability imported-event unique key is absent and the aggregate
   duplicate count is zero. Adoption requires this explicit profile. Apply first
@@ -107,6 +108,15 @@ is disposable — so no recorded root changed meaning. The owner confirmed on
 2026-09-25 that the new migrator has never run against a database anyone kept.
 From the first production adoption on, changes take new versioned paths as
 described above.
+
+On 2026-10-14 R4 (cause fix 11, G01) changed a domain table the same way, still
+before any adoption: `native_push_tokens` is unique on `device_token` alone
+instead of `(user_id, device_token)`, and the plain token index is gone. The
+snapshot, catalog and manifest were re-pinned. This is group 013, a key rather
+than tables: the inspector counts it present when the token is unique on its
+own, and otherwise checks `native_push_tokens` against its predecessor shape.
+`migrations/013-push-token-owner.sql` is its forward step (dropping all but the
+most recently active holder of each token), installed by `--apply` after 012.
 
 `r2Schema.mjs` checks actual fresh and adopted schemas through the real migration
 runner and application HTTP/adapter code, plus independent catalog drift and

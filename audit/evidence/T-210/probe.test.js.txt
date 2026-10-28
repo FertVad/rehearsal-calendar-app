@@ -1,0 +1,36 @@
+// The timing probe behind red-before.txt, section 1. It lived for the
+// investigation as server/__tests__/routes/zzProbeAuthLogin.test.js and was
+// removed; kept here as text so it does not run with the suite.
+import { jest } from '@jest/globals';
+import { setupIntegrationDb, closeIntegrationDb } from '../integration/setup.js';
+
+const t = [];
+const mark = (label) => t.push([label, performance.now()]);
+
+beforeAll(async () => {
+  mark('start');
+  const testDb = await setupIntegrationDb();
+  mark('db');
+  jest.unstable_mockModule('../../database/db.js', () => ({
+    default: testDb, isPostgres: false, initDatabase: async () => testDb, testConnection: async () => true,
+  }));
+  await import('express'); await import('supertest');
+  mark('express+supertest');
+  const bcrypt = (await import('bcrypt')).default;
+  mark('bcrypt import');
+  await import('../../utils/accountLinking.js');
+  mark('accountLinking');
+  await import('../../routes/auth.js');
+  mark('routes/auth');
+  await bcrypt.hash('correct-horse-battery', 10);
+  mark('hash cost 10');
+  await bcrypt.hash('correct-horse-battery', 4);
+  mark('hash cost 4');
+}, 60000);
+
+afterAll(() => closeIntegrationDb());
+
+it('reports', () => {
+  const lines = t.slice(1).map(([l, v], i) => `${l}: ${(v - t[i][1]).toFixed(0)} ms`);
+  process.stderr.write(`PROBE ${lines.join(' | ')}\n`);
+});

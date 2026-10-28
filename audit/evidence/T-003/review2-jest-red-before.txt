@@ -1,0 +1,30 @@
+T-003 review round 2: src/navigation/linking.ts at 8ec2e7b (git restore --source=HEAD), new test in place.
+$ npx jest --selectProjects frontend --silent --testPathPatterns launchLink
+
+Running one project: frontend
+FAIL frontend src/navigation/__tests__/launchLink.test.tsx (10.03 s)
+  ● opens the launch link once — signing out and in again lands on the calendar
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 1
+
+      Array [
+        "MainTabs",
+    +   "JoinProject",
+      ]
+
+      78 |   rerender(<Root stage="app" />);
+      79 |   await waitFor(() => expect(firstState).not.toBeNull());
+    > 80 |   expect(screens()).toEqual(['MainTabs']);
+         |                     ^
+      81 | });
+      82 |
+
+      at Object.<anonymous> (src/navigation/__tests__/launchLink.test.tsx:80:21)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        10.795 s, estimated 16 s

@@ -1,0 +1,38 @@
+Cause fix 12, review round — e2e red before, flows 15-17.
+App files of the fix restored from ce1a4fb (git restore --source=ce1a4fb -- <17 files>:
+AuthContext, I18nContext, ProjectContext, SeenContext, UnreadContext, useAddRehearsalSubmit,
+useRehearsalAvailability, useRehearsals, AddRehearsalScreen, NotificationsScreen,
+translations/calendar.ts, useAutoCalendarSync, api.ts, calendar/export.ts, calendar/import.ts,
+calendarMappings.ts, storage.ts). Flows, seed, e2e server and testIDs from a081511 + the hold
+`ms` parameter (committed after). Restored to HEAD afterwards.
+Command (rehearsal-calendar-native):
+npm run e2e -- e2e/flows/15-session-revoked.yaml e2e/flows/16-switch-account-unread-language.yaml e2e/flows/17-filter-late-answer.yaml
+Output filtered to the runner's steps and Maestro's results.
+
+[e2e] starting a disposable PostgreSQL
+[e2e] stopping the database a dead run left behind (e167fdf9af17)
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Failed] Signed out elsewhere (1m 8s) (Assertion is false: id: login-submit is visible)
+[Failed] Switch accounts - count and language (1m 32s) (Assertion is false: id: unread-badge is not visible)
+[Failed] Calendar filter against a late answer (1m 16s) (Assertion is false: ".*Garden debate.*" is not visible)
+3/3 Flows Failed
+
+AC02: after the sessions were ended elsewhere the app stayed on the calendar.
+NI03: Dunyasha's bell showed Yasha's unread count.
+DF06: Garden Debates' rehearsal under the Eternal Student filter.
+
+HC01 (flow 16 stops at NI03 above). An earlier run of the same old files, with the
+count held nine seconds instead of past the app's timeout, got past the badge and
+stopped at the language; that run was cut off by the tool's 10-minute limit after
+four flows, so its output is partial:
+
+[Failed] Signed out elsewhere (1m 43s) (Assertion is false: id: login-submit is visible)
+[Failed] Switch accounts - count and language (1m 26s) (Assertion is false: ".*Все проекты.*", id: calendar-filter is visible)
+[Failed] Calendar filter against a late answer (57s) (Assertion is false: ".*Garden debate.*" is not visible)
+[Failed] Inbox against a late answer (1m 10s) (Assertion is false: "Mark all read" is not visible)

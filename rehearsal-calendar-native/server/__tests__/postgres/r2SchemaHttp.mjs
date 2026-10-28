@@ -105,8 +105,31 @@ export async function checkSchemaHttp({ connectionString, control, allowedPorts,
     assert.equal(inbox.status, 200);
     assert.ok(inbox.body.notifications.length > 0);
     assert.ok(inbox.body.unreadCount > 0);
+    // Pages by timestamptz and id (cause fix 21: NI01): three rows in one
+    // millisecond, one a millisecond older, walked two at a time, each once.
+    const stamp = new Date(Date.now() - 60_000);
+    const older = new Date(stamp.getTime() - 1);
+    await control.query(`INSERT INTO ${schema}.native_notifications(user_id,type,title,body,data,sent_at,created_at)
+      VALUES($1,'e2e','page-a','',$4,$2,$2),($1,'e2e','page-b','',$4,$2,$2),($1,'e2e','page-c','',$4,$2,$2),
+            ($1,'e2e','page-d','',$4,$3,$3)`, [memberId, stamp.toISOString(), older.toISOString(), '{}']);
+    const walked = [];
+    let cursor = null;
+    do {
+      const page = await request(`/api/native/notifications?limit=2${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+        { token: member.body.accessToken });
+      assert.equal(page.status, 200);
+      walked.push(...page.body.notifications);
+      cursor = page.body.nextCursor;
+    } while (cursor && walked.length < 50);
+    assert.deepEqual(walked.map(item => item.title).filter(title => title.startsWith('page-')),
+      ['page-c', 'page-b', 'page-a', 'page-d']);
+    assert.equal(new Set(walked.map(item => item.id)).size, inbox.body.notifications.length + 4);
+    assert.equal(walked.length, inbox.body.notifications.length + 4);
+    // A list that names nothing marks nothing; the whole inbox is asked for by name.
     assert.equal((await request('/api/native/notifications/read', { method: 'POST', token: member.body.accessToken,
-      body: {} })).body.unreadCount, 0);
+      body: { ids: [] } })).body.unreadCount, inbox.body.unreadCount + 4);
+    assert.equal((await request('/api/native/notifications/read', { method: 'POST', token: member.body.accessToken,
+      body: { all: true } })).body.unreadCount, 0);
     await control.query(`INSERT INTO ${schema}.native_push_reminders(rehearsal_id,user_id,reminder_type,sent_at)
       VALUES($1,$2,'24h',NOW()),($1,$3,'24h',NOW()) ON CONFLICT(rehearsal_id,user_id,reminder_type) DO NOTHING`,
     [rehearsalRow.id, ownerId, memberId]);
@@ -166,6 +189,13 @@ export async function checkSchemaHttp({ connectionString, control, allowedPorts,
     for (const route of ['/admin/api/stats', '/admin/api/users']) {
       assert.equal((await request(route, { token: admin.body.token })).status, 200, route);
     }
+    // Sign-ins, counted on PostgreSQL's timestamps: the joiner signed in today,
+    // and with no sign-in since a registration 40 days old counts (H03).
+    const signIns = async () => (await request('/admin/api/stats', { token: admin.body.token })).body.signIns;
+    const before = (await signIns()).notInLast30Days;
+    await control.query(`UPDATE ${schema}.native_users SET last_login_at = NULL, created_at = NOW() - INTERVAL '40 days'
+      WHERE id = $1`, [joinerId]);
+    assert.equal((await signIns()).notInLast30Days, before + 1);
     assert.equal((await request(`/api/native/projects/${projectId}/members/${joinerId}`, { method: 'DELETE', token })).status, 200);
     assert.equal(Number((await control.query(`SELECT count(*) FROM ${schema}.native_rehearsal_responses
       WHERE user_id=$1`, [joinerId])).rows[0].count), 0);

@@ -13,7 +13,14 @@ const groupTables={
   '009':['native_operation_ip_rate_limits','native_operation_ip_rate_limit_gates'],
   '010':['native_email_codes','native_email_identities'],
   '011':['native_push_tickets'],
+  '012':['native_idempotency_keys'],
+  '013':[],
 };
+// Group 013 is a key, not a table: its predecessor is the push token table
+// unique on (user_id, device_token) with a plain token index.
+const pushTokenPredecessorSql=`ALTER TABLE native_push_tokens DROP CONSTRAINT native_push_tokens_device_token_key;
+  ALTER TABLE native_push_tokens ADD UNIQUE (user_id, device_token);
+  CREATE INDEX idx_push_tokens_token ON native_push_tokens(device_token)`;
 
 // Only invoked after probe.mjs verifies its freshly owned disposable database.
 // This scenario starts with the empty r0_fixture schema, never fixture.sql.
@@ -53,7 +60,9 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
   await withMutation('deferrable conflict target', 'DROP INDEX idx_availability_imported_event; ALTER TABLE native_user_availability ADD UNIQUE(user_id,external_event_id,source) DEFERRABLE','CONFLICT_TARGET_MISSING');
   await withMutation('NULLS NOT DISTINCT is not the manual-row contract', 'DROP INDEX idx_availability_imported_event; CREATE UNIQUE INDEX idx_availability_imported_event ON native_user_availability(user_id,external_event_id,source) NULLS NOT DISTINCT','CONFLICT_TARGET_MISSING');
   await withMutation('old reminder unique still restrictive', 'ALTER TABLE native_push_reminders ADD UNIQUE(rehearsal_id,reminder_type)','UNKNOWN_RESTRICTIVE_OBJECT');
-  await withMutation('extra unique on a lookup key', 'CREATE UNIQUE INDEX bad_unique ON native_users(week_start_day)','UNKNOWN_RESTRICTIVE_OBJECT');
+  await withMutation('push token without its one-owner key is missing group 013', pushTokenPredecessorSql,'BUDGET_GROUP_MISSING');
+  await withMutation('push token keeping the old pair key beside the owner key', 'ALTER TABLE native_push_tokens ADD UNIQUE (user_id, device_token)','UNKNOWN_RESTRICTIVE_OBJECT');
+  await withMutation('extra unique on a lookup key','CREATE UNIQUE INDEX bad_unique ON native_users(week_start_day)','UNKNOWN_RESTRICTIVE_OBJECT');
   await withMutation('required check not validated', 'ALTER TABLE native_user_availability DROP CONSTRAINT native_user_availability_check; ALTER TABLE native_user_availability ADD CHECK(ends_at>starts_at) NOT VALID','REQUIRED_CONSTRAINT_MISSING');
   await withMutation('foreign key wrong action', 'ALTER TABLE native_project_members DROP CONSTRAINT native_project_members_user_id_fkey; ALTER TABLE native_project_members ADD FOREIGN KEY(user_id) REFERENCES native_users(id) ON DELETE RESTRICT','REQUIRED_CONSTRAINT_MISSING');
   await withMutation('notification index wrong ordering', 'DROP INDEX idx_notifications_user_created; CREATE INDEX idx_notifications_user_created ON native_notifications(user_id,created_at ASC)','REQUIRED_INDEX_MISSING');
@@ -128,11 +137,15 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
   assert.equal((await check('r0_fixture')).compatible,true);
   pass('actual failed concurrent unique build leaves an unusable index and is refused');
   await create('r2_schema_modern');
-  await query("INSERT INTO native_users(email,first_name,created_at,updated_at) VALUES('preserve@fixture.invalid','  Keep  ','2026-01-02T03:04:05Z','2026-01-02T03:04:05Z')");
+  await query("INSERT INTO native_users(email,first_name,created_at,updated_at) VALUES('preserve@fixture.invalid','  Keep  ','2026-01-02T03:04:05Z','2026-01-02T03:04:05Z'),('second-holder@fixture.invalid','Second','2026-01-02T03:04:05Z','2026-01-02T03:04:05Z')");
   await query("INSERT INTO native_user_availability(user_id,starts_at,ends_at,title,external_event_id) VALUES(1,'2026-10-01T10:00Z','2026-10-01T11:00Z','keep1',NULL),(1,'2026-10-02T10:00Z','2026-10-02T11:00Z','keep2',NULL),(1,'2026-10-03T10:00Z','2026-10-03T11:00Z','keep3','imported-1')");
   const before=(await query('SELECT row_to_json(a) AS row FROM native_user_availability a ORDER BY id')).rows;
   const usersBefore=(await query('SELECT row_to_json(u) AS row FROM native_users u ORDER BY id')).rows;
   for(const names of Object.values(groupTables)) for(const table of names) await query(`DROP TABLE ${table}`);
+  await query(pushTokenPredecessorSql);
+  // Two holders of one token, as G01 left them: 013 keeps the later one.
+  await query(`INSERT INTO native_push_tokens(user_id,device_token,last_active_at) VALUES
+      (1,'ExponentPushToken[shared]','2026-10-01T10:00Z'),(2,'ExponentPushToken[shared]','2026-10-01T11:00Z')`);
   await query('DROP INDEX idx_availability_imported_event');
   await assert.rejects(query(`INSERT INTO native_user_availability(user_id,starts_at,ends_at,external_event_id)
     VALUES(1,'2026-11-01T10:00Z','2026-11-01T11:00Z','missing-key-proof')
@@ -158,6 +171,8 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
   assert.equal(upgraded.evidenceSha256,baseline.evidenceSha256);
   assert.deepEqual((await query('SELECT row_to_json(a) AS row FROM native_user_availability a ORDER BY id')).rows,before);
   assert.deepEqual((await query('SELECT row_to_json(u) AS row FROM native_users u ORDER BY id')).rows,usersBefore);
+  assert.deepEqual((await query('SELECT user_id,device_token FROM native_push_tokens')).rows,
+    [{user_id:2,device_token:'ExponentPushToken[shared]'}],'013 keeps the most recently active holder');
   assert.equal((await migrate('r2_schema_modern',{mode:'apply'})).outcome,'unchanged');
   pass('real runner adoption and repair-first batch preserve rows and legacy ledger and match runner fresh catalog');
   await query('BEGIN');
@@ -227,7 +242,8 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
   // and the runner accepts no non-PostgreSQL target.
   assert.deepEqual(manifest.steps.map(step=>step.sql.file).sort(),['database/schema/availability-conflict-key-v1.sql',
     'migrations/007-member-availability-rate-limit.sql','migrations/008-invite-rate-limits.sql','migrations/009-operation-ip-rate-limits.sql',
-    'migrations/010-email-verification.sql','migrations/011-push-tickets.sql']);
+    'migrations/010-email-verification.sql','migrations/011-push-tickets.sql','migrations/012-idempotency-keys.sql',
+    'migrations/013-push-token-owner.sql']);
   await query('BEGIN');
   try {
     await query('SET LOCAL search_path TO r2_schema_legacy_time,pg_catalog');
@@ -243,5 +259,5 @@ export async function probeR2Schema({connectionString,control,allowedPorts}) {
     assert.equal((await check(schema)).compatible,true);
     pass('actual HTTP contracts on '+schema);
   }
-  return {outcome:'PASS',checks:report.length,catalogTables:22,http};
+  return {outcome:'PASS',checks:report.length,catalogTables:23,http};
 }

@@ -228,9 +228,17 @@ module.exports = {
 
   // Additional utilities
   findNodeHandle: jest.fn(),
+  useWindowDimensions: () => ({ width: 375, height: 812 }),
   Animated: {
-    Value: jest.fn(),
-    timing: jest.fn(),
+    // AppModal moves its content with one; a timing ends at once.
+    Value: class {
+      constructor(value) { this.value = value; }
+      setValue(value) { this.value = value; }
+      interpolate() { return this; }
+    },
+    timing: jest.fn((value, { toValue }) => ({
+      start: (done) => { value.value = toValue; if (done) done({ finished: true }); },
+    })),
     spring: jest.fn(),
     View: View,
     Text: Text,

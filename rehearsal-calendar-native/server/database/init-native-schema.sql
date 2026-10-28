@@ -175,7 +175,8 @@ CREATE TABLE native_push_tokens (
   last_active_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (user_id, device_token),
+  -- One owner per token (R4: G01); migrations/013-push-token-owner.sql for existing schemas.
+  UNIQUE (device_token),
   FOREIGN KEY (user_id) REFERENCES native_users(id) ON DELETE CASCADE
 );
 
@@ -303,7 +304,6 @@ CREATE UNIQUE INDEX idx_availability_imported_event
 CREATE INDEX idx_notifications_user_created ON native_notifications (user_id, created_at DESC);
 CREATE INDEX idx_notifications_user_unread ON native_notifications (user_id) WHERE read_at IS NULL;
 CREATE INDEX idx_push_tokens_user_id ON native_push_tokens(user_id);
-CREATE INDEX idx_push_tokens_token ON native_push_tokens(device_token);
 CREATE INDEX idx_push_reminders_rehearsal ON native_push_reminders(rehearsal_id);
 CREATE INDEX idx_push_reminders_sent_at ON native_push_reminders(sent_at);
 CREATE INDEX idx_native_users_week_start_day ON native_users(week_start_day);
@@ -354,3 +354,15 @@ CREATE TABLE native_push_tickets (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_push_tickets_created ON native_push_tickets (created_at);
+
+-- 012: creates by the key the client sent with them (R4: B02, D03).
+-- Same DDL as migrations/012-idempotency-keys.sql, the forward step for existing schemas.
+CREATE TABLE native_idempotency_keys (
+  user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+  idempotency_key TEXT NOT NULL,
+  operation TEXT NOT NULL,
+  fingerprint TEXT NOT NULL,
+  response TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, idempotency_key)
+);

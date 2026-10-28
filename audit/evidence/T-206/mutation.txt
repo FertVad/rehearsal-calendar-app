@@ -1,0 +1,39 @@
+T-206: does flow 17 still guard DF06 (cause fix 12)?
+Mutation: src/features/calendar/hooks/useRehearsals.ts, `if (!current()) return;`
+before setRehearsals removed - the late "All Projects" answer lands over the
+chosen project's list. Restored afterwards with git restore --source=HEAD.
+
+slow-plain / slow-open = flow 17 with a 10 s pause after the pull (a slow
+simulator), with the old plain hold and the new open hold.
+
+--- 1st attempt: flow 17 OPEN, server-with-mailbox.mjs not yet changed (artifacts 2026-10-25_041004)
+npm run e2e -- e2e/flows/17-filter-late-answer.yaml e2e/repro/slow-open.yaml e2e/repro/slow-plain.yaml
+[Failed] Calendar filter against a late answer (1m 55s) (Assertion is false: ".*Lecture on progress.*" is visible)
+[Failed] T-206 slow simulator, open hold (1m 37s) (Assertion is false: ".*Lecture on progress.*" is visible)
+[Passed] T-206 slow simulator, plain hold (1m 12s)
+2/3 Flows Failed
+server.log:
+[e2e] holding the request GET /api/native/rehearsals/batch, its connection open
+[e2e] released GET /api/native/rehearsals/batch: the server answered 304
+=> wrong reason: iOS asked with If-None-Match, the server said 304, the 200
+   already sent carried an empty body, the mutated app showed an empty list.
+   Fixed: an open hold forwards without the conditional headers.
+
+--- 2nd attempt: with the server-with-mailbox.mjs fix (artifacts 2026-10-25_042015)
+npm run e2e -- e2e/flows/17-filter-late-answer.yaml e2e/repro/slow-open.yaml e2e/repro/slow-plain.yaml
+[Failed] Calendar filter against a late answer (2m 12s) (Assertion is false: ".*Garden debate.*" is not visible)
+[Failed] T-206 slow simulator, open hold (1m 32s) (Assertion is false: ".*Garden debate.*" is not visible)
+[Passed] T-206 slow simulator, plain hold (1m 9s)
+2/3 Flows Failed
+server.log:
+[e2e] released GET /api/native/rehearsals/batch: the server answered 200
+flow 17 steps: pick, "Garden debate" not visible, release ... then
+04:23:21.213 Assert that ".*Garden debate.*" is not visible FAILED   <- the late answer landed
+=> flow 17 catches DF06 on its last step, as intended. The old plain hold on a
+   slow simulator is green with the bug back: its answer went before the pick.
+
+--- without the mutation (useRehearsals.ts as at HEAD), slow variants (artifacts after 04:00)
+npm run e2e -- e2e/repro/slow-open.yaml e2e/repro/slow-plain.yaml
+[Passed] T-206 slow simulator, open hold (1m 19s)
+[Passed] T-206 slow simulator, plain hold (1m 5s)
+2/2 Flows Passed in 2m 24s

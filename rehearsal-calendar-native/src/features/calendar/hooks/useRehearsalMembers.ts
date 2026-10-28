@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { projectsAPI } from '../../../shared/services/api';
 import { Project, ProjectMember } from '../../../shared/types';
 
+import { logger } from '../../../shared/utils/logger';
 type Loaded = { projectId: string | null; members: ProjectMember[]; failed: boolean };
 
 /**
@@ -34,7 +35,7 @@ export const useRehearsalMembers = (project: Project | null) => {
       })
       .catch((error) => {
         if (!current) return;
-        console.error('Failed to load members:', error);
+        logger.error('Failed to load members:', error);
         setLoaded({ projectId: project.id, members: [], failed: true });
       })
       .finally(() => {

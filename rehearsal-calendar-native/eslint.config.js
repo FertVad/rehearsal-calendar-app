@@ -103,10 +103,15 @@ module.exports = [
       'react-native/no-inline-styles': 'warn',
 
       // General
-      'no-console': 'off',
+      // The logger is the one sink, and it redacts credentials (AC04).
+      'no-console': 'error',
       'no-debugger': 'warn',
       'prefer-const': 'warn',
       'no-var': 'error',
     },
+  },
+  {
+    files: ['src/shared/utils/logger.ts', '**/__tests__/**', '**/*.{test,spec}.{ts,tsx}'],
+    rules: { 'no-console': 'off' },
   },
 ];

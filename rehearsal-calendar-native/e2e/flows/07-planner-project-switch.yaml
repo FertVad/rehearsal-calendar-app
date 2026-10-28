@@ -1,0 +1,63 @@
+# Switching the planner to another project selects that project's people, not
+# the ones the previous project had, and plans its slots for them (DP01, cause
+# fix 8). Three Sisters has three people, The Bear two; only their director,
+# Olga Stage, is in both, and Grigory Smirnov, The Bear's other, is busy
+# tomorrow 10:00-14:00. Olga is in no other flow's projects, so nothing another
+# flow books lands on her day.
+appId: ${APP_ID}
+name: Planner follows the project
+tags:
+  - planner
+  - projects
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${STAGE_EMAIL}
+- tapOn: "Planner, tab.*"
+- tapOn:
+    id: planner-project
+- tapOn: "Three Sisters"
+# Its roster is in once the counter names three. Everyone selected, set here:
+# the flow does not lean on arrival for its starting point.
+- extendedWaitUntil:
+    visible: "\\d+ of 3 selected"
+    timeout: 15000
+- repeat:
+    while:
+      notVisible: "3 of 3 selected"
+    times: 2
+    commands:
+      - tapOn:
+          id: members-toggle-all
+- assertVisible: "3 of 3 selected"
+# The Bear: its own two, all of them. Three Sisters' three seeded here read
+# "3 of 2 selected" and planned The Bear for the director alone.
+- tapOn:
+    id: planner-project
+- tapOn: "The Bear"
+- extendedWaitUntil:
+    visible: "2 of 2 selected"
+    timeout: 15000
+- assertNotVisible: "3 of 2 selected"
+# The slots are The Bear's: tomorrow morning names Smirnov as busy.
+- scrollUntilVisible:
+    element: "Busy: .*Grigory Smirnov.*"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: 07-planner-the-bear
+# And back: Three Sisters' three again, not The Bear's two, and nobody from
+# The Bear in its slots.
+- scrollUntilVisible:
+    element:
+      id: planner-project
+    direction: UP
+- tapOn:
+    id: planner-project
+- tapOn: "Three Sisters"
+- extendedWaitUntil:
+    visible: "3 of 3 selected"
+    timeout: 15000
+- assertNotVisible: "2 of 3 selected"
+- assertNotVisible: "Busy: .*Grigory Smirnov.*"
+- takeScreenshot: 07-planner-three-sisters

@@ -1,0 +1,15 @@
+Cause fix 12, review round 3 - after.
+Code: useRequestOrder keeps one order per session (useSession.ts), tests of this round.
+Command: cd rehearsal-calendar-native && npx jest --selectProjects frontend src/shared/hooks/__tests__/requestOrder.test.ts src/contexts/__tests__/UnreadContext.test.tsx
+(the runner ran every frontend suite)
+
+PASS frontend src/shared/hooks/__tests__/requestOrder.test.ts (39.28 s)
+PASS frontend src/contexts/__tests__/UnreadContext.test.tsx (40.801 s)
+PASS frontend src/features/notifications/screens/__tests__/NotificationsScreen.test.tsx
+PASS frontend src/features/calendar/hooks/__tests__/seenOrder.test.tsx
+PASS frontend src/contexts/__tests__/SeenContext.test.tsx
+
+Tests:       769 passed, 769 total
+
+npm run type-check: tsc --noEmit, no errors
+npm run check:secrets: {"summary":"pass","mode":"worktree","files":1041,"findings":0,"errors":0}

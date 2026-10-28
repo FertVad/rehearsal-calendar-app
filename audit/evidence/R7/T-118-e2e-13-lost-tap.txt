@@ -1,0 +1,40 @@
+T-118: e2e flow 13 failed in the supervisor's run of e774950/38b984f - a tap the
+simulator lost (T-207), not the sync change.
+
+== Supervisor run 2026-10-25 21:34 (e2e/out/artifacts/2026-10-25_213413), 30/31 passed
+[Failed] A create tapped again after its answer was lost makes one project (1m 40s) (Assertion is false: ".*Dunsinane.*", id: project-card is visible)
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+== commands.json, end of the flow
+launchAppCommand {"appId":"${APP_ID}"} COMPLETED 5509
+tapOnElement {"selector":{"textRegex":"Projects, tab.*"}} COMPLETED 5847
+assertConditionCommand {"condition":{"visible":{"textRegex":".*Dunsinane.*","idRegex":"project-card"}},"timeout":"15000"} FAILED 15576
+
+Screenshot at the failed step (screenshots/step-040-assertCondition-Dunsinane.png):
+the Calendar tab is still selected ("All Projects", "Nothing today") - the tab
+tap left no trace.
+
+== logs/maestro.log
+21:42:14.250 Tap on "Projects, tab.*" RUNNING
+21:42:18.919 Tapping on element: accessibilityText=Projects, tab, 2 of 5, resource-id=tab-projects, bounds=[78,781][157,824]
+21:42:20.097 Tap on "Projects, tab.*" COMPLETED
+
+== logs/device-simulator.log (backboardd), the same tap
+149337 21:42:19.527180 backboardd: digitizer attached (sender 101ABC000006B)
+149340 21:42:19.527721 backboardd: we already have a service for senderID:101ABC000006B
+149354 21:42:19.542535 backboardd: didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+  ... 10 such lines, 21:42:19.542-21:42:19.641, the only ones in the flow's log
+
+The signature of docs/e2e.md "A lost tap": the digitizer registered twice, the
+touch cancelled. It cannot be made to happen on demand, so this run is the red.
+The flow did not use tap-and-see for this tap; Maestro reported it done.
+
+== Fix: flow 13's "Projects" tab tap goes through e2e/subflows/tap-and-see.yaml
+   (TAP_ID tab-projects, SEE ".*Dunsinane.*", WAIT_MS 15000)
+
+== Green after: npm run e2e -- e2e/flows/13-create-project-lost-answer.yaml
+[Passed] A create tapped again after its answer was lost makes one project (2m 7s)
+
+1/1 Flow Passed in 2m 7s
+
+[e2e] taps taken again (tap-and-see.yaml): 0

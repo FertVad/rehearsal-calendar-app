@@ -1,0 +1,61 @@
+# Cause fix 20, review (T-120): red before.
+# The review fix's tests (0ad10c3) on the reviewed sources:
+#   git restore --source=fc7b02f -- src/shared/services/notifications.ts \
+#     src/features/profile/screens/ProfileScreen.tsx
+# (translations and tests from 0ad10c3), then restored from HEAD.
+
+$ npx jest --selectProjects frontend --testPathPatterns 'ProfileScreen.push|AuthContext.push|useNotifications.push' --forceExit --verbose
+  ✓ registers again when the app comes forward after a failed start, and stops once it has (GC03) (357 ms)
+  ✓ registers once the permission is granted in Settings, never asking itself (83 ms)
+  ✓ a change to the user is the same session and registers nothing new (72 ms)
+  ✓ does not ask when the tabs mount for someone with notifications on (GC01) (1033 ms)
+  ✓ "Later" asks nothing; "Allow" asks once (46 ms)
+  ✓ says a refused permission, offers Settings, and saves nothing (GC02) (1272 ms)
+  ✓ says a token the server never got, and leaves the switch off (GC02) (101 ms)
+  ✓ saves the setting once the device is registered (72 ms)
+  ✕ says this phone is not allowed while the account setting is on, asking nothing (GC01) (63 ms)
+  ✕ keeps saying a token the server refused after the profile is opened again (review 1) (36 ms)
+  ✕ turns the account setting off on a phone that refused, without asking (review 2) (58 ms)
+  ✕ sees an answer given in Settings when the app comes forward (review 3) (52 ms)
+
+  ● says this phone is not allowed while the account setting is on, asking nothing (GC01)
+    Received has value: null
+    > 145 |   expect(notice(view)).toHaveTextContent(t.profile.pushNotAllowedHere, { exact: false });
+  ● keeps saying a token the server refused after the profile is opened again (review 1)
+    Received has value: null
+    > 162 |   expect(notice(first)).toHaveTextContent(t.profile.pushNotRegisteredHere, { exact: false });
+  ● turns the account setting off on a phone that refused, without asking (review 2)
+    Expected: true
+    Received: false
+    > 175 |   expect(theSwitch(view).props.value).toBe(true);
+  ● sees an answer given in Settings when the app comes forward (review 3)
+    Received has value: null
+    > 189 |   expect(notice(view)).toHaveTextContent(t.profile.pushNotAllowedHere, { exact: false });
+
+Test Suites: 1 failed, 2 passed, 3 total
+Tests:       4 failed, 8 passed, 12 total
+
+# The same sources, e2e flow 23 (from 0ad10c3):
+
+$ npm run e2e -- e2e/flows/23-profile-timezone.yaml
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/23-profile-timezone.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] The profile's timezone, not the device's (2m 53s) (Assertion is false: id: profile-notifications is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+# After restoring from HEAD (0ad10c3): 12/12 PASS; flow 23 PASS
+# (gc-push-review-e2e23-after.txt).

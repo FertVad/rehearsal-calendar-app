@@ -104,6 +104,31 @@ describe('What a sync sends', () => {
     expect(sent().calendars[0].events.map((e: { key: string }) => e.key)).toEqual(['theirs']);
   });
 
+  it('knows ours from before the URL by the export\'s own rule, not by how it reads (cause fix 19)', async () => {
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
+      event('ours', 'work', { title: 'Rehearsal: Гамлет', notes: 'Project: Гамлет\n\nCreated via Rehearsly' }),
+      event('theirs', 'work', { title: 'Rehearsal: Гамлет', notes: 'Bring the score' }),
+    ]);
+
+    await importCalendarEventsToAvailability(['work']);
+
+    expect(sent().calendars[0].events.map((e: { key: string }) => e.key)).toEqual(['theirs']);
+  });
+
+  it('imports an unmarked event even when a mapping points at it (review of cause fix 19)', async () => {
+    // The old guess left mappings on the reader's own entries. Taken as proof,
+    // such a mapping kept the entry's hours out of the sync before the export
+    // had let it go, so they showed only a sync later.
+    (getAllMappings as jest.Mock).mockResolvedValue({ '42': { eventId: 'personal', calendarId: 'work' } });
+    (Calendar.getEventsAsync as jest.Mock).mockResolvedValue([
+      event('personal', 'work', { title: 'Rehearsal', notes: 'With the band' }),
+    ]);
+
+    await importCalendarEventsToAvailability(['work']);
+
+    expect(sent().calendars[0].events.map((e: { key: string }) => e.key)).toEqual(['personal']);
+  });
+
   it('names the local dates it read, so the server compares whole days as dates (R7-02)', async () => {
     await importCalendarEventsToAvailability(['work']);
 

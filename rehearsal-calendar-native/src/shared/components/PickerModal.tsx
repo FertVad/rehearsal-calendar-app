@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Modal,
   View,
   Text,
   TouchableOpacity,
@@ -11,6 +10,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { usePickerDraft } from '../hooks/usePickerDraft';
+import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
 
 interface PickerModalProps {
@@ -55,12 +55,7 @@ export const PickerModal: React.FC<PickerModalProps> = ({
   // iOS custom modal with bottom sheet
   if (Platform.OS === 'ios') {
     return (
-      <Modal
-        visible={visible}
-        transparent
-        animationType="slide"
-        onRequestClose={picker.cancel}
-      >
+      <AppModal visible={visible} animationType="slide" onRequestClose={picker.cancel}>
         <ModalSheet overlayStyle={styles.overlay} onClose={picker.cancel}>
           <View style={styles.modalContent}>
             {/* Header with Cancel and Done buttons */}
@@ -90,7 +85,7 @@ export const PickerModal: React.FC<PickerModalProps> = ({
             </View>
           </View>
         </ModalSheet>
-      </Modal>
+      </AppModal>
     );
   }
 

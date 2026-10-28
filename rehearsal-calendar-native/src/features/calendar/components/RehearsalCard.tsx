@@ -8,6 +8,8 @@ import { Rehearsal } from '../../../shared/types';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useSeen } from '../../../contexts/SeenContext';
+import { getDateLocale } from '../../../shared/utils/locale';
+import { rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
 import type { AppNavigation } from '../../../navigation';
 
 interface RehearsalCardProps {
@@ -41,7 +43,7 @@ export default function RehearsalCard({
   onPress,
   onDelete,
 }: RehearsalCardProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const navigation = useNavigation<AppNavigation>();
 
   // Read straight from the store. These used to arrive as five props threaded
@@ -75,9 +77,8 @@ export default function RehearsalCard({
             <View style={styles.upcomingContent}>
               <View style={styles.upcomingTimeRow}>
                 <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
-                <Text style={styles.upcomingTime}>
-                  {rehearsal.time?.substring(0, 5) || ''}
-                  {rehearsal.endTime && ` — ${rehearsal.endTime.substring(0, 5)}`}
+                <Text style={styles.upcomingTime} testID="rehearsal-card-time">
+                  {rehearsalTimeLabel(rehearsal, getDateLocale(language))}
                 </Text>
                 {isSynced && (
                   <Ionicons name="calendar" size={14} color={Colors.accent.green} />

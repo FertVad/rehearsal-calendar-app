@@ -1,19 +1,25 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, Modal, FlatList, Alert } from 'react-native';
+import React, { useState, useSyncExternalStore } from 'react';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, FlatList, Alert } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import type { Language } from '../../../i18n/translations';
 import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/components';
+import { AppModal } from '../../../shared/components/AppModal';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
-import { registerForPushNotifications, unregisterPushToken } from '../../../shared/services/notifications';
+import {
+  askAndRegisterPush,
+  getPushDeviceState,
+  subscribePushDeviceState,
+  unregisterPushToken,
+} from '../../../shared/services/notifications';
+import { explainPushRegistration } from '../../../shared/utils/pushAlert';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
@@ -48,18 +54,48 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     await logout();
   };
 
+  // The switch is the account's setting, for every device; below it, what
+  // this phone came to, as the session last found it (cause fix 20). The
+  // switch used to read off whenever the system permission was missing —
+  // then the setting could not be turned off without allowing push first,
+  // while other devices went on being notified — and its "can be notified"
+  // was the permission read on focus, so a token the server refused read as
+  // registered again after a tab change, and an answer given in Settings was
+  // not seen until the next one (review of cause fix 20; GC01, GC02).
+  const deviceState = useSyncExternalStore(subscribePushDeviceState, getPushDeviceState);
+  const deviceNotice =
+    !notificationsEnabled
+      ? null
+      : deviceState === 'denied'
+        ? t.profile.pushNotAllowedHere
+        : deviceState === 'failed'
+          ? t.profile.pushNotRegisteredHere
+          : deviceState === 'unsupported'
+            ? t.profile.pushUnsupported
+            : null;
+
   const handleNotificationsToggle = async (value: boolean) => {
     hapticLight();
+    const before = notificationsEnabled;
     setNotificationsEnabled(value);
 
     try {
-      // Update database
-      await updateUser({ notificationsEnabled: value });
-
-      // Register or unregister push token
       if (value) {
-        await registerForPushNotifications();
+        // The device first: the setting is saved only once this phone can be
+        // notified. It used to be saved, the result of registering ignored, and
+        // success reported over a refusal or a lost connection (GC02).
+        const result = await askAndRegisterPush();
+        // Answered after the session it was asked in: the next person's
+        // setting is not this one's to save (review 2 of cause fix 20).
+        if (result === 'ended') return;
+        if (result !== 'registered') {
+          setNotificationsEnabled(before);
+          explainPushRegistration(result, t);
+          return;
+        }
+        await updateUser({ notificationsEnabled: true });
       } else {
+        await updateUser({ notificationsEnabled: false });
         await unregisterPushToken();
       }
 
@@ -67,8 +103,19 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     } catch (err: any) {
       Alert.alert(t.profile.errorTitle, err.message || t.profile.notificationError);
       // Revert state on error
-      setNotificationsEnabled(!value);
+      setNotificationsEnabled(before);
     }
+  };
+
+  // The setting is on and this phone is not notified: ask again from here —
+  // the prompt if it was never shown ("Later"), the way to Settings if it was
+  // refused, one more try after a lost connection.
+  const handleRegisterThisDevice = async () => {
+    hapticLight();
+    const result = await askAndRegisterPush();
+    if (result === 'ended') return;
+    if (result === 'registered') hapticSuccess();
+    else explainPushRegistration(result, t);
   };
 
   const handleLanguageSelect = async (newLanguage: Language) => {
@@ -207,6 +254,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </View>
           <Text style={styles.userEmail}>{user?.email}</Text>
           <TouchableOpacity
+            testID="profile-edit"
             style={styles.editProfileButton}
             onPress={() => {
               hapticLight();
@@ -231,15 +279,32 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <Text style={styles.settingLabel}>{t.profile.notifications}</Text>
             </View>
             <Switch
+              testID="profile-notifications"
               value={notificationsEnabled}
               onValueChange={handleNotificationsToggle}
               trackColor={{ false: Colors.bg.tertiary, true: Colors.accent.purple }}
               thumbColor={Colors.text.inverse}
             />
           </View>
+          {deviceNotice && (
+            <TouchableOpacity
+              testID="profile-notifications-device"
+              style={styles.settingItem}
+              disabled={deviceState === 'unsupported'}
+              onPress={handleRegisterThisDevice}
+            >
+              <View style={styles.settingLeft}>
+                <View style={[styles.settingIcon, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                  <Ionicons name="alert-circle" size={20} color={Colors.accent.yellow} />
+                </View>
+                <Text style={[styles.settingValue, { flex: 1 }]}>{deviceNotice}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
 
           {/* Language */}
           <TouchableOpacity
+            testID="profile-language"
             style={styles.settingItem}
             onPress={() => { hapticLight(); setLanguageModalVisible(true); }}
           >
@@ -347,6 +412,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             {/* Logout Button */}
             <GlassButton
               title={t.profile.logout}
+              testID="profile-logout"
               onPress={handleLogout}
               variant="glass"
               style={styles.logoutButton}
@@ -356,9 +422,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       </ScrollView>
 
       {/* Timezone Selection Modal */}
-      <Modal
+      <AppModal
         visible={timezoneModalVisible}
-        transparent
         animationType="slide"
         onRequestClose={() => setTimezoneModalVisible(false)}
       >
@@ -398,12 +463,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             />
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Language Selection Modal */}
-      <Modal
+      <AppModal
         visible={languageModalVisible}
-        transparent
         animationType="slide"
         onRequestClose={() => setLanguageModalVisible(false)}
       >
@@ -421,6 +485,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                 return (
                   <TouchableOpacity
                     key={option.value}
+                    testID={`language-${option.value}`}
                     style={[
                       styles.timezoneItem,
                       isSelected && styles.timezoneItemSelected,
@@ -444,12 +509,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Week Start Selection Modal */}
-      <Modal
+      <AppModal
         visible={weekStartModalVisible}
-        transparent
         animationType="slide"
         onRequestClose={() => setWeekStartModalVisible(false)}
       >
@@ -490,12 +554,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           </View>
         </View>
-      </Modal>
+      </AppModal>
 
       {/* Delete Account Confirmation Modal */}
-      <Modal
+      <AppModal
         visible={deleteAccountModalVisible}
-        transparent
         animationType="fade"
         onRequestClose={() => setDeleteAccountModalVisible(false)}
       >
@@ -552,7 +615,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           </View>
         </View>
-      </Modal>
+      </AppModal>
     </SafeAreaView>
   );
 }

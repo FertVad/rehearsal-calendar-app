@@ -1,0 +1,27 @@
+-- Red-before, Jest: R5-01 on the DP01 fix alone --
+-- Fix files at 9d7bb83 (DP01 fix, before 23e4342). Test file at 23e4342. --
+-- git restore --source=9d7bb83 -- src/features/smart-planner/hooks/useSmartPlanner.ts src/features/smart-planner/screens/SmartPlannerScreen.tsx
+-- cd rehearsal-calendar-native && npx jest src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx --silent --selectProjects frontend
+-- exit code 1; run 2026-10-11 --
+Running one project: frontend
+FAIL frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx (23.613 s)
+  ● DP01 — roster reload within the same project (R5-01) › drops removed members from selection when the roster reloads
+
+    expect(received).toBeNull()
+
+    Received: {"_fiber": {"_debugHookTypes": null, "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": [FiberNode], "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": -0, "actualStartTime": 11919.256334, "alternate": [FiberNode], "child": [FiberNode], "childLanes": 0, "deletions": null, "dependencies": null, "elementType": "Text", "flags": 4, "index": 0, "key": null, "lanes": 0, "memoizedProps": [Object], "memoizedState": null, "mode": 1, "pendingProps": [Object], "ref": null, "refCleanup": null, "return": [FiberNode], "selfBaseDuration": -0, "sibling": null, "stateNode": [Object], "subtreeFlags": 262144, "tag": 5, "treeBaseDuration": -0, "type": "Text", "updateQueue": null}}
+
+      131 |     //   simpleMembers, counts zero valid members, renders no slot buttons.
+      132 |     // With the fix: selectedMemberIds trimmed to [a1,a2] → "2 of 2 selected".
+    > 133 |     expect(screen.queryByText(/3 of 2/)).toBeNull();
+          |                                          ^
+      134 |   });
+      135 | });
+      136 |
+
+      at Object.<anonymous> (src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx:133:42)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        24.094 s, estimated 33 s

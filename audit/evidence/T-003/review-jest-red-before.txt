@@ -1,0 +1,35 @@
+T-003 review: src/navigation/linking.ts with its config as b4b1e5d had it (no
+initialRouteName), src/navigation/__tests__/linking.test.ts run against it:
+
+$ npx jest --selectProjects frontend --runTestsByPath src/navigation/__tests__/linking.test.ts
+
+  ● opens invite/ABCD2345 over the calendar, and closing it goes back there
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+    -   "MainTabs",
+        "JoinProject",
+      ]
+
+    > 34 |   expect(state.routes.map((route) => route.name)).toEqual(['MainTabs', screen]);
+
+  ● opens rehearsal/42 over the calendar, and closing it goes back there
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+    -   "MainTabs",
+        "RehearsalDetails",
+      ]
+
+    > 34 |   expect(state.routes.map((route) => route.name)).toEqual(['MainTabs', screen]);
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 total

@@ -1,0 +1,43 @@
+Cause fix 21, review item 5 (NI06): a body that is not {} and names no scope
+must be refused, not read as "all".
+
+Red before: the new cases in server/__tests__/routes/notifications.test.js
+(b9433c1) run against server/routes/native/notifications.js as it was at
+20180d1:
+
+  git restore --source=20180d1 -- rehearsal-calendar-native/server/routes/native/notifications.js
+  cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules \
+    npx jest __tests__/routes/notifications.test.js -t 'what "read" covers'
+  git restore --source=HEAD -- rehearsal-calendar-native/server/routes/native/notifications.js
+
+Output (lines with results; stack frames and the JWT_SECRET warning left out):
+
+      ✓ marks nothing for an empty list (124 ms)
+      ✓ marks the whole inbox when asked for all (18 ms)
+      ✓ refuses ids that are not ids, marking nothing (33 ms)
+      ✓ refuses ids that are not whole, marking nothing (28 ms)
+      ✓ refuses both all and ids, marking nothing (35 ms)
+      ✓ refuses all that is not true, marking nothing (25 ms)
+      ✕ refuses an empty list for a body, marking nothing (19 ms)
+      ✕ refuses a list of ids for a body, marking nothing (15 ms)
+      ✕ refuses a key it does not know, marking nothing (24 ms)
+      ✕ refuses ids beside a key it does not know, marking nothing (13 ms)
+      ✓ deletes nothing for an empty list (13 ms)
+  ● Notification inbox › what "read" covers › refuses an empty list for a body, marking nothing
+    Expected: 400
+    Received: 200
+  ● Notification inbox › what "read" covers › refuses a list of ids for a body, marking nothing
+    Expected: 400
+    Received: 200
+  ● Notification inbox › what "read" covers › refuses a key it does not know, marking nothing
+    Expected: 400
+    Received: 200
+  ● Notification inbox › what "read" covers › refuses ids beside a key it does not know, marking nothing
+    Expected: 400
+    Received: 200
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 23 skipped, 7 passed, 34 total
+
+All four new cases red, each on the status: the old route took [] , [1] and
+{ id: 1 } as "all" (no `ids` seen), and { ids: [1], also: 'all' } as the list
+without noticing the stray key. On b9433c1: 34 of 34 pass.

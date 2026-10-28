@@ -13,6 +13,8 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, act, waitFor } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '../AuthContext';
+import { reportSessionExpired, restoreOwner, sessionWork, resetSessionForTests } from '../../shared/services/session';
+import { appTimezone } from '../../shared/utils/time';
 
 const mockApi = {
   getMe: jest.fn(),
@@ -22,6 +24,11 @@ const mockApi = {
   resendVerification: jest.fn(),
   loginWithApple: jest.fn(),
   updateMe: jest.fn(() => Promise.resolve({ data: {} })),
+  requestPasswordReset: jest.fn(),
+  confirmPasswordReset: jest.fn(),
+  requestEmailChange: jest.fn(),
+  confirmEmailChange: jest.fn(),
+  logout: jest.fn(() => Promise.resolve({ data: {} })),
 };
 jest.mock('../../shared/services/api', () => ({
   authAPI: new Proxy({}, { get: (_target, key: string) => (...args: any[]) => (mockApi as any)[key](...args) }),
@@ -54,11 +61,11 @@ const mockSyncPreferences = jest.fn((..._args: any[]) => Promise.resolve());
 jest.mock('../../shared/utils/storage', () => ({ syncUserPreferences: (...args: any[]) => mockSyncPreferences(...args) }));
 jest.mock('../../shared/services/notifications', () => ({
   unregisterPushToken: jest.fn(() => Promise.resolve()),
-  syncPushTokenIfGranted: jest.fn(() => Promise.resolve()),
+  keepPushRegistered: jest.fn(() => () => undefined),
 }));
 jest.mock('../../shared/utils/calendarMappings', () => ({ resetConnectionCache: jest.fn() }));
 
-// The device's own zone, so the provider's timezone auto-sync has nothing to do.
+// The device's own zone; the tests of the zone itself are at the end.
 const USER = { id: 7, email: 'new@example.com', firstName: 'New', createdAt: '2026-09-26T00:00:00Z',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
 let auth: ReturnType<typeof useAuth>;
@@ -81,11 +88,13 @@ beforeEach(() => {
   Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
   Object.values(mockApi).forEach((fn) => fn.mockReset());
   mockApi.updateMe.mockImplementation(() => Promise.resolve({ data: {} }));
+  mockApi.logout.mockImplementation(() => Promise.resolve({ data: {} }));
   mockSyncPreferences.mockReset();
   mockSyncPreferences.mockImplementation((..._args: any[]) => Promise.resolve());
   Object.keys(mockHeldReads).forEach((k) => delete mockHeldReads[k]);
   mockRefusedWrite.key = null;
   loadingSeen.length = 0;
+  resetSessionForTests();
 });
 
 // A request held open until the test decides how it ends.
@@ -352,4 +361,255 @@ it('keeps the code screen on a wrong code, with the server code to show', async 
   expect(failure.code).toBe('CODE_INVALID');
   expect(auth.pendingEmail).toBe('new@example.com');
   expect(mockStorage.accessToken).toBeUndefined();
+});
+
+// Password reset (R3): the request is the same for any address; a confirmed
+// code is a sign-in, through the one session write.
+it('asks for a reset code for the normalized address, without a session', async () => {
+  const screen = await renderAuth();
+  mockApi.requestPasswordReset.mockResolvedValue({ data: { status: 'reset_requested' } });
+  let address: any;
+  await act(async () => { address = await auth.requestPasswordReset(' Anna@Example.com '); });
+  expect(address).toBe('anna@example.com');
+  expect(mockApi.requestPasswordReset).toHaveBeenCalledWith('anna@example.com');
+  expect(screen.getByTestId('user').props.children).toBe('none');
+});
+
+it('signs in with the pair a confirmed reset answers with', async () => {
+  const screen = await renderAuth();
+  mockApi.confirmPasswordReset.mockResolvedValue({ data: { user: USER, accessToken: 'access', refreshToken: 'refresh' } });
+  await act(async () => { await auth.resetPassword('new@example.com', '123456', 'long-enough-1'); });
+  expect(mockApi.confirmPasswordReset).toHaveBeenCalledWith('new@example.com', '123456', 'long-enough-1');
+  expect(mockStorage.accessToken).toBe('access');
+  expect(mockStorage.refreshToken).toBe('refresh');
+  expect(screen.getByTestId('user').props.children).toBe('7');
+});
+
+it('signs nobody in when a reset answers after the person left (review R3-24)', async () => {
+  const screen = await renderAuth();
+  const answer = held<any>();
+  mockApi.confirmPasswordReset.mockReturnValue(answer.promise);
+  let resetting: Promise<void>;
+  act(() => { resetting = auth.resetPassword('new@example.com', '123456', 'long-enough-1'); });
+  act(() => { auth.forgetPendingSignIn(); });
+  await act(async () => { answer.resolve({ data: { user: USER, accessToken: 'late', refreshToken: 'late' } }); await resetting; });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.accessToken).toBeUndefined();
+});
+
+it('keeps a refused reset code with the server code to show', async () => {
+  await renderAuth();
+  mockApi.confirmPasswordReset.mockRejectedValue({ response: { status: 400, data: { error: 'The code is not valid', code: 'CODE_LOCKED' } } });
+  let failure: any;
+  await act(async () => { failure = await auth.resetPassword('new@example.com', '000000', 'long-enough-1').catch((error) => error); });
+  expect(failure.code).toBe('CODE_LOCKED');
+  expect(mockStorage.accessToken).toBeUndefined();
+});
+
+// Changing the address (R3: HP01): the server revokes every session, this
+// one's too, and answers with the pair that works now.
+async function signedIn() {
+  const screen = await renderAuth();
+  mockApi.login.mockResolvedValue({ data: { user: USER, accessToken: 'old-access', refreshToken: 'old-refresh' } });
+  await act(async () => { await auth.login('new@example.com', 'long-enough-1'); });
+  return screen;
+}
+
+it('asks for both codes and returns what happened to each email', async () => {
+  await signedIn();
+  mockApi.requestEmailChange.mockResolvedValue({ data: { status: 'codes_sent', delivery: { newAddress: 'sent', currentAddress: 'failed' } } });
+  let delivery: any;
+  await act(async () => { delivery = await auth.requestEmailChange(' Moved@Example.com', 'long-enough-1'); });
+  expect(mockApi.requestEmailChange).toHaveBeenCalledWith('moved@example.com', 'long-enough-1');
+  expect(delivery).toEqual({ newAddress: 'sent', currentAddress: 'failed' });
+});
+
+it('keeps the session with the new pair and the new address after a confirmed change', async () => {
+  await signedIn();
+  const moved = { ...USER, email: 'moved@example.com' };
+  mockApi.confirmEmailChange.mockResolvedValue({ data: { user: moved, accessToken: 'new-access', refreshToken: 'new-refresh' } });
+  await act(async () => { await auth.confirmEmailChange('222222', '111111'); });
+  expect(mockApi.confirmEmailChange).toHaveBeenCalledWith('222222', '111111');
+  expect(mockStorage.accessToken).toBe('new-access');
+  expect(mockStorage.refreshToken).toBe('new-refresh');
+  expect(JSON.parse(mockStorage.cachedUser).email).toBe('moved@example.com');
+  expect(auth.user?.email).toBe('moved@example.com');
+});
+
+it('keeps the old pair and says which code was wrong when the change is refused', async () => {
+  await signedIn();
+  mockApi.confirmEmailChange.mockRejectedValue({ response: { status: 400, data: {
+    error: 'The code is not valid', code: 'CODE_INVALID', field: 'currentCode' } } });
+  let failure: any;
+  await act(async () => { failure = await auth.confirmEmailChange('222222', '000000').catch((error) => error); });
+  expect([failure.code, failure.details.field]).toEqual(['CODE_INVALID', 'currentCode']);
+  expect(mockStorage.accessToken).toBe('old-access');
+  expect(auth.user?.email).toBe('new@example.com');
+});
+
+// Signing out ends the session for every answer still on its way: none of
+// them writes it back (review of T-130).
+it('stays signed out when a change answers after the sign-out', async () => {
+  const screen = await signedIn();
+  const answer = held<any>();
+  mockApi.confirmEmailChange.mockReturnValue(answer.promise);
+  let confirming: Promise<void>;
+  act(() => { confirming = auth.confirmEmailChange('222222', '111111'); });
+  await act(async () => { await auth.logout(); });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  const moved = { ...USER, email: 'moved@example.com' };
+  await act(async () => { answer.resolve({ data: { user: moved, accessToken: 'late', refreshToken: 'late' } }); await confirming; });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.accessToken).toBeUndefined();
+  expect(mockStorage.refreshToken).toBeUndefined();
+  expect(mockStorage.cachedUser).toBeUndefined();
+});
+
+it('a sign-out waits for a change already writing, then clears it', async () => {
+  const screen = await signedIn();
+  const moved = { ...USER, email: 'moved@example.com' };
+  mockApi.confirmEmailChange.mockResolvedValue({ data: { user: moved, accessToken: 'new-access', refreshToken: 'new-refresh' } });
+  const syncing = held<void>();
+  mockSyncPreferences.mockReturnValueOnce(syncing.promise);
+  let confirming: Promise<void>;
+  act(() => { confirming = auth.confirmEmailChange('222222', '111111'); });
+  await waitFor(() => expect(mockSyncPreferences).toHaveBeenCalledTimes(2));
+  let tokenAtSignOut: string | undefined;
+  mockApi.logout.mockImplementation(() => { tokenAtSignOut = mockStorage.accessToken; return Promise.resolve({ data: {} }); });
+  let leaving: Promise<void>;
+  act(() => { leaving = auth.logout(); });
+  // The sign-out has every chance to run ahead before the write goes on.
+  await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
+  await act(async () => { syncing.resolve(); await confirming; await leaving; });
+  // The server is told with the pair that works now, not the revoked one.
+  expect(tokenAtSignOut).toBe('new-access');
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.accessToken).toBeUndefined();
+  expect(mockStorage.cachedUser).toBeUndefined();
+});
+
+it('stays signed out when a profile update answers after the sign-out', async () => {
+  const screen = await signedIn();
+  const answer = held<any>();
+  mockApi.updateMe.mockReturnValue(answer.promise);
+  let updating: Promise<void>;
+  act(() => { updating = auth.updateUser({ firstName: 'Late' }); });
+  await act(async () => { await auth.logout(); });
+  await act(async () => { answer.resolve({ data: { user: { ...USER, firstName: 'Late' } } }); await updating; });
+  expect(screen.getByTestId('user').props.children).toBe('none');
+  expect(mockStorage.cachedUser).toBeUndefined();
+});
+
+// Cause fix 12: the app's state belongs to the session.
+
+// The server refused the session for good — revoked from another device. The
+// open app went on showing the account, every request failing (AC02).
+it('signs out and opens sign-in when the server refuses the session (AC02)', async () => {
+  const screen = await signedIn();
+  await act(async () => {
+    reportSessionExpired();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('none'));
+  expect(mockStorage.accessToken).toBeUndefined();
+  expect(mockStorage.refreshToken).toBeUndefined();
+  expect(mockStorage.cachedUser).toBeUndefined();
+});
+
+// A calendar sync of the previous person still running: the next person's
+// tokens are written only after it, so nothing it sends goes out under them (ES01).
+it('writes the next person\'s tokens only after the previous session\'s work has finished (ES01)', async () => {
+  await renderAuth();
+  restoreOwner(USER.id);
+  const work = held<void>();
+  let tokenWhenWorkEnded: string | undefined = 'not yet';
+  sessionWork(() => work.promise.then(() => { tokenWhenWorkEnded = mockStorage.accessToken; }));
+  mockApi.login.mockResolvedValue({ data: { user: OTHER, accessToken: 'other-access', refreshToken: 'other-refresh' } });
+  let signingIn: Promise<void>;
+  act(() => { signingIn = auth.login('other@example.com', 'long-enough-1'); });
+  await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
+  expect(mockStorage.accessToken).toBeUndefined();
+  await act(async () => { work.resolve(); await signingIn; });
+  expect(tokenWhenWorkEnded).toBeUndefined();
+  expect(mockStorage.accessToken).toBe('other-access');
+});
+
+// The device's zone, sent for the previous person — an account with none of
+// its own — answered after the next one signed in: the profile shown stays the
+// next person's (AC03).
+it('keeps the next person when the previous one\'s time zone update answers late (AC03)', async () => {
+  const away = { ...USER, timezone: undefined };
+  const answer = held<any>();
+  mockApi.updateMe.mockReturnValue(answer.promise);
+  const screen = await renderAuth();
+  mockApi.login.mockResolvedValue({ data: { user: away, accessToken: 'a', refreshToken: 'a' } });
+  await act(async () => { await auth.login('new@example.com', 'long-enough-1'); });
+  await waitFor(() => expect(mockApi.updateMe).toHaveBeenCalled());
+  await act(async () => { await auth.logout(); });
+  mockApi.login.mockResolvedValue({ data: { user: OTHER, accessToken: 'b', refreshToken: 'b' } });
+  await act(async () => { await auth.login('other@example.com', 'long-enough-1'); });
+  await act(async () => { answer.resolve({ data: { user: { ...away, timezone: USER.timezone } } }); });
+  expect(screen.getByTestId('user').props.children).toBe('8');
+  expect(JSON.parse(mockStorage.cachedUser).id).toBe(8);
+});
+
+// The zone is the one the person chose; the device's never replaces it (owner's
+// decision 16.10.2026, cause fix 14). Tests run in New York (jest.config.js).
+describe('the profile\'s time zone (HP04)', () => {
+  const TEL_AVIV = { ...USER, timezone: 'Asia/Jerusalem' };
+
+  it('keeps a zone chosen by hand at sign-in, with the device elsewhere', async () => {
+    await renderAuth();
+    mockApi.login.mockResolvedValue({ data: { user: TEL_AVIV, accessToken: 'a', refreshToken: 'a' } });
+    await act(async () => { await auth.login('new@example.com', 'long-enough-1'); });
+    await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
+
+    expect(mockApi.updateMe).not.toHaveBeenCalled();
+    expect(auth.user?.timezone).toBe('Asia/Jerusalem');
+    expect(appTimezone()).toBe('Asia/Jerusalem');
+  });
+
+  it('keeps it at the next start, too', async () => {
+    mockStorage.accessToken = 'saved';
+    mockApi.getMe.mockResolvedValue({ data: { user: TEL_AVIV } });
+    await renderAuth();
+    await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
+
+    expect(mockApi.updateMe).not.toHaveBeenCalled();
+    expect(appTimezone()).toBe('Asia/Jerusalem');
+  });
+
+  it('follows a zone changed in the profile, and drops it at sign-out', async () => {
+    await renderAuth();
+    mockApi.login.mockResolvedValue({ data: { user: TEL_AVIV, accessToken: 'a', refreshToken: 'a' } });
+    await act(async () => { await auth.login('new@example.com', 'long-enough-1'); });
+    mockApi.updateMe.mockResolvedValue({ data: { user: { ...TEL_AVIV, timezone: 'Asia/Tokyo' } } });
+    await act(async () => { await auth.updateUser({ timezone: 'Asia/Tokyo' }); });
+    expect(appTimezone()).toBe('Asia/Tokyo');
+
+    await act(async () => { await auth.logout(); });
+    expect(appTimezone()).toBe('America/New_York');
+  });
+
+  it('gives an account created through Apple the device\'s zone, once', async () => {
+    await renderAuth();
+    // The server makes it with its default, which nobody chose.
+    mockApi.loginWithApple.mockResolvedValue({
+      data: { user: { ...OTHER, timezone: 'UTC' }, isNewUser: true, accessToken: 'n', refreshToken: 'n' },
+    });
+    await act(async () => { await auth.loginWithApple('token'); });
+
+    await waitFor(() => expect(mockApi.updateMe).toHaveBeenCalledWith({ timezone: 'America/New_York' }));
+  });
+
+  it('leaves an existing Apple account\'s zone as it is', async () => {
+    await renderAuth();
+    mockApi.loginWithApple.mockResolvedValue({
+      data: { user: { ...OTHER, timezone: 'UTC' }, isNewUser: false, accessToken: 'n', refreshToken: 'n' },
+    });
+    await act(async () => { await auth.loginWithApple('token'); });
+    await act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
+
+    expect(mockApi.updateMe).not.toHaveBeenCalled();
+  });
 });

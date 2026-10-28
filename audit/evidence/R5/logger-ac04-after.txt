@@ -1,0 +1,23 @@
+AC04 / cause fix 13 — green after. Working tree on top of ce1a4fb with the fix applied.
+
+$ npx jest --selectProjects frontend --forceExit src/shared/utils/__tests__/logger.test.ts
+    ✓ logs a failed request as a typed summary without its body or headers (41 ms)
+    ✓ applies the same rule to warn, info and debug (4 ms)
+    ✓ redacts credential fields and token-shaped strings anywhere in a plain value (6 ms)
+    ✓ keeps a plain error readable and survives a cycle (3 ms)
+    ✓ finds no direct console call (291 ms)
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+
+$ npx jest --selectProjects frontend --silent --forceExit
+Test Suites: 68 passed, 68 total
+Tests:       707 passed, 707 total
+
+$ npx tsc --noEmit
+(no output)
+
+$ npx eslint src/
+✖ 355 problems (0 errors, 355 warnings)   # no-console is now 'error'; zero errors
+
+$ npm run check:secrets
+{"summary":"pass","mode":"worktree","files":998,"findings":0,"errors":0}

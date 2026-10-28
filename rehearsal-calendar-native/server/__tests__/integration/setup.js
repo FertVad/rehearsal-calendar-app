@@ -221,7 +221,7 @@ export async function setupIntegrationDb() {
       last_active_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE (user_id, device_token)
+      UNIQUE (device_token)
     );
 
     -- Push reminders already sent. The unique pair is what stops a rehearsal
@@ -246,6 +246,7 @@ export async function setupIntegrationDb() {
   testDb.exec(readFileSync(join(__dirname, '../../migrations/008-invite-rate-limits.sql'), 'utf8'));
   testDb.exec(readFileSync(join(__dirname, '../../migrations/009-operation-ip-rate-limits.sql'), 'utf8'));
   testDb.exec(readFileSync(join(__dirname, '../../migrations/011-push-tickets.sql'), 'utf8'));
+  testDb.exec(readFileSync(join(__dirname, '../../migrations/012-idempotency-keys.sql'), 'utf8'));
 
   // Translate the PostgreSQL dialect our routes are written in into something
   // SQLite can parse. Only the constructs actually used in the codebase are
@@ -346,6 +347,7 @@ export async function setupIntegrationDb() {
  */
 export function clearIntegrationDb() {
   if (testDb) {
+    testDb.exec('DELETE FROM native_idempotency_keys');
     testDb.exec('DELETE FROM native_operation_ip_rate_limits');
     testDb.exec('UPDATE native_operation_ip_rate_limit_gates SET key_count = 0');
     testDb.exec('DELETE FROM native_invite_account_rate_limits');

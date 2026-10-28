@@ -11,6 +11,7 @@ import { hapticLight, hapticSuccess } from '../../../shared/utils/haptics';
 import type { DeviceCalendar } from '../../../shared/types/calendar';
 import type { OnboardingStackParamList } from '../navigation/OnboardingNavigator';
 
+import { logger } from '../../../shared/utils/logger';
 type CalendarSyncScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'CalendarSync'>;
 
 export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenProps) {
@@ -24,9 +25,7 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
     settings,
   } = useCalendarSync();
 
-  const [selectedProvider, setSelectedProvider] = useState<'google' | 'apple' | null>(null);
-  const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
-  const [providerCalendarsList, setProviderCalendarsList] = useState<DeviceCalendar[]>([]);
+  const [pickedProvider, setPickedProvider] = useState<'google' | 'apple' | null>(null);
   const [isSettingUp, setIsSettingUp] = useState(false);
 
   // Helper to determine calendar provider
@@ -73,6 +72,26 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
     (c) => c.allowsModifications && getCalendarProvider(c) === 'apple'
   );
 
+  const calendarsOf = (provider: 'google' | 'apple' | null): DeviceCalendar[] =>
+    calendars.filter(
+      (c) =>
+        c.allowsModifications &&
+        getCalendarProvider(c) === provider &&
+        !shouldExcludeFromImport(c)
+    );
+
+  // The calendar connected is the one the settings say, once saved. It was the
+  // one last tapped, set before the save and kept when the save failed — and on
+  // coming back to this step, none, whatever had been saved (HP05).
+  const connected = settings.exportEnabled && settings.importEnabled
+    ? calendars.find((c) => c.id === settings.exportCalendarId) ?? null
+    : null;
+  const selectedCalendarId = connected?.id ?? null;
+  // The provider whose calendars are listed: the one picked here, or else the
+  // connected calendar's.
+  const selectedProvider = pickedProvider ?? (connected ? getCalendarProvider(connected) : null);
+  const providerCalendarsList = calendarsOf(selectedProvider);
+
   const handleBack = () => {
     navigation.goBack();
   };
@@ -96,12 +115,7 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
     hapticLight();
 
     // Get all writable calendars from this provider
-    const providerCalendars = calendars.filter(
-      (c) =>
-        c.allowsModifications &&
-        getCalendarProvider(c) === provider &&
-        !shouldExcludeFromImport(c)
-    );
+    const providerCalendars = calendarsOf(provider);
 
     if (providerCalendars.length === 0) {
       Alert.alert(
@@ -111,24 +125,22 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
       return;
     }
 
-    setSelectedProvider(provider);
-    setProviderCalendarsList(providerCalendars);
-
-    // If only 1 calendar, auto-select it
+    // If only 1 calendar, auto-select it — and the provider is marked only once
+    // that is saved, since there is no list to choose from.
     if (providerCalendars.length === 1) {
-      await handleSelectCalendar(providerCalendars[0].id, providerCalendars);
+      if (await handleSelectCalendar(providerCalendars[0].id)) setPickedProvider(provider);
     } else {
-      setSelectedCalendarId(null);
+      setPickedProvider(provider);
     }
   };
 
-  const handleSelectCalendar = async (calendarId: string, cals?: DeviceCalendar[]) => {
+  const handleSelectCalendar = async (calendarId: string): Promise<boolean> => {
     try {
       setIsSettingUp(true);
       hapticLight();
 
-      setSelectedCalendarId(calendarId);
-
+      // Shown as connected once saved: the settings it shows are set from
+      // what was saved, and a save that fails throws before that.
       await updateSettings({
         exportEnabled: true,
         exportCalendarId: calendarId,
@@ -136,14 +148,14 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
         // Single-calendar mode: sync only the picked one
         importCalendarIds: [calendarId],
         importInterval: 'always',
-        lastExportTime: settings?.lastExportTime || null,
-        lastImportTime: settings?.lastImportTime || null,
       });
 
       hapticSuccess();
+      return true;
     } catch (error: any) {
-      console.error('Failed to set up calendar sync:', error);
+      logger.error('Failed to set up calendar sync:', error);
       Alert.alert(t.common.error, error.message || 'Failed to set up calendar sync');
+      return false;
     } finally {
       setIsSettingUp(false);
     }

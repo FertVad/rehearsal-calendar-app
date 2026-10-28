@@ -1,0 +1,38 @@
+Cause fix 20, review 3 - after: e2e flow 38 and flow 23 on the fixed code (c69a2a1 + this change)
+Date: 2026-10-27, Rehearsly E2E simulator (iPhone 16), Maestro 2.11.0
+
+$ npm run e2e -- e2e/flows/38-switch-account-push-answer-late.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Switch accounts - a push registration answered late (2m 5s)
+
+1/1 Flow Passed in 2m 5s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+server.log:
+657:[e2e] holding the request POST /api/native/push-tokens, its connection open
+660:[e2e] released POST /api/native/push-tokens: the server answered 401
+
+release-answers.js ran with EXPECT "1": exactly one answer was held - Natasha's
+token, sent by her switch - so the app reached the server as a phone would
+(e2e/device) and the late answer did come. Screenshot 38-andrei-after-her-answer
+(e2e/out/artifacts/2026-10-27_093517): Andrei's switch OFF after the relaunch.
+
+Without the launch argument the stand-ins are the real modules - the simulator
+cannot receive push, as flow 23 says on screen:
+
+$ npm run e2e -- e2e/flows/23-profile-timezone.yaml
+[e2e] running the flows
+[Passed] The profile's timezone, not the device's (2m 50s)
+1/1 Flow Passed in 2m 51s
+[e2e] taps taken again (tap-and-see.yaml): 0

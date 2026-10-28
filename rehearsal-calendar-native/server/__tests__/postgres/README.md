@@ -97,17 +97,17 @@ incorrect status/body is a test failure. Exit 0 from `--a02-only` means controls
 and these A02 contracts passed. This does not establish production migration or
 mobile/device correctness.
 
-The default diagnostic run also reproduces these **unfixed contracts**:
-
-- B02: a trigger rejects membership insertion; project creation returns 500 but leaves the project row.
-- D01: an outsider participant is accepted and gets an invitation and busy slot.
-
-Exit 0 from the full run means controls/A02/B03/B04/H04/IS02/R2 passed **and** those two known
-failures were reproduced. It does not mean B02/D01 are safe. These probes
-remain outside normal Jest discovery. When treating each remaining finding,
-write its desired behavior as a regression assertion and retire/update that
-baseline probe; never keep asserting the defective outcome as the release gate.
-Historical R0 evidence retains the original A02 crash and source hashes.
+The default diagnostic run no longer reproduces any unfixed contract. The two
+R0 baselines were retired as their findings were fixed: D01 now asserts the
+roster rule (R4, cause fix 1), and the B02 orphan-project probe became
+R4_LIFECYCLE (cause fix 10). R4_LIFECYCLE provisions the canonical snapshot and
+fails the last write of each lifecycle operation with a trigger — project
+create and delete, member removal, rehearsal create, edit and delete — then
+checks from an independent connection that the request answered 500 and left
+every row as it was, and that the retry succeeds once the trigger is gone.
+These probes remain outside normal Jest discovery; never keep asserting a
+defective outcome as the release gate. Historical R0 evidence retains the
+original A02 crash and source hashes.
 
 B03 verifies bounded availability work, real SQL/response sentinels and one
 account budget shared by two application instances. B04 verifies migration008,

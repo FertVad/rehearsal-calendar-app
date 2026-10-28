@@ -85,6 +85,25 @@ it('stops a name of spaces and an over-long password before asking the server', 
   expect(mockAuth.register).not.toHaveBeenCalled();
 });
 
+it('counts the password in characters like the server, not in UTF-16 units', async () => {
+  const view = form();
+  fill(view, { password: '😀'.repeat(4) }); // 8 units, 4 characters
+  await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
+  expect(Alert.alert).toHaveBeenLastCalledWith(t.common.error, t.auth.passwordRule);
+  expect(mockAuth.register).not.toHaveBeenCalled();
+});
+
+it('offers both sign-in and a password reset for a taken address (R3 contract)', async () => {
+  mockAuth.register.mockRejectedValue(new AuthFlowError('Taken', 'EMAIL_TAKEN', 409));
+  const view = form();
+  fill(view, { email: 'Anna@Example.com' });
+  await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
+  const buttons = (Alert.alert as jest.Mock).mock.calls[0][2] as { text: string; onPress?: () => void }[];
+  expect(buttons.map((button) => button.text)).toEqual([t.common.cancel, t.auth.loginButton, t.auth.resetPassword]);
+  buttons[2].onPress?.();
+  expect(navigation.navigate).toHaveBeenCalledWith('ResetPassword', { email: 'anna@example.com' });
+});
+
 it('opens the code screen, or nothing when the answer came after leaving', async () => {
   const view = form();
   fill(view, {});

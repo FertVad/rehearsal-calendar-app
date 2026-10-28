@@ -1,0 +1,82 @@
+Cause fix 14 (T-402) - red before, Jest.
+
+Code of the fix put back as it was at 1e9a265 (git restore --source=1e9a265):
+  src/contexts/AuthContext.tsx
+  src/features/availability/hooks/useAvailabilityData.ts
+  src/features/availability/hooks/useAvailabilitySave.ts
+  src/features/calendar/hooks/useAddRehearsalForm.ts
+  src/features/calendar/hooks/useAddRehearsalSubmit.ts
+  src/features/calendar/hooks/useRehearsals.ts
+  src/shared/hooks/useClock.ts
+  src/shared/services/calendar/export.ts
+time.ts kept as in 8ff8757: its additions (the profile's zone held for the app)
+are what the tests set the zone through; the old code never reads it.
+Device zone America/New_York (jest.config.js), profile Asia/Jerusalem (Tel Aviv).
+
+$ npx jest --selectProjects frontend --runTestsByPath \
+    src/shared/utils/__tests__/oneTimezone.test.tsx \
+    src/contexts/__tests__/AuthContext.test.tsx \
+    src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts \
+    --forceExit --testTimeout=20000 --verbose -t "today|Editing|phone|HP04|profile's zone"
+
+FAIL frontend src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts (25.449 s)
+      ✕ saves the hours in the profile's zone, not the device's (cause fix 14) (129 ms)
+  ● useAvailabilitySave Hook › prepareEntriesForAPI › saves the hours in the profile's zone, not the device's (cause fix 14)
+    Expected: "2025-12-29T08:00:00.000Z"
+    Received: "2025-12-29T15:00:00.000Z"
+FAIL frontend src/shared/utils/__tests__/oneTimezone.test.tsx (25.805 s)
+    ✕ is the profile's, not the device's (118 ms)
+    ✓ follows the zone chosen in the profile at once (28 ms)
+    ✕ reads the hour on the profile's clock (25 ms)
+    ✕ opens on the rehearsal's time in the profile's zone (142 ms)
+    ✕ saved unchanged, keeps the rehearsal where it was (74 ms)
+    ✕ is told the profile's zone, not the device's (45 ms)
+    ✕ keeps one event when the device has flown elsewhere (28 ms)
+    ✕ moves the same event to a zone the profile changes to (42 ms)
+    ✓ finds its own event again by the rehearsal, not the time, with the mapping lost (36 ms)
+  ● "today" › is the profile's, not the device's
+    Expected: "2026-10-17"
+    Received: "2026-10-16"
+  ● "today" › reads the hour on the profile's clock
+    Expected: "01:30"
+    Received: "18:30"
+  ● Editing a rehearsal (DF01) › opens on the rehearsal's time in the profile's zone
+    Expected: "18:00"
+    Received: "11:00"
+  ● Editing a rehearsal (DF01) › saved unchanged, keeps the rehearsal where it was
+    Expected: "2026-10-20T15:00:00.000Z"
+    Received: "2026-10-20T08:00:00.000Z"
+  ● The phone's calendar › is told the profile's zone, not the device's
+    Expected: "Asia/Jerusalem"
+    Received: "America/New_York"
+  ● The phone's calendar › keeps one event when the device has flown elsewhere
+    Expected: "Asia/Jerusalem"
+    Received: "America/New_York"
+  ● The phone's calendar › moves the same event to a zone the profile changes to
+    Expected: "event-1", ObjectContaining {"timeZone": "Asia/Tokyo"}
+FAIL frontend src/contexts/__tests__/AuthContext.test.tsx (26.485 s)
+    ✕ keeps a zone chosen by hand at sign-in, with the device elsewhere (298 ms)
+    ✕ keeps it at the next start, too (70 ms)
+    ✕ follows a zone changed in the profile, and drops it at sign-out (92 ms)
+    ✓ gives an account created through Apple the device's zone, once (71 ms)
+    ✕ leaves an existing Apple account's zone as it is (69 ms)
+  ● the profile's time zone (HP04) › keeps a zone chosen by hand at sign-in, with the device elsewhere
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● the profile's time zone (HP04) › keeps it at the next start, too
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● the profile's time zone (HP04) › follows a zone changed in the profile, and drops it at sign-out
+    Expected: "Asia/Tokyo"
+    Received: "America/New_York"
+  ● the profile's time zone (HP04) › leaves an existing Apple account's zone as it is
+    Expected number of calls: 0
+    Received number of calls: 1
+Tests:       12 failed, 44 skipped, 3 passed, 59 total
+
+Passing before as well, as they should: the date in Los Angeles and New York
+agree at that hour; the export already found its event by the rehearsal's id
+(EX01's mark), so no duplicate came of a time either way; and the old sync
+gave a new Apple account the device's zone too - it gave it to every account.
+
+After (8ff8757): the same files, all green; frontend 79 suites, 784 tests passed.

@@ -2,22 +2,28 @@
  * Validation utilities for availability time slots
  */
 import { TimeSlot, SlotValidation } from '../types/availability';
-import { timeToMinutes } from '../../../shared/utils/time';
+import {
+  timeToMinutes,
+  clockRangeMinutes,
+  isEmptyClockRange,
+  minuteRangesOverlap,
+} from '../../../shared/utils/time';
 
 // Re-export for backward compatibility
 export { timeToMinutes };
 
 /**
- * Validate a single time slot
+ * Validate a single time slot. A slot is a clock range on its day, and an end
+ * before the start is the next morning (cause fix 15): 23:00–01:00 is a
+ * two-hour slot, and it used to be refused here as "end before start" before
+ * the save ever reached its next-day branch (CC06). Only a slot that starts
+ * where it ends says nothing.
  */
 export const validateSlot = (slot: TimeSlot): SlotValidation => {
-  const startMinutes = timeToMinutes(slot.start);
-  const endMinutes = timeToMinutes(slot.end);
-
-  if (startMinutes >= endMinutes) {
+  if (isEmptyClockRange(slot.start, slot.end)) {
     return {
       isValid: false,
-      error: 'endBeforeStart'
+      error: 'sameStartEnd'
     };
   }
 
@@ -25,20 +31,13 @@ export const validateSlot = (slot: TimeSlot): SlotValidation => {
 };
 
 /**
- * Check if two slots overlap
+ * Check if two slots of one day overlap, on that day's axis: one running past
+ * midnight takes the evening from its start on.
  */
-export const slotsOverlap = (slot1: TimeSlot, slot2: TimeSlot): boolean => {
-  const start1 = timeToMinutes(slot1.start);
-  const end1 = timeToMinutes(slot1.end);
-  const start2 = timeToMinutes(slot2.start);
-  const end2 = timeToMinutes(slot2.end);
-
-  // Slots overlap if one starts before the other ends
-  // Examples:
-  // 10:00-14:00 and 12:00-16:00 overlap (start2 < end1 && start1 < end2)
-  // 10:00-14:00 and 14:00-16:00 don't overlap (adjacent, not overlapping)
-  return (start1 < end2 && end1 > start2);
-};
+export const slotsOverlap = (slot1: TimeSlot, slot2: TimeSlot): boolean =>
+  // 10:00-14:00 and 12:00-16:00 overlap; 10:00-14:00 and 14:00-16:00 only touch;
+  // 22:00-02:00 and 23:00-23:30 overlap.
+  minuteRangesOverlap(clockRangeMinutes(slot1.start, slot1.end), clockRangeMinutes(slot2.start, slot2.end));
 
 /**
  * Validate all slots for individual validity and overlaps

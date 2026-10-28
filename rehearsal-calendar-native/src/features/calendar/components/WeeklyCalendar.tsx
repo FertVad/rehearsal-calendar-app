@@ -2,7 +2,9 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing } from '../../../shared/constants/colors';
 import { Rehearsal } from '../../../shared/types';
-import { formatDateToString } from '../../../shared/utils/time';
+import { formatDateToString, parseDateString } from '../../../shared/utils/time';
+import { useToday } from '../../../shared/hooks/useClock';
+import { rehearsalDates } from '../../../shared/utils/rehearsalDays';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useWeekStart, getWeekStart as getWeekStartUtil } from '../../../hooks/useWeekStart';
@@ -11,6 +13,11 @@ import { hapticMedium } from '../../../shared/utils/haptics';
 interface WeeklyCalendarProps {
   rehearsals: Rehearsal[];
   onDaySelect: (date: string) => void;
+  /**
+   * "Today": the day shown goes back to today and moves with it again, at
+   * midnight and with the profile's zone — what it is before any day is picked.
+   */
+  onShowToday: () => void;
   onDayLongPress?: (date: string) => void;
   selectedDate: string;
 }
@@ -34,7 +41,7 @@ const WEEK_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md * 2; // Account fo
 const INITIAL_WEEKS = 105; // ~1 year on each side
 const CENTER_INDEX = Math.floor(INITIAL_WEEKS / 2);
 
-export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
+export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
   const { t, language } = useI18n();
   const weekStartDay = useWeekStart();
   const flatListRef = useRef<FlatList>(null);
@@ -52,22 +59,24 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     return getWeekStartUtil(date, weekStartDay);
   }, [weekStartDay]);
 
-  // Memoize rehearsal count map to avoid re-filtering on every render
+  // Rehearsals per day, counted on every day each one is on — one running past
+  // midnight counts on the next day too (DD02).
   const rehearsalCountMap = useMemo(() => {
     const map = new Map<string, number>();
     rehearsals.forEach(r => {
-      if (r.date) {
-        map.set(r.date, (map.get(r.date) || 0) + 1);
+      for (const date of rehearsalDates(r)) {
+        map.set(date, (map.get(date) || 0) + 1);
       }
     });
     return map;
   }, [rehearsals]);
 
+  // Today in the profile's zone, the one rehearsals are dated in (DF01).
+  const today = useToday();
+
   // Generate week data
   const generateWeekData = useCallback((weekStart: Date): DayInfo[] => {
     const days: DayInfo[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStart);
@@ -80,18 +89,18 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
         date: dateString,
         dayOfWeek: DAYS_OF_WEEK[i],
         dayOfMonth: date.getDate(),
-        isToday: date.getTime() === today.getTime(),
+        isToday: dateString === today,
         rehearsalCount,
       });
     }
 
     return days;
-  }, [rehearsalCountMap, DAYS_OF_WEEK]);
+  }, [rehearsalCountMap, DAYS_OF_WEEK, today]);
 
   // Generate all weeks
   const weeks = useMemo((): WeekData[] => {
     const result: WeekData[] = [];
-    const todayWeekStart = getWeekStart(new Date());
+    const todayWeekStart = getWeekStart(parseDateString(today));
 
     for (let i = -CENTER_INDEX; i <= CENTER_INDEX; i++) {
       const weekStart = new Date(todayWeekStart);
@@ -105,7 +114,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     }
 
     return result;
-  }, [getWeekStart, generateWeekData]);
+  }, [getWeekStart, generateWeekData, today]);
 
   // Show the month of the week's middle day so the header flips when the
   // majority of visible days have crossed into a new month — not when the
@@ -129,15 +138,18 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     }
   }, [currentWeekIndex, weeks.length]);
 
-  // Navigate to today's week
+  // Today's day, not only its week: this scrolled the strip back and left the
+  // day picked before selected, so the list under it went on showing that day,
+  // likely in a week no longer on screen (DD03). Today's week is the centre one.
   const handleGoToToday = useCallback(() => {
     hapticMedium();
+    onShowToday();
     flatListRef.current?.scrollToIndex({
       index: CENTER_INDEX,
       animated: true,
     });
     setCurrentWeekIndex(CENTER_INDEX);
-  }, []);
+  }, [onShowToday]);
 
   // Render a single week
   const renderWeek = useCallback(({ item }: { item: WeekData }) => (
@@ -149,6 +161,9 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
           return (
             <TouchableOpacity
               key={day.date}
+              testID={`calendar-day-${day.date}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
               style={[
                 styles.dayCell,
                 day.isToday && styles.dayToday,
@@ -214,7 +229,12 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onDayLongPress
     <View style={styles.container}>
       {/* Header with month/year and today button */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleGoToToday} style={styles.todayButton}>
+        <TouchableOpacity
+          onPress={handleGoToToday}
+          style={styles.todayButton}
+          testID="calendar-today"
+          accessibilityRole="button"
+        >
           <Text style={styles.todayButtonText}>{t.calendar.todayButton}</Text>
         </TouchableOpacity>
 

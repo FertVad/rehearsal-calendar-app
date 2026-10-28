@@ -1,0 +1,33 @@
+Cause fix 14, review round 1 — flow 23, red before (24.10.2026). Chebutykin's
+profile is now pinned to Asia/Jerusalem by the seed, whatever the machine's
+zone; the simulator is in Pacific/Honolulu.
+
+Run 1 — the whole client as at 14dda81 (ProjectDetailScreen.tsx,
+SmartPlannerScreen.tsx, useClock.ts, time.ts, useAvailabilitySave.ts restored
+from 14dda81), the new flow and seed:
+
+$ git restore --source=14dda81 -- src/features/projects/screens/ProjectDetailScreen.tsx src/features/smart-planner/screens/SmartPlannerScreen.tsx src/shared/hooks/useClock.ts src/shared/utils/time.ts src/features/availability/hooks/useAvailabilitySave.ts
+$ npm run e2e -- e2e/flows/23-profile-timezone.yaml
+[e2e] running the flows
+[Failed] The profile's timezone, not the device's (1m 46s) (Assertion is false: "24-30 Oct" is visible)
+1/1 Flow Failed
+
+The planner's header read "23-29 Oct": the week of 24 October in Tel Aviv,
+read as UTC midnights with Honolulu's local getters (screenshot
+step-031-assertCondition-${WEEK_CHOSEN_LABEL}.png).
+
+Run 2 — only ProjectDetailScreen.tsx as at 14dda81, the rest fixed, so the flow
+gets past the planner to the project's page (its card selectors corrected to
+the merged label between the runs; the steps before the page are as in run 1):
+
+$ git restore --source=HEAD -- src && git restore --source=14dda81 -- src/features/projects/screens/ProjectDetailScreen.tsx
+$ npm run e2e -- e2e/flows/23-profile-timezone.yaml
+[e2e] running the flows
+[Failed] The profile's timezone, not the device's (2m 31s) (Assertion is false: "(?s)(?=.*Night watch)(?=.*09:00 - ).*" is visible)
+1/1 Flow Failed
+
+Tokyo chosen in the profile, the calendar at Tokyo's 09:00, and the project's
+page, left open, still showed Night watch at 02:00 - 03:00, Tel Aviv's hours
+(screenshot step-057).
+
+$ git restore --source=HEAD -- src

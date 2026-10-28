@@ -1,0 +1,21 @@
+The fast guard in e2e/__tests__/http.test.mjs: "run.mjs reads the bundle with getText, not fetch".
+
+Red — run.mjs from before the fix:
+$ git restore --source=902d4a6^ -- rehearsal-calendar-native/e2e/run.mjs
+$ node --test rehearsal-calendar-native/e2e/__tests__/http.test.mjs
+not ok 3 - run.mjs reads the bundle with getText, not fetch
+  error: '    `http://localhost:${METRO_PORT}/.expo/.virtual-metro-entry.bundle?platform=ios&dev=true&minify=false`)).text();'
+  code: 'ERR_ASSERTION'
+# tests 4
+# pass 3
+# fail 1
+$ git restore --source=HEAD -- rehearsal-calendar-native/e2e/run.mjs
+
+Green — run.mjs as it is now:
+$ node --test rehearsal-calendar-native/e2e/__tests__/http.test.mjs
+ok 1 - a slow answer is waited for within the deadline
+ok 2 - past the deadline it fails and says how long it waited
+ok 3 - run.mjs reads the bundle with getText, not fetch
+ok 4 - an error status is an error, with what was said
+# pass 4
+# fail 0

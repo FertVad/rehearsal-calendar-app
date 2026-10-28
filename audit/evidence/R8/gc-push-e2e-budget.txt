@@ -1,0 +1,59 @@
+Cause fix 20 - full e2e run on 61f9c7f stopped by the supervisor's 45 minutes (exit 143)
+
+Supervisor (tools/autodev/lib/checks.mjs:93): run('e2e', node, ['e2e/run.mjs'], opts(45 * 60 * 1000))
+Run 2026-10-26_123513: setup 12:31:38 (migrate.log) -> flows 12:35:13 -> junit.xml 13:16:36
+32/32 Flows Passed in 40m 36s, then SIGTERM: run.mjs exits 143.
+
+Where the 40m 36s went (commands.json of that run, all flows):
+  launchAppCommand        36 x   514s
+  eraseTextCommand        78 x   225s   ~2.9s each; 76 in sign-in-form.yaml, 74 of them a first try on an empty field
+  when: notVisible (tap-and-see.yaml)  10 x 69s, 6.8-7.0s each, all SKIPPED (the result was there)
+
+sign-in-form.yaml on 61f9c7f, flow "Sign in" (run 2026-10-26_123513):
+    7.6s retryCommand
+      1.1s tapOnElement login-email
+      1.5s waitForAnimationToEndCommand
+      3.0s eraseTextCommand
+      1.7s inputTextCommand director@e2e.test
+    8.0s retryCommand
+      1.3s tapOnElement login-password
+      1.9s waitForAnimationToEndCommand
+      2.9s eraseTextCommand
+      1.6s inputTextCommand e2e-local-only
+
+tap-and-see.yaml on 61f9c7f, flow 23 (run 2026-10-26_123513):
+  10.1s runFlowCommand ../subflows/tap-and-see.yaml
+    2.7s tapOnElement profile-notifications
+    6.9s runFlowCommand {"notVisible": ".*This device cannot receive push notifications.*"} SKIPPED
+
+After (subflows changed, run 2026-10-26_132330, flows 23 and 13: 2/2 Passed):
+  sign-in-form.yaml, flow 23:
+    8.6s retryCommand
+      0.1s evalScriptCommand
+      1.9s inputTextCommand chebutykin@e2e.test     (no eraseText)
+    5.9s retryCommand
+      0.0s evalScriptCommand
+      1.8s inputTextCommand e2e-local-only          (no eraseText)
+  tap-and-see.yaml, flow 23:
+    3.7s runFlowCommand ../subflows/tap-and-see.yaml
+      3.0s tapOnElement profile-notifications
+      0.2s runFlowCommand {"visible": ".*This device cannot receive push notifications.*"} COMPLETED
+
+Run 2026-10-26_133145, flows 14 and 08: 2/2 Passed (08: 57s, was 1m 21s).
+
+The second try still erases (scratch flow: "junk" typed into login-email before
+sign-in-form.yaml; run 2026-10-26_134612, 1/1 Passed):
+    34.2s retryCommand
+      0.1s runFlowCommand {"scriptCondition":"false"} SKIPPED
+      1.8s inputTextCommand director@e2e.test
+      17.3s assertConditionCommand login-email = director@e2e.test FAILED
+      3.0s runFlowCommand {"scriptCondition":"true"} COMPLETED
+        2.9s eraseTextCommand
+      1.8s inputTextCommand director@e2e.test
+
+A lost tap is still tapped again (scratch flow: tap-and-see on login-forgot-password,
+SEE never on screen; run 2026-10-26_135314, fails on the last wait as it must):
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-10-26T11:55:08.742Z  tapped "id login-forgot-password" again: no "Nothing like this is ever on screen" after the first tap
+
+Saved, per full run: ~2.9s x 74 erases (~3.5 min) + ~6.6s x 10 tap-and-see (~1 min).

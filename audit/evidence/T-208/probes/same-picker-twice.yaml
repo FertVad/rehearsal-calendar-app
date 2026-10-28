@@ -1,0 +1,42 @@
+# T-208 probe: the end picker first, then the start picker — is it the second
+# picker opened in the form that is not in the accessibility tree?
+appId: ${APP_ID}
+name: T-208 probe - second picker
+---
+- runFlow:
+    file: subflows/sign-in.yaml
+    env:
+      EMAIL: ${ARKADINA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- tapOn:
+    id: rehearsal-start-time
+- extendedWaitUntil:
+    visible: "Select Start Time"
+    timeout: 10000
+- tapOn: "Done"
+- extendedWaitUntil:
+    notVisible: "Select Start Time"
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: rehearsal-start-time
+- extendedWaitUntil:
+    visible: "Select Start Time"
+    timeout: 10000
+- takeScreenshot: probe-second-picker

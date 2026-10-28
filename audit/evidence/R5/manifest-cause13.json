@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-16",
+  "branch": "auto/main",
+  "causeFix": 13,
+  "finding": "AC04",
+  "baseCommit": "ce1a4fb",
+  "sourceCommit": "f847b3efa11e9b18a1c9844f8b24d3fd06e5ab7d",
+  "sourceTree": "c610aaa24fd7978e681a160827df984a7b5c3377",
+  "reviewFixCommit": "94d09de316285c0f2d77e6cb046b40551f9e4bd3",
+  "reviewFixTree": "7608f34520b50239fa240ff73941bbf995083df1",
+  "runtime": {
+    "node": "v22",
+    "platform": "darwin",
+    "environment": "jest frontend project",
+    "production": "NOT_RUN",
+    "physicalDevice": "not required",
+    "findingStatus": "READY_FOR_CHECK"
+  },
+  "runs": [
+    {
+      "file": "logger-ac04-before.txt",
+      "sha256": "9a913d28e4492bd1a113596d873bfe2a4f5ea40c35c1f9e2ff7bc4629119e000",
+      "fixFilesAt": "ce1a4fb",
+      "exitCode": 1,
+      "tests": { "failed": 5, "passed": 0 }
+    },
+    {
+      "file": "logger-ac04-after.txt",
+      "sha256": "e1c1e36fe7fda9a0ac27186d7f2a97c28c273d2bf0da2a3f233b100979173b4f",
+      "fixFilesAt": "f847b3efa11e9b18a1c9844f8b24d3fd06e5ab7d",
+      "exitCode": 0,
+      "tests": { "failed": 0, "passed": 5 }
+    },
+    {
+      "file": "logger-ac04-invite-before.txt",
+      "sha256": "94f00e0fdab3575e8d5db31a6ee23b4675d2607ab6ef5f046c20853546c33968",
+      "fixFilesAt": "2f76652",
+      "exitCode": 1,
+      "tests": { "failed": 2, "passed": 5 }
+    },
+    {
+      "file": "logger-ac04-invite-after.txt",
+      "sha256": "1178ba0d05222f114c10a923792166db9bb1b2fd578d7fa4c35960a5c5148c7a",
+      "fixFilesAt": "94d09de316285c0f2d77e6cb046b40551f9e4bd3",
+      "exitCode": 0,
+      "tests": { "failed": 0, "passed": 7 }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+Cause fix 15, review round 2, finding 1 — red before.
+Code: useAvailabilityData.ts at 948a407 (7c57925 carried onto auto/main, HEAD
+before the fix); tests: the new cases "a trip from the phone across a day
+marked free by hand" in useAvailabilityDataMultiDay.test.ts.
+Command: cd rehearsal-calendar-native && npx jest --selectProjects frontend --silent --testPathPatterns 'useAvailabilityDataMultiDay' -t 'trip from the phone'
+
+Running one project: frontend
+FAIL frontend src/features/availability/hooks/__tests__/useAvailabilityDataMultiDay.test.ts (8.939 s)
+  ● A multi-day calendar event, read in Jerusalem › a trip from the phone across a day marked free by hand › shows the trip on the day marked free (whole days, 9 to 11 September)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "custom"
+    Received: "free"
+
+      227 |           const result = await load(data);
+      228 |           const day = result.current.availability['2026-09-10'];
+    > 229 |           expect(day.mode).toBe('custom');
+          |                            ^
+      230 |           expect(day.importedSlots).toEqual([
+      231 |             expect.objectContaining({ start: '00:00', end: '23:59', isAllDay: true }),
+      232 |           ]);
+
+
+  ● A multi-day calendar event, read in Jerusalem › a trip from the phone across a day marked free by hand › shows the trip on the day marked free (timed, 9 to 11 September)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "custom"
+    Received: "free"
+
+      227 |           const result = await load(data);
+      228 |           const day = result.current.availability['2026-09-10'];
+    > 229 |           expect(day.mode).toBe('custom');
+          |                            ^
+      230 |           expect(day.importedSlots).toEqual([
+      231 |             expect.objectContaining({ start: '00:00', end: '23:59', isAllDay: true }),
+      232 |           ]);
+
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 12 skipped, 14 total
+Snapshots:   0 total
+Time:        9.609 s, estimated 58 s

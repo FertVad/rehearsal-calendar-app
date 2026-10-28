@@ -19,6 +19,7 @@ import { GlassButton, UserAvatar } from '../../../shared/components';
 import { ProfileStackParamList } from '../../../navigation';
 import { editProfileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess } from '../../../shared/utils/haptics';
+import { authErrorMessage } from '../../auth/utils/authErrors';
 
 type EditProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'EditProfile'>;
 
@@ -28,26 +29,14 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
 
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
-  const [email, setEmail] = useState(user?.email || '');
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<{ firstName?: string; email?: string }>({});
-
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const [errors, setErrors] = useState<{ firstName?: string }>({});
 
   const validateForm = (): boolean => {
-    const newErrors: { firstName?: string; email?: string } = {};
+    const newErrors: { firstName?: string } = {};
 
     if (!firstName.trim()) {
       newErrors.firstName = t.profile.firstNameRequired;
-    }
-
-    if (!email.trim()) {
-      newErrors.email = t.profile.emailRequired;
-    } else if (!validateEmail(email)) {
-      newErrors.email = t.profile.emailInvalid;
     }
 
     setErrors(newErrors);
@@ -63,10 +52,11 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
       hapticLight();
       setSaving(true);
 
+      // An empty last name clears it; undefined would leave the old one (HP02).
+      // The address is not sent: it changes on its own screen (HP01).
       await updateUser({
         firstName: firstName.trim(),
-        lastName: lastName.trim() || undefined,
-        email: email.trim(),
+        lastName: lastName.trim(),
       });
 
       hapticSuccess();
@@ -77,7 +67,7 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
         },
       ]);
     } catch (err: any) {
-      Alert.alert(t.profile.updateError, err.message);
+      Alert.alert(t.profile.updateError, authErrorMessage(t, err));
     } finally {
       setSaving(false);
     }
@@ -85,8 +75,7 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
 
   const hasChanges =
     firstName.trim() !== (user?.firstName || '') ||
-    lastName.trim() !== (user?.lastName || '') ||
-    email.trim() !== (user?.email || '');
+    lastName.trim() !== (user?.lastName || '');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -167,29 +156,19 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
               />
             </View>
 
-            {/* Email */}
+            {/* Email: read only here — a new address needs a code to each (HP01) */}
             <View style={styles.fieldContainer}>
-              <Text style={styles.label}>
-                {t.profile.email} <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  if (errors.email) {
-                    setErrors({ ...errors, email: undefined });
-                  }
+              <Text style={styles.label}>{t.profile.email}</Text>
+              <Text testID="profile-email" style={styles.input}>{user?.email}</Text>
+              <GlassButton
+                testID="profile-change-email"
+                title={t.profile.changeEmail}
+                onPress={() => {
+                  hapticLight();
+                  navigation.navigate('ChangeEmail');
                 }}
-                placeholder={t.profile.emailPlaceholder}
-                placeholderTextColor={Colors.text.tertiary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
+                variant="glass"
               />
-              {errors.email && (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              )}
             </View>
           </View>
 

@@ -1,0 +1,24 @@
+T-207 - after: flows 30, 27, 28, 29 with their taps through tap-and-see.yaml
+(artifacts e2e/out/artifacts/2026-10-25_130533, not in git).
+
+  npm run e2e -- e2e/flows/30-sync-import-fails-export-runs.yaml e2e/flows/27-past-midnight-morning-slot.yaml \
+    e2e/flows/28-trip-under-free-day.yaml e2e/flows/29-calendar-event-at-the-same-hours.yaml
+
+[e2e] running the flows
+Waiting for flows to complete...
+[Passed] A sync whose import fails still exports (2m 22s)
+[Passed] A morning slot of his own outlives a save of the morning (1m 48s)
+[Passed] A trip from the calendar shows on a day marked free (1m 1s)
+[Passed] A calendar event shows beside a row with the same hours (1m 1s)
+4/4 Flows Passed in 6m 12s
+
+The command was then cut by the tool's 10-minute limit during teardown,
+before the run's last line; no e2e/out/taps-again.log was written, so no tap
+was taken again (the line would have read "taps taken again: 0"). No process
+of the run was left (pgrep: no run.mjs, Metro or server).
+
+Flow 30's metro.log (cause fix 17 holds):
+  [CalendarSync] Enabled apple calendar sync: Calendar
+  [useCalendarSync] Import failed: {"code": "ECONNABORTED", "message": "timeout of 10000ms exceeded", ...}
+  [Sync] ❌ Import failed: ...
+  [Sync] ✅ Export completed: {"errors": [], "failed": 0, "success": 1}

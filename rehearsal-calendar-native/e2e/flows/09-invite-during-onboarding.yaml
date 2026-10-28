@@ -1,0 +1,42 @@
+# An invite link that arrives while a new member is still in onboarding waits
+# for onboarding to end and then opens the invitation (HN01, fix 9). It was
+# navigated to at once, into the onboarding stack, which has no invitation
+# screen: the call was dropped and the invite lost. Sebastian has not been
+# through onboarding and is in no project; Twelfth Night is in no other flow.
+appId: ${APP_ID}
+name: Invite link during onboarding
+tags:
+  - invite
+  - auth
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${SEBASTIAN_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: rehearsalapp://invite/${TWELFTH_INVITE}
+# Onboarding stays on screen: the invite waits for it.
+- assertVisible:
+    id: onboarding-skip
+- tapOn:
+    id: onboarding-skip
+# The confirmation is the system's alert, which carries no testID.
+- tapOn: "Yes"
+- extendedWaitUntil:
+    visible:
+      id: join-project-name
+      text: "Twelfth Night"
+    timeout: 20000
+- takeScreenshot: 09-invite-after-onboarding
+- tapOn:
+    id: join-project-submit
+- tapOn: "Projects, tab.*"
+- extendedWaitUntil:
+    visible: ".*Twelfth Night.*"
+    timeout: 15000

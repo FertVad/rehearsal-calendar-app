@@ -1,0 +1,89 @@
+Cause fix 17, review round — red before.
+
+The new and changed tests run against the code under review (50f9cc4, the
+fix fe11e12): the three files of this round put back with
+`git restore --source=HEAD -- <files>`, the tests as in this round.
+ts-jest's type diagnostics are off (cause17-r2-jest.config.js beside this
+file): the tests call syncAllRehearsals with the pass's options, which the
+old type does not have, and the run should fail on behaviour, not on the type.
+Node 22, `npx jest -c ../audit/evidence/R7/cause17-r2-jest.config.js --silent
+--verbose --runTestsByPath <files>`, lines filtered to results and checks.
+
+Files of this round restored:
+  src/shared/services/calendar/export.ts
+  src/shared/utils/calendarStorage.ts
+  src/shared/hooks/useAutoCalendarSync.ts
+
+FAIL frontend src/shared/services/calendar/__tests__/syncOutcome.test.ts (30.928 s)
+    ✓ a lookup that failed is not "the reader deleted it" (232 ms)
+    ✓ the calendar's own "no such event" still recreates it (21 ms)
+    ✓ a search that could not read the calendar creates no second copy (9 ms)
+    ✓ is counted as failed, not as the old event exported (52 ms)
+    ✓ keeps the mapping it has (21 ms)
+    ✓ brings it up to date rather than taking it as it is (23 ms)
+    ✓ fails, rather than reporting the move done (16 ms)
+    ✕ keeps both copies within reach: the mapping on the new one, the old one to take back (54 ms)
+    ✕ then "remove all" removes both copies (35 ms)
+    ✕ the next export pass takes the old copy back and makes no third (16 ms)
+    ✕ a pass in which the old copy still will not go is not a success (14 ms)
+    ✕ removes the event of a rehearsal no longer there, and only that one (6 ms)
+    ✕ one that will not go keeps its mapping, the rest still go — and the pass is no success (9 ms)
+    ✓ leaves every mapping alone unless told the list is every rehearsal (3 ms)
+    ✓ keeps the mapping of the event still in the calendar (71 ms)
+    ✓ is not stamped by a run in which something failed (4 ms)
+    ✓ is stamped by a run with no failure, once (7 ms)
+    ✓ is not stamped by one rehearsal written on its own (3 ms)
+    - Expected  - 2
+    + Received  + 2
+    > 190 |     expect(mappings['1']).toEqual({ eventId: 'new-event', calendarId: 'work' });
+    - Expected  - 1
+    + Received  + 3
+    > 203 |     expect([...inCalendar]).toEqual([]);
+    Expected number of calls: 1
+    Received number of calls: 2
+    > 216 |     expect(Calendar.createEventAsync).toHaveBeenCalledTimes(1);
+    - Expected  - 3
+    + Received  + 1
+    > 228 |     expect(Object.keys(leftovers)).toEqual(['old-event']);
+    Expected number of calls: 1
+    Received number of calls: 0
+    > 250 |     expect(Calendar.deleteEventAsync).toHaveBeenCalledTimes(1);
+    Expected: "e3"
+    > 266 |     expect(Calendar.deleteEventAsync).toHaveBeenCalledWith('e3');
+FAIL frontend src/shared/hooks/__tests__/useAutoCalendarSync.test.ts (31.122 s)
+    ✓ does not listen unless asked to (1263 ms)
+    ✓ listens when asked, which is what the tab bar does (38 ms)
+    ✓ syncs when the app comes forward (11 ms)
+    ✓ registers one listener however many screens use the hook (15 ms)
+    ✓ is shared between separate mounts, not one lock each (23 ms)
+    ✓ syncs on a cold launch, not only on a return from the background (18 ms)
+    ✓ does not sync on mount for a screen that only wants the manual functions (4 ms)
+    ✕ hands the export pass every live rehearsal, to take back the rest (35 ms)
+    ✕ runs the pass once the last rehearsal is gone too (26 ms)
+    ✓ waits its turn instead of being dropped (10 ms)
+    ✕ no longer holds back, so someone else's edit arrives on opening the app (4 ms)
+    ✓ asks for the mappings once, not once per rehearsal (2 ms)
+    ✓ a failed import still lets the export run (5 ms)
+    ✓ mappings that could not be fetched for the import still let the export run (21 ms)
+    ✕ can bring the calendar in line without the hook (5 ms)
+    ✓ shares the lock, so an extra caller causes no extra run (5 ms)
+    Expected: {"removeOthers": true}
+    Received: undefined
+    > 189 |     expect(options).toEqual({ removeOthers: true });
+    Expected: [], "cal-export", undefined, {"1": {"calendarId": "c1", "eventId": "evt-1", "lastSynced": ""}, "2": {"calendarId": "c1", "eventId": "evt-2", "lastSynced": ""}}, Any<Number>, {"removeOthers": true}
+    > 197 |     expect(syncAllRehearsals).toHaveBeenCalledWith([], 'cal-export', undefined, mapped(['1', '2']), expect.any(Number), { removeOthers: true });
+    Expected: [], "cal-export", undefined, ObjectContaining {"7": Anything}, Any<Number>, {"removeOthers": true}
+    > 246 |     expect(syncAllRehearsals).toHaveBeenCalledWith([], 'cal-export', undefined, expect.objectContaining({ '7': expect.anything() }), expect.any(Number), { removeOthers: true });
+    Expected: [], "cal-export", undefined, ObjectContaining {"7": Anything}, Any<Number>, {"removeOthers": true}
+    > 331 |     expect(syncAllRehearsals).toHaveBeenCalledWith([], 'cal-export', undefined, expect.objectContaining({ '7': expect.anything() }), expect.any(Number), { removeOthers: true });
+Test Suites: 2 failed, 2 total
+Tests:       10 failed, 24 passed, 34 total
+
+Red: 10 of the 34, each on a check. The review's two cases fail as it
+reported them: after a failed move "remove all" leaves the new copy in the
+calendar (line 203), and a pass whose cancelled event will not go is still
+counted clean (the cancelled-event tests; the hook took the events back
+itself and the export pass never saw the failure, lines 189–331). Green on
+the old code, as they should be: the earlier cause-17 tests, "fails, rather
+than reporting the move done" (the move failed before as well), and "leaves
+every mapping alone unless told" (the pass never took anything back).

@@ -11,6 +11,7 @@
 import { Platform } from 'react-native';
 import { calendarSyncAPI } from '../services/api';
 import { listDeviceCalendarIds } from '../services/calendar/deviceCalendars';
+import { assertSession, currentSession, SessionEndedError, SessionStamp } from '../services/session';
 import {
   saveEventMapping as saveToAsyncStorage,
   getEventMapping as getFromAsyncStorage,
@@ -19,6 +20,7 @@ import {
   clearAllMappings as clearAllFromAsyncStorage,
 } from './calendarStorage';
 
+import { logger } from './logger';
 // Connection cache
 //
 // Keyed by the calendar and nothing else, so it has to be cleared when a
@@ -38,7 +40,8 @@ export function resetConnectionCache(): void {
  */
 export async function getOrCreateConnection(
   deviceCalendarId: string,
-  deviceCalendarName?: string
+  deviceCalendarName?: string,
+  session: SessionStamp = currentSession()
 ): Promise<number | null> {
   try {
     // Check cache
@@ -47,7 +50,7 @@ export async function getOrCreateConnection(
     }
 
     // Get existing connections
-    const response = await calendarSyncAPI.getConnections();
+    const response = await calendarSyncAPI.getConnections(session);
     const connections = response.data.connections || [];
 
     // Find connection for this calendar
@@ -68,31 +71,39 @@ export async function getOrCreateConnection(
       deviceCalendarName,
       syncEnabled: true,
       syncDirection: 'both',
-    });
+    }, session);
 
     const newConnection = createResponse.data.connection;
+    assertSession(session);
     connectionCache = { id: newConnection.id, deviceCalendarId };
     return newConnection.id;
   } catch (error) {
-    console.error('[CalendarMappings] Failed to get/create connection:', error);
+    if (error instanceof SessionEndedError) throw error;
+    logger.error('[CalendarMappings] Failed to get/create connection:', error);
     return null;
   }
 }
 
 /**
  * Save event mapping (both DB and AsyncStorage)
+ *
+ * The writes below, like every write here, are the session's that asked for
+ * them (ES01): the stamp is checked before each, and its end is passed on, not
+ * swallowed with the failures.
  */
 export async function saveEventMapping(
   rehearsalId: string,
   eventId: string,
-  calendarId: string
+  calendarId: string,
+  session: SessionStamp = currentSession()
 ): Promise<void> {
   try {
     // Save to AsyncStorage first (for offline access)
+    assertSession(session);
     await saveToAsyncStorage(rehearsalId, eventId, calendarId);
 
     // Get or create connection
-    const connectionId = await getOrCreateConnection(calendarId);
+    const connectionId = await getOrCreateConnection(calendarId, undefined, session);
     if (!connectionId) {
       return;
     }
@@ -104,9 +115,10 @@ export async function saveEventMapping(
       internalEventId: rehearsalId,
       externalEventId: eventId,
       syncDirection: 'export',
-    });
+    }, session);
   } catch (error) {
-    console.error('[CalendarMappings] Failed to save mapping to DB:', error);
+    if (error instanceof SessionEndedError) throw error;
+    logger.error('[CalendarMappings] Failed to save mapping to DB:', error);
     // Fallback: at least AsyncStorage is saved
   }
 }
@@ -150,9 +162,9 @@ function later(first: Mapping | undefined, second: Mapping | undefined): Mapping
  * (ES02). Only mappings recorded under a calendar this device has are its own
  * (deviceCalendars.ts), whichever side holds them.
  */
-async function serverMappingsHere(): Promise<{ here: Set<string>; server: Map<string, Mapping> }> {
+async function serverMappingsHere(session: SessionStamp): Promise<{ here: Set<string>; server: Map<string, Mapping> }> {
   const [response, calendars] = await Promise.all([
-    calendarSyncAPI.getMappings('rehearsal'),
+    calendarSyncAPI.getMappings('rehearsal', session),
     listDeviceCalendarIds(),
   ]);
   const here = new Set(calendars);
@@ -190,7 +202,7 @@ async function localHere(): Promise<Record<string, Mapping>> {
   try {
     here = new Set(await listDeviceCalendarIds());
   } catch (error) {
-    console.error('[CalendarMappings] Could not list the device calendars; using the local record whole:', error);
+    logger.error('[CalendarMappings] Could not list the device calendars; using the local record whole:', error);
     return cached;
   }
   const result: Record<string, Mapping> = {};
@@ -205,24 +217,27 @@ async function localHere(): Promise<Record<string, Mapping>> {
  * Get event mapping (try DB first, fallback to AsyncStorage)
  */
 export async function getEventMapping(
-  rehearsalId: string
+  rehearsalId: string,
+  session: SessionStamp = currentSession()
 ): Promise<{ eventId: string; calendarId: string; lastSynced: string } | null> {
   try {
     const [{ here, server }, local] = await Promise.all([
-      serverMappingsHere(),
+      serverMappingsHere(session),
       getFromAsyncStorage(rehearsalId),
     ]);
     const result = current(here, server.get(String(rehearsalId)), local);
 
     // The server's is newer: keep it here too, with the time it was written.
     if (result && result !== local) {
+      assertSession(session);
       await saveToAsyncStorage(rehearsalId, result.eventId, result.calendarId, result.lastSynced);
     }
     return result ?? null;
   } catch (error: any) {
+    if (error instanceof SessionEndedError) throw error;
     // A missing mapping comes back as null, so anything landing here is a real
     // failure — the local cache is the fallback.
-    console.error('[CalendarMappings] DB lookup failed, falling back to AsyncStorage:', error);
+    logger.error('[CalendarMappings] DB lookup failed, falling back to AsyncStorage:', error);
   }
 
   // Fallback: this device's own record (offline, or the server failed)
@@ -232,23 +247,28 @@ export async function getEventMapping(
 /**
  * Remove event mapping (both DB and AsyncStorage)
  */
-export async function removeEventMapping(rehearsalId: string): Promise<void> {
+export async function removeEventMapping(
+  rehearsalId: string,
+  session: SessionStamp = currentSession()
+): Promise<void> {
   try {
     // Remove from AsyncStorage
+    assertSession(session);
     await removeFromAsyncStorage(rehearsalId);
 
     // Remove from database — this device's mapping only. Another phone that
     // exported the same rehearsal keeps its own (ES02).
     try {
-      await calendarSyncAPI.deleteMappingByEvent('rehearsal', rehearsalId, await listDeviceCalendarIds());
+      await calendarSyncAPI.deleteMappingByEvent('rehearsal', rehearsalId, await listDeviceCalendarIds(), session);
     } catch (error: any) {
+      if (error instanceof SessionEndedError) throw error;
       // 404 is okay - mapping doesn't exist
       if (error.response?.status !== 404) {
-        console.error('[CalendarMappings] Failed to remove from DB:', error);
+        logger.error('[CalendarMappings] Failed to remove from DB:', error);
       }
     }
   } catch (error) {
-    console.error('[CalendarMappings] Failed to remove mapping:', error);
+    logger.error('[CalendarMappings] Failed to remove mapping:', error);
     throw error;
   }
 }
@@ -256,10 +276,12 @@ export async function removeEventMapping(rehearsalId: string): Promise<void> {
 /**
  * Get all mappings (try DB first, fallback to AsyncStorage)
  */
-export async function getAllMappings(): Promise<Record<string, { eventId: string; calendarId: string; lastSynced: string }>> {
+export async function getAllMappings(
+  session: SessionStamp = currentSession()
+): Promise<Record<string, { eventId: string; calendarId: string; lastSynced: string }>> {
   try {
     const [{ here, server }, cached] = await Promise.all([
-      serverMappingsHere(),
+      serverMappingsHere(session),
       getAllFromAsyncStorage(),
     ]);
 
@@ -279,7 +301,8 @@ export async function getAllMappings(): Promise<Record<string, { eventId: string
     }
     return result;
   } catch (error) {
-    console.error('[CalendarMappings] Failed to get mappings from DB, falling back to AsyncStorage:', error);
+    if (error instanceof SessionEndedError) throw error;
+    logger.error('[CalendarMappings] Failed to get mappings from DB, falling back to AsyncStorage:', error);
 
     const cached = await localHere();
     if (Object.keys(cached).length > 0) return cached;
@@ -300,9 +323,10 @@ export async function getAllMappings(): Promise<Record<string, { eventId: string
 /**
  * Clear all mappings (both DB and AsyncStorage)
  */
-export async function clearAllMappings(): Promise<void> {
+export async function clearAllMappings(session: SessionStamp = currentSession()): Promise<void> {
   try {
     // Clear AsyncStorage
+    assertSession(session);
     await clearAllFromAsyncStorage();
 
     // Clear database — this device's mappings, in one request. It used to
@@ -310,12 +334,13 @@ export async function clearAllMappings(): Promise<void> {
     // phone left the other's events in its calendar with nothing pointing at
     // them (ES02).
     try {
-      await calendarSyncAPI.deleteMappings('rehearsal', await listDeviceCalendarIds());
+      await calendarSyncAPI.deleteMappings('rehearsal', await listDeviceCalendarIds(), session);
     } catch (error) {
-      console.error('[CalendarMappings] Failed to clear DB mappings:', error);
+      if (error instanceof SessionEndedError) throw error;
+      logger.error('[CalendarMappings] Failed to clear DB mappings:', error);
     }
   } catch (error) {
-    console.error('[CalendarMappings] Failed to clear mappings:', error);
+    logger.error('[CalendarMappings] Failed to clear mappings:', error);
     throw error;
   }
 }

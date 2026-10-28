@@ -1,0 +1,21 @@
+Cause fix 12 — e2e flow 14 (switch accounts on a running app), after.
+Code: 1a4071a (fix) + the flow, the seed people (Ranevskaya, Lopakhin) and testID profile-logout.
+Command (rehearsal-calendar-native): npm run e2e -- e2e/flows/14-switch-account.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Passed] Switch accounts on a running app (2m 23s)
+1/1 Flow Passed in 2m 23s
+
+Seen by the flow: Ranevskaya marks "Orchard walk" seen, signs out from the profile, Lopakhin signs in
+on the same running app — his toggle on "Orchard walk" is not selected, and the rehearsal form opens on
+"Lopakhin Holdings", not on "The Cherry Orchard".
+(An earlier run of the same code failed only at the form step: the flow matched the project name
+exactly, while the picker is one touchable labelled with all its text; the screenshot showed
+"Lopakhin Holdings". The flow now matches it by regex on id rehearsal-project.)

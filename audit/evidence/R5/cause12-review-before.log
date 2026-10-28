@@ -1,0 +1,79 @@
+Cause fix 12, review round — red before.
+Production files of the review fix restored from ac5e1ec (git restore --source=ac5e1ec):
+session.ts, api.ts, calendarMappings.ts, calendar/export.ts, calendar/import.ts,
+useAutoCalendarSync.ts, SeenContext.tsx, useRehearsals.ts, NotificationsScreen.tsx.
+Tests from 62173fd. Restored to HEAD afterwards (git restore --source=HEAD -- src).
+Command (rehearsal-calendar-native):
+npx jest --selectProjects frontend --verbose --runTestsByPath \
+  src/shared/hooks/__tests__/syncSession.test.ts src/shared/services/__tests__/api.refresh.test.ts \
+  src/features/calendar/hooks/__tests__/seenOrder.test.tsx src/features/calendar/hooks/__tests__/useRehearsals.test.ts \
+  src/features/notifications/screens/__tests__/NotificationsScreen.test.tsx
+Output filtered: stack frames, console and source excerpts dropped; ●, Expected/Received, totals kept.
+
+FAIL frontend src/features/calendar/hooks/__tests__/seenOrder.test.tsx (39.477 s)
+  ✕ keeps a mark put on after the list was asked for (HN02) (992 ms)
+  ✕ keeps a mark put on while the list was out and the tap was on its way (98 ms)
+  ✓ takes off a mark taken back elsewhere when nothing was tapped here (143 ms)
+  ● keeps a mark put on after the list was asked for (HN02)
+    Expected: "yes"
+    Received: null
+    > 57 |   expect(result.current.seen.responseFor('r1')).toBe('yes');
+  ● keeps a mark put on while the list was out and the tap was on its way
+    Expected: "yes"
+    Received: null
+    > 75 |   expect(result.current.seen.responseFor('r1')).toBe('yes');
+FAIL frontend src/shared/services/__tests__/api.refresh.test.ts (41.922 s)
+  ✓ keeps the session when the refresh cannot reach the server (AC01) (55 ms)
+  ✓ keeps the session when the server fails the refresh with its own error (AC01) (28 ms)
+  ✓ reports the session over when the server refuses the refresh token (AC02) (13 ms)
+  ✓ retries with the new pair after a refresh (13 ms)
+  ✓ spends the refresh token once when two requests are refused together (22 ms)
+  ✓ does not refresh or retry a request of a session that has ended (14 ms)
+  ✕ sends a request of an ended session with nobody's token (ES01) (12 ms)
+  ✓ leaves a refused password at sign-in alone: no session was sent (13 ms)
+  ● sends a request of an ended session with nobody's token (ES01)
+    Expected: "SessionEndedError"
+    Received: undefined
+    > 121 |   expect(sent.name).toBe('SessionEndedError');
+FAIL frontend src/features/calendar/hooks/__tests__/useRehearsals.test.ts (43.369 s)
+      ✓ should fetch rehearsals from all projects using batch endpoint (266 ms)
+      ✓ keeps the chosen project's rehearsals when the earlier filter answers last (DF06) (64 ms)
+      ✓ should handle empty rehearsals array (14 ms)
+      ✓ should fetch rehearsals for specific project (31 ms)
+      ✓ should not fetch admin stats for non-admin projects (32 ms)
+      ✓ should only fetch RSVP for upcoming rehearsals (23 ms)
+      ✓ should clear rehearsals when no projects (16 ms)
+      ✕ ends the loading when the last project goes while a load is out (24 ms)
+      ✓ should handle API errors gracefully (33 ms)
+      ✓ should handle RSVP fetch errors without failing (11 ms)
+      ✓ should set loading state during fetch (31 ms)
+      ✓ should transform ISO timestamps to legacy format (21 ms)
+      ✓ should keep legacy format if already present (21 ms)
+  ● useRehearsals Hook › fetchRehearsals - Empty Projects › ends the loading when the last project goes while a load is out
+    Expected: false
+    Received: true
+    > 331 |       expect(result.current.loading).toBe(false);
+FAIL frontend src/shared/hooks/__tests__/syncSession.test.ts (43.444 s)
+  ✕ sends no calendar of the first person once the mappings come back after the change (ES01) (310 ms)
+  ✕ neither creates the event nor records its mapping when the account changed during the search for a copy (ES01) (137 ms)
+  ✓ runs to the end while the account stays (17 ms)
+  ● sends no calendar of the first person once the mappings come back after the change (ES01)
+    - Expected  - 1
+    + Received  + 6
+    > 116 |   expect(mockSent.filter((request) => request.session !== firstPersons)).toEqual([]);
+  ● neither creates the event nor records its mapping when the account changed during the search for a copy (ES01)
+    Expected number of calls: 0
+    Received number of calls: 1
+    > 133 |   expect(Calendar.createEventAsync).not.toHaveBeenCalled();
+FAIL frontend src/features/notifications/screens/__tests__/NotificationsScreen.test.tsx (62.03 s)
+  ✓ does not bring back a card deleted while a load was out (458 ms)
+  ✕ does not make cards unread again after "Mark all read" while a load was out (18346 ms)
+  ● does not make cards unread again after "Mark all read" while a load was out
+    Received: {"_fiber": {... "type": "TouchableOpacity" ...}}   (the "Mark all read" button is back)
+    > 90 |   expect(screen.queryByLabelText('Mark all read')).toBeNull();
+Test Suites: 5 failed, 5 total
+Tests:       7 failed, 22 passed, 29 total
+
+Note: nine existing tests (useAutoCalendarSync, mappingScope, exportMatching,
+exportFailures, availabilityFlow) were changed in 62173fd only to expect the
+session argument the chain now passes; they are not part of this red.

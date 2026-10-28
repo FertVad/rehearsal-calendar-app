@@ -5,7 +5,9 @@
  * @see https://date-fns.org/docs/Time-Zones
  */
 
-import { fromZonedTime, toZonedTime, formatInTimeZone } from 'date-fns-tz';
+// The subpath only: the package root's format helpers load the whole date-fns
+// barrel, about half of the server's cold start (__tests__/startup/importWeight).
+import { fromZonedTime } from 'date-fns-tz/fromZonedTime';
 
 /**
  * @typedef {Object} DateTimeResult
@@ -122,6 +124,32 @@ export function localToTimestamp(date, time, timezone) {
 
   // Return ISO string in UTC (Z format)
   return utcDate.toISOString();
+}
+
+/**
+ * A clock range on a local date as the interval it is (cause fix 15), the same
+ * rule as the app's clockRangeToISO: an end before the start is on the next day
+ * — 23:00–01:00 runs into the next morning — and an end equal to the start is
+ * left equal, for the caller to refuse. The end used to be put on the start's
+ * date whatever it said, so an overnight range ended before it began.
+ *
+ * @returns {{ startsAtISO: string, endsAtISO: string }}
+ */
+export function localRangeToTimestamps(date, startTime, endTime, timezone) {
+  const minutes = (time) => {
+    const [hours, mins] = String(time).split(':').map(Number);
+    return hours * 60 + mins;
+  };
+  let endDate = date;
+  if (minutes(endTime) < minutes(startTime)) {
+    const next = new Date(`${date}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    endDate = next.toISOString().slice(0, 10);
+  }
+  return {
+    startsAtISO: localToTimestamp(date, startTime, timezone),
+    endsAtISO: localToTimestamp(endDate, endTime, timezone),
+  };
 }
 
 /**

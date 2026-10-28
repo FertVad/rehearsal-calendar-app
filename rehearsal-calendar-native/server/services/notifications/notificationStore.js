@@ -92,22 +92,61 @@ export async function getUnreadCounts(userIds, executor = db) {
   return new Map(rows.map((r) => [Number(r.user_id), Number(r.unread)]));
 }
 
+export const PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 100;
+
+/** Where a page ended: the last row's place in the order, `<created_at ISO>~<id>`. */
+const cursorOf = (row) => `${new Date(row.created_at).toISOString()}~${row.id}`;
+
 /**
- * One user's inbox, newest first.
+ * The place a cursor names, or null if this store did not issue it.
+ * @returns {{createdAt: string, id: number} | null}
  */
-export async function listNotifications(userId, { limit = 50, offset = 0 } = {}) {
+export function parseCursor(cursor) {
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)~(\d+)$/.exec(String(cursor));
+  if (!match || Number.isNaN(Date.parse(match[1]))) return null;
+  const id = Number(match[2]);
+  return Number.isSafeInteger(id) ? { createdAt: match[1], id } : null;
+}
+
+/**
+ * One page of a user's inbox, newest first, and where the next one begins.
+ *
+ * Paged by the place the last row holds in the order, not by an offset (cause
+ * fix 21: NI01): a notification arriving or deleted between two pages moved an
+ * offset's rows by one, and the next page repeated a row or skipped one.
+ *
+ * @param {{limit?: number, cursor?: {createdAt: string, id: number} | null}} options
+ *   `cursor` from parseCursor: the page begins after it.
+ * @returns {Promise<{notifications: object[], nextCursor: string | null}>}
+ *   nextCursor is null when this page holds the oldest.
+ */
+export async function listNotifications(userId, { limit = PAGE_SIZE, cursor = null } = {}) {
+  const size = Math.min(Math.max(Math.trunc(Number(limit)) || PAGE_SIZE, 1), MAX_PAGE_SIZE);
+  const after = cursor
+    ? 'AND (created_at < ? OR (created_at = ? AND id < ?))'
+    : '';
   const rows = await db.all(
     `SELECT id, type, title, body, data, related_type, related_id, read_at, created_at
      FROM native_notifications
-     WHERE user_id = ?
+     WHERE user_id = ? ${after}
      -- id breaks the tie: a fan-out writes several rows inside the same
      -- millisecond, and on created_at alone their order is arbitrary.
      ORDER BY created_at DESC, id DESC
-     LIMIT ? OFFSET ?`,
-    [userId, Math.min(Number(limit) || 50, 100), Number(offset) || 0]
+     LIMIT ?`,
+    // One more than the page: whether it is there says whether there is more.
+    [userId, ...(cursor ? [cursor.createdAt, cursor.createdAt, cursor.id] : []), size + 1]
   );
 
-  return rows.map((r) => ({
+  const page = rows.slice(0, size);
+  return {
+    notifications: page.map(toNotification),
+    nextCursor: rows.length > size ? cursorOf(page[page.length - 1]) : null,
+  };
+}
+
+function toNotification(r) {
+  return {
     id: r.id,
     type: r.type,
     title: r.title,
@@ -118,7 +157,7 @@ export async function listNotifications(userId, { limit = 50, offset = 0 } = {})
     relatedId: r.related_id,
     read: r.read_at !== null,
     createdAt: r.created_at,
-  }));
+  };
 }
 
 function safeParse(text) {
@@ -138,7 +177,27 @@ export async function countUnread(userId) {
 }
 
 /**
- * Delete notifications. Without ids, empties the user's whole inbox.
+ * What a change covers: the ids named, or — asked for by name — the whole inbox
+ * (cause fix 21: NI06). A list is a list, and an empty one covers nothing: it
+ * used to fall through to "everything", so filtering a selection down to none
+ * marked or deleted the lot.
+ *
+ * @param {number[] | 'all'} scope
+ * @returns {{sql: string, params: number[]} | null} the condition to add, or
+ *   null for a list that names nothing.
+ */
+function scopeOf(scope) {
+  if (scope === 'all') return { sql: '', params: [] };
+  if (!Array.isArray(scope)) {
+    throw new TypeError("A change covers a list of ids or 'all'");
+  }
+  const numeric = scope.map(Number).filter((n) => Number.isSafeInteger(n));
+  if (numeric.length === 0) return null;
+  return { sql: `AND id IN (${numeric.map(() => '?').join(',')})`, params: numeric };
+}
+
+/**
+ * Delete notifications: the ids given, or `'all'` to empty the user's inbox.
  *
  * Scoped to the user in the WHERE clause rather than checked first — the ids
  * come from the client, and a check-then-delete would be one more place to
@@ -147,64 +206,40 @@ export async function countUnread(userId) {
  * Deleting an unread one lowers the count, which is why this answers with what
  * remains: the client sets bell and badge from it without asking again.
  *
+ * @param {number[] | 'all'} scope
  * @returns {Promise<{deleted: number, unreadCount: number}>}
  */
-export async function deleteNotifications(userId, ids = null) {
-  let deleted = 0;
+export async function deleteNotifications(userId, scope) {
+  const where = scopeOf(scope);
+  if (!where) return { deleted: 0, unreadCount: await countUnread(userId) };
 
-  if (Array.isArray(ids) && ids.length > 0) {
-    const numeric = ids.map(Number).filter((n) => Number.isInteger(n));
-    if (numeric.length === 0) {
-      return { deleted: 0, unreadCount: await countUnread(userId) };
-    }
+  const rows = await db.all(
+    `DELETE FROM native_notifications WHERE user_id = ? ${where.sql} RETURNING id`,
+    [userId, ...where.params]
+  );
 
-    const placeholders = numeric.map(() => '?').join(',');
-    const rows = await db.all(
-      `DELETE FROM native_notifications
-       WHERE user_id = ? AND id IN (${placeholders})
-       RETURNING id`,
-      [userId, ...numeric]
-    );
-    deleted = rows.length;
-  } else {
-    const rows = await db.all(
-      'DELETE FROM native_notifications WHERE user_id = ? RETURNING id',
-      [userId]
-    );
-    deleted = rows.length;
-  }
-
-  return { deleted, unreadCount: await countUnread(userId) };
+  return { deleted: rows.length, unreadCount: await countUnread(userId) };
 }
 
 /**
- * Mark notifications read. Without ids, marks the user's whole inbox.
+ * Mark notifications read: the ids given, or `'all'` for the user's whole inbox.
  *
  * Scoped to the user in the WHERE clause rather than checked first — the id
  * comes from the client, and a check-then-update would be one more place to
  * forget the ownership test.
  *
+ * @param {number[] | 'all'} scope
  * @returns {Promise<number>} the unread count that remains
  */
-export async function markRead(userId, ids = null) {
-  const now = new Date().toISOString();
+export async function markRead(userId, scope) {
+  const where = scopeOf(scope);
+  if (!where) return countUnread(userId);
 
-  if (Array.isArray(ids) && ids.length > 0) {
-    const numeric = ids.map(Number).filter((n) => Number.isInteger(n));
-    if (numeric.length === 0) return countUnread(userId);
-
-    const placeholders = numeric.map(() => '?').join(',');
-    await db.run(
-      `UPDATE native_notifications SET read_at = ?
-       WHERE user_id = ? AND read_at IS NULL AND id IN (${placeholders})`,
-      [now, userId, ...numeric]
-    );
-  } else {
-    await db.run(
-      'UPDATE native_notifications SET read_at = ? WHERE user_id = ? AND read_at IS NULL',
-      [now, userId]
-    );
-  }
+  await db.run(
+    `UPDATE native_notifications SET read_at = ?
+     WHERE user_id = ? AND read_at IS NULL ${where.sql}`,
+    [new Date().toISOString(), userId, ...where.params]
+  );
 
   return countUnread(userId);
 }

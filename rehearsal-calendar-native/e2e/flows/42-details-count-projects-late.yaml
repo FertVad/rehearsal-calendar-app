@@ -1,0 +1,61 @@
+# An admin's count in a rehearsal's details comes whichever answers first,
+# the participants or the projects (cause fix 22: DD01, review). Olga is
+# the admin of Estate Ball and not on its "Ball rehearsal", so her calendar
+# has nothing to give the count; she opens it by link while her projects are
+# still on their way. The participants come first, when nothing yet says she
+# is an admin; the details dropped their count then and never asked again, so
+# "0/1" did not come with the projects.
+appId: ${APP_ID}
+name: Details count when the projects come late
+tags:
+  - rehearsals
+  - seen
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+# Her projects held, the connection open, until the release below.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "^/api/native/projects$"
+      OPEN: "1"
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${OLGA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+# iOS may offer to keep the password later than the sign-in waits for it, over
+# the whole screen and the link's own alert.
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: rehearsalapp://rehearsal/${BALL_REHEARSAL}
+- extendedWaitUntil:
+    visible: "Ball rehearsal"
+    timeout: 15000
+# The participants have answered; the projects have not, so no count yet.
+- extendedWaitUntil:
+    visible: "Leonid Gaev.*"
+    timeout: 15000
+- assertNotVisible: "0/1"
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+- extendedWaitUntil:
+    visible: "0/1"
+    timeout: 15000
+- takeScreenshot: 42-details-count-after-projects

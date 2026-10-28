@@ -97,13 +97,13 @@ describe('Rehearsal participants and their busy slots', () => {
   });
 
   async function create(participantIds) {
-    const r = await createRehearsal(projectId, owner, {
+    const { rehearsal } = await createRehearsal(projectId, owner, {
       title: 'Act II',
       startsAt: START,
       endsAt: END,
       participant_ids: participantIds,
     });
-    return Number(r.id);
+    return Number(rehearsal.id);
   }
 
   it('books a busy slot for everyone on a new rehearsal', async () => {

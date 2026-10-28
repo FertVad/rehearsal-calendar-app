@@ -1,0 +1,61 @@
+# Cause fix 21 (T-121), server: red before.
+# server/__tests__/routes/notifications.test.js with the new cases, run on the
+# store and route as they were at e32b0ad (before 47a9960):
+#   cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules \
+#     npx jest --silent __tests__/routes/notifications.test.js
+# Output filtered to the failure lines (stack frames dropped).
+
+FAIL __tests__/routes/notifications.test.js
+  ● Notification inbox › what "read" covers › marks nothing for an empty list
+    Expected: 2
+    Received: 0
+    > 189 |       expect(res.body.unreadCount).toBe(2);
+  ● Notification inbox › what "read" covers › refuses ids that are not ids, marking nothing
+    Expected: 400
+    Received: 200
+    > 220 |       expect(res.status).toBe(400);
+  ● Notification inbox › what "read" covers › refuses ids that are not whole, marking nothing
+    Expected: 400
+    Received: 200
+  ● Notification inbox › what "read" covers › refuses both all and ids, marking nothing
+    Expected: 400
+    Received: 200
+  ● Notification inbox › what "read" covers › refuses all that is not true, marking nothing
+    Expected: 400
+    Received: 200
+  ● Notification inbox › what "read" covers › deletes nothing for an empty list
+    Expected: 0
+    Received: 1
+    > 230 |       expect(deleted).toBe(0);
+  ● Notification inbox › pages › walks to the oldest, each once, in order
+    - Expected  - 3
+    + Received  + 0
+      Array [
+        "5",
+        "4",
+    -   "3",
+    -   "2",
+    -   "1",
+      ]
+    > 256 |       expect(seen).toEqual(['5', '4', '3', '2', '1']);
+  ● Notification inbox › pages › says there is no more when the page holds the last
+    expect(received).toBeNull()
+    Received: undefined
+    > 265 |       expect(res.body.nextCursor).toBeNull();
+  ● Notification inbox › pages › skips nothing when one on an earlier page is deleted
+    - Expected  - 1
+    + Received  + 1
+      Array [
+    +   "3",
+        "2",
+    -   "1",
+      ]
+  ● Notification inbox › pages › refuses a cursor it did not issue
+    Expected: 400
+    Received: 200
+Tests:       10 failed, 20 passed, 30 total
+
+# After 47a9960: Tests: 30 passed, 30 total.
+# PG: node scripts/r0-postgres.mjs --r2-schema-only -> R2_SCHEMA PASS, 40 checks,
+# both schemas (r0_fixture, r2_schema_modern) incl. cursor walk over timestamptz
+# rows in one millisecond, ids: [] marks nothing, all: true marks the inbox.

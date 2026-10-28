@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
   TextInput,
   Alert,
   FlatList,
@@ -22,7 +21,9 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { createProjectScreenStyles as styles } from '../styles';
+import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
+import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 
 type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
 
@@ -39,6 +40,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
   );
   const [timezonePickerVisible, setTimezonePickerVisible] = useState(false);
   const [creating, setCreating] = useState(false);
+  const idempotency = useIdempotencyKey();
 
   const getTimezoneLabel = (value: string) => getTzLabel(value, language);
 
@@ -50,11 +52,17 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
     setCreating(true);
     try {
+      const name = projectName.trim();
+      const description = projectDescription.trim() || undefined;
+      // The same form sent again after a lost answer gets the project the
+      // first try made, not a second one (useIdempotencyKey).
       const newProject = await createProject(
-        projectName.trim(),
-        projectDescription.trim() || undefined,
+        idempotency.keyFor({ name, description, projectTimezone }),
+        name,
+        description,
         projectTimezone,
       );
+      idempotency.settle();
 
       // Close the modal and drop the user straight into the new project
       // so they can invite members / set up rehearsals without an extra tap.
@@ -161,9 +169,8 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
       </KeyboardAvoidingView>
 
       {/* Timezone Picker Modal */}
-      <Modal
+      <AppModal
         visible={timezonePickerVisible}
-        transparent
         animationType="slide"
         onRequestClose={() => setTimezonePickerVisible(false)}
       >
@@ -206,7 +213,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
             />
           </View>
         </ModalSheet>
-      </Modal>
+      </AppModal>
     </SafeAreaView>
   );
 }

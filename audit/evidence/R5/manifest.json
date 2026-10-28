@@ -1,0 +1,173 @@
+{
+  "date": "2026-10-11",
+  "branch": "auto/main",
+  "finding": "DP01",
+  "reviewFindings": ["R5-01", "R5-02"],
+  "baseCommit": "9fd6f645254c3497d0a990dabdd9edb7a551d165",
+  "fixCommits": [
+    {
+      "commit": "9d7bb83a97a66179cb4e59a83a3855e397aadf96",
+      "tree": "fd3951767b0f8920a04adcdc75117f0ae8bc93da",
+      "scope": "DP01: membersProjectId in useSmartPlanner; seeding waits for the confirmed roster",
+      "cherryPickedFrom": ["02a8549f93a7e2c8143d2e8da7b5d3e4528692ff", "f9212b3a58d28852bb081656e14a71a9f8c3ba35"]
+    },
+    {
+      "commit": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "tree": "1c0a871898149f4e715ddfd31d96c3cb0f6a3126",
+      "scope": "R5-01: roster reload in the same project drops removed members from the selection",
+      "cherryPickedFrom": ["c9f40a5e3d250a9b23567558f02bd6756fccb075", "0b9f1a98194f1f8c13091ec42d3678dfec22bc25"]
+    },
+    {
+      "commit": "f95061c5b41943defb21db8e843ec6844bd76943",
+      "tree": "bdeeca348f2f967b8b9fe1bd42dd10471e5dfd4e",
+      "scope": "e2e flow 07-planner-project-switch.yaml"
+    }
+  ],
+  "sourceCommit": "23e43425801be17ca6f4108b1bee12d11283def5",
+  "sourceTree": "1c0a871898149f4e715ddfd31d96c3cb0f6a3126",
+  "runtime": {
+    "node": "v22",
+    "platform": "darwin",
+    "simulator": "Rehearsly E2E (iPhone 16), 0E96462E-BD5B-4C19-9847-8E63D550B36E",
+    "environment": "jest frontend project; e2e via npm run e2e (disposable PostgreSQL, local server, Metro on the local API)",
+    "production": "NOT_RUN",
+    "physicalDevice": "DEV-19 NOT_RUN",
+    "findingStatus": "READY_FOR_CHECK"
+  },
+  "runs": [
+    {
+      "file": "planner-dp01-before.log",
+      "sha256": "a9577405bc2832aa2113a000c741cbf292c769a5ef5c0fbf39b2dbf38bee6d07",
+      "fixFilesAt": "9fd6f645254c3497d0a990dabdd9edb7a551d165",
+      "testFileAt": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "exitCode": 1,
+      "tests": { "failed": 3, "passed": 0 }
+    },
+    {
+      "file": "planner-r5-01-before.log",
+      "sha256": "8d9bf1a971b7b8645fd3f34fb1d73f983cc6aadedcd953486c9bd17405d6392c",
+      "fixFilesAt": "9d7bb83a97a66179cb4e59a83a3855e397aadf96",
+      "testFileAt": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "exitCode": 1,
+      "tests": { "failed": 1, "passed": 2 }
+    },
+    {
+      "file": "planner-after.log",
+      "sha256": "75ebd8acaaa5dd88502873d52f3501fea8bb176c5ea1ddff69160b2439a987bc",
+      "fixFilesAt": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "testFileAt": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "exitCode": 0,
+      "tests": { "failed": 0, "passed": 3 }
+    },
+    {
+      "file": "e2e-07-before.txt",
+      "sha256": "2998cd1c394abe99f523d986a3145bf66ab9c2fa05f9799aa908694664a8c6ec",
+      "fixFilesAt": "9fd6f645254c3497d0a990dabdd9edb7a551d165",
+      "flowAt": "f95061c5b41943defb21db8e843ec6844bd76943",
+      "exitCode": 1,
+      "flows": { "failed": 1, "passed": 0 },
+      "seen": "Hamlet after a switch from The Seagull: \"2 of 4 selected\""
+    },
+    {
+      "file": "e2e-07-after.txt",
+      "sha256": "30f46df8f03ee9bcb66365df061463cf5b02aceb0b93795db91cb3666d83ed92",
+      "fixFilesAt": "23e43425801be17ca6f4108b1bee12d11283def5",
+      "flowAt": "f95061c5b41943defb21db8e843ec6844bd76943",
+      "exitCode": 0,
+      "flows": { "failed": 0, "passed": 1 }
+    }
+  ],
+  "historical": [
+    {
+      "file": "planner-before.txt",
+      "sha256": "1eb04085cc431564c415dfedf77a96f1c48207b799dd7b93da11f9e39f40e02a",
+      "note": "first red-before for DP01, written on 47037a4 (branch auto/out-of-scope/T-108); a summary, not raw output; kept as written, superseded by planner-dp01-before.log"
+    },
+    {
+      "file": "planner-r5-01-before.txt",
+      "sha256": "a131074ec8a4179609f4cd6da4673a9ccb56531f6e0fbd30e5cafb7b3b09e9a2",
+      "note": "first red-before for R5-01, written on f9212b3 (branch auto/out-of-scope/T-108); kept as written, superseded by planner-r5-01-before.log"
+    }
+  ],
+  "cause12": {
+    "date": "2026-10-15",
+    "task": "T-112",
+    "findings": ["AC01", "AC02", "AC03", "BC01", "BC02", "NI03", "HN02", "HN03", "HC01", "DF05", "DF06", "NI04", "ES01"],
+    "baseCommit": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd",
+    "fixCommits": [
+      { "commit": "1a4071ae8a8734985ce5e09bbd6daad4622de683", "tree": "a3f03291ab2586abbfdef5451442dc229803c51c", "scope": "session module, contexts, API refresh, sync as session work, tests" },
+      { "commit": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "tree": "1300e4b86375daf9f649443cf1404802a3b34c17", "scope": "e2e flow 14-switch-account.yaml, seed people, profile-logout testID; DF05 hook test runs on old types" }
+    ],
+    "sourceCommit": "20724bd6bded1c587d57090dfe38cb7bcd3effdf",
+    "sourceTree": "1300e4b86375daf9f649443cf1404802a3b34c17",
+    "runtime": { "node": "v22", "production": "NOT_RUN", "physicalDevice": "DEV-01, DEV-17, DEV-19, DEV-21 NOT_RUN", "findingStatus": "READY_FOR_CHECK" },
+    "runs": [
+      { "file": "cause12-before.log", "sha256": "0999800258c0b3421cb5df6bb69724aec777ed5131be364f7444e541d9d3d87c", "fixFilesAt": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd", "testFilesAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 1, "tests": { "failed": 31, "passed": 81 } },
+      { "file": "cause12-after.log", "sha256": "151dbfe1ab8c9fdf5d2ad31215c1fd98b7381457b42d8fff99d5ebb7ea415092", "fixFilesAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 0, "tests": { "failed": 0, "passed": 112 } },
+      { "file": "e2e-14-before.txt", "sha256": "aa24787592b226e11ea7abbd31e412dda699d9394d0af0b5a57b6efbf39e73cc", "fixFilesAt": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd", "flowAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 1, "flows": { "failed": 1, "passed": 0 }, "seen": "Lopakhin's toggle on Orchard walk shows Ranevskaya's mark" },
+      { "file": "e2e-14-after.txt", "sha256": "941d8660c64a873c4ccb092b79a9736030cd57520f943f5d1fb72d9b0ef80272", "fixFilesAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "flowAt": "20724bd6bded1c587d57090dfe38cb7bcd3effdf", "exitCode": 0, "flows": { "failed": 0, "passed": 1 } }
+    ],
+    "review": {
+      "reviewer": "Astra",
+      "findings": ["ES01", "HN02", "NI04", "useRehearsals loading regression", "e2e for AC02, BC02, DF05, DF06, NI03, NI04, HC01"],
+      "fixCommits": [
+        { "commit": "62173fd8dec9cb4c433c10a929d5236a853a8e8c", "tree": "b6d7baddba10516056e1792ca656d252882b023d", "scope": "session stamp down the whole sync, request sent only in its session; SeenContext read/change order; inbox changes take a turn; empty project list ends loading; tests" },
+        { "commit": "a0815113044fd6451386ceba6616bb8771a033e9", "tree": "44b3725bc671e84d64ebbea76d14934d41693cb9", "scope": "e2e flows 15-20, held answers in the e2e server, revoke script, seed people, testIDs" },
+        { "commit": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "tree": "ecb9e3a11dea117843f079d3d0a83882d5133dcf", "scope": "held answer may outlast the app's timeout; flow 16 uses it" }
+      ],
+      "sourceCommit": "856a88d30f72a1e08671a9e1bd5470e57a06fadb",
+      "sourceTree": "ecb9e3a11dea117843f079d3d0a83882d5133dcf",
+      "runs": [
+        { "file": "cause12-review-before.log", "sha256": "ec40c765a083d1a18556a912bfab523f3dca54d0a6597a3fd8f9f2eaf32fae1f", "fixFilesAt": "ac5e1ec", "testFilesAt": "62173fd8dec9cb4c433c10a929d5236a853a8e8c", "exitCode": 1, "tests": { "failed": 7, "passed": 22 } },
+        { "file": "cause12-review-after.log", "sha256": "f1ec5c60212ecb354e8c744691d58c7ef12f091756c4e2b8cb79f8d3cd4427c2", "fixFilesAt": "62173fd8dec9cb4c433c10a929d5236a853a8e8c", "exitCode": 0, "tests": { "failed": 0, "passed": 29 } },
+        { "file": "e2e-15-17-before.txt", "sha256": "a5d4d92684652a50275b4e07eb348b9ab3093269b6c0762acbe313c6499ea20e", "fixFilesAt": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd", "flowAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "exitCode": 1, "flows": { "failed": 3, "passed": 0 } },
+        { "file": "e2e-18-20-before.txt", "sha256": "c0a9e55d923450f7a27f2b95fb33549f05d40f5831e5a3d8e7772e0c3729e1a1", "fixFilesAt": "ce1a4fb536b522065cbcc9e1eceb2458be8242cd", "flowAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "exitCode": 1, "flows": { "failed": 3, "passed": 0 } },
+        { "file": "e2e-16-hc01-before.txt", "sha256": "9197fff2a2a81fe196dcac08bafd26eb881b57623ed7ffa7fd2f511677357447", "fixFilesAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb except I18nContext.tsx, storage.ts at ce1a4fb", "flowAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "exitCode": 1, "flows": { "failed": 1, "passed": 0 } },
+        { "file": "e2e-14-20-after.txt", "sha256": "92244b67489e79973725b841c49f3224b21679d8628abdee92e404cc118d6801", "fixFilesAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "flowAt": "856a88d30f72a1e08671a9e1bd5470e57a06fadb", "exitCode": 0, "flows": { "failed": 0, "passed": 8 } }
+      ]
+    },
+    "review2": {
+      "reviewer": "Astra",
+      "findings": ["HN02, NI04: a read answering while a change of the same state is on its way"],
+      "baseCommit": "1aa1bd5",
+      "fixCommits": [
+        { "commit": "52934c921656836e12cb2925706c3290fcb26869", "tree": "b38389bdbd0f8e89f10550fccc21c2d688c46c6d", "scope": "useRequestOrder in useSession.ts; SeenContext, UnreadContext, NotificationsScreen use it; tests" },
+        { "commit": "3b20f40f3907ca17e141fbaf6d5773c40c43e0f5", "tree": "3fb114e87c6086f8766fba4b0dbac63fec73f75a", "scope": "e2e flow 21-inbox-delete-on-its-way.yaml, request held before the server (BEFORE=1), seed" }
+      ],
+      "sourceCommit": "3b20f40f3907ca17e141fbaf6d5773c40c43e0f5",
+      "sourceTree": "3fb114e87c6086f8766fba4b0dbac63fec73f75a",
+      "runs": [
+        { "file": "cause12-r2-before.log", "sha256": "c98a60d8c90a03030a1a1a174b3fd52aa5760eb481f07dde4a210efd905a9c34", "fixFilesAt": "1aa1bd5", "testFilesAt": "52934c921656836e12cb2925706c3290fcb26869", "exitCode": 1, "tests": { "failed": 3, "passed": 24 } },
+        { "file": "cause12-r2-after.log", "sha256": "df519a66230f0295aa7c867dac454e5cb3581bf93a7a6909cb11030cdeea91a8", "fixFilesAt": "52934c921656836e12cb2925706c3290fcb26869", "exitCode": 0, "tests": { "failed": 0, "passed": 39 } },
+        { "file": "e2e-21-before.txt", "sha256": "4795ae8ce87181a389e06770348a4bc4eaca1600ad933580af4500da56f05859", "fixFilesAt": "1aa1bd5", "flowAt": "3b20f40f3907ca17e141fbaf6d5773c40c43e0f5", "exitCode": 1, "flows": { "failed": 1, "passed": 0 }, "seen": "Ledger check came back after the refresh and stayed after the DELETE" },
+        { "file": "e2e-21-after.txt", "sha256": "77c0ce1705bdc40b8ba908d9d6c1dfc48b7b358117a2a0b0f05fd3b7641e86da", "fixFilesAt": "3b20f40f3907ca17e141fbaf6d5773c40c43e0f5", "flowAt": "3b20f40f3907ca17e141fbaf6d5773c40c43e0f5", "exitCode": 0, "flows": { "failed": 0, "passed": 3 }, "note": "21 alone, then 16, 18, 21 together" }
+      ]
+    },
+    "review3": {
+      "reviewer": "Astra",
+      "findings": ["the order of reads and changes outlived the session", "manifest without round 2"],
+      "baseCommit": "1fbbc471569c16fcf7066dc4687268eb5b695a21",
+      "fixCommits": [
+        { "commit": "9e70ab67a3b4de84cd98c88fe19907c7b27f87cc", "tree": "d04c9955f43262664d89ad5606ca1e6fcb3b5301", "scope": "useRequestOrder: one order per session; tests in requestOrder.test.ts and UnreadContext.test.tsx" }
+      ],
+      "sourceCommit": "9e70ab67a3b4de84cd98c88fe19907c7b27f87cc",
+      "sourceTree": "d04c9955f43262664d89ad5606ca1e6fcb3b5301",
+      "e2e": "NOT_RUN: on screen the case needs the next sign-in within the app's 10 s request timeout; Maestro took 64 s from the held change to the next sign-in, so a flow passes on the old code too",
+      "runs": [
+        { "file": "T-112-r3-red-before.log", "sha256": "15d8cc80cd119ead25ff264578410285b1793642f1ca7c3b1efbc8b0e5691655", "fixFilesAt": "1fbbc471569c16fcf7066dc4687268eb5b695a21", "testFilesAt": "9e70ab67a3b4de84cd98c88fe19907c7b27f87cc", "exitCode": 1, "tests": { "failed": 3, "passed": 766 } },
+        { "file": "cause12-r3-after.log", "sha256": "b965e81dd0731da30f81d59f7d206592c636fb5d275957566a53445ceebde212", "fixFilesAt": "9e70ab67a3b4de84cd98c88fe19907c7b27f87cc", "exitCode": 0, "tests": { "failed": 0, "passed": 769 } }
+      ]
+    },
+    "review4": {
+      "reviewer": "Astra",
+      "findings": ["no e2e for the next person's count while the previous person's change is on its way"],
+      "baseCommit": "1fbbc471569c16fcf7066dc4687268eb5b695a21",
+      "e2eCommit": "e677aaf",
+      "e2e": "flow 22 (22-switch-account-change-on-its-way.yaml); the e2e server holds the change with its connection open (OPEN: \"1\"), so it is still on its way at the next sign-in",
+      "runs": [
+        { "file": "e2e-22-before.txt", "sha256": "b94ed91d7ac744f513ad972b81f3f0f75c70b2d2558323144fcb239ba4730984", "fixFilesAt": "1fbbc471569c16fcf7066dc4687268eb5b695a21", "fixFiles": ["rehearsal-calendar-native/src/shared/hooks/useSession.ts"], "flows": { "failed": 1, "passed": 0 } },
+        { "file": "e2e-22-after.txt", "sha256": "2a30267b98472272454a2b5c8f05af0a2857de3f0457096bf089c441d73893f1", "fixFilesAt": "HEAD (useSession.ts of 9e70ab6)", "flows": { "failed": 0, "passed": 3 } }
+      ]
+    }
+  }
+}

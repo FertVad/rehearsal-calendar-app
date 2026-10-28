@@ -1,0 +1,38 @@
+2026-10-11, this machine. stale-socket.mjs: each request is a distinct app
+answering its own number; any other answer came from somewhere else.
+
+$ node audit/evidence/T-203/stale-socket.mjs 20000 supertest
+node v22.16.0, supertest, globalAgent keepAlive=true
+20000 requests in 37.8s: 3 answered by an earlier app, 2 failed
+  request 1966 to 127.0.0.1:59164 was answered "ok" (status 200, headers {"content-type":"text/plain","date":"Sun, 11 Oct 2026 07:56:03 GMT","connection":"close","transfer-encoding":"chunked"}); 127.0.0.1:59164 now: held by another socket (EADDRINUSE)
+  request 7886 failed: ECONNRESET
+  request 10138 to 127.0.0.1:59164 was answered "ok" (status 200, headers {"content-type":"text/plain","date":"Sun, 11 Oct 2026 07:56:16 GMT","connection":"close","transfer-encoding":"chunked"}); 127.0.0.1:59164 now: held by another socket (EADDRINUSE)
+  request 16053 failed: ECONNRESET
+  request 18304 to 127.0.0.1:59164 was answered "ok" (status 200, headers {"content-type":"text/plain","date":"Sun, 11 Oct 2026 07:56:34 GMT","connection":"close","transfer-encoding":"chunked"}); 127.0.0.1:59164 now: held by another socket (EADDRINUSE)
+
+$ node audit/evidence/T-203/stale-socket.mjs 20000 loopback
+node v22.16.0, loopback, globalAgent keepAlive=true
+20000 requests in 36.5s: 0 answered by an earlier app, 301 failed
+  request 10631 failed: EADDRNOTAVAIL
+  (… 127.0.0.1's ports used up at 550 requests/s; see investigation.md)
+
+$ node audit/evidence/T-203/stale-socket.mjs 8000 loopback
+node v22.16.0, loopback, globalAgent keepAlive=true
+8000 requests in 14.4s: 0 answered by an earlier app, 0 failed
+
+$ node audit/evidence/T-203/stale-socket.mjs 8000 supertest
+node v22.16.0, supertest, globalAgent keepAlive=true
+8000 requests in 19.8s: 1 answered by an earlier app, 2 failed
+  request 1732 failed: ECONNRESET
+  request 3494 to 127.0.0.1:59164 was answered "ok" (status 200, headers {"content-type":"text/plain","date":"Sun, 11 Oct 2026 07:57:58 GMT","connection":"close","transfer-encoding":"chunked"}); 127.0.0.1:59164 now: held by another socket (EADDRINUSE)
+  request 7827 failed: ECONNRESET
+
+$ node audit/evidence/T-203/port-cross.mjs 2000
+ours bound {"address":"::","family":"IPv6","port":51391}
+theirs bound {"address":"127.0.0.1","family":"IPv4","port":51391} as well
+GET http://127.0.0.1:51391/ (what supertest sends) -> THEIRS (another worker, 127.0.0.1)
+ephemeral: 0 of 2000 127.0.0.1:0 binds got a port a [::]:0 server was holding
+ephemeral: 0 of 2000 [::]:0 binds got a port a 127.0.0.1 server was holding
+
+$ node audit/evidence/T-203/port-race.mjs 60 3
+38810 requests in 60s against 3 other processes: 0 reached another process, 6 failed to connect

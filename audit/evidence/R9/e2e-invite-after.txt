@@ -1,0 +1,29 @@
+-- After, e2e (T-302): flows 08 and 09 on src/navigation/index.tsx at HEAD (3017290) --
+-- Run 2026-10-11 16:16 --
+-- Command: cd rehearsal-calendar-native && npm run e2e -- e2e/flows/08-invite-before-sign-in.yaml e2e/flows/09-invite-during-onboarding.yaml --
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/08-invite-before-sign-in.yaml e2e/flows/09-invite-during-onboarding.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Invite link before sign-in (2m 11s)
+[Passed] Invite link during onboarding (1m 2s)
+
+2/2 Flows Passed in 3m 13s
+
+-- The shared sign-in subflow was split (sign-in.yaml = launch + sign-in-form.yaml) --
+-- npm run e2e -- e2e/flows/01-login.yaml --
+[Passed] Sign in (2m 9s)
+1/1 Flow Passed in 2m 9s
+
+-- Earlier green run of 09 alone: screenshot 09-invite-after-onboarding.png shows
+-- "Project Invitation", "Twelfth Night", "Illyria in winter", Join / Cancel. --

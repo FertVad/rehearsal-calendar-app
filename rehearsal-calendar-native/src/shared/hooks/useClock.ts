@@ -1,41 +1,63 @@
 /**
- * The local clock, for screens that show "today" or what is still ahead of it.
+ * The app's clock, for screens that show "today" or what is still ahead of it.
  *
  * `new Date().toISOString().split('T')[0]` is the UTC date. Behind UTC it turns
  * to tomorrow in the evening, so the availability editor called the rest of
  * today "past" and refused it (review CC01); ahead of UTC it lags after
  * midnight. And a value read once goes stale on a screen left open: the planner
- * kept offering 10:30 at noon (review DP04). Both read the local clock here,
- * and read it again when it has moved far enough to matter and when the app
- * comes back to the foreground — the background runs no timers.
+ * kept offering 10:30 at noon (review DP04). Both read the clock here, and read
+ * it again when it has moved far enough to matter and when the app comes back
+ * to the foreground — the background runs no timers.
+ *
+ * The clock is the profile's zone, not the device's (cause fix 14, time.ts):
+ * rehearsals are dated in it, so "today" is too. Read by the device, a
+ * rehearsal already over counted as upcoming wherever the two differed (DF01).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
-import { formatDateToString } from '../utils/time';
+import { appTimezone, formatDateToString, onAppTimezone, todayIn, wallClockIn } from '../utils/time';
 
-/** The local calendar date, 'YYYY-MM-DD'. */
-export const localDate = (now: Date = new Date()): string => formatDateToString(now);
+/** The app's zone: the profile's, the device's only while the profile has none. */
+export function useTimezone(): string {
+  return useSyncExternalStore(onAppTimezone, appTimezone);
+}
+
+/** The date in `timezone` now, 'YYYY-MM-DD'. */
+export const localDate = (now: Date = new Date(), timezone?: string): string =>
+  timezone ? todayIn(timezone, now) : formatDateToString(now);
 
 const POLL_MS = 30 * 1000;
 
 /**
- * Now, moving in steps of `stepMinutes` of the local day: the value changes
- * only when the step or the date changes, so a screen recomputes when there is
- * something new to show and not every tick.
+ * Now, as a wall clock in the profile's zone (time.ts, wallClockIn), moving in
+ * steps of `stepMinutes` of its day: the value changes only when the step, the
+ * date or the zone changes, so a screen recomputes when there is something new
+ * to show and not every tick.
+ *
+ * The instant is kept with the zone it was read for. A new zone reads the clock
+ * again: the one kept moves only with the step, so for `useToday` it can be the
+ * morning's, and in a zone behind that is still yesterday.
  */
 export function useNow(stepMinutes = 1): Date {
-  const [now, setNow] = useState(() => new Date());
+  const timezone = useTimezone();
+  const [read, setRead] = useState(() => ({ zone: timezone, instant: new Date() }));
+  if (read.zone !== timezone) setRead({ zone: timezone, instant: new Date() });
+  const instant = read.zone === timezone ? read.instant : new Date();
+  const zone = useRef(timezone);
+  zone.current = timezone;
 
   useEffect(() => {
-    const step = (date: Date) =>
-      `${localDate(date)} ${Math.floor((date.getHours() * 60 + date.getMinutes()) / stepMinutes)}`;
+    const step = (date: Date) => {
+      const clock = wallClockIn(zone.current, date);
+      return `${zone.current} ${formatDateToString(clock)} ${Math.floor((clock.getHours() * 60 + clock.getMinutes()) / stepMinutes)}`;
+    };
     let current = step(new Date());
     const look = () => {
       const date = new Date();
       const next = step(date);
       if (next !== current) {
         current = next;
-        setNow(date);
+        setRead({ zone: zone.current, instant: date });
       }
     };
     const timer = setInterval(look, POLL_MS);
@@ -46,12 +68,12 @@ export function useNow(stepMinutes = 1): Date {
       clearInterval(timer);
       subscription.remove();
     };
-  }, [stepMinutes]);
+  }, [stepMinutes, timezone]);
 
-  return now;
+  return useMemo(() => wallClockIn(timezone, instant), [timezone, instant]);
 }
 
-/** Today's local date, turning at local midnight and on return to the app. */
+/** Today in the profile's zone, turning at its midnight and on return to the app. */
 export function useToday(): string {
-  return localDate(useNow(24 * 60));
+  return formatDateToString(useNow(24 * 60));
 }
