@@ -944,7 +944,11 @@ the form, going back showed the form again, and "Create" made a second project
 passes `{ pop: true }` (or uses `popTo`); the tabs open the screen named in the
 changed params themselves. A screen deep in a tab's stack gets `initial: false`
 next to its `screen`, so a tab not opened yet starts at its list and back is
-the list. `backToTabs.test.tsx` holds it against the real stack router.
+the list. Since the tabs kept are the tabs as they were left, naming only a tab
+shows whatever was open in it: to land on a tab's root, name it too with its
+own `pop: true` (`{ screen: 'Projects', params: { screen: 'ProjectsMain', pop:
+true } }`). `backToTabs.test.tsx` holds it against the real stack and tab
+routers.
 
 ## Environment Setup
 

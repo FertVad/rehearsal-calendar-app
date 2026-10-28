@@ -177,8 +177,17 @@ export function useNotifications() {
     navigation.navigate('RehearsalDetails', { rehearsalId: String(rehearsalId) });
   };
 
+  /**
+   * The list itself, not just its tab: `pop: true` keeps the MainTabs that is
+   * there, and with it the Projects stack as it was left — naming only the tab
+   * showed whatever card was open there, even the project just deleted. The
+   * stack is taken back down to ProjectsMain the same way, with `pop: true`.
+   */
   const openProjectsList = () => {
-    navigation.navigate('MainTabs', { screen: 'Projects' }, { pop: true });
+    navigation.navigate('MainTabs', {
+      screen: 'Projects',
+      params: { screen: 'ProjectsMain', pop: true },
+    }, { pop: true });
   };
 
   const handleNotificationNavigation = (data: any) => {

@@ -16,7 +16,7 @@
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
-import { CommonActions, StackRouter } from '@react-navigation/routers';
+import { CommonActions, StackRouter, TabRouter } from '@react-navigation/routers';
 import CreateProjectScreen from '../../features/projects/screens/CreateProjectScreen';
 import NotificationsScreen from '../../features/notifications/screens/NotificationsScreen';
 import { useNotifications } from '../../shared/hooks/useNotifications';
@@ -141,11 +141,42 @@ describe('a tapped push, with a modal screen open (T-007)', () => {
     expect(top().params).toEqual(projectOpened('3'));
   });
 
-  it('opens the projects list in the tabs under the modal', async () => {
+  it.each(['project_deleted', 'member_removed'])('%s opens the projects list, not the card left open in the tab', async (type) => {
+    // A project open in the Projects tab, then "+" → mark busy over it.
     open('MainTabs', 'MarkBusy');
-    await tap({ type: 'project_deleted' });
+    const projects = projectsRouter.getRehydratedState({
+      stale: true, routes: [{ name: 'ProjectsMain' }, { name: 'ProjectDetail', params: { projectId: '3' } }],
+    } as never, projectsOptions);
+    const tabState = tabRouter.getRehydratedState({
+      stale: true, index: 1, routes: tabNames.map((name) => (name === 'Projects' ? { name, state: projects } : { name })),
+    } as never, tabOptions);
+    mockState.routes[0] = { ...mockState.routes[0], state: tabState };
+
+    await tap({ type });
 
     expect(stack()).toEqual(['MainTabs']);
-    expect(top().params).toEqual({ screen: 'Projects' });
+    expect(projectsStack(top())).toEqual(['ProjectsMain']);
   });
 });
+
+// The tabs and the Projects stack, each handed its changed params the way
+// useNavigationBuilder hands them to a nested navigator.
+const tabNames = ['Calendar', 'Projects', 'Create', 'Planner', 'Profile'];
+const tabOptions = { routeNames: tabNames, routeParamList: {}, routeGetIdList: {} };
+const tabRouter = TabRouter({});
+const projectsOptions = { routeNames: ['ProjectsMain', 'ProjectDetail'], routeParamList: {}, routeGetIdList: {} };
+const projectsRouter = StackRouter({});
+const descend = (route: any, nested: any, nestedOptions: any) => {
+  const { params, state } = route;
+  if (typeof params?.screen !== 'string') return state;
+  const action = CommonActions.navigate({
+    name: params.screen, params: params.params, path: params.path, merge: params.merge, pop: params.pop,
+  } as never);
+  return nested.getStateForAction(state, action, nestedOptions) ?? state;
+};
+const projectsStack = (mainTabs: any) => {
+  const tabs = descend(mainTabs, tabRouter, tabOptions);
+  const projectsRoute = tabs.routes[tabs.index];
+  expect(projectsRoute.name).toBe('Projects');
+  return descend(projectsRoute, projectsRouter, projectsOptions).routes.map((route: any) => route.name);
+};
