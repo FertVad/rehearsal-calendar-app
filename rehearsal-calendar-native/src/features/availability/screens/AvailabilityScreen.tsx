@@ -30,6 +30,7 @@ import {
 import { useI18n } from '../../../contexts/I18nContext';
 import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
 import { PickerModal } from '../../../shared/components/PickerModal';
+import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
 
 type AvailabilityScreenProps = {
   navigation: AppNavigation<'MarkBusy'>;
@@ -504,29 +505,21 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           )}
         </ScrollView>
 
-        {/* Save sits with the work rather than in the header. The count is
-            spelled out because one press commits every date touched so far,
-            not just the one the sheet is showing. */}
-        {hasChanges && (
-          <View style={styles.sheetSaveBar}>
-            <TouchableOpacity
-              testID="availability-save"
-              style={[styles.sheetSaveButton, saving && styles.sheetSaveButtonDisabled]}
-              onPress={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color={Colors.text.inverse} />
-              ) : (
-                <Text style={styles.sheetSaveButtonText}>
-                  {editor.selectedDates.length > 1
-                    ? `${t.common.save} · ${t.availability.selectedDates(editor.selectedDates.length)}`
-                    : t.common.save}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Save sits with the work rather than in the header, there from the
+            first day picked and off until something changed (T-009). The
+            count is spelled out because one press commits every date touched
+            so far, not just the one the sheet is showing. */}
+        <BottomActionBar>
+          <BottomActionButton
+            testID="availability-save"
+            label={editor.selectedDates.length > 1
+              ? `${t.common.save} · ${t.availability.selectedDates(editor.selectedDates.length)}`
+              : t.common.save}
+            onPress={handleSave}
+            disabled={!hasChanges}
+            loading={saving}
+          />
+        </BottomActionBar>
       </Animated.View>
 
       {/* Time Picker Modal — Cancel keeps the slot's time (usePickerDraft) */}

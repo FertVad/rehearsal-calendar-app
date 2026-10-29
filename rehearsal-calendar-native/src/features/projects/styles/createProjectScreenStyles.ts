@@ -6,7 +6,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg.primary,
   },
-  keyboardView: {
+  body: {
     flex: 1,
   },
   header: {
@@ -76,42 +76,6 @@ export const styles = StyleSheet.create({
   timezoneSelectorValue: {
     fontSize: FontSize.base,
     color: Colors.text.primary,
-  },
-  bottomButtons: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    marginTop: Spacing.xl,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xxl,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: Colors.bg.tertiary,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.medium,
-    color: Colors.text.secondary,
-  },
-  createButton: {
-    flex: 1,
-    backgroundColor: Colors.accent.purple,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
-  },
-  createButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: '#fff',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   // Timezone picker modal styles
   timezoneModalOverlay: {

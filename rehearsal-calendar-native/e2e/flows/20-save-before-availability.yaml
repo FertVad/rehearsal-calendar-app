@@ -3,6 +3,9 @@
 # of the day shown is on its way, held back. She saves: the old form checked
 # conflicts against nothing — "nobody is busy" — and created the rehearsal;
 # now it says the availability is still being checked.
+# She presses Create with the keyboard up from typing the location: the button
+# stays over the keyboard and takes the tap. It was at the end of the form,
+# and the keyboard covered it (T-009).
 appId: ${APP_ID}
 name: Save before the availability is in
 tags:
@@ -19,6 +22,8 @@ tags:
       MAIL_URL: ${MAIL_URL}
       METHOD: GET
       PATH: "/members/availability$"
+      # Held through the typing, longer than the nine seconds of a plain hold.
+      OPEN: "1"
 - tapOn:
     id: tab-create
 - tapOn: "Create Rehearsal"
@@ -33,8 +38,15 @@ tags:
     timeout: 15000
 - scrollUntilVisible:
     element:
-      id: rehearsal-submit
+      id: rehearsal-location
     direction: DOWN
+    centerElement: true
+- tapOn:
+    id: rehearsal-location
+- inputText: "Rehearsal room"
+- takeScreenshot: 20-create-over-keyboard
+- assertVisible:
+    id: rehearsal-submit
 - tapOn:
     id: rehearsal-submit
 - extendedWaitUntil:

@@ -89,24 +89,6 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.base,
     color: Colors.text.primary,
   },
-  submitButton: {
-    backgroundColor: Colors.accent.purple,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: '#fff',
-  },
   loadingOverlay: {
     alignItems: 'center',
     justifyContent: 'center',

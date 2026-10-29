@@ -36,31 +36,6 @@ export const styles = StyleSheet.create({
   saveHeaderButtonDisabled: {
     opacity: 0.7,
   },
-  // Sticky footer inside the editor sheet — sits below the scrolling slot
-  // list so it stays reachable however long that list gets.
-  sheetSaveBar: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-    backgroundColor: Colors.bg.secondary,
-  },
-  sheetSaveButton: {
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.accent.purple,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheetSaveButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.inverse,
-  },
-  sheetSaveButtonDisabled: {
-    opacity: 0.7,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

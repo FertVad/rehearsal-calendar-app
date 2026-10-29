@@ -5,12 +5,9 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   TextInput,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +20,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { createProjectScreenStyles as styles } from '../styles';
 import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
+import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 
 type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
@@ -86,11 +84,10 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
+    <View style={styles.container}>
+      {/* The buttons are in the bar below, which keeps them over the keyboard
+          (T-009). */}
+      <SafeAreaView style={styles.body}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -145,33 +142,24 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
               <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
             </TouchableOpacity>
           </View>
-
-          {/* Buttons */}
-          <View style={styles.bottomButtons}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.cancelButtonText}>{t.common.cancel}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.createButton, creating && styles.buttonDisabled]}
-              onPress={() => {
-                hapticSuccess();
-                handleCreateProject();
-              }}
-              disabled={creating}
-            >
-              {creating ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.createButtonText}>{t.projects.create}</Text>
-              )}
-            </TouchableOpacity>
-          </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </SafeAreaView>
+
+      <BottomActionBar>
+        <BottomActionButton
+          variant="secondary"
+          label={t.common.cancel}
+          onPress={() => navigation.goBack()}
+        />
+        <BottomActionButton
+          label={t.projects.create}
+          onPress={() => {
+            hapticSuccess();
+            handleCreateProject();
+          }}
+          loading={creating}
+        />
+      </BottomActionBar>
 
       {/* Timezone Picker Modal */}
       <AppModal
@@ -219,6 +207,6 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
           </View>
         </ModalSheet>
       </AppModal>
-    </SafeAreaView>
+    </View>
   );
 }

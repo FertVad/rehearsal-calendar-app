@@ -6,6 +6,8 @@
 # OTHER_DAY is still free: the old save sent every loaded day, and put the
 # busy day it had loaded back over the newer one. He is in no project, so no
 # other flow's rehearsals land on his days.
+# Save is in the editor from the first day picked, and off until a change
+# (T-009).
 # Then a second slot over the first: the save refuses, naming MARK_DAY. The old
 # error read the day as UTC midnight with the device's clock (Honolulu): the
 # day before (cause fix 14).
@@ -50,6 +52,11 @@ tags:
       DAY: ${MARK_DAY}
 - tapOn:
     id: day-${MARK_DAY}
+# Save is there from the first day picked, off until something changes; it
+# used to appear only then, under the finger (T-009).
+- assertVisible:
+    id: availability-save
+    enabled: false
 - tapOn:
     id: mode-custom
 - extendedWaitUntil:

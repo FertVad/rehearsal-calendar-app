@@ -7,9 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
   FlatList,
-  KeyboardAvoidingView,
   Keyboard,
   Alert,
 } from 'react-native';
@@ -26,6 +24,7 @@ import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
 import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
+import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
 import { useParticipantSeed } from '../hooks/useParticipantSeed';
 import { addRehearsalScreenStyles as styles } from '../styles';
 import {
@@ -113,12 +112,10 @@ export default function AddRehearsalScreen() {
   }, [membersLoad.failed]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
+    <View style={styles.container}>
+      {/* Create is in the bar below, which keeps it over the keyboard; it
+          was at the end of this list, and typing the location hid it. */}
+      <SafeAreaView style={styles.scrollView}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.content}
@@ -275,6 +272,7 @@ export default function AddRehearsalScreen() {
             <View style={styles.locationInputContainer}>
               <Ionicons name="location-outline" size={20} color={Colors.accent.purple} style={styles.locationIcon} />
               <TextInput
+                testID="rehearsal-location"
                 style={styles.locationInput}
                 value={form.location}
                 onChangeText={form.setLocation}
@@ -286,35 +284,23 @@ export default function AddRehearsalScreen() {
               />
             </View>
           </View>
-
-          {/* Submit Button */}
-          <TouchableOpacity
-            testID="rehearsal-submit"
-            style={[styles.submitButton, (loading || form.loadingRehearsal) && styles.submitButtonDisabled]}
-            onPress={() => {
-              hapticSuccess();
-              handleSubmit();
-            }}
-            disabled={loading || form.loadingRehearsal}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Ionicons
-                  name={form.isEditMode ? 'checkmark-circle' : 'add-circle'}
-                  size={20}
-                  color="#fff"
-                />
-                <Text style={styles.submitButtonText}>
-                  {form.isEditMode ? t.rehearsals.updateRehearsal : t.rehearsals.createRehearsal}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
         </View>
       </ScrollView>
-      </KeyboardAvoidingView>
+      </SafeAreaView>
+
+      <BottomActionBar>
+        <BottomActionButton
+          testID="rehearsal-submit"
+          icon={form.isEditMode ? 'checkmark-circle' : 'add-circle'}
+          label={form.isEditMode ? t.rehearsals.updateRehearsal : t.rehearsals.createRehearsal}
+          onPress={() => {
+            hapticSuccess();
+            handleSubmit();
+          }}
+          disabled={form.loadingRehearsal}
+          loading={loading}
+        />
+      </BottomActionBar>
 
       {/* Date Picker Modal */}
       <PickerModal
@@ -421,6 +407,6 @@ export default function AddRehearsalScreen() {
           </View>
         </ModalSheet>
       </AppModal>
-    </SafeAreaView>
+    </View>
   );
 }
