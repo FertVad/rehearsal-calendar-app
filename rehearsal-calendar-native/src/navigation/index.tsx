@@ -12,7 +12,6 @@ import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { inviteCodeFromUrl } from '../shared/utils/inviteCode';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
 import { useNotifications } from '../shared/hooks/useNotifications';
-import { BetaBanner } from '../shared/components/BetaBanner';
 import { useAutoCalendarSync } from '../shared/hooks/useAutoCalendarSync';
 import { OnboardingNavigator } from '../features/onboarding';
 import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
@@ -168,7 +167,6 @@ function TabNavigator() {
 
   return (
     <>
-      <BetaBanner />
       <AppTabs.Navigator
         screenOptions={{
           headerShown: false,

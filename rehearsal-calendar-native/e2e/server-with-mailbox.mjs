@@ -53,6 +53,12 @@
  *                                                  account, oldest first,
  *                                                  titled "<t> 1" to "<t> n"
  *
+ * It reads back what the server stored from an account's bug reports, to show
+ * a report sent from the app arrived (flow 47):
+ *
+ *   GET /bug-reports?from=<address>   { reports: [{ message, screen }] }, oldest
+ *                                     first
+ *
  * And it keeps count of the taps the flows had to take again:
  *
  *   GET /tap-again?tap=<what>&see=<what>   e2e/subflows/tap-and-see.yaml did not
@@ -224,6 +230,15 @@ http.createServer((request, response) => {
       console.log(`[e2e] recorded ${count} notifications for ${to}`);
       return answer(200, { recorded: count });
     })().catch((error) => answer(500, { error: String(error) }));
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/bug-reports') {
+    const from = (url.searchParams.get('from') || '').trim().toLowerCase();
+    db.all(
+      `SELECT r.message, r.screen FROM native_bug_reports r
+       JOIN native_users u ON u.id = r.user_id WHERE u.email = $1 ORDER BY r.id`,
+      [from]
+    ).then((reports) => answer(200, { reports }), (error) => answer(500, { error: String(error) }));
     return;
   }
   if (request.method === 'GET' && url.pathname === '/release') {

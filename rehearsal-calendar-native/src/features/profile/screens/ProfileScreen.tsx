@@ -10,6 +10,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import type { Language } from '../../../i18n/translations';
 import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/components';
 import { AppModal } from '../../../shared/components/AppModal';
+import { BugReportSheet } from '../components/BugReportSheet';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
 import { hapticLight, hapticSuccess, hapticMedium } from '../../../shared/utils/haptics';
@@ -49,6 +50,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [bugReportVisible, setBugReportVisible] = useState(false);
   const handleLogout = async () => {
     hapticMedium();
     await logout();
@@ -393,6 +395,23 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </TouchableOpacity>
 
           <TouchableOpacity
+            testID="profile-report-bug"
+            style={styles.settingItem}
+            onPress={() => {
+              hapticLight();
+              setBugReportVisible(true);
+            }}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
+                <Ionicons name="bug-outline" size={20} color={Colors.accent.purple} />
+              </View>
+              <Text style={styles.settingLabel}>{t.profile.reportBug}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.settingItem}
             onPress={() => {
               hapticLight();
@@ -555,6 +574,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </View>
         </View>
       </AppModal>
+
+      <BugReportSheet visible={bugReportVisible} onClose={() => setBugReportVisible(false)} />
 
       {/* Delete Account Confirmation Modal */}
       <AppModal

@@ -87,7 +87,6 @@ jest.mock('../../contexts/I18nContext', () => ({
 }));
 jest.mock('../../shared/hooks/useNotifications', () => ({ useNotifications: () => undefined }));
 jest.mock('../../shared/hooks/useAutoCalendarSync', () => ({ useAutoCalendarSync: () => undefined }));
-jest.mock('../../shared/components/BetaBanner', () => ({ BetaBanner: () => null }));
 jest.mock('../../shared/components/CreateActionSheet', () => ({ CreateActionSheet: () => null }));
 jest.mock('../../shared/services/api', () => ({ rehearsalsAPI: {}, projectsAPI: {} }));
 

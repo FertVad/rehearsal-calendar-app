@@ -682,15 +682,15 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 - `PATCH /admin/api/bug-reports/:id/status` — update bug report status (new/in_progress/fixed)
 
 ### Beta Testing: Bug Reports
-**Location**: `src/shared/components/BetaBanner.tsx`, `server/routes/native/bugReports.js`
+**Location**: `src/features/profile/components/BugReportSheet.tsx`, `server/routes/native/bugReports.js`
 
-Global "Test Flight" banner visible on all tab screens during beta testing.
+The "Test Flight" banner over every tab is gone (owner, 29.10.2026, T-008); a bug report is sent from the profile.
 
 **Frontend**:
-- `BetaBanner` component mounted in `TabNavigator` (navigation/index.tsx)
-- Shows rocket icon + "Тестовый полёт" / "Test Flight" with "Bug Report" button
-- Opens modal with text input, submits to backend
-- Automatically captures current screen name via `useNavigationState`
+- Profile → "About" block: "Report a Bug" / «Сообщить об ошибке» (`profile-report-bug`), after "Help" and before "Delete Account"
+- Opens `BugReportSheet` (an `AppModal`) with a text field, submits to backend, then "Thanks! Report sent"
+- `screen` is always `Profile`
+- Strings: `t.profile.reportBug*`, in all four languages
 
 **Backend**:
 - `POST /api/native/bug-reports` — create report (requireAuth, body: `{ message, screen }`)
@@ -699,7 +699,7 @@ Global "Test Flight" banner visible on all tab screens during beta testing.
 
 **Admin view**: Bug reports appear in admin dashboard at `/admin` with clickable status buttons.
 
-**Removing after beta**: Delete `<BetaBanner />` from `TabNavigator` in `src/navigation/index.tsx` and remove the import.
+**E2E**: `e2e/flows/47-bug-report-from-profile.yaml` — no banner, report from the profile, read back from the server.
 
 ### Logging Convention
 Use `logger` utility instead of `console.log` — automatically suppressed in production:

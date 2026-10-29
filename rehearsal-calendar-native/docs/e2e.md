@@ -219,6 +219,10 @@ An inbox that grows while the app is open: `e2e/scripts/notify.js` with
 the server's own `recordNotifications`, titled "`TITLE` 1" (the oldest) to
 "`TITLE` `COUNT`" (flow 33).
 
+What the server stored from a bug report: `e2e/scripts/bug-report-received.js`
+with `MAIL_URL`, `EMAIL`, `MESSAGE` and `SCREEN` fails unless the account has
+exactly one report with that text, sent from that screen (flow 47).
+
 An answer held while a flow takes several steps is held `OPEN`: the nine
 seconds of a plain hold are a clock the steps race. Flow 17 held its "All
 Projects" answer that way through a pull, the filter and a pick; on a slow

@@ -12,6 +12,10 @@ export interface ProfileTranslations {
   about: string;
   version: string;
   help: string;
+  reportBug: string;
+  reportBugPlaceholder: string;
+  reportBugSend: string;
+  reportBugSent: string;
   logout: string;
   deleteAccount: string;
   deleteAccountConfirm: string;
@@ -82,6 +86,10 @@ export const ru = {
     about: 'О приложении',
     version: 'Версия',
     help: 'Помощь',
+    reportBug: 'Сообщить об ошибке',
+    reportBugPlaceholder: 'Опишите проблему...',
+    reportBugSend: 'Отправить',
+    reportBugSent: 'Спасибо! Отчёт отправлен',
     logout: 'Выйти из аккаунта',
     deleteAccount: 'Удалить аккаунт',
     deleteAccountConfirm: 'Удалить аккаунт?',
@@ -155,6 +163,10 @@ export const en = {
     about: 'About',
     version: 'Version',
     help: 'Help',
+    reportBug: 'Report a Bug',
+    reportBugPlaceholder: 'Describe the issue...',
+    reportBugSend: 'Send',
+    reportBugSent: 'Thanks! Report sent',
     logout: 'Log out',
     deleteAccount: 'Delete Account',
     deleteAccountConfirm: 'Delete Account?',
@@ -228,6 +240,10 @@ export const es = {
     about: 'Acerca de',
     version: 'Versión',
     help: 'Ayuda',
+    reportBug: 'Reportar un error',
+    reportBugPlaceholder: 'Describe el problema...',
+    reportBugSend: 'Enviar',
+    reportBugSent: '¡Gracias! Informe enviado',
     logout: 'Cerrar sesión',
     deleteAccount: 'Eliminar cuenta',
     deleteAccountConfirm: '¿Eliminar cuenta?',
@@ -301,6 +317,10 @@ export const de = {
     about: 'Über',
     version: 'Version',
     help: 'Hilfe',
+    reportBug: 'Fehler melden',
+    reportBugPlaceholder: 'Problem beschreiben...',
+    reportBugSend: 'Senden',
+    reportBugSent: 'Danke! Bericht gesendet',
     logout: 'Abmelden',
     deleteAccount: 'Konto löschen',
     deleteAccountConfirm: 'Konto löschen?',
