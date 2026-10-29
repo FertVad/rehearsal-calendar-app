@@ -10,6 +10,10 @@
 # matched. And the picker opened a second time was a second React Native
 # Modal on the screen, which iOS leaves out of the accessibility tree, so
 # "English" was drawn and not found (T-208, every sheet is an AppModal since).
+#
+# The tab taps go through tap-and-see.yaml: the simulator lost the one on the
+# profile tab after the restart, the calendar stayed, and the flow failed
+# looking for the sign-out (T-212; docs/e2e.md, "A lost tap").
 appId: ${APP_ID}
 name: The profile's language, kept by the account
 tags:
@@ -25,13 +29,15 @@ tags:
       id: tab-calendar
       text: "Calendar, tab.*"
     timeout: 30000
-- tapOn:
-    id: tab-profile
-- extendedWaitUntil:
-    visible:
-      id: profile-language
-      text: ".*English.*"
-    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: profile-language
+    text: ".*English.*"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -72,8 +78,12 @@ tags:
 - takeScreenshot: 44-russian-after-restart
 
 # Signed out, the app cleared, signed in again: Russian, from her account.
-- tapOn:
-    id: tab-profile
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Язык, Русский.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element:
       id: profile-logout
@@ -96,13 +106,15 @@ tags:
 - takeScreenshot: 44-russian-from-account
 
 # Back to English.
-- tapOn:
-    id: tab-profile
-- extendedWaitUntil:
-    visible:
-      id: profile-language
-      text: ".*Русский.*"
-    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Язык, Русский.*"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: profile-language
+    text: ".*Русский.*"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
