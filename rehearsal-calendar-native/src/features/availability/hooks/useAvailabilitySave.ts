@@ -164,6 +164,7 @@ export const useAvailabilitySave = () => {
    * The counters are read before the request and handed back afterwards: a day
    * edited while the save was out keeps a newer counter and stays unsaved
    * (review CC03). Past days cannot be saved and stop counting as changed.
+   * The days sent go back too, as what the server now holds (T-013).
    *
    * `announce: false` is a save on the way out (useLeaveGuard): the sheet
    * closing says it went through, and an alert raised over a sheet that is
@@ -176,7 +177,7 @@ export const useAvailabilitySave = () => {
     language: string;
     t: any;
     setSaving: (saving: boolean) => void;
-    markSaved: (sent: Record<string, number>) => void;
+    markSaved: (sent: Record<string, number>, sentDays: AvailabilityData) => void;
     announce?: boolean;
   }): Promise<boolean> => {
     const sent = { ...changed };
@@ -195,7 +196,7 @@ export const useAvailabilitySave = () => {
         await availabilityAPI.saveDays(dates.map((date) => ({ date, entries: entriesForDay(date, availability[date]) })));
       }
 
-      markSaved(sent);
+      markSaved(sent, availability);
       if (announce) Alert.alert(t.rehearsals.success, t.availability.saved);
       return true;
     } catch (err: any) {

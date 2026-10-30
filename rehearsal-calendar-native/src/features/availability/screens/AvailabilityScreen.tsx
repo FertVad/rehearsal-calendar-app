@@ -48,6 +48,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     saving,
     setSaving,
     hasChanges,
+    differsFromSaved,
     changed,
     markChanged,
     markSaved,
@@ -121,8 +122,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   // Closing with days changed and not saved asks first, however it is closed
   // (T-013); saved there, the sheet closes once the save has gone through.
+  // Only a day that says something else than on the server is asked about.
   useLeaveGuard({
-    hasChanges,
+    hasChanges: differsFromSaved,
     canSave: () => canSave({ availability, changed, today, language, t }),
     onSave: async (leave) => {
       if (await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved, announce: false })) {

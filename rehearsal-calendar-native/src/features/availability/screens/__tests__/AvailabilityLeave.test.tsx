@@ -46,6 +46,7 @@ jest.mock('../../hooks', () => ({
     saving: false,
     setSaving: jest.fn(),
     hasChanges: mockHasChanges,
+    differsFromSaved: mockHasChanges,
     changed: mockHasChanges ? { '2026-11-03': 1 } : {},
     markChanged: jest.fn(),
     markSaved: jest.fn(),
@@ -139,7 +140,8 @@ it('Don\'t Save closes it the way it was being closed; Cancel keeps it open', as
 
 it('Save saves the days, without an alert over the closing sheet, and then closes it', async () => {
   mockHasChanges = true;
-  mockSave.mockResolvedValue(true);
+  // The save marks the days saved, as markSaved does.
+  mockSave.mockImplementation(async () => { mockHasChanges = false; return true; });
   render(<AvailabilityScreen navigation={navigation} />);
 
   __remove();
@@ -147,6 +149,24 @@ it('Save saves the days, without an alert over the closing sheet, and then close
 
   expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({ announce: false }));
   expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+});
+
+it('a day edited while that save was out is not closed away: the question comes again (review)', async () => {
+  mockHasChanges = true;
+  // The save goes through, but a day was changed again meanwhile: markSaved
+  // leaves it unsaved.
+  mockSave.mockResolvedValue(true);
+  render(<AvailabilityScreen navigation={navigation} />);
+
+  __remove(swipe);
+  await choose(t.common.save);
+
+  expect(mockSave).toHaveBeenCalledTimes(1);
+  expect(navigation.dispatch).not.toHaveBeenCalled();
+  expect(showSheet).toHaveBeenCalledTimes(2);
+
+  await choose(t.common.dontSave);
+  expect(navigation.dispatch).toHaveBeenCalledWith(swipe);
 });
 
 it('a save that fails leaves the sheet open', async () => {

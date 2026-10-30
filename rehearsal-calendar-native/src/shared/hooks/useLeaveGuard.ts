@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
 import { useNavigation, usePreventRemove } from '@react-navigation/native';
+import type { NavigationAction } from '@react-navigation/native';
 import { useI18n } from '../../contexts/I18nContext';
 import type { AppNavigation } from '../../navigation/types';
 
@@ -28,16 +30,24 @@ export function useLeaveGuard({ hasChanges, canSave, onSave }: {
   const navigation = useNavigation<AppNavigation>();
   const { t } = useI18n();
 
-  usePreventRemove(hasChanges, ({ data }) => {
+  // The way out a save was asked for, once that save has gone through. The
+  // sheet stays usable while the save is out, so what it holds when the save
+  // is back is not what was sent: the way out goes on only from the next
+  // render, by what is left unsaved then (review T-013). Let through at once,
+  // an edit made meanwhile was closed away.
+  const [saved, setSaved] = useState<NavigationAction | null>(null);
+
+  const ask = (action: NavigationAction) => {
     // The removal that was held, let through this time.
-    const leave = () => navigation.dispatch(data.action);
+    const leave = () => navigation.dispatch(action);
+    const afterSave = () => setSaved(action);
     const save = canSave();
 
     if (Platform.OS !== 'ios') {
       Alert.alert(t.common.unsavedChanges, undefined, [
         { text: t.common.cancel, style: 'cancel' },
         { text: t.common.dontSave, style: 'destructive', onPress: leave },
-        ...(save ? [{ text: t.common.save, onPress: () => onSave(leave) }] : []),
+        ...(save ? [{ text: t.common.save, onPress: () => onSave(afterSave) }] : []),
       ]);
       return;
     }
@@ -54,8 +64,19 @@ export function useLeaveGuard({ hasChanges, canSave, onSave }: {
       },
       (index) => {
         if (index === 0) leave();
-        else if (save && index === 1) onSave(leave);
+        else if (save && index === 1) onSave(afterSave);
       }
     );
+  };
+
+  usePreventRemove(hasChanges, ({ data }) => ask(data.action));
+
+  // Saved and rendered: nothing left, it closes; an edit made while the save
+  // was out, and the question comes again for it.
+  useEffect(() => {
+    if (!saved) return;
+    setSaved(null);
+    if (hasChanges) ask(saved);
+    else navigation.dispatch(saved);
   });
 }

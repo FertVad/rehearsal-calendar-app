@@ -9,7 +9,9 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { Animated } from 'react-native';
 import { useAvailabilityData } from '../useAvailabilityData';
+import { useAvailabilityEditor } from '../useAvailabilityEditor';
 import { availabilityAPI } from '../../../../shared/services/api';
 import { setProfileTimezone } from '../../../../shared/utils/time';
 
@@ -17,6 +19,12 @@ import { setProfileTimezone } from '../../../../shared/utils/time';
 beforeEach(() => setProfileTimezone('UTC'));
 
 jest.mock('../../../../shared/services/api');
+// The editor animates its panel; nothing here is about that.
+jest.spyOn(Animated, 'spring').mockReturnValue({
+  start: jest.fn(),
+  stop: jest.fn(),
+  reset: jest.fn(),
+} as unknown as Animated.CompositeAnimation);
 jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({ language: 'ru', t: jest.requireActual('../../../../i18n/translations').ru }),
 }));
@@ -84,8 +92,88 @@ it('a save marks saved only the edits it sent: one made meanwhile stays unsaved 
   const sent = { ...result.current.changed };
   // Edited again while the save was out.
   act(() => { result.current.markChanged(['2026-10-01']); });
-  act(() => { result.current.markSaved(sent); });
+  act(() => { result.current.markSaved(sent, {}); });
 
   expect(Object.keys(result.current.changed)).toEqual(['2026-10-01']);
   expect(result.current.hasChanges).toBe(true);
+});
+
+describe('What leaving would lose: a day saying something else than the server (T-013, review)', () => {
+  // The screen's two hooks together, as AvailabilityScreen joins them.
+  const open = async () => {
+    const { result } = renderHook(() => {
+      const data = useAvailabilityData();
+      const editor = useAvailabilityEditor({
+        availability: data.availability,
+        setAvailability: data.setAvailability,
+        markChanged: data.markChanged,
+        markSettled: data.markSettled,
+        today: '2026-09-20',
+        getDayState: data.getDayState,
+        months: [{ year: 2026, month: 9, key: '2026-9' }],
+      });
+      return { data, editor };
+    });
+    await waitFor(() => expect(result.current.data.loading).toBe(false));
+    act(() => { result.current.editor.handleDayPress(2026, 9, 1, () => '2026-10-01'); });
+    return result;
+  };
+
+  it('its hours\' mode picked again changes nothing to lose, though it can still be saved', async () => {
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [busy('2026-10-01', '10:00', '12:00')] });
+    const result = await open();
+
+    act(() => { result.current.editor.handleModeChange('custom'); });
+
+    expect(result.current.data.hasChanges).toBe(true);
+    expect(result.current.data.differsFromSaved).toBe(false);
+  });
+
+  it('a real change is one, and put back as it was is none', async () => {
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [{
+      startsAt: '2026-10-01T00:00:00.000Z', endsAt: '2026-10-01T23:59:59.999Z', type: 'busy', isAllDay: true, source: 'manual',
+    }] });
+    const result = await open();
+
+    act(() => { result.current.editor.handleModeChange('free'); });
+    expect(result.current.data.differsFromSaved).toBe(true);
+
+    act(() => { result.current.editor.handleModeChange('busy'); });
+    expect(result.current.data.differsFromSaved).toBe(false);
+  });
+
+  it('other hours on a day of hours are a change', async () => {
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [busy('2026-10-01', '10:00', '12:00')] });
+    const result = await open();
+
+    act(() => { result.current.editor.addSlot(); });
+
+    expect(result.current.data.differsFromSaved).toBe(true);
+  });
+
+  it('an untouched day marked free is a change: the server holds nothing for it', async () => {
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+    const result = await open();
+
+    act(() => { result.current.editor.handleModeChange('free'); });
+
+    expect(result.current.data.differsFromSaved).toBe(true);
+  });
+
+  it('after a save, a day is compared with what was sent: an edit made meanwhile still differs', async () => {
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [] });
+    const result = await open();
+
+    act(() => { result.current.editor.handleModeChange('busy'); });
+    const sent = { ...result.current.data.changed };
+    const sentDays = { ...result.current.data.availability };
+    // Changed again while the save was out.
+    act(() => { result.current.editor.handleModeChange('free'); });
+    act(() => { result.current.data.markSaved(sent, sentDays); });
+    expect(result.current.data.differsFromSaved).toBe(true);
+
+    // And back to what was sent: nothing to lose.
+    act(() => { result.current.editor.handleModeChange('busy'); });
+    expect(result.current.data.differsFromSaved).toBe(false);
+  });
 });

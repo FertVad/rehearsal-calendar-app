@@ -320,7 +320,7 @@ describe('useAvailabilitySave Hook', () => {
         { date: '2025-12-29', entries: [expect.objectContaining({ type: 'busy', isAllDay: false })] },
       ]);
       expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
-      expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 1 });
+      expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 1 }, expect.objectContaining({ '2025-12-29': expect.objectContaining({ mode: 'custom' }) }));
       expect(mockSetSaving).toHaveBeenCalledWith(true);
       expect(mockSetSaving).toHaveBeenLastCalledWith(false);
       expect(Alert.alert).toHaveBeenCalledWith('Success', 'Availability saved');
@@ -370,7 +370,7 @@ describe('useAvailabilitySave Hook', () => {
       changed['2025-12-29'] = 4;
       await act(async () => { finish(); await pending; });
 
-      expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 3 });
+      expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 3 }, { '2025-12-29': { mode: 'busy', slots: [] } });
     });
 
     it('leaves out days already past, and stops counting them as unsaved', async () => {
@@ -384,7 +384,7 @@ describe('useAvailabilitySave Hook', () => {
       });
 
       expect(availabilityAPI.saveDays).toHaveBeenCalledWith([expect.objectContaining({ date: '2025-12-29' })]);
-      expect(markSaved).toHaveBeenCalledWith({ '2025-11-30': 1, '2025-12-29': 2 });
+      expect(markSaved).toHaveBeenCalledWith({ '2025-11-30': 1, '2025-12-29': 2 }, expect.anything());
     });
 
     it('does not save if validation fails', async () => {
