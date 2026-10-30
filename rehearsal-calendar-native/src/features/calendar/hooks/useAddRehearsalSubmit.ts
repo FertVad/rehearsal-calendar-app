@@ -234,7 +234,7 @@ export function useAddRehearsalSubmit({
       );
 
       if (conflicts.hasConflicts) {
-        const conflictMessage = formatConflictMessage(conflicts);
+        const conflictMessage = formatConflictMessage(conflicts, t);
 
         // Show warning and ask for confirmation
         Alert.alert(

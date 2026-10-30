@@ -63,6 +63,8 @@ export interface RehearsalsTranslations {
   endsNextDay: string;
   scheduleConflict: string;
   scheduleConflictMessage: string;
+  /** Above scheduleConflictMessage: who of those picked is busy then, `count` of them. */
+  busyAtThisTime: (names: string, count: number) => string;
   createAnyway: string;
   success: string;
   rehearsalCreated: string;
@@ -165,6 +167,8 @@ needProject: 'Репетиции появятся, когда вы окажет�
     endsNextDay: 'следующего дня',
     scheduleConflict: '⚠️ Конфликт расписания',
     scheduleConflictMessage: 'Вы уверены, что хотите создать репетицию?',
+    busyAtThisTime: (names: string, count: number) =>
+      count === 1 ? `${names} занят(а) в это время` : `${names} заняты в это время`,
     createAnyway: 'Создать всё равно',
     success: 'Успешно',
     rehearsalCreated: 'Репетиция создана',
@@ -262,6 +266,8 @@ needProject: 'Rehearsals show up once you are in a project',
     endsNextDay: 'next day',
     scheduleConflict: '⚠️ Schedule Conflict',
     scheduleConflictMessage: 'Are you sure you want to create this rehearsal?',
+    busyAtThisTime: (names: string, count: number) =>
+      count === 1 ? `${names} is busy at this time` : `${names} are busy at this time`,
     createAnyway: 'Create Anyway',
     success: 'Success',
     rehearsalCreated: 'Rehearsal created',
@@ -359,6 +365,8 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     endsNextDay: 'día siguiente',
     scheduleConflict: '⚠️ Conflicto de horario',
     scheduleConflictMessage: '¿Seguro que quieres crear este ensayo?',
+    busyAtThisTime: (names: string, count: number) =>
+      count === 1 ? `${names} está ocupado/a a esa hora` : `${names} están ocupados a esa hora`,
     createAnyway: 'Crear de todos modos',
     success: 'Éxito',
     rehearsalCreated: 'Ensayo creado',
@@ -456,6 +464,8 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     endsNextDay: 'am nächsten Tag',
     scheduleConflict: '⚠️ Terminkonflikt',
     scheduleConflictMessage: 'Möchtest du diese Probe wirklich erstellen?',
+    busyAtThisTime: (names: string, count: number) =>
+      count === 1 ? `${names} ist zu dieser Zeit belegt` : `${names} sind zu dieser Zeit belegt`,
     createAnyway: 'Trotzdem erstellen',
     success: 'Erfolg',
     rehearsalCreated: 'Probe erstellt',

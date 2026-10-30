@@ -1,5 +1,6 @@
 import { TimeRange } from './availability';
 import { ProjectMember } from '../types';
+import type { Translations } from '../../i18n/translations';
 import { clockRangeMinutes, minuteRangesOverlap } from './time';
 
 export interface ConflictInfo {
@@ -65,24 +66,21 @@ export function checkSchedulingConflicts(
 }
 
 /**
- * Format conflict information into a user-friendly message
+ * Format conflict information into a user-friendly message, in the app's
+ * language.
  */
-export function formatConflictMessage(conflictInfo: ConflictInfo): string {
+export function formatConflictMessage(conflictInfo: ConflictInfo, t: Translations): string {
   if (!conflictInfo.hasConflicts) {
     return '';
   }
 
   const memberNames = conflictInfo.busyMembers
     .map(({ member }) => {
-      const firstName = member.firstName || 'Участник';
+      const firstName = member.firstName || t.projects.member;
       const lastName = member.lastName || '';
       return `${firstName} ${lastName}`.trim();
     })
     .join(', ');
 
-  if (conflictInfo.busyMembers.length === 1) {
-    return `${memberNames} занят(а) в это время`;
-  }
-
-  return `${memberNames} заняты в это время`;
+  return t.rehearsals.busyAtThisTime(memberNames, conflictInfo.busyMembers.length);
 }
