@@ -12,7 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { PlannerStackParamList, SmartPlannerNavigation } from '../../../navigation';
 import { Colors } from '../../../shared/constants/colors';
-import type { SlotCategory } from '../types';
+import type { SlotCategory, TimeSlot } from '../types';
 import { useSmartPlanner } from '../hooks/useSmartPlanner';
 import { DayCard } from '../components/DayCard';
 import { ParticipantPicker } from '../../../shared/components/ParticipantPicker';
@@ -23,6 +23,7 @@ import { DateRangePicker } from '../../../shared/components/DateRangePicker';
 import { addDays, formatDateToString, parseDateString } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
 import { memberAvailabilityLimits } from '../../../shared/utils/memberAvailabilityLimits';
+import { canScheduleIn } from '../../../shared/utils/rehearsalRights';
 import { smartPlannerScreenStyles as styles } from '../styles';
 
 type Props = NativeStackScreenProps<PlannerStackParamList, 'SmartPlanner'>;
@@ -177,15 +178,34 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     navigation.setParams({ projectId: newProjectId });
   }, [navigation]);
 
+  // "Select Dates" becomes the period once dates are picked in it, so Cancel
+  // leaves the period it was. The segment chose 'custom' on the tap, and a
+  // cancelled picker left it selected over the week's dates (T-012).
+  const handleCustomPeriodClick = useCallback(() => {
+    setShowDateRangePicker(true);
+  }, []);
+
   const handleDateRangeConfirm = useCallback((start: Date, end: Date) => {
     setCustomStartDate(start);
     setCustomEndDate(end);
+    setSelectedPeriod('custom');
   }, []);
 
-  const handleCustomPeriodClick = useCallback(() => {
-    setSelectedPeriod('custom');
-    setShowDateRangePicker(true);
-  }, []);
+  // A slot opens the form only for an admin of this project, the one person
+  // the form can put a rehearsal in it for (T-012).
+  const canSchedule = canScheduleIn(projects.find(p => p.id === projectId));
+  const createRehearsal = useCallback((slot: TimeSlot) => {
+    // AddRehearsal is on the app stack, above this tab. The slot is free time,
+    // so it gives the start; the form ends it the usual length on (T-012).
+    appNavigation.navigate('AddRehearsal', {
+      projectId,
+      prefilledDate: slot.date,
+      prefilledTime: slot.startTime,
+      // The slot is free for the people picked here, so the rehearsal starts
+      // with them; none picked means everyone, as in the planner itself (DP02).
+      prefilledMemberIds: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
+    });
+  }, [appNavigation, projectId, selectedMemberIds]);
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
@@ -253,6 +273,9 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
       <Text style={styles.sectionTitle}>{t.smartPlanner.period}</Text>
       <View style={styles.periodButtons}>
         <TouchableOpacity
+          testID="planner-period-week"
+          accessibilityRole="button"
+          accessibilityState={{ selected: selectedPeriod === 'week' }}
           style={[
             styles.periodButton,
             selectedPeriod === 'week' && styles.periodButtonActive,
@@ -269,6 +292,9 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          testID="planner-period-month"
+          accessibilityRole="button"
+          accessibilityState={{ selected: selectedPeriod === 'month' }}
           style={[
             styles.periodButton,
             selectedPeriod === 'month' && styles.periodButtonActive,
@@ -285,6 +311,9 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          testID="planner-period-custom"
+          accessibilityRole="button"
+          accessibilityState={{ selected: selectedPeriod === 'custom' }}
           style={[
             styles.periodButton,
             selectedPeriod === 'custom' && styles.periodButtonActive,
@@ -409,19 +438,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
                 key={date}
                 date={date}
                 slots={slots}
-                onCreateRehearsal={(slot) => {
-                  // AddRehearsal is on the app stack, above this tab.
-                  appNavigation.navigate('AddRehearsal', {
-                    projectId,
-                    prefilledDate: slot.date,
-                    prefilledTime: slot.startTime,
-                    prefilledEndTime: slot.endTime,
-                    // The slot is free for the people picked here, so the
-                    // rehearsal starts with them; none picked means everyone,
-                    // as in the planner itself (DP02).
-                    prefilledMemberIds: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
-                  });
-                }}
+                onCreateRehearsal={canSchedule ? createRehearsal : undefined}
               />
             ))}
           </View>

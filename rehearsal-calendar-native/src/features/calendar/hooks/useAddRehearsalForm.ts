@@ -14,6 +14,8 @@ import {
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useTimezone } from '../../../shared/hooks/useClock';
+import { endAfter, nextRoundHour } from '../utils/rehearsalDefaults';
+import { useUsualDuration } from './useUsualDuration';
 
 import { logger } from '../../../shared/utils/logger';
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
@@ -22,8 +24,8 @@ interface RouteParams {
   projectId?: string;
   rehearsalId?: string;
   prefilledDate?: string;
+  /** A start only: the end is the form's own rule (rehearsalDefaults.ts). */
   prefilledTime?: string;
-  prefilledEndTime?: string;
 }
 
 interface UseAddRehearsalFormProps {
@@ -32,13 +34,6 @@ interface UseAddRehearsalFormProps {
   setSelectedProject: (project: Project | null) => void;
   routeParams?: RouteParams;
 }
-
-// Helper function to set minutes to 00 (round hours)
-const setMinutesToZero = (date: Date): Date => {
-  const rounded = new Date(date);
-  rounded.setMinutes(0, 0, 0);
-  return rounded;
-};
 
 export function useAddRehearsalForm({
   projects,
@@ -50,7 +45,7 @@ export function useAddRehearsalForm({
   const { language, t } = useI18n();
 
   // Extract route params
-  const { projectId: prefilledProjectId, prefilledDate, prefilledTime, prefilledEndTime } = routeParams || {};
+  const { projectId: prefilledProjectId, prefilledDate, prefilledTime } = routeParams || {};
 
   // Filter projects - only show where user is admin
   const adminProjects = useMemo(() => projects.filter(p => p.is_admin), [projects]);
@@ -76,19 +71,25 @@ export function useAddRehearsalForm({
   // difference (review DF01).
   const timezone = useTimezone();
 
-  // Form state - set minutes to 00 for better UX
-  const [date, setDate] = useState(() => wallClockIn(timezone));
-  const [startTime, setStartTime] = useState(() => setMinutesToZero(wallClockIn(timezone)));
-  const [endTime, setEndTime] = useState(() => {
-    const start = setMinutesToZero(wallClockIn(timezone));
-    const end = new Date(start);
-    end.setHours(end.getHours() + 2);
-    return end;
-  });
+  // A new rehearsal starts at the next whole hour, on its day: the hour it was
+  // already was gone (07:00 at 07:02), and after 23:00 the next one is tomorrow.
+  const [opening] = useState(() => nextRoundHour(wallClockIn(timezone)));
+  const [date, setDate] = useState(opening);
+  const [startTime, setStartTime] = useState(opening);
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [localSelectedProject, setLocalSelectedProject] = useState<Project | null>(
     selectedProject?.is_admin ? selectedProject : null
+  );
+  // The end is the usual length after the start until someone sets it: picked
+  // in its picker, or an edit's own. It follows the start, and the project's
+  // usual length once that is in (rehearsalDefaults.ts).
+  const isEditMode = Boolean(routeParams?.rehearsalId && routeParams?.projectId);
+  const usualMinutes = useUsualDuration(isEditMode ? null : localSelectedProject);
+  const [chosenEnd, setEndTime] = useState<Date | null>(null);
+  const endTime = useMemo(
+    () => chosenEnd ?? endAfter(startTime, usualMinutes),
+    [chosenEnd, startTime, usualMinutes]
   );
   // Who is on the rehearsal, for which project, and whether that is settled
   // (review R9-01, R9-02). One owner: the project switch empties it and marks
@@ -116,10 +117,9 @@ export function useAddRehearsalForm({
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
-  // An edit is what the route says it is, from the first render: a form
-  // that read it from state set in an effect could act as a new rehearsal for
-  // a frame (review R9-01).
-  const isEditMode = Boolean(routeParams?.rehearsalId && routeParams?.projectId);
+  // An edit is what the route says it is, from the first render (isEditMode
+  // above): a form that read it from state set in an effect could act as a new
+  // rehearsal for a frame (review R9-01).
   const [loadingRehearsal, setLoadingRehearsal] = useState(false);
 
   // Prefill form from route params
@@ -140,11 +140,7 @@ export function useAddRehearsalForm({
     if (prefilledTime) {
       setStartTime(parseTimeString(prefilledTime));
     }
-
-    if (prefilledEndTime) {
-      setEndTime(parseTimeString(prefilledEndTime));
-    }
-  }, [prefilledProjectId, prefilledDate, prefilledTime, prefilledEndTime, projects]);
+  }, [prefilledProjectId, prefilledDate, prefilledTime, projects]);
 
   // Update selected project when projects list changes or default changes
   useEffect(() => {
@@ -213,9 +209,11 @@ export function useAddRehearsalForm({
   }, [routeParams?.rehearsalId]);
 
   // Handlers
-  const handleTimeSelect = (startTime: string, endTime: string) => {
+  // A recommendation is free time, not a rehearsal: it gives the start, and the
+  // end is the usual length on (T-012).
+  const handleTimeSelect = (startTime: string) => {
     setStartTime(parseTimeString(startTime, date));
-    setEndTime(parseTimeString(endTime, date));
+    setEndTime(null);
   };
 
   const openDatePicker = () => {
@@ -243,15 +241,14 @@ export function useAddRehearsalForm({
 
   const handleStartTimeChange = (selectedTime: Date) => {
     setStartTime(selectedTime);
-    // A later start moves a same-day end along with it — two hours on, which
-    // may well be the next morning. A rehearsal that already ran overnight
-    // keeps its end, unless the start lands right on it.
+    // An end nobody set follows the start. One that was set stays, unless a
+    // later start passes it: then it goes back to following — the usual length
+    // on, which may well be the next morning. A rehearsal that already ran
+    // overnight keeps its end, unless the start lands right on it.
     const start = formatDateToTimeString(selectedTime);
     const wasOvernight = endsNextDay(startClock, endClock);
     if (isEmptyClockRange(start, endClock) || (!wasOvernight && endsNextDay(start, endClock))) {
-      const newEnd = new Date(selectedTime);
-      newEnd.setHours(newEnd.getHours() + 2);
-      setEndTime(newEnd);
+      setEndTime(null);
     }
   };
 
@@ -260,12 +257,10 @@ export function useAddRehearsalForm({
   };
 
   const resetForm = () => {
-    setDate(wallClockIn(timezone));
-    const start = setMinutesToZero(wallClockIn(timezone));
+    const start = nextRoundHour(wallClockIn(timezone));
+    setDate(start);
     setStartTime(start);
-    const end = new Date(start);
-    end.setHours(end.getHours() + 2);
-    setEndTime(end);
+    setEndTime(null);
     setLocation('');
   };
 

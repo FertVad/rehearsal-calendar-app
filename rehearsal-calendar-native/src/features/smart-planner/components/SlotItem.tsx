@@ -7,7 +7,8 @@ import { Colors } from '../../../shared/constants/colors';
 
 interface SlotItemProps {
   slot: TimeSlot;
-  onCreateRehearsal: (slot: TimeSlot) => void;
+  /** Absent: no "+ Add" — hidden, not dimmed, for someone who may not use it (T-012). */
+  onCreateRehearsal?: (slot: TimeSlot) => void;
 }
 
 export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateRehearsal }) => {
@@ -54,7 +55,7 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
         <Text style={styles.time}>{formatTimeRange()}</Text>
         <Text testID={`planner-slot-${slot.date}`} style={styles.status}>{getStatusText()}</Text>
       </View>
-      {canCreateRehearsal && (
+      {canCreateRehearsal && onCreateRehearsal && (
         <TouchableOpacity
           testID={`planner-add-${slot.date}-${slot.startTime}`}
           style={styles.addButton}

@@ -18,6 +18,7 @@ import { getDateLocale } from '../../../shared/utils/locale';
 import { addDays, formatDateLocalized } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
 import { rehearsalOnDate } from '../../../shared/utils/rehearsalDays';
+import { canScheduleAny } from '../../../shared/utils/rehearsalRights';
 import { useRehearsals } from '../hooks';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { calendarScreenStyles as styles } from '../styles';
@@ -44,7 +45,7 @@ export default function CalendarScreen() {
 
   // Check if user has any admin role
   const hasAnyAdminRole = useMemo(() =>
-    projects.some(p => p.is_admin),
+    canScheduleAny(projects),
     [projects]
   );
 
@@ -336,7 +337,9 @@ export default function CalendarScreen() {
           rehearsals={rehearsals}
           onDaySelect={setSelectedDate}
           onShowToday={showToday}
-          onDayLongPress={handleDayLongPress}
+          // A rehearsal on the day pressed, for someone with a project to put
+          // one in; for anyone else the press does nothing (T-012).
+          onDayLongPress={hasAnyAdminRole ? handleDayLongPress : undefined}
           selectedDate={selectedDate}
         />
 

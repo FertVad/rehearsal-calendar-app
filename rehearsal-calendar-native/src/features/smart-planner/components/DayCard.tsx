@@ -8,7 +8,8 @@ import { getDateLocale } from '../../../shared/utils/locale';
 interface DayCardProps {
   date: string;
   slots: TimeSlot[];
-  onCreateRehearsal: (slot: TimeSlot) => void;
+  /** Absent for someone who may not put a rehearsal in the project (T-012). */
+  onCreateRehearsal?: (slot: TimeSlot) => void;
 }
 
 interface CategoryGroup {

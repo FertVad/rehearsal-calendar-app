@@ -10,7 +10,8 @@ interface TimeRecommendationsProps {
   selectedDate: string;
   selectedMembers: ProjectMember[];
   memberAvailability: Record<string, { timeRanges: TimeRange[] }>;
-  onTimeSelect: (startTime: string, endTime: string) => void;
+  /** A window of free time gives the rehearsal its start, not its end (T-012). */
+  onTimeSelect: (startTime: string) => void;
   loading?: boolean;
 }
 
@@ -77,7 +78,7 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
               styles.slotButton,
               rec.confidence === 'high' ? styles.slotHigh : styles.slotMedium,
             ]}
-            onPress={() => onTimeSelect(rec.startTime, rec.endTime)}
+            onPress={() => onTimeSelect(rec.startTime)}
           >
             <Text style={styles.slotText}>{formatRecommendation(rec)}</Text>
           </TouchableOpacity>

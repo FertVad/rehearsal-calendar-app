@@ -65,7 +65,7 @@ beforeEach(() => {
   (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue({ data: { availability: [] } });
   create.mockResolvedValue({ data: { rehearsal: { id: 'new' } } });
   update.mockResolvedValue({ data: { rehearsal: { id: 'r1' } } });
-  routeParams = { projectId: 'A', prefilledDate: '2026-11-10', prefilledTime: '10:00', prefilledEndTime: '12:00' };
+  routeParams = { projectId: 'A', prefilledDate: '2026-11-10', prefilledTime: '10:00' };
 });
 
 const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });

@@ -351,12 +351,13 @@ describe('useAddRehearsalForm Hook', () => {
         useAddRehearsalForm({ projects: mockProjects, selectedProject: null, setSelectedProject: mockSetSelectedProject })
       ).result;
 
-      it('a start moved past a same-day end takes the end two hours on — the next morning at 23:00', () => {
+      // The usual length: three hours for a project with no rehearsal (T-012).
+      it('a start moved past a same-day end takes the end the usual length on — the next morning at 23:00', () => {
         const result = form();
         act(() => { result.current.setStartTime(at(18)); result.current.setEndTime(at(20)); });
         act(() => { result.current.handleStartTimeChange(at(23)); });
 
-        expect(result.current.endTime.getHours()).toBe(1);
+        expect(result.current.endTime.getHours()).toBe(2);
         expect(result.current.endsNextDay).toBe(true);
       });
 
@@ -375,9 +376,115 @@ describe('useAddRehearsalForm Hook', () => {
         act(() => { result.current.setStartTime(at(23)); result.current.setEndTime(at(1)); });
         act(() => { result.current.handleStartTimeChange(at(1)); });
 
-        expect(result.current.endTime.getHours()).toBe(3);
+        expect(result.current.endTime.getHours()).toBe(4);
         expect(result.current.endsNextDay).toBe(false);
       });
+    });
+  });
+
+  // T-012. A planner slot or a recommendation is free time, not a rehearsal:
+  // "All day", 09:00-23:00, went into the form as a fourteen-hour rehearsal.
+  // And the form opened on the hour already begun: 07:00 at 07:02.
+  describe('What the form fills in by itself (T-012)', () => {
+    const lastOf = (minutes: number) => ({
+      data: { rehearsals: [
+        { startsAt: '2026-10-01T18:00:00Z', endsAt: '2026-10-01T21:00:00Z', createdAt: '2026-09-01T10:00:00Z' },
+        { startsAt: '2026-09-20T10:00:00Z', endsAt: new Date(Date.parse('2026-09-20T10:00:00Z') + minutes * 60000).toISOString(),
+          createdAt: '2026-09-15T10:00:00Z' },
+      ] },
+    });
+    const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    const clock = (date: Date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+    afterEach(() => jest.useRealTimers());
+
+    it('a slot gives the start, and the end is the usual length on', async () => {
+      (rehearsalsAPI.getAll as jest.Mock).mockResolvedValue(lastOf(150));
+      const { result } = renderHook(() =>
+        useAddRehearsalForm({
+          projects: mockProjects,
+          selectedProject: null,
+          setSelectedProject: mockSetSelectedProject,
+          routeParams: { projectId: '1', prefilledDate: '2026-11-03', prefilledTime: '09:00' },
+        })
+      );
+      await settle();
+
+      expect(rehearsalsAPI.getAll).toHaveBeenCalledWith('1');
+      expect(clock(result.current.startTime)).toBe('09:00');
+      // The last one put in the project ran 2 h 30 min.
+      expect(clock(result.current.endTime)).toBe('11:30');
+    });
+
+    it('three hours for a project with no rehearsal yet, or none that could be read', async () => {
+      (rehearsalsAPI.getAll as jest.Mock).mockResolvedValue({ data: { rehearsals: [] } });
+      const { result } = renderHook(() =>
+        useAddRehearsalForm({
+          projects: mockProjects, selectedProject: null, setSelectedProject: mockSetSelectedProject,
+          routeParams: { projectId: '1', prefilledTime: '09:00' },
+        })
+      );
+      await settle();
+      expect(clock(result.current.endTime)).toBe('12:00');
+
+      (rehearsalsAPI.getAll as jest.Mock).mockRejectedValue(new Error('offline'));
+      const offline = renderHook(() =>
+        useAddRehearsalForm({
+          projects: mockProjects, selectedProject: null, setSelectedProject: mockSetSelectedProject,
+          routeParams: { projectId: '1', prefilledTime: '09:00' },
+        })
+      ).result;
+      await settle();
+      expect(clock(offline.current.endTime)).toBe('12:00');
+    });
+
+    it('a recommendation gives the start only, and the end follows', async () => {
+      (rehearsalsAPI.getAll as jest.Mock).mockResolvedValue(lastOf(120));
+      const { result } = renderHook(() =>
+        useAddRehearsalForm({ projects: mockProjects, selectedProject: null, setSelectedProject: mockSetSelectedProject })
+      );
+      await settle();
+      act(() => { result.current.setEndTime(new Date(2026, 8, 10, 23, 0)); });
+
+      act(() => { result.current.handleTimeSelect('09:00'); });
+
+      expect(clock(result.current.startTime)).toBe('09:00');
+      expect(clock(result.current.endTime)).toBe('11:00');
+    });
+
+    it('an end someone picked stays', async () => {
+      (rehearsalsAPI.getAll as jest.Mock).mockResolvedValue(lastOf(120));
+      const { result } = renderHook(() =>
+        useAddRehearsalForm({
+          projects: mockProjects, selectedProject: null, setSelectedProject: mockSetSelectedProject,
+          routeParams: { projectId: '1', prefilledTime: '09:00' },
+        })
+      );
+      await settle();
+      act(() => { result.current.handleEndTimeChange(new Date(2026, 8, 10, 10, 15)); });
+      act(() => { result.current.handleStartTimeChange(new Date(2026, 8, 10, 8, 0)); });
+
+      expect(clock(result.current.endTime)).toBe('10:15');
+    });
+
+    it('starts at the next whole hour: 08:00 at 07:02', () => {
+      jest.useFakeTimers({ now: new Date(2026, 9, 29, 7, 2), doNotFake: ['nextTick', 'setImmediate'] });
+      const { result } = renderHook(() =>
+        useAddRehearsalForm({ projects: [], selectedProject: null, setSelectedProject: mockSetSelectedProject })
+      );
+
+      expect(clock(result.current.startTime)).toBe('08:00');
+      expect(result.current.date.getDate()).toBe(29);
+    });
+
+    it('after 23:00 the next whole hour is midnight, on the next day', () => {
+      jest.useFakeTimers({ now: new Date(2026, 9, 29, 23, 30), doNotFake: ['nextTick', 'setImmediate'] });
+      const { result } = renderHook(() =>
+        useAddRehearsalForm({ projects: [], selectedProject: null, setSelectedProject: mockSetSelectedProject })
+      );
+
+      expect(clock(result.current.startTime)).toBe('00:00');
+      expect(result.current.date.getDate()).toBe(30);
     });
   });
 

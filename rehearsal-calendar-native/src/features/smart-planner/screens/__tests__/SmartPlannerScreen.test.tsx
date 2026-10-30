@@ -45,9 +45,11 @@ jest.mock('../../../../contexts/ProjectContext', () => ({
     projects: [
       { id: 'A', name: 'Project A', is_admin: true, timezone: 'UTC', created_at: '2026-01-01T00:00:00Z' },
       { id: 'B', name: 'Project B', is_admin: true, timezone: 'UTC', created_at: '2026-01-02T00:00:00Z' },
+      { id: 'C', name: 'Project C', is_admin: false, timezone: 'UTC', created_at: '2026-01-03T00:00:00Z' },
     ],
   }),
 }));
+jest.mock('../../../../hooks/useWeekStart', () => ({ useWeekStart: () => 'monday' }));
 jest.mock('../../../../shared/services/api', () => ({
   projectsAPI: {
     getProject: jest.fn(),
@@ -75,6 +77,7 @@ const member = (userId: string) => ({
 const MEMBERS: Record<string, ReturnType<typeof member>[]> = {
   A: ['a1', 'a2', 'a3'].map(member),
   B: ['b1', 'b2'].map(member),
+  C: ['c1', 'c2'].map(member),
 };
 
 const getProject = projectsAPI.getProject as jest.Mock;
@@ -158,6 +161,50 @@ describe('The participants sheet over the planner (T-010)', () => {
     const scroll = screen.UNSAFE_getByType('ScrollView' as any);
     expect(scroll.props.keyboardShouldPersistTaps).toBe('handled');
     expect(scroll.findByProps({ testID: 'participants-row' })).toBeTruthy();
+  });
+});
+
+// T-012. "+ Add" opened the form for anyone, and handed it the whole slot:
+// "All day" became a rehearsal from 09:00 to 23:00.
+describe('A slot\'s "+ Add" (T-012)', () => {
+  it('gives the form the slot\'s start, and no end', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    expect(screen.getAllByText(t.smartPlanner.allDay).length).toBeGreaterThan(0);
+    fireEvent.press(screen.getByTestId('planner-add-2026-01-01-09:00'));
+
+    expect(navigate).toHaveBeenCalledWith('AddRehearsal', expect.objectContaining({
+      projectId: 'A', prefilledDate: '2026-01-01', prefilledTime: '09:00',
+    }));
+    expect(navigate.mock.calls[0][1]).not.toHaveProperty('prefilledEndTime');
+  });
+
+  it('is shown only to an admin of the project', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('C')} />);
+    await settle();
+    await settle();
+
+    // The slots are there, to read; nothing on them opens the form.
+    expect(screen.getAllByText(t.smartPlanner.allDay).length).toBeGreaterThan(0);
+    expect(screen.queryByText(t.smartPlanner.addButton)).toBeNull();
+  });
+});
+
+// T-012: the segment chose "Select Dates" on the tap, and a cancelled picker
+// left it selected over the week's dates.
+describe('Cancel in "Select Dates"', () => {
+  it('leaves the period it was', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+
+    fireEvent.press(screen.getByTestId('planner-period-custom'));
+    fireEvent.press(screen.getByTestId('date-range-cancel'));
+    await settle();
+
+    expect(screen.getByTestId('planner-period-week').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('planner-period-custom').props.accessibilityState).toMatchObject({ selected: false });
   });
 });
 

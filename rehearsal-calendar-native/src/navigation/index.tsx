@@ -11,6 +11,8 @@ import { Colors } from '../shared/constants/colors';
 import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { inviteCodeFromUrl } from '../shared/utils/inviteCode';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
+import { useProjects } from '../contexts/ProjectContext';
+import { canScheduleAny } from '../shared/utils/rehearsalRights';
 import { useNotifications } from '../shared/hooks/useNotifications';
 import { useAutoCalendarSync } from '../shared/hooks/useAutoCalendarSync';
 import { OnboardingNavigator } from '../features/onboarding';
@@ -112,6 +114,9 @@ function ActionSheetWrapper() {
   const navigation = useNavigation<AppNavigation<'MainTabs'>>();
   const { showActionSheet, setShowActionSheet } = useActionSheet();
   const { language } = useI18n();
+  // "Create Rehearsal" only for someone with a project to put one in (T-012).
+  const { projects } = useProjects();
+  const canSchedule = canScheduleAny(projects);
 
   // Anyone can create a project: the paid tier was taken out of the app for
   // the App Store release — see docs/app-store-release.md
@@ -124,10 +129,10 @@ function ActionSheetWrapper() {
     <CreateActionSheet
       visible={showActionSheet}
       onClose={() => setShowActionSheet(false)}
-      onCreateRehearsal={() => {
+      onCreateRehearsal={canSchedule ? () => {
         setShowActionSheet(false);
         navigation.navigate('AddRehearsal', {});
-      }}
+      } : undefined}
       onMarkBusy={() => {
         setShowActionSheet(false);
         navigation.navigate('MarkBusy');

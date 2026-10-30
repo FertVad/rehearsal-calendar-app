@@ -85,6 +85,7 @@ jest.mock('../../contexts/AuthContext', () => ({
 jest.mock('../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: require('../../i18n/translations').translations.en, language: 'en' }),
 }));
+jest.mock('../../contexts/ProjectContext', () => ({ useProjects: () => ({ projects: [] }) }));
 jest.mock('../../shared/hooks/useNotifications', () => ({ useNotifications: () => undefined }));
 jest.mock('../../shared/hooks/useAutoCalendarSync', () => ({ useAutoCalendarSync: () => undefined }));
 jest.mock('../../shared/components/CreateActionSheet', () => ({ CreateActionSheet: () => null }));

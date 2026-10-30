@@ -57,8 +57,8 @@ export type AppStackParamList = {
     projectId?: string;
     rehearsalId?: string;
     prefilledDate?: string;
+    /** A start: the form ends it the usual length on (rehearsalDefaults.ts). */
     prefilledTime?: string;
-    prefilledEndTime?: string;
     /** The people the planner planned the slot for; absent means everyone (DP02). */
     prefilledMemberIds?: string[];
   };

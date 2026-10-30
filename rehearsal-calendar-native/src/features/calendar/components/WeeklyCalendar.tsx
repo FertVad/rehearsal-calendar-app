@@ -173,10 +173,10 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
                 hapticMedium();
                 onDaySelect(day.date);
               }}
-              onLongPress={() => {
+              onLongPress={onDayLongPress && (() => {
                 hapticMedium();
-                onDayLongPress?.(day.date);
-              }}
+                onDayLongPress(day.date);
+              })}
               delayLongPress={400}
               activeOpacity={0.7}
             >
