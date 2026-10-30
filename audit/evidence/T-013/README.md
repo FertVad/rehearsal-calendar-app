@@ -113,6 +113,99 @@ again untouched, closes at once. 25 — saved, closes at once; the day picked
 again, asks, "Save" saves and closes. Screenshots `10-close-asks`,
 `20-close-asks`, `25-close-asks`.
 
+## Review (Astra): two findings
+
+Base `b0af89a`. Fix `9a0b459`, flow `f90f8d1`. Fix files:
+
+```
+src/features/availability/hooks/useAvailabilityData.ts
+src/features/availability/hooks/useAvailabilitySave.ts
+src/features/availability/screens/AvailabilityScreen.tsx
+src/shared/hooks/useLeaveGuard.ts
+```
+
+**[P1] "Save" from the question lost an edit made while it was out.** The
+sheet stays usable during the save; `markSaved` correctly left a day edited
+meanwhile unsaved, but the guard's `leave()` ran as soon as the request came
+back and closed the sheet past it. Cause: the way out went on by what was
+sent, not by what was left. Now `useLeaveGuard` holds the action until the
+save has rendered: nothing left unsaved, it is dispatched; something left,
+the question comes again for it. The form (`AddRehearsal`) is unaffected: its
+"Save" is Create, which closes the form on its own.
+
+**[P2] Mark Busy asked about an unchanged day.** The guard read `hasChanges`,
+"some day was touched": the mode of a day of hours picked again counted. Now
+`useAvailabilityData` keeps what the server holds per day (as last loaded or
+saved — `markSaved` gets the days sent) and `differsFromSaved` compares each
+changed day with it (`sameDay`: the mode, and the hours in custom mode; no
+state is not the same as a declared free day, since a save would write one).
+The guard reads `differsFromSaved`; `hasChanges`, what a save would send,
+still drives the Save button, so re-saving a day as it is (flow 25's own
+check of the past-midnight slot) still works.
+
+Flow 25 no longer treats a re-picked mode as a change (the step at line 122
+the review named): picked again, closed — no question. Then a real change
+(busy), the save's answer held (`hold-answers.js`, `PUT
+/availability/days$`, `OPEN`), "Save", the day back to hours while it is out,
+release — the question comes again (`25-asks-again`), "Don't Save" closes.
+
+### Red before
+
+```
+# fix files at b0af89a, tests from 9a0b459
+npx jest --selectProjects frontend --silent \
+  src/features/availability/screens/__tests__/AvailabilityLeave.test.tsx \
+  src/features/availability/hooks/__tests__/useAvailabilityDrafts.test.ts \
+  src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts
+FAIL AvailabilityLeave.test.tsx
+  ● a day edited while that save was out is not closed away: the question comes again (review)
+    Expected number of calls: 0  Received number of calls: 1
+    > expect(navigation.dispatch).not.toHaveBeenCalled();
+FAIL useAvailabilitySave.test.ts  (markSaved now gets the days sent, 3 tests)
+FAIL useAvailabilityDrafts.test.ts
+  ● Test suite failed to run
+    TS2339: Property 'differsFromSaved' does not exist on type ...
+    TS2554: Expected 1 arguments, but got 2.   (markSaved)
+Tests: 4 failed, 22 passed, 26 total
+```
+
+The real-hook P2 tests fail on types on the old code: the flag they read is
+the fix. P2 is shown red on behaviour by flow 25:
+
+```
+# all four fix files at b0af89a
+npm run e2e -- e2e/flows/25-past-midnight-availability.yaml
+[Failed] A busy slot past midnight is one slot, on both days (3m 35s)
+  (Assertion is false: "Don't Save" is not visible)
+  step 93, after 25-evening-slot-whole: the mode picked again, closed — it asked
+
+# only useLeaveGuard.ts at b0af89a (P2 fixed, P1 not)
+npm run e2e -- e2e/flows/25-past-midnight-availability.yaml
+[Failed] A busy slot past midnight is one slot, on both days (3m 50s)
+  (Assertion is false: "Don't Save" is visible)
+  step 113, after 25-close-asks and the release: the sheet had closed and the
+  calendar tab was on screen; the hours set while the save was out were gone
+```
+
+### Green after (`f90f8d1`)
+
+```
+npx jest --selectProjects frontend --silent     Tests: 934 passed, 934 total
+npm run type-check                              clean
+npm run check:secrets                           {"summary":"pass","findings":0}
+npm run e2e -- e2e/flows/25-past-midnight-availability.yaml
+[Passed] A busy slot past midnight is one slot, on both days (4m 14s)
+npm run e2e -- e2e/flows/10-availability-days.yaml
+[Passed] Availability saves the day it changed (2m 32s)
+npm run e2e -- e2e/flows/20-save-before-availability.yaml
+[Passed] Save before the availability is in (1m 49s)
+```
+
+The first green run of 25 failed on an `assertVisible: availability-legend`
+under the repeated question: iOS takes the content under an action sheet out
+of the accessibility tree. The step was dropped; the question itself is the
+proof (screenshot `25-asks-again`: the sheet open, the question over it).
+
 ## Flow 20: the close button under the sheet's edge
 
 The first green runs of flow 20 failed at the question with the fix in. The
