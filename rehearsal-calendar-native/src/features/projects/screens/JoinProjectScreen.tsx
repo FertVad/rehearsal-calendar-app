@@ -43,21 +43,23 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
   } | null>(null);
 
   useEffect(() => {
-    if (!code) return;
-    checkAndFetchInviteInfo();
-  }, [code]);
+    if (!linkCode) return;
+    checkAndFetchInviteInfo(linkCode);
+  }, [linkCode]);
 
   const handleSubmitCode = () => {
     const entered = typedCode.trim();
-    if (!entered) return;
-    setError(null);
-    setLoading(true);
+    if (!entered || loading) return;
     // Pasting the whole link is the likelier gesture than copying the code out
     // of it, so take the code out of a link by the same rule as opened links.
-    setCode(inviteCodeFromUrl(entered) ?? entered);
+    const next = inviteCodeFromUrl(entered) ?? entered;
+    setCode(next);
+    // Asked here rather than on a change of `code`: the same code sent again
+    // after a failure is asked again.
+    fetchInviteInfo(next);
   };
 
-  const checkAndFetchInviteInfo = async () => {
+  const checkAndFetchInviteInfo = async (inviteCode: string) => {
     try {
       // Check if user logged out recently (within last 5 seconds)
       const lastLogoutTime = await AsyncStorage.getItem('lastLogoutTime');
@@ -74,19 +76,19 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
       }
 
       // Proceed with fetching invite info
-      await fetchInviteInfo();
+      await fetchInviteInfo(inviteCode);
     } catch (err) {
       logger.error('Error checking logout time:', err);
       // If check fails, proceed anyway
-      await fetchInviteInfo();
+      await fetchInviteInfo(inviteCode);
     }
   };
 
-  const fetchInviteInfo = async () => {
+  const fetchInviteInfo = async (inviteCode: string) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await invitesAPI.getInviteInfo(code);
+      const response = await invitesAPI.getInviteInfo(inviteCode);
       setProjectInfo(response.data);
     } catch (err: any) {
       if (err.response?.status === 404) {
@@ -125,6 +127,8 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
         });
       } else {
         setError(err.response?.data?.error || t.projects.joinError);
+        // A typed code goes back to its field, the error under it.
+        if (!linkCode) setProjectInfo(null);
       }
     } finally {
       setJoining(false);
@@ -135,8 +139,9 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
     navigation.goBack();
   };
 
-  // No code yet — ask for one
-  if (!code) {
+  // No link — ask for a code until one names a project. A code that does not
+  // stays in the field with the error under it, to be corrected.
+  if (!linkCode && !projectInfo) {
     return (
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
@@ -151,9 +156,13 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
           <Text style={styles.subtitle}>{t.projects.joinByCodeSubtitle}</Text>
 
           <TextInput
-            style={styles.codeInput}
+            testID="join-code-input"
+            style={[styles.codeInput, error && styles.codeInputError]}
             value={typedCode}
-            onChangeText={setTypedCode}
+            onChangeText={(text) => {
+              setTypedCode(text);
+              setError(null);
+            }}
             placeholder={t.projects.joinByCodePlaceholder}
             placeholderTextColor={Colors.text.tertiary}
             autoCapitalize="none"
@@ -161,16 +170,26 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
             returnKeyType="go"
             onSubmitEditing={handleSubmitCode}
           />
+          {error && (
+            <Text testID="join-code-error" style={styles.codeError}>
+              {error}
+            </Text>
+          )}
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
+              testID="join-code-submit"
               style={[styles.button, styles.primaryButton]}
               onPress={handleSubmitCode}
-              disabled={!typedCode.trim()}
+              disabled={!typedCode.trim() || loading}
             >
-              <Text style={[styles.buttonText, styles.primaryButtonText]}>
-                {t.projects.join}
-              </Text>
+              {loading ? (
+                <ActivityIndicator size="small" color={Colors.text.inverse} />
+              ) : (
+                <Text style={[styles.buttonText, styles.primaryButtonText]}>
+                  {t.projects.join}
+                </Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -204,11 +223,11 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
           <Text style={styles.errorTitle}>{t.projects.error}</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
-            style={styles.button}
-            onPress={linkCode ? handleCancel : () => { setCode(''); setError(null); }}
+            style={[styles.button, styles.primaryButton]}
+            onPress={handleCancel}
           >
-            <Text style={styles.buttonText}>
-              {linkCode ? t.projects.close : t.projects.tryAgain}
+            <Text style={[styles.buttonText, styles.primaryButtonText]}>
+              {t.projects.close}
             </Text>
           </TouchableOpacity>
         </View>

@@ -118,4 +118,14 @@ export const styles = StyleSheet.create({
     color: Colors.text.primary,
     fontSize: FontSize.base,
   },
+  codeInputError: {
+    borderColor: Colors.accent.red,
+  },
+  codeError: {
+    alignSelf: 'flex-start',
+    fontSize: FontSize.sm,
+    color: Colors.accent.red,
+    marginTop: -Spacing.sm,
+    marginBottom: Spacing.md,
+  },
 });

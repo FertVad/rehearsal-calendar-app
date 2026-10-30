@@ -36,3 +36,43 @@ tags:
 - extendedWaitUntil:
     visible: ".*Twelfth Night.*"
     timeout: 15000
+# A code typed by hand that names no project (T-011). The screen went to a
+# full-screen error whose "Try another code" was black on the dark background:
+# nothing to tap, no way out. The error is under the field now, and the code
+# stays in it to be corrected.
+- scrollUntilVisible:
+    element: ".*Join with a code"
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Join with a code"
+      SEE: "Code or link"
+      WAIT_MS: 10000
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: join-code-input
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: "NOSUCH42"
+      - assertVisible:
+          id: join-code-input
+          text: "NOSUCH42"
+- tapOn:
+    id: join-code-submit
+- extendedWaitUntil:
+    visible:
+      id: join-code-error
+      text: "Invitation not found"
+    timeout: 15000
+- assertVisible:
+    id: join-code-input
+    text: "NOSUCH42"
+- takeScreenshot: 08-wrong-code-under-the-field
+- tapOn: "Cancel"
+- extendedWaitUntil:
+    visible: ".*Twelfth Night.*"
+    timeout: 10000

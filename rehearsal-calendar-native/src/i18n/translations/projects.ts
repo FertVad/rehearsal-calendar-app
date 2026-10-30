@@ -38,7 +38,6 @@ export interface ProjectsTranslations {
   joinByCode: string;
   joinByCodeSubtitle: string;
   joinByCodePlaceholder: string;
-  tryAgain: string;
   shareInviteMessage: (projectName: string) => string;
   shareInviteTitle: (projectName: string) => string;
   manageMember: string;
@@ -114,7 +113,6 @@ export const ru = {
     joinByCode: 'Вступить в проект',
     joinByCodeSubtitle: 'Введите код или вставьте ссылку из приглашения',
     joinByCodePlaceholder: 'Код или ссылка',
-    tryAgain: 'Ввести другой код',
     shareInviteMessage: (projectName: string) => `Присоединяйся к проекту "${projectName}" в приложении Rehearsly:`,
     shareInviteTitle: (projectName: string) => `Приглашение в проект ${projectName}`,
     manageMember: 'Управление участником',
@@ -191,7 +189,6 @@ export const en = {
     joinByCode: 'Join a project',
     joinByCodeSubtitle: 'Enter the code, or paste the invite link',
     joinByCodePlaceholder: 'Code or link',
-    tryAgain: 'Try another code',
     shareInviteMessage: (projectName: string) => `Join the project "${projectName}" in the Rehearsly app:`,
     shareInviteTitle: (projectName: string) => `Invitation to project ${projectName}`,
     manageMember: 'Manage Member',
@@ -268,7 +265,6 @@ export const es = {
     joinByCode: 'Unirse a un proyecto',
     joinByCodeSubtitle: 'Escriban el código o peguen el enlace',
     joinByCodePlaceholder: 'Código o enlace',
-    tryAgain: 'Probar otro código',
     shareInviteMessage: (projectName: string) => `Únete al proyecto "${projectName}" en la app Rehearsly:`,
     shareInviteTitle: (projectName: string) => `Invitación al proyecto ${projectName}`,
     manageMember: 'Gestionar miembro',
@@ -345,7 +341,6 @@ export const de = {
     joinByCode: 'Einem Projekt beitreten',
     joinByCodeSubtitle: 'Gib den Code ein oder füg den Link ein',
     joinByCodePlaceholder: 'Code oder Link',
-    tryAgain: 'Anderen Code versuchen',
     shareInviteMessage: (projectName: string) => `Tritt dem Projekt „${projectName}" in der Rehearsly-App bei:`,
     shareInviteTitle: (projectName: string) => `Einladung zum Projekt ${projectName}`,
     manageMember: 'Mitglied verwalten',
