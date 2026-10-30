@@ -9,6 +9,7 @@ import {
   formatDateToTimeString,
   isEmptyClockRange,
   parseTimeString,
+  todayIn,
   wallClockIn,
 } from '../../../shared/utils/time';
 import { rehearsalsAPI } from '../../../shared/services/api';
@@ -132,9 +133,18 @@ export function useAddRehearsalForm({
       }
     }
 
-    if (prefilledDate) {
-      const parsedDate = new Date(prefilledDate + 'T00:00:00');
-      setDate(parsedDate);
+    if (prefilledDate && !prefilledTime) {
+      // A day with no time - a long press in the calendar - starts at the
+      // opening's hour on that day. Today it is the opening itself, date and
+      // all: at 23:30 that is midnight tomorrow, not 00:00 today, which had
+      // gone (T-012 review).
+      const onDay = new Date(prefilledDate + 'T00:00:00');
+      onDay.setHours(opening.getHours());
+      const start = prefilledDate === todayIn(timezone) ? opening : onDay;
+      setDate(start);
+      setStartTime(start);
+    } else if (prefilledDate) {
+      setDate(new Date(prefilledDate + 'T00:00:00'));
     }
 
     if (prefilledTime) {

@@ -486,6 +486,35 @@ describe('useAddRehearsalForm Hook', () => {
       expect(clock(result.current.startTime)).toBe('00:00');
       expect(result.current.date.getDate()).toBe(30);
     });
+
+    // The calendar's long press gives a day and no time (CalendarScreen).
+    describe('a long press on a day', () => {
+      const longPress = (prefilledDate: string) => renderHook(() =>
+        useAddRehearsalForm({
+          projects: [], selectedProject: null, setSelectedProject: mockSetSelectedProject,
+          routeParams: { prefilledDate },
+        })
+      ).result;
+
+      it('on today after 23:00 opens on tomorrow at midnight, not today at 00:00', () => {
+        jest.useFakeTimers({ now: new Date(2026, 9, 30, 23, 30), doNotFake: ['nextTick', 'setImmediate'] });
+        const result = longPress('2026-10-30');
+
+        expect(result.current.date.getDate()).toBe(31);
+        expect(clock(result.current.startTime)).toBe('00:00');
+        expect(clock(result.current.endTime)).toBe('03:00');
+        expect(result.current.endsNextDay).toBe(false);
+      });
+
+      it('on a later day opens on that day at the next whole hour', () => {
+        jest.useFakeTimers({ now: new Date(2026, 9, 30, 7, 2), doNotFake: ['nextTick', 'setImmediate'] });
+        const result = longPress('2026-11-02');
+
+        expect(result.current.date.getMonth()).toBe(10);
+        expect(result.current.date.getDate()).toBe(2);
+        expect(clock(result.current.startTime)).toBe('08:00');
+      });
+    });
   });
 
   describe('Project Selection', () => {
