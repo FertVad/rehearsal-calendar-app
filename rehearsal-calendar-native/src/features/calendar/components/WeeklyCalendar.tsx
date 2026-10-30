@@ -195,19 +195,23 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
                 {day.dayOfMonth}
               </Text>
 
-              {day.rehearsalCount > 0 && (
-                <View style={[
-                  styles.badge,
-                  isSelected && styles.badgeSelected,
-                ]}>
-                  <Text style={[
-                    styles.badgeText,
-                    isSelected && styles.badgeTextSelected,
+              {/* Under the date, in a slot every cell keeps: in the corner,
+                  absolute, it covered the day's name (T-011). */}
+              <View testID={`calendar-day-count-${day.date}`} style={styles.badgeSlot}>
+                {day.rehearsalCount > 0 && (
+                  <View style={[
+                    styles.badge,
+                    isSelected && styles.badgeSelected,
                   ]}>
-                    {day.rehearsalCount}
-                  </Text>
-                </View>
-              )}
+                    <Text style={[
+                      styles.badgeText,
+                      isSelected && styles.badgeTextSelected,
+                    ]}>
+                      {day.rehearsalCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -321,7 +325,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg.secondary,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
     minHeight: 56,
   },
   dayToday: {
@@ -347,10 +350,13 @@ const styles = StyleSheet.create({
   textSelected: {
     color: Colors.text.inverse,
   },
+  badgeSlot: {
+    height: 16,
+    marginTop: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   badge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
     backgroundColor: Colors.accent.purple,
     borderRadius: 8,
     minWidth: 16,

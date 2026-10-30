@@ -16,6 +16,14 @@ tags:
 - extendedWaitUntil:
     visible: ".*Lamp trimming.*"
     timeout: 30000
+# Both days of his carry a count of rehearsals, under the date: in the cell's
+# corner it covered the day's name (T-011). A cell is one element to Maestro,
+# its name, date and count one label, so where the count sits is shown here
+# and held by WeeklyCalendar.test.
+- assertVisible:
+    id: calendar-day-${TODAY_DAY}
+    text: ".*, 1"
+- takeScreenshot: 41-week-strip-counts
 - tapOn:
     id: calendar-day-${PICKED_DAY}
 - extendedWaitUntil:
