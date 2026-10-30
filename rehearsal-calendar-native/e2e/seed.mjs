@@ -268,6 +268,8 @@ export async function seed({ client, apiUrl, timezone }) {
   if (!new RegExp(`^[${inviteFormat.alphabet}]{${inviteFormat.length}}$`).test(twelfth.inviteCode)) {
     throw new Error(`The server issued ${twelfth.inviteCode}, not a short invite code`);
   }
+  // A second invitation opened over Twelfth Night's, the screen still up (08).
+  const arden = await project('As You Like It', 'The forest of Arden', [], 'orsino');
   // Ranevskaya runs the orchard and Lopakhin is in it; he runs a project of his own.
   const { id: orchardId } = await project('The Cherry Orchard', 'Act IV', ['lopakhin'], 'ranevskaya');
   await project('Lopakhin Holdings', 'Summer cottages', [], 'lopakhin');
@@ -560,7 +562,7 @@ export async function seed({ client, apiUrl, timezone }) {
     password: PASSWORD,
     people: Object.fromEntries(Object.entries(PEOPLE).map(([key, person]) => [key, { id: ids[key], email: person.email }])),
     projects: { hamlet: hamletId, seagull: seagullId, sisters: sistersId, bear: bearId, twelfth: twelfth.id },
-    invites: { twelfth: twelfth.inviteCode },
+    invites: { twelfth: twelfth.inviteCode, arden: arden.inviteCode },
     days,
     times,
     labels,
