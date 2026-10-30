@@ -92,6 +92,14 @@ tags:
       below:
         id: rehearsal-project
     timeout: 15000
+# The slot gives the start; the end is the usual length on - three hours, The
+# Bear having no rehearsal yet - not the slot's own end, 14:00 (T-012).
+- assertVisible:
+    id: rehearsal-start-time
+    text: ".*10:00.*"
+- assertVisible:
+    id: rehearsal-end-time
+    text: ".*13:00.*"
 - takeScreenshot: 07-form-smirnov-busy
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -154,6 +162,33 @@ tags:
     text: ".*2 of 3.*"
 - assertNotVisible: "Busy: .*Grigory Smirnov.*"
 - takeScreenshot: 07-planner-three-sisters
+# Tomorrow is free for all three: "All day", 09:00-23:00. Its "+ Add" made a
+# fourteen-hour rehearsal; it starts one at 09:00 for three hours (T-012).
+# Only opened, and closed again.
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-09:00
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    id: planner-add-${TOMORROW_DAY}-09:00
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-end-time
+    timeout: 15000
+- assertVisible:
+    id: rehearsal-start-time
+    text: ".*09:00.*"
+- assertVisible:
+    id: rehearsal-end-time
+    text: ".*12:00.*"
+- takeScreenshot: 07-form-all-day
+- tapOn: "Cancel"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-project
+    timeout: 10000
 # Back to the calendar: in its place, not 60 pt down. The load on focus turned
 # on the pull-to-refresh spinner, and iOS left the calendar under it (T-011).
 # Maestro reads no coordinates, so the filter is tapped where it belongs - its

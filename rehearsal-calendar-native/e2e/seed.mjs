@@ -204,6 +204,17 @@ export function otherDayThisWeek() {
   return new Date().getDay() === 0 ? -1 : 1;
 }
 
+/** This month's first Saturday and the Sunday after it, both in this month (41). */
+export function firstWeekendOfMonth() {
+  const day = new Date();
+  day.setDate(1);
+  while (day.getDay() !== 6) day.setDate(day.getDate() + 1);
+  const saturday = new Date(day);
+  day.setDate(day.getDate() + 1);
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return { saturday: ymd(saturday), sunday: ymd(day) };
+}
+
 /**
  * Chebutykin's zone (23): Tel Aviv, set here rather than taken from the
  * machine, so his flow reads the same wherever it runs.
@@ -477,6 +488,9 @@ export async function seed({ client, apiUrl, timezone }) {
     picked: localDate(otherDayThisWeek()), today: localDate(0),
     // The day Sonya marks busy, and the one after it, which stays free (45).
     tomorrow: localDate(1), after_tomorrow: localDate(2),
+    // A weekend in this month's period picker, which begins its weeks on
+    // Monday, everyone's default: Sunday beside Saturday, not under it (41).
+    ...firstWeekendOfMonth(),
   };
   await call(apiUrl, 'PUT', '/native/availability/days', {
     token: await token('treplev'),

@@ -31,12 +31,20 @@ tags:
 - tapOn:
     text: "Not Now"
     optional: true
+- runScript:
+    file: ../scripts/next-hour.js
 - tapOn:
     id: tab-create
 - tapOn: "Create Rehearsal"
 - extendedWaitUntil:
     visible: "Add Rehearsal"
     timeout: 10000
+# It opens at the next whole hour, not the one already begun: 07:00 at 07:02
+# was in the past (T-012). HOUR_AFTER if the hour turned on the way here.
+- assertVisible:
+    id: rehearsal-start-time
+    text: ".*(${output.NEXT_HOUR}|${output.HOUR_AFTER}).*"
+- takeScreenshot: 26-form-next-hour
 # Who takes part is one row that says how many: she alone (T-010).
 - extendedWaitUntil:
     visible:
@@ -44,9 +52,10 @@ tags:
       text: "Participants, 1 of 1"
     timeout: 10000
 # Start: 11 PM, then the end: 1 AM, each on its own picker. Both are opened
-# whatever the hour of the run. The form starts at the hour it is; started
-# at 22:00 its end, 00:00, is already past midnight and stays when the start
-# moves, so only a run at 22:xx needed the end's picker - and that second
+# whatever the hour of the run. The form started at the hour it was, its end
+# two hours on; started at 22:00 its end, 00:00, was already past midnight
+# and stayed when the start moved, so only a run at 22:xx needed the end's
+# picker - and that second
 # picker of the form was drawn but not in the accessibility tree: React
 # Native's Modal left every second sheet a screen presented out of it (T-208,
 # AppModal). The flow failed at 22:xx and passed at every other hour.

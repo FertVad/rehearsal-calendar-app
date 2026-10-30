@@ -4,10 +4,18 @@
 # trimming" today and "Boat repair" on the other day of this week he picks
 # (tomorrow, or yesterday on a Sunday); with that day picked, today's is
 # nowhere on the screen.
+#
+# Yakov is in one project, and no admin of it (T-012). Nothing that opens the
+# rehearsal form is shown to him: it opened, and offered only "No projects
+# where you are an administrator". And the planner's period picker names
+# today by his profile, not by the phone, which is in Honolulu (run.mjs) and
+# for half of every day on another date.
 appId: ${APP_ID}
 name: Today selects today
 tags:
   - calendar
+  - planner
+  - rehearsals
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -40,3 +48,69 @@ tags:
     id: calendar-day-${TODAY_DAY}
     selected: true
 - takeScreenshot: 41-today-selected
+# A long press on a day opened the form on it. For him it is no gesture.
+- longPressOn:
+    id: calendar-day-${PICKED_DAY}
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertNotVisible: "Add Rehearsal"
+- assertVisible:
+    id: calendar-filter
+# The "+" sheet lists what he can do: mark himself busy, make a project.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: "10000"
+- assertVisible: "Create Project"
+- assertNotVisible: "Create Rehearsal"
+- takeScreenshot: 41-create-sheet-member
+# iOS draws this sheet with no Cancel; a tap beside it puts it away.
+- tapOn:
+    point: "50%,80%"
+- extendedWaitUntil:
+    notVisible: "Mark Busy"
+    timeout: 10000
+# The planner: his project's slots, to read, with no "+ Add" on them. A whole
+# free day is brought to the middle; its "+ Add" stood beside it.
+- tapOn: "Planner, tab.*"
+- scrollUntilVisible:
+    element: "All day"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- waitForAnimationToEnd
+- assertNotVisible: "\\+ Add"
+- takeScreenshot: 41-planner-member
+# Its period picker: today is the profile's day, the week begins on Monday,
+# and Cancel leaves the period as it was.
+- scrollUntilVisible:
+    element:
+      id: planner-period-custom
+    direction: UP
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-period-custom
+      SEE: "Select Period"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: date-range-calendar.day_${TODAY_DAY}
+    text: ".*Today.*"
+- assertVisible:
+    id: date-range-calendar.day_${SUNDAY_DAY}
+    rightOf:
+      id: date-range-calendar.day_${SATURDAY_DAY}
+- takeScreenshot: 41-period-picker
+- tapOn:
+    id: date-range-cancel
+- extendedWaitUntil:
+    notVisible: "Select Period"
+    timeout: 10000
+- assertVisible:
+    id: planner-period-week
+    selected: true
+- assertVisible:
+    id: planner-period-custom
+    selected: false
