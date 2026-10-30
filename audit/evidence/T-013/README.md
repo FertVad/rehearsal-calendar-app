@@ -215,3 +215,57 @@ tapped the button at y=29–61 pt — the status bar, which scrolled the form to
 the top instead. The flow now swipes the form back to its top and waits for
 `rehearsal-project` before the tap. Not a defect of the guard; the header
 scrolling with the form is how the screen already was.
+
+## Review round 2: an edit while the save is out
+
+Astra (reviews/T-013-r2.md): both screens stayed editable while a save was
+out, and "saved" was what the screen held when the answer came, not what was
+sent. Mark Busy: a day saved busy, made free, saved from the question, made
+busy again meanwhile — compared with the server as unchanged, the sheet closed
+unasked and the save wrote free. The form: "Room A" saved from the question,
+"Room B" typed meanwhile, `markSaved()` cleared the whole form and OK closed B
+away.
+
+By the owner's decision (30.10 22:19) the cause is fixed once, in
+`useLeaveGuard`: every save of both screens — the question's and the screen's
+own button — goes through it. While one is out the screen takes no taps
+(`pointerEvents="none"`, the form's text fields `editable={false}`), shows it
+is saving (Mark Busy: `availability-saving` in the header; the form: its
+button's spinner), and a way out waits silently; gone through, the way out
+asked for goes on; failed, the screen keeps its changes and the save's alert
+says why. Saved is what was sent: Mark Busy already marked the days it sent
+(`markSaved(sent, availability)` of the save's own render); the form now marks
+its `fields` as they were when the save began, a field holding something else
+since staying unsaved. The form's Save from the question closes it without
+the success alert, as Mark Busy does: the alert would go with the sheet.
+
+Flow 25 drops the edit made while the save is out — it cannot be made any
+more — and shows the lock instead: the saving indicator, a tap on the day that
+does not open it, then the sheet closing unasked and the day read back busy.
+
+### Red before (base `8aee22c`, the task's commits before this fix)
+
+Unit tests on the real screens and hooks: `r2-red-before.txt` — 2 of 3 in
+`AvailabilitySaving.test.tsx` and the 2 new edit-while-saving tests in
+`AddRehearsalScreen.test.tsx` fail, the edit going into the screen.
+
+```
+git restore --source=8aee22c -- src/shared/hooks/useLeaveGuard.ts src/features/availability/screens/AvailabilityScreen.tsx src/features/calendar/hooks/useAddRehearsalForm.ts src/features/calendar/hooks/useAddRehearsalSubmit.ts src/features/calendar/screens/AddRehearsalScreen.tsx
+npm run e2e -- e2e/flows/25-past-midnight-availability.yaml
+[Failed] A busy slot past midnight is one slot, on both days (3m 10s) (Assertion is false: id: availability-saving is visible)
+git restore --source=HEAD -- <the same files>
+```
+
+### Green after (`ad93876`)
+
+```
+npx jest --selectProjects frontend --silent     Tests: 964 passed, 964 total
+npx tsc --noEmit -p .                           clean
+npm run check:secrets                           {"summary":"pass","findings":0}
+npm run e2e -- e2e/flows/25-past-midnight-availability.yaml
+[Passed] A busy slot past midnight is one slot, on both days (3m 33s)
+npm run e2e -- e2e/flows/20-save-before-availability.yaml
+[Passed] Save before the availability is in (2m 23s)
+npm run e2e -- e2e/flows/10-availability-days.yaml
+[Passed] Availability saves the day it changed (2m 20s)
+```
