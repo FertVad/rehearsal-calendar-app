@@ -105,6 +105,71 @@ npm run e2e -- e2e/flows/26-past-midnight-form.yaml       [Passed] (3m 5s)
 npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml     [Passed] (2m 8s)
 ```
 
+## Review (Astra): changes
+
+1. **A long press on today after 23:00 opened a rehearsal in the past.** The
+   form's start was `nextRoundHour(now)`, which is tomorrow's 00:00 at 23:30.
+   The `prefilledDate` effect then put the date back to today, so the form
+   showed 30 Oct, 00:00–03:00. A day with no time now starts at the
+   opening's hour on that day. On the profile's today, it starts at the
+   opening itself, date included: 31 Oct, 00:00–03:00. A past day that
+   someone picks stays that day. Tests: `useAddRehearsalForm.test` ›
+   "a long press on a day", which passes `prefilledDate` as `CalendarScreen`
+   does.
+2. **VoiceOver still called the phone's date "today".** react-native-calendars'
+   `Day` builds its label as `getDefaultLocale().today || 'today'` plus the
+   date. It does this whenever `isToday` (the device clock) is true, whatever
+   the marking says, and it reads an empty word as 'today'. The picker now
+   passes a `dayComponent`, the library's own `PeriodDay`, and gives it a
+   label of its own: "Today" only on the profile's date (`useToday`), then
+   the date in the app's locale, then period start/end/disabled. Tests:
+   `DateRangePicker.test` › "VoiceOver hears "today" on the profile's day
+   only". It renders the library's real `Day` with what the picker gives
+   the calendar. Flow 41 now has `PHONE_TODAY_DAY` (seed, Honolulu). While
+   that date differs from the profile's, it asserts that the phone's day is
+   not labelled Today.
+3. **No on-screen red/green for "Recommended Time".** The seed gives Three
+   Sisters a 90-minute read-through three days ago. Flow 07 then checks two
+   things: "+ Add" on its "All day" slot opens 09:00–10:30, the project's
+   last length, and a tap on the form's "09:00-23:00 (14h)" chip leaves
+   09:00–10:30. The Bear, with no rehearsal, still checks the three-hour
+   fallback.
+
+### Red before
+
+```
+# 3   HEAD with only the chip's handling back as at ad8d513:
+#     TimeRecommendations passes (start, end), handleTimeSelect sets both
+npm run e2e -- e2e/flows/07-planner-project-switch.yaml
+[Failed] Planner follows the project (2m 24s) (Assertion is false: ".*10:30.*", id: rehearsal-end-time is visible)
+  -- run 2026-10-30_133041: 07-form-all-day taken (the slot's form at 09:00-10:30),
+     then step 117 after the chip's tap: start 09:00, end 23:00
+```
+
+Not run here: the Jest red for 1 and 2. In this session Jest did not finish
+even a single small file, sandboxed or not, `--runInBand` or not, through
+npx, node or npm test (each run hit its 4 to 10 minute limit; tsc ran
+normally). `npm test` itself stopped earlier, at three
+`check-secrets.test.mjs` subtests that fail in this environment. The new
+Jest tests are left to the supervisor's `npm test`. On ad8d513/HEAD~ they are
+expected to fail as follows: 1 gives date 30, not 31. 2 fails on
+`calendar.props.dayComponent` being undefined, because the library's label
+then begins with "Today" on the 28th.
+
+Flow 41's phone-date step could not be shown red here: the runs were after
+12:00 IST, when Honolulu and Jerusalem are on the same date, so the step is
+skipped (`when: true`).
+
+### Green after
+
+```
+npm run type-check                                         clean
+npm run e2e -- e2e/flows/07-planner-project-switch.yaml    [Passed] (2m 26s)
+npm run e2e -- e2e/flows/41-today-selects-today.yaml       [Passed] (2m 46s)
+npm run e2e -- e2e/flows/26-past-midnight-form.yaml        [Passed] (3m 14s)
+npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml      [Passed] (1m 51s)
+```
+
 ## Notes
 
 - **Flow 41 and the phone's date.** Flow 41 tells the profile's today from
