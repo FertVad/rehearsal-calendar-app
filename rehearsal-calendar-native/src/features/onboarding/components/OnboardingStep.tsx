@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { GlassButton } from '../../../shared/components';
 import OnboardingProgress from './OnboardingProgress';
 import { hapticLight } from '../../../shared/utils/haptics';
@@ -140,8 +140,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   skipButton: {
+    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
   },
   skipText: {
     fontSize: FontSize.sm,
@@ -188,7 +189,8 @@ const styles = StyleSheet.create({
   secondaryAction: {
     alignSelf: 'center',
     marginTop: 12,
-    paddingVertical: 8,
+    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingHorizontal: 16,
   },
   secondaryActionText: {

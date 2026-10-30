@@ -2,7 +2,7 @@
  * Styles for AvailabilityScreen
  */
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { PANEL_HEIGHT } from '../constants';
 
 export const styles = StyleSheet.create({
@@ -244,6 +244,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: Colors.bg.secondary,
     borderRadius: BorderRadius.sm,
+    minHeight: TouchTarget,
     padding: Spacing.sm,
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -254,7 +255,6 @@ export const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   removeSlotButton: {
-    padding: Spacing.sm,
     marginLeft: Spacing.sm,
   },
   addSlotButton: {

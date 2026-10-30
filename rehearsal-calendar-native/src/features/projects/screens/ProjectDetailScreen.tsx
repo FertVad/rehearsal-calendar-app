@@ -14,6 +14,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
 import type { ProjectsStackParamList, ProjectDetailNavigation } from '../../../navigation';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
@@ -432,9 +433,7 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
+          <IconButton icon="arrow-back" color={Colors.text.primary} accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()} />
           <Text style={styles.title} numberOfLines={1}>{project.name}</Text>
           {project.is_admin && (
             <View style={styles.adminBadge}>

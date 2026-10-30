@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { IconButton } from '../../../shared/components/IconButton';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../../shared/constants/colors';
@@ -117,31 +118,32 @@ export default function RehearsalCard({
                 <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
                 <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
               </View>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel={t.common.delete}
-                onPress={(e) => {
-                  e?.stopPropagation();
-                  onDelete(rehearsal.id);
-                }}
-                style={styles.iconButton}
-              >
-                <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel={t.common.edit}
-                onPress={(e) => {
-                  e?.stopPropagation();
-                  navigation.navigate('AddRehearsal', {
-                    rehearsalId: rehearsal.id,
-                    projectId: rehearsal.projectId,
-                  });
-                }}
-                style={styles.iconButton}
-              >
-                <Ionicons name="create-outline" size={18} color={Colors.text.secondary} />
-              </TouchableOpacity>
+              {/* Side by side: two 44 pt targets one over the other made the
+                  card taller than its text. */}
+              <View style={styles.adminActions}>
+                <IconButton
+                  icon="trash-outline"
+                  size={18}
+                  color={Colors.accent.red}
+                  accessibilityLabel={t.common.delete}
+                  onPress={(e) => {
+                    e?.stopPropagation();
+                    onDelete(rehearsal.id);
+                  }}
+                />
+                <IconButton
+                  icon="create-outline"
+                  size={18}
+                  accessibilityLabel={t.common.edit}
+                  onPress={(e) => {
+                    e?.stopPropagation();
+                    navigation.navigate('AddRehearsal', {
+                      rehearsalId: rehearsal.id,
+                      projectId: rehearsal.projectId,
+                    });
+                  }}
+                />
+              </View>
             </View>
           )}
         </View>

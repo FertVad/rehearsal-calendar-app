@@ -11,6 +11,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import type { Language } from '../../../i18n/translations';
 import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/components';
 import { AppModal } from '../../../shared/components/AppModal';
+import { IconButton } from '../../../shared/components/IconButton';
 import { BugReportSheet } from '../components/BugReportSheet';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
@@ -461,9 +462,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.timezoneModalTitle}</Text>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setTimezoneModalVisible(false); }}>
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
-              </TouchableOpacity>
+              <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setTimezoneModalVisible(false); }} />
             </View>
             <FlatList
               data={getTimezonesWithDevice()}
@@ -505,9 +504,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.language}</Text>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setLanguageModalVisible(false); }}>
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
-              </TouchableOpacity>
+              <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setLanguageModalVisible(false); }} />
             </View>
             <View style={styles.weekStartOptions}>
               {LANGUAGE_OPTIONS.map((option) => {
@@ -551,9 +548,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.weekStart}</Text>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setWeekStartModalVisible(false); }}>
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
-              </TouchableOpacity>
+              <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setWeekStartModalVisible(false); }} />
             </View>
             <View style={styles.weekStartOptions}>
               {WEEK_START_OPTIONS.map((option) => {
@@ -598,17 +593,15 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={[styles.modalContent, { maxHeight: undefined }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.deleteAccountConfirm}</Text>
-              <TouchableOpacity
-                accessibilityRole="button"
+              <IconButton
+                icon="close"
                 accessibilityLabel={t.common.close}
                 onPress={() => {
                   hapticLight();
                   setDeleteAccountModalVisible(false);
                 }}
                 disabled={deletingAccount}
-              >
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
-              </TouchableOpacity>
+              />
             </View>
             <View style={{ padding: 20 }}>
               <View style={{ marginBottom: 20 }}>

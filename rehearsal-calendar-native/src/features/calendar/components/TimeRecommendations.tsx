@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { ProjectMember } from '../../../shared/types';
 import { useTimeRecommendations, TimeSlot } from '../hooks/useTimeRecommendations';
 import { TimeRange } from '../../../shared/utils/availability';
@@ -130,8 +130,9 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.sm,
   },
   slotButton: {
+    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
   },

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -15,9 +15,6 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.bg.secondary,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.default,
-  },
-  backButton: {
-    padding: Spacing.xs,
   },
   title: {
     fontSize: FontSize.xl,
@@ -62,6 +59,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
+    minHeight: TouchTarget,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
     fontSize: FontSize.base,

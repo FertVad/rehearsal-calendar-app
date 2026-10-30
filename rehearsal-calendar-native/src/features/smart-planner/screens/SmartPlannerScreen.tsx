@@ -12,6 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { PlannerStackParamList, SmartPlannerNavigation } from '../../../navigation';
 import { Colors } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
 import type { SlotCategory, TimeSlot } from '../types';
 import { useSmartPlanner } from '../hooks/useSmartPlanner';
 import { DayCard } from '../components/DayCard';
@@ -210,14 +211,13 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const renderHeader = () => (
     <View style={styles.headerContainer}>
       <View style={styles.header}>
-        <TouchableOpacity
-          accessibilityRole="button"
+        <IconButton
+          icon="arrow-back"
+          color={Colors.text.primary}
           accessibilityLabel={t.common.back}
           style={styles.backButton}
           onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-        </TouchableOpacity>
+        />
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerSubtitle}>{t.smartPlanner.title}</Text>
         </View>

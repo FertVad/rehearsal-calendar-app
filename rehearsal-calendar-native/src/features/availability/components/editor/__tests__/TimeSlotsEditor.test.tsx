@@ -157,7 +157,7 @@ describe('TimeSlotsEditor Component', () => {
     });
 
     it('should call onRemoveSlot with correct index', () => {
-      const { UNSAFE_getAllByType } = render(
+      const { getAllByLabelText } = render(
         <TimeSlotsEditor
           slots={multipleSlots}
           validationError={null}
@@ -168,14 +168,8 @@ describe('TimeSlotsEditor Component', () => {
         />
       );
 
-      // Find all TouchableOpacity components
-      const touchables = UNSAFE_getAllByType(require('react-native').TouchableOpacity);
-
-      // Find the first remove button (trash icon)
-      const removeButtons = touchables.filter(t => {
-        const icon = t.props.children?.props?.name;
-        return icon === 'trash-outline';
-      });
+      // The remove buttons, by what they say they do
+      const removeButtons = getAllByLabelText(ru.common.delete);
 
       // Click first remove button (should remove index 0)
       fireEvent.press(removeButtons[0]);

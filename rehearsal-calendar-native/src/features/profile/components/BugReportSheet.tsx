@@ -9,11 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../../../contexts/I18nContext';
 import { bugReportsAPI } from '../../../shared/services/api';
 import { Colors } from '../../../shared/constants/colors';
 import { AppModal } from '../../../shared/components/AppModal';
+import { IconButton } from '../../../shared/components/IconButton';
 
 // The bug report, sent from the profile. It was a "Test Flight" banner over
 // every tab until the owner took the banner out (T-008, 29.10.2026); the
@@ -52,9 +52,7 @@ export function BugReportSheet({ visible, onClose }: { visible: boolean; onClose
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{t.profile.reportBug}</Text>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose}>
-              <Ionicons name="close" size={24} color={Colors.text.secondary} />
-            </TouchableOpacity>
+            <IconButton icon="close" accessibilityLabel={t.common.close} onPress={onClose} />
           </View>
           <TextInput
             testID="bug-report-message"
@@ -102,7 +100,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 6,
   },
   modalTitle: {
     color: Colors.text.primary,

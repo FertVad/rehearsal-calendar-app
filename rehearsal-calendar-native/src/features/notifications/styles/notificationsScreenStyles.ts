@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { Colors } from '../../../shared/constants/colors';
-import { Spacing, BorderRadius } from '../../../shared/constants/spacing';
+import { Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/spacing';
 import { FontSize, FontWeight } from '../../../shared/constants/typography';
 
 export const styles = StyleSheet.create({
@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   backButton: {
-    marginRight: Spacing.md,
+    marginRight: Spacing.xs,
   },
   title: {
     fontSize: FontSize.xxl,
@@ -25,7 +25,6 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   headerAction: {
-    padding: Spacing.sm,
     marginLeft: Spacing.xs,
   },
   // The panel the row slides off to reveal. Its height comes from the card's,
@@ -138,6 +137,8 @@ export const styles = StyleSheet.create({
   // Under the last card: the next page, or another try at the first.
   more: {
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: TouchTarget,
     paddingVertical: Spacing.md,
     marginTop: Spacing.sm,
   },

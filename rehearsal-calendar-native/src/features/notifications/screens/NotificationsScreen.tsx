@@ -18,6 +18,7 @@ import { TouchableOpacity as GestureTouchable } from 'react-native-gesture-handl
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
 import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
 import { useUnread } from '../../../contexts/UnreadContext';
@@ -330,31 +331,37 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-        </TouchableOpacity>
+        <IconButton
+          icon="arrow-back"
+          color={Colors.text.primary}
+          accessibilityLabel={t.common.back}
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        />
         <Text style={styles.title} numberOfLines={1}>{t.notifications.title}</Text>
 
         {/* Icons rather than words. Two text buttons beside a large title do not
             fit in Russian and fit still less in German, so they overlapped. The
             words survive as accessibility labels and in the confirmation. */}
         {hasUnread && (
-          <TouchableOpacity
+          <IconButton
+            icon="checkmark-done"
+            size={22}
+            color={Colors.accent.purple}
             style={styles.headerAction}
             onPress={markEverythingRead}
             accessibilityLabel={t.notifications.markAllRead}
-          >
-            <Ionicons name="checkmark-done" size={22} color={Colors.accent.purple} />
-          </TouchableOpacity>
+          />
         )}
         {items.length > 0 && (
-          <TouchableOpacity
+          <IconButton
+            icon="trash-outline"
+            size={22}
+            color={Colors.accent.red}
             style={styles.headerAction}
             onPress={confirmClearAll}
             accessibilityLabel={t.notifications.clearAll}
-          >
-            <Ionicons name="trash-outline" size={22} color={Colors.accent.red} />
-          </TouchableOpacity>
+          />
         )}
       </View>
 

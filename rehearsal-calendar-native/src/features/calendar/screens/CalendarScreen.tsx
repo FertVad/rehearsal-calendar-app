@@ -5,6 +5,7 @@ import type { CalendarScreenNavigation } from '../../../navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
+import { IconButton } from '../../../shared/components/IconButton';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import TodayRehearsals from '../components/TodayRehearsals';
 import RehearsalCard from '../components/RehearsalCard';
@@ -270,22 +271,20 @@ export default function CalendarScreen() {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <IconButton
             style={styles.bellButton}
             onPress={() => navigation.navigate('Notifications')}
             accessibilityLabel={t.notifications.title}
+            icon={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
+            size={22}
+            color={unreadCount > 0 ? Colors.accent.purple : Colors.text.secondary}
           >
-            <Ionicons
-              name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
-              size={22}
-              color={unreadCount > 0 ? Colors.accent.purple : Colors.text.secondary}
-            />
             {unreadCount > 0 && (
               <View style={styles.bellBadge} testID="unread-badge">
                 <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
               </View>
             )}
-          </TouchableOpacity>
+          </IconButton>
         </View>
 
         {/* Filter Dropdown */}

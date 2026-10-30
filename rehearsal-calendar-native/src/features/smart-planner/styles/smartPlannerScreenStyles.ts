@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -19,8 +19,7 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.bg.secondary,
   },
   backButton: {
-    padding: Spacing.xs,
-    marginRight: Spacing.sm,
+    marginRight: Spacing.xs,
   },
   headerTextContainer: {
     flex: 1,
@@ -46,6 +45,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
+    minHeight: TouchTarget,
     padding: Spacing.md,
     gap: Spacing.sm,
   },
@@ -67,6 +67,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: TouchTarget,
     padding: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
@@ -104,7 +105,8 @@ export const styles = StyleSheet.create({
   },
   periodButton: {
     flex: 1,
-    paddingVertical: Spacing.sm,
+    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingHorizontal: Spacing.xs,
     backgroundColor: Colors.glass.bg,
     borderWidth: 1,

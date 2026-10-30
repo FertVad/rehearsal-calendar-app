@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import PeriodDay, { PeriodDayProps } from 'react-native-calendars/src/calendar/day/period';
-import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '../constants/colors';
+import { Colors, Spacing, BorderRadius, FontSize, FontWeight, TouchTarget } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { getDateLocale } from '../../shared/utils/locale';
 import { formatDateToString, parseDateString } from '../utils/time';
@@ -380,6 +380,8 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
+    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',

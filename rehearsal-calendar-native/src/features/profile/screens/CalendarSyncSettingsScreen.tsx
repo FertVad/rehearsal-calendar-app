@@ -13,6 +13,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
 import { useI18n } from '../../../contexts/I18nContext';
 import { GlassButton } from '../../../shared/components';
 import { styles } from '../styles/calendarSyncSettingsScreenStyles';
@@ -400,9 +401,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
+          <IconButton icon="arrow-back" color={Colors.text.primary} accessibilityLabel={t.common.back} onPress={() => navigation.goBack()} style={styles.backButton} />
           <Text style={styles.title}>{t.calendarSync.title}</Text>
         </View>
 

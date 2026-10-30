@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { Colors } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
 import { SkeletonLoader } from '../../../shared/components';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -43,14 +44,13 @@ export default function ProjectsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>{t.projects.title}</Text>
-          <TouchableOpacity
-            accessibilityRole="button"
+          <IconButton
+            icon="add-circle"
+            size={28}
+            color={Colors.accent.purple}
             accessibilityLabel={t.projects.createProject}
-            style={styles.addButton}
             onPress={handleCreateProject}
-          >
-            <Ionicons name="add-circle" size={28} color={Colors.accent.purple} />
-          </TouchableOpacity>
+          />
         </View>
 
         {/* Projects List */}

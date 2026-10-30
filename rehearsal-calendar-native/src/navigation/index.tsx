@@ -1,5 +1,5 @@
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
-import { View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { NavigationContainer, useNavigation, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,7 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
-import { Colors } from '../shared/constants/colors';
+import { Colors, TouchTarget } from '../shared/constants/colors';
+import { IconButton } from '../shared/components/IconButton';
 import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { inviteCodeFromUrl } from '../shared/utils/inviteCode';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
@@ -72,9 +73,12 @@ const EmptyCreateScreen = () => <View />;
 // The "+" is only an icon, so it says what it is: VoiceOver read nothing here.
 const CreateTabButton = React.memo(({ onPress, label }: { onPress: () => void; label: string }) => {
   return (
-    <TouchableOpacity
+    <IconButton
       testID="tab-create"
-      accessibilityRole="button"
+      icon="add-circle"
+      size={56}
+      color={Colors.accent.purple}
+      iconStyle={tabButtonStyles.icon}
       accessibilityLabel={label}
       style={tabButtonStyles.container}
       onPress={() => {
@@ -82,15 +86,7 @@ const CreateTabButton = React.memo(({ onPress, label }: { onPress: () => void; l
         onPress();
       }}
       activeOpacity={0.7}
-    >
-      <View style={tabButtonStyles.iconContainer}>
-        <Ionicons
-          name="add-circle"
-          size={56}
-          color={Colors.accent.purple}
-        />
-      </View>
-    </TouchableOpacity>
+    />
   );
 });
 
@@ -102,9 +98,7 @@ const tabButtonStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+  icon: {
     marginBottom: -14,
   },
 });
@@ -181,7 +175,9 @@ function TabNavigator() {
             borderTopColor: Colors.glass.border,
             paddingBottom: 28,
             paddingTop: 8,
-            height: 80,
+            // A tab is what is left between the paddings and the border: at 80
+            // it was 43 pt tall (T-014).
+            height: 8 + TouchTarget + 28 + 1,
           },
           tabBarActiveTintColor: Colors.accent.purple,
           tabBarInactiveTintColor: Colors.text.secondary,

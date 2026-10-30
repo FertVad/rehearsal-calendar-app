@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, TouchTarget } from '../../../shared/constants/colors';
 import { Rehearsal } from '../../../shared/types';
 import { formatDateToString, parseDateString } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
@@ -158,17 +158,16 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         {item.days.map((day) => {
           const isSelected = day.date === selectedDate;
 
+          // The cell takes the tap across its whole seventh of the week; the
+          // gap between the drawn days is inside it. With the gap outside, a
+          // day was 42 pt wide (T-014).
           return (
             <TouchableOpacity
               key={day.date}
               testID={`calendar-day-${day.date}`}
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
-              style={[
-                styles.dayCell,
-                day.isToday && styles.dayToday,
-                isSelected && styles.daySelected,
-              ]}
+              style={styles.dayTarget}
               onPress={() => {
                 hapticMedium();
                 onDaySelect(day.date);
@@ -180,37 +179,43 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
               delayLongPress={400}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.dayOfWeek,
-                isSelected && styles.textSelected,
+              <View style={[
+                styles.dayCell,
+                day.isToday && styles.dayToday,
+                isSelected && styles.daySelected,
               ]}>
-                {day.dayOfWeek}
-              </Text>
+                <Text style={[
+                  styles.dayOfWeek,
+                  isSelected && styles.textSelected,
+                ]}>
+                  {day.dayOfWeek}
+                </Text>
 
-              <Text style={[
-                styles.dayOfMonth,
-                day.isToday && styles.textToday,
-                isSelected && styles.textSelected,
-              ]}>
-                {day.dayOfMonth}
-              </Text>
+                <Text style={[
+                  styles.dayOfMonth,
+                  day.isToday && styles.textToday,
+                  isSelected && styles.textSelected,
+                ]}>
+                  {day.dayOfMonth}
+                </Text>
 
-              {/* Under the date, in a slot every cell keeps: in the corner,
-                  absolute, it covered the day's name (T-011). */}
-              <View testID={`calendar-day-count-${day.date}`} style={styles.badgeSlot}>
-                {day.rehearsalCount > 0 && (
-                  <View style={[
-                    styles.badge,
-                    isSelected && styles.badgeSelected,
-                  ]}>
-                    <Text style={[
-                      styles.badgeText,
-                      isSelected && styles.badgeTextSelected,
+                {/* Under the date, in a slot every cell keeps: in the corner,
+                    absolute, it covered the day's name (T-011). */}
+                <View testID={`calendar-day-count-${day.date}`} style={styles.badgeSlot}>
+                  {day.rehearsalCount > 0 && (
+                    <View style={[
+                      styles.badge,
+                      isSelected && styles.badgeSelected,
                     ]}>
-                      {day.rehearsalCount}
-                    </Text>
-                  </View>
-                )}
+                      <Text style={[
+                        styles.badgeText,
+                        isSelected && styles.badgeTextSelected,
+                      ]}>
+                        {day.rehearsalCount}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
             </TouchableOpacity>
           );
@@ -233,13 +238,16 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
     <View style={styles.container}>
       {/* Header with month/year and today button */}
       <View style={styles.header}>
+        {/* The pill is what shows; the tap is taken on 44 pt around it. */}
         <TouchableOpacity
           onPress={handleGoToToday}
-          style={styles.todayButton}
+          style={styles.todayTarget}
           testID="calendar-today"
           accessibilityRole="button"
         >
-          <Text style={styles.todayButtonText}>{t.calendar.todayButton}</Text>
+          <View style={styles.todayButton}>
+            <Text style={styles.todayButtonText}>{t.calendar.todayButton}</Text>
+          </View>
         </TouchableOpacity>
 
         <Text style={styles.monthYear}>{monthYear}</Text>
@@ -289,12 +297,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
   },
   monthYear: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,
+  },
+  todayTarget: {
+    minWidth: TouchTarget,
+    minHeight: TouchTarget,
+    justifyContent: 'center',
   },
   todayButton: {
     paddingHorizontal: Spacing.sm,
@@ -316,6 +328,10 @@ const styles = StyleSheet.create({
   weekGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  dayTarget: {
+    flex: 1,
+    minWidth: TouchTarget,
   },
   dayCell: {
     flex: 1,

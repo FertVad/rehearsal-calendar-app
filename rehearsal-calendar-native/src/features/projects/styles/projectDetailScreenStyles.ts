@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -23,7 +23,7 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   backButton: {
-    marginRight: Spacing.md,
+    marginRight: Spacing.xs,
   },
   title: {
     flex: 1,
@@ -49,6 +49,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.sm,
     backgroundColor: Colors.accent.purple,
+    minHeight: TouchTarget,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     borderRadius: BorderRadius.md,
@@ -64,10 +65,13 @@ export const styles = StyleSheet.create({
   section: {
     marginBottom: Spacing.xl,
   },
+  // Upcoming and past open and close on a tap here: 44 pt, the margin under
+  // it giving back what the height took.
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    minHeight: TouchTarget,
+    marginBottom: Spacing.xs,
     gap: Spacing.sm,
   },
   sectionTitle: {

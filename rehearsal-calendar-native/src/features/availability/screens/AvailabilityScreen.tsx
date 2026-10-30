@@ -16,6 +16,7 @@ import { useToday } from '../../../shared/hooks/useClock';
 import { endsNextDay } from '../../../shared/utils/time';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
 import { CalendarMonth, EditorHeader, ModeInfo } from '../components';
 import { DayMode } from '../types';
 import { getDayStatus, displayedMode, formatDate, generateMonths } from '../utils';
@@ -179,15 +180,12 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             swipe-down dismiss, so without this there is no way back out. As a
             tab root there is nothing to go back to and the button is hidden. */}
         {navigation.canGoBack() && (
-          <TouchableOpacity
+          <IconButton
             testID="availability-close"
+            icon="close"
             onPress={() => navigation.goBack()}
-            accessibilityRole="button"
             accessibilityLabel={t.common.cancel}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close" size={24} color={Colors.text.secondary} />
-          </TouchableOpacity>
+          />
         )}
       </View>
 
@@ -462,14 +460,14 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                   </View>
 
                   {selectedDayState.slots.length > 1 && (
-                    <TouchableOpacity
-                      accessibilityRole="button"
+                    <IconButton
+                      icon="trash-outline"
+                      size={18}
+                      color={Colors.accent.red}
                       accessibilityLabel={t.common.delete}
                       style={styles.removeSlotButton}
                       onPress={() => editor.removeSlot(index)}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
-                    </TouchableOpacity>
+                    />
                   )}
                 </View>
               ))}

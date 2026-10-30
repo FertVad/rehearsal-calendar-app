@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -26,7 +26,6 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   closeButton: {
-    padding: Spacing.xs,
     marginLeft: Spacing.md,
   },
   projectName: {
@@ -85,6 +84,7 @@ export const styles = StyleSheet.create({
   },
   locationInput: {
     flex: 1,
+    minHeight: TouchTarget,
     padding: Spacing.md,
     fontSize: FontSize.base,
     color: Colors.text.primary,
@@ -127,6 +127,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: TouchTarget,
     padding: Spacing.md,
     marginHorizontal: Spacing.md,
     marginVertical: Spacing.xs / 2,

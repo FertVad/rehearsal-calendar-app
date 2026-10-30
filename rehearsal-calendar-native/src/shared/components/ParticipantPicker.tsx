@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../constants/colors';
 import type { TimeRange } from '../utils/availability';
 import { useI18n } from '../../contexts/I18nContext';
 import type { Translations } from '../../i18n/translations';
@@ -168,7 +168,7 @@ function ParticipantSheet({
                 testID="participants-done"
                 onPress={close}
                 accessibilityRole="button"
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.doneButton}
               >
                 <Text style={styles.done}>{t.common.done}</Text>
               </TouchableOpacity>
@@ -309,9 +309,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
+  },
+  // 44 pt of its own rather than a hitSlop reaching past the header.
+  doneButton: {
+    minWidth: TouchTarget,
+    minHeight: TouchTarget,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
   },
   title: {
     fontSize: FontSize.xl,
@@ -330,7 +337,7 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.md,
     paddingHorizontal: Spacing.md,
-    height: 36,
+    height: TouchTarget,
     borderRadius: BorderRadius.sm,
     backgroundColor: Colors.bg.tertiary,
   },

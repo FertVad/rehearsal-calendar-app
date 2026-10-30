@@ -12,6 +12,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
 import { hapticSuccess } from '../../../shared/utils/haptics';
 import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -90,9 +91,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
       <SafeAreaView style={styles.body}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
+          <IconButton icon="chevron-back" color={Colors.text.primary} accessibilityLabel={t.common.back} onPress={() => navigation.goBack()} />
           <Text style={styles.title}>{t.projects.createProject}</Text>
           <View style={styles.headerRight} />
         </View>
@@ -171,9 +170,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
           <View style={styles.timezoneModalContent}>
             <View style={styles.timezoneModalHeader}>
               <Text style={styles.timezoneModalTitle}>{t.projects.selectTimezone}</Text>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => setTimezonePickerVisible(false)}>
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
-              </TouchableOpacity>
+              <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => setTimezonePickerVisible(false)} />
             </View>
             <FlatList
               data={getTimezonesWithDevice()}

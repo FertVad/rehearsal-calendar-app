@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -16,15 +16,13 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    // The "+" is 44 pt tall; the margin gives back what it took.
+    marginBottom: Spacing.sm,
   },
   title: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.bold,
     color: Colors.text.primary,
-  },
-  addButton: {
-    padding: Spacing.xs,
   },
   loadingState: {
     backgroundColor: Colors.glass.bg,
@@ -129,7 +127,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.xs,
     marginTop: Spacing.md,
-    paddingVertical: Spacing.sm,
+    minHeight: TouchTarget,
     paddingHorizontal: Spacing.md,
     backgroundColor: Colors.accent.purpleAlpha10,
     borderRadius: BorderRadius.md,
@@ -149,8 +147,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     marginTop: Spacing.sm,
+    minHeight: TouchTarget,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.sm,
     backgroundColor: Colors.bg.tertiary,
   },
@@ -171,6 +169,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.sm,
     marginTop: Spacing.lg,
+    minHeight: TouchTarget,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -53,8 +53,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
     marginTop: Spacing.md,
+    minHeight: TouchTarget,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
     backgroundColor: Colors.accent.purpleDarkAlpha10,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
@@ -133,7 +133,9 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Spacing.xl,
+    // The cross's own 44 pt makes up the height the padding gave.
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
   },
@@ -152,6 +154,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: TouchTarget,
     padding: Spacing.md,
     marginHorizontal: Spacing.md,
     marginVertical: Spacing.xs / 2,

@@ -1,5 +1,5 @@
 import { StyleSheet, Dimensions } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const UPCOMING_CARD_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md;
@@ -78,6 +78,7 @@ export const styles = StyleSheet.create({
   filterOption: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: TouchTarget,
     justifyContent: 'space-between',
     padding: Spacing.md,
     borderBottomWidth: 1,
@@ -132,8 +133,9 @@ export const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: Spacing.sm,
   },
-  iconButton: {
-    padding: Spacing.xs,
+  adminActions: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
   },
   skeletonRow: {
     marginBottom: Spacing.sm,
@@ -250,9 +252,10 @@ export const styles = StyleSheet.create({
     color: Colors.accent.red,
   },
   // Seen button styles
+  // The eye's own 44 pt holds the space the padding used to.
   seenSection: {
     marginTop: Spacing.md,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.xs,
     borderTopWidth: 1,
     borderTopColor: Colors.glass.border,
     flexDirection: 'row',
@@ -262,7 +265,9 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    padding: Spacing.xs,
+    minWidth: TouchTarget,
+    minHeight: TouchTarget,
+    paddingHorizontal: Spacing.xs,
   },
   seenCount: {
     fontSize: FontSize.sm,

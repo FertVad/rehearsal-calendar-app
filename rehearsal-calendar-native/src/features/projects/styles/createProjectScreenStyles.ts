@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -18,16 +18,14 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
   },
-  backButton: {
-    padding: Spacing.xs,
-  },
   title: {
     fontSize: FontSize.xl,
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,
   },
+  // As wide as the back button, so the title sits in the middle.
   headerRight: {
-    width: 32,
+    width: TouchTarget,
   },
   scrollView: {
     flex: 1,
@@ -49,6 +47,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
+    minHeight: TouchTarget,
     padding: Spacing.md,
     fontSize: FontSize.base,
     color: Colors.text.primary,
@@ -65,6 +64,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
+    minHeight: TouchTarget,
     padding: Spacing.md,
   },
   timezoneSelectorLeft: {
@@ -93,7 +93,8 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
   },
@@ -109,6 +110,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: TouchTarget,
     padding: Spacing.md,
     marginHorizontal: Spacing.md,
     marginVertical: Spacing.xs / 2,

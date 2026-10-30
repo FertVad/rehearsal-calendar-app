@@ -4,15 +4,14 @@ import {
   Text,
   SafeAreaView,
   ScrollView,
-  TouchableOpacity,
   TextInput,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { GlassButton, UserAvatar } from '../../../shared/components';
@@ -84,17 +83,15 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
         style={{ flex: 1 }}
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            accessibilityRole="button"
+          <IconButton
+            icon="arrow-back"
+            color={Colors.text.primary}
             accessibilityLabel={t.common.back}
-            style={styles.backButton}
             onPress={() => {
               hapticLight();
               navigation.goBack();
             }}
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
+          />
           <Text style={styles.title}>{t.profile.editProfile}</Text>
           <View style={{ width: 24 }} />
         </View>

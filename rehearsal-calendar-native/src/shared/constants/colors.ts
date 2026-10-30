@@ -55,5 +55,5 @@ export const Colors = {
 } as const;
 
 // Re-export for backward compatibility
-export { Spacing, BorderRadius } from './spacing';
+export { Spacing, BorderRadius, TouchTarget } from './spacing';
 export { FontSize, FontWeight } from './typography';

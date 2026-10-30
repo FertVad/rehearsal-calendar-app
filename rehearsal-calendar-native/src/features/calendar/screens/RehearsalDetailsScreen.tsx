@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Pressable,
@@ -11,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { IconButton } from '../../../shared/components/IconButton';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -36,6 +36,11 @@ interface AdminStats {
   confirmed: number;
   invited: number;
 }
+
+// iOS draws this sheet smaller while it stands at three quarters of the
+// screen: 44 pt of layout measured 42 on the glass in Maestro's inspector
+// (T-014). 47 is 44 and more there.
+const SHEET_TARGET = 47;
 
 /**
  * One rehearsal, in full.
@@ -223,9 +228,7 @@ export default function RehearsalDetailsScreen() {
       <View style={styles.fill}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t.calendar.rehearsal}</Text>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={Colors.text.secondary} />
-          </TouchableOpacity>
+          <IconButton icon="close" accessibilityLabel={t.common.close} onPress={onClose} minSize={SHEET_TARGET} />
         </View>
         <View style={styles.centred}>
           <Text style={styles.missingText}>{t.rehearsals.notFound}</Text>
@@ -268,9 +271,7 @@ export default function RehearsalDetailsScreen() {
             <Text style={styles.headerTitle} numberOfLines={2}>
               {rehearsal.title || t.calendar.rehearsal}
             </Text>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={Colors.text.secondary} />
-            </TouchableOpacity>
+            <IconButton icon="close" accessibilityLabel={t.common.close} onPress={onClose} minSize={SHEET_TARGET} />
           </View>
 
           <View style={styles.content}>
@@ -390,9 +391,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
     color: Colors.text.primary,
-  },
-  closeButton: {
-    padding: Spacing.xs,
   },
   content: {
     padding: Spacing.lg,

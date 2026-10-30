@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../../shared/constants/colors';
+import { IconButton } from '../../../../shared/components/IconButton';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../../shared/constants/colors';
 import { TimeSlot, SlotValidationError } from '../../types';
 import { useI18n } from '../../../../contexts/I18nContext';
 
@@ -69,14 +70,14 @@ export default function TimeSlotsEditor({
           </View>
 
           {slots.length > 1 && (
-            <TouchableOpacity
-              accessibilityRole="button"
+            <IconButton
+              icon="trash-outline"
+              size={18}
+              color={Colors.accent.red}
               accessibilityLabel={t.common.delete}
               style={styles.removeSlotButton}
               onPress={() => onRemoveSlot(index)}
-            >
-              <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
-            </TouchableOpacity>
+            />
           )}
         </View>
       ))}
@@ -125,6 +126,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: Colors.bg.secondary,
     borderRadius: BorderRadius.sm,
+    minHeight: TouchTarget,
     padding: Spacing.sm,
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -135,7 +137,6 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   removeSlotButton: {
-    padding: Spacing.sm,
     marginLeft: Spacing.sm,
   },
   addSlotButton: {

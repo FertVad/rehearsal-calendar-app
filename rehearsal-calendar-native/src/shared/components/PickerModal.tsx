@@ -7,7 +7,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { usePickerDraft } from '../hooks/usePickerDraft';
 import { AppModal } from './AppModal';
@@ -60,11 +60,11 @@ export const PickerModal: React.FC<PickerModalProps> = ({
           <View style={styles.modalContent}>
             {/* Header with Cancel and Done buttons */}
             <View style={styles.header}>
-              <TouchableOpacity onPress={picker.cancel}>
+              <TouchableOpacity onPress={picker.cancel} style={styles.headerButton}>
                 <Text style={styles.cancelButton}>{t.common.cancel}</Text>
               </TouchableOpacity>
               <Text style={styles.title}>{title}</Text>
-              <TouchableOpacity onPress={picker.confirm}>
+              <TouchableOpacity onPress={picker.confirm} style={styles.headerButton}>
                 <Text style={styles.doneButton}>{t.common.done}</Text>
               </TouchableOpacity>
             </View>
@@ -109,9 +109,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
+  },
+  // Cancel and Done are words, but the tap is taken on 44 pt; the header's
+  // padding went into them.
+  headerButton: {
+    minWidth: TouchTarget,
+    minHeight: TouchTarget,
+    justifyContent: 'center',
   },
   title: {
     fontSize: FontSize.lg,

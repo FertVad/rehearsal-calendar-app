@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing } from '../../../../shared/constants/colors';
+import { IconButton } from '../../../../shared/components/IconButton';
+import { Colors, FontSize, FontWeight, Spacing, TouchTarget } from '../../../../shared/constants/colors';
 import { useI18n } from '../../../../contexts/I18nContext';
 import { getDateLocale } from '../../../../shared/utils/locale';
 import { parseDateString } from '../../../../shared/utils/time';
@@ -37,9 +37,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
           </TouchableOpacity>
         )}
       </View>
-      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClear}>
-        <Ionicons name="chevron-down" size={24} color={Colors.text.secondary} />
-      </TouchableOpacity>
+      <IconButton icon="chevron-down" accessibilityLabel={t.common.close} onPress={onClear} />
     </View>
   );
 };
@@ -65,8 +63,9 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   clearButton: {
+    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
   },
   clearButtonText: {
     fontSize: FontSize.sm,

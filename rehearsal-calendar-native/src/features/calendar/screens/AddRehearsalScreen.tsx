@@ -20,6 +20,7 @@ import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { ParticipantPicker, busyText } from '../../../shared/components/ParticipantPicker';
+import { IconButton } from '../../../shared/components/IconButton';
 import { checkSchedulingConflicts } from '../../../shared/utils/conflictDetection';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
@@ -179,19 +180,16 @@ export default function AddRehearsalScreen() {
           {/* The screen is a modal whose body is a full-height ScrollView, so the
               swipe-down dismiss gesture is swallowed by the list. Without this the
               only way out is creating the rehearsal. */}
-          <TouchableOpacity
+          <IconButton
             testID="rehearsal-close"
+            icon="close"
             style={styles.closeButton}
             onPress={() => {
               Keyboard.dismiss();
               navigation.goBack();
             }}
-            accessibilityRole="button"
             accessibilityLabel={t.common.cancel}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close" size={24} color={Colors.text.secondary} />
-          </TouchableOpacity>
+          />
         </View>
 
         {/* Form */}
@@ -385,9 +383,7 @@ export default function AddRehearsalScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.rehearsals.selectProject}</Text>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => form.setShowProjectPicker(false)}>
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
-              </TouchableOpacity>
+              <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => form.setShowProjectPicker(false)} />
             </View>
 
             {form.adminProjects.length === 0 ? (
