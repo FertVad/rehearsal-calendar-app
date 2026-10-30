@@ -9,6 +9,8 @@ name: Planner follows the project
 tags:
   - planner
   - projects
+  - participants
+  - rehearsals
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -18,34 +20,98 @@ tags:
 - tapOn:
     id: planner-project
 - tapOn: "Three Sisters"
-# Its roster is in once the counter names three. Everyone selected, set here:
-# the flow does not lean on arrival for its starting point.
+# Its roster is in once the counter names three. Everyone selected, set here
+# in the sheet behind the row (T-010): the flow does not lean on arrival for
+# its starting point.
 - extendedWaitUntil:
-    visible: "\\d+ of 3 selected"
+    visible:
+      id: participants-row
+      text: "Participants, \\d+ of 3"
     timeout: 15000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "All participants, \\d+ of 3"
+      WAIT_MS: "5000"
 - repeat:
     while:
-      notVisible: "3 of 3 selected"
+      notVisible:
+        id: participants-all
+        text: "All participants, 3 of 3"
     times: 2
     commands:
       - tapOn:
-          id: members-toggle-all
-- assertVisible: "3 of 3 selected"
+          id: participants-all
+- assertVisible:
+    id: participants-all
+    text: "All participants, 3 of 3"
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, 3 of 3"
+    timeout: 10000
 # The Bear: its own two, all of them. Three Sisters' three seeded here read
 # "3 of 2 selected" and planned The Bear for the director alone.
 - tapOn:
     id: planner-project
 - tapOn: "The Bear"
 - extendedWaitUntil:
-    visible: "2 of 2 selected"
+    visible:
+      id: participants-row
+      text: "Participants, 2 of 2"
     timeout: 15000
-- assertNotVisible: "3 of 2 selected"
+- assertNotVisible:
+    id: participants-row
+    text: ".*3 of 2.*"
 # The slots are The Bear's: tomorrow morning names Smirnov as busy.
 - scrollUntilVisible:
     element: "Busy: .*Grigory Smirnov.*"
     direction: DOWN
     timeout: 60000
 - takeScreenshot: 07-planner-the-bear
+# A rehearsal planned in that slot says on its participants row that he is
+# busy then, and his sheet row gives his hours (T-010). Only opened: nothing
+# is saved, so the slots stay as they were for the rest of the flow.
+# His slot is his busy hours, 10:00-14:00 tomorrow; its "+ Add" by its id, as
+# `rightOf` takes whichever "+ Add" comes first in the tree.
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-10:00
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    id: planner-add-${TOMORROW_DAY}-10:00
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, 2 of 2, Smirnov busy 10:00–14:00"
+      below:
+        id: rehearsal-project
+    timeout: 15000
+- takeScreenshot: 07-form-smirnov-busy
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Participants, 2 of 2, Smirnov busy.*"
+      SEE: "All participants, 2 of 2"
+      WAIT_MS: "5000"
+- assertVisible: "Grigory Smirnov, 10:00–14:00"
+- assertVisible: "Olga Stage, admin"
+- takeScreenshot: 07-form-participants-sheet
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    notVisible: "All participants, 2 of 2"
+    timeout: 10000
+- tapOn: "Cancel"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-project
+    timeout: 10000
 # And back: Three Sisters' three again, not The Bear's two, and nobody from
 # The Bear in its slots.
 - scrollUntilVisible:
@@ -56,8 +122,12 @@ tags:
     id: planner-project
 - tapOn: "Three Sisters"
 - extendedWaitUntil:
-    visible: "3 of 3 selected"
+    visible:
+      id: participants-row
+      text: "Participants, 3 of 3"
     timeout: 15000
-- assertNotVisible: "2 of 3 selected"
+- assertNotVisible:
+    id: participants-row
+    text: ".*2 of 3.*"
 - assertNotVisible: "Busy: .*Grigory Smirnov.*"
 - takeScreenshot: 07-planner-three-sisters

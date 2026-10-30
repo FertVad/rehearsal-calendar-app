@@ -80,15 +80,17 @@ export interface RehearsalsTranslations {
   createNewProject: string;
   loadingMembers: string;
   noMembers: string;
-  selectAll: string;
-  deselectAll: string;
-  expand: string;
-  collapse: string;
-  selectedCount: (selected: number, total: number) => string;
+  /** The participants row and sheet: how many of the project are picked. */
+  participantsCount: (selected: number, total: number) => string;
+  /** The sheet's three-state box over everyone. */
+  allParticipants: string;
+  searchParticipants: string;
+  /** Under the participants row: someone picked is busy at the rehearsal's time. */
+  busyAt: (name: string, time: string) => string;
+  andMore: (count: number) => string;
+  /** Beside the name of someone busy the whole day. */
+  wholeDay: string;
   admin: string;
-  availableStatus: string;
-  busyAllDay: string;
-  busyTime: string;
   rehearsalDetails: string;
   /** Shown when a rehearsal cannot be opened — deleted, or the reader was taken off it. */
   notFound: string;
@@ -179,15 +181,13 @@ needProject: 'Репетиции появятся, когда вы окажет�
     createNewProject: 'Создать новый проект',
     loadingMembers: 'Загрузка участников...',
     noMembers: 'Нет участников в проекте',
-    selectAll: 'Выбрать всех',
-    deselectAll: 'Снять выделение',
-    expand: 'Развернуть',
-    collapse: 'Свернуть',
-    selectedCount: (selected: number, total: number) => `Выбрано: ${selected} из ${total}`,
-    admin: 'Админ',
-    availableStatus: 'Свободен',
-    busyAllDay: 'Занят весь день',
-    busyTime: 'Занят',
+    participantsCount: (selected: number, total: number) => `${selected} из ${total}`,
+    allParticipants: 'Все участники',
+    searchParticipants: 'Поиск',
+    busyAt: (name: string, time: string) => `${name} занят ${time}`,
+    andMore: (count: number) => `и ещё ${count}`,
+    wholeDay: 'весь день',
+    admin: 'админ',
     rehearsalDetails: 'Детали репетиции',
     notFound: 'Репетиция не найдена. Возможно, её удалили или вас сняли с неё.',
     like: 'Иду',
@@ -278,15 +278,13 @@ needProject: 'Rehearsals show up once you are in a project',
     createNewProject: 'Create New Project',
     loadingMembers: 'Loading members...',
     noMembers: 'No members in project',
-    selectAll: 'Select All',
-    deselectAll: 'Deselect All',
-    expand: 'Expand',
-    collapse: 'Collapse',
-    selectedCount: (selected: number, total: number) => `Selected: ${selected} of ${total}`,
-    admin: 'Admin',
-    availableStatus: 'Available',
-    busyAllDay: 'Busy all day',
-    busyTime: 'Busy',
+    participantsCount: (selected: number, total: number) => `${selected} of ${total}`,
+    allParticipants: 'All participants',
+    searchParticipants: 'Search',
+    busyAt: (name: string, time: string) => `${name} busy ${time}`,
+    andMore: (count: number) => `and ${count} more`,
+    wholeDay: 'all day',
+    admin: 'admin',
     rehearsalDetails: 'Rehearsal Details',
     notFound: 'This rehearsal is not available. It may have been deleted, or you were taken off it.',
     like: 'Going',
@@ -377,15 +375,13 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     createNewProject: 'Crear nuevo proyecto',
     loadingMembers: 'Cargando miembros...',
     noMembers: 'No hay miembros en el proyecto',
-    selectAll: 'Seleccionar todos',
-    deselectAll: 'Deseleccionar todos',
-    expand: 'Expandir',
-    collapse: 'Contraer',
-    selectedCount: (selected: number, total: number) => `Seleccionados: ${selected} de ${total}`,
-    admin: 'Admin',
-    availableStatus: 'Disponible',
-    busyAllDay: 'Ocupado todo el día',
-    busyTime: 'Ocupado',
+    participantsCount: (selected: number, total: number) => `${selected} de ${total}`,
+    allParticipants: 'Todos los participantes',
+    searchParticipants: 'Buscar',
+    busyAt: (name: string, time: string) => `${name}: ocupado ${time}`,
+    andMore: (count: number) => `y ${count} más`,
+    wholeDay: 'todo el día',
+    admin: 'admin',
     rehearsalDetails: 'Detalles del ensayo',
     notFound: 'Este ensayo no está disponible. Puede que se haya eliminado o que los hayan quitado de él.',
     like: 'Voy',
@@ -476,15 +472,13 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     createNewProject: 'Neues Projekt erstellen',
     loadingMembers: 'Mitglieder werden geladen...',
     noMembers: 'Keine Mitglieder im Projekt',
-    selectAll: 'Alle auswählen',
-    deselectAll: 'Auswahl aufheben',
-    expand: 'Erweitern',
-    collapse: 'Einklappen',
-    selectedCount: (selected: number, total: number) => `Ausgewählt: ${selected} von ${total}`,
+    participantsCount: (selected: number, total: number) => `${selected} von ${total}`,
+    allParticipants: 'Alle Teilnehmer',
+    searchParticipants: 'Suchen',
+    busyAt: (name: string, time: string) => `${name} belegt ${time}`,
+    andMore: (count: number) => `und ${count} weitere`,
+    wholeDay: 'ganztägig',
     admin: 'Admin',
-    availableStatus: 'Verfügbar',
-    busyAllDay: 'Ganztägig beschäftigt',
-    busyTime: 'Beschäftigt',
     rehearsalDetails: 'Probendetails',
     notFound: 'Diese Probe ist nicht verfügbar. Vielleicht wurde sie gelöscht, oder du wurdest abgemeldet.',
     like: 'Ich komme',

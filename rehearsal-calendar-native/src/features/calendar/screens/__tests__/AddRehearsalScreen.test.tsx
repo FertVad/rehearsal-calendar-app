@@ -141,6 +141,34 @@ describe('Picking the project (R9-01)', () => {
   });
 });
 
+describe('The participants row (T-010)', () => {
+  const busyFor = (userId: string, start: string, end: string) => ({
+    data: { availability: [{ userId, dates: [{ date: '2026-11-10', timeRanges: [{ start, end, type: 'busy' }] }] }] },
+  });
+
+  it('counts the people, and names someone picked who is busy at the time', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busyFor('7', '11:00', '14:00'));
+    const screen = await open();
+    await settle();
+
+    expect(screen.getByTestId('participants-row').props.accessibilityLabel)
+      .toBe('Participants, 3 of 3, Name7 busy 11:00–14:00');
+    // The sheet: their busy time beside them, nobody else's.
+    fireEvent.press(screen.getByTestId('participants-row'));
+    expect(screen.getByTestId('participant-7').props.accessibilityLabel).toBe('Name7, 11:00–14:00');
+    expect(screen.getByTestId('participant-3').props.accessibilityLabel).toBe('Name3');
+  });
+
+  it('says nothing for someone busy at another time of the day', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busyFor('7', '15:00', '18:00'));
+    const screen = await open();
+    await settle();
+
+    expect(screen.getByTestId('participants-row').props.accessibilityLabel).toBe('Participants, 3 of 3');
+    expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+});
+
 describe('Before the people are known (R9-02)', () => {
   it('while the project\'s members are loading, Create sends nothing and says why', async () => {
     getMembers.mockImplementation(() => new Promise(() => { /* never answers */ }));

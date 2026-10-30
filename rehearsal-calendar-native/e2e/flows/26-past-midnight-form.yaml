@@ -14,6 +14,7 @@ name: A rehearsal made from 23:00 to 01:00 ends the next morning
 tags:
   - calendar
   - rehearsals
+  - participants
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -35,6 +36,12 @@ tags:
 - tapOn: "Create Rehearsal"
 - extendedWaitUntil:
     visible: "Add Rehearsal"
+    timeout: 10000
+# Who takes part is one row that says how many: she alone (T-010).
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, 1 of 1"
     timeout: 10000
 # Start: 11 PM, then the end: 1 AM, each on its own picker. Both are opened
 # whatever the hour of the run. The form starts at the hour it is; started

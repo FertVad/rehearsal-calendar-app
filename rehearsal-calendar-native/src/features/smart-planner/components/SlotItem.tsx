@@ -56,6 +56,7 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
       </View>
       {canCreateRehearsal && (
         <TouchableOpacity
+          testID={`planner-add-${slot.date}-${slot.startTime}`}
           style={styles.addButton}
           onPress={() => onCreateRehearsal(slot)}
         >

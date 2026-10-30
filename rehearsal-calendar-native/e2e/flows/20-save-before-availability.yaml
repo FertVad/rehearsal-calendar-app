@@ -34,7 +34,9 @@ tags:
     timeout: 15000
 # The people are in; the day's availability is not.
 - extendedWaitUntil:
-    visible: "Selected: 1 of 1"
+    visible:
+      id: participants-row
+      text: "Participants, 1 of 1"
     timeout: 15000
 - scrollUntilVisible:
     element:

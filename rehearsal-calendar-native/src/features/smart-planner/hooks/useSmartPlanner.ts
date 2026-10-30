@@ -145,6 +145,7 @@ export function useSmartPlanner({
     return members.map(m => ({
       id: m.userId,
       name: `${m.firstName}${m.lastName ? ` ${m.lastName}` : ''}`,
+      isAdmin: m.role === 'owner' || m.role === 'admin',
     }));
   }, [members]);
 

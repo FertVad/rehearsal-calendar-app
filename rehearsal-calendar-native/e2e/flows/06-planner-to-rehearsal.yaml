@@ -5,6 +5,7 @@ name: From the planner to a rehearsal
 tags:
   - planner
   - rehearsals
+  - participants
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -14,16 +15,34 @@ tags:
 - tapOn:
     id: planner-project
 - tapOn: "Hamlet"
-- tapOn: "Expand.*"
 # Start from everyone and take two out. Arrival selects Hamlet's whole roster,
 # whichever project the planner opened on (DP01, cause fix 8;
-# 07-planner-project-switch shows it).
+# 07-planner-project-switch shows it). Who takes part is one row that says how
+# many, and a sheet to pick them in (T-010).
 - extendedWaitUntil:
-    visible: "4 of 4 selected"
+    visible:
+      id: participants-row
+      text: "Participants, 4 of 4"
     timeout: 15000
-- tapOn: ".*Ophelia Bright"
-- tapOn: ".*Horatio Friend"
-- assertVisible: "2 of 4 selected"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "All participants, 4 of 4"
+      WAIT_MS: "5000"
+- tapOn: "Ophelia Bright.*"
+- tapOn: "Horatio Friend.*"
+- assertVisible:
+    id: participants-all
+    text: "All participants, 2 of 4"
+- takeScreenshot: 06-participants-sheet
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, 2 of 4"
+    timeout: 10000
 # The first slot offered, whichever day it falls on, brought to the middle of
 # the screen — under the tab bar or still moving, a tap misses it.
 - scrollUntilVisible:
@@ -34,8 +53,13 @@ tags:
 - tapOn:
     text: "\\+ Add"
     index: 0
+# The form's own row, below its project: the planner's says the same behind it.
 - extendedWaitUntil:
-    visible: "Selected: 2 of 4"
+    visible:
+      id: participants-row
+      text: "Participants, 2 of 4"
+      below:
+        id: rehearsal-project
     timeout: 15000
 - tapOn: "e.g. Act II run-through"
 - inputText: "Duel scene"

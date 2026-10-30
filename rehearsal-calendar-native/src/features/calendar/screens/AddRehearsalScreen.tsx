@@ -19,7 +19,8 @@ import type { AppStackParamList, AppNavigation } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
-import { ActorSelector } from '../components/ActorSelector';
+import { ParticipantPicker, busyText } from '../../../shared/components/ParticipantPicker';
+import { checkSchedulingConflicts } from '../../../shared/utils/conflictDetection';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
 import { AppModal } from '../../../shared/components/AppModal';
@@ -100,6 +101,29 @@ export default function AddRehearsalScreen() {
     plannedMemberIds: route.params?.prefilledMemberIds,
     startParticipants: form.startParticipants,
   });
+
+  // The participants row and its sheet: who is busy on the day, and whether
+  // anyone picked is busy at the rehearsal's time — by the same check as the
+  // warning on save, once the day's availability is in.
+  const people = useMemo(() => members.map(m => ({
+    id: m.userId,
+    name: `${m.firstName}${m.lastName ? ' ' + m.lastName : ''}`,
+    isAdmin: m.role === 'owner' || m.role === 'admin',
+    busy: busyText(memberAvailability[m.userId]?.timeRanges, t),
+  })), [members, memberAvailability, t]);
+  const conflict = useMemo(() => {
+    if (!availabilityLoad.ready || form.selectedMemberIds.length === 0) return undefined;
+    const { busyMembers } = checkSchedulingConflicts(
+      members.filter(m => form.selectedMemberIds.includes(m.userId)),
+      memberAvailability,
+      formatDateToTimeString(form.startTime),
+      formatDateToTimeString(form.endTime),
+    );
+    if (busyMembers.length === 0) return undefined;
+    const [{ member, conflictingSlots: [slot] }] = busyMembers;
+    const line = t.rehearsals.busyAt(member.lastName || member.firstName, `${slot.start}–${slot.end}`);
+    return busyMembers.length > 1 ? `${line} ${t.rehearsals.andMore(busyMembers.length - 1)}` : line;
+  }, [availabilityLoad.ready, members, form.selectedMemberIds, memberAvailability, form.startTime, form.endTime, t]);
 
   // A project whose members could not be loaded says so, with a way to try
   // again; until then nothing is saved (useAddRehearsalSubmit).
@@ -211,14 +235,12 @@ export default function AddRehearsalScreen() {
           {/* Participants */}
           {form.localSelectedProject && (
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>{t.rehearsals.participants}</Text>
-              <ActorSelector
-                members={members}
-                selectedMemberIds={form.selectedMemberIds}
-                onSelectionChange={form.setSelectedMemberIds}
+              <ParticipantPicker
+                people={people}
+                selectedIds={form.selectedMemberIds}
+                onChange={form.setSelectedMemberIds}
                 loading={loadingMembers}
-                date={formatDateToString(form.date)}
-                memberAvailability={memberAvailability}
+                conflict={conflict}
               />
             </View>
           )}

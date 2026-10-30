@@ -15,7 +15,7 @@ import { Colors } from '../../../shared/constants/colors';
 import type { SlotCategory } from '../types';
 import { useSmartPlanner } from '../hooks/useSmartPlanner';
 import { DayCard } from '../components/DayCard';
-import { MemberFilter } from '../components/MemberFilter';
+import { ParticipantPicker } from '../../../shared/components/ParticipantPicker';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
@@ -320,26 +320,17 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     </View>
   );
 
-  const renderMemberFilter = () => {
-    const selectAll = () => {
-      setSelectedMemberIds(simpleMembers.map(m => m.id));
-    };
-    const clearAll = () => {
-      setSelectedMemberIds([]);
-    };
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t.smartPlanner.members}</Text>
-        <MemberFilter
-          members={simpleMembers}
-          selected={selectedMemberIds}
-          onSelectionChange={setSelectedMemberIds}
-          onSelectAll={selectAll}
-          onClearAll={clearAll}
-        />
-      </View>
-    );
-  };
+  // Nobody picked is everyone here: the planner weighs the whole roster.
+  const renderParticipants = () => (
+    <View style={styles.section}>
+      <ParticipantPicker
+        people={simpleMembers}
+        selectedIds={selectedMemberIds}
+        onChange={setSelectedMemberIds}
+        noneLabel={t.smartPlanner.allMembers}
+      />
+    </View>
+  );
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -385,7 +376,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
       >
         {renderProjectSelector()}
         {renderPeriodSelector()}
-        {renderMemberFilter()}
+        {renderParticipants()}
 
         {loading ? (
           <View style={styles.loadingContainer}>

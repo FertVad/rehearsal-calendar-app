@@ -11,6 +11,7 @@ tags:
   - availability
   - planner
   - auth
+  - participants
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -74,7 +75,9 @@ tags:
       text: ".*Uncle Vanya.*"
     timeout: 30000
 - extendedWaitUntil:
-    visible: "2 of 2 selected"
+    visible:
+      id: participants-row
+      text: "Participants, 2 of 2"
     timeout: 15000
 # Each slot's line says who is busy and carries its day: a card is not the
 # parent of its text in the iOS tree, so `childOf` a card finds nothing.
