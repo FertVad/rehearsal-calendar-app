@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
+import PeriodDay, { PeriodDayProps } from 'react-native-calendars/src/calendar/day/period';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { getDateLocale } from '../../shared/utils/locale';
@@ -21,9 +22,9 @@ interface DateRangePickerProps {
   maxDays?: number;
 }
 
-// Configure locales for react-native-calendars. No word for "today": the
-// library's today is the phone's date, and the picker names the profile's
-// itself (todayMarking below).
+// Configure locales for react-native-calendars. Its word for "today" is not
+// used: the library's today is the phone's date, and the picker's days name
+// the profile's themselves (dayComponent below).
 LocaleConfig.locales['ru'] = {
   monthNames: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
   monthNamesShort: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
@@ -46,14 +47,13 @@ LocaleConfig.locales['en'] = {
  * for: in Honolulu with a profile in Europe it marked the 28th while the first
  * day it would take was the 29th. A day's marking overrides it, so the phone's
  * date is unmarked — and, before `minDate`, shown as the past it is — and the
- * profile's date is marked, and named for VoiceOver.
+ * profile's date is marked.
  */
 function withToday(
   marked: { [key: string]: any },
   today: string,
   phoneToday: string,
   minDate: string | undefined,
-  todayLabel: string,
 ): { [key: string]: any } {
   const result = { ...marked };
   if (phoneToday !== today) {
@@ -63,17 +63,40 @@ function withToday(
       ...(minDate && phoneToday < minDate ? { disabled: true, disableTouchEvent: true } : {}),
     };
   }
-  const day = result[today];
-  result[today] = {
-    ...day,
-    today: true,
-    accessibilityLabel: [
-      todayLabel,
-      day?.startingDay && 'period start',
-      day?.endingDay && 'period end',
-    ].filter(Boolean).join(', '),
-  };
+  result[today] = { ...result[today], today: true };
   return result;
+}
+
+interface DayComponentProps extends Omit<PeriodDayProps, 'date'> {
+  date?: DateData;
+  children?: React.ReactNode;
+}
+
+/**
+ * The library's day, named by the picker. The library's own name for a day
+ * begins with its word for today on the phone's date, whatever the marking
+ * says, and an empty word is read as 'today': VoiceOver called both the
+ * phone's date and the profile's "today" (T-012 review). Here only the
+ * profile's date is.
+ */
+function profileDay(today: string, todayLabel: string, locale: string) {
+  return function ProfileDay({ date, marking, children, ...props }: DayComponentProps) {
+    const dateString = date?.dateString;
+    const label = [
+      dateString === today && todayLabel,
+      dateString && parseDateString(dateString).toLocaleDateString(locale, {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      }),
+      marking?.startingDay && 'period start',
+      marking?.endingDay && 'period end',
+      (marking?.disabled || props.state === 'disabled') && 'disabled',
+    ].filter(Boolean).join(', ');
+    return (
+      <PeriodDay {...props} marking={marking} date={dateString} accessibilityLabel={label}>
+        {children}
+      </PeriodDay>
+    );
+  };
 }
 
 export function DateRangePicker({
@@ -164,7 +187,11 @@ export function DateRangePicker({
     return marked;
   }, [startDate, endDate, rangeError]);
 
-  const calendarMarks = withToday(markedDates, today, phoneToday, minDateStr, t.common.today);
+  const calendarMarks = withToday(markedDates, today, phoneToday, minDateStr);
+  const dayComponent = useMemo(
+    () => profileDay(today, t.common.today, getDateLocale(language)),
+    [today, t.common.today, language]
+  );
 
   const handleDayPress = (day: DateData) => {
     if (!startDate || (startDate && endDate)) {
@@ -242,6 +269,7 @@ export function DateRangePicker({
             firstDay={weekStart === 'monday' ? 1 : 0}
             onDayPress={handleDayPress}
             markingType={'period'}
+            dayComponent={dayComponent}
             markedDates={calendarMarks}
             minDate={minDateStr}
             theme={{

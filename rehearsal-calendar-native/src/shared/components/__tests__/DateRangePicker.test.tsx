@@ -40,6 +40,12 @@ jest.mock('../../hooks/useClock', () => {
   return { ...actual, useToday: () => mockToday() ?? actual.useToday() };
 });
 
+// The library's own day, rendered in the Today tests, presses through this.
+jest.mock('react-native', () => {
+  const actual = jest.requireActual('react-native');
+  return { ...actual, TouchableWithoutFeedback: actual.TouchableOpacity };
+});
+
 const calendarOf = (view: ReturnType<typeof render>) =>
   view.UNSAFE_getByType(require('react-native-calendars').Calendar);
 // The range's own marks, without the day marked as today.
@@ -298,8 +304,30 @@ describe('DateRangePicker Component', () => {
       );
       const marks = calendarOf(view).props.markedDates;
 
-      expect(marks['2026-10-29']).toEqual(expect.objectContaining({ today: true, accessibilityLabel: 'Сегодня' }));
+      expect(marks['2026-10-29']).toEqual(expect.objectContaining({ today: true }));
       expect(marks['2026-10-28']).toEqual(expect.objectContaining({ today: false, disabled: true }));
+    });
+
+    // The library names a day itself, "today" first on the phone's date,
+    // whatever the marking; an empty word for it is read as 'today'. Its own
+    // Day, given what the picker gives the calendar, is what VoiceOver reads.
+    it('VoiceOver hears "today" on the profile\'s day only', () => {
+      const view = render(
+        <DateRangePicker visible onClose={mockOnClose} onConfirm={mockOnConfirm} minDate={new Date(2026, 9, 29)} />
+      );
+      const { dayComponent, markedDates } = calendarOf(view).props;
+      const LibraryDay = jest.requireActual('react-native-calendars/src/calendar/day').default;
+      const spoken = (date: string) => {
+        const day = render(
+          <LibraryDay date={date} markingType="period" marking={markedDates[date]} dayComponent={dayComponent} />
+        );
+        return day.UNSAFE_getByProps({ accessible: true }).props.accessibilityLabel as string;
+      };
+
+      expect(spoken('2026-10-28')).not.toMatch(/today|сегодня/i);
+      expect(spoken('2026-10-28')).toMatch(/28/);
+      expect(spoken('2026-10-29')).toMatch(/^Сегодня, .*29/);
+      expect(spoken('2026-10-30')).not.toMatch(/today|сегодня/i);
     });
 
     it('keeps the period\'s marks on a today inside it', () => {
