@@ -84,11 +84,17 @@ tags:
 - assertNotVisible: "\\+ Add"
 - takeScreenshot: 41-planner-member
 # Its period picker: today is the profile's day, the week begins on Monday,
-# and Cancel leaves the period as it was.
+# and Cancel leaves the period as it was. The list is taken to its top: scrolled
+# up only until Maestro sees it, it stopped under the status bar, the tap on it
+# was the status bar's, and no picker opened. It cannot be centred, so high up.
 - scrollUntilVisible:
     element:
       id: planner-period-custom
     direction: UP
+- swipe:
+    start: 50%, 40%
+    end: 50%, 90%
+- waitForAnimationToEnd
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:

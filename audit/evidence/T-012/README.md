@@ -250,3 +250,49 @@ npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml      [Passed] (1m 37s)
 `npm test` here still stops before Jest, at three `check-secrets.test.mjs`
 subtests. Their fixtures make env and key file names, and the OS refuses
 that in this session.
+
+## Supervisor's e2e: a second tap in flow 41, flow 12 failed
+
+```
+[Failed] Address change by emailed codes (1m 7s) (Element not found: Id matching regex: profile-change-email)
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-10-30T15:22:09.472Z  tapped "id planner-period-custom" again: no "Select Period" after the first tap
+```
+
+### Flow 41: the tap landed on the status bar
+
+Not a lost tap: that run's simulator log for flow 41 has no "we already have
+a service for senderID". Flow 41 scrolled the planner UP only until Maestro
+counted `planner-period-custom` as on screen, and it stopped at
+`bounds=[262,22][377,57]`, under the status bar and the planner's header (the
+list's frames are reported even where the header covers them). The tap at
+y=39 was the status bar's: iOS scrolled the list to its top, and no picker
+opened. The tap taken again found the segment at `[262,212]` and opened it.
+
+The flow now takes the list to its top after the scroll (a swipe down), and
+taps the segment where it is drawn. `centerElement` cannot do it: the segment
+is too near the top to be centred, and the scroll then fails (tried first:
+`No visible element found: id: planner-period-custom`).
+
+```
+npm run e2e -- e2e/flows/41-today-selects-today.yaml     [Passed] (2m 45s)
+  taps taken again (tap-and-see.yaml): 0
+  Tapping on ... resource-id=planner-period-custom, bounds=[262,212]
+```
+
+The app is unchanged. A red run on demand is not possible: where the scroll
+stops depends on its steps, as in the supervisor's run.
+
+### Flow 12: not this task's change
+
+T-012 does not touch the profile, its screens or flow 12. In the failed run
+`profile-edit` was tapped from a hierarchy with it at `[139,231]`; a second
+later it was at `[139,290]` (the failure's screenshot: the Profile screen,
+"Edit Profile" not opened). 59 pt is the top safe-area inset: the Profile
+tab's first frame was laid out without it, and the tap went 59 pt above the
+button. That is React Native's `SafeAreaView` on a freshly mounted tab, used
+by every screen, and outside this task: left for a task of its own.
+
+```
+npm run e2e -- e2e/flows/12-change-email.yaml            [Passed] (2m 48s), on HEAD
+```
