@@ -163,8 +163,10 @@ tags:
 - assertNotVisible: "Busy: .*Grigory Smirnov.*"
 - takeScreenshot: 07-planner-three-sisters
 # Tomorrow is free for all three: "All day", 09:00-23:00. Its "+ Add" made a
-# fourteen-hour rehearsal; it starts one at 09:00 for three hours (T-012).
-# Only opened, and closed again.
+# fourteen-hour rehearsal; it starts one at 09:00 for as long as Three
+# Sisters' last, its read-through three days ago: an hour and a half (T-012).
+# The form's "Recommended Time" is the same window, and a tap on it gives the
+# start the same way - it gave 09:00-23:00 too. Only opened, and closed again.
 - scrollUntilVisible:
     element:
       id: planner-add-${TOMORROW_DAY}-09:00
@@ -180,10 +182,24 @@ tags:
 - assertVisible:
     id: rehearsal-start-time
     text: ".*09:00.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-end-time
+      text: ".*10:30.*"
+    timeout: 10000
+- takeScreenshot: 07-form-all-day
+- scrollUntilVisible:
+    element: "09:00-23:00 \\(14h\\)"
+    direction: DOWN
+    centerElement: true
+- tapOn: "09:00-23:00 \\(14h\\)"
+- assertVisible:
+    id: rehearsal-start-time
+    text: ".*09:00.*"
 - assertVisible:
     id: rehearsal-end-time
-    text: ".*12:00.*"
-- takeScreenshot: 07-form-all-day
+    text: ".*10:30.*"
+- takeScreenshot: 07-form-recommended-time
 - tapOn: "Cancel"
 - extendedWaitUntil:
     notVisible:

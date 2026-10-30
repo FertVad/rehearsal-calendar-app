@@ -423,6 +423,9 @@ export async function seed({ client, apiUrl, timezone }) {
     lesson: await rehearsal(schoolId, 'Lesson plan', 2, 16, 17, ['gaev', 'medvedenko'], 'gaev'),
     midnight: await rehearsal(roundsId, 'Midnight call', 0, [0, 30], 1, ['chebutykin'], 'gaev', CHOSEN_ZONE),
     watch: await rehearsal(roundsId, 'Night watch', 1, 2, 3, ['chebutykin'], 'gaev', CHOSEN_ZONE),
+    // Three Sisters' only one, an hour and a half three days ago: the length a
+    // new one there is given (07, T-012). The Bear has none, so three hours.
+    sisters: await rehearsal(sistersId, 'Read-through', -3, 18, [19, 30], ['stage', 'masha', 'irina'], 'stage'),
     // Three days ago: on his project's page, under the past ones (39).
     monologue: await rehearsal(sorinEstateId, 'Old monologue', -3, 12, 13, ['gaev', 'sorin'], 'gaev'),
     // Hers and Gaev's, neither seen: "0/2" until she marks it (40).
@@ -486,6 +489,8 @@ export async function seed({ client, apiUrl, timezone }) {
     trip: localDate(4),
     // Yakov's day in the strip, and today (41).
     picked: localDate(otherDayThisWeek()), today: localDate(0),
+    // The phone's today, in run.mjs's SIMULATOR_ZONE: not called today (41).
+    phone_today: zoneDate('Pacific/Honolulu', 0),
     // The day Sonya marks busy, and the one after it, which stays free (45).
     tomorrow: localDate(1), after_tomorrow: localDate(2),
     // A weekend in this month's period picker, which begins its weeks on
