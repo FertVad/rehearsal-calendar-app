@@ -5,8 +5,10 @@
 # midnight could not be saved at all. Now the evening holds it whole, "01:00,
 # next day", and saves it as it is; the morning shows its end, from the day
 # before. Only she is on her days (flow 24 has her rehearsal, days earlier).
-# Saved, the editor closes without asking; picked again and closed unsaved, it
-# asks first, and its "Save" saves the day and closes it (T-013).
+# Saved, the editor closes without asking; its mode picked again, the day says
+# what it said and closing does not ask either. Made busy and closed unsaved,
+# it asks first; its "Save" saves, and the day changed again while that save is
+# out is asked about again rather than closed away (T-013, review).
 appId: ${APP_ID}
 name: A busy slot past midnight is one slot, on both days
 tags:
@@ -117,8 +119,8 @@ tags:
       text: "01:00.*"
     timeout: 10000
 - takeScreenshot: 25-evening-slot-whole
-# Picked again, the day is one to save. Let go of, the editor's own Save goes
-# off the screen with its panel, so the only "Save" is the question's.
+# Its mode picked again, the day says what it said: closing loses nothing and
+# goes at once. It used to count as a change and ask (T-013, review).
 - tapOn:
     id: mode-custom
 - tapOn:
@@ -130,11 +132,79 @@ tags:
 - tapOn:
     id: availability-close
 - extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- assertNotVisible: "Don't Save"
+# A real change: busy all day. Let go of, the editor's own Save goes off the
+# screen with its panel, so the only "Save" is the question's.
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${EVENING_DAY}
+      text: ".*, Partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${EVENING_DAY}
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    visible:
+      id: slot-0-end
+      text: "01:00.*"
+    timeout: 10000
+- tapOn:
+    id: mode-busy
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 5000
+# The save is held on its way, so the sheet can be changed while it is out.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: PUT
+      PATH: "/availability/days$"
+      OPEN: "1"
+- tapOn:
+    id: availability-close
+- extendedWaitUntil:
     visible: "Don't Save"
     timeout: 5000
 - takeScreenshot: 25-close-asks
 - tapOn: "Save"
+# Meanwhile the day goes back to hours.
+- tapOn:
+    id: day-${EVENING_DAY}
+- tapOn:
+    id: mode-custom
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 5000
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+# The busy day is saved; the hours since are not, so the question comes again
+# and the sheet stays. It used to close as soon as the save was back.
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 15000
+- takeScreenshot: 25-asks-again
+- tapOn: "Don't Save"
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
-    timeout: 15000
+    timeout: 10000
