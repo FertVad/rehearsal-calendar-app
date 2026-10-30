@@ -49,7 +49,8 @@ only the fix's own files back to `71c3b41`, then restored them from `HEAD`.
 # 1  JoinProjectScreen.tsx, joinProjectScreenStyles.ts, projects.ts at 71c3b41
 npm run e2e -- e2e/flows/08-invite-before-sign-in.yaml
 [Failed] Invite link before sign-in (1m 40s) (Element not found: Id matching regex: join-code-input)
-  -- the old screen has no such form after a wrong code: it is the full-screen error
+  -- wrong: the old screen had no join-code-input, so this failed before the code
+     was typed. Redone with the ids kept, see "Review" below.
 Jest: ✕ shows a wrong code's error under the field…  Unable to find testID join-code-input
       ✕ draws the button of a link's error as a button  Expected "#ffffff", Received undefined
 
@@ -129,7 +130,57 @@ touch it. The server's full Jest run fails 8 tests of
 `startup/runtimeStartup.test.js`, where child processes cannot import the
 server here. They fail the same way with `legal.js` at `71c3b41`.
 
-Screenshots: `08-wrong-code-under-the-field`, `07-conflict-in-english`,
+## Review (Astra), 30.10.2026
+
+| # | Remark | Commit | Red before | Green after |
+|---|---|---|---|---|
+| 1 | Second link shown, first one joined | `077e26b` | Jest: 2 ✕ `Expected "BBBB", Received "AAAA"`; flow 08 with `JoinProjectScreen.tsx` at `f6725db`: `[Failed] (2m 17s) (Assertion is false: ".*As You Like It.*" is visible)` | Jest 4/4; flow 08 `[Passed] (2m 26s)` |
+| 2 | Offset wrong at a change of clocks | `8b398dd` | Jest: `Expected "Berlin (UTC+1)", Received "Berlin (UTC+2)"` (01:30 UTC, 25.10.2026) | Jest 5/5; flow 23 `[Passed] (1m 55s)` |
+| 3 | Wrong-code red failed on the new id | `077e26b` (flow 08) | below | — |
+| 4 | Flow 44 failed on the new id, read English | `2900336` | below | flow 44 `[Passed] (2m 46s)` |
+| 5 | Badge layout not held by a flow | — | not done, see below | — |
+
+**3.** The red run now keeps the ids: `JoinProjectScreen.tsx`,
+`joinProjectScreenStyles.ts`, `projects.ts` at `71c3b41`, with only
+`testID="join-code-input"` and `"join-code-submit"` added. Flow 08 types the
+code and fails at what it checks: `[Failed] (2m 15s) (Assertion is false:
+"Invitation not found", id: join-code-error is visible)`. The screenshot of
+that step (run `2026-10-30_084822`, `step-065`) is the defect: "Error /
+Invitation not found" and "Try another code" black on the background. Jest on
+the same file: `Unable to find an element with testID: join-code-error`; the
+link's button `Expected "#ffffff", Received undefined`. The wrong-code part of
+flow 08 now runs before any project is joined, so the second-link part (1)
+cannot fail first.
+
+**4.** Red: `ProfileScreen.tsx` at `71c3b41` with only `testID="profile-help"`
+added: `[Failed] (2m 38s) (Assertion is false: ".*support@rehearsly.me.*" is
+visible)` — the tap opens nothing. The flow no longer expects the English
+"Support": it waits for the page's address, the same in every language, and
+for the profile to be gone. Not in the flow, and why:
+- *The page's language.* legal.js picks it, and Safari does not run legal.js
+  from the local http server: the CSP's `upgrade-insecure-requests` sends the
+  script to https. `invitePage.browser.test` holds that directive ("must not
+  weaken or replace the global CSP"). Dropping it for the local server is a
+  security-header decision for the owner. Jest holds both ends: the link
+  carries `lang=ru`, and legal.js shows ru for it.
+- *The version.* The build's version is `1.0.0` (`app.json`), the number the
+  old screen had written in, so the screen looks the same before and after. A
+  different version for e2e would be a test hook in the app config. Jest holds
+  it: `expoConfig.version` 2.4.1 is shown.
+
+**5.** Not done. Maestro sees a day cell as one accessibility element ("Fri,
+30, 1"): it has no bounds for the name or the count, so no flow can tell where
+the count sits. Making them separate elements would split each day into three
+for VoiceOver; comparing images would be a new mechanism, and the strip
+changes with the date. The screenshots stay as the visual proof (runs
+`2026-10-30_071946` old, `2026-10-30_071447` fixed), and `WeeklyCalendar.test`
+holds the layout.
+
+Checks after the review: `npx jest --selectProjects frontend --silent` 105
+suites, 915 tests passed; `npm run type-check` clean; `npm run check:secrets`
+pass.
+
+Screenshots: `08-wrong-code-under-the-field`, `08-second-link-joined`, `07-conflict-in-english`,
 `07-calendar-after-back`, `44-support-page`, `09-onboarding-notifications`,
 `41-week-strip-counts`, `23-picker-device-in-honolulu`.
 
