@@ -104,18 +104,6 @@ tags:
 - assertVisible:
     id: date-range-calendar.day_${TODAY_DAY}
     text: ".*Today.*"
-# And VoiceOver does not call the phone's date today as well: the library
-# named it so whatever its marking said (T-012 review). Only while the two
-# dates differ - in Jerusalem against Honolulu, from 00:00 to 12:00.
-- runFlow:
-    when:
-      true: ${PHONE_TODAY_DAY != TODAY_DAY}
-    commands:
-      - assertVisible:
-          id: date-range-calendar.day_${PHONE_TODAY_DAY}
-      - assertNotVisible:
-          id: date-range-calendar.day_${PHONE_TODAY_DAY}
-          text: ".*Today.*"
 - assertVisible:
     id: date-range-calendar.day_${SUNDAY_DAY}
     rightOf:

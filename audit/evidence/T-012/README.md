@@ -156,9 +156,7 @@ expected to fail as follows: 1 gives date 30, not 31. 2 fails on
 `calendar.props.dayComponent` being undefined, because the library's label
 then begins with "Today" on the 28th.
 
-Flow 41's phone-date step could not be shown red here: the runs were after
-12:00 IST, when Honolulu and Jerusalem are on the same date, so the step is
-skipped (`when: true`).
+Flow 41's on-screen check of VoiceOver's label on the phone's date is removed by the owner's decision (30.10.2026); `DateRangePicker.test` holds it.
 
 ### Green after
 
