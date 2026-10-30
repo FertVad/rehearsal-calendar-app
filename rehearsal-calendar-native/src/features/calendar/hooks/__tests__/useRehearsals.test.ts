@@ -512,4 +512,29 @@ describe('useRehearsals Hook', () => {
     });
   });
 
+  // `refreshing` is the pull-to-refresh spinner's. Set by the load on focus
+  // too, it opened the spinner on the way back from the planner and iOS left
+  // the calendar 60 pt down under it (T-011).
+  describe('refreshing', () => {
+    it('is for a pull only: a load on focus or a change goes unseen', async () => {
+      (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({ data: { rehearsals: [] } });
+      const { result } = renderHook(() => useRehearsals(mockProjects, null));
+      await act(async () => { await result.current.fetchRehearsals(); });
+
+      let answer!: (value: unknown) => void;
+      (rehearsalsAPI.getBatch as jest.Mock).mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+      let load!: Promise<void>;
+      act(() => { load = result.current.fetchRehearsals(true); });
+      expect(result.current.refreshing).toBe(false);
+      expect(result.current.loading).toBe(false);
+      await act(async () => { answer({ data: { rehearsals: [] } }); await load; });
+
+      (rehearsalsAPI.getBatch as jest.Mock).mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+      act(() => { load = result.current.refresh(); });
+      expect(result.current.refreshing).toBe(true);
+      await act(async () => { answer({ data: { rehearsals: [] } }); await load; });
+      expect(result.current.refreshing).toBe(false);
+    });
+  });
+
 });

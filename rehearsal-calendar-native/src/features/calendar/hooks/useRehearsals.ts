@@ -38,7 +38,11 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
   // a rehearsal already over counted as upcoming).
   const userTimezone = useTimezone();
 
-  const fetchRehearsals = useCallback(async (force = false) => {
+  // `pulled`: the person pulled to refresh. Only then is `refreshing` set: it
+  // is the pull's spinner, and turned on by the load on focus it opened over
+  // the calendar on the way back from the planner and left it 60 pt down
+  // (T-011). Every other load goes unseen, its data replacing the old.
+  const fetchRehearsals = useCallback(async (force = false, pulled = false) => {
     if (projects.length === 0) {
       // No projects is an answer, and the newest: the load still out is
       // dropped, and with it the `finally` that would have ended the spinner,
@@ -64,10 +68,10 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
     // The marks of the answer land only where nobody toggled since (HN02).
     const primeSeen = beginRead();
 
-    // Use loading for initial load (no data), refreshing for background updates
+    // Loading for the first load (no data yet), refreshing for a pull
     if (isInitialLoadRef.current) {
       setLoading(true);
-    } else {
+    } else if (pulled) {
       setRefreshing(true);
     }
     setError(null);
@@ -163,11 +167,15 @@ export const useRehearsals = (projects: Project[], filterProjectId: string | nul
     }
   }, [projects, filterProjectId, userTimezone, beginRead, beginLoad]);
 
+  // Pull-to-refresh: forced past the cache, with its spinner.
+  const refresh = useCallback(() => fetchRehearsals(true, true), [fetchRehearsals]);
+
   return {
     rehearsals,
     loading,
     refreshing,
     error,
     fetchRehearsals,
+    refresh,
   };
 };

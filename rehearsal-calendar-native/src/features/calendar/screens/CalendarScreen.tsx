@@ -78,6 +78,7 @@ export default function CalendarScreen() {
     refreshing,
     error,
     fetchRehearsals,
+    refresh,
   } = useRehearsals(projects, filterProjectId);
 
   // Straight from the store, so a push landing while this screen is open moves
@@ -99,11 +100,6 @@ export default function CalendarScreen() {
       prefilledDate: date,
     });
   }, [navigation]);
-
-  // Pull-to-refresh handler (forces update, ignores cache)
-  const handleRefresh = useCallback(() => {
-    fetchRehearsals(true);
-  }, [fetchRehearsals]);
 
   // Fetch rehearsals when screen is focused (with smart caching)
   // A push announcing a rehearsal arrives while this screen is already in
@@ -239,7 +235,7 @@ export default function CalendarScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={handleRefresh}
+            onRefresh={refresh}
             tintColor={Colors.accent.purple}
             colors={[Colors.accent.purple]}
           />

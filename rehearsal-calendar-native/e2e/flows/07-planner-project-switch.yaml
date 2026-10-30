@@ -107,6 +107,29 @@ tags:
 - extendedWaitUntil:
     notVisible: "All participants, 2 of 2"
     timeout: 10000
+# Saving it warns of him, in the app's language: the warning was written in
+# Russian in the code, "Grigory Smirnov занят(а) в это время" (T-011). The
+# warning is declined, so still nothing is saved.
+- scrollUntilVisible:
+    element:
+      id: rehearsal-submit
+    direction: DOWN
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-submit
+      SEE: ".*Schedule Conflict"
+      WAIT_MS: "10000"
+- assertVisible: "Grigory Smirnov is busy at this time[\\s\\S]*"
+- assertNotVisible: "[\\s\\S]*занят[\\s\\S]*"
+- takeScreenshot: 07-conflict-in-english
+# The alert's Cancel, not the form's close, which is labelled Cancel too.
+- tapOn:
+    text: "Cancel"
+    below: "Create Anyway"
+- extendedWaitUntil:
+    notVisible: ".*Schedule Conflict"
+    timeout: 10000
 - tapOn: "Cancel"
 - extendedWaitUntil:
     notVisible:
@@ -131,3 +154,27 @@ tags:
     text: ".*2 of 3.*"
 - assertNotVisible: "Busy: .*Grigory Smirnov.*"
 - takeScreenshot: 07-planner-three-sisters
+# Back to the calendar: in its place, not 60 pt down. The load on focus turned
+# on the pull-to-refresh spinner, and iOS left the calendar under it (T-011).
+# Maestro reads no coordinates, so the filter is tapped where it belongs - its
+# middle, 12% down an iPhone 16 - and its list must open; 60 pt lower, the tap
+# lands above it.
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 07-calendar-after-back
+- repeat:
+    while:
+      notVisible: ".*Three Sisters.*"
+    times: 2
+    commands:
+      - tapOn:
+          point: "40%,12%"
+      - waitForAnimationToEnd:
+          timeout: 3000
+- assertVisible: ".*Three Sisters.*"
+- tapOn:
+    id: calendar-filter
