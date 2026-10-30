@@ -60,8 +60,14 @@ tags:
       TAP: "Next"
       SEE: "Not now"
       WAIT_MS: 10000
-# Notifications: not now.
+# Notifications: not now. Its examples are what a notification says; they were
+# the form's "Add Rehearsal" and "Save Changes", framed like buttons (T-011).
 - assertVisible: "Notifications"
+- assertVisible: "You were added to a rehearsal"
+- assertVisible: "A rehearsal’s time changed"
+- assertNotVisible: "Add Rehearsal"
+- assertNotVisible: "Save Changes"
+- takeScreenshot: 09-onboarding-notifications
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:

@@ -27,6 +27,9 @@ export interface OnboardingTranslations {
     later: string;
     back: string;
     skip: string;
+    /** Examples of what a notification says. */
+    exampleAdded: string;
+    exampleTimeChanged: string;
   };
   calendarSync: {
     title: string;
@@ -78,6 +81,8 @@ feature3: 'Репетиция уходит всем в календарь',
       later: 'Не сейчас',
       back: 'Назад',
       skip: 'Пропустить',
+      exampleAdded: 'Вас добавили в репетицию',
+      exampleTimeChanged: 'Время репетиции изменилось',
     },
     calendarSync: {
 pickCalendar: 'Выберите календарь — занятость перенесётся из него в приложение',
@@ -130,6 +135,8 @@ feature3: 'The rehearsal lands in everyone\'s calendar',
       later: 'Not now',
       back: 'Back',
       skip: 'Skip',
+      exampleAdded: 'You were added to a rehearsal',
+      exampleTimeChanged: 'A rehearsal’s time changed',
     },
     calendarSync: {
 pickCalendar: 'Pick a calendar and your busy hours come across into the app',
@@ -182,6 +189,8 @@ feature3: 'El ensayo llega al calendario de cada uno',
       later: 'Ahora no',
       back: 'Atrás',
       skip: 'Omitir',
+      exampleAdded: 'Te añadieron a un ensayo',
+      exampleTimeChanged: 'Cambió la hora de un ensayo',
     },
     calendarSync: {
 pickCalendar: 'Elijan un calendario y sus horas ocupadas pasan a la app',
@@ -234,6 +243,8 @@ feature3: 'Die Probe landet in jedem Kalender',
       later: 'Jetzt nicht',
       back: 'Zurück',
       skip: 'Überspringen',
+      exampleAdded: 'Du wurdest zu einer Probe eingetragen',
+      exampleTimeChanged: 'Die Zeit einer Probe hat sich geändert',
     },
     calendarSync: {
 pickCalendar: 'Wähl einen Kalender — deine belegten Stunden kommen in die App',
