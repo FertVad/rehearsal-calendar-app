@@ -89,6 +89,7 @@ describe('useAddRehearsalSubmit Hook', () => {
     availabilityFailed: false,
     reloadAvailability: jest.fn(),
     resetForm: jest.fn(),
+    fields: { project: '1', date: '', start: '', end: '', title: '', location: '', participants: '' },
     markSaved: jest.fn(),
     t: mockT,
     isEditMode: false,
@@ -210,8 +211,9 @@ describe('useAddRehearsalSubmit Hook', () => {
         })
       );
 
+      // Answered when the conflict is: not here.
       await act(async () => {
-        await result.current.handleSubmit();
+        result.current.handleSubmit();
       });
 
       // Should show conflict alert with two buttons
@@ -517,7 +519,7 @@ describe('useAddRehearsalSubmit Hook', () => {
   // fix 10: D03).
   describe('Idempotency-Key of a create', () => {
     const keysSent = () => (rehearsalsAPI.create as jest.Mock).mock.calls.map((call) => call[2]);
-    const submit = async (result: { current: { handleSubmit: () => Promise<void> } }) => {
+    const submit = async (result: { current: { handleSubmit: () => Promise<unknown> } }) => {
       await act(async () => {
         await result.current.handleSubmit();
       });

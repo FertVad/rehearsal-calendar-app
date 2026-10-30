@@ -7,8 +7,8 @@
 # before. Only she is on her days (flow 24 has her rehearsal, days earlier).
 # Saved, the editor closes without asking; its mode picked again, the day says
 # what it said and closing does not ask either. Made busy and closed unsaved,
-# it asks first; its "Save" saves, and the day changed again while that save is
-# out is asked about again rather than closed away (T-013, review).
+# it asks first; its "Save" saves, and while that save is out the sheet takes
+# no changes; saved, it closes (T-013, review).
 appId: ${APP_ID}
 name: A busy slot past midnight is one slot, on both days
 tags:
@@ -167,7 +167,7 @@ tags:
     notVisible:
       id: availability-save
     timeout: 5000
-# The save is held on its way, so the sheet can be changed while it is out.
+# The save is held on its way.
 - runScript:
     file: ../scripts/hold-answers.js
     env:
@@ -182,29 +182,35 @@ tags:
     timeout: 5000
 - takeScreenshot: 25-close-asks
 - tapOn: "Save"
-# Meanwhile the day goes back to hours.
-- tapOn:
-    id: day-${EVENING_DAY}
-- tapOn:
-    id: mode-custom
-- tapOn:
-    id: day-${EVENING_DAY}
+# While it is out the sheet shows it is saving and takes nothing: a tap on the
+# day does not open it again. It did, and the day changed back meanwhile
+# closed the sheet unasked, the save writing busy over it (T-013, review 2).
 - extendedWaitUntil:
-    notVisible:
-      id: availability-save
+    visible:
+      id: availability-saving
     timeout: 5000
+- tapOn:
+    id: day-${EVENING_DAY}
+- assertNotVisible:
+    id: mode-custom
+- takeScreenshot: 25-saving
 - runScript:
     file: ../scripts/release-answers.js
     env:
       MAIL_URL: ${MAIL_URL}
-# The busy day is saved; the hours since are not, so the question comes again
-# and the sheet stays. It used to close as soon as the save was back.
-- extendedWaitUntil:
-    visible: "Don't Save"
-    timeout: 15000
-- takeScreenshot: 25-asks-again
-- tapOn: "Don't Save"
+# Saved: the sheet closes, nothing asked, and the day is busy, as it was sent.
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
-    timeout: 10000
+    timeout: 15000
+- assertNotVisible: "Don't Save"
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${EVENING_DAY}
+      text: ".*, Busy"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000

@@ -290,6 +290,79 @@ describe('Leaving with changes (T-013)', () => {
     expect(leave()).toBe(true);
   });
 
+  describe('While a save is out, the form is the one being saved (T-013, review 2)', () => {
+    // The create request, answered when the test says.
+    let answer: (value: unknown) => void;
+    let fail: (error: Error) => void;
+    beforeEach(() => {
+      create.mockImplementation(() => new Promise((resolve, reject) => { answer = resolve; fail = reject; }));
+    });
+    const location = (screen: ReturnType<typeof render>) => screen.getByTestId('rehearsal-location').props.value;
+    const closes = () => mockNavigation.dispatch.mock.calls.length + mockNavigation.goBack.mock.calls.length;
+    const pressOk = async () => {
+      const [, , buttons] = (Alert.alert as jest.Mock).mock.calls.find(([title]) => title === t.rehearsals.success);
+      await act(async () => { buttons[0].onPress(); });
+      await settle();
+    };
+
+    it('the question\'s Save: no edits meanwhile, no way out until it is back, then closed once', async () => {
+      const screen = await open();
+      type(screen, 'Room A');
+      leave();
+      await choose(t.common.save);
+
+      type(screen, 'Room B');
+      expect(location(screen)).toBe('Room A');
+      expect(leave()).toBe(false);
+      expect(showSheet).toHaveBeenCalledTimes(1);
+      expect(closes()).toBe(0);
+
+      await act(async () => { answer({ data: { rehearsal: { id: 'new' } } }); });
+      await settle();
+
+      // Closed by the guard, the way it was being closed: no alert over it.
+      expect(create.mock.calls[0][1]).toMatchObject({ location: 'Room A' });
+      expect(closes()).toBe(1);
+      expect(mockNavigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+      expect(Alert.alert).not.toHaveBeenCalledWith(t.rehearsals.success, expect.anything(), expect.anything());
+    });
+
+    it('Create: no edits meanwhile, and saved is what was sent', async () => {
+      const screen = await open();
+      type(screen, 'Room A');
+      await submit(screen);
+
+      type(screen, 'Room B');
+      expect(location(screen)).toBe('Room A');
+      expect(leave()).toBe(false);
+      expect(showSheet).not.toHaveBeenCalled();
+
+      await act(async () => { answer({ data: { rehearsal: { id: 'new' } } }); });
+      await settle();
+      await pressOk();
+
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(closes()).toBe(1);
+    });
+
+    it('a save that fails keeps the edits, says so, and the form takes edits again', async () => {
+      const screen = await open();
+      type(screen, 'Room A');
+      leave();
+      await choose(t.common.save);
+
+      await act(async () => { fail(new Error('offline')); });
+      await settle();
+
+      expect(Alert.alert).toHaveBeenCalledWith(t.common.error, 'offline');
+      expect(closes()).toBe(0);
+      type(screen, 'Room B');
+      expect(location(screen)).toBe('Room B');
+      expect(leave()).toBe(false);
+      expect(showSheet).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it('while the people are still loading, Save is not offered', async () => {
     getMembers.mockImplementation(() => new Promise(() => { /* never answers */ }));
     const screen = await open();

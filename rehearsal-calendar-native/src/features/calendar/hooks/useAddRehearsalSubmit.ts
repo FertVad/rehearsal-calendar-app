@@ -17,6 +17,7 @@ import { exportRehearsal } from '../../../shared/services/calendarSync';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 import { useTimezone } from '../../../shared/hooks/useClock';
+import type { RehearsalFields } from './useAddRehearsalForm';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
@@ -40,8 +41,10 @@ interface UseAddRehearsalSubmitProps {
   availabilityFailed: boolean;
   reloadAvailability: () => void;
   resetForm: () => void;
-  /** The form holds nothing unsaved any more (useAddRehearsalForm). */
-  markSaved: () => void;
+  /** What the form holds, as it is sent (useAddRehearsalForm). */
+  fields: RehearsalFields;
+  /** What was sent is saved (useAddRehearsalForm). */
+  markSaved: (sent: RehearsalFields) => void;
   t: any;
   isEditMode: boolean;
   rehearsalId?: string;
@@ -64,6 +67,7 @@ export function useAddRehearsalSubmit({
   availabilityFailed,
   reloadAvailability,
   resetForm,
+  fields,
   markSaved,
   t,
   isEditMode,
@@ -74,8 +78,15 @@ export function useAddRehearsalSubmit({
   const idempotency = useIdempotencyKey();
   const userTimezone = useTimezone();
 
-  const saveRehearsal = async () => {
+  /**
+   * True once saved. `leaving`: saved from the question on the way out, which
+   * closes the form itself — an alert raised over a sheet being dismissed
+   * would go with it (useLeaveGuard).
+   */
+  const saveRehearsal = async (leaving: boolean): Promise<boolean> => {
     setLoading(true);
+    // What goes, as the form held it when the save began (review T-013 r2).
+    const sent = fields;
 
     try {
       // The date and the two clock times as the interval they are, in the
@@ -143,8 +154,10 @@ export function useAddRehearsalSubmit({
         });
       }
 
-      // Saved: the way out after it is not asked about (useLeaveGuard).
-      markSaved();
+      // Saved, as it was sent: the way out after it is not asked about
+      // (useLeaveGuard).
+      markSaved(sent);
+      if (leaving) return true;
 
       // Success message based on mode
       const successMessage = isEditMode
@@ -164,6 +177,7 @@ export function useAddRehearsalSubmit({
           },
         ]
       );
+      return true;
     } catch (error: any) {
       logger.error('Failed to save rehearsal:', error);
       const errorMessage = isEditMode
@@ -178,23 +192,28 @@ export function useAddRehearsalSubmit({
         participantsLeft ? t.rehearsals.participantsLeft
           : error.response?.data?.error || error.message || errorMessage
       );
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async () => {
+  /**
+   * Create, or Update: true once saved. Every save goes through useLeaveGuard,
+   * which keeps the form as it is until this is answered (review T-013 r2).
+   */
+  const handleSubmit = async (leaving = false): Promise<boolean> => {
     // Validation
     if (!localSelectedProject) {
       Alert.alert(t.common.error, t.rehearsals.projectNotSelected);
-      return;
+      return false;
     }
 
     // Only the clock times count: the form's Date objects carry whatever day
     // they were made on, and an end before the start is the next day.
     if (isEmptyClockRange(formatDateToTimeString(startTime), formatDateToTimeString(endTime))) {
       Alert.alert(t.common.error, t.rehearsals.endTimeError);
-      return;
+      return false;
     }
 
     // Nobody is sent until the participants are settled: the list goes as the
@@ -209,7 +228,7 @@ export function useAddRehearsalSubmit({
       } else {
         Alert.alert(t.common.error, t.rehearsals.participantsLoading);
       }
-      return;
+      return false;
     }
 
     // The conflict check reads the availability of the day shown: one still
@@ -223,7 +242,7 @@ export function useAddRehearsalSubmit({
       } else {
         Alert.alert(t.common.error, t.rehearsals.availabilityChecking);
       }
-      return;
+      return false;
     }
 
     // Check for scheduling conflicts
@@ -243,27 +262,27 @@ export function useAddRehearsalSubmit({
         const conflictMessage = formatConflictMessage(conflicts, t);
 
         // Show warning and ask for confirmation
-        Alert.alert(
+        return new Promise((resolve) => Alert.alert(
           t.rehearsals.scheduleConflict,
           `${conflictMessage}\n\n${t.rehearsals.scheduleConflictMessage}`,
           [
             {
               text: t.common.cancel,
               style: 'cancel',
+              onPress: () => resolve(false),
             },
             {
               text: t.rehearsals.createAnyway,
               style: 'destructive',
-              onPress: () => saveRehearsal(),
+              onPress: () => resolve(saveRehearsal(leaving)),
             },
           ]
-        );
-        return;
+        ));
       }
     }
 
     // No conflicts, save rehearsal
-    saveRehearsal();
+    return saveRehearsal(leaving);
   };
 
   /**

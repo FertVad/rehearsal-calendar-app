@@ -134,6 +134,7 @@ describe('The event of a rehearsal just saved', () => {
         availabilityFailed: false,
         reloadAvailability: jest.fn(),
         resetForm: jest.fn(),
+        fields: { project: '1', date: '', start: '', end: '', title: '', location: '', participants: '' },
         markSaved: jest.fn(),
         t: { common: { error: 'Error' }, rehearsals: { success: 'Success', rehearsalUpdated: 'Updated' } },
         isEditMode: true,

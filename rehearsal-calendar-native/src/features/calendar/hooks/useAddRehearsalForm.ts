@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -28,6 +28,17 @@ interface RouteParams {
   prefilledDate?: string;
   /** A start only: the end is the form's own rule (rehearsalDefaults.ts). */
   prefilledTime?: string;
+}
+
+/** What the form holds, field by field, as text to compare (T-013). */
+export interface RehearsalFields {
+  project: string;
+  date: string;
+  start: string;
+  end: string;
+  title: string;
+  location: string;
+  participants: string;
 }
 
 interface UseAddRehearsalFormProps {
@@ -259,7 +270,7 @@ export function useAddRehearsalForm({
   // rehearsal's load, the participants it starts with — is not theirs to lose,
   // so it goes through the plain setters and is never counted; a field put
   // back as it was is not a change.
-  const fields = {
+  const fields: RehearsalFields = {
     project: localSelectedProject?.id ?? '',
     date: formatDateToString(date),
     start: startClock,
@@ -268,16 +279,27 @@ export function useAddRehearsalForm({
     location,
     participants: [...selectedMemberIds].sort().join(','),
   };
-  type Field = keyof typeof fields;
-  const [untouched, setUntouched] = useState<Partial<Record<Field, string>>>({});
+  type Field = keyof RehearsalFields;
+  const [untouched, setUntouched] = useState<Partial<RehearsalFields>>({});
   const touch = (...names: Field[]) => setUntouched((current) => {
     const next = { ...current };
     for (const name of names) if (!(name in next)) next[name] = fields[name];
     return next;
   });
   const hasChanges = (Object.keys(untouched) as Field[]).some((name) => untouched[name] !== fields[name]);
-  /** Saved: what the form holds now is nothing to lose. */
-  const markSaved = useCallback(() => setUntouched({}), []);
+  const fieldsRef = useRef(fields);
+  fieldsRef.current = fields;
+  /**
+   * Saved as it was sent (review T-013 r2): a field holding something else
+   * since is still unsaved, against what was sent.
+   */
+  const markSaved = useCallback((sent: RehearsalFields) => setUntouched(() => {
+    const next: Partial<RehearsalFields> = {};
+    for (const name of Object.keys(sent) as Field[]) {
+      if (sent[name] !== fieldsRef.current[name]) next[name] = sent[name];
+    }
+    return next;
+  }), []);
 
   const changeTitle = (value: string) => {
     touch('title');
@@ -367,6 +389,8 @@ export function useAddRehearsalForm({
     participantsSettled: participants.settled && participants.projectId === localSelectedProject?.id,
     /** Something the person changed is not saved (T-013). */
     hasChanges,
+    /** What the form holds, as a save sends it and marks it saved. */
+    fields,
     markSaved,
     // UI state
     showDatePicker,

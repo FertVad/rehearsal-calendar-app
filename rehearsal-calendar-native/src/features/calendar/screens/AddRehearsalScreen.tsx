@@ -68,7 +68,7 @@ export default function AddRehearsalScreen() {
   const { memberAvailability, loading: loadingAvailability } = availabilityLoad;
 
   // Submit logic hook
-  const { loading, handleSubmit, canSubmit } = useAddRehearsalSubmit({
+  const { handleSubmit, canSubmit } = useAddRehearsalSubmit({
     localSelectedProject: form.localSelectedProject,
     date: form.date,
     startTime: form.startTime,
@@ -85,6 +85,7 @@ export default function AddRehearsalScreen() {
     availabilityFailed: availabilityLoad.failed,
     reloadAvailability: availabilityLoad.reload,
     resetForm: form.resetForm,
+    fields: form.fields,
     markSaved: form.markSaved,
     t,
     isEditMode: form.isEditMode,
@@ -92,13 +93,15 @@ export default function AddRehearsalScreen() {
   });
 
   // Closing with something changed and not saved asks first, however it is
-  // closed (T-013). Saved from there, the form closes as after Create, once
-  // its confirmation is answered.
-  useLeaveGuard({
+  // closed (T-013); saved from there, the form closes once the save is in.
+  // Create goes through it too, and while a save is out the form takes no
+  // edits (review T-013 r2).
+  const guard = useLeaveGuard({
     hasChanges: form.hasChanges,
     canSave: canSubmit,
-    onSave: () => handleSubmit(),
+    save: (leaving) => handleSubmit(leaving),
   });
+  const saving = guard.saving;
 
   // Who a new rehearsal starts with: the planner's people, or everyone (DP02).
   const memberIds = useMemo(() => members.map(m => m.userId), [members]);
@@ -147,7 +150,8 @@ export default function AddRehearsalScreen() {
   }, [membersLoad.failed]);
 
   return (
-    <View style={styles.container}>
+    // While a save is out nothing here takes a tap (useLeaveGuard).
+    <View style={styles.container} pointerEvents={saving ? 'none' : 'auto'}>
       {/* Create is in the bar below, which keeps it over the keyboard; it
           was at the end of this list, and typing the location hid it. */}
       <SafeAreaView style={styles.scrollView}>
@@ -223,6 +227,7 @@ export default function AddRehearsalScreen() {
                 style={styles.locationInput}
                 value={form.title}
                 onChangeText={form.setTitle}
+                editable={!saving}
                 placeholder={t.rehearsals.rehearsalTitlePlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 returnKeyType="done"
@@ -310,6 +315,7 @@ export default function AddRehearsalScreen() {
                 style={styles.locationInput}
                 value={form.location}
                 onChangeText={form.setLocation}
+                editable={!saving}
                 placeholder={t.rehearsals.locationPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 returnKeyType="done"
@@ -329,10 +335,10 @@ export default function AddRehearsalScreen() {
           label={form.isEditMode ? t.rehearsals.updateRehearsal : t.rehearsals.createRehearsal}
           onPress={() => {
             hapticSuccess();
-            handleSubmit();
+            guard.save();
           }}
           disabled={form.loadingRehearsal}
-          loading={loading}
+          loading={saving}
         />
       </BottomActionBar>
 

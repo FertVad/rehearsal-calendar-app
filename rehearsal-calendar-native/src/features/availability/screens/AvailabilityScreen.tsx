@@ -45,7 +45,6 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     availability,
     setAvailability,
     loading,
-    saving,
     setSaving,
     hasChanges,
     differsFromSaved,
@@ -110,28 +109,27 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     }, [performSmartSync, performAutoSync, loadAvailability])
   );
 
-  const handleSave = async () => {
-    const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
-    // A slot past midnight shows on the next day as read from the server, so
-    // a saved change to it is read back rather than left to the next visit.
-    if (saved) loadAvailability();
-    // Drop the selection so it is obvious the batch was committed; the sheet
-    // stays open because marking several days in a row is the common case.
-    editor.clearSelection();
-  };
-
   // Closing with days changed and not saved asks first, however it is closed
   // (T-013); saved there, the sheet closes once the save has gone through.
   // Only a day that says something else than on the server is asked about.
-  useLeaveGuard({
+  // Every save goes through the guard, and while one is out the sheet takes
+  // no changes (review T-013 r2).
+  const guard = useLeaveGuard({
     hasChanges: differsFromSaved,
     canSave: () => canSave({ availability, changed, today, language, t }),
-    onSave: async (leave) => {
-      if (await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved, announce: false })) {
-        leave();
-      }
+    save: async (leaving) => {
+      const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved, announce: !leaving });
+      if (leaving) return saved;
+      // A slot past midnight shows on the next day as read from the server, so
+      // a saved change to it is read back rather than left to the next visit.
+      if (saved) loadAvailability();
+      // Drop the selection so it is obvious the batch was committed; the sheet
+      // stays open because marking several days in a row is the common case.
+      editor.clearSelection();
+      return saved;
     },
   });
+  const saving = guard.saving;
 
   // Pull-to-refresh: sync calendar + reload availability
   const onRefresh = async () => {
@@ -167,10 +165,16 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    // While a save is out nothing here takes a tap (useLeaveGuard).
+    <SafeAreaView style={styles.container} pointerEvents={saving ? 'none' : 'auto'}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>{t.availability.title}</Text>
+        {/* Saving: shown here too, for the save from the close question,
+            whose panel may be gone. */}
+        {saving && (
+          <ActivityIndicator testID="availability-saving" size="small" color={Colors.accent.purple} style={{ marginLeft: 'auto', marginRight: Spacing.md }} />
+        )}
         {/* Only when pushed as the MarkBusy modal — the month list eats the
             swipe-down dismiss, so without this there is no way back out. As a
             tab root there is nothing to go back to and the button is hidden. */}
@@ -530,7 +534,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
             label={editor.selectedDates.length > 1
               ? `${t.common.save} · ${t.availability.selectedDates(editor.selectedDates.length)}`
               : t.common.save}
-            onPress={handleSave}
+            onPress={() => guard.save()}
             disabled={!hasChanges}
             loading={saving}
           />
