@@ -6,6 +6,8 @@ import { useI18n } from '../../contexts/I18nContext';
 import { getDateLocale } from '../../shared/utils/locale';
 import { formatDateToString, parseDateString } from '../utils/time';
 import { calendarRangeDays } from '../utils/memberAvailabilityLimits';
+import { useToday } from '../hooks/useClock';
+import { useWeekStart } from '../../hooks/useWeekStart';
 import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
 
@@ -19,13 +21,15 @@ interface DateRangePickerProps {
   maxDays?: number;
 }
 
-// Configure locales for react-native-calendars
+// Configure locales for react-native-calendars. No word for "today": the
+// library's today is the phone's date, and the picker names the profile's
+// itself (todayMarking below).
 LocaleConfig.locales['ru'] = {
   monthNames: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
   monthNamesShort: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
   dayNames: ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
   dayNamesShort: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-  today: 'Сегодня'
+  today: ''
 };
 
 LocaleConfig.locales['en'] = {
@@ -33,8 +37,44 @@ LocaleConfig.locales['en'] = {
   monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
   dayNamesShort: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
-  today: 'Today'
+  today: ''
 };
+
+/**
+ * Today is the profile's (CLAUDE.md, dates). react-native-calendars marks the
+ * phone's date as today, which it takes from the device clock and has no prop
+ * for: in Honolulu with a profile in Europe it marked the 28th while the first
+ * day it would take was the 29th. A day's marking overrides it, so the phone's
+ * date is unmarked — and, before `minDate`, shown as the past it is — and the
+ * profile's date is marked, and named for VoiceOver.
+ */
+function withToday(
+  marked: { [key: string]: any },
+  today: string,
+  phoneToday: string,
+  minDate: string | undefined,
+  todayLabel: string,
+): { [key: string]: any } {
+  const result = { ...marked };
+  if (phoneToday !== today) {
+    result[phoneToday] = {
+      ...result[phoneToday],
+      today: false,
+      ...(minDate && phoneToday < minDate ? { disabled: true, disableTouchEvent: true } : {}),
+    };
+  }
+  const day = result[today];
+  result[today] = {
+    ...day,
+    today: true,
+    accessibilityLabel: [
+      todayLabel,
+      day?.startingDay && 'period start',
+      day?.endingDay && 'period end',
+    ].filter(Boolean).join(', '),
+  };
+  return result;
+}
 
 export function DateRangePicker({
   visible,
@@ -46,6 +86,12 @@ export function DateRangePicker({
   maxDays,
 }: DateRangePickerProps) {
   const { t, language } = useI18n();
+  // The week begins on the profile's day, as in the availability calendar
+  // (CalendarMonth): without `firstDay` the library began it on Sunday.
+  const weekStart = useWeekStart();
+  const today = useToday();
+  // The phone's date, which is all the library knows as today.
+  const phoneToday = formatDateToString(new Date());
 
   // Set calendar locale
   LocaleConfig.defaultLocale = language;
@@ -118,6 +164,8 @@ export function DateRangePicker({
     return marked;
   }, [startDate, endDate, rangeError]);
 
+  const calendarMarks = withToday(markedDates, today, phoneToday, minDateStr, t.common.today);
+
   const handleDayPress = (day: DateData) => {
     if (!startDate || (startDate && endDate)) {
       // First selection or resetting selection
@@ -189,9 +237,12 @@ export function DateRangePicker({
           {rangeError && <Text accessibilityRole="alert" style={{ color: Colors.accent.red }}>{rangeError}</Text>}
 
           <Calendar
+            testID="date-range-calendar"
+            current={startDate ?? today}
+            firstDay={weekStart === 'monday' ? 1 : 0}
             onDayPress={handleDayPress}
             markingType={'period'}
-            markedDates={markedDates}
+            markedDates={calendarMarks}
             minDate={minDateStr}
             theme={{
               backgroundColor: Colors.bg.secondary,
@@ -212,6 +263,7 @@ export function DateRangePicker({
 
           <View style={styles.footer}>
             <TouchableOpacity
+              testID="date-range-cancel"
               style={[styles.button, styles.cancelButton]}
               onPress={handleCancel}
             >

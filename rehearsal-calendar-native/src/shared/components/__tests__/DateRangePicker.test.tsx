@@ -26,11 +26,25 @@ jest.mock('../../../contexts/I18nContext', () => ({
         to: 'До',
         cancel: 'Отмена',
         done: 'Готово',
+        today: 'Сегодня',
       },
     },
     language: 'ru',
   }),
 }));
+const mockWeekStart = jest.fn(() => 'monday');
+jest.mock('../../../hooks/useWeekStart', () => ({ useWeekStart: () => mockWeekStart() }));
+const mockToday = jest.fn<string | undefined, []>(() => undefined);
+jest.mock('../../hooks/useClock', () => {
+  const actual = jest.requireActual('../../hooks/useClock');
+  return { ...actual, useToday: () => mockToday() ?? actual.useToday() };
+});
+
+const calendarOf = (view: ReturnType<typeof render>) =>
+  view.UNSAFE_getByType(require('react-native-calendars').Calendar);
+// The range's own marks, without the day marked as today.
+const rangeMarks = (marks: Record<string, { color?: string }>) =>
+  Object.keys(marks).filter((day) => marks[day].color);
 
 describe('DateRangePicker Component', () => {
   const mockOnClose = jest.fn();
@@ -255,6 +269,58 @@ describe('DateRangePicker Component', () => {
     });
   });
 
+  // T-012: the calendar began its week on Sunday whatever the setting.
+  describe('The first day of the week', () => {
+    it.each([['monday', 1], ['sunday', 0]])('begins on the profile\'s day: %s', (weekStart, firstDay) => {
+      mockWeekStart.mockReturnValue(weekStart);
+      const view = render(<DateRangePicker visible onClose={mockOnClose} onConfirm={mockOnConfirm} />);
+
+      expect(calendarOf(view).props.firstDay).toBe(firstDay);
+    });
+  });
+
+  // T-012: the library marks the phone's date as today. In Honolulu on the
+  // 28th, with a profile already on the 29th, it marked the 28th — a day before
+  // the first one it would take.
+  describe('Today', () => {
+    beforeEach(() => {
+      jest.useFakeTimers({ now: new Date(2026, 9, 28, 12, 0), doNotFake: ['nextTick', 'setImmediate'] });
+      mockToday.mockReturnValue('2026-10-29');
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+      mockToday.mockReturnValue(undefined);
+    });
+
+    it('is the profile\'s day, not the phone\'s', () => {
+      const view = render(
+        <DateRangePicker visible onClose={mockOnClose} onConfirm={mockOnConfirm} minDate={new Date(2026, 9, 29)} />
+      );
+      const marks = calendarOf(view).props.markedDates;
+
+      expect(marks['2026-10-29']).toEqual(expect.objectContaining({ today: true, accessibilityLabel: 'Сегодня' }));
+      expect(marks['2026-10-28']).toEqual(expect.objectContaining({ today: false, disabled: true }));
+    });
+
+    it('keeps the period\'s marks on a today inside it', () => {
+      const view = render(
+        <DateRangePicker visible onClose={mockOnClose} onConfirm={mockOnConfirm}
+          initialStartDate={new Date(2026, 9, 29)} initialEndDate={new Date(2026, 9, 31)} />
+      );
+      const marks = calendarOf(view).props.markedDates;
+
+      expect(marks['2026-10-29']).toEqual(expect.objectContaining({ today: true, startingDay: true }));
+      expect(rangeMarks(marks)).toEqual(['2026-10-29', '2026-10-31', '2026-10-30']);
+    });
+
+    it('opens on the profile\'s month', () => {
+      mockToday.mockReturnValue('2026-11-01');
+      const view = render(<DateRangePicker visible onClose={mockOnClose} onConfirm={mockOnConfirm} />);
+
+      expect(calendarOf(view).props.current).toBe('2026-11-01');
+    });
+  });
+
   describe('Date Formatting', () => {
     it('should format dates correctly in Russian', () => {
       const { getByText } = render(
@@ -314,7 +380,7 @@ describe('DateRangePicker Component', () => {
       );
       expect(view.getByText('Maximum 90 days')).toBeTruthy();
       const calendar = view.UNSAFE_getByType(require('react-native-calendars').Calendar);
-      expect(calendar.props.markedDates).toEqual({});
+      expect(rangeMarks(calendar.props.markedDates)).toEqual([]);
       fireEvent.press(view.getByText('Готово'));
       expect(mockOnConfirm).not.toHaveBeenCalled();
       expect(mockOnClose).not.toHaveBeenCalled();
@@ -325,7 +391,7 @@ describe('DateRangePicker Component', () => {
       act(() => view.UNSAFE_getByType(require('react-native-calendars').Calendar)
         .props.onDayPress({ dateString: '2026-03-31' }));
       expect(view.queryByText('Maximum 90 days')).toBeNull();
-      expect(Object.keys(view.UNSAFE_getByType(require('react-native-calendars').Calendar)
+      expect(rangeMarks(view.UNSAFE_getByType(require('react-native-calendars').Calendar)
         .props.markedDates)).toHaveLength(90);
       fireEvent.press(view.getByText('Готово'));
       expect(mockOnConfirm).toHaveBeenCalledTimes(1);

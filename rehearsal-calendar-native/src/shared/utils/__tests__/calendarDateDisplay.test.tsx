@@ -16,6 +16,7 @@ import { formatDate } from '../../../features/projects/screens/ProjectDetailScre
 jest.mock('../../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: require('../../../i18n/translations').translations.en, language: 'en' }),
 }));
+jest.mock('../../../hooks/useWeekStart', () => ({ useWeekStart: () => 'monday' }));
 
 // jest.config.js runs every test in New York for this reason.
 it('runs where the date and the instant disagree', () => {
