@@ -1,5 +1,6 @@
 import React, { useState, useSyncExternalStore } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, FlatList, Alert } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, FlatList, Alert, Linking } from 'react-native';
+import Constants from 'expo-constants';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -21,6 +22,7 @@ import {
   unregisterPushToken,
 } from '../../../shared/services/notifications';
 import { explainPushRegistration } from '../../../shared/utils/pushAlert';
+import { supportPageUrl } from '../../../shared/services/api';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
@@ -374,17 +376,26 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t.profile.about}</Text>
 
-          <TouchableOpacity style={styles.settingItem}>
+          {/* Nothing to do on it: a row, not a button. The version is the
+              build's, from its app config. */}
+          <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
                 <Ionicons name="information-circle" size={20} color={Colors.accent.yellow} />
               </View>
               <Text style={styles.settingLabel}>{t.profile.version}</Text>
             </View>
-            <Text style={styles.settingValue}>1.0.0</Text>
-          </TouchableOpacity>
+            <Text testID="profile-version" style={styles.settingValue}>{Constants.expoConfig?.version ?? '—'}</Text>
+          </View>
 
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity
+            testID="profile-help"
+            style={styles.settingItem}
+            onPress={() => {
+              hapticLight();
+              Linking.openURL(supportPageUrl(language));
+            }}
+          >
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
                 <Ionicons name="help-circle" size={20} color={Colors.accent.red} />

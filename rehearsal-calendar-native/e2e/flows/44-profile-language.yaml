@@ -105,6 +105,38 @@ tags:
     text: "Профиль, tab.*"
 - takeScreenshot: 44-russian-from-account
 
+# «Помощь» opens the support page (T-011): it had no onPress. The page comes
+# from the server the app talks to, here the local one, asked with ?lang=ru.
+# Its language is chosen by legal.js, which Safari does not run here: the
+# server's CSP upgrades the page's scripts to https, which the local http
+# server does not answer. So the page shows its markup's English; the link's
+# language and legal.js keeping it are Jest's (ProfileScreen.about,
+# legalPageLanguage).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Язык, Русский.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-help
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: profile-help
+- extendedWaitUntil:
+    visible: "Support"
+    timeout: 20000
+- assertVisible: ".*support@rehearsly.me.*"
+- takeScreenshot: 44-support-page
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: profile-help
+    timeout: 20000
+
 # Back to English.
 - runFlow:
     file: ../subflows/tap-and-see.yaml

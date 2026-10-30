@@ -75,6 +75,15 @@ const getApiUrl = (): string => {
 
 const API_URL = getApiUrl();
 
+/**
+ * The support page, in the app's language. The server that answers the API
+ * serves the site too (one origin, for Universal Links), so the page is taken
+ * from the same place: rehearsly.me in production, the local server in
+ * development and e2e.
+ */
+export const supportPageUrl = (language: string): string =>
+  `${API_URL.replace(/\/api\/?$/, '')}/support?lang=${encodeURIComponent(language)}`;
+
 const REQUEST_TIMEOUT_MS = 10000;
 // A request that sends email answers only after the provider does: the server
 // sends each email inside the request, one after another, giving each up to
