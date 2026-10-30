@@ -137,6 +137,25 @@ export const useAvailabilitySave = () => {
     return { isValid: true };
   };
 
+  /** The days a save sends, and what they hold. */
+  const pendingDays = (availability: AvailabilityData, changed: Record<string, number>, today: string) => {
+    const dates = Object.keys(changed).filter((date) => date >= today).sort();
+    const touched: AvailabilityData = {};
+    for (const date of dates) {
+      if (availability[date]) touched[date] = availability[date];
+    }
+    return { dates, touched };
+  };
+
+  /** A save would go through as things stand: no day it sends is refused. */
+  const canSave = ({ availability, changed, today, language, t }: {
+    availability: AvailabilityData;
+    changed: Record<string, number>;
+    today: string;
+    language: string;
+    t: any;
+  }): boolean => validateAvailability(pendingDays(availability, changed, today).touched, today, language, t).isValid;
+
   /**
    * Save the days the person changed — only those, each by name, each replaced
    * by exactly what it now holds (review CC05). The whole snapshot used to go,
@@ -145,8 +164,12 @@ export const useAvailabilitySave = () => {
    * The counters are read before the request and handed back afterwards: a day
    * edited while the save was out keeps a newer counter and stays unsaved
    * (review CC03). Past days cannot be saved and stop counting as changed.
+   *
+   * `announce: false` is a save on the way out (useLeaveGuard): the sheet
+   * closing says it went through, and an alert raised over a sheet that is
+   * being dismissed would go with it.
    */
-  const saveAvailability = async ({ availability, changed, today, language, t, setSaving, markSaved }: {
+  const saveAvailability = async ({ availability, changed, today, language, t, setSaving, markSaved, announce = true }: {
     availability: AvailabilityData;
     changed: Record<string, number>;
     today: string;
@@ -154,14 +177,11 @@ export const useAvailabilitySave = () => {
     t: any;
     setSaving: (saving: boolean) => void;
     markSaved: (sent: Record<string, number>) => void;
+    announce?: boolean;
   }): Promise<boolean> => {
     const sent = { ...changed };
-    const dates = Object.keys(sent).filter((date) => date >= today).sort();
+    const { dates, touched } = pendingDays(availability, sent, today);
     try {
-      const touched: AvailabilityData = {};
-      for (const date of dates) {
-        if (availability[date]) touched[date] = availability[date];
-      }
       const validation = validateAvailability(touched, today, language, t);
       if (!validation.isValid) {
         Alert.alert(validation.errorTitle!, validation.errorMessage!, [
@@ -176,7 +196,7 @@ export const useAvailabilitySave = () => {
       }
 
       markSaved(sent);
-      Alert.alert(t.rehearsals.success, t.availability.saved);
+      if (announce) Alert.alert(t.rehearsals.success, t.availability.saved);
       return true;
     } catch (err: any) {
       logger.error('Failed to save availability:', err);
@@ -189,6 +209,7 @@ export const useAvailabilitySave = () => {
 
   return {
     saveAvailability,
+    canSave,
     entriesForDay,
     prepareEntriesForAPI,
     validateAvailability,

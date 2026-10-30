@@ -6,6 +6,9 @@
 # She presses Create with the keyboard up from typing the location: the button
 # stays over the keyboard and takes the tap. It was at the end of the form,
 # and the keyboard covered it (T-009).
+# Closing the form with the location typed asks first, and "Don't Save" closes
+# it; the close button closed it at once and the typing was gone. Opened again
+# and left as it came, it closes without asking (T-013).
 appId: ${APP_ID}
 name: Save before the availability is in
 tags:
@@ -61,3 +64,41 @@ tags:
     file: ../scripts/release-answers.js
     env:
       MAIL_URL: ${MAIL_URL}
+# Scrolled down to the location, the form has its close button above the
+# sheet's top edge: clipped, but on the screen, so a tap on it goes to the
+# status bar. The form is scrolled back to its top first.
+- swipe:
+    start: "50%, 35%"
+    end: "50%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-project
+    timeout: 5000
+- tapOn:
+    id: rehearsal-close
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+- takeScreenshot: 20-close-asks
+- tapOn: "Don't Save"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-close
+    timeout: 10000
+- assertNotVisible: "Rehearsal created"
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, 1 of 1"
+    timeout: 15000
+- tapOn:
+    id: rehearsal-close
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-close
+    timeout: 10000
+- assertNotVisible: "Don't Save"

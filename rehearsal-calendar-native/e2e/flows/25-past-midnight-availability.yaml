@@ -5,6 +5,8 @@
 # midnight could not be saved at all. Now the evening holds it whole, "01:00,
 # next day", and saves it as it is; the morning shows its end, from the day
 # before. Only she is on her days (flow 24 has her rehearsal, days earlier).
+# Saved, the editor closes without asking; picked again and closed unsaved, it
+# asks first, and its "Save" saves the day and closes it (T-013).
 appId: ${APP_ID}
 name: A busy slot past midnight is one slot, on both days
 tags:
@@ -66,6 +68,11 @@ tags:
 # Away and back: the editor loads from the server again.
 - tapOn:
     id: availability-close
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- assertNotVisible: "Don't Save"
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
@@ -110,3 +117,24 @@ tags:
       text: "01:00.*"
     timeout: 10000
 - takeScreenshot: 25-evening-slot-whole
+# Picked again, the day is one to save. Let go of, the editor's own Save goes
+# off the screen with its panel, so the only "Save" is the question's.
+- tapOn:
+    id: mode-custom
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 5000
+- tapOn:
+    id: availability-close
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+- takeScreenshot: 25-close-asks
+- tapOn: "Save"
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 15000

@@ -24,6 +24,10 @@ export interface CommonTranslations {
   to: string;
   done: string;
   yes: string;
+  /** Leaving a sheet with unsaved changes: the destructive choice (useLeaveGuard). */
+  dontSave: string;
+  /** Its title where there is no action sheet (Android). */
+  unsavedChanges: string;
 }
 
 export interface NavTranslations {
@@ -87,6 +91,8 @@ export const ru = {
     to: 'До:',
     done: 'Готово',
     yes: 'Да',
+    dontSave: 'Не сохранять',
+    unsavedChanges: 'Изменения не сохранены',
   },
   nav: {
     calendar: 'Календарь',
@@ -152,6 +158,8 @@ export const en = {
     to: 'To:',
     done: 'Done',
     yes: 'Yes',
+    dontSave: "Don't Save",
+    unsavedChanges: 'Unsaved changes',
   },
   nav: {
     calendar: 'Calendar',
@@ -217,6 +225,8 @@ export const es = {
     to: 'Hasta:',
     done: 'Listo',
     yes: 'Sí',
+    dontSave: 'No guardar',
+    unsavedChanges: 'Cambios sin guardar',
   },
   nav: {
     calendar: 'Calendario',
@@ -282,6 +292,8 @@ export const de = {
     to: 'Bis:',
     done: 'Fertig',
     yes: 'Ja',
+    dontSave: 'Nicht sichern',
+    unsavedChanges: 'Nicht gesicherte Änderungen',
   },
   nav: {
     calendar: 'Kalender',

@@ -27,6 +27,7 @@ import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
 import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
 import { useParticipantSeed } from '../hooks/useParticipantSeed';
+import { useLeaveGuard } from '../../../shared/hooks/useLeaveGuard';
 import { addRehearsalScreenStyles as styles } from '../styles';
 import {
   useRehearsalMembers,
@@ -67,7 +68,7 @@ export default function AddRehearsalScreen() {
   const { memberAvailability, loading: loadingAvailability } = availabilityLoad;
 
   // Submit logic hook
-  const { loading, handleSubmit } = useAddRehearsalSubmit({
+  const { loading, handleSubmit, canSubmit } = useAddRehearsalSubmit({
     localSelectedProject: form.localSelectedProject,
     date: form.date,
     startTime: form.startTime,
@@ -84,9 +85,19 @@ export default function AddRehearsalScreen() {
     availabilityFailed: availabilityLoad.failed,
     reloadAvailability: availabilityLoad.reload,
     resetForm: form.resetForm,
+    markSaved: form.markSaved,
     t,
     isEditMode: form.isEditMode,
     rehearsalId: form.rehearsalId,
+  });
+
+  // Closing with something changed and not saved asks first, however it is
+  // closed (T-013). Saved from there, the form closes as after Create, once
+  // its confirmation is answered.
+  useLeaveGuard({
+    hasChanges: form.hasChanges,
+    canSave: canSubmit,
+    onSave: () => handleSubmit(),
   });
 
   // Who a new rehearsal starts with: the planner's people, or everyone (DP02).
@@ -165,6 +176,7 @@ export default function AddRehearsalScreen() {
               swipe-down dismiss gesture is swallowed by the list. Without this the
               only way out is creating the rehearsal. */}
           <TouchableOpacity
+            testID="rehearsal-close"
             style={styles.closeButton}
             onPress={() => {
               Keyboard.dismiss();

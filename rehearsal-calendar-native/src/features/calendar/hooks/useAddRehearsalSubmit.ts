@@ -40,6 +40,8 @@ interface UseAddRehearsalSubmitProps {
   availabilityFailed: boolean;
   reloadAvailability: () => void;
   resetForm: () => void;
+  /** The form holds nothing unsaved any more (useAddRehearsalForm). */
+  markSaved: () => void;
   t: any;
   isEditMode: boolean;
   rehearsalId?: string;
@@ -62,6 +64,7 @@ export function useAddRehearsalSubmit({
   availabilityFailed,
   reloadAvailability,
   resetForm,
+  markSaved,
   t,
   isEditMode,
   rehearsalId,
@@ -139,6 +142,9 @@ export function useAddRehearsalSubmit({
           logger.error('[AddRehearsal] ❌ Failed to auto-sync to calendar:', syncError);
         });
       }
+
+      // Saved: the way out after it is not asked about (useLeaveGuard).
+      markSaved();
 
       // Success message based on mode
       const successMessage = isEditMode
@@ -260,8 +266,21 @@ export function useAddRehearsalSubmit({
     saveRehearsal();
   };
 
+  /**
+   * Create would go to the server as the form stands, without stopping at a
+   * check that refuses it — asked before offering "Save" on the way out
+   * (T-013). A conflict only asks, so it does not count.
+   */
+  const canSubmit = () =>
+    !loading
+    && Boolean(localSelectedProject)
+    && !isEmptyClockRange(formatDateToTimeString(startTime), formatDateToTimeString(endTime))
+    && participantsSettled
+    && (selectedMemberIds.length === 0 || availabilityReady);
+
   return {
     loading,
     handleSubmit,
+    canSubmit,
   };
 }

@@ -29,6 +29,7 @@ import {
 } from '../hooks';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
+import { useLeaveGuard } from '../../../shared/hooks/useLeaveGuard';
 import { PickerModal } from '../../../shared/components/PickerModal';
 import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
 
@@ -57,7 +58,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   } = useAvailabilityData();
 
   // Save hook for validation and API submission
-  const { saveAvailability } = useAvailabilitySave();
+  const { saveAvailability, canSave } = useAvailabilitySave();
 
   // Sync hook for calendar sync management
   const {
@@ -117,6 +118,18 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     // stays open because marking several days in a row is the common case.
     editor.clearSelection();
   };
+
+  // Closing with days changed and not saved asks first, however it is closed
+  // (T-013); saved there, the sheet closes once the save has gone through.
+  useLeaveGuard({
+    hasChanges,
+    canSave: () => canSave({ availability, changed, today, language, t }),
+    onSave: async (leave) => {
+      if (await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved, announce: false })) {
+        leave();
+      }
+    },
+  });
 
   // Pull-to-refresh: sync calendar + reload availability
   const onRefresh = async () => {

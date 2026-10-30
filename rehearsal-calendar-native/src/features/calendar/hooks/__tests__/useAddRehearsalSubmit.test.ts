@@ -89,6 +89,7 @@ describe('useAddRehearsalSubmit Hook', () => {
     availabilityFailed: false,
     reloadAvailability: jest.fn(),
     resetForm: jest.fn(),
+    markSaved: jest.fn(),
     t: mockT,
     isEditMode: false,
     rehearsalId: undefined,

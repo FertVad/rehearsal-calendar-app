@@ -6,6 +6,7 @@ import { AppStackParamList } from '../../../navigation';
 import { Project } from '../../../shared/types';
 import {
   endsNextDay,
+  formatDateToString,
   formatDateToTimeString,
   isEmptyClockRange,
   parseTimeString,
@@ -104,10 +105,6 @@ export function useAddRehearsalForm({
     settled: false,
   });
   const selectedMemberIds = participants.ids;
-  const setSelectedMemberIds = useCallback(
-    (ids: string[]) => setParticipants((current) => ({ ...current, ids })),
-    []
-  );
   const startParticipants = useCallback(
     (projectId: string, ids: string[]) => setParticipants({ projectId, ids, settled: true }),
     []
@@ -227,6 +224,7 @@ export function useAddRehearsalForm({
   // A recommendation is free time, not a rehearsal: it gives the start, and the
   // end is the usual length on (T-012).
   const handleTimeSelect = (startTime: string) => {
+    touch('start', 'end');
     setStartTime(parseTimeString(startTime, date));
     setEndTime(null);
   };
@@ -246,6 +244,7 @@ export function useAddRehearsalForm({
   // Called with a confirmed value only: Cancel in the picker never reaches the
   // form, nor the end moved along with a start (usePickerDraft, HC02).
   const handleDateChange = (selectedDate: Date) => {
+    touch('date');
     setDate(selectedDate);
   };
 
@@ -254,7 +253,48 @@ export function useAddRehearsalForm({
   const startClock = formatDateToTimeString(startTime);
   const endClock = formatDateToTimeString(endTime);
 
+  // What the person changed here and has not saved (T-013): each field they
+  // touched, against what it held before their first touch. What the form
+  // fills in by itself — the default project, a planner's prefill, an edited
+  // rehearsal's load, the participants it starts with — is not theirs to lose,
+  // so it goes through the plain setters and is never counted; a field put
+  // back as it was is not a change.
+  const fields = {
+    project: localSelectedProject?.id ?? '',
+    date: formatDateToString(date),
+    start: startClock,
+    end: endClock,
+    title,
+    location,
+    participants: [...selectedMemberIds].sort().join(','),
+  };
+  type Field = keyof typeof fields;
+  const [untouched, setUntouched] = useState<Partial<Record<Field, string>>>({});
+  const touch = (...names: Field[]) => setUntouched((current) => {
+    const next = { ...current };
+    for (const name of names) if (!(name in next)) next[name] = fields[name];
+    return next;
+  });
+  const hasChanges = (Object.keys(untouched) as Field[]).some((name) => untouched[name] !== fields[name]);
+  /** Saved: what the form holds now is nothing to lose. */
+  const markSaved = useCallback(() => setUntouched({}), []);
+
+  const changeTitle = (value: string) => {
+    touch('title');
+    setTitle(value);
+  };
+  const changeLocation = (value: string) => {
+    touch('location');
+    setLocation(value);
+  };
+  const setSelectedMemberIds = (ids: string[]) => {
+    touch('participants');
+    setParticipants((current) => ({ ...current, ids }));
+  };
+
   const handleStartTimeChange = (selectedTime: Date) => {
+    // A start can move the end along with it.
+    touch('start', 'end');
     setStartTime(selectedTime);
     // An end nobody set follows the start. One that was set stays, unless a
     // later start passes it: then it goes back to following — the usual length
@@ -268,6 +308,7 @@ export function useAddRehearsalForm({
   };
 
   const handleEndTimeChange = (selectedTime: Date) => {
+    touch('end');
     setEndTime(selectedTime);
   };
 
@@ -285,6 +326,7 @@ export function useAddRehearsalForm({
   const handleSelectProject = (project: Project) => {
     setShowProjectPicker(false);
     if (isEditMode || project.id === localSelectedProject?.id) return;
+    touch('project', 'participants');
     setLocalSelectedProject(project);
     setSelectedProject(project); // Also update global context
     setParticipants({ projectId: project.id, ids: [], settled: false });
@@ -314,15 +356,18 @@ export function useAddRehearsalForm({
     /** The end is on the day after `date`. */
     endsNextDay: endsNextDay(startClock, endClock),
     title,
-    setTitle,
+    setTitle: changeTitle,
     location,
-    setLocation,
+    setLocation: changeLocation,
     localSelectedProject,
     setLocalSelectedProject,
     selectedMemberIds,
     setSelectedMemberIds,
     startParticipants,
     participantsSettled: participants.settled && participants.projectId === localSelectedProject?.id,
+    /** Something the person changed is not saved (T-013). */
+    hasChanges,
+    markSaved,
     // UI state
     showDatePicker,
     setShowDatePicker,

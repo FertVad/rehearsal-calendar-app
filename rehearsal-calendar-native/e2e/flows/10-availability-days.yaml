@@ -11,6 +11,9 @@
 # Then a second slot over the first: the save refuses, naming MARK_DAY. The old
 # error read the day as UTC midnight with the device's clock (Honolulu): the
 # day before (cause fix 14).
+# Closed with nothing unsaved, the editor goes at once; closed with that slot
+# unsaved, it asks first, with no "Save" for a change the save refuses. The
+# close button closed it at once and the change was gone (T-013).
 appId: ${APP_ID}
 name: Availability saves the day it changed
 tags:
@@ -75,9 +78,15 @@ tags:
 - tapOn: "OK"
 - assertNotVisible:
     id: availability-save
-# Away and back: the editor loads from the server again.
+# Away and back: the editor loads from the server again. Everything is saved,
+# so it closes without asking (T-013).
 - tapOn:
     id: availability-close
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- assertNotVisible: "Don't Save"
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
@@ -144,3 +153,15 @@ tags:
 - assertVisible: "Error \\(${MARK_DAY_LABEL}\\):[\\s\\S]*Slots must not overlap[\\s\\S]*"
 - takeScreenshot: 10-availability-overlap
 - tapOn: "Understood"
+# The overlapping slot is not saved: closing asks first (T-013).
+- tapOn:
+    id: availability-close
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+- takeScreenshot: 10-close-asks
+- tapOn: "Don't Save"
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000

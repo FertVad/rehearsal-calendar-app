@@ -140,6 +140,10 @@ const Alert = {
   alert: jest.fn(),
 };
 
+const ActionSheetIOS = {
+  showActionSheetWithOptions: jest.fn(),
+};
+
 const Share = {
   share: jest.fn(),
 };
@@ -174,6 +178,7 @@ const NativeModules = {
 module.exports = {
   // Native modules
   Alert,
+  ActionSheetIOS,
   Share,
   Platform,
   Dimensions,

@@ -12,7 +12,7 @@
  */
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { ActionSheetIOS, Alert } from 'react-native';
 import { translations } from '../../../../i18n/translations';
 import { projectsAPI, rehearsalsAPI } from '../../../../shared/services/api';
 import AddRehearsalScreen from '../AddRehearsalScreen';
@@ -21,10 +21,18 @@ const t = translations.en;
 let routeParams: Record<string, unknown> = {};
 
 jest.mock('@react-native-community/datetimepicker', () => () => null);
+// One navigation for the screen and its hooks; the guard on its removal is
+// kept so a test can play a way out (T-013).
+const mockNavigation = { navigate: jest.fn(), goBack: jest.fn(), dispatch: jest.fn(), setParams: jest.fn(), addListener: jest.fn(() => jest.fn()) };
+const mockGuard: { prevent: boolean; callback: ((e: { data: { action: object } }) => void) | null } = { prevent: false, callback: null };
 jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({ params: routeParams }),
-  useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn(), addListener: jest.fn(() => jest.fn()) }),
+  useNavigation: () => mockNavigation,
   useFocusEffect: jest.fn(),
+  usePreventRemove: (prevent: boolean, callback: typeof mockGuard.callback) => {
+    mockGuard.prevent = prevent;
+    mockGuard.callback = callback;
+  },
 }));
 jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: require('../../../../i18n/translations').translations.en, language: 'en' }),
@@ -61,6 +69,8 @@ const sentRoster = (call: jest.Mock) =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockGuard.prevent = false;
+  mockGuard.callback = null;
   getMembers.mockImplementation(async (projectId: string) => ({ data: { members: PEOPLE[projectId] } }));
   (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue({ data: { availability: [] } });
   create.mockResolvedValue({ data: { rehearsal: { id: 'new' } } });
@@ -195,5 +205,98 @@ describe('Before the people are known (R9-02)', () => {
     await submit(screen);
 
     expect(sentRoster(create)).toEqual(['3', '7']);
+  });
+});
+
+describe('Leaving with changes (T-013)', () => {
+  const showSheet = ActionSheetIOS.showActionSheetWithOptions as jest.Mock;
+  // A way out — the close button, the swipe, back: true when it goes through.
+  const leave = (action: object = { type: 'GO_BACK' }) => {
+    if (!mockGuard.prevent) return true;
+    mockGuard.callback!({ data: { action } });
+    return false;
+  };
+  const choose = async (label: string) => {
+    const [{ options }, answer] = showSheet.mock.calls.at(-1);
+    await act(async () => { answer(options.indexOf(label)); });
+    await settle();
+  };
+  const type = (screen: ReturnType<typeof render>, text: string) =>
+    act(() => { fireEvent.changeText(screen.getByTestId('rehearsal-location'), text); });
+
+  it('untouched, the form closes at once: what it filled in by itself is not a change', async () => {
+    routeParams.prefilledMemberIds = ['3', '7'];
+    await open();
+
+    expect(leave()).toBe(true);
+    expect(showSheet).not.toHaveBeenCalled();
+  });
+
+  it('an edit closes at once once it has loaded, untouched', async () => {
+    routeParams = { rehearsalId: 'r1', projectId: 'A' };
+    (rehearsalsAPI.getById as jest.Mock).mockResolvedValue({ data: { rehearsal: {
+      id: 'r1', projectId: 'A', title: 'Act I', location: 'Hall',
+      startsAt: '2026-11-10T10:00:00.000Z', endsAt: '2026-11-10T12:00:00.000Z' } } });
+    (rehearsalsAPI.getResponses as jest.Mock).mockResolvedValue({ data: { allParticipants: [{ userId: '9', response: 'no' }] } });
+    await open();
+
+    expect(leave()).toBe(true);
+  });
+
+  it('something typed, a way out asks: Don\'t Save, Save, Cancel', async () => {
+    const screen = await open();
+    type(screen, 'Rehearsal room');
+
+    expect(leave()).toBe(false);
+    expect(showSheet.mock.calls[0][0]).toMatchObject({
+      options: [t.common.dontSave, t.common.save, t.common.cancel],
+      destructiveButtonIndex: 0,
+      cancelButtonIndex: 2,
+    });
+  });
+
+  it('Don\'t Save closes it the way it was being closed, and nothing is sent', async () => {
+    const screen = await open();
+    type(screen, 'Rehearsal room');
+    const swipe = { type: 'POP', payload: { count: 1 } };
+
+    leave(swipe);
+    await choose(t.common.cancel);
+    expect(mockNavigation.dispatch).not.toHaveBeenCalled();
+
+    leave(swipe);
+    await choose(t.common.dontSave);
+    expect(mockNavigation.dispatch).toHaveBeenCalledWith(swipe);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('typed and put back as it was is not a change', async () => {
+    const screen = await open();
+    type(screen, 'Rehearsal room');
+    type(screen, '');
+
+    expect(leave()).toBe(true);
+  });
+
+  it('Save creates it, and the way out after that is not asked about', async () => {
+    const screen = await open();
+    type(screen, 'Rehearsal room');
+
+    leave();
+    await choose(t.common.save);
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][1]).toMatchObject({ location: 'Rehearsal room' });
+    expect(leave()).toBe(true);
+  });
+
+  it('while the people are still loading, Save is not offered', async () => {
+    getMembers.mockImplementation(() => new Promise(() => { /* never answers */ }));
+    const screen = await open();
+    type(screen, 'Rehearsal room');
+
+    leave();
+
+    expect(showSheet.mock.calls[0][0]).toMatchObject({ options: [t.common.dontSave, t.common.cancel] });
   });
 });
