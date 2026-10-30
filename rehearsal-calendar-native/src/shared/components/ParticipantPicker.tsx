@@ -7,6 +7,8 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -130,10 +132,18 @@ function ParticipantSheet({
   const all = people.length > 0 && people.every(p => selectedIds.includes(p.id));
   const checked: boolean | 'mixed' = all ? true : picked === 0 ? false : 'mixed';
 
+  // A search lasts while the sheet is open, and narrows the list only where
+  // its field is there to see and clear. Kept after closing, it emptied the
+  // sheet of a project of two opened next: no rows, and no field (T-010 review).
+  const searchable = people.length > SEARCH_OVER;
   const shown = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase();
+    const q = searchable ? query.trim().toLocaleLowerCase() : '';
     return q ? people.filter(p => p.name.toLocaleLowerCase().includes(q)) : people;
-  }, [people, query]);
+  }, [people, query, searchable]);
+  const close = () => {
+    setQuery('');
+    onClose();
+  };
 
   const toggle = (id: string) => {
     onChange(selectedIds.includes(id) ? selectedIds.filter(s => s !== id) : [...selectedIds, id]);
@@ -141,79 +151,87 @@ function ParticipantSheet({
   // Some picked, or none: everyone. Everyone: nobody.
   const toggleAll = () => onChange(all ? [] : people.map(p => p.id));
 
+  // The sheet sits on the keyboard while the search types: a search that
+  // leaves one person shrinks it, and it went under the keyboard with them.
   return (
-    <AppModal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <ModalSheet overlayStyle={styles.overlay} onClose={onClose}>
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + Spacing.md }]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{t.rehearsals.participants}</Text>
-            <TouchableOpacity
-              testID="participants-done"
-              onPress={onClose}
-              accessibilityRole="button"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.done}>{t.common.done}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {people.length > SEARCH_OVER && (
-            <View style={styles.search}>
-              <Ionicons name="search" size={16} color={Colors.text.tertiary} />
-              <TextInput
-                testID="participants-search"
-                style={styles.searchInput}
-                value={query}
-                onChangeText={setQuery}
-                placeholder={t.rehearsals.searchParticipants}
-                placeholderTextColor={Colors.text.tertiary}
-                autoCorrect={false}
-                clearButtonMode="while-editing"
-              />
+    <AppModal visible={visible} animationType="slide" onRequestClose={close}>
+      <KeyboardAvoidingView
+        testID="participants-keyboard"
+        style={styles.keyboard}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ModalSheet overlayStyle={styles.overlay} onClose={close}>
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + Spacing.md }]}>
+            <View style={styles.header}>
+              <Text style={styles.title}>{t.rehearsals.participants}</Text>
+              <TouchableOpacity
+                testID="participants-done"
+                onPress={close}
+                accessibilityRole="button"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.done}>{t.common.done}</Text>
+              </TouchableOpacity>
             </View>
-          )}
 
-          <Pressable
-            testID="participants-all"
-            style={styles.allRow}
-            onPress={toggleAll}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked }}
-            accessibilityLabel={`${t.rehearsals.allParticipants}, ${t.rehearsals.participantsCount(picked, people.length)}`}
-          >
-            <Checkbox checked={checked} />
-            <Text style={styles.allText}>{t.rehearsals.allParticipants}</Text>
-            <Text style={styles.side}>{t.rehearsals.participantsCount(picked, people.length)}</Text>
-          </Pressable>
+            {searchable && (
+              <View style={styles.search}>
+                <Ionicons name="search" size={16} color={Colors.text.tertiary} />
+                <TextInput
+                  testID="participants-search"
+                  style={styles.searchInput}
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder={t.rehearsals.searchParticipants}
+                  placeholderTextColor={Colors.text.tertiary}
+                  autoCorrect={false}
+                  clearButtonMode="while-editing"
+                />
+              </View>
+            )}
 
-          <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-            {shown.map(person => {
-              const on = selectedIds.includes(person.id);
-              return (
-                <Pressable
-                  key={person.id}
-                  testID={`participant-${person.id}`}
-                  style={styles.personRow}
-                  onPress={() => toggle(person.id)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: on }}
-                  accessibilityLabel={[person.name, person.isAdmin && t.rehearsals.admin, person.busy]
-                    .filter(Boolean).join(', ')}
-                >
-                  <Checkbox checked={on} />
-                  <View style={styles.nameLine}>
-                    <Text style={styles.name} numberOfLines={1}>{person.name}</Text>
-                    {person.isAdmin && <Text style={styles.admin}>{t.rehearsals.admin}</Text>}
-                  </View>
-                  {person.busy ? (
-                    <Text style={[styles.side, styles.busy]} numberOfLines={1}>{person.busy}</Text>
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </ModalSheet>
+            <Pressable
+              testID="participants-all"
+              style={styles.allRow}
+              onPress={toggleAll}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked }}
+              accessibilityLabel={`${t.rehearsals.allParticipants}, ${t.rehearsals.participantsCount(picked, people.length)}`}
+            >
+              <Checkbox checked={checked} />
+              <Text style={styles.allText}>{t.rehearsals.allParticipants}</Text>
+              <Text style={styles.side}>{t.rehearsals.participantsCount(picked, people.length)}</Text>
+            </Pressable>
+
+            <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+              {shown.map(person => {
+                const on = selectedIds.includes(person.id);
+                return (
+                  <Pressable
+                    key={person.id}
+                    testID={`participant-${person.id}`}
+                    style={styles.personRow}
+                    onPress={() => toggle(person.id)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: on }}
+                    accessibilityLabel={[person.name, person.isAdmin && t.rehearsals.admin, person.busy]
+                      .filter(Boolean).join(', ')}
+                  >
+                    <Checkbox checked={on} />
+                    <View style={styles.nameLine}>
+                      <Text style={styles.name} numberOfLines={1}>{person.name}</Text>
+                      {person.isAdmin && <Text style={styles.admin}>{t.rehearsals.admin}</Text>}
+                    </View>
+                    {person.busy ? (
+                      <Text style={[styles.side, styles.busy]} numberOfLines={1}>{person.busy}</Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </ModalSheet>
+      </KeyboardAvoidingView>
     </AppModal>
   );
 }
@@ -271,6 +289,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: FontSize.sm,
     color: Colors.accent.yellow,
+  },
+  keyboard: {
+    flex: 1,
   },
   overlay: {
     flex: 1,
@@ -333,8 +354,11 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,
   },
+  // As tall as its rows, and no taller than the room the sheet has left:
+  // less with the keyboard up.
   list: {
     flexGrow: 0,
+    flexShrink: 1,
   },
   personRow: {
     height: 48,

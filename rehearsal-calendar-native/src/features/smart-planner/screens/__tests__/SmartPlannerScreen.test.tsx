@@ -148,6 +148,19 @@ describe('The range under the period (cause fix 14)', () => {
   });
 });
 
+describe('The participants sheet over the planner (T-010)', () => {
+  it('takes a tap with its search\'s keyboard up', async () => {
+    // The sheet is inside the screen's scroll for React's touches; a scroll
+    // left to its default caught the tap to put the keyboard away.
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+
+    const scroll = screen.UNSAFE_getByType('ScrollView' as any);
+    expect(scroll.props.keyboardShouldPersistTaps).toBe('handled');
+    expect(scroll.findByProps({ testID: 'participants-row' })).toBeTruthy();
+  });
+});
+
 describe('DP01 — member selection follows the project', () => {
   it('member filter shows exactly the new project\'s count after switching', async () => {
     // Project A has 3 members, project B has 2. After switching, the filter

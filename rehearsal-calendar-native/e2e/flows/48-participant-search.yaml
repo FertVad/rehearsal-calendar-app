@@ -1,0 +1,126 @@
+# The participants sheet searches a company of more than twelve (T-010).
+# Prospero Milan runs The Tempest, thirteen with him, and Prospero Cell, him
+# and Ariel; nobody signs in to either but him, so no other flow moves them.
+#
+# A search left in the sheet when it closed went on filtering the next
+# project's: Prospero Cell opened on "2 of 2" over no rows, and with two
+# people there was no field to clear (review of T-010). And the sheet did not
+# rise with the keyboard: a search that left one person shrank it to the
+# bottom of the screen, under the keyboard, and a tap on the person found
+# went to a key.
+appId: ${APP_ID}
+name: The participants sheet searches, above the keyboard
+tags:
+  - planner
+  - participants
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${PROSPERO_EMAIL}
+- tapOn: "Planner, tab.*"
+- tapOn:
+    id: planner-project
+- tapOn: "The Tempest"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, \\d+ of 13"
+    timeout: 15000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "All participants, \\d+ of 13"
+      WAIT_MS: "5000"
+# A search, left there when the sheet closes.
+- tapOn:
+    id: participants-search
+- inputText: "Caliban"
+- extendedWaitUntil:
+    visible: "Caliban Island"
+    timeout: 5000
+- assertNotVisible: "Ariel Spirit"
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    notVisible:
+      id: participants-all
+    timeout: 10000
+# Prospero Cell: both of its people, though "Caliban" was the last search.
+- tapOn:
+    id: planner-project
+- tapOn: "Prospero Cell"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, \\d+ of 2"
+    timeout: 15000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "All participants, \\d+ of 2"
+      WAIT_MS: "5000"
+- assertNotVisible:
+    id: participants-search
+- assertVisible: "Ariel Spirit"
+- assertVisible: "Prospero Milan.*"
+- takeScreenshot: 48-cell-after-a-search
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    notVisible:
+      id: participants-all
+    timeout: 10000
+# The Tempest again, everyone in it picked.
+- tapOn:
+    id: planner-project
+- tapOn: "The Tempest"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, \\d+ of 13"
+    timeout: 15000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "All participants, \\d+ of 13"
+      WAIT_MS: "5000"
+- repeat:
+    while:
+      notVisible:
+        id: participants-all
+        text: "All participants, 13 of 13"
+    times: 2
+    commands:
+      - tapOn:
+          id: participants-all
+- assertVisible:
+    id: participants-all
+    text: "All participants, 13 of 13"
+# One found, and picked off with the keyboard still up.
+- tapOn:
+    id: participants-search
+- inputText: "Caliban"
+- extendedWaitUntil:
+    visible: "Caliban Island"
+    timeout: 5000
+- assertNotVisible: "Ariel Spirit"
+- takeScreenshot: 48-search-above-the-keyboard
+- tapOn: "Caliban Island"
+- extendedWaitUntil:
+    visible:
+      id: participants-all
+      text: "All participants, 12 of 13"
+    timeout: 5000
+- assertVisible: "Caliban Island"
+- takeScreenshot: 48-found-and-unpicked
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, 12 of 13"
+    timeout: 10000

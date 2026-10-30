@@ -370,9 +370,13 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         minDate={parseDateString(today)}
         maxDays={memberAvailabilityLimits.maxDays}
       />
+      {/* The participants sheet is inside it for React's touches, overlay or
+          not: by default a tap on the sheet with its search's keyboard up
+          only put the keyboard away, a person found took two (T-010). */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
         {renderProjectSelector()}
         {renderPeriodSelector()}

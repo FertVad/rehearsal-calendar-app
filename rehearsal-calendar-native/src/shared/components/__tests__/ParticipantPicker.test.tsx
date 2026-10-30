@@ -165,6 +165,47 @@ describe('the sheet', () => {
     expect(view.queryByTestId('participant-m1')).toBeNull();
   });
 
+  it('forgets the search once closed: the next project shows all of its people', () => {
+    // A search in a company of thirteen, closed, then a project of two: the
+    // query stayed and still filtered, with no field left to clear it, and
+    // the sheet said "2 of 2" over no rows (T-010 review).
+    const onChange = jest.fn();
+    const view = render(<ParticipantPicker people={company(13)} selectedIds={[]} onChange={onChange} />);
+    fireEvent.press(view.getByTestId('participants-row'));
+    fireEvent.changeText(view.getByTestId('participants-search'), 'actor 13');
+    fireEvent.press(view.getByTestId('participants-done'));
+
+    const two = [{ id: 'p1', name: 'Prospero Milan' }, { id: 'p2', name: 'Ariel Spirit' }];
+    view.rerender(<ParticipantPicker people={two} selectedIds={['p1', 'p2']} onChange={onChange} />);
+    fireEvent.press(view.getByTestId('participants-row'));
+
+    expect(view.getByTestId('participant-p1')).toBeTruthy();
+    expect(view.getByTestId('participant-p2')).toBeTruthy();
+  });
+
+  it('narrows nothing where there is no field to see the search in', () => {
+    // The roster shrinks under an open sheet to twelve or fewer.
+    const onChange = jest.fn();
+    const view = render(<ParticipantPicker people={company(13)} selectedIds={[]} onChange={onChange} />);
+    fireEvent.press(view.getByTestId('participants-row'));
+    fireEvent.changeText(view.getByTestId('participants-search'), 'actor 13');
+    view.rerender(<ParticipantPicker people={company(2)} selectedIds={[]} onChange={onChange} />);
+
+    expect(view.queryByTestId('participants-search')).toBeNull();
+    expect(view.getByTestId('participant-m1')).toBeTruthy();
+    expect(view.getByTestId('participant-m2')).toBeTruthy();
+  });
+
+  it('sits on the keyboard on iOS, so what the search found is above it', () => {
+    const view = setup(company(13), []);
+    open(view);
+
+    const keyboard = view.getByTestId('participants-keyboard');
+    expect(keyboard.props.behavior).toBe('padding');
+    expect(within(keyboard).getByTestId('participants-search')).toBeTruthy();
+    expect(within(keyboard).getByTestId('participant-m1')).toBeTruthy();
+  });
+
   it('closes on Done', () => {
     const view = setup(company(2), []);
     open(view);

@@ -137,6 +137,9 @@ export const PEOPLE = {
   // Creates a project and swipes it away (46): in no project, so the one card
   // on his list is the one he made.
   banquo: { email: 'banquo@e2e.test', firstName: 'Banquo', lastName: 'Lochaber', onboarded: true },
+  // Runs a company of thirteen, which the participants sheet searches, and a
+  // project of two (48). The twelve others are ISLANDERS, who never sign in.
+  prospero: { email: 'prospero@e2e.test', firstName: 'Prospero', lastName: 'Milan', onboarded: true },
   // Neither has been through onboarding yet. One goes through it to the end
   // (09-onboarding), after which it is never shown to her again; the other
   // connects a calendar in it and comes back to the step (32), and needs it
@@ -144,6 +147,13 @@ export const PEOPLE = {
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
   perdita: { email: 'perdita@e2e.test', firstName: 'Perdita', lastName: 'Shepherd', onboarded: false },
 };
+
+/** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
+const ISLANDERS = [
+  ['Ariel', 'Spirit'], ['Caliban', 'Island'], ['Miranda', 'Milan'], ['Ferdinand', 'Naples'],
+  ['Alonso', 'Naples'], ['Gonzalo', 'Counsellor'], ['Adrian', 'Lord'], ['Francisco', 'Lord'],
+  ['Trinculo', 'Jester'], ['Stephano', 'Butler'], ['Iris', 'Rainbow'], ['Juno', 'Queen'],
+];
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -303,6 +313,33 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
     [estate.id, ids.voynitsky, ids.sonya]);
+  // Prospero's (48), the same way: The Tempest with all twelve islanders, and
+  // his cell with Ariel alone.
+  const islanders = [];
+  for (const [firstName, lastName] of ISLANDERS) {
+    const { rows: [islander] } = await client.query(
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
+       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE) RETURNING id`,
+      [`${firstName.toLowerCase()}@e2e.test`, hash, firstName, lastName, timezone]);
+    islanders.push(islander.id);
+  }
+  const prosperoProject = async (name, description, members) => {
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id`, [name, description, timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [made.id, ids.prospero]);
+    for (const member of members) {
+      await client.query(
+        `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+         VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+        [made.id, member]);
+    }
+  };
+  await prosperoProject('The Tempest', 'The island', islanders);
+  await prosperoProject('Prospero Cell', 'The books', [islanders[0]]);
   // Made in this order: the Estate is the newer, so the form opens on it.
   await project('Pishchik Mill', 'Flour', [], 'pishchik');
   await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
