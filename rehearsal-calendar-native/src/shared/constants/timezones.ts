@@ -1,4 +1,4 @@
-import { getTimezoneOffset } from 'date-fns-tz';
+import { formatInTimeZone } from 'date-fns-tz';
 
 /**
  * Common timezones presented to users when picking project/user timezone.
@@ -63,20 +63,25 @@ function getCityName(tz: string): string {
 }
 
 /**
- * The UTC offset of `tz` at `at`, e.g. "UTC+2", "UTC-10", "UTC+5:30".
- * Worked out from the zone's wall clock (date-fns-tz, as every date in the
- * app is), not from Intl's timeZoneName 'shortOffset': Hermes answers that
- * with a bare "GMT", and Honolulu read "(UTC)" (T-011). Empty if the zone is
- * unknown.
+ * The UTC offset of `tz` at the moment `at`, e.g. "UTC+2", "UTC-10",
+ * "UTC+5:30". Worked out by date-fns-tz, as every date in the app is, not
+ * from Intl's timeZoneName 'shortOffset': Hermes answers that with a bare
+ * "GMT", and Honolulu read "(UTC)" (T-011). formatInTimeZone takes `at` as
+ * the moment it is; getTimezoneOffset took its fields in the device's zone
+ * for the wall clock of `tz`, and an hour either side of a change of clocks
+ * gave the other side's offset. Empty if the zone is unknown.
  */
 function getOffsetLabel(tz: string, at: Date): string {
-  const ms = getTimezoneOffset(tz, at);
-  if (Number.isNaN(ms)) return '';
-  const minutes = Math.round(ms / 60000);
-  const sign = minutes < 0 ? '-' : '+';
-  const hours = Math.floor(Math.abs(minutes) / 60);
-  const rest = Math.abs(minutes) % 60;
-  return `UTC${sign}${hours}${rest ? `:${String(rest).padStart(2, '0')}` : ''}`;
+  let iso: string;
+  try {
+    iso = formatInTimeZone(at, tz, 'xxx'); // "-04:00", "+05:30"
+  } catch {
+    return '';
+  }
+  const parts = /^([+-])(\d{2}):(\d{2})$/.exec(iso);
+  if (!parts) return '';
+  const [, sign, hours, minutes] = parts;
+  return `UTC${sign}${Number(hours)}${minutes === '00' ? '' : `:${minutes}`}`;
 }
 
 function withOffset(city: string, tz: string, at: Date): string {
