@@ -449,6 +449,10 @@ export async function seed({ client, apiUrl, timezone }) {
     week_chosen: first.month === last.month
       ? `${first.day}-${last.day} ${first.month}`
       : `${first.day} ${first.month} - ${last.day} ${last.month}`,
+    // New York's offset today, as the timezone picker names it: "UTC-4" in
+    // its summer, "UTC-5" in its winter (23). Node's Intl has the offset.
+    new_york_offset: new Intl.DateTimeFormat('en', { timeZone: 'America/New_York', timeZoneName: 'shortOffset' })
+      .formatToParts(new Date()).find((part) => part.type === 'timeZoneName').value.replace('GMT', 'UTC'),
   };
 
   // Some of the cast are busy, so the planner has something to weigh.

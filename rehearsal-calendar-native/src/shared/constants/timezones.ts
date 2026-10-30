@@ -1,10 +1,13 @@
+import { getTimezoneOffset } from 'date-fns-tz';
+
 /**
  * Common timezones presented to users when picking project/user timezone.
  * Curated for global theatre/rehearsal app use — balanced across regions,
  * not region-specific.
  *
- * UTC offsets reflect standard time; some entries observe DST and shift
- * by one hour seasonally.
+ * Only the cities are written here. A zone's offset is worked out for the
+ * moment it is shown (T-011): written out, it was standard time all year, and
+ * New York read UTC-5 through the summer it is UTC-4.
  */
 export interface TimezoneOption {
   value: string;     // IANA timezone identifier
@@ -12,36 +15,42 @@ export interface TimezoneOption {
   labelEn: string;
 }
 
-export const TIMEZONES: TimezoneOption[] = [
+interface CuratedZone {
+  value: string;
+  cityRu: string;
+  cityEn: string;
+}
+
+const CURATED: CuratedZone[] = [
   // Americas
-  { value: 'America/Los_Angeles', labelRu: 'Лос-Анджелес (UTC-8)', labelEn: 'Los Angeles (UTC-8)' },
-  { value: 'America/Denver',      labelRu: 'Денвер (UTC-7)',       labelEn: 'Denver (UTC-7)' },
-  { value: 'America/Chicago',     labelRu: 'Чикаго (UTC-6)',       labelEn: 'Chicago (UTC-6)' },
-  { value: 'America/New_York',    labelRu: 'Нью-Йорк (UTC-5)',     labelEn: 'New York (UTC-5)' },
-  { value: 'America/Sao_Paulo',   labelRu: 'Сан-Паулу (UTC-3)',    labelEn: 'São Paulo (UTC-3)' },
+  { value: 'America/Los_Angeles', cityRu: 'Лос-Анджелес', cityEn: 'Los Angeles' },
+  { value: 'America/Denver',      cityRu: 'Денвер',       cityEn: 'Denver' },
+  { value: 'America/Chicago',     cityRu: 'Чикаго',       cityEn: 'Chicago' },
+  { value: 'America/New_York',    cityRu: 'Нью-Йорк',     cityEn: 'New York' },
+  { value: 'America/Sao_Paulo',   cityRu: 'Сан-Паулу',    cityEn: 'São Paulo' },
 
   // Europe
-  { value: 'Europe/London',       labelRu: 'Лондон (UTC+0)',       labelEn: 'London (UTC+0)' },
-  { value: 'Europe/Berlin',       labelRu: 'Берлин (UTC+1)',       labelEn: 'Berlin (UTC+1)' },
-  { value: 'Europe/Kiev',         labelRu: 'Киев (UTC+2)',         labelEn: 'Kyiv (UTC+2)' },
-  { value: 'Europe/Istanbul',     labelRu: 'Стамбул (UTC+3)',      labelEn: 'Istanbul (UTC+3)' },
-  { value: 'Europe/Moscow',       labelRu: 'Москва (UTC+3)',       labelEn: 'Moscow (UTC+3)' },
+  { value: 'Europe/London',       cityRu: 'Лондон',       cityEn: 'London' },
+  { value: 'Europe/Berlin',       cityRu: 'Берлин',       cityEn: 'Berlin' },
+  { value: 'Europe/Kiev',         cityRu: 'Киев',         cityEn: 'Kyiv' },
+  { value: 'Europe/Istanbul',     cityRu: 'Стамбул',      cityEn: 'Istanbul' },
+  { value: 'Europe/Moscow',       cityRu: 'Москва',       cityEn: 'Moscow' },
 
   // Middle East & Africa
-  { value: 'Africa/Cairo',        labelRu: 'Каир (UTC+2)',         labelEn: 'Cairo (UTC+2)' },
-  { value: 'Asia/Jerusalem',      labelRu: 'Тель-Авив (UTC+2)',    labelEn: 'Tel Aviv (UTC+2)' },
-  { value: 'Asia/Dubai',          labelRu: 'Дубай (UTC+4)',        labelEn: 'Dubai (UTC+4)' },
+  { value: 'Africa/Cairo',        cityRu: 'Каир',         cityEn: 'Cairo' },
+  { value: 'Asia/Jerusalem',      cityRu: 'Тель-Авив',    cityEn: 'Tel Aviv' },
+  { value: 'Asia/Dubai',          cityRu: 'Дубай',        cityEn: 'Dubai' },
 
   // Asia
-  { value: 'Asia/Yekaterinburg',  labelRu: 'Екатеринбург (UTC+5)', labelEn: 'Yekaterinburg (UTC+5)' },
-  { value: 'Asia/Kolkata',        labelRu: 'Мумбаи (UTC+5:30)',    labelEn: 'Mumbai (UTC+5:30)' },
-  { value: 'Asia/Bangkok',        labelRu: 'Бангкок (UTC+7)',      labelEn: 'Bangkok (UTC+7)' },
-  { value: 'Asia/Singapore',      labelRu: 'Сингапур (UTC+8)',     labelEn: 'Singapore (UTC+8)' },
-  { value: 'Asia/Tokyo',          labelRu: 'Токио (UTC+9)',        labelEn: 'Tokyo (UTC+9)' },
+  { value: 'Asia/Yekaterinburg',  cityRu: 'Екатеринбург', cityEn: 'Yekaterinburg' },
+  { value: 'Asia/Kolkata',        cityRu: 'Мумбаи',       cityEn: 'Mumbai' },
+  { value: 'Asia/Bangkok',        cityRu: 'Бангкок',      cityEn: 'Bangkok' },
+  { value: 'Asia/Singapore',      cityRu: 'Сингапур',     cityEn: 'Singapore' },
+  { value: 'Asia/Tokyo',          cityRu: 'Токио',        cityEn: 'Tokyo' },
 
   // Oceania
-  { value: 'Australia/Sydney',    labelRu: 'Сидней (UTC+10)',      labelEn: 'Sydney (UTC+10)' },
-  { value: 'Pacific/Auckland',    labelRu: 'Окленд (UTC+12)',      labelEn: 'Auckland (UTC+12)' },
+  { value: 'Australia/Sydney',    cityRu: 'Сидней',       cityEn: 'Sydney' },
+  { value: 'Pacific/Auckland',    cityRu: 'Окленд',       cityEn: 'Auckland' },
 ];
 
 /**
@@ -54,20 +63,33 @@ function getCityName(tz: string): string {
 }
 
 /**
- * Compute the current UTC offset label for any IANA timezone, e.g. "UTC+2".
- * Returns empty string if Intl can't resolve the timezone.
+ * The UTC offset of `tz` at `at`, e.g. "UTC+2", "UTC-10", "UTC+5:30".
+ * Worked out from the zone's wall clock (date-fns-tz, as every date in the
+ * app is), not from Intl's timeZoneName 'shortOffset': Hermes answers that
+ * with a bare "GMT", and Honolulu read "(UTC)" (T-011). Empty if the zone is
+ * unknown.
  */
-function getOffsetLabel(tz: string): string {
-  try {
-    const parts = new Intl.DateTimeFormat('en', {
-      timeZone: tz,
-      timeZoneName: 'shortOffset',
-    }).formatToParts(new Date());
-    const tzName = parts.find(p => p.type === 'timeZoneName')?.value || '';
-    return tzName.replace('GMT', 'UTC') || 'UTC';
-  } catch {
-    return '';
-  }
+function getOffsetLabel(tz: string, at: Date): string {
+  const ms = getTimezoneOffset(tz, at);
+  if (Number.isNaN(ms)) return '';
+  const minutes = Math.round(ms / 60000);
+  const sign = minutes < 0 ? '-' : '+';
+  const hours = Math.floor(Math.abs(minutes) / 60);
+  const rest = Math.abs(minutes) % 60;
+  return `UTC${sign}${hours}${rest ? `:${String(rest).padStart(2, '0')}` : ''}`;
+}
+
+function withOffset(city: string, tz: string, at: Date): string {
+  const offset = getOffsetLabel(tz, at);
+  return offset ? `${city} (${offset})` : city;
+}
+
+function curatedOption(zone: CuratedZone, at: Date): TimezoneOption {
+  return {
+    value: zone.value,
+    labelRu: withOffset(zone.cityRu, zone.value, at),
+    labelEn: withOffset(zone.cityEn, zone.value, at),
+  };
 }
 
 /**
@@ -75,11 +97,9 @@ function getOffsetLabel(tz: string): string {
  * user's device reports a timezone outside the curated list — we still want
  * a nice label like "Vienna (UTC+1)" instead of raw "Europe/Vienna".
  */
-function buildDynamicOption(tz: string): TimezoneOption {
-  const city = getCityName(tz);
-  const offset = getOffsetLabel(tz);
-  const label = offset ? `${city} (${offset})` : city;
+function buildDynamicOption(tz: string, at: Date): TimezoneOption {
   // No translated form available for arbitrary cities, so reuse for both locales.
+  const label = withOffset(getCityName(tz), tz, at);
   return { value: tz, labelRu: label, labelEn: label };
 }
 
@@ -87,27 +107,27 @@ function buildDynamicOption(tz: string): TimezoneOption {
  * Returns the curated list, prepended with the device's current timezone
  * if it's not already present. Makes it discoverable in the picker.
  */
-export function getTimezonesWithDevice(): TimezoneOption[] {
+export function getTimezonesWithDevice(at: Date = new Date()): TimezoneOption[] {
   let deviceTz: string | null = null;
   try {
     deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   } catch {
     // Intl unavailable — fall through to curated list
   }
-  if (!deviceTz || TIMEZONES.some(t => t.value === deviceTz)) return TIMEZONES;
-  return [buildDynamicOption(deviceTz), ...TIMEZONES];
+  const curated = CURATED.map((zone) => curatedOption(zone, at));
+  if (!deviceTz || CURATED.some(t => t.value === deviceTz)) return curated;
+  return [buildDynamicOption(deviceTz, at), ...curated];
 }
 
 /**
- * Resolve display label for an IANA timezone identifier.
- * Only Russian has fully curated translations; all other languages share
+ * Resolve display label for an IANA timezone identifier, with its offset at
+ * `at`. Only Russian has fully curated translations; all other languages share
  * the English label set. Falls back to a computed "City (UTC±N)" when the
  * timezone isn't in the curated list.
  */
-export function getTimezoneLabel(value: string, language: string): string {
+export function getTimezoneLabel(value: string, language: string, at: Date = new Date()): string {
   const useRussian = language === 'ru';
-  const tz = TIMEZONES.find(t => t.value === value);
-  if (tz) return useRussian ? tz.labelRu : tz.labelEn;
-  const opt = buildDynamicOption(value);
+  const zone = CURATED.find(t => t.value === value);
+  const opt = zone ? curatedOption(zone, at) : buildDynamicOption(value, at);
   return useRussian ? opt.labelRu : opt.labelEn;
 }

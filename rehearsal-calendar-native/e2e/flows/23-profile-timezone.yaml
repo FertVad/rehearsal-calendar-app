@@ -65,22 +65,29 @@ tags:
 # calendar's card does, "02:00 — 03:00" (one label for both since cause fix 15).
 - assertVisible: "(?s)(?=.*Night watch)(?=.*02:00 — 03:00).*"
 - takeScreenshot: 23-project-in-tel-aviv
-# The profile still says Tel Aviv after signing in on a phone in Honolulu.
+# The profile still says Tel Aviv after signing in on a phone in Honolulu -
+# UTC+2, or UTC+3 in Israel's summer.
 - tapOn:
     id: tab-profile
 - scrollUntilVisible:
-    element: ".*Tel Aviv \\(UTC\\+2\\).*"
+    element: ".*Tel Aviv \\(UTC\\+[23]\\).*"
     direction: DOWN
     centerElement: true
 - assertNotVisible: ".*Honolulu.*"
-- tapOn: ".*Tel Aviv \\(UTC\\+2\\).*"
-# The picker offers the phone's own zone first: the simulator is in Honolulu.
-# (Its offset in the label is whatever the engine's Intl gives — Hermes says
-# "UTC".)
+- tapOn: ".*Tel Aviv \\(UTC\\+[23]\\).*"
+# The picker offers the phone's own zone first: the simulator is in Honolulu,
+# ten hours behind UTC. It read "Honolulu (UTC)": the offset was Intl's
+# 'shortOffset' zone name, which Hermes gives as a bare "GMT" (T-011).
 - extendedWaitUntil:
-    visible: "Honolulu \\(.*\\)"
+    visible: "Honolulu \\(UTC-10\\)"
     timeout: 10000
 - takeScreenshot: 23-picker-device-in-honolulu
+# Offsets are today's: New York's, written out as UTC-5 all year, is UTC-4
+# through its summer (the seed works out which, NEW_YORK_OFFSET_LABEL).
+- scrollUntilVisible:
+    element: "New York \\(${NEW_YORK_OFFSET_LABEL}\\)"
+    direction: DOWN
+    centerElement: true
 - scrollUntilVisible:
     element: "Tokyo \\(UTC\\+9\\)"
     direction: DOWN
