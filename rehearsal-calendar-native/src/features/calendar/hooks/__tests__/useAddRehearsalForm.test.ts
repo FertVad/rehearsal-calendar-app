@@ -514,6 +514,26 @@ describe('useAddRehearsalForm Hook', () => {
         expect(result.current.date.getDate()).toBe(2);
         expect(clock(result.current.startTime)).toBe('08:00');
       });
+
+      // The route's day and time are read once: a refreshed project list put
+      // them back over what was chosen, and a list made anew on each render
+      // did it on every render, without end (T-012 review).
+      it('keeps the start someone chose when the project list comes in again', () => {
+        jest.useFakeTimers({ now: new Date(2026, 9, 30, 7, 2), doNotFake: ['nextTick', 'setImmediate'] });
+        const { result, rerender } = renderHook(
+          ({ projects }: { projects: typeof mockProjects }) =>
+            useAddRehearsalForm({
+              projects, selectedProject: null, setSelectedProject: mockSetSelectedProject,
+              routeParams: { prefilledDate: '2026-11-02' },
+            }),
+          { initialProps: { projects: mockProjects } }
+        );
+        act(() => { result.current.setStartTime(new Date(2026, 10, 2, 19, 0)); });
+
+        rerender({ projects: [...mockProjects] });
+
+        expect(clock(result.current.startTime)).toBe('19:00');
+      });
     });
   });
 

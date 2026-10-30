@@ -185,3 +185,68 @@ npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml      [Passed] (1m 51s)
   usual length, the same rule as a slot, so the two ways in agree.
 - **Not run here.** The server is unchanged. `npm test` runs the server
   suites as well and was left to the supervisor's checks.
+
+## Supervisor's `npm test`: out of memory
+
+The supervisor's `npm test` ran out of heap and was stopped at its 20-minute
+limit. That is why Jest "did not finish a single small file" above.
+
+### Cause
+
+`useAddRehearsalForm` applied the route's day and time in the same effect
+that picks the route's project, and that effect watched `projects`. Each new
+project list therefore put the route's day and time back over the form.
+With a list made anew on each render, this never stopped. A long press on
+a later day sets a new `Date` on every pass, the state changes, the form
+renders again, the list is new, and the effect runs again. The test "a long
+press on a day › on a later day" passes `projects: []` inline, so the loop
+filled the heap. In the app, the same effect wiped the start someone had
+chosen whenever the project list came in again.
+
+Fix: the day and time come from the route in their own effect, keyed on
+`prefilledDate` and `prefilledTime` only. Test: `useAddRehearsalForm.test` ›
+"keeps the start someone chose when the project list comes in again".
+
+The run then reached the second test, which had never run before:
+`DateRangePicker.test` › "VoiceOver hears "today" on the profile's day only".
+It failed on `I18nManager` being undefined: the library's real `Day` reads
+it when it loads, and the app's `react-native` mock has none. Its mock in
+the test file now provides it. The picker code is unchanged.
+
+### Red before
+
+```
+# hook as at HEAD (12bfdac), new test only
+npx jest --selectProjects frontend src/features/calendar/hooks/__tests__/useAddRehearsalForm.test.ts -t "keeps the start someone chose"
+  ● ... a long press on a day › keeps the start someone chose when the project list comes in again
+    Expected: "19:00"
+    Received: "08:00"
+Tests:       1 failed, 938 skipped, 939 total
+
+# whole file at HEAD: did not finish (killed at 3 min), the loop above
+
+# DateRangePicker.tsx as at d1ccc7b~1, test mock fixed
+npx jest --selectProjects frontend src/shared/components/__tests__/DateRangePicker.test.tsx -t "VoiceOver"
+  ● ... Today › VoiceOver hears "today" on the profile's day only
+    Expected pattern: not /today|сегодня/i
+    Received string:      "today Wednesday 28 October 2026 disabled "
+Tests:       1 failed, 938 skipped, 939 total
+```
+
+### Green after
+
+```
+npx jest --selectProjects frontend                         939 passed, 939 total (~83 s)
+NODE_OPTIONS=--experimental-vm-modules npx jest --runInBand
+  Test Suites: 1 failed, 178 passed, 179 total; Time: 415 s, no OOM
+  the one failure is server/__tests__/startup/runtimeStartup.test.js
+  (needs the server's env file, unreadable here; the server is unchanged)
+npm run type-check                                         clean
+npm run e2e -- e2e/flows/07-planner-project-switch.yaml    [Passed] (2m 32s)
+npm run e2e -- e2e/flows/26-past-midnight-form.yaml        [Passed] (3m 7s)
+npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml      [Passed] (1m 37s)
+```
+
+`npm test` here still stops before Jest, at three `check-secrets.test.mjs`
+subtests. Their fixtures make env and key file names, and the OS refuses
+that in this session.

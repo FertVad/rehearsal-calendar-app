@@ -40,10 +40,11 @@ jest.mock('../../hooks/useClock', () => {
   return { ...actual, useToday: () => mockToday() ?? actual.useToday() };
 });
 
-// The library's own day, rendered in the Today tests, presses through this.
+// The library's own day, rendered in the Today tests, presses through this,
+// and reads the writing direction when it loads (the app's mock has neither).
 jest.mock('react-native', () => {
   const actual = jest.requireActual('react-native');
-  return { ...actual, TouchableWithoutFeedback: actual.TouchableOpacity };
+  return { ...actual, TouchableWithoutFeedback: actual.TouchableOpacity, I18nManager: { isRTL: false } };
 });
 
 const calendarOf = (view: ReturnType<typeof render>) =>

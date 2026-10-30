@@ -132,7 +132,12 @@ export function useAddRehearsalForm({
         setSelectedProject(project);
       }
     }
+  }, [prefilledProjectId, projects]);
 
+  // The route's day and time, once per route: not on each new project list,
+  // which put them back over what was chosen - and, a list made anew on each
+  // render, did it without end (T-012 review).
+  useEffect(() => {
     if (prefilledDate && !prefilledTime) {
       // A day with no time - a long press in the calendar - starts at the
       // opening's hour on that day. Today it is the opening itself, date and
@@ -150,7 +155,7 @@ export function useAddRehearsalForm({
     if (prefilledTime) {
       setStartTime(parseTimeString(prefilledTime));
     }
-  }, [prefilledProjectId, prefilledDate, prefilledTime, projects]);
+  }, [prefilledDate, prefilledTime]);
 
   // Update selected project when projects list changes or default changes
   useEffect(() => {
