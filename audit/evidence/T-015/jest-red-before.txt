@@ -1,0 +1,46 @@
+$ git restore --source=8fae51c -- src/features/auth/screens/LoginScreen.tsx src/features/auth/screens/RegisterScreen.tsx \
+    src/features/auth/styles/loginScreenStyles.ts src/features/auth/styles/registerScreenStyles.ts \
+    src/shared/components/buttons/GoogleSignInButton.tsx
+# translations, accountRules and spacing as in HEAD; createAccount put back in
+# the translations for this run only, which the old LoginScreen still reads
+$ npx jest --selectProjects frontend --silent LoginScreen.test LoginFlow.test RegisterScreen.test RegisterFlow.test
+
+FAIL frontend src/features/auth/screens/__tests__/RegisterFlow.test.tsx
+  ● a registration answered after leaving through the form button opens nothing
+FAIL frontend src/features/auth/screens/__tests__/LoginFlow.test.tsx
+  ● a wrong password is said under the fields, once
+  ● no network is said under the fields, once
+  ● the server failing is said under the fields, once
+  ● too many tries is said under the fields, once
+FAIL frontend src/features/auth/screens/__tests__/RegisterScreen.test.tsx
+  ● alerts in the app language on a refused registration
+  ● names the server name rule rather than repeating its English
+  ● stops a name of spaces and an over-long password before asking the server
+  ● counts the password in characters like the server, not in UTF-16 units
+  ● keeps the button off until the required fields are filled, with no alert (T-015)
+  ● says each problem under its own field, not in an alert, and forgets it on an edit (T-015)
+  ● Return goes field to field, and the last one sends the form (T-015)
+  ● names the rule under the password from the rule itself, and shows the password on request (T-015)
+  ● offers both sign-in and a password reset for a taken address (R3 contract)
+  ● opens the code screen, or nothing when the answer came after leaving
+FAIL frontend src/features/auth/screens/__tests__/LoginScreen.test.tsx
+  ● keeps "Sign In" off until both fields are filled, and sends no alert
+  ● Return goes from the address to the password, and Return there signs in
+  ● a failed sign-in is said once, under the fields, not again in an alert
+  ● names the password field by its word, and shows the password on request
+  ● leads to registration from the link at the foot
+Tests:       20 failed, 6 passed, 26 total
+
+Reasons:
+  ● keeps "Sign In" off ...                 Expected: true   Received: false
+  ● Return goes from the address ...        Expected: "next" Received: undefined
+  ● a failed sign-in is said once ...       Expected number of calls: 0  Received number of calls: 1
+  ● names the password field by its word    Expected: "Password"  Received: "••••••••"
+  ● leads to registration from the link     Unable to find an element with text: No account? Create one
+  ● LoginFlow, all four (401, no network, 500, 429): the words are under the fields,
+    and Alert.alert - Expected number of calls: 0  Received number of calls: 1
+  ● RegisterScreen / RegisterFlow: Unable to find an element with testID: register-first-name
+    (register-submit; "Минимум 8 символов") - the old form has no ids; what it did
+    is shown by flow 49 (e2e-red-before.txt) and was alerts, as the old tests said.
+
+Then: git restore --source=HEAD -- <the same files and the translations>

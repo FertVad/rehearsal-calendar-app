@@ -1,0 +1,21 @@
+$ npm run type-check
+> tsc --noEmit            (no errors)
+
+$ npx jest --selectProjects frontend --silent LoginScreen.test LoginFlow.test RegisterScreen.test RegisterFlow.test iconButtonLabels
+PASS frontend src/shared/components/__tests__/iconButtonLabels.test.ts
+PASS frontend src/features/auth/screens/__tests__/LoginFlow.test.tsx
+PASS frontend src/features/auth/screens/__tests__/RegisterFlow.test.tsx
+PASS frontend src/features/auth/screens/__tests__/LoginScreen.test.tsx
+PASS frontend src/features/auth/screens/__tests__/RegisterScreen.test.tsx
+Tests:       27 passed, 27 total
+
+$ npm run test:unit -- --silent
+Test Suites: 3 failed, 179 passed, 182 total
+Tests:       10 failed, 2021 passed, 2031 total
+  The three are server suites (runtimeStartup, rehearsalById, authorization)
+  that start child servers: "copied entrypoint must provide an owned HTTP
+  listener" - the sandbox of this session. T-015 changes nothing under server/
+  (git diff --stat 8fae51c HEAD -- server: empty).
+
+$ npm run check:secrets
+{"summary":"pass","mode":"worktree","files":1273,"findings":0,"errors":0}

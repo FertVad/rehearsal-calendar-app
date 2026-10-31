@@ -1,0 +1,12 @@
+$ git restore --source=8fae51c -- src/features/auth/screens/LoginScreen.tsx src/features/auth/screens/RegisterScreen.tsx \
+    src/features/auth/styles/loginScreenStyles.ts src/features/auth/styles/registerScreenStyles.ts \
+    src/shared/components/buttons/GoogleSignInButton.tsx src/i18n/translations/auth.ts \
+    src/features/auth/utils/accountRules.ts src/shared/constants/spacing.ts
+$ npm run e2e -- e2e/flows/49-sign-in-and-register-forms.yaml
+
+[Failed] Sign-in and registration forms (50s) (Assertion is false: id: login-submit, disabled is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+# The old form's Sign In is live on an empty form (it answered with the
+# "Fill in all fields" alert). Then: git restore --source=HEAD -- <the same files>
