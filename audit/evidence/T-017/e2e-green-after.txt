@@ -1,0 +1,42 @@
+Fixed code (the files of f3b92ce and 9b8b8ae, before committing), one run per line or group:
+
+$ npm run e2e -- e2e/flows/53-time-format.yaml
+[Passed] Times on the phone's 12 or 24 hours, one way to write an interval (2m 19s)
+1/1 Flow Passed in 2m 19s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/05-inbox.yaml e2e/flows/39-past-rehearsal-title.yaml e2e/flows/24-past-midnight.yaml
+[Passed] Inbox (1m 10s)
+[Passed] A past rehearsal keeps its title (40s)
+[Passed] A rehearsal past midnight is on both days (38s)
+3/3 Flows Passed in 2m 28s
+
+$ npm run e2e -- e2e/flows/07-planner-project-switch.yaml e2e/flows/23-profile-timezone.yaml
+[Passed] Planner follows the project (3m 9s)
+(the command's 10 minutes ran out during 23; run again alone:)
+$ npm run e2e -- e2e/flows/23-profile-timezone.yaml
+[Passed] The profile's timezone, not the device's (2m 6s)
+
+$ npm run e2e -- e2e/flows/26-past-midnight-form.yaml e2e/flows/27-past-midnight-morning-slot.yaml
+[Failed] A rehearsal made from 23:00 to 01:00 ends the next morning (Assertion is false: ".*(16:00|17:00).*", id: rehearsal-start-time is visible)
+[Passed] A morning slot of his own outlives a save of the morning (2m 21s)
+(next-hour.js still gave "HH:00"; it now gives the 12-hour pattern)
+$ npm run e2e -- e2e/flows/26-past-midnight-form.yaml e2e/flows/25-past-midnight-availability.yaml
+[Passed] A rehearsal made from 23:00 to 01:00 ends the next morning (3m 11s)
+(the command's 10 minutes ran out during 25; run again alone:)
+$ npm run e2e -- e2e/flows/25-past-midnight-availability.yaml
+[Passed] A busy slot past midnight is one slot, on both days (3m 15s)
+
+$ npm run e2e -- e2e/flows/10-availability-days.yaml
+[Passed] Availability saves the day it changed (2m 18s)
+
+$ npm run e2e -- e2e/flows/45-busy-seen-by-director.yaml e2e/flows/51-rehearsal-swipe-and-details.yaml
+[Passed] Busy marked by an actor, seen by the director (2m 31s)
+[Passed] An admin swipes a rehearsal away, an actor has no swipe (2m 6s)
+
+$ npm run e2e -- e2e/flows/52-rehearsal-details-edit-and-delete.yaml
+[Failed] An admin edits and deletes from the details (No visible element found: id: rehearsal-location)
+(the screenshot: "Failed to load project members" over the form, not a time;
+run again:)
+$ npm run e2e -- e2e/flows/52-rehearsal-details-edit-and-delete.yaml
+[Passed] An admin edits and deletes from the details (3m 33s)
