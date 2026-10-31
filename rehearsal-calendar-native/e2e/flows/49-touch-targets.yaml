@@ -1,0 +1,236 @@
+# Every target a finger has is 44 pt on its smaller side at least (T-014; HIG:
+# 44×44 pt on iOS). The UX audit of 29.10.2026 measured them in Maestro's
+# inspector: "Back" on a project 24×24, the crosses 24-32, "Today" 53×24,
+# "+ Add" 63×29, the planner's periods 35 tall, the eye on a card 57×33,
+# "Mark all read" and "Clear all" 38×38, the "+" over the projects 36×37, a
+# day of the week 42 wide, and the tabs 43 tall.
+#
+# Maestro matches an element's size here: `height: 50` with `tolerance: 6` is
+# 44 to 56 pt, the same for `width`. A button that is only an icon is an
+# IconButton, 44 a side whatever its icon (IconButton.test, and
+# iconButtonLabels.test refuses one made otherwise); the rest are measured
+# where they stand. Nothing here is changed: the director only looks.
+appId: ${APP_ID}
+name: Touch targets are 44 pt
+tags:
+  - calendar
+  - notifications
+  - rehearsals
+  - availability
+  - projects
+  - planner
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*"
+    timeout: 30000
+# The calendar: "Today", a day of the strip, the eye on a card, the tabs.
+- assertVisible:
+    id: calendar-today
+    height: 50
+    tolerance: 6
+- assertVisible:
+    id: calendar-day-${TODAY_DAY}
+    width: 50
+    tolerance: 6
+- assertVisible:
+    id: seen-toggle
+    height: 50
+    tolerance: 6
+- assertVisible:
+    id: tab-projects
+    height: 50
+    tolerance: 6
+- takeScreenshot: 49-calendar
+# The inbox: back, and its two actions side by side.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Notifications"
+      SEE: "Mark all read"
+      WAIT_MS: "10000"
+- assertVisible:
+    text: "Back"
+    width: 50
+    height: 50
+    tolerance: 6
+- assertVisible:
+    text: "Mark all read"
+    width: 50
+    height: 50
+    tolerance: 6
+- assertVisible:
+    text: "Clear all"
+    width: 50
+    height: 50
+    tolerance: 6
+    rightOf: "Mark all read"
+- takeScreenshot: 49-inbox
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: ".*Act I run-through.*"
+    timeout: 10000
+# A rehearsal's sheet: its cross.
+- tapOn: ".*Act I run-through.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-time
+    timeout: 10000
+- assertVisible:
+    text: "Close"
+    width: 50
+    height: 50
+    tolerance: 6
+- takeScreenshot: 49-details
+- tapOn: "Close"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-details-time
+    timeout: 10000
+# The rehearsal form: its cross, and the one on its project picker.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Create Rehearsal"
+      WAIT_MS: "10000"
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-close
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-close
+    width: 50
+    height: 50
+    tolerance: 6
+- tapOn:
+    id: rehearsal-project
+- extendedWaitUntil:
+    visible: "Select Project"
+    timeout: 10000
+- assertVisible:
+    text: "Close"
+    width: 50
+    height: 50
+    tolerance: 6
+    rightOf: "Select Project"
+- takeScreenshot: 49-form-projects
+- tapOn:
+    text: "Close"
+    rightOf: "Select Project"
+- extendedWaitUntil:
+    notVisible: "Select Project"
+    timeout: 10000
+- tapOn:
+    id: rehearsal-close
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-close
+    timeout: 10000
+# Mark Busy: its cross, and the editor's "Clear" and chevron over a day.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Mark Busy"
+      WAIT_MS: "10000"
+- tapOn: "Mark Busy"
+- extendedWaitUntil:
+    visible:
+      id: availability-legend
+    timeout: 15000
+- assertVisible:
+    id: availability-close
+    width: 50
+    height: 50
+    tolerance: 6
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MARK_DAY}
+- tapOn:
+    id: day-${MARK_DAY}
+- extendedWaitUntil:
+    visible:
+      id: mode-free
+    timeout: 10000
+- assertVisible:
+    text: "Clear"
+    height: 50
+    tolerance: 6
+- assertVisible:
+    text: "Close"
+    width: 50
+    height: 50
+    tolerance: 6
+- takeScreenshot: 49-busy-day
+- tapOn: "Close"
+- extendedWaitUntil:
+    notVisible:
+      id: mode-free
+    timeout: 10000
+- tapOn:
+    id: availability-close
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+# The projects: the "+", and "Back" on a project.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Projects, tab.*"
+      SEE: "My Projects"
+      WAIT_MS: "10000"
+- assertVisible:
+    text: "Create Project"
+    width: 50
+    height: 50
+    tolerance: 6
+- takeScreenshot: 49-projects
+# On its name: the middle of the card is its Invite button (flow 19).
+- tapOn:
+    point: "25%,23%"
+- extendedWaitUntil:
+    notVisible: "My Projects"
+    timeout: 15000
+- assertVisible:
+    text: "Back"
+    width: 50
+    height: 50
+    tolerance: 6
+- takeScreenshot: 49-project
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: "My Projects"
+    timeout: 10000
+# The planner: back, its periods, "+ Add" on a free slot.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Planner, tab.*"
+      SEE: "Smart Planner"
+      WAIT_MS: "10000"
+- assertVisible:
+    text: "Back"
+    width: 50
+    height: 50
+    tolerance: 6
+- assertVisible:
+    id: planner-period-week
+    height: 50
+    tolerance: 6
+- scrollUntilVisible:
+    element: "\\+ Add"
+    direction: DOWN
+    centerElement: true
+    timeout: 60000
+- assertVisible:
+    text: "\\+ Add"
+    height: 50
+    tolerance: 6
+- takeScreenshot: 49-planner
