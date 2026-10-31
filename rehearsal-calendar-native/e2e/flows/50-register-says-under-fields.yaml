@@ -1,0 +1,106 @@
+# Registration says what is wrong under the field it is about (T-015).
+# Before: each problem came in an alert of its own, one at a time — the
+# address first; the name and the password rule were only seen after it was
+# put right.
+#
+# Now one press of Sign Up says them all, each under its field: the name
+# longer than 100 characters, the address, the password shorter than the rule
+# and the repeat that does not match. The rule itself stays under the
+# password. The form is never sent.
+#
+# Fields are found by their placeholders and the way in by its title, which
+# the form had before T-015 too: the red run on the old form reaches the
+# alert rather than stopping at an id it never had.
+appId: ${APP_ID}
+name: Registration says what is wrong under each field
+tags:
+  - auth
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: login-submit
+    timeout: 60000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "No account\\? Create one|Create Account"
+      SEE: "Join Rehearsly"
+      WAIT_MS: 10000
+# Both passwords shown before any typing, with no keyboard over the eyes: a
+# hidden new password is where iOS offers a strong password in place of the
+# keyboard and fills both fields with it, and the typing goes nowhere (flow
+# 49). The old form has no such button: there the taps are skipped, and its
+# alert comes all the same. Once the first is shown, the second is the one
+# still labelled "Show password".
+- runFlow:
+    when:
+      visible: "Show password"
+    commands:
+      - tapOn: "Show password"
+      - tapOn: "Show password"
+      - assertNotVisible: "Show password"
+# The first keyboard after a cold launch is slow (sign-in-form.yaml).
+- evalScript: ${output.tries = 0}
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn: "Your first name"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - evalScript: ${output.tries += 1}
+      - runFlow:
+          when:
+            true: ${output.tries > 1}
+          commands:
+            - eraseText
+      - inputText: ${'a'.repeat(101)}
+      - assertVisible: ${'a'.repeat(101)}
+# The password's placeholder was the rule before T-015, the word since;
+# index 1 skips the label "Password" above it.
+- tapOn:
+    text: "Password|Password must be at least 8 characters"
+    index: 1
+- inputText: short1
+# The repeat is under the keyboard: a tap on a label puts it away first.
+- tapOn: "Last Name"
+- tapOn: "Repeat password"
+- inputText: other-password
+- tapOn: "Last Name"
+- tapOn: "your@email.com"
+- inputText: not-an-address
+- assertVisible: not-an-address
+# Away from the fields the keyboard goes; Sign Up is under it.
+- tapOn: "Last Name"
+- scrollUntilVisible:
+    element: "Sign Up"
+    direction: DOWN
+    timeout: 10000
+- takeScreenshot: 50-register-filled
+- tapOn: "Sign Up"
+# One press, every problem, with no alert over the form.
+- extendedWaitUntil:
+    visible: "Invalid email format"
+    timeout: 10000
+- assertNotVisible: "Error"
+- assertNotVisible: "OK"
+- scrollUntilVisible:
+    element: "A first name is required; first and last name are at most 100 characters."
+    direction: UP
+    timeout: 10000
+- assertVisible: "Invalid email format"
+- takeScreenshot: 50-register-name-and-address
+- scrollUntilVisible:
+    element: "Password: at least 8 characters and at most 72 bytes — 72 Latin letters, fewer in other scripts."
+    direction: DOWN
+    timeout: 10000
+- assertVisible: "At least 8 characters"
+- scrollUntilVisible:
+    element: "Passwords do not match"
+    direction: DOWN
+    timeout: 10000
+- takeScreenshot: 50-register-password-and-repeat
+# The form stayed: nothing was sent.
+- assertVisible: "Join Rehearsly|Sign Up"

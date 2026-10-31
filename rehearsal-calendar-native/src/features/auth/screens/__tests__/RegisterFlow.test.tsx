@@ -8,6 +8,7 @@
  * the answer is held, the button pressed, then the answer released.
  */
 import React from 'react';
+import { TextInput } from 'react-native';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '../../../../contexts/AuthContext';
 import RegisterScreen from '../RegisterScreen';
@@ -57,10 +58,12 @@ it('a registration answered after leaving through the form button opens nothing'
   mockRegister.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
   const view = render(<AuthProvider><Capture /><RegisterScreen navigation={navigation} route={{ key: 'r', name: 'Register' } as any} /></AuthProvider>);
   await waitFor(() => expect(auth.loading).toBe(false));
-  fireEvent.changeText(view.getByTestId('register-first-name'), 'Anna');
-  fireEvent.changeText(view.getByTestId('register-email'), 'anna@example.com');
-  fireEvent.changeText(view.getByTestId('register-password'), 'long-enough-1');
-  fireEvent.changeText(view.getByTestId('register-confirm'), 'long-enough-1');
+  // By their place in the form: first name, last name, address, password, repeat.
+  const [first, , email, password, confirm] = view.UNSAFE_getAllByType(TextInput);
+  fireEvent.changeText(first, 'Anna');
+  fireEvent.changeText(email, 'anna@example.com');
+  fireEvent.changeText(password, 'long-enough-1');
+  fireEvent.changeText(confirm, 'long-enough-1');
   await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
   await act(async () => { fireEvent.press(view.getByText(t.auth.alreadyHaveAccount)); });
   expect(navigation.popTo).toHaveBeenCalledWith('Login');

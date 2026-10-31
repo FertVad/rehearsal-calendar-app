@@ -9,7 +9,7 @@
  * opens nothing (review R3-24, R3-25).
  */
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, TextInput } from 'react-native';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import RegisterScreen from '../RegisterScreen';
 import { AuthFlowError } from '../../utils/authErrors';
@@ -33,14 +33,20 @@ jest.mock('../../../../shared/components', () => {
 
 const navigation: any = { navigate: jest.fn(), popTo: jest.fn() };
 const form = () => render(<RegisterScreen navigation={navigation} route={{ key: 'r', name: 'Register' } as any} />);
+// The fields by their place in the form, the button by its title: the form
+// before T-015 had no ids, and its red run must reach what it did.
+const FIELDS = ['first', 'last', 'email', 'password', 'confirm'] as const;
+const field = (view: ReturnType<typeof form>, name: typeof FIELDS[number]) =>
+  view.UNSAFE_getAllByType(TextInput)[FIELDS.indexOf(name)];
+const button = (view: ReturnType<typeof form>) => view.getByText(t.auth.registerButton);
 function fill(view: ReturnType<typeof form>, values: { first?: string; last?: string; email?: string; password?: string; confirm?: string }) {
-  fireEvent.changeText(view.getByTestId('register-first-name'), values.first ?? 'Анна');
-  if (values.last !== undefined) fireEvent.changeText(view.getByTestId('register-last-name'), values.last);
-  fireEvent.changeText(view.getByTestId('register-email'), values.email ?? 'anna@example.com');
-  fireEvent.changeText(view.getByTestId('register-password'), values.password ?? 'long-enough-1');
-  fireEvent.changeText(view.getByTestId('register-confirm'), values.confirm ?? values.password ?? 'long-enough-1');
+  fireEvent.changeText(field(view, 'first'), values.first ?? 'Анна');
+  if (values.last !== undefined) fireEvent.changeText(field(view, 'last'), values.last);
+  fireEvent.changeText(field(view, 'email'), values.email ?? 'anna@example.com');
+  fireEvent.changeText(field(view, 'password'), values.password ?? 'long-enough-1');
+  fireEvent.changeText(field(view, 'confirm'), values.confirm ?? values.password ?? 'long-enough-1');
 }
-const submit = (view: ReturnType<typeof form>) => act(async () => { fireEvent.press(view.getByTestId('register-submit')); });
+const submit = (view: ReturnType<typeof form>) => act(async () => { fireEvent.press(button(view)); });
 
 beforeEach(() => {
   (Alert.alert as jest.Mock).mockReset();
@@ -80,7 +86,7 @@ it('names the server name rule rather than repeating its English', async () => {
 it('stops a name of spaces and an over-long password before asking the server', async () => {
   const view = form();
   fill(view, { first: '   ' });
-  expect(view.getByTestId('register-submit').props.accessibilityState?.disabled).toBe(true);
+  expect(button(view)).toBeDisabled();
   await submit(view);
   fill(view, { password: 'я'.repeat(37) }); // 74 bytes in UTF-8
   await submit(view);
@@ -99,15 +105,15 @@ it('counts the password in characters like the server, not in UTF-16 units', asy
 
 it('keeps the button off until the required fields are filled, with no alert (T-015)', async () => {
   const view = form();
-  expect(view.getByTestId('register-submit').props.accessibilityState?.disabled).toBe(true);
+  expect(button(view)).toBeDisabled();
   await submit(view);
   fill(view, { confirm: '' });
-  expect(view.getByTestId('register-submit').props.accessibilityState?.disabled).toBe(true);
+  expect(button(view)).toBeDisabled();
   await submit(view);
   expect(Alert.alert).not.toHaveBeenCalled();
   expect(mockAuth.register).not.toHaveBeenCalled();
-  fireEvent.changeText(view.getByTestId('register-confirm'), 'long-enough-1');
-  expect(view.getByTestId('register-submit').props.accessibilityState?.disabled).toBe(false);
+  fireEvent.changeText(field(view, 'confirm'), 'long-enough-1');
+  expect(button(view)).toBeEnabled();
 });
 
 it('says each problem under its own field, not in an alert, and forgets it on an edit (T-015)', async () => {
@@ -119,18 +125,17 @@ it('says each problem under its own field, not in an alert, and forgets it on an
   expect(view.getByText(t.auth.nameInvalid)).toBeTruthy();
   expect(view.getByText(t.auth.invalidEmail)).toBeTruthy();
   expect(view.getByText(t.auth.passwordsMismatch)).toBeTruthy();
-  fireEvent.changeText(view.getByTestId('register-email'), 'anna@example.com');
+  fireEvent.changeText(field(view, 'email'), 'anna@example.com');
   expect(view.queryByText(t.auth.invalidEmail)).toBeNull();
   expect(view.getByText(t.auth.passwordsMismatch)).toBeTruthy();
 });
 
 it('Return goes field to field, and the last one sends the form (T-015)', async () => {
   const view = form();
-  const ids = ['register-first-name', 'register-last-name', 'register-email', 'register-password'];
-  ids.forEach((id) => expect(view.getByTestId(id).props.returnKeyType).toBe('next'));
-  expect(view.getByTestId('register-confirm').props.returnKeyType).toBe('go');
+  (['first', 'last', 'email', 'password'] as const).forEach((name) => expect(field(view, name).props.returnKeyType).toBe('next'));
+  expect(field(view, 'confirm').props.returnKeyType).toBe('go');
   fill(view, {});
-  await act(async () => { fireEvent(view.getByTestId('register-confirm'), 'submitEditing'); });
+  await act(async () => { fireEvent(field(view, 'confirm'), 'submitEditing'); });
   expect(mockAuth.register).toHaveBeenCalledWith('anna@example.com', 'long-enough-1', 'Анна', undefined, 'ru');
 });
 
@@ -139,10 +144,10 @@ it('names the rule under the password from the rule itself, and shows the passwo
   const view = form();
   expect(view.getByText(t.auth.passwordHint(PASSWORD_MIN_LENGTH))).toBeTruthy();
   expect(t.auth.passwordHint(PASSWORD_MIN_LENGTH)).toBe('Минимум 8 символов');
-  expect(view.getByTestId('register-password').props.placeholder).toBe(t.auth.password);
+  expect(field(view, 'password').props.placeholder).toBe(t.auth.password);
   expect(view.getAllByLabelText(t.auth.showPassword)).toHaveLength(2);
   fireEvent.press(view.getAllByLabelText(t.auth.showPassword)[0]);
-  expect(view.getByTestId('register-password').props.secureTextEntry).toBe(false);
+  expect(field(view, 'password').props.secureTextEntry).toBe(false);
 });
 
 it('offers both sign-in and a password reset for a taken address (R3 contract)', async () => {
