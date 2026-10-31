@@ -145,6 +145,10 @@ export const PEOPLE = {
   // (51). A project of their own: a deleted rehearsal is gone for every flow.
   claudius: { email: 'claudius@e2e.test', firstName: 'Claudius', lastName: 'King', onboarded: true },
   gertrude: { email: 'gertrude@e2e.test', firstName: 'Gertrude', lastName: 'Queen', onboarded: true },
+  // An admin of her project who opens its rehearsal at 10:07 in the form and
+  // saves it untouched, and steps a new one's start by five minutes (54).
+  // Alone on it, so no other flow's times move.
+  cordelia: { email: 'cordelia@e2e.test', firstName: 'Cordelia', lastName: 'Lear', onboarded: true },
   // Neither has been through onboarding yet. One goes through it to the end
   // (09-onboarding), after which it is never shown to her again; the other
   // connects a calendar in it and comes back to the step (32), and needs it
@@ -392,6 +396,8 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
     [courtId, ids.gertrude]);
+  // Cordelia its admin (54).
+  const learId = await joined('Lear Court', 'The heath', 'cordelia', 'admin');
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -455,6 +461,8 @@ export async function seed({ client, apiUrl, timezone }) {
     // Made by Gaev, signed in already: the seed's twenty sign-ins are spent.
     ghost: await rehearsal(courtId, 'Ghost watch', 2, 19, 20, ['claudius', 'gertrude'], 'gaev'),
     mousetrap: await rehearsal(courtId, 'The Mousetrap', 3, 19, 20, ['claudius', 'gertrude'], 'gaev'),
+    // Off the form's five-minute step, as a rehearsal made before it (54).
+    storm: await rehearsal(learId, 'Storm scene', 1, [10, 7], 12, ['cordelia'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),

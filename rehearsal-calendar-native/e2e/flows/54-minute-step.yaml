@@ -1,0 +1,123 @@
+# The time wheel steps by five minutes, and an old rehearsal off that step
+# opens and is saved as it is (T-017, review r1).
+# The wheel was always given a five-minute interval, and UIKit rounds what it
+# shows to it (roundsToMinuteInterval): "Storm scene" at 10:07 opened its wheel
+# at 10:05. Now a time off the step turns by the minute and opens at 10:07;
+# Done and Save leave it 10:07. A new rehearsal starts on the hour, and the
+# row under its minutes is 05, not 01.
+#
+# The simulator is en_US, as run.mjs pins it, and so on the 12-hour clock.
+# The wheel's columns read "10 o’clock", "07 minutes", "AM" to Maestro.
+#
+# Cordelia's Storm scene is tomorrow, 10:07 to 12:00 (seed.mjs).
+appId: ${APP_ID}
+name: The wheel steps by five minutes and keeps an old 10:07
+tags:
+  - rehearsals
+  - calendar
+  - time-format
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${CORDELIA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+
+# 10:07, opened in the form and saved untouched.
+- scrollUntilVisible:
+    element: "(?s)(?=.*Storm scene)(?=.*10:07.AM–12:00.PM).*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- waitForAnimationToEnd
+- tapOn: ".*Storm scene.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-edit
+    timeout: 15000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-details-edit
+      SEE: "Edit Rehearsal"
+      WAIT_MS: 10000
+- assertVisible:
+    id: rehearsal-start-time
+    text: ".*10:07.AM.*"
+- tapOn:
+    id: rehearsal-start-time
+- extendedWaitUntil:
+    visible: "Select Start Time"
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "07 minutes"
+    timeout: 5000
+- assertVisible: "10 o’clock"
+- takeScreenshot: 54-wheel-at-10-07
+- tapOn: "Done"
+- extendedWaitUntil:
+    notVisible: "Select Start Time"
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-start-time
+    text: ".*10:07.AM.*"
+- scrollUntilVisible:
+    element:
+      id: rehearsal-submit
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: rehearsal-submit
+- extendedWaitUntil:
+    visible: "Rehearsal updated successfully"
+    timeout: 15000
+- tapOn: "OK"
+- extendedWaitUntil:
+    visible: ".*10:07.AM–12:00.PM.*"
+    timeout: 10000
+- takeScreenshot: 54-saved-at-10-07
+- tapOn:
+    text: "Close"
+    index: 0
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-details-edit
+    timeout: 10000
+
+# A new one: on the hour, and the next row of minutes is five past.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Create Rehearsal"
+      WAIT_MS: 5000
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- tapOn:
+    id: rehearsal-start-time
+- extendedWaitUntil:
+    visible: "Select Start Time"
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "00 minutes"
+    timeout: 5000
+# The row under the chosen one, in the minutes' column: a tap turns to it.
+- tapOn:
+    point: "49%,86%"
+- extendedWaitUntil:
+    visible: "05 minutes"
+    timeout: 5000
+- takeScreenshot: 54-wheel-five-minutes
+- tapOn: "Cancel"
