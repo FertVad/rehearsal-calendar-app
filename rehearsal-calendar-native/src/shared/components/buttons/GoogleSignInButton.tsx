@@ -96,9 +96,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
+  // The size iOS gives "Sign in with Apple" at AUTH_BUTTON_HEIGHT, measured
+  // on the simulator: the two labels sit one above the other (T-015).
   label: {
     color: '#1f1f1f',
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: '500',
   },
 });
