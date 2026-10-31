@@ -147,7 +147,7 @@ describe('The range under the period (cause fix 14)', () => {
     const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
     await settle();
 
-    expect(screen.getByText('1-7 Jan')).toBeTruthy();
+    expect(screen.getByText('Jan 1 – Jan 7')).toBeTruthy();
   });
 });
 

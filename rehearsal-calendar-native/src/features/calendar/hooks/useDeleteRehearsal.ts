@@ -7,6 +7,7 @@ import { unexportRehearsal } from '../../../shared/services/calendarSync';
 import { emitDataChanged } from '../../../shared/utils/dataChanged';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { formatDateLocalized } from '../../../shared/utils/time';
+import { formatClock } from '../../../shared/utils/clockFormat';
 import { logger } from '../../../shared/utils/logger';
 import type { Rehearsal } from '../../../shared/types';
 import type { Translations } from '../../../i18n/translations';
@@ -16,7 +17,7 @@ import type { Translations } from '../../../i18n/translations';
  * Without the abbreviations' dots, which made "сб, 31 окт., 15:00" of it.
  */
 export function rehearsalWhen(r: Rehearsal, locale: string): string {
-  const start = r.time?.substring(0, 5) || '';
+  const start = formatClock(r.time, locale);
   if (!r.date) return start;
   const day = [
     formatDateLocalized(r.date, { weekday: 'short' }, locale),

@@ -4,6 +4,8 @@ import type { TimeSlot } from '../types';
 import { useI18n } from '../../../contexts/I18nContext';
 import { WORKDAY_START, WORKDAY_END } from '../../../shared/utils/availability';
 import { Colors, TouchTarget } from '../../../shared/constants/colors';
+import { formatTimeRange } from '../../../shared/utils/clockFormat';
+import { getDateLocale } from '../../../shared/utils/locale';
 
 interface SlotItemProps {
   slot: TimeSlot;
@@ -12,7 +14,7 @@ interface SlotItemProps {
 }
 
 export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateRehearsal }) => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const getCategoryColor = (): string => {
     switch (slot.category) {
@@ -38,12 +40,12 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
     return `${t.smartPlanner.busyPrefix}: ${names}`;
   };
 
-  const formatTimeRange = (): string => {
+  const timeText = (): string => {
     // Check if entire workday
     if (slot.startTime === WORKDAY_START && slot.endTime === WORKDAY_END) {
       return t.smartPlanner.allDay;
     }
-    return `${slot.startTime}-${slot.endTime}`;
+    return formatTimeRange(slot.startTime, slot.endTime, getDateLocale(language));
   };
 
   const canCreateRehearsal = slot.busyMembers.length < slot.totalMembers;
@@ -52,7 +54,7 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
     <View style={styles.slot}>
       <View style={[styles.indicator, { backgroundColor: getCategoryColor() }]} />
       <View style={styles.content}>
-        <Text style={styles.time}>{formatTimeRange()}</Text>
+        <Text style={styles.time}>{timeText()}</Text>
         <Text testID={`planner-slot-${slot.date}`} style={styles.status}>{getStatusText()}</Text>
       </View>
       {canCreateRehearsal && onCreateRehearsal && (

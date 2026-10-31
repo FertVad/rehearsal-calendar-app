@@ -67,5 +67,5 @@ it('names a past rehearsal by its title and times it as an upcoming one is', asy
   expect(screen.getByText('Act II blocking')).toBeTruthy();
   expect(screen.getByText('Old monologue')).toBeTruthy();
   // Both rows give the interval, from the same label.
-  expect(screen.getAllByText('18:00 — 21:00')).toHaveLength(2);
+  expect(screen.getAllByText('18:00–21:00')).toHaveLength(2);
 });

@@ -5,6 +5,8 @@ import { IconButton } from '../../../../shared/components/IconButton';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../../shared/constants/colors';
 import { TimeSlot, SlotValidationError } from '../../types';
 import { useI18n } from '../../../../contexts/I18nContext';
+import { formatClock } from '../../../../shared/utils/clockFormat';
+import { getDateLocale } from '../../../../shared/utils/locale';
 
 interface TimeSlotsEditorProps {
   slots: TimeSlot[];
@@ -23,7 +25,8 @@ export default function TimeSlotsEditor({
   onRemoveSlot,
   onTimePickerOpen,
 }: TimeSlotsEditorProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const locale = getDateLocale(language);
 
   return (
     <View style={styles.slotsSection}>
@@ -50,7 +53,7 @@ export default function TimeSlotsEditor({
                 style={styles.timeButton}
                 onPress={() => onTimePickerOpen(index, 'start')}
               >
-                <Text style={styles.timeValue}>{slot.start}</Text>
+                <Text style={styles.timeValue}>{formatClock(slot.start, locale)}</Text>
                 <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
               </TouchableOpacity>
             </View>
@@ -63,7 +66,7 @@ export default function TimeSlotsEditor({
                 style={styles.timeButton}
                 onPress={() => onTimePickerOpen(index, 'end')}
               >
-                <Text style={styles.timeValue}>{slot.end}</Text>
+                <Text style={styles.timeValue}>{formatClock(slot.end, locale)}</Text>
                 <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
               </TouchableOpacity>
             </View>

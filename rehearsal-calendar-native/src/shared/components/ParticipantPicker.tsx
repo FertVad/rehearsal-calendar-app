@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../constants/colors';
 import type { TimeRange } from '../utils/availability';
+import { formatTimeRange } from '../utils/clockFormat';
 import { useI18n } from '../../contexts/I18nContext';
 import type { Translations } from '../../i18n/translations';
 import { AppModal } from './AppModal';
@@ -250,13 +251,13 @@ function Checkbox({ checked }: { checked: boolean | 'mixed' }) {
  * ranges, or the whole day. Nothing for someone free. Busy as the conflict
  * check on save counts it (conflictDetection.ts): rows of type 'busy'.
  */
-export function busyText(ranges: TimeRange[] | undefined, t: Translations): string | undefined {
+export function busyText(ranges: TimeRange[] | undefined, t: Translations, locale: string): string | undefined {
   const busy = (ranges ?? []).filter(r => r.type === 'busy');
   if (busy.length === 0) return undefined;
   if (busy.length === 1 && busy[0].start === '00:00' && (busy[0].end === '23:59' || busy[0].end === '24:00')) {
     return t.rehearsals.wholeDay;
   }
-  return busy.map(r => `${r.start}–${r.end}`).join(', ');
+  return busy.map(r => formatTimeRange(r.start, r.end, locale)).join(', ');
 }
 
 const styles = StyleSheet.create({

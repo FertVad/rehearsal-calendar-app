@@ -247,8 +247,8 @@ describe('useAvailabilitySave Hook', () => {
       expect(validation.isValid).toBe(false);
       expect(validation.errorTitle).toBe('Cannot Save');
       expect(validation.errorMessage).toContain('Slots overlap');
-      expect(validation.errorMessage).toContain('10:00 - 13:00');
-      expect(validation.errorMessage).toContain('12:00 - 14:00');
+      expect(validation.errorMessage).toContain('10:00–13:00');
+      expect(validation.errorMessage).toContain('12:00–14:00');
     });
 
     it('should skip validation for past dates', () => {

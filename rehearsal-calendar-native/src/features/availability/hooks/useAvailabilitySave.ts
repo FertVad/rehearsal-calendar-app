@@ -3,6 +3,7 @@ import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayState } from '../types';
 import { validateSlot, slotsOverlap } from '../utils';
 import { getDateLocale } from '../../../shared/utils/locale';
+import { formatTimeRange } from '../../../shared/utils/clockFormat';
 import { clockRangeEndDate, dateTimeToOffsetISOInTimezone, parseDateString } from '../../../shared/utils/time';
 import { useTimezone } from '../../../shared/hooks/useClock';
 
@@ -126,7 +127,7 @@ export const useAvailabilitySave = () => {
               return {
                 isValid: false,
                 errorTitle: t.availability.cannotSave,
-                errorMessage: `${t.common.error} (${formattedDate}):\n\n${t.availability.slotsOverlap}\n\nSlot ${j + 1}: ${slot1.start} - ${slot1.end}\nSlot ${k + 1}: ${slot2.start} - ${slot2.end}\n\n${t.availability.fixSlots}`,
+                errorMessage: `${t.common.error} (${formattedDate}):\n\n${t.availability.slotsOverlap}\n\nSlot ${j + 1}: ${formatTimeRange(slot1.start, slot1.end, locale)}\nSlot ${k + 1}: ${formatTimeRange(slot2.start, slot2.end, locale)}\n\n${t.availability.fixSlots}`,
               };
             }
           }

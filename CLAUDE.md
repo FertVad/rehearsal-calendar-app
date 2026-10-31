@@ -898,6 +898,14 @@ Every turn of the wheel used to reach the owner, so Cancel was Done (HC02).
 Do not put a `DateTimePicker` in a screen directly — there is one picker, and
 the rehearsal form and the availability editor both use it.
 
+**A time on a screen goes through `shared/utils/clockFormat.ts`** (T-017):
+`formatClock` shows a stored "HH:MM" on the phone's 12 or 24 hours
+(`expo-localization`), `formatTimeRange` writes "18:00–21:00" and
+`formatDateRange` "Oct 29 – Nov 4"; `formatRange` is the one joiner. The
+picker's wheel takes its hour cycle from `timePickerLocale` and steps by five
+minutes. Storage and requests stay "HH:MM" and ISO; server notification texts
+are not this.
+
 ### 12. A sheet in a `Modal` goes through `ModalSheet`
 ❌ **Problem**: VoiceOver reads a whole sheet as one button, and a tap on the
 sheet's title closes it

@@ -12,6 +12,7 @@
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import { Platform } from 'react-native';
+import { getCalendars as mockedCalendars } from 'expo-localization';
 import { PickerModal } from '../PickerModal';
 
 let wheel: { value: Date; onChange: (event: { type: string }, date?: Date) => void } | null = null;
@@ -76,6 +77,41 @@ describe('On iOS', () => {
     rerender(<PickerModal {...props} visible />);
 
     expect(wheel!.value).toEqual(NINE);
+  });
+});
+
+// T-017: the wheel is 12 or 24 hours as the phone is set, not as the app's
+// language has it, and steps by five minutes. iOS ignores is24Hour; its wheel
+// takes the hour cycle from the locale.
+describe('The time wheel', () => {
+  const getCalendars = mockedCalendars as jest.Mock;
+  afterEach(() => getCalendars.mockReturnValue([{ uses24hourClock: true }]));
+
+  it('is 24-hour on a 24-hour phone, in English too', () => {
+    getCalendars.mockReturnValue([{ uses24hourClock: true }]);
+    open(jest.fn());
+    expect(wheel).toMatchObject({ is24Hour: true, locale: 'en_US@hours=h23' });
+  });
+
+  it('is 12-hour on a 12-hour phone', () => {
+    getCalendars.mockReturnValue([{ uses24hourClock: false }]);
+    open(jest.fn());
+    expect(wheel).toMatchObject({ is24Hour: false, locale: 'en_US@hours=h12' });
+  });
+
+  it('steps by five minutes', () => {
+    open(jest.fn());
+    expect(wheel).toMatchObject({ minuteInterval: 5 });
+  });
+
+  it('keeps a time off the five-minute step when it is not turned', () => {
+    const owner = jest.fn();
+    const sevenPast = new Date(2026, 9, 6, 10, 7);
+    const { getByText } = open(owner, jest.fn(), sevenPast);
+
+    expect(wheel!.value).toEqual(sevenPast);
+    fireEvent.press(getByText('Done'));
+    expect(owner.mock.calls[0].find((arg: unknown) => arg instanceof Date)).toEqual(sevenPast);
   });
 });
 

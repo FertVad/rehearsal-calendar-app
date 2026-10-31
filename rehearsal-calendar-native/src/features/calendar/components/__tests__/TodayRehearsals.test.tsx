@@ -250,8 +250,8 @@ describe('TodayRehearsals Component', () => {
         />
       );
 
-      expect(getByText('10:00 — 12:00')).toBeTruthy();
-      expect(getByText('14:00 — 16:00')).toBeTruthy();
+      expect(getByText('10:00–12:00')).toBeTruthy();
+      expect(getByText('14:00–16:00')).toBeTruthy();
       expect(getByText('Project Alpha')).toBeTruthy();
       expect(getByText('Project Beta')).toBeTruthy();
       expect(getByText('Studio A')).toBeTruthy();

@@ -22,6 +22,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { DateRangePicker } from '../../../shared/components/DateRangePicker';
 import { addDays, formatDateToString, parseDateString } from '../../../shared/utils/time';
+import { formatDateRange } from '../../../shared/utils/clockFormat';
 import { useToday } from '../../../shared/hooks/useClock';
 import { memberAvailabilityLimits } from '../../../shared/utils/memberAvailabilityLimits';
 import { canScheduleIn } from '../../../shared/utils/rehearsalRights';
@@ -35,27 +36,10 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const { projects } = useProjects();
   const { t, language } = useI18n();
 
-  // Calendar dates of the profile's zone. Not new Date('YYYY-MM-DD'): that is
-  // UTC midnight, and the local getters below read it as the day before
-  // anywhere behind UTC.
-  const formatDateRange = useCallback((startDate: string, endDate: string): string => {
-    const start = parseDateString(startDate);
-    const end = parseDateString(endDate);
-
-    const locale = getDateLocale(language);
-    const options: Intl.DateTimeFormatOptions = { month: 'short' };
-
-    const startDay = start.getDate();
-    const endDay = end.getDate();
-    const startMonth = start.toLocaleDateString(locale, options);
-    const endMonth = end.toLocaleDateString(locale, options);
-
-    if (start.getMonth() === end.getMonth()) {
-      return `${startDay}-${endDay} ${startMonth}`;
-    }
-
-    return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
-  }, [language]);
+  // Calendar dates of the profile's zone, written as every interval of dates
+  // is: "29 окт. – 4 нояб." (clockFormat.ts).
+  const formatPeriod = useCallback((startDate: string, endDate: string): string =>
+    formatDateRange(startDate, endDate, getDateLocale(language)), [language]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'custom'>('week');
   const [selectedCategories] = useState<SlotCategory[]>([
@@ -337,13 +321,13 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
           onPress={() => setShowDateRangePicker(true)}
         >
           <Text style={styles.customDateText}>
-            {formatDateRange(startDate, endDate)}
+            {formatPeriod(startDate, endDate)}
           </Text>
           <Ionicons name="calendar-outline" size={20} color={Colors.accent.purple} />
         </TouchableOpacity>
       ) : (
         <Text style={styles.periodDate}>
-          {formatDateRange(startDate, endDate)}
+          {formatPeriod(startDate, endDate)}
         </Text>
       )}
     </View>

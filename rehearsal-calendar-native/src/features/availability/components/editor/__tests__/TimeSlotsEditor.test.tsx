@@ -452,9 +452,9 @@ describe('TimeSlotsEditor Component', () => {
         />
       );
 
-      // Should display full time string including seconds
-      expect(getByText('09:00:00')).toBeTruthy();
-      expect(getByText('17:00:00')).toBeTruthy();
+      // Shown as every time is, seconds dropped (clockFormat.ts)
+      expect(getByText('09:00')).toBeTruthy();
+      expect(getByText('17:00')).toBeTruthy();
     });
   });
 });

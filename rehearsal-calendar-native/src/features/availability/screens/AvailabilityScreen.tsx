@@ -14,6 +14,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { AppNavigation } from '../../../navigation';
 import { useToday } from '../../../shared/hooks/useClock';
 import { endsNextDay } from '../../../shared/utils/time';
+import { formatClock, formatTimeRange } from '../../../shared/utils/clockFormat';
+import { getDateLocale } from '../../../shared/utils/locale';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
@@ -432,7 +434,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                         style={styles.timeButton}
                         onPress={() => editor.openTimePicker(index, 'start')}
                       >
-                        <Text style={styles.timeValue}>{slot.start}</Text>
+                        <Text style={styles.timeValue}>{formatClock(slot.start, getDateLocale(language))}</Text>
                         <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
                       </TouchableOpacity>
                     </View>
@@ -446,7 +448,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                         style={styles.timeButton}
                         onPress={() => editor.openTimePicker(index, 'end')}
                       >
-                        <Text style={styles.timeValue}>{slot.end}</Text>
+                        <Text style={styles.timeValue}>{formatClock(slot.end, getDateLocale(language))}</Text>
                         {/* An end before the start is the next morning, and says so. */}
                         {endsNextDay(slot.start, slot.end) ? (
                           <Text style={styles.importedSource} testID={`slot-${index}-next-day`}>
@@ -498,7 +500,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                     color={Colors.text.tertiary}
                   />
                   <Text style={styles.importedTime}>
-                    {slot.isAllDay ? t.availability.allDay : `${slot.start} – ${slot.end}`}
+                    {slot.isAllDay ? t.availability.allDay : formatTimeRange(slot.start, slot.end, getDateLocale(language))}
                   </Text>
                   <Text style={styles.importedSource}>
                     {slot.source === 'rehearsal'

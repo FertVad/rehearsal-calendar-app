@@ -12,6 +12,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { usePickerDraft } from '../hooks/usePickerDraft';
 import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
+import { phoneUses24HourClock, timePickerLocale } from '../utils/clockFormat';
 
 interface PickerModalProps {
   visible: boolean;
@@ -35,6 +36,13 @@ export const PickerModal: React.FC<PickerModalProps> = ({
 }) => {
   const { t } = useI18n();
   const picker = usePickerDraft({ visible, value, onConfirm, onClose });
+  // A time's wheel follows the phone's 12/24 hours (clockFormat.ts) and steps
+  // by five minutes. A start at 10:07 still opens at 10:07 and is kept on Done
+  // unless the wheel is turned: the draft is the owner's value until then.
+  const uses24 = phoneUses24HourClock();
+  const time = mode === 'time'
+    ? { is24Hour: uses24, locale: timePickerLocale(language, uses24), minuteInterval: 5 as const }
+    : { locale: language };
 
   // Android uses native modal, no custom UI needed
   if (Platform.OS === 'android' && visible) {
@@ -44,8 +52,7 @@ export const PickerModal: React.FC<PickerModalProps> = ({
         mode={mode}
         display="default"
         onChange={picker.change}
-        is24Hour={mode === 'time'}
-        locale={language}
+        {...time}
         themeVariant="dark"
         textColor={Colors.text.primary}
       />
@@ -76,8 +83,7 @@ export const PickerModal: React.FC<PickerModalProps> = ({
                 mode={mode}
                 display="spinner"
                 onChange={picker.change}
-                is24Hour={mode === 'time'}
-                locale={language}
+                {...time}
                 themeVariant="dark"
                 textColor={Colors.text.primary}
                 style={styles.picker}

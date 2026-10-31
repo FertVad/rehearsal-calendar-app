@@ -5,6 +5,8 @@ import { ProjectMember } from '../../../shared/types';
 import { useTimeRecommendations, TimeSlot } from '../hooks/useTimeRecommendations';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useI18n } from '../../../contexts/I18nContext';
+import { formatTimeRange } from '../../../shared/utils/clockFormat';
+import { getDateLocale } from '../../../shared/utils/locale';
 
 interface TimeRecommendationsProps {
   selectedDate: string;
@@ -22,7 +24,7 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
   onTimeSelect,
   loading = false,
 }) => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const recommendations = useTimeRecommendations(
     selectedDate,
     selectedMembers,
@@ -31,7 +33,7 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
 
   const formatRecommendation = (rec: TimeSlot) => {
     const duration = rec.duration % 1 === 0 ? rec.duration : rec.duration.toFixed(1);
-    return `${rec.startTime}-${rec.endTime} (${duration}${t.rehearsals.hoursShort})`;
+    return `${formatTimeRange(rec.startTime, rec.endTime, getDateLocale(language))} (${duration}${t.rehearsals.hoursShort})`;
   };
 
   if (!selectedDate || selectedMembers.length === 0) {
