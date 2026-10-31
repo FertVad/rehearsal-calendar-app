@@ -1,0 +1,20 @@
+# Review 1, points 1 and 2: flow 50 on the form before T-015. It finds the
+# fields by their placeholders and the way in by its title, so the old form
+# is driven to its press of Sign Up.
+$ git restore --source=8fae51c -- src/features/auth/screens/LoginScreen.tsx src/features/auth/screens/RegisterScreen.tsx \
+    src/features/auth/styles/loginScreenStyles.ts src/features/auth/styles/registerScreenStyles.ts \
+    src/shared/components/buttons/GoogleSignInButton.tsx src/i18n/translations/auth.ts \
+    src/features/auth/utils/accountRules.ts src/shared/constants/spacing.ts
+$ npm run e2e -- e2e/flows/50-register-says-under-fields.yaml
+
+[Failed] Registration says what is wrong under each field (2m) (Assertion is false: "Error" is not visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+# Screenshot of the failing step (e2e/out/artifacts/2026-10-31_084657/.../
+# step-040-assertCondition-Error.png): an alert "Error / Invalid email format"
+# over the form, a 101-character name in it and nothing under any field. The
+# name and the password rule would each have come in an alert of their own,
+# only after the address was put right.
+
+$ git restore --source=HEAD -- <the same files>

@@ -1,0 +1,12 @@
+$ npm run e2e -- e2e/flows/50-register-says-under-fields.yaml
+
+[Passed] Registration says what is wrong under each field (1m 21s)
+1/1 Flow Passed in 1m 21s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+# Screenshots (e2e/out/artifacts/2026-10-31_083932/.../takeScreenshot):
+# 50-register-password-and-repeat.png shows, after one press of Sign Up and no
+# alert: "A first name is required; first and last name are at most 100
+# characters." under the name, "Invalid email format" under the address,
+# "At least 8 characters" and the password rule under the password ("short1"),
+# "Passwords do not match" under the repeat.
