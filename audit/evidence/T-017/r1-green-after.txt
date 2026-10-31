@@ -1,0 +1,23 @@
+T-017 review r1 — green after (f833150, 3204da7).
+
+$ npx jest --selectProjects frontend --silent --testPathPatterns '(PickerModal|AddRehearsalScreen|ParticipantPicker|clockFormat|clockRange)\.test'
+PASS frontend src/shared/utils/__tests__/clockRange.test.ts
+PASS frontend src/shared/utils/__tests__/clockFormat.test.ts
+PASS frontend src/shared/components/__tests__/PickerModal.test.tsx
+PASS frontend src/shared/components/__tests__/ParticipantPicker.test.tsx
+PASS frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx
+Test Suites: 5 passed, 5 total
+Tests:       73 passed, 73 total
+
+The whole frontend project before the commit: Test Suites: 111 passed, 111 total; Tests: 1014 passed.
+$ npm run type-check — no errors.
+
+$ npm run e2e -- e2e/flows/54-minute-step.yaml
+[Passed] The wheel steps by five minutes and keeps an old 10:07 (2m 47s)
+1/1 Flow Passed in 2m 47s
+(screenshots 54-wheel-at-10-07: 10 / 07 / AM; 54-saved-at-10-07: 10:07 AM–12:00 PM in the
+details after Save; 54-wheel-five-minutes: the row under 00 is 05, then 10, 15)
+
+$ npm run e2e -- e2e/flows/53-time-format.yaml
+[Passed] Times on the phone's 12 or 24 hours, one way to write an interval (1m 46s)
+1/1 Flow Passed in 1m 46s

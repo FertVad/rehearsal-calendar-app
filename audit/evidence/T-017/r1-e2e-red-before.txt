@@ -1,0 +1,22 @@
+T-017 review r1 — e2e red before.
+The same twelve source files from c9d6be8; seed and flow 54 from 3204da7.
+
+$ npm run e2e -- e2e/flows/54-minute-step.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] The wheel steps by five minutes and keeps an old 10:07 (2m 29s) (Assertion is false: "07 minutes" is visible)
+
+1/1 Flow Failed
+
+The wheel's columns in Maestro's hierarchy at the failure (artifacts 2026-10-31_181410):
+  "text" : "10 o’clock"
+  "text" : "05 minutes"
+Storm scene, stored 10:07, opened its wheel at 10:05: UIKit's roundsToMinuteInterval.

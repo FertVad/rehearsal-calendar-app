@@ -33,6 +33,22 @@ the app stayed 12-hour: a launch argument is parsed as a property list, and
 - `jest-green-after.txt`, `e2e-green-after.txt`: the task's tests, and every
   flow it changed (05, 07, 10, 23, 24, 25, 26, 27, 39, 45, 51, 52, 53).
 
+## Review r1 (fix `f833150`, flow `3204da7`)
+
+| Remark | Cause and change | Proved by |
+|---|---|---|
+| 10:07 shown as 10:05 on the wheel | UIKit rounds the wheel to `minuteInterval` (`roundsToMinuteInterval`, not exposed by the module); the draft kept 10:07, the wheel showed 10:05. `wheelMinuteInterval`: five for a time on the step, one for a time off it | `PickerModal.test.tsx`; flow 54 (Storm scene at 10:07: wheel "07 minutes", saved 10:07; a new one's next row is "05 minutes") |
+| An open form mixes two formats after the setting changes | The setting was read by a default argument in each render: nothing rendered again on the phone's change, and the form's memoized busy and conflict lines kept the old format. `usePhoneUses24HourClock` (expo-localization's `useCalendars`, which renders again on the phone's calendar event) in every screen that shows a time, passed on to the helpers and into the memos' deps; `busyText` and `rehearsalTimeLabel` take it. `phoneUses24HourClock` stays for alerts, written once at the tap | `AddRehearsalScreen.test.tsx` and `PickerModal.test.tsx` with the mock firing the listener |
+
+The change while the app is open is proved in Jest, not on the simulator: the
+only way a flow sets 24-hour time is a launch argument (flow 53), which needs a
+relaunch, and Maestro cannot open Settings → General → Date & Time. On the
+phone, `useCalendars` listens to `NSLocale.currentLocaleDidChangeNotification`
+(expo-localization's `LocalizationModule.swift`), which iOS posts when that
+switch is turned.
+
+Files: `r1-jest-red-before.txt`, `r1-e2e-red-before.txt`, `r1-green-after.txt`.
+
 ## node_modules
 
 An `npm install expo-localization` in the first session of this task (before
