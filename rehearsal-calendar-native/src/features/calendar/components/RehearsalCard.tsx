@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { IconButton } from '../../../shared/components/IconButton';
 import * as Haptics from 'expo-haptics';
@@ -150,10 +150,11 @@ export default function RehearsalCard({
       </TouchableOpacity>
 
       <View style={styles.seenSection}>
-        <Pressable
+        {/* Only an icon until someone has seen it: then the count beside it. */}
+        <IconButton
           testID="seen-toggle"
-          // Only an icon and a count: VoiceOver read nothing here.
-          accessibilityRole="button"
+          icon={currentResponse === 'yes' ? 'eye' : 'eye-off-outline'}
+          color={currentResponse === 'yes' ? Colors.accent.blue : Colors.text.secondary}
           accessibilityLabel={t.rehearsals.markSeen}
           accessibilityState={{ selected: currentResponse === 'yes', disabled: responding }}
           accessibilityValue={seenLabel ? { text: seenLabel } : undefined}
@@ -164,13 +165,8 @@ export default function RehearsalCard({
           }}
           disabled={responding}
         >
-          <Ionicons
-            name={currentResponse === 'yes' ? 'eye' : 'eye-off-outline'}
-            size={24}
-            color={currentResponse === 'yes' ? Colors.accent.blue : Colors.text.secondary}
-          />
           {seenLabel && <Text style={styles.seenCount}>{seenLabel}</Text>}
-        </Pressable>
+        </IconButton>
       </View>
     </View>
   );

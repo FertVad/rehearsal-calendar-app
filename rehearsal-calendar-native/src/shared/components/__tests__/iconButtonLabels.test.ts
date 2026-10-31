@@ -45,8 +45,31 @@ function elements(text: string, tags: RegExp): { tag: string; body: string; line
   });
 }
 
+/**
+ * The body without text under a condition of its own — `{count && <Text>…}` —
+ * which leaves the icon alone the rest of the time. Text in the same branch
+ * as the icon (`{loading ? <Spinner/> : <><Ionicons/><Text/></>}`) stays.
+ */
+function withoutOwnConditionText(body: string): string {
+  let depth = 0;
+  let start = 0;
+  let out = '';
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (c === '{' && depth++ === 0) start = i;
+    else if (c === '}' && --depth === 0) {
+      const group = body.slice(start, i + 1);
+      if (!(/<Text\b/.test(group) && !group.includes('<Ionicons'))) out += group;
+    } else if (depth === 0) out += c;
+  }
+  return out;
+}
+
 const TOUCHABLES = /<(TouchableOpacity|TouchableHighlight|TouchableWithoutFeedback|Pressable)\b/g;
-const iconOnly = ({ body }: { body: string }) => body.includes('<Ionicons') && !/<Text\b/.test(body);
+// The eye on a card shows its count only once someone has seen it; before
+// that it is an icon alone, and it went past this check (T-014 review).
+const iconOnly = ({ body }: { body: string }) =>
+  body.includes('<Ionicons') && !/<Text\b/.test(withoutOwnConditionText(body));
 
 // IconButton's own touchable takes the label from its props, which require it.
 const app = () => sources(SRC).filter((file) => file !== ICON_BUTTON);

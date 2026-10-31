@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing, TouchTarget } from '../../../shared/constants/colors';
 import { Rehearsal } from '../../../shared/types';
 import { formatDateToString, parseDateString } from '../../../shared/utils/time';
@@ -36,8 +36,23 @@ interface WeekData {
   days: DayInfo[];
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const WEEK_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md * 2; // Account for container padding
+/**
+ * A week is seven days of 44 pt side by side, 308 (T-014). The card sits in
+ * the calendar screen's margin; on a screen too narrow for the days within it
+ * (320 pt, an SE with Display Zoom) the card reaches into that margin rather
+ * than the days shrinking or running off their page.
+ */
+const SCREEN_MARGIN = Spacing.xl;
+const CARD_BORDER = 1;
+const CARD_PADDING_X = Spacing.xs;
+const CARD_INSET = CARD_BORDER + CARD_PADDING_X;
+const WEEK_MIN_WIDTH = 7 * TouchTarget;
+
+function cardReach(screenWidth: number): number {
+  const room = screenWidth - 2 * SCREEN_MARGIN - 2 * CARD_INSET;
+  return Math.min(SCREEN_MARGIN, Math.max(0, (WEEK_MIN_WIDTH - room) / 2));
+}
+
 const INITIAL_WEEKS = 105; // ~1 year on each side
 const CENTER_INDEX = Math.floor(INITIAL_WEEKS / 2);
 
@@ -46,6 +61,18 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   const weekStartDay = useWeekStart();
   const flatListRef = useRef<FlatList>(null);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(CENTER_INDEX);
+  const screenWidth = Dimensions.get('window').width;
+  const reach = cardReach(screenWidth);
+  // A page is the width the list is laid out at, and so is the step between
+  // pages: they were both a guess from the screen's width, and six points
+  // apart (T-014 review). Until the list is laid out, the same sum.
+  const [weekWidth, setWeekWidth] = useState(
+    screenWidth - 2 * (SCREEN_MARGIN - reach) - 2 * CARD_INSET,
+  );
+  const handleListLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    if (width > 0 && width !== weekWidth) setWeekWidth(width);
+  }, [weekWidth]);
 
   const DAYS_OF_WEEK = useMemo(() => {
     const s = t.days.short;
@@ -131,12 +158,12 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   // Handle scroll to update current week index and haptic feedback
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    const newIndex = Math.round(offsetX / WEEK_WIDTH);
+    const newIndex = Math.round(offsetX / weekWidth);
     if (newIndex !== currentWeekIndex && newIndex >= 0 && newIndex < weeks.length) {
       hapticMedium();
       setCurrentWeekIndex(newIndex);
     }
-  }, [currentWeekIndex, weeks.length]);
+  }, [currentWeekIndex, weeks.length, weekWidth]);
 
   // Today's day, not only its week: this scrolled the strip back and left the
   // day picked before selected, so the list under it went on showing that day,
@@ -153,7 +180,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
 
   // Render a single week
   const renderWeek = useCallback(({ item }: { item: WeekData }) => (
-    <View style={[styles.weekContainer, { width: WEEK_WIDTH }]}>
+    <View style={{ width: weekWidth }}>
       <View style={styles.weekGrid}>
         {item.days.map((day) => {
           const isSelected = day.date === selectedDate;
@@ -222,7 +249,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         })}
       </View>
     </View>
-  ), [selectedDate, onDaySelect, onDayLongPress]);
+  ), [selectedDate, onDaySelect, onDayLongPress, weekWidth]);
 
   // Scroll to today's week on mount
   useEffect(() => {
@@ -234,8 +261,15 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
     }, 100);
   }, []);
 
+  // A page of a new width moves the pages: the week on screen stays on it.
+  const shownWeek = useRef(currentWeekIndex);
+  shownWeek.current = currentWeekIndex;
+  useEffect(() => {
+    flatListRef.current?.scrollToOffset({ offset: shownWeek.current * weekWidth, animated: false });
+  }, [weekWidth]);
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { marginHorizontal: -reach }]}>
       {/* Header with month/year and today button */}
       <View style={styles.header}>
         {/* The pill is what shows; the tap is taken on 44 pt around it. */}
@@ -265,9 +299,11 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         showsHorizontalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        onLayout={handleListLayout}
+        extraData={weekWidth}
         getItemLayout={(_, index) => ({
-          length: WEEK_WIDTH,
-          offset: WEEK_WIDTH * index,
+          length: weekWidth,
+          offset: weekWidth * index,
           index,
         })}
         initialScrollIndex={CENTER_INDEX}
@@ -287,10 +323,11 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
+    borderWidth: CARD_BORDER,
     borderColor: Colors.glass.border,
     borderRadius: 16,
-    padding: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: CARD_PADDING_X,
     overflow: 'hidden',
   },
   header: {
@@ -322,16 +359,14 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 64, // Same width as today button for centering
   },
-  weekContainer: {
-    paddingHorizontal: 2,
-  },
   weekGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  // A seventh of the page, never more: a day wider than that ran off its
+  // week's page. The page is made wide enough for 44 (cardReach).
   dayTarget: {
     flex: 1,
-    minWidth: TouchTarget,
   },
   dayCell: {
     flex: 1,

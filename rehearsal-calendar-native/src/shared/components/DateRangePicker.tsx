@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import PeriodDay, { PeriodDayProps } from 'react-native-calendars/src/calendar/day/period';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight, TouchTarget } from '../constants/colors';
@@ -66,6 +66,46 @@ function withToday(
   result[today] = { ...result[today], today: true };
   return result;
 }
+
+/**
+ * A day takes the tap on 44×44 pt (T-014 review). The library draws it 38×34
+ * and takes the tap on exactly that; the drawn day and its period band stay
+ * as they were, with the room for the finger as padding around them. A row
+ * is as tall as before: the week's margin gives back what the padding takes.
+ */
+const DAY_DRAWN_WIDTH = 38;
+const DAY_DRAWN_HEIGHT = 34;
+const DAY_PAD_X = (TouchTarget - DAY_DRAWN_WIDTH) / 2;
+const DAY_PAD_Y = (TouchTarget - DAY_DRAWN_HEIGHT) / 2;
+const dayTheme = {
+  weekVerticalMargin: 7 - DAY_PAD_Y,
+  'stylesheet.day.period': {
+    container: {
+      alignSelf: 'stretch',
+      alignItems: 'center',
+      paddingHorizontal: DAY_PAD_X,
+      paddingVertical: DAY_PAD_Y,
+    },
+    fillers: {
+      position: 'absolute',
+      top: DAY_PAD_Y,
+      height: DAY_DRAWN_HEIGHT,
+      flexDirection: 'row',
+      left: 0,
+      right: 0,
+    },
+  },
+};
+
+/**
+ * Seven days of 44 side by side want 308 pt: the calendar runs to the sheet's
+ * edges, and the sheet's margin to the screen's is what is left over, up to
+ * the usual. On a 320 pt screen a day had 39.
+ */
+const SHEET_MARGIN_X = Math.min(
+  Spacing.lg,
+  (Dimensions.get('window').width - 7 * TouchTarget) / 2,
+);
 
 interface DayComponentProps extends Omit<PeriodDayProps, 'date'> {
   date?: DateData;
@@ -272,7 +312,9 @@ export function DateRangePicker({
             dayComponent={dayComponent}
             markedDates={calendarMarks}
             minDate={minDateStr}
+            style={styles.calendar}
             theme={{
+              ...dayTheme,
               backgroundColor: Colors.bg.secondary,
               calendarBackground: Colors.bg.secondary,
               textSectionTitleColor: Colors.text.secondary,
@@ -319,7 +361,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: SHEET_MARGIN_X,
+  },
+  calendar: {
+    paddingLeft: 0,
+    paddingRight: 0,
   },
   container: {
     backgroundColor: Colors.bg.secondary,
