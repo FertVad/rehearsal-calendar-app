@@ -82,12 +82,19 @@ export default function RehearsalDetailsScreen() {
     rehearsalsAPI
       .getById(rehearsalId)
       .then((res: any) => {
+        if (!alive) return;
         // Days and times from the interval, as the calendar reads them.
-        if (alive) setRehearsal(rehearsalInZone(res.data.rehearsal, userTimezone));
+        setRehearsal(rehearsalInZone(res.data.rehearsal, userTimezone));
+        setLoadFailed(false);
       })
       .catch((err: any) => {
         logger.warn('[RehearsalDetails] Could not load:', err);
-        if (alive) setLoadFailed(true);
+        if (!alive) return;
+        // Gone is gone. Any other failure of a read again — after a save, on
+        // a bad network — leaves the details as they were last read, rather
+        // than "not found" with Edit and Delete hidden (review T-016).
+        if (err?.response?.status === 404) setRehearsal(null);
+        setLoadFailed(true);
       });
 
     return () => {
@@ -230,7 +237,7 @@ export default function RehearsalDetailsScreen() {
     return <View key={item.userId}>{content}</View>;
   };
 
-  if (loadFailed) {
+  if (loadFailed && !rehearsal) {
     return (
       <View style={styles.fill}>
         <View style={styles.header}>

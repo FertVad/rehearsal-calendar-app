@@ -12,6 +12,8 @@ import { Text } from 'react-native';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import { rehearsalsAPI } from '../../../../shared/services/api';
 import { SeenProvider, useSeen } from '../../../../contexts/SeenContext';
+import { emitDataChanged } from '../../../../shared/utils/dataChanged';
+import { translations } from '../../../../i18n/translations';
 import RehearsalDetailsScreen from '../RehearsalDetailsScreen';
 
 const mockNavigate = jest.fn();
@@ -220,6 +222,75 @@ describe('Rehearsal details: Edit and Delete (T-016)', () => {
     expect(rehearsalsAPI.delete).toHaveBeenCalledWith('p1', 'r1');
     expect(mockGoBack).toHaveBeenCalled();
     expect(listChanged).toHaveBeenCalled();
+  });
+
+  it('does not ask without the count when who is on it could not be read, and reads it again (review)', async () => {
+    isAdmin = true;
+    answer('no');
+    const screen = await open();
+    getResponses.mockRejectedValueOnce(new Error('timeout of 10000ms exceeded'));
+
+    fireEvent.press(screen.getByTestId('rehearsal-details-delete'));
+    await settle();
+
+    // An error, not a confirmation without its line: nothing to delete from.
+    const [title, message, buttons] = alertSpy.mock.calls[alertSpy.mock.calls.length - 1] as any[];
+    expect(title).toBe('Error');
+    expect(message).toBe(translations.en.rehearsals.deleteNotifiedUnknown);
+    expect(buttons.map((b: any) => b.text)).toEqual(['Cancel', 'Try again']);
+    expect(buttons.some((b: any) => b.style === 'destructive')).toBe(false);
+
+    await act(async () => { buttons[1].onPress(); });
+    await settle();
+
+    const [title2, message2] = alertSpy.mock.calls[alertSpy.mock.calls.length - 1] as any[];
+    expect(title2).toBe('Delete “Act I run-through”, Thu Jan 10, 18:00?');
+    expect(message2).toBe('Participants (1) will be notified');
+  });
+
+  it('keeps the details when a read again fails, and takes the next one (review)', async () => {
+    isAdmin = true;
+    answer('no');
+    const getById = rehearsalsAPI.getById as jest.Mock;
+    const screen = await open();
+
+    // Saved in the form: read again, on a network that drops it.
+    getById.mockRejectedValueOnce(new Error('Network Error'));
+    act(() => emitDataChanged('rehearsals'));
+    await settle();
+    await settle();
+
+    expect(screen.queryByText(translations.en.rehearsals.notFound)).toBeNull();
+    expect(screen.getByText('Act I run-through')).toBeTruthy();
+    expect(screen.getByTestId('rehearsal-details-edit')).toBeTruthy();
+    expect(screen.getByTestId('rehearsal-details-delete')).toBeTruthy();
+
+    // The next read comes through, and is what the sheet shows.
+    getById.mockResolvedValueOnce({
+      data: {
+        rehearsal: {
+          id: 'r1', projectId: 'p1', title: 'Act I run-through', location: 'Battlements',
+          startsAt: '2030-01-10T18:00:00.000Z', endsAt: '2030-01-10T21:00:00.000Z',
+        },
+      },
+    });
+    act(() => emitDataChanged('rehearsals'));
+    await settle();
+    await settle();
+
+    expect(screen.getByText('Battlements')).toBeTruthy();
+    expect(screen.getByTestId('rehearsal-details-edit')).toBeTruthy();
+  });
+
+  it('says "not found" when a read again finds it gone', async () => {
+    answer('no');
+    const screen = await open();
+
+    (rehearsalsAPI.getById as jest.Mock).mockRejectedValueOnce({ response: { status: 404 } });
+    act(() => emitDataChanged('rehearsals'));
+    await settle();
+
+    expect(screen.getByText(translations.en.rehearsals.notFound)).toBeTruthy();
   });
 
   it('gives an actor neither', async () => {

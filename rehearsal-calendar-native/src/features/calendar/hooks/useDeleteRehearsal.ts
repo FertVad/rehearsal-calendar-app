@@ -27,11 +27,12 @@ export function rehearsalWhen(r: Rehearsal, locale: string): string {
 
 /**
  * What the confirmation says: which rehearsal, and how many will hear of it —
- * no line when nobody will, or when that could not be read.
+ * no line when nobody will. A count not read is not nobody: the confirmation
+ * does not open on it (useDeleteRehearsal).
  */
 export function deletePrompt(
   r: Rehearsal,
-  notified: number | null,
+  notified: number,
   t: Translations,
   locale: string,
 ): { title: string; message?: string } {
@@ -47,15 +48,18 @@ export function deletePrompt(
  *
  * The count is the server's own rule for who hears of it — everyone on the
  * rehearsal but whoever deletes it (routes/native/rehearsals.js) — read from
- * the roster as the confirmation opens. Once deleted, every list showing
- * rehearsals reloads (`emitDataChanged`), and `onDeleted` lets the caller go.
+ * the roster as the confirmation opens. When it cannot be read, there is no
+ * confirmation without the line, which would read as "nobody is told": an
+ * error says so, and Try again reads it again (review T-016). Once deleted,
+ * every list showing rehearsals reloads (`emitDataChanged`), and `onDeleted`
+ * lets the caller go.
  */
 export function useDeleteRehearsal() {
   const { t, language } = useI18n();
   const { user } = useAuth();
   const ownId = user ? String(user.id) : null;
 
-  return useCallback(async (rehearsal: Rehearsal, onDeleted?: () => void) => {
+  return useCallback(async function askToDelete(rehearsal: Rehearsal, onDeleted?: () => void) {
     const projectId = rehearsal.projectId;
     if (!projectId) {
       logger.error('[useDeleteRehearsal] projectId missing for rehearsal:', rehearsal.id);
@@ -67,8 +71,16 @@ export function useDeleteRehearsal() {
       const res = await rehearsalsAPI.getResponses(rehearsal.id);
       const all: any[] | undefined = res.data?.allParticipants;
       if (all) notified = all.filter((p) => String(p.userId) !== ownId).length;
+      else logger.warn('[useDeleteRehearsal] Response had no allParticipants');
     } catch (err) {
       logger.warn('[useDeleteRehearsal] Could not read who is on it:', err);
+    }
+    if (notified === null) {
+      Alert.alert(t.common.error, t.rehearsals.deleteNotifiedUnknown, [
+        { text: t.common.cancel, style: 'cancel' },
+        { text: t.common.retry, onPress: () => { askToDelete(rehearsal, onDeleted); } },
+      ]);
+      return;
     }
 
     const { title, message } = deletePrompt(rehearsal, notified, t, getDateLocale(language));

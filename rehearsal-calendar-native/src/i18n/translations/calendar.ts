@@ -53,6 +53,8 @@ export interface RehearsalsTranslations {
   deleteTitle: (title: string | null, when: string) => string;
   /** Under it: how many will be told it is cancelled. */
   deleteNotifies: (count: number) => string;
+  /** In place of the confirmation, when who would be told could not be read. */
+  deleteNotifiedUnknown: string;
   deleteError: string;
   /** The card's swipe and the details' corner: open the rehearsal in the form. */
   edit: string;
@@ -161,6 +163,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     deleteTitle: (title: string | null, when: string) =>
       title ? `Удалить «${title}», ${when}?` : `Удалить репетицию, ${when}?`,
     deleteNotifies: (count: number) => `Участники (${count}) получат уведомление`,
+    deleteNotifiedUnknown: 'Не удалось узнать, кто получит уведомление об отмене. Проверьте соединение и повторите.',
     deleteError: 'Не удалось удалить репетицию',
     edit: 'Изменить',
     participants: 'Участники',
@@ -262,6 +265,7 @@ needProject: 'Rehearsals show up once you are in a project',
     deleteTitle: (title: string | null, when: string) =>
       title ? `Delete “${title}”, ${when}?` : `Delete the rehearsal, ${when}?`,
     deleteNotifies: (count: number) => `Participants (${count}) will be notified`,
+    deleteNotifiedUnknown: 'Could not find out who will be told it is cancelled. Check your connection and try again.',
     deleteError: 'Could not delete the rehearsal',
     edit: 'Edit',
     participants: 'Participants',
@@ -363,6 +367,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     deleteTitle: (title: string | null, when: string) =>
       title ? `¿Eliminar «${title}», ${when}?` : `¿Eliminar el ensayo, ${when}?`,
     deleteNotifies: (count: number) => `Los participantes (${count}) recibirán un aviso`,
+    deleteNotifiedUnknown: 'No se pudo saber quién recibirá el aviso de la cancelación. Revisa la conexión e inténtalo de nuevo.',
     deleteError: 'No se pudo eliminar el ensayo',
     edit: 'Editar',
     participants: 'Participantes',
@@ -464,6 +469,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     deleteTitle: (title: string | null, when: string) =>
       title ? `„${title}“ löschen, ${when}?` : `Probe löschen, ${when}?`,
     deleteNotifies: (count: number) => `Teilnehmende (${count}) werden benachrichtigt`,
+    deleteNotifiedUnknown: 'Es ließ sich nicht ermitteln, wer über die Absage benachrichtigt wird. Prüfe die Verbindung und versuche es erneut.',
     deleteError: 'Die Probe konnte nicht gelöscht werden',
     edit: 'Bearbeiten',
     participants: 'Teilnehmer',
