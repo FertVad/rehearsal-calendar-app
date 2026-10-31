@@ -192,9 +192,12 @@ tags:
     height: 50
     tolerance: 6
 - takeScreenshot: 49-projects
-# On its name: the middle of the card is its Invite button (flow 19).
+# On the first card's name: the middle of a card is its Invite button (flow
+# 19), and the card reads as one element, so the name is a point. Not 23%:
+# flow 03's "Macbeth", listed first, has no description, and 23% was its
+# Invite, which opened the share sheet (T-213). 18% is the name either way.
 - tapOn:
-    point: "25%,23%"
+    point: "25%,18%"
 - extendedWaitUntil:
     notVisible: "My Projects"
     timeout: 15000
