@@ -34,3 +34,24 @@ re-applied and committed (`f8e617d`). The green runs are on that commit.
   `onDeleteRehearsal` prop it no longer passes was required), so its red is
   shown by flow 51 instead.
 - `e2e-green-after.txt`, `jest-green-after.txt`.
+
+## Review 1
+
+Fix `3d92959`, flow 52 `e8bd105`; red taken on `27bf274`'s files.
+
+| Point | What changed | Proved by |
+|---|---|---|
+| 1 Roster not read | `useDeleteRehearsal` no longer opens the confirmation without its line when `/responses` fails (or has no `allParticipants`): an error says who would be told is unknown, with Cancel and Try again, which reads it again. No delete from it | `RehearsalDetailsScreen.test.tsx`, flow 52 |
+| 2 Read again lost | The sheet clears `loadFailed` on a read that comes through, keeps what it had on a failed read again, and says "not available" only with nothing loaded or on a 404 | `RehearsalDetailsScreen.test.tsx`, flow 52 |
+| 3 e2e | Flow 52 (Claudius, two rehearsals of his own in the seed): a save from the details' form whose read again is lost, a second save shown in the sheet; a delete from the details on the project's page, the roster lost once, the sheet closing, the project's page and the calendar without it | flow 52 |
+
+- `review1-jest-red-before.txt`: the two new details tests fail on the old files.
+- `review1-e2e-red-before.txt`: flow 52 fails at "not available" with both old
+  files, and with the old hook alone at the error that never comes.
+- `review1-jest-green-after.txt`, `review1-e2e-green-after.txt` (flow 51 too,
+  green with the seed's two new rehearsals).
+
+The first try at the red, by `git restore --source=HEAD` before the fix was
+committed, put the old files back over the uncommitted fix (HEAD was still
+`27bf274`); the Jest red was taken on that, and the fix was written again and
+committed before the e2e reds.

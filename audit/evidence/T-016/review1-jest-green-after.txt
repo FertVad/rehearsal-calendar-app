@@ -1,0 +1,23 @@
+$ npx jest src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx --selectProjects frontend   (on 3d92959)
+
+PASS frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx (21.492 s)
+    ✓ takes the mark back when opened before the calendar primed the store (262 ms)
+    ✓ puts its own row back when the tap fails, as the card is put back (75 ms)
+    ✓ shows the server's count after the tap, not the one from before it (66 ms)
+    ✓ shows the count when the projects come after the participants (review) (50 ms)
+    ✓ keeps the others as the server gave them (34 ms)
+    ✓ gives an admin Edit, which opens the form on this rehearsal (44 ms)
+    ✓ asks with the name, the day and the time, and who will be told (62 ms)
+    ✓ says nothing of notifications when nobody else is on it (50 ms)
+    ✓ deletes, closes the sheet and tells the lists (93 ms)
+    ✓ does not ask without the count when who is on it could not be read, and reads it again (review) (117 ms)
+    ✓ keeps the details when a read again fails, and takes the next one (review) (149 ms)
+    ✓ says "not found" when a read again finds it gone (53 ms)
+    ✓ gives an actor neither (37 ms)
+Tests:       13 passed, 13 total
+
+$ npx jest --selectProjects frontend   (whole frontend suite)
+Tests:       997 passed, 997 total
+
+$ npm run type-check
+> tsc --noEmit   (no errors)

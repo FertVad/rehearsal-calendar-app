@@ -1,0 +1,27 @@
+On e8bd105.
+
+$ npm run e2e -- e2e/flows/52-rehearsal-details-edit-and-delete.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+Waiting for flows to complete...
+[Passed] An admin edits and deletes from the details (3m 24s)
+1/1 Flow Passed in 3m 25s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screenshots (e2e/out): 52-read-again-lost, 52-saved-and-shown ("Battlements"),
+52-roster-not-read (Error, "Try again"), 52-delete-confirmation
+("Participants (1) will be notified"), 52-project-without-it (3 upcoming,
+no "Ghost watch"), 52-calendar-without-it.
+
+Flow 51 again, the seed having two more rehearsals in its project:
+
+$ npm run e2e -- e2e/flows/51-rehearsal-swipe-and-details.yaml
+[Passed] An admin swipes a rehearsal away, an actor has no swipe (2m 45s)
+1/1 Flow Passed in 2m 45s
+[e2e] taps taken again (tap-and-see.yaml): 0

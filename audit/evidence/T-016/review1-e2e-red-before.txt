@@ -1,0 +1,43 @@
+Flow 52 on e8bd105 with the fix's files put back as they were in 27bf274.
+
+1. Both files (the sheet and the hook) as before:
+
+$ git restore --source=27bf274 -- src/features/calendar/hooks/useDeleteRehearsal.ts src/features/calendar/screens/RehearsalDetailsScreen.tsx
+$ npm run e2e -- e2e/flows/52-rehearsal-details-edit-and-delete.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+Waiting for flows to complete...
+[Failed] An admin edits and deletes from the details (2m 14s) (Assertion is false: "This rehearsal is not available.*" is not visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+$ git restore --source=HEAD -- (both)
+
+The read again after the save lost, the sheet says "not available" and hides
+Edit and Delete (review point 2).
+
+2. Only the hook as before, so the run gets past the sheet to the delete:
+
+$ git restore --source=27bf274 -- src/features/calendar/hooks/useDeleteRehearsal.ts
+$ npm run e2e -- e2e/flows/52-rehearsal-details-edit-and-delete.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+Waiting for flows to complete...
+[Failed] An admin edits and deletes from the details (3m 15s) (Assertion is false: "Could not find out who will be told it is cancelled.*" is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+$ git restore --source=HEAD -- src/features/calendar/hooks/useDeleteRehearsal.ts
+
+The roster lost, the confirmation opened without its line instead (review
+point 1).

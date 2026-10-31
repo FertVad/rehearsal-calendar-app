@@ -1,0 +1,30 @@
+$ git restore --source=27bf274 -- src/features/calendar/hooks/useDeleteRehearsal.ts src/features/calendar/screens/RehearsalDetailsScreen.tsx
+$ npx jest src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx --selectProjects frontend
+(console noise removed)
+
+FAIL frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx (18.581 s)
+  Rehearsal details: one "seen" model (DD01)
+    ✓ takes the mark back when opened before the calendar primed the store (232 ms)
+    ✓ puts its own row back when the tap fails, as the card is put back (61 ms)
+    ✓ shows the server's count after the tap, not the one from before it (53 ms)
+    ✓ shows the count when the projects come after the participants (review) (42 ms)
+    ✓ keeps the others as the server gave them (30 ms)
+  Rehearsal details: Edit and Delete (T-016)
+    ✓ gives an admin Edit, which opens the form on this rehearsal (37 ms)
+    ✓ asks with the name, the day and the time, and who will be told (48 ms)
+    ✓ says nothing of notifications when nobody else is on it (31 ms)
+    ✓ deletes, closes the sheet and tells the lists (64 ms)
+    ✕ does not ask without the count when who is on it could not be read, and reads it again (review) (91 ms)
+    ✕ keeps the details when a read again fails, and takes the next one (review) (2916 ms)
+    ✓ says "not found" when a read again finds it gone (41 ms)
+    ✓ gives an actor neither (31 ms)
+  ● Rehearsal details: Edit and Delete (T-016) › does not ask without the count when who is on it could not be read, and reads it again (review)
+    expect(received).toBe(expected) // Object.is equality
+    Expected: "Error"
+    Received: "Delete “Act I run-through”, Thu Jan 10, 18:00?"
+  ● Rehearsal details: Edit and Delete (T-016) › keeps the details when a read again fails, and takes the next one (review)
+    expect(received).toBeNull()
+    Received: {"_fiber": … "elementType": "Text" …}   (the "not available" text)
+    > 263 |     expect(screen.queryByText(translations.en.rehearsals.notFound)).toBeNull();
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 11 passed, 13 total
