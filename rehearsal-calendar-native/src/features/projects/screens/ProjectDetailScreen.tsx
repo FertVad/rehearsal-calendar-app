@@ -21,6 +21,7 @@ import { projectDetailScreenStyles as styles } from '../styles';
 import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
 import { parseDateString } from '../../../shared/utils/time';
+import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { useTimezone, useToday } from '../../../shared/hooks/useClock';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -175,6 +176,10 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // A rehearsal deleted or saved from its details, opened from this list, is
+  // a change this screen does not see: it stays mounted under the sheet.
+  useEffect(() => onDataChanged('rehearsals', fetchData), [fetchData]);
 
   const onRefresh = useCallback(() => {
     if (isDeleting) return; // Don't refresh if deleting

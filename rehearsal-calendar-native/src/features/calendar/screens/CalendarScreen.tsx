@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { CalendarScreenNavigation } from '../../../navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,6 @@ import TodayRehearsals from '../components/TodayRehearsals';
 import RehearsalCard from '../components/RehearsalCard';
 import SmartPlannerButton from '../components/SmartPlannerButton';
 import { Rehearsal } from '../../../shared/types';
-import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useUnread } from '../../../contexts/UnreadContext';
@@ -23,9 +22,7 @@ import { canScheduleAny } from '../../../shared/utils/rehearsalRights';
 import { useRehearsals } from '../hooks';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { calendarScreenStyles as styles } from '../styles';
-import { unexportRehearsal } from '../../../shared/services/calendarSync';
 
-import { logger } from '../../../shared/utils/logger';
 export default function CalendarScreen() {
   const navigation = useNavigation<CalendarScreenNavigation>();
   const { projects } = useProjects();
@@ -121,59 +118,8 @@ export default function CalendarScreen() {
     fetchRehearsals(true);
   }, [filterProjectId, fetchRehearsals]);
 
-  const handleDeleteRehearsal = async (rehearsalId: string) => {
-    // Find the rehearsal to get its projectId
-    const rehearsal = rehearsals.find(r => r.id === rehearsalId);
-
-    if (!rehearsal) {
-      logger.error('[CalendarScreen] Rehearsal not found:', rehearsalId);
-      Alert.alert(t.common.error, 'Rehearsal not found');
-      return;
-    }
-
-    // Try to get projectId from rehearsal object (check both camelCase and snake_case)
-    const projectId = rehearsal.projectId || (rehearsal as any)?.project_id;
-
-    if (!projectId) {
-      logger.error('[CalendarScreen] projectId missing for rehearsal:', rehearsalId, rehearsal);
-      Alert.alert(t.common.error, 'Cannot delete: project ID is missing');
-      return;
-    }
-
-    Alert.alert(
-      t.rehearsals.deleteTitle,
-      t.rehearsals.deleteMessage,
-      [
-        { text: t.common.cancel, style: 'cancel' },
-        {
-          text: t.rehearsals.deleteConfirm,
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await rehearsalsAPI.delete(projectId, rehearsalId);
-
-              // Its event, in the sync's queue: after a run already going,
-              // which may have read the rehearsal before it was deleted and
-              // would put the event back.
-              unexportRehearsal(rehearsalId).catch((syncError) => {
-                // Don't fail the whole operation if unsync fails
-                logger.error('[CalendarScreen] Failed to unsync from calendar:', syncError);
-              });
-
-              // Force refetch rehearsals after deletion (bypass cache)
-              await fetchRehearsals(true);
-
-              Alert.alert(t.common.success, t.rehearsals.deleteSuccess);
-            } catch (err: any) {
-              logger.error('[CalendarScreen] Failed to delete rehearsal:', err);
-              const errorMessage = err.response?.data?.error || err.message || t.rehearsals.createError;
-              Alert.alert(t.common.error, errorMessage);
-            }
-          },
-        },
-      ]
-    );
-  };
+  // A card's delete is the card's own now (useDeleteRehearsal), as it is in
+  // the details; the list reloads on the change it announces, above.
 
   const getFilterLabel = () => {
     if (filterProjectId === null) return t.calendar.allProjects;
@@ -359,7 +305,6 @@ export default function CalendarScreen() {
           selectedDate={selectedDate}
           loading={loading}
           projects={projects}
-          onDeleteRehearsal={handleDeleteRehearsal}
           onOpenRehearsal={openDetails}
         />
 
@@ -410,7 +355,6 @@ export default function CalendarScreen() {
                     projectName={project?.name || rehearsal.projectName}
                     isAdmin={isAdminForThisRehearsal}
                     onPress={() => openDetails(rehearsal)}
-                    onDelete={handleDeleteRehearsal}
                   />
                 );
               })}

@@ -133,9 +133,35 @@ export const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: Spacing.sm,
   },
-  adminActions: {
+  // An admin's swipe on a card (T-016): Edit, then Delete in red at the edge.
+  swipeActions: {
     flexDirection: 'row',
     gap: Spacing.xs,
+    paddingLeft: Spacing.sm,
+  },
+  swipeAction: {
+    // The card's height: gesture-handler's touchable is not stretched for it.
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 2,
+    width: 84,
+    borderRadius: BorderRadius.md,
+  },
+  swipeActionEdit: {
+    backgroundColor: Colors.accent.purple,
+  },
+  swipeActionDelete: {
+    backgroundColor: Colors.accent.red,
+  },
+  swipeActionText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.inverse,
+  },
+  swipeCardUnder: {
+    backgroundColor: Colors.bg.primary,
+    borderRadius: BorderRadius.md,
   },
   skeletonRow: {
     marginBottom: Spacing.sm,

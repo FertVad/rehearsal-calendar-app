@@ -1,5 +1,10 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
+// The card is inside a Swipeable, and React Native's own touchables take no
+// part in gesture-handler's arbitration: a swipe let slide back would open the
+// details as well (as in the inbox, NotificationsScreen).
+import { TouchableOpacity as GestureTouchable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { IconButton } from '../../../shared/components/IconButton';
 import * as Haptics from 'expo-haptics';
@@ -11,6 +16,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { useSeen } from '../../../contexts/SeenContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
+import { useDeleteRehearsal } from '../hooks/useDeleteRehearsal';
 import type { AppNavigation } from '../../../navigation';
 
 interface RehearsalCardProps {
@@ -25,7 +31,6 @@ interface RehearsalCardProps {
   isAdmin: boolean;
   isSynced?: boolean;
   onPress: () => void;
-  onDelete: (rehearsalId: string) => void;
 }
 
 /**
@@ -34,6 +39,10 @@ interface RehearsalCardProps {
  * Today's rehearsals and the upcoming ones used to render this separately, so
  * every change had to be made twice — which is how the rehearsal title nearly
  * shipped visible in one list and missing from the other.
+ *
+ * An admin edits and deletes it with a swipe to the left (T-016). The pencil
+ * and the bin used to sit on the card, the bin 16 pt from the pencil, and a
+ * tap meant for one could land on the other.
  */
 export default function RehearsalCard({
   rehearsal,
@@ -42,10 +51,11 @@ export default function RehearsalCard({
   isAdmin,
   isSynced = false,
   onPress,
-  onDelete,
 }: RehearsalCardProps) {
   const { t, language } = useI18n();
   const navigation = useNavigation<AppNavigation>();
+  const askToDelete = useDeleteRehearsal();
+  const swipeable = useRef<Swipeable>(null);
 
   // Read straight from the store. These used to arrive as five props threaded
   // from the screen through every list in between, which is why a second list
@@ -62,9 +72,9 @@ export default function RehearsalCard({
         : `${stats.confirmed}`
       : null;
 
-  return (
+  const card = (
     <View style={styles.upcomingCard}>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <GestureTouchable onPress={onPress} activeOpacity={0.7}>
         <View style={styles.upcomingCardRow}>
           <View style={styles.upcomingCardLeftCol}>
             {dateLabel ? (
@@ -118,36 +128,10 @@ export default function RehearsalCard({
                 <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
                 <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
               </View>
-              {/* Side by side: two 44 pt targets one over the other made the
-                  card taller than its text. */}
-              <View style={styles.adminActions}>
-                <IconButton
-                  icon="trash-outline"
-                  size={18}
-                  color={Colors.accent.red}
-                  accessibilityLabel={t.common.delete}
-                  onPress={(e) => {
-                    e?.stopPropagation();
-                    onDelete(rehearsal.id);
-                  }}
-                />
-                <IconButton
-                  icon="create-outline"
-                  size={18}
-                  accessibilityLabel={t.common.edit}
-                  onPress={(e) => {
-                    e?.stopPropagation();
-                    navigation.navigate('AddRehearsal', {
-                      rehearsalId: rehearsal.id,
-                      projectId: rehearsal.projectId,
-                    });
-                  }}
-                />
-              </View>
             </View>
           )}
         </View>
-      </TouchableOpacity>
+      </GestureTouchable>
 
       <View style={styles.seenSection}>
         {/* Only an icon until someone has seen it: then the count beside it. */}
@@ -169,5 +153,55 @@ export default function RehearsalCard({
         </IconButton>
       </View>
     </View>
+  );
+
+  // No swipe for anyone else: there is nothing behind it they may do.
+  if (!isAdmin) return card;
+
+  const renderActions = () => (
+    <View style={styles.swipeActions}>
+      <GestureTouchable
+        testID="rehearsal-swipe-edit"
+        style={[styles.swipeAction, styles.swipeActionEdit]}
+        onPress={() => {
+          swipeable.current?.close();
+          navigation.navigate('AddRehearsal', {
+            rehearsalId: rehearsal.id,
+            projectId: rehearsal.projectId,
+          });
+        }}
+      >
+        <Ionicons name="create-outline" size={22} color={Colors.text.inverse} />
+        <Text style={styles.swipeActionText}>{t.rehearsals.edit}</Text>
+      </GestureTouchable>
+      <GestureTouchable
+        testID="rehearsal-swipe-delete"
+        style={[styles.swipeAction, styles.swipeActionDelete]}
+        onPress={() => {
+          swipeable.current?.close();
+          askToDelete(rehearsal);
+        }}
+      >
+        <Ionicons name="trash-outline" size={22} color={Colors.text.inverse} />
+        <Text style={styles.swipeActionText}>{t.common.delete}</Text>
+      </GestureTouchable>
+    </View>
+  );
+
+  return (
+    <Swipeable
+      ref={swipeable}
+      renderRightActions={renderActions}
+      overshootRight={false}
+      friction={2}
+      // Two actions are twice the inbox's one, and half their width — the
+      // default — took a swipe across half the screen to open them.
+      rightThreshold={40}
+      // Under the card's glass, so the actions do not show through it while it
+      // slides; at rest it is the screen's own colour.
+      childrenContainerStyle={styles.swipeCardUnder}
+    >
+      {card}
+    </Swipeable>
   );
 }

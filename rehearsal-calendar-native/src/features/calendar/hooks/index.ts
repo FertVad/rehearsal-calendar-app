@@ -5,3 +5,4 @@ export * from './useCalendarSync';
 export * from './useTimeRecommendations';
 export * from './useAddRehearsalForm';
 export * from './useAddRehearsalSubmit';
+export * from './useDeleteRehearsal';

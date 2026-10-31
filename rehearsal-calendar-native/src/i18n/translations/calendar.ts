@@ -49,9 +49,13 @@ export interface RehearsalsTranslations {
   created: string;
   createError: string;
   deleteConfirm: string;
-  deleteTitle: string;
-  deleteMessage: string;
-  deleteSuccess: string;
+  /** The confirmation's title: the rehearsal's name, if it has one, its day and start. */
+  deleteTitle: (title: string | null, when: string) => string;
+  /** Under it: how many will be told it is cancelled. */
+  deleteNotifies: (count: number) => string;
+  deleteError: string;
+  /** The card's swipe and the details' corner: open the rehearsal in the form. */
+  edit: string;
   participants: string;
   createRehearsal: string;
   updateRehearsal: string;
@@ -154,9 +158,11 @@ needProject: 'Репетиции появятся, когда вы окажет�
     created: 'Репетиция создана',
     createError: 'Ошибка создания репетиции',
     deleteConfirm: 'Удалить',
-    deleteTitle: 'Удалить репетицию?',
-    deleteMessage: 'Это действие нельзя отменить',
-    deleteSuccess: 'Репетиция удалена',
+    deleteTitle: (title: string | null, when: string) =>
+      title ? `Удалить «${title}», ${when}?` : `Удалить репетицию, ${when}?`,
+    deleteNotifies: (count: number) => `Участники (${count}) получат уведомление`,
+    deleteError: 'Не удалось удалить репетицию',
+    edit: 'Изменить',
     participants: 'Участники',
     createRehearsal: 'Создать репетицию',
     updateRehearsal: 'Сохранить изменения',
@@ -253,9 +259,11 @@ needProject: 'Rehearsals show up once you are in a project',
     created: 'Rehearsal created',
     createError: 'Error creating rehearsal',
     deleteConfirm: 'Delete',
-    deleteTitle: 'Delete Rehearsal?',
-    deleteMessage: 'This action cannot be undone',
-    deleteSuccess: 'Rehearsal deleted',
+    deleteTitle: (title: string | null, when: string) =>
+      title ? `Delete “${title}”, ${when}?` : `Delete the rehearsal, ${when}?`,
+    deleteNotifies: (count: number) => `Participants (${count}) will be notified`,
+    deleteError: 'Could not delete the rehearsal',
+    edit: 'Edit',
     participants: 'Participants',
     createRehearsal: 'Create Rehearsal',
     updateRehearsal: 'Save Changes',
@@ -352,9 +360,11 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     created: 'Ensayo creado',
     createError: 'Error al crear el ensayo',
     deleteConfirm: 'Eliminar',
-    deleteTitle: '¿Eliminar ensayo?',
-    deleteMessage: 'Esta acción no se puede deshacer',
-    deleteSuccess: 'Ensayo eliminado',
+    deleteTitle: (title: string | null, when: string) =>
+      title ? `¿Eliminar «${title}», ${when}?` : `¿Eliminar el ensayo, ${when}?`,
+    deleteNotifies: (count: number) => `Los participantes (${count}) recibirán un aviso`,
+    deleteError: 'No se pudo eliminar el ensayo',
+    edit: 'Editar',
     participants: 'Participantes',
     createRehearsal: 'Crear ensayo',
     updateRehearsal: 'Guardar cambios',
@@ -451,9 +461,11 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     created: 'Probe erstellt',
     createError: 'Fehler beim Erstellen der Probe',
     deleteConfirm: 'Löschen',
-    deleteTitle: 'Probe löschen?',
-    deleteMessage: 'Diese Aktion kann nicht rückgängig gemacht werden',
-    deleteSuccess: 'Probe gelöscht',
+    deleteTitle: (title: string | null, when: string) =>
+      title ? `„${title}“ löschen, ${when}?` : `Probe löschen, ${when}?`,
+    deleteNotifies: (count: number) => `Teilnehmende (${count}) werden benachrichtigt`,
+    deleteError: 'Die Probe konnte nicht gelöscht werden',
+    edit: 'Bearbeiten',
     participants: 'Teilnehmer',
     createRehearsal: 'Probe erstellen',
     updateRehearsal: 'Änderungen speichern',

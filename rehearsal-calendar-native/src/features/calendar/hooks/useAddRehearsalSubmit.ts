@@ -14,6 +14,7 @@ import {
   isEmptyClockRange,
 } from '../../../shared/utils/time';
 import { exportRehearsal } from '../../../shared/services/calendarSync';
+import { emitDataChanged } from '../../../shared/utils/dataChanged';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 import { useTimezone } from '../../../shared/hooks/useClock';
@@ -153,6 +154,10 @@ export function useAddRehearsalSubmit({
           logger.error('[AddRehearsal] ❌ Failed to auto-sync to calendar:', syncError);
         });
       }
+
+      // A list this form was not opened from — a project's, under the details
+      // it was opened from (T-016) — reloads too.
+      emitDataChanged('rehearsals');
 
       // Saved, as it was sent: the way out after it is not asked about
       // (useLeaveGuard).

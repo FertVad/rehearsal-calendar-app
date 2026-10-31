@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { IconButton } from '../../../shared/components/IconButton';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -22,6 +22,8 @@ import { Rehearsal, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDateLocalized } from '../../../shared/utils/time';
 import { rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
+import { onDataChanged } from '../../../shared/utils/dataChanged';
+import { useDeleteRehearsal } from '../hooks/useDeleteRehearsal';
 import type { AppNavigation, AppStackParamList } from '../../../navigation';
 
 interface Participant {
@@ -67,6 +69,10 @@ export default function RehearsalDetailsScreen() {
 
   const [rehearsal, setRehearsal] = useState<Rehearsal | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // Read again when a rehearsal changes: saved in the form "Edit" opens over
+  // this sheet, which comes back to it (T-016).
+  const [reads, setReads] = useState(0);
+  useEffect(() => onDataChanged('rehearsals', () => setReads((n) => n + 1)), []);
 
   // Loaded here rather than passed in — see the note above the component.
   useEffect(() => {
@@ -87,11 +93,12 @@ export default function RehearsalDetailsScreen() {
     return () => {
       alive = false;
     };
-  }, [rehearsalId, userTimezone]);
+  }, [rehearsalId, userTimezone, reads]);
 
   const project = rehearsal ? projects.find(p => p.id === rehearsal.projectId) || null : null;
   const isAdmin = project?.is_admin || false;
   const onClose = () => navigation.goBack();
+  const askToDelete = useDeleteRehearsal();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(false);
   const ownId = user ? String(user.id) : null;
@@ -271,11 +278,31 @@ export default function RehearsalDetailsScreen() {
             <Text style={styles.headerTitle} numberOfLines={2}>
               {rehearsal.title || t.calendar.rehearsal}
             </Text>
+            {/* An admin's way to the form from here, so a rehearsal opened
+                from a notification can be changed too (T-016). Over this
+                sheet, which reads it again when the form saves. */}
+            {isAdmin && (
+              <Pressable
+                testID="rehearsal-details-edit"
+                accessibilityRole="button"
+                style={styles.headerAction}
+                hitSlop={4}
+                onPress={() => navigation.navigate('AddRehearsal', {
+                  rehearsalId: rehearsal.id,
+                  projectId: rehearsal.projectId,
+                })}
+              >
+                <Text style={styles.headerActionText}>{t.rehearsals.edit}</Text>
+              </Pressable>
+            )}
             <IconButton icon="close" accessibilityLabel={t.common.close} onPress={onClose} minSize={SHEET_TARGET} />
           </View>
 
           <View style={styles.content}>
 
+            {/* The facts, as rows of text: in boxes they looked like fields
+                to type in. The place is only words — often "Hall 1" — and
+                opens no map (owner, 30.10). */}
             {/* Date */}
             <View style={styles.detailRow}>
               <Ionicons name="calendar-outline" size={20} color={Colors.accent.blue} />
@@ -343,6 +370,20 @@ export default function RehearsalDetailsScreen() {
                 ))}
               </View>
             )}
+
+            {/* At the foot, away from everything else: the confirmation is
+                the cards' own (useDeleteRehearsal), and the sheet goes when
+                it is done. */}
+            {isAdmin && (
+              <Pressable
+                testID="rehearsal-details-delete"
+                accessibilityRole="button"
+                style={styles.deleteRow}
+                onPress={() => askToDelete(rehearsal, onClose)}
+              >
+                <Text style={styles.deleteText}>{t.common.delete}</Text>
+              </Pressable>
+            )}
           </View>
       </ScrollView>
   );
@@ -392,6 +433,16 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.text.primary,
   },
+  headerAction: {
+    minHeight: SHEET_TARGET,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+  },
+  headerActionText: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.purple,
+  },
   content: {
     padding: Spacing.lg,
   },
@@ -399,13 +450,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.glass.bg,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    marginBottom: Spacing.sm,
+    minHeight: TouchTarget,
   },
   detailText: {
     fontSize: FontSize.base,
@@ -478,5 +523,18 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: FontSize.base,
     color: Colors.text.tertiary,
+  },
+  deleteRow: {
+    marginTop: Spacing.xl,
+    minHeight: SHEET_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.glass.bg,
+  },
+  deleteText: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.red,
   },
 });

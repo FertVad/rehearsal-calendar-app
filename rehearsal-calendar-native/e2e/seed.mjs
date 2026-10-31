@@ -140,6 +140,11 @@ export const PEOPLE = {
   // Runs a company of thirteen, which the participants sheet searches, and a
   // project of two (48). The twelve others are ISLANDERS, who never sign in.
   prospero: { email: 'prospero@e2e.test', firstName: 'Prospero', lastName: 'Milan', onboarded: true },
+  // An admin of his project who swipes one of its rehearsals away and opens
+  // the form from another's details, and an actor on both who has no swipe
+  // (51). A project of their own: a deleted rehearsal is gone for every flow.
+  claudius: { email: 'claudius@e2e.test', firstName: 'Claudius', lastName: 'King', onboarded: true },
+  gertrude: { email: 'gertrude@e2e.test', firstName: 'Gertrude', lastName: 'Queen', onboarded: true },
   // Neither has been through onboarding yet. One goes through it to the end
   // (09-onboarding), after which it is never shown to her again; the other
   // connects a calendar in it and comes back to the step (32), and needs it
@@ -381,6 +386,12 @@ export async function seed({ client, apiUrl, timezone }) {
   const accountsId = await joined('Estate Accounts', 'The ledgers', 'polina', 'admin');
   const lighthouseId = await joined('Lighthouse', 'The night shift', 'yakov');
   const ballId = await joined('Estate Ball', 'The ballroom', 'olga', 'admin');
+  // Claudius its admin, Gertrude in it (51).
+  const courtId = await joined('Elsinore Court', 'The throne room', 'claudius', 'admin');
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+    [courtId, ids.gertrude]);
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -435,6 +446,10 @@ export async function seed({ client, apiUrl, timezone }) {
     boat: await rehearsal(lighthouseId, 'Boat repair', otherDayThisWeek(), 12, 13, ['gaev', 'yakov'], 'gaev'),
     // Gaev's alone: Olga, its project's admin, is not on it — "0/1" (42).
     ball: await rehearsal(ballId, 'Ball rehearsal', 2, 12, 13, ['gaev'], 'gaev'),
+    // Claudius deletes the first by its swipe, Gaev and Gertrude told of it:
+    // "Participants (2)". He opens the form from the second's details (51).
+    court: await rehearsal(courtId, 'Court scene', 2, 15, 17, ['gaev', 'claudius', 'gertrude'], 'gaev'),
+    play: await rehearsal(courtId, 'Play within', 3, 15, 17, ['gaev', 'claudius', 'gertrude'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),

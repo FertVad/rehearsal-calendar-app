@@ -15,7 +15,6 @@ interface TodayRehearsalsProps {
   selectedDate: string;
   loading: boolean;
   projects: Project[];
-  onDeleteRehearsal: (rehearsalId: string) => void;
   /** Opening the details sheet belongs to the calendar. This component used to
    *  render its own, which meant two of them on one screen with separate state:
    *  a sheet opened from here was invisible to the code that opens one for a
@@ -29,7 +28,6 @@ export default function TodayRehearsals({
   selectedDate,
   loading,
   projects,
-  onDeleteRehearsal,
   onOpenRehearsal,
 }: TodayRehearsalsProps) {
   const { t, language } = useI18n();
@@ -108,7 +106,6 @@ export default function TodayRehearsals({
               isAdmin={isAdminForThisRehearsal}
               isSynced={syncedRehearsals[rehearsal.id]}
               onPress={() => onOpenRehearsal(rehearsal)}
-              onDelete={onDeleteRehearsal}
             />
           );
         })}
