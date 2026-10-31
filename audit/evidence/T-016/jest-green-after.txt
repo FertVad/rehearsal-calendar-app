@@ -1,0 +1,13 @@
+# f8e617d. 2026-10-31.
+$ npx jest --selectProjects frontend --silent src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx src/features/calendar/components/__tests__/TodayRehearsals.test.tsx
+PASS frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx (12.7 s)
+PASS frontend src/features/calendar/components/__tests__/TodayRehearsals.test.tsx (12.797 s)
+Tests:       30 passed, 30 total
+
+$ npx jest --selectProjects frontend --silent
+Test Suites: 110 passed, 110 total
+Tests:       994 passed, 994 total
+
+$ npm run type-check
+> tsc --noEmit
+(no errors)
