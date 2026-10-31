@@ -1,0 +1,216 @@
+# An admin edits a rehearsal from its details and deletes one from them, and
+# a bad network on the way does not hide either (T-016, review).
+# Claudius opens "The Mousetrap" and saves it from the form "Edit" opens; the
+# sheet's read again after it is lost, as on no network. The old sheet then
+# said "not available" and hid Edit and Delete for good, even once a read came
+# through; now it keeps what it had, and the next save shows the new place.
+# Then on his project's page he deletes "Ghost watch" from its details. Who
+# would be told cannot be read the first time: the old confirmation opened
+# without its line, as if nobody were; now an error says so, and Try again
+# asks with "Participants (1)". The sheet closes, and neither the project's
+# page nor the calendar shows it.
+appId: ${APP_ID}
+name: An admin edits and deletes from the details
+tags:
+  - rehearsals
+  - calendar
+  - projects
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${CLAUDIUS_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+# Below the fold, after the day's others.
+- scrollUntilVisible:
+    element: ".*The Mousetrap.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- waitForAnimationToEnd
+- tapOn: ".*The Mousetrap.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-edit
+    timeout: 15000
+
+# A save whose read again is lost.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-details-edit
+      SEE: "Edit Rehearsal"
+      WAIT_MS: 10000
+- scrollUntilVisible:
+    element:
+      id: rehearsal-location
+    direction: DOWN
+    centerElement: true
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: rehearsal-location
+      - eraseText
+      - inputText: "Gun platform"
+      - assertVisible:
+          id: rehearsal-location
+          text: "Gun platform"
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "^/api/native/rehearsals/${MOUSETRAP_REHEARSAL}$"
+      # Past the app's ten seconds: the read does not come at all.
+      MS: "15000"
+      ONCE: "1"
+- assertVisible:
+    id: rehearsal-submit
+- tapOn:
+    id: rehearsal-submit
+- extendedWaitUntil:
+    visible: "Rehearsal updated successfully"
+    timeout: 15000
+- tapOn: "OK"
+# Until the app has given up on the read: the old sheet said "not available"
+# then, and this goes on at once.
+- extendedWaitUntil:
+    visible: "This rehearsal is not available.*"
+    timeout: 13000
+    optional: true
+- assertNotVisible: "This rehearsal is not available.*"
+- assertVisible: ".*The Mousetrap.*"
+- assertVisible:
+    id: rehearsal-details-edit
+- assertVisible:
+    id: rehearsal-details-delete
+- takeScreenshot: 52-read-again-lost
+
+# The next save, read again on a good network: the sheet shows it.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-details-edit
+      SEE: "Edit Rehearsal"
+      WAIT_MS: 10000
+- scrollUntilVisible:
+    element:
+      id: rehearsal-location
+    direction: DOWN
+    centerElement: true
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: rehearsal-location
+      - eraseText
+      - inputText: "Battlements"
+      - assertVisible:
+          id: rehearsal-location
+          text: "Battlements"
+- assertVisible:
+    id: rehearsal-submit
+- tapOn:
+    id: rehearsal-submit
+- extendedWaitUntil:
+    visible: "Rehearsal updated successfully"
+    timeout: 15000
+- tapOn: "OK"
+- extendedWaitUntil:
+    visible: "Battlements"
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-details-edit
+- takeScreenshot: 52-saved-and-shown
+- tapOn:
+    text: "Close"
+    index: 0
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-details-edit
+    timeout: 10000
+
+# From the project's page: Delete in the details, the roster lost once.
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Elsinore Court.*"
+    timeout: 10000
+- waitForAnimationToEnd
+# On its name, as in flow 39: his only project, listed first.
+- tapOn:
+    point: "25%,23%"
+# Its upcoming rehearsals open folded.
+- extendedWaitUntil:
+    visible: ".*Upcoming Rehearsals.*"
+    timeout: 15000
+- tapOn: ".*Upcoming Rehearsals.*"
+- scrollUntilVisible:
+    element: ".*Ghost watch.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- waitForAnimationToEnd
+- tapOn: ".*Ghost watch.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-delete
+    timeout: 15000
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: GET
+      PATH: "^/api/native/rehearsals/${GHOST_REHEARSAL}/responses$"
+      MS: "15000"
+      ONCE: "1"
+- scrollUntilVisible:
+    element:
+      id: rehearsal-details-delete
+    direction: DOWN
+    centerElement: true
+# Not tap-and-see: a second tap would read the roster again, past the hold.
+- tapOn:
+    id: rehearsal-details-delete
+- extendedWaitUntil:
+    visible: "Could not find out who will be told it is cancelled.*"
+    timeout: 20000
+- assertNotVisible: "Delete “Ghost watch”.*"
+- takeScreenshot: 52-roster-not-read
+- tapOn: "Try again"
+- extendedWaitUntil:
+    visible: "Delete “Ghost watch”, .*, 19:00\\?"
+    timeout: 10000
+- assertVisible: "Participants \\(1\\) will be notified"
+- takeScreenshot: 52-delete-confirmation
+# The alert's, beside its Cancel: the sheet's own Delete is below it too.
+- tapOn:
+    text: "Delete"
+    rightOf: "Cancel"
+# The sheet goes, and the page under it has reloaded without it.
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-details-delete
+    timeout: 10000
+- extendedWaitUntil:
+    notVisible: ".*Ghost watch.*"
+    timeout: 10000
+- assertVisible: ".*Elsinore Court.*"
+- takeScreenshot: 52-project-without-it
+
+# Nor does the calendar: the day after it, and nothing of it before.
+- tapOn:
+    id: tab-calendar
+- scrollUntilVisible:
+    element: ".*The Mousetrap.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- assertNotVisible: ".*Ghost watch.*"
+- takeScreenshot: 52-calendar-without-it

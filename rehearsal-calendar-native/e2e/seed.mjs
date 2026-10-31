@@ -450,6 +450,11 @@ export async function seed({ client, apiUrl, timezone }) {
     // "Participants (2)". He opens the form from the second's details (51).
     court: await rehearsal(courtId, 'Court scene', 2, 15, 17, ['gaev', 'claudius', 'gertrude'], 'gaev'),
     play: await rehearsal(courtId, 'Play within', 3, 15, 17, ['gaev', 'claudius', 'gertrude'], 'gaev'),
+    // Claudius deletes the first from its details on the project's page,
+    // Gertrude told of it, and edits the second from its details twice (52).
+    // Made by Gaev, signed in already: the seed's twenty sign-ins are spent.
+    ghost: await rehearsal(courtId, 'Ghost watch', 2, 19, 20, ['claudius', 'gertrude'], 'gaev'),
+    mousetrap: await rehearsal(courtId, 'The Mousetrap', 3, 19, 20, ['claudius', 'gertrude'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),
