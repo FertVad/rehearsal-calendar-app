@@ -224,6 +224,31 @@ tags:
     id: planner-period-week
     height: 50
     tolerance: 6
+# Its period picker: a day is 44 a side, drawn 38×34 as the library draws it
+# (T-014 review: the library's day took the tap on 38×34). Today is marked;
+# the month's first Saturday, before today or not, is a day like the others.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-period-custom
+      SEE: "Select Period"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: date-range-calendar.day_${TODAY_DAY}
+    width: 50
+    height: 50
+    tolerance: 6
+- assertVisible:
+    id: date-range-calendar.day_${SATURDAY_DAY}
+    width: 50
+    height: 50
+    tolerance: 6
+- takeScreenshot: 49-period-picker
+- tapOn:
+    id: date-range-cancel
+- extendedWaitUntil:
+    notVisible: "Select Period"
+    timeout: 10000
 - scrollUntilVisible:
     element: "\\+ Add"
     direction: DOWN
