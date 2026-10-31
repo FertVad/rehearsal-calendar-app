@@ -54,14 +54,14 @@ tags:
 - tapOn:
     id: day-${MORNING_DAY}
 - extendedWaitUntil:
-    visible: ".*00:00 – 01:00.*"
+    visible: ".*12:00.AM–1:00.AM.*"
     timeout: 10000
 - assertVisible: ".*from the day before.*"
 # An hour more in the morning: Add slot gives 10:00–18:00, its end goes to 11 AM.
 - tapOn: ".*Add slot.*"
 - tapOn:
     id: "slot-[0-9]-end"
-    text: "18:00.*"
+    text: "6:00.PM.*"
 - extendedWaitUntil:
     visible: "End time"
     timeout: 10000
@@ -87,7 +87,7 @@ tags:
     timeout: 10000
 - assertVisible:
     id: "slot-[0-9]-end"
-    text: "11:00.*"
+    text: "11:00.AM.*"
 - tapOn:
     id: availability-save
 - extendedWaitUntil:
@@ -118,16 +118,16 @@ tags:
 - extendedWaitUntil:
     visible:
       id: slot-0-start
-      text: "00:00.*"
+      text: "12:00.AM.*"
     timeout: 10000
 - assertVisible:
     id: slot-0-end
-    text: "01:00.*"
+    text: "1:00.AM.*"
 - assertVisible:
     id: slot-1-start
-    text: "10:00.*"
+    text: "10:00.AM.*"
 - assertVisible:
     id: slot-1-end
-    text: "11:00.*"
+    text: "11:00.AM.*"
 - assertVisible: ".*from the day before.*"
 - takeScreenshot: 27-morning-slot-kept

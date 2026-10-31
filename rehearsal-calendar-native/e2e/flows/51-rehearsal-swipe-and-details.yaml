@@ -40,7 +40,7 @@ tags:
 - tapOn:
     id: rehearsal-swipe-delete
 - extendedWaitUntil:
-    visible: "Delete “Court scene”, .*, 15:00\\?"
+    visible: "Delete “Court scene”, .*, 3:00.PM\\?"
     timeout: 10000
 - assertVisible: "Participants \\(2\\) will be notified"
 - takeScreenshot: 51-delete-confirmation

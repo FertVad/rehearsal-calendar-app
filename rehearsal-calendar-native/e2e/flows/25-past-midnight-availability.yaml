@@ -51,11 +51,11 @@ tags:
 - extendedWaitUntil:
     visible:
       id: slot-0-start
-      text: "23:00.*"
+      text: "11:00.PM.*"
     timeout: 10000
 - assertVisible:
     id: slot-0-end
-    text: "01:00.*"
+    text: "1:00.AM.*"
 - assertVisible:
     id: slot-0-next-day
 # Saved as it is: picking its mode again makes the day one to save.
@@ -93,7 +93,7 @@ tags:
 - tapOn:
     id: day-${MORNING_DAY}
 - extendedWaitUntil:
-    visible: ".*00:00 – 01:00.*"
+    visible: ".*12:00.AM–1:00.AM.*"
     timeout: 10000
 - assertVisible: ".*from the day before.*"
 - assertNotVisible:
@@ -116,7 +116,7 @@ tags:
 - extendedWaitUntil:
     visible:
       id: slot-0-end
-      text: "01:00.*"
+      text: "1:00.AM.*"
     timeout: 10000
 - takeScreenshot: 25-evening-slot-whole
 # Its mode picked again, the day says what it said: closing loses nothing and
@@ -157,7 +157,7 @@ tags:
 - extendedWaitUntil:
     visible:
       id: slot-0-end
-      text: "01:00.*"
+      text: "1:00.AM.*"
     timeout: 10000
 - tapOn:
     id: mode-busy

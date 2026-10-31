@@ -33,7 +33,7 @@ tags:
 # One button, its texts one label: the title and the interval, as an upcoming
 # one reads.
 - scrollUntilVisible:
-    element: "(?s)(?=.*Old monologue)(?=.*12:00 — 13:00).*"
+    element: "(?s)(?=.*Old monologue)(?=.*12:00.PM–1:00.PM).*"
     direction: DOWN
     centerElement: true
     timeout: 15000

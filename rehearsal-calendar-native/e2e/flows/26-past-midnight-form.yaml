@@ -111,10 +111,10 @@ tags:
     timeout: 10000
 - assertVisible:
     id: rehearsal-start-time
-    text: ".*23:00.*"
+    text: ".*11:00.PM.*"
 - assertVisible:
     id: rehearsal-end-time
-    text: ".*01:00.*"
+    text: ".*1:00.AM.*"
 - assertVisible:
     id: rehearsal-ends-next-day
 - takeScreenshot: 26-form-ends-next-day
@@ -133,14 +133,14 @@ tags:
 # Saved ending the next morning: the card gives the end its own date.
 - tapOn: "Calendar, tab.*"
 - scrollUntilVisible:
-    element: ".*23:00 — .*, 01:00.*Lakeside night.*"
+    element: ".*11:00.PM – .*, 1:00.AM.*Lakeside night.*"
     direction: DOWN
     timeout: 30000
 # Opened again, it is the same 23:00 to 01:00 the next day.
-- tapOn: ".*23:00 — .*, 01:00.*Lakeside night.*"
+- tapOn: ".*11:00.PM – .*, 1:00.AM.*Lakeside night.*"
 - extendedWaitUntil:
     visible:
       id: rehearsal-details-time
-      text: "23:00 — .*, 01:00"
+      text: "11:00.PM – .*, 1:00.AM"
     timeout: 15000
 - takeScreenshot: 26-reopened

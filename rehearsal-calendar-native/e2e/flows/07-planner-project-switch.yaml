@@ -88,7 +88,7 @@ tags:
 - extendedWaitUntil:
     visible:
       id: participants-row
-      text: "Participants, 2 of 2, Smirnov busy 10:00–14:00"
+      text: "Participants, 2 of 2, Smirnov busy 10:00.AM–2:00.PM"
       below:
         id: rehearsal-project
     timeout: 15000
@@ -96,10 +96,10 @@ tags:
 # Bear having no rehearsal yet - not the slot's own end, 14:00 (T-012).
 - assertVisible:
     id: rehearsal-start-time
-    text: ".*10:00.*"
+    text: ".*10:00.AM.*"
 - assertVisible:
     id: rehearsal-end-time
-    text: ".*13:00.*"
+    text: ".*1:00.PM.*"
 - takeScreenshot: 07-form-smirnov-busy
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -107,7 +107,7 @@ tags:
       TAP: "Participants, 2 of 2, Smirnov busy.*"
       SEE: "All participants, 2 of 2"
       WAIT_MS: "5000"
-- assertVisible: "Grigory Smirnov, 10:00–14:00"
+- assertVisible: "Grigory Smirnov, 10:00.AM–2:00.PM"
 - assertVisible: "Olga Stage, admin"
 - takeScreenshot: 07-form-participants-sheet
 - tapOn:
@@ -181,24 +181,24 @@ tags:
     timeout: 15000
 - assertVisible:
     id: rehearsal-start-time
-    text: ".*09:00.*"
+    text: ".*9:00.AM.*"
 - extendedWaitUntil:
     visible:
       id: rehearsal-end-time
-      text: ".*10:30.*"
+      text: ".*10:30.AM.*"
     timeout: 10000
 - takeScreenshot: 07-form-all-day
 - scrollUntilVisible:
-    element: "09:00-23:00 \\(14h\\)"
+    element: "9:00.AM–11:00.PM \\(14h\\)"
     direction: DOWN
     centerElement: true
-- tapOn: "09:00-23:00 \\(14h\\)"
+- tapOn: "9:00.AM–11:00.PM \\(14h\\)"
 - assertVisible:
     id: rehearsal-start-time
-    text: ".*09:00.*"
+    text: ".*9:00.AM.*"
 - assertVisible:
     id: rehearsal-end-time
-    text: ".*10:30.*"
+    text: ".*10:30.AM.*"
 - takeScreenshot: 07-form-recommended-time
 - tapOn: "Cancel"
 - extendedWaitUntil:

@@ -185,7 +185,7 @@ tags:
 - takeScreenshot: 52-roster-not-read
 - tapOn: "Try again"
 - extendedWaitUntil:
-    visible: "Delete “Ghost watch”, .*, 19:00\\?"
+    visible: "Delete “Ghost watch”, .*, 7:00.PM\\?"
     timeout: 10000
 - assertVisible: "Participants \\(1\\) will be notified"
 - takeScreenshot: 52-delete-confirmation

@@ -469,22 +469,21 @@ export async function seed({ client, apiUrl, timezone }) {
   };
 
   // What the flow reads after moving the profile to Tokyo: the same instant on
-  // Tokyo's clock, six or seven hours on from Tel Aviv with summer time.
-  const tokyo = (instant) => new Intl.DateTimeFormat('en-GB',
-    { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(instant));
+  // Tokyo's clock, six or seven hours on from Tel Aviv with summer time — as
+  // the en_US simulator, on the 12-hour clock, shows it: "9:00 AM". A pattern
+  // for the flow: the space before AM/PM is ICU's narrow one, matched by "."
+  // (T-017).
+  const tokyo = (instant) => new Intl.DateTimeFormat('en-US',
+    { timeZone: 'Asia/Tokyo', hour: 'numeric', minute: '2-digit', hour12: true })
+    .format(new Date(instant)).replace(/\s/g, '.');
   const times = { watch_tokyo: tokyo(zoneInstant(CHOSEN_ZONE, 1, 2)) };
 
-  // The planner's week in Tel Aviv, as its header names it in English:
-  // "16-22 Oct", or "28 Oct - 3 Nov" across a month.
-  const plannerDay = (offset) => {
-    const day = new Date(`${zoneDate(CHOSEN_ZONE, offset)}T00:00:00Z`);
-    return { day: day.getUTCDate(), month: day.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }) };
-  };
-  const [first, last] = [plannerDay(0), plannerDay(6)];
+  // The planner's week in Tel Aviv, as its header names it in English, an
+  // interval of dates (T-017): "Oct 16 – Oct 22", "Oct 28 – Nov 3".
+  const plannerDay = (offset) => new Date(`${zoneDate(CHOSEN_ZONE, offset)}T00:00:00Z`)
+    .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   const labels = {
-    week_chosen: first.month === last.month
-      ? `${first.day}-${last.day} ${first.month}`
-      : `${first.day} ${first.month} - ${last.day} ${last.month}`,
+    week_chosen: `${plannerDay(0)} – ${plannerDay(6)}`,
     // New York's offset today, as the timezone picker names it: "UTC-4" in
     // its summer, "UTC-5" in its winter (23). Node's Intl has the offset.
     new_york_offset: new Intl.DateTimeFormat('en', { timeZone: 'America/New_York', timeZoneName: 'shortOffset' })

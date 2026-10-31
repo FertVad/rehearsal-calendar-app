@@ -96,6 +96,13 @@ the same, nothing on screen could tell them apart. Honolulu has no summer time
 and is not in the profile's list, so the zone picker names it at the top as
 the device's (flow 23).
 
+Being en_US, it is on the 12-hour clock, and the app shows times as the phone
+is set (T-017): a flow reads "6:00.PM–9:00.PM", the "." for the narrow space
+ICU puts before AM/PM; `WATCH_TOKYO_TIME` and `next-hour.js` give patterns of
+that form. A flow that needs the 24-hour clock launches with `arguments: {
+AppleICUForce24HourTime: "<true/>" }` — the key Settings writes, read among the
+user defaults as a property list: `"YES"` is a string and is ignored (flow 53).
+
 ## A lost tap
 
 The simulator loses about one tap in 250, and Maestro does not notice. For

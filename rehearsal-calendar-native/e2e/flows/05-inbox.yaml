@@ -21,6 +21,6 @@ tags:
     visible: "Participants"
     timeout: 15000
 - assertVisible: "Act I run-through"
-- assertVisible: "18:00 — 21:00"
+- assertVisible: "6:00.PM–9:00.PM"
 - assertVisible: "Ophelia Bright"
 - takeScreenshot: 05-rehearsal-from-notification
