@@ -1,0 +1,106 @@
+# A rehearsal is edited and deleted by a swipe on its card, or from its
+# details, and only by an admin of its project (T-016). The bin and the pencil
+# sat on the card, the bin 16 pt from the pencil; the details had neither.
+# Claudius runs Elsinore Court: he swipes "Court scene" to the left and deletes
+# it, the confirmation naming it, its day and its start, and the two others on
+# it who are told. Then "Edit" in the details of "Play within" opens the form.
+# Gertrude, an actor on both, swipes "Play within" and finds nothing behind
+# it, and its details have neither Edit nor Delete.
+appId: ${APP_ID}
+name: An admin swipes a rehearsal away, an actor has no swipe
+tags:
+  - rehearsals
+  - calendar
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${CLAUDIUS_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Court scene.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element: ".*Court scene.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+# Nothing on the card itself to tap by mistake.
+- assertNotVisible:
+    id: rehearsal-swipe-delete
+- swipe:
+    from: ".*Court scene.*"
+    direction: LEFT
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-swipe-delete
+    timeout: 5000
+- assertVisible:
+    id: rehearsal-swipe-edit
+- takeScreenshot: 51-card-swiped
+- tapOn:
+    id: rehearsal-swipe-delete
+- extendedWaitUntil:
+    visible: "Delete “Court scene”, .*, 15:00\\?"
+    timeout: 10000
+- assertVisible: "Participants \\(2\\) will be notified"
+- takeScreenshot: 51-delete-confirmation
+- tapOn:
+    text: "Delete"
+    below: "Participants \\(2\\) will be notified"
+- extendedWaitUntil:
+    notVisible: ".*Court scene.*"
+    timeout: 10000
+
+# From the details: Edit opens the form on the rehearsal.
+- scrollUntilVisible:
+    element: ".*Play within.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn: ".*Play within.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-edit
+    timeout: 15000
+- assertVisible:
+    id: rehearsal-details-delete
+- takeScreenshot: 51-details-admin
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-details-edit
+      SEE: "Edit Rehearsal"
+      WAIT_MS: 10000
+- takeScreenshot: 51-edit-form
+
+# An actor: no swipe, and no Edit or Delete in the details.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${GERTRUDE_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Play within.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element: ".*Play within.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- swipe:
+    from: ".*Play within.*"
+    direction: LEFT
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: rehearsal-swipe-delete
+- assertNotVisible:
+    id: rehearsal-swipe-edit
+- takeScreenshot: 51-actor-swiped
+- tapOn: ".*Play within.*"
+- extendedWaitUntil:
+    visible: "Participants"
+    timeout: 15000
+- assertNotVisible:
+    id: rehearsal-details-edit
+- assertNotVisible:
+    id: rehearsal-details-delete
+- takeScreenshot: 51-details-actor
