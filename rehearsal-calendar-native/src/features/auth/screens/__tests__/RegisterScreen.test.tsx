@@ -25,19 +25,22 @@ jest.mock('../../../../shared/components', () => {
   const React = require('react');
   const { TouchableOpacity, Text } = require('react-native');
   return {
-    GlassButton: ({ title, onPress, disabled, loading }: any) => React.createElement(TouchableOpacity,
-      { onPress: disabled || loading ? undefined : onPress, disabled: disabled || loading }, React.createElement(Text, null, title)),
+    GlassButton: ({ title, onPress, disabled, loading, testID }: any) => React.createElement(TouchableOpacity,
+      { testID, onPress: disabled || loading ? undefined : onPress, disabled: disabled || loading, accessibilityState: { disabled: !!disabled } },
+      React.createElement(Text, null, title)),
   };
 });
 
 const navigation: any = { navigate: jest.fn(), popTo: jest.fn() };
 const form = () => render(<RegisterScreen navigation={navigation} route={{ key: 'r', name: 'Register' } as any} />);
-function fill(view: ReturnType<typeof form>, values: { first?: string; email?: string; password?: string; confirm?: string }) {
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.firstNamePlaceholder), values.first ?? 'Анна');
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.emailPlaceholder), values.email ?? 'anna@example.com');
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.passwordMinLength), values.password ?? 'long-enough-1');
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.confirmPasswordPlaceholder), values.confirm ?? values.password ?? 'long-enough-1');
+function fill(view: ReturnType<typeof form>, values: { first?: string; last?: string; email?: string; password?: string; confirm?: string }) {
+  fireEvent.changeText(view.getByTestId('register-first-name'), values.first ?? 'Анна');
+  if (values.last !== undefined) fireEvent.changeText(view.getByTestId('register-last-name'), values.last);
+  fireEvent.changeText(view.getByTestId('register-email'), values.email ?? 'anna@example.com');
+  fireEvent.changeText(view.getByTestId('register-password'), values.password ?? 'long-enough-1');
+  fireEvent.changeText(view.getByTestId('register-confirm'), values.confirm ?? values.password ?? 'long-enough-1');
 }
+const submit = (view: ReturnType<typeof form>) => act(async () => { fireEvent.press(view.getByTestId('register-submit')); });
 
 beforeEach(() => {
   (Alert.alert as jest.Mock).mockReset();
@@ -77,20 +80,69 @@ it('names the server name rule rather than repeating its English', async () => {
 it('stops a name of spaces and an over-long password before asking the server', async () => {
   const view = form();
   fill(view, { first: '   ' });
-  await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
-  expect(Alert.alert).toHaveBeenLastCalledWith(t.common.error, t.auth.fillAllFields);
+  expect(view.getByTestId('register-submit').props.accessibilityState?.disabled).toBe(true);
+  await submit(view);
   fill(view, { password: 'я'.repeat(37) }); // 74 bytes in UTF-8
-  await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
-  expect(Alert.alert).toHaveBeenLastCalledWith(t.common.error, t.auth.passwordRule);
+  await submit(view);
+  expect(view.getByText(t.auth.passwordRule)).toBeTruthy();
   expect(mockAuth.register).not.toHaveBeenCalled();
+  expect(Alert.alert).not.toHaveBeenCalled();
 });
 
 it('counts the password in characters like the server, not in UTF-16 units', async () => {
   const view = form();
   fill(view, { password: '😀'.repeat(4) }); // 8 units, 4 characters
-  await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
-  expect(Alert.alert).toHaveBeenLastCalledWith(t.common.error, t.auth.passwordRule);
+  await submit(view);
+  expect(view.getByText(t.auth.passwordRule)).toBeTruthy();
   expect(mockAuth.register).not.toHaveBeenCalled();
+});
+
+it('keeps the button off until the required fields are filled, with no alert (T-015)', async () => {
+  const view = form();
+  expect(view.getByTestId('register-submit').props.accessibilityState?.disabled).toBe(true);
+  await submit(view);
+  fill(view, { confirm: '' });
+  expect(view.getByTestId('register-submit').props.accessibilityState?.disabled).toBe(true);
+  await submit(view);
+  expect(Alert.alert).not.toHaveBeenCalled();
+  expect(mockAuth.register).not.toHaveBeenCalled();
+  fireEvent.changeText(view.getByTestId('register-confirm'), 'long-enough-1');
+  expect(view.getByTestId('register-submit').props.accessibilityState?.disabled).toBe(false);
+});
+
+it('says each problem under its own field, not in an alert, and forgets it on an edit (T-015)', async () => {
+  const view = form();
+  fill(view, { last: 'я'.repeat(101), email: 'not-an-address', confirm: 'something-else' });
+  await submit(view);
+  expect(Alert.alert).not.toHaveBeenCalled();
+  expect(mockAuth.register).not.toHaveBeenCalled();
+  expect(view.getByText(t.auth.nameInvalid)).toBeTruthy();
+  expect(view.getByText(t.auth.invalidEmail)).toBeTruthy();
+  expect(view.getByText(t.auth.passwordsMismatch)).toBeTruthy();
+  fireEvent.changeText(view.getByTestId('register-email'), 'anna@example.com');
+  expect(view.queryByText(t.auth.invalidEmail)).toBeNull();
+  expect(view.getByText(t.auth.passwordsMismatch)).toBeTruthy();
+});
+
+it('Return goes field to field, and the last one sends the form (T-015)', async () => {
+  const view = form();
+  const ids = ['register-first-name', 'register-last-name', 'register-email', 'register-password'];
+  ids.forEach((id) => expect(view.getByTestId(id).props.returnKeyType).toBe('next'));
+  expect(view.getByTestId('register-confirm').props.returnKeyType).toBe('go');
+  fill(view, {});
+  await act(async () => { fireEvent(view.getByTestId('register-confirm'), 'submitEditing'); });
+  expect(mockAuth.register).toHaveBeenCalledWith('anna@example.com', 'long-enough-1', 'Анна', undefined, 'ru');
+});
+
+it('names the rule under the password from the rule itself, and shows the password on request (T-015)', () => {
+  const { PASSWORD_MIN_LENGTH } = require('../../utils/accountRules');
+  const view = form();
+  expect(view.getByText(t.auth.passwordHint(PASSWORD_MIN_LENGTH))).toBeTruthy();
+  expect(t.auth.passwordHint(PASSWORD_MIN_LENGTH)).toBe('Минимум 8 символов');
+  expect(view.getByTestId('register-password').props.placeholder).toBe(t.auth.password);
+  expect(view.getAllByLabelText(t.auth.showPassword)).toHaveLength(2);
+  fireEvent.press(view.getAllByLabelText(t.auth.showPassword)[0]);
+  expect(view.getByTestId('register-password').props.secureTextEntry).toBe(false);
 });
 
 it('offers both sign-in and a password reset for a taken address (R3 contract)', async () => {

@@ -51,6 +51,17 @@ export const styles = StyleSheet.create({
     color: Colors.text.primary,
     minHeight: 44,
   },
+  // Under a field: the rule it follows, always, and what is wrong with it.
+  hint: {
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
+  },
+  fieldError: {
+    fontSize: FontSize.sm,
+    color: Colors.accent.red,
+    marginTop: Spacing.xs,
+  },
   errorContainer: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,

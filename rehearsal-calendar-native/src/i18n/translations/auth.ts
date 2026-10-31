@@ -12,11 +12,16 @@ export interface AuthTranslations {
   confirmPassword: string;
   loginButton: string;
   registerButton: string;
-  createAccount: string;
+  /** The way from sign-in to registration, at the foot of the screen. */
+  noAccount: string;
   alreadyHaveAccount: string;
   fillAllFields: string;
   invalidEmail: string;
   passwordMinLength: string;
+  /** Under the registration password, always: the rule's length, from accountRules. */
+  passwordHint: (min: number) => string;
+  showPassword: string;
+  hidePassword: string;
   passwordsMismatch: string;
   loginError: string;
   registerError: string;
@@ -97,11 +102,19 @@ export const ru = {
     confirmPassword: 'Подтвердите пароль',
     loginButton: 'Войти',
     registerButton: 'Зарегистрироваться',
-    createAccount: 'Создать аккаунт',
+    noAccount: 'Нет аккаунта? Создать',
     alreadyHaveAccount: 'Уже есть аккаунт? Войти',
     fillAllFields: 'Заполните все поля',
     invalidEmail: 'Неверный формат email',
     passwordMinLength: 'Пароль должен содержать минимум 8 символов',
+    passwordHint: (min: number) => {
+      const last = min % 10;
+      const word = last === 1 && min % 100 !== 11 ? 'символ'
+        : last >= 2 && last <= 4 && (min % 100 < 12 || min % 100 > 14) ? 'символа' : 'символов';
+      return `Минимум ${min} ${word}`;
+    },
+    showPassword: 'Показать пароль',
+    hidePassword: 'Скрыть пароль',
     passwordsMismatch: 'Пароли не совпадают',
     loginError: 'Ошибка входа',
     registerError: 'Ошибка регистрации',
@@ -179,11 +192,14 @@ export const en = {
     confirmPassword: 'Confirm Password',
     loginButton: 'Sign In',
     registerButton: 'Sign Up',
-    createAccount: 'Create Account',
+    noAccount: 'No account? Create one',
     alreadyHaveAccount: 'Already have an account? Sign In',
     fillAllFields: 'Fill in all fields',
     invalidEmail: 'Invalid email format',
     passwordMinLength: 'Password must be at least 8 characters',
+    passwordHint: (min: number) => `At least ${min} characters`,
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     passwordsMismatch: 'Passwords do not match',
     loginError: 'Login Error',
     registerError: 'Registration Error',
@@ -261,11 +277,14 @@ export const es = {
     confirmPassword: 'Confirmar contraseña',
     loginButton: 'Iniciar sesión',
     registerButton: 'Registrarse',
-    createAccount: 'Crear cuenta',
+    noAccount: '¿No tienes cuenta? Crear una',
     alreadyHaveAccount: '¿Ya tienes una cuenta? Inicia sesión',
     fillAllFields: 'Completa todos los campos',
     invalidEmail: 'Formato de correo no válido',
     passwordMinLength: 'La contraseña debe tener al menos 8 caracteres',
+    passwordHint: (min: number) => `Mínimo ${min} caracteres`,
+    showPassword: 'Mostrar contraseña',
+    hidePassword: 'Ocultar contraseña',
     passwordsMismatch: 'Las contraseñas no coinciden',
     loginError: 'Error de inicio de sesión',
     registerError: 'Error de registro',
@@ -343,11 +362,14 @@ export const de = {
     confirmPassword: 'Passwort bestätigen',
     loginButton: 'Anmelden',
     registerButton: 'Registrieren',
-    createAccount: 'Konto erstellen',
+    noAccount: 'Kein Konto? Jetzt erstellen',
     alreadyHaveAccount: 'Bereits ein Konto? Anmelden',
     fillAllFields: 'Bitte alle Felder ausfüllen',
     invalidEmail: 'Ungültiges E-Mail-Format',
     passwordMinLength: 'Das Passwort muss mindestens 8 Zeichen lang sein',
+    passwordHint: (min: number) => `Mindestens ${min} Zeichen`,
+    showPassword: 'Passwort anzeigen',
+    hidePassword: 'Passwort verbergen',
     passwordsMismatch: 'Passwörter stimmen nicht überein',
     loginError: 'Anmeldefehler',
     registerError: 'Registrierungsfehler',

@@ -57,10 +57,10 @@ it('a registration answered after leaving through the form button opens nothing'
   mockRegister.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
   const view = render(<AuthProvider><Capture /><RegisterScreen navigation={navigation} route={{ key: 'r', name: 'Register' } as any} /></AuthProvider>);
   await waitFor(() => expect(auth.loading).toBe(false));
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.firstNamePlaceholder), 'Anna');
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.emailPlaceholder), 'anna@example.com');
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.passwordMinLength), 'long-enough-1');
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.confirmPasswordPlaceholder), 'long-enough-1');
+  fireEvent.changeText(view.getByTestId('register-first-name'), 'Anna');
+  fireEvent.changeText(view.getByTestId('register-email'), 'anna@example.com');
+  fireEvent.changeText(view.getByTestId('register-password'), 'long-enough-1');
+  fireEvent.changeText(view.getByTestId('register-confirm'), 'long-enough-1');
   await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
   await act(async () => { fireEvent.press(view.getByText(t.auth.alreadyHaveAccount)); });
   expect(navigation.popTo).toHaveBeenCalledWith('Login');

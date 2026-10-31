@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
+  TouchableOpacity,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +20,7 @@ import { AuthStackParamList } from '../../../navigation';
 import { loginScreenStyles as styles } from '../styles';
 import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
 import { normalizeEmail } from '../utils/accountRules';
+import PasswordField from '../components/PasswordField';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useGoogleAuth, getGoogleIdToken } from '../../../shared/services/googleAuth';
 import { signInWithApple, isAppleAuthAvailable } from '../../../shared/services/appleAuth';
@@ -31,6 +33,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
+  const passwordInput = useRef<TextInput>(null);
   const { login, loginWithGoogle, loginWithApple, busy, error } = useAuth();
   const { t } = useI18n();
 
@@ -49,11 +52,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     }
   }, [response]);
 
+  // An empty form is not sent: the button waits for both fields (T-015).
+  const filled = email.trim() !== '' && password !== '';
+
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert(t.common.error, t.auth.fillAllFields);
-      return;
-    }
+    if (!filled || busy) return;
 
     try {
       await login(email, password);
@@ -62,9 +65,9 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       // The password was right, the address still waits for its code (R3).
       if (err instanceof AuthFlowError && err.code === 'EMAIL_NOT_VERIFIED') {
         navigation.navigate('VerifyEmail', { email: err.details.email ?? email.trim().toLowerCase() });
-        return;
       }
-      Alert.alert(t.auth.loginError, authErrorMessage(t, err));
+      // Any other failure is the context's error, shown under the fields —
+      // once, not again in an alert (T-015).
     }
   };
 
@@ -128,102 +131,108 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>{t.auth.loginTitle}</Text>
-            <Text style={styles.subtitle}>{t.auth.loginSubtitle}</Text>
-          </View>
-
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{t.auth.email}</Text>
-              <TextInput
-                testID="login-email"
-                style={styles.input}
-                placeholder={t.auth.emailPlaceholder}
-                placeholderTextColor={Colors.text.tertiary}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+          <View style={styles.main}>
+            <View style={styles.header}>
+              <Text style={styles.title}>{t.auth.loginTitle}</Text>
+              <Text style={styles.subtitle}>{t.auth.loginSubtitle}</Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{t.auth.password}</Text>
-              <TextInput
-                testID="login-password"
-                style={styles.input}
-                placeholder={t.auth.passwordPlaceholder}
-                placeholderTextColor={Colors.text.tertiary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-            </View>
-
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{authErrorMessage(t, error)}</Text>
-              </View>
-            )}
-
-            <GlassButton
-              testID="login-submit"
-              title={t.auth.loginButton}
-              onPress={handleLogin}
-              variant="purple"
-              loading={busy}
-              style={styles.loginButton}
-            />
-
-            <GlassButton
-              testID="login-forgot-password"
-              title={t.auth.forgotPassword}
-              onPress={() => navigation.navigate('ResetPassword', { email: normalizeEmail(email) })}
-              variant="glass"
-              style={styles.registerButton}
-            />
-
-            <GlassButton
-              title={t.auth.createAccount}
-              onPress={() => navigation.navigate('Register')}
-              variant="glass"
-              style={styles.registerButton}
-            />
-
-            {/* OAuth Buttons */}
-            <View style={styles.oauthContainer}>
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>{t.auth.orContinueWith}</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              <GoogleSignInButton
-                title={t.auth.signInWithGoogle}
-                onPress={() => promptAsync()}
-                loading={googleLoading}
-                disabled={!request || busy || googleLoading}
-                style={styles.oauthButton}
-              />
-
-              {appleAvailable && (
-                <AppleAuthentication.AppleAuthenticationButton
-                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-                  cornerRadius={12}
-                  style={styles.appleButton}
-                  onPress={handleAppleSignIn}
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t.auth.email}</Text>
+                <TextInput
+                  testID="login-email"
+                  style={styles.input}
+                  placeholder={t.auth.emailPlaceholder}
+                  placeholderTextColor={Colors.text.tertiary}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                  submitBehavior="submit"
+                  onSubmitEditing={() => passwordInput.current?.focus()}
                 />
+              </View>
+
+              <View style={styles.passwordGroup}>
+                <Text style={styles.label}>{t.auth.password}</Text>
+                <PasswordField
+                  ref={passwordInput}
+                  testID="login-password"
+                  style={styles.input}
+                  placeholder={t.auth.password}
+                  value={password}
+                  onChangeText={setPassword}
+                  returnKeyType="go"
+                  onSubmitEditing={handleLogin}
+                />
+                <TouchableOpacity
+                  testID="login-forgot-password"
+                  style={styles.forgotLink}
+                  onPress={() => navigation.navigate('ResetPassword', { email: normalizeEmail(email) })}
+                >
+                  <Text style={styles.linkText}>{t.auth.forgotPassword}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{authErrorMessage(t, error)}</Text>
+                </View>
               )}
 
-              {appleLoading && (
-                <ActivityIndicator color={Colors.accent.purple} style={styles.oauthButton} />
-              )}
+              <GlassButton
+                testID="login-submit"
+                title={t.auth.loginButton}
+                onPress={handleLogin}
+                variant="purple"
+                loading={busy}
+                disabled={!filled}
+                style={styles.loginButton}
+              />
+
+              {/* OAuth Buttons */}
+              <View style={styles.oauthContainer}>
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>{t.auth.orContinueWith}</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                <GoogleSignInButton
+                  title={t.auth.signInWithGoogle}
+                  onPress={() => promptAsync()}
+                  loading={googleLoading}
+                  disabled={!request || busy || googleLoading}
+                  style={styles.oauthButton}
+                />
+
+                {appleAvailable && (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                    cornerRadius={12}
+                    style={styles.appleButton}
+                    onPress={handleAppleSignIn}
+                  />
+                )}
+
+                {appleLoading && (
+                  <ActivityIndicator color={Colors.accent.purple} style={styles.oauthButton} />
+                )}
+              </View>
             </View>
           </View>
+
+          <TouchableOpacity
+            testID="login-register"
+            style={styles.registerLink}
+            onPress={() => navigation.navigate('Register')}
+          >
+            <Text style={styles.linkText}>{t.auth.noAccount}</Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

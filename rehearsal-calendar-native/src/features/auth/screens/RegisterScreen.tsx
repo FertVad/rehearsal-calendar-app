@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -17,9 +17,16 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { AuthStackParamList } from '../../../navigation';
 import { registerScreenStyles as styles } from '../styles';
 import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
-import { looksLikeEmail, meetsPasswordRule, normalizeEmail } from '../utils/accountRules';
+import { looksLikeEmail, meetsPasswordRule, normalizeEmail, PASSWORD_MIN_LENGTH } from '../utils/accountRules';
+import PasswordField from '../components/PasswordField';
 
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
+type Field = 'firstName' | 'lastName' | 'email' | 'password' | 'confirmPassword';
+
+/** What is wrong with one field, said under it. */
+function FieldError({ message }: { message?: string }) {
+  return message ? <Text style={styles.fieldError}>{message}</Text> : null;
+}
 
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [email, setEmail] = useState('');
@@ -27,6 +34,11 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<Field, string>>>({});
+  const lastNameInput = useRef<TextInput>(null);
+  const emailInput = useRef<TextInput>(null);
+  const passwordInput = useRef<TextInput>(null);
+  const confirmInput = useRef<TextInput>(null);
   const { register, busy, error, forgetPendingSignIn } = useAuth();
   const { t, language } = useI18n();
 
@@ -34,37 +46,29 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   // must not open a code screen nobody is looking at (review R3-24).
   useEffect(() => () => forgetPendingSignIn(), [forgetPendingSignIn]);
 
+  // An empty form is not sent: the button waits for the required fields, and
+  // what else is wrong is said under its own field, not in an alert (T-015).
+  const filled = firstName.trim() !== '' && email.trim() !== '' && password !== '' && confirmPassword !== '';
+
+  // A field's problem goes as soon as the field is edited.
+  const edit = (field: Field, set: (value: string) => void) => (value: string) => {
+    set(value);
+    setFieldErrors((errors) => (errors[field] ? { ...errors, [field]: undefined } : errors));
+  };
+
   const validateForm = () => {
-    if (!email.trim() || !firstName.trim() || !password || !confirmPassword) {
-      Alert.alert(t.common.error, t.auth.fillAllFields);
-      return false;
-    }
-
-    if (!looksLikeEmail(email)) {
-      Alert.alert(t.common.error, t.auth.invalidEmail);
-      return false;
-    }
-
-    if (!meetsPasswordRule(password)) {
-      Alert.alert(t.common.error, t.auth.passwordRule);
-      return false;
-    }
-
-    if (firstName.trim().length > 100 || lastName.trim().length > 100) {
-      Alert.alert(t.common.error, t.auth.nameInvalid);
-      return false;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert(t.common.error, t.auth.passwordsMismatch);
-      return false;
-    }
-
-    return true;
+    const errors: Partial<Record<Field, string>> = {};
+    if (firstName.trim().length > 100) errors.firstName = t.auth.nameInvalid;
+    if (lastName.trim().length > 100) errors.lastName = t.auth.nameInvalid;
+    if (!looksLikeEmail(email)) errors.email = t.auth.invalidEmail;
+    if (!meetsPasswordRule(password)) errors.password = t.auth.passwordRule;
+    if (password !== confirmPassword) errors.confirmPassword = t.auth.passwordsMismatch;
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleRegister = async () => {
-    if (!validateForm()) return;
+    if (!filled || busy || !validateForm()) return;
 
     try {
       // No session yet: the account waits for the code just emailed (R3).
@@ -105,67 +109,90 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t.auth.firstName} {t.auth.required}</Text>
               <TextInput
+                testID="register-first-name"
                 style={styles.input}
                 placeholder={t.auth.firstNamePlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 value={firstName}
-                onChangeText={setFirstName}
+                onChangeText={edit('firstName', setFirstName)}
                 autoCapitalize="words"
                 autoCorrect={false}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => lastNameInput.current?.focus()}
               />
+              <FieldError message={fieldErrors.firstName} />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t.auth.lastName}</Text>
               <TextInput
+                ref={lastNameInput}
+                testID="register-last-name"
                 style={styles.input}
                 placeholder={t.auth.lastNamePlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 value={lastName}
-                onChangeText={setLastName}
+                onChangeText={edit('lastName', setLastName)}
                 autoCapitalize="words"
                 autoCorrect={false}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => emailInput.current?.focus()}
               />
+              <FieldError message={fieldErrors.lastName} />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t.auth.email} {t.auth.required}</Text>
               <TextInput
+                ref={emailInput}
+                testID="register-email"
                 style={styles.input}
                 placeholder={t.auth.emailPlaceholder}
                 placeholderTextColor={Colors.text.tertiary}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={edit('email', setEmail)}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => passwordInput.current?.focus()}
               />
+              <FieldError message={fieldErrors.email} />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t.auth.password}</Text>
-              <TextInput
+              <PasswordField
+                ref={passwordInput}
+                testID="register-password"
                 style={styles.input}
-                placeholder={t.auth.passwordMinLength}
-                placeholderTextColor={Colors.text.tertiary}
+                placeholder={t.auth.password}
                 value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
+                onChangeText={edit('password', setPassword)}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => confirmInput.current?.focus()}
               />
+              <Text style={styles.hint}>{t.auth.passwordHint(PASSWORD_MIN_LENGTH)}</Text>
+              <FieldError message={fieldErrors.password} />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t.auth.confirmPassword}</Text>
-              <TextInput
+              <PasswordField
+                ref={confirmInput}
+                testID="register-confirm"
                 style={styles.input}
                 placeholder={t.auth.confirmPasswordPlaceholder}
-                placeholderTextColor={Colors.text.tertiary}
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoCapitalize="none"
+                onChangeText={edit('confirmPassword', setConfirmPassword)}
+                returnKeyType="go"
+                onSubmitEditing={handleRegister}
               />
+              <FieldError message={fieldErrors.confirmPassword} />
             </View>
 
             {error && (
@@ -175,10 +202,12 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             )}
 
             <GlassButton
+              testID="register-submit"
               title={t.auth.registerButton}
               onPress={handleRegister}
               variant="purple"
               loading={busy}
+              disabled={!filled}
               style={styles.registerButton}
             />
 

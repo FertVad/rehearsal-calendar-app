@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { Colors, BorderRadius, FontSize, FontWeight, Spacing } from '../../../shared/constants/colors';
+import { AUTH_BUTTON_HEIGHT } from '../../../shared/constants/spacing';
 
 export const styles = StyleSheet.create({
   container: {
@@ -11,8 +12,12 @@ export const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: Spacing.xl,
+  },
+  // The form in the middle of the screen, the way to registration at its foot.
+  main: {
+    flex: 1,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
@@ -64,8 +69,28 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     textAlign: 'center',
   },
-  loginButton: {
+  passwordGroup: {
+    marginBottom: Spacing.sm,
+  },
+  // Links are text, with a 44 pt target.
+  forgotLink: {
+    alignSelf: 'flex-end',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  registerLink: {
+    alignSelf: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
     marginTop: Spacing.lg,
+  },
+  linkText: {
+    color: Colors.accent.purple,
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+  },
+  loginButton: {
+    height: AUTH_BUTTON_HEIGHT,
   },
   divider: {
     flexDirection: 'row',
@@ -82,9 +107,6 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     marginHorizontal: Spacing.md,
   },
-  registerButton: {
-    marginTop: Spacing.md,
-  },
   oauthContainer: {
     marginTop: Spacing.lg,
   },
@@ -92,11 +114,11 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   // Apple mandates its own button styling for Sign in with Apple, so this
-  // only controls the footprint — height matches GlassButton so the two
-  // OAuth buttons line up.
+  // only controls the footprint — the height of the other two, so the
+  // buttons line up.
   appleButton: {
     width: '100%',
-    height: 52,
+    height: AUTH_BUTTON_HEIGHT,
     marginBottom: Spacing.sm,
   },
 });
