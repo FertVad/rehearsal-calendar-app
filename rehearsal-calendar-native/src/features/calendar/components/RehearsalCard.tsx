@@ -16,6 +16,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { useSeen } from '../../../contexts/SeenContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
+import { usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 import { useDeleteRehearsal } from '../hooks/useDeleteRehearsal';
 import type { AppNavigation } from '../../../navigation';
 
@@ -53,6 +54,7 @@ export default function RehearsalCard({
   onPress,
 }: RehearsalCardProps) {
   const { t, language } = useI18n();
+  const uses24 = usePhoneUses24HourClock();
   const navigation = useNavigation<AppNavigation>();
   const askToDelete = useDeleteRehearsal();
   const swipeable = useRef<Swipeable>(null);
@@ -89,7 +91,7 @@ export default function RehearsalCard({
               <View style={styles.upcomingTimeRow}>
                 <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
                 <Text style={styles.upcomingTime} testID="rehearsal-card-time">
-                  {rehearsalTimeLabel(rehearsal, getDateLocale(language))}
+                  {rehearsalTimeLabel(rehearsal, getDateLocale(language), uses24)}
                 </Text>
                 {isSynced && (
                   <Ionicons name="calendar" size={14} color={Colors.accent.green} />

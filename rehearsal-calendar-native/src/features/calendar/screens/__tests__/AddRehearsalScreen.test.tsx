@@ -16,6 +16,8 @@ import { ActionSheetIOS, Alert } from 'react-native';
 import { translations } from '../../../../i18n/translations';
 import { projectsAPI, rehearsalsAPI } from '../../../../shared/services/api';
 import AddRehearsalScreen from '../AddRehearsalScreen';
+// @ts-expect-error the mock's own helper (src/__tests__/__mocks__/expo-localization.js)
+import { __changeCalendars } from 'expo-localization';
 
 const t = translations.en;
 let routeParams: Record<string, unknown> = {};
@@ -186,6 +188,27 @@ describe('The participants row (T-010)', () => {
     fireEvent.press(screen.getByTestId('participants-row'));
     expect(screen.getByTestId('participant-7').props.accessibilityLabel).toBe('Name7, 11:00–14:00');
     expect(screen.getByTestId('participant-3').props.accessibilityLabel).toBe('Name3');
+  });
+
+  // T-017 review r1: the phone's 12/24 hours changed while the form is open.
+  // Every time on it follows, the ones it keeps memoized too; the form used to
+  // show the start in the new way and the busy time in the old.
+  it('follows the phone\'s 12/24 hours when it is changed with the form open', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busyFor('7', '11:00', '14:00'));
+    const screen = await open();
+    await settle();
+    expect(screen.getByText('10:00')).toBeTruthy();
+
+    try {
+      act(() => __changeCalendars([{ uses24hourClock: false }]));
+
+      expect(screen.getByText(/^10:00\sAM$/)).toBeTruthy();
+      expect(screen.getByTestId('participants-conflict').props.children).toMatch(/^Name7 busy 11:00\sAM–2:00\sPM$/);
+      fireEvent.press(screen.getByTestId('participants-row'));
+      expect(screen.getByTestId('participant-7').props.accessibilityLabel).toMatch(/^Name7, 11:00\sAM–2:00\sPM$/);
+    } finally {
+      act(() => __changeCalendars([{ uses24hourClock: true }]));
+    }
   });
 
   it('says nothing for someone busy at another time of the day', async () => {

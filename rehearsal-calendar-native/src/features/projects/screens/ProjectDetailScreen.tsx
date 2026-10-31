@@ -30,6 +30,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useInviteLink } from '../hooks';
 import type { Rehearsal as RehearsalInterval } from '../../../shared/types';
 import { lastDateOf, rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
+import { usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 
 import { logger } from '../../../shared/utils/logger';
 type ProjectDetailScreenProps = {
@@ -94,6 +95,7 @@ export function RehearsalRow({ rehearsal, onPress, past = false }: {
   past?: boolean;
 }) {
   const { t, language } = useI18n();
+  const uses24 = usePhoneUses24HourClock();
   return (
     <TouchableOpacity
       style={[styles.rehearsalCard, past && styles.pastCard]}
@@ -112,7 +114,7 @@ export function RehearsalRow({ rehearsal, onPress, past = false }: {
         <View style={styles.rehearsalMeta}>
           <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
           <Text style={styles.rehearsalTime}>
-            {rehearsalTimeLabel(rehearsal, getDateLocale(language))}
+            {rehearsalTimeLabel(rehearsal, getDateLocale(language), uses24)}
           </Text>
         </View>
         {rehearsal.location ? (

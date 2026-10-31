@@ -5,7 +5,7 @@ import { IconButton } from '../../../../shared/components/IconButton';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../../shared/constants/colors';
 import { TimeSlot, SlotValidationError } from '../../types';
 import { useI18n } from '../../../../contexts/I18nContext';
-import { formatClock } from '../../../../shared/utils/clockFormat';
+import { formatClock, usePhoneUses24HourClock } from '../../../../shared/utils/clockFormat';
 import { getDateLocale } from '../../../../shared/utils/locale';
 
 interface TimeSlotsEditorProps {
@@ -27,6 +27,7 @@ export default function TimeSlotsEditor({
 }: TimeSlotsEditorProps) {
   const { t, language } = useI18n();
   const locale = getDateLocale(language);
+  const uses24 = usePhoneUses24HourClock();
 
   return (
     <View style={styles.slotsSection}>
@@ -53,7 +54,7 @@ export default function TimeSlotsEditor({
                 style={styles.timeButton}
                 onPress={() => onTimePickerOpen(index, 'start')}
               >
-                <Text style={styles.timeValue}>{formatClock(slot.start, locale)}</Text>
+                <Text style={styles.timeValue}>{formatClock(slot.start, locale, uses24)}</Text>
                 <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
               </TouchableOpacity>
             </View>
@@ -66,7 +67,7 @@ export default function TimeSlotsEditor({
                 style={styles.timeButton}
                 onPress={() => onTimePickerOpen(index, 'end')}
               >
-                <Text style={styles.timeValue}>{formatClock(slot.end, locale)}</Text>
+                <Text style={styles.timeValue}>{formatClock(slot.end, locale, uses24)}</Text>
                 <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
               </TouchableOpacity>
             </View>

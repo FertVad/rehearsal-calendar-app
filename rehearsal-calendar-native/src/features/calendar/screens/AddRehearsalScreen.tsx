@@ -38,7 +38,7 @@ import {
 } from '../hooks';
 import { formatDisplayDate } from '../utils/rehearsalFormatters';
 import { formatDateToString, formatDateToTimeString } from '../../../shared/utils/time';
-import { formatClock, formatTimeRange } from '../../../shared/utils/clockFormat';
+import { formatClock, formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 
 type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
 
@@ -47,6 +47,7 @@ export default function AddRehearsalScreen() {
   const navigation = useNavigation<AppNavigation<'AddRehearsal'>>();
   const { projects, selectedProject, setSelectedProject } = useProjects();
   const { t, language } = useI18n();
+  const uses24 = usePhoneUses24HourClock();
 
   // Form management hook
   const form = useAddRehearsalForm({
@@ -125,8 +126,8 @@ export default function AddRehearsalScreen() {
     id: m.userId,
     name: `${m.firstName}${m.lastName ? ' ' + m.lastName : ''}`,
     isAdmin: m.role === 'owner' || m.role === 'admin',
-    busy: busyText(memberAvailability[m.userId]?.timeRanges, t, getDateLocale(language)),
-  })), [members, memberAvailability, t, language]);
+    busy: busyText(memberAvailability[m.userId]?.timeRanges, t, getDateLocale(language), uses24),
+  })), [members, memberAvailability, t, language, uses24]);
   const conflict = useMemo(() => {
     if (!availabilityLoad.ready || form.selectedMemberIds.length === 0) return undefined;
     const { busyMembers } = checkSchedulingConflicts(
@@ -137,9 +138,9 @@ export default function AddRehearsalScreen() {
     );
     if (busyMembers.length === 0) return undefined;
     const [{ member, conflictingSlots: [slot] }] = busyMembers;
-    const line = t.rehearsals.busyAt(member.lastName || member.firstName, formatTimeRange(slot.start, slot.end, getDateLocale(language)));
+    const line = t.rehearsals.busyAt(member.lastName || member.firstName, formatTimeRange(slot.start, slot.end, getDateLocale(language), uses24));
     return busyMembers.length > 1 ? `${line} ${t.rehearsals.andMore(busyMembers.length - 1)}` : line;
-  }, [availabilityLoad.ready, members, form.selectedMemberIds, memberAvailability, form.startTime, form.endTime, t, language]);
+  }, [availabilityLoad.ready, members, form.selectedMemberIds, memberAvailability, form.startTime, form.endTime, t, language, uses24]);
 
   // A project whose members could not be loaded says so, with a way to try
   // again; until then nothing is saved (useAddRehearsalSubmit).
@@ -281,7 +282,7 @@ export default function AddRehearsalScreen() {
               onPress={form.openStartTimePicker}
             >
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
-              <Text style={styles.pickerButtonText}>{formatClock(formatDateToTimeString(form.startTime), getDateLocale(language))}</Text>
+              <Text style={styles.pickerButtonText}>{formatClock(formatDateToTimeString(form.startTime), getDateLocale(language), uses24)}</Text>
             </TouchableOpacity>
           </View>
 
@@ -294,7 +295,7 @@ export default function AddRehearsalScreen() {
               onPress={form.openEndTimePicker}
             >
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
-              <Text style={styles.pickerButtonText}>{formatClock(formatDateToTimeString(form.endTime), getDateLocale(language))}</Text>
+              <Text style={styles.pickerButtonText}>{formatClock(formatDateToTimeString(form.endTime), getDateLocale(language), uses24)}</Text>
               {/* An end before the start is the next morning, and says so. */}
               {form.endsNextDay && (
                 <Text style={styles.nextDayText} testID="rehearsal-ends-next-day">

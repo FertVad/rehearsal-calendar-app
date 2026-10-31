@@ -4,7 +4,7 @@ import type { TimeSlot } from '../types';
 import { useI18n } from '../../../contexts/I18nContext';
 import { WORKDAY_START, WORKDAY_END } from '../../../shared/utils/availability';
 import { Colors, TouchTarget } from '../../../shared/constants/colors';
-import { formatTimeRange } from '../../../shared/utils/clockFormat';
+import { formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 import { getDateLocale } from '../../../shared/utils/locale';
 
 interface SlotItemProps {
@@ -15,6 +15,7 @@ interface SlotItemProps {
 
 export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateRehearsal }) => {
   const { t, language } = useI18n();
+  const uses24 = usePhoneUses24HourClock();
 
   const getCategoryColor = (): string => {
     switch (slot.category) {
@@ -45,7 +46,7 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
     if (slot.startTime === WORKDAY_START && slot.endTime === WORKDAY_END) {
       return t.smartPlanner.allDay;
     }
-    return formatTimeRange(slot.startTime, slot.endTime, getDateLocale(language));
+    return formatTimeRange(slot.startTime, slot.endTime, getDateLocale(language), uses24);
   };
 
   const canCreateRehearsal = slot.busyMembers.length < slot.totalMembers;

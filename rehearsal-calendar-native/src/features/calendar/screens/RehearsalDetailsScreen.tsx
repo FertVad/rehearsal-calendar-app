@@ -22,6 +22,7 @@ import { Rehearsal, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDateLocalized } from '../../../shared/utils/time';
 import { rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
+import { usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { useDeleteRehearsal } from '../hooks/useDeleteRehearsal';
 import type { AppNavigation, AppStackParamList } from '../../../navigation';
@@ -62,6 +63,7 @@ export default function RehearsalDetailsScreen() {
   const rehearsalId: string = String(route.params?.rehearsalId ?? '');
 
   const { t, language } = useI18n();
+  const uses24 = usePhoneUses24HourClock();
   const { user } = useAuth();
   const userTimezone = user?.timezone || 'UTC';
   const { projects } = useProjects();
@@ -320,7 +322,7 @@ export default function RehearsalDetailsScreen() {
             <View style={styles.detailRow}>
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.detailText} testID="rehearsal-details-time">
-                {rehearsalTimeLabel(rehearsal, locale)}
+                {rehearsalTimeLabel(rehearsal, locale, uses24)}
               </Text>
             </View>
 

@@ -218,19 +218,19 @@ describe('the sheet', () => {
 
 describe('busy time beside a name', () => {
   it('is nothing for someone free, or only marked available', () => {
-    expect(busyText(undefined, t, 'en-US')).toBeUndefined();
-    expect(busyText([{ start: '10:00', end: '12:00', type: 'available' }], t, 'en-US')).toBeUndefined();
+    expect(busyText(undefined, t, 'en-US', true)).toBeUndefined();
+    expect(busyText([{ start: '10:00', end: '12:00', type: 'available' }], t, 'en-US', true)).toBeUndefined();
   });
 
   it('is the ranges', () => {
     expect(busyText([
       { start: '10:00', end: '12:00', type: 'busy' },
       { start: '14:00', end: '16:00', type: 'busy' },
-    ], t, 'en-US')).toBe('10:00–12:00, 14:00–16:00');
+    ], t, 'en-US', true)).toBe('10:00–12:00, 14:00–16:00');
   });
 
   it('is the whole day', () => {
-    expect(busyText([{ start: '00:00', end: '23:59', type: 'busy' }], t, 'en-US')).toBe('all day');
+    expect(busyText([{ start: '00:00', end: '23:59', type: 'busy' }], t, 'en-US', true)).toBe('all day');
   });
 });
 

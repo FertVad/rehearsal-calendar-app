@@ -1,4 +1,4 @@
-import { getCalendars } from 'expo-localization';
+import { getCalendars, useCalendars } from 'expo-localization';
 import { formatDateLocalized } from './time';
 
 // =============================================================================
@@ -20,11 +20,21 @@ import { formatDateLocalized } from './time';
 // =============================================================================
 
 /**
- * The phone is set to the 24-hour clock. Read on every call, so a change in
- * Settings shows on the next render.
+ * The phone is set to the 24-hour clock, as it is at the moment of the call:
+ * for what is written once and not kept, like an alert's text.
  */
 export const phoneUses24HourClock = (): boolean =>
   getCalendars()[0]?.uses24hourClock ?? true;
+
+/**
+ * The same setting for a screen: it renders again when the setting is changed
+ * while the app is open (expo-localization's calendar listener). A screen
+ * passes it on to the helpers below and keeps it in the deps of anything it
+ * memoizes with a time in it; a default read in a render goes stale in a memo
+ * and in a memoized row (review T-017 r1).
+ */
+export const usePhoneUses24HourClock = (): boolean =>
+  useCalendars()[0]?.uses24hourClock ?? true;
 
 /**
  * A stored "HH:MM" (or "HH:MM:SS") as the screens show it: "18:00" on a
@@ -72,3 +82,11 @@ export const formatDateRange = (
  */
 export const timePickerLocale = (language: string, uses24 = phoneUses24HourClock()): string =>
   `${language.replace('-', '_')}@hours=${uses24 ? 'h23' : 'h12'}`;
+
+/**
+ * The time wheel's minute step for the time it opens at: five minutes (HIG:
+ * "less granularity when specifying minutes"), and one for a time off that
+ * step, which UIKit would otherwise round on the wheel.
+ */
+export const wheelMinuteInterval = (opensAt: Date): 1 | 5 =>
+  opensAt.getMinutes() % 5 === 0 ? 5 : 1;

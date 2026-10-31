@@ -12,7 +12,8 @@
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import { Platform } from 'react-native';
-import { getCalendars as mockedCalendars } from 'expo-localization';
+// @ts-expect-error __changeCalendars is the mock's own helper (src/__tests__/__mocks__/expo-localization.js)
+import { getCalendars as mockedCalendars, __changeCalendars } from 'expo-localization';
 import { PickerModal } from '../PickerModal';
 
 let wheel: { value: Date; onChange: (event: { type: string }, date?: Date) => void } | null = null;
@@ -112,6 +113,23 @@ describe('The time wheel', () => {
     expect(wheel!.value).toEqual(sevenPast);
     fireEvent.press(getByText('Done'));
     expect(owner.mock.calls[0].find((arg: unknown) => arg instanceof Date)).toEqual(sevenPast);
+  });
+
+  // Review T-017 r1: UIKit rounds the wheel itself to its minute interval, so
+  // a 10:07 on a five-minute wheel shows 10:05 whatever the draft holds.
+  it('turns by the minute for a time off the step, so the wheel shows it as it is', () => {
+    open(jest.fn(), jest.fn(), new Date(2026, 9, 6, 10, 7));
+    expect(wheel).toMatchObject({ minuteInterval: 1 });
+  });
+
+  it('turns to the phone\'s 12/24 hours while it is open', () => {
+    open(jest.fn());
+    try {
+      act(() => __changeCalendars([{ uses24hourClock: false }]));
+      expect(wheel).toMatchObject({ is24Hour: false, locale: 'en_US@hours=h12' });
+    } finally {
+      act(() => __changeCalendars([{ uses24hourClock: true }]));
+    }
   });
 });
 

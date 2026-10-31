@@ -251,13 +251,13 @@ function Checkbox({ checked }: { checked: boolean | 'mixed' }) {
  * ranges, or the whole day. Nothing for someone free. Busy as the conflict
  * check on save counts it (conflictDetection.ts): rows of type 'busy'.
  */
-export function busyText(ranges: TimeRange[] | undefined, t: Translations, locale: string): string | undefined {
+export function busyText(ranges: TimeRange[] | undefined, t: Translations, locale: string, uses24: boolean): string | undefined {
   const busy = (ranges ?? []).filter(r => r.type === 'busy');
   if (busy.length === 0) return undefined;
   if (busy.length === 1 && busy[0].start === '00:00' && (busy[0].end === '23:59' || busy[0].end === '24:00')) {
     return t.rehearsals.wholeDay;
   }
-  return busy.map(r => formatTimeRange(r.start, r.end, locale)).join(', ');
+  return busy.map(r => formatTimeRange(r.start, r.end, locale, uses24)).join(', ');
 }
 
 const styles = StyleSheet.create({

@@ -12,7 +12,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { usePickerDraft } from '../hooks/usePickerDraft';
 import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
-import { phoneUses24HourClock, timePickerLocale } from '../utils/clockFormat';
+import { timePickerLocale, usePhoneUses24HourClock, wheelMinuteInterval } from '../utils/clockFormat';
 
 interface PickerModalProps {
   visible: boolean;
@@ -37,11 +37,13 @@ export const PickerModal: React.FC<PickerModalProps> = ({
   const { t } = useI18n();
   const picker = usePickerDraft({ visible, value, onConfirm, onClose });
   // A time's wheel follows the phone's 12/24 hours (clockFormat.ts) and steps
-  // by five minutes. A start at 10:07 still opens at 10:07 and is kept on Done
-  // unless the wheel is turned: the draft is the owner's value until then.
-  const uses24 = phoneUses24HourClock();
+  // by five minutes. Not for a time off the step, as an old rehearsal's 10:07:
+  // UIKit rounds the wheel to its interval (roundsToMinuteInterval, which the
+  // module does not expose), so it would open at 10:05 — that one turns by the
+  // minute, opens at 10:07 and is kept on Done unless turned (review T-017 r1).
+  const uses24 = usePhoneUses24HourClock();
   const time = mode === 'time'
-    ? { is24Hour: uses24, locale: timePickerLocale(language, uses24), minuteInterval: 5 as const }
+    ? { is24Hour: uses24, locale: timePickerLocale(language, uses24), minuteInterval: wheelMinuteInterval(value) }
     : { locale: language };
 
   // Android uses native modal, no custom UI needed

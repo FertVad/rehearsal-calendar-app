@@ -5,7 +5,7 @@ import {
   intervalDates,
   isoToTimeStringInTimezone,
 } from './time';
-import { formatClock, formatRange } from './clockFormat';
+import { formatClock, formatRange, phoneUses24HourClock } from './clockFormat';
 
 /**
  * A rehearsal as the screens show it: an interval, startsAt to endsAt, read in
@@ -45,10 +45,10 @@ export const rehearsalDates = (r: Rehearsal): string[] =>
  * "23:00 – 11 Sep, 01:00" — an interval with a date in it (clockFormat.ts).
  * 12 or 24 hours as the phone is set.
  */
-export function rehearsalTimeLabel(r: Rehearsal, locale: string): string {
-  const start = formatClock(r.time, locale);
+export function rehearsalTimeLabel(r: Rehearsal, locale: string, uses24 = phoneUses24HourClock()): string {
+  const start = formatClock(r.time, locale, uses24);
   if (!r.endTime) return start;
-  const end = formatClock(r.endTime, locale);
+  const end = formatClock(r.endTime, locale, uses24);
   const last = lastDateOf(r);
   if (!last || last === r.date) return formatRange('time', start, end);
   const endDay = formatDateLocalized(last, { day: 'numeric', month: 'short' }, locale);
