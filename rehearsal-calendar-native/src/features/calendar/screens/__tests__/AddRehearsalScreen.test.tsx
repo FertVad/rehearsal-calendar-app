@@ -50,7 +50,7 @@ jest.mock('../../../../shared/utils/calendarStorage', () => ({
 }));
 jest.mock('../../../../shared/services/calendar', () => ({ syncRehearsalToCalendar: jest.fn() }));
 jest.mock('../../../../shared/services/api', () => ({
-  projectsAPI: { getMembers: jest.fn(), getMembersAvailability: jest.fn() },
+  projectsAPI: { getMembers: jest.fn(), getMembersAvailability: jest.fn(), getMembersAvailabilityRange: jest.fn() },
   rehearsalsAPI: { create: jest.fn(), update: jest.fn(), getById: jest.fn(), getResponses: jest.fn() },
 }));
 
@@ -67,15 +67,34 @@ const update = rehearsalsAPI.update as jest.Mock;
 const sentRoster = (call: jest.Mock) =>
   call.mock.calls.at(-1)?.find((arg: unknown) => typeof arg === 'object' && arg !== null)?.participant_ids;
 
+// The form starts a new rehearsal at the next whole hour, and after a create
+// starts over from it: the clock is the test's, not the machine's. 22:30 in
+// New York (jest.config.js) is the hour whose default three hours run past
+// midnight, so the next day's busy time is asked for too. Only Date is faked:
+// the timers stay real for settle().
+const NOW = new Date('2026-10-31T02:30:00Z');
+
 beforeEach(() => {
+  jest.useFakeTimers({
+    now: NOW,
+    doNotFake: [
+      'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate',
+      'nextTick', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+      'requestIdleCallback', 'cancelIdleCallback', 'hrtime', 'performance',
+    ],
+  });
   jest.clearAllMocks();
   mockGuard.prevent = false;
   mockGuard.callback = null;
   getMembers.mockImplementation(async (projectId: string) => ({ data: { members: PEOPLE[projectId] } }));
   (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue({ data: { availability: [] } });
+  (projectsAPI.getMembersAvailabilityRange as jest.Mock).mockResolvedValue({ data: { availability: [] } });
   create.mockResolvedValue({ data: { rehearsal: { id: 'new' } } });
   update.mockResolvedValue({ data: { rehearsal: { id: 'r1' } } });
   routeParams = { projectId: 'A', prefilledDate: '2026-11-10', prefilledTime: '10:00' };
+});
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
