@@ -1,0 +1,47 @@
+T-014 green after (724a80f, flow 967709f).
+
+1. Jest
+   npx jest --selectProjects frontend --silent  (whole frontend, before commit)
+     Test Suites: 109 passed; Tests: 970 passed
+   then, after IconButton took minSize:
+     npx jest --selectProjects frontend --silent src/shared/components src/features/calendar src/navigation
+     Tests: 269 passed, 269 total
+   npm run type-check — clean. npm run lint — 0 errors, no new warnings.
+
+2. e2e flow 49 — npm run e2e -- e2e/flows/49-touch-targets.yaml
+   First run: failed at the rehearsal sheet's "Close", 42x42 — iOS draws
+   the 3/4 sheet smaller (~0.955). The sheet's cross now asks 47 pt (45x45 on
+   the glass). Then:
+   [Passed] Touch targets are 44 pt (2m)
+   1/1 Flow Passed in 2m 1s
+   [e2e] taps taken again (tap-and-see.yaml): 0
+
+3. Flows reached by the change (layout moved, taps by point, changed
+   controls), all on 724a80f:
+   [Passed] Chosen project deleted (19)
+   [Passed] A past rehearsal keeps its title (39)
+   [Failed] Today selects today (41) — "No visible element found: id:
+            planner-period-custom" in scrollUntilVisible UP, the element at
+            262,224 fully on screen in the failure's hierarchy; run again
+            alone: [Passed] Today selects today (2m 51s)
+   [Passed] The profile's timezone, not the device's (23)
+   [Passed] A rehearsal made from 23:00 to 01:00 ends the next morning (26)
+   [Passed] A morning slot of his own outlives a save of the morning (27)
+   [Passed] Availability saves the day it changed (10)
+   [Passed] Planner follows the project (07)
+   [Passed] A busy slot past midnight is one slot, on both days (25)
+   [Passed] From the planner to a rehearsal (06)
+   [Passed] The participants sheet searches, above the keyboard (48)
+   [Passed] Inbox older pages (33)
+   [Passed] Mark a rehearsal seen (04)
+   [Passed] Details and the card read one seen mark (40)
+   [Passed] No beta banner; a bug report sent from the profile (47)
+   [Passed] The profile's language, kept by the account (44)
+   [Passed] Create a project (03)
+   [Passed] Inbox mark all before the list (35)
+   [Passed] Onboarding to the end, nothing granted (09-onboarding)
+   [Passed] Sync settings stay put while a sync runs (31)
+   [Passed] Sign in (01)
+   Taps taken again in every run: 0.
+
+4. Measurements after: measurements.txt.
