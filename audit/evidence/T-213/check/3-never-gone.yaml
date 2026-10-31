@@ -1,0 +1,14 @@
+# T-213 check, the bound (expected to fail): a text that never goes - the
+# sheet's own "All participants" button. Exactly one more tap, then the flow
+# fails on it: no third.
+appId: ${APP_ID}
+name: T-213 check 3 - a text that never goes
+---
+- runFlow:
+    file: planner-partial.yaml
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-all
+      GONE: "All participants, \\d+ of 3"
+      WAIT_MS: 5000

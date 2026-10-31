@@ -1,0 +1,45 @@
+T-213: flow 51 "An admin swipes a rehearsal away, an actor has no swipe", red run
+T-017 checks, commit cd3d075, 2026-10-31 (artifacts
+rehearsal-calendar-native/e2e/out/artifacts/2026-10-31_184328, not in git).
+
+Failed step: extendedWaitUntil ".*Play within.*" (30 s), the first step after
+Gertrude's sign-in (e2e/subflows/sign-in.yaml -> sign-in-form.yaml).
+
+Screenshot step-090-assertCondition-Play_within.png: iOS's "Save Password?"
+sheet over the calendar; "Play within" is drawn under it. The hierarchy Maestro
+had (screen-hierarchy/step-090-assertCondition-Play_within.json) contains only
+the sheet and the status bar: Rehearsly, Save Password?, the text, Not Now,
+Save. None of the app is in it, so no wait on the app can succeed while the
+sheet is up.
+
+$ node audit/evidence/T-207/timeline.mjs "rehearsal-calendar-native/e2e/out/artifacts/2026-10-31_184328/An admin swipes a rehearsal away, an actor has no swipe"
+(the second sign-in, Gertrude)
+
+19:08:20.855  maestro  Tap on id: login-submit
+19:08:23.102  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+19:08:23.121  maestro  Assert that (Optional) "Not Now" is visible
+19:08:23.687  maestro  Tap on (Optional) "Not Now"
+19:08:24.491  device   tap digitizer registered twice
+19:08:24.496  device   touch dropped (move/lift with no touch down)
+19:08:25.570  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+19:08:25.574  maestro  Assert that ".*Play within.*" is visible
+           -> FAILED at 19:08:56.119 (30 s)
+
+device-xctest.log: "Tapping 122.0, 534.0" at 07:08:24.464 (local -1000), the
+centre of "Not Now" [52,510][192,558], in the sheet.
+
+device-simulator.log, backboardd, at the tap:
+19:08:24.496182 didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+  (x10 to 19:08:24.605673)
+19:08:24.710060 cancel -- digitizer did disappear: <BKDirectTouchState ... senderID: 0x1062C00000166 ...>
+19:08:24.712586 cancel -- digitizer did disappear: <BKDirectTouchState ... senderID: 0x1062C00000166 ...>
+  two touch states for one digitizer: the T-207 lost tap (docs/e2e.md, "A lost tap").
+
+Claudius's sign-in in the same flow, for comparison: "Not Now" tapped at
+19:07:23.756, no drop, the sheet went and "Court scene" was found.
+
+Cause: the simulator lost the one tap on "Not Now", and Maestro reported it
+done, as it does every lost tap. sign-in-form.yaml taps "Not Now" once,
+optional, and never checks that the sheet went, so the flow went on under the
+sheet and waited 30 s for a calendar Maestro could not see. Nothing in flow 51,
+the app or the server; the same can fail any flow at any sign-in.

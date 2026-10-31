@@ -1,0 +1,15 @@
+# T-213 check, red: what sign-in-form.yaml did with "Not Now" - one tap, then
+# on as if it took - on a tap whose first press leaves what it should take
+# away (planner-partial.yaml: the first tap on "All participants" selects all
+# three, only the second clears them). What a lost tap on "Not Now" looks like
+# to a flow, made on purpose: the wait after it fails.
+appId: ${APP_ID}
+name: T-213 check 1 - a bare tap whose first press is lost
+---
+- runFlow:
+    file: planner-partial.yaml
+- tapOn:
+    id: participants-all
+- extendedWaitUntil:
+    notVisible: "All participants, [1-9] of 3"
+    timeout: 5000

@@ -1,0 +1,15 @@
+# T-213 check, green: the same tap through tap-and-see.yaml with GONE, as
+# sign-in-form.yaml now taps "Not Now". The first press leaves the text, the
+# subflow says so to the run and taps once more: the flow passes, and the run
+# prints one tap taken again.
+appId: ${APP_ID}
+name: T-213 check 2 - the same tap through tap-and-see, GONE
+---
+- runFlow:
+    file: planner-partial.yaml
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-all
+      GONE: "All participants, [1-9] of 3"
+      WAIT_MS: 5000

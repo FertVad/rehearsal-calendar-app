@@ -1,0 +1,45 @@
+# T-213 check, setup (T-207's, on the planner as it is now - participants in a
+# sheet behind the row, T-010): Olga Stage's planner on Three Sisters, the
+# sheet open with two of three selected. From there the first tap on "All
+# participants" selects all three and only the second clears them to none
+# (ParticipantPicker: all ? [] : everyone), so "All participants, [1-9] of 3"
+# goes only on the second: a tap whose first press leaves what it should take
+# away - what a lost tap on "Not Now" looks like to a flow, made on purpose.
+appId: ${APP_ID}
+---
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/sign-in.yaml
+    env:
+      EMAIL: ${STAGE_EMAIL}
+- tapOn: "Planner, tab.*"
+- tapOn:
+    id: planner-project
+- tapOn: "Three Sisters"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, \\d+ of 3"
+    timeout: 15000
+- tapOn:
+    id: participants-row
+- extendedWaitUntil:
+    visible: "All participants, \\d+ of 3"
+    timeout: 5000
+- repeat:
+    while:
+      notVisible:
+        id: participants-all
+        text: "All participants, 3 of 3"
+    times: 2
+    commands:
+      - tapOn:
+          id: participants-all
+- assertVisible:
+    id: participants-all
+    text: "All participants, 3 of 3"
+- tapOn: "Masha Prozorova.*"
+- extendedWaitUntil:
+    visible:
+      id: participants-all
+      text: "All participants, 2 of 3"
+    timeout: 5000
