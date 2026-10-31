@@ -1,0 +1,35 @@
+T-213 review 1: flow 49 red before, on HEAD 3b84ea4 (the flow as it was).
+Supervisor's red: the 55-flow run of the task, "Touch targets are 44 pt"
+failed on "Back", Size: 50x50 is visible (artifacts 2026-10-31_211439).
+
+Cause, from that run's artifacts (commands-scan.mjs, hierarchy-scan.mjs):
+  156 tapOnPointV2Command {"point":"25%,23%"}       - "on its name"
+  157 notVisible "My Projects"                        - COMPLETED
+  158 FAILED visible "Back" 50x50
+  screen-hierarchy at the failure:
+    "Join the project \"Macbeth\" in the Rehearsly app: ... | LP.CaptionBar"
+The point tap opened iOS's share sheet: flow 03 makes the director "Macbeth",
+with no description, and it is listed first. Its card is a line shorter, so
+23% of the screen is its Invite button, not its name. Run alone on the seed
+(as T-014 ran it) the first card has a description and 23% lands on it; in
+any run where 03 goes before 49 it fails every time. Not a flake: an order.
+
+Reproduced, the same order, the old flow:
+
+$ npm run e2e -- e2e/flows/03-create-project.yaml e2e/flows/49-touch-targets.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Create a project (1m 33s)
+[Failed] Touch targets are 44 pt (1m 59s) (Assertion is false: "Back", Size: 50x50(tolerance: 6) is visible)
+
+1/2 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0

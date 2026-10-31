@@ -1,0 +1,24 @@
+T-213 review 1: flow 49 green after, its project opened on the first card's
+name (25%,18%) instead of 25%,23%.
+
+The order that failed, 03 then 49 (first card "Macbeth", no description):
+
+$ npm run e2e -- e2e/flows/03-create-project.yaml e2e/flows/49-touch-targets.yaml
+Waiting for flows to complete...
+[Passed] Create a project (1m 25s)
+[Passed] Touch targets are 44 pt (1m 43s)
+
+2/2 Flows Passed in 3m 8s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The seed alone (first card with a description), and the task's flow 51:
+
+$ npm run e2e -- e2e/flows/49-touch-targets.yaml e2e/flows/51-rehearsal-swipe-and-details.yaml
+Waiting for flows to complete...
+[Passed] Touch targets are 44 pt (2m 19s)
+[Passed] An admin swipes a rehearsal away, an actor has no swipe (2m 26s)
+
+2/2 Flows Passed in 4m 46s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
