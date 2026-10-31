@@ -1,0 +1,44 @@
+# T-014 review 1 — red before
+# Fix commit ba3413e; base 71a50f8. The fix's files restored to the base with
+#   git restore --source=71a50f8 -- <files>, run, then git restore --source=HEAD.
+
+## e2e, flow 49, with the base's src/shared/components/DateRangePicker.tsx
+$ npm run e2e -- e2e/flows/49-touch-targets.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Touch targets are 44 pt (2m 46s) (Assertion is false: id: date-range-calendar.day_2026-10-31, Size: 50x50(tolerance: 6) is visible)
+
+1/1 Flow Failed
+
+# Maestro's hierarchy at the failure (step-166):
+#   "resource-id" : "date-range-calendar.day_2026-10-03", "bounds" : "[277,372][315,406]"   -> 38x34
+#   "resource-id" : "date-range-calendar.day_2026-10-31", "bounds" : "[271,564][322,598]"   -> 51x34
+
+## Jest, with the base's WeeklyCalendar.tsx and RehearsalCard.tsx (tests from ba3413e)
+$ npx jest --selectProjects frontend --testPathPatterns 'components/__tests__/WeeklyCalendar|iconButtonLabels'
+FAIL frontend src/shared/components/__tests__/iconButtonLabels.test.ts (12.276 s)
+  ● every icon-only button is an IconButton
+    expect(received).toEqual(expected) // deep equality
+    - Expected  - 1
+    + Received  + 3
+    - Array []
+    + Array [
+    +   "features/calendar/components/RehearsalCard.tsx:153",
+    + ]
+    > 91 |   expect(ownMade).toEqual([]);
+FAIL frontend src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx (21.354 s)
+  ● fits seven days of 44 pt on a 320 pt screen, and pages by the page it has
+    expect(received).toBeGreaterThanOrEqual(expected)
+    Expected: >= 308
+    Received:    262
+    >  97 |     expect(strip).toBeGreaterThanOrEqual(7 * TouchTarget);
+Test Suites: 2 failed, 2 total
+Tests:       2 failed, 4 passed, 6 total
