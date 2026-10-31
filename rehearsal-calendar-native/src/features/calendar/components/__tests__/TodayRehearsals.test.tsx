@@ -331,7 +331,7 @@ describe('TodayRehearsals Component', () => {
 
   describe('RSVP Button', () => {
     it('asks the store to toggle when the seen button is pressed', () => {
-      const { UNSAFE_getAllByType } = render(
+      const { getByTestId } = render(
         <TodayRehearsals
           rehearsals={[mockRehearsals[0]]}
           selectedDate="2025-12-29"
@@ -342,20 +342,11 @@ describe('TodayRehearsals Component', () => {
         />
       );
 
-      // Find the RSVP Pressable (seen button)
-      const pressables = UNSAFE_getAllByType(require('react-native').Pressable);
-      const seenButton = pressables.find(p => {
-        // Seen button contains Ionicons with eye or eye-off-outline
-        const icon = p.props.children?.[0]?.props?.name;
-        return icon === 'eye' || icon === 'eye-off-outline';
-      });
-
-      if (seenButton) {
-        fireEvent.press(seenButton);
-        // The card asks the store to toggle; it no longer carries the previous
-        // value or a callback, because the store already knows both.
-        expect(mockToggleSeen).toHaveBeenCalledWith('r1');
-      }
+      // The seen button is an IconButton now (T-014 review), found by its id.
+      fireEvent.press(getByTestId('seen-toggle'));
+      // The card asks the store to toggle; it no longer carries the previous
+      // value or a callback, because the store already knows both.
+      expect(mockToggleSeen).toHaveBeenCalledWith('r1');
     });
 
     it('should show eye icon for yes response', () => {
