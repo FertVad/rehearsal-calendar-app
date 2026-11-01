@@ -1,0 +1,22 @@
+T-020 — Jest, the new and moved tests against the code before the fix
+(SmartPlannerScreen.tsx, smartPlannerScreenStyles.ts, DayCard.tsx, SlotItem.tsx,
+ParticipantPicker.tsx, calendar.ts at cbcfaf9; SmartPlannerScreen.test.tsx at T-020)
+
+$ npx jest SmartPlannerScreen --selectProjects frontend --forceExit
+    ✕ drops removed members from selection when the roster reloads (323 ms)
+    ✓ names the profile's days, not the device's (107 ms)
+    ✓ takes a tap with its search's keyboard up (105 ms)
+    ✓ gives the form the slot's start, and no end (105 ms)
+    ✓ is shown only to an admin of the project (105 ms)
+    ✕ leaves the period it was (112 ms)
+    ✕ heads a day with 28 pt and gives a slot a row of 56 (100 ms)
+    ✕ puts the project, the period and the people in one row of 44 pt (113 ms)
+    ✕ opens each filter's own choice from the row (38392 ms)
+    ✓ member filter shows exactly the new project's count after switching (173 ms)
+    ✓ member filter summary does not show more selected than there are members (168 ms)
+    Unable to find an element with testID: planner-period
+FAIL frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx
+Tests:       5 failed, 6 passed, 11 total
+
+The two that fail besides the three new ones are the old tests moved onto the
+row: they open the period ("planner-period") before picking in it.

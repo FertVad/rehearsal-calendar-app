@@ -1,0 +1,37 @@
+T-020 — after the fix (ebb2e7b, and the flows' "Week.*"/"Month.*" in the next commit)
+
+$ npx jest SmartPlannerScreen ParticipantPicker iconButtonLabels translations plurals --selectProjects frontend --silent
+PASS frontend src/shared/components/__tests__/iconButtonLabels.test.ts
+PASS frontend src/i18n/__tests__/plurals.test.ts
+PASS frontend src/shared/components/__tests__/ParticipantPicker.test.tsx
+PASS frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx
+Tests:       45 passed, 45 total
+
+$ npx jest --selectProjects frontend --silent
+Test Suites: 112 passed, 112 total
+Tests:       1036 passed, 1036 total
+(an earlier run of the same, with the simulator busy, had useSmartPlannerLimits
+fail at 66 s; alone 9 of 9, and the whole set again all green)
+
+$ npm run type-check            # clean
+$ npm run check:secrets         # {"summary":"pass","findings":0}
+
+$ npm run e2e -- e2e/flows/58-planner-dense.yaml
+[Passed] Planner list is dense (1m 44s)
+$ npm run e2e -- e2e/flows/41-today-selects-today.yaml
+[Passed] Today selects today (2m 48s)
+$ npm run e2e -- e2e/flows/49-touch-targets.yaml
+[Passed] Touch targets are 44 pt (2m 26s)
+$ npm run e2e -- e2e/flows/07-planner-project-switch.yaml
+[Passed] Planner follows the project (2m 34s)
+$ npm run e2e -- e2e/flows/23-profile-timezone.yaml e2e/flows/06-planner-to-rehearsal.yaml
+[Passed] The profile's timezone, not the device's (3m 5s)
+[Passed] From the planner to a rehearsal (1m 7s)
+$ npm run e2e -- e2e/flows/45-busy-seen-by-director.yaml e2e/flows/48-participant-search.yaml
+[Passed] Busy marked by an actor, seen by the director (2m 38s)
+[Passed] The participants sheet searches, above the keyboard (1m 21s)
+taps taken again (tap-and-see.yaml): 0 in every run
+
+The first run of flow 58 on the fix passed the three sizes and failed on
+`id: planner-period, text: "Month"`: the button's label carries the chevron's
+glyph after the word. The flows match "Month.*" / "Week.*".
