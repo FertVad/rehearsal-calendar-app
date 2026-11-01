@@ -19,3 +19,11 @@ offered, so it changes the place and still checks the 10:07.
 "Wait a moment and save again", since there is nothing to press.
 
 Files: `jest-red-before.txt`, `e2e-red-before.txt`, `green-after.txt`.
+
+Review r1 [P2]: the month threw in Spanish and German — `profileCalendar.tsx`
+had the library's words for `ru` and `en` only, and both calendars set the
+app's language as its default. `calendarLocales` is now a
+`Record<Language, …>`, registered for all four. Red on 882c4d5 and green on
+a16d601: `DayCalendar.locales.test.tsx` (the real library's month, every
+language) and flow 56 (Spanish and German profiles open the form's month).
+File: `review-r1-locales.txt`.

@@ -1,0 +1,55 @@
+T-018 review r1, [P2]: the form's month threw in Spanish and German.
+
+Cause: DayCalendar (and DateRangePicker) set LocaleConfig.defaultLocale to the
+app's language, and profileCalendar.tsx registered words for 'ru' and 'en'
+only. The library read getLocale().dayNamesShort of undefined for 'es'/'de'.
+Fix (a16d601): calendarLocales is a Record<Language, ...> in profileCalendar.tsx,
+so every language of the app has its words and type-check refuses a missing one.
+
+== Red: profileCalendar.tsx restored from 882c4d5 ==
+
+$ git restore --source=882c4d5 -- src/shared/components/profileCalendar.tsx
+
+$ npx jest --selectProjects frontend --testPathPatterns DayCalendar.locales
+    ✓ opens in ru, its month in its words (570 ms)
+    ✓ opens in en, its month in its words (211 ms)
+    ✕ opens in es, its month in its words (148 ms)
+    ✕ opens in de, its month in its words (31 ms)
+
+  ● DayCalendar in every language › opens in es, its month in its words
+    TypeError: Cannot read properties of undefined (reading 'dayNamesShort')
+
+  ● DayCalendar in every language › opens in de, its month in its words
+    TypeError: Cannot read properties of undefined (reading 'dayNamesShort')
+
+Tests:       2 failed, 2 passed, 4 total
+
+$ npm run e2e -- e2e/flows/56-rehearsal-form-calendar-language.yaml
+[Failed] The form's month in Spanish and in German (1m 32s) (Assertion is false: id: rehearsal-date-calendar is visible)
+1/1 Flow Failed
+
+e2e/out/artifacts/2026-11-01_084446/metro.log:60:
+ ERROR  [TypeError: Cannot read property 'dayNamesShort' of undefined]
+screen-hierarchy/step-066-assertCondition-rehearsal-date-calendar.json (the
+error screen in place of the form):
+  "accessibilityText" : "Cannot read property 'dayNamesShort' of undefined",
+  "accessibilityText" : "> 93 |    let weekDaysNames = getLocale().dayNamesShort;",
+
+$ git restore --source=HEAD -- src/shared/components/profileCalendar.tsx
+
+== Green: HEAD (a16d601) ==
+
+$ npx jest --selectProjects frontend --testPathPatterns DayCalendar.locales
+    ✓ opens in ru, its month in its words (543 ms)
+    ✓ opens in en, its month in its words (227 ms)
+    ✓ opens in es, its month in its words (217 ms)
+    ✓ opens in de, its month in its words (207 ms)
+Tests:       4 passed, 4 total
+
+$ npm run e2e -- e2e/flows/56-rehearsal-form-calendar-language.yaml
+[Passed] The form's month in Spanish and in German (3m 6s)
+1/1 Flow Passed in 3m 7s
+
+$ npm run type-check
+> tsc --noEmit
+(no errors)
