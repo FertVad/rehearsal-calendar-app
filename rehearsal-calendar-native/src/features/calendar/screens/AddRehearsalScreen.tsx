@@ -24,6 +24,7 @@ import { IconButton } from '../../../shared/components/IconButton';
 import { checkSchedulingConflicts } from '../../../shared/utils/conflictDetection';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
+import { DayCalendar } from '../../../shared/components/DayCalendar';
 import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
 import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
@@ -37,10 +38,15 @@ import {
   useAddRehearsalSubmit,
 } from '../hooks';
 import { formatDisplayDate } from '../utils/rehearsalFormatters';
-import { formatDateToString, formatDateToTimeString } from '../../../shared/utils/time';
+import { formatDateToString, formatDateToTimeString, parseDateString } from '../../../shared/utils/time';
 import { formatClock, formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 
 type RouteType = RouteProp<AppStackParamList, 'AddRehearsal'>;
+
+/** What stops a save, under the field it is about (T-018). */
+function FieldError({ message, testID }: { message?: string; testID: string }) {
+  return message ? <Text testID={testID} style={styles.fieldError}>{message}</Text> : null;
+}
 
 export default function AddRehearsalScreen() {
   const route = useRoute<RouteType>();
@@ -71,7 +77,7 @@ export default function AddRehearsalScreen() {
   const { memberAvailability, loading: loadingAvailability } = availabilityLoad;
 
   // Submit logic hook
-  const { handleSubmit, canSubmit } = useAddRehearsalSubmit({
+  const { handleSubmit, canSubmit, issues } = useAddRehearsalSubmit({
     localSelectedProject: form.localSelectedProject,
     date: form.date,
     startTime: form.startTime,
@@ -215,6 +221,7 @@ export default function AddRehearsalScreen() {
               </Text>
               <Ionicons name="chevron-down" size={20} color={Colors.text.tertiary} style={styles.chevronIcon} />
             </TouchableOpacity>
+            <FieldError testID="rehearsal-project-error" message={issues.project} />
           </View>
 
           {/* Title — optional; a rehearsal identified by time and venue alone
@@ -241,12 +248,27 @@ export default function AddRehearsalScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t.rehearsals.date}</Text>
             <TouchableOpacity
+              testID="rehearsal-date"
               style={styles.pickerButton}
-              onPress={form.openDatePicker}
+              onPress={form.toggleDatePicker}
             >
               <Ionicons name="calendar-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.pickerButtonText}>{formatDisplayDate(form.date, language)}</Text>
+              <Ionicons name={form.showDatePicker ? 'chevron-up' : 'chevron-down'} size={20} color={Colors.text.tertiary} style={styles.chevronIcon} />
             </TouchableOpacity>
+            {/* The month, in the form: wheels for a date gave no sense of the
+                week (T-018). Days before today take no tap, but the edited
+                rehearsal's own. */}
+            {form.showDatePicker && (
+              <View style={styles.calendarBox}>
+                <DayCalendar
+                  testID="rehearsal-date-calendar"
+                  value={formatDateToString(form.date)}
+                  allowedPast={form.savedDate}
+                  onChange={(day) => form.handleDateChange(parseDateString(day))}
+                />
+              </View>
+            )}
           </View>
 
           {/* Participants */}
@@ -259,6 +281,25 @@ export default function AddRehearsalScreen() {
                 loading={loadingMembers}
                 conflict={conflict}
               />
+              {issues.participants && (
+                <View style={styles.fieldNoteRow}>
+                  <Text
+                    testID="rehearsal-participants-note"
+                    style={[styles.fieldNote, issues.participants.failed && styles.fieldError]}
+                  >
+                    {issues.participants.text}
+                  </Text>
+                  {issues.participants.retry && (
+                    <TouchableOpacity
+                      testID="rehearsal-participants-retry"
+                      style={styles.fieldNoteAction}
+                      onPress={issues.participants.retry}
+                    >
+                      <Text style={styles.fieldNoteActionText}>{t.common.retry}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
             </View>
           )}
 
@@ -303,6 +344,7 @@ export default function AddRehearsalScreen() {
                 </Text>
               )}
             </TouchableOpacity>
+            <FieldError testID="rehearsal-end-time-error" message={issues.end} />
           </View>
 
           {/* Location */}
@@ -337,21 +379,13 @@ export default function AddRehearsalScreen() {
             hapticSuccess();
             guard.save();
           }}
-          disabled={form.loadingRehearsal}
+          // Not while something above says why it cannot be saved, and an edit
+          // not before something in it is changed (T-018) - by the same mark
+          // that asks before closing (T-013).
+          disabled={form.loadingRehearsal || !canSubmit() || (form.isEditMode && !form.hasChanges)}
           loading={saving}
         />
       </BottomActionBar>
-
-      {/* Date Picker Modal */}
-      <PickerModal
-        visible={form.showDatePicker}
-        onClose={() => form.setShowDatePicker(false)}
-        value={form.date}
-        onConfirm={form.handleDateChange}
-        mode="date"
-        title={t.rehearsals.selectDate}
-        language={getDateLocale(language)}
-      />
 
       {/* Start Time Picker Modal */}
       <PickerModal

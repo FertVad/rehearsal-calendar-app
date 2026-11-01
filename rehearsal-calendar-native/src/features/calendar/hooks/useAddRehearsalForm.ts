@@ -130,6 +130,9 @@ export function useAddRehearsalForm({
   // above): a form that read it from state set in an effect could act as a new
   // rehearsal for a frame (review R9-01).
   const [loadingRehearsal, setLoadingRehearsal] = useState(false);
+  // The edited rehearsal's own day, as loaded: one in the past stays shown and
+  // chosen in the calendar, whose other past days take no tap (T-018).
+  const [savedDate, setSavedDate] = useState<string | undefined>(undefined);
 
   // Prefill form from route params
   useEffect(() => {
@@ -204,6 +207,7 @@ export function useAddRehearsalForm({
         const endsAt = wallClockIn(timezone, rehearsal.endsAt);
 
         setDate(startsAt);
+        setSavedDate(formatDateToString(startsAt));
         setStartTime(startsAt);
         setEndTime(endsAt);
         setTitle(rehearsal.title || '');
@@ -240,8 +244,9 @@ export function useAddRehearsalForm({
     setEndTime(null);
   };
 
-  const openDatePicker = () => {
-    setShowDatePicker(true);
+  // The date's calendar opens and closes in the form, under the date (T-018).
+  const toggleDatePicker = () => {
+    setShowDatePicker((open) => !open);
   };
 
   const openStartTimePicker = () => {
@@ -252,8 +257,9 @@ export function useAddRehearsalForm({
     setShowEndTimePicker(true);
   };
 
-  // Called with a confirmed value only: Cancel in the picker never reaches the
-  // form, nor the end moved along with a start (usePickerDraft, HC02).
+  // A day tapped in the calendar. The times are called with a confirmed value
+  // only: Cancel in their picker never reaches the form, nor the end moved
+  // along with a start (usePickerDraft, HC02).
   const handleDateChange = (selectedDate: Date) => {
     touch('date');
     setDate(selectedDate);
@@ -403,7 +409,7 @@ export function useAddRehearsalForm({
     setShowProjectPicker,
     // Handlers
     handleTimeSelect,
-    openDatePicker,
+    toggleDatePicker,
     openStartTimePicker,
     openEndTimePicker,
     handleDateChange,
@@ -416,5 +422,7 @@ export function useAddRehearsalForm({
     isEditMode,
     loadingRehearsal,
     rehearsalId: routeParams?.rehearsalId,
+    /** The edited rehearsal's day as loaded, 'YYYY-MM-DD'. */
+    savedDate,
   };
 }

@@ -203,52 +203,39 @@ export function useAddRehearsalSubmit({
     }
   };
 
+  // What keeps the form from being saved, said under its field as soon as it
+  // is so (T-018): it was an alert on Create, after the fact. While any of it
+  // holds, Create is not offered (canSubmit).
+  // Only the clock times count: the form's Date objects carry whatever day
+  // they were made on, and an end before the start is the next day.
+  const emptyRange = isEmptyClockRange(formatDateToTimeString(startTime), formatDateToTimeString(endTime));
+  // Nobody is sent until the participants are settled: the list goes as the
+  // whole roster, and one sent while the members were loading — or after
+  // they failed to load — put nobody on the rehearsal (review R9-02). While
+  // they load, the participants row says so itself.
+  // The conflict check reads the availability of the day shown: one still
+  // loading, or failed, is not "nobody is busy" (DF05).
+  const waitingForAvailability = participantsSettled && selectedMemberIds.length > 0 && !availabilityReady;
+  const issues: FormIssues = {
+    project: localSelectedProject ? undefined : t.rehearsals.projectNotSelected,
+    end: emptyRange ? t.rehearsals.endTimeError : undefined,
+    participants: !participantsSettled && membersFailed
+      ? { text: t.rehearsals.loadMembersError, failed: true, retry: reloadMembers }
+      : waitingForAvailability
+        ? availabilityFailed
+          ? { text: t.rehearsals.loadAvailabilityError, failed: true, retry: reloadAvailability }
+          : { text: t.rehearsals.availabilityChecking, failed: false }
+        : undefined,
+  };
+  const blocked = !localSelectedProject || emptyRange || !participantsSettled || waitingForAvailability;
+
   /**
    * Create, or Update: true once saved. Every save goes through useLeaveGuard,
    * which keeps the form as it is until this is answered (review T-013 r2).
    */
   const handleSubmit = async (leaving = false): Promise<boolean> => {
-    // Validation
-    if (!localSelectedProject) {
-      Alert.alert(t.common.error, t.rehearsals.projectNotSelected);
-      return false;
-    }
-
-    // Only the clock times count: the form's Date objects carry whatever day
-    // they were made on, and an end before the start is the next day.
-    if (isEmptyClockRange(formatDateToTimeString(startTime), formatDateToTimeString(endTime))) {
-      Alert.alert(t.common.error, t.rehearsals.endTimeError);
-      return false;
-    }
-
-    // Nobody is sent until the participants are settled: the list goes as the
-    // whole roster, and one sent while the members were loading — or after
-    // they failed to load — put nobody on the rehearsal (review R9-02).
-    if (!participantsSettled) {
-      if (membersFailed) {
-        Alert.alert(t.common.error, t.rehearsals.loadMembersError, [
-          { text: t.common.cancel, style: 'cancel' },
-          { text: t.common.retry, onPress: reloadMembers },
-        ]);
-      } else {
-        Alert.alert(t.common.error, t.rehearsals.participantsLoading);
-      }
-      return false;
-    }
-
-    // The conflict check reads the availability of the day shown: one still
-    // loading, or failed, is not "nobody is busy" (DF05).
-    if (selectedMemberIds.length > 0 && !availabilityReady) {
-      if (availabilityFailed) {
-        Alert.alert(t.common.error, t.rehearsals.loadAvailabilityError, [
-          { text: t.common.cancel, style: 'cancel' },
-          { text: t.common.retry, onPress: reloadAvailability },
-        ]);
-      } else {
-        Alert.alert(t.common.error, t.rehearsals.availabilityChecking);
-      }
-      return false;
-    }
+    // Said under its field already, and Create is not offered meanwhile.
+    if (blocked) return false;
 
     // Check for scheduling conflicts
     if (selectedMemberIds.length > 0) {
@@ -293,18 +280,23 @@ export function useAddRehearsalSubmit({
   /**
    * Create would go to the server as the form stands, without stopping at a
    * check that refuses it — asked before offering "Save" on the way out
-   * (T-013). A conflict only asks, so it does not count.
+   * (T-013), and for the Create button (T-018). A conflict only asks, so it
+   * does not count.
    */
-  const canSubmit = () =>
-    !loading
-    && Boolean(localSelectedProject)
-    && !isEmptyClockRange(formatDateToTimeString(startTime), formatDateToTimeString(endTime))
-    && participantsSettled
-    && (selectedMemberIds.length === 0 || availabilityReady);
+  const canSubmit = () => !loading && !blocked;
 
   return {
     loading,
     handleSubmit,
     canSubmit,
+    issues,
   };
+}
+
+/** What stops a save, as each field says it (useAddRehearsalSubmit). */
+export interface FormIssues {
+  project?: string;
+  end?: string;
+  /** A load that failed, with a way to try again, or one still on its way. */
+  participants?: { text: string; failed: boolean; retry?: () => void };
 }

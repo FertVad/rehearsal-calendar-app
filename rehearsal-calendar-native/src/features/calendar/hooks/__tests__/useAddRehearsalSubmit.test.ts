@@ -107,7 +107,8 @@ describe('useAddRehearsalSubmit Hook', () => {
   });
 
   describe('Validation - Project Not Selected', () => {
-    it('should show error when project not selected', async () => {
+    // Said under the project as soon as it is so, not by an alert (T-018).
+    it('says so under the project, and nothing is sent', async () => {
       const { result } = renderHook(() =>
         useAddRehearsalSubmit({
           ...defaultProps,
@@ -115,14 +116,13 @@ describe('useAddRehearsalSubmit Hook', () => {
         })
       );
 
+      expect(result.current.issues.project).toBe('Please select a project');
+      expect(result.current.canSubmit()).toBe(false);
       await act(async () => {
         await result.current.handleSubmit();
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Please select a project'
-      );
+      expect(Alert.alert).not.toHaveBeenCalled();
       expect(rehearsalsAPI.create).not.toHaveBeenCalled();
     });
   });
@@ -175,7 +175,7 @@ describe('useAddRehearsalSubmit Hook', () => {
       }), expect.anything());
     });
 
-    it('should show error when end time equals start time', async () => {
+    it('an end at the start says so under the end, and nothing is sent (T-018)', async () => {
       const sameTime = new Date('2025-12-29T14:00:00');
       const { result } = renderHook(() =>
         useAddRehearsalSubmit({
@@ -185,14 +185,14 @@ describe('useAddRehearsalSubmit Hook', () => {
         })
       );
 
+      expect(result.current.issues.end).toBe('End time must be after start time');
+      expect(result.current.canSubmit()).toBe(false);
       await act(async () => {
         await result.current.handleSubmit();
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'End time must be after start time'
-      );
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(rehearsalsAPI.create).not.toHaveBeenCalled();
     });
   });
 
@@ -660,10 +660,13 @@ describe('useAddRehearsalSubmit Hook', () => {
 
       expect(checkSchedulingConflicts).not.toHaveBeenCalled();
       expect(rehearsalsAPI.create).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Still checking');
+      // Said under the participants, not by an alert (T-018).
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(result.current.issues.participants).toEqual({ text: 'Still checking', failed: false });
+      expect(result.current.canSubmit()).toBe(false);
     });
 
-    it('does not save over a failed availability load, and offers to try again', async () => {
+    it('does not save over a failed availability load, and offers to try again under the participants', async () => {
       const reloadAvailability = jest.fn();
       const props: any = { ...defaultProps, t, selectedMemberIds: ['user1'], availabilityReady: false, availabilityFailed: true, reloadAvailability };
       const { result } = renderHook(() => useAddRehearsalSubmit(props));
@@ -673,9 +676,10 @@ describe('useAddRehearsalSubmit Hook', () => {
       });
 
       expect(rehearsalsAPI.create).not.toHaveBeenCalled();
-      const [, message, buttons] = (Alert.alert as jest.Mock).mock.calls[0];
-      expect(message).toBe('Could not check');
-      buttons[1].onPress();
+      expect(Alert.alert).not.toHaveBeenCalled();
+      const { participants } = result.current.issues;
+      expect(participants).toMatchObject({ text: 'Could not check', failed: true });
+      participants!.retry!();
       expect(reloadAvailability).toHaveBeenCalled();
     });
   });

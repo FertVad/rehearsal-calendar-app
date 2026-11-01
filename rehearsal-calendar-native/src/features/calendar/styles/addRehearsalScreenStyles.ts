@@ -71,6 +71,39 @@ export const styles = StyleSheet.create({
   chevronIcon: {
     marginLeft: 'auto',
   },
+  // The date's month, in the form (T-018).
+  calendarBox: {
+    backgroundColor: Colors.glass.bg,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  // What stops a save, under its field (T-018).
+  fieldError: {
+    fontSize: FontSize.sm,
+    color: Colors.accent.red,
+  },
+  fieldNote: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+  },
+  fieldNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  fieldNoteAction: {
+    minHeight: TouchTarget,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+  },
+  fieldNoteActionText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.purple,
+  },
   locationInputContainer: {
     backgroundColor: Colors.glass.bg,
     borderWidth: 1,

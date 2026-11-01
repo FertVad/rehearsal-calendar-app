@@ -78,7 +78,6 @@ export interface RehearsalsTranslations {
   updateError: string;
   loadRehearsalError: string;
   participantsLeft: string;
-  participantsLoading: string;
   availabilityChecking: string;
   seenError: string;
   /** The eye on a rehearsal, for VoiceOver: it is only an icon. */
@@ -185,8 +184,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     updateError: 'Не удалось обновить репетицию',
     loadRehearsalError: 'Не удалось загрузить репетицию. Проверьте соединение и попробуйте ещё раз.',
     participantsLeft: 'Кто-то из выбранных участников больше не в проекте. Откройте форму заново и сохраните ещё раз.',
-    participantsLoading: 'Участники проекта ещё загружаются. Подождите секунду и сохраните снова.',
-    availabilityChecking: 'Занятость участников на этот день ещё проверяется. Подождите секунду и сохраните снова.',
+    availabilityChecking: 'Занятость участников на этот день ещё проверяется.',
     seenError: 'Не удалось отметить просмотр',
     markSeen: 'Отметить просмотренным',
     noProjects: 'Нет проектов',
@@ -287,8 +285,7 @@ needProject: 'Rehearsals show up once you are in a project',
     updateError: 'Failed to update rehearsal',
     loadRehearsalError: 'Could not load the rehearsal. Check your connection and try again.',
     participantsLeft: 'Someone you selected is no longer in the project. Open the form again and save once more.',
-    participantsLoading: 'The project members are still loading. Wait a moment and save again.',
-    availabilityChecking: "The participants' availability for this day is still being checked. Wait a moment and save again.",
+    availabilityChecking: "The participants' availability for this day is still being checked.",
     seenError: 'Could not mark it as seen',
     markSeen: 'Mark as seen',
     noProjects: 'No projects',
@@ -389,8 +386,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     updateError: 'No se pudo actualizar el ensayo',
     loadRehearsalError: 'No se pudo cargar el ensayo. Comprueba la conexión e inténtalo de nuevo.',
     participantsLeft: 'Alguien que seleccionaste ya no está en el proyecto. Abre el formulario de nuevo y guarda otra vez.',
-    participantsLoading: 'Los miembros del proyecto aún se están cargando. Espera un momento y guarda de nuevo.',
-    availabilityChecking: 'Aún se está comprobando la disponibilidad de los participantes para este día. Espera un momento y guarda de nuevo.',
+    availabilityChecking: 'Aún se está comprobando la disponibilidad de los participantes para este día.',
     seenError: 'No se pudo marcar como visto',
     markSeen: 'Marcar como visto',
     noProjects: 'No hay proyectos',
@@ -491,8 +487,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     updateError: 'Probe konnte nicht aktualisiert werden',
     loadRehearsalError: 'Die Probe konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut.',
     participantsLeft: 'Jemand, den du ausgewählt hast, ist nicht mehr im Projekt. Öffne das Formular erneut und speichere noch einmal.',
-    participantsLoading: 'Die Projektmitglieder werden noch geladen. Warte einen Moment und speichere erneut.',
-    availabilityChecking: 'Die Verfügbarkeit der Teilnehmenden für diesen Tag wird noch geprüft. Warte einen Moment und speichere erneut.',
+    availabilityChecking: 'Die Verfügbarkeit der Teilnehmenden für diesen Tag wird noch geprüft.',
     seenError: 'Konnte nicht als gesehen markiert werden',
     markSeen: 'Als gesehen markieren',
     noProjects: 'Keine Projekte',

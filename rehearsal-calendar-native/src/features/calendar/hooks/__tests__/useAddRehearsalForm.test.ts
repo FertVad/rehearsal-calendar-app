@@ -255,7 +255,7 @@ describe('useAddRehearsalForm Hook', () => {
   });
 
   describe('Date and Time Pickers', () => {
-    it('should open date picker', () => {
+    it('opens the date\'s calendar, and closes it again (T-018)', () => {
       const { result } = renderHook(() =>
         useAddRehearsalForm({
           projects: mockProjects,
@@ -267,10 +267,14 @@ describe('useAddRehearsalForm Hook', () => {
       expect(result.current.showDatePicker).toBe(false);
 
       act(() => {
-        result.current.openDatePicker();
+        result.current.toggleDatePicker();
       });
-
       expect(result.current.showDatePicker).toBe(true);
+
+      act(() => {
+        result.current.toggleDatePicker();
+      });
+      expect(result.current.showDatePicker).toBe(false);
     });
 
     it('should open start time picker', () => {
