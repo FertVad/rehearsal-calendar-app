@@ -5,6 +5,12 @@
 process.env.TZ = 'America/New_York';
 
 module.exports = {
+  // A worker whose heap is above this after a file is replaced before the next
+  // one. Every file leaves its modules behind; in one process for the whole run
+  // that reached 1.6 GB, and a single garbage collection there stopped the run
+  // for 3 s (T-215). npm test runs one worker, so files still go one
+  // at a time. Ignored by --runInBand, which has no worker to replace.
+  workerIdleMemoryLimit: '512MB',
   projects: [
     {
       // Frontend tests (React Hooks - no UI rendering)
