@@ -147,7 +147,7 @@ it('Save saves the days, without an alert over the closing sheet, and then close
   __remove();
   await choose(t.common.save);
 
-  expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({ leaving: true }));
+  expect(mockSave).toHaveBeenCalledTimes(1);
   // The sheet closing says it went through; no notice is left behind it (T-021).
   expect(screen.queryByTestId('toast')).toBeNull();
   expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });

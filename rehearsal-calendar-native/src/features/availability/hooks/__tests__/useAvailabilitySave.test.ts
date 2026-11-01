@@ -416,25 +416,10 @@ describe('useAvailabilitySave Hook', () => {
 
       expect(success).toBe(false);
       expect(markSaved).not.toHaveBeenCalled();
-      // Above the sheet's Save, not in an alert (T-021).
+      // Written on the screen, not in an alert (T-021).
       expect(Alert.alert).not.toHaveBeenCalled();
       expect(result.current.error).toBe('Failed to save');
       expect(mockSetSaving).toHaveBeenLastCalledWith(false);
-    });
-
-    it('says why in an alert when the save was the close question\'s, its panel perhaps gone', async () => {
-      (availabilityAPI.saveDays as jest.Mock).mockRejectedValue(new Error('Network error'));
-      const { result } = renderHook(() => useAvailabilitySave());
-
-      await act(async () => {
-        await result.current.saveAvailability({
-          availability: { '2025-12-29': { mode: 'busy', slots: [] } }, changed: { '2025-12-29': 1 },
-          today: '2025-12-01', language: 'en', t: mockT, setSaving: mockSetSaving, markSaved: jest.fn(), leaving: true,
-        });
-      });
-
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to save');
-      expect(result.current.error).toBeNull();
     });
   });
 });

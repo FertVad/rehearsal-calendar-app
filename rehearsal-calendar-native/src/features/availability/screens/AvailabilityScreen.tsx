@@ -140,7 +140,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     hasChanges: differsFromSaved,
     canSave: () => canSave({ availability, changed, today, language, t }),
     save: async (leaving) => {
-      const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved, leaving });
+      const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
       if (leaving || !saved) return saved;
       // Said without stopping anyone: a notice and a tap of the haptics, the
       // calendar where it was. An alert had to be dismissed first (T-021).
@@ -220,6 +220,16 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       {/* Nothing marked yet — say what that costs, not just that it is empty.
           Being treated as free is what actually happens, and it is the whole
           reason to fill this in. */}
+      {/* A save from the close question that failed with no day picked: the
+          panel and its Save are down, so the reason is written here (T-021,
+          review). With the panel up it is above Save. */}
+      {saveError && !editor.panelOpen && (
+        <View style={styles.nothingMarked}>
+          <Ionicons name="warning" size={18} color={Colors.accent.red} />
+          <Text testID="availability-save-error" style={styles.nothingMarkedText}>{saveError}</Text>
+        </View>
+      )}
+
       {loadFailed ? (
         <View style={styles.nothingMarked}>
           <Ionicons name="cloud-offline-outline" size={18} color={Colors.accent.yellow} />
@@ -552,7 +562,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
         {/* A save that failed says why here, over the button that retries it
             (T-021). */}
-        {saveError && (
+        {saveError && editor.panelOpen && (
           <View style={[styles.validationError, { marginHorizontal: Spacing.xl, marginTop: Spacing.sm }]}>
             <Ionicons name="warning" size={18} color={Colors.accent.red} />
             <Text testID="availability-save-error" style={[styles.validationErrorText, { flex: 1 }]}>{saveError}</Text>

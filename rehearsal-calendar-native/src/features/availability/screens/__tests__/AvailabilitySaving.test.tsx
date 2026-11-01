@@ -164,7 +164,9 @@ it('a save that fails keeps the day as changed, says so, and the sheet takes cha
   await act(async () => { fail(new Error('offline')); });
   await settle();
 
-  expect(Alert.alert).toHaveBeenCalledWith(t.common.error, expect.anything());
+  // Written above Save, as the sheet's own Save's failure is: no alert (T-021, review).
+  expect(Alert.alert).not.toHaveBeenCalled();
+  expect(screen.getByTestId('availability-save-error').props.children).toBe(t.availability.saveError);
   expect(navigation.dispatch).not.toHaveBeenCalled();
   expect(shown(screen, 'free')).toBe(true);
   expect(__remove(swipe)).toBe(false);
@@ -172,4 +174,20 @@ it('a save that fails keeps the day as changed, says so, and the sheet takes cha
 
   fireEvent.press(screen.getByTestId('mode-custom'));
   expect(shown(screen, 'custom')).toBe(true);
+});
+
+it('the question\'s Save failing with no day picked: the panel is down, the reason is written on the screen', async () => {
+  const screen = await open();
+  fireEvent.press(screen.getByTestId('mode-free'));
+  // Let go of the day: the change stays, the panel and its Save go down.
+  fireEvent.press(screen.getByTestId('day-2026-11-03'));
+  __remove(swipe);
+  await choose(t.common.save);
+
+  await act(async () => { fail(new Error('offline')); });
+  await settle();
+
+  expect(Alert.alert).not.toHaveBeenCalled();
+  expect(screen.getByTestId('availability-save-error').props.children).toBe(t.availability.saveError);
+  expect(navigation.dispatch).not.toHaveBeenCalled();
 });

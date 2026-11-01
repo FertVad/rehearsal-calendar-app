@@ -171,13 +171,12 @@ export const useAvailabilitySave = () => {
    * The days sent go back too, as what the server now holds (T-013).
    *
    * Success raises nothing here: the screen says it with a short notice, the
-   * sheet closing says it for a save on the way out. A failure of the sheet's
-   * own Save is `error`, written above that button; an alert only told what
-   * the screen can show (T-021). `leaving` is the close question's Save
-   * (useLeaveGuard): the sheet's button may be gone with its panel by then,
-   * so that failure is still an alert.
+   * sheet closing says it for a save on the way out. A failure is `error`,
+   * whichever Save it was — the sheet's own or the close question's: the
+   * screen stays open either way and writes it (T-021, review); an alert only
+   * told what the screen can show.
    */
-  const saveAvailability = async ({ availability, changed, today, language, t, setSaving, markSaved, leaving = false }: {
+  const saveAvailability = async ({ availability, changed, today, language, t, setSaving, markSaved }: {
     availability: AvailabilityData;
     changed: Record<string, number>;
     today: string;
@@ -185,7 +184,6 @@ export const useAvailabilitySave = () => {
     t: any;
     setSaving: (saving: boolean) => void;
     markSaved: (sent: Record<string, number>, sentDays: AvailabilityData) => void;
-    leaving?: boolean;
   }): Promise<boolean> => {
     const sent = { ...changed };
     const { dates, touched } = pendingDays(availability, sent, today);
@@ -208,9 +206,7 @@ export const useAvailabilitySave = () => {
       return true;
     } catch (err: any) {
       logger.error('Failed to save availability:', err);
-      const message = err.response?.data?.error || t.availability.saveError;
-      if (leaving) Alert.alert(t.common.error, message);
-      else setError(message);
+      setError(err.response?.data?.error || t.availability.saveError);
       return false;
     } finally {
       setSaving(false);
@@ -219,7 +215,7 @@ export const useAvailabilitySave = () => {
 
   return {
     saveAvailability,
-    /** Why the sheet's last Save failed, until the next one or `clearError`. */
+    /** Why the last save failed, until the next one or `clearError`. */
     error,
     clearError,
     canSave,
