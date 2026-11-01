@@ -149,6 +149,10 @@ export const PEOPLE = {
   // saves it untouched, and steps a new one's start by five minutes (54).
   // Alone on it, so no other flow's times move.
   cordelia: { email: 'cordelia@e2e.test', firstName: 'Cordelia', lastName: 'Lear', onboarded: true },
+  // Open the form's month in Spanish and in German, each in a project of her
+  // own (56): languages none of the others speak.
+  bernarda: { email: 'bernarda@e2e.test', firstName: 'Bernarda', lastName: 'Alba', onboarded: true, locale: 'es' },
+  courage: { email: 'courage@e2e.test', firstName: 'Anna', lastName: 'Fierling', onboarded: true, locale: 'de' },
   // Neither has been through onboarding yet. One goes through it to the end
   // (09-onboarding), after which it is never shown to her again; the other
   // connects a calendar in it and comes back to the step (32), and needs it
@@ -335,6 +339,16 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
     [estate.id, ids.voynitsky, ids.sonya]);
+  // Bernarda's and Mutter's (56), one each, the same way.
+  for (const [name, key] of [['La casa de Bernarda Alba', 'bernarda'], ['Mutter Courage', 'courage']]) {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, 'Her own', $2, NOW(), NOW()) RETURNING id`, [name, timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids[key]]);
+  }
   // Prospero's (48), the same way: The Tempest with all twelve islanders, and
   // his cell with Ariel alone.
   const islanders = [];

@@ -1,0 +1,113 @@
+# The form's month opens in Spanish and in German (T-018 review). The month
+# took the app's language as its library's, which had words for Russian and
+# English only: in Spanish or German a tap on the date threw (`dayNamesShort`
+# of undefined) and the form was gone. Bernarda Alba, whose profile speaks
+# Spanish, and Anna Fierling, whose speaks German, each open the form and its
+# month: it is there, named in her words, and today takes a tap. Nothing is
+# saved: "Don't Save" closes it.
+appId: ${APP_ID}
+name: The form's month in Spanish and in German
+tags:
+  - rehearsals
+  - calendar
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${BERNARDA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Crear ensayo"
+      WAIT_MS: 5000
+- tapOn: "Crear ensayo"
+- extendedWaitUntil:
+    visible: "Añadir ensayo"
+    timeout: 10000
+- tapOn:
+    id: rehearsal-date
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-date-calendar
+    timeout: 5000
+- assertVisible:
+    id: rehearsal-date-calendar.header
+    text: ".*(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Octubre|Noviembre|Diciembre) 20[0-9][0-9].*"
+- assertVisible:
+    id: rehearsal-date-calendar.day_${TODAY_DAY}
+    enabled: true
+- takeScreenshot: 56-month-in-spanish
+- tapOn:
+    id: rehearsal-close
+- runFlow:
+    when:
+      visible: "No guardar"
+    commands:
+      - tapOn: "No guardar"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-close
+    timeout: 10000
+
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${COURAGE_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Probe erstellen"
+      WAIT_MS: 5000
+- tapOn: "Probe erstellen"
+- extendedWaitUntil:
+    visible: "Probe hinzufügen"
+    timeout: 10000
+- tapOn:
+    id: rehearsal-date
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-date-calendar
+    timeout: 5000
+- assertVisible:
+    id: rehearsal-date-calendar.header
+    text: ".*(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember) 20[0-9][0-9].*"
+- assertVisible:
+    id: rehearsal-date-calendar.day_${TODAY_DAY}
+    enabled: true
+- takeScreenshot: 56-month-in-german
+- tapOn:
+    id: rehearsal-close
+- runFlow:
+    when:
+      visible: "Nicht sichern"
+    commands:
+      - tapOn: "Nicht sichern"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-close
+    timeout: 10000
