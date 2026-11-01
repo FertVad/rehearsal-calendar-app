@@ -131,7 +131,8 @@ tags:
     notVisible:
       id: rehearsal-close
     timeout: 10000
-# Mark Busy: its cross, and the editor's "Clear" and chevron over a day.
+# Mark Busy: its cross, and the editor's "Deselect" (T-021) and chevron over a
+# day.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -159,7 +160,7 @@ tags:
       id: mode-free
     timeout: 10000
 - assertVisible:
-    text: "Clear"
+    text: "Deselect"
     height: 50
     tolerance: 6
 - assertVisible:

@@ -45,10 +45,12 @@ tags:
     text: "6:00.PM.*"
 - tapOn:
     id: availability-save
+# Saved: a moment's "Saved", no alert to dismiss (T-021).
 - extendedWaitUntil:
-    visible: "Availability saved"
+    visible:
+      id: toast
+      text: "Saved"
     timeout: 15000
-- tapOn: "OK"
 - assertNotVisible:
     id: availability-save
 - tapOn:

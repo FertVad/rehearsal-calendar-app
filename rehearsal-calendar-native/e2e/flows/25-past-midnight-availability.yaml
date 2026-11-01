@@ -63,10 +63,12 @@ tags:
     id: mode-custom
 - tapOn:
     id: availability-save
+# Saved: a moment's "Saved", no alert to dismiss (T-021).
 - extendedWaitUntil:
-    visible: "Availability saved"
+    visible:
+      id: toast
+      text: "Saved"
     timeout: 15000
-- tapOn: "OK"
 # Away and back: the editor loads from the server again.
 - tapOn:
     id: availability-close

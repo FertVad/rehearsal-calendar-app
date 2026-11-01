@@ -1,0 +1,20 @@
+T-021 — green after (b0e571d plus the flows).
+
+$ npm run e2e -- e2e/flows/10-availability-days.yaml
+[Passed] Availability saves the day it changed (2m 35s)
+1/1 Flow Passed in 2m 35s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screenshot (not copied here; the sandbox refused cp):
+rehearsal-calendar-native/e2e/out/artifacts/2026-11-01_210205/Availability saves the day it changed/takeScreenshot/10-saved-notice.png — "Saved" over the bottom, no alert,
+the calendar on this week (1 November 2026, a Sunday: the first row).
+
+$ npx jest --selectProjects frontend --runInBand --silent
+Test Suites: 115 passed, 115 total
+Tests:       1045 passed, 1045 total
+
+$ npm run type-check
+tsc --noEmit — no errors
+
+Note: Jest with workers hung in this sandbox (even one small suite, past
+5 min); --runInBand runs it.

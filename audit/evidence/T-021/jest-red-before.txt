@@ -1,0 +1,34 @@
+T-021 — Jest, red before. Fix files put back to 3c16b81 with
+`git restore --source=3c16b81 --` AvailabilityScreen.tsx, useAvailabilitySave.ts,
+useAvailabilityData.ts, CalendarMonth.tsx, EditorHeader.tsx, common.ts,
+availability.ts; the new and changed tests left as in b0e571d.
+
+$ npx jest --selectProjects frontend --runInBand --silent \
+    src/features/availability/screens/__tests__/AvailabilityQuietSave.test.tsx \
+    src/features/availability/components/calendar/__tests__/CalendarMonth.test.tsx \
+    src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts \
+    src/features/availability/screens/__tests__/AvailabilityLeave.test.tsx
+
+FAIL frontend src/features/availability/screens/__tests__/AvailabilityQuietSave.test.tsx (20.718 s)
+  ● opens on today's week as drawn, once
+    Expected number of calls: 1
+    Received number of calls: 0
+  ● a save says "Saved" with a haptic, no alert, and the calendar stays while it is read back
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● a save that fails says why above Save, not in an alert, and keeps the day picked
+    Expected number of calls: 0
+    Received number of calls: 1
+FAIL frontend src/features/availability/components/calendar/__tests__/CalendarMonth.test.tsx
+  ● Test suite failed to run
+    (the old CalendarMonth has no onTodayLayout)
+FAIL frontend src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts
+  ● Test suite failed to run
+    (the old hook has no `error` and no `leaving`)
+FAIL frontend src/features/availability/screens/__tests__/AvailabilityLeave.test.tsx
+  ● Save saves the days, without an alert over the closing sheet, and then closes it
+    Expected: ObjectContaining {"leaving": true}
+    Received: {"announce": false, ...}
+Tests:       4 failed, 6 passed, 10 total
+
+Then `git restore --source=HEAD -- src/features/availability src/i18n`.
