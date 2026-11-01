@@ -24,5 +24,8 @@ Waiting for flows to complete...
 [e2e] taps taken again (tap-and-see.yaml): 0
 
 (A run of 02, 13, 46 and 49 together hit the 10-minute command limit and was
-cut off. It is not counted. All three of those flows make a director's project
-with a short name and no description, the layout the two runs above check.)
+cut off. It is not counted. None of 02, 13, 46 makes a project for the
+director, whom 49 signs in as: 02 only opens the project form, 13 makes
+Dunsinane for Macduff, 46 makes Inverness for Banquo. Only 03 gives the
+director the short first card, so 03 then 49 is the run that checks the fix;
+46 then 49 shows 49 the seed's first card, as when it runs alone.)

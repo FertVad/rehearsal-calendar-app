@@ -20,9 +20,10 @@ already fixed by 4563c0c, a commit after 209d0f3.
   seed's first card with a description, so 23% hits the name and the flow passes.
 - 4563c0c (T-213) taps at 25%,18%. That is the card's first row (the name and
   the admin badge), which leads every card whether or not it has a description
-  or an invite code. Every flow that makes a project (02, 03, 13, 46) leaves the
-  director a short name with no description, so the first card has the layout
-  checked here.
+  or an invite code. Of the flows that touch the project form, only 03 makes a
+  project for the director, the user flow 49 signs in as: 02 only opens the
+  form, 13 makes Dunsinane for Macduff, and 46 makes Inverness for Banquo. So
+  03 then 49 is the order that gives 49 the short first card.
 
 Nothing is changed in this task: the fix is already on auto/main.
 
@@ -35,8 +36,11 @@ flow 03. It fails on the same assertion as the night run.
 ## Green after
 
 `green-after.txt`, on HEAD d013046:
-- 03 then 49: passed.
-- 46 then 49 ("Inverness", with no description, first): passed.
+- 03 then 49 ("Macbeth", with no description, first for the director):
+  passed. This is the run that checks the fix.
+- 46 then 49: passed. It does not check the short card: 46 makes Inverness for
+  Banquo, and 49 signs in as the director, so it sees the seed's first card, as
+  in a run of 49 alone.
 
 The bug flow 49 guards (T-014: every target is at least 44 pt) has not come
 back. In both green runs every size assertion passed: "Today", a day of the
