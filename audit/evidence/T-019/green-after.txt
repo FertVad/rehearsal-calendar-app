@@ -1,0 +1,26 @@
+On 39e17db.
+
+$ npx jest --selectProjects frontend --silent
+Test Suites: 112 passed, 112 total
+Tests:       1033 passed, 1033 total
+
+$ npm run type-check
+> tsc --noEmit          (no errors)
+
+$ npm run check:secrets
+{"summary":"pass","mode":"worktree","files":1347,"findings":0,"errors":0}
+
+$ npm run e2e -- e2e/flows/57-day-strip-centre.yaml
+[Passed] Day strip centres the day (1m 22s)
+1/1 Flow Passed in 1m 22s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/41-today-selects-today.yaml
+[Passed] Today selects today (2m 1s)
+1/1 Flow Passed in 2m 2s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/49-touch-targets.yaml
+[Passed] Touch targets are 44 pt (2m 16s)
+1/1 Flow Passed in 2m 16s
+[e2e] taps taken again (tap-and-see.yaml): 0

@@ -1,0 +1,22 @@
+$ git restore --source=c353ad1 -- src/features/calendar/components/WeeklyCalendar.tsx src/features/calendar/components/TodayRehearsals.tsx src/shared/components/DayCalendar.tsx src/i18n/translations/calendar.ts
+$ npx jest --selectProjects frontend --silent src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx src/features/calendar/components/__tests__/TodayRehearsals.test.tsx
+  (failures and their first Expected/Received lines)
+
+  ● TodayRehearsals Component › Empty State › takes no room on a day with no rehearsals
+    Received: <View ref={null} style={{"marginBottom": 20, "marginTop": 20}}><Text ref={null} style={{"color": "#e6edf3", "fontSize": 16, "fontWeight": "600", "marginBottom": 12, "textTransform": "cap
+  ● The day strip › is 72 pt tall, a day 44 pt wide or more
+    Expected: 72
+    Received: undefined
+  ● The day strip › opens with the day selected in its middle
+    Expected: "2030-01-10"
+  ● The day strip › brings a day tapped at its edge to the middle, and selects it
+    Expected: "2030-01-13"
+  ● The day strip › selects the day a swipe stops on
+    Expected: "2030-01-15"
+  ● The day strip › brings today to the middle on "Today"
+  ● The day strip › keeps its days 44 pt wide on a 320 pt screen
+  ● The month › opens on the month name, and the name closes it
+  ● The month › begins the week on the profile's day, today the profile's, rehearsal days marked
+  ● The month › selects a day picked in it, closes, and brings the day to the middle of the strip
+Test Suites: 2 failed, 2 total
+Tests:       10 failed, 21 passed, 31 total
