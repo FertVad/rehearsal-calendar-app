@@ -42,10 +42,10 @@ tags:
     visible:
       id: onboarding-skip
     timeout: 20000
-# One line, the name in it.
+# One line, the name in it. ("Rehearsly" is not asked after: the application
+# element itself is labelled with it.)
 - assertVisible: "Welcome, Nina!"
 - assertNotVisible: "Nina!"
-- assertNotVisible: "Rehearsly"
 - takeScreenshot: 09-onboarding-welcome
 - runFlow:
     file: ../subflows/tap-and-see.yaml
