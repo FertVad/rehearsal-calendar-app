@@ -15,7 +15,8 @@
 # unsaved, it asks first, with no "Save" for a change the save refuses. The
 # close button closed it at once and the change was gone (T-013).
 # It opens on this week; a save says "Saved" for a moment instead of an alert
-# and leaves the calendar where it was; the sheet's "Clear" is "Deselect"
+# and leaves the calendar where it was; the sheet's "Clear" is "Deselect"; a
+# save that fails, the sheet's or the close question's, says why on the screen
 # (T-021).
 appId: ${APP_ID}
 name: Availability saves the day it changed
@@ -29,13 +30,20 @@ tags:
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
-# It opens on this week, not on the first of the month (T-021).
+# It opens on this week, not on the first of the month (T-021): today's week
+# is the first row under the legend, this month's title gone up above it.
+# Opened at the top, the title was there whatever the date.
 - extendedWaitUntil:
     visible:
       id: day-${TODAY_DAY}
       below:
         id: availability-legend
     timeout: 30000
+- assertNotVisible:
+    text: "${THIS_MONTH_LABEL}"
+    below:
+      id: availability-legend
+- takeScreenshot: 10-opens-on-this-week
 # Loaded once OTHER_DAY shows the seeded mark.
 - scrollUntilVisible:
     element:
@@ -82,8 +90,7 @@ tags:
     text: "6:00.PM.*"
 - tapOn:
     id: availability-save
-# Saved without an alert to dismiss: "Saved" for two seconds, and the
-# calendar where it was, MARK_DAY still in reach below the legend (T-021).
+# Saved without an alert to dismiss: "Saved" for two seconds (T-021).
 - extendedWaitUntil:
     visible:
       id: toast
@@ -92,12 +99,48 @@ tags:
 - takeScreenshot: 10-saved-notice
 - assertNotVisible: "Availability saved"
 - assertNotVisible: "OK"
-- assertVisible:
-    id: day-${MARK_DAY}
-    below:
-      id: availability-legend
 - assertNotVisible:
     id: availability-save
+# And the calendar stays where it was. Saved two months on, far below this
+# month's title, the list is still there once the save is read back; it came
+# back at its top, this month's title under the legend (T-021).
+- scrollUntilVisible:
+    element:
+      id: day-${LATER_DAY}
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${LATER_DAY}
+- tapOn:
+    id: day-${LATER_DAY}
+- tapOn:
+    id: mode-busy
+- waitForAnimationToEnd
+- assertNotVisible:
+    text: "${THIS_MONTH_LABEL}"
+    below:
+      id: availability-legend
+- tapOn:
+    id: availability-save
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: day-${LATER_DAY}
+      text: ".*, Busy"
+      below:
+        id: availability-legend
+    timeout: 10000
+- assertNotVisible:
+    text: "${THIS_MONTH_LABEL}"
+    below:
+      id: availability-legend
+- takeScreenshot: 10-saved-in-place
 # Away and back: the editor loads from the server again. Everything is saved,
 # so it closes without asking (T-013).
 - tapOn:
@@ -184,6 +227,104 @@ tags:
     visible: "Don't Save"
     timeout: 5000
 - takeScreenshot: 10-close-asks
+- tapOn: "Don't Save"
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+# A save that fails says why on the screen, not in an alert (T-021): the
+# sheet's own Save above that button, and the close question's Save with the
+# panel down on the screen itself, which stays open with the change. The
+# request is held past the app's ten seconds, so the app gives up on it.
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${MARK_DAY}
+      text: ".*, Partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MARK_DAY}
+- tapOn:
+    id: day-${MARK_DAY}
+- extendedWaitUntil:
+    visible:
+      id: mode-custom
+      selected: true
+    timeout: 10000
+- tapOn:
+    id: mode-busy
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: PUT
+      PATH: "/availability/days$"
+      BEFORE: "1"
+      ONCE: "1"
+      MS: "40000"
+- tapOn:
+    id: availability-save
+- extendedWaitUntil:
+    visible:
+      id: availability-save-error
+      text: "Failed to save availability"
+      above:
+        id: availability-save
+    timeout: 25000
+- assertNotVisible: "OK"
+- takeScreenshot: 10-save-error-above-save
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EXPECT: "1"
+# Let go of the day: the change stays, the panel and its Save go down.
+- tapOn:
+    id: day-${MARK_DAY}
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 5000
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: PUT
+      PATH: "/availability/days$"
+      BEFORE: "1"
+      ONCE: "1"
+      MS: "40000"
+- tapOn:
+    id: availability-close
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+- tapOn: "Save"
+- extendedWaitUntil:
+    visible:
+      id: availability-save-error
+      text: "Failed to save availability"
+    timeout: 25000
+- assertNotVisible: "OK"
+- assertVisible:
+    id: availability-legend
+- takeScreenshot: 10-save-error-on-close
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EXPECT: "1"
+- tapOn:
+    id: availability-close
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
 - tapOn: "Don't Save"
 - extendedWaitUntil:
     notVisible:

@@ -539,6 +539,9 @@ export async function seed({ client, apiUrl, timezone }) {
   // the flow changes it behind the screen's back while the editor is open.
   const days = {
     before: localDate(2), mark: localDate(3), after: localDate(4), other: localDate(6),
+    // A day two months on, whose week is far below this month's title: the
+    // editor saved there stays there (10, T-021).
+    later: localDate(60),
     // Zarechnaya's slot (25), and Trigorin's (27): from 23:00 on the first to
     // 01:00 on the second.
     evening: localDate(5), morning: localDate(6),
@@ -570,6 +573,9 @@ export async function seed({ client, apiUrl, timezone }) {
   // The day the editor's error names, in English: "October 27, 2026".
   labels.mark_day = new Date(`${days.mark}T00:00:00Z`).toLocaleDateString('en-US',
     { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  // This month's title in the editor, in English: "November 2026" (10).
+  labels.this_month = new Date(`${days.today}T00:00:00Z`).toLocaleDateString('en-US',
+    { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
   // Zarechnaya's own slot past midnight (25), the row PUT /availability/days
   // writes for it — written here, since the sign-ins are spent.
