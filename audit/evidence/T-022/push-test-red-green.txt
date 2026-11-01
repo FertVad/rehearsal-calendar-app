@@ -1,0 +1,41 @@
+T-022 — useNotifications.push.test.tsx expected the removed WeekStart step
+
+Cause: after "Not now" / "Allow", NotificationsScreen goes on to WhatWhere (the
+week-start step is gone, 1d848f8), but the push test still expected
+navigate('WeekStart'). Supervisor run: Expected "WeekStart", Received "WhatWhere".
+Fix: the test expects 'WhatWhere'.
+
+Red before — the base's onboarding (1d848f8^: NotificationsScreen,
+OnboardingNavigator, WeekStartScreen, screens/index, WeekPreview,
+components/index) under the updated test:
+
+$ npx jest --selectProjects frontend --runTestsByPath src/shared/hooks/__tests__/useNotifications.push.test.tsx
+FAIL frontend src/shared/hooks/__tests__/useNotifications.push.test.tsx (15.204 s)
+  ✓ does not ask when the tabs mount for someone with notifications on (GC01) (611 ms)
+  ✕ "Later" asks nothing; "Allow" asks once (36 ms)
+
+  ● "Later" asks nothing; "Allow" asks once
+
+    expect(jest.fn()).toHaveBeenLastCalledWith(...expected)
+
+    Expected: "WhatWhere"
+    Received: "WeekStart"
+
+    Number of calls: 1
+
+    > 71 |   expect(navigation.navigate).toHaveBeenLastCalledWith('WhatWhere');
+
+Tests:       1 failed, 1 passed, 2 total
+
+Green after — HEAD's onboarding:
+
+$ npx jest --selectProjects frontend --runTestsByPath src/shared/hooks/__tests__/useNotifications.push.test.tsx
+PASS frontend src/shared/hooks/__tests__/useNotifications.push.test.tsx (14.905 s)
+  ✓ does not ask when the tabs mount for someone with notifications on (GC01) (576 ms)
+  ✓ "Later" asks nothing; "Allow" asks once (45 ms)
+
+Tests:       2 passed, 2 total
+
+Also: npx jest --selectProjects frontend src/features/onboarding src/shared/hooks src/navigation
+— 117 of 118 suites pass; AvailabilityQuietSave failed once under load and
+passes alone (3/3), as it did in the supervisor's run. npm run type-check — clean.

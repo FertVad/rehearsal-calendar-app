@@ -19,3 +19,7 @@ No VoiceOver work. `skipMessage` (the Skip alert) is unchanged.
   `phoneWeekStart`).
 - `e2e-red-before.txt`: flow 09 on the base fails at "Welcome, Nina!".
 - `green-after.txt`: the tests, type-check, flows 09 and 32.
+- `push-test-red-green.txt`: the supervisor's run failed on
+  `useNotifications.push.test.tsx`, which still expected the removed
+  `WeekStart` step after Notifications; it now expects `WhatWhere`. Red on the
+  base's onboarding, green on HEAD.
