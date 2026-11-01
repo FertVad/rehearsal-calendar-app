@@ -1,0 +1,16 @@
+T-021 review — green after (510b7d9 + flow 10).
+
+$ npm run e2e -- e2e/flows/10-availability-days.yaml
+[Passed] Availability saves the day it changed (4m 16s)
+1/1 Flow Passed in 4m 16s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npx jest --selectProjects frontend --runInBand --silent
+Test Suites: 115 passed, 115 total
+Tests:       1045 passed, 1045 total
+
+$ npm run type-check
+tsc --noEmit — no errors
+
+$ npm run check:secrets
+{"summary":"pass","mode":"worktree","files":1392,"findings":0,"errors":0}
