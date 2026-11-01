@@ -73,6 +73,14 @@ tags:
 - assertVisible: "Upcoming Events"
 - assertVisible: ".*Guitar tuning.*"
 - takeScreenshot: 57-empty-day
+# Today again, so the month opens on today's - tomorrow is next month's on
+# the month's last day.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-today
+      SEE: ".*Tea on the terrace.*"
+      WAIT_MS: 10000
 # The month, from its name: today the profile's, named so.
 - tapOn:
     id: calendar-month

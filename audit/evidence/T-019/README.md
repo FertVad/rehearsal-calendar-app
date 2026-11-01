@@ -32,3 +32,10 @@ list stays. Red before: `TodayRehearsals.tsx` and `calendar.ts` at `c353ad1`,
 the rest of T-019 in place — fails on `".*Nothing today.*" is not visible`.
 Green after: all at HEAD, passes. Files: `e2e-empty-day-red-before.txt`,
 `e2e-empty-day-green-after.txt`.
+
+Review r2 — flow 57 on a month's last day. After the empty day it selected
+tomorrow, and the month opened on tomorrow's: on 30 November, December, with
+"Tree planting" on the 18th of November not in it. Now "Today" is tapped
+again before the month opens, so the month is today's whatever the date. Owner:
+no date faked for it; the flow shows the month is opened from "Today". Green
+after: `e2e-month-from-today-green-after.txt`.
