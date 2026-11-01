@@ -1,0 +1,57 @@
+T-215: membersAvailabilityRange.test.js on its own, a fresh Jest process each
+round, under busy loops (load-repro.mjs). Base HEAD c353ad1, test blob b68f61e.
+These runs look at the first test's own time, without a big heap.
+
+== 1. probe.test.js.txt then the test, 32 busy loops (4 per core)
+   node audit/evidence/T-215/load-repro.mjs 4 4 __tests__/routes/membersAvailabilityProbe.test.js __tests__/routes/membersAvailabilityRange.test.js
+   Quiet, the probe saw: beforeAll 969 ms; first request 120 ms, then 17 and 12 ms.
+   With a ping to a bare express app first: ping 70 ms then 15; first route request 25 ms.
+   Under load (round 1 of 4; the others alike):
+PROBE beforeAll 2011 ms
+PROBE ping 1 225 ms
+PROBE ping 2 197 ms
+PROBE first request (status 200) 304 ms
+PROBE second request (status 200) 149 ms
+PROBE third request (status 200) 202 ms
+✓ says whether they have ever recorded anything (420 ms)
+✓ does not hand out other members’ email addresses (215 ms)
+=== red 0 of 4
+
+== 2. the test alone, 80 busy loops (10 per core), 6 rounds
+--- round 1: exit 0, 39.4 s
+✓ says whether they have ever recorded anything (3285 ms)
+✓ does not hand out other members’ email addresses (1198 ms)
+✓ leaves a range inside one day alone (984 ms)
+--- round 2: exit 0, 63.9 s
+✓ says whether they have ever recorded anything (4841 ms)
+✓ does not hand out other members’ email addresses (1328 ms)
+✓ leaves a range inside one day alone (1747 ms)
+--- round 3: exit 0, 47.6 s
+✓ says whether they have ever recorded anything (3975 ms)
+--- round 4: exit 0, 32.3 s
+✓ says whether they have ever recorded anything (2611 ms)
+--- round 5: exit 0, 34.5 s
+✓ says whether they have ever recorded anything (3197 ms)
+--- round 6: exit 0, 33.4 s
+✓ says whether they have ever recorded anything (3311 ms)
+=== red 0 of 6
+
+== 3. the test alone, 96 busy loops (12 per core), 8 rounds
+   first test: 928, 5118, 1884, 1610, 2798, 1635, 1542, 936 ms; the others under 1.8 s
+=== red 0 of 8
+
+== 4. a hypothesis tried and dropped: the first request's one-time cost
+   The first test makes two requests and is the file's first through
+   supertest, express and the route, so it pays their first run. A variant of
+   the test made one request at the top of the file, outside any timeout, and
+   was alternated with HEAD's under 80 busy loops:
+=== before: red 0 of 5, first test median 1496 ms, max 1709 ms
+=== after: red 0 of 5, first test median 1342 ms, max 1705 ms
+   No difference that holds: the first test is about one and a half times the
+   slowest other because it makes two requests, not because it is first. The
+   variant was not kept.
+
+Reading: on a fresh process the first test does not reach 5 s until the
+machine is loaded well beyond the red run (whose other tests averaged about
+0.5 s, against 1 s here). What it needs on top is a stall of a few seconds;
+red-order-runs.txt finds it.
