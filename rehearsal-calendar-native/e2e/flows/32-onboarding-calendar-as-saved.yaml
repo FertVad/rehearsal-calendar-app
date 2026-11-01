@@ -6,8 +6,10 @@
 # with sync switched on. Now it shows what the settings say, once saved.
 #
 # A save that fails cannot be made to happen on the simulator; that half is
-# pinned by Jest (CalendarSyncScreen.test.tsx). The onboarding has no test ids
-# but Skip; the rest is found by its English labels.
+# pinned by Jest (CalendarSyncScreen.test.tsx). The rest is found by its
+# English labels, and the card by its id, which says whether a calendar is
+# connected: since T-022 the step has no outcome text, and "Set up later" is
+# there only while nothing is.
 appId: ${APP_ID}
 name: Onboarding shows the calendar that was saved
 tags:
@@ -43,8 +45,10 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: ".*Apple Calendar.*"
-      SEE: ".*Busy hours will come across on their own.*"
+      GONE: "Set up later"
       WAIT_MS: 10000
+- assertVisible:
+    id: onboarding-calendar-connected
 - tapOn: "Back"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -54,7 +58,8 @@ tags:
       WAIT_MS: 10000
 # Back on the step: the calendar saved is the one shown as connected.
 - extendedWaitUntil:
-    visible: ".*Busy hours will come across on their own.*"
+    visible:
+      id: onboarding-calendar-connected
     timeout: 10000
-- assertNotVisible: ".*Until you do, everyone sees you as free.*"
+- assertNotVisible: "Set up later"
 - takeScreenshot: 32-onboarding-calendar-as-saved
