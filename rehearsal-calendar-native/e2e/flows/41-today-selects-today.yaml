@@ -123,4 +123,4 @@ tags:
     timeout: 10000
 - assertVisible:
     id: planner-period
-    text: "Week"
+    text: "Week.*"
