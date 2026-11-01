@@ -1,0 +1,54 @@
+T-022 — Jest, red before. The fix's source files put back as at 78065ae
+(git restore --source=78065ae -- OnboardingStep.tsx, components/index.ts,
+WeekPreview.tsx, OnboardingNavigator.tsx, CalendarSyncScreen.tsx,
+NotificationsScreen.tsx, WelcomeScreen.tsx, WeekStartScreen.tsx,
+screens/index.ts, hooks/useWeekStart.ts, i18n/translations/onboarding.ts),
+the task's tests as committed in 1d848f8. WhatWhereScreen.tsx is new and stays.
+
+$ npx jest --selectProjects frontend --silent --verbose src/features/onboarding/ src/navigation/__tests__/registeredRoutes.test.tsx
+PASS frontend src/features/onboarding/screens/__tests__/NotificationsScreen.test.tsx (32.236 s)
+  ✓ gives notifications as examples, not the form’s buttons (2973 ms)
+  ✓ draws them as a list, without a button’s frame (33 ms)
+  ✓ says them in Russian to a Russian app (27 ms)
+FAIL frontend src/features/onboarding/screens/__tests__/WelcomeScreen.test.tsx (40.014 s)
+  ✕ greets by name on one line (3530 ms)
+  ✕ greets by name in Russian (170 ms)
+    Unable to find an element with text: Welcome, Nina!
+    Unable to find an element with text: Добро пожаловать, Nina!
+PASS frontend src/features/onboarding/hooks/__tests__/useOnboarding.test.ts (41.613 s)
+  ✓ shows an error Alert when onboarding cannot be completed during skip (HP03) (2493 ms)
+FAIL frontend src/features/onboarding/screens/__tests__/CalendarSyncScreen.test.tsx (44.892 s)
+  ✕ does not show the calendar connected when its choice could not be saved (2060 ms)
+  ✕ shows the calendar connected once its choice is saved (127 ms)
+  ✕ shows a calendar connected earlier as connected on coming back (1102 ms)
+  ✕ promises privacy once: in the description, with no box of its own (108 ms)
+  ✕ "Set up later" is a button that goes on, with the Profile path under it (63 ms)
+  ✕ names the Profile path by the Profile's own labels, in Russian too (76 ms)
+  ✕ says "no calendars" in the app's language (1060 ms)
+  ✕ says it is setting the calendar up in the app's language (93 ms)
+    Unable to find an element with testID: onboarding-calendar-card
+    Unable to find an element with testID: onboarding-calendar-connected
+    Unable to find an element with testID: onboarding-calendar-connected
+    - Expected  - 0
+    + Received  + 1
+    Unable to find an element with text: You can do it later in Profile → Calendar Sync
+    Unable to find an element with text: Это можно сделать потом: Профиль → Синхронизация с календарём
+    Unable to find an element with text: Календари не найдены
+    Unable to find an element with text: Kalendersynchronisation wird eingerichtet …
+FAIL frontend src/features/onboarding/screens/__tests__/WhatWhereScreen.test.tsx
+FAIL frontend src/features/onboarding/components/__tests__/OnboardingStep.test.tsx
+FAIL frontend src/navigation/__tests__/registeredRoutes.test.tsx
+Test Suites: 5 failed, 2 passed, 7 total
+Tests:       10 failed, 4 passed, 14 total
+
+The three suites that do not run fail on the base's types, which is the
+change itself:
+- OnboardingStep.test.tsx: TS2353, 'note' does not exist in type
+  '{ title: string; onPress: () => void; }' — the base's secondary action was
+  a line under the bar, with nothing under it.
+- WhatWhereScreen.test.tsx: TS2305, '"../../../hooks/useWeekStart"' has no
+  exported member 'phoneWeekStart'; TS2344, '"WhatWhere"' is not a route —
+  the base has no last step and asks for the week's first day instead.
+- registeredRoutes.test.tsx: the base registers WeekStart, not WhatWhere.
+The screen-level red of the bar, "Skip"/"Next" and the week's first day is
+flow 09 (e2e-red-before.txt).
