@@ -29,7 +29,7 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
   // "Later" asks nothing, now or after onboarding: nothing in the background
   // shows the prompt (cause fix 20, GC01). The profile's switch is where it is
   // asked for later.
-  const goOn = () => navigation.navigate('WeekStart');
+  const goOn = () => navigation.navigate('WhatWhere');
 
   const handleAllow = async () => {
     hapticLight();

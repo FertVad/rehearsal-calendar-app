@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, TouchTarget } from '../../../shared/constants/colors';
 import { GlassButton } from '../../../shared/components';
 import OnboardingProgress from './OnboardingProgress';
 import { hapticLight } from '../../../shared/utils/haptics';
@@ -15,11 +15,15 @@ interface OnboardingStepProps {
   onBack?: () => void;
   onNext?: () => void;
   onSkip?: () => void;
-  nextButtonTitle?: string; // Default: "Next", last screen: "Finish"
+  nextButtonTitle?: string; // Default: the translated "Next"
   nextButtonDisabled?: boolean;
   showBackButton?: boolean;
-  /** A quieter way past this step — "not now" rather than a refusal. */
-  secondaryAction?: { title: string; onPress: () => void };
+  /**
+   * A quieter way past this step — "not now" rather than a refusal. It ends the
+   * step's content, never the bar below: under the bar it lifted Back and Next
+   * about 44 pt on its one step (T-022). `note` is a line under it.
+   */
+  secondaryAction?: { title: string; onPress: () => void; note?: string };
 }
 
 export default function OnboardingStep({
@@ -31,12 +35,13 @@ export default function OnboardingStep({
   onBack,
   onNext,
   onSkip,
-  nextButtonTitle = 'Next',
+  nextButtonTitle,
   nextButtonDisabled = false,
   secondaryAction,
   showBackButton = true,
 }: OnboardingStepProps) {
   const { t } = useI18n();
+  const nextTitle = nextButtonTitle ?? t.onboarding.next;
   return (
     <SafeAreaView style={styles.container}>
       {/* Header with Skip button */}
@@ -51,7 +56,7 @@ export default function OnboardingStep({
             }}
             style={styles.skipButton}
           >
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText}>{t.onboarding.skip}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -68,10 +73,26 @@ export default function OnboardingStep({
         <Text style={styles.title}>{title}</Text>
         {description && <Text style={styles.description}>{description}</Text>}
         <View style={styles.childrenContainer}>{children}</View>
+
+        {secondaryAction && (
+          <View style={styles.secondaryAction}>
+            <GlassButton
+              title={secondaryAction.title}
+              onPress={() => {
+                hapticLight();
+                secondaryAction.onPress();
+              }}
+              variant="glass"
+            />
+            {secondaryAction.note && (
+              <Text style={styles.secondaryActionNote}>{secondaryAction.note}</Text>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       {/* Bottom buttons */}
-      <View style={styles.footer}>
+      <View testID="onboarding-footer" style={styles.footer}>
         {showBackButton && onBack ? (
           <View style={styles.buttonRow}>
             <View style={styles.buttonHalf}>
@@ -86,7 +107,7 @@ export default function OnboardingStep({
             </View>
             <View style={styles.buttonHalf}>
               <GlassButton
-                title={nextButtonTitle}
+                title={nextTitle}
                 onPress={() => {
                   hapticLight();
                   onNext?.();
@@ -98,7 +119,7 @@ export default function OnboardingStep({
           </View>
         ) : (
           <GlassButton
-            title={nextButtonTitle}
+            title={nextTitle}
             onPress={() => {
               hapticLight();
               onNext?.();
@@ -106,18 +127,6 @@ export default function OnboardingStep({
             variant="purple"
             disabled={nextButtonDisabled}
           />
-        )}
-
-        {secondaryAction && (
-          <TouchableOpacity
-            style={styles.secondaryAction}
-            onPress={() => {
-              hapticLight();
-              secondaryAction.onPress();
-            }}
-          >
-            <Text style={styles.secondaryActionText}>{secondaryAction.title}</Text>
-          </TouchableOpacity>
         )}
       </View>
     </SafeAreaView>
@@ -187,14 +196,12 @@ const styles = StyleSheet.create({
   },
 
   secondaryAction: {
-    alignSelf: 'center',
-    marginTop: 12,
-    minHeight: TouchTarget,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    marginTop: 24,
+    gap: 8,
   },
-  secondaryActionText: {
+  secondaryActionNote: {
     fontSize: FontSize.sm,
-    color: Colors.text.secondary,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
   },
 });
