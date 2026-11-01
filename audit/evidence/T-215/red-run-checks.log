@@ -1,0 +1,257 @@
+T-215: the red run's checks.log, copied from the supervisor's tree
+(rehearsal-calendar-native/e2e/out/failed/T-019-2026-11-01T08-49-14-736Z/checks.log,
+not in git). Source: T-019 checks on commit 48c438f5116656193c8668532d068ff94c6a0540,
+01.11.2026 11:09 local. Lines 1-19 and 312-541 of the original, verbatim; lines
+20-311 between them are the two node:test TAP blocks before Jest (33 of 33 and
+12 of 12 ok), left out. redOrderSequencer.cjs reads the file order from here.
+
+### 2026-11-01T08:39:37.266Z secrets: /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/npm run check:secrets
+
+> rehearsal-calendar-native@1.0.0 check:secrets
+> bash scripts/check-secrets.sh
+
+{"summary":"pass","mode":"worktree","files":1351,"findings":0,"errors":0}
+
+### 2026-11-01T08:39:41.031Z type-check: /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/npm run type-check
+
+> rehearsal-calendar-native@1.0.0 type-check
+> tsc --noEmit
+
+
+### 2026-11-01T08:40:16.312Z tests: /Users/vadimfertik/.nvm/versions/node/v22.16.0/bin/npm test -- --silent
+
+> rehearsal-calendar-native@1.0.0 test
+> node server/scripts/test.mjs all --silent
+
+[tests] Running mandatory secret scanner CLI regressions with synthetic fixtures.
+[... lines 20-311: TAP, 33 of 33 and 12 of 12 ok ...]
+[browser] Preparing the Chromium version pinned by Playwright.
+[tests] Running Jest. Command-line filters apply only to this stage.
+PASS frontend src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx (28.812 s)
+PASS frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx (6.382 s)
+PASS frontend src/shared/utils/__tests__/rehearsalRights.test.tsx
+PASS frontend src/features/calendar/components/__tests__/TodayRehearsals.test.tsx
+PASS frontend src/features/calendar/hooks/__tests__/useAddRehearsalForm.test.ts
+PASS frontend src/shared/components/__tests__/ModalSheet.test.tsx
+PASS frontend src/features/profile/screens/__tests__/ProfileScreen.push.test.tsx
+PASS frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx
+PASS frontend src/features/calendar/hooks/__tests__/useRehearsalAvailability.test.ts
+PASS frontend src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx
+PASS frontend src/navigation/__tests__/pendingInvite.test.tsx
+PASS frontend src/features/auth/screens/__tests__/LoginFlow.test.tsx
+PASS frontend src/features/profile/screens/__tests__/ProfileScreen.pushSession.test.tsx
+PASS frontend src/features/projects/screens/__tests__/JoinProjectScreen.test.tsx
+PASS frontend src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.test.tsx
+PASS frontend src/features/availability/screens/__tests__/AvailabilitySaving.test.tsx
+PASS frontend src/features/auth/screens/__tests__/LoginScreen.test.tsx
+PASS frontend src/features/profile/screens/__tests__/ChangeEmailScreen.test.tsx
+PASS frontend src/navigation/__tests__/backToTabs.test.tsx
+PASS frontend src/features/availability/screens/__tests__/AvailabilityLeave.test.tsx
+PASS frontend src/features/auth/screens/__tests__/ResetPasswordScreen.test.tsx
+PASS frontend src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.onePath.test.tsx
+PASS frontend src/shared/components/__tests__/DayCalendar.locales.test.tsx
+PASS frontend src/shared/utils/__tests__/calendarDateDisplay.test.tsx
+PASS frontend src/navigation/__tests__/stageState.test.tsx
+PASS frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx
+PASS frontend src/shared/hooks/__tests__/useAutoCalendarSync.test.ts
+(node:1699) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS backend server/__tests__/startup/runtimeStartup.test.js (17.544 s)
+PASS frontend src/shared/components/__tests__/ParticipantPicker.test.tsx
+PASS frontend src/features/profile/screens/__tests__/EditProfileScreen.test.tsx
+PASS frontend src/features/auth/screens/__tests__/RegisterFlow.test.tsx
+PASS frontend src/features/auth/screens/__tests__/RegisterScreen.test.tsx
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts
+PASS frontend src/shared/components/__tests__/IconButton.test.tsx
+PASS frontend src/features/auth/screens/__tests__/VerifyEmailScreen.test.tsx
+PASS frontend src/shared/components/__tests__/modalBackdrops.test.ts
+PASS frontend src/navigation/__tests__/registeredRoutes.test.tsx
+PASS frontend src/shared/hooks/__tests__/useNotifications.push.test.tsx
+PASS frontend src/features/auth/utils/__tests__/authErrors.test.ts
+PASS frontend src/features/onboarding/screens/__tests__/CalendarSyncScreen.test.tsx
+PASS frontend src/features/profile/screens/__tests__/ProfileScreen.about.test.tsx
+PASS frontend src/shared/utils/__tests__/conflictMessage.test.ts
+PASS frontend src/features/onboarding/screens/__tests__/NotificationsScreen.test.tsx
+PASS frontend src/features/onboarding/hooks/__tests__/useOnboarding.test.ts
+PASS frontend src/shared/services/__tests__/api.refresh.test.ts
+PASS frontend src/i18n/__tests__/plurals.test.ts
+PASS frontend src/contexts/__tests__/AuthContext.test.tsx
+PASS frontend src/features/availability/components/editor/__tests__/ModeSelector.test.tsx
+PASS backend server/__tests__/middleware/authFailure.test.js
+PASS backend server/__tests__/routes/rehearsalById.test.js
+PASS frontend src/shared/services/__tests__/calendarQueue.test.ts
+PASS frontend src/features/calendar/hooks/__tests__/useParticipantSeed.test.ts
+PASS frontend src/navigation/__tests__/typedNavigation.test.ts
+PASS backend server/__tests__/routes/memberRemoval.test.js
+PASS frontend src/shared/components/__tests__/AppModal.test.tsx
+PASS frontend src/features/availability/screens/__tests__/AvailabilitySaveBar.test.tsx
+PASS frontend src/features/notifications/screens/__tests__/NotificationsScreenInbox.test.tsx
+PASS backend server/__tests__/routes/emailVerification.test.js (6.33 s)
+PASS frontend src/shared/components/__tests__/iconButtonLabels.test.ts
+PASS backend server/__tests__/services/reminderText.test.js
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityDataMultiDay.test.ts
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityDataAllDay.test.ts
+PASS backend server/__tests__/routes/rehearsalNotifications.test.js
+PASS frontend src/features/calendar/hooks/__tests__/useCalendarSync.test.ts
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityData.test.ts
+PASS frontend src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts
+PASS frontend src/shared/components/__tests__/DateRangePicker.test.tsx
+PASS frontend src/features/calendar/hooks/__tests__/useRehearsalMembers.test.ts
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityDrafts.test.ts
+PASS backend server/__tests__/routes/appleAuth.test.js (5.617 s)
+PASS frontend src/shared/utils/__tests__/logger.test.ts
+PASS backend server/__tests__/services/operationIpRateLimit.test.js
+PASS backend server/__tests__/routes/adminStats.test.js
+PASS backend server/__tests__/utils/appleAudience.test.js
+PASS backend server/__tests__/routes/operationIpLimits.test.js
+PASS frontend src/features/calendar/hooks/__tests__/useTimeRecommendations.test.ts
+PASS frontend src/shared/utils/__tests__/oneTimezone.test.tsx
+PASS frontend src/shared/services/calendar/__tests__/syncOutcome.test.ts
+PASS backend server/__tests__/routes/passwordReset.test.js
+PASS backend server/__tests__/services/inviteRateLimit.test.js
+PASS backend server/__tests__/middleware/tokenTtl.test.js
+PASS frontend src/contexts/__tests__/I18nContext.test.tsx
+PASS frontend src/features/calendar/hooks/__tests__/useRehearsals.test.ts
+PASS frontend src/contexts/__tests__/SeenContext.test.tsx
+PASS backend server/__tests__/routes/lifecycleAtomicity.test.js
+PASS frontend src/contexts/__tests__/UnreadContext.test.tsx
+PASS backend server/__tests__/routes/signInMethods.test.js
+PASS backend server/__tests__/routes/pushTokenOwnership.test.js
+PASS backend server/__tests__/routes/authorization.test.js
+PASS frontend src/features/smart-planner/hooks/__tests__/useSmartPlannerClock.test.ts
+PASS backend server/__tests__/routes/tokenRefreshTtl.test.js
+PASS backend server/__tests__/routes/accountInput.test.js
+PASS backend server/__tests__/routes/emailChange.test.js
+PASS backend server/__tests__/integration/adminStoredContent.test.js
+PASS backend server/__tests__/integration/rehearsals.integration.test.js
+PASS backend server/__tests__/routes/inviteLimits.test.js (7.485 s)
+PASS frontend src/navigation/__tests__/launchLink.test.tsx
+PASS frontend src/features/projects/hooks/__tests__/useInviteLink.test.ts
+PASS backend server/__tests__/routes/cronReminders.test.js
+PASS frontend src/features/availability/components/editor/__tests__/TimeSlotsEditor.test.tsx
+PASS backend server/__tests__/services/memberAvailabilityRateLimit.test.js
+PASS backend server/__tests__/routes/availabilityImportSync.test.js
+PASS backend server/__tests__/routes/rehearsalRoster.test.js
+PASS backend server/__tests__/utils/legalPageLanguage.test.js
+PASS backend server/__tests__/routes/projectsInviteCode.test.js
+PASS backend server/__tests__/routes/availabilityBulk.test.js
+PASS backend server/__tests__/integration/rehearsalParticipants.integration.test.js
+PASS backend server/__tests__/routes/membershipNotifications.test.js
+PASS backend server/__tests__/seedDemo.test.js
+PASS backend server/__tests__/startup/importWeight.test.js
+PASS frontend src/features/calendar/hooks/__tests__/seenOrder.test.tsx
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityEditor.test.ts
+PASS frontend src/features/smart-planner/hooks/__tests__/useSmartPlannerLimits.test.ts
+PASS frontend src/shared/components/__tests__/PickerModal.test.tsx
+PASS backend server/__tests__/routes/availabilityDays.test.js
+PASS backend server/__tests__/errorHttp.test.js
+PASS backend server/__tests__/routes/providerSignIn.test.js
+PASS frontend src/shared/hooks/__tests__/syncSession.test.ts
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityOffline.test.ts
+PASS backend server/__tests__/appImport.test.js
+PASS backend server/__tests__/routes/notifications.test.js
+PASS backend server/__tests__/integration/invites.integration.test.js
+PASS backend server/__tests__/integration/rsvp.integration.test.js (6.473 s)
+PASS frontend src/shared/hooks/__tests__/useClock.test.ts
+PASS frontend src/shared/constants/__tests__/timezones.test.ts
+PASS frontend src/__tests__/integration/availabilityFlow.test.ts
+PASS frontend src/features/notifications/screens/__tests__/NotificationsScreen.test.tsx
+PASS backend server/__tests__/services/expoTransport.test.js
+PASS backend server/__tests__/routes/projectDeletionCleanup.test.js
+PASS backend server/__tests__/integration/reminderScheduler.integration.test.js
+PASS backend server/__tests__/utils/googleAudience.test.js
+PASS backend server/__tests__/utils/mailTokens.test.js
+PASS frontend src/shared/utils/__tests__/time.timezone.test.ts (5.376 s)
+PASS backend server/__tests__/integration/projects.integration.test.js
+PASS backend server/__tests__/asyncRoutes.test.js
+PASS frontend src/shared/utils/__tests__/inviteCode.test.ts
+PASS frontend src/shared/hooks/__tests__/syncCost.test.ts
+PASS backend server/__tests__/loopbackSupertest.test.js
+PASS backend server/__tests__/routes/calendarMappingLookup.test.js
+PASS frontend src/contexts/__tests__/ProjectContext.test.tsx
+PASS frontend src/contexts/__tests__/AuthContext.push.test.tsx
+PASS frontend src/features/smart-planner/utils/__tests__/slotGenerator.test.ts
+PASS backend server/__tests__/middleware/jwtMiddleware.test.js
+PASS frontend src/shared/utils/__tests__/connectionCache.test.ts
+PASS backend server/__tests__/routes/membersAvailabilityBudget.test.js
+PASS frontend src/features/availability/utils/__tests__/displayedMode.test.ts
+PASS backend server/__tests__/routes/authLogin.test.js
+PASS frontend src/__tests__/integration/authFlow.test.ts
+PASS backend server/__tests__/utils/names.test.js
+PASS backend server/__tests__/adminHttp.test.js (8.54 s)
+PASS backend server/__tests__/routes/accountDeletionCleanup.test.js
+PASS backend server/__tests__/services/emailCodes.test.js
+PASS backend server/__tests__/integration/availability.integration.test.js
+PASS frontend src/navigation/__tests__/linking.test.ts
+PASS backend server/__tests__/services/emailTransport.test.js
+PASS backend server/__tests__/integration/calendarSync.integration.test.js
+PASS backend server/__tests__/middleware/asyncBoundary.test.js
+PASS frontend src/shared/services/calendar/__tests__/exportMatching.test.ts
+PASS frontend src/shared/hooks/__tests__/requestOrder.test.ts
+PASS frontend src/shared/services/calendar/__tests__/exportOwnership.test.ts
+PASS backend server/__tests__/database/transaction.test.js
+PASS backend server/__tests__/timezone.test.js
+PASS backend server/__tests__/middleware/operationIpRateLimit.test.js
+PASS frontend src/shared/services/__tests__/api.log.test.ts
+PASS backend server/__tests__/routes/adminStatus.test.js
+PASS frontend src/shared/utils/__tests__/mappingScope.test.ts
+PASS frontend src/shared/services/calendar/__tests__/exportFailures.test.ts
+PASS frontend src/shared/utils/__tests__/clockRange.test.ts
+PASS frontend src/shared/components/__tests__/keyboardTaps.test.ts
+PASS frontend src/contexts/__tests__/UnreadContextMarkRead.test.tsx
+PASS backend server/__tests__/routes/htmlEscaping.test.js
+PASS frontend src/shared/services/calendar/__tests__/importScope.test.ts
+PASS backend server/__tests__/startup/fixtureBudget.test.js
+PASS frontend src/shared/utils/__tests__/clockFormat.test.ts
+PASS frontend src/__tests__/availabilityValidation.test.ts
+PASS frontend src/shared/services/__tests__/api.timeout.test.ts
+PASS frontend src/shared/services/calendar/__tests__/importSession.test.ts
+FAIL backend server/__tests__/routes/membersAvailabilityRange.test.js (12.313 s)
+  ● members availability range — what the planner is told about a member › says whether they have ever recorded anything
+
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+      114 |
+      115 | describe('members availability range — what the planner is told about a member', () => {
+    > 116 |   it('says whether they have ever recorded anything', async () => {
+          |   ^
+      117 |     // Nothing at all: the planner counts them free, and has to be able to say
+      118 |     // that this is an absence of data rather than a declaration of freedom.
+      119 |     expect((await rawFor('2026-12-01', '2026-12-03', testData.memberId)).hasData).toBe(false);
+
+      at server/__tests__/routes/membersAvailabilityRange.test.js:116:3
+      at server/__tests__/routes/membersAvailabilityRange.test.js:115:1
+
+PASS frontend src/features/smart-planner/utils/__tests__/availabilityMerger.test.ts
+PASS frontend src/shared/utils/__tests__/dataChanged.test.ts
+PASS frontend src/__tests__/integration/rehearsalFlow.test.ts
+PASS frontend src/shared/utils/__tests__/calendarStorageWrites.test.ts
+PASS backend server/__tests__/routes/calendarMappingScope.test.js
+PASS backend server/__tests__/routes/rehearsalTimes.test.js
+PASS backend server/__tests__/integration/rsvpService.integration.test.js
+
+Summary of all failing tests
+FAIL server/__tests__/routes/membersAvailabilityRange.test.js (12.313 s)
+  ● members availability range — what the planner is told about a member › says whether they have ever recorded anything
+
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+      114 |
+      115 | describe('members availability range — what the planner is told about a member', () => {
+    > 116 |   it('says whether they have ever recorded anything', async () => {
+          |   ^
+      117 |     // Nothing at all: the planner counts them free, and has to be able to say
+      118 |     // that this is an absence of data rather than a declaration of freedom.
+      119 |     expect((await rawFor('2026-12-01', '2026-12-03', testData.memberId)).hasData).toBe(false);
+
+      at server/__tests__/routes/membersAvailabilityRange.test.js:116:3
+      at server/__tests__/routes/membersAvailabilityRange.test.js:115:1
+
+
+Test Suites: 1 failed, 184 passed, 185 total
+Tests:       1 failed, 2085 passed, 2086 total
+Snapshots:   0 total
+Time:        486.092 s, estimated 2215 s
+[tests] Test command failed (exit 1).
