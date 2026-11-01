@@ -1,0 +1,27 @@
+T-020 review (P2), after 1622e7a.
+
+$ npm run e2e -- e2e/flows/59-planner-filters-spanish.yaml e2e/flows/58-planner-dense.yaml
+[Passed] The planner's filters fit in Spanish (2m 48s)
+[Passed] Planner list is dense (1m 6s)
+
+2/2 Flows Passed in 3m 54s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The three's bounds with "Período personalizado" picked, from Maestro's log
+(a measuring run of flow 59 with a tap on each, 2026-11-01_192513), in pt on
+the iPhone 16 (393 wide; the row's inside ends at 393 - 16 - 12 = 365):
+
+  planner-project   [28,136][139,180]  111 wide
+  planner-period    [151,136][250,180]  99 wide
+  participants-row  [262,136][365,180] 103 wide
+
+Screenshot: review-after-59-filters-spanish.png — "La casa de… ▾ ·
+Período p… ▾ · Parti…os (1) ▾".
+
+$ npx jest --selectProjects frontend
+Test Suites: 112 passed, 112 total
+Tests:       1036 passed, 1036 total
+
+$ npx tsc --noEmit -p .
+(no output)

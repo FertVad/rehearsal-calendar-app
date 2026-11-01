@@ -1,0 +1,24 @@
+T-020 review (P2, the row of filters in Spanish): flow 59 with
+smartPlannerScreenStyles.ts, SmartPlannerScreen.tsx and ParticipantPicker.tsx
+restored from 3f6ca94 (git restore --source=3f6ca94), the flow from 1622e7a.
+
+$ npm run e2e -- e2e/flows/59-planner-filters-spanish.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] The planner's filters fit in Spanish (2m 49s) (Assertion is false: id: planner-project, Size: 92xnull(tolerance: 32) is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screenshot: review-before-59-filters-spanish.png — the project is left a dot,
+"Período personalizado ▾ · Participantes: todos (1)" whole, and the people's
+chevron cut by the screen's right edge.

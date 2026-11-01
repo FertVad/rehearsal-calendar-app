@@ -19,6 +19,15 @@ first.
 `measure.mjs` reads a column of a screenshot and prints its runs of colour in
 points; `keep.mjs` copies a run's screenshot here.
 
+Review (P2): in Spanish, with dates of her own, "Período personalizado" and
+"Participantes: todos (1)" did not shrink (`flexShrink: 0`), the project was
+left a dot and the row ran past the screen's edge. Fix `1622e7a`: each of the
+three shrinks by its length, the people's text cut in the middle so the count
+stays. Flow 59 (Bernarda, Spanish) holds each at 60–124 pt: red on
+`3f6ca94` (`review-e2e-red-before.txt`, `review-before-59-filters-spanish.png`),
+green after (`review-green-after.txt`, 111/99/103 pt,
+`review-after-59-filters-spanish.png`).
+
 Red before: flow 58 on `cbcfaf9` fails at `planner-filters` 44
 (`e2e-red-before.txt`); Jest with the six source files at `cbcfaf9` and the
 tests of T-020: 5 of 11 fail (`jest-red-before.txt`). Green after:
