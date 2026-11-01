@@ -17,6 +17,16 @@ interface DayCalendarProps {
    * which stays shown and chosen when it is past (T-018).
    */
   allowedPast?: string;
+  /**
+   * The days before today take a tap as any other: the calendar's month,
+   * which is for looking back as well as ahead (T-019).
+   */
+  pastOpen?: boolean;
+  /** Days drawn with a dot: the ones with a rehearsal (T-019). */
+  dotted?: ReadonlySet<string>;
+  /** The first and last day it offers. */
+  minDate?: string;
+  maxDate?: string;
   testID?: string;
 }
 
@@ -33,7 +43,9 @@ function addDays(day: string, days: number): string {
  * picker (DateRangePicker). The days before today are shown and take no tap,
  * but for `allowedPast`.
  */
-export function DayCalendar({ value, onChange, allowedPast, testID }: DayCalendarProps) {
+export function DayCalendar({
+  value, onChange, allowedPast, pastOpen, dotted, minDate, maxDate, testID,
+}: DayCalendarProps) {
   const { t, language } = useI18n();
   const weekStart = useWeekStart();
   const today = useToday();
@@ -50,19 +62,24 @@ export function DayCalendar({ value, onChange, allowedPast, testID }: DayCalenda
   const markedDates = useMemo(() => {
     const marked: { [key: string]: any } = {};
     // The month and the days of the months beside it in its first and last week.
+    const first = addDays(`${month}-01`, -7);
     const last = addDays(`${month}-01`, 31 + 7);
-    for (let day = addDays(`${month}-01`, -7); day < last && day < today; day = addDays(day, 1)) {
+    for (let day = first; !pastOpen && day < last && day < today; day = addDays(day, 1)) {
       if (day !== allowedPast) marked[day] = { disabled: true, disableTouchEvent: true };
     }
+    dotted?.forEach((day) => {
+      if (day >= first && day < last) marked[day] = { ...marked[day], marked: true, dotColor: Colors.accent.purple };
+    });
     marked[value] = {
       ...marked[value],
       startingDay: true,
       endingDay: true,
       color: Colors.accent.purple,
       textColor: 'white',
+      ...(marked[value]?.marked ? { dotColor: 'white' } : {}),
     };
     return withToday(marked, today, phoneToday, undefined);
-  }, [month, today, phoneToday, value, allowedPast]);
+  }, [month, today, phoneToday, value, allowedPast, pastOpen, dotted]);
 
   const dayComponent = useMemo(
     () => profileDay(today, t.common.today, getDateLocale(language)),
@@ -76,6 +93,8 @@ export function DayCalendar({ value, onChange, allowedPast, testID }: DayCalenda
       firstDay={weekStart === 'monday' ? 1 : 0}
       onDayPress={(day: DateData) => onChange(day.dateString)}
       onMonthChange={(day: DateData) => setMonth(day.dateString.slice(0, 7))}
+      minDate={minDate}
+      maxDate={maxDate}
       markingType={'period'}
       dayComponent={dayComponent}
       markedDates={markedDates}

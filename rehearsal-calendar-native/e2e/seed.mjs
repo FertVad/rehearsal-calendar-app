@@ -153,6 +153,9 @@ export const PEOPLE = {
   // own (56): languages none of the others speak.
   bernarda: { email: 'bernarda@e2e.test', firstName: 'Bernarda', lastName: 'Alba', onboarded: true, locale: 'es' },
   courage: { email: 'courage@e2e.test', firstName: 'Anna', lastName: 'Fierling', onboarded: true, locale: 'de' },
+  // A day at the strip's edge, "Today" and a day of the month (57): on no
+  // other project, so his strip is only his.
+  telegin: { email: 'telegin@e2e.test', firstName: 'Ilya', lastName: 'Telegin', onboarded: true },
   // Neither has been through onboarding yet. One goes through it to the end
   // (09-onboarding), after which it is never shown to her again; the other
   // connects a calendar in it and comes back to the step (32), and needs it
@@ -215,6 +218,14 @@ export function zoneInstant(zone, offset, hours, minutes = 0) {
  */
 export function otherDayThisWeek() {
   return new Date().getDay() === 0 ? -1 : 1;
+}
+
+/** Twelve days on, or twelve back when that is next month: in this month's grid (57). */
+export function farDayThisMonth() {
+  const day = new Date();
+  const month = day.getMonth();
+  day.setDate(day.getDate() + 12);
+  return day.getMonth() === month ? 12 : -12;
 }
 
 /** This month's first Saturday and the Sunday after it, both in this month (41). */
@@ -412,6 +423,7 @@ export async function seed({ client, apiUrl, timezone }) {
     [courtId, ids.gertrude]);
   // Cordelia its admin (54).
   const learId = await joined('Lear Court', 'The heath', 'cordelia', 'admin');
+  const dachaId = await joined('Dacha Evenings', 'The terrace', 'telegin');
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -477,6 +489,10 @@ export async function seed({ client, apiUrl, timezone }) {
     mousetrap: await rehearsal(courtId, 'The Mousetrap', 3, 19, 20, ['claudius', 'gertrude'], 'gaev'),
     // Off the form's five-minute step, as a rehearsal made before it (54).
     storm: await rehearsal(learId, 'Storm scene', 1, [10, 7], 12, ['cordelia'], 'gaev'),
+    // Today, three days on at the strip's edge, and a day of the month (57).
+    terrace: await rehearsal(dachaId, 'Tea on the terrace', 0, 12, 13, ['gaev', 'telegin'], 'gaev'),
+    guitar_tuning: await rehearsal(dachaId, 'Guitar tuning', 3, 12, 13, ['gaev', 'telegin'], 'gaev'),
+    planting: await rehearsal(dachaId, 'Tree planting', farDayThisMonth(), 12, 13, ['gaev', 'telegin'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),
@@ -536,6 +552,8 @@ export async function seed({ client, apiUrl, timezone }) {
     tomorrow: localDate(1), after_tomorrow: localDate(2),
     // A day gone, in the form's calendar (55).
     yesterday: localDate(-1),
+    // Telegin's day at the strip's edge, and his day of the month (57).
+    edge: localDate(3), far: localDate(farDayThisMonth()),
     // A weekend in this month's period picker, which begins its weeks on
     // Monday, everyone's default: Sunday beside Saturday, not under it (41).
     ...firstWeekendOfMonth(),

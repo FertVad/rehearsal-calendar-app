@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Spacing, TouchTarget } from '../../../shared/constants/colors';
 import { Rehearsal } from '../../../shared/types';
-import { formatDateToString, parseDateString } from '../../../shared/utils/time';
+import { addDays, parseDateString } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
 import { rehearsalDates } from '../../../shared/utils/rehearsalDays';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
-import { useWeekStart, getWeekStart as getWeekStartUtil } from '../../../hooks/useWeekStart';
+import { DayCalendar } from '../../../shared/components/DayCalendar';
 import { hapticMedium } from '../../../shared/utils/haptics';
 
 interface WeeklyCalendarProps {
@@ -22,69 +23,46 @@ interface WeeklyCalendarProps {
   selectedDate: string;
 }
 
-interface DayInfo {
+interface DayItem {
   date: string;
-  dayOfWeek: string;
-  dayOfMonth: number;
-  isToday: boolean;
-  rehearsalCount: number;
-}
-
-interface WeekData {
-  id: string;
-  weekStart: Date;
-  days: DayInfo[];
 }
 
 /**
- * A week is seven days of 44 pt side by side, 308 (T-014). The card sits in
- * the calendar screen's margin; on a screen too narrow for the days within it
- * (320 pt, an SE with Display Zoom) the card reaches into that margin rather
- * than the days shrinking or running off their page.
+ * A strip of days, the selected one in its middle (T-019). It was a week to a
+ * page, and the day picked could stand at the page's edge. A tap brings the
+ * day to the middle, a swipe stops on a day and selects it, "Today" brings
+ * today. The week's first day plays no part here; it is the month's.
+ *
+ * 72 pt tall, a day 48 wide: never under 44 (T-014), and about seven on a
+ * phone's width.
  */
-const SCREEN_MARGIN = Spacing.xl;
+const STRIP_HEIGHT = 72;
+const DAY_WIDTH = 48;
 const CARD_BORDER = 1;
 const CARD_PADDING_X = Spacing.xs;
 const CARD_INSET = CARD_BORDER + CARD_PADDING_X;
-const WEEK_MIN_WIDTH = 7 * TouchTarget;
-
-function cardReach(screenWidth: number): number {
-  const room = screenWidth - 2 * SCREEN_MARGIN - 2 * CARD_INSET;
-  return Math.min(SCREEN_MARGIN, Math.max(0, (WEEK_MIN_WIDTH - room) / 2));
-}
-
-const INITIAL_WEEKS = 105; // ~1 year on each side
-const CENTER_INDEX = Math.floor(INITIAL_WEEKS / 2);
+/** A year on each side of today, as the weeks were. */
+const RANGE_DAYS = 366;
 
 export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
   const { t, language } = useI18n();
-  const weekStartDay = useWeekStart();
-  const flatListRef = useRef<FlatList>(null);
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(CENTER_INDEX);
-  const screenWidth = Dimensions.get('window').width;
-  const reach = cardReach(screenWidth);
-  // A page is the width the list is laid out at, and so is the step between
-  // pages: they were both a guess from the screen's width, and six points
-  // apart (T-014 review). Until the list is laid out, the same sum.
-  const [weekWidth, setWeekWidth] = useState(
-    screenWidth - 2 * (SCREEN_MARGIN - reach) - 2 * CARD_INSET,
+  const listRef = useRef<FlatList<DayItem>>(null);
+  // The width the strip is laid out at; until then, the screen's less the
+  // calendar screen's margin and the card's.
+  const [stripWidth, setStripWidth] = useState(
+    Dimensions.get('window').width - 2 * Spacing.xl - 2 * CARD_INSET,
   );
   const handleListLayout = useCallback((event: LayoutChangeEvent) => {
     const { width } = event.nativeEvent.layout;
-    if (width > 0 && width !== weekWidth) setWeekWidth(width);
-  }, [weekWidth]);
+    if (width > 0) setStripWidth(width);
+  }, []);
+  // The first and the last day stand in the middle too.
+  const edge = Math.max(0, (stripWidth - DAY_WIDTH) / 2);
 
-  const DAYS_OF_WEEK = useMemo(() => {
+  const dayNames = useMemo(() => {
     const s = t.days.short;
-    const daysMonday = [s.monday, s.tuesday, s.wednesday, s.thursday, s.friday, s.saturday, s.sunday];
-    const daysSunday = [s.sunday, s.monday, s.tuesday, s.wednesday, s.thursday, s.friday, s.saturday];
-    return weekStartDay === 'monday' ? daysMonday : daysSunday;
-  }, [t, weekStartDay]);
-
-  // Get the start of current week based on user preference
-  const getWeekStart = useCallback((date: Date): Date => {
-    return getWeekStartUtil(date, weekStartDay);
-  }, [weekStartDay]);
+    return [s.sunday, s.monday, s.tuesday, s.wednesday, s.thursday, s.friday, s.saturday];
+  }, [t]);
 
   // Rehearsals per day, counted on every day each one is on — one running past
   // midnight counts on the next day too (DD02).
@@ -97,180 +75,162 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
     });
     return map;
   }, [rehearsals]);
+  const rehearsalDays = useMemo(() => new Set(rehearsalCountMap.keys()), [rehearsalCountMap]);
 
   // Today in the profile's zone, the one rehearsals are dated in (DF01).
   const today = useToday();
+  const firstDay = addDays(today, -RANGE_DAYS);
+  const lastDay = addDays(today, RANGE_DAYS);
 
-  // Generate week data
-  const generateWeekData = useCallback((weekStart: Date): DayInfo[] => {
-    const days: DayInfo[] = [];
-
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + i);
-
-      const dateString = formatDateToString(date);
-      const rehearsalCount = rehearsalCountMap.get(dateString) || 0;
-
-      days.push({
-        date: dateString,
-        dayOfWeek: DAYS_OF_WEEK[i],
-        dayOfMonth: date.getDate(),
-        isToday: dateString === today,
-        rehearsalCount,
-      });
-    }
-
-    return days;
-  }, [rehearsalCountMap, DAYS_OF_WEEK, today]);
-
-  // Generate all weeks
-  const weeks = useMemo((): WeekData[] => {
-    const result: WeekData[] = [];
-    const todayWeekStart = getWeekStart(parseDateString(today));
-
-    for (let i = -CENTER_INDEX; i <= CENTER_INDEX; i++) {
-      const weekStart = new Date(todayWeekStart);
-      weekStart.setDate(todayWeekStart.getDate() + i * 7);
-
-      result.push({
-        id: `week-${i}`,
-        weekStart: new Date(weekStart),
-        days: generateWeekData(weekStart),
-      });
-    }
-
+  const days = useMemo((): DayItem[] => {
+    const result: DayItem[] = [];
+    for (let day = firstDay; day <= lastDay; day = addDays(day, 1)) result.push({ date: day });
     return result;
-  }, [getWeekStart, generateWeekData, today]);
+  }, [firstDay, lastDay]);
+  const indexOf = useMemo(() => new Map(days.map((d, i) => [d.date, i])), [days]);
+  const selectedIndex = indexOf.get(selectedDate) ?? indexOf.get(today)!;
 
-  // Show the month of the week's middle day so the header flips when the
-  // majority of visible days have crossed into a new month — not when the
-  // very first day of the week does.
+  // The day in the middle while the strip moves, for the month it names.
+  const [middleIndex, setMiddleIndex] = useState(selectedIndex);
+  const middle = useRef(selectedIndex);
+
+  const scrollTo = useCallback((index: number, animated: boolean) => {
+    middle.current = index;
+    setMiddleIndex(index);
+    listRef.current?.scrollToOffset({ offset: index * DAY_WIDTH, animated });
+  }, []);
+
+  // The selected day goes to the middle, wherever it was chosen: a tap, the
+  // month, "Today". When the days themselves move — today has — it is put
+  // there at once.
+  const shownFirst = useRef(firstDay);
+  useEffect(() => {
+    const moved = shownFirst.current !== firstDay;
+    shownFirst.current = firstDay;
+    if (moved || middle.current !== selectedIndex) scrollTo(selectedIndex, !moved);
+  }, [selectedIndex, firstDay, scrollTo]);
+
+  const indexAt = useCallback((offsetX: number) => (
+    Math.min(days.length - 1, Math.max(0, Math.round(offsetX / DAY_WIDTH)))
+  ), [days.length]);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = indexAt(event.nativeEvent.contentOffset.x);
+    if (index !== middleIndex) setMiddleIndex(index);
+  }, [indexAt, middleIndex]);
+
+  // Where the strip stops, the day in the middle is the one selected.
+  const settle = useCallback((offsetX: number) => {
+    const index = indexAt(offsetX);
+    middle.current = index;
+    setMiddleIndex(index);
+    const date = days[index].date;
+    if (date !== selectedDate) {
+      hapticMedium();
+      onDaySelect(date);
+    }
+  }, [indexAt, days, selectedDate, onDaySelect]);
+
+  const handleMomentumEnd = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    settle(event.nativeEvent.contentOffset.x);
+  }, [settle]);
+  // A drag let go on a day, with nothing left to snap, has no momentum after it.
+  const handleDragEnd = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = event.nativeEvent.contentOffset.x;
+    if (Math.abs(x - Math.round(x / DAY_WIDTH) * DAY_WIDTH) < 1) settle(x);
+  }, [settle]);
+
   const monthYear = useMemo(() => {
     const locale = getDateLocale(language);
     const options: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
-    const week = weeks[currentWeekIndex];
-    const reference = week ? new Date(week.weekStart) : new Date();
-    if (week) reference.setDate(reference.getDate() + 3);
-    return reference.toLocaleDateString(locale, options);
-  }, [weeks, currentWeekIndex, language]);
+    return parseDateString(days[middleIndex]?.date ?? today).toLocaleDateString(locale, options);
+  }, [days, middleIndex, today, language]);
 
-  // Handle scroll to update current week index and haptic feedback
-  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const newIndex = Math.round(offsetX / weekWidth);
-    if (newIndex !== currentWeekIndex && newIndex >= 0 && newIndex < weeks.length) {
-      hapticMedium();
-      setCurrentWeekIndex(newIndex);
-    }
-  }, [currentWeekIndex, weeks.length, weekWidth]);
+  const [monthOpen, setMonthOpen] = useState(false);
+  const handlePickInMonth = useCallback((date: string) => {
+    hapticMedium();
+    setMonthOpen(false);
+    onDaySelect(date);
+  }, [onDaySelect]);
 
-  // Today's day, not only its week: this scrolled the strip back and left the
-  // day picked before selected, so the list under it went on showing that day,
-  // likely in a week no longer on screen (DD03). Today's week is the centre one.
+  // Today's day, not only its place: this scrolled the strip back and left the
+  // day picked before selected, so the list under it went on showing that day
+  // (DD03).
   const handleGoToToday = useCallback(() => {
     hapticMedium();
     onShowToday();
-    flatListRef.current?.scrollToIndex({
-      index: CENTER_INDEX,
-      animated: true,
-    });
-    setCurrentWeekIndex(CENTER_INDEX);
-  }, [onShowToday]);
+    scrollTo(indexOf.get(today)!, true);
+  }, [onShowToday, scrollTo, indexOf, today]);
 
-  // Render a single week
-  const renderWeek = useCallback(({ item }: { item: WeekData }) => (
-    <View style={{ width: weekWidth }}>
-      <View style={styles.weekGrid}>
-        {item.days.map((day) => {
-          const isSelected = day.date === selectedDate;
+  const renderDay = useCallback(({ item }: { item: DayItem }) => {
+    const isSelected = item.date === selectedDate;
+    const isToday = item.date === today;
+    const rehearsalCount = rehearsalCountMap.get(item.date) || 0;
 
-          // The cell takes the tap across its whole seventh of the week; the
-          // gap between the drawn days is inside it. With the gap outside, a
-          // day was 42 pt wide (T-014).
-          return (
-            <TouchableOpacity
-              key={day.date}
-              testID={`calendar-day-${day.date}`}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
-              style={styles.dayTarget}
-              onPress={() => {
-                hapticMedium();
-                onDaySelect(day.date);
-              }}
-              onLongPress={onDayLongPress && (() => {
-                hapticMedium();
-                onDayLongPress(day.date);
-              })}
-              delayLongPress={400}
-              activeOpacity={0.7}
-            >
+    // The cell takes the tap across its whole width; the gap between the
+    // drawn days is inside it (T-014).
+    return (
+      <TouchableOpacity
+        testID={`calendar-day-${item.date}`}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        style={styles.dayTarget}
+        onPress={() => {
+          hapticMedium();
+          onDaySelect(item.date);
+        }}
+        onLongPress={onDayLongPress && (() => {
+          hapticMedium();
+          onDayLongPress(item.date);
+        })}
+        delayLongPress={400}
+        activeOpacity={0.7}
+      >
+        <View style={[
+          styles.dayCell,
+          isToday && styles.dayToday,
+          isSelected && styles.daySelected,
+        ]}>
+          <Text style={[
+            styles.dayOfWeek,
+            isSelected && styles.textSelected,
+          ]}>
+            {dayNames[parseDateString(item.date).getDay()]}
+          </Text>
+
+          <Text style={[
+            styles.dayOfMonth,
+            isToday && styles.textToday,
+            isSelected && styles.textSelected,
+          ]}>
+            {Number(item.date.slice(8))}
+          </Text>
+
+          {/* Under the date, in a slot every cell keeps: in the corner,
+              absolute, it covered the day's name (T-011). */}
+          <View testID={`calendar-day-count-${item.date}`} style={styles.badgeSlot}>
+            {rehearsalCount > 0 && (
               <View style={[
-                styles.dayCell,
-                day.isToday && styles.dayToday,
-                isSelected && styles.daySelected,
+                styles.badge,
+                isSelected && styles.badgeSelected,
               ]}>
                 <Text style={[
-                  styles.dayOfWeek,
-                  isSelected && styles.textSelected,
+                  styles.badgeText,
+                  isSelected && styles.badgeTextSelected,
                 ]}>
-                  {day.dayOfWeek}
+                  {rehearsalCount}
                 </Text>
-
-                <Text style={[
-                  styles.dayOfMonth,
-                  day.isToday && styles.textToday,
-                  isSelected && styles.textSelected,
-                ]}>
-                  {day.dayOfMonth}
-                </Text>
-
-                {/* Under the date, in a slot every cell keeps: in the corner,
-                    absolute, it covered the day's name (T-011). */}
-                <View testID={`calendar-day-count-${day.date}`} style={styles.badgeSlot}>
-                  {day.rehearsalCount > 0 && (
-                    <View style={[
-                      styles.badge,
-                      isSelected && styles.badgeSelected,
-                    ]}>
-                      <Text style={[
-                        styles.badgeText,
-                        isSelected && styles.badgeTextSelected,
-                      ]}>
-                        {day.rehearsalCount}
-                      </Text>
-                    </View>
-                  )}
-                </View>
               </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  ), [selectedDate, onDaySelect, onDayLongPress, weekWidth]);
-
-  // Scroll to today's week on mount
-  useEffect(() => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToIndex({
-        index: CENTER_INDEX,
-        animated: false,
-      });
-    }, 100);
-  }, []);
-
-  // A page of a new width moves the pages: the week on screen stays on it.
-  const shownWeek = useRef(currentWeekIndex);
-  shownWeek.current = currentWeekIndex;
-  useEffect(() => {
-    flatListRef.current?.scrollToOffset({ offset: shownWeek.current * weekWidth, animated: false });
-  }, [weekWidth]);
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [selectedDate, today, rehearsalCountMap, dayNames, onDaySelect, onDayLongPress]);
 
   return (
-    <View style={[styles.container, { marginHorizontal: -reach }]}>
-      {/* Header with month/year and today button */}
+    <View style={styles.container}>
+      {/* Header with today button and month/year, which opens the month */}
       <View style={styles.header}>
         {/* The pill is what shows; the tap is taken on 44 pt around it. */}
         <TouchableOpacity
@@ -284,37 +244,65 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
           </View>
         </TouchableOpacity>
 
-        <Text style={styles.monthYear}>{monthYear}</Text>
+        <TouchableOpacity
+          onPress={() => setMonthOpen(open => !open)}
+          style={styles.monthTarget}
+          testID="calendar-month"
+          accessibilityRole="button"
+          accessibilityState={{ expanded: monthOpen }}
+        >
+          <Text style={styles.monthYear}>{monthYear}</Text>
+          <Ionicons
+            name={monthOpen ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={Colors.text.secondary}
+          />
+        </TouchableOpacity>
 
         <View style={styles.placeholder} />
       </View>
 
-      {/* Scrollable weeks */}
+      {monthOpen && (
+        <DayCalendar
+          testID="calendar-month-grid"
+          value={selectedDate}
+          onChange={handlePickInMonth}
+          pastOpen
+          dotted={rehearsalDays}
+          minDate={firstDay}
+          maxDate={lastDay}
+        />
+      )}
+
+      {/* The days, the selected one in the middle */}
       <FlatList
-        ref={flatListRef}
-        data={weeks}
-        renderItem={renderWeek}
-        keyExtractor={(item) => item.id}
+        ref={listRef}
+        testID="calendar-strip"
+        style={styles.strip}
+        data={days}
+        renderItem={renderDay}
+        keyExtractor={(item) => item.date}
+        extraData={renderDay}
         horizontal
         showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: edge }}
+        snapToInterval={DAY_WIDTH}
+        decelerationRate="fast"
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        onScrollEndDrag={handleDragEnd}
+        onMomentumScrollEnd={handleMomentumEnd}
         onLayout={handleListLayout}
-        extraData={weekWidth}
+        // An offset is the day's place less the edge: the day at `index` is in
+        // the middle at index * DAY_WIDTH.
         getItemLayout={(_, index) => ({
-          length: weekWidth,
-          offset: weekWidth * index,
+          length: DAY_WIDTH,
+          offset: DAY_WIDTH * index,
           index,
         })}
-        initialScrollIndex={CENTER_INDEX}
-        onScrollToIndexFailed={(info) => {
-          setTimeout(() => {
-            flatListRef.current?.scrollToIndex({
-              index: info.index,
-              animated: false,
-            });
-          }, 500);
-        }}
+        initialScrollIndex={selectedIndex}
+        initialNumToRender={15}
+        windowSize={11}
       />
     </View>
   );
@@ -334,6 +322,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  monthTarget: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    minHeight: TouchTarget,
+    paddingHorizontal: Spacing.sm,
   },
   monthYear: {
     fontSize: FontSize.lg,
@@ -359,24 +354,21 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 64, // Same width as today button for centering
   },
-  weekGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  strip: {
+    height: STRIP_HEIGHT,
   },
-  // A seventh of the page, never more: a day wider than that ran off its
-  // week's page. The page is made wide enough for 44 (cardReach).
   dayTarget: {
-    flex: 1,
+    width: DAY_WIDTH,
+    height: STRIP_HEIGHT,
   },
   dayCell: {
     flex: 1,
     marginHorizontal: 2,
-    paddingVertical: Spacing.xs,
+    marginVertical: Spacing.xs,
     borderRadius: 12,
     backgroundColor: Colors.bg.secondary,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 56,
   },
   dayToday: {
     borderWidth: 2,

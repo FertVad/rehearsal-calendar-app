@@ -201,9 +201,11 @@ describe('TodayRehearsals Component', () => {
     });
   });
 
+  // A day with none took 98 pt for its title and "Nothing today" (T-019): the
+  // strip above shows the day has no count, the upcoming list below stays.
   describe('Empty State', () => {
-    it('should display empty message when no rehearsals', () => {
-      const { getByText } = render(
+    it('takes no room on a day with no rehearsals', () => {
+      const { toJSON } = render(
         <TodayRehearsals
           rehearsals={[]}
           selectedDate="2025-12-29"
@@ -213,7 +215,7 @@ describe('TodayRehearsals Component', () => {
         />
       );
 
-      expect(getByText('No rehearsals')).toBeTruthy();
+      expect(toJSON()).toBeNull();
     });
   });
 

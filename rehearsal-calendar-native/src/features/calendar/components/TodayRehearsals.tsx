@@ -79,16 +79,10 @@ export default function TodayRehearsals({
     );
   }
 
-  if (rehearsals.length === 0) {
-    return (
-      <View style={styles.todaySection}>
-        <Text style={styles.sectionTitle}>{dateLabel}</Text>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>{t.calendar.noRehearsals}</Text>
-        </View>
-      </View>
-    );
-  }
+  // A day with none takes no room (T-019): its title and "Nothing today" were
+  // 98 pt, and the strip already shows the day has no count. The upcoming
+  // list under it stays.
+  if (rehearsals.length === 0) return null;
 
   return (
     <View style={styles.todaySection}>
