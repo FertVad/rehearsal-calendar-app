@@ -1,11 +1,13 @@
 # The form does not save before it knows who is busy that day (cause fix 12:
 # DF05). Charlotta opens the rehearsal form for her project; the availability
-# of the day shown is on its way, held back. She saves: the old form checked
-# conflicts against nothing — "nobody is busy" — and created the rehearsal;
-# now it says the availability is still being checked.
-# She presses Create with the keyboard up from typing the location: the button
-# stays over the keyboard and takes the tap. It was at the end of the form,
-# and the keyboard covered it (T-009).
+# of the day shown is on its way, held back. The old form checked conflicts
+# against nothing — "nobody is busy" — and created the rehearsal; now it says
+# under the participants that the availability is still being checked, and
+# offers no Create until it is in: a tap on it brings no alert (T-018; it was
+# an alert on Create). Then the answer comes, the note goes and Create is
+# offered.
+# She has the keyboard up from typing the location: the button stays over the
+# keyboard. It was at the end of the form, and the keyboard covered it (T-009).
 # Closing the form with the location typed asks first, and "Don't Save" closes
 # it; the close button closed it at once and the typing was gone. Opened again
 # and left as it came, it closes without asking (T-013).
@@ -51,19 +53,29 @@ tags:
 - inputText: "Rehearsal room"
 - takeScreenshot: 20-create-over-keyboard
 - assertVisible:
+    id: rehearsal-participants-note
+    text: ".*availability for this day is still being checked.*"
+- assertVisible:
     id: rehearsal-submit
+    enabled: false
 - tapOn:
     id: rehearsal-submit
-- extendedWaitUntil:
-    visible: ".*availability for this day is still being checked.*"
-    timeout: 5000
+- waitForAnimationToEnd
+- assertNotVisible: "Error"
 - assertNotVisible: "Rehearsal created"
 - takeScreenshot: 20-save-waits-for-availability
-- tapOn: "OK"
 - runScript:
     file: ../scripts/release-answers.js
     env:
       MAIL_URL: ${MAIL_URL}
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-participants-note
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-submit
+    enabled: true
+- takeScreenshot: 20-create-offered-over-keyboard
 # Scrolled down to the location, the form has its close button above the
 # sheet's top edge: clipped, but on the screen, so a tap on it goes to the
 # status bar. The form is scrolled back to its top first.

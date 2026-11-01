@@ -1,6 +1,7 @@
 # An admin edits a rehearsal from its details and deletes one from them, and
 # a bad network on the way does not hide either (T-016, review).
-# Claudius opens "The Mousetrap" and saves it from the form "Edit" opens; the
+# Claudius opens "The Mousetrap" and saves it from the form "Edit" opens, whose
+# Save is offered only once something in it is changed (T-018); the
 # sheet's read again after it is lost, as on no network. The old sheet then
 # said "not available" and hid Edit and Delete for good, even once a read came
 # through; now it keeps what it had, and the next save shows the new place.
@@ -49,6 +50,16 @@ tags:
       id: rehearsal-location
     direction: DOWN
     centerElement: true
+# Loaded and nothing changed yet: Save is not offered (T-018).
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-location
+      text: "Main hall"
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-submit
+    enabled: false
+- takeScreenshot: 52-save-before-a-change
 - retry:
     maxRetries: 3
     commands:
@@ -59,6 +70,9 @@ tags:
       - assertVisible:
           id: rehearsal-location
           text: "Gun platform"
+- assertVisible:
+    id: rehearsal-submit
+    enabled: true
 - runScript:
     file: ../scripts/hold-answers.js
     env:

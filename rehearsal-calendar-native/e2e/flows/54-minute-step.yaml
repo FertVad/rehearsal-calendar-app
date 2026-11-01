@@ -3,7 +3,8 @@
 # The wheel was always given a five-minute interval, and UIKit rounds what it
 # shows to it (roundsToMinuteInterval): "Storm scene" at 10:07 opened its wheel
 # at 10:05. Now a time off the step turns by the minute and opens at 10:07;
-# Done and Save leave it 10:07. A new rehearsal starts on the hour, and the
+# Done and Save leave it 10:07 - saved with its place changed, since an edit
+# with nothing changed offers no Save (T-018). A new rehearsal starts on the hour, and the
 # row under its minutes is 05, not 01.
 #
 # The simulator is en_US, as run.mjs pins it, and so on the 12-hour clock.
@@ -33,7 +34,7 @@ tags:
     text: "Not Now"
     optional: true
 
-# 10:07, opened in the form and saved untouched.
+# 10:07, opened in the form and saved with its time untouched.
 - scrollUntilVisible:
     element: "(?s)(?=.*Storm scene)(?=.*10:07.AM–12:00.PM).*"
     direction: DOWN
@@ -71,6 +72,23 @@ tags:
 - assertVisible:
     id: rehearsal-start-time
     text: ".*10:07.AM.*"
+# The time as it was is no change, and an edit with none offers no Save
+# (T-018): the place is changed, and the time is saved as it stands.
+- scrollUntilVisible:
+    element:
+      id: rehearsal-location
+    direction: DOWN
+    centerElement: true
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: rehearsal-location
+      - eraseText
+      - inputText: "Storm deck"
+      - assertVisible:
+          id: rehearsal-location
+          text: "Storm deck"
 - scrollUntilVisible:
     element:
       id: rehearsal-submit

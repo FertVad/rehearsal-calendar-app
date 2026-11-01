@@ -520,6 +520,8 @@ export async function seed({ client, apiUrl, timezone }) {
     phone_today: zoneDate('Pacific/Honolulu', 0),
     // The day Sonya marks busy, and the one after it, which stays free (45).
     tomorrow: localDate(1), after_tomorrow: localDate(2),
+    // A day gone, in the form's calendar (55).
+    yesterday: localDate(-1),
     // A weekend in this month's period picker, which begins its weeks on
     // Monday, everyone's default: Sunday beside Saturday, not under it (41).
     ...firstWeekendOfMonth(),
@@ -528,6 +530,11 @@ export async function seed({ client, apiUrl, timezone }) {
     token: await token('treplev'),
     body: { days: [{ date: days.other, entries: [{ startsAt: `${days.other}T00:00:00.000Z`, endsAt: `${days.other}T23:59:59.999Z`, type: 'busy', isAllDay: true }] }] },
   });
+  // The form's date as it names yesterday and tomorrow: "Saturday, October 31, 2026" (55).
+  for (const key of ['yesterday', 'tomorrow']) {
+    labels[key] = new Date(`${days[key]}T00:00:00Z`).toLocaleDateString('en-US',
+      { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  }
   // The day the editor's error names, in English: "October 27, 2026".
   labels.mark_day = new Date(`${days.mark}T00:00:00Z`).toLocaleDateString('en-US',
     { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });

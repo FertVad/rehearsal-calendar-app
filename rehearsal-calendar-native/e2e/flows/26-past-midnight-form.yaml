@@ -2,6 +2,8 @@
 # (cause fix 15: DF04). The form put the end on the start's day, so 01:00 came
 # before 23:00 and the form refused it; now the end says "next day", the
 # rehearsal is saved ending the next morning, and it opens again as it was.
+# On the way the end is put at the start: the form says so under the end and
+# offers no Create, without an alert (T-018).
 # Irina Arkadina is alone in a project of her own, so nobody else's days move.
 #
 # The times are set on the picker's wheels: each one is a single element whose
@@ -84,6 +86,47 @@ tags:
 - extendedWaitUntil:
     notVisible: "Select Start Time"
     timeout: 10000
+# The end put at the start, 11 PM, is said under the end at once, and Create
+# is not offered; a tap on it brings no alert (T-018). It was an alert, and
+# only on Create.
+- tapOn:
+    id: rehearsal-end-time
+- extendedWaitUntil:
+    visible: "Select End Time"
+    timeout: 10000
+- repeat:
+    times: 30
+    while:
+      notVisible: "11 o’clock"
+    commands:
+      - tapOn:
+          point: "133,736"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "AM"
+    commands:
+      - tapOn:
+          point: "253,736"
+      - waitForAnimationToEnd
+- assertVisible: "PM"
+- tapOn: "Done"
+- extendedWaitUntil:
+    notVisible: "Select End Time"
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-end-time-error
+    text: "End time cannot be the same as start time"
+- assertVisible:
+    id: rehearsal-submit
+    enabled: false
+- tapOn:
+    id: rehearsal-submit
+- waitForAnimationToEnd
+- assertNotVisible: "Error"
+- assertNotVisible: "Rehearsal created"
+- takeScreenshot: 26-end-at-start
+# Then 1 AM, the next morning: the error goes.
 - tapOn:
     id: rehearsal-end-time
 - extendedWaitUntil:
@@ -117,6 +160,11 @@ tags:
     text: ".*1:00.AM.*"
 - assertVisible:
     id: rehearsal-ends-next-day
+- assertNotVisible:
+    id: rehearsal-end-time-error
+- assertVisible:
+    id: rehearsal-submit
+    enabled: true
 - takeScreenshot: 26-form-ends-next-day
 - tapOn: "e.g. Act II run-through"
 - inputText: "Lakeside night"

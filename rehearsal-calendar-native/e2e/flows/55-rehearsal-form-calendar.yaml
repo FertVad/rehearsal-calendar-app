@@ -1,0 +1,102 @@
+# The rehearsal form's date is a month in the form itself, not wheels in a
+# sheet (T-018). Irina Arkadina opens the form: the date names its day of the
+# week, and a tap on it opens the month under it. Today takes a tap; the day
+# before does not, and tapping it leaves the date as it was. Tomorrow is
+# picked, and the date says so. Nothing is saved: "Don't Save" closes it.
+#
+# Yesterday is in the month shown but when the month's first day begins the
+# week, and tomorrow when it is in another month - or, at 23:xx, when the
+# form opens on tomorrow in the next month. The steps on either are then
+# skipped; the month itself is always checked.
+appId: ${APP_ID}
+name: The form's date is a month, and the past takes no tap
+tags:
+  - rehearsals
+  - calendar
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${ARKADINA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-date
+    text: ".*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), .*"
+- tapOn:
+    id: rehearsal-date
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-date-calendar
+    timeout: 5000
+# No wheels for the date.
+- assertNotVisible: "Select Date"
+- runFlow:
+    when:
+      visible:
+        id: rehearsal-date-calendar.day_${TODAY_DAY}
+    commands:
+      - assertVisible:
+          id: rehearsal-date-calendar.day_${TODAY_DAY}
+          enabled: true
+- runFlow:
+    when:
+      visible:
+        id: rehearsal-date-calendar.day_${YESTERDAY_DAY}
+    commands:
+      - assertVisible:
+          id: rehearsal-date-calendar.day_${YESTERDAY_DAY}
+          enabled: false
+      - tapOn:
+          id: rehearsal-date-calendar.day_${YESTERDAY_DAY}
+      - waitForAnimationToEnd
+      - assertNotVisible:
+          id: rehearsal-date
+          text: ".*${YESTERDAY_LABEL}.*"
+- takeScreenshot: 55-form-calendar
+- runFlow:
+    when:
+      visible:
+        id: rehearsal-date-calendar.day_${TOMORROW_DAY}
+    commands:
+      - tapOn:
+          id: rehearsal-date-calendar.day_${TOMORROW_DAY}
+      - extendedWaitUntil:
+          visible:
+            id: rehearsal-date
+            text: ".*${TOMORROW_LABEL}.*"
+          timeout: 5000
+- takeScreenshot: 55-form-tomorrow
+# The month closes as it opened, under the date.
+- tapOn:
+    id: rehearsal-date
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-date-calendar
+    timeout: 5000
+- tapOn:
+    id: rehearsal-close
+- runFlow:
+    when:
+      visible: "Don't Save"
+    commands:
+      - tapOn: "Don't Save"
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-close
+    timeout: 10000
