@@ -7,6 +7,8 @@
 # A day is in the middle when a tap on the strip's middle is a tap on it: it
 # stays selected. Tapped at the edge, the day comes there; "Today" brings
 # today; a day picked in the month, opened from its name, comes there too.
+# Tomorrow has none: nothing of the selected day's takes room, the upcoming
+# list stays.
 appId: ${APP_ID}
 name: Day strip centres the day
 tags:
@@ -56,6 +58,21 @@ tags:
     id: calendar-day-${TODAY_DAY}
     selected: true
 - assertVisible: ".*Tea on the terrace.*"
+# Tomorrow, a day with none: no "Tomorrow" over "Nothing today", the
+# upcoming list stays.
+- tapOn:
+    id: calendar-day-${TOMORROW_DAY}
+- extendedWaitUntil:
+    notVisible: ".*Tea on the terrace.*"
+    timeout: 10000
+- assertVisible:
+    id: calendar-day-${TOMORROW_DAY}
+    selected: true
+- assertNotVisible: ".*Nothing today.*"
+- assertNotVisible: "Tomorrow"
+- assertVisible: "Upcoming Events"
+- assertVisible: ".*Guitar tuning.*"
+- takeScreenshot: 57-empty-day
 # The month, from its name: today the profile's, named so.
 - tapOn:
     id: calendar-month

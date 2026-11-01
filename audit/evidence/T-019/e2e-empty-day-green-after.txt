@@ -1,0 +1,11 @@
+T-019 review r1 — flow 57, the empty day, green after.
+
+All files at HEAD, the extended flow 57 in place.
+
+$ npm run e2e -- e2e/flows/57-day-strip-centre.yaml
+
+[Passed] Day strip centres the day (2m 2s)
+
+1/1 Flow Passed in 2m 2s
+
+[e2e] taps taken again (tap-and-see.yaml): 0

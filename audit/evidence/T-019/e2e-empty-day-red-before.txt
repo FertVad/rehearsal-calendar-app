@@ -1,0 +1,23 @@
+T-019 review r1 — flow 57, the empty day, red before.
+
+`TodayRehearsals.tsx` and `calendar.ts` restored to c353ad1
+(`git restore --source=c353ad1 -- …`), the rest of T-019 and the extended
+flow 57 in place. Telegin's tomorrow has no rehearsals.
+
+$ npm run e2e -- e2e/flows/57-day-strip-centre.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Day strip centres the day (2m 2s) (Assertion is false: ".*Nothing today.*" is not visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
