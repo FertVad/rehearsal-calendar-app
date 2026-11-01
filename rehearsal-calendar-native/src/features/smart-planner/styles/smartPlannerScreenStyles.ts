@@ -48,15 +48,15 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.glass.bg,
     borderRadius: BorderRadius.md,
   },
+  // Each of the three gives way, by its length, and its words end in "…". The
+  // period and the people did not: "Período personalizado · Participantes:
+  // todos (3)" took the row, the project was left its chevron, and the row ran
+  // off the screen's edge (T-020 review).
   filter: {
     height: TouchTarget,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    flexShrink: 0,
-  },
-  // The project's name gives way first: the period and the people stay whole.
-  filterShrinks: {
     flexShrink: 1,
   },
   filterText: {

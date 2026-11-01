@@ -108,7 +108,8 @@ export function ParticipantPicker({
           accessibilityLabel={[t.rehearsals.participants, value].join(', ')}
           accessibilityState={{ disabled }}
         >
-          <Text style={styles.chipText} numberOfLines={1}>{chipText}</Text>
+          {/* Cut in the middle: the count, at its end, stays. */}
+          <Text style={styles.chipText} numberOfLines={1} ellipsizeMode="middle">{chipText}</Text>
           {!disabled && <Ionicons name="chevron-down" size={14} color={Colors.text.secondary} />}
         </TouchableOpacity>
         {sheet}
@@ -324,11 +325,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    flexShrink: 0,
+    flexShrink: 1,
   },
   chipText: {
     fontSize: FontSize.md,
     color: Colors.text.primary,
+    flexShrink: 1,
   },
   conflict: {
     marginTop: 2,

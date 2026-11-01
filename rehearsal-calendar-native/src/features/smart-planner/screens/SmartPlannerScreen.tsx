@@ -275,7 +275,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
       <View testID="planner-filters" style={styles.filters}>
         <TouchableOpacity
           testID="planner-project"
-          style={[styles.filter, styles.filterShrinks]}
+          style={styles.filter}
           onPress={() => toggleChoice('project')}
         >
           <Text style={styles.filterText} numberOfLines={1}>{projectName}</Text>
