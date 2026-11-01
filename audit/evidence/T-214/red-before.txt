@@ -1,0 +1,35 @@
+T-214 red before: flow 49 as at 209d0f3 (tap at 25%,23%), after flow 03,
+the order of the night's full run.
+
+$ git restore --source=209d0f3 -- rehearsal-calendar-native/e2e/flows/49-touch-targets.yaml
+$ grep -n "point:" e2e/flows/49-touch-targets.yaml
+197:    point: "25%,23%"
+$ npm run e2e -- e2e/flows/03-create-project.yaml e2e/flows/49-touch-targets.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/03-create-project.yaml e2e/flows/49-touch-targets.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Create a project (1m 57s)
+[Failed] Touch targets are 44 pt (1m 59s) (Assertion is false: "Back", Size: 50x50(tolerance: 6) is visible)
+
+1/2 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ git restore --source=HEAD -- rehearsal-calendar-native/e2e/flows/49-touch-targets.yaml
+
+The night's red run, for comparison (its logs/maestro.log):
+03:28:43.661 Tap on point (25%,23%) RUNNING
+03:28:48.475 Tap on point (25%,23%) COMPLETED
+then: Assertion is false: "Back", Size: 50x50(tolerance: 6) is visible;
+the screenshot shows the share sheet "Join the project "Macbeth" in the Rehe...".
