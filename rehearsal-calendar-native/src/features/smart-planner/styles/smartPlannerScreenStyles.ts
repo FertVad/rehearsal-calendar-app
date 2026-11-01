@@ -35,27 +35,40 @@ export const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
   },
-  projectSelectorContainer: {
+  filtersContainer: {
     marginBottom: Spacing.md,
   },
-  projectSelectorButton: {
+  // One row of 44 pt, the three filters in it (T-020).
+  filters: {
+    height: TouchTarget,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
     backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
-    minHeight: TouchTarget,
-    padding: Spacing.md,
-    gap: Spacing.sm,
   },
-  projectSelectorText: {
-    flex: 1,
-    fontSize: FontSize.base,
+  filter: {
+    height: TouchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    flexShrink: 0,
+  },
+  // The project's name gives way first: the period and the people stay whole.
+  filterShrinks: {
+    flexShrink: 1,
+  },
+  filterText: {
+    fontSize: FontSize.md,
     color: Colors.text.primary,
-    fontWeight: FontWeight.medium,
+    flexShrink: 1,
   },
-  projectDropdown: {
+  filterDot: {
+    fontSize: FontSize.md,
+    color: Colors.text.tertiary,
+  },
+  choice: {
     backgroundColor: Colors.glass.bg,
     borderWidth: 1,
     borderColor: Colors.glass.border,
@@ -63,92 +76,46 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     overflow: 'hidden',
   },
-  projectOption: {
+  option: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: TouchTarget,
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
   },
-  projectOptionSelected: {
+  optionSelected: {
     backgroundColor: Colors.accent.purpleDarkAlpha10,
   },
-  projectOptionText: {
+  optionText: {
     fontSize: FontSize.base,
     color: Colors.text.primary,
   },
-  projectOptionTextSelected: {
+  optionTextSelected: {
     color: Colors.accent.purple,
     fontWeight: FontWeight.semibold,
   },
-  section: {
-    marginBottom: Spacing.xl,
+  listTitle: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
   },
-  sectionTitle: {
+  listTitleText: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,
-    marginBottom: Spacing.md,
   },
   unknownNote: {
     fontSize: FontSize.sm,
     color: Colors.text.tertiary,
-    marginTop: -Spacing.xs,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
     lineHeight: 18,
-  },
-  periodButtons: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  periodButton: {
-    flex: 1,
-    minHeight: TouchTarget,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xs,
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.border.default,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-  },
-  periodButtonActive: {
-    backgroundColor: Colors.accent.purple,
-    borderColor: Colors.accent.purple,
-  },
-  periodButtonText: {
-    fontSize: FontSize.base,
-    color: Colors.text.secondary,
-    fontWeight: FontWeight.medium,
-  },
-  periodButtonTextActive: {
-    color: Colors.text.inverse,
   },
   periodDate: {
     fontSize: FontSize.sm,
     color: Colors.text.secondary,
-    marginTop: Spacing.sm,
-    textAlign: 'center',
-  },
-  customDateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.accent.purple,
-    borderRadius: BorderRadius.md,
-  },
-  customDateText: {
-    fontSize: FontSize.base,
-    color: Colors.accent.purple,
-    fontWeight: FontWeight.semibold,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -177,8 +144,5 @@ export const styles = StyleSheet.create({
     color: Colors.text.secondary,
     textAlign: 'center',
     maxWidth: 280,
-  },
-  slotsContainer: {
-    marginTop: Spacing.lg,
   },
 });

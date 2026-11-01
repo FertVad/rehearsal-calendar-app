@@ -87,14 +87,21 @@ tags:
 # and Cancel leaves the period as it was. The list is taken to its top: scrolled
 # up only until Maestro sees it, it stopped under the status bar, the tap on it
 # was the status bar's, and no picker opened. It cannot be centred, so high up.
+# The period is one of the filters in a row, its choices under it (T-020).
 - scrollUntilVisible:
     element:
-      id: planner-period-custom
+      id: planner-period
     direction: UP
 - swipe:
     start: 50%, 40%
     end: 50%, 90%
 - waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-period
+      SEE: "Select Dates"
+      WAIT_MS: "5000"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -115,8 +122,5 @@ tags:
     notVisible: "Select Period"
     timeout: 10000
 - assertVisible:
-    id: planner-period-week
-    selected: true
-- assertVisible:
-    id: planner-period-custom
-    selected: false
+    id: planner-period
+    text: "Week"

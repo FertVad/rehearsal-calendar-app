@@ -52,11 +52,11 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
   const canCreateRehearsal = slot.busyMembers.length < slot.totalMembers;
 
   return (
-    <View style={styles.slot}>
+    <View testID={`planner-row-${slot.date}-${slot.startTime}`} style={styles.slot}>
       <View style={[styles.indicator, { backgroundColor: getCategoryColor() }]} />
       <View style={styles.content}>
-        <Text style={styles.time}>{timeText()}</Text>
-        <Text testID={`planner-slot-${slot.date}`} style={styles.status}>{getStatusText()}</Text>
+        <Text style={styles.time} numberOfLines={1}>{timeText()}</Text>
+        <Text testID={`planner-slot-${slot.date}`} style={styles.status} numberOfLines={1}>{getStatusText()}</Text>
       </View>
       {canCreateRehearsal && onCreateRehearsal && (
         <TouchableOpacity
@@ -71,34 +71,35 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
   );
 });
 
+// 56 pt a slot, "+ Add" 44 inside it (owner, 30.10.2026; T-020).
 const styles = StyleSheet.create({
   slot: {
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    paddingHorizontal: 12,
+    marginBottom: 4,
   },
   indicator: {
     width: 4,
-    height: 40,
+    height: 36,
     borderRadius: 2,
     marginRight: 12,
   },
   content: {
     flex: 1,
+    marginRight: 8,
   },
   time: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#f9fafb',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   status: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#9ca3af',
   },
   addButton: {

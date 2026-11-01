@@ -37,6 +37,11 @@ interface ParticipantPickerProps {
   noneLabel?: string;
   /** A second line under the row, for someone picked who is busy then. */
   conflict?: string;
+  /**
+   * One filter in a row of them, "Participants: all (4) ▾", instead of a row
+   * of its own (the planner, T-020). The same sheet opens.
+   */
+  chip?: boolean;
 }
 
 /** Past this many people the sheet gets a search field. */
@@ -60,6 +65,7 @@ export function ParticipantPicker({
   loading = false,
   noneLabel,
   conflict,
+  chip = false,
 }: ParticipantPickerProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -75,6 +81,40 @@ export function ParticipantPicker({
         ? noneLabel
         : t.rehearsals.participantsCount(picked, people.length);
   const disabled = loading || people.length === 0;
+  // Everyone, or nobody where that means everyone: "all (4)".
+  const everyone = !disabled && (picked === people.length || (picked === 0 && !!noneLabel));
+  const chipText = `${t.rehearsals.participants}: ${everyone ? t.rehearsals.participantsAll(people.length) : value}`;
+
+  const sheet = (
+    <ParticipantSheet
+      visible={open}
+      onClose={() => setOpen(false)}
+      people={people}
+      selectedIds={selectedIds}
+      onChange={onChange}
+      t={t}
+    />
+  );
+
+  if (chip) {
+    return (
+      <>
+        <TouchableOpacity
+          testID="participants-row"
+          style={styles.chip}
+          onPress={() => setOpen(true)}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel={[t.rehearsals.participants, value].join(', ')}
+          accessibilityState={{ disabled }}
+        >
+          <Text style={styles.chipText} numberOfLines={1}>{chipText}</Text>
+          {!disabled && <Ionicons name="chevron-down" size={14} color={Colors.text.secondary} />}
+        </TouchableOpacity>
+        {sheet}
+      </>
+    );
+  }
 
   return (
     <>
@@ -99,14 +139,7 @@ export function ParticipantPicker({
         ) : null}
       </TouchableOpacity>
 
-      <ParticipantSheet
-        visible={open}
-        onClose={() => setOpen(false)}
-        people={people}
-        selectedIds={selectedIds}
-        onChange={onChange}
-        t={t}
-      />
+      {sheet}
     </>
   );
 }
@@ -285,6 +318,17 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: Colors.text.secondary,
     flexShrink: 1,
+  },
+  chip: {
+    height: TouchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    flexShrink: 0,
+  },
+  chipText: {
+    fontSize: FontSize.md,
+    color: Colors.text.primary,
   },
   conflict: {
     marginTop: 2,

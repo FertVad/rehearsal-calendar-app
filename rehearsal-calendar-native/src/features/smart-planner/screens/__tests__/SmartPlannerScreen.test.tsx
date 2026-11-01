@@ -17,7 +17,8 @@
  * that prefilledMemberIds carries the new project's IDs, not the old one's.
  */
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
+import { render, fireEvent, act, within } from '@testing-library/react-native';
 import { translations } from '../../../../i18n/translations';
 import { projectsAPI } from '../../../../shared/services/api';
 import SmartPlannerScreen from '../SmartPlannerScreen';
@@ -126,7 +127,8 @@ describe('DP01 — roster reload within the same project (R5-01)', () => {
     }));
 
     // Trigger reload by switching to the Month period (changes date range).
-    fireEvent.press(screen.getByText(t.smartPlanner.month));
+    fireEvent.press(screen.getByTestId('planner-period'));
+    fireEvent.press(screen.getByTestId('planner-period-month'));
     await settle();
     await settle();
     await settle();
@@ -199,12 +201,73 @@ describe('Cancel in "Select Dates"', () => {
     const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
     await settle();
 
+    fireEvent.press(screen.getByTestId('planner-period'));
     fireEvent.press(screen.getByTestId('planner-period-custom'));
     fireEvent.press(screen.getByTestId('date-range-cancel'));
     await settle();
 
+    expect(within(screen.getByTestId('planner-period')).getByText(t.smartPlanner.week)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('planner-period'));
     expect(screen.getByTestId('planner-period-week').props.accessibilityState).toMatchObject({ selected: true });
     expect(screen.getByTestId('planner-period-custom').props.accessibilityState).toMatchObject({ selected: false });
+  });
+});
+
+// T-020 (owner, 30.10.2026): a day of one slot took 167 pt, a week four
+// screens, and the filters 252 pt above the first recommendation.
+describe('The planner\'s list, dense (T-020)', () => {
+  const height = (node: { props: { style: unknown } }) => StyleSheet.flatten(node.props.style as any).height;
+
+  it('heads a day with 28 pt and gives a slot a row of 56', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    expect(height(screen.getByTestId('planner-day-2026-01-01'))).toBe(28);
+    expect(height(screen.getByTestId('planner-row-2026-01-01-09:00'))).toBe(56);
+  });
+
+  it('puts the project, the period and the people in one row of 44 pt', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    const row = screen.getByTestId('planner-filters');
+    expect(height(row)).toBe(44);
+    expect(within(row).getByTestId('planner-project')).toBeTruthy();
+    expect(within(row).getByText('Project A')).toBeTruthy();
+    expect(within(row).getByText(t.smartPlanner.week)).toBeTruthy();
+    expect(within(row).getByText('Participants: all (3)')).toBeTruthy();
+    // Nothing else stands above the list.
+    expect(screen.queryByText(t.smartPlanner.period)).toBeNull();
+  });
+
+  it('opens each filter\'s own choice from the row', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    // The period: closed until tapped, and the one picked names it in the row.
+    expect(screen.queryByTestId('planner-period-month')).toBeNull();
+    fireEvent.press(screen.getByTestId('planner-period'));
+    fireEvent.press(screen.getByTestId('planner-period-month'));
+    await settle();
+    expect(screen.queryByTestId('planner-period-month')).toBeNull();
+    expect(within(screen.getByTestId('planner-period')).getByText(t.smartPlanner.month)).toBeTruthy();
+    expect(screen.getByText('Jan 1 – Jan 30')).toBeTruthy();
+
+    // The project: the projects this person runs.
+    expect(screen.queryByText('Project B')).toBeNull();
+    fireEvent.press(screen.getByTestId('planner-project'));
+    expect(screen.getByText('Project B')).toBeTruthy();
+    expect(screen.queryByText('Project C')).toBeNull();
+
+    // The people: their sheet.
+    fireEvent.press(screen.getByTestId('participants-row'));
+    expect(screen.getByTestId('participants-all')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('participant-a2'));
+    await settle();
+    expect(screen.getByText('Participants: 2 of 3')).toBeTruthy();
   });
 });
 

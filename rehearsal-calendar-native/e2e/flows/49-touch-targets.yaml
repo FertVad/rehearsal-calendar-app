@@ -223,6 +223,17 @@ tags:
     width: 50
     height: 50
     tolerance: 6
+# The period is a filter in the row, its choices under it (T-020).
+- assertVisible:
+    id: planner-period
+    height: 50
+    tolerance: 6
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-period
+      SEE: "Select Dates"
+      WAIT_MS: "5000"
 - assertVisible:
     id: planner-period-week
     height: 50

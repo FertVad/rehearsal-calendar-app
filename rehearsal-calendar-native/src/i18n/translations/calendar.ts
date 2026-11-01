@@ -88,6 +88,8 @@ export interface RehearsalsTranslations {
   noMembers: string;
   /** The participants row and sheet: how many of the project are picked. */
   participantsCount: (selected: number, total: number) => string;
+  /** The planner's filter with everyone picked: "all (4)". */
+  participantsAll: (total: number) => string;
   /** The sheet's three-state box over everyone. */
   allParticipants: string;
   searchParticipants: string;
@@ -191,6 +193,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     loadingMembers: 'Загрузка участников...',
     noMembers: 'Нет участников в проекте',
     participantsCount: (selected: number, total: number) => `${selected} из ${total}`,
+    participantsAll: (total: number) => `все (${total})`,
     allParticipants: 'Все участники',
     searchParticipants: 'Поиск',
     busyAt: (name: string, time: string) => `${name} занят ${time}`,
@@ -291,6 +294,7 @@ needProject: 'Rehearsals show up once you are in a project',
     loadingMembers: 'Loading members...',
     noMembers: 'No members in project',
     participantsCount: (selected: number, total: number) => `${selected} of ${total}`,
+    participantsAll: (total: number) => `all (${total})`,
     allParticipants: 'All participants',
     searchParticipants: 'Search',
     busyAt: (name: string, time: string) => `${name} busy ${time}`,
@@ -391,6 +395,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     loadingMembers: 'Cargando miembros...',
     noMembers: 'No hay miembros en el proyecto',
     participantsCount: (selected: number, total: number) => `${selected} de ${total}`,
+    participantsAll: (total: number) => `todos (${total})`,
     allParticipants: 'Todos los participantes',
     searchParticipants: 'Buscar',
     busyAt: (name: string, time: string) => `${name}: ocupado ${time}`,
@@ -491,6 +496,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     loadingMembers: 'Mitglieder werden geladen...',
     noMembers: 'Keine Mitglieder im Projekt',
     participantsCount: (selected: number, total: number) => `${selected} von ${total}`,
+    participantsAll: (total: number) => `alle (${total})`,
     allParticipants: 'Alle Teilnehmer',
     searchParticipants: 'Suchen',
     busyAt: (name: string, time: string) => `${name} belegt ${time}`,

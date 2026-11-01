@@ -12,11 +12,6 @@ interface DayCardProps {
   onCreateRehearsal?: (slot: TimeSlot) => void;
 }
 
-interface CategoryGroup {
-  category: SlotCategory;
-  slots: TimeSlot[];
-}
-
 export const DayCard: React.FC<DayCardProps> = React.memo(({ date, slots, onCreateRehearsal }) => {
   const { t, language } = useI18n();
 
@@ -31,8 +26,8 @@ export const DayCard: React.FC<DayCardProps> = React.memo(({ date, slots, onCrea
     return d.toLocaleDateString(getDateLocale(language), options);
   };
 
-  // Group slots by category
-  const categoryGroups: CategoryGroup[] = useMemo(() => {
+  // Group slots by category: the best first
+  const ordered: TimeSlot[] = useMemo(() => {
     const groups = new Map<SlotCategory, TimeSlot[]>();
 
     slots.forEach(slot => {
@@ -44,70 +39,47 @@ export const DayCard: React.FC<DayCardProps> = React.memo(({ date, slots, onCrea
 
     const categoryOrder: SlotCategory[] = ['perfect', 'good', 'ok', 'bad'];
 
-    return categoryOrder
-      .filter(cat => groups.has(cat))
-      .map(cat => ({
-        category: cat,
-        slots: groups.get(cat)!,
-      }));
+    return categoryOrder.flatMap(cat => groups.get(cat) ?? []);
   }, [slots]);
 
+  // A header of 28 pt and a row of 56 a slot, no card around them: a day of
+  // one slot took 167 pt, and a week four screens (owner, 30.10.2026; T-020).
   return (
-    <View style={styles.card}>
-      <View style={styles.dateHeader}>
+    <View style={styles.day}>
+      <View testID={`planner-day-${date}`} style={styles.dateHeader}>
         <Text style={styles.dateText}>{formatDate(date)}</Text>
         <Text style={styles.slotCount}>{t.smartPlanner.slotsCount(slots.length)}</Text>
       </View>
 
-      {categoryGroups.map(group => (
-        <View key={group.category} style={styles.categorySection}>
-          <View style={styles.categorySlots}>
-            {group.slots.map((slot, index) => (
-              <SlotItem
-                key={`${slot.date}-${slot.startTime}-${index}`}
-                slot={slot}
-                onCreateRehearsal={onCreateRehearsal}
-              />
-            ))}
-          </View>
-        </View>
+      {ordered.map((slot, index) => (
+        <SlotItem
+          key={`${slot.date}-${slot.startTime}-${index}`}
+          slot={slot}
+          onCreateRehearsal={onCreateRehearsal}
+        />
       ))}
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+  day: {
+    marginBottom: 12,
   },
   dateHeader: {
+    height: 28,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   dateText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: '#f9fafb',
     textTransform: 'capitalize',
   },
   slotCount: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#9ca3af',
-  },
-  categorySection: {
-    marginBottom: 8,
-  },
-  categorySlots: {
-    marginTop: 4,
   },
 });
