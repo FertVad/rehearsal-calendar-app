@@ -14,7 +14,6 @@ export interface AvailabilityTranslations {
   partial: string;
   legend: string;
   saving: string;
-  saved: string;
   saveError: string;
   selectDates: string;
   busyTime: string;
@@ -98,7 +97,6 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     partial: 'Частично',
     legend: 'Легенда',
     saving: 'Сохранение...',
-    saved: 'Занятость сохранена',
     saveError: 'Не удалось сохранить занятость',
     selectDates: 'Выберите даты',
     busyTime: 'Время когда занят',
@@ -184,7 +182,6 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     partial: 'Partial',
     legend: 'Legend',
     saving: 'Saving...',
-    saved: 'Availability saved',
     saveError: 'Failed to save availability',
     selectDates: 'Select dates',
     busyTime: 'Busy time',
@@ -263,7 +260,6 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     partial: 'Parcial',
     legend: 'Leyenda',
     saving: 'Guardando...',
-    saved: 'Disponibilidad guardada',
     saveError: 'No se pudo guardar la disponibilidad',
     selectDates: 'Selecciona las fechas',
     busyTime: 'Hora en que estás ocupado',
@@ -342,7 +338,6 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     partial: 'Teilweise',
     legend: 'Legende',
     saving: 'Wird gespeichert...',
-    saved: 'Verfügbarkeit gespeichert',
     saveError: 'Verfügbarkeit konnte nicht gespeichert werden',
     selectDates: 'Daten auswählen',
     busyTime: 'Beschäftigte Zeit',

@@ -130,9 +130,12 @@ export const useAvailabilityData = () => {
   // saved in it (useAvailabilitySave); the server keys a day on it too.
   const userTimezone = useTimezone();
 
+  // `loading` is the first load only: there is nothing to show before it. A
+  // reload — after a save, on focus, pulled — keeps the calendar on screen; it
+  // used to put the spinner in its place, and the list came back at its top,
+  // away from the week the person was on (T-021).
   const loadAvailability = useCallback(async () => {
     try {
-      setLoading(true);
       setLoadFailed(false);
       const response = await availabilityAPI.getAll();
 

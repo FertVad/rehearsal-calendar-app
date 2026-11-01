@@ -33,7 +33,9 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
         </Text>
         {selectedCount > 0 && (
           <TouchableOpacity onPress={onClear} style={styles.clearButton}>
-            <Text style={styles.clearButtonText}>{t.common.clear}</Text>
+            {/* It lets go of the days picked and leaves what is on them: "Clear"
+                read as emptying the day (T-021). */}
+            <Text style={styles.clearButtonText}>{t.common.deselect}</Text>
           </TouchableOpacity>
         )}
       </View>

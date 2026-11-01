@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -35,6 +35,8 @@ import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
 import { useLeaveGuard } from '../../../shared/hooks/useLeaveGuard';
 import { PickerModal } from '../../../shared/components/PickerModal';
 import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
+import { Toast, useToast } from '../../../shared/components/Toast';
+import { hapticSuccess } from '../../../shared/utils/haptics';
 
 type AvailabilityScreenProps = {
   navigation: AppNavigation<'MarkBusy'>;
@@ -62,7 +64,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   } = useAvailabilityData();
 
   // Save hook for validation and API submission
-  const { saveAvailability, canSave } = useAvailabilitySave();
+  const { saveAvailability, canSave, error: saveError, clearError } = useAvailabilitySave();
+  const toast = useToast();
 
   // Sync hook for calendar sync management
   const {
@@ -100,6 +103,21 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // day was tapped first (review CC04).
   const selectionHasPast = editor.selectedDates.some((date) => date < today);
 
+  // Opened on this week, not the first of the month: by the end of a month
+  // the weeks gone filled the top of the screen (T-021). Once, on the first
+  // layout; after that the list stays where the person put it.
+  const openedOnToday = useRef(false);
+  const scrollToToday = (y: number) => {
+    if (openedOnToday.current) return;
+    openedOnToday.current = true;
+    editor.flatListRef.current?.scrollToOffset({ offset: y, animated: false });
+  };
+
+  // A failed save's reason belongs to the selection it was about.
+  useEffect(() => {
+    if (!editor.panelOpen) clearError();
+  }, [editor.panelOpen, clearError]);
+
   // Load last sync time on mount
   useEffect(() => {
     loadLastSyncTime();
@@ -122,13 +140,18 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     hasChanges: differsFromSaved,
     canSave: () => canSave({ availability, changed, today, language, t }),
     save: async (leaving) => {
-      const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved, announce: !leaving });
-      if (leaving) return saved;
+      const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved, leaving });
+      if (leaving || !saved) return saved;
+      // Said without stopping anyone: a notice and a tap of the haptics, the
+      // calendar where it was. An alert had to be dismissed first (T-021).
+      hapticSuccess();
+      toast.show(t.common.saved);
       // A slot past midnight shows on the next day as read from the server, so
       // a saved change to it is read back rather than left to the next visit.
-      if (saved) loadAvailability();
+      loadAvailability();
       // Drop the selection so it is obvious the batch was committed; the sheet
       // stays open because marking several days in a row is the common case.
+      // A failed save keeps it, with its reason above Save.
       editor.clearSelection();
       return saved;
     },
@@ -154,7 +177,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // writes, and this only decides what is drawn.
   const shownMode = displayedMode(selectedDayState ?? undefined);
 
-  const renderMonth = ({ item }: { item: { year: number; month: number; key: string } }) => {
+  const renderMonth = ({ item, index }: { item: { year: number; month: number; key: string }; index: number }) => {
+    // The list begins with today's month, at the top of the list's content.
     return (
       <CalendarMonth
         year={item.year}
@@ -164,6 +188,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         today={today}
         onDayPress={(y, m, d) => editor.handleDayPress(y, m, d, formatDate)}
         getDayStatus={(date) => getDayStatus(date, availability)}
+        onTodayLayout={index === 0 ? scrollToToday : undefined}
       />
     );
   };
@@ -525,6 +550,15 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           )}
         </ScrollView>
 
+        {/* A save that failed says why here, over the button that retries it
+            (T-021). */}
+        {saveError && (
+          <View style={[styles.validationError, { marginHorizontal: Spacing.xl, marginTop: Spacing.sm }]}>
+            <Ionicons name="warning" size={18} color={Colors.accent.red} />
+            <Text testID="availability-save-error" style={[styles.validationErrorText, { flex: 1 }]}>{saveError}</Text>
+          </View>
+        )}
+
         {/* Save sits with the work rather than in the header, there from the
             first day picked and off until something changed (T-009). The
             count is spelled out because one press commits every date touched
@@ -552,6 +586,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         title={editor.editingSlot?.field === 'start' ? t.availability.startTime : t.availability.endTime}
         language={language}
       />
+
+      <Toast message={toast.message} />
     </SafeAreaView>
   );
 }

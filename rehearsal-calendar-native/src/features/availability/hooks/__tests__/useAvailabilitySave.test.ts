@@ -27,7 +27,6 @@ describe('useAvailabilitySave Hook', () => {
       success: 'Success',
     },
     availability: {
-      saved: 'Availability saved',
       saveError: 'Failed to save',
       cannotSave: 'Cannot Save',
       invalidSlot: 'Please fix the slot',
@@ -323,7 +322,9 @@ describe('useAvailabilitySave Hook', () => {
       expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 1 }, expect.objectContaining({ '2025-12-29': expect.objectContaining({ mode: 'custom' }) }));
       expect(mockSetSaving).toHaveBeenCalledWith(true);
       expect(mockSetSaving).toHaveBeenLastCalledWith(false);
-      expect(Alert.alert).toHaveBeenCalledWith('Success', 'Availability saved');
+      // Said by the screen's notice, not an alert to dismiss (T-021).
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(result.current.error).toBeNull();
     });
 
     it('saves a slot past midnight from Save, ending on the next day (CC06)', async () => {
@@ -415,8 +416,25 @@ describe('useAvailabilitySave Hook', () => {
 
       expect(success).toBe(false);
       expect(markSaved).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to save');
+      // Above the sheet's Save, not in an alert (T-021).
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(result.current.error).toBe('Failed to save');
       expect(mockSetSaving).toHaveBeenLastCalledWith(false);
+    });
+
+    it('says why in an alert when the save was the close question\'s, its panel perhaps gone', async () => {
+      (availabilityAPI.saveDays as jest.Mock).mockRejectedValue(new Error('Network error'));
+      const { result } = renderHook(() => useAvailabilitySave());
+
+      await act(async () => {
+        await result.current.saveAvailability({
+          availability: { '2025-12-29': { mode: 'busy', slots: [] } }, changed: { '2025-12-29': 1 },
+          today: '2025-12-01', language: 'en', t: mockT, setSaving: mockSetSaving, markSaved: jest.fn(), leaving: true,
+        });
+      });
+
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to save');
+      expect(result.current.error).toBeNull();
     });
   });
 });

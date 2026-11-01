@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayState } from '../types';
@@ -18,6 +19,8 @@ export const useAvailabilitySave = () => {
   // device's offset, so where the two differed a slot saved moved by the
   // difference — or onto another day (cause fix 14).
   const timezone = useTimezone();
+  const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
 
   /**
    * The date and time in the profile's zone, with its offset: the text names
@@ -167,11 +170,14 @@ export const useAvailabilitySave = () => {
    * (review CC03). Past days cannot be saved and stop counting as changed.
    * The days sent go back too, as what the server now holds (T-013).
    *
-   * `announce: false` is a save on the way out (useLeaveGuard): the sheet
-   * closing says it went through, and an alert raised over a sheet that is
-   * being dismissed would go with it.
+   * Success raises nothing here: the screen says it with a short notice, the
+   * sheet closing says it for a save on the way out. A failure of the sheet's
+   * own Save is `error`, written above that button; an alert only told what
+   * the screen can show (T-021). `leaving` is the close question's Save
+   * (useLeaveGuard): the sheet's button may be gone with its panel by then,
+   * so that failure is still an alert.
    */
-  const saveAvailability = async ({ availability, changed, today, language, t, setSaving, markSaved, announce = true }: {
+  const saveAvailability = async ({ availability, changed, today, language, t, setSaving, markSaved, leaving = false }: {
     availability: AvailabilityData;
     changed: Record<string, number>;
     today: string;
@@ -179,10 +185,11 @@ export const useAvailabilitySave = () => {
     t: any;
     setSaving: (saving: boolean) => void;
     markSaved: (sent: Record<string, number>, sentDays: AvailabilityData) => void;
-    announce?: boolean;
+    leaving?: boolean;
   }): Promise<boolean> => {
     const sent = { ...changed };
     const { dates, touched } = pendingDays(availability, sent, today);
+    setError(null);
     try {
       const validation = validateAvailability(touched, today, language, t);
       if (!validation.isValid) {
@@ -198,11 +205,12 @@ export const useAvailabilitySave = () => {
       }
 
       markSaved(sent, availability);
-      if (announce) Alert.alert(t.rehearsals.success, t.availability.saved);
       return true;
     } catch (err: any) {
       logger.error('Failed to save availability:', err);
-      Alert.alert(t.common.error, err.response?.data?.error || t.availability.saveError);
+      const message = err.response?.data?.error || t.availability.saveError;
+      if (leaving) Alert.alert(t.common.error, message);
+      else setError(message);
       return false;
     } finally {
       setSaving(false);
@@ -211,6 +219,9 @@ export const useAvailabilitySave = () => {
 
   return {
     saveAvailability,
+    /** Why the sheet's last Save failed, until the next one or `clearError`. */
+    error,
+    clearError,
     canSave,
     entriesForDay,
     prepareEntriesForAPI,

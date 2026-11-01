@@ -142,12 +142,14 @@ it('Save saves the days, without an alert over the closing sheet, and then close
   mockHasChanges = true;
   // The save marks the days saved, as markSaved does.
   mockSave.mockImplementation(async () => { mockHasChanges = false; return true; });
-  render(<AvailabilityScreen navigation={navigation} />);
+  const screen = render(<AvailabilityScreen navigation={navigation} />);
 
   __remove();
   await choose(t.common.save);
 
-  expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({ announce: false }));
+  expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({ leaving: true }));
+  // The sheet closing says it went through; no notice is left behind it (T-021).
+  expect(screen.queryByTestId('toast')).toBeNull();
   expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
 });
 

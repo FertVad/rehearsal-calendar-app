@@ -15,7 +15,10 @@ export interface CommonTranslations {
   apply: string;
   or: string;
   selectAll: string;
-  clear: string;
+  /** Lets go of the days picked; nothing on them changes (T-021). */
+  deselect: string;
+  /** The short notice after a save went through (Toast, T-021). */
+  saved: string;
   change: string;
   selectPeriod: string;
   invalidDateRange: string;
@@ -82,7 +85,8 @@ export const ru = {
     apply: 'Применить',
     or: 'или',
     selectAll: 'Выбрать всех',
-    clear: 'Очистить',
+    deselect: 'Снять выбор',
+    saved: 'Сохранено',
     change: 'Сменить',
     selectPeriod: 'Выберите период',
     invalidDateRange: 'Выберите корректные даты начала и окончания.',
@@ -149,7 +153,8 @@ export const en = {
     apply: 'Apply',
     or: 'or',
     selectAll: 'Select All',
-    clear: 'Clear',
+    deselect: 'Deselect',
+    saved: 'Saved',
     change: 'Change',
     selectPeriod: 'Select Period',
     invalidDateRange: 'Choose valid start and end dates.',
@@ -216,7 +221,8 @@ export const es = {
     apply: 'Aplicar',
     or: 'o',
     selectAll: 'Seleccionar todo',
-    clear: 'Limpiar',
+    deselect: 'Quitar selección',
+    saved: 'Guardado',
     change: 'Cambiar',
     selectPeriod: 'Seleccionar período',
     invalidDateRange: 'Elige fechas de inicio y fin válidas.',
@@ -283,7 +289,8 @@ export const de = {
     apply: 'Anwenden',
     or: 'oder',
     selectAll: 'Alle auswählen',
-    clear: 'Löschen',
+    deselect: 'Auswahl aufheben',
+    saved: 'Gespeichert',
     change: 'Ändern',
     selectPeriod: 'Zeitraum auswählen',
     invalidDateRange: 'Wähle gültige Start- und Enddaten.',
