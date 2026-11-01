@@ -129,6 +129,11 @@ tags:
     notVisible:
       id: availability-save
     timeout: 15000
+# The notice gone, two seconds on, the save has been read back.
+- extendedWaitUntil:
+    notVisible:
+      id: toast
+    timeout: 10000
 - extendedWaitUntil:
     visible:
       id: day-${LATER_DAY}
