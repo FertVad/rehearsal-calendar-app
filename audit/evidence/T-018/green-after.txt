@@ -1,0 +1,34 @@
+T-018, green after (HEAD d42ffa2: fix 896e11f, flows d42ffa2).
+
+Jest, frontend, whole set:
+$ npx jest --selectProjects frontend --silent
+Test Suites: 111 passed, 111 total
+Tests:       1021 passed, 1021 total
+
+The task's tests alone (AddRehearsalScreen, useAddRehearsalSubmit, useAddRehearsalForm):
+Tests: 26 passed (screen); 23 passed (submit hook); form hook suite passed.
+$ npm run type-check   -> no errors
+
+e2e, each on the new code:
+$ npm run e2e -- e2e/flows/55-rehearsal-form-calendar.yaml
+[Passed] The form's date is a month, and the past takes no tap (1m 48s)
+1/1 Flow Passed in 1m 48s
+  (commands.json: the steps on today, yesterday and tomorrow all ran, none skipped:
+   today enabled, yesterday enabled:false and its tap left the date, tomorrow picked)
+
+$ npm run e2e -- e2e/flows/26-past-midnight-form.yaml e2e/flows/20-save-before-availability.yaml
+[Passed] A rehearsal made from 23:00 to 01:00 ends the next morning (3m 40s)
+[Passed] Save before the availability is in (1m 18s)
+2/2 Flows Passed in 4m 59s
+
+$ npm run e2e -- e2e/flows/52-rehearsal-details-edit-and-delete.yaml
+[Passed] An admin edits and deletes from the details (3m 19s)
+1/1 Flow Passed in 3m 19s
+
+$ npm run e2e -- e2e/flows/54-minute-step.yaml
+[Passed] The wheel steps by five minutes and keeps an old 10:07 (2m 29s)
+1/1 Flow Passed in 2m 29s
+
+taps taken again (tap-and-see.yaml): 0 in every run.
+(52 and 54 run together hit the tool's 10-minute limit once, exit 143; each
+alone passed.)

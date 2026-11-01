@@ -1,0 +1,39 @@
+T-018 Jest, red before.
+Tests of 896e11f on the base 1075f17's source: the form's files put back with
+  git restore --source=1075f17 -- src/features/calendar/screens/AddRehearsalScreen.tsx
+    src/features/calendar/hooks/useAddRehearsalForm.ts src/features/calendar/hooks/useAddRehearsalSubmit.ts
+    src/features/calendar/styles/addRehearsalScreenStyles.ts src/features/calendar/utils/rehearsalFormatters.ts
+    src/i18n/translations/calendar.ts src/shared/components/DateRangePicker.tsx
+(DayCalendar.tsx and profileCalendar.tsx stay; the base form does not use them.)
+
+$ npx jest --selectProjects frontend --runTestsByPath \
+    src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx \
+    src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts \
+    src/features/calendar/hooks/__tests__/useAddRehearsalForm.test.ts --silent
+
+FAIL frontend src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts
+  ● Test suite failed to run
+    src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts:119:29 - error TS2339: Property 'issues' does not exist on type '{ loading: boolean; handleSubmit: (leaving?: boolean) => Promise<boolean>; canSubmit: () => boolean; }'.
+    src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts:188:29 - error TS2339: Property 'issues' does not exist on type '{ loading: boolean; handleSubmit: (leaving?: boolean) => Promise<boolean>; canSubmit: () => boolean; }'.
+    src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts:665:29 - error TS2339: Property 'issues' does not exist on type '{ loading: boolean; handleSubmit: (leaving?: boolean) => Promise<boolean>; canSubmit: () => boolean; }'.
+    src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts:680:47 - error TS2339: Property 'issues' does not exist on type '{ loading: boolean; handleSubmit: (leaving?: boolean) => Promise<boolean>; canSubmit: () => boolean; }'.
+FAIL frontend src/features/calendar/hooks/__tests__/useAddRehearsalForm.test.ts
+  ● Test suite failed to run
+    src/features/calendar/hooks/__tests__/useAddRehearsalForm.test.ts:270:24 - error TS2551: Property 'toggleDatePicker' does not exist on type '{ ... }'. Did you mean 'openDatePicker'?
+    src/features/calendar/hooks/__tests__/useAddRehearsalForm.test.ts:275:24 - error TS2551: Property 'toggleDatePicker' does not exist on type '{ ... }'. Did you mean 'openDatePicker'?
+FAIL frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx (43.627 s)
+  ● Before the people are known (R9-02) › while the project's members are loading, Create is not offered and sends nothing
+    Expected: false
+    Received: true
+  ● Before the people are known (R9-02) › after the load failed, it says so under the participants; trying again from there loads them, and then it saves
+  ● The form says what stops a save, under its field (T-018) › an end at the start says so under the end at once, and Create is not offered; no alert
+  ● The form says what stops a save, under its field (T-018) › no project says so under the project, and Create is not offered; no alert
+  ● The form says what stops a save, under its field (T-018) › while the day's availability is on its way, it says so under the participants, and Create waits
+  ● The form says what stops a save, under its field (T-018) › the date is a month in the form: its weekday shown, the days before today take no tap
+  ● The form says what stops a save, under its field (T-018) › its week begins on the profile's first day
+  ● The form says what stops a save, under its field (T-018) › An edit › Save is not offered until something is changed, and is once it is
+    Expected: false
+    Received: true
+  ● The form says what stops a save, under its field (T-018) › An edit › one in the past keeps its own day shown and chosen; the other past days take no tap
+Test Suites: 3 failed, 3 total
+Tests:       9 failed, 17 passed, 26 total
