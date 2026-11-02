@@ -22,6 +22,12 @@ module.exports = {
           tsconfig: {
             jsx: 'react',
             esModuleInterop: true,
+            // Each file is only compiled; npm run type-check (tsc) checks the
+            // types, test files included. Type checking here made a file's
+            // cache key the mtime of everything it imports, so a commit or a
+            // checkout touching translations sent every screen's test through
+            // the checker again, 7-19 s a file, and npm test past 20 min (T-216).
+            isolatedModules: true,
           },
         }],
       },

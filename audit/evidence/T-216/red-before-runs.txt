@@ -1,0 +1,107 @@
+T-216 red before. Base: HEAD 9cf6f2e (the commit of the red run), jest.config.js
+unchanged: frontend ts-jest with type checking (no isolatedModules).
+Commands as server/scripts/test.mjs runs Jest: --maxWorkers=1, frontend project.
+
+== Run 1: warm cache, nothing touched, full frontend (118 files) ==
+$ npx jest --selectProjects frontend --maxWorkers=1 --silent --logHeapUsage
+(only the first file of each new worker is slow, 9-29 s: ts-jest builds a
+TypeScript language service for the worker; the rest have no time printed, < 5 s)
+PASS frontend src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx (29.274 s, 672 MB heap size)
+PASS frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx (15.485 s, 377 MB heap size)
+PASS frontend src/features/notifications/screens/__tests__/NotificationsScreenInbox.test.tsx (395 MB heap size)
+... 12 more without a time ...
+PASS frontend src/contexts/__tests__/AuthContext.test.tsx (12.277 s, 353 MB heap size)
+... 7 without a time ...
+PASS frontend src/features/profile/screens/__tests__/ProfileScreen.push.test.tsx (10.261 s, 349 MB heap size)
+... 11 without a time ...
+PASS frontend src/features/availability/screens/__tests__/AvailabilitySaving.test.tsx (9.9 s, 358 MB heap size)
+... 13 without a time ...
+PASS frontend src/features/availability/components/editor/__tests__/ModeSelector.test.tsx (9.218 s, 343 MB heap size)
+... 18 without a time ...
+PASS frontend src/features/projects/screens/__tests__/JoinProjectScreen.test.tsx (9.318 s, 348 MB heap size)
+... 19 without a time ...
+PASS frontend src/shared/components/__tests__/iconButtonLabels.test.ts (9.064 s, 337 MB heap size)
+... 28 without a time ...
+Test Suites: 118 passed, 118 total
+Tests:       1064 passed, 1064 total
+Time:        174.108 s, estimated 248 s
+
+== Run 2: what a checkout or a commit does - new mtime, same content ==
+$ node /tmp/t216/touch.mjs src/i18n/translations/common.ts src/i18n/translations/onboarding.ts src/shared/components/index.ts
+1793588908045 src/i18n/translations/common.ts
+1793588908045 src/i18n/translations/onboarding.ts
+1793588908045 src/shared/components/index.ts
+$ git status --short
+(empty: no content changed)
+$ uptime
+ 5:08  up 35 days, 18:27, 1 user, load averages: 1.55 3.64 5.79
+$ npx jest --selectProjects frontend --maxWorkers=1 --silent --shard=1/2
+PASS frontend src/features/profile/screens/__tests__/ProfileScreen.push.test.tsx (19.519 s)
+PASS frontend src/features/availability/screens/__tests__/AvailabilitySaving.test.tsx (17.256 s)
+PASS frontend src/shared/utils/__tests__/rehearsalRights.test.tsx (17.965 s)
+PASS frontend src/shared/components/__tests__/DayCalendar.locales.test.tsx (17.335 s)
+PASS frontend src/features/calendar/hooks/__tests__/useCalendarSync.test.ts (10.347 s)
+PASS frontend src/features/calendar/hooks/__tests__/useAddRehearsalSubmit.test.ts (7.384 s)
+PASS frontend src/features/onboarding/screens/__tests__/CalendarSyncScreen.test.tsx (16.688 s)
+PASS frontend src/features/auth/screens/__tests__/RegisterScreen.test.tsx (17.251 s)
+PASS frontend src/features/profile/screens/__tests__/ChangeEmailScreen.test.tsx (17.784 s)
+PASS frontend src/contexts/__tests__/ProjectContext.test.tsx (9.464 s)
+PASS frontend src/shared/utils/__tests__/oneTimezone.test.tsx
+PASS frontend src/features/auth/screens/__tests__/LoginFlow.test.tsx (8.3 s)
+PASS frontend src/features/calendar/hooks/__tests__/useRehearsals.test.ts (9.889 s)
+PASS frontend src/navigation/__tests__/registeredRoutes.test.tsx (8.605 s)
+PASS frontend src/navigation/__tests__/typedNavigation.test.ts (9.473 s)
+PASS frontend src/shared/utils/__tests__/calendarDateDisplay.test.tsx (8.344 s)
+PASS frontend src/features/profile/screens/__tests__/ProfileScreen.pushSession.test.tsx (16.538 s)
+PASS frontend src/features/calendar/hooks/__tests__/useRehearsalAvailability.test.ts (9.45 s)
+PASS frontend src/features/availability/screens/__tests__/AvailabilityLeave.test.tsx (7.975 s)
+PASS frontend src/shared/components/__tests__/PickerModal.test.tsx (9.264 s)
+PASS frontend src/features/auth/screens/__tests__/RegisterFlow.test.tsx (7.059 s)
+PASS frontend src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx (16.34 s)
+PASS frontend src/features/notifications/screens/__tests__/NotificationsScreen.test.tsx (9.241 s)
+PASS frontend src/features/onboarding/screens/__tests__/WhatWhereScreen.test.tsx (7.656 s)
+PASS frontend src/contexts/__tests__/I18nContext.test.tsx (15.587 s)
+PASS frontend src/features/projects/hooks/__tests__/useInviteLink.test.ts (9.398 s)
+PASS frontend src/shared/hooks/__tests__/useAutoCalendarSync.test.ts
+PASS frontend src/shared/hooks/__tests__/useNotifications.push.test.tsx (8.512 s)
+PASS frontend src/shared/services/calendar/__tests__/syncOutcome.test.ts (9.121 s)
+PASS frontend src/contexts/__tests__/AuthContext.push.test.tsx
+PASS frontend src/shared/utils/__tests__/connectionCache.test.ts
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilityEditor.test.ts
+PASS frontend src/features/availability/screens/__tests__/AvailabilitySaveBar.test.tsx (6.528 s)
+PASS frontend src/features/availability/components/calendar/__tests__/CalendarMonth.test.tsx (15.522 s)
+PASS frontend src/shared/components/__tests__/ModalSheet.test.tsx (15.13 s)
+PASS frontend src/__tests__/integration/availabilityFlow.test.ts (9.336 s)
+PASS frontend src/features/onboarding/screens/__tests__/NotificationsScreen.test.tsx (7.059 s)
+PASS frontend src/features/onboarding/components/__tests__/OnboardingStep.test.tsx (15.871 s)
+PASS frontend src/features/calendar/hooks/__tests__/useParticipantSeed.test.ts (9.032 s)
+PASS frontend src/shared/hooks/__tests__/syncCost.test.ts
+PASS frontend src/navigation/__tests__/linking.test.ts
+PASS frontend src/shared/components/__tests__/Toast.test.tsx
+PASS frontend src/shared/utils/__tests__/time.timezone.test.ts
+PASS frontend src/shared/components/__tests__/AppModal.test.tsx
+PASS frontend src/shared/utils/__tests__/mappingScope.test.ts
+PASS frontend src/__tests__/integration/rehearsalFlow.test.ts
+PASS frontend src/shared/services/calendar/__tests__/exportFailures.test.ts
+PASS frontend src/i18n/__tests__/plurals.test.ts (6.943 s)
+PASS frontend src/features/auth/utils/__tests__/authErrors.test.ts (15.737 s)
+PASS frontend src/shared/utils/__tests__/clockFormat.test.ts (8.977 s)
+PASS frontend src/shared/utils/__tests__/calendarStorageWrites.test.ts
+PASS frontend src/features/onboarding/hooks/__tests__/useOnboarding.test.ts (7.237 s)
+PASS frontend src/shared/utils/__tests__/inviteCode.test.ts (8.839 s)
+PASS frontend src/shared/components/__tests__/modalBackdrops.test.ts
+PASS frontend src/features/availability/utils/__tests__/displayedMode.test.ts
+PASS frontend src/shared/services/__tests__/api.refresh.test.ts
+PASS frontend src/shared/services/calendar/__tests__/exportOwnership.test.ts
+PASS frontend src/shared/hooks/__tests__/useClock.test.ts
+PASS frontend src/shared/utils/__tests__/conflictMessage.test.ts (6.662 s)
+Test Suites: 59 passed, 59 total
+Tests:       439 passed, 439 total
+Time:        498.855 s
+$ uptime
+ 5:16  up 35 days, 18:36, 1 user, load averages: 2.85 2.95 4.47
+
+Half the frontend: 499 s, against about 87 s (half of run 1) warm. The whole
+frontend so is about 1000 s on a quiet machine; the red run's whole Jest stage
+took 1075.79 s, and with the scanner, browser and invite stages around it
+`npm test` passed the 20 min limit with no test failing.
