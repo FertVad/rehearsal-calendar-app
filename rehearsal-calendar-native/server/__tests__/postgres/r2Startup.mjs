@@ -17,7 +17,7 @@ export async function probeR2Startup({ connectionString, control, allowedPorts }
   const email = 'r2-startup-user@fixture.invalid';
   await control.query(`ALTER TABLE native_users
     ADD COLUMN password_hash TEXT, ADD COLUMN phone TEXT, ADD COLUMN avatar_url TEXT,
-    ADD COLUMN timezone TEXT DEFAULT 'UTC', ADD COLUMN email_notifications BOOLEAN DEFAULT TRUE,
+    ADD COLUMN email_notifications BOOLEAN DEFAULT TRUE,
     ADD COLUMN week_start_day TEXT DEFAULT 'monday', ADD COLUMN onboarding_completed BOOLEAN DEFAULT FALSE,
     ADD COLUMN last_login_at TIMESTAMPTZ`);
   const inserted = await control.query(

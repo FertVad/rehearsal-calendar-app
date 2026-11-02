@@ -4,7 +4,7 @@
 CREATE TABLE native_users (
   id SERIAL PRIMARY KEY, email TEXT UNIQUE NOT NULL, first_name TEXT NOT NULL,
   last_name TEXT, token_version INTEGER NOT NULL DEFAULT 1,
-  notifications_enabled BOOLEAN DEFAULT TRUE, locale TEXT DEFAULT 'en',
+  notifications_enabled BOOLEAN DEFAULT TRUE, locale TEXT DEFAULT 'en', timezone TEXT DEFAULT 'UTC',
   created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE TABLE native_projects (

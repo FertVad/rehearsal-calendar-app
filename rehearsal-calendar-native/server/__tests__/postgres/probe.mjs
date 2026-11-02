@@ -82,14 +82,11 @@ await control.query(operationBudgetMigration);
 // has group 010's actual tables as well; the runtime does not work without them.
 await control.query(await readFile(new URL('../../migrations/010-email-verification.sql', import.meta.url), 'utf8'));
 if (scenario === 'A02') {
-  // The diagnostic subset needs these real columns to reach availability's
-  // preprocessing and to authorize the admin users listing after bcrypt login.
-  await control.query(`ALTER TABLE native_users
-    ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC',
-    ADD COLUMN last_login_at TIMESTAMPTZ`);
+  // The diagnostic subset needs this real column to authorize the admin users
+  // listing after bcrypt login.
+  await control.query('ALTER TABLE native_users ADD COLUMN last_login_at TIMESTAMPTZ');
 }
 if (scenario === 'B03') {
-  await control.query("ALTER TABLE native_users ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC'");
   // Apply only B03's actual additive migration, twice, against this owned
   // fixture. Never import the migration runner, its ledger or its environment.
   const migration = await readFile(new URL('../../migrations/007-member-availability-rate-limit.sql', import.meta.url), 'utf8');
@@ -97,7 +94,6 @@ if (scenario === 'B03') {
   await control.query(migration);
 }
 if (scenario === 'B04') {
-  await control.query("ALTER TABLE native_users ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC'");
   await control.query('ALTER TABLE native_projects ADD COLUMN invite_created_by INTEGER REFERENCES native_users(id)');
   // Only the checked-in B04 additive migration, on the owned synthetic
   // fixture. No migration runner, production schema or ledger is consulted.
