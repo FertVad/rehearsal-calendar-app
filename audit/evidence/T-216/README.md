@@ -38,6 +38,26 @@ retry, no test changed.
 
 ## Red before, green after
 
+The failure itself, under autodev's limit (`budget-runs.txt`): the stages of
+`npm test -- --silent` in their order, a 20 min limit, the stage that crosses
+it killed (`budget-run.mjs`), after a new mtime on the three files T-022
+rewrote (`touch.mjs`), content unchanged.
+
+| | jest.config.js | Jest, 191 files | whole run | result |
+|---|---|---|---|---|
+| before (5) | of 9cf6f2e | 1092.6 s (red run: 1075.79 s) | 1200 s | **stopped by the limit** in "admin errors", code null |
+| after (6) | of HEAD | 261.8 s | 427.1 s | every stage ran |
+
+The limit is the same 1200 s in both; no retry. The shell here may not hold a
+call for 10 min, so each run went over several calls and only the stages'
+own time is counted; Jest ran as six `--shard=i/6` processes. The red run
+was stopped one stage later ("invite"). Test results are the same before and
+after; the only failures are this sandbox's (no `.env` reads): 3 scanner, 1
+lock (fails also run alone) and 8 `runtimeStartup` tests, all of which passed
+in the red run.
+
+The cause, measured on half the frontend:
+
 | | run | files | time |
 |---|---|---|---|
 | before | warm, full frontend (1) | 118 | 174 s |
@@ -57,7 +77,10 @@ this sandbox pass after the change.
 
 ## Files
 
+- `budget-runs.txt`: runs 5 and 6, the 20 min limit reproduced and passed.
+- `budget-run.mjs`: the runner of runs 5 and 6
+  (`node audit/evidence/T-216/budget-run.mjs <label> [--reset]`).
 - `red-before-runs.txt`: runs 1 and 2.
 - `green-after-runs.txt`: runs 3 and 4, type-check.
-- The mtime was set with a 6-line `fs.utimesSync` script
-  (`node /tmp/t216/touch.mjs <files>`), content untouched (`git status` clean).
+- `touch.mjs`: sets the mtime (`fs.utimesSync`), content untouched
+  (`git status` clean); runs 2-4 used the same script from `/tmp/t216`.
