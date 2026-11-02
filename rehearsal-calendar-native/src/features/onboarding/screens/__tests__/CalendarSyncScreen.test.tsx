@@ -142,6 +142,21 @@ it('says "no calendars" in the app\'s language', async () => {
   expect(view.queryByText('No calendars found')).toBeNull();
 });
 
+it('says why it needs the calendar in the app\'s language when refused', async () => {
+  mockLanguage.current = 'ru';
+  const calendar = require('../../../../shared/services/calendar');
+  calendar.checkCalendarPermissions.mockResolvedValueOnce(false);
+  calendar.requestCalendarPermissions.mockResolvedValueOnce(false);
+  const alert = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => undefined);
+  const ru = translations.ru;
+  const view = await openStep(ru.onboarding.calendarSync.grantPermission);
+
+  await act(async () => { fireEvent.press(view.getByText(ru.onboarding.calendarSync.grantPermission)); });
+
+  expect(alert).toHaveBeenCalledWith(ru.onboarding.calendarSync.permissionRequired, ru.calendarSync.permissionDeniedMessage);
+  alert.mockRestore();
+});
+
 it('says it is setting the calendar up in the app\'s language', async () => {
   mockLanguage.current = 'de';
   const view = await openStep(translations.de.onboarding.calendarSync.apple);

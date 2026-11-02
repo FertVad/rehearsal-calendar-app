@@ -101,7 +101,7 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
     if (!granted) {
       Alert.alert(
         t.onboarding.calendarSync.permissionRequired,
-        'Calendar access is required to sync rehearsals'
+        t.calendarSync.permissionDeniedMessage
       );
     }
   };
@@ -118,10 +118,7 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
     const providerCalendars = calendarsOf(provider);
 
     if (providerCalendars.length === 0) {
-      Alert.alert(
-        t.common.error,
-        `No writable ${provider === 'google' ? 'Google' : 'Apple'} calendar found`
-      );
+      Alert.alert(t.common.error, t.calendarSync.noWritableCalendars);
       return;
     }
 
@@ -154,7 +151,7 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
       return true;
     } catch (error: any) {
       logger.error('Failed to set up calendar sync:', error);
-      Alert.alert(t.common.error, error.message || 'Failed to set up calendar sync');
+      Alert.alert(t.common.error, error.message || t.calendarSync.syncError);
       return false;
     } finally {
       setIsSettingUp(false);

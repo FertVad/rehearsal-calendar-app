@@ -38,3 +38,14 @@ it('greets by name in Russian', () => {
   mockLanguage.current = 'ru';
   expect(open().getByText('Добро пожаловать, Nina!')).toBeTruthy();
 });
+
+// "Добро пожаловать, Нина!" is about 402 pt at the title's 32, wider than the
+// 345 an iPhone 16 leaves: the line is made smaller to fit, never wrapped
+// (T-022 review). Flow 60 measures it on screen.
+it('keeps the greeting on one line, made smaller to fit', () => {
+  mockLanguage.current = 'ru';
+  const title = open().getByTestId('onboarding-title');
+  expect(title.props.children).toBe('Добро пожаловать, Nina!');
+  expect(title.props.numberOfLines).toBe(1);
+  expect(title.props.adjustsFontSizeToFit).toBe(true);
+});

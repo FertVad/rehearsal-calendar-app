@@ -70,7 +70,17 @@ export default function OnboardingStep({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>{title}</Text>
+        {/* One line, made smaller to fit: "Добро пожаловать, Нина!" is about
+            402 pt at 32, and the iPhone 16 leaves 345 (T-022 review). */}
+        <Text
+          testID="onboarding-title"
+          style={styles.title}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
+        >
+          {title}
+        </Text>
         {description && <Text style={styles.description}>{description}</Text>}
         <View style={styles.childrenContainer}>{children}</View>
 
