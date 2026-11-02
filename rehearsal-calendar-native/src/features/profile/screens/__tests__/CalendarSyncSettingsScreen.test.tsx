@@ -107,6 +107,15 @@ it('names both when the import fails and the export runs', async () => {
   expect(message).toContain(`${t.calendarSync.exportedRehearsals}: 1`);
 });
 
+// T-024: the screen said nothing of what sync does. One line at the top, with
+// or without calendar access — and only the hours come in, as onboarding says.
+it.each([true, false])('says at the top what sync does (calendar access: %s)', (access) => {
+  mockSync.hasPermission = access;
+  const view = render(<CalendarSyncSettingsScreen navigation={{ goBack: jest.fn() } as any} route={{} as any} />);
+  expect(view.getByTestId('calendar-sync-explanation').props.children).toBe(t.calendarSync.explanation);
+  expect(t.calendarSync.explanation).toMatch(/only the hours/);
+});
+
 it('says when the export could not run', async () => {
   mockSync.synchronize.mockResolvedValue(run(undefined, { status: 'failed', error: 'Request timed out' }));
 

@@ -404,6 +404,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
           <IconButton icon="arrow-back" color={Colors.text.primary} accessibilityLabel={t.common.back} onPress={() => navigation.goBack()} style={styles.backButton} />
           <Text style={styles.title}>{t.calendarSync.title}</Text>
         </View>
+        <Text testID="calendar-sync-explanation" style={styles.explanation}>{t.calendarSync.explanation}</Text>
 
         {/* Permission Status */}
         {!hasPermission && (

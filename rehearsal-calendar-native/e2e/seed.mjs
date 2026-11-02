@@ -165,6 +165,10 @@ export const PEOPLE = {
   // New here too, and her account speaks Russian: onboarding in Russian, her
   // name in Cyrillic, the longest greeting of the four languages (60).
   nina: { email: 'nina@e2e.test', firstName: 'Нина', lastName: 'Новикова', onboarded: false, locale: 'ru' },
+  // Looks over his profile: the last button, the language sheet's bottom, a
+  // zone found by search and chosen (61). An account of his own, since the
+  // zone he picks stays.
+  puck: { email: 'puck@e2e.test', firstName: 'Robin', lastName: 'Goodfellow', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */

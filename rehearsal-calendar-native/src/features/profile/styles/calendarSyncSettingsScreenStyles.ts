@@ -27,6 +27,12 @@ export const styles = StyleSheet.create({
     color: Colors.text.primary,
     flex: 1,
   },
+  explanation: {
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xl,
+    marginHorizontal: Spacing.sm,
+  },
   section: {
     marginBottom: Spacing.xl,
   },

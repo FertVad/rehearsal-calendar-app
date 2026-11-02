@@ -1,5 +1,9 @@
-import React, { useState, useSyncExternalStore } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, FlatList, Alert, Linking } from 'react-native';
+import React, { useMemo, useState, useSyncExternalStore } from 'react';
+import {
+  View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch, FlatList, Alert, Linking,
+  TextInput, KeyboardAvoidingView, Platform,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -12,6 +16,7 @@ import type { Language } from '../../../i18n/translations';
 import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/components';
 import { AppModal } from '../../../shared/components/AppModal';
 import { IconButton } from '../../../shared/components/IconButton';
+import { DeleteButton } from '../../../shared/components/buttons/DeleteButton';
 import { BugReportSheet } from '../components/BugReportSheet';
 import { ProfileStackParamList } from '../../../navigation';
 import { profileScreenStyles as styles } from '../styles';
@@ -27,7 +32,7 @@ import { supportPageUrl } from '../../../shared/services/api';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
-import { getTimezonesWithDevice, getTimezoneLabel } from '../../../shared/constants/timezones';
+import { getTimezonesWithDevice, getTimezoneLabel, searchTimezones } from '../../../shared/constants/timezones';
 
 // Week start options
 const WEEK_START_OPTIONS = [
@@ -54,6 +59,21 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [bugReportVisible, setBugReportVisible] = useState(false);
+  const [timezoneQuery, setTimezoneQuery] = useState('');
+  const timezones = useMemo(
+    () => (timezoneModalVisible ? searchTimezones(getTimezonesWithDevice(), timezoneQuery) : []),
+    [timezoneModalVisible, timezoneQuery],
+  );
+  // The sheets end above the home indicator, as the bottom bar does (T-009):
+  // the last language and the last zone ran into it (T-024).
+  const insets = useSafeAreaInsets();
+  const sheetStyle = [styles.modalContent, { paddingBottom: insets.bottom }];
+
+  const closeTimezones = () => {
+    setTimezoneModalVisible(false);
+    setTimezoneQuery('');
+  };
+
   const handleLogout = async () => {
     hapticMedium();
     await logout();
@@ -145,7 +165,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     hapticLight();
     try {
       await updateUser({ timezone });
-      setTimezoneModalVisible(false);
+      closeTimezones();
       hapticSuccess();
     } catch (err: any) {
       Alert.alert(t.profile.errorTitle, err.message || t.profile.timezoneError);
@@ -193,7 +213,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>{t.profile.title}</Text>
@@ -328,7 +348,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </TouchableOpacity>
 
           {/* Timezone */}
-          <TouchableOpacity style={styles.settingItem} onPress={() => { hapticLight(); setTimezoneModalVisible(true); }}>
+          <TouchableOpacity testID="profile-timezone" style={styles.settingItem} onPress={() => { hapticLight(); setTimezoneModalVisible(true); }}>
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
                 <Ionicons name="globe" size={20} color={Colors.accent.blue} />
@@ -422,22 +442,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => {
-              hapticLight();
-              setDeleteAccountModalVisible(true);
-            }}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
-                <Ionicons name="trash" size={20} color={Colors.accent.red} />
-              </View>
-              <Text style={[styles.settingLabel, { color: Colors.accent.red }]}>{t.profile.deleteAccount}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.accent.red} />
-          </TouchableOpacity>
         </View>
 
             {/* Logout Button */}
@@ -448,6 +452,17 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               variant="glass"
               style={styles.logoutButton}
             />
+
+            {/* Last on the screen, as a project's is on its page (T-024): it
+                was a row of About, 8 pt under Help. */}
+            <DeleteButton
+              title={t.profile.deleteAccount}
+              testID="profile-delete-account"
+              onPress={() => {
+                hapticLight();
+                setDeleteAccountModalVisible(true);
+              }}
+            />
           </>
         )}
       </ScrollView>
@@ -456,16 +471,35 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       <AppModal
         visible={timezoneModalVisible}
         animationType="slide"
-        onRequestClose={() => setTimezoneModalVisible(false)}
+        onRequestClose={closeTimezones}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        {/* The sheet sits on the keyboard while the search types. */}
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={sheetStyle}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.timezoneModalTitle}</Text>
-              <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setTimezoneModalVisible(false); }} />
+              <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); closeTimezones(); }} />
+            </View>
+            <View style={styles.search}>
+              <Ionicons name="search" size={16} color={Colors.text.tertiary} />
+              <TextInput
+                testID="timezone-search"
+                style={styles.searchInput}
+                value={timezoneQuery}
+                onChangeText={setTimezoneQuery}
+                placeholder={t.profile.timezoneSearch}
+                placeholderTextColor={Colors.text.tertiary}
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+              />
             </View>
             <FlatList
-              data={getTimezonesWithDevice()}
+              data={timezones}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={<Text style={styles.searchEmpty}>{t.profile.timezoneNotFound}</Text>}
               keyExtractor={(item) => item.value}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -491,7 +525,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               style={styles.timezoneList}
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </AppModal>
 
       {/* Language Selection Modal */}
@@ -501,7 +535,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         onRequestClose={() => setLanguageModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={sheetStyle}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.language}</Text>
               <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setLanguageModalVisible(false); }} />
@@ -545,7 +579,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         onRequestClose={() => setWeekStartModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={sheetStyle}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t.profile.weekStart}</Text>
               <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => { hapticLight(); setWeekStartModalVisible(false); }} />

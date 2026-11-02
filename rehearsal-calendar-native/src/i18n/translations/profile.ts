@@ -6,6 +6,9 @@ export interface ProfileTranslations {
   timezone: string;
   timezoneModalTitle: string;
   timezoneNotSelected: string;
+  /** The search over the zones, by city or zone name. */
+  timezoneSearch: string;
+  timezoneNotFound: string;
   weekStart: string;
   weekStartMonday: string;
   weekStartSunday: string;
@@ -80,6 +83,8 @@ export const ru = {
     timezone: 'Часовой пояс',
     timezoneModalTitle: 'Выберите часовой пояс',
     timezoneNotSelected: 'Не выбран',
+    timezoneSearch: 'Город или часовой пояс',
+    timezoneNotFound: 'Ничего не найдено',
     weekStart: 'Начало недели',
     weekStartMonday: 'Понедельник',
     weekStartSunday: 'Воскресенье',
@@ -157,6 +162,8 @@ export const en = {
     timezone: 'Timezone',
     timezoneModalTitle: 'Select Timezone',
     timezoneNotSelected: 'Not selected',
+    timezoneSearch: 'City or time zone',
+    timezoneNotFound: 'Nothing found',
     weekStart: 'Week starts on',
     weekStartMonday: 'Monday',
     weekStartSunday: 'Sunday',
@@ -234,6 +241,8 @@ export const es = {
     timezone: 'Zona horaria',
     timezoneModalTitle: 'Seleccionar zona horaria',
     timezoneNotSelected: 'No seleccionada',
+    timezoneSearch: 'Ciudad o zona horaria',
+    timezoneNotFound: 'No se encontró nada',
     weekStart: 'Inicio de la semana',
     weekStartMonday: 'Lunes',
     weekStartSunday: 'Domingo',
@@ -311,6 +320,8 @@ export const de = {
     timezone: 'Zeitzone',
     timezoneModalTitle: 'Zeitzone auswählen',
     timezoneNotSelected: 'Nicht ausgewählt',
+    timezoneSearch: 'Stadt oder Zeitzone',
+    timezoneNotFound: 'Nichts gefunden',
     weekStart: 'Wochenbeginn',
     weekStartMonday: 'Montag',
     weekStartSunday: 'Sonntag',

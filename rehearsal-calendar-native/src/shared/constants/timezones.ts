@@ -125,6 +125,19 @@ export function getTimezonesWithDevice(at: Date = new Date()): TimezoneOption[] 
 }
 
 /**
+ * The options whose city, in either language, or zone name has `query` in it,
+ * in any case: "hon" finds Honolulu, "pacific" the zones of the Pacific, and
+ * "new york" and "new_york" find the same. An empty query is every option.
+ */
+export function searchTimezones(options: TimezoneOption[], query: string): TimezoneOption[] {
+  const q = query.trim().toLocaleLowerCase().replace(/_/g, ' ');
+  if (!q) return options;
+  return options.filter((option) =>
+    [option.labelEn, option.labelRu, option.value.replace(/_/g, ' ')]
+      .some((text) => text.toLocaleLowerCase().includes(q)));
+}
+
+/**
  * Resolve display label for an IANA timezone identifier, with its offset at
  * `at`. Only Russian has fully curated translations; all other languages share
  * the English label set. Falls back to a computed "City (UTC±N)" when the

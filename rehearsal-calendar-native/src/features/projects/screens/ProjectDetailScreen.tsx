@@ -20,6 +20,7 @@ import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services
 import { projectDetailScreenStyles as styles } from '../styles';
 import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
+import { DeleteButton } from '../../../shared/components/buttons/DeleteButton';
 import { parseDateString } from '../../../shared/utils/time';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { useTimezone, useToday } from '../../../shared/hooks/useClock';
@@ -607,15 +608,11 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
         {/* Delete Project Button (owner only) */}
         {isOwner && (
           <View style={styles.section}>
-            <TouchableOpacity
-              style={styles.deleteButton}
+            <DeleteButton
+              title={t.projects.deleteProject}
               testID="project-delete"
               onPress={handleDeleteProject}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="trash-outline" size={20} color={Colors.accent.red} />
-              <Text style={styles.deleteButtonText}>{t.projects.deleteProject}</Text>
-            </TouchableOpacity>
+            />
           </View>
         )}
       </ScrollView>

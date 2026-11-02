@@ -147,6 +147,29 @@ export const styles = StyleSheet.create({
   timezoneList: {
     paddingBottom: Spacing.xxl,
   },
+  // The participant picker's search field, over the zones.
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.lg,
+    marginVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    height: TouchTarget,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.bg.tertiary,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 17,
+    color: Colors.text.primary,
+  },
+  searchEmpty: {
+    fontSize: FontSize.base,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    padding: Spacing.lg,
+  },
   weekStartOptions: {
     paddingBottom: Spacing.xl,
   },

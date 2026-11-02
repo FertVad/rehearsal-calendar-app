@@ -1,0 +1,125 @@
+# The profile, as the owner decided on 02.11 after the audit of 29.10 (T-024).
+#
+# "Delete Account" was a red row of About, 8 pt under Help, with Sign Out
+# below it. It is the last thing on the screen now, after Sign Out, in the
+# look of a project's delete. Not tapped: the deletion is the same as before.
+#
+# The language sheet ran its last row, Deutsch, into the home indicator: the
+# sheet sat on the screen's bottom with 20 pt under its rows, and the
+# indicator's zone on an iPhone 16 is the bottom 34 pt, from 818 of 852 pt.
+# The measure is a tap on the zone's top edge, 96% down (818 pt): it chose
+# Deutsch, and now meets the sheet's padding, which ends its rows above the
+# zone as the bottom bar does (T-009).
+#
+# The timezone list has a search: by city, by zone name, "Nothing found" for
+# neither. The simulator is in Honolulu (docs/e2e.md), the phone's own zone
+# the picker offers; it is found, and chosen with the keyboard still up.
+appId: ${APP_ID}
+name: The profile's last button, its sheets' bottom and the zone search
+tags:
+  - profile
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${PUCK_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Calendar, tab.*"
+    timeout: 30000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+
+# Delete Account, last: below Sign Out, which is below the bug report. Its
+# label starts with the trash icon's glyph, ", Delete Account".
+- scrollUntilVisible:
+    element: ".*Delete Account.*"
+    direction: DOWN
+- scroll
+- assertVisible:
+    id: profile-logout
+    below:
+      id: profile-report-bug
+- assertVisible:
+    text: ".*Delete Account.*"
+    below:
+      id: profile-logout
+- takeScreenshot: 61-delete-account-last
+
+# The language sheet: nothing of it under the home indicator.
+- scrollUntilVisible:
+    element:
+      id: profile-language
+    direction: UP
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 61-language-sheet-bottom
+- tapOn:
+    point: "50%,96%"
+- waitForAnimationToEnd
+# Still open: the tap met no row. And still English once it is closed.
+- assertVisible:
+    id: language-de
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-en
+      GONE: "Deutsch"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: profile-language
+    text: ".*English.*"
+
+# The zone search.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-timezone
+      SEE: "Select Timezone"
+      WAIT_MS: "10000"
+- tapOn:
+    id: timezone-search
+- inputText: "Honolulu"
+- extendedWaitUntil:
+    visible: "Honolulu \\(UTC-10\\)"
+    timeout: 5000
+- assertNotVisible: "Tokyo \\(UTC\\+9\\)"
+- takeScreenshot: 61-search-by-city
+# By the zone's name: Pacific/Honolulu and Pacific/Auckland.
+- eraseText: 20
+- inputText: "Pacific"
+- extendedWaitUntil:
+    visible: "Auckland \\(UTC\\+1[23]\\)"
+    timeout: 5000
+- assertVisible: "Honolulu \\(UTC-10\\)"
+- assertNotVisible: "Tokyo \\(UTC\\+9\\)"
+- eraseText: 20
+- inputText: "Atlantis"
+- extendedWaitUntil:
+    visible: "Nothing found"
+    timeout: 5000
+- takeScreenshot: 61-search-nothing-found
+- eraseText: 20
+- inputText: "Honolulu"
+- extendedWaitUntil:
+    visible: "Honolulu \\(UTC-10\\)"
+    timeout: 5000
+# Chosen with the keyboard up: the sheet closes on it, the profile names it.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Honolulu \\(UTC-10\\)"
+      GONE: "Select Timezone"
+      WAIT_MS: "10000"
+- assertVisible: ".*Honolulu \\(UTC-10\\).*"
