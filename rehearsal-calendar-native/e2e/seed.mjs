@@ -413,6 +413,16 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
       [castle.id, member]);
   }
+  // And his own short one, him alone in it: left open when "New member" of
+  // the castle is tapped (61, review of T-023). The older, so the castle
+  // stays the project his app opens on.
+  const { rows: [dunsinane] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Dunsinane', 'The hill', $1, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day') RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+    [dunsinane.id, ids.duncan]);
   // Its rehearsal, two days on at 19:00, that he is told was changed and was
   // answered (62). Put in as the project was: no sign-in, and nobody told.
   await client.query(

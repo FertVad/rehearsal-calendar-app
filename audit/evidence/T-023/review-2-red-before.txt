@@ -1,0 +1,50 @@
+T-023, review 2: e2e for "New member" of B tapped with project A left open.
+
+Flow e2e/flows/61-inbox-new-member-opens-members.yaml now opens Dunsinane
+(Duncan's own short project, added to e2e/seed.mjs, older than the castle so
+the castle stays his selected project), goes Calendar -> Notifications, taps
+"Malcolm Prince joined Forres Castle", and waits for the castle's members
+(Ariel Spirit, not in Dunsinane) with the castle's description "The great
+hall" scrolled out of sight.
+
+The old check notVisible "Upcoming Rehearsals" never matched anything (the
+header is read together with its count), so it could not fail; it is
+replaced by "The great hall".
+
+RED - ProjectDetailScreen.tsx before the key={projectId} fix
+(git restore --source=c3c138c~1 -- src/features/projects/screens/ProjectDetailScreen.tsx,
+the same file as at 9f42ba7):
+
+$ npm run e2e -- e2e/flows/61-inbox-new-member-opens-members.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+Waiting for flows to complete...
+[Failed] Inbox, new member opens the members (1m 46s) (Assertion is false: "The great hall" is not visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+(Screenshot of the old code: Forres Castle at its top - title, "The great
+hall", invite, "Upcoming Rehearsals", members below - not scrolled.)
+
+Then git restore --source=HEAD -- src/features/projects/screens/ProjectDetailScreen.tsx
+
+GREEN - HEAD (c3c138c's fix):
+
+$ npm run e2e -- e2e/flows/61-inbox-new-member-opens-members.yaml
+[e2e] running the flows
+Waiting for flows to complete...
+[Passed] Inbox, new member opens the members (1m 33s)
+1/1 Flow Passed in 1m 34s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Flow 62 (also Duncan's, same seed) still green:
+
+$ npm run e2e -- e2e/flows/62-inbox-says-when.yaml
+[Passed] Inbox says when (1m 31s)
+1/1 Flow Passed in 1m 31s
