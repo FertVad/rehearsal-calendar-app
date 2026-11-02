@@ -1,0 +1,49 @@
+T-023, server. Fix files put back as at e67fd0d (the base):
+  git restore --source=e67fd0d -- services/notifications/pushNotificationService.js i18n/pushNotifications.js routes/native/inviteRedemption.js
+then, from rehearsal-calendar-native/server:
+  NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/integration/rehearsalNoticeText __tests__/routes/membershipNotifications --silent
+
+FAIL __tests__/integration/rehearsalNoticeText.integration.test.js
+  ● Each reader is told when, on their own clock and in their own language › a new rehearsal
+
+    Expected: "Hamlet: Full dress назначена завтра в 22:00"
+    Received: "Hamlet: Full dress назначена"
+
+  ● Each reader is told when, on their own clock and in their own language › a changed rehearsal, with what changed
+
+    Expected: "Hamlet: Full dress, завтра в 22:00 — дата/время"
+    Received: "Hamlet: Full dress — дата/время"
+
+  ● Each reader is told when, on their own clock and in their own language › a response names the rehearsal and when it is
+
+    Expected: "Ophelia Bright откликнулся на «Full dress» (завтра в 22:00) в проекте Hamlet"
+    Received: "Ophelia Bright откликнулся на репетицию в проекте Hamlet"
+
+  ● Each reader is told when, on their own clock and in their own language › further out, the date
+
+    Expected pattern: /^Hamlet: Full dress назначена вт, 6 окт\.? в 22:00$/
+    Received string:  "Hamlet: Full dress назначена"
+
+  ● "New member" › carries its project, so a tap can open it
+
+    expect(Number(row.data.projectId)).toBe(Number(data.projectId))
+    Expected: 1
+    Received: NaN
+
+FAIL __tests__/routes/membershipNotifications.test.js
+  ● Somebody joins a project › names the project by its id, so a tap on it can open it (T-023)
+
+    expect(Number(memberJoined.mock.calls[0][3])).toBe(Number(testData.projectId))
+    Expected: 1
+    Received: NaN
+
+Test Suites: 2 failed, 2 total
+Tests:       6 failed, 8 passed, 14 total
+
+After git restore --source=HEAD (daa35f2) of the same files:
+
+PASS __tests__/integration/rehearsalNoticeText.integration.test.js
+PASS __tests__/routes/membershipNotifications.test.js
+
+Test Suites: 2 passed, 2 total
+Tests:       14 passed, 14 total

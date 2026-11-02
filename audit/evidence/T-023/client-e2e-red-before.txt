@@ -1,0 +1,53 @@
+T-023, the app and flow 61. Fix files put back as at e67fd0d (the base), the
+tests, the flow, the seed, notify.js and the mailbox kept as at cc88141:
+
+  git restore --source=e67fd0d -- server/services/notifications/pushNotificationService.js \
+    server/i18n/pushNotifications.js server/routes/native/inviteRedemption.js \
+    src/shared/hooks/useNotifications.ts src/features/notifications/screens/NotificationsScreen.tsx \
+    src/features/projects/screens/ProjectDetailScreen.tsx src/navigation/types.ts src/navigation/index.tsx
+
+== e2e, red before ==
+npm run e2e -- e2e/flows/61-inbox-new-member-opens-members.yaml
+
+[Failed] Inbox, new member opens the members (2m 7s) (Assertion is false: "Members" is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-11-02T17:14:30.347Z  tapped ".*Malcolm Prince joined Forres Castle.*" again: no "Members" after the first tap
+
+The notification came without the project's id, and the tap (twice) opened nothing.
+
+== Jest, red before ==
+npx jest --selectProjects frontend --testPathPatterns 'ProjectDetailScreen|backToTabs' --silent
+
+FAIL frontend src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx
+  ● opened on its members (T-023) › scrolls to the members, and asks it only once
+  ● opened on its members (T-023) › no further than the page goes
+  ● opened on its members (T-023) › opened without a section, stays at the top   (no project-members section to lay out)
+FAIL frontend src/navigation/__tests__/backToTabs.test.tsx
+  ● "New member" opens its project on the members (T-023) › from a tapped push, over a modal   (the modal stayed: nothing opened)
+  ● "New member" opens its project on the members (T-023) › from the inbox   (opened without the section)
+Tests:       5 failed, 7 passed, 12 total
+
+== After git restore --source=HEAD (cc88141) of the same files ==
+npx jest --selectProjects frontend --testPathPatterns 'ProjectDetailScreen|backToTabs|Notifications|iconButtonLabels|useNotifications' --silent
+Test Suites: 7 passed, 7 total
+Tests:       35 passed, 35 total
+
+npm run e2e -- e2e/flows/05-inbox.yaml e2e/flows/61-inbox-new-member-opens-members.yaml
+[Passed] Inbox (1m 38s)
+[Passed] Inbox, new member opens the members (1m 6s)
+2/2 Flows Passed; taps taken again: 0
+
+npm run e2e -- e2e/flows/33-inbox-older-pages.yaml   (runs the changed notify.js)
+[Passed] Inbox older pages (4m 34s); taps taken again: 0
+
+Screenshot of the green run: the project page scrolled to "Members 13",
+"Upcoming Rehearsals" above it out of sight (61-new-member-on-members.png in
+e2e/out/artifacts, not kept in the repository).
+
+npm run type-check: clean.
+
+Server Jest (npm run test:unit): 1051 passed, 8 failed, all 8 in
+__tests__/startup/runtimeStartup.test.js ("copied entrypoint must provide an
+owned HTTP listener"); the same 8 fail with the server files put back to
+e67fd0d — the sandbox, not this change.
