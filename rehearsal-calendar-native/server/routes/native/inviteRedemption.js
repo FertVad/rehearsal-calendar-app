@@ -108,7 +108,7 @@ const joinHandlers = [limitInviteIp, requireAuth, limitInviteAccount, validateIn
           [userId]
         );
         const joinerName = fullName(joiner);
-        await notifyMemberJoined(project.name, joinerName, runners.map((r) => r.user_id));
+        await notifyMemberJoined(project.name, joinerName, runners.map((r) => r.user_id), project.id);
       }
     } catch (notifErr) {
       logger.error('[Invites] Could not announce the new member:', notifErr);

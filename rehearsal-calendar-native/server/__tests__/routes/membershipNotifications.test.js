@@ -137,6 +137,12 @@ describe('Somebody joins a project', () => {
 
     expect(memberJoined.mock.calls[0][1]).toBe('Нина Петрова');
   });
+
+  it('names the project by its id, so a tap on it can open it (T-023)', async () => {
+    await joinByCode();
+
+    expect(Number(memberJoined.mock.calls[0][3])).toBe(Number(testData.projectId));
+  });
 });
 
 describe('Somebody is made an administrator', () => {

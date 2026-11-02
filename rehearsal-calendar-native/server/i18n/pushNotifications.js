@@ -3,17 +3,19 @@
  * Supported locales: 'ru', 'en', 'es', 'de'. Falls back to 'en' on unknown locale.
  */
 
+// A new or changed rehearsal and a response say when it is, as the reminders
+// do: `when` is the rehearsal's start in the reader's zone (reminderText.js).
 const translations = {
   ru: {
     newRehearsal: {
       title: 'Новая репетиция',
-      body: ({ projectName, rehearsalTitle }) =>
-        `${projectName}: ${rehearsalTitle || 'Репетиция'} назначена`,
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${rehearsalTitle || 'Репетиция'} назначена ${when}`,
     },
     rehearsalUpdated: {
       title: 'Изменена репетиция',
-      body: ({ projectName, rehearsalTitle, changes }) =>
-        `${projectName}: ${rehearsalTitle || 'Репетиция'} — ${changes}`,
+      body: ({ projectName, rehearsalTitle, when, changes }) =>
+        `${projectName}: ${rehearsalTitle || 'Репетиция'}, ${when} — ${changes}`,
     },
     rehearsalDeleted: {
       title: 'Отменена репетиция',
@@ -22,8 +24,8 @@ const translations = {
     },
     memberResponse: {
       title: 'Новый отклик',
-      body: ({ responderName, projectName }) =>
-        `${responderName} откликнулся на репетицию в проекте ${projectName}`,
+      body: ({ responderName, projectName, rehearsalTitle, when }) =>
+        `${responderName} откликнулся на «${rehearsalTitle || 'Репетиция'}» (${when}) в проекте ${projectName}`,
     },
     projectInvite: {
       title: 'Приглашение в проект',
@@ -83,13 +85,13 @@ const translations = {
   en: {
     newRehearsal: {
       title: 'New rehearsal',
-      body: ({ projectName, rehearsalTitle }) =>
-        `${projectName}: ${rehearsalTitle || 'Rehearsal'} scheduled`,
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${rehearsalTitle || 'Rehearsal'} scheduled ${when}`,
     },
     rehearsalUpdated: {
       title: 'Rehearsal updated',
-      body: ({ projectName, rehearsalTitle, changes }) =>
-        `${projectName}: ${rehearsalTitle || 'Rehearsal'} — ${changes}`,
+      body: ({ projectName, rehearsalTitle, when, changes }) =>
+        `${projectName}: ${rehearsalTitle || 'Rehearsal'}, ${when} — ${changes}`,
     },
     rehearsalDeleted: {
       title: 'Rehearsal cancelled',
@@ -98,8 +100,8 @@ const translations = {
     },
     memberResponse: {
       title: 'New response',
-      body: ({ responderName, projectName }) =>
-        `${responderName} responded to a rehearsal in ${projectName}`,
+      body: ({ responderName, projectName, rehearsalTitle, when }) =>
+        `${responderName} responded to “${rehearsalTitle || 'Rehearsal'}” (${when}) in ${projectName}`,
     },
     projectInvite: {
       title: 'Project invitation',
@@ -159,13 +161,13 @@ const translations = {
   es: {
     newRehearsal: {
       title: 'Nuevo ensayo',
-      body: ({ projectName, rehearsalTitle }) =>
-        `${projectName}: ${rehearsalTitle || 'Ensayo'} programado`,
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${rehearsalTitle || 'Ensayo'} programado ${when}`,
     },
     rehearsalUpdated: {
       title: 'Ensayo actualizado',
-      body: ({ projectName, rehearsalTitle, changes }) =>
-        `${projectName}: ${rehearsalTitle || 'Ensayo'} — ${changes}`,
+      body: ({ projectName, rehearsalTitle, when, changes }) =>
+        `${projectName}: ${rehearsalTitle || 'Ensayo'}, ${when} — ${changes}`,
     },
     rehearsalDeleted: {
       title: 'Ensayo cancelado',
@@ -174,8 +176,8 @@ const translations = {
     },
     memberResponse: {
       title: 'Nueva respuesta',
-      body: ({ responderName, projectName }) =>
-        `${responderName} ha respondido a un ensayo en ${projectName}`,
+      body: ({ responderName, projectName, rehearsalTitle, when }) =>
+        `${responderName} ha respondido a «${rehearsalTitle || 'Ensayo'}» (${when}) en ${projectName}`,
     },
     projectInvite: {
       title: 'Invitación al proyecto',
@@ -235,13 +237,13 @@ const translations = {
   de: {
     newRehearsal: {
       title: 'Neue Probe',
-      body: ({ projectName, rehearsalTitle }) =>
-        `${projectName}: ${rehearsalTitle || 'Probe'} angesetzt`,
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${rehearsalTitle || 'Probe'} angesetzt ${when}`,
     },
     rehearsalUpdated: {
       title: 'Probe geändert',
-      body: ({ projectName, rehearsalTitle, changes }) =>
-        `${projectName}: ${rehearsalTitle || 'Probe'} — ${changes}`,
+      body: ({ projectName, rehearsalTitle, when, changes }) =>
+        `${projectName}: ${rehearsalTitle || 'Probe'}, ${when} — ${changes}`,
     },
     rehearsalDeleted: {
       title: 'Probe abgesagt',
@@ -250,8 +252,8 @@ const translations = {
     },
     memberResponse: {
       title: 'Neue Antwort',
-      body: ({ responderName, projectName }) =>
-        `${responderName} hat auf eine Probe in ${projectName} reagiert`,
+      body: ({ responderName, projectName, rehearsalTitle, when }) =>
+        `${responderName} hat auf „${rehearsalTitle || 'Probe'}“ (${when}) in ${projectName} reagiert`,
     },
     projectInvite: {
       title: 'Projekteinladung',
