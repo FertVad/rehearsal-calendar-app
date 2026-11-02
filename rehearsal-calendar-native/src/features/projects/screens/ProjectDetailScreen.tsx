@@ -131,7 +131,18 @@ export function RehearsalRow({ rehearsal, onPress, past = false }: {
   );
 }
 
-export default function ProjectDetailScreen({ route, navigation }: ProjectDetailScreenProps) {
+/**
+ * Everything the page holds — the project, its lists, where its members are
+ * laid out — is one project's. The navigator gives this screen another
+ * project's id when one is opened over it ("New member" of B with A open):
+ * then it starts over as B's, rather than show A's page meanwhile and scroll
+ * to where A's members were (T-023, review).
+ */
+export default function ProjectDetailScreen(props: ProjectDetailScreenProps) {
+  return <ProjectDetail key={props.route.params.projectId} {...props} />;
+}
+
+function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
   const { projectId, section } = route.params;
   const { t } = useI18n();
   const { refreshProjects } = useProjects();

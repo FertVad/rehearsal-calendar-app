@@ -130,4 +130,34 @@ describe('opened on its members (T-023)', () => {
 
     expect(scrollTo).not.toHaveBeenCalled();
   });
+
+  // Project A left open and "New member" of B tapped: the navigator gives the
+  // same screen B's id. A's page and its members' place are not B's — it
+  // scrolled to where A's members were, before B had come, and then not again.
+  it('opened from another project, scrolls to its own members once it has come', async () => {
+    const { screen, navigation } = await open({});
+    layOut(screen, { view: 700, page: 2000, members: 520 });
+
+    let answerB: (value: unknown) => void = () => {};
+    (projectsAPI.getProject as jest.Mock).mockReturnValueOnce(new Promise((resolve) => { answerB = resolve; }));
+    screen.rerender(
+      <ProjectDetailScreen
+        route={{ key: 'ProjectDetail', name: 'ProjectDetail', params: { projectId: 'p2', section: 'members' } } as any}
+        navigation={navigation as any}
+      />
+    );
+    await settle();
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(navigation.setParams).not.toHaveBeenCalled();
+
+    answerB({ data: { project: { id: 'p2', name: 'Macbeth', description: '', is_admin: false, is_owner: false, created_at: '2030-01-01' } } });
+    await settle();
+    await settle();
+    expect(screen.getByText('Macbeth')).toBeTruthy();
+    layOut(screen, { view: 700, page: 2400, members: 900 });
+
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(scrollTo).toHaveBeenCalledWith({ y: 900, animated: true });
+    expect(navigation.setParams).toHaveBeenCalledWith({ section: undefined });
+  });
 });
