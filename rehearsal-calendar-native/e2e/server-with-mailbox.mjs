@@ -56,6 +56,19 @@
  *                                                  "New member" about that
  *                                                  project, sent as the join
  *                                                  sends it (flow 61)
+ *   GET /notify?to=<address>&type=rehearsal_updated&rehearsal=<title>&change=<key>
+ *   GET /notify?to=<address>&type=member_response&rehearsal=<title>&member=<who>
+ *                                                  that rehearsal changed, or
+ *                                                  answered, sent as an edit
+ *                                                  and a "yes" send it (flow 62)
+ *
+ * It measures an icon on a screenshot a flow took, which Maestro cannot: a
+ * button that is only an icon is one element, the size of its target (ink.mjs):
+ *
+ *   GET /ink?shot=<name>&colour=<#rrggbb>&left=&right=&top=&bottom=
+ *                                    { box: { width, height } } in points, of
+ *                                    that colour within those fractions of the
+ *                                    newest <name>.png in e2e/out/artifacts
  *
  * It reads back what the server stored from an account's bug reports, to show
  * a report sent from the app arrived (flow 47):
@@ -79,10 +92,12 @@ import { fileURLToPath } from 'node:url';
 import { capturedEmails } from '../server/services/email/transport.js';
 import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
-import { notifyMemberJoined } from '../server/services/notifications/pushNotificationService.js';
+import { notifyMemberJoined, notifyMemberResponse, notifyRehearsalUpdated } from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
+import { inkBox } from './ink.mjs';
 
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
+const ARTIFACTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'artifacts');
 const TAPS_AGAIN = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'taps-again.log');
 
 assert.equal(process.env.EMAIL_TRANSPORT, 'capture-for-tests', 'The e2e server keeps its mail in memory, never sends it');
@@ -236,6 +251,39 @@ http.createServer((request, response) => {
       return answer(200, { recorded: 1 });
     })().catch((error) => answer(500, { error: String(error) }));
     return;
+  }
+  const about = url.searchParams.get('type');
+  if (request.method === 'GET' && url.pathname === '/notify' && (about === 'rehearsal_updated' || about === 'member_response')) {
+    const to = (url.searchParams.get('to') || '').trim().toLowerCase();
+    const title = url.searchParams.get('rehearsal') || '';
+    (async () => {
+      const user = await db.get('SELECT id FROM native_users WHERE email = $1', [to]);
+      if (!user) return answer(404, { error: `no account ${to}` });
+      const rehearsal = await db.get('SELECT * FROM native_rehearsals WHERE title = $1', [title]);
+      if (!rehearsal) return answer(404, { error: `no rehearsal ${title}` });
+      const project = await db.get('SELECT name FROM native_projects WHERE id = $1', [rehearsal.project_id]);
+      // As an edit and a "yes" tell them (routes/native/rehearsals.js), the
+      // server's own words, on the reader's clock.
+      if (about === 'rehearsal_updated') {
+        await notifyRehearsalUpdated(rehearsal, project.name, [{ user_id: user.id }], [url.searchParams.get('change') || 'location']);
+      } else {
+        await notifyMemberResponse(rehearsal, project.name, url.searchParams.get('member') || 'Somebody', [user.id]);
+      }
+      console.log(`[e2e] told ${to} of ${about} on ${title}`);
+      return answer(200, { recorded: 1 });
+    })().catch((error) => answer(500, { error: String(error) }));
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/ink') {
+    // The newest screenshot of that name the flows took (e2e/out/artifacts).
+    const name = path.basename(url.searchParams.get('shot') || '') + '.png';
+    const shots = fs.readdirSync(ARTIFACTS, { recursive: true })
+      .filter((file) => path.basename(file) === name)
+      .map((file) => path.join(ARTIFACTS, file))
+      .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+    if (!shots.length) return answer(404, { error: `no screenshot ${name}` });
+    const region = Object.fromEntries(['left', 'right', 'top', 'bottom'].map((side) => [side, Number(url.searchParams.get(side))]));
+    return answer(200, { box: inkBox(shots[0], { colour: url.searchParams.get('colour') || '', region }) });
   }
   if (request.method === 'GET' && url.pathname === '/notify') {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();

@@ -1,0 +1,70 @@
+# A changed rehearsal and a response say in the inbox which one and when it is
+# (T-023): "Forres Castle: Banquet — location" and "responded to a rehearsal in
+# Forres Castle" made the reader open each to find out. Sent as an edit and a
+# "yes" send them, by the server's own notifyRehearsalUpdated and
+# notifyMemberResponse. The Banquet is two days on at 19:00 on his clock (the
+# seed); by the time this runs that may be tomorrow.
+#
+# And the inbox's "Mark all read" and "Clear all" are drawn 24 pt, not 22, in
+# the same 44-point targets (flow 49 measures those). Maestro sees only the
+# target, so the glyphs are measured on the screenshot: at 22 the trash was
+# 16 x 19 pt and the ticks 19 x 12, at 24 they are a point and more larger.
+appId: ${APP_ID}
+name: Inbox says when
+tags:
+  - notifications
+---
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${DUNCAN_EMAIL}
+      TYPE: rehearsal_updated
+      REHEARSAL: Banquet
+      CHANGE: location
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${DUNCAN_EMAIL}
+      TYPE: member_response
+      REHEARSAL: Banquet
+      MEMBER: Malcolm Prince
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DUNCAN_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Notifications"
+      SEE: "Mark all read"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible: ".*Malcolm Prince responded to “Banquet” \\((tomorrow|on .*) at 7:00.PM\\) in Forres Castle.*"
+    timeout: 15000
+- assertVisible: ".*Forres Castle: Banquet, (tomorrow|on .*) at 7:00.PM — location.*"
+- takeScreenshot: 62-inbox-says-when
+# The two icons, in the header's right-hand part, above the first card.
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 62-inbox-says-when
+      COLOUR: "#ef4444"
+      LEFT: "0.6"
+      RIGHT: "1"
+      TOP: "0.06"
+      BOTTOM: "0.15"
+      MIN_HEIGHT: "20"
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 62-inbox-says-when
+      COLOUR: "#a855f7"
+      LEFT: "0.6"
+      RIGHT: "1"
+      TOP: "0.06"
+      BOTTOM: "0.15"
+      MIN_WIDTH: "20"

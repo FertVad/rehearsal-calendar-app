@@ -227,7 +227,17 @@ it (flow 38).
 An inbox that grows while the app is open: `e2e/scripts/notify.js` with
 `MAIL_URL`, `EMAIL`, `COUNT` and `TITLE` records `COUNT` notifications through
 the server's own `recordNotifications`, titled "`TITLE` 1" (the oldest) to
-"`TITLE` `COUNT`" (flow 33).
+"`TITLE` `COUNT`" (flow 33). With `TYPE` it sends one as the server's own code
+sends it: `member_joined` with `PROJECT` and `MEMBER` (flow 61),
+`rehearsal_updated` with `REHEARSAL` (a title) and `CHANGE`, `member_response`
+with `REHEARSAL` and `MEMBER` (flow 62).
+
+How large an icon is drawn: a button that is only an icon is one element,
+44 a side, and Maestro sees nothing inside it. `e2e/scripts/icon-size.js` with
+`MAIL_URL`, `SHOT` (a `takeScreenshot` the flow took), `COLOUR` (`#rrggbb`),
+`LEFT`, `RIGHT`, `TOP`, `BOTTOM` (fractions of the screen) and `MIN_WIDTH` or
+`MIN_HEIGHT` (points) fails when the pixels of that colour there make a smaller
+box (`e2e/ink.mjs`; flow 62, the inbox's 24-point icons).
 
 What the server stored from a bug report: `e2e/scripts/bug-report-received.js`
 with `MAIL_URL`, `EMAIL`, `MESSAGE` and `SCREEN` fails unless the account has

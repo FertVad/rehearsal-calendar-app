@@ -1,5 +1,7 @@
 # The inbox holds what this person was told about — the rehearsals they are on,
 # not the whole project's — and a notification opens its rehearsal.
+# Each new one says when it is, on his clock (T-023): the seed makes them
+# tomorrow at 18:00 and eight days on at 19:00.
 appId: ${APP_ID}
 name: Inbox
 tags:
@@ -11,9 +13,9 @@ tags:
       EMAIL: ${HAMLET_EMAIL}
 - tapOn: "Notifications"
 - extendedWaitUntil:
-    visible: ".*Act I run-through scheduled.*"
+    visible: ".*Act I run-through scheduled tomorrow at 6:00.PM.*"
     timeout: 15000
-- assertVisible: ".*Full dress scheduled.*"
+- assertVisible: ".*Full dress scheduled on .* at 7:00.PM.*"
 # Hamlet is not on this one, so he was not told about it.
 - assertNotVisible: ".*Ophelia scenes.*"
 - tapOn: ".*Act I run-through scheduled.*"

@@ -141,7 +141,8 @@ export const PEOPLE = {
   // project of two (48). The twelve others are ISLANDERS, who never sign in.
   prospero: { email: 'prospero@e2e.test', firstName: 'Prospero', lastName: 'Milan', onboarded: true },
   // Runs a project the islanders are in, and is told somebody joined it (61):
-  // a tap on "New member" opens it on its members.
+  // a tap on "New member" opens it on its members. Told its rehearsal was
+  // changed and answered, with when it is (62).
   duncan: { email: 'duncan@e2e.test', firstName: 'King', lastName: 'Duncan', onboarded: true },
   // An admin of his project who swipes one of its rehearsals away and opens
   // the form from another's details, and an actor on both who has no swipe
@@ -412,6 +413,12 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
       [castle.id, member]);
   }
+  // Its rehearsal, two days on at 19:00, that he is told was changed and was
+  // answered (62). Put in as the project was: no sign-in, and nobody told.
+  await client.query(
+    `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+     VALUES ($1, 'Banquet', $2::timestamptz, $3::timestamptz, 'The great hall', $4, NOW(), NOW())`,
+    [castle.id, localInstant(2, 19), localInstant(2, 22), ids.duncan]);
   // Made in this order: the Estate is the newer, so the form opens on it.
   await project('Pishchik Mill', 'Flour', [], 'pishchik');
   await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
