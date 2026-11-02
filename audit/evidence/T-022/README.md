@@ -23,3 +23,5 @@ No VoiceOver work. `skipMessage` (the Skip alert) is unchanged.
   `useNotifications.push.test.tsx`, which still expected the removed
   `WeekStart` step after Notifications; it now expects `WhatWhere`. Red on the
   base's onboarding, green on HEAD.
+- `review-1-red-green.md`: review 1 — the Russian greeting one line high,
+  flow 60 in Russian ("Пропустить", the refusal), red before and green after.
