@@ -10,6 +10,10 @@
 # and the launch link only once: signing out and in again does not bring the
 # invitation back (launchLink.test).
 # The other invite flows open their link in an app already running.
+#
+# The taps the flow waits on go through tap-and-see.yaml: the simulator lost
+# the one on Close, the invitation stayed, and the flow failed waiting for the
+# calendar (T-217; docs/e2e.md, "A lost tap").
 appId: ${APP_ID}
 name: Invite link at a cold start, turned down
 tags:
@@ -47,7 +51,12 @@ tags:
     text: "Not Now"
     optional: true
 - takeScreenshot: 43-invite-cold-start
-- tapOn: "Cancel"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Cancel"
+      GONE: "Project Invitation"
+      WAIT_MS: "15000"
 - extendedWaitUntil:
     visible:
       id: calendar-today
@@ -58,15 +67,23 @@ tags:
 # Signed out and in again without opening a link: the invitation turned down
 # stays turned down. Each sign-in mounts the app's container afresh, and each
 # one read the launch link again (navigation/linking.ts, launchLink.test).
-- tapOn:
-    id: tab-profile
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Week starts on.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element:
       id: profile-logout
     direction: DOWN
     centerElement: true
-- tapOn:
-    id: profile-logout
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-logout
+      GONE: "Log out"
+      WAIT_MS: "10000"
 - runFlow:
     file: ../subflows/sign-in-form.yaml
     env:
@@ -100,7 +117,12 @@ tags:
 - extendedWaitUntil:
     visible: "Invitation not found"
     timeout: 30000
-- tapOn: "Close"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Close"
+      GONE: "Invitation not found"
+      WAIT_MS: "15000"
 - extendedWaitUntil:
     visible:
       id: calendar-today
