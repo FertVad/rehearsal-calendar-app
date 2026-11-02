@@ -1,0 +1,30 @@
+T-024 — Jest red before. Fix: f857d05. Base: e67fd0d.
+Files of the fix put back to the base (the tests and translations as in f857d05):
+  git restore --source=e67fd0d -- src/features/profile/screens/ProfileScreen.tsx \
+    src/features/profile/styles/profileScreenStyles.ts \
+    src/features/profile/screens/CalendarSyncSettingsScreen.tsx \
+    src/features/profile/styles/calendarSyncSettingsScreenStyles.ts
+
+npx jest --selectProjects frontend --silent src/features/profile/screens/__tests__/ProfileScreen.layout src/features/profile/screens/__tests__/CalendarSyncSettingsScreen.test
+
+  ● says at the top what sync does (calendar access: true)
+    Unable to find an element with testID: calendar-sync-explanation
+  ● says at the top what sync does (calendar access: false)
+    Unable to find an element with testID: calendar-sync-explanation
+  ● puts "Delete account" last, after "Sign out", in the look of a project’s delete
+    Expected: "profile-delete-account"
+    Received: "profile-logout"
+  ● opens the same confirmation from the new "Delete account"
+    Unable to find an element with testID: profile-delete-account
+  ● ends the language sheet above the home indicator
+    Expected: 34
+    Received: 0
+  ● ends the timezone sheet above the home indicator
+    Unable to find an element with testID: profile-timezone
+  ● finds a zone by its city and by its name, and says when nothing is found
+    Unable to find an element with testID: profile-timezone
+  ● opens the timezone list whole again after a search
+    Unable to find an element with testID: profile-timezone
+Tests:       8 failed, 5 passed, 13 total
+
+The five that pass are the sync screen's earlier tests (what "Synchronize" reports).
