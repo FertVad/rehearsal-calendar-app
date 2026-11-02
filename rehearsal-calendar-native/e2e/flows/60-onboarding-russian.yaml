@@ -1,0 +1,92 @@
+# Onboarding in Russian, to the end (T-022 review). Nina Novikova is new and
+# her account speaks Russian; she refuses the calendar and turns nothing on.
+#
+# The greeting, "Добро пожаловать, Нина!", is about 402 pt at the title's
+# 32 pt, and the iPhone 16 leaves it 345: it wrapped to two lines. The title is
+# one line now, made smaller to fit, so its height is one line's. And the
+# steps' own words were English whatever the language: "Skip" at the top,
+# "Calendar access is required…" when the calendar is refused. Flow 09 walks
+# the same steps in English and could not tell.
+#
+# "No calendars found" and "Setting up calendar sync…" are not here: the
+# simulator always has its calendar, and the choice is saved on the phone at
+# once. Jest says them in Russian and German (CalendarSyncScreen.test.tsx).
+appId: ${APP_ID}
+name: Onboarding in Russian, the greeting on one line
+tags:
+  - onboarding
+  - language
+  - calendar
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: unset
+- runFlow:
+    file: ../subflows/sign-in-form.yaml
+    env:
+      EMAIL: ${NINA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- assertVisible:
+    id: onboarding-skip
+    text: "Пропустить"
+# One line: 32 pt high here, made smaller to the 345 pt; a line at 32 pt is
+# 38, and two of them, as it wrapped, about 77.
+- assertVisible:
+    id: onboarding-title
+    text: "Добро пожаловать, Нина!"
+    height: 35
+    tolerance: 9
+- takeScreenshot: 60-onboarding-welcome-ru
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Начать"
+      SEE: "Ваша занятость"
+      WAIT_MS: 10000
+- assertVisible: "Это можно сделать потом: Профиль → .*"
+# Refused: the app says why it asks, in her language.
+- tapOn: "Предоставить доступ"
+- extendedWaitUntil:
+    visible: "Don’t Allow|Don't Allow"
+    timeout: 10000
+- tapOn: "Don’t Allow|Don't Allow"
+- extendedWaitUntil:
+    visible: "Требуется разрешение"
+    timeout: 10000
+- assertVisible: "Для использования этой функции необходим доступ к календарю"
+- assertNotVisible: "Calendar access is required.*"
+- takeScreenshot: 60-onboarding-calendar-refused-ru
+- tapOn: "OK"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Настроить позже"
+      SEE: "Не сейчас"
+      WAIT_MS: 10000
+- assertVisible: "Уведомления"
+- assertVisible: "Назад"
+- assertVisible: "Включить"
+- assertVisible:
+    id: onboarding-skip
+    text: "Пропустить"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Не сейчас"
+      SEE: "Что где"
+      WAIT_MS: 10000
+- assertVisible: ".*Создать проект.*"
+- takeScreenshot: 60-onboarding-what-where-ru
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Начать"
+      SEE: "Сегодня"
+      WAIT_MS: 15000
+- assertVisible:
+    id: calendar-today

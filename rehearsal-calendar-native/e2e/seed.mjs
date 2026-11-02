@@ -162,6 +162,9 @@ export const PEOPLE = {
   // still there whichever of the two runs first.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
   perdita: { email: 'perdita@e2e.test', firstName: 'Perdita', lastName: 'Shepherd', onboarded: false },
+  // New here too, and her account speaks Russian: onboarding in Russian, her
+  // name in Cyrillic, the longest greeting of the four languages (60).
+  nina: { email: 'nina@e2e.test', firstName: 'Нина', lastName: 'Новикова', onboarded: false, locale: 'ru' },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
