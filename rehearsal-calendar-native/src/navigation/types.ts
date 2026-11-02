@@ -16,9 +16,12 @@ export type CalendarStackParamList = {
   CalendarMain: undefined;
 };
 
+export type ProjectSection = 'members';
+
 export type ProjectsStackParamList = {
   ProjectsMain: undefined;
-  ProjectDetail: { projectId: string };
+  // The section to scroll to on opening: "New member" opens on the members.
+  ProjectDetail: { projectId: string; section?: ProjectSection };
 };
 
 export type PlannerStackParamList = {

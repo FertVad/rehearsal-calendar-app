@@ -21,6 +21,18 @@ jest.mock('../../hooks', () => ({
   useInviteLink: () => ({ generateInviteLink: jest.fn(), generatingInvite: false, lastCode: null }),
 }));
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn() }));
+// The page, with the scrolling the screen asks of it.
+const mockScrollTo = jest.fn();
+jest.mock('react-native', () => {
+  const native = jest.requireActual('../../../../__tests__/__mocks__/react-native.js');
+  const ReactActual = jest.requireActual('react');
+  const Plain = native.ScrollView;
+  native.ScrollView = ReactActual.forwardRef((props: object, ref: unknown) => {
+    ReactActual.useImperativeHandle(ref, () => ({ scrollTo: mockScrollTo }));
+    return ReactActual.createElement(Plain, props);
+  });
+  return native;
+});
 jest.mock('../../../../shared/services/api', () => ({
   projectsAPI: { getProject: jest.fn(), getMembers: jest.fn() },
   rehearsalsAPI: { getAll: jest.fn() },
@@ -68,4 +80,54 @@ it('names a past rehearsal by its title and times it as an upcoming one is', asy
   expect(screen.getByText('Old monologue')).toBeTruthy();
   // Both rows give the interval, from the same label.
   expect(screen.getAllByText('18:00–21:00')).toHaveLength(2);
+});
+
+describe('opened on its members (T-023)', () => {
+  // "New member" opens the project on this section: scrolled there once the
+  // page is laid out, no further than the page goes.
+  const { ScrollView } = require('react-native');
+  const scrollTo = mockScrollTo;
+
+  const open = async (params: Record<string, unknown>) => {
+    const navigation = { navigate: jest.fn(), goBack: jest.fn(), setOptions: jest.fn(), setParams: jest.fn() };
+    const screen = render(
+      <ProjectDetailScreen
+        route={{ key: 'ProjectDetail', name: 'ProjectDetail', params: { projectId: 'p1', ...params } } as any}
+        navigation={navigation as any}
+      />
+    );
+    await settle();
+    await settle();
+    return { screen, navigation };
+  };
+  const layOut = (screen: ReturnType<typeof render>, { view, page, members }: { view: number; page: number; members: number }) => {
+    const scroll = screen.UNSAFE_getByType(ScrollView);
+    act(() => {
+      fireEvent(scroll, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: view } } });
+      fireEvent(scroll, 'contentSizeChange', 390, page);
+      fireEvent(screen.getByTestId('project-members'), 'layout', { nativeEvent: { layout: { x: 0, y: members, width: 390, height: 300 } } });
+    });
+  };
+
+  it('scrolls to the members, and asks it only once', async () => {
+    const { screen, navigation } = await open({ section: 'members' });
+    layOut(screen, { view: 700, page: 2000, members: 520 });
+
+    expect(scrollTo).toHaveBeenCalledWith({ y: 520, animated: true });
+    expect(navigation.setParams).toHaveBeenCalledWith({ section: undefined });
+  });
+
+  it('no further than the page goes', async () => {
+    const { screen } = await open({ section: 'members' });
+    layOut(screen, { view: 700, page: 1000, members: 520 });
+
+    expect(scrollTo).toHaveBeenCalledWith({ y: 300, animated: true });
+  });
+
+  it('opened without a section, stays at the top', async () => {
+    const { screen } = await open({});
+    layOut(screen, { view: 700, page: 2000, members: 520 });
+
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
 });

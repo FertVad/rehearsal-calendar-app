@@ -159,6 +159,61 @@ describe('a tapped push, with a modal screen open (T-007)', () => {
   });
 });
 
+describe('"New member" opens its project on the members (T-023)', () => {
+  const membersOpened = (projectId: string) => ({
+    screen: 'Projects',
+    params: { screen: 'ProjectDetail', params: { projectId, section: 'members' }, initial: false },
+  });
+  const tap = async (data: Record<string, unknown>) => {
+    const listen = Notifications.addNotificationResponseReceivedListener as jest.Mock;
+    listen.mockClear();
+    const { renderHook } = require('@testing-library/react-native');
+    renderHook(() => useNotifications());
+    await act(async () => {});
+    act(() => listen.mock.calls[0][0]({ notification: { request: { content: { data } } } }));
+  };
+  const inboxWith = async (data: Record<string, unknown>, related: { relatedType: string | null; relatedId: number | null }) => {
+    open('MainTabs', 'Notifications');
+    mockList.mockResolvedValueOnce({
+      data: {
+        notifications: [{
+          id: 6, type: 'member_joined', title: 'New member', body: 'Nina Petrova joined Hamlet', data,
+          ...related, read: false, createdAt: new Date().toISOString(),
+        }],
+        unreadCount: 1,
+        nextCursor: null,
+      },
+    });
+    const view = render(<NotificationsScreen />);
+    await act(async () => { mockFocus.run?.(); });
+    await act(async () => { fireEvent.press(await view.findByText('Nina Petrova joined Hamlet')); });
+  };
+
+  it('from a tapped push, over a modal', async () => {
+    open('MainTabs', 'CreateProject');
+    await tap({ type: 'member_joined', projectName: 'Hamlet', projectId: 3 });
+
+    expect(stack()).toEqual(['MainTabs']);
+    expect(top().params).toEqual(membersOpened('3'));
+  });
+
+  it('from the inbox', async () => {
+    await inboxWith({ type: 'member_joined', projectName: 'Hamlet', projectId: 3 }, { relatedType: 'project', relatedId: 3 });
+
+    expect(stack()).toEqual(['MainTabs']);
+    expect(top().params).toEqual(membersOpened('3'));
+  });
+
+  it('one sent before it carried the project opens nothing, and breaks nothing', async () => {
+    open('MainTabs', 'CreateProject');
+    await tap({ type: 'member_joined', projectName: 'Hamlet' });
+    expect(stack()).toEqual(['MainTabs', 'CreateProject']);
+
+    await inboxWith({ type: 'member_joined', projectName: 'Hamlet' }, { relatedType: null, relatedId: null });
+    expect(stack()).toEqual(['MainTabs', 'Notifications']);
+  });
+});
+
 // The tabs and the Projects stack, each handed its changed params the way
 // useNavigationBuilder hands them to a nested navigator.
 const tabNames = ['Calendar', 'Projects', 'Create', 'Planner', 'Profile'];

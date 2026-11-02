@@ -52,6 +52,10 @@
  *   GET /notify?to=<address>&count=<n>&title=<t>   n notifications for that
  *                                                  account, oldest first,
  *                                                  titled "<t> 1" to "<t> n"
+ *   GET /notify?to=<address>&type=member_joined&project=<name>&member=<who>
+ *                                                  "New member" about that
+ *                                                  project, sent as the join
+ *                                                  sends it (flow 61)
  *
  * It reads back what the server stored from an account's bug reports, to show
  * a report sent from the app arrived (flow 47):
@@ -75,6 +79,7 @@ import { fileURLToPath } from 'node:url';
 import { capturedEmails } from '../server/services/email/transport.js';
 import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
+import { notifyMemberJoined } from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
 
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
@@ -215,6 +220,22 @@ http.createServer((request, response) => {
     const once = url.searchParams.get('once') === '1';
     holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
+  }
+  if (request.method === 'GET' && url.pathname === '/notify' && url.searchParams.get('type') === 'member_joined') {
+    const to = (url.searchParams.get('to') || '').trim().toLowerCase();
+    const projectName = url.searchParams.get('project') || '';
+    const member = url.searchParams.get('member') || 'Somebody';
+    (async () => {
+      const user = await db.get('SELECT id FROM native_users WHERE email = $1', [to]);
+      if (!user) return answer(404, { error: `no account ${to}` });
+      const project = await db.get('SELECT id, name FROM native_projects WHERE name = $1', [projectName]);
+      if (!project) return answer(404, { error: `no project ${projectName}` });
+      // As the join tells them (inviteRedemption.js), the server's own words and data.
+      await notifyMemberJoined(project.name, member, [user.id], project.id);
+      console.log(`[e2e] told ${to} that ${member} joined ${project.name}`);
+      return answer(200, { recorded: 1 });
+    })().catch((error) => answer(500, { error: String(error) }));
+    return;
   }
   if (request.method === 'GET' && url.pathname === '/notify') {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();

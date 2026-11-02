@@ -38,6 +38,7 @@ export type {
   AuthStackParamList,
   CalendarStackParamList,
   ProjectsStackParamList,
+  ProjectSection,
   PlannerStackParamList,
   ProfileStackParamList,
   TabParamList,

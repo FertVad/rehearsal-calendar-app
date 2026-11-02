@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -132,7 +132,7 @@ export function RehearsalRow({ rehearsal, onPress, past = false }: {
 }
 
 export default function ProjectDetailScreen({ route, navigation }: ProjectDetailScreenProps) {
-  const { projectId } = route.params;
+  const { projectId, section } = route.params;
   const { t } = useI18n();
   const { refreshProjects } = useProjects();
 
@@ -150,6 +150,19 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   const [isDeleting, setIsDeleting] = useState(false);
   const [upcomingExpanded, setUpcomingExpanded] = useState(false);
   const [pastExpanded, setPastExpanded] = useState(false);
+
+  // Opened on a section — "New member" opens on the members (T-023): scrolled
+  // there once the page is laid out, no further than the page goes, and the
+  // ask then dropped, so coming back to the page does not scroll it again.
+  const scrollRef = useRef<ScrollView>(null);
+  const [membersY, setMembersY] = useState<number | null>(null);
+  const [pageHeight, setPageHeight] = useState(0);
+  const [viewHeight, setViewHeight] = useState(0);
+  useEffect(() => {
+    if (section !== 'members' || loading || membersY === null || pageHeight === 0 || viewHeight === 0) return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, Math.min(membersY, pageHeight - viewHeight)), animated: true });
+    navigation.setParams({ section: undefined });
+  }, [section, loading, membersY, pageHeight, viewHeight, navigation]);
 
   const fetchData = useCallback(async () => {
     // Prevent fetching if project is being deleted
@@ -433,6 +446,9 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
+        ref={scrollRef}
+        onLayout={(e) => setViewHeight(e.nativeEvent.layout.height)}
+        onContentSizeChange={(_, height) => setPageHeight(height)}
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         refreshControl={
@@ -560,7 +576,11 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
         )}
 
         {/* Members */}
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+          testID="project-members"
+          onLayout={(e) => setMembersY(e.nativeEvent.layout.y)}
+        >
           <View style={styles.sectionHeader}>
             <Ionicons name="people" size={20} color={Colors.accent.purple} />
             <Text style={styles.sectionTitle}>{t.projects.members}</Text>

@@ -24,6 +24,7 @@ import { notificationsAPI } from '../../../shared/services/api';
 import { useUnread } from '../../../contexts/UnreadContext';
 import { logger } from '../../../shared/utils/logger';
 import { useRequestOrder } from '../../../shared/hooks/useSession';
+import { openProject, projectSectionOf } from '../../../shared/hooks/useNotifications';
 import { currentSession, isCurrentSession } from '../../../shared/services/session';
 import { styles } from '../styles/notificationsScreenStyles';
 import {
@@ -214,13 +215,9 @@ export default function NotificationsScreen() {
     }
 
     // The project is in the tabs under the inbox: back to them, not a copy
-    // pushed on top, and over the projects list (T-007).
-    if (projectId) {
-      navigation.navigate('MainTabs', {
-        screen: 'Projects',
-        params: { screen: 'ProjectDetail', params: { projectId: String(projectId) }, initial: false },
-      }, { pop: true });
-    }
+    // pushed on top, and over the projects list (T-007) — opened as a tapped
+    // push opens it, "New member" on its members (T-023).
+    if (projectId) openProject(navigation, projectId, projectSectionOf(item.type));
   };
 
   const ageOf = (iso: string) => {
@@ -342,11 +339,12 @@ export default function NotificationsScreen() {
 
         {/* Icons rather than words. Two text buttons beside a large title do not
             fit in Russian and fit still less in German, so they overlapped. The
-            words survive as accessibility labels and in the confirmation. */}
+            words survive as accessibility labels and in the confirmation.
+            24 pt, the size of the other icons up here; the target stays 44. */}
         {hasUnread && (
           <IconButton
             icon="checkmark-done"
-            size={22}
+            size={24}
             color={Colors.accent.purple}
             style={styles.headerAction}
             onPress={markEverythingRead}
@@ -356,7 +354,7 @@ export default function NotificationsScreen() {
         {items.length > 0 && (
           <IconButton
             icon="trash-outline"
-            size={22}
+            size={24}
             color={Colors.accent.red}
             style={styles.headerAction}
             onPress={confirmClearAll}
