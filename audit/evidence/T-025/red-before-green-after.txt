@@ -1,0 +1,76 @@
+T-025 — projects: "New rehearsal" on a project's page, a card without the
+invite or a tick, "Create" waits for a name, a code typed in lowercase.
+
+Base 68ee1c1, fix ec5a375. Node 22.
+
+== Jest, red before ==
+The new and extended tests, the app files at 68ee1c1:
+
+  npx jest --selectProjects frontend --silent src/features/projects/screens/__tests__ src/shared/utils/__tests__/inviteCode.test.ts
+
+FAIL frontend src/shared/utils/__tests__/inviteCode.test.ts
+  ● inviteCodeFromUrl › reads rehearsalapp://invite/abcdefgh as ABCDEFGH
+  ● inviteCodeFromUrl › reads https://example.com/invite/23kmNPqr?utm=1 as 23KMNPQR
+  ● inviteCodeFromInput › sends AB23CDEF as AB23CDEF
+  ● inviteCodeFromInput › sends ab23cdef as AB23CDEF
+  ● inviteCodeFromInput › sends   Ab23cDef  as AB23CDEF
+  ● inviteCodeFromInput › sends https://example.com/invite/ab23cdef as AB23CDEF
+  ● inviteCodeFromInput › sends Join us: https://example.com/invite/AB23CDEF as AB23CDEF
+  ● inviteCodeFromInput › sends 0123456789abcdef0123456789abcdef as 0123456789abcdef0123456789abcdef
+  ● inviteCodeFromInput › sends 0123456789ABCDEF0123456789abcdef as 0123456789ABCDEF0123456789abcdef
+  ● inviteCodeFromInput › sends NOSUCH42 as NOSUCH42
+  ● inviteCodeFromInput › sends nosuch42 as nosuch42
+FAIL frontend src/features/projects/screens/__tests__/CreateProjectScreen.test.tsx
+  ● keeps "Create" off until the project has a name, and asks nothing
+FAIL frontend src/features/projects/screens/__tests__/JoinProjectScreen.test.tsx
+  ● types capitals and sends a short code typed in lowercase in capitals
+  ● pastes with the system paste button, and a pasted link gives its code
+FAIL frontend src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx
+  ● "New rehearsal" (T-025) › opens the form on this project for its admin
+FAIL frontend src/features/projects/screens/__tests__/ProjectsScreen.test.tsx
+  ● shows an admin’s card without its invite code, "Invite" or a tick
+Tests:       16 failed, 28 passed, 44 total
+
+(inviteCodeFromInput fails whole at the base: the function did not exist.)
+
+== Jest, green after (ec5a375) ==
+  same files + hooks: Tests: 53 passed, 53 total
+  whole frontend:     Test Suites: 121 passed, 121 total; Tests: 1097 passed, 1097 total
+  npm run type-check: clean
+  npm run check:secrets: {"summary":"pass","mode":"worktree","files":1431,"findings":0,"errors":0}
+
+== e2e, red before ==
+App files at 68ee1c1 (git restore --source=68ee1c1 -- <the nine app files>),
+seed and flows new:
+
+  npm run e2e -- e2e/flows/08-invite-before-sign-in.yaml e2e/flows/63-project-new-rehearsal.yaml
+[Failed] Invite link before sign-in (1m 58s) (Assertion is false: "Twelfth Night", id: join-project-name is visible)
+[Failed] Project's card, and a new rehearsal from its page (53s) (Assertion is false: ".*Invite code.*" is not visible)
+2/2 Flows Failed
+
+Flow 63 stops at the card there, before the page. So once more with only the
+project's page at 68ee1c1 (ProjectDetailScreen.tsx, projectDetailScreenStyles.ts),
+the card fixed:
+
+  npm run e2e -- e2e/flows/63-project-new-rehearsal.yaml
+[Failed] Project's card, and a new rehearsal from its page (2m 2s) (Assertion is false: ".*New rehearsal.*" is visible)
+1/1 Flow Failed
+
+== e2e, green after (ec5a375) ==
+  npm run e2e -- e2e/flows/08-invite-before-sign-in.yaml e2e/flows/19-chosen-project-deleted.yaml e2e/flows/39-past-rehearsal-title.yaml e2e/flows/63-project-new-rehearsal.yaml
+[Passed] Invite link before sign-in (2m 15s)
+[Passed] Chosen project deleted (1m 4s)
+[Passed] A past rehearsal keeps its title (39s)
+[Passed] Project's card, and a new rehearsal from its page (1m 24s)
+4/4 Flows Passed in 5m 23s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Flows 19 and 39 tapped the card at a point ("25%,23%") because its middle was
+"Invite"; the card is shorter now and that point near its edge, so they tap it
+by its name.
+
+Screenshots checked by eye: 63-project-cards (two cards: name, Admin,
+description; nothing at the right; no-ink.js region x 0.75-0.97, y 0.15-0.35
+lies between the header's "+" at 0.105-0.133 and "Join with a code" from
+0.363), 08-wrong-code-under-the-field (field with capitals keyboard, iOS's
+paste control beside it).
