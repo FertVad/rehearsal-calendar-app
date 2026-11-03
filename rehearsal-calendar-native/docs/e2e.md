@@ -237,7 +237,10 @@ How large an icon is drawn: a button that is only an icon is one element,
 `MAIL_URL`, `SHOT` (a `takeScreenshot` the flow took), `COLOUR` (`#rrggbb`),
 `LEFT`, `RIGHT`, `TOP`, `BOTTOM` (fractions of the screen) and `MIN_WIDTH` or
 `MIN_HEIGHT` (points) fails when the pixels of that colour there make a smaller
-box (`e2e/ink.mjs`; flow 62, the inbox's 24-point icons).
+box (`e2e/ink.mjs`; flow 62, the inbox's 24-point icons). `e2e/scripts/no-ink.js`
+with the same `SHOT`, `COLOUR` and region fails when anything there is drawn in
+that colour: an icon that must be gone from inside a card (flow 63, the tick the
+projects list no longer draws).
 
 What the server stored from a bug report: `e2e/scripts/bug-report-received.js`
 with `MAIL_URL`, `EMAIL`, `MESSAGE` and `SCREEN` fails unless the account has

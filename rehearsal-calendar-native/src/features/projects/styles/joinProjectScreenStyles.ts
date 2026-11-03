@@ -106,12 +106,19 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
 
-  codeInput: {
+  // The field, and iOS's paste control beside it, as tall.
+  codeRow: {
     width: '100%',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: Spacing.sm,
     marginTop: Spacing.xl,
     marginBottom: Spacing.md,
+  },
+  codeInput: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.glass.border,
@@ -121,6 +128,11 @@ export const styles = StyleSheet.create({
   },
   codeInputError: {
     borderColor: Colors.accent.red,
+  },
+  // Its colours and corners are the control's own props: iOS takes no others.
+  pasteButton: {
+    width: TouchTarget + Spacing.sm,
+    minHeight: TouchTarget,
   },
   codeError: {
     alignSelf: 'flex-start',

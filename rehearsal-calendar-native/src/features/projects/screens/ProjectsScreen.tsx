@@ -1,34 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as Clipboard from 'expo-clipboard';
 import { Colors } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
 import { SkeletonLoader } from '../../../shared/components';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
-import { useInviteLink } from '../hooks';
 import { projectsScreenStyles as styles } from '../styles';
 import type { ProjectsScreenNavigation } from '../../../navigation';
 
 export default function ProjectsScreen() {
   const navigation = useNavigation<ProjectsScreenNavigation>();
-  const { projects, selectedProject, setSelectedProject, loading, error } = useProjects();
-  const { generateInviteLink, generatingFor } = useInviteLink();
-  const { t, language } = useI18n();
+  const { projects, setSelectedProject, loading, error } = useProjects();
+  const { t } = useI18n();
   // Anyone can create a project: the paid tier was taken out of the app for
   // the App Store release — see docs/app-store-release.md
   // Joining is not creating, so it lives here on the projects screen rather
   // than in the create sheet — and above all in the empty state, which is
   // exactly what an invited person sees when their link failed to open.
-  const handleCopyCode = async (code: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await Clipboard.setStringAsync(code);
-    Alert.alert(t.projects.codeCopied, '');
-  };
-
   const handleJoinProject = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('JoinProject', {});
@@ -86,81 +77,37 @@ export default function ProjectsScreen() {
           </View>
         ) : (
           <View style={styles.projectsList}>
-            {projects.map((project) => {
-              const isSelected = selectedProject?.id === project.id;
-              return (
-                <TouchableOpacity
-                  key={project.id}
-                  testID="project-card"
-                  style={[
-                    styles.projectCard,
-                    isSelected && styles.projectCardSelected,
-                  ]}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    setSelectedProject(project);
-                    navigation.navigate('ProjectDetail', { projectId: project.id });
-                  }}
-                >
-                  <View style={styles.projectHeader}>
-                    <View style={styles.projectInfo}>
-                      <Text style={styles.projectName}>{project.name}</Text>
-                      {project.is_admin && (
-                        <View style={styles.adminBadge}>
-                          <Ionicons name="shield-checkmark" size={14} color={Colors.accent.purple} />
-                          <Text style={styles.adminText}>{t.projects.admin}</Text>
-                        </View>
-                      )}
-                    </View>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={24} color={Colors.accent.purple} />
-                    )}
-                  </View>
-                  {project.description && (
-                    <Text style={styles.projectDescription} numberOfLines={2}>
-                      {project.description}
-                    </Text>
-                  )}
-                  {/* Invite button for admins */}
+            {/* A card is the project: its name, role and description. The
+                invitation and its code are on the project's own page, and
+                opening a project makes it the one the rehearsal form offers,
+                with no tick here to say so (T-025). */}
+            {projects.map((project) => (
+              <TouchableOpacity
+                key={project.id}
+                testID="project-card"
+                style={styles.projectCard}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setSelectedProject(project);
+                  navigation.navigate('ProjectDetail', { projectId: project.id });
+                }}
+              >
+                <View style={styles.projectInfo}>
+                  <Text style={styles.projectName}>{project.name}</Text>
                   {project.is_admin && (
-                    <TouchableOpacity
-                      style={styles.inviteButton}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        generateInviteLink(project.id, project.name);
-                      }}
-                      disabled={generatingFor !== null}
-                    >
-                      {generatingFor === project.id ? (
-                        <ActivityIndicator size="small" color={Colors.accent.purple} />
-                      ) : (
-                        <>
-                          <Ionicons name="person-add-outline" size={16} color={Colors.accent.purple} />
-                          <Text style={styles.inviteButtonText}>{t.projects.inviteLink}</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
+                    <View style={styles.adminBadge}>
+                      <Ionicons name="shield-checkmark" size={14} color={Colors.accent.purple} />
+                      <Text style={styles.adminText}>{t.projects.admin}</Text>
+                    </View>
                   )}
-
-                  {/* Carried down with the project itself, so reading a code
-                      out no longer means opening the project first. */}
-                  {project.is_admin && project.inviteCode && (
-                    <TouchableOpacity
-                      style={styles.cardCodeRow}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleCopyCode(project.inviteCode!);
-                      }}
-                    >
-                      <Text style={styles.cardCodeLabel}>{t.projects.inviteCodeLabel}</Text>
-                      <Text style={styles.cardCodeValue}>{project.inviteCode}</Text>
-                      <Ionicons name="copy-outline" size={14} color={Colors.text.secondary} />
-                    </TouchableOpacity>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+                </View>
+                {project.description && (
+                  <Text style={styles.projectDescription} numberOfLines={2}>
+                    {project.description}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
 
             <TouchableOpacity style={styles.joinButton} onPress={handleJoinProject}>
               <Ionicons name="enter-outline" size={18} color={Colors.accent.purple} />

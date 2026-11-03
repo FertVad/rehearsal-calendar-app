@@ -544,6 +544,19 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
             )}
           </TouchableOpacity>
 
+          {/* Only for the project's admins, the people the server lets put a
+              rehearsal in it; the form opens on this project (T-025). */}
+          {project.is_admin && (
+            <TouchableOpacity
+              testID="project-new-rehearsal"
+              style={styles.newRehearsalButton}
+              onPress={() => navigation.navigate('AddRehearsal', { projectId })}
+            >
+              <Ionicons name="add" size={18} color={Colors.accent.purple} />
+              <Text style={styles.newRehearsalText}>{t.projects.newRehearsal}</Text>
+            </TouchableOpacity>
+          )}
+
           {upcomingRehearsals.length === 0 ? (
             <Text style={styles.emptyText}>{t.projects.noUpcomingRehearsals}</Text>
           ) : upcomingExpanded ? (

@@ -68,6 +68,29 @@ tags:
     id: join-code-input
     text: "NOSUCH42"
 - takeScreenshot: 08-wrong-code-under-the-field
+# The right code typed in lowercase (T-025). Codes are capitals and digits and
+# the server finds one exactly; the field typed lowercase, and the code was
+# "not found". The field types capitals now, and a short code goes in capitals.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: join-code-input
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: ${TWELFTH_LOWERCASE_INVITE}
+      - assertVisible:
+          id: join-code-input
+          text: "(?i)${TWELFTH_INVITE}"
+- tapOn:
+    id: join-code-submit
+- extendedWaitUntil:
+    visible:
+      id: join-project-name
+      text: "Twelfth Night"
+    timeout: 15000
+- takeScreenshot: 08-lowercase-code-found
 - tapOn: "Cancel"
 - extendedWaitUntil:
     visible: ".*Join with a code"

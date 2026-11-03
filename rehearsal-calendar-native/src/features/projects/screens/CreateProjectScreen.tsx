@@ -43,11 +43,12 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
   const getTimezoneLabel = (value: string) => getTzLabel(value, language);
 
+  // "Create" waits for a name, as "Sign in" waits for its fields (T-015,
+  // T-025): an empty form was sent and answered with an alert.
+  const canCreate = projectName.trim().length > 0;
+
   const handleCreateProject = async () => {
-    if (!projectName.trim()) {
-      Alert.alert(t.common.error, t.projects.nameRequired);
-      return;
-    }
+    if (!canCreate) return;
 
     setCreating(true);
     try {
@@ -156,6 +157,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
             hapticSuccess();
             handleCreateProject();
           }}
+          disabled={!canCreate}
           loading={creating}
         />
       </BottomActionBar>

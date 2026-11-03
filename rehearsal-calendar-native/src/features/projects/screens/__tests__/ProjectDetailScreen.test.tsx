@@ -6,7 +6,7 @@
  */
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
-import { projectsAPI, rehearsalsAPI } from '../../../../shared/services/api';
+import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../../shared/services/api';
 import ProjectDetailScreen from '../ProjectDetailScreen';
 
 jest.mock('../../../../contexts/I18nContext', () => ({
@@ -159,5 +159,38 @@ describe('opened on its members (T-023)', () => {
     expect(scrollTo).toHaveBeenCalledTimes(1);
     expect(scrollTo).toHaveBeenCalledWith({ y: 900, animated: true });
     expect(navigation.setParams).toHaveBeenCalledWith({ section: undefined });
+  });
+});
+
+// A new rehearsal from the project's own page, by its upcoming ones (T-025):
+// for the project's admins, the people the server lets put one in; the form
+// opens on this project.
+describe('"New rehearsal" (T-025)', () => {
+  const open = async (isAdmin: boolean) => {
+    (projectsAPI.getProject as jest.Mock).mockResolvedValue({
+      data: { project: { id: 'p1', name: 'Hamlet', description: '', is_admin: isAdmin, is_owner: false, created_at: '2030-01-01' } },
+    });
+    (invitesAPI.getInvite as jest.Mock).mockResolvedValue({ data: { inviteCode: null } });
+    const navigation = { navigate: jest.fn(), goBack: jest.fn(), setOptions: jest.fn(), setParams: jest.fn() };
+    const screen = render(
+      <ProjectDetailScreen
+        route={{ key: 'ProjectDetail', name: 'ProjectDetail', params: { projectId: 'p1' } } as any}
+        navigation={navigation as any}
+      />
+    );
+    await settle();
+    await settle();
+    return { screen, navigation };
+  };
+
+  it('opens the form on this project for its admin', async () => {
+    const { screen, navigation } = await open(true);
+    fireEvent.press(screen.getByTestId('project-new-rehearsal'));
+    expect(navigation.navigate).toHaveBeenCalledWith('AddRehearsal', { projectId: 'p1' });
+  });
+
+  it('is not there for an actor', async () => {
+    const { screen } = await open(false);
+    expect(screen.queryByTestId('project-new-rehearsal')).toBeNull();
   });
 });

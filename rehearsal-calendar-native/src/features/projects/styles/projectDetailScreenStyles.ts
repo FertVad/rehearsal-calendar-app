@@ -92,6 +92,26 @@ export const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
   },
+  // The admin's "New rehearsal", under the upcoming ones' header (T-025): the
+  // dashed outline the app gives an optional extra action.
+  newRehearsalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    minHeight: TouchTarget,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.accent.purple,
+  },
+  newRehearsalText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.accent.purple,
+  },
   emptyText: {
     fontSize: FontSize.sm,
     color: Colors.text.tertiary,

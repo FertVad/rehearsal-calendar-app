@@ -173,6 +173,10 @@ export const PEOPLE = {
   // zone found by search and chosen (61). An account of his own, since the
   // zone he picks stays.
   puck: { email: 'puck@e2e.test', firstName: 'Robin', lastName: 'Goodfellow', onboarded: true },
+  // An admin of two projects who opens "New rehearsal" on the older one's page,
+  // and an actor in it, who has no such button (63). Nothing is saved.
+  leonato: { email: 'leonato@e2e.test', firstName: 'Leonato', lastName: 'Governor', onboarded: true },
+  hero: { email: 'hero@e2e.test', firstName: 'Hero', lastName: 'Messina', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -466,6 +470,14 @@ export async function seed({ client, apiUrl, timezone }) {
   // Cordelia its admin (54).
   const learId = await joined('Lear Court', 'The heath', 'cordelia', 'admin');
   const dachaId = await joined('Dacha Evenings', 'The terrace', 'telegin');
+  // Leonato's two, Hero in the first (63). Made in this order: the Orchard is
+  // the newer, the one the form opens on when no project is given it.
+  const watchId = await joined('Messina Watch', 'The night watch', 'leonato', 'admin');
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+    [watchId, ids.hero]);
+  await joined('Leonato Orchard', 'The arbour', 'leonato', 'admin');
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -695,7 +707,8 @@ export async function seed({ client, apiUrl, timezone }) {
     password: PASSWORD,
     people: Object.fromEntries(Object.entries(PEOPLE).map(([key, person]) => [key, { id: ids[key], email: person.email }])),
     projects: { hamlet: hamletId, seagull: seagullId, sisters: sistersId, bear: bearId, twelfth: twelfth.id },
-    invites: { twelfth: twelfth.inviteCode, arden: arden.inviteCode },
+    // And Twelfth Night's typed in lowercase, as the field typed it (08, T-025).
+    invites: { twelfth: twelfth.inviteCode, arden: arden.inviteCode, twelfth_lowercase: twelfth.inviteCode.toLowerCase() },
     days,
     times,
     labels,

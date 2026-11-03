@@ -98,6 +98,40 @@ it('keeps the later link’s invitation when the earlier answer comes last', asy
   expect(invitesAPI.joinProject).toHaveBeenCalledWith('BBBB');
 });
 
+// Codes are capitals and digits and the server finds one exactly; the field
+// typed lowercase, and a code typed so found nothing (T-025).
+it('types capitals and sends a short code typed in lowercase in capitals', async () => {
+  (invitesAPI.getInviteInfo as jest.Mock).mockResolvedValue({ data: { projectId: 'p1', projectName: 'Hamlet' } });
+  const screen = render(
+    <JoinProjectScreen route={{ key: 'j', name: 'JoinProject', params: {} } as any} navigation={navigation()} />
+  );
+
+  expect(screen.getByTestId('join-code-input').props.autoCapitalize).toBe('characters');
+  fireEvent.changeText(screen.getByTestId('join-code-input'), 'ab23cdef');
+  fireEvent.press(screen.getByTestId('join-code-submit'));
+  await settle();
+
+  expect(invitesAPI.getInviteInfo).toHaveBeenCalledWith('AB23CDEF');
+  expect(screen.getByTestId('join-project-name')).toHaveTextContent('Hamlet');
+});
+
+// "Paste" is iOS's own control, which pastes without iOS asking whether the
+// app may read the clipboard; a whole link pasted gives its code.
+it('pastes with the system paste button, and a pasted link gives its code', async () => {
+  (invitesAPI.getInviteInfo as jest.Mock).mockResolvedValue({ data: { projectId: 'p1', projectName: 'Hamlet' } });
+  const screen = render(
+    <JoinProjectScreen route={{ key: 'j', name: 'JoinProject', params: {} } as any} navigation={navigation()} />
+  );
+
+  const paste = screen.UNSAFE_getByType('ClipboardPasteButton' as any);
+  act(() => paste.props.onPress({ type: 'text', text: 'https://rehearsly.me/invite/AB23CDEF' }));
+  expect(screen.getByTestId('join-code-input').props.value).toBe('https://rehearsly.me/invite/AB23CDEF');
+  fireEvent.press(screen.getByTestId('join-code-submit'));
+  await settle();
+
+  expect(invitesAPI.getInviteInfo).toHaveBeenCalledWith('AB23CDEF');
+});
+
 it('draws the button of a link’s error as a button: visible on the dark background', async () => {
   (invitesAPI.getInviteInfo as jest.Mock).mockRejectedValue(notFound());
   const nav = navigation();

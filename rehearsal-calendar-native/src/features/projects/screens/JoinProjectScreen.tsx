@@ -10,12 +10,13 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Clipboard from 'expo-clipboard';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';
 import { invitesAPI } from '../../../shared/services/api';
-import { inviteCodeFromUrl } from '../../../shared/utils/inviteCode';
+import { inviteCodeFromInput } from '../../../shared/utils/inviteCode';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { joinProjectScreenStyles as styles } from '../styles';
@@ -53,14 +54,19 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
     checkAndFetchInviteInfo(linkCode);
   }, [linkCode]);
 
+  const changeCode = (text: string) => {
+    setTypedCode(text);
+    setError(null);
+  };
+
   const handleSubmitCode = () => {
-    const entered = typedCode.trim();
-    if (!entered || loading) return;
+    if (!typedCode.trim() || loading) return;
     // Pasting the whole link is the likelier gesture than copying the code out
-    // of it, so take the code out of a link by the same rule as opened links.
+    // of it, so take the code out of a link by the same rule as opened links,
+    // and a code typed in lowercase in capitals (T-025).
     // Asked here rather than on a change of state: the same code sent again
     // after a failure is asked again.
-    fetchInviteInfo(inviteCodeFromUrl(entered) ?? entered);
+    fetchInviteInfo(inviteCodeFromInput(typedCode));
   };
 
   const checkAndFetchInviteInfo = async (inviteCode: string) => {
@@ -165,21 +171,37 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
           <Text style={styles.title}>{t.projects.joinByCode}</Text>
           <Text style={styles.subtitle}>{t.projects.joinByCodeSubtitle}</Text>
 
-          <TextInput
-            testID="join-code-input"
-            style={[styles.codeInput, error && styles.codeInputError]}
-            value={typedCode}
-            onChangeText={(text) => {
-              setTypedCode(text);
-              setError(null);
-            }}
-            placeholder={t.projects.joinByCodePlaceholder}
-            placeholderTextColor={Colors.text.tertiary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="go"
-            onSubmitEditing={handleSubmitCode}
-          />
+          {/* Codes are capitals and digits, so the keyboard types capitals.
+              "Paste" is iOS's own control: it pastes without iOS asking
+              whether the app may read the clipboard (T-025). */}
+          <View style={styles.codeRow}>
+            <TextInput
+              testID="join-code-input"
+              style={[styles.codeInput, error && styles.codeInputError]}
+              value={typedCode}
+              onChangeText={changeCode}
+              placeholder={t.projects.joinByCodePlaceholder}
+              placeholderTextColor={Colors.text.tertiary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              returnKeyType="go"
+              onSubmitEditing={handleSubmitCode}
+            />
+            {Clipboard.isPasteButtonAvailable && (
+              <Clipboard.ClipboardPasteButton
+                testID="join-code-paste"
+                style={styles.pasteButton}
+                acceptedContentTypes={['plain-text']}
+                displayMode="iconOnly"
+                cornerStyle="medium"
+                backgroundColor={Colors.bg.secondary}
+                foregroundColor={Colors.accent.purple}
+                onPress={(data) => {
+                  if (data.type === 'text') changeCode(data.text);
+                }}
+              />
+            )}
+          </View>
           {error && (
             <Text testID="join-code-error" style={styles.codeError}>
               {error}

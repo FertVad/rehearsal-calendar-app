@@ -8,14 +8,12 @@ export interface ProjectsTranslations {
   projectName: string;
   projectDescription: string;
   create: string;
-  inviteLink: string;
   copyLink: string;
   linkCopied: string;
   loading: string;
   selectProject: string;
   namePlaceholder: string;
   descriptionPlaceholder: string;
-  nameRequired: string;
   createError: string;
   projectNotFound: string;
   owner: string;
@@ -23,6 +21,7 @@ export interface ProjectsTranslations {
   upcomingRehearsals: string;
   pastRehearsals: string;
   noUpcomingRehearsals: string;
+  newRehearsal: string;
   inviteMembers: string;
   members: string;
   timezone: string;
@@ -83,14 +82,12 @@ export const ru = {
     projectName: 'Название проекта',
     projectDescription: 'Описание',
     create: 'Создать',
-    inviteLink: 'Пригласить',
     copyLink: 'Копировать ссылку',
     linkCopied: 'Ссылка скопирована!',
     loading: 'Загрузка проектов...',
     selectProject: 'Выбрать проект',
     namePlaceholder: 'Введите название',
     descriptionPlaceholder: 'Введите описание',
-    nameRequired: 'Название обязательно',
     createError: 'Ошибка создания проекта',
     projectNotFound: 'Проект не найден',
     owner: 'Владелец',
@@ -98,6 +95,7 @@ export const ru = {
     upcomingRehearsals: 'Ближайшие репетиции',
     pastRehearsals: 'Прошедшие репетиции',
     noUpcomingRehearsals: 'Нет запланированных репетиций',
+    newRehearsal: 'Новая репетиция',
     inviteMembers: 'Пригласить участников',
     members: 'Участники',
     timezone: 'Часовой пояс',
@@ -159,14 +157,12 @@ export const en = {
     projectName: 'Project Name',
     projectDescription: 'Description',
     create: 'Create',
-    inviteLink: 'Invite',
     copyLink: 'Copy Link',
     linkCopied: 'Link copied!',
     loading: 'Loading projects...',
     selectProject: 'Select Project',
     namePlaceholder: 'Enter name',
     descriptionPlaceholder: 'Enter description',
-    nameRequired: 'Name is required',
     createError: 'Error creating project',
     projectNotFound: 'Project not found',
     owner: 'Owner',
@@ -174,6 +170,7 @@ export const en = {
     upcomingRehearsals: 'Upcoming Rehearsals',
     pastRehearsals: 'Past Rehearsals',
     noUpcomingRehearsals: 'No upcoming rehearsals',
+    newRehearsal: 'New rehearsal',
     inviteMembers: 'Invite Members',
     members: 'Members',
     timezone: 'Timezone',
@@ -235,14 +232,12 @@ export const es = {
     projectName: 'Nombre del proyecto',
     projectDescription: 'Descripción',
     create: 'Crear',
-    inviteLink: 'Invitar',
     copyLink: 'Copiar enlace',
     linkCopied: '¡Enlace copiado!',
     loading: 'Cargando proyectos...',
     selectProject: 'Seleccionar proyecto',
     namePlaceholder: 'Introduce el nombre',
     descriptionPlaceholder: 'Introduce la descripción',
-    nameRequired: 'El nombre es obligatorio',
     createError: 'Error al crear el proyecto',
     projectNotFound: 'Proyecto no encontrado',
     owner: 'Propietario',
@@ -250,6 +245,7 @@ export const es = {
     upcomingRehearsals: 'Próximos ensayos',
     pastRehearsals: 'Ensayos pasados',
     noUpcomingRehearsals: 'No hay ensayos programados',
+    newRehearsal: 'Nuevo ensayo',
     inviteMembers: 'Invitar miembros',
     members: 'Miembros',
     timezone: 'Zona horaria',
@@ -311,14 +307,12 @@ export const de = {
     projectName: 'Projektname',
     projectDescription: 'Beschreibung',
     create: 'Erstellen',
-    inviteLink: 'Einladen',
     copyLink: 'Link kopieren',
     linkCopied: 'Link kopiert!',
     loading: 'Projekte werden geladen...',
     selectProject: 'Projekt auswählen',
     namePlaceholder: 'Namen eingeben',
     descriptionPlaceholder: 'Beschreibung eingeben',
-    nameRequired: 'Name ist erforderlich',
     createError: 'Fehler beim Erstellen des Projekts',
     projectNotFound: 'Projekt nicht gefunden',
     owner: 'Eigentümer',
@@ -326,6 +320,7 @@ export const de = {
     upcomingRehearsals: 'Bevorstehende Proben',
     pastRehearsals: 'Vergangene Proben',
     noUpcomingRehearsals: 'Keine geplanten Proben',
+    newRehearsal: 'Neue Probe',
     inviteMembers: 'Mitglieder einladen',
     members: 'Mitglieder',
     timezone: 'Zeitzone',
