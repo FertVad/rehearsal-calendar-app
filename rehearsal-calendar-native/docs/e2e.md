@@ -246,6 +246,12 @@ What the server stored from a bug report: `e2e/scripts/bug-report-received.js`
 with `MAIL_URL`, `EMAIL`, `MESSAGE` and `SCREEN` fails unless the account has
 exactly one report with that text, sent from that screen (flow 47).
 
+Something copied in another app: `e2e/scripts/set-pasteboard.js` with
+`MAIL_URL`, `SIMULATOR` (`${SIMULATOR}`, the device's udid) and `TEXT` puts
+the text on the simulator's pasteboard (`xcrun simctl pbcopy`). Maestro's
+`setClipboard` keeps it to itself, for its own `pasteText`; iOS's paste
+control reads the system's (flow 08).
+
 An answer held while a flow takes several steps is held `OPEN`: the nine
 seconds of a plain hold are a clock the steps race. Flow 17 held its "All
 Projects" answer that way through a pull, the filter and a pick; on a slow

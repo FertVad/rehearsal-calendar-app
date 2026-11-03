@@ -95,6 +95,40 @@ tags:
 - extendedWaitUntil:
     visible: ".*Join with a code"
     timeout: 10000
+# The whole link pasted with "Paste" beside the field (T-025): iOS's own paste
+# control, which pastes without iOS asking whether the app may read the
+# clipboard. The link was copied elsewhere - on the simulator's pasteboard, not
+# Maestro's own - and its code is found.
+- runScript:
+    file: ../scripts/set-pasteboard.js
+    env:
+      SIMULATOR: ${SIMULATOR}
+      TEXT: rehearsalapp://invite/${TWELFTH_LOWERCASE_INVITE}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Join with a code"
+      SEE: "Code or link"
+      WAIT_MS: 10000
+- tapOn:
+    id: join-code-paste
+- extendedWaitUntil:
+    visible:
+      id: join-code-input
+      text: "rehearsalapp://invite/${TWELFTH_LOWERCASE_INVITE}"
+    timeout: 10000
+- takeScreenshot: 08-link-pasted
+- tapOn:
+    id: join-code-submit
+- extendedWaitUntil:
+    visible:
+      id: join-project-name
+      text: "Twelfth Night"
+    timeout: 15000
+- tapOn: "Cancel"
+- extendedWaitUntil:
+    visible: ".*Join with a code"
+    timeout: 10000
 # A second link opened over the first, the screen still up (T-011 review): it
 # showed As You Like It and joined Twelfth Night, the first link's code.
 - runFlow:

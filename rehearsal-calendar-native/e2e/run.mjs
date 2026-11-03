@@ -482,7 +482,7 @@ async function main() {
   watchReportedAddress(udid);
 
   const variables = ['-e', `PASSWORD=${seeded.password}`, '-e', `APP_ID=${BUNDLE_ID}`,
-    '-e', `API_URL=${API_URL}`, '-e', `MAIL_URL=${MAIL_URL}`,
+    '-e', `API_URL=${API_URL}`, '-e', `MAIL_URL=${MAIL_URL}`, '-e', `SIMULATOR=${udid}`,
     ...Object.entries(seeded.people).flatMap(([key, person]) => ['-e', `${key.toUpperCase()}_EMAIL=${person.email}`]),
     ...Object.entries(seeded.invites).flatMap(([key, code]) => ['-e', `${key.toUpperCase()}_INVITE=${code}`]),
     ...Object.entries(seeded.days).flatMap(([key, date]) => ['-e', `${key.toUpperCase()}_DAY=${date}`]),

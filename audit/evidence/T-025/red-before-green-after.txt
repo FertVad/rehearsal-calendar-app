@@ -69,7 +69,48 @@ Flows 19 and 39 tapped the card at a point ("25%,23%") because its middle was
 "Invite"; the card is shorter now and that point near its edge, so they tap it
 by its name.
 
-Screenshots checked by eye: 63-project-cards (two cards: name, Admin,
+== Review 1: "Create" without a name, and "Paste" itself, on screen ==
+Flow 03 now opens the form empty: "Create" off (enabled: false), a tap on it
+brings no "Name is required"; the same with a name of spaces; on with
+"Macbeth". Flow 08 now puts rehearsalapp://invite/<Twelfth Night's code in
+lowercase> on the simulator's pasteboard (e2e/scripts/set-pasteboard.js, the
+mailbox's GET /pasteboard, xcrun simctl pbcopy; run.mjs gives the flows
+${SIMULATOR}), taps iOS's paste control (join-code-paste), sees the link in the
+field, and "Join" finds Twelfth Night.
+
+Red before - app files at 68ee1c1 (CreateProjectScreen.tsx,
+JoinProjectScreen.tsx, joinProjectScreenStyles.ts, inviteCode.ts,
+translations/projects.ts), flows new:
+
+  npm run e2e -- e2e/flows/03-create-project.yaml e2e/flows/08-invite-before-sign-in.yaml
+[Failed] Create a project (1m 18s) (Assertion is false: "Create", disabled is visible)
+[Failed] Invite link before sign-in (1m 34s) (Assertion is false: "Twelfth Night", id: join-project-name is visible)
+2/2 Flows Failed
+
+Flow 08 stops there at the lowercase code, before "Paste". So once more at
+ec5a375 with only the paste control taken out of JoinProjectScreen.tsx
+(`false && Clipboard.isPasteButtonAvailable`; the base had no control), then
+put back with git restore --source=HEAD:
+
+  npm run e2e -- e2e/flows/08-invite-before-sign-in.yaml
+[Failed] Invite link before sign-in (2m 6s) (Element not found: Id matching regex: join-code-paste)
+1/1 Flow Failed
+
+Green after (ec5a375 + the flows):
+
+  npm run e2e -- e2e/flows/03-create-project.yaml e2e/flows/08-invite-before-sign-in.yaml
+[Passed] Create a project (1m 28s)
+[Passed] Invite link before sign-in (1m 57s)
+2/2 Flows Passed in 3m 26s
+[e2e] taps taken again (tap-and-see.yaml): 0
+  server.log: [e2e] put "rehearsalapp://invite/4ytnf6f6" on the pasteboard
+  npm run type-check: clean
+
+Screenshots checked by eye: 03-create-off-without-a-name (empty name,
+"Create" dimmed, no alert), 08-link-pasted (the link in the field, the paste
+control beside it).
+
+Screenshots checked by eye (first round): 63-project-cards (two cards: name, Admin,
 description; nothing at the right; no-ink.js region x 0.75-0.97, y 0.15-0.35
 lies between the header's "+" at 0.105-0.133 and "Join with a code" from
 0.363), 08-wrong-code-under-the-field (field with capitals keyboard, iOS's

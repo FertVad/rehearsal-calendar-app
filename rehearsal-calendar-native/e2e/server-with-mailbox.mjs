@@ -76,6 +76,12 @@
  *   GET /bug-reports?from=<address>   { reports: [{ message, screen }] }, oldest
  *                                     first
  *
+ * It puts text on the simulator's pasteboard, as copying it in another app
+ * would, for a flow that pastes with iOS's own paste control (flow 08):
+ *
+ *   GET /pasteboard?device=<udid>&text=<t>   `xcrun simctl pbcopy` on that
+ *                                            simulator
+ *
  * And it keeps count of the taps the flows had to take again:
  *
  *   GET /tap-again?tap=<what>&see=<what>   e2e/subflows/tap-and-see.yaml did not
@@ -85,6 +91,7 @@
  *                                          prints after the flows (T-207)
  */
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -315,6 +322,17 @@ http.createServer((request, response) => {
     holds = [];
     answers.forEach((release) => release());
     return answer(200, { released: answers.length });
+  }
+  if (request.method === 'GET' && url.pathname === '/pasteboard') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    const child = execFile('xcrun', ['simctl', 'pbcopy', device], { timeout: 30000 }, (error) => {
+      if (error) return answer(500, { error: String(error) });
+      console.log(`[e2e] put ${JSON.stringify(url.searchParams.get('text'))} on the pasteboard`);
+      return answer(200, { copied: true });
+    });
+    child.stdin.end(url.searchParams.get('text') || '');
+    return;
   }
   if (request.method === 'GET' && url.pathname === '/tap-again') {
     const line = `${new Date().toISOString()}  tapped "${url.searchParams.get('tap')}" again: no "${url.searchParams.get('see')}" after the first tap`;
