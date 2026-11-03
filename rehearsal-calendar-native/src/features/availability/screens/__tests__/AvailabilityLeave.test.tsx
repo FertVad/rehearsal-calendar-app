@@ -7,7 +7,7 @@
  * navigation mock's `__remove`.
  */
 import React from 'react';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { ActionSheetIOS } from 'react-native';
 import * as Navigation from '@react-navigation/native';
 import AvailabilityScreen from '../AvailabilityScreen';
@@ -29,15 +29,21 @@ jest.mock('../../../../shared/hooks/useAutoCalendarSync', () => ({
   useAutoCalendarSync: () => ({ performAutoSync: jest.fn(), forceSync: jest.fn() }),
 }));
 jest.mock('../../../../shared/components/PickerModal', () => ({ PickerModal: () => null }));
-jest.mock('../../components', () => ({
-  CalendarMonth: () => null,
-  EditorHeader: () => null,
-  ModeInfo: () => null,
-}));
+jest.mock('../../components', () => {
+  const { Pressable } = require('react-native');
+  return {
+    CalendarMonth: () => null,
+    // Its arrow and "Deselect" both put the editor away through onClear.
+    EditorHeader: ({ onClear }: { onClear: () => void }) => <Pressable testID="collapse" onPress={onClear} />,
+    ModeInfo: () => null,
+  };
+});
 
 let mockHasChanges = false;
 let mockCanSave = true;
 const mockSave = jest.fn();
+const mockDiscard = jest.fn();
+const mockClearSelection = jest.fn();
 jest.mock('../../hooks', () => ({
   useAvailabilityData: () => ({
     availability: {},
@@ -51,6 +57,7 @@ jest.mock('../../hooks', () => ({
     markChanged: jest.fn(),
     markSaved: jest.fn(),
     markSettled: jest.fn(),
+    discardChanges: mockDiscard,
     getDayState: () => ({ mode: 'busy', slots: [] }),
     loadAvailability: jest.fn(),
     loadFailed: false,
@@ -73,7 +80,7 @@ jest.mock('../../hooks', () => ({
     validationError: null,
     handleDayPress: jest.fn(),
     handleModeChange: jest.fn(),
-    clearSelection: jest.fn(),
+    clearSelection: mockClearSelection,
     deletePastDates: jest.fn(),
     openTimePicker: jest.fn(),
     closeTimePicker: jest.fn(),
@@ -193,5 +200,82 @@ it('changes that cannot be saved as they are offer no Save', () => {
   expect(showSheet.mock.calls[0][0]).toMatchObject({
     options: [t.common.dontSave, t.common.cancel],
     cancelButtonIndex: 1,
+  });
+});
+
+// The editor's arrow and "Deselect" put it away with Save in it, and the
+// changes were left unsaved out of sight (T-026). The same question, from the
+// same guard; the screen stays.
+describe('Collapsing the editor (T-026)', () => {
+  const collapse = (screen: ReturnType<typeof render>) => {
+    act(() => { fireEvent.press(screen.getByTestId('collapse')); });
+  };
+
+  it('with nothing changed, it collapses at once', () => {
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    collapse(screen);
+
+    expect(showSheet).not.toHaveBeenCalled();
+    expect(mockClearSelection).toHaveBeenCalledTimes(1);
+  });
+
+  it('with days changed, it asks Don\'t Save, Save, Cancel, and Cancel leaves it as it was', async () => {
+    mockHasChanges = true;
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    collapse(screen);
+    expect(showSheet).toHaveBeenCalledTimes(1);
+    expect(showSheet.mock.calls[0][0]).toMatchObject({
+      options: [t.common.dontSave, t.common.save, t.common.cancel],
+      destructiveButtonIndex: 0,
+      cancelButtonIndex: 2,
+    });
+    expect(mockClearSelection).not.toHaveBeenCalled();
+
+    await choose(t.common.cancel);
+    expect(mockClearSelection).not.toHaveBeenCalled();
+    expect(mockDiscard).not.toHaveBeenCalled();
+    expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it('Don\'t Save puts the days back as saved and collapses; the screen stays', async () => {
+    mockHasChanges = true;
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    collapse(screen);
+    await choose(t.common.dontSave);
+
+    expect(mockDiscard).toHaveBeenCalledTimes(1);
+    expect(mockClearSelection).toHaveBeenCalled();
+    expect(mockSave).not.toHaveBeenCalled();
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('Save saves, as the screen\'s own Save does, and collapses once it went through', async () => {
+    mockHasChanges = true;
+    mockSave.mockImplementation(async () => { mockHasChanges = false; return true; });
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    collapse(screen);
+    await choose(t.common.save);
+
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(mockClearSelection).toHaveBeenCalled();
+    expect(mockDiscard).not.toHaveBeenCalled();
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('a save that fails leaves the editor up with its changes', async () => {
+    mockHasChanges = true;
+    mockSave.mockResolvedValue(false);
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+    collapse(screen);
+    await choose(t.common.save);
+
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(mockClearSelection).not.toHaveBeenCalled();
+    expect(mockDiscard).not.toHaveBeenCalled();
   });
 });

@@ -32,14 +32,14 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
             : t.availability.selectedDates(selectedCount)}
         </Text>
         {selectedCount > 0 && (
-          <TouchableOpacity onPress={onClear} style={styles.clearButton}>
+          <TouchableOpacity testID="availability-deselect" onPress={onClear} style={styles.clearButton}>
             {/* It lets go of the days picked and leaves what is on them: "Clear"
                 read as emptying the day (T-021). */}
             <Text style={styles.clearButtonText}>{t.common.deselect}</Text>
           </TouchableOpacity>
         )}
       </View>
-      <IconButton icon="chevron-down" accessibilityLabel={t.common.close} onPress={onClear} />
+      <IconButton testID="availability-collapse" icon="chevron-down" accessibilityLabel={t.common.close} onPress={onClear} />
     </View>
   );
 };

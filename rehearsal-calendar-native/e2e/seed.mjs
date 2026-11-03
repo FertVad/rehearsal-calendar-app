@@ -177,6 +177,9 @@ export const PEOPLE = {
   // and an actor in it, who has no such button (63). Nothing is saved.
   leonato: { email: 'leonato@e2e.test', firstName: 'Leonato', lastName: 'Governor', onboarded: true },
   hero: { email: 'hero@e2e.test', firstName: 'Hero', lastName: 'Messina', onboarded: true },
+  // Busy all day on MARK_DAY, changes it and collapses the editor (64). In no
+  // project, so nothing another flow books lands on her days.
+  yelena: { email: 'yelena@e2e.test', firstName: 'Yelena', lastName: 'Serebryakova', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -658,6 +661,11 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual', NULL),
             ($1, $4::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-early-train')`,
     [ids.shamrayev, localInstant(5, 23), localInstant(6, 1), localInstant(6, 0)]);
+  // Yelena's (64): MARK_DAY busy all day, as a save of that day writes it.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'manual')`,
+    [ids.yelena, `${days.mark}T00:00:00.000Z`, `${days.mark}T23:59:59.999Z`]);
 
   // Inboxes written as the server records a notification, a minute apart and
   // to the millisecond as it writes them: sign-ins are spent, and sixty

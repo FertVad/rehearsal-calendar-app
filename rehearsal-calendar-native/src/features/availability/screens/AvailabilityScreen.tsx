@@ -58,6 +58,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     markChanged,
     markSaved,
     markSettled,
+    discardChanges,
     getDayState,
     loadAvailability,
     loadFailed,
@@ -135,10 +136,12 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // (T-013); saved there, the sheet closes once the save has gone through.
   // Only a day that says something else than on the server is asked about.
   // Every save goes through the guard, and while one is out the sheet takes
-  // no changes (review T-013 r2).
+  // no changes (review T-013 r2). Collapsing the editor, which takes Save out
+  // of sight, asks the same; "Don't Save" there puts the days back (T-026).
   const guard = useLeaveGuard({
     hasChanges: differsFromSaved,
     canSave: () => canSave({ availability, changed, today, language, t }),
+    discard: discardChanges,
     save: async (leaving) => {
       const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
       if (leaving || !saved) return saved;
@@ -328,7 +331,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         <EditorHeader
           selectedCount={editor.selectedDates.length}
           selectedDate={editor.selectedDate}
-          onClear={editor.clearSelection}
+          onClear={() => guard.leave(editor.clearSelection)}
         />
 
         <ScrollView style={styles.bottomSheetContent} showsVerticalScrollIndicator={false}>

@@ -218,13 +218,13 @@ describe('Cancel in "Select Dates"', () => {
 describe('The planner\'s list, dense (T-020)', () => {
   const height = (node: { props: { style: unknown } }) => StyleSheet.flatten(node.props.style as any).height;
 
-  it('heads a day with 28 pt and gives a slot a row of 56', async () => {
+  it('heads a day with 28 pt and gives a slot a row of 52 (T-026)', async () => {
     const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
     await settle();
     await settle();
 
     expect(height(screen.getByTestId('planner-day-2026-01-01'))).toBe(28);
-    expect(height(screen.getByTestId('planner-row-2026-01-01-09:00'))).toBe(56);
+    expect(height(screen.getByTestId('planner-row-2026-01-01-09:00'))).toBe(52);
   });
 
   it('puts the project, the period and the people in one row of 44 pt', async () => {

@@ -1,0 +1,148 @@
+# Collapsing the availability editor with a day changed asks first, as
+# closing the screen does (T-026; owner, 02.11.2026). The arrow and
+# "Deselect" put the editor away at once, its Save with it, and the change
+# stayed unsaved out of sight. Now: "Cancel" leaves the editor as it was;
+# "Don't Save" puts the day back as saved and collapses; "Save" saves and
+# collapses, and the day is saved when the screen is opened again. Nothing
+# changed, it collapses without asking.
+#
+# Yelena Serebryakova is busy all day on MARK_DAY, in no project, so nothing
+# another flow books lands on her days.
+appId: ${APP_ID}
+name: Availability editor asks before collapsing
+tags:
+  - availability
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${YELENA_EMAIL}
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${MARK_DAY}
+      text: ".*, Busy"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MARK_DAY}
+- tapOn:
+    id: day-${MARK_DAY}
+- extendedWaitUntil:
+    visible:
+      id: mode-busy
+      selected: true
+    timeout: 10000
+# Free instead of busy, and the arrow: the question, not the editor gone.
+- tapOn:
+    id: mode-free
+- tapOn:
+    id: availability-collapse
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+- takeScreenshot: 64-collapse-asks
+# iOS draws the sheet as a popover with no "Cancel" button: a tap outside it
+# is its Cancel. Not the centre of its dismiss region, which is the popover.
+- tapOn:
+    point: "50%, 8%"
+- extendedWaitUntil:
+    notVisible: "Don't Save"
+    timeout: 5000
+- assertVisible:
+    id: mode-free
+    selected: true
+- assertVisible:
+    id: availability-save
+    enabled: true
+# "Don't Save": the day as it was, the editor down.
+- tapOn:
+    id: availability-collapse
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+- tapOn: "Don't Save"
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 10000
+- assertVisible:
+    id: day-${MARK_DAY}
+    text: ".*, Busy"
+- takeScreenshot: 64-dont-save-day-as-it-was
+# Picked again, it is busy, and nothing is left to lose.
+- tapOn:
+    id: day-${MARK_DAY}
+- extendedWaitUntil:
+    visible:
+      id: mode-busy
+      selected: true
+    timeout: 10000
+- assertVisible:
+    id: availability-save
+    enabled: false
+# Free again, and "Deselect": "Save" saves and collapses.
+- tapOn:
+    id: mode-free
+- tapOn:
+    id: availability-deselect
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+# With the popover up the screen behind is out of reach: this "Save" is its.
+- tapOn: "Save"
+- extendedWaitUntil:
+    visible:
+      id: toast
+      text: "Saved"
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 10000
+- assertNotVisible: "Don't Save"
+- assertVisible:
+    id: day-${MARK_DAY}
+    text: ".*, Free"
+- takeScreenshot: 64-save-saved-and-collapsed
+# Saved on the server: closed without asking, opened again, the day is free.
+- tapOn:
+    id: availability-close
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- assertNotVisible: "Don't Save"
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${MARK_DAY}
+      text: ".*, Free"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+# Nothing changed: the arrow collapses at once.
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${MARK_DAY}
+- tapOn:
+    id: day-${MARK_DAY}
+- extendedWaitUntil:
+    visible:
+      id: availability-save
+    timeout: 10000
+- tapOn:
+    id: availability-collapse
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 10000
+- assertNotVisible: "Don't Save"

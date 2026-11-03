@@ -176,4 +176,23 @@ describe('What leaving would lose: a day saying something else than the server (
     act(() => { result.current.editor.handleModeChange('busy'); });
     expect(result.current.data.differsFromSaved).toBe(false);
   });
+
+  it('"Don\'t Save" of a collapse puts every changed day back as saved (T-026)', async () => {
+    (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [busy('2026-10-01', '10:00', '12:00')] });
+    const result = await open();
+    const asSaved = result.current.data.availability['2026-10-01'];
+
+    act(() => { result.current.editor.addSlot(); });
+    // A second day, with nothing on the server.
+    act(() => { result.current.editor.handleDayPress(2026, 9, 2, () => '2026-10-02'); });
+    act(() => { result.current.editor.handleModeChange('busy'); });
+    expect(result.current.data.differsFromSaved).toBe(true);
+
+    act(() => { result.current.data.discardChanges(); });
+
+    expect(result.current.data.availability['2026-10-01']).toEqual(asSaved);
+    expect(result.current.data.availability['2026-10-02']).toBeUndefined();
+    expect(result.current.data.hasChanges).toBe(false);
+    expect(result.current.data.differsFromSaved).toBe(false);
+  });
 });

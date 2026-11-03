@@ -71,10 +71,10 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
   );
 });
 
-// 56 pt a slot, "+ Add" 44 inside it (owner, 30.10.2026; T-020).
+// 52 pt a slot, "+ Add" 44 inside it (owner, 02.11.2026; T-026; 56 in T-020).
 const styles = StyleSheet.create({
   slot: {
-    height: 56,
+    height: 52,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',

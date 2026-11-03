@@ -118,6 +118,19 @@ export const useAvailabilityData = () => {
     });
   }, []);
 
+  /** Every day changed and not saved says again what was saved (T-026). */
+  const discardChanges = useCallback(() => {
+    setAvailability((prev) => {
+      const next = { ...prev };
+      for (const date of Object.keys(changedRef.current)) {
+        if (saved[date]) next[date] = saved[date];
+        else delete next[date];
+      }
+      return next;
+    });
+    setChanged({});
+  }, [saved]);
+
   // Whether the last load actually answered.
   //
   // A failure used to leave the state empty and say nothing, and the screen
@@ -406,6 +419,7 @@ export const useAvailabilityData = () => {
     markChanged,
     markSaved,
     markSettled,
+    discardChanges,
     getDayState,
     loadAvailability,
   };
