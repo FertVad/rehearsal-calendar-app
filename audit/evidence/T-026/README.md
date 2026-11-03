@@ -144,6 +144,84 @@ Before their update, flows 10 and 25 failed on the fix ("Element not found:
 availability-close" — the question's popover was up where they expected the
 editor gone).
 
+## Review 2 (Astra): "Delete Data" put the editor away past the guard
+
+`deletePastDates` ended in `clearSelection()`: with a future day changed and a past day
+picked, deleting the past day took the whole selection, the editor and its Save with it,
+and left the future day unsaved, unasked.
+
+Fix: `9dae404`. Base for "red before": `a366fbd`. Files put back to it for the red run:
+`src/features/availability/hooks/useAvailabilityEditor.ts`,
+`src/features/availability/screens/AvailabilityScreen.tsx`.
+
+### Every way the selection empties
+
+| Way | Before | Now |
+|---|---|---|
+| The editor's arrow, "Deselect" (`EditorHeader.onClear`) | `guard.leave(clearSelection)` on the screen | `editor.collapse` → `putAway` → `guard.leave` |
+| The last day picked tapped again | intercepted on the screen → `guard.leave` | in `handleDayPress` itself → `collapse` |
+| Another day let go of while more are picked | toggled off | the same; the selection is not empty, the editor stays |
+| "Delete Data" of the past days picked | `clearSelection()`, unasked | only the deleted days let go of; none left → `putAway` after the render that has them settled, so they are not asked about |
+| The editor's Save / the question's Save gone through | `clearSelection()` | the same: nothing is left unsaved (the screen takes no taps while a save is out) |
+| "Don't Save" of the question | `discard`, then `clearSelection` | the same, from `guard.leave` |
+
+The hook now takes `putAway` (required) and empties its selection only through it, save
+for the save gone through; the screen wires it to `guard.leave`. `setSelectedDates([])`
+is nowhere else.
+
+### e2e
+
+Not for the deletion path: the month list begins with the current month, so on the 1st
+there is no past day on the screen to pick, and the owner ruled out moving the date
+(03.11). Jest on the real screen and hooks instead, `AvailabilityPutAway.test.tsx`.
+Flows 64, 10 and 25 rerun on the fix: the collapse and the last-day tap moved from the
+screen into the hook.
+
+### Jest — red before (a366fbd hook and screen)
+
+```
+npx jest --selectProjects frontend --testPathPatterns 'AvailabilityPutAway|useAvailabilityEditor' --verbose
+    ✕ lets go of the deleted days only; the editor stays up with the rest (T-026, review 2)
+    ✕ with none left picked, puts the editor away through the screen (T-026, review 2)
+    ✕ by the last day picked tapped again goes through the screen, as the arrow does (T-026)
+    ✓ with the day changed, it asks; Don't Save puts it back and collapses
+    ✓ Save saves and collapses; the day is not picked back
+    ✓ with nothing changed, it collapses at once
+    ✓ another day picked, the one let go of goes without asking
+    ✕ a future day changed and picked stays picked, its Save with it, and nothing is asked
+      Expected: 1
+      Received: 0
+      > 178 |     expect(picked(screen)).toBe(1);
+    ✕ none left picked with a day still unsaved: the editor goes down only once asked
+      Expected number of calls: 1
+      Received number of calls: 0
+      > 194 |     expect(showSheet).toHaveBeenCalledTimes(1);
+    ✓ none left picked and nothing unsaved but the deleted day: the editor goes down unasked
+Tests:       5 failed, 19 passed, 24 total
+```
+The green ones on the base: the last-day tap was already guarded on the screen (review 1),
+and the last case guards the fix against asking about the deleted day itself.
+
+### Jest — green after (9dae404)
+
+```
+npx jest --selectProjects frontend --silent
+Test Suites: 123 passed, 123 total
+Tests:       1119 passed, 1119 total
+```
+`npm run type-check`: clean. `npm run check:secrets`: pass, 0 findings.
+
+### e2e — after (9dae404)
+
+```
+npm run e2e -- e2e/flows/64-availability-collapse-asks.yaml
+[Passed] Availability editor asks before collapsing (2m 31s)
+npm run e2e -- e2e/flows/10-availability-days.yaml
+[Passed] Availability saves the day it changed (3m 34s)
+npm run e2e -- e2e/flows/25-past-midnight-availability.yaml
+[Passed] A busy slot past midnight is one slot, on both days (3m 23s)
+```
+
 ## Seen on the simulator
 
 On this iOS the action sheet is a popover: "Don't Save" and "Save", no "Cancel"
