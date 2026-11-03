@@ -111,6 +111,7 @@ describe('What leaving would lose: a day saying something else than the server (
         today: '2026-09-20',
         getDayState: data.getDayState,
         months: [{ year: 2026, month: 9, key: '2026-9' }],
+        putAway: (clear) => clear(),
       });
       return { data, editor };
     });

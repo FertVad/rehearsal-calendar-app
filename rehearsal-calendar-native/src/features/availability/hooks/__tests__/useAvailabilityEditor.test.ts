@@ -36,7 +36,13 @@ const DATE = '2026-09-08';
 const TODAY = '2026-09-20';
 const LATER = '2026-09-28';
 
-const setup = (initial: AvailabilityData = {}, markChanged = jest.fn(), markSettled = jest.fn()) => {
+const setup = (
+  initial: AvailabilityData = {},
+  markChanged = jest.fn(),
+  markSettled = jest.fn(),
+  // The screen's guard, letting the editor go down at once.
+  putAway = jest.fn((clear: () => void) => clear()),
+) => {
   let availability: AvailabilityData = { ...initial };
 
   const setAvailability = jest.fn((updater: (prev: AvailabilityData) => AvailabilityData) => {
@@ -55,6 +61,7 @@ const setup = (initial: AvailabilityData = {}, markChanged = jest.fn(), markSett
       today: TODAY,
       getDayState,
       months: [{ year: 2026, month: 8, key: '2026-8' }],
+      putAway,
     })
   );
 
@@ -241,5 +248,49 @@ describe('Deleting the marks on past dates', () => {
     });
 
     expect(markSettled).toHaveBeenCalledWith([DATE]);
+  });
+
+  it('lets go of the deleted days only; the editor stays up with the rest (T-026, review 2)', async () => {
+    const putAway = jest.fn();
+    const { hook } = setup({ [DATE]: { mode: 'busy', slots: [] } }, jest.fn(), jest.fn(), putAway);
+    act(() => {
+      hook.result.current.handleDayPress(2026, 8, 28, () => LATER);
+    });
+
+    await act(async () => {
+      await hook.result.current.deletePastDates(() => {});
+    });
+
+    expect(hook.result.current.selectedDates).toEqual([LATER]);
+    expect(putAway).not.toHaveBeenCalled();
+  });
+
+  it('with none left picked, puts the editor away through the screen (T-026, review 2)', async () => {
+    const putAway = jest.fn();
+    const { hook } = setup({ [DATE]: { mode: 'busy', slots: [] } }, jest.fn(), jest.fn(), putAway);
+
+    await act(async () => {
+      await hook.result.current.deletePastDates(() => {});
+    });
+
+    expect(putAway).toHaveBeenCalledTimes(1);
+    expect(hook.result.current.selectedDates).toEqual([DATE]);
+  });
+});
+
+describe('The selection emptied', () => {
+  it('by the last day picked tapped again goes through the screen, as the arrow does (T-026)', () => {
+    const putAway = jest.fn();
+    const { hook } = setup({}, jest.fn(), jest.fn(), putAway);
+
+    act(() => hook.result.current.handleDayPress(2026, 8, 8, () => DATE));
+    expect(putAway).toHaveBeenCalledTimes(1);
+    expect(hook.result.current.selectedDates).toEqual([DATE]);
+
+    act(() => hook.result.current.collapse());
+    expect(putAway).toHaveBeenCalledTimes(2);
+
+    act(() => putAway.mock.calls[1][0]());
+    expect(hook.result.current.selectedDates).toEqual([]);
   });
 });

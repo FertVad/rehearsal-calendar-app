@@ -80,7 +80,8 @@ jest.mock('../../hooks', () => ({
     performSmartSync: jest.fn(),
     performForceSync: jest.fn(),
   }),
-  useAvailabilityEditor: () => ({
+  // Put away as the real one puts it: through the screen's putAway.
+  useAvailabilityEditor: ({ putAway }: { putAway: (clear: () => void) => void }) => ({
     selectedDates: ['2026-11-03'],
     selectedDate: '2026-11-03',
     panelOpen: true,
@@ -90,6 +91,7 @@ jest.mock('../../hooks', () => ({
     handleDayPress: mockDayPress,
     handleModeChange: jest.fn(),
     clearSelection: mockClearSelection,
+    collapse: () => putAway(mockClearSelection),
     deletePastDates: jest.fn(),
     openTimePicker: jest.fn(),
     closeTimePicker: jest.fn(),
@@ -289,59 +291,15 @@ describe('Collapsing the editor (T-026)', () => {
     expect(mockDiscard).not.toHaveBeenCalled();
   });
 
-  // The last day picked, tapped again, puts the editor away too, and it went
-  // without a word (review T-026).
-  describe('by tapping the last day picked again', () => {
-    const tapDay = (screen: ReturnType<typeof render>, id: string) => {
-      act(() => { fireEvent.press(screen.getByTestId(id)); });
-    };
+  // The last day picked tapped again, and "Delete Data", empty the selection
+  // in the editor itself: AvailabilityPutAway.test.tsx, with the real hooks.
+  it('a day tapped is the editor\'s to pick or let go of', () => {
+    mockLoading = false;
+    const screen = render(<AvailabilityScreen navigation={navigation} />);
 
-    beforeEach(() => { mockLoading = false; });
+    act(() => { fireEvent.press(screen.getByTestId('day-4')); });
 
-    it('with days changed, it asks, and Don\'t Save puts them back and collapses', async () => {
-      mockHasChanges = true;
-      const screen = render(<AvailabilityScreen navigation={navigation} />);
-
-      tapDay(screen, 'day-3');
-      expect(showSheet).toHaveBeenCalledTimes(1);
-      expect(mockClearSelection).not.toHaveBeenCalled();
-
-      await choose(t.common.dontSave);
-      expect(mockDiscard).toHaveBeenCalledTimes(1);
-      expect(mockClearSelection).toHaveBeenCalledTimes(1);
-      expect(mockDayPress).not.toHaveBeenCalled();
-    });
-
-    it('Save saves and collapses; the day is not picked back', async () => {
-      mockHasChanges = true;
-      mockSave.mockImplementation(async () => { mockHasChanges = false; return true; });
-      const screen = render(<AvailabilityScreen navigation={navigation} />);
-
-      tapDay(screen, 'day-3');
-      await choose(t.common.save);
-
-      expect(mockSave).toHaveBeenCalledTimes(1);
-      expect(mockClearSelection).toHaveBeenCalled();
-      expect(mockDayPress).not.toHaveBeenCalled();
-    });
-
-    it('with nothing changed, it collapses at once', () => {
-      const screen = render(<AvailabilityScreen navigation={navigation} />);
-
-      tapDay(screen, 'day-3');
-
-      expect(showSheet).not.toHaveBeenCalled();
-      expect(mockClearSelection).toHaveBeenCalledTimes(1);
-    });
-
-    it('another day, the editor staying up, is picked without asking', () => {
-      mockHasChanges = true;
-      const screen = render(<AvailabilityScreen navigation={navigation} />);
-
-      tapDay(screen, 'day-4');
-
-      expect(showSheet).not.toHaveBeenCalled();
-      expect(mockDayPress).toHaveBeenCalledWith(2026, 10, 4, expect.any(Function));
-    });
+    expect(showSheet).not.toHaveBeenCalled();
+    expect(mockDayPress).toHaveBeenCalledWith(2026, 10, 4, expect.any(Function));
   });
 });

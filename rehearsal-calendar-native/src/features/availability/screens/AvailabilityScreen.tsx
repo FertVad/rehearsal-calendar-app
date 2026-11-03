@@ -97,6 +97,9 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     today,
     getDayState,
     months,
+    // However the selection empties, the editor goes down through the guard
+    // (T-026); called on a tap, once `guard` below is there.
+    putAway: (clear) => guard.leave(clear),
   });
 
   const [refreshing, setRefreshing] = useState(false);
@@ -138,6 +141,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // Every save goes through the guard, and while one is out the sheet takes
   // no changes (review T-013 r2). Collapsing the editor, which takes Save out
   // of sight, asks the same; "Don't Save" there puts the days back (T-026).
+  // The editor empties its selection only through `putAway`, that is here.
   const guard = useLeaveGuard({
     hasChanges: differsFromSaved,
     canSave: () => canSave({ availability, changed, today, language, t }),
@@ -189,15 +193,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         selectedDates={editor.selectedDates}
         availability={availability}
         today={today}
-        onDayPress={(y, m, d) => {
-          // The last day picked, tapped again, puts the editor away as its
-          // arrow does, and is asked about the same way (T-026, review).
-          if (editor.selectedDates.length === 1 && editor.selectedDates[0] === formatDate(y, m, d)) {
-            guard.leave(editor.clearSelection);
-          } else {
-            editor.handleDayPress(y, m, d, formatDate);
-          }
-        }}
+        onDayPress={(y, m, d) => editor.handleDayPress(y, m, d, formatDate)}
         getDayStatus={(date) => getDayStatus(date, availability)}
         onTodayLayout={index === 0 ? scrollToToday : undefined}
       />
@@ -339,7 +335,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         <EditorHeader
           selectedCount={editor.selectedDates.length}
           selectedDate={editor.selectedDate}
-          onClear={() => guard.leave(editor.clearSelection)}
+          onClear={editor.collapse}
         />
 
         <ScrollView style={styles.bottomSheetContent} showsVerticalScrollIndicator={false}>

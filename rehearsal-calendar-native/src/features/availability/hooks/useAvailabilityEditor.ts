@@ -20,6 +20,12 @@ interface UseAvailabilityEditorProps {
   today: string;
   getDayState: (date: string) => DayState;
   months: Array<{ year: number; month: number; key: string }>;
+  /**
+   * The editor put away, its Save with it: `clear` once the screen allows —
+   * asked first with something unsaved (useLeaveGuard.leave, T-026). Every way
+   * the selection empties here goes through this.
+   */
+  putAway: (clear: () => void) => void;
 }
 
 export function useAvailabilityEditor({
@@ -30,8 +36,16 @@ export function useAvailabilityEditor({
   today,
   getDayState,
   months,
+  putAway,
 }: UseAvailabilityEditorProps) {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  // The selection as last rendered, for the deletion coming back from the server.
+  const selectedRef = useRef(selectedDates);
+  selectedRef.current = selectedDates;
+  // A deletion that left nothing picked: the editor is put away after the
+  // render that has the deleted days settled, so only what is still unsaved
+  // is asked about (T-026, review 2).
+  const [putAwayDue, setPutAwayDue] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Time picker state. The picker holds its own draft and hands back only a
@@ -74,6 +88,13 @@ export function useAvailabilityEditor({
   const handleDayPress = (year: number, month: number, day: number, formatDate: (y: number, m: number, d: number) => string) => {
     const date = formatDate(year, month, day);
 
+    // The last day picked, tapped again, puts the editor away as its arrow
+    // does (T-026, review).
+    if (selectedDates.length === 1 && selectedDates[0] === date) {
+      collapse();
+      return;
+    }
+
     setSelectedDates(prev => {
       const exists = prev.includes(date);
       const next = exists ? prev.filter(d => d !== date) : [...prev, date];
@@ -101,9 +122,19 @@ export function useAvailabilityEditor({
     });
   };
 
+  /** Only once nothing is left unsaved — a save gone through; else `collapse`. */
   const clearSelection = () => {
     setSelectedDates([]);
   };
+
+  /** The editor's arrow and "Deselect": put away through the screen. */
+  const collapse = () => putAway(clearSelection);
+
+  useEffect(() => {
+    if (!putAwayDue) return;
+    setPutAwayDue(false);
+    collapse();
+  });
 
   // Time picker handlers
   const openTimePicker = (slotIndex: number, field: 'start' | 'end') => {
@@ -200,6 +231,11 @@ export function useAvailabilityEditor({
    *
    * Nothing is removed locally unless the server agreed, so a failure leaves
    * the screen telling the truth rather than a comfortable fiction.
+   *
+   * Only the deleted days are let go of: the rest stay picked, the editor and
+   * its Save with them. It used to drop the whole selection, so a future day
+   * changed and picked too was left unsaved, unasked (T-026, review 2). With
+   * nothing left picked, the editor is put away as its arrow puts it.
    */
   const deletePastDates = async (onComplete: (error?: unknown) => void) => {
     const dates = selectedDates.filter((date) => date < today);
@@ -218,7 +254,11 @@ export function useAvailabilityEditor({
       return updated;
     });
     markSettled(dates);
-    clearSelection();
+    if (selectedRef.current.some((date) => !dates.includes(date))) {
+      setSelectedDates(prev => prev.filter((date) => !dates.includes(date)));
+    } else {
+      setPutAwayDue(true);
+    }
     onComplete();
   };
 
@@ -238,6 +278,7 @@ export function useAvailabilityEditor({
     // Handlers
     handleDayPress,
     clearSelection,
+    collapse,
     openTimePicker,
     confirmTimePicker,
     handleModeChange,
