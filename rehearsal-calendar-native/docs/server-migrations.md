@@ -7,7 +7,7 @@ operator action, separate from deployment. SQLite is a test fixture only;
 
 ## Select the target explicitly
 
-Use Node22.16.0 and the locked server dependencies. Settings come from the process
+Use Node 26.13.0 and the locked server dependencies. Settings come from the process
 or an explicitly selected absolute `SERVER_ENV_FILE`; no `.env` search occurs.
 Process settings take precedence over that file. `DATABASE_URL` (or `POSTGRES_URL`)
 must identify the intended PostgreSQL database. `MIGRATION_SCHEMA` selects an
