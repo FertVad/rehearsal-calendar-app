@@ -1,0 +1,35 @@
+T-218 green after: flow 25 with Busy through tap-and-see, 2026-11-03, Node 26.13.0.
+
+$ npm run e2e -- e2e/flows/25-past-midnight-availability.yaml
+[e2e] running the flows
+[Passed] A busy slot past midnight is one slot, on both days (3m 27s)
+1/1 Flow Passed in 3m 27s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The step, on T-207's timeline.mjs (artifacts 2026-11-03_212301):
+21:26:50.455  maestro  Assert that "1:00.AM.*", id: slot-0-end is visible
+21:26:50.829  maestro  Run ../subflows/tap-and-see.yaml
+21:26:50.915  maestro  Tap on id: ${TAP_ID}                         (mode-busy)
+21:26:52.709  maestro  Assert that (Optional) "${SEE}" is visible   ("You are unavailable on this day")
+21:26:53.471  maestro  Run ${output.tapSeen = true}                 - seen at once, no second tap
+21:26:53.945  maestro  Tap on id: day-${EVENING_DAY}
+21:26:55.734  maestro  Assert that "Don't Save" is visible          - asked
+21:26:55.988  maestro  Tap on point (50%, 8%)
+21:26:57.263  maestro  Assert that "Don't Save" is not visible
+21:26:58.329  maestro  Assert that id: mode-busy, selected is visible
+21:27:00.852  maestro  Assert that "Don't Save" is visible          - the close asks
+21:27:01.228  maestro  Tap on "Save"
+21:27:06.088  maestro  Assert that id: availability-saving is visible
+21:27:06.461  maestro  Tap on id: day-${EVENING_DAY}                - while the save is out
+21:27:16.980  maestro  Assert that "Don't Save" is not visible
+21:27:18.103  maestro  Assert that id: mode-busy, selected is visible
+21:27:18.796  maestro  Assert that id: availability-legend is not visible   - saved, closed
+21:27:20.073  maestro  Assert that "Don't Save" is not visible
+21:27:24.124  maestro  Scrolling DOWN until ".*, Busy", id: day-${EVENING_DAY} - busy, as sent
+
+The note is not there before the tap: the day is custom hours then, and
+ModeInfo draws nothing for custom (ModeInfo.tsx), so SEE can only come from
+Busy taken.
+
+Under load (load-e2e.mjs) not run again: the old flow's try was cut by the
+10-minute command limit (red-before.txt, 2).

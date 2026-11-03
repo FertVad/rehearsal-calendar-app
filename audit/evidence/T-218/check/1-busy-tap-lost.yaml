@@ -1,0 +1,50 @@
+# T-218 check, red: flow 25's last part with the tap on Busy lost, as the
+# simulator lost it in the red run - here it is simply not there. The day is
+# as saved, its tap closes the editor unasked, and the wait for "Don't Save"
+# fails as the red run's did.
+#   npm run e2e -- ../audit/evidence/T-218/check/1-busy-tap-lost.yaml
+appId: ${APP_ID}
+name: T-218 check 1 - the tap on Busy lost
+---
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/sign-in.yaml
+    env:
+      EMAIL: ${ZARECHNAYA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${EVENING_DAY}
+      text: ".*, Partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/day-in-reach.yaml
+    env:
+      DAY: ${EVENING_DAY}
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    visible:
+      id: slot-0-end
+      text: "1:00.AM.*"
+    timeout: 10000
+# Here flow 25 tapped mode-busy; the red run's tap never reached the app.
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000

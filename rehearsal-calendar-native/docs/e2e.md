@@ -119,7 +119,8 @@ every one of 9 198 taps, the lost ones too, so its own tap-again never runs
 artifacts). Most were the first tap of sign-in, which types inside `retry`;
 flow 30 failed on one at "Apple Calendar", flow 11 at "Change password and
 sign in" and, under load, at "Forgot password?" (T-209), flow 44 at the
-profile tab after a restart (T-212).
+profile tab after a restart (T-212), flow 25 at "Busy" in the availability
+editor, whose day then closed unasked with nothing changed (T-218).
 
 It is below the app, and cannot be made to happen on demand. The rule:
 

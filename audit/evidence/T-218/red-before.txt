@@ -1,0 +1,35 @@
+T-218 red before, on 1e8f24c (flow 25 as it was), 2026-11-03, Node 26.13.0.
+
+1. The red run: red-run-timeline.txt. The tap on mode-busy was lost in the
+   simulator (backboardd registered its digitizer twice and skipped the
+   touch); the day stayed "8, Partial", and its tap closed the editor unasked.
+
+2. The old flow under load, as the red run had it (memory pressure 2, the
+   full set before it): T-207's load-e2e.mjs, 8 busy workers, one copy of
+   flow 25.
+   $ node audit/evidence/T-207/load-e2e.mjs 8 1 e2e/flows/25-past-midnight-availability.yaml
+   Exit code 143 - Command timed out after 10m 0s
+   Cut by the 10-minute command limit, as T-212's were; no result.
+
+3. The old flow alone, once:
+   $ npm run e2e -- e2e/flows/25-past-midnight-availability.yaml
+   [e2e] running the flows
+   [Passed] A busy slot past midnight is one slot, on both days (2m 57s)
+   1/1 Flow Passed in 2m 57s
+   [e2e] taps taken again (tap-and-see.yaml): 0
+   touch-scan over its artifacts: no digitizer registered twice, no tap lost.
+
+   A lost tap cannot be had on demand (T-207: about one in 250, below the
+   app). The full run of 1e8f24c lost 4 in 71 flows; flow 25 was the one it
+   failed.
+
+4. What a lost tap on Busy does, made on purpose: check/1-busy-tap-lost.yaml,
+   flow 25's last part with the tap on mode-busy left out.
+   $ npm run e2e -- ../audit/evidence/T-218/check/1-busy-tap-lost.yaml
+   [e2e] running the flows
+   [Failed] T-218 check 1 - the tap on Busy lost (1m 51s) (Assertion is false: "Don't Save" is visible)
+   1/1 Flow Failed
+   [e2e] taps taken again (tap-and-see.yaml): 0
+   touch-scan: digitizers 12, registered twice 1, taps lost 0 - the tap is
+   missing because the flow has none, not because one was dropped.
+   The red run's failure, word for word.

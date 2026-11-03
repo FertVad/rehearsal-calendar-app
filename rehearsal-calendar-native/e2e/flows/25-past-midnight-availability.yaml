@@ -162,8 +162,15 @@ tags:
       id: slot-0-end
       text: "1:00.AM.*"
     timeout: 10000
-- tapOn:
-    id: mode-busy
+# Busy through tap-and-see: the simulator once lost this tap, the day stayed
+# as saved, and its tap rightly closed the editor unasked (T-218). The note
+# under the buttons is there only for a day busy all day.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: mode-busy
+      SEE: "You are unavailable on this day"
+      WAIT_MS: "5000"
 - tapOn:
     id: day-${EVENING_DAY}
 - extendedWaitUntil:

@@ -1,0 +1,65 @@
+T-218: the red run, flow 25 "A busy slot past midnight is one slot, on both days"
+Full e2e on Node 26.13.0, claude/systematic-repair 1e8f24c, 2026-11-03 19:23-20:39.
+Artifacts: rehearsal-calendar-native/e2e/out/artifacts/2026-11-03_192404 (main tree, not in git).
+Logs: rehearsal-calendar-native/e2e/out/failed/node26-full-e2e-1e8f24c-2026-11-03.
+
+$ node audit/evidence/T-207/timeline.mjs "<artifacts>/A busy slot past midnight is one slot, on both days" 19:47:41
+19:47:41.637  maestro  Tap on id: tab-create
+19:47:42.951  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+19:47:42.952  maestro  Tap on "Mark Busy"
+19:47:44.850  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+19:47:44.851  maestro  Scrolling DOWN until ".*, Partial", id: day-${EVENING_DAY} is visible
+19:47:45.229  maestro  Run ../subflows/day-in-reach.yaml
+19:47:45.234  maestro  Define variables
+19:47:45.242  maestro  Apply configuration
+19:47:45.246  maestro  Wait for animation to end
+19:47:45.810  maestro  Repeat while id: day-${DAY}, Below id: availability-legend is not visi
+19:47:53.177  maestro  Assert that id: day-${DAY}, Below id: availability-legend is visible
+19:47:53.536  maestro  Tap on id: day-${EVENING_DAY}
+19:47:55.447  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+19:47:55.448  maestro  Assert that "1:00.AM.*", id: slot-0-end is visible
+19:47:55.932  maestro  Tap on id: mode-busy
+19:47:57.545  device   tap digitizer registered twice
+19:47:57.570  device   touch dropped (move/lift with no touch down)
+19:47:58.329  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+19:47:58.332  maestro  Tap on id: day-${EVENING_DAY}
+19:48:00.377  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+19:48:00.381  maestro  Assert that "Don't Save" is visible
+
+The device log at the tap on mode-busy (device-simulator.log, backboardd):
+19:47:57.545376 digitizer attached (sender 1036C140001BC) ... events:1 mask:0x800
+19:47:57.545838 (BackBoardHIDEventFoundation) we already have a service for senderID:1036C140001BC
+19:47:57.570824 didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+   ... the same line 9 more times, to 19:47:57.663449
+19:47:57.778894 digitizer detached (sender 1036C140001BC)
+19:47:57.779056 digitizer detached (sender 1036C140001BC)
+Every other tap of the flow (27): attached "events:0 mask:0x0", once, no event skipped.
+
+What the app showed (maestro.log, the hierarchy each tap was aimed by):
+19:47:56.323 mode-busy        "Busy", selected=false              <- the tap aimed here, at (316, 517)
+19:47:58.963 day-2026-11-08   "8, Partial", selected=true         <- 2.4 s later: still Partial; a busy
+                                                                     day reads "8, Busy" (CalendarMonth)
+The day was never made busy, so nothing differed from the saved day: its tap
+put the editor away without asking, as it must with nothing to lose
+(useLeaveGuard.leave). Not the screen's guard: it never saw an edit.
+
+$ node audit/evidence/T-207/touch-scan.mjs <main tree>/rehearsal-calendar-native/e2e/out/artifacts
+2026-11-03_192404  A busy slot past midnight is one slot, on both days: digitizers 28, registered twice 1 (s after the app's last scene change: 96.00s/tap 26 after "unspecified -> foreground"), app scene changes 7, taps lost 1
+    lost 19:47:57.570 -> Something have changed in the UI judging by view hierarchy. Proceed.
+2026-11-03_192404  A rehearsal made from 23:00 to 01:00 ends the next morning: digitizers 39, registered twice 2 (s after the app's last scene change: 5.92s/tap 0 after "unspecified -> foreground", 0.33s/tap 0 after "unspecified -> foreground"), app scene changes 5, taps lost 0
+2026-11-03_192404  Availability saves the day it changed: digitizers 39, registered twice 1 (s after the app's last scene change: 20.10s/tap 5 after "unspecified -> foreground"), app scene changes 8, taps lost 0
+2026-11-03_192404  Create a project: digitizers 21, registered twice 1 (s after the app's last scene change: 10.34s/tap 6 after "unspecified -> foreground"), app scene changes 5, taps lost 1
+    lost 19:29:29.118 -> Something have changed in the UI judging by view hierarchy. Proceed.
+2026-11-03_192404  Save before the availability is in: digitizers 25, registered twice 1 (s after the app's last scene change: 39.28s/tap 18 after "unspecified -> foreground"), app scene changes 8, taps lost 0
+2026-11-03_192404  Sign in: digitizers 13, registered twice 1 (s after the app's last scene change: 3.18s/tap 0 after "unspecified -> foreground"), app scene changes 7, taps lost 1
+    lost 19:56:07.750 -> Something have changed in the UI judging by view hierarchy. Proceed.
+2026-11-03_192404  Today selects today: digitizers 34, registered twice 1 (s after the app's last scene change: 3.35s/tap 1 after "unspecified -> foreground"), app scene changes 6, taps lost 1
+    lost 19:49:27.522 -> Something have changed in the UI judging by view hierarchy. Proceed.
+2026-11-03_204122  A busy slot past midnight is one slot, on both days: digitizers 39, registered twice 2 (s after the app's last scene change: 4.13s/tap 0 after "unspecified -> foreground", 2.94s/tap 0 after "unspecified -> foreground"), app scene changes 50, taps lost 1
+    lost 20:42:01.926 -> Something have changed in the UI judging by view hierarchy. Proceed.
+
+73 flow logs, 1548 digitizers attached, 10 registered twice, 5 taps lost
+
+The full run lost 4 taps in 71 flows; only flow 25's failed it. The green
+rerun (2026-11-03_204122) lost one too, at 20:42:01.926, early in the flow
+(sign-in, typed inside retry), and passed.
