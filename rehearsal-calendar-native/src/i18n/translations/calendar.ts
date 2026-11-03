@@ -1,7 +1,6 @@
 export interface CalendarTranslations {
   title: string;
   rehearsalsFor: string;
-  noRehearsals: string;
   selectProject: string;
   needProject: string;
   myRehearsals: string;
@@ -49,9 +48,15 @@ export interface RehearsalsTranslations {
   created: string;
   createError: string;
   deleteConfirm: string;
-  deleteTitle: string;
-  deleteMessage: string;
-  deleteSuccess: string;
+  /** The confirmation's title: the rehearsal's name, if it has one, its day and start. */
+  deleteTitle: (title: string | null, when: string) => string;
+  /** Under it: how many will be told it is cancelled. */
+  deleteNotifies: (count: number) => string;
+  /** In place of the confirmation, when who would be told could not be read. */
+  deleteNotifiedUnknown: string;
+  deleteError: string;
+  /** The card's swipe and the details' corner: open the rehearsal in the form. */
+  edit: string;
   participants: string;
   createRehearsal: string;
   updateRehearsal: string;
@@ -63,6 +68,8 @@ export interface RehearsalsTranslations {
   endsNextDay: string;
   scheduleConflict: string;
   scheduleConflictMessage: string;
+  /** Above scheduleConflictMessage: who of those picked is busy then, `count` of them. */
+  busyAtThisTime: (names: string, count: number) => string;
   createAnyway: string;
   success: string;
   rehearsalCreated: string;
@@ -70,7 +77,6 @@ export interface RehearsalsTranslations {
   updateError: string;
   loadRehearsalError: string;
   participantsLeft: string;
-  participantsLoading: string;
   availabilityChecking: string;
   seenError: string;
   /** The eye on a rehearsal, for VoiceOver: it is only an icon. */
@@ -80,15 +86,19 @@ export interface RehearsalsTranslations {
   createNewProject: string;
   loadingMembers: string;
   noMembers: string;
-  selectAll: string;
-  deselectAll: string;
-  expand: string;
-  collapse: string;
-  selectedCount: (selected: number, total: number) => string;
+  /** The participants row and sheet: how many of the project are picked. */
+  participantsCount: (selected: number, total: number) => string;
+  /** The planner's filter with everyone picked: "all (4)". */
+  participantsAll: (total: number) => string;
+  /** The sheet's three-state box over everyone. */
+  allParticipants: string;
+  searchParticipants: string;
+  /** Under the participants row: someone picked is busy at the rehearsal's time. */
+  busyAt: (name: string, time: string) => string;
+  andMore: (count: number) => string;
+  /** Beside the name of someone busy the whole day. */
+  wholeDay: string;
   admin: string;
-  availableStatus: string;
-  busyAllDay: string;
-  busyTime: string;
   rehearsalDetails: string;
   /** Shown when a rehearsal cannot be opened — deleted, or the reader was taken off it. */
   notFound: string;
@@ -103,7 +113,6 @@ export const ru = {
   calendar: {
     title: 'Календарь репетиций',
     rehearsalsFor: 'Репетиции на',
-    noRehearsals: 'Сегодня репетиций нет',
 needProject: 'Репетиции появятся, когда вы окажетесь в проекте',
     selectProject: 'Выберите проект в разделе "Проекты"',
     myRehearsals: 'Мои репетиции',
@@ -150,9 +159,12 @@ needProject: 'Репетиции появятся, когда вы окажет�
     created: 'Репетиция создана',
     createError: 'Ошибка создания репетиции',
     deleteConfirm: 'Удалить',
-    deleteTitle: 'Удалить репетицию?',
-    deleteMessage: 'Это действие нельзя отменить',
-    deleteSuccess: 'Репетиция удалена',
+    deleteTitle: (title: string | null, when: string) =>
+      title ? `Удалить «${title}», ${when}?` : `Удалить репетицию, ${when}?`,
+    deleteNotifies: (count: number) => `Участники (${count}) получат уведомление`,
+    deleteNotifiedUnknown: 'Не удалось узнать, кто получит уведомление об отмене. Проверьте соединение и повторите.',
+    deleteError: 'Не удалось удалить репетицию',
+    edit: 'Изменить',
     participants: 'Участники',
     createRehearsal: 'Создать репетицию',
     updateRehearsal: 'Сохранить изменения',
@@ -163,6 +175,8 @@ needProject: 'Репетиции появятся, когда вы окажет�
     endsNextDay: 'следующего дня',
     scheduleConflict: '⚠️ Конфликт расписания',
     scheduleConflictMessage: 'Вы уверены, что хотите создать репетицию?',
+    busyAtThisTime: (names: string, count: number) =>
+      count === 1 ? `${names} занят(а) в это время` : `${names} заняты в это время`,
     createAnyway: 'Создать всё равно',
     success: 'Успешно',
     rehearsalCreated: 'Репетиция создана',
@@ -170,8 +184,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     updateError: 'Не удалось обновить репетицию',
     loadRehearsalError: 'Не удалось загрузить репетицию. Проверьте соединение и попробуйте ещё раз.',
     participantsLeft: 'Кто-то из выбранных участников больше не в проекте. Откройте форму заново и сохраните ещё раз.',
-    participantsLoading: 'Участники проекта ещё загружаются. Подождите секунду и сохраните снова.',
-    availabilityChecking: 'Занятость участников на этот день ещё проверяется. Подождите секунду и сохраните снова.',
+    availabilityChecking: 'Занятость участников на этот день ещё проверяется.',
     seenError: 'Не удалось отметить просмотр',
     markSeen: 'Отметить просмотренным',
     noProjects: 'Нет проектов',
@@ -179,15 +192,14 @@ needProject: 'Репетиции появятся, когда вы окажет�
     createNewProject: 'Создать новый проект',
     loadingMembers: 'Загрузка участников...',
     noMembers: 'Нет участников в проекте',
-    selectAll: 'Выбрать всех',
-    deselectAll: 'Снять выделение',
-    expand: 'Развернуть',
-    collapse: 'Свернуть',
-    selectedCount: (selected: number, total: number) => `Выбрано: ${selected} из ${total}`,
-    admin: 'Админ',
-    availableStatus: 'Свободен',
-    busyAllDay: 'Занят весь день',
-    busyTime: 'Занят',
+    participantsCount: (selected: number, total: number) => `${selected} из ${total}`,
+    participantsAll: (total: number) => `все (${total})`,
+    allParticipants: 'Все участники',
+    searchParticipants: 'Поиск',
+    busyAt: (name: string, time: string) => `${name} занят ${time}`,
+    andMore: (count: number) => `и ещё ${count}`,
+    wholeDay: 'весь день',
+    admin: 'админ',
     rehearsalDetails: 'Детали репетиции',
     notFound: 'Репетиция не найдена. Возможно, её удалили или вас сняли с неё.',
     like: 'Иду',
@@ -202,7 +214,6 @@ export const en = {
   calendar: {
     title: 'Rehearsal Calendar',
     rehearsalsFor: 'Rehearsals for',
-    noRehearsals: 'Nothing today',
 needProject: 'Rehearsals show up once you are in a project',
     selectProject: 'Select a project in "Projects" section',
     myRehearsals: 'My Rehearsals',
@@ -249,9 +260,12 @@ needProject: 'Rehearsals show up once you are in a project',
     created: 'Rehearsal created',
     createError: 'Error creating rehearsal',
     deleteConfirm: 'Delete',
-    deleteTitle: 'Delete Rehearsal?',
-    deleteMessage: 'This action cannot be undone',
-    deleteSuccess: 'Rehearsal deleted',
+    deleteTitle: (title: string | null, when: string) =>
+      title ? `Delete “${title}”, ${when}?` : `Delete the rehearsal, ${when}?`,
+    deleteNotifies: (count: number) => `Participants (${count}) will be notified`,
+    deleteNotifiedUnknown: 'Could not find out who will be told it is cancelled. Check your connection and try again.',
+    deleteError: 'Could not delete the rehearsal',
+    edit: 'Edit',
     participants: 'Participants',
     createRehearsal: 'Create Rehearsal',
     updateRehearsal: 'Save Changes',
@@ -262,6 +276,8 @@ needProject: 'Rehearsals show up once you are in a project',
     endsNextDay: 'next day',
     scheduleConflict: '⚠️ Schedule Conflict',
     scheduleConflictMessage: 'Are you sure you want to create this rehearsal?',
+    busyAtThisTime: (names: string, count: number) =>
+      count === 1 ? `${names} is busy at this time` : `${names} are busy at this time`,
     createAnyway: 'Create Anyway',
     success: 'Success',
     rehearsalCreated: 'Rehearsal created',
@@ -269,8 +285,7 @@ needProject: 'Rehearsals show up once you are in a project',
     updateError: 'Failed to update rehearsal',
     loadRehearsalError: 'Could not load the rehearsal. Check your connection and try again.',
     participantsLeft: 'Someone you selected is no longer in the project. Open the form again and save once more.',
-    participantsLoading: 'The project members are still loading. Wait a moment and save again.',
-    availabilityChecking: "The participants' availability for this day is still being checked. Wait a moment and save again.",
+    availabilityChecking: "The participants' availability for this day is still being checked.",
     seenError: 'Could not mark it as seen',
     markSeen: 'Mark as seen',
     noProjects: 'No projects',
@@ -278,15 +293,14 @@ needProject: 'Rehearsals show up once you are in a project',
     createNewProject: 'Create New Project',
     loadingMembers: 'Loading members...',
     noMembers: 'No members in project',
-    selectAll: 'Select All',
-    deselectAll: 'Deselect All',
-    expand: 'Expand',
-    collapse: 'Collapse',
-    selectedCount: (selected: number, total: number) => `Selected: ${selected} of ${total}`,
-    admin: 'Admin',
-    availableStatus: 'Available',
-    busyAllDay: 'Busy all day',
-    busyTime: 'Busy',
+    participantsCount: (selected: number, total: number) => `${selected} of ${total}`,
+    participantsAll: (total: number) => `all (${total})`,
+    allParticipants: 'All participants',
+    searchParticipants: 'Search',
+    busyAt: (name: string, time: string) => `${name} busy ${time}`,
+    andMore: (count: number) => `and ${count} more`,
+    wholeDay: 'all day',
+    admin: 'admin',
     rehearsalDetails: 'Rehearsal Details',
     notFound: 'This rehearsal is not available. It may have been deleted, or you were taken off it.',
     like: 'Going',
@@ -301,7 +315,6 @@ export const es = {
   calendar: {
     title: 'Calendario de ensayos',
     rehearsalsFor: 'Ensayos para',
-    noRehearsals: 'Nada hoy',
 needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     selectProject: 'Selecciona un proyecto en la sección "Proyectos"',
     myRehearsals: 'Mis ensayos',
@@ -348,9 +361,12 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     created: 'Ensayo creado',
     createError: 'Error al crear el ensayo',
     deleteConfirm: 'Eliminar',
-    deleteTitle: '¿Eliminar ensayo?',
-    deleteMessage: 'Esta acción no se puede deshacer',
-    deleteSuccess: 'Ensayo eliminado',
+    deleteTitle: (title: string | null, when: string) =>
+      title ? `¿Eliminar «${title}», ${when}?` : `¿Eliminar el ensayo, ${when}?`,
+    deleteNotifies: (count: number) => `Los participantes (${count}) recibirán un aviso`,
+    deleteNotifiedUnknown: 'No se pudo saber quién recibirá el aviso de la cancelación. Revisa la conexión e inténtalo de nuevo.',
+    deleteError: 'No se pudo eliminar el ensayo',
+    edit: 'Editar',
     participants: 'Participantes',
     createRehearsal: 'Crear ensayo',
     updateRehearsal: 'Guardar cambios',
@@ -361,6 +377,8 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     endsNextDay: 'día siguiente',
     scheduleConflict: '⚠️ Conflicto de horario',
     scheduleConflictMessage: '¿Seguro que quieres crear este ensayo?',
+    busyAtThisTime: (names: string, count: number) =>
+      count === 1 ? `${names} está ocupado/a a esa hora` : `${names} están ocupados a esa hora`,
     createAnyway: 'Crear de todos modos',
     success: 'Éxito',
     rehearsalCreated: 'Ensayo creado',
@@ -368,8 +386,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     updateError: 'No se pudo actualizar el ensayo',
     loadRehearsalError: 'No se pudo cargar el ensayo. Comprueba la conexión e inténtalo de nuevo.',
     participantsLeft: 'Alguien que seleccionaste ya no está en el proyecto. Abre el formulario de nuevo y guarda otra vez.',
-    participantsLoading: 'Los miembros del proyecto aún se están cargando. Espera un momento y guarda de nuevo.',
-    availabilityChecking: 'Aún se está comprobando la disponibilidad de los participantes para este día. Espera un momento y guarda de nuevo.',
+    availabilityChecking: 'Aún se está comprobando la disponibilidad de los participantes para este día.',
     seenError: 'No se pudo marcar como visto',
     markSeen: 'Marcar como visto',
     noProjects: 'No hay proyectos',
@@ -377,15 +394,14 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     createNewProject: 'Crear nuevo proyecto',
     loadingMembers: 'Cargando miembros...',
     noMembers: 'No hay miembros en el proyecto',
-    selectAll: 'Seleccionar todos',
-    deselectAll: 'Deseleccionar todos',
-    expand: 'Expandir',
-    collapse: 'Contraer',
-    selectedCount: (selected: number, total: number) => `Seleccionados: ${selected} de ${total}`,
-    admin: 'Admin',
-    availableStatus: 'Disponible',
-    busyAllDay: 'Ocupado todo el día',
-    busyTime: 'Ocupado',
+    participantsCount: (selected: number, total: number) => `${selected} de ${total}`,
+    participantsAll: (total: number) => `todos (${total})`,
+    allParticipants: 'Todos los participantes',
+    searchParticipants: 'Buscar',
+    busyAt: (name: string, time: string) => `${name}: ocupado ${time}`,
+    andMore: (count: number) => `y ${count} más`,
+    wholeDay: 'todo el día',
+    admin: 'admin',
     rehearsalDetails: 'Detalles del ensayo',
     notFound: 'Este ensayo no está disponible. Puede que se haya eliminado o que los hayan quitado de él.',
     like: 'Voy',
@@ -400,7 +416,6 @@ export const de = {
   calendar: {
     title: 'Probenkalender',
     rehearsalsFor: 'Proben für',
-    noRehearsals: 'Heute nichts',
 needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     selectProject: 'Wähle ein Projekt im Bereich „Projekte" aus',
     myRehearsals: 'Meine Proben',
@@ -447,9 +462,12 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     created: 'Probe erstellt',
     createError: 'Fehler beim Erstellen der Probe',
     deleteConfirm: 'Löschen',
-    deleteTitle: 'Probe löschen?',
-    deleteMessage: 'Diese Aktion kann nicht rückgängig gemacht werden',
-    deleteSuccess: 'Probe gelöscht',
+    deleteTitle: (title: string | null, when: string) =>
+      title ? `„${title}“ löschen, ${when}?` : `Probe löschen, ${when}?`,
+    deleteNotifies: (count: number) => `Teilnehmende (${count}) werden benachrichtigt`,
+    deleteNotifiedUnknown: 'Es ließ sich nicht ermitteln, wer über die Absage benachrichtigt wird. Prüfe die Verbindung und versuche es erneut.',
+    deleteError: 'Die Probe konnte nicht gelöscht werden',
+    edit: 'Bearbeiten',
     participants: 'Teilnehmer',
     createRehearsal: 'Probe erstellen',
     updateRehearsal: 'Änderungen speichern',
@@ -460,6 +478,8 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     endsNextDay: 'am nächsten Tag',
     scheduleConflict: '⚠️ Terminkonflikt',
     scheduleConflictMessage: 'Möchtest du diese Probe wirklich erstellen?',
+    busyAtThisTime: (names: string, count: number) =>
+      count === 1 ? `${names} ist zu dieser Zeit belegt` : `${names} sind zu dieser Zeit belegt`,
     createAnyway: 'Trotzdem erstellen',
     success: 'Erfolg',
     rehearsalCreated: 'Probe erstellt',
@@ -467,8 +487,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     updateError: 'Probe konnte nicht aktualisiert werden',
     loadRehearsalError: 'Die Probe konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut.',
     participantsLeft: 'Jemand, den du ausgewählt hast, ist nicht mehr im Projekt. Öffne das Formular erneut und speichere noch einmal.',
-    participantsLoading: 'Die Projektmitglieder werden noch geladen. Warte einen Moment und speichere erneut.',
-    availabilityChecking: 'Die Verfügbarkeit der Teilnehmenden für diesen Tag wird noch geprüft. Warte einen Moment und speichere erneut.',
+    availabilityChecking: 'Die Verfügbarkeit der Teilnehmenden für diesen Tag wird noch geprüft.',
     seenError: 'Konnte nicht als gesehen markiert werden',
     markSeen: 'Als gesehen markieren',
     noProjects: 'Keine Projekte',
@@ -476,15 +495,14 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     createNewProject: 'Neues Projekt erstellen',
     loadingMembers: 'Mitglieder werden geladen...',
     noMembers: 'Keine Mitglieder im Projekt',
-    selectAll: 'Alle auswählen',
-    deselectAll: 'Auswahl aufheben',
-    expand: 'Erweitern',
-    collapse: 'Einklappen',
-    selectedCount: (selected: number, total: number) => `Ausgewählt: ${selected} von ${total}`,
+    participantsCount: (selected: number, total: number) => `${selected} von ${total}`,
+    participantsAll: (total: number) => `alle (${total})`,
+    allParticipants: 'Alle Teilnehmer',
+    searchParticipants: 'Suchen',
+    busyAt: (name: string, time: string) => `${name} belegt ${time}`,
+    andMore: (count: number) => `und ${count} weitere`,
+    wholeDay: 'ganztägig',
     admin: 'Admin',
-    availableStatus: 'Verfügbar',
-    busyAllDay: 'Ganztägig beschäftigt',
-    busyTime: 'Beschäftigt',
     rehearsalDetails: 'Probendetails',
     notFound: 'Diese Probe ist nicht verfügbar. Vielleicht wurde sie gelöscht, oder du wurdest abgemeldet.',
     like: 'Ich komme',

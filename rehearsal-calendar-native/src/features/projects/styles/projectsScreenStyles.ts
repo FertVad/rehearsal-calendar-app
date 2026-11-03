@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -11,20 +11,6 @@ export const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-  },
-  addButton: {
-    padding: Spacing.xs,
   },
   loadingState: {
     backgroundColor: Colors.glass.bg,
@@ -84,10 +70,6 @@ export const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
   },
-  projectCardSelected: {
-    borderColor: Colors.accent.purple,
-    borderWidth: 2,
-  },
   projectHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -123,54 +105,13 @@ export const styles = StyleSheet.create({
     color: Colors.text.secondary,
     marginTop: Spacing.sm,
   },
-  inviteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.accent.purpleAlpha10,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.accent.purple,
-  },
-  inviteButtonText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    color: Colors.accent.purple,
-  },
-
-  // Same dashed outline the availability editor uses for "add another one" —
-  // in this app that shape already reads as an optional extra action.
-  cardCodeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.bg.tertiary,
-  },
-  cardCodeLabel: {
-    fontSize: FontSize.xs,
-    color: Colors.text.secondary,
-  },
-  cardCodeValue: {
-    flex: 1,
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    letterSpacing: 1.5,
-    color: Colors.text.primary,
-  },
   joinButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
     marginTop: Spacing.lg,
+    minHeight: TouchTarget,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,

@@ -1,23 +1,17 @@
 export interface OnboardingTranslations {
   skipTitle: string;
   skipMessage: string;
+  /** The step's "Skip" at the top, and its forward button unless it names its own. */
+  skip: string;
+  next: string;
   welcome: {
     feature1: string;
     feature2: string;
     feature3: string;
-    title: string;
-    subtitle: string;
+    /** One line, the name in it: "Welcome, Nina!" (T-022). */
+    greeting: (firstName?: string) => string;
     description: string;
     next: string;
-    skip: string;
-  };
-  weekStart: {
-    title: string;
-    description: string;
-    monday: string;
-    sunday: string;
-    next: string;
-    back: string;
     skip: string;
   };
   notifications: {
@@ -27,24 +21,43 @@ export interface OnboardingTranslations {
     later: string;
     back: string;
     skip: string;
+    /** Examples of what a notification says. */
+    exampleAdded: string;
+    exampleTimeChanged: string;
   };
   calendarSync: {
     title: string;
+    /** Two sentences; the privacy promise is said here and only here. */
     description: string;
-    privacy: string;
-    pickCalendar: string;
-    connectedTitle: string;
-    connectedBody: string;
-    manualBody: string;
     next: string;
     google: string;
     apple: string;
     setupLater: string;
+    /** Under "Set up later": where it is set up then, the path as the Profile labels it. */
+    laterWhere: (path: string) => string;
+    noCalendars: string;
+    settingUp: string;
     finish: string;
     finishWithoutSync: string;
     back: string;
     permissionRequired: string;
     grantPermission: string;
+  };
+  /**
+   * The last step: where things are. Each place is given in the labels the
+   * app itself shows there, passed in, so the step cannot drift from it.
+   */
+  whatWhere: {
+    title: string;
+    project: string;
+    projectWhere: (create: string, projects: string, join: string) => string;
+    rehearsal: string;
+    rehearsalWhere: (create: string) => string;
+    availability: string;
+    availabilityWhere: (mark: string) => string;
+    planner: string;
+    plannerWhere: (planner: string) => string;
+    start: string;
   };
 }
 
@@ -52,23 +65,15 @@ export const ru = {
   onboarding: {
     skipTitle: 'Настройки доступны в профиле',
     skipMessage: 'Вы сможете настроить день начала недели и синхронизацию календаря в любое время в разделе Профиль → Настройки',
+    skip: 'Пропустить',
+    next: 'Далее',
     welcome: {
 feature1: 'Все отмечают, когда заняты',
 feature2: 'Rehearsly находит время, когда свободны все',
 feature3: 'Репетиция уходит всем в календарь',
-      title: 'Добро пожаловать!',
-      subtitle: 'Rehearsly',
+      greeting: (firstName?: string) => (firstName ? `Добро пожаловать, ${firstName}!` : 'Добро пожаловать!'),
       description: 'Планируйте репетиции, управляйте расписанием и синхронизируйте календари в одном месте',
       next: 'Начать',
-      skip: 'Пропустить',
-    },
-    weekStart: {
-      title: 'День начала недели',
-      description: 'С какого дня у вас начинается неделя?',
-      monday: 'Понедельник',
-      sunday: 'Воскресенье',
-      next: 'Далее',
-      back: 'Назад',
       skip: 'Пропустить',
     },
     notifications: {
@@ -78,24 +83,37 @@ feature3: 'Репетиция уходит всем в календарь',
       later: 'Не сейчас',
       back: 'Назад',
       skip: 'Пропустить',
+      exampleAdded: 'Вас добавили в репетицию',
+      exampleTimeChanged: 'Время репетиции изменилось',
     },
     calendarSync: {
-pickCalendar: 'Выберите календарь — занятость перенесётся из него в приложение',
-      privacy: 'Мы читаем только занятые временные слоты. Что это за события, приложение не видит и никому не показывает. Репетиции уходят обратно в ваш календарь.',
-      connectedTitle: 'Календарь подключён',
-      connectedBody: 'Занятые часы будут подтягиваться сами. Если календарь покрывает не всё — отметьте остальное в приложении, на экране «Занятость».',
-      manualBody: 'Отмечайте занятость на экране «Занятость». Пока вы этого не сделали, вас считают свободным.',
       title: 'Ваша занятость',
-      description: 'Команда видит не ваши дела, а только часы, когда вас нет. Занятость можно подтянуть из календаря телефона — тогда отмечать руками почти не придётся.',
+      description: 'Команда видит только часы, когда вы заняты, но не ваши дела. Выберите календарь телефона — и эти часы будут подтягиваться сами.',
       next: 'Далее',
       google: 'Google Calendar',
       apple: 'Apple Calendar',
       setupLater: 'Настроить позже',
+      laterWhere: (path: string) => `Это можно сделать потом: ${path}`,
+      noCalendars: 'Календари не найдены',
+      settingUp: 'Подключаем календарь…',
       finish: 'Завершить',
       finishWithoutSync: 'Продолжить без синхронизации',
       back: 'Назад',
       permissionRequired: 'Требуется разрешение',
       grantPermission: 'Предоставить доступ',
+    },
+    whatWhere: {
+      title: 'Что где',
+      project: 'Проект',
+      projectWhere: (create: string, projects: string, join: string) =>
+        `«+» → «${create}». По коду: «${projects}» → «${join}»`,
+      rehearsal: 'Репетиция',
+      rehearsalWhere: (create: string) => `«+» → «${create}», в проектах, где вы администратор`,
+      availability: 'Занятость',
+      availabilityWhere: (mark: string) => `«+» → «${mark}»`,
+      planner: 'Подбор времени',
+      plannerWhere: (planner: string) => `«${planner}» под календарём`,
+      start: 'Начать',
     },
   },
 };
@@ -104,23 +122,15 @@ export const en = {
   onboarding: {
     skipTitle: 'Settings available in profile',
     skipMessage: 'You can set up week start day and calendar sync anytime in Profile → Settings',
+    skip: 'Skip',
+    next: 'Next',
     welcome: {
 feature1: 'Everyone marks when they are busy',
 feature2: 'Rehearsly finds the hours that suit all of you',
 feature3: 'The rehearsal lands in everyone\'s calendar',
-      title: 'Welcome!',
-      subtitle: 'Rehearsly',
+      greeting: (firstName?: string) => (firstName ? `Welcome, ${firstName}!` : 'Welcome!'),
       description: 'Plan rehearsals, manage schedules, and sync calendars in one place',
       next: 'Get Started',
-      skip: 'Skip',
-    },
-    weekStart: {
-      title: 'Week Start Day',
-      description: 'Which day does your week start on?',
-      monday: 'Monday',
-      sunday: 'Sunday',
-      next: 'Next',
-      back: 'Back',
       skip: 'Skip',
     },
     notifications: {
@@ -130,24 +140,37 @@ feature3: 'The rehearsal lands in everyone\'s calendar',
       later: 'Not now',
       back: 'Back',
       skip: 'Skip',
+      exampleAdded: 'You were added to a rehearsal',
+      exampleTimeChanged: 'A rehearsal’s time changed',
     },
     calendarSync: {
-pickCalendar: 'Pick a calendar and your busy hours come across into the app',
-      privacy: 'We read only the busy time slots. What the events are, the app never sees and never shows. Rehearsals go back out to your calendar.',
-      connectedTitle: 'Calendar connected',
-      connectedBody: 'Busy hours will come across on their own. Where the calendar does not cover everything, mark the rest in the app, on the Availability screen.',
-      manualBody: 'Mark your time on the Availability screen. Until you do, everyone sees you as free.',
       title: 'Your availability',
-      description: 'The company sees the hours you are taken, never what you are doing. Those hours can come from the calendar on your phone, which leaves you little to fill in by hand.',
+      description: 'The company sees only the hours you are taken, never what you are doing. Pick a calendar on your phone and those hours come across on their own.',
       next: 'Next',
       google: 'Google Calendar',
       apple: 'Apple Calendar',
       setupLater: 'Set up later',
+      laterWhere: (path: string) => `You can do it later in ${path}`,
+      noCalendars: 'No calendars found',
+      settingUp: 'Setting up calendar sync…',
       finish: 'Finish',
       finishWithoutSync: 'Continue without sync',
       back: 'Back',
       permissionRequired: 'Permission required',
       grantPermission: 'Grant Access',
+    },
+    whatWhere: {
+      title: 'What’s where',
+      project: 'Project',
+      projectWhere: (create: string, projects: string, join: string) =>
+        `“+” → “${create}”. With a code: “${projects}” → “${join}”`,
+      rehearsal: 'Rehearsal',
+      rehearsalWhere: (create: string) => `“+” → “${create}”, in projects where you are an admin`,
+      availability: 'Availability',
+      availabilityWhere: (mark: string) => `“+” → “${mark}”`,
+      planner: 'Finding a time',
+      plannerWhere: (planner: string) => `“${planner}”, under the calendar`,
+      start: 'Get Started',
     },
   },
 };
@@ -156,23 +179,15 @@ export const es = {
   onboarding: {
     skipTitle: 'Ajustes disponibles en el perfil',
     skipMessage: 'Puedes configurar el inicio de la semana y la sincronización del calendario en cualquier momento en Perfil → Ajustes',
+    skip: 'Omitir',
+    next: 'Siguiente',
     welcome: {
 feature1: 'Cada quien marca cuándo está ocupado',
 feature2: 'Rehearsly encuentra las horas que les sirven a todos',
 feature3: 'El ensayo llega al calendario de cada uno',
-      title: '¡Bienvenido!',
-      subtitle: 'Rehearsly',
+      greeting: (firstName?: string) => (firstName ? `¡Bienvenido, ${firstName}!` : '¡Bienvenido!'),
       description: 'Planifica ensayos, gestiona horarios y sincroniza calendarios en un solo lugar',
       next: 'Empezar',
-      skip: 'Omitir',
-    },
-    weekStart: {
-      title: 'Día de inicio de la semana',
-      description: '¿Qué día empieza tu semana?',
-      monday: 'Lunes',
-      sunday: 'Domingo',
-      next: 'Siguiente',
-      back: 'Atrás',
       skip: 'Omitir',
     },
     notifications: {
@@ -182,24 +197,37 @@ feature3: 'El ensayo llega al calendario de cada uno',
       later: 'Ahora no',
       back: 'Atrás',
       skip: 'Omitir',
+      exampleAdded: 'Te añadieron a un ensayo',
+      exampleTimeChanged: 'Cambió la hora de un ensayo',
     },
     calendarSync: {
-pickCalendar: 'Elijan un calendario y sus horas ocupadas pasan a la app',
-      privacy: 'Leemos solo las franjas ocupadas. Qué son esos eventos, la app no lo ve ni lo muestra. Los ensayos vuelven a su calendario.',
-      connectedTitle: 'Calendario conectado',
-      connectedBody: 'Las horas ocupadas llegarán solas. Donde el calendario no alcance, marquen el resto en la pantalla Disponibilidad.',
-      manualBody: 'Marquen su tiempo en la pantalla Disponibilidad. Hasta entonces, los demás los ven libres.',
       title: 'Su disponibilidad',
-      description: 'El equipo ve las horas que están tomadas, nunca qué están haciendo. Esas horas pueden venir del calendario del teléfono, y así queda poco por marcar a mano.',
+      description: 'El equipo ve solo las horas en que están ocupados, nunca qué están haciendo. Elijan un calendario del teléfono y esas horas llegan solas.',
       next: 'Siguiente',
       google: 'Google Calendar',
       apple: 'Apple Calendar',
       setupLater: 'Configurar más tarde',
+      laterWhere: (path: string) => `Pueden hacerlo después en ${path}`,
+      noCalendars: 'No se encontraron calendarios',
+      settingUp: 'Configurando la sincronización…',
       finish: 'Finalizar',
       finishWithoutSync: 'Continuar sin sincronizar',
       back: 'Atrás',
       permissionRequired: 'Permiso requerido',
       grantPermission: 'Conceder acceso',
+    },
+    whatWhere: {
+      title: 'Dónde está cada cosa',
+      project: 'Proyecto',
+      projectWhere: (create: string, projects: string, join: string) =>
+        `“+” → “${create}”. Con un código: “${projects}” → “${join}”`,
+      rehearsal: 'Ensayo',
+      rehearsalWhere: (create: string) => `“+” → “${create}”, en los proyectos donde son administradores`,
+      availability: 'Disponibilidad',
+      availabilityWhere: (mark: string) => `“+” → “${mark}”`,
+      planner: 'Buscar un horario',
+      plannerWhere: (planner: string) => `“${planner}”, debajo del calendario`,
+      start: 'Empezar',
     },
   },
 };
@@ -208,23 +236,15 @@ export const de = {
   onboarding: {
     skipTitle: 'Einstellungen im Profil verfügbar',
     skipMessage: 'Du kannst den Wochenbeginn und die Kalendersynchronisation jederzeit unter Profil → Einstellungen konfigurieren',
+    skip: 'Überspringen',
+    next: 'Weiter',
     welcome: {
 feature1: 'Jeder trägt ein, wann er beschäftigt ist',
 feature2: 'Rehearsly findet die Stunden, die allen passen',
 feature3: 'Die Probe landet in jedem Kalender',
-      title: 'Willkommen!',
-      subtitle: 'Rehearsly',
+      greeting: (firstName?: string) => (firstName ? `Willkommen, ${firstName}!` : 'Willkommen!'),
       description: 'Plane Proben, verwalte Termine und synchronisiere Kalender an einem Ort',
       next: 'Loslegen',
-      skip: 'Überspringen',
-    },
-    weekStart: {
-      title: 'Wochenbeginn',
-      description: 'An welchem Tag beginnt deine Woche?',
-      monday: 'Montag',
-      sunday: 'Sonntag',
-      next: 'Weiter',
-      back: 'Zurück',
       skip: 'Überspringen',
     },
     notifications: {
@@ -234,24 +254,37 @@ feature3: 'Die Probe landet in jedem Kalender',
       later: 'Jetzt nicht',
       back: 'Zurück',
       skip: 'Überspringen',
+      exampleAdded: 'Du wurdest zu einer Probe eingetragen',
+      exampleTimeChanged: 'Die Zeit einer Probe hat sich geändert',
     },
     calendarSync: {
-pickCalendar: 'Wähl einen Kalender — deine belegten Stunden kommen in die App',
-      privacy: 'Wir lesen nur die belegten Zeitfenster. Worum es bei den Terminen geht, sieht die App nicht und zeigt sie niemandem. Proben gehen zurück in deinen Kalender.',
-      connectedTitle: 'Kalender verbunden',
-      connectedBody: 'Belegte Stunden kommen von selbst herüber. Wo der Kalender nicht alles abdeckt, trag den Rest unter „Zeiten“ ein.',
-      manualBody: 'Trag deine Zeiten unter „Zeiten“ ein. Bis dahin giltst du als frei.',
       title: 'Deine Zeiten',
-      description: 'Das Ensemble sieht die Stunden, in denen du besetzt bist, nie womit. Diese Stunden können aus dem Kalender deines Telefons kommen — dann bleibt kaum etwas von Hand einzutragen.',
+      description: 'Das Ensemble sieht nur die Stunden, in denen du besetzt bist, nie womit. Wähl einen Kalender deines Telefons, und diese Stunden kommen von selbst herüber.',
       next: 'Weiter',
       google: 'Google Calendar',
       apple: 'Apple Calendar',
       setupLater: 'Später einrichten',
+      laterWhere: (path: string) => `Das geht auch später unter ${path}`,
+      noCalendars: 'Keine Kalender gefunden',
+      settingUp: 'Kalendersynchronisation wird eingerichtet …',
       finish: 'Fertigstellen',
       finishWithoutSync: 'Ohne Synchronisation fortfahren',
       back: 'Zurück',
       permissionRequired: 'Berechtigung erforderlich',
       grantPermission: 'Zugriff gewähren',
+    },
+    whatWhere: {
+      title: 'Was ist wo',
+      project: 'Projekt',
+      projectWhere: (create: string, projects: string, join: string) =>
+        `„+“ → „${create}“. Mit einem Code: „${projects}“ → „${join}“`,
+      rehearsal: 'Probe',
+      rehearsalWhere: (create: string) => `„+“ → „${create}“, in Projekten, in denen du Admin bist`,
+      availability: 'Zeiten',
+      availabilityWhere: (mark: string) => `„+“ → „${mark}“`,
+      planner: 'Zeit finden',
+      plannerWhere: (planner: string) => `„${planner}“ unter dem Kalender`,
+      start: 'Loslegen',
     },
   },
 };

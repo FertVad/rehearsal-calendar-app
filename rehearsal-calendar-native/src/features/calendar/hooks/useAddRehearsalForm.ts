@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,14 +6,18 @@ import { AppStackParamList } from '../../../navigation';
 import { Project } from '../../../shared/types';
 import {
   endsNextDay,
+  formatDateToString,
   formatDateToTimeString,
   isEmptyClockRange,
   parseTimeString,
+  todayIn,
   wallClockIn,
 } from '../../../shared/utils/time';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useTimezone } from '../../../shared/hooks/useClock';
+import { endAfter, nextRoundHour } from '../utils/rehearsalDefaults';
+import { useUsualDuration } from './useUsualDuration';
 
 import { logger } from '../../../shared/utils/logger';
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
@@ -22,8 +26,19 @@ interface RouteParams {
   projectId?: string;
   rehearsalId?: string;
   prefilledDate?: string;
+  /** A start only: the end is the form's own rule (rehearsalDefaults.ts). */
   prefilledTime?: string;
-  prefilledEndTime?: string;
+}
+
+/** What the form holds, field by field, as text to compare (T-013). */
+export interface RehearsalFields {
+  project: string;
+  date: string;
+  start: string;
+  end: string;
+  title: string;
+  location: string;
+  participants: string;
 }
 
 interface UseAddRehearsalFormProps {
@@ -32,13 +47,6 @@ interface UseAddRehearsalFormProps {
   setSelectedProject: (project: Project | null) => void;
   routeParams?: RouteParams;
 }
-
-// Helper function to set minutes to 00 (round hours)
-const setMinutesToZero = (date: Date): Date => {
-  const rounded = new Date(date);
-  rounded.setMinutes(0, 0, 0);
-  return rounded;
-};
 
 export function useAddRehearsalForm({
   projects,
@@ -50,7 +58,7 @@ export function useAddRehearsalForm({
   const { language, t } = useI18n();
 
   // Extract route params
-  const { projectId: prefilledProjectId, prefilledDate, prefilledTime, prefilledEndTime } = routeParams || {};
+  const { projectId: prefilledProjectId, prefilledDate, prefilledTime } = routeParams || {};
 
   // Filter projects - only show where user is admin
   const adminProjects = useMemo(() => projects.filter(p => p.is_admin), [projects]);
@@ -76,19 +84,25 @@ export function useAddRehearsalForm({
   // difference (review DF01).
   const timezone = useTimezone();
 
-  // Form state - set minutes to 00 for better UX
-  const [date, setDate] = useState(() => wallClockIn(timezone));
-  const [startTime, setStartTime] = useState(() => setMinutesToZero(wallClockIn(timezone)));
-  const [endTime, setEndTime] = useState(() => {
-    const start = setMinutesToZero(wallClockIn(timezone));
-    const end = new Date(start);
-    end.setHours(end.getHours() + 2);
-    return end;
-  });
+  // A new rehearsal starts at the next whole hour, on its day: the hour it was
+  // already was gone (07:00 at 07:02), and after 23:00 the next one is tomorrow.
+  const [opening] = useState(() => nextRoundHour(wallClockIn(timezone)));
+  const [date, setDate] = useState(opening);
+  const [startTime, setStartTime] = useState(opening);
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [localSelectedProject, setLocalSelectedProject] = useState<Project | null>(
     selectedProject?.is_admin ? selectedProject : null
+  );
+  // The end is the usual length after the start until someone sets it: picked
+  // in its picker, or an edit's own. It follows the start, and the project's
+  // usual length once that is in (rehearsalDefaults.ts).
+  const isEditMode = Boolean(routeParams?.rehearsalId && routeParams?.projectId);
+  const usualMinutes = useUsualDuration(isEditMode ? null : localSelectedProject);
+  const [chosenEnd, setEndTime] = useState<Date | null>(null);
+  const endTime = useMemo(
+    () => chosenEnd ?? endAfter(startTime, usualMinutes),
+    [chosenEnd, startTime, usualMinutes]
   );
   // Who is on the rehearsal, for which project, and whether that is settled
   // (review R9-01, R9-02). One owner: the project switch empties it and marks
@@ -102,10 +116,6 @@ export function useAddRehearsalForm({
     settled: false,
   });
   const selectedMemberIds = participants.ids;
-  const setSelectedMemberIds = useCallback(
-    (ids: string[]) => setParticipants((current) => ({ ...current, ids })),
-    []
-  );
   const startParticipants = useCallback(
     (projectId: string, ids: string[]) => setParticipants({ projectId, ids, settled: true }),
     []
@@ -116,11 +126,13 @@ export function useAddRehearsalForm({
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
-  // An edit is what the route says it is, from the first render: a form
-  // that read it from state set in an effect could act as a new rehearsal for
-  // a frame (review R9-01).
-  const isEditMode = Boolean(routeParams?.rehearsalId && routeParams?.projectId);
+  // An edit is what the route says it is, from the first render (isEditMode
+  // above): a form that read it from state set in an effect could act as a new
+  // rehearsal for a frame (review R9-01).
   const [loadingRehearsal, setLoadingRehearsal] = useState(false);
+  // The edited rehearsal's own day, as loaded: one in the past stays shown and
+  // chosen in the calendar, whose other past days take no tap (T-018).
+  const [savedDate, setSavedDate] = useState<string | undefined>(undefined);
 
   // Prefill form from route params
   useEffect(() => {
@@ -131,20 +143,30 @@ export function useAddRehearsalForm({
         setSelectedProject(project);
       }
     }
+  }, [prefilledProjectId, projects]);
 
-    if (prefilledDate) {
-      const parsedDate = new Date(prefilledDate + 'T00:00:00');
-      setDate(parsedDate);
+  // The route's day and time, once per route: not on each new project list,
+  // which put them back over what was chosen - and, a list made anew on each
+  // render, did it without end (T-012 review).
+  useEffect(() => {
+    if (prefilledDate && !prefilledTime) {
+      // A day with no time - a long press in the calendar - starts at the
+      // opening's hour on that day. Today it is the opening itself, date and
+      // all: at 23:30 that is midnight tomorrow, not 00:00 today, which had
+      // gone (T-012 review).
+      const onDay = new Date(prefilledDate + 'T00:00:00');
+      onDay.setHours(opening.getHours());
+      const start = prefilledDate === todayIn(timezone) ? opening : onDay;
+      setDate(start);
+      setStartTime(start);
+    } else if (prefilledDate) {
+      setDate(new Date(prefilledDate + 'T00:00:00'));
     }
 
     if (prefilledTime) {
       setStartTime(parseTimeString(prefilledTime));
     }
-
-    if (prefilledEndTime) {
-      setEndTime(parseTimeString(prefilledEndTime));
-    }
-  }, [prefilledProjectId, prefilledDate, prefilledTime, prefilledEndTime, projects]);
+  }, [prefilledDate, prefilledTime]);
 
   // Update selected project when projects list changes or default changes
   useEffect(() => {
@@ -185,6 +207,7 @@ export function useAddRehearsalForm({
         const endsAt = wallClockIn(timezone, rehearsal.endsAt);
 
         setDate(startsAt);
+        setSavedDate(formatDateToString(startsAt));
         setStartTime(startsAt);
         setEndTime(endsAt);
         setTitle(rehearsal.title || '');
@@ -213,13 +236,17 @@ export function useAddRehearsalForm({
   }, [routeParams?.rehearsalId]);
 
   // Handlers
-  const handleTimeSelect = (startTime: string, endTime: string) => {
+  // A recommendation is free time, not a rehearsal: it gives the start, and the
+  // end is the usual length on (T-012).
+  const handleTimeSelect = (startTime: string) => {
+    touch('start', 'end');
     setStartTime(parseTimeString(startTime, date));
-    setEndTime(parseTimeString(endTime, date));
+    setEndTime(null);
   };
 
-  const openDatePicker = () => {
-    setShowDatePicker(true);
+  // The date's calendar opens and closes in the form, under the date (T-018).
+  const toggleDatePicker = () => {
+    setShowDatePicker((open) => !open);
   };
 
   const openStartTimePicker = () => {
@@ -230,9 +257,11 @@ export function useAddRehearsalForm({
     setShowEndTimePicker(true);
   };
 
-  // Called with a confirmed value only: Cancel in the picker never reaches the
-  // form, nor the end moved along with a start (usePickerDraft, HC02).
+  // A day tapped in the calendar. The times are called with a confirmed value
+  // only: Cancel in their picker never reaches the form, nor the end moved
+  // along with a start (usePickerDraft, HC02).
   const handleDateChange = (selectedDate: Date) => {
+    touch('date');
     setDate(selectedDate);
   };
 
@@ -241,31 +270,81 @@ export function useAddRehearsalForm({
   const startClock = formatDateToTimeString(startTime);
   const endClock = formatDateToTimeString(endTime);
 
+  // What the person changed here and has not saved (T-013): each field they
+  // touched, against what it held before their first touch. What the form
+  // fills in by itself — the default project, a planner's prefill, an edited
+  // rehearsal's load, the participants it starts with — is not theirs to lose,
+  // so it goes through the plain setters and is never counted; a field put
+  // back as it was is not a change.
+  const fields: RehearsalFields = {
+    project: localSelectedProject?.id ?? '',
+    date: formatDateToString(date),
+    start: startClock,
+    end: endClock,
+    title,
+    location,
+    participants: [...selectedMemberIds].sort().join(','),
+  };
+  type Field = keyof RehearsalFields;
+  const [untouched, setUntouched] = useState<Partial<RehearsalFields>>({});
+  const touch = (...names: Field[]) => setUntouched((current) => {
+    const next = { ...current };
+    for (const name of names) if (!(name in next)) next[name] = fields[name];
+    return next;
+  });
+  const hasChanges = (Object.keys(untouched) as Field[]).some((name) => untouched[name] !== fields[name]);
+  const fieldsRef = useRef(fields);
+  fieldsRef.current = fields;
+  /**
+   * Saved as it was sent (review T-013 r2): a field holding something else
+   * since is still unsaved, against what was sent.
+   */
+  const markSaved = useCallback((sent: RehearsalFields) => setUntouched(() => {
+    const next: Partial<RehearsalFields> = {};
+    for (const name of Object.keys(sent) as Field[]) {
+      if (sent[name] !== fieldsRef.current[name]) next[name] = sent[name];
+    }
+    return next;
+  }), []);
+
+  const changeTitle = (value: string) => {
+    touch('title');
+    setTitle(value);
+  };
+  const changeLocation = (value: string) => {
+    touch('location');
+    setLocation(value);
+  };
+  const setSelectedMemberIds = (ids: string[]) => {
+    touch('participants');
+    setParticipants((current) => ({ ...current, ids }));
+  };
+
   const handleStartTimeChange = (selectedTime: Date) => {
+    // A start can move the end along with it.
+    touch('start', 'end');
     setStartTime(selectedTime);
-    // A later start moves a same-day end along with it — two hours on, which
-    // may well be the next morning. A rehearsal that already ran overnight
-    // keeps its end, unless the start lands right on it.
+    // An end nobody set follows the start. One that was set stays, unless a
+    // later start passes it: then it goes back to following — the usual length
+    // on, which may well be the next morning. A rehearsal that already ran
+    // overnight keeps its end, unless the start lands right on it.
     const start = formatDateToTimeString(selectedTime);
     const wasOvernight = endsNextDay(startClock, endClock);
     if (isEmptyClockRange(start, endClock) || (!wasOvernight && endsNextDay(start, endClock))) {
-      const newEnd = new Date(selectedTime);
-      newEnd.setHours(newEnd.getHours() + 2);
-      setEndTime(newEnd);
+      setEndTime(null);
     }
   };
 
   const handleEndTimeChange = (selectedTime: Date) => {
+    touch('end');
     setEndTime(selectedTime);
   };
 
   const resetForm = () => {
-    setDate(wallClockIn(timezone));
-    const start = setMinutesToZero(wallClockIn(timezone));
+    const start = nextRoundHour(wallClockIn(timezone));
+    setDate(start);
     setStartTime(start);
-    const end = new Date(start);
-    end.setHours(end.getHours() + 2);
-    setEndTime(end);
+    setEndTime(null);
     setLocation('');
   };
 
@@ -275,6 +354,7 @@ export function useAddRehearsalForm({
   const handleSelectProject = (project: Project) => {
     setShowProjectPicker(false);
     if (isEditMode || project.id === localSelectedProject?.id) return;
+    touch('project', 'participants');
     setLocalSelectedProject(project);
     setSelectedProject(project); // Also update global context
     setParticipants({ projectId: project.id, ids: [], settled: false });
@@ -304,15 +384,20 @@ export function useAddRehearsalForm({
     /** The end is on the day after `date`. */
     endsNextDay: endsNextDay(startClock, endClock),
     title,
-    setTitle,
+    setTitle: changeTitle,
     location,
-    setLocation,
+    setLocation: changeLocation,
     localSelectedProject,
     setLocalSelectedProject,
     selectedMemberIds,
     setSelectedMemberIds,
     startParticipants,
     participantsSettled: participants.settled && participants.projectId === localSelectedProject?.id,
+    /** Something the person changed is not saved (T-013). */
+    hasChanges,
+    /** What the form holds, as a save sends it and marks it saved. */
+    fields,
+    markSaved,
     // UI state
     showDatePicker,
     setShowDatePicker,
@@ -324,7 +409,7 @@ export function useAddRehearsalForm({
     setShowProjectPicker,
     // Handlers
     handleTimeSelect,
-    openDatePicker,
+    toggleDatePicker,
     openStartTimePicker,
     openEndTimePicker,
     handleDateChange,
@@ -337,5 +422,7 @@ export function useAddRehearsalForm({
     isEditMode,
     loadingRehearsal,
     rehearsalId: routeParams?.rehearsalId,
+    /** The edited rehearsal's day as loaded, 'YYYY-MM-DD'. */
+    savedDate,
   };
 }

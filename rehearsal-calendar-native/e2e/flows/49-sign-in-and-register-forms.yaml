@@ -1,0 +1,149 @@
+# The sign-in and registration forms (T-015). Before: an empty form was sent
+# and answered with an alert; a wrong password was said twice, in an alert and
+# again under the fields; Return in the address closed the keyboard and Return
+# in the password did nothing; the password could not be shown; registration
+# said each problem in an alert of its own.
+#
+# Now Sign In and Sign Up stay off until the fields they need are filled,
+# Return goes field to field and sends the form from the last one, a refusal
+# is said once, under the fields, and a registration problem under its field.
+# Nobody signs in: the address is no one's, and the registration never leaves
+# the form.
+appId: ${APP_ID}
+name: Sign-in and registration forms
+tags:
+  - auth
+env:
+  NOBODY: nobody-t015@example.com
+  WRONG: wrong-password-1
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: login-submit
+    timeout: 60000
+- assertVisible:
+    id: login-submit
+    enabled: false
+# The first keyboard after a cold launch is slow (sign-in-form.yaml).
+- evalScript: ${output.tries = 0}
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: login-email
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - evalScript: ${output.tries += 1}
+      - runFlow:
+          when:
+            true: ${output.tries > 1}
+          commands:
+            - eraseText
+      - inputText: ${NOBODY}
+      - assertVisible:
+          id: login-email
+          text: ${NOBODY}
+- assertVisible:
+    id: login-submit
+    enabled: false
+# Return in the address goes to the password.
+- pressKey: Enter
+- inputText: ${WRONG}
+- assertVisible:
+    id: login-password
+    text: ${'•'.repeat(WRONG.length)}
+- assertVisible:
+    id: login-submit
+    enabled: true
+- takeScreenshot: 49-sign-in-filled
+# Return in the password signs in, and the refusal is said once: under the
+# fields, with no alert over them.
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: "Wrong email or password"
+    timeout: 20000
+- assertNotVisible: "Login Error"
+- assertNotVisible: "OK"
+- takeScreenshot: 49-sign-in-refused
+# The password can be shown.
+- tapOn: "Show password"
+- assertVisible:
+    id: login-password
+    text: ${WRONG}
+- tapOn: "Hide password"
+- assertVisible:
+    id: login-password
+    text: ${'•'.repeat(WRONG.length)}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: login-register
+      # Leaving a typed password, iOS offers to keep it, over the whole
+      # screen: either says the tap was taken.
+      SEE: "Join Rehearsly|Not Now"
+      WAIT_MS: 10000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- extendedWaitUntil:
+    visible: "Join Rehearsly"
+    timeout: 10000
+- assertVisible:
+    id: register-submit
+    enabled: false
+- assertVisible: "At least 8 characters"
+# Both passwords shown: a hidden new password next to an address is where iOS
+# offers a strong password in place of the keyboard, and the flow's typing
+# would go nowhere. Once the first is shown, the second is the one still
+# labelled "Show password".
+- tapOn: "Show password"
+- tapOn: "Show password"
+- assertNotVisible: "Show password"
+# Return goes field to field: the name, the last name left empty, the address,
+# the password, its repeat.
+- tapOn:
+    id: register-first-name
+- inputText: Viola
+- pressKey: Enter
+- pressKey: Enter
+- inputText: not-an-address
+- assertVisible:
+    id: register-email
+    text: not-an-address
+- pressKey: Enter
+- inputText: long-enough-1
+- assertVisible:
+    id: register-password
+    text: long-enough-1
+- pressKey: Enter
+- inputText: long-enough-2
+- assertVisible:
+    id: register-confirm
+    text: long-enough-2
+- takeScreenshot: 49-register-filled
+# Return in the last field sends the form; what is wrong is said under each
+# field, with no alert.
+- pressKey: Enter
+- assertNotVisible: "Error"
+- scrollUntilVisible:
+    element: "Invalid email format"
+    direction: UP
+    timeout: 10000
+- assertVisible:
+    id: register-email
+    text: not-an-address
+- assertVisible:
+    id: register-first-name
+    text: Viola
+- scrollUntilVisible:
+    element: "Passwords do not match"
+    direction: DOWN
+    timeout: 10000
+- takeScreenshot: 49-register-said-under-fields

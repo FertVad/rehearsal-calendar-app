@@ -1,0 +1,29 @@
+$ git restore --source=286a058 -- <the eleven source files of f3b92ce, not the new clockFormat.ts>
+$ npx jest --selectProjects frontend --silent clockFormat clockRange PickerModal ParticipantPicker SmartPlannerScreen useAvailabilitySave ProjectDetailScreen TodayRehearsals TimeSlotsEditor | grep -E "^(PASS|FAIL) |^  ● |Tests:|Suites:" | sort -u
+
+  ● a phone on the 12-hour clock › writes an interval past midnight the same way
+  ● a phone on the 24-hour clock › gives a rehearsal its interval, and the end its date when it is another day
+  ● a rehearsal past midnight on the screens (DD02) › says which day it ends on, and only when that is another day
+  ● names a past rehearsal by its title and times it as an upcoming one is
+  ● Test suite failed to run
+  ● The range under the period (cause fix 14) › names the profile's days, not the device's
+  ● The time wheel › is 12-hour on a 12-hour phone
+  ● The time wheel › is 24-hour on a 24-hour phone, in English too
+  ● The time wheel › steps by five minutes
+  ● TimeSlotsEditor Component › Edge Cases › should handle time values with seconds
+  ● TodayRehearsals Component › Rehearsals List Rendering › should render all rehearsals
+  ● useAvailabilitySave Hook › validateAvailability › should fail validation for overlapping slots
+FAIL frontend src/features/availability/components/editor/__tests__/TimeSlotsEditor.test.tsx (127.562 s)
+FAIL frontend src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts (128.713 s)
+FAIL frontend src/features/calendar/components/__tests__/TodayRehearsals.test.tsx (133.104 s)
+FAIL frontend src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx (133.003 s)
+FAIL frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx (134.8 s)
+FAIL frontend src/shared/components/__tests__/ParticipantPicker.test.tsx
+FAIL frontend src/shared/components/__tests__/PickerModal.test.tsx (124.892 s)
+FAIL frontend src/shared/utils/__tests__/clockFormat.test.ts (8.428 s)
+FAIL frontend src/shared/utils/__tests__/clockRange.test.ts (18.533 s)
+Test Suites: 9 failed, 9 total
+Tests:       11 failed, 84 passed, 95 total
+
+("Test suite failed to run" is ParticipantPicker.test.tsx: busyText on the base
+takes no locale, and the test passes one.)

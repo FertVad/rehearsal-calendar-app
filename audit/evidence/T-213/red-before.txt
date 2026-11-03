@@ -1,0 +1,33 @@
+T-213 red before: the lost tap on "Not Now", looked for again on the old code
+(sign-in-form.yaml and tap-and-see.yaml as at 209d0f3).
+
+1. Every Maestro run kept on this machine, taps on "Not Now" and the dropped
+   ones (before this task's runs: 45 flow logs, 69 taps, 1 dropped):
+
+$ node audit/evidence/T-213/not-now-scan.mjs
+lost: 2026-10-31_184328 / An admin swipes a rehearsal away, an actor has no swipe: 19:08:23.687  maestro  Tap on (Optional) "Not Now"
+45 flow logs, 69 taps on "Not Now", 1 dropped
+
+   The one dropped is the red run's (red-run-timeline.txt).
+
+2. Flow 51 three times in one run, old code, as a loop:
+
+$ node audit/evidence/T-207/repeat-e2e.mjs 3 e2e/flows/51-rehearsal-swipe-and-details.yaml
+Command timed out after 10m 0s (the agent's limit; artifacts 2026-10-31_201507)
+
+   r1 went through every step, both sign-ins ("Not Now" 20:18:02 and
+   20:19:06, "Play within" seen at 20:19:07, the actor's details without
+   Delete at 20:19:23). r2 signed in ("Not Now" 20:20:02) and failed on
+   ".*Court scene.*": r1 had deleted it from the one seed - the flow is not
+   repeatable within a run, which says nothing of the flake. r3 was cut off by
+   the time limit before it signed in. Taps on "Not Now": 3, none dropped:
+
+$ node audit/evidence/T-213/not-now-scan.mjs
+lost: 2026-10-31_184328 / An admin swipes a rehearsal away, an actor has no swipe: 19:08:23.687  maestro  Tap on (Optional) "Not Now"
+47 flow logs, 72 taps on "Not Now", 1 dropped
+
+Like T-207 (nine runs, load, churn, 48 taps after a banner: no tap lost), the
+simulator's drop of one tap in about 250 does not come on demand. The failure
+the fix answers - a tap on "Not Now" that leaves the sheet, then a flow that
+goes on as if it went - is made red on purpose: tap-and-see-gone-check.txt,
+check 1.

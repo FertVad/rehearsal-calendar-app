@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
-import { Colors, Spacing, BorderRadius, FontSize, FontWeight } from '../constants/colors';
+import { Colors, Spacing, BorderRadius, FontSize, FontWeight, TouchTarget } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
-import { getDateLocale } from '../../shared/utils/locale';
+import { formatDate } from '../utils/dateFormat';
 import { formatDateToString, parseDateString } from '../utils/time';
 import { calendarRangeDays } from '../utils/memberAvailabilityLimits';
+import { useToday } from '../hooks/useClock';
+import { useWeekStart } from '../../hooks/useWeekStart';
 import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
+import { calendarTheme, monthTitle, profileDay, withToday } from './profileCalendar';
 
 interface DateRangePickerProps {
   visible: boolean;
@@ -19,22 +22,15 @@ interface DateRangePickerProps {
   maxDays?: number;
 }
 
-// Configure locales for react-native-calendars
-LocaleConfig.locales['ru'] = {
-  monthNames: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
-  monthNamesShort: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
-  dayNames: ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
-  dayNamesShort: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-  today: 'Сегодня'
-};
-
-LocaleConfig.locales['en'] = {
-  monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-  monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-  dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-  dayNamesShort: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
-  today: 'Today'
-};
+/**
+ * Seven days of 44 side by side want 308 pt: the calendar runs to the sheet's
+ * edges, and the sheet's margin to the screen's is what is left over, up to
+ * the usual. On a 320 pt screen a day had 39.
+ */
+const SHEET_MARGIN_X = Math.min(
+  Spacing.lg,
+  (Dimensions.get('window').width - 7 * TouchTarget) / 2,
+);
 
 export function DateRangePicker({
   visible,
@@ -46,6 +42,12 @@ export function DateRangePicker({
   maxDays,
 }: DateRangePickerProps) {
   const { t, language } = useI18n();
+  // The week begins on the profile's day, as in the availability calendar
+  // (CalendarMonth): without `firstDay` the library began it on Sunday.
+  const weekStart = useWeekStart();
+  const today = useToday();
+  // The phone's date, which is all the library knows as today.
+  const phoneToday = formatDateToString(new Date());
 
   // Set calendar locale
   LocaleConfig.defaultLocale = language;
@@ -118,6 +120,13 @@ export function DateRangePicker({
     return marked;
   }, [startDate, endDate, rangeError]);
 
+  const calendarMarks = withToday(markedDates, today, phoneToday, minDateStr);
+  const dayComponent = useMemo(
+    () => profileDay(today, t.common.today, language),
+    [today, t.common.today, language]
+  );
+  const renderHeader = useMemo(() => monthTitle(language), [language]);
+
   const handleDayPress = (day: DateData) => {
     if (!startDate || (startDate && endDate)) {
       // First selection or resetting selection
@@ -152,13 +161,8 @@ export function DateRangePicker({
     onClose();
   };
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '—';
-    // A calendar date, not an instant: new Date('2026-09-10') is the 9th west of UTC.
-    const date = parseDateString(dateStr);
-    const locale = getDateLocale(language);
-    return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
-  };
+  const shownDate = (dateStr: string | null) =>
+    dateStr ? formatDate(dateStr, 'dayMonthShort', language) : '—';
 
   return (
     <AppModal
@@ -175,43 +179,36 @@ export function DateRangePicker({
           <View style={styles.selectedRange}>
             <View style={styles.dateBox}>
               <Text style={styles.dateLabel}>{t.common.from}</Text>
-              <Text style={styles.dateValue}>{formatDate(startDate)}</Text>
+              <Text style={styles.dateValue}>{shownDate(startDate)}</Text>
             </View>
             <View style={styles.arrow}>
               <Text style={styles.arrowText}>→</Text>
             </View>
             <View style={styles.dateBox}>
               <Text style={styles.dateLabel}>{t.common.to}</Text>
-              <Text style={styles.dateValue}>{formatDate(endDate)}</Text>
+              <Text style={styles.dateValue}>{shownDate(endDate)}</Text>
             </View>
           </View>
 
           {rangeError && <Text accessibilityRole="alert" style={{ color: Colors.accent.red }}>{rangeError}</Text>}
 
           <Calendar
+            testID="date-range-calendar"
+            current={startDate ?? today}
+            firstDay={weekStart === 'monday' ? 1 : 0}
             onDayPress={handleDayPress}
             markingType={'period'}
-            markedDates={markedDates}
+            dayComponent={dayComponent}
+            renderHeader={renderHeader}
+            markedDates={calendarMarks}
             minDate={minDateStr}
-            theme={{
-              backgroundColor: Colors.bg.secondary,
-              calendarBackground: Colors.bg.secondary,
-              textSectionTitleColor: Colors.text.secondary,
-              selectedDayBackgroundColor: Colors.accent.purple,
-              selectedDayTextColor: '#ffffff',
-              todayTextColor: Colors.accent.purple,
-              dayTextColor: Colors.text.primary,
-              textDisabledColor: Colors.text.tertiary,
-              monthTextColor: Colors.text.primary,
-              textMonthFontWeight: FontWeight.semibold,
-              textDayFontSize: FontSize.base,
-              textMonthFontSize: FontSize.lg,
-              textDayHeaderFontSize: FontSize.sm,
-            }}
+            style={styles.calendar}
+            theme={calendarTheme}
           />
 
           <View style={styles.footer}>
             <TouchableOpacity
+              testID="date-range-cancel"
               style={[styles.button, styles.cancelButton]}
               onPress={handleCancel}
             >
@@ -239,7 +236,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: SHEET_MARGIN_X,
+  },
+  calendar: {
+    paddingLeft: 0,
+    paddingRight: 0,
   },
   container: {
     backgroundColor: Colors.bg.secondary,
@@ -300,6 +302,8 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
+    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
@@ -315,7 +319,7 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
   },
   confirmButton: {
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
   },
   confirmButtonText: {
     fontSize: FontSize.base,

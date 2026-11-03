@@ -21,9 +21,10 @@ tags:
       text: ".*Sorin Estate.*"
     timeout: 10000
 - waitForAnimationToEnd
-# On its name, as in flow 19: his only project, listed first.
+# The card is the project alone now, nothing to tap inside it (T-025).
 - tapOn:
-    point: "25%,23%"
+    id: project-card
+    text: ".*Sorin Estate.*"
 - extendedWaitUntil:
     visible:
       id: past-rehearsals-toggle
@@ -33,7 +34,7 @@ tags:
 # One button, its texts one label: the title and the interval, as an upcoming
 # one reads.
 - scrollUntilVisible:
-    element: "(?s)(?=.*Old monologue)(?=.*12:00 — 13:00).*"
+    element: "(?s)(?=.*Old monologue)(?=.*12:00.PM–1:00.PM).*"
     direction: DOWN
     centerElement: true
     timeout: 15000

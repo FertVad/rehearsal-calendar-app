@@ -1,0 +1,15 @@
+T-022 — e2e flow 09, red before. The same fix files put back as at 78065ae
+(see jest-red-before.txt), flow 09 as changed by this task (c44bf88).
+
+$ npm run e2e -- e2e/flows/09-onboarding.yaml
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Onboarding to the end, nothing granted (1m 32s) (Assertion is false: "Welcome, Nina!" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The base greets with "Welcome!", then "Nina!", then "Rehearsly", each on a
+line of its own.

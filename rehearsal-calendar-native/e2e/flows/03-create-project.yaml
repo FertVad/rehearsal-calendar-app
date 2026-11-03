@@ -13,8 +13,29 @@ tags:
 - tapOn:
     id: tab-create
 - tapOn: "Create Project"
+# "Create" waits for a name (T-025), as "Sign in" waits for its fields: it was
+# on with the name empty, and a tap answered "Name is required" in an alert.
+- extendedWaitUntil:
+    visible: "Enter name"
+    timeout: 10000
+- assertVisible:
+    text: "Create"
+    enabled: false
+- tapOn: "Create"
+- assertNotVisible: "Name is required"
 - tapOn: "Enter name"
+- inputText: "   "
+- assertVisible:
+    text: "Create"
+    enabled: false
+- tapOn: "Create"
+- assertNotVisible: "Name is required"
+- takeScreenshot: 03-create-off-without-a-name
+- eraseText
 - inputText: "Macbeth"
+- assertVisible:
+    text: "Create"
+    enabled: true
 - tapOn: "Create"
 - extendedWaitUntil:
     visible: "Macbeth"

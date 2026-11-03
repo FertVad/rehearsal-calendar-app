@@ -140,6 +140,10 @@ const Alert = {
   alert: jest.fn(),
 };
 
+const ActionSheetIOS = {
+  showActionSheetWithOptions: jest.fn(),
+};
+
 const Share = {
   share: jest.fn(),
 };
@@ -174,6 +178,7 @@ const NativeModules = {
 module.exports = {
   // Native modules
   Alert,
+  ActionSheetIOS,
   Share,
   Platform,
   Dimensions,
@@ -226,6 +231,33 @@ module.exports = {
     },
   },
 
+  // The keyboard coming up and going down; __emit plays an event to the
+  // listeners of that name (BottomActionBar).
+  Keyboard: {
+    __listeners: [],
+    addListener(event, handler) {
+      const entry = { event, handler };
+      module.exports.Keyboard.__listeners.push(entry);
+      return {
+        remove: () => {
+          const list = module.exports.Keyboard.__listeners;
+          const i = list.indexOf(entry);
+          if (i >= 0) list.splice(i, 1);
+        },
+      };
+    },
+    __emit(event, payload) {
+      for (const entry of [...module.exports.Keyboard.__listeners]) {
+        if (entry.event === event) entry.handler(payload);
+      }
+    },
+    dismiss: jest.fn(),
+  },
+  LayoutAnimation: {
+    configureNext: jest.fn(),
+    Types: { keyboard: 'keyboard' },
+  },
+
   // Additional utilities
   findNodeHandle: jest.fn(),
   useWindowDimensions: () => ({ width: 375, height: 812 }),
@@ -242,5 +274,9 @@ module.exports = {
     spring: jest.fn(),
     View: View,
     Text: Text,
+    // The month list of "Busy" (AvailabilityScreen).
+    FlatList: FlatList,
   },
+  // Pull to refresh, given to a list; nothing of its own here.
+  RefreshControl: () => null,
 };

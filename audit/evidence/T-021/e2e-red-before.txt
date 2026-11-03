@@ -1,0 +1,21 @@
+T-021 — e2e flow 10, red before. The same fix files at 3c16b81 (see
+jest-red-before.txt), flow 10 as changed by this task.
+
+$ npm run e2e -- e2e/flows/10-availability-days.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Availability saves the day it changed (2m 17s) (Assertion is false: "Saved", id: toast is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The old save raised the "Availability saved" alert instead.

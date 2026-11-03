@@ -299,8 +299,10 @@ const { t, language, changeLanguage } = useI18n();
 // Dynamic strings (functions)
 <Text>{t.rehearsals.selectedCount(3, 10)}</Text>  // "Selected: 3 of 10"
 
-// Localized dates — all four languages, from one place
-date.toLocaleDateString(getDateLocale(language))   // shared/utils/locale.ts
+// Localized dates — all four languages, from one place: named formats,
+// Intl's form, a capital first letter (T-028). Nothing else calls
+// toLocaleDateString (dateFormat.test.ts)
+formatDate('2026-10-29', 'weekdayDayMonthShort', language)   // "Чт, 29 окт." — shared/utils/dateFormat.ts
 ```
 
 ### 8. Authorize the ids, not only the caller
@@ -682,15 +684,15 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 - `PATCH /admin/api/bug-reports/:id/status` — update bug report status (new/in_progress/fixed)
 
 ### Beta Testing: Bug Reports
-**Location**: `src/shared/components/BetaBanner.tsx`, `server/routes/native/bugReports.js`
+**Location**: `src/features/profile/components/BugReportSheet.tsx`, `server/routes/native/bugReports.js`
 
-Global "Test Flight" banner visible on all tab screens during beta testing.
+The "Test Flight" banner over every tab is gone (owner, 29.10.2026, T-008); a bug report is sent from the profile.
 
 **Frontend**:
-- `BetaBanner` component mounted in `TabNavigator` (navigation/index.tsx)
-- Shows rocket icon + "Тестовый полёт" / "Test Flight" with "Bug Report" button
-- Opens modal with text input, submits to backend
-- Automatically captures current screen name via `useNavigationState`
+- Profile → "About" block: "Report a Bug" / «Сообщить об ошибке» (`profile-report-bug`), after "Help" and before "Delete Account"
+- Opens `BugReportSheet` (an `AppModal`) with a text field, submits to backend, then "Thanks! Report sent"
+- `screen` is always `Profile`
+- Strings: `t.profile.reportBug*`, in all four languages
 
 **Backend**:
 - `POST /api/native/bug-reports` — create report (requireAuth, body: `{ message, screen }`)
@@ -699,7 +701,7 @@ Global "Test Flight" banner visible on all tab screens during beta testing.
 
 **Admin view**: Bug reports appear in admin dashboard at `/admin` with clickable status buttons.
 
-**Removing after beta**: Delete `<BetaBanner />` from `TabNavigator` in `src/navigation/index.tsx` and remove the import.
+**E2E**: `e2e/flows/47-bug-report-from-profile.yaml` — no banner, report from the profile, read back from the server.
 
 ### Logging Convention
 Use `logger` utility instead of `console.log` — automatically suppressed in production:
@@ -898,6 +900,14 @@ Every turn of the wheel used to reach the owner, so Cancel was Done (HC02).
 Do not put a `DateTimePicker` in a screen directly — there is one picker, and
 the rehearsal form and the availability editor both use it.
 
+**A time on a screen goes through `shared/utils/clockFormat.ts`** (T-017):
+`formatClock` shows a stored "HH:MM" on the phone's 12 or 24 hours
+(`expo-localization`), `formatTimeRange` writes "18:00–21:00" and
+`formatDateRange` "Oct 29 – Nov 4"; `formatRange` is the one joiner. The
+picker's wheel takes its hour cycle from `timePickerLocale` and steps by five
+minutes. Storage and requests stay "HH:MM" and ISO; server notification texts
+are not this.
+
 ### 12. A sheet in a `Modal` goes through `ModalSheet`
 ❌ **Problem**: VoiceOver reads a whole sheet as one button, and a tap on the
 sheet's title closes it
@@ -934,6 +944,21 @@ does not have, behind a `useNavigation<any>()` (R9-03). `typedNavigation.test.ts
 refuses any cast in navigation; `registeredRoutes.test.tsx` requires each
 navigator to register exactly what its param list declares — add a screen to
 both or the tests fail.
+
+**Leaving a modal screen for the tabs goes back to the `MainTabs` under it,
+never to a copy.** In React Navigation 7 `navigate` to a route lower in the
+stack but not on top pushes a new one unless told `{ pop: true }`: "Create" on
+the new-project form opened the project in a second `MainTabs` presented over
+the form, going back showed the form again, and "Create" made a second project
+(T-007). So every `navigate('MainTabs', …)` from a modal screen or a push tap
+passes `{ pop: true }` (or uses `popTo`); the tabs open the screen named in the
+changed params themselves. A screen deep in a tab's stack gets `initial: false`
+next to its `screen`, so a tab not opened yet starts at its list and back is
+the list. Since the tabs kept are the tabs as they were left, naming only a tab
+shows whatever was open in it: to land on a tab's root, name it too with its
+own `pop: true` (`{ screen: 'Projects', params: { screen: 'ProjectsMain', pop:
+true } }`). `backToTabs.test.tsx` holds it against the real stack and tab
+routers.
 
 ## Environment Setup
 

@@ -11,11 +11,12 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { EditorHeader } from '../../../features/availability/components/editor/EditorHeader';
 import { DateRangePicker } from '../../components/DateRangePicker';
-import { formatDate } from '../../../features/projects/screens/ProjectDetailScreen';
+import { RehearsalRow } from '../../../features/projects/screens/ProjectDetailScreen';
 
 jest.mock('../../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: require('../../../i18n/translations').translations.en, language: 'en' }),
 }));
+jest.mock('../../../hooks/useWeekStart', () => ({ useWeekStart: () => 'monday' }));
 
 // jest.config.js runs every test in New York for this reason.
 it('runs where the date and the instant disagree', () => {
@@ -39,7 +40,8 @@ it('the period picker shows the days of the period', () => {
 });
 
 it('a project page shows a rehearsal on its own date, in the reader\'s language', () => {
-  expect(formatDate('2026-09-10', 'en')).toBe('Sep 10');
-  expect(formatDate('2026-09-10', 'de')).toBe(
-    new Date(2026, 8, 10).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' }).replace(/\.$/, ''));
+  const { getByText } = render(
+    <RehearsalRow onPress={jest.fn()} rehearsal={{ id: 'r', title: 'Run', date: '2026-09-10', time: '10:00', status: 'scheduled' } as any} />,
+  );
+  expect(getByText('Sep 10')).toBeTruthy();
 });

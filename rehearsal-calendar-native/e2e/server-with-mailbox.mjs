@@ -52,6 +52,36 @@
  *   GET /notify?to=<address>&count=<n>&title=<t>   n notifications for that
  *                                                  account, oldest first,
  *                                                  titled "<t> 1" to "<t> n"
+ *   GET /notify?to=<address>&type=member_joined&project=<name>&member=<who>
+ *                                                  "New member" about that
+ *                                                  project, sent as the join
+ *                                                  sends it (flow 61)
+ *   GET /notify?to=<address>&type=rehearsal_updated&rehearsal=<title>&change=<key>
+ *   GET /notify?to=<address>&type=member_response&rehearsal=<title>&member=<who>
+ *                                                  that rehearsal changed, or
+ *                                                  answered, sent as an edit
+ *                                                  and a "yes" send it (flow 62)
+ *
+ * It measures an icon on a screenshot a flow took, which Maestro cannot: a
+ * button that is only an icon is one element, the size of its target (ink.mjs):
+ *
+ *   GET /ink?shot=<name>&colour=<#rrggbb>&left=&right=&top=&bottom=[&tolerance=]
+ *                                    { box: { width, height } } in points, of
+ *                                    that colour within those fractions of the
+ *                                    newest <name>.png in e2e/out/artifacts;
+ *                                    within 40 a channel, or `tolerance`
+ *
+ * It reads back what the server stored from an account's bug reports, to show
+ * a report sent from the app arrived (flow 47):
+ *
+ *   GET /bug-reports?from=<address>   { reports: [{ message, screen }] }, oldest
+ *                                     first
+ *
+ * It puts text on the simulator's pasteboard, as copying it in another app
+ * would, for a flow that pastes with iOS's own paste control (flow 08):
+ *
+ *   GET /pasteboard?device=<udid>&text=<t>   `xcrun simctl pbcopy` on that
+ *                                            simulator
  *
  * And it keeps count of the taps the flows had to take again:
  *
@@ -62,6 +92,7 @@
  *                                          prints after the flows (T-207)
  */
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -69,9 +100,12 @@ import { fileURLToPath } from 'node:url';
 import { capturedEmails } from '../server/services/email/transport.js';
 import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
+import { notifyMemberJoined, notifyMemberResponse, notifyRehearsalUpdated } from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
+import { inkBox } from './ink.mjs';
 
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
+const ARTIFACTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'artifacts');
 const TAPS_AGAIN = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'taps-again.log');
 
 assert.equal(process.env.EMAIL_TRANSPORT, 'capture-for-tests', 'The e2e server keeps its mail in memory, never sends it');
@@ -210,6 +244,56 @@ http.createServer((request, response) => {
     holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
   }
+  if (request.method === 'GET' && url.pathname === '/notify' && url.searchParams.get('type') === 'member_joined') {
+    const to = (url.searchParams.get('to') || '').trim().toLowerCase();
+    const projectName = url.searchParams.get('project') || '';
+    const member = url.searchParams.get('member') || 'Somebody';
+    (async () => {
+      const user = await db.get('SELECT id FROM native_users WHERE email = $1', [to]);
+      if (!user) return answer(404, { error: `no account ${to}` });
+      const project = await db.get('SELECT id, name FROM native_projects WHERE name = $1', [projectName]);
+      if (!project) return answer(404, { error: `no project ${projectName}` });
+      // As the join tells them (inviteRedemption.js), the server's own words and data.
+      await notifyMemberJoined(project.name, member, [user.id], project.id);
+      console.log(`[e2e] told ${to} that ${member} joined ${project.name}`);
+      return answer(200, { recorded: 1 });
+    })().catch((error) => answer(500, { error: String(error) }));
+    return;
+  }
+  const about = url.searchParams.get('type');
+  if (request.method === 'GET' && url.pathname === '/notify' && (about === 'rehearsal_updated' || about === 'member_response')) {
+    const to = (url.searchParams.get('to') || '').trim().toLowerCase();
+    const title = url.searchParams.get('rehearsal') || '';
+    (async () => {
+      const user = await db.get('SELECT id FROM native_users WHERE email = $1', [to]);
+      if (!user) return answer(404, { error: `no account ${to}` });
+      const rehearsal = await db.get('SELECT * FROM native_rehearsals WHERE title = $1', [title]);
+      if (!rehearsal) return answer(404, { error: `no rehearsal ${title}` });
+      const project = await db.get('SELECT name FROM native_projects WHERE id = $1', [rehearsal.project_id]);
+      // As an edit and a "yes" tell them (routes/native/rehearsals.js), the
+      // server's own words, on the reader's clock.
+      if (about === 'rehearsal_updated') {
+        await notifyRehearsalUpdated(rehearsal, project.name, [{ user_id: user.id }], [url.searchParams.get('change') || 'location']);
+      } else {
+        await notifyMemberResponse(rehearsal, project.name, url.searchParams.get('member') || 'Somebody', [user.id]);
+      }
+      console.log(`[e2e] told ${to} of ${about} on ${title}`);
+      return answer(200, { recorded: 1 });
+    })().catch((error) => answer(500, { error: String(error) }));
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/ink') {
+    // The newest screenshot of that name the flows took (e2e/out/artifacts).
+    const name = path.basename(url.searchParams.get('shot') || '') + '.png';
+    const shots = fs.readdirSync(ARTIFACTS, { recursive: true })
+      .filter((file) => path.basename(file) === name)
+      .map((file) => path.join(ARTIFACTS, file))
+      .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+    if (!shots.length) return answer(404, { error: `no screenshot ${name}` });
+    const region = Object.fromEntries(['left', 'right', 'top', 'bottom'].map((side) => [side, Number(url.searchParams.get(side))]));
+    const tolerance = url.searchParams.has('tolerance') ? Number(url.searchParams.get('tolerance')) : undefined;
+    return answer(200, { box: inkBox(shots[0], { colour: url.searchParams.get('colour') || '', region, tolerance }) });
+  }
   if (request.method === 'GET' && url.pathname === '/notify') {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const count = Number(url.searchParams.get('count'));
@@ -226,11 +310,31 @@ http.createServer((request, response) => {
     })().catch((error) => answer(500, { error: String(error) }));
     return;
   }
+  if (request.method === 'GET' && url.pathname === '/bug-reports') {
+    const from = (url.searchParams.get('from') || '').trim().toLowerCase();
+    db.all(
+      `SELECT r.message, r.screen FROM native_bug_reports r
+       JOIN native_users u ON u.id = r.user_id WHERE u.email = $1 ORDER BY r.id`,
+      [from]
+    ).then((reports) => answer(200, { reports }), (error) => answer(500, { error: String(error) }));
+    return;
+  }
   if (request.method === 'GET' && url.pathname === '/release') {
     const answers = [...held];
     holds = [];
     answers.forEach((release) => release());
     return answer(200, { released: answers.length });
+  }
+  if (request.method === 'GET' && url.pathname === '/pasteboard') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    const child = execFile('xcrun', ['simctl', 'pbcopy', device], { timeout: 30000 }, (error) => {
+      if (error) return answer(500, { error: String(error) });
+      console.log(`[e2e] put ${JSON.stringify(url.searchParams.get('text'))} on the pasteboard`);
+      return answer(200, { copied: true });
+    });
+    child.stdin.end(url.searchParams.get('text') || '');
+    return;
   }
   if (request.method === 'GET' && url.pathname === '/tap-again') {
     const line = `${new Date().toISOString()}  tapped "${url.searchParams.get('tap')}" again: no "${url.searchParams.get('see')}" after the first tap`;

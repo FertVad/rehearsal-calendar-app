@@ -70,7 +70,7 @@ jest.mock('../../features/smart-planner/screens/SmartPlannerTabScreen', mockScre
 jest.mock('../../features/availability/screens/AvailabilityScreen', mockScreen);
 jest.mock('../../features/notifications/screens/NotificationsScreen', mockScreen);
 jest.mock('../../features/onboarding/screens', () => ({
-  WelcomeScreen: () => null, WeekStartScreen: () => null, CalendarSyncScreen: () => null, NotificationsScreen: () => null,
+  WelcomeScreen: () => null, WhatWhereScreen: () => null, CalendarSyncScreen: () => null, NotificationsScreen: () => null,
 }));
 jest.mock('../../features/onboarding/components', () => ({}));
 
@@ -85,16 +85,16 @@ jest.mock('../../contexts/AuthContext', () => ({
 jest.mock('../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: require('../../i18n/translations').translations.en, language: 'en' }),
 }));
+jest.mock('../../contexts/ProjectContext', () => ({ useProjects: () => ({ projects: [] }) }));
 jest.mock('../../shared/hooks/useNotifications', () => ({ useNotifications: () => undefined }));
 jest.mock('../../shared/hooks/useAutoCalendarSync', () => ({ useAutoCalendarSync: () => undefined }));
-jest.mock('../../shared/components/BetaBanner', () => ({ BetaBanner: () => null }));
 jest.mock('../../shared/components/CreateActionSheet', () => ({ CreateActionSheet: () => null }));
 jest.mock('../../shared/services/api', () => ({ rehearsalsAPI: {}, projectsAPI: {} }));
 
 // Each param list, key for key; the type check refuses a missing or extra one.
 const DECLARED = [
   { Login: true, Register: true, VerifyEmail: true, ResetPassword: true } satisfies Record<keyof AuthStackParamList, true>,
-  { Welcome: true, CalendarSync: true, Notifications: true, WeekStart: true } satisfies Record<keyof OnboardingStackParamList, true>,
+  { Welcome: true, CalendarSync: true, Notifications: true, WhatWhere: true } satisfies Record<keyof OnboardingStackParamList, true>,
   { MainTabs: true, Notifications: true, RehearsalDetails: true, JoinProject: true, MarkBusy: true, CreateProject: true,
     AddRehearsal: true } satisfies Record<keyof AppStackParamList, true>,
   { Calendar: true, Projects: true, Create: true, Planner: true, Profile: true } satisfies Record<keyof TabParamList, true>,

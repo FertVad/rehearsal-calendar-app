@@ -1,0 +1,51 @@
+T-021 review (Astra, P2 x2) — red before.
+
+Flow 10 now tells the week it opens on and the place kept after Save by this
+month's title: above the legend (scrolled away) on this week, under it at the
+list's top — whatever the date of the run. 1 November 2026 is a Sunday, the
+first row, so "today visible" alone could not tell them apart. It also reads a
+failed save's text: the sheet's own Save above that button, and the close
+question's Save with the panel down on the screen (the request held past the
+app's ten seconds, hold-answers.js BEFORE + MS 40000).
+
+1. Opening — the task's source files as on 3c16b81 (before T-021):
+$ git restore --source=3c16b81 -- <CalendarMonth.tsx EditorHeader.tsx useAvailabilityData.ts useAvailabilitySave.ts AvailabilityScreen.tsx translations/availability.ts translations/common.ts>
+$ npm run e2e -- e2e/flows/10-availability-days.yaml
+[Failed] Availability saves the day it changed (1m 29s) (Assertion is false: "November 2026", Below id: availability-legend is not visible)
+1/1 Flow Failed
+  — the first check after opening: opened at the month's top.
+
+2. Place after Save — only useAvailabilityData.ts as on 3c16b81 (a reload
+swapped the calendar for the spinner):
+$ git restore --source=3c16b81 -- src/features/availability/hooks/useAvailabilityData.ts
+$ npm run e2e -- e2e/flows/10-availability-days.yaml
+[Failed] Availability saves the day it changed (2m 15s) (Assertion is false: "November 2026", Below id: availability-legend is not visible)
+1/1 Flow Failed
+  — commands.json: before Save the title is away (COMPLETED); after Save, the
+    notice gone, it is back under the legend (FAILED): the list at its top.
+
+3. Close question's failed save — useAvailabilitySave.ts and
+AvailabilityScreen.tsx as on f1a91b2 (before this review):
+$ git restore --source=f1a91b2 -- src/features/availability/hooks/useAvailabilitySave.ts src/features/availability/screens/AvailabilityScreen.tsx
+$ npm run e2e -- e2e/flows/10-availability-days.yaml
+[Failed] Availability saves the day it changed (3m 53s) (Assertion is false: "Failed to save availability", id: availability-save-error is visible)
+1/1 Flow Failed
+  — the sheet's own Save's text above Save passed (screenshot
+    10-save-error-above-save); the close question's Save failed: the
+    screenshot of the failed step (e2e/out/artifacts/2026-11-01_224908/…/
+    step-147-…png) shows the alert "Error / Failed to save availability / OK".
+
+Then: git restore --source=HEAD -- src
+
+Jest, AvailabilitySaving.test.tsx on f1a91b2's useAvailabilitySave.ts and
+AvailabilityScreen.tsx:
+FAIL frontend src/features/availability/screens/__tests__/AvailabilitySaving.test.tsx
+  ● a save that fails keeps the day as changed, says so, and the sheet takes changes again
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Received number of calls: 1
+    1: "Error", "Failed to save availability"
+  ● the question's Save failing with no day picked: the panel is down, the reason is written on the screen
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Received number of calls: 1
+    1: "Error", "Failed to save availability"
+Tests:       2 failed, 2 passed, 4 total

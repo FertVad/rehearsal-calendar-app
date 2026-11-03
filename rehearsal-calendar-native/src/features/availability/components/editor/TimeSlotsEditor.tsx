@@ -1,9 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../../shared/constants/colors';
+import { IconButton } from '../../../../shared/components/IconButton';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../../shared/constants/colors';
 import { TimeSlot, SlotValidationError } from '../../types';
 import { useI18n } from '../../../../contexts/I18nContext';
+import { formatClock, usePhoneUses24HourClock } from '../../../../shared/utils/clockFormat';
+import { getDateLocale } from '../../../../shared/utils/locale';
 
 interface TimeSlotsEditorProps {
   slots: TimeSlot[];
@@ -22,7 +25,9 @@ export default function TimeSlotsEditor({
   onRemoveSlot,
   onTimePickerOpen,
 }: TimeSlotsEditorProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const locale = getDateLocale(language);
+  const uses24 = usePhoneUses24HourClock();
 
   return (
     <View style={styles.slotsSection}>
@@ -49,7 +54,7 @@ export default function TimeSlotsEditor({
                 style={styles.timeButton}
                 onPress={() => onTimePickerOpen(index, 'start')}
               >
-                <Text style={styles.timeValue}>{slot.start}</Text>
+                <Text style={styles.timeValue}>{formatClock(slot.start, locale, uses24)}</Text>
                 <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
               </TouchableOpacity>
             </View>
@@ -62,21 +67,21 @@ export default function TimeSlotsEditor({
                 style={styles.timeButton}
                 onPress={() => onTimePickerOpen(index, 'end')}
               >
-                <Text style={styles.timeValue}>{slot.end}</Text>
+                <Text style={styles.timeValue}>{formatClock(slot.end, locale, uses24)}</Text>
                 <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
               </TouchableOpacity>
             </View>
           </View>
 
           {slots.length > 1 && (
-            <TouchableOpacity
-              accessibilityRole="button"
+            <IconButton
+              icon="trash-outline"
+              size={18}
+              color={Colors.accent.red}
               accessibilityLabel={t.common.delete}
               style={styles.removeSlotButton}
               onPress={() => onRemoveSlot(index)}
-            >
-              <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
-            </TouchableOpacity>
+            />
           )}
         </View>
       ))}
@@ -125,6 +130,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: Colors.bg.secondary,
     borderRadius: BorderRadius.sm,
+    minHeight: TouchTarget,
     padding: Spacing.sm,
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -135,7 +141,6 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   removeSlotButton: {
-    padding: Spacing.sm,
     marginLeft: Spacing.sm,
   },
   addSlotButton: {

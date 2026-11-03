@@ -14,7 +14,6 @@ export interface AvailabilityTranslations {
   partial: string;
   legend: string;
   saving: string;
-  saved: string;
   saveError: string;
   selectDates: string;
   busyTime: string;
@@ -66,7 +65,6 @@ export interface SmartPlannerTranslations {
   unknownAvailability: (names: string) => string;
   addButton: string;
   selectAll: string;
-  clearAll: string;
   selectMembers: string;
   applyFilter: string;
   perfect: string;
@@ -81,11 +79,6 @@ export interface SmartPlannerTranslations {
   allAvailable: string;
   allBusy: string;
   busyPrefix: string;
-  expand: string;
-  collapse: string;
-  of: string;
-  selected: string;
-  noMembers: string;
 }
 
 export const ru = {
@@ -104,7 +97,6 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     partial: 'Частично',
     legend: 'Легенда',
     saving: 'Сохранение...',
-    saved: 'Занятость сохранена',
     saveError: 'Не удалось сохранить занятость',
     selectDates: 'Выберите даты',
     busyTime: 'Время когда занят',
@@ -157,7 +149,6 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     unknownAvailability: (names: string) => `Нет данных о занятости: ${names}. В расчёте они считаются свободными.`,
     addButton: '+ Добавить',
     selectAll: 'Все',
-    clearAll: 'Очистить',
     selectMembers: 'Участники',
     applyFilter: 'Применить',
     perfect: 'Идеально',
@@ -172,11 +163,6 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     allAvailable: 'Все свободны',
     allBusy: 'Все заняты',
     busyPrefix: 'Заняты',
-    expand: 'Развернуть',
-    collapse: 'Свернуть',
-    of: 'из',
-    selected: 'выбрано',
-    noMembers: 'Нет участников',
   },
 };
 
@@ -196,7 +182,6 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     partial: 'Partial',
     legend: 'Legend',
     saving: 'Saving...',
-    saved: 'Availability saved',
     saveError: 'Failed to save availability',
     selectDates: 'Select dates',
     busyTime: 'Busy time',
@@ -242,7 +227,6 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     unknownAvailability: (names: string) => `No availability recorded: ${names}. They are counted as free.`,
     addButton: '+ Add',
     selectAll: 'All',
-    clearAll: 'Clear',
     selectMembers: 'Members',
     applyFilter: 'Apply',
     perfect: 'Perfect',
@@ -257,11 +241,6 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     allAvailable: 'All available',
     allBusy: 'All busy',
     busyPrefix: 'Busy',
-    expand: 'Expand',
-    collapse: 'Collapse',
-    of: 'of',
-    selected: 'selected',
-    noMembers: 'No members',
   },
 };
 
@@ -281,7 +260,6 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     partial: 'Parcial',
     legend: 'Leyenda',
     saving: 'Guardando...',
-    saved: 'Disponibilidad guardada',
     saveError: 'No se pudo guardar la disponibilidad',
     selectDates: 'Selecciona las fechas',
     busyTime: 'Hora en que estás ocupado',
@@ -327,7 +305,6 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     unknownAvailability: (names: string) => `Sin disponibilidad registrada: ${names}. Se cuentan como libres.`,
     addButton: '+ Añadir',
     selectAll: 'Todos',
-    clearAll: 'Limpiar',
     selectMembers: 'Miembros',
     applyFilter: 'Aplicar',
     perfect: 'Perfecto',
@@ -342,11 +319,6 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     allAvailable: 'Todos disponibles',
     allBusy: 'Todos ocupados',
     busyPrefix: 'Ocupados',
-    expand: 'Expandir',
-    collapse: 'Contraer',
-    of: 'de',
-    selected: 'seleccionados',
-    noMembers: 'No hay miembros',
   },
 };
 
@@ -366,7 +338,6 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     partial: 'Teilweise',
     legend: 'Legende',
     saving: 'Wird gespeichert...',
-    saved: 'Verfügbarkeit gespeichert',
     saveError: 'Verfügbarkeit konnte nicht gespeichert werden',
     selectDates: 'Daten auswählen',
     busyTime: 'Beschäftigte Zeit',
@@ -413,7 +384,6 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     unknownAvailability: (names: string) => `Keine Verfügbarkeit hinterlegt: ${names}. Sie zählen als frei.`,
     addButton: '+ Hinzufügen',
     selectAll: 'Alle',
-    clearAll: 'Löschen',
     selectMembers: 'Mitglieder',
     applyFilter: 'Anwenden',
     perfect: 'Perfekt',
@@ -428,10 +398,5 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     allAvailable: 'Alle verfügbar',
     allBusy: 'Alle beschäftigt',
     busyPrefix: 'Beschäftigt',
-    expand: 'Erweitern',
-    collapse: 'Einklappen',
-    of: 'von',
-    selected: 'ausgewählt',
-    noMembers: 'Keine Mitglieder',
   },
 };

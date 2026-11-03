@@ -1,0 +1,58 @@
+T-213 - e2e/subflows/tap-and-see.yaml with GONE, checked on a tap whose first
+press leaves what it should take away, made so on purpose
+(audit/evidence/T-213/check): Olga Stage's planner on Three Sisters, the
+participants sheet with two of three selected; the first tap on "All
+participants" selects all three ("3 of 3"), only the second clears them
+("0 of 3"), so "All participants, [1-9] of 3" goes only on the second. That is
+what a lost tap on "Not Now" looks like to a flow, but every time. (T-207's
+setup no longer matches the planner - participants moved into a sheet, T-010
+- so the setup is redone here; its first run, all three failing in the setup
+on "\d+ of 3 selected", is not counted.)
+
+  cd rehearsal-calendar-native
+  npm run e2e -- ../audit/evidence/T-213/check/1-bare-tap-gone.yaml \
+    ../audit/evidence/T-213/check/2-tap-and-see-gone.yaml ../audit/evidence/T-213/check/3-never-gone.yaml
+
+[e2e] running the flows
+Waiting for flows to complete...
+[Failed] T-213 check 1 - a bare tap whose first press is lost (1m 59s) (Assertion is false: "All participants, [1-9] of 3" is not visible)
+[Passed] T-213 check 2 - the same tap through tap-and-see, GONE (1m 7s)
+[Failed] T-213 check 3 - a text that never goes (1m 10s) (Assertion is false: "All participants, \d+ of 3" is not visible)
+
+2/3 Flows Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 2
+[e2e]   2026-10-31T18:38:48.535Z  tapped "id participants-all" again: no "All participants, [1-9] of 3 gone" after the first tap
+[e2e]   2026-10-31T18:39:53.945Z  tapped "id participants-all" again: no "All participants, \d+ of 3 gone" after the first tap
+
+1 (red, as sign-in-form.yaml tapped "Not Now"): one tap, then on - the wait
+  after it fails.
+2 (green): the same through tap-and-see with GONE - one more tap, printed;
+  passes.
+3 (the bound, expected to fail): the text never goes - exactly one more tap,
+  then the flow fails on it.
+
+Check 2's maestro.log (artifacts 2026-10-31_203443), the subflow:
+
+20:38:39.870 Start: Tap on id: ${TAP_ID} RUNNING
+20:38:41.051 Start: Assert that (Optional) "${GONE}" is not visible RUNNING
+20:38:46.523 Finished: Assert that (Optional) "${GONE}" is not visible WARNED
+20:38:48.135 Finished: Run flow when "${GONE}" is not visible SKIPPED
+20:38:48.175 Start: Run ../scripts/tap-again.js RUNNING
+20:38:48.584 Start: Tap on id: ${TAP_ID} RUNNING
+20:38:49.855 Start: Assert that "${GONE}" is not visible RUNNING
+20:38:50.666 Finished: Assert that "${GONE}" is not visible COMPLETED
+
+Check 3's, the end:
+
+20:39:53.973 Start: Tap on id: ${TAP_ID} RUNNING          (the second)
+20:39:55.247 Start: Assert that "${GONE}" is not visible RUNNING
+20:40:00.729 Finished: Assert that "${GONE}" is not visible FAILED
+
+Two taps, no third, no pause: the waits are the flow's own (WAIT_MS).
+
+The sign-in in each check went through the new sign-in-form.yaml: "Not Now"
+seen, tapped once through tap-and-see, the sheet gone, no second tap (check
+2, 20:38:20.257-20:38:25.439). The last wait there, 1.2 s, asked again for a
+sheet already seen gone; after this run tap-and-see asks it only after a
+second tap (a GONE already gone is not asked again).

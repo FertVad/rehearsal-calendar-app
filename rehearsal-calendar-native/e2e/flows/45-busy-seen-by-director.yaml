@@ -11,6 +11,7 @@ tags:
   - availability
   - planner
   - auth
+  - participants
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -37,21 +38,23 @@ tags:
 - extendedWaitUntil:
     visible:
       id: slot-0-start
-      text: "10:00.*"
+      text: "10:00.AM.*"
     timeout: 10000
 - assertVisible:
     id: slot-0-end
-    text: "18:00.*"
+    text: "6:00.PM.*"
 - tapOn:
     id: availability-save
+# Saved: a moment's "Saved", no alert to dismiss (T-021).
 - extendedWaitUntil:
-    visible: "Availability saved"
+    visible:
+      id: toast
+      text: "Saved"
     timeout: 15000
-- tapOn: "OK"
 - assertNotVisible:
     id: availability-save
 - tapOn:
-    id: availability-close
+    id: header-cancel
 # Signed out from the profile: the app stays running.
 - tapOn:
     id: tab-profile
@@ -74,7 +77,9 @@ tags:
       text: ".*Uncle Vanya.*"
     timeout: 30000
 - extendedWaitUntil:
-    visible: "2 of 2 selected"
+    visible:
+      id: participants-row
+      text: "Participants, 2 of 2"
     timeout: 15000
 # Each slot's line says who is busy and carries its day: a card is not the
 # parent of its text in the iOS tree, so `childOf` a card finds nothing.

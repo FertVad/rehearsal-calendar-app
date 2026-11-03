@@ -1,0 +1,11 @@
+$ git restore --source=286a058 -- <the eleven source files of f3b92ce>
+$ npm run e2e -- e2e/flows/53-time-format.yaml | grep -E "\[e2e\] (running|taps)|\[(Passed|Failed)\]|Flow"
+
+[e2e] running the flows
+[Failed] Times on the phone's 12 or 24 hours, one way to write an interval (1m 52s) (No visible element found: "(?s)(?=.*Act I run-through)(?=.*6:00.PM–9:00.PM).*")
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The en_US simulator is on the 12-hour clock; the base card reads "18:00 — 21:00".
+Artifacts: e2e/out/artifacts/2026-10-31_162603 (not committed).
+$ git restore --source=HEAD -- src

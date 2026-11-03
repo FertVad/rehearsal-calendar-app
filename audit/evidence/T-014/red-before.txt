@@ -1,0 +1,64 @@
+T-014 red before. Files of the fix put back to base 8fae51c with
+  git restore --source=8fae51c -- src ':!src/shared/components/__tests__'
+(IconButton.tsx removed, every screen as it was), the new tests and flow 49
+kept; then git restore --source=HEAD -- src.
+
+1. Jest — npx jest --selectProjects frontend --silent \
+     src/shared/components/__tests__/IconButton.test.tsx \
+     src/shared/components/__tests__/iconButtonLabels.test.ts
+
+FAIL frontend src/shared/components/__tests__/iconButtonLabels.test.ts
+  ● every icon-only button is an IconButton
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 29
+    - Array []
+    + Array [
+    +   "features/availability/components/editor/EditorHeader.tsx:40",
+    +   "features/availability/components/editor/TimeSlotsEditor.tsx:72",
+    +   "features/availability/screens/AvailabilityScreen.tsx:182",
+    +   "features/availability/screens/AvailabilityScreen.tsx:465",
+    +   "features/calendar/components/RehearsalCard.tsx:120",
+    +   "features/calendar/components/RehearsalCard.tsx:131",
+    +   "features/calendar/screens/AddRehearsalScreen.tsx:182",
+    +   "features/calendar/screens/AddRehearsalScreen.tsx:388",
+    +   "features/calendar/screens/RehearsalDetailsScreen.tsx:226",
+    +   "features/calendar/screens/RehearsalDetailsScreen.tsx:271",
+    +   "features/notifications/screens/NotificationsScreen.tsx:333",
+    +   "features/notifications/screens/NotificationsScreen.tsx:342",
+    +   "features/notifications/screens/NotificationsScreen.tsx:351",
+    +   "features/profile/components/BugReportSheet.tsx:55",
+    +   "features/profile/screens/CalendarSyncSettingsScreen.tsx:403",
+    +   "features/profile/screens/ChangeEmailScreen.tsx:175",
+    +   "features/profile/screens/EditProfileScreen.tsx:87",
+    +   "features/profile/screens/ProfileScreen.tsx:464",
+    +   "features/profile/screens/ProfileScreen.tsx:508",
+    +   "features/profile/screens/ProfileScreen.tsx:554",
+    +   "features/profile/screens/ProfileScreen.tsx:601",
+    +   "features/projects/screens/CreateProjectScreen.tsx:93",
+    +   "features/projects/screens/CreateProjectScreen.tsx:174",
+    +   "features/projects/screens/ProjectDetailScreen.tsx:435",
+    +   "features/projects/screens/ProjectsScreen.tsx:46",
+    +   "features/smart-planner/screens/SmartPlannerScreen.tsx:213",
+    +   "navigation/index.tsx:75",
+    + ]
+FAIL frontend src/shared/components/__tests__/IconButton.test.tsx
+  ● Test suite failed to run
+    TS2307: Cannot find module '../IconButton' or its corresponding type declarations.
+    TS2305: Module '"../../constants/spacing"' has no exported member 'TouchTarget'.
+    TS2578: Unused '@ts-expect-error' directive.
+Test Suites: 2 failed, 2 total
+Tests:       1 failed, 2 passed, 3 total
+
+2. e2e — npm run e2e -- e2e/flows/49-touch-targets.yaml (artifacts
+   e2e/out/artifacts/2026-10-31_012731, not in git)
+
+[Failed] Touch targets are 44 pt (1m 53s) (Assertion is false: id: calendar-today, Size: nullx50(tolerance: 6) is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The screen at the failure, from its hierarchy:
+  53x23 calendar-today "Today"
+  41-42x65 calendar-day-* (each day of the week)
+  57x33 seen-toggle "Mark as seen"
+  78-79x43 every tab

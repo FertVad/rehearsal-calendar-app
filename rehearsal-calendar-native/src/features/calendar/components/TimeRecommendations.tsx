@@ -1,16 +1,19 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { ProjectMember } from '../../../shared/types';
 import { useTimeRecommendations, TimeSlot } from '../hooks/useTimeRecommendations';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useI18n } from '../../../contexts/I18nContext';
+import { formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
+import { getDateLocale } from '../../../shared/utils/locale';
 
 interface TimeRecommendationsProps {
   selectedDate: string;
   selectedMembers: ProjectMember[];
   memberAvailability: Record<string, { timeRanges: TimeRange[] }>;
-  onTimeSelect: (startTime: string, endTime: string) => void;
+  /** A window of free time gives the rehearsal its start, not its end (T-012). */
+  onTimeSelect: (startTime: string) => void;
   loading?: boolean;
 }
 
@@ -21,7 +24,8 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
   onTimeSelect,
   loading = false,
 }) => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const uses24 = usePhoneUses24HourClock();
   const recommendations = useTimeRecommendations(
     selectedDate,
     selectedMembers,
@@ -30,7 +34,7 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
 
   const formatRecommendation = (rec: TimeSlot) => {
     const duration = rec.duration % 1 === 0 ? rec.duration : rec.duration.toFixed(1);
-    return `${rec.startTime}-${rec.endTime} (${duration}${t.rehearsals.hoursShort})`;
+    return `${formatTimeRange(rec.startTime, rec.endTime, getDateLocale(language), uses24)} (${duration}${t.rehearsals.hoursShort})`;
   };
 
   if (!selectedDate || selectedMembers.length === 0) {
@@ -77,7 +81,7 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
               styles.slotButton,
               rec.confidence === 'high' ? styles.slotHigh : styles.slotMedium,
             ]}
-            onPress={() => onTimeSelect(rec.startTime, rec.endTime)}
+            onPress={() => onTimeSelect(rec.startTime)}
           >
             <Text style={styles.slotText}>{formatRecommendation(rec)}</Text>
           </TouchableOpacity>
@@ -129,8 +133,9 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.sm,
   },
   slotButton: {
+    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
   },

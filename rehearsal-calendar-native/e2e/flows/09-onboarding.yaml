@@ -12,12 +12,22 @@
 # app is launched with them unset: the calendar step then has to ask, and iOS
 # asks, and she refuses. The notifications step is passed by "Not now" — a
 # simulator would not show that prompt anyway (docs/e2e.md, push).
+#
+# T-022: the greeting is one line, "Welcome, Nina!" (it was "Welcome!",
+# "Nina!" and "Rehearsly" on three). The calendar step is two sentences and
+# the card: the privacy box is gone, and "Set up later" is a button that goes
+# on, with the Profile path under it. "Not now" ends the notifications step's
+# content, above the bar: under Back and Turn on it lifted the bar on that
+# step alone. The week-start step is gone; the last step says what is where,
+# and the week starts as the phone's region has it — Sunday on this en_US
+# simulator, where the step's default was Monday.
 appId: ${APP_ID}
 name: Onboarding to the end, nothing granted
 tags:
   - onboarding
   - auth
   - calendar
+  - profile
 ---
 - launchApp:
     clearState: true
@@ -32,46 +42,71 @@ tags:
     visible:
       id: onboarding-skip
     timeout: 20000
-- assertVisible: "Welcome!"
+# One line, the name in it. ("Rehearsly" is not asked after: the application
+# element itself is labelled with it.)
+- assertVisible: "Welcome, Nina!"
+- assertNotVisible: "Nina!"
+- takeScreenshot: 09-onboarding-welcome
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Get Started"
       SEE: "Your availability"
       WAIT_MS: 10000
-# Calendar: the app has no access, asks, and is refused.
+# Calendar: two sentences and the card; the privacy said once.
+- assertVisible: ".*never what you are doing.*"
+- assertNotVisible: ".*We read only the busy time slots.*"
+- assertVisible: "You can do it later in Profile → Calendar Sync"
+# The app has no access, asks, and is refused.
 - tapOn: "Grant Access"
 - extendedWaitUntil:
     visible: "Don’t Allow|Don't Allow"
     timeout: 10000
 - takeScreenshot: 09-onboarding-calendar-prompt
 - tapOn: "Don’t Allow|Don't Allow"
-# The app says it has none and stays on the step, which tells her to mark her
-# time by hand.
+# The app says it has none and stays on the step; she sets it up later.
 - extendedWaitUntil:
     visible: "OK"
     timeout: 10000
 - tapOn: "OK"
 - assertVisible: "Grant Access"
-- assertVisible: ".*Until you do, everyone sees you as free.*"
+- takeScreenshot: 09-onboarding-calendar
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "Next"
+      TAP: "Set up later"
       SEE: "Not now"
       WAIT_MS: 10000
-# Notifications: not now.
+# Notifications: not now. Its examples are what a notification says; they were
+# the form's "Add Rehearsal" and "Save Changes", framed like buttons (T-011).
 - assertVisible: "Notifications"
+- assertVisible: "You were added to a rehearsal"
+- assertVisible: "A rehearsal’s time changed"
+- assertNotVisible: "Add Rehearsal"
+- assertNotVisible: "Save Changes"
+# "Not now" above the bar, not in it.
+- assertVisible:
+    text: "Not now"
+    above:
+      id: onboarding-footer
+- takeScreenshot: 09-onboarding-notifications
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Not now"
-      SEE: "Week Start Day"
+      SEE: "What.s where"
       WAIT_MS: 10000
+# What is where, in the labels the app shows there; no week-start step.
+- assertVisible: ".*Create Project.*Join with a code.*"
+- assertVisible: ".*Create Rehearsal.*admin.*"
+- assertVisible: ".*Mark Busy.*"
+- assertVisible: ".*Smart Planner.*under the calendar.*"
+- assertNotVisible: "Week Start Day"
+- takeScreenshot: 09-onboarding-what-where
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "Next"
+      TAP: "Get Started"
       SEE: "Today"
       WAIT_MS: 15000
 # The calendar, and onboarding gone.
@@ -80,6 +115,15 @@ tags:
 - assertNotVisible:
     id: onboarding-skip
 - takeScreenshot: 09-onboarding-done
+# The week starts as the phone's region starts it: Sunday in en_US.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Week starts on.*"
+      WAIT_MS: 10000
+- assertVisible: ".*Sunday.*"
+- takeScreenshot: 09-onboarding-week-start
 # Opened again, still signed in: straight to the calendar.
 - stopApp
 - launchApp:
@@ -91,7 +135,7 @@ tags:
     timeout: 30000
 - assertNotVisible:
     id: onboarding-skip
-- assertNotVisible: "Welcome!"
+- assertNotVisible: "Welcome.*"
 # A fresh install, signed in again: the server kept it.
 - launchApp:
     clearState: true
@@ -108,5 +152,5 @@ tags:
     timeout: 30000
 - assertNotVisible:
     id: onboarding-skip
-- assertNotVisible: "Welcome!"
+- assertNotVisible: "Welcome.*"
 - takeScreenshot: 09-onboarding-not-again

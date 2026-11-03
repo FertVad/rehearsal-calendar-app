@@ -1,0 +1,16 @@
+$ (on 9b8b8ae) npx jest --selectProjects frontend --silent clockFormat clockRange PickerModal ParticipantPicker SmartPlannerScreen useAvailabilitySave ProjectDetailScreen TodayRehearsals TimeSlotsEditor | grep -E "^(PASS|FAIL) |^  ● |Tests:|Suites:" | sort -u
+
+PASS frontend src/features/availability/components/editor/__tests__/TimeSlotsEditor.test.tsx (100.764 s)
+PASS frontend src/features/availability/hooks/__tests__/useAvailabilitySave.test.ts (101.794 s)
+PASS frontend src/features/calendar/components/__tests__/TodayRehearsals.test.tsx (104.659 s)
+PASS frontend src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx (105.933 s)
+PASS frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx (107.599 s)
+PASS frontend src/shared/components/__tests__/ParticipantPicker.test.tsx (6.242 s)
+PASS frontend src/shared/components/__tests__/PickerModal.test.tsx (101.382 s)
+PASS frontend src/shared/utils/__tests__/clockFormat.test.ts (7.576 s)
+PASS frontend src/shared/utils/__tests__/clockRange.test.ts (97.3 s)
+Test Suites: 9 passed, 9 total
+Tests:       119 passed, 119 total
+
+Whole frontend project, before committing: Test Suites: 111 passed; Tests: 1011 passed.
+npm run type-check: no errors.

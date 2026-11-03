@@ -1,0 +1,55 @@
+$ npx jest --selectProjects frontend src/navigation/__tests__/backToTabs.test.tsx
+(on c7100aa — CreateProjectScreen.tsx, NotificationsScreen.tsx, useNotifications.ts as they were)
+
+FAIL src/navigation/__tests__/backToTabs.test.tsx (86.95 s)
+  ● opens the new project in the tabs it came from, with the form gone (T-007)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 2
+
+      Array [
+        "MainTabs",
+    +   "CreateProject",
+    +   "MainTabs",
+      ]
+
+       98 |
+       99 |   // One MainTabs, showing the project: going back leaves the form behind.
+    > 100 |   expect(stack()).toEqual(['MainTabs']);
+          |                   ^
+      101 |   expect(top().params).toEqual(projectOpened('1'));
+      102 | });
+
+  ● a tapped push, with a modal screen open (T-007) › opens the project in the tabs under the modal
+
+    - Expected  - 0
+    + Received  + 2
+
+      Array [
+        "MainTabs",
+    +   "CreateProject",
+    +   "MainTabs",
+      ]
+
+    > 139 |     expect(stack()).toEqual(['MainTabs']);
+
+  ● a tapped push, with a modal screen open (T-007) › opens the projects list in the tabs under the modal
+
+    - Expected  - 0
+    + Received  + 2
+
+      Array [
+        "MainTabs",
+    +   "MarkBusy",
+    +   "MainTabs",
+      ]
+
+    > 147 |     expect(stack()).toEqual(['MainTabs']);
+
+Tests: 3 failed, 1 passed (backToTabs.test.tsx)
+
+The inbox case passed already: it called goBack() first and then navigate, so
+MainTabs was on top when navigate came. It now uses the same rule as the rest
+(navigate with pop: true) and the test holds it.

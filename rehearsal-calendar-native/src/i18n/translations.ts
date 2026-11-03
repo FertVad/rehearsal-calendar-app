@@ -36,12 +36,8 @@ export interface Translations {
   notifications: notifications.NotificationsTranslations;
   // Onboarding
   onboarding: onboarding.OnboardingTranslations;
-  // Beta Banner
-  betaBanner: common.BetaBannerTranslations;
   // Days
   days: common.DaysTranslations;
-  // Months
-  months: string[];
 }
 
 export const ru: Translations = {

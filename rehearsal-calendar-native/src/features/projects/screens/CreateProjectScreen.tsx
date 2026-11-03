@@ -5,16 +5,15 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   TextInput,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { hapticSuccess } from '../../../shared/utils/haptics';
 import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -23,6 +22,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { createProjectScreenStyles as styles } from '../styles';
 import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
+import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 
 type CreateProjectScreenProps = NativeStackScreenProps<AppStackParamList, 'CreateProject'>;
@@ -44,11 +44,12 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
   const getTimezoneLabel = (value: string) => getTzLabel(value, language);
 
+  // "Create" waits for a name, as "Sign in" waits for its fields (T-015,
+  // T-025): an empty form was sent and answered with an alert.
+  const canCreate = projectName.trim().length > 0;
+
   const handleCreateProject = async () => {
-    if (!projectName.trim()) {
-      Alert.alert(t.common.error, t.projects.nameRequired);
-      return;
-    }
+    if (!canCreate) return;
 
     setCreating(true);
     try {
@@ -66,13 +67,18 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
       // Close the modal and drop the user straight into the new project
       // so they can invite members / set up rehearsals without an extra tap.
+      // `pop: true` goes back to the MainTabs under the form; without it a
+      // copy was pushed over the form, and swiping the project away showed the
+      // form again (T-007). `initial: false` puts the project over the list
+      // when the Projects tab has not been opened yet, so back is the list.
       navigation.navigate('MainTabs', {
         screen: 'Projects',
         params: {
           screen: 'ProjectDetail',
           params: { projectId: newProject.id },
+          initial: false,
         },
-      });
+      }, { pop: true });
     } catch (err: any) {
       Alert.alert(t.common.error, err.message || t.projects.createError);
     } finally {
@@ -81,19 +87,16 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.title}>{t.projects.createProject}</Text>
-          <View style={styles.headerRight} />
-        </View>
+    <View style={styles.container}>
+      {/* Create is in the bar below, which keeps it over the keyboard (T-009);
+          Cancel is where every sheet has it (T-029). */}
+      <SafeAreaView style={styles.body}>
+        <ScreenHeader
+          kind="modal"
+          title={t.projects.createProject}
+          cancelLabel={t.common.cancel}
+          onCancel={() => navigation.goBack()}
+        />
 
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Project Name */}
@@ -140,33 +143,20 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
               <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
             </TouchableOpacity>
           </View>
-
-          {/* Buttons */}
-          <View style={styles.bottomButtons}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.cancelButtonText}>{t.common.cancel}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.createButton, creating && styles.buttonDisabled]}
-              onPress={() => {
-                hapticSuccess();
-                handleCreateProject();
-              }}
-              disabled={creating}
-            >
-              {creating ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.createButtonText}>{t.projects.create}</Text>
-              )}
-            </TouchableOpacity>
-          </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </SafeAreaView>
+
+      <BottomActionBar>
+        <BottomActionButton
+          label={t.projects.create}
+          onPress={() => {
+            hapticSuccess();
+            handleCreateProject();
+          }}
+          disabled={!canCreate}
+          loading={creating}
+        />
+      </BottomActionBar>
 
       {/* Timezone Picker Modal */}
       <AppModal
@@ -178,9 +168,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
           <View style={styles.timezoneModalContent}>
             <View style={styles.timezoneModalHeader}>
               <Text style={styles.timezoneModalTitle}>{t.projects.selectTimezone}</Text>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={() => setTimezonePickerVisible(false)}>
-                <Ionicons name="close" size={24} color={Colors.text.secondary} />
-              </TouchableOpacity>
+              <IconButton icon="close" accessibilityLabel={t.common.close} onPress={() => setTimezonePickerVisible(false)} />
             </View>
             <FlatList
               data={getTimezonesWithDevice()}
@@ -214,6 +202,6 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
           </View>
         </ModalSheet>
       </AppModal>
-    </SafeAreaView>
+    </View>
   );
 }

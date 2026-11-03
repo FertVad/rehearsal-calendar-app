@@ -1,0 +1,89 @@
+T-023, review 1 (Astra, 02.11.2026): red before, green after
+
+== P2.1 Opened from another project, the scroll to the members was lost ==
+
+Jest: src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx,
+"opened from another project, scrolls to its own members once it has come".
+Project A laid out (members at 520), the same screen given B's id with
+section "members" while B's request is still on its way.
+
+Before (ProjectDetailScreen.tsx as in HEAD 9f42ba7):
+
+  cd rehearsal-calendar-native && npx jest --selectProjects frontend ProjectDetailScreen
+
+  FAIL src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx
+    ● opened on its members (T-023) › opened from another project, scrolls to its own members once it has come
+
+      expect(jest.fn()).not.toHaveBeenCalled()
+
+      Expected number of calls: 0
+      Received number of calls: 1
+
+      1: {"animated": true, "y": 520}
+
+        148 |     );
+        149 |     await settle();
+      > 150 |     expect(scrollTo).not.toHaveBeenCalled();
+
+  Tests:       1 failed, 1070 passed, 1071 total
+
+  A's y, before B had come — what the review found.
+
+After (the screen keyed by projectId: A's state, data and layout start over as B's):
+
+  PASS frontend src/features/projects/screens/__tests__/ProjectDetailScreen.test.tsx
+    ✓ names a past rehearsal by its title and times it as an upcoming one is
+    opened on its members (T-023)
+      ✓ scrolls to the members, and asks it only once
+      ✓ no further than the page goes
+      ✓ opened without a section, stays at the top
+      ✓ opened from another project, scrolls to its own members once it has come
+  Tests:       5 passed, 5 total
+
+  Related: ProjectDetailScreen, backToTabs, useNotifications.push,
+  NotificationsScreen (both), IconButton, iconButtonLabels — 41 passed;
+  npm run type-check clean.
+
+== P2.2 The texts and the icons on screen, in e2e ==
+
+Flow 05 (extended): Hamlet's inbox reads "Act I run-through scheduled tomorrow
+at 6:00 PM" and "Full dress scheduled on … at 7:00 PM" — sent by the seed's
+real creates.
+Flow 62 (new): Duncan is told, by the server's own notifyRehearsalUpdated and
+notifyMemberResponse (e2e/scripts/notify.js, the mailbox), that "Banquet" (seed,
+two days on at 19:00) changed and was answered; the inbox reads
+"Forres Castle: Banquet, on Wed, Nov 4 at 7:00 PM — location" and
+"Malcolm Prince responded to “Banquet” (on Wed, Nov 4 at 7:00 PM) in Forres
+Castle". Then the icons, measured on its screenshot (e2e/ink.mjs,
+e2e/scripts/icon-size.js): the trash at least 20 pt tall, the ticks at least
+20 pt wide.
+
+Red 1 — server/i18n/pushNotifications.js, pushNotificationService.js and
+NotificationsScreen.tsx restored from e67fd0d (before T-023):
+
+  npm run e2e -- e2e/flows/05-inbox.yaml e2e/flows/62-inbox-says-when.yaml
+
+  [Failed] Inbox (1m 54s) (Assertion is false: ".*Act I run-through scheduled tomorrow at 6:00.PM.*" is visible)
+  [Failed] Inbox says when (1m) (Assertion is false: ".*Malcolm Prince responded to “Banquet” \((tomorrow|on .*) at 7:00.PM\) in Forres Castle.*" is visible)
+  2/2 Flows Failed
+
+Red 2 — only NotificationsScreen.tsx from e67fd0d (icons 22 pt), the texts new:
+
+  npm run e2e -- e2e/flows/62-inbox-says-when.yaml
+
+  [Failed] Inbox says when (1m 4s)
+  maestro.log: 62-inbox-says-when: #ef4444 drawn 16 x 19 pt, shorter than 20
+
+Green — everything as committed:
+
+  npm run e2e -- e2e/flows/05-inbox.yaml e2e/flows/61-inbox-new-member-opens-members.yaml e2e/flows/62-inbox-says-when.yaml
+
+  [Passed] Inbox (1m 13s)
+  [Passed] Inbox, new member opens the members (46s)
+  [Passed] Inbox says when (41s)
+  3/3 Flows Passed in 2m 40s
+  [e2e] taps taken again (tap-and-see.yaml): 0
+
+  Measured on the screenshots: at 22 pt the trash 16 x 19 pt, the ticks
+  19 x 12 (flow 49's 49-inbox of 31.10, flows 18 and 21 the same); at 24 pt
+  the trash 17.7 x 20.7, the ticks 20.7 x 13.3.

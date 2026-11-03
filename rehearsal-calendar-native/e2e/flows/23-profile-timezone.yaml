@@ -27,13 +27,13 @@ tags:
       EMAIL: ${CHEBUTYKIN_EMAIL}
 # Today in Tel Aviv: Midnight call is today's, at its Tel Aviv time.
 - extendedWaitUntil:
-    visible: "(?s)(?=.*Midnight call)(?=.*00:30).*"
+    visible: "(?s)(?=.*Midnight call)(?=.*12:30.AM).*"
     timeout: 30000
 - scrollUntilVisible:
     element: "(?s)(?=.*Night watch).*"
     direction: DOWN
     centerElement: true
-- assertVisible: "(?s)(?=.*Night watch)(?=.*02:00).*"
+- assertVisible: "(?s)(?=.*Night watch)(?=.*\\b2:00.AM).*"
 - takeScreenshot: 23-calendar-in-tel-aviv
 # The planner's week starts on today in Tel Aviv.
 - tapOn: "Planner, tab.*"
@@ -62,25 +62,32 @@ tags:
     direction: DOWN
     centerElement: true
 # Each card is one button, its texts one label. Its time reads as the
-# calendar's card does, "02:00 — 03:00" (one label for both since cause fix 15).
-- assertVisible: "(?s)(?=.*Night watch)(?=.*02:00 — 03:00).*"
+# calendar's card does, "2:00 AM–3:00 AM" (one label for both since cause fix 15).
+- assertVisible: "(?s)(?=.*Night watch)(?=.*\\b2:00.AM–3:00.AM).*"
 - takeScreenshot: 23-project-in-tel-aviv
-# The profile still says Tel Aviv after signing in on a phone in Honolulu.
+# The profile still says Tel Aviv after signing in on a phone in Honolulu -
+# UTC+2, or UTC+3 in Israel's summer.
 - tapOn:
     id: tab-profile
 - scrollUntilVisible:
-    element: ".*Tel Aviv \\(UTC\\+2\\).*"
+    element: ".*Tel Aviv \\(UTC\\+[23]\\).*"
     direction: DOWN
     centerElement: true
 - assertNotVisible: ".*Honolulu.*"
-- tapOn: ".*Tel Aviv \\(UTC\\+2\\).*"
-# The picker offers the phone's own zone first: the simulator is in Honolulu.
-# (Its offset in the label is whatever the engine's Intl gives — Hermes says
-# "UTC".)
+- tapOn: ".*Tel Aviv \\(UTC\\+[23]\\).*"
+# The picker offers the phone's own zone first: the simulator is in Honolulu,
+# ten hours behind UTC. It read "Honolulu (UTC)": the offset was Intl's
+# 'shortOffset' zone name, which Hermes gives as a bare "GMT" (T-011).
 - extendedWaitUntil:
-    visible: "Honolulu \\(.*\\)"
+    visible: "Honolulu \\(UTC-10\\)"
     timeout: 10000
 - takeScreenshot: 23-picker-device-in-honolulu
+# Offsets are today's: New York's, written out as UTC-5 all year, is UTC-4
+# through its summer (the seed works out which, NEW_YORK_OFFSET_LABEL).
+- scrollUntilVisible:
+    element: "New York \\(${NEW_YORK_OFFSET_LABEL}\\)"
+    direction: DOWN
+    centerElement: true
 - scrollUntilVisible:
     element: "Tokyo \\(UTC\\+9\\)"
     direction: DOWN
@@ -102,7 +109,7 @@ tags:
     centerElement: true
 - takeScreenshot: 23-calendar-in-tokyo
 # And so does the project's page, still open where it was left: Night watch
-# at Tokyo's time, not the 02:00 it was opened with.
+# at Tokyo's time, not the 2:00 AM it was opened with.
 - tapOn:
     id: tab-projects
 - scrollUntilVisible:
@@ -110,9 +117,9 @@ tags:
     direction: DOWN
     centerElement: true
 - extendedWaitUntil:
-    visible: "(?s)(?=.*Night watch)(?=.*${WATCH_TOKYO_TIME} — ).*"
+    visible: "(?s)(?=.*Night watch)(?=.*${WATCH_TOKYO_TIME}–).*"
     timeout: 10000
-- assertNotVisible: "(?s)(?=.*Night watch)(?=.*02:00 — 03:00).*"
+- assertNotVisible: "(?s)(?=.*Night watch)(?=.*\\b2:00.AM–3:00.AM).*"
 - takeScreenshot: 23-project-in-tokyo
 # The notifications switch says what this phone will get (cause fix 20: GC02,
 # GC01). A simulator cannot receive push at all, which is the one refusal a

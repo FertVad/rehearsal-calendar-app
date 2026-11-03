@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
@@ -101,7 +101,7 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
     if (!granted) {
       Alert.alert(
         t.onboarding.calendarSync.permissionRequired,
-        'Calendar access is required to sync rehearsals'
+        t.calendarSync.permissionDeniedMessage
       );
     }
   };
@@ -118,10 +118,7 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
     const providerCalendars = calendarsOf(provider);
 
     if (providerCalendars.length === 0) {
-      Alert.alert(
-        t.common.error,
-        `No writable ${provider === 'google' ? 'Google' : 'Apple'} calendar found`
-      );
+      Alert.alert(t.common.error, t.calendarSync.noWritableCalendars);
       return;
     }
 
@@ -154,7 +151,7 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
       return true;
     } catch (error: any) {
       logger.error('Failed to set up calendar sync:', error);
-      Alert.alert(t.common.error, error.message || 'Failed to set up calendar sync');
+      Alert.alert(t.common.error, error.message || t.calendarSync.syncError);
       return false;
     } finally {
       setIsSettingUp(false);
@@ -179,21 +176,25 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
       nextButtonTitle={t.onboarding.calendarSync.next}
       nextButtonDisabled={isSettingUp}
       showBackButton={true}
+      // Nothing to set up once a calendar is connected. The note is the path
+      // as the Profile labels it, so it can be found there by its words.
+      secondaryAction={selectedCalendarId ? undefined : {
+        title: t.onboarding.calendarSync.setupLater,
+        onPress: handleNext,
+        note: t.onboarding.calendarSync.laterWhere(`${t.nav.profile} → ${t.calendarSync.title}`),
+      }}
     >
-      <View style={styles.content}>
-        {/* What we take and what we never take. Asked for before the
-            permission prompt, because that is when it is worth knowing. */}
-        <View style={styles.privacyNote}>
-          <Ionicons name="lock-closed-outline" size={18} color={Colors.text.secondary} />
-          <Text style={styles.privacyText}>{t.onboarding.calendarSync.privacy}</Text>
-        </View>
-
+      {/* Two sentences above — what the company sees, and what picking a
+          calendar does — then this card. The privacy promise is said there
+          once; it was a box of its own and the description again (T-022).
+          Its id says whether a calendar is connected, as saved (HP05). */}
+      <View
+        testID={selectedCalendarId ? 'onboarding-calendar-connected' : 'onboarding-calendar-card'}
+        style={styles.content}
+      >
         {!hasPermission ? (
           <View style={styles.permissionCard}>
-            <Ionicons name="alert-circle" size={48} color={Colors.accent.yellow} />
-            <Text style={styles.permissionText}>
-              {t.onboarding.calendarSync.permissionRequired}
-            </Text>
+            <Ionicons name="calendar-outline" size={48} color={Colors.accent.purple} />
             <TouchableOpacity
               style={styles.permissionButton}
               onPress={handleRequestPermissions}
@@ -205,9 +206,6 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
           </View>
         ) : (
           <View style={styles.providersContainer}>
-            {/* Without this the screen is a list of calendars and no verb —
-                nothing said what picking one would do. */}
-            <Text style={styles.pickHint}>{t.onboarding.calendarSync.pickCalendar}</Text>
             {/* Google Calendar */}
             {hasGoogleCalendar && (
               <TouchableOpacity
@@ -281,79 +279,26 @@ export default function CalendarSyncScreen({ navigation }: CalendarSyncScreenPro
             {!hasGoogleCalendar && !hasAppleCalendar && (
               <View style={styles.emptyContainer}>
                 <Ionicons name="calendar-outline" size={48} color={Colors.text.tertiary} />
-                <Text style={styles.emptyText}>No calendars found</Text>
+                <Text style={styles.emptyText}>{t.onboarding.calendarSync.noCalendars}</Text>
               </View>
             )}
 
             {isSettingUp && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color={Colors.accent.purple} />
-                <Text style={styles.loadingText}>Setting up calendar sync...</Text>
+                <Text style={styles.loadingText}>{t.onboarding.calendarSync.settingUp}</Text>
               </View>
             )}
-
-            <Text style={styles.skipHint}>{t.onboarding.calendarSync.setupLater}</Text>
           </View>
         )}
-        {/* The outcome, in the words that follow from the choice just made.
-            Either way it ends by naming what the person still has to do. */}
-        <View style={styles.outcome}>
-          <Ionicons
-            name={selectedCalendarId ? 'checkmark-circle-outline' : 'create-outline'}
-            size={18}
-            color={selectedCalendarId ? Colors.accent.green : Colors.accent.yellow}
-          />
-          <Text style={styles.outcomeText}>
-            {selectedCalendarId
-              ? t.onboarding.calendarSync.connectedBody
-              : t.onboarding.calendarSync.manualBody}
-          </Text>
-        </View>
       </View>
     </OnboardingStep>
   );
 }
 
 const styles = StyleSheet.create({
-  pickHint: {
-    fontSize: FontSize.sm,
-    color: Colors.text.primary,
-    marginBottom: 12,
-  },
-  privacyNote: {
-    flexDirection: 'row',
-    gap: 10,
-    padding: 14,
-    marginBottom: 16,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.bg.secondary,
-  },
-  privacyText: {
-    flex: 1,
-    fontSize: FontSize.xs,
-    lineHeight: 18,
-    color: Colors.text.secondary,
-  },
-  outcome: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 16,
-    padding: 14,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.bg.secondary,
-  },
-  outcomeText: {
-    flex: 1,
-    fontSize: FontSize.sm,
-    lineHeight: 20,
-    color: Colors.text.secondary,
-  },
   content: {
-    paddingTop: 24,
+    paddingTop: 8,
   },
   permissionCard: {
     alignItems: 'center',
@@ -362,15 +307,12 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     gap: 16,
   },
-  permissionText: {
-    fontSize: FontSize.base,
-    color: Colors.text.primary,
-    textAlign: 'center',
-  },
   permissionButton: {
+    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 24,
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
     borderRadius: BorderRadius.md,
   },
   permissionButtonText: {
@@ -445,6 +387,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: TouchTarget,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: BorderRadius.md,
@@ -469,11 +412,5 @@ const styles = StyleSheet.create({
   calendarItemLabel: {
     fontSize: FontSize.base,
     color: Colors.text.primary,
-  },
-  skipHint: {
-    fontSize: FontSize.sm,
-    color: Colors.text.tertiary,
-    textAlign: 'center',
-    marginTop: 24,
   },
 });

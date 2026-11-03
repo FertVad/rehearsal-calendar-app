@@ -1,0 +1,47 @@
+T-023, supervisor's PG check (npm run test:r0-postgres -- --security-only) red on 1f62b73
+
+Cause
+  The rehearsal notices now read each reader's clock:
+  sendAboutRehearsal: SELECT id, locale, timezone FROM native_users ...
+  native_users.timezone is a real column (database/init-native-schema.sql:17,
+  catalog.json), and rehearsalService, auth, members and availability already
+  read it. The R0 diagnostic subset __tests__/postgres/fixture.sql did not carry
+  it on native_users; only A02, B03, B04, IS02 and R2_STARTUP added it per
+  scenario. So in `controls` the create-rehearsal notice failed on the fixture,
+  not on the real schema, and no inbox row was written.
+
+Red before (fixture.sql/probe.mjs/r2Startup.mjs/is02.mjs as on 1f62b73)
+  $ npm run test:r0-postgres -- --r2-foundation-only
+  Error sending rehearsal created notification: error: column "timezone" does not exist
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal: 0 !== 1
+      at __tests__/postgres/probe.mjs:173 (native_notifications for user 2)
+  AssertionError [ERR_ASSERTION]: controls probe failed unexpectedly
+
+Fix
+  fixture.sql: native_users gets `timezone TEXT DEFAULT 'UTC'`, as in the
+  canonical schema. The per-scenario ADD COLUMN timezone in probe.mjs (A02, B03,
+  B04), r2Startup.mjs and is02.mjs are removed: they would now collide.
+  No migration and no schema change.
+
+Green after
+  controls        PASS   (--r2-foundation-only)
+  R2_ADAPTER      PASS
+  A02, B03        PASS   (--a02-b03-only)
+  B04             PASS
+  H04             PASS
+  IS02            PASS
+  F05             PASS
+  R2_SCHEMA       PASS
+  R2_MIGRATIONS   PASS
+  R3_EMAIL, R3_AUTH                    PASS
+  D01, R4_LIFECYCLE, R4_PUSH_TOKEN     PASS   (--r4-only)
+  R6_AVAILABILITY PASS
+  R7_IMPORT       PASS
+  R8_REMINDERS    PASS
+
+Not run here
+  R2_STARTUP: in this session's sandbox the OS refuses reading any `.env`, and
+  the scenario's copied entrypoint loads its synthetic temp `.env`
+  ("Unable to load the explicitly selected server environment file"), so the
+  child reports import-failed before any query. Environment, not T-023; left to
+  the supervisor's run.

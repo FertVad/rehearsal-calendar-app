@@ -1,0 +1,88 @@
+# The planner's row of filters in Spanish, with dates of her own picked
+# (T-020 review): "La casa de Bernarda Alba ▾ · Período personalizado ▾ ·
+# Participantes: todos (1) ▾". The period and the people kept their whole
+# words: the project was left its chevron, and the row ran past the screen's
+# right edge. Each gives way now, and the three fit in the row.
+#
+# Bernarda Alba, whose profile speaks Spanish, in a project of her own (56).
+# Nothing is saved.
+appId: ${APP_ID}
+name: The planner's filters fit in Spanish
+tags:
+  - planner
+  - participants
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${BERNARDA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-planner
+      SEE: "Semana.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-period
+      SEE: "Elegir fechas"
+      WAIT_MS: "5000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-period-custom
+      SEE: "Seleccionar período"
+      WAIT_MS: "10000"
+# The week's seven days are picked already: "Listo" takes them.
+- tapOn: "Listo"
+- extendedWaitUntil:
+    visible:
+      id: planner-period
+      text: "Período personalizado.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 59-filters-spanish
+# The three have 393 - 2 × 16 - 2 × 12 - 26 = 311 pt of the row on the
+# iPhone 16, once the dots and the gaps are out (111, 99 and 103 here).
+# Maestro matches a size within a tolerance, 60 to 124 pt each: the project
+# is more than its chevron, and neither the period nor the people keep their
+# whole words.
+- assertVisible:
+    id: planner-filters
+    height: 44
+    tolerance: 1
+- assertVisible:
+    id: planner-project
+    width: 92
+    tolerance: 32
+- assertVisible:
+    id: planner-period
+    width: 92
+    tolerance: 32
+- assertVisible:
+    id: participants-row
+    width: 92
+    tolerance: 32
+# The people's, cut, still open their sheet.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "Todos los participantes.*"
+      WAIT_MS: "5000"
+- takeScreenshot: 59-participants-spanish
+- tapOn:
+    id: participants-done

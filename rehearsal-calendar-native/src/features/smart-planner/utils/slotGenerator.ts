@@ -212,7 +212,11 @@ function categorizeSlot(busyCount: number, totalMembers: number): SlotCategory {
 export const NOW_STEP_MINUTES = 1;
 
 /**
- * Generates all time slots for a date range
+ * Generates all time slots for a date range.
+ *
+ * `now` is the profile's wall clock (useNow), and has no default: one of
+ * `new Date()` read the phone's, and cut today's hours by the phone's time
+ * wherever the two zones differ (T-012).
  */
 export function generateTimeSlots(
   startDate: string,
@@ -222,11 +226,12 @@ export function generateTimeSlots(
   selectedMemberIds: string[] = [],
   workHoursStart: string = WORKDAY_START,
   workHoursEnd: string = WORKDAY_END,
-  now: Date = new Date()
+  now: Date
 ): TimeSlot[] {
+  if (!(now instanceof Date)) throw new TypeError('generateTimeSlots: now is the profile\'s clock, and is required');
   const slots: TimeSlot[] = [];
 
-  // Today and the time of day, in the reader's own clock — the same clock the
+  // Today and the time of day, in the profile's clock — the same clock the
   // availability arrives in. A day already over contributes nothing, and today
   // starts from the next half-hour rather than from the top of the working day.
   const today = formatDateToString(now);

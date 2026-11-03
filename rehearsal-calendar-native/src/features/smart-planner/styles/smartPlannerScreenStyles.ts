@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -19,8 +19,7 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.bg.secondary,
   },
   backButton: {
-    padding: Spacing.xs,
-    marginRight: Spacing.sm,
+    marginRight: Spacing.xs,
   },
   headerTextContainer: {
     flex: 1,
@@ -36,26 +35,40 @@ export const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
   },
-  projectSelectorContainer: {
+  filtersContainer: {
     marginBottom: Spacing.md,
   },
-  projectSelectorButton: {
+  // One row of 44 pt, the three filters in it (T-020).
+  filters: {
+    height: TouchTarget,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
     backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    gap: Spacing.sm,
   },
-  projectSelectorText: {
-    flex: 1,
-    fontSize: FontSize.base,
+  // Each of the three gives way, by its length, and its words end in "…". The
+  // period and the people did not: "Período personalizado · Participantes:
+  // todos (3)" took the row, the project was left its chevron, and the row ran
+  // off the screen's edge (T-020 review).
+  filter: {
+    height: TouchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    flexShrink: 1,
+  },
+  filterText: {
+    fontSize: FontSize.md,
     color: Colors.text.primary,
-    fontWeight: FontWeight.medium,
+    flexShrink: 1,
   },
-  projectDropdown: {
+  filterDot: {
+    fontSize: FontSize.md,
+    color: Colors.text.tertiary,
+  },
+  choice: {
     backgroundColor: Colors.glass.bg,
     borderWidth: 1,
     borderColor: Colors.glass.border,
@@ -63,90 +76,46 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     overflow: 'hidden',
   },
-  projectOption: {
+  option: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: Spacing.md,
+    minHeight: TouchTarget,
+    paddingHorizontal: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
   },
-  projectOptionSelected: {
+  optionSelected: {
     backgroundColor: Colors.accent.purpleDarkAlpha10,
   },
-  projectOptionText: {
+  optionText: {
     fontSize: FontSize.base,
     color: Colors.text.primary,
   },
-  projectOptionTextSelected: {
+  optionTextSelected: {
     color: Colors.accent.purple,
     fontWeight: FontWeight.semibold,
   },
-  section: {
-    marginBottom: Spacing.xl,
+  listTitle: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
   },
-  sectionTitle: {
+  listTitleText: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,
-    marginBottom: Spacing.md,
   },
   unknownNote: {
     fontSize: FontSize.sm,
     color: Colors.text.tertiary,
-    marginTop: -Spacing.xs,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
     lineHeight: 18,
-  },
-  periodButtons: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  periodButton: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.border.default,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-  },
-  periodButtonActive: {
-    backgroundColor: Colors.accent.purple,
-    borderColor: Colors.accent.purple,
-  },
-  periodButtonText: {
-    fontSize: FontSize.base,
-    color: Colors.text.secondary,
-    fontWeight: FontWeight.medium,
-  },
-  periodButtonTextActive: {
-    color: Colors.text.inverse,
   },
   periodDate: {
     fontSize: FontSize.sm,
     color: Colors.text.secondary,
-    marginTop: Spacing.sm,
-    textAlign: 'center',
-  },
-  customDateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.accent.purple,
-    borderRadius: BorderRadius.md,
-  },
-  customDateText: {
-    fontSize: FontSize.base,
-    color: Colors.accent.purple,
-    fontWeight: FontWeight.semibold,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -175,8 +144,5 @@ export const styles = StyleSheet.create({
     color: Colors.text.secondary,
     textAlign: 'center',
     maxWidth: 280,
-  },
-  slotsContainer: {
-    marginTop: Spacing.lg,
   },
 });

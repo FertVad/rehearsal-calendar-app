@@ -9,7 +9,9 @@ import { ModalSheet } from './ModalSheet';
 interface CreateActionSheetProps {
   visible: boolean;
   onClose: () => void;
-  onCreateRehearsal: () => void;
+  /** Absent: the sheet has no "Create Rehearsal" — it lists only what the
+   *  person can do (rehearsalRights.ts, T-012). */
+  onCreateRehearsal?: () => void;
   onMarkBusy: () => void;
   onCreateProject: () => void;
 }
@@ -31,27 +33,21 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
       // Сразу вызываем onClose, чтобы сбросить флаг visible
       onClose();
 
+      const actions: Array<[string, () => void]> = [
+        ...(onCreateRehearsal ? [[t.actionSheet.createRehearsal, onCreateRehearsal] as [string, () => void]] : []),
+        [t.actionSheet.markBusy, onMarkBusy],
+        [t.actionSheet.createProject, onCreateProject],
+      ];
+
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: [
-            t.common.cancel,
-            t.actionSheet.createRehearsal,
-            t.actionSheet.markBusy,
-            t.actionSheet.createProject,
-          ],
+          options: [t.common.cancel, ...actions.map(([label]) => label)],
           cancelButtonIndex: 0,
           userInterfaceStyle: 'dark',
         },
         (buttonIndex) => {
           isShowingRef.current = false;
-
-          if (buttonIndex === 1) {
-            onCreateRehearsal();
-          } else if (buttonIndex === 2) {
-            onMarkBusy();
-          } else if (buttonIndex === 3) {
-            onCreateProject();
-          }
+          actions[buttonIndex - 1]?.[1]();
         }
       );
     } else if (!visible) {
@@ -63,7 +59,7 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
     hapticLight();
     switch (action) {
       case 'rehearsal':
-        onCreateRehearsal();
+        onCreateRehearsal?.();
         break;
       case 'busy':
         onMarkBusy();
@@ -90,12 +86,14 @@ export const CreateActionSheet: React.FC<CreateActionSheetProps> = ({
           <View style={styles.sheet}>
             <Text style={styles.title}>{t.actionSheet.title}</Text>
 
-            <TouchableOpacity
-              style={styles.option}
-              onPress={() => handleAction('rehearsal')}
-            >
-              <Text style={styles.optionText}>{t.actionSheet.createRehearsal}</Text>
-            </TouchableOpacity>
+            {onCreateRehearsal && (
+              <TouchableOpacity
+                style={styles.option}
+                onPress={() => handleAction('rehearsal')}
+              >
+                <Text style={styles.optionText}>{t.actionSheet.createRehearsal}</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.option}

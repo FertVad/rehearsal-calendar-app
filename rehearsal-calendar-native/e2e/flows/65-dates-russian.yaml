@@ -1,0 +1,110 @@
+# Dates in Russian, one way on every screen (T-028; owner, 02.11.2026: the
+# full dates and the short ones to one format, as each language writes them).
+# The audit's screenshots 73 and 76: "октябрь 2026 г." over the calendar's
+# strip and "Ноябрь 2026" over the availability's month; "Ближайшие События"
+# and "Чт, 29 Окт.", every word capitalized by the style.
+#
+# Marina, whose account speaks Russian, reads the month over her strip, the
+# date of her rehearsal three days on among the upcoming ones, her planner's
+# days and the availability's next month. Each is what Intl writes, its first
+# letter a capital: "Ноябрь 2026 г.", "Чт, 6 нояб.". Maestro matches text
+# without regard to case, so the texts are copied and checked in JavaScript,
+# after the three screens are shot. The card is one element, its label
+# beginning with the date. Nothing is saved.
+appId: ${APP_ID}
+name: Dates in Russian, one format
+tags:
+  - calendar
+  - planner
+  - availability
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MARINA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+# The calendar: the month over the strip, and the rehearsal three days on.
+- scrollUntilVisible:
+    element:
+      text: ".*Samovar.*"
+    direction: DOWN
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 65-calendar
+- copyTextFrom:
+    id: calendar-month
+- evalScript: ${output.month = maestro.copiedText}
+- copyTextFrom:
+    text: ".*Samovar.*"
+- evalScript: ${output.upcoming = maestro.copiedText}
+# The planner, on her one project: a day's header.
+- tapOn:
+    id: tab-planner
+- extendedWaitUntil:
+    visible:
+      text: "[а-яё]+, \\d\\d? [а-яё]+\\.?"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 65-planner
+- copyTextFrom:
+    text: "[а-яё]+, \\d\\d? [а-яё]+\\.?"
+- evalScript: ${output.plannerDay = maestro.copiedText}
+# The availability: it opens on this week, next month's title further down.
+- tapOn:
+    id: tab-create
+- tapOn: "Отметить занятость"
+- extendedWaitUntil:
+    visible:
+      id: day-${TODAY_DAY}
+      below:
+        id: availability-legend
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "[а-яё]+ 20\\d\\d.*"
+      below:
+        id: availability-legend
+    direction: DOWN
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 65-availability
+- copyTextFrom:
+    text: "[а-яё]+ 20\\d\\d.*"
+    below:
+      id: availability-legend
+- evalScript: ${output.availabilityMonth = maestro.copiedText}
+- evalScript: ${console.log('65 dates ' + JSON.stringify([output.month, output.upcoming, output.plannerDay, output.availabilityMonth]))}
+# A month: "Ноябрь 2026 г.", in both places (iOS puts a narrow space before
+# "г."; the month's button adds its chevron's ", "). A day: "Чт, 6 нояб.",
+# the card's label beginning with it. Each with a capital first letter and
+# none after it: iOS names a Text as its style draws it, "Вт, 3 Нояб.".
+# Maestro let a regular expression pass whatever it was given, so the check
+# is in plain string methods, and what does not match is named and fails the
+# flow on its own.
+- evalScript: "${output.month = output.month.split(',')[0].trim()}"
+- evalScript: "${output.upcoming = output.upcoming.split(',').slice(0, 2).join(',')}"
+- evalScript: "${output.wrong = ''}"
+- evalScript: "${output.wrong = output.wrong + (output.month.charAt(0) != output.month.charAt(0).toLowerCase() && output.month.slice(1) == output.month.slice(1).toLowerCase() && output.month.slice(-2) == 'г.' ? '' : output.month + ' | ')}"
+- evalScript: "${output.wrong = output.wrong + (output.availabilityMonth.charAt(0) != output.availabilityMonth.charAt(0).toLowerCase() && output.availabilityMonth.slice(1) == output.availabilityMonth.slice(1).toLowerCase() && output.availabilityMonth.slice(-2) == 'г.' ? '' : output.availabilityMonth + ' | ')}"
+- evalScript: "${output.wrong = output.wrong + (output.upcoming.charAt(0) != output.upcoming.charAt(0).toLowerCase() && output.upcoming.slice(1) == output.upcoming.slice(1).toLowerCase() && output.upcoming.indexOf(', ') == 2 ? '' : output.upcoming + ' | ')}"
+- evalScript: "${output.wrong = output.wrong + (output.plannerDay.charAt(0) != output.plannerDay.charAt(0).toLowerCase() && output.plannerDay.slice(1) == output.plannerDay.slice(1).toLowerCase() && output.plannerDay.indexOf(', ') == 2 ? '' : output.plannerDay + ' | ')}"
+- evalScript: "${console.log('65 not one format ' + JSON.stringify(output.wrong))}"
+- runFlow:
+    when:
+      true: ${output.wrong != ''}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: dates-not-in-one-format
+          timeout: 1000

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Pressable,
@@ -11,17 +10,20 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { ScreenHeader, HeaderTextButton } from '../../../shared/components/ScreenHeader';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
-import { getDateLocale } from '../../../shared/utils/locale';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSeen } from '../../../contexts/SeenContext';
 import { Rehearsal, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
-import { formatDateLocalized } from '../../../shared/utils/time';
+import { formatDate } from '../../../shared/utils/dateFormat';
 import { rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
+import { usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
+import { onDataChanged } from '../../../shared/utils/dataChanged';
+import { useDeleteRehearsal } from '../hooks/useDeleteRehearsal';
 import type { AppNavigation, AppStackParamList } from '../../../navigation';
 
 interface Participant {
@@ -36,6 +38,11 @@ interface AdminStats {
   confirmed: number;
   invited: number;
 }
+
+// iOS draws this sheet smaller while it stands at three quarters of the
+// screen: 44 pt of layout measured 42 on the glass in Maestro's inspector
+// (T-014). 47 is 44 and more there.
+const SHEET_TARGET = 47;
 
 /**
  * One rehearsal, in full.
@@ -55,6 +62,7 @@ export default function RehearsalDetailsScreen() {
   const rehearsalId: string = String(route.params?.rehearsalId ?? '');
 
   const { t, language } = useI18n();
+  const uses24 = usePhoneUses24HourClock();
   const { user } = useAuth();
   const userTimezone = user?.timezone || 'UTC';
   const { projects } = useProjects();
@@ -62,6 +70,10 @@ export default function RehearsalDetailsScreen() {
 
   const [rehearsal, setRehearsal] = useState<Rehearsal | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // Read again when a rehearsal changes: saved in the form "Edit" opens over
+  // this sheet, which comes back to it (T-016).
+  const [reads, setReads] = useState(0);
+  useEffect(() => onDataChanged('rehearsals', () => setReads((n) => n + 1)), []);
 
   // Loaded here rather than passed in — see the note above the component.
   useEffect(() => {
@@ -71,22 +83,30 @@ export default function RehearsalDetailsScreen() {
     rehearsalsAPI
       .getById(rehearsalId)
       .then((res: any) => {
+        if (!alive) return;
         // Days and times from the interval, as the calendar reads them.
-        if (alive) setRehearsal(rehearsalInZone(res.data.rehearsal, userTimezone));
+        setRehearsal(rehearsalInZone(res.data.rehearsal, userTimezone));
+        setLoadFailed(false);
       })
       .catch((err: any) => {
         logger.warn('[RehearsalDetails] Could not load:', err);
-        if (alive) setLoadFailed(true);
+        if (!alive) return;
+        // Gone is gone. Any other failure of a read again — after a save, on
+        // a bad network — leaves the details as they were last read, rather
+        // than "not found" with Edit and Delete hidden (review T-016).
+        if (err?.response?.status === 404) setRehearsal(null);
+        setLoadFailed(true);
       });
 
     return () => {
       alive = false;
     };
-  }, [rehearsalId, userTimezone]);
+  }, [rehearsalId, userTimezone, reads]);
 
   const project = rehearsal ? projects.find(p => p.id === rehearsal.projectId) || null : null;
   const isAdmin = project?.is_admin || false;
   const onClose = () => navigation.goBack();
+  const askToDelete = useDeleteRehearsal();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(false);
   const ownId = user ? String(user.id) : null;
@@ -218,14 +238,17 @@ export default function RehearsalDetailsScreen() {
     return <View key={item.userId}>{content}</View>;
   };
 
-  if (loadFailed) {
+  if (loadFailed && !rehearsal) {
     return (
       <View style={styles.fill}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t.calendar.rehearsal}</Text>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={Colors.text.secondary} />
-          </TouchableOpacity>
+          <ScreenHeader
+            kind="modal"
+            title={t.calendar.rehearsal}
+            cancelLabel={t.common.close}
+            onCancel={onClose}
+            target={SHEET_TARGET}
+          />
         </View>
         <View style={styles.centred}>
           <Text style={styles.missingText}>{t.rehearsals.notFound}</Text>
@@ -244,10 +267,7 @@ export default function RehearsalDetailsScreen() {
     );
   }
 
-  const locale = getDateLocale(language);
-  const formattedDate = rehearsal.date
-    ? formatDateLocalized(rehearsal.date, { day: 'numeric', month: 'long', weekday: 'long' }, locale)
-    : '';
+  const formattedDate = rehearsal.date ? formatDate(rehearsal.date, 'weekdayDayMonth', language) : '';
 
   // One scroll view, one flow. Nesting flex: 1 containers inside a native sheet
   // is what put the header and the list on top of each other: the sheet does not
@@ -263,18 +283,38 @@ export default function RehearsalDetailsScreen() {
               above the rehearsal's own name, which said nothing the name did
               not and left two large texts fighting for the same band at the top
               of the sheet. The name is the heading; the grabber and a swipe
-              close the sheet, and the cross stays for those who look for one. */}
+              close the sheet, and "Close" is where every sheet has its way out
+              (T-029). */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle} numberOfLines={2}>
-              {rehearsal.title || t.calendar.rehearsal}
-            </Text>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={Colors.text.secondary} />
-            </TouchableOpacity>
+            <ScreenHeader
+              kind="modal"
+              title={rehearsal.title || t.calendar.rehearsal}
+              titleLines={2}
+              cancelLabel={t.common.close}
+              onCancel={onClose}
+              target={SHEET_TARGET}
+              // An admin's way to the form from here, so a rehearsal opened
+              // from a notification can be changed too (T-016). Over this
+              // sheet, which reads it again when the form saves.
+              right={isAdmin ? (
+                <HeaderTextButton
+                  testID="rehearsal-details-edit"
+                  label={t.rehearsals.edit}
+                  target={SHEET_TARGET}
+                  onPress={() => navigation.navigate('AddRehearsal', {
+                    rehearsalId: rehearsal.id,
+                    projectId: rehearsal.projectId,
+                  })}
+                />
+              ) : null}
+            />
           </View>
 
           <View style={styles.content}>
 
+            {/* The facts, as rows of text: in boxes they looked like fields
+                to type in. The place is only words — often "Hall 1" — and
+                opens no map (owner, 30.10). */}
             {/* Date */}
             <View style={styles.detailRow}>
               <Ionicons name="calendar-outline" size={20} color={Colors.accent.blue} />
@@ -285,7 +325,7 @@ export default function RehearsalDetailsScreen() {
             <View style={styles.detailRow}>
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.detailText} testID="rehearsal-details-time">
-                {rehearsalTimeLabel(rehearsal, locale)}
+                {rehearsalTimeLabel(rehearsal, language, uses24)}
               </Text>
             </View>
 
@@ -342,6 +382,20 @@ export default function RehearsalDetailsScreen() {
                 ))}
               </View>
             )}
+
+            {/* At the foot, away from everything else: the confirmation is
+                the cards' own (useDeleteRehearsal), and the sheet goes when
+                it is done. */}
+            {isAdmin && (
+              <Pressable
+                testID="rehearsal-details-delete"
+                accessibilityRole="button"
+                style={styles.deleteRow}
+                onPress={() => askToDelete(rehearsal, onClose)}
+              >
+                <Text style={styles.deleteText}>{t.common.delete}</Text>
+              </Pressable>
+            )}
           </View>
       </ScrollView>
   );
@@ -374,25 +428,12 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     textAlign: 'center',
   },
+  // The bar is ScreenHeader's; this only clears the sheet's grabber, which
+  // sits in the top few points, and draws the line under it.
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    // Clears the sheet's grabber, which sits in the top few points.
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-  },
-  closeButton: {
-    padding: Spacing.xs,
   },
   content: {
     padding: Spacing.lg,
@@ -401,13 +442,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.glass.bg,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    marginBottom: Spacing.sm,
+    minHeight: TouchTarget,
   },
   detailText: {
     fontSize: FontSize.base,
@@ -480,5 +515,18 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: FontSize.base,
     color: Colors.text.tertiary,
+  },
+  deleteRow: {
+    marginTop: Spacing.xl,
+    minHeight: SHEET_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.glass.bg,
+  },
+  deleteText: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.red,
   },
 });

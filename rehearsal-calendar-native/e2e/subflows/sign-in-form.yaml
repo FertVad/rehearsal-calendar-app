@@ -53,11 +53,19 @@ appId: ${APP_ID}
           text: ${'•'.repeat(PASSWORD.length)}
 - tapOn:
     id: login-submit
-# iOS offers to keep the password, over the whole screen.
+# iOS offers to keep the password, over the whole screen: while its sheet is
+# up Maestro sees nothing of the app. A tap on "Not Now" the simulator lost
+# left it there, and flow 51 waited 30 s for a calendar under it (T-213), so
+# the tap goes through tap-and-see.yaml, which waits for the sheet to go.
 - extendedWaitUntil:
     visible: "Not Now"
     timeout: 10000
     optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
+- runFlow:
+    when:
+      visible: "Not Now"
+    file: tap-and-see.yaml
+    env:
+      TAP: "Not Now"
+      GONE: "Not Now"
+      WAIT_MS: 5000

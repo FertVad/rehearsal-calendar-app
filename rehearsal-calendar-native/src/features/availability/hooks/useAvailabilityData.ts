@@ -41,6 +41,19 @@ export function keepDrafts(loaded: AvailabilityData, current: AvailabilityData,
   return merged;
 }
 
+/**
+ * Two states of a day say the same: the same mode, and for custom hours the
+ * same hours. A mode's slots kept aside for switching back are not what it
+ * says; a day with no state says nothing, which a declaration of free is not.
+ */
+export function sameDay(a: DayState | undefined, b: DayState | undefined): boolean {
+  if (!a || !b) return a === b;
+  if (a.mode !== b.mode) return false;
+  if (a.mode !== 'custom') return true;
+  return a.slots.length === b.slots.length
+    && a.slots.every((slot, i) => slot.start === b.slots[i].start && slot.end === b.slots[i].end);
+}
+
 export const useAvailabilityData = () => {
   const [availability, setAvailability] = useState<AvailabilityData>({});
   const [loading, setLoading] = useState(true);
@@ -54,6 +67,13 @@ export const useAvailabilityData = () => {
   changedRef.current = changed;
   const hasChanges = Object.keys(changed).length > 0;
 
+  // What the server holds for each day, as last loaded or saved here. A day
+  // can be changed and still say what it says there — its mode picked again —
+  // and leaving it loses nothing (T-013, review): `hasChanges` is what a save
+  // would send, `differsFromSaved` what leaving would lose.
+  const [saved, setSaved] = useState<AvailabilityData>({});
+  const differsFromSaved = Object.keys(changed).some((date) => !sameDay(availability[date], saved[date]));
+
   const markChanged = useCallback((dates: string[]) => {
     setChanged((prev) => {
       const next = { ...prev };
@@ -62,12 +82,23 @@ export const useAvailabilityData = () => {
     });
   }, []);
 
-  /** A save went through with these counters: days edited since stay changed. */
-  const markSaved = useCallback((sent: Record<string, number>) => {
+  /**
+   * A save went through with these counters and these days: days edited since
+   * stay changed, and are compared with what was sent.
+   */
+  const markSaved = useCallback((sent: Record<string, number>, sentDays: AvailabilityData) => {
     setChanged((prev) => {
       const next = { ...prev };
       for (const [date, version] of Object.entries(sent)) {
         if (next[date] === version) delete next[date];
+      }
+      return next;
+    });
+    setSaved((prev) => {
+      const next = { ...prev };
+      for (const date of Object.keys(sent)) {
+        if (sentDays[date]) next[date] = sentDays[date];
+        else delete next[date];
       }
       return next;
     });
@@ -80,7 +111,25 @@ export const useAvailabilityData = () => {
       for (const date of dates) delete next[date];
       return next;
     });
+    setSaved((prev) => {
+      const next = { ...prev };
+      for (const date of dates) delete next[date];
+      return next;
+    });
   }, []);
+
+  /** Every day changed and not saved says again what was saved (T-026). */
+  const discardChanges = useCallback(() => {
+    setAvailability((prev) => {
+      const next = { ...prev };
+      for (const date of Object.keys(changedRef.current)) {
+        if (saved[date]) next[date] = saved[date];
+        else delete next[date];
+      }
+      return next;
+    });
+    setChanged({});
+  }, [saved]);
 
   // Whether the last load actually answered.
   //
@@ -94,9 +143,12 @@ export const useAvailabilityData = () => {
   // saved in it (useAvailabilitySave); the server keys a day on it too.
   const userTimezone = useTimezone();
 
+  // `loading` is the first load only: there is nothing to show before it. A
+  // reload — after a save, on focus, pulled — keeps the calendar on screen; it
+  // used to put the spinner in its place, and the list came back at its top,
+  // away from the week the person was on (T-021).
   const loadAvailability = useCallback(async () => {
     try {
-      setLoading(true);
       setLoadFailed(false);
       const response = await availabilityAPI.getAll();
 
@@ -320,6 +372,7 @@ export const useAvailabilityData = () => {
       ));
 
       setAvailability((current) => keepDrafts(localData, current, changedRef.current));
+      setSaved(localData);
       AsyncStorage.setItem(CACHED_AVAILABILITY_KEY, JSON.stringify(localData)).catch(() => {
         // A cache is not worth an error.
       });
@@ -334,6 +387,7 @@ export const useAvailabilityData = () => {
         if (cached) {
           const loaded: AvailabilityData = JSON.parse(cached);
           setAvailability((current) => keepDrafts(loaded, current, changedRef.current));
+          setSaved(loaded);
         }
       } catch {
         // Nothing cached, or it will not parse. The banner already says the
@@ -360,10 +414,12 @@ export const useAvailabilityData = () => {
     saving,
     setSaving,
     hasChanges,
+    differsFromSaved,
     changed,
     markChanged,
     markSaved,
     markSettled,
+    discardChanges,
     getDayState,
     loadAvailability,
   };

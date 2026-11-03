@@ -1,0 +1,58 @@
+# A bug report is sent from the profile (T-008). The "Test Flight" banner with
+# its "Bug Report" button sat over every tab during the beta; the owner took it
+# out on 29.10.2026 and moved the report to the profile's "About" block, after
+# "Help" and before "Delete Account". Horatio sees no banner on the calendar,
+# reports from the profile, gets the thanks, and the server has the report,
+# from the profile.
+appId: ${APP_ID}
+name: No beta banner; a bug report sent from the profile
+tags:
+  - profile
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${HORATIO_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: tab-calendar
+      text: "Calendar, tab.*"
+    timeout: 30000
+- assertNotVisible: "Test Flight"
+- assertNotVisible: "Bug Report"
+- takeScreenshot: 47-calendar-no-banner
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-report-bug
+    direction: DOWN
+    centerElement: true
+- assertNotVisible: "Test Flight"
+- takeScreenshot: 47-profile-about
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-report-bug
+      SEE: "Describe the issue..."
+      WAIT_MS: "10000"
+- tapOn:
+    id: bug-report-message
+- inputText: "Horatio cannot see the ghost"
+- assertVisible: "Horatio cannot see the ghost"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: bug-report-send
+      SEE: "Thanks! Report sent"
+      WAIT_MS: "15000"
+- takeScreenshot: 47-report-sent
+- tapOn: "OK"
+- assertNotVisible: "Describe the issue..."
+- runScript:
+    file: ../scripts/bug-report-received.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${HORATIO_EMAIL}
+      MESSAGE: "Horatio cannot see the ghost"
+      SCREEN: "Profile"

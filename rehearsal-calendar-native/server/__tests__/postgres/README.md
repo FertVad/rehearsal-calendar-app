@@ -63,9 +63,10 @@ services, JWT middleware and production PG adapter execute. The notification
 inbox is real SQL, with zero registered devices and no external sends.
 
 `fixture.sql` is a deliberately small PostgreSQL diagnostic schema, **not** a
-replacement bootstrap/migration. A02 adds `timezone` and `last_login_at` columns
-inside its disposable fixture so availability preprocessing and a real admin
-users listing can execute. R2_SCHEMA and R2_MIGRATIONS start before this subset
+replacement bootstrap/migration. Its `native_users` carries the real `timezone`
+column: availability preprocessing and the rehearsal notifications (each
+reader's day and time) read it. A02 adds `last_login_at` inside its disposable
+fixture so a real admin users listing can execute. R2_SCHEMA and R2_MIGRATIONS start before this subset
 is installed: they own empty schemas and provision the actual canonical snapshot
 or explicit supported upgrade fixtures. The historical F01 mixed-dialect failure
 is retained in audit evidence; it is no longer asserted as the desired outcome.

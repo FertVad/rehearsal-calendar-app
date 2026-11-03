@@ -1,0 +1,105 @@
+# Times follow the phone's 12/24-hour setting, and an interval is written one
+# way (T-017). Every time was "HH:MM" whatever the phone said, and the time
+# picker took the app's language for its locale: in English its wheel was
+# always 12-hour, in Russian always 24-hour. Intervals were "18:00 — 21:00" on
+# a card and "09:00-23:00" in the form's suggestions; now "18:00–21:00".
+#
+# The simulator is en_US, as run.mjs pins it, and so on the 12-hour clock. The
+# second launch puts the phone on the 24-hour clock: iOS reads a launch
+# argument among the user defaults, AppleICUForce24HourTime too — the key
+# Settings → General → Date & Time → 24-Hour Time writes. Its value is read as
+# a property list: "<true/>" is the boolean the system wants, "YES" a string
+# it ignores.
+#
+# Anna Director's Act I run-through is tomorrow, 18:00 to 21:00.
+appId: ${APP_ID}
+name: Times on the phone's 12 or 24 hours, one way to write an interval
+tags:
+  - calendar
+  - rehearsals
+  - time-format
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+# 12 hours: the card, and the form's own times.
+- scrollUntilVisible:
+    element: "(?s)(?=.*Act I run-through)(?=.*6:00.PM–9:00.PM).*"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: 53-card-12-hour
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Create Rehearsal"
+      WAIT_MS: 5000
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-start-time
+    text: ".*[0-9]:00.(AM|PM).*"
+# The wheel has its AM/PM column.
+- tapOn:
+    id: rehearsal-start-time
+- extendedWaitUntil:
+    visible: "Select Start Time"
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "(AM|PM)"
+    timeout: 5000
+- takeScreenshot: 53-wheel-12-hour
+- tapOn: "Cancel"
+# 24 hours: the same phone with the setting turned on, still signed in.
+- launchApp:
+    stopApp: true
+    arguments:
+      AppleICUForce24HourTime: "<true/>"
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- scrollUntilVisible:
+    element: "(?s)(?=.*Act I run-through)(?=.*18:00–21:00).*"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: 53-card-24-hour
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-create
+      SEE: "Create Rehearsal"
+      WAIT_MS: 5000
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-start-time
+    text: ".*[0-2][0-9]:00.*"
+- assertNotVisible:
+    id: rehearsal-start-time
+    text: ".*(AM|PM).*"
+# The wheel has no AM/PM column.
+- tapOn:
+    id: rehearsal-start-time
+- extendedWaitUntil:
+    visible: "Select Start Time"
+    timeout: 10000
+- assertNotVisible: "(AM|PM)"
+- takeScreenshot: 53-wheel-24-hour
+- tapOn: "Cancel"

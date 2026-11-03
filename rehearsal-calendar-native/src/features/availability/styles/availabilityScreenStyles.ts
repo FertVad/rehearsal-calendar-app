@@ -2,7 +2,7 @@
  * Styles for AvailabilityScreen
  */
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { PANEL_HEIGHT } from '../constants';
 
 export const styles = StyleSheet.create({
@@ -10,22 +10,10 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg.primary,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-  },
   saveHeaderButton: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
     borderRadius: BorderRadius.md,
   },
   saveHeaderButtonText: {
@@ -34,31 +22,6 @@ export const styles = StyleSheet.create({
     color: Colors.text.inverse,
   },
   saveHeaderButtonDisabled: {
-    opacity: 0.7,
-  },
-  // Sticky footer inside the editor sheet — sits below the scrolling slot
-  // list so it stays reachable however long that list gets.
-  sheetSaveBar: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-    backgroundColor: Colors.bg.secondary,
-  },
-  sheetSaveButton: {
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.accent.purple,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheetSaveButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.inverse,
-  },
-  sheetSaveButtonDisabled: {
     opacity: 0.7,
   },
   loadingContainer: {
@@ -269,6 +232,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: Colors.bg.secondary,
     borderRadius: BorderRadius.sm,
+    minHeight: TouchTarget,
     padding: Spacing.sm,
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -279,7 +243,6 @@ export const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   removeSlotButton: {
-    padding: Spacing.sm,
     marginLeft: Spacing.sm,
   },
   addSlotButton: {

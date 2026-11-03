@@ -43,12 +43,17 @@ async function prepareBrowser({ withDeps = false } = {}) {
   runNode([join(playwrightDirectory, 'cli.js'), 'install', ...(withDeps ? ['--with-deps'] : []), 'chromium']);
 }
 
+// One file at a time, as --runInBand ran them, but in one worker that Jest
+// replaces once a file leaves its heap above workerIdleMemoryLimit (the Jest
+// configs). In band, one process kept every file's modules: 1.6 GB by the end
+// of the run, where a single garbage collection stopped it for 3 s, and a test
+// that paid for such a pause ran out of its 5 s (T-215).
 function runJest(cwd, jestArgs, browserCheck) {
   const requirePackage = createRequire(join(cwd, 'package.json'));
   const explicitWorkers = jestArgs.some(arg => /^--(?:runInBand|maxWorkers)(?:=|$)/.test(arg) ||
     arg === '-i' || /^-w/.test(arg));
   runNode(['--experimental-vm-modules', requirePackage.resolve('jest/bin/jest'),
-    ...(explicitWorkers ? [] : ['--runInBand']), ...jestArgs], cwd, {
+    ...(explicitWorkers ? [] : ['--maxWorkers=1']), ...jestArgs], cwd, {
     ADMIN_BROWSER_CHECK: browserCheck ? '1' : '0',
   });
 }

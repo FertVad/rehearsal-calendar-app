@@ -1,0 +1,30 @@
+T-020 — where the first recommendation begins, on the code before the fix (cbcfaf9)
+Screenshot: before-58-planner-first-screen.png (flow 58's first, Olga Stage, Three Sisters, Week)
+
+$ node audit/evidence/T-020/measure.mjs before-58-planner-first-screen.png
+1178×2556 px, 3.000 px a point, column x=24.0 pt
+y    0.0 –   59.0 pt  #0d1117      status bar
+y   59.0 –  119.0 pt  #161b22      header "Smart Planner"
+y  119.0 –  120.0 pt  #2e343b
+y  120.0 –  136.0 pt  #0d1117
+y  136.0 –  137.0 pt  #2b3139      project row (137–180)
+y  137.0 –  179.7 pt  #13181f
+y  179.7 –  180.7 pt  #2b3139
+y  180.7 –  197.0 pt  #0d1117
+y  197.0 –  204.0 pt  ...          "Period"
+y  204.0 –  224.0 pt  #0d1117
+y  224.0 –  268.0 pt  #a855f7      Week / Month / Select Dates
+y  268.0 –  311.7 pt  #0d1117      "Nov 1 – Nov 7"
+y  311.7 –  312.7 pt  #2b3139      participants row (312–367)
+y  312.7 –  366.7 pt  #13181f
+y  366.7 –  367.7 pt  #2b3139
+y  367.7 –  408.0 pt  #0d1117
+y  408.0 –  419.0 pt  ...          "Recommendations"
+y  419.0 –  435.3 pt  #0d1117
+y  435.3 –  605.3 pt  #15181e      first day's card, one slot: 170 pt
+y  605.3 –  622.0 pt  #0d1117
+y  622.0 –  771.0 pt  #15181e      second day's card, under the tab bar at 771
+
+The first recommendation begins at y = 435 pt of 852 (the audit of 29.10: 479,
+before T-010 made the participants a 56 pt row). Below 300: the filters go in
+one row of 44 pt.

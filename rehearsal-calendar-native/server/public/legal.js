@@ -13,6 +13,10 @@
   var SUPPORTED = ['en', 'ru', 'es', 'de'];
 
   function pick() {
+    // ?lang=ru wins, as on the landing page: the app's Help opens the support
+    // page in the language the app is in, whatever the browser says.
+    var q = /[?&]lang=([a-z]{2})(?:&|$)/i.exec(location.search);
+    if (q && SUPPORTED.indexOf(q[1].toLowerCase()) !== -1) return q[1].toLowerCase();
     try {
       var saved = localStorage.getItem(KEY);
       if (SUPPORTED.indexOf(saved) !== -1) return saved;

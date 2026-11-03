@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,20 +14,23 @@ import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import type { ProjectsStackParamList, ProjectDetailNavigation } from '../../../navigation';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
 import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
-import { parseDateString } from '../../../shared/utils/time';
+import { DeleteButton } from '../../../shared/components/buttons/DeleteButton';
+import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { useTimezone, useToday } from '../../../shared/hooks/useClock';
-import { getDateLocale } from '../../../shared/utils/locale';
+import { formatDate } from '../../../shared/utils/dateFormat';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
 import * as Clipboard from 'expo-clipboard';
 import { useInviteLink } from '../hooks';
 import type { Rehearsal as RehearsalInterval } from '../../../shared/types';
 import { lastDateOf, rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
+import { usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 
 import { logger } from '../../../shared/utils/logger';
 type ProjectDetailScreenProps = {
@@ -66,18 +69,6 @@ interface Rehearsal extends RehearsalInterval {
   status: string;
 }
 
-// A rehearsal's calendar date, in the reader's language. Not new Date(dateStr):
-// that reads '2026-09-10' as UTC midnight, the 9th anywhere west of UTC.
-export function formatDate(dateStr: string, language: string): string {
-  const date = parseDateString(dateStr);
-  const formatted = date.toLocaleDateString(getDateLocale(language), {
-    day: 'numeric',
-    month: 'short',
-  });
-  // Remove trailing period from Russian month abbreviations
-  return formatted.replace(/\.$/, '');
-}
-
 /**
  * One rehearsal in the project's lists, upcoming or past alike.
  *
@@ -92,6 +83,7 @@ export function RehearsalRow({ rehearsal, onPress, past = false }: {
   past?: boolean;
 }) {
   const { t, language } = useI18n();
+  const uses24 = usePhoneUses24HourClock();
   return (
     <TouchableOpacity
       style={[styles.rehearsalCard, past && styles.pastCard]}
@@ -100,7 +92,7 @@ export function RehearsalRow({ rehearsal, onPress, past = false }: {
     >
       <View style={[styles.rehearsalDate, past && styles.pastDate]}>
         <Text style={[styles.rehearsalDateText, past && styles.pastDateText]}>
-          {formatDate(rehearsal.date, language)}
+          {formatDate(rehearsal.date, 'dayMonthShort', language)}
         </Text>
       </View>
       <View style={styles.rehearsalInfo}>
@@ -110,7 +102,7 @@ export function RehearsalRow({ rehearsal, onPress, past = false }: {
         <View style={styles.rehearsalMeta}>
           <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
           <Text style={styles.rehearsalTime}>
-            {rehearsalTimeLabel(rehearsal, getDateLocale(language))}
+            {rehearsalTimeLabel(rehearsal, language, uses24)}
           </Text>
         </View>
         {rehearsal.location ? (
@@ -126,8 +118,19 @@ export function RehearsalRow({ rehearsal, onPress, past = false }: {
   );
 }
 
-export default function ProjectDetailScreen({ route, navigation }: ProjectDetailScreenProps) {
-  const { projectId } = route.params;
+/**
+ * Everything the page holds — the project, its lists, where its members are
+ * laid out — is one project's. The navigator gives this screen another
+ * project's id when one is opened over it ("New member" of B with A open):
+ * then it starts over as B's, rather than show A's page meanwhile and scroll
+ * to where A's members were (T-023, review).
+ */
+export default function ProjectDetailScreen(props: ProjectDetailScreenProps) {
+  return <ProjectDetail key={props.route.params.projectId} {...props} />;
+}
+
+function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
+  const { projectId, section } = route.params;
   const { t } = useI18n();
   const { refreshProjects } = useProjects();
 
@@ -145,6 +148,19 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   const [isDeleting, setIsDeleting] = useState(false);
   const [upcomingExpanded, setUpcomingExpanded] = useState(false);
   const [pastExpanded, setPastExpanded] = useState(false);
+
+  // Opened on a section — "New member" opens on the members (T-023): scrolled
+  // there once the page is laid out, no further than the page goes, and the
+  // ask then dropped, so coming back to the page does not scroll it again.
+  const scrollRef = useRef<ScrollView>(null);
+  const [membersY, setMembersY] = useState<number | null>(null);
+  const [pageHeight, setPageHeight] = useState(0);
+  const [viewHeight, setViewHeight] = useState(0);
+  useEffect(() => {
+    if (section !== 'members' || loading || membersY === null || pageHeight === 0 || viewHeight === 0) return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, Math.min(membersY, pageHeight - viewHeight)), animated: true });
+    navigation.setParams({ section: undefined });
+  }, [section, loading, membersY, pageHeight, viewHeight, navigation]);
 
   const fetchData = useCallback(async () => {
     // Prevent fetching if project is being deleted
@@ -174,6 +190,10 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // A rehearsal deleted or saved from its details, opened from this list, is
+  // a change this screen does not see: it stays mounted under the sheet.
+  useEffect(() => onDataChanged('rehearsals', fetchData), [fetchData]);
 
   const onRefresh = useCallback(() => {
     if (isDeleting) return; // Don't refresh if deleting
@@ -423,26 +443,28 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Pushed in the Projects tab: back to the list, with its name (T-029). */}
+      <ScreenHeader
+        kind="stack"
+        title={project.name}
+        backTitle={t.projects.title}
+        onBack={() => navigation.goBack()}
+        right={project.is_admin ? (
+          <View style={styles.adminBadge}>
+            <Ionicons name="shield-checkmark" size={14} color={Colors.accent.purple} />
+          </View>
+        ) : null}
+      />
       <ScrollView
+        ref={scrollRef}
+        onLayout={(e) => setViewHeight(e.nativeEvent.layout.height)}
+        onContentSizeChange={(_, height) => setPageHeight(height)}
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent.purple} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.title} numberOfLines={1}>{project.name}</Text>
-          {project.is_admin && (
-            <View style={styles.adminBadge}>
-              <Ionicons name="shield-checkmark" size={14} color={Colors.accent.purple} />
-            </View>
-          )}
-        </View>
-
         {project.description && (
           <Text style={styles.description}>{project.description}</Text>
         )}
@@ -510,6 +532,19 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
             )}
           </TouchableOpacity>
 
+          {/* Only for the project's admins, the people the server lets put a
+              rehearsal in it; the form opens on this project (T-025). */}
+          {project.is_admin && (
+            <TouchableOpacity
+              testID="project-new-rehearsal"
+              style={styles.newRehearsalButton}
+              onPress={() => navigation.navigate('AddRehearsal', { projectId })}
+            >
+              <Ionicons name="add" size={18} color={Colors.accent.purple} />
+              <Text style={styles.newRehearsalText}>{t.projects.newRehearsal}</Text>
+            </TouchableOpacity>
+          )}
+
           {upcomingRehearsals.length === 0 ? (
             <Text style={styles.emptyText}>{t.projects.noUpcomingRehearsals}</Text>
           ) : upcomingExpanded ? (
@@ -553,7 +588,11 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
         )}
 
         {/* Members */}
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+          testID="project-members"
+          onLayout={(e) => setMembersY(e.nativeEvent.layout.y)}
+        >
           <View style={styles.sectionHeader}>
             <Ionicons name="people" size={20} color={Colors.accent.purple} />
             <Text style={styles.sectionTitle}>{t.projects.members}</Text>
@@ -601,15 +640,11 @@ export default function ProjectDetailScreen({ route, navigation }: ProjectDetail
         {/* Delete Project Button (owner only) */}
         {isOwner && (
           <View style={styles.section}>
-            <TouchableOpacity
-              style={styles.deleteButton}
+            <DeleteButton
+              title={t.projects.deleteProject}
               testID="project-delete"
               onPress={handleDeleteProject}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="trash-outline" size={20} color={Colors.accent.red} />
-              <Text style={styles.deleteButtonText}>{t.projects.deleteProject}</Text>
-            </TouchableOpacity>
+            />
           </View>
         )}
       </ScrollView>

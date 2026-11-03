@@ -1,6 +1,11 @@
 export interface CalendarSyncTranslations {
   // Navigation
   title: string;
+  /**
+   * What sync does, in one line at the top. Only the hours come in, never
+   * what the events are: what onboarding promised (T-024).
+   */
+  explanation: string;
   // Permissions
   permissions: string;
   permissionGranted: string;
@@ -124,6 +129,7 @@ export const ru = {
   calendarSync: {
     // Navigation
     title: 'Синхронизация с календарём',
+    explanation: 'Репетиции попадают в календарь телефона, а из него сюда — только часы, когда вы заняты, без названий событий.',
     // Permissions
     permissions: 'Разрешения',
     permissionGranted: 'Доступ предоставлен',
@@ -247,6 +253,7 @@ export const en = {
   calendarSync: {
     // Navigation
     title: 'Calendar Sync',
+    explanation: 'Rehearsals go into your phone’s calendar, and only the hours you are busy come back from it, never what the events are.',
     // Permissions
     permissions: 'Permissions',
     permissionGranted: 'Access Granted',
@@ -370,6 +377,7 @@ export const es = {
   calendarSync: {
     // Navigation
     title: 'Sincronización de calendario',
+    explanation: 'Los ensayos pasan al calendario del teléfono, y de él solo llegan las horas en que estás ocupado, nunca qué son los eventos.',
     // Permissions
     permissions: 'Permisos',
     permissionGranted: 'Acceso concedido',
@@ -493,6 +501,7 @@ export const de = {
   calendarSync: {
     // Navigation
     title: 'Kalendersynchronisation',
+    explanation: 'Proben kommen in den Kalender deines Telefons, und von dort nur die Stunden, in denen du belegt bist – nie, was die Termine sind.',
     // Permissions
     permissions: 'Berechtigungen',
     permissionGranted: 'Zugriff gewährt',

@@ -16,9 +16,12 @@ export type CalendarStackParamList = {
   CalendarMain: undefined;
 };
 
+export type ProjectSection = 'members';
+
 export type ProjectsStackParamList = {
   ProjectsMain: undefined;
-  ProjectDetail: { projectId: string };
+  // The section to scroll to on opening: "New member" opens on the members.
+  ProjectDetail: { projectId: string; section?: ProjectSection };
 };
 
 export type PlannerStackParamList = {
@@ -57,8 +60,8 @@ export type AppStackParamList = {
     projectId?: string;
     rehearsalId?: string;
     prefilledDate?: string;
+    /** A start: the form ends it the usual length on (rehearsalDefaults.ts). */
     prefilledTime?: string;
-    prefilledEndTime?: string;
     /** The people the planner planned the slot for; absent means everyone (DP02). */
     prefilledMemberIds?: string[];
   };

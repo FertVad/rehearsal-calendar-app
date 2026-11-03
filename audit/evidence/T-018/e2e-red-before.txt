@@ -1,0 +1,29 @@
+T-018 e2e, red before.
+Flows of d42ffa2 on the base 1075f17's form: the same seven source files as
+jest-red-before.txt put back with git restore --source=1075f17, each flow run
+alone (npm run e2e -- e2e/flows/<flow>.yaml), then git restore --source=HEAD -- src.
+Machine output lines (Java WARNINGs) left out.
+
+$ npm run e2e -- e2e/flows/55-rehearsal-form-calendar.yaml
+[e2e] running the flows
+[Failed] The form's date is a month, and the past takes no tap (1m 48s) (Assertion is false: ".*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), .*", id: rehearsal-date is visible)
+1/1 Flow Failed
+  -> the date names no weekday (and is wheels in a sheet, not a month in the form)
+
+$ npm run e2e -- e2e/flows/26-past-midnight-form.yaml
+[e2e] running the flows
+[Failed] A rehearsal made from 23:00 to 01:00 ends the next morning (3m 20s) (Assertion is false: "End time cannot be the same as start time", id: rehearsal-end-time-error is visible)
+1/1 Flow Failed
+  -> an end at the start says nothing under the end (the old form alerted only on Create)
+
+$ npm run e2e -- e2e/flows/20-save-before-availability.yaml
+[e2e] running the flows
+[Failed] Save before the availability is in (2m 19s) (Assertion is false: ".*availability for this day is still being checked.*", id: rehearsal-participants-note is visible)
+1/1 Flow Failed
+  -> nothing under the participants while the day's availability is on its way
+
+$ npm run e2e -- e2e/flows/52-rehearsal-details-edit-and-delete.yaml
+[e2e] running the flows
+[Failed] An admin edits and deletes from the details (2m 16s) (Assertion is false: id: rehearsal-submit, disabled is visible)
+1/1 Flow Failed
+  -> an edit loaded and unchanged offers Save

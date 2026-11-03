@@ -19,6 +19,7 @@ export interface TimeSlot {
 export interface Member {
   id: string;
   name: string;
+  isAdmin?: boolean;
 }
 
 export interface AvailabilityData {

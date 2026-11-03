@@ -68,11 +68,11 @@ it('"Later" asks nothing; "Allow" asks once', async () => {
 
   await act(async () => { fireEvent.press(view.getByText(t.onboarding.notifications.later)); });
   expect(requestPermissions).not.toHaveBeenCalled();
-  expect(navigation.navigate).toHaveBeenLastCalledWith('WeekStart');
+  expect(navigation.navigate).toHaveBeenLastCalledWith('WhatWhere');
 
   navigation.navigate.mockClear();
   await act(async () => { fireEvent.press(view.getByText(t.onboarding.notifications.allow)); });
   expect(requestPermissions).toHaveBeenCalledTimes(1);
   expect(mockRegisterPushToken).toHaveBeenCalledTimes(1);
-  expect(navigation.navigate).toHaveBeenLastCalledWith('WeekStart');
+  expect(navigation.navigate).toHaveBeenLastCalledWith('WhatWhere');
 });

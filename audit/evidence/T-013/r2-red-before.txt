@@ -1,0 +1,53 @@
+T-013, review round 2 — red before. The new tests, on the task's commits
+before this fix (auto/main 8aee22c: cherry-picks of 1a69413 b0af89a 9a0b459
+f90f8d1 9bb4bda), with only the tests added.
+
+$ npx jest --selectProjects frontend --silent --runTestsByPath src/features/availability/screens/__tests__/AvailabilitySaving.test.tsx
+FAIL frontend src/features/availability/screens/__tests__/AvailabilitySaving.test.tsx (16.25 s)
+  ● the question's Save: the day cannot change meanwhile, the way out waits, and it closes once saved
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      122 |   // Changed back meanwhile — or it would close unasked and the save write free.
+      123 |   fireEvent.press(screen.getByTestId('mode-busy'));
+    > 124 |   expect(shown(screen, 'free')).toBe(true);
+          |                                 ^
+
+  ● the editor's Save: the day cannot change meanwhile; saved, it is what was sent and nothing is left to lose
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      145 |   fireEvent.press(screen.getByTestId('mode-busy'));
+    > 146 |   expect(shown(screen, 'free')).toBe(true);
+          |                                 ^
+
+Tests:       2 failed, 1 passed, 3 total
+
+$ npx jest --selectProjects frontend --silent --runTestsByPath src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx
+FAIL frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx (12.821 s)
+  ● Leaving with changes (T-013) › While a save is out, the form is the one being saved (T-013, review 2) › the question's Save: no edits meanwhile, no way out until it is back, then closed once
+
+    Expected: "Room A"
+    Received: "Room B"
+
+    > 315 |       expect(location(screen)).toBe('Room A');
+
+  ● Leaving with changes (T-013) › While a save is out, the form is the one being saved (T-013, review 2) › Create: no edits meanwhile, and saved is what was sent
+
+    Expected: "Room A"
+    Received: "Room B"
+
+    > 334 |       expect(location(screen)).toBe('Room A');
+
+Tests:       2 failed, 16 passed, 18 total
+
+The edit made while the save is out goes into the screen on the old code
+(Astra's two cases, review r2): "Mark Busy" takes busy back while free is being
+saved, the form takes "Room B" while "Room A" is being created. The failing
+save test passes on the old code too; it holds the error path as it is.

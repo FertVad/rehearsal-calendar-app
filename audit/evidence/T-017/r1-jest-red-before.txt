@@ -1,0 +1,38 @@
+T-017 review r1 — Jest red before.
+The fix's twelve source files restored from c9d6be8 (git restore --source=c9d6be8 -- <files>),
+the tests and the expo-localization mock from f833150. Then git restore --source=HEAD -- src.
+
+$ npx jest --selectProjects frontend --silent --testPathPatterns '(PickerModal|AddRehearsalScreen)\.test' \
+    -t "off the step|while it is open|changed with the form open"
+
+FAIL frontend src/shared/components/__tests__/PickerModal.test.tsx (12.102 s)
+  ● The time wheel › turns by the minute for a time off the step, so the wheel shows it as it is
+    expect(received).toMatchObject(expected)
+    - Expected  - 1
+    + Received  + 1
+      Object {
+    -   "minuteInterval": 1,
+    +   "minuteInterval": 5,
+      }
+    > 122 |     expect(wheel).toMatchObject({ minuteInterval: 1 });
+
+  ● The time wheel › turns to the phone's 12/24 hours while it is open
+    expect(received).toMatchObject(expected)
+    - Expected  - 2
+    + Received  + 2
+      Object {
+    -   "is24Hour": false,
+    -   "locale": "en_US@hours=h12",
+    +   "is24Hour": true,
+    +   "locale": "en_US@hours=h23",
+      }
+    > 129 |       expect(wheel).toMatchObject({ is24Hour: false, locale: 'en_US@hours=h12' });
+
+FAIL frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx (12.601 s)
+  ● The participants row (T-010) › follows the phone's 12/24 hours when it is changed with the form open
+    Unable to find an element with text: /^10:00\sAM$/
+    (nothing rendered again on the phone's event: the start still "10:00")
+
+The whole frontend project on the same files: 3 failed, 987 passed; plus
+ParticipantPicker.test.tsx not compiling (busyText takes the 12/24 flag now:
+"Expected 3 arguments, but got 4").

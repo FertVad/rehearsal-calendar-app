@@ -1,0 +1,40 @@
+Review (Astra) P2: a push for project_deleted / member_removed, tapped over a
+modal, kept the MainTabs that was there ({ pop: true }) but named only the
+Projects tab, so its stack stayed [ProjectsMain, ProjectDetail] and the card
+left open — even of the deleted project — was shown.
+
+npx jest --selectProjects frontend src/navigation/__tests__/backToTabs.test.tsx
+(the tab and the Projects stack are run through the real TabRouter and
+StackRouter, given their params as useNavigationBuilder gives them)
+
+--- useNotifications.ts from 935f22c (before), test from the fix ---
+  ✓ opens the new project in the tabs it came from, with the form gone (T-007)
+  ✓ opens a project from the inbox in the tabs under it (T-007)
+  a tapped push, with a modal screen open (T-007)
+    ✓ opens the project in the tabs under the modal
+    ✕ project_deleted opens the projects list, not the card left open in the tab
+    ✕ member_removed opens the projects list, not the card left open in the tab
+  ● a tapped push, with a modal screen open (T-007) › project_deleted opens the projects list, not the card left open in the tab
+    expect(received).toEqual(expected) // deep equality
+    - Expected  - 0
+    + Received  + 1
+      Array [
+        "ProjectsMain",
+    +   "ProjectDetail",
+      ]
+  ● ... › member_removed opens the projects list, not the card left open in the tab
+    (the same)
+Tests:       2 failed, 3 passed, 5 total
+
+--- after the fix (Projects named with { screen: 'ProjectsMain', pop: true }) ---
+  ✓ opens the new project in the tabs it came from, with the form gone (T-007)
+  ✓ opens a project from the inbox in the tabs under it (T-007)
+    ✓ opens the project in the tabs under the modal
+    ✓ project_deleted opens the projects list, not the card left open in the tab
+    ✓ member_removed opens the projects list, not the card left open in the tab
+Tests:       5 passed, 5 total
+
+npx tsc --noEmit — clean.
+
+No e2e flow: a push tap cannot be delivered to the simulator by the e2e runner;
+the inbox (flow 05) opens projects, never the list.

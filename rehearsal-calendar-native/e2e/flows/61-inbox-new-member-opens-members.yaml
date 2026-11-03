@@ -1,0 +1,56 @@
+# "New member" in the inbox opens its project, scrolled to the members (T-023).
+# It carried only the project's name, and a tap on it opened nothing.
+# Sent as the join sends it, by the server's own notifyMemberJoined.
+#
+# And with another of his projects left open, Dunsinane, the tap opens the
+# castle on its own members (review of T-023): the page stayed Dunsinane's,
+# scrolled to where its members were before the castle had come, and the
+# castle came at its top.
+appId: ${APP_ID}
+name: Inbox, new member opens the members
+tags:
+  - notifications
+  - projects
+---
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${DUNCAN_EMAIL}
+      TYPE: member_joined
+      PROJECT: Forres Castle
+      MEMBER: Malcolm Prince
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DUNCAN_EMAIL}
+# Dunsinane, open in the projects' stack.
+- tapOn: "Projects, tab.*"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Dunsinane.*"
+      SEE: "Members"
+      WAIT_MS: "15000"
+- assertVisible: "Dunsinane"
+- tapOn: "Calendar, tab.*"
+- tapOn: "Notifications"
+- extendedWaitUntil:
+    visible: ".*Malcolm Prince joined Forres Castle.*"
+    timeout: 15000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Malcolm Prince joined Forres Castle.*"
+      SEE: ".*Ariel Spirit.*"
+      WAIT_MS: "15000"
+# The castle's, on its members (Ariel is in it, not in Dunsinane): the page is
+# longer than the screen, and what is above them has gone up out of sight,
+# its description with it. Opened over Dunsinane it came at its top. (The
+# rehearsals' header is no measure: it is read with its count, and its
+# exact text is never there.)
+- extendedWaitUntil:
+    notVisible: "The great hall"
+    timeout: 10000
+- assertVisible: "Members"
+- takeScreenshot: 61-new-member-on-members

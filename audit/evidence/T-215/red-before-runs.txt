@@ -1,0 +1,275 @@
+T-215 review r1: the red run's failure reproduced on the base code, and the fix
+in the same conditions.
+
+Source of the red: T-019 checks on commit 48c438f5116656193c8668532d068ff94c6a0540,
+01.11.2026 11:09 local; its log is red-run-checks.log here. The failing test
+file there is blob b68f61e, the same in every run below.
+Base: c353ad1 (before 3f846c3). The three files the fix changes were put back
+with `git restore --source=c353ad1 -- jest.config.js server/package.json
+server/scripts/test.mjs` for the "before" runs, and `git restore --source=HEAD`
+for "after"; each run prints their blobs:
+  before: jest.config.js a9b8499, server/package.json c8ce7b9, server/scripts/test.mjs 03264c7
+  after:  jest.config.js a7d55db, server/package.json 079af86, server/scripts/test.mjs 90af97c
+Tree HEAD during all runs: dddd03e. Machine: 8 cores, 8 GB, Node 22.16.
+
+How (late-load-repro.mjs): one Jest run of the red run's 178 files in its order
+(redOrderSequencer.cjs, from red-run-checks.log), --runInBand as npm test ran
+before the fix, or --maxWorkers=1 as it runs after; GC traced; busy loops on
+the cores once the target starts (the red run's npm test took 486 s against
+about 400 s quiet here, so its machine was loaded). With "repeat 12", 12
+byte-identical copies of the target (membersAvailabilityRange.repeat<i>.test.js,
+made beside it for the run and removed after) run right after it in the same
+process: the same test again on the heap the red order left, a loop that fits
+in the session's 10 minutes per command where a new 450-s run per try does
+not. liveReporter.cjs prints each test of the target and its copies the
+moment it ends. Output below is the script's, piped through
+  grep -vE "^\[[0-3]?[0-9]?[0-9]\.[0-9] s\] PASS" | grep -v "^● [a-z]"
+(result lines before 400 s and the bullet lines of runtimeStartup dropped;
+runtimeStartup.test.js fails in every run of this session, before and after:
+it starts the app in a child that reads server/.env, which the OS forbids here).
+
+======================================================================
+1. BEFORE, red. in band, load from the target's start, 12 copies
+   node audit/evidence/T-215/late-load-repro.mjs in-band 2 0 598 12
+   (the terminal's own 10 minutes ended the command just after the deadline,
+   so the script's closing lines are missing; the copies were removed by hand,
+   no process was left; the script now cleans up on SIGTERM too)
+
+HEAD dddd03e72e888586b477b0c4bb977c5d23a84bf7
+diff from HEAD: M rehearsal-calendar-native/jest.config.js
+ M rehearsal-calendar-native/server/package.json
+ M rehearsal-calendar-native/server/scripts/test.mjs
+?? rehearsal-calendar-native/server/__tests__/routes/membersAvailabilityRange.repeat1.test.js
+[... repeat2-12 alike ...]
+blob a9b849999a7d566fc584b5a00654ec44bd2a9ec9 jest.config.js
+blob c8ce7b947ff6892784ca6e39395f225d2aa61bb9 server/package.json
+blob 03264c7dee57bc30258c3d048674f1423049a5bb server/scripts/test.mjs
+blob b68f61eba34cc1ef83f986f709e0cd848bec7985 server/__tests__/routes/membersAvailabilityRange.test.js
+blob b68f61eba34cc1ef83f986f709e0cd848bec7985 server/__tests__/routes/membersAvailabilityRange.repeat1.test.js
+[... repeat2-12: the same blob b68f61e ...]
+mode in-band (--runInBand), 190 files (12 copies of the target), load 2 busy loops per core from after server/__tests__/routes/membersAvailabilityRange.test.js (0 files before the target), deadline 598 s
+[69.8 s] FAIL backend server/__tests__/startup/runtimeStartup.test.js (9.663 s, 634 MB heap size)
+  GC at 109.7 s: Mark-Compact 968.9 -> 770.2 MB, pause 380.33 ms
+  GC at 161.8 s: Scavenge 1123.1 -> 1113.3 MB, pause 465.04 ms
+  GC at 179.6 s: Mark-Compact 1216.4 -> 952.6 MB, pause 550.46 ms
+  GC at 242.0 s: Mark-Compact 1289.5 -> 1103.9 MB, pause 719.96 ms
+  GC at 311.3 s: Scavenge 1439.0 -> 1426.6 MB, pause 422.75 ms
+  GC at 314.9 s: Mark-Compact 1432.8 -> 1275.0 MB, pause 1798.04 ms
+  GC at 333.5 s: Scavenge 1348.5 -> 1338.5 MB, pause 373.12 ms
+  GC at 401.0 s: Scavenge 1594.8 -> 1585.2 MB, pause 1041.08 ms
+  GC at 403.9 s: Mark-Compact 1587.0 -> 1414.6 MB, pause 2140.17 ms
+[405.9 s] PASS backend server/__tests__/routes/accountDeletionCleanup.test.js (10.533 s, 1436 MB heap size)
+[... 20 more PASS lines, 407.7-457.9 s, heap 1430 -> 1619 MB ...]
+[459.8 s] PASS backend server/__tests__/startup/fixtureBudget.test.js (1620 MB heap size)
+  GC at 466.0 s: Scavenge 1696.6 -> 1695.6 MB, pause 760.12 ms
+  GC at 467.7 s: Scavenge 1702.6 -> 1702.0 MB, pause 660.83 ms
+  GC at 471.0 s: Mark-Compact 1707.8 -> 1578.5 MB, pause 2091.21 ms
+  GC at 480.5 s: Scavenge 1740.1 -> 1737.6 MB, pause 1090.21 ms
+  GC at 484.0 s: Mark-Compact 1741.7 -> 1699.7 MB, pause 2714.33 ms
+  GC at 484.6 s: Scavenge 1702.3 -> 1701.7 MB, pause 386.71 ms
+[487.4 s] PASS frontend src/shared/utils/__tests__/clockFormat.test.ts (27.518 s, 1736 MB heap size)
+  GC at 489.6 s: Scavenge 1755.6 -> 1755.3 MB, pause 327.88 ms
+[493.9 s] PASS frontend src/__tests__/availabilityValidation.test.ts (5.733 s, 1821 MB heap size)
+  GC at 499.5 s: Mark-Compact 1826.8 -> 1702.9 MB, pause 2319.58 ms
+[505.0 s] PASS frontend src/shared/services/__tests__/api.timeout.test.ts (10.6 s, 1794 MB heap size)
+  GC at 510.7 s: Scavenge 1871.5 -> 1864.1 MB, pause 637.25 ms
+  GC at 511.6 s: Scavenge 1865.9 -> 1864.3 MB, pause 602.38 ms
+  GC at 512.6 s: Scavenge 1865.3 -> 1864.6 MB, pause 858.21 ms
+  GC at 515.1 s: Mark-Compact 1865.2 -> 1685.5 MB, pause 2357.08 ms
+[517.5 s] PASS frontend src/shared/services/calendar/__tests__/importSession.test.ts (12.522 s, 1697 MB heap size)
+LIVE [515.8 s] start server/__tests__/routes/membersAvailabilityRange.test.js
+=== 16 busy loops started at 520.2 s
+LIVE [518.8 s] passed "says whether they have ever recorded anything" 611 ms
+[522.9 s] PASS backend server/__tests__/routes/membersAvailabilityRange.test.js (5.273 s, 1722 MB heap size)
+  GC at 523.5 s: Scavenge 1726.3 -> 1711.3 MB, pause 370.46 ms
+  GC at 526.9 s: Scavenge 1728.8 -> 1717.7 MB, pause 419.46 ms
+LIVE [521.2 s] start server/__tests__/routes/membersAvailabilityRange.repeat1.test.js
+  GC at 532.0 s: Scavenge 1735.3 -> 1722.7 MB, pause 1742.17 ms
+  GC at 534.7 s: Scavenge 1723.5 -> 1722.8 MB, pause 2400.08 ms
+  GC at 537.2 s: Scavenge 1723.6 -> 1722.8 MB, pause 2295.33 ms
+  GC at 539.7 s: Scavenge 1723.8 -> 1723.1 MB, pause 2242.62 ms
+  GC at 541.8 s: Scavenge 1723.8 -> 1723.2 MB, pause 1933.46 ms
+  GC at 545.1 s: Scavenge 1724.0 -> 1723.2 MB, pause 3086.21 ms
+  GC at 547.3 s: Scavenge 1724.1 -> 1723.2 MB, pause 1984.58 ms
+  GC at 549.7 s: Scavenge 1724.1 -> 1723.2 MB, pause 2037.71 ms
+  GC at 552.2 s: Scavenge 1723.9 -> 1723.4 MB, pause 2253.79 ms
+LIVE [535.7 s] failed "says whether they have ever recorded anything" 6607 ms Error: thrown: "Exceeded timeout of 5000 ms for a test.
+  GC at 554.4 s: Scavenge 1724.1 -> 1723.5 MB, pause 1990.88 ms
+  GC at 557.5 s: Scavenge 1724.4 -> 1723.6 MB, pause 2901.88 ms
+  GC at 560.5 s: Scavenge 1724.5 -> 1723.6 MB, pause 2720.96 ms
+  GC at 564.0 s: Scavenge 1724.5 -> 1723.7 MB, pause 3285.75 ms
+  GC at 566.4 s: Scavenge 1724.5 -> 1723.7 MB, pause 2161.46 ms
+  GC at 569.3 s: Scavenge 1724.6 -> 1723.8 MB, pause 2668.54 ms
+  GC at 572.3 s: Scavenge 1724.6 -> 1723.8 MB, pause 2773.67 ms
+  GC at 575.1 s: Scavenge 1724.7 -> 1723.8 MB, pause 2647.75 ms
+  GC at 578.1 s: Scavenge 1724.7 -> 1723.8 MB, pause 2777.12 ms
+  GC at 581.0 s: Scavenge 1724.6 -> 1724.0 MB, pause 2585.12 ms
+  GC at 584.2 s: Scavenge 1724.8 -> 1724.1 MB, pause 2945.58 ms
+  GC at 592.0 s: Mark-Compact 1724.1 -> 1673.6 MB, pause 7736.04 ms
+LIVE [562.3 s] failed "does not hand out other members’ email addresses" 20790 ms Error: thrown: "Exceeded timeout of 5000 ms for a test.
+LIVE [590.4 s] failed "leaves a range inside one day alone" 25565 ms Error: thrown: "Exceeded timeout of 5000 ms for a test.
+  GC at 593.3 s: Scavenge 1675.9 -> 1674.4 MB, pause 315.21 ms
+  GC at 593.7 s: Scavenge 1676.2 -> 1674.5 MB, pause 357.67 ms
+  GC at 594.7 s: Scavenge 1676.4 -> 1674.8 MB, pause 372.58 ms
+[597.0 s] FAIL backend server/__tests__/routes/membersAvailabilityRange.repeat1.test.js (73.972 s, 1678 MB heap size)
+thrown: "Exceeded timeout of 5000 ms for a test.
+
+   The red run's failure, the same test, the same message: "says whether they
+   have ever recorded anything" past 5000 ms (6607), in a file that took 74 s
+   (the red run's: 12.3 s). The heap is 1.72 GB; scavenges that free under
+   1 MB stop the process for 2-3 s each, back to back, for 60 s, until a
+   7.7 s mark-compact. (The LIVE clock starts with Jest, about 2 s after the
+   script's.)
+
+======================================================================
+2. BEFORE, the same, again (deadline 575 s so the script closes itself)
+   node audit/evidence/T-215/late-load-repro.mjs in-band 2 0 575 12
+
+[... header as in 1, blobs a9b8499 c8ce7b9 03264c7, target and copies b68f61e ...]
+[474.8 s] PASS frontend src/shared/services/calendar/__tests__/importSession.test.ts (1549 MB heap size)
+LIVE [472.7 s] start server/__tests__/routes/membersAvailabilityRange.test.js
+=== 16 busy loops started at 477.7 s
+LIVE [475.9 s] passed "says whether they have ever recorded anything" 449 ms
+  GC at 478.5 s: Scavenge 1574.8 -> 1559.8 MB, pause 318.75 ms
+[483.2 s] PASS backend server/__tests__/routes/membersAvailabilityRange.test.js (8.189 s, 1572 MB heap size)
+  GC at 485.5 s: Scavenge 1576.0 -> 1561.0 MB, pause 1784.29 ms
+  GC at 489.4 s: Scavenge 1562.2 -> 1562.1 MB, pause 3070.92 ms
+  [... 21 more scavenges of 2.3-3.8 s each, 492.9-555.9 s, heap 1562 -> 1568 MB ...]
+  GC at 562.7 s: Mark-Compact 1568.1 -> 1490.7 MB, pause 6633.54 ms
+LIVE [481.3 s] start server/__tests__/routes/membersAvailabilityRange.repeat1.test.js
+LIVE [565.0 s] passed "says whether they have ever recorded anything" 584 ms
+[569.3 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat1.test.js (85.744 s, 1502 MB heap size)
+LIVE [567.2 s] start server/__tests__/routes/membersAvailabilityRange.repeat2.test.js
+LIVE [572.3 s] passed "says whether they have ever recorded anything" 343 ms
+=== deadline reached at 575.0 s, run killed
+=== "says whether they have ever recorded anything": 0 failed, 3 passed; other tests of the target and its copies failed: 0
+=== 35 pauses of 300 ms or more; all pauses together 121.7 s
+=== jest exit null, 575.2 s
+
+   The same stall, 80 s, but it fell in repeat1's beforeAll (the file took
+   85.7 s, its first test began only after the mark-compact): no test was
+   waiting on a timer through it.
+
+======================================================================
+3. BEFORE, the same, a third time
+   node audit/evidence/T-215/late-load-repro.mjs in-band 2 0 575 12
+
+[... header as in 1 ...]
+[451.3 s] PASS frontend src/shared/services/calendar/__tests__/importSession.test.ts (1625 MB heap size)
+  GC at 457.6 s: Mark-Compact 1630.9 -> 1469.4 MB, pause 1307.67 ms
+LIVE [449.8 s] start server/__tests__/routes/membersAvailabilityRange.test.js
+=== 16 busy loops started at 460.3 s
+LIVE [458.9 s] passed "says whether they have ever recorded anything" 534 ms
+[463.6 s] PASS backend server/__tests__/routes/membersAvailabilityRange.test.js (11.818 s, 1485 MB heap size)
+[... repeat1-7 start and pass their first test, 317-462 ms, files 7.4-9.7 s, heap 1498 -> 1561 MB,
+     scavenges of 0.3-0.7 s between ...]
+LIVE [514.6 s] start server/__tests__/routes/membersAvailabilityRange.repeat7.test.js
+LIVE [520.3 s] passed "says whether they have ever recorded anything" 347 ms
+  GC at 526.3 s: Scavenge 1583.2 -> 1568.7 MB, pause 460.42 ms
+  GC at 528.5 s: Scavenge 1569.6 -> 1568.6 MB, pause 1592.83 ms
+  GC at 531.3 s: Scavenge 1569.6 -> 1568.8 MB, pause 2578.54 ms
+  [... 14 more scavenges of 2.6-4.0 s each, 534.3-574.3 s, heap 1568.7 -> 1569.6 MB ...]
+=== deadline reached at 575.0 s, run killed
+=== "says whether they have ever recorded anything": 0 failed, 8 passed; other tests of the target and its copies failed: 0
+=== 44 pauses of 300 ms or more; all pauses together 94.7 s
+=== jest exit null, 575.3 s
+
+   The stall began in repeat7 after its first test and ran into the deadline.
+
+======================================================================
+4. AFTER, one worker, workerIdleMemoryLimit 512MB, the same order, load and copies
+   node audit/evidence/T-215/late-load-repro.mjs one-worker 2 0 575 12
+
+HEAD dddd03e72e888586b477b0c4bb977c5d23a84bf7
+diff from HEAD: ?? rehearsal-calendar-native/server/__tests__/routes/membersAvailabilityRange.repeat1.test.js
+[... repeat2-12 alike: only the copies differ from HEAD ...]
+blob a7d55db268de307370cfb6e3cee2bd8326c7edba jest.config.js
+blob 079af86616557ac2fe3213e5e8944592831ba64f server/package.json
+blob 90af97c536a43f5f3159e6f10bd229cbc2758979 server/scripts/test.mjs
+blob b68f61eba34cc1ef83f986f709e0cd848bec7985 server/__tests__/routes/membersAvailabilityRange.test.js
+[... repeat1-12: the same blob b68f61e ...]
+mode one-worker (--maxWorkers=1), 190 files (12 copies of the target), load 2 busy loops per core from after server/__tests__/routes/membersAvailabilityRange.test.js (0 files before the target), deadline 575 s
+[100.7 s] FAIL backend server/__tests__/startup/runtimeStartup.test.js (9.665 s, 493 MB heap size)
+[402.7 s] PASS frontend src/shared/services/calendar/__tests__/importSession.test.ts (10.195 s, 345 MB heap size)
+LIVE [400.9 s] start server/__tests__/routes/membersAvailabilityRange.test.js
+=== 16 busy loops started at 402.9 s
+LIVE [403.7 s] passed "says whether they have ever recorded anything" 333 ms
+[406.6 s] PASS backend server/__tests__/routes/membersAvailabilityRange.test.js (361 MB heap size)
+LIVE [404.8 s] start server/__tests__/routes/membersAvailabilityRange.repeat1.test.js
+LIVE [407.9 s] passed "says whether they have ever recorded anything" 310 ms
+[410.5 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat1.test.js (372 MB heap size)
+LIVE [408.7 s] start server/__tests__/routes/membersAvailabilityRange.repeat2.test.js
+LIVE [410.1 s] passed "says whether they have ever recorded anything" 244 ms
+[412.8 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat2.test.js (381 MB heap size)
+LIVE [411.0 s] start server/__tests__/routes/membersAvailabilityRange.repeat3.test.js
+LIVE [413.8 s] passed "says whether they have ever recorded anything" 256 ms
+[416.5 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat3.test.js (391 MB heap size)
+LIVE [414.7 s] start server/__tests__/routes/membersAvailabilityRange.repeat4.test.js
+LIVE [416.0 s] passed "says whether they have ever recorded anything" 228 ms
+[418.7 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat4.test.js (400 MB heap size)
+LIVE [416.9 s] start server/__tests__/routes/membersAvailabilityRange.repeat5.test.js
+LIVE [419.6 s] passed "says whether they have ever recorded anything" 356 ms
+[422.3 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat5.test.js (409 MB heap size)
+LIVE [420.5 s] start server/__tests__/routes/membersAvailabilityRange.repeat6.test.js
+LIVE [422.7 s] passed "says whether they have ever recorded anything" 326 ms
+[425.4 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat6.test.js (417 MB heap size)
+LIVE [423.6 s] start server/__tests__/routes/membersAvailabilityRange.repeat7.test.js
+LIVE [425.4 s] passed "says whether they have ever recorded anything" 134 ms
+[428.1 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat7.test.js (427 MB heap size)
+LIVE [426.3 s] start server/__tests__/routes/membersAvailabilityRange.repeat8.test.js
+LIVE [428.8 s] passed "says whether they have ever recorded anything" 214 ms
+[431.5 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat8.test.js (437 MB heap size)
+LIVE [429.8 s] start server/__tests__/routes/membersAvailabilityRange.repeat9.test.js
+LIVE [432.0 s] passed "says whether they have ever recorded anything" 404 ms
+[434.8 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat9.test.js (448 MB heap size)
+LIVE [433.0 s] start server/__tests__/routes/membersAvailabilityRange.repeat10.test.js
+LIVE [435.0 s] passed "says whether they have ever recorded anything" 260 ms
+[437.6 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat10.test.js (465 MB heap size)
+LIVE [435.8 s] start server/__tests__/routes/membersAvailabilityRange.repeat11.test.js
+LIVE [437.6 s] passed "says whether they have ever recorded anything" 305 ms
+[440.3 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat11.test.js (474 MB heap size)
+LIVE [438.6 s] start server/__tests__/routes/membersAvailabilityRange.repeat12.test.js
+LIVE [441.1 s] passed "says whether they have ever recorded anything" 409 ms
+[443.8 s] PASS backend server/__tests__/routes/membersAvailabilityRange.repeat12.test.js (485 MB heap size)
+[444.2 s] FAIL server/__tests__/startup/runtimeStartup.test.js (9.665 s, 493 MB heap size)
+Tests:       8 failed, 2142 passed, 2150 total
+Time:        442.57 s
+=== "says whether they have ever recorded anything": 0 failed, 13 passed; other tests of the target and its copies failed: 0
+=== 0 pauses of 300 ms or more; all pauses together 20.2 s
+=== jest exit 1, 444.5 s
+
+   All 13 runs of the file pass, every one of its 130 tests; the heap stays
+   at 345-485 MB, no pause reaches 300 ms in the whole run (before: 35-44
+   pauses, up to 7.7 s), and the run ends at 444 s with every copy done,
+   where no "before" run got through its copies in 575 s.
+
+======================================================================
+5. BEFORE, without copies: ten runs of the red order alone, in band, base
+   blobs as above, load started at various points near the end (the script
+   then had no copies and no live reporter; first test of the target as
+   Jest's verbose line). Every run stalls in its last dozen files once the
+   heap passes 1.5-1.6 GB; where the stall falls decides which file pays.
+
+   load            stall (pauses back to back)                  falls on                      target's first test
+   2/core, -12     512-584 s, 17 scavenges 2.5-6.2 s, MC 9.9 s  the target (file still        killed at the deadline
+                                                                running at 585 s)             before its verdict
+   2/core, -3      460-527 s, 18 scavenges 2.7-4.2 s, MC 7.3 s  api.timeout, importSession    252 ms
+   2/core, -6      480-513 s, 7 scavenges 2.6-4.3 s, MC 7.3 s   availabilityValidation...     540 ms
+   none (trigger   440-450 s, 9 scavenges 0.6-0.8 s, MC 2.6 s   the target: file 16.3 s       4284 ms, the second test 7426 ms
+   after target)
+   2/core, -1      none in the target (MC 2.8 s just before)    -                             406 ms
+   1/core, -12     476-483 s, scavenge 2.1 s, MC 5.0 s          availabilityValidation 16.9 s 184 ms
+   2/core, -12     419-479 s, 15 scavenges 1.3-4.8 s, MC 7.9 s  fixtureBudget 62.9 s          376 ms
+   2/core, -4      547-571 s, scavenges 2.6-4.2 s, MC 8.4 s     right after the target        774 ms
+   2/core, -12     MC 1.7 s at 1.6 GB (machine busy with other  inviteLimits.test.js FAILED:  not reached by 598 s
+   (slow machine)  work: runtimeStartup at 219 s)               "Exceeded timeout of 5000 ms"
+   3/core, at the  MCs of 1.5-4.8 s every 15-40 s from 1.6 GB   files before the target       not reached by 598 s
+   target          (machine busy as above)
+   (MC: mark-compact; "-12": load from 12 files before the target)
+
+   Two runs side by side (late-load-pair.mjs, in band, 1/core, -12) to get
+   two tries per 10 minutes: neither got past the twelfth file before the
+   target by 595 s.
+
+   This is why the copies: the stall is certain, the file it lands on is not,
+   and each try costs a whole 450-s run.

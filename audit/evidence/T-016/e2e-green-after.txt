@@ -1,0 +1,17 @@
+# 1d24584 (fix f8e617d). 2026-10-31.
+$ npm run e2e -- e2e/flows/51-rehearsal-swipe-and-details.yaml
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] An admin swipes a rehearsal away, an actor has no swipe (2m 55s)
+
+1/1 Flow Passed in 2m 55s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+# The flows through the card and the details that were there before:
+$ npm run e2e -- e2e/flows/04-mark-seen.yaml e2e/flows/40-details-seen-one-model.yaml e2e/flows/42-details-count-projects-late.yaml
+[Passed] Mark a rehearsal seen (2m 23s)
+[Passed] Details and the card read one seen mark (1m 7s)
+[Passed] Details count when the projects come late (57s)
+3/3 Flows Passed in 4m 28s

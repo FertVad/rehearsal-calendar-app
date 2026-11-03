@@ -9,7 +9,7 @@
  * opens nothing (review R3-24, R3-25).
  */
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, TextInput } from 'react-native';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import RegisterScreen from '../RegisterScreen';
 import { AuthFlowError } from '../../utils/authErrors';
@@ -25,19 +25,28 @@ jest.mock('../../../../shared/components', () => {
   const React = require('react');
   const { TouchableOpacity, Text } = require('react-native');
   return {
-    GlassButton: ({ title, onPress, disabled, loading }: any) => React.createElement(TouchableOpacity,
-      { onPress: disabled || loading ? undefined : onPress, disabled: disabled || loading }, React.createElement(Text, null, title)),
+    GlassButton: ({ title, onPress, disabled, loading, testID }: any) => React.createElement(TouchableOpacity,
+      { testID, onPress: disabled || loading ? undefined : onPress, disabled: disabled || loading, accessibilityState: { disabled: !!disabled } },
+      React.createElement(Text, null, title)),
   };
 });
 
 const navigation: any = { navigate: jest.fn(), popTo: jest.fn() };
 const form = () => render(<RegisterScreen navigation={navigation} route={{ key: 'r', name: 'Register' } as any} />);
-function fill(view: ReturnType<typeof form>, values: { first?: string; email?: string; password?: string; confirm?: string }) {
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.firstNamePlaceholder), values.first ?? 'Анна');
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.emailPlaceholder), values.email ?? 'anna@example.com');
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.passwordMinLength), values.password ?? 'long-enough-1');
-  fireEvent.changeText(view.getByPlaceholderText(t.auth.confirmPasswordPlaceholder), values.confirm ?? values.password ?? 'long-enough-1');
+// The fields by their place in the form, the button by its title: the form
+// before T-015 had no ids, and its red run must reach what it did.
+const FIELDS = ['first', 'last', 'email', 'password', 'confirm'] as const;
+const field = (view: ReturnType<typeof form>, name: typeof FIELDS[number]) =>
+  view.UNSAFE_getAllByType(TextInput)[FIELDS.indexOf(name)];
+const button = (view: ReturnType<typeof form>) => view.getByText(t.auth.registerButton);
+function fill(view: ReturnType<typeof form>, values: { first?: string; last?: string; email?: string; password?: string; confirm?: string }) {
+  fireEvent.changeText(field(view, 'first'), values.first ?? 'Анна');
+  if (values.last !== undefined) fireEvent.changeText(field(view, 'last'), values.last);
+  fireEvent.changeText(field(view, 'email'), values.email ?? 'anna@example.com');
+  fireEvent.changeText(field(view, 'password'), values.password ?? 'long-enough-1');
+  fireEvent.changeText(field(view, 'confirm'), values.confirm ?? values.password ?? 'long-enough-1');
 }
+const submit = (view: ReturnType<typeof form>) => act(async () => { fireEvent.press(button(view)); });
 
 beforeEach(() => {
   (Alert.alert as jest.Mock).mockReset();
@@ -77,20 +86,68 @@ it('names the server name rule rather than repeating its English', async () => {
 it('stops a name of spaces and an over-long password before asking the server', async () => {
   const view = form();
   fill(view, { first: '   ' });
-  await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
-  expect(Alert.alert).toHaveBeenLastCalledWith(t.common.error, t.auth.fillAllFields);
+  expect(button(view)).toBeDisabled();
+  await submit(view);
   fill(view, { password: 'я'.repeat(37) }); // 74 bytes in UTF-8
-  await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
-  expect(Alert.alert).toHaveBeenLastCalledWith(t.common.error, t.auth.passwordRule);
+  await submit(view);
+  expect(view.getByText(t.auth.passwordRule)).toBeTruthy();
   expect(mockAuth.register).not.toHaveBeenCalled();
+  expect(Alert.alert).not.toHaveBeenCalled();
 });
 
 it('counts the password in characters like the server, not in UTF-16 units', async () => {
   const view = form();
   fill(view, { password: '😀'.repeat(4) }); // 8 units, 4 characters
-  await act(async () => { fireEvent.press(view.getByText(t.auth.registerButton)); });
-  expect(Alert.alert).toHaveBeenLastCalledWith(t.common.error, t.auth.passwordRule);
+  await submit(view);
+  expect(view.getByText(t.auth.passwordRule)).toBeTruthy();
   expect(mockAuth.register).not.toHaveBeenCalled();
+});
+
+it('keeps the button off until the required fields are filled, with no alert (T-015)', async () => {
+  const view = form();
+  expect(button(view)).toBeDisabled();
+  await submit(view);
+  fill(view, { confirm: '' });
+  expect(button(view)).toBeDisabled();
+  await submit(view);
+  expect(Alert.alert).not.toHaveBeenCalled();
+  expect(mockAuth.register).not.toHaveBeenCalled();
+  fireEvent.changeText(field(view, 'confirm'), 'long-enough-1');
+  expect(button(view)).toBeEnabled();
+});
+
+it('says each problem under its own field, not in an alert, and forgets it on an edit (T-015)', async () => {
+  const view = form();
+  fill(view, { last: 'я'.repeat(101), email: 'not-an-address', confirm: 'something-else' });
+  await submit(view);
+  expect(Alert.alert).not.toHaveBeenCalled();
+  expect(mockAuth.register).not.toHaveBeenCalled();
+  expect(view.getByText(t.auth.nameInvalid)).toBeTruthy();
+  expect(view.getByText(t.auth.invalidEmail)).toBeTruthy();
+  expect(view.getByText(t.auth.passwordsMismatch)).toBeTruthy();
+  fireEvent.changeText(field(view, 'email'), 'anna@example.com');
+  expect(view.queryByText(t.auth.invalidEmail)).toBeNull();
+  expect(view.getByText(t.auth.passwordsMismatch)).toBeTruthy();
+});
+
+it('Return goes field to field, and the last one sends the form (T-015)', async () => {
+  const view = form();
+  (['first', 'last', 'email', 'password'] as const).forEach((name) => expect(field(view, name).props.returnKeyType).toBe('next'));
+  expect(field(view, 'confirm').props.returnKeyType).toBe('go');
+  fill(view, {});
+  await act(async () => { fireEvent(field(view, 'confirm'), 'submitEditing'); });
+  expect(mockAuth.register).toHaveBeenCalledWith('anna@example.com', 'long-enough-1', 'Анна', undefined, 'ru');
+});
+
+it('names the rule under the password from the rule itself, and shows the password on request (T-015)', () => {
+  const { PASSWORD_MIN_LENGTH } = require('../../utils/accountRules');
+  const view = form();
+  expect(view.getByText(t.auth.passwordHint(PASSWORD_MIN_LENGTH))).toBeTruthy();
+  expect(t.auth.passwordHint(PASSWORD_MIN_LENGTH)).toBe('Минимум 8 символов');
+  expect(field(view, 'password').props.placeholder).toBe(t.auth.password);
+  expect(view.getAllByLabelText(t.auth.showPassword)).toHaveLength(2);
+  fireEvent.press(view.getAllByLabelText(t.auth.showPassword)[0]);
+  expect(field(view, 'password').props.secureTextEntry).toBe(false);
 });
 
 it('offers both sign-in and a password reset for a taken address (R3 contract)', async () => {

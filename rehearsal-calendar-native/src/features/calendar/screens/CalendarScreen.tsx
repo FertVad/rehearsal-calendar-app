@@ -1,29 +1,29 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { CalendarScreenNavigation } from '../../../navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
+import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import TodayRehearsals from '../components/TodayRehearsals';
 import RehearsalCard from '../components/RehearsalCard';
 import SmartPlannerButton from '../components/SmartPlannerButton';
 import { Rehearsal } from '../../../shared/types';
-import { rehearsalsAPI } from '../../../shared/services/api';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useUnread } from '../../../contexts/UnreadContext';
-import { getDateLocale } from '../../../shared/utils/locale';
-import { addDays, formatDateLocalized } from '../../../shared/utils/time';
+import { formatDate } from '../../../shared/utils/dateFormat';
+import { addDays } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
 import { rehearsalOnDate } from '../../../shared/utils/rehearsalDays';
+import { canScheduleAny } from '../../../shared/utils/rehearsalRights';
 import { useRehearsals } from '../hooks';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { calendarScreenStyles as styles } from '../styles';
-import { unexportRehearsal } from '../../../shared/services/calendarSync';
 
-import { logger } from '../../../shared/utils/logger';
 export default function CalendarScreen() {
   const navigation = useNavigation<CalendarScreenNavigation>();
   const { projects } = useProjects();
@@ -44,7 +44,7 @@ export default function CalendarScreen() {
 
   // Check if user has any admin role
   const hasAnyAdminRole = useMemo(() =>
-    projects.some(p => p.is_admin),
+    canScheduleAny(projects),
     [projects]
   );
 
@@ -78,6 +78,7 @@ export default function CalendarScreen() {
     refreshing,
     error,
     fetchRehearsals,
+    refresh,
   } = useRehearsals(projects, filterProjectId);
 
   // Straight from the store, so a push landing while this screen is open moves
@@ -100,11 +101,6 @@ export default function CalendarScreen() {
     });
   }, [navigation]);
 
-  // Pull-to-refresh handler (forces update, ignores cache)
-  const handleRefresh = useCallback(() => {
-    fetchRehearsals(true);
-  }, [fetchRehearsals]);
-
   // Fetch rehearsals when screen is focused (with smart caching)
   // A push announcing a rehearsal arrives while this screen is already in
   // focus, so the focus effect below will not fire again. Reload on the signal
@@ -123,59 +119,8 @@ export default function CalendarScreen() {
     fetchRehearsals(true);
   }, [filterProjectId, fetchRehearsals]);
 
-  const handleDeleteRehearsal = async (rehearsalId: string) => {
-    // Find the rehearsal to get its projectId
-    const rehearsal = rehearsals.find(r => r.id === rehearsalId);
-
-    if (!rehearsal) {
-      logger.error('[CalendarScreen] Rehearsal not found:', rehearsalId);
-      Alert.alert(t.common.error, 'Rehearsal not found');
-      return;
-    }
-
-    // Try to get projectId from rehearsal object (check both camelCase and snake_case)
-    const projectId = rehearsal.projectId || (rehearsal as any)?.project_id;
-
-    if (!projectId) {
-      logger.error('[CalendarScreen] projectId missing for rehearsal:', rehearsalId, rehearsal);
-      Alert.alert(t.common.error, 'Cannot delete: project ID is missing');
-      return;
-    }
-
-    Alert.alert(
-      t.rehearsals.deleteTitle,
-      t.rehearsals.deleteMessage,
-      [
-        { text: t.common.cancel, style: 'cancel' },
-        {
-          text: t.rehearsals.deleteConfirm,
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await rehearsalsAPI.delete(projectId, rehearsalId);
-
-              // Its event, in the sync's queue: after a run already going,
-              // which may have read the rehearsal before it was deleted and
-              // would put the event back.
-              unexportRehearsal(rehearsalId).catch((syncError) => {
-                // Don't fail the whole operation if unsync fails
-                logger.error('[CalendarScreen] Failed to unsync from calendar:', syncError);
-              });
-
-              // Force refetch rehearsals after deletion (bypass cache)
-              await fetchRehearsals(true);
-
-              Alert.alert(t.common.success, t.rehearsals.deleteSuccess);
-            } catch (err: any) {
-              logger.error('[CalendarScreen] Failed to delete rehearsal:', err);
-              const errorMessage = err.response?.data?.error || err.message || t.rehearsals.createError;
-              Alert.alert(t.common.error, errorMessage);
-            }
-          },
-        },
-      ]
-    );
-  };
+  // A card's delete is the card's own now (useDeleteRehearsal), as it is in
+  // the details; the list reloads on the change it announces, above.
 
   const getFilterLabel = () => {
     if (filterProjectId === null) return t.calendar.allProjects;
@@ -227,19 +172,19 @@ export default function CalendarScreen() {
 
     if (dateStr === today) return t.common.today;
     if (dateStr === tomorrowStr) return t.calendar.tomorrow || 'Tomorrow';
-    const locale = getDateLocale(language);
-    return formatDateLocalized(dateStr, { day: 'numeric', month: 'short', weekday: 'short' }, locale);
+    return formatDate(dateStr, 'weekdayDayMonthShort', language);
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScreenHeader kind="root" title={t.nav.calendar} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={handleRefresh}
+            onRefresh={refresh}
             tintColor={Colors.accent.purple}
             colors={[Colors.accent.purple]}
           />
@@ -273,22 +218,20 @@ export default function CalendarScreen() {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <IconButton
             style={styles.bellButton}
             onPress={() => navigation.navigate('Notifications')}
             accessibilityLabel={t.notifications.title}
+            icon={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
+            size={22}
+            color={unreadCount > 0 ? Colors.accent.purple : Colors.text.secondary}
           >
-            <Ionicons
-              name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
-              size={22}
-              color={unreadCount > 0 ? Colors.accent.purple : Colors.text.secondary}
-            />
             {unreadCount > 0 && (
               <View style={styles.bellBadge} testID="unread-badge">
                 <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
               </View>
             )}
-          </TouchableOpacity>
+          </IconButton>
         </View>
 
         {/* Filter Dropdown */}
@@ -340,7 +283,9 @@ export default function CalendarScreen() {
           rehearsals={rehearsals}
           onDaySelect={setSelectedDate}
           onShowToday={showToday}
-          onDayLongPress={handleDayLongPress}
+          // A rehearsal on the day pressed, for someone with a project to put
+          // one in; for anyone else the press does nothing (T-012).
+          onDayLongPress={hasAnyAdminRole ? handleDayLongPress : undefined}
           selectedDate={selectedDate}
         />
 
@@ -361,7 +306,6 @@ export default function CalendarScreen() {
           selectedDate={selectedDate}
           loading={loading}
           projects={projects}
-          onDeleteRehearsal={handleDeleteRehearsal}
           onOpenRehearsal={openDetails}
         />
 
@@ -412,7 +356,6 @@ export default function CalendarScreen() {
                     projectName={project?.name || rehearsal.projectName}
                     isAdmin={isAdminForThisRehearsal}
                     onPress={() => openDetails(rehearsal)}
-                    onDelete={handleDeleteRehearsal}
                   />
                 );
               })}

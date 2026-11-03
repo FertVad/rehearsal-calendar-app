@@ -41,6 +41,7 @@
     "supertest": "^7.2.2"
   },
   "jest": {
+    "workerIdleMemoryLimit": "512MB",
     "testMatch": [
       "**/__tests__/**/*.test.js"
     ],

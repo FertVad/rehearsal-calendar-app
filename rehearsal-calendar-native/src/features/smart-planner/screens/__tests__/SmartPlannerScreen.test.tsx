@@ -17,7 +17,8 @@
  * that prefilledMemberIds carries the new project's IDs, not the old one's.
  */
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
+import { render, fireEvent, act, within } from '@testing-library/react-native';
 import { translations } from '../../../../i18n/translations';
 import { projectsAPI } from '../../../../shared/services/api';
 import SmartPlannerScreen from '../SmartPlannerScreen';
@@ -45,9 +46,11 @@ jest.mock('../../../../contexts/ProjectContext', () => ({
     projects: [
       { id: 'A', name: 'Project A', is_admin: true, timezone: 'UTC', created_at: '2026-01-01T00:00:00Z' },
       { id: 'B', name: 'Project B', is_admin: true, timezone: 'UTC', created_at: '2026-01-02T00:00:00Z' },
+      { id: 'C', name: 'Project C', is_admin: false, timezone: 'UTC', created_at: '2026-01-03T00:00:00Z' },
     ],
   }),
 }));
+jest.mock('../../../../hooks/useWeekStart', () => ({ useWeekStart: () => 'monday' }));
 jest.mock('../../../../shared/services/api', () => ({
   projectsAPI: {
     getProject: jest.fn(),
@@ -75,6 +78,7 @@ const member = (userId: string) => ({
 const MEMBERS: Record<string, ReturnType<typeof member>[]> = {
   A: ['a1', 'a2', 'a3'].map(member),
   B: ['b1', 'b2'].map(member),
+  C: ['c1', 'c2'].map(member),
 };
 
 const getProject = projectsAPI.getProject as jest.Mock;
@@ -123,7 +127,8 @@ describe('DP01 — roster reload within the same project (R5-01)', () => {
     }));
 
     // Trigger reload by switching to the Month period (changes date range).
-    fireEvent.press(screen.getByText(t.smartPlanner.month));
+    fireEvent.press(screen.getByTestId('planner-period'));
+    fireEvent.press(screen.getByTestId('planner-period-month'));
     await settle();
     await settle();
     await settle();
@@ -144,7 +149,125 @@ describe('The range under the period (cause fix 14)', () => {
     const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
     await settle();
 
-    expect(screen.getByText('1-7 Jan')).toBeTruthy();
+    expect(screen.getByText('Jan 1 – Jan 7')).toBeTruthy();
+  });
+});
+
+describe('The participants sheet over the planner (T-010)', () => {
+  it('takes a tap with its search\'s keyboard up', async () => {
+    // The sheet is inside the screen's scroll for React's touches; a scroll
+    // left to its default caught the tap to put the keyboard away.
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+
+    const scroll = screen.UNSAFE_getByType('ScrollView' as any);
+    expect(scroll.props.keyboardShouldPersistTaps).toBe('handled');
+    expect(scroll.findByProps({ testID: 'participants-row' })).toBeTruthy();
+  });
+});
+
+// T-012. "+ Add" opened the form for anyone, and handed it the whole slot:
+// "All day" became a rehearsal from 09:00 to 23:00.
+describe('A slot\'s "+ Add" (T-012)', () => {
+  it('gives the form the slot\'s start, and no end', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    expect(screen.getAllByText(t.smartPlanner.allDay).length).toBeGreaterThan(0);
+    fireEvent.press(screen.getByTestId('planner-add-2026-01-01-09:00'));
+
+    expect(navigate).toHaveBeenCalledWith('AddRehearsal', expect.objectContaining({
+      projectId: 'A', prefilledDate: '2026-01-01', prefilledTime: '09:00',
+    }));
+    expect(navigate.mock.calls[0][1]).not.toHaveProperty('prefilledEndTime');
+  });
+
+  it('is shown only to an admin of the project', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('C')} />);
+    await settle();
+    await settle();
+
+    // The slots are there, to read; nothing on them opens the form.
+    expect(screen.getAllByText(t.smartPlanner.allDay).length).toBeGreaterThan(0);
+    expect(screen.queryByText(t.smartPlanner.addButton)).toBeNull();
+  });
+});
+
+// T-012: the segment chose "Select Dates" on the tap, and a cancelled picker
+// left it selected over the week's dates.
+describe('Cancel in "Select Dates"', () => {
+  it('leaves the period it was', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+
+    fireEvent.press(screen.getByTestId('planner-period'));
+    fireEvent.press(screen.getByTestId('planner-period-custom'));
+    fireEvent.press(screen.getByTestId('date-range-cancel'));
+    await settle();
+
+    expect(within(screen.getByTestId('planner-period')).getByText(t.smartPlanner.week)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('planner-period'));
+    expect(screen.getByTestId('planner-period-week').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('planner-period-custom').props.accessibilityState).toMatchObject({ selected: false });
+  });
+});
+
+// T-020 (owner, 30.10.2026): a day of one slot took 167 pt, a week four
+// screens, and the filters 252 pt above the first recommendation.
+describe('The planner\'s list, dense (T-020)', () => {
+  const height = (node: { props: { style: unknown } }) => StyleSheet.flatten(node.props.style as any).height;
+
+  it('heads a day with 28 pt and gives a slot a row of 52 (T-026)', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    expect(height(screen.getByTestId('planner-day-2026-01-01'))).toBe(28);
+    expect(height(screen.getByTestId('planner-row-2026-01-01-09:00'))).toBe(52);
+  });
+
+  it('puts the project, the period and the people in one row of 44 pt', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    const row = screen.getByTestId('planner-filters');
+    expect(height(row)).toBe(44);
+    expect(within(row).getByTestId('planner-project')).toBeTruthy();
+    expect(within(row).getByText('Project A')).toBeTruthy();
+    expect(within(row).getByText(t.smartPlanner.week)).toBeTruthy();
+    expect(within(row).getByText('Participants: all (3)')).toBeTruthy();
+    // Nothing else stands above the list.
+    expect(screen.queryByText(t.smartPlanner.period)).toBeNull();
+  });
+
+  it('opens each filter\'s own choice from the row', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    // The period: closed until tapped, and the one picked names it in the row.
+    expect(screen.queryByTestId('planner-period-month')).toBeNull();
+    fireEvent.press(screen.getByTestId('planner-period'));
+    fireEvent.press(screen.getByTestId('planner-period-month'));
+    await settle();
+    expect(screen.queryByTestId('planner-period-month')).toBeNull();
+    expect(within(screen.getByTestId('planner-period')).getByText(t.smartPlanner.month)).toBeTruthy();
+    expect(screen.getByText('Jan 1 – Jan 30')).toBeTruthy();
+
+    // The project: the projects this person runs.
+    expect(screen.queryByText('Project B')).toBeNull();
+    fireEvent.press(screen.getByTestId('planner-project'));
+    expect(screen.getByText('Project B')).toBeTruthy();
+    expect(screen.queryByText('Project C')).toBeNull();
+
+    // The people: their sheet.
+    fireEvent.press(screen.getByTestId('participants-row'));
+    expect(screen.getByTestId('participants-all')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('participant-a2'));
+    await settle();
+    expect(screen.getByText('Participants: 2 of 3')).toBeTruthy();
   });
 });
 

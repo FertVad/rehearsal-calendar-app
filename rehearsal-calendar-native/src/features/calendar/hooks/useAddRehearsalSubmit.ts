@@ -14,9 +14,11 @@ import {
   isEmptyClockRange,
 } from '../../../shared/utils/time';
 import { exportRehearsal } from '../../../shared/services/calendarSync';
+import { emitDataChanged } from '../../../shared/utils/dataChanged';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 import { useTimezone } from '../../../shared/hooks/useClock';
+import type { RehearsalFields } from './useAddRehearsalForm';
 
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
@@ -40,6 +42,10 @@ interface UseAddRehearsalSubmitProps {
   availabilityFailed: boolean;
   reloadAvailability: () => void;
   resetForm: () => void;
+  /** What the form holds, as it is sent (useAddRehearsalForm). */
+  fields: RehearsalFields;
+  /** What was sent is saved (useAddRehearsalForm). */
+  markSaved: (sent: RehearsalFields) => void;
   t: any;
   isEditMode: boolean;
   rehearsalId?: string;
@@ -62,6 +68,8 @@ export function useAddRehearsalSubmit({
   availabilityFailed,
   reloadAvailability,
   resetForm,
+  fields,
+  markSaved,
   t,
   isEditMode,
   rehearsalId,
@@ -71,8 +79,15 @@ export function useAddRehearsalSubmit({
   const idempotency = useIdempotencyKey();
   const userTimezone = useTimezone();
 
-  const saveRehearsal = async () => {
+  /**
+   * True once saved. `leaving`: saved from the question on the way out, which
+   * closes the form itself — an alert raised over a sheet being dismissed
+   * would go with it (useLeaveGuard).
+   */
+  const saveRehearsal = async (leaving: boolean): Promise<boolean> => {
     setLoading(true);
+    // What goes, as the form held it when the save began (review T-013 r2).
+    const sent = fields;
 
     try {
       // The date and the two clock times as the interval they are, in the
@@ -140,6 +155,15 @@ export function useAddRehearsalSubmit({
         });
       }
 
+      // A list this form was not opened from — a project's, under the details
+      // it was opened from (T-016) — reloads too.
+      emitDataChanged('rehearsals');
+
+      // Saved, as it was sent: the way out after it is not asked about
+      // (useLeaveGuard).
+      markSaved(sent);
+      if (leaving) return true;
+
       // Success message based on mode
       const successMessage = isEditMode
         ? t.rehearsals.rehearsalUpdated
@@ -158,6 +182,7 @@ export function useAddRehearsalSubmit({
           },
         ]
       );
+      return true;
     } catch (error: any) {
       logger.error('Failed to save rehearsal:', error);
       const errorMessage = isEditMode
@@ -172,53 +197,45 @@ export function useAddRehearsalSubmit({
         participantsLeft ? t.rehearsals.participantsLeft
           : error.response?.data?.error || error.message || errorMessage
       );
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async () => {
-    // Validation
-    if (!localSelectedProject) {
-      Alert.alert(t.common.error, t.rehearsals.projectNotSelected);
-      return;
-    }
+  // What keeps the form from being saved, said under its field as soon as it
+  // is so (T-018): it was an alert on Create, after the fact. While any of it
+  // holds, Create is not offered (canSubmit).
+  // Only the clock times count: the form's Date objects carry whatever day
+  // they were made on, and an end before the start is the next day.
+  const emptyRange = isEmptyClockRange(formatDateToTimeString(startTime), formatDateToTimeString(endTime));
+  // Nobody is sent until the participants are settled: the list goes as the
+  // whole roster, and one sent while the members were loading — or after
+  // they failed to load — put nobody on the rehearsal (review R9-02). While
+  // they load, the participants row says so itself.
+  // The conflict check reads the availability of the day shown: one still
+  // loading, or failed, is not "nobody is busy" (DF05).
+  const waitingForAvailability = participantsSettled && selectedMemberIds.length > 0 && !availabilityReady;
+  const issues: FormIssues = {
+    project: localSelectedProject ? undefined : t.rehearsals.projectNotSelected,
+    end: emptyRange ? t.rehearsals.endTimeError : undefined,
+    participants: !participantsSettled && membersFailed
+      ? { text: t.rehearsals.loadMembersError, failed: true, retry: reloadMembers }
+      : waitingForAvailability
+        ? availabilityFailed
+          ? { text: t.rehearsals.loadAvailabilityError, failed: true, retry: reloadAvailability }
+          : { text: t.rehearsals.availabilityChecking, failed: false }
+        : undefined,
+  };
+  const blocked = !localSelectedProject || emptyRange || !participantsSettled || waitingForAvailability;
 
-    // Only the clock times count: the form's Date objects carry whatever day
-    // they were made on, and an end before the start is the next day.
-    if (isEmptyClockRange(formatDateToTimeString(startTime), formatDateToTimeString(endTime))) {
-      Alert.alert(t.common.error, t.rehearsals.endTimeError);
-      return;
-    }
-
-    // Nobody is sent until the participants are settled: the list goes as the
-    // whole roster, and one sent while the members were loading — or after
-    // they failed to load — put nobody on the rehearsal (review R9-02).
-    if (!participantsSettled) {
-      if (membersFailed) {
-        Alert.alert(t.common.error, t.rehearsals.loadMembersError, [
-          { text: t.common.cancel, style: 'cancel' },
-          { text: t.common.retry, onPress: reloadMembers },
-        ]);
-      } else {
-        Alert.alert(t.common.error, t.rehearsals.participantsLoading);
-      }
-      return;
-    }
-
-    // The conflict check reads the availability of the day shown: one still
-    // loading, or failed, is not "nobody is busy" (DF05).
-    if (selectedMemberIds.length > 0 && !availabilityReady) {
-      if (availabilityFailed) {
-        Alert.alert(t.common.error, t.rehearsals.loadAvailabilityError, [
-          { text: t.common.cancel, style: 'cancel' },
-          { text: t.common.retry, onPress: reloadAvailability },
-        ]);
-      } else {
-        Alert.alert(t.common.error, t.rehearsals.availabilityChecking);
-      }
-      return;
-    }
+  /**
+   * Create, or Update: true once saved. Every save goes through useLeaveGuard,
+   * which keeps the form as it is until this is answered (review T-013 r2).
+   */
+  const handleSubmit = async (leaving = false): Promise<boolean> => {
+    // Said under its field already, and Create is not offered meanwhile.
+    if (blocked) return false;
 
     // Check for scheduling conflicts
     if (selectedMemberIds.length > 0) {
@@ -234,34 +251,52 @@ export function useAddRehearsalSubmit({
       );
 
       if (conflicts.hasConflicts) {
-        const conflictMessage = formatConflictMessage(conflicts);
+        const conflictMessage = formatConflictMessage(conflicts, t);
 
         // Show warning and ask for confirmation
-        Alert.alert(
+        return new Promise((resolve) => Alert.alert(
           t.rehearsals.scheduleConflict,
           `${conflictMessage}\n\n${t.rehearsals.scheduleConflictMessage}`,
           [
             {
               text: t.common.cancel,
               style: 'cancel',
+              onPress: () => resolve(false),
             },
             {
               text: t.rehearsals.createAnyway,
               style: 'destructive',
-              onPress: () => saveRehearsal(),
+              onPress: () => resolve(saveRehearsal(leaving)),
             },
           ]
-        );
-        return;
+        ));
       }
     }
 
     // No conflicts, save rehearsal
-    saveRehearsal();
+    return saveRehearsal(leaving);
   };
+
+  /**
+   * Create would go to the server as the form stands, without stopping at a
+   * check that refuses it — asked before offering "Save" on the way out
+   * (T-013), and for the Create button (T-018). A conflict only asks, so it
+   * does not count.
+   */
+  const canSubmit = () => !loading && !blocked;
 
   return {
     loading,
     handleSubmit,
+    canSubmit,
+    issues,
   };
+}
+
+/** What stops a save, as each field says it (useAddRehearsalSubmit). */
+export interface FormIssues {
+  project?: string;
+  end?: string;
+  /** A load that failed, with a way to try again, or one still on its way. */
+  participants?: { text: string; failed: boolean; retry?: () => void };
 }

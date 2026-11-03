@@ -186,6 +186,12 @@ describe('generateTimeSlots — time already gone', () => {
     expect(slotsNow(at(10, 0), '2026-08-31', '2026-08-31')).toHaveLength(0);
   });
 
+  // T-012: a default of new Date() read the phone's clock, not the profile's.
+  it('has no clock of its own: now is the profile\'s, and always given', () => {
+    // @ts-expect-error — now is required
+    expect(() => generateTimeSlots(DATE, DATE, members, [], [])).toThrow(TypeError);
+  });
+
   it('leaves later days whole', () => {
     const slots = slotsNow(at(18, 5), DATE, '2026-09-02');
     const tomorrow = slots.filter((s) => s.date === '2026-09-02');

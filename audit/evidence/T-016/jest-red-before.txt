@@ -1,0 +1,7 @@
+# Base 2a52a16 source, the fix's RehearsalDetailsScreen.test.tsx. 2026-10-31.
+$ npx jest --selectProjects frontend --silent src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx | grep -E "✕|✓|Tests:|●.*›"
+  ● Rehearsal details: Edit and Delete (T-016) › gives an admin Edit, which opens the form on this rehearsal
+  ● Rehearsal details: Edit and Delete (T-016) › asks with the name, the day and the time, and who will be told
+  ● Rehearsal details: Edit and Delete (T-016) › says nothing of notifications when nobody else is on it
+  ● Rehearsal details: Edit and Delete (T-016) › deletes, closes the sheet and tells the lists
+Tests:       4 failed, 6 passed, 10 total

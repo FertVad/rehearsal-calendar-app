@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -11,23 +11,6 @@ export const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xl,
-  },
-  title: {
-    flex: 1,
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xs,
-  },
-  closeButton: {
-    padding: Spacing.xs,
-    marginLeft: Spacing.md,
   },
   projectName: {
     fontSize: FontSize.base,
@@ -72,6 +55,39 @@ export const styles = StyleSheet.create({
   chevronIcon: {
     marginLeft: 'auto',
   },
+  // The date's month, in the form (T-018).
+  calendarBox: {
+    backgroundColor: Colors.glass.bg,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  // What stops a save, under its field (T-018).
+  fieldError: {
+    fontSize: FontSize.sm,
+    color: Colors.accent.red,
+  },
+  fieldNote: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+  },
+  fieldNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  fieldNoteAction: {
+    minHeight: TouchTarget,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+  },
+  fieldNoteActionText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.accent.purple,
+  },
   locationInputContainer: {
     backgroundColor: Colors.glass.bg,
     borderWidth: 1,
@@ -85,27 +101,10 @@ export const styles = StyleSheet.create({
   },
   locationInput: {
     flex: 1,
+    minHeight: TouchTarget,
     padding: Spacing.md,
     fontSize: FontSize.base,
     color: Colors.text.primary,
-  },
-  submitButton: {
-    backgroundColor: Colors.accent.purple,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: '#fff',
   },
   loadingOverlay: {
     alignItems: 'center',
@@ -145,6 +144,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: TouchTarget,
     padding: Spacing.md,
     marginHorizontal: Spacing.md,
     marginVertical: Spacing.xs / 2,

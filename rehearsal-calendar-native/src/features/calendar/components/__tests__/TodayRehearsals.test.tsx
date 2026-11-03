@@ -40,9 +40,14 @@ jest.mock('../../../../contexts/I18nContext', () => ({
         today: 'Today',
         delete: 'Delete',
         edit: 'Edit',
+        cancel: 'Cancel',
       },
       rehearsals: {
         markSeen: 'Mark as seen',
+        edit: 'Edit',
+        deleteConfirm: 'Delete',
+        deleteTitle: require('../../../../i18n/translations').translations.en.rehearsals.deleteTitle,
+        deleteNotifies: require('../../../../i18n/translations').translations.en.rehearsals.deleteNotifies,
       },
       calendar: {
         tomorrow: 'Tomorrow',
@@ -56,10 +61,26 @@ jest.mock('../../../../contexts/I18nContext', () => ({
   }),
 }));
 
+const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
-    navigate: jest.fn(),
+    navigate: mockNavigate,
   }),
+}));
+
+// The swipe drawn open, its actions beside the card, as in the inbox's tests.
+jest.mock('react-native-gesture-handler/Swipeable', () => {
+  const { View } = jest.requireActual('react-native');
+  const R = jest.requireActual('react');
+  return R.forwardRef(({ children, renderRightActions }: any, _ref: any) =>
+    R.createElement(View, null, children, renderRightActions?.()));
+});
+jest.mock('react-native-gesture-handler', () => {
+  const { TouchableOpacity } = jest.requireActual('react-native');
+  return { TouchableOpacity };
+});
+jest.mock('../../../../shared/services/calendarSync', () => ({
+  unexportRehearsal: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('../../../../contexts/AuthContext', () => ({
@@ -85,6 +106,7 @@ jest.mock('../../../../shared/utils/calendarStorage', () => ({
 jest.mock('../../../../shared/services/api', () => ({
   rehearsalsAPI: {
     getResponses: jest.fn(),
+    delete: jest.fn(),
   },
 }));
 
@@ -143,7 +165,6 @@ describe('TodayRehearsals Component', () => {
   };
 
   const mockOnRSVP = jest.fn();
-  const mockOnDeleteRehearsal = jest.fn();
   const mockOnOpenRehearsal = jest.fn();
   const mockSetRsvpResponses = jest.fn();
   const mockSetAdminStats = jest.fn();
@@ -168,7 +189,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-28"
           loading={true}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -181,20 +201,21 @@ describe('TodayRehearsals Component', () => {
     });
   });
 
+  // A day with none took 98 pt for its title and "Nothing today" (T-019): the
+  // strip above shows the day has no count, the upcoming list below stays.
   describe('Empty State', () => {
-    it('should display empty message when no rehearsals', () => {
-      const { getByText } = render(
+    it('takes no room on a day with no rehearsals', () => {
+      const { toJSON } = render(
         <TodayRehearsals
           rehearsals={[]}
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
 
-      expect(getByText('No rehearsals')).toBeTruthy();
+      expect(toJSON()).toBeNull();
     });
   });
 
@@ -211,7 +232,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -228,13 +248,12 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
 
-      expect(getByText('10:00 — 12:00')).toBeTruthy();
-      expect(getByText('14:00 — 16:00')).toBeTruthy();
+      expect(getByText('10:00–12:00')).toBeTruthy();
+      expect(getByText('14:00–16:00')).toBeTruthy();
       expect(getByText('Project Alpha')).toBeTruthy();
       expect(getByText('Project Beta')).toBeTruthy();
       expect(getByText('Studio A')).toBeTruthy();
@@ -253,7 +272,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -271,7 +289,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -280,34 +297,79 @@ describe('TodayRehearsals Component', () => {
       expect(getAllByText('Admin').length).toBeGreaterThan(0);
     });
 
-    it('should call onDeleteRehearsal when delete button pressed', () => {
-      const { UNSAFE_getAllByType } = render(
+    // T-016: no bin or pencil on the card; a swipe to the left has them.
+    it('has no bin or pencil on the card', () => {
+      const { queryAllByTestId } = render(
         <TodayRehearsals
-          rehearsals={[mockRehearsals[0]]} // Only admin project rehearsal
+          rehearsals={[mockRehearsals[0]]}
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
 
-      // Find all TouchableOpacity components
-      const touchables = UNSAFE_getAllByType(require('react-native').TouchableOpacity);
+      // The swipe's own actions draw a bin and a pencil; nothing else may.
+      expect(queryAllByTestId('icon-Ionicons-trash-outline')).toHaveLength(1);
+      expect(queryAllByTestId('icon-Ionicons-create-outline')).toHaveLength(1);
+      expect(queryAllByTestId('rehearsal-swipe-delete')).toHaveLength(1);
+    });
 
-      // Find delete button by icon (trash-outline) - it's one of the touchables
-      // We know it's the delete button by its context
-      const deleteButton = touchables.find(t => {
-        const icon = t.props.children?.props?.name;
-        return icon === 'trash-outline';
+    it("opens the form from the swipe's Edit", () => {
+      const { getByTestId } = render(
+        <TodayRehearsals
+          rehearsals={[mockRehearsals[0]]}
+          selectedDate="2025-12-29"
+          loading={false}
+          projects={mockProjects}
+          onOpenRehearsal={mockOnOpenRehearsal}
+        />
+      );
+
+      fireEvent.press(getByTestId('rehearsal-swipe-edit'));
+      expect(mockNavigate).toHaveBeenCalledWith('AddRehearsal', { rehearsalId: 'r1', projectId: '1' });
+      expect(mockOnOpenRehearsal).not.toHaveBeenCalled();
+    });
+
+    it("asks before deleting from the swipe, naming the rehearsal and who will be told", async () => {
+      const { rehearsalsAPI } = require('../../../../shared/services/api');
+      rehearsalsAPI.getResponses.mockResolvedValue({
+        data: { allParticipants: [{ userId: 'test-user' }, { userId: 'a' }, { userId: 'b' }] },
       });
+      const alert = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => {});
+      const { getByTestId } = render(
+        <TodayRehearsals
+          rehearsals={[{ ...mockRehearsals[0], title: 'Table read' }]}
+          selectedDate="2025-12-29"
+          loading={false}
+          projects={mockProjects}
+          onOpenRehearsal={mockOnOpenRehearsal}
+        />
+      );
 
-      if (deleteButton) {
-        // The handler stops the press from reaching the card behind it, so it
-        // needs an event — pressing with none is a thing only a test does.
-        fireEvent.press(deleteButton, { stopPropagation: jest.fn() });
-        expect(mockOnDeleteRehearsal).toHaveBeenCalledWith('r1');
-      }
+      fireEvent.press(getByTestId('rehearsal-swipe-delete'));
+      await waitFor(() => expect(alert).toHaveBeenCalled());
+
+      const [title, message, buttons] = alert.mock.calls[0] as any[];
+      expect(title).toBe('Delete “Table read”, Mon, Dec 29, 10:00?');
+      expect(message).toBe('Participants (2) will be notified');
+      expect(buttons.map((b: any) => b.style)).toEqual(['cancel', 'destructive']);
+      alert.mockRestore();
+    });
+
+    it('gives an actor no swipe', () => {
+      const { queryByTestId } = render(
+        <TodayRehearsals
+          rehearsals={[mockRehearsals[1]]}
+          selectedDate="2025-12-29"
+          loading={false}
+          projects={mockProjects}
+          onOpenRehearsal={mockOnOpenRehearsal}
+        />
+      );
+
+      expect(queryByTestId('rehearsal-swipe-delete')).toBeNull();
+      expect(queryByTestId('rehearsal-swipe-edit')).toBeNull();
     });
 
     it('should not show admin controls for non-admin projects', () => {
@@ -317,7 +379,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -331,31 +392,21 @@ describe('TodayRehearsals Component', () => {
 
   describe('RSVP Button', () => {
     it('asks the store to toggle when the seen button is pressed', () => {
-      const { UNSAFE_getAllByType } = render(
+      const { getByTestId } = render(
         <TodayRehearsals
           rehearsals={[mockRehearsals[0]]}
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
 
-      // Find the RSVP Pressable (seen button)
-      const pressables = UNSAFE_getAllByType(require('react-native').Pressable);
-      const seenButton = pressables.find(p => {
-        // Seen button contains Ionicons with eye or eye-off-outline
-        const icon = p.props.children?.[0]?.props?.name;
-        return icon === 'eye' || icon === 'eye-off-outline';
-      });
-
-      if (seenButton) {
-        fireEvent.press(seenButton);
-        // The card asks the store to toggle; it no longer carries the previous
-        // value or a callback, because the store already knows both.
-        expect(mockToggleSeen).toHaveBeenCalledWith('r1');
-      }
+      // The seen button is an IconButton now (T-014 review), found by its id.
+      fireEvent.press(getByTestId('seen-toggle'));
+      // The card asks the store to toggle; it no longer carries the previous
+      // value or a callback, because the store already knows both.
+      expect(mockToggleSeen).toHaveBeenCalledWith('r1');
     });
 
     it('should show eye icon for yes response', () => {
@@ -365,7 +416,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -383,7 +433,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -404,7 +453,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -421,7 +469,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -443,7 +490,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate={todayStr}
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -462,7 +508,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate={tomorrowStr}
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -484,7 +529,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );
@@ -505,7 +549,6 @@ describe('TodayRehearsals Component', () => {
           selectedDate="2025-12-29"
           loading={false}
           projects={mockProjects}
-          onDeleteRehearsal={mockOnDeleteRehearsal}
           onOpenRehearsal={mockOnOpenRehearsal}
         />
       );

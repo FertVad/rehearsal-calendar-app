@@ -1,0 +1,80 @@
+T-212 - "red before": flow 44 "The profile's language, kept by the account" on
+the old flow (e2e/flows/44-profile-language.yaml of e8d9d23), 29.10.2026.
+
+Tools are T-207's (audit/evidence/T-207), run from the root of the tree.
+
+------------------------------------------------------------------------
+1. The supervisor's red run (T-008 checks, e8d9d23, 29.10 22:43 local;
+   artifacts e2e/out/artifacts/2026-10-29_224300, logs
+   e2e/out/failed/T-008-2026-10-29T20-49-00-353Z, not in git).
+
+   node audit/evidence/T-207/timeline.mjs "rehearsal-calendar-native/e2e/out/artifacts/2026-10-29_224300/The profile's language, kept by the account"
+   ...
+   22:47:13.309  maestro  Stop ${APP_ID}
+   22:47:14.402  maestro  Launch app "${APP_ID}"
+   22:47:18.065  maestro  Assert that "Календарь, tab.*", id: tab-calendar is visible
+   22:47:19.336  device   app scene unspecified -> foreground
+   22:47:22.146  maestro  Assert that "Проекты, tab.*", id: tab-projects is visible
+   22:47:22.416  maestro  Take screenshot 44-russian-after-restart
+   22:47:22.567  maestro  Tap on id: tab-profile
+   22:47:23.295  device   tap digitizer registered twice
+   22:47:23.300  device   touch dropped (move/lift with no touch down)
+   22:47:23.854  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+   22:47:23.855  maestro  Scrolling DOWN until id: profile-logout is visible ...
+   -> [Failed] No visible element found: id: profile-logout
+
+   device-simulator.log at the tap (22:47:23.29-23.51): "*** already have a
+   main display digitizer", "*** unknown digitizer", two BKDirectTouchState
+   for sender 0x103ABC0000034, "touch down without previous range event: 2",
+   ten times "didn't see a previous touch down or range-in event for
+   pathIndex:2; skipping event", then "cancel -- digitizer did disappear ...
+   canceling paths contacts: [pathIndex: 2; touchIdentifier: 41; touching".
+   The lift never reached the app.
+
+   The same tap on the same tab 15 s earlier (22:47:08), for comparison: one
+   digitizer, "contact 2 presence: touching", then "contact 2 presence: none"
+   (the lift) 120 ms later - the profile opened.
+
+   The failure's screenshot (step-068-scrollUntilVisible-profile-logout.png):
+   the calendar, in Russian, its tab selected - the tab bar was there and
+   right, the press never arrived. metro.log after the restart: GET /auth/me,
+   /native/projects, /native/notifications/unread-count, all 200; nothing
+   navigates on launch (no push, no link).
+
+   node audit/evidence/T-207/touch-scan.mjs rehearsal-calendar-native/e2e/out/artifacts
+   ...
+   2026-10-29_224300  The profile's language, kept by the account: digitizers 20,
+     registered twice 1 (... 3.75s/tap 1 after "unspecified -> foreground"),
+     app scene changes 10, taps lost 1
+       lost 22:47:23.300 -> Something have changed in the UI judging by view hierarchy. Proceed.
+   2026-10-29_224300  The profile's timezone, not the device's: ... taps lost 1
+   2026-10-29_222010  The profile's timezone, not the device's: ... taps lost 1
+   ...
+   122 flow logs, 2112 digitizers attached, 13 registered twice, 8 taps lost
+
+   Flow 44 had three bare `tapOn: id: tab-profile` the flow then waited on;
+   the one lost was the second.
+
+------------------------------------------------------------------------
+2. The old flow again, with every core busy (T-207's load-e2e.mjs: 8 busy
+   workers on 8 cores; each copy signs in again with a cleared app).
+
+   node audit/evidence/T-207/load-e2e.mjs 8 1 e2e/flows/44-profile-language.yaml
+   [load] 8 busy workers on 8 cores
+   [Passed] The profile's language, kept by the account r1 (2m 34s)
+   1/1 Flow Passed in 2m 35s
+   [e2e] taps taken again (tap-and-see.yaml): 0
+
+   node audit/evidence/T-207/load-e2e.mjs 8 3 e2e/flows/44-profile-language.yaml
+   -> cut by the 10-minute limit of the command while r1 ran (Metro rebuilt
+      its cache under load); no result.
+   node audit/evidence/T-207/load-e2e.mjs 8 2 e2e/flows/44-profile-language.yaml
+   -> cut by the 10-minute limit during r2; r1 finished.
+   touch-scan over these runs (2026-10-29_231944, _232845, _233647): no
+   digitizer registered twice, no tap lost.
+
+   The loss did not come again in these runs. It is a race in backboardd
+   about one tap in 250 (docs/e2e.md, "A lost tap"): it comes with load, not
+   on demand, and a command here is cut at 10 minutes, so a long loop was not
+   possible. The red evidence is the supervisor's run above, which the logs
+   pin to this one tap.

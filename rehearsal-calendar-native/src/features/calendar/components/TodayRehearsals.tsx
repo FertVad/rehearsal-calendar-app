@@ -2,11 +2,11 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { Colors } from '../../../shared/constants/colors';
 import { Rehearsal, Project } from '../../../shared/types';
-import { addDays, formatDateLocalized } from '../../../shared/utils/time';
+import { addDays } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
-import { getDateLocale } from '../../../shared/utils/locale';
+import { formatDate } from '../../../shared/utils/dateFormat';
 import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
 import RehearsalCard from './RehearsalCard';
 
@@ -15,7 +15,6 @@ interface TodayRehearsalsProps {
   selectedDate: string;
   loading: boolean;
   projects: Project[];
-  onDeleteRehearsal: (rehearsalId: string) => void;
   /** Opening the details sheet belongs to the calendar. This component used to
    *  render its own, which meant two of them on one screen with separate state:
    *  a sheet opened from here was invisible to the code that opens one for a
@@ -29,7 +28,6 @@ export default function TodayRehearsals({
   selectedDate,
   loading,
   projects,
-  onDeleteRehearsal,
   onOpenRehearsal,
 }: TodayRehearsalsProps) {
   const { t, language } = useI18n();
@@ -66,8 +64,7 @@ export default function TodayRehearsals({
   const dateLabel = useMemo(() => {
     if (selectedDate === today) return t.common.today;
     if (selectedDate === addDays(today, 1)) return t.calendar.tomorrow;
-    const locale = getDateLocale(language);
-    return formatDateLocalized(selectedDate, { day: 'numeric', month: 'long', weekday: 'long' }, locale);
+    return formatDate(selectedDate, 'weekdayDayMonth', language);
   }, [selectedDate, today, t, language]);
 
   if (loading) {
@@ -81,16 +78,10 @@ export default function TodayRehearsals({
     );
   }
 
-  if (rehearsals.length === 0) {
-    return (
-      <View style={styles.todaySection}>
-        <Text style={styles.sectionTitle}>{dateLabel}</Text>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>{t.calendar.noRehearsals}</Text>
-        </View>
-      </View>
-    );
-  }
+  // A day with none takes no room (T-019): its title and "Nothing today" were
+  // 98 pt, and the strip already shows the day has no count. The upcoming
+  // list under it stays.
+  if (rehearsals.length === 0) return null;
 
   return (
     <View style={styles.todaySection}>
@@ -108,7 +99,6 @@ export default function TodayRehearsals({
               isAdmin={isAdminForThisRehearsal}
               isSynced={syncedRehearsals[rehearsal.id]}
               onPress={() => onOpenRehearsal(rehearsal)}
-              onDelete={onDeleteRehearsal}
             />
           );
         })}

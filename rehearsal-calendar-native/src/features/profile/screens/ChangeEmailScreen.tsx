@@ -4,15 +4,14 @@ import {
   Text,
   SafeAreaView,
   ScrollView,
-  TouchableOpacity,
   TextInput,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { GlassButton } from '../../../shared/components';
@@ -171,18 +170,14 @@ export default function ChangeEmailScreen({ navigation }: ChangeEmailScreenProps
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel={t.common.back}
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.title}>{t.profile.changeEmailTitle}</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        {/* A sheet over the profile's edit (T-029). The codes are sent and
+            confirmed below, a step at a time. */}
+        <ScreenHeader
+          kind="modal"
+          title={t.profile.changeEmailTitle}
+          cancelLabel={t.common.cancel}
+          onCancel={() => navigation.goBack()}
+        />
 
         <ScrollView
           style={styles.scrollView}

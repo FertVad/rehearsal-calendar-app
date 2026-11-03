@@ -8,14 +8,12 @@ export interface ProjectsTranslations {
   projectName: string;
   projectDescription: string;
   create: string;
-  inviteLink: string;
   copyLink: string;
   linkCopied: string;
   loading: string;
   selectProject: string;
   namePlaceholder: string;
   descriptionPlaceholder: string;
-  nameRequired: string;
   createError: string;
   projectNotFound: string;
   owner: string;
@@ -23,6 +21,7 @@ export interface ProjectsTranslations {
   upcomingRehearsals: string;
   pastRehearsals: string;
   noUpcomingRehearsals: string;
+  newRehearsal: string;
   inviteMembers: string;
   members: string;
   timezone: string;
@@ -38,7 +37,6 @@ export interface ProjectsTranslations {
   joinByCode: string;
   joinByCodeSubtitle: string;
   joinByCodePlaceholder: string;
-  tryAgain: string;
   shareInviteMessage: (projectName: string) => string;
   shareInviteTitle: (projectName: string) => string;
   manageMember: string;
@@ -84,14 +82,12 @@ export const ru = {
     projectName: 'Название проекта',
     projectDescription: 'Описание',
     create: 'Создать',
-    inviteLink: 'Пригласить',
     copyLink: 'Копировать ссылку',
     linkCopied: 'Ссылка скопирована!',
     loading: 'Загрузка проектов...',
     selectProject: 'Выбрать проект',
     namePlaceholder: 'Введите название',
     descriptionPlaceholder: 'Введите описание',
-    nameRequired: 'Название обязательно',
     createError: 'Ошибка создания проекта',
     projectNotFound: 'Проект не найден',
     owner: 'Владелец',
@@ -99,6 +95,7 @@ export const ru = {
     upcomingRehearsals: 'Ближайшие репетиции',
     pastRehearsals: 'Прошедшие репетиции',
     noUpcomingRehearsals: 'Нет запланированных репетиций',
+    newRehearsal: 'Новая репетиция',
     inviteMembers: 'Пригласить участников',
     members: 'Участники',
     timezone: 'Часовой пояс',
@@ -114,7 +111,6 @@ export const ru = {
     joinByCode: 'Вступить в проект',
     joinByCodeSubtitle: 'Введите код или вставьте ссылку из приглашения',
     joinByCodePlaceholder: 'Код или ссылка',
-    tryAgain: 'Ввести другой код',
     shareInviteMessage: (projectName: string) => `Присоединяйся к проекту "${projectName}" в приложении Rehearsly:`,
     shareInviteTitle: (projectName: string) => `Приглашение в проект ${projectName}`,
     manageMember: 'Управление участником',
@@ -161,14 +157,12 @@ export const en = {
     projectName: 'Project Name',
     projectDescription: 'Description',
     create: 'Create',
-    inviteLink: 'Invite',
     copyLink: 'Copy Link',
     linkCopied: 'Link copied!',
     loading: 'Loading projects...',
     selectProject: 'Select Project',
     namePlaceholder: 'Enter name',
     descriptionPlaceholder: 'Enter description',
-    nameRequired: 'Name is required',
     createError: 'Error creating project',
     projectNotFound: 'Project not found',
     owner: 'Owner',
@@ -176,6 +170,7 @@ export const en = {
     upcomingRehearsals: 'Upcoming Rehearsals',
     pastRehearsals: 'Past Rehearsals',
     noUpcomingRehearsals: 'No upcoming rehearsals',
+    newRehearsal: 'New rehearsal',
     inviteMembers: 'Invite Members',
     members: 'Members',
     timezone: 'Timezone',
@@ -191,7 +186,6 @@ export const en = {
     joinByCode: 'Join a project',
     joinByCodeSubtitle: 'Enter the code, or paste the invite link',
     joinByCodePlaceholder: 'Code or link',
-    tryAgain: 'Try another code',
     shareInviteMessage: (projectName: string) => `Join the project "${projectName}" in the Rehearsly app:`,
     shareInviteTitle: (projectName: string) => `Invitation to project ${projectName}`,
     manageMember: 'Manage Member',
@@ -238,14 +232,12 @@ export const es = {
     projectName: 'Nombre del proyecto',
     projectDescription: 'Descripción',
     create: 'Crear',
-    inviteLink: 'Invitar',
     copyLink: 'Copiar enlace',
     linkCopied: '¡Enlace copiado!',
     loading: 'Cargando proyectos...',
     selectProject: 'Seleccionar proyecto',
     namePlaceholder: 'Introduce el nombre',
     descriptionPlaceholder: 'Introduce la descripción',
-    nameRequired: 'El nombre es obligatorio',
     createError: 'Error al crear el proyecto',
     projectNotFound: 'Proyecto no encontrado',
     owner: 'Propietario',
@@ -253,6 +245,7 @@ export const es = {
     upcomingRehearsals: 'Próximos ensayos',
     pastRehearsals: 'Ensayos pasados',
     noUpcomingRehearsals: 'No hay ensayos programados',
+    newRehearsal: 'Nuevo ensayo',
     inviteMembers: 'Invitar miembros',
     members: 'Miembros',
     timezone: 'Zona horaria',
@@ -268,7 +261,6 @@ export const es = {
     joinByCode: 'Unirse a un proyecto',
     joinByCodeSubtitle: 'Escriban el código o peguen el enlace',
     joinByCodePlaceholder: 'Código o enlace',
-    tryAgain: 'Probar otro código',
     shareInviteMessage: (projectName: string) => `Únete al proyecto "${projectName}" en la app Rehearsly:`,
     shareInviteTitle: (projectName: string) => `Invitación al proyecto ${projectName}`,
     manageMember: 'Gestionar miembro',
@@ -315,14 +307,12 @@ export const de = {
     projectName: 'Projektname',
     projectDescription: 'Beschreibung',
     create: 'Erstellen',
-    inviteLink: 'Einladen',
     copyLink: 'Link kopieren',
     linkCopied: 'Link kopiert!',
     loading: 'Projekte werden geladen...',
     selectProject: 'Projekt auswählen',
     namePlaceholder: 'Namen eingeben',
     descriptionPlaceholder: 'Beschreibung eingeben',
-    nameRequired: 'Name ist erforderlich',
     createError: 'Fehler beim Erstellen des Projekts',
     projectNotFound: 'Projekt nicht gefunden',
     owner: 'Eigentümer',
@@ -330,6 +320,7 @@ export const de = {
     upcomingRehearsals: 'Bevorstehende Proben',
     pastRehearsals: 'Vergangene Proben',
     noUpcomingRehearsals: 'Keine geplanten Proben',
+    newRehearsal: 'Neue Probe',
     inviteMembers: 'Mitglieder einladen',
     members: 'Mitglieder',
     timezone: 'Zeitzone',
@@ -345,7 +336,6 @@ export const de = {
     joinByCode: 'Einem Projekt beitreten',
     joinByCodeSubtitle: 'Gib den Code ein oder füg den Link ein',
     joinByCodePlaceholder: 'Code oder Link',
-    tryAgain: 'Anderen Code versuchen',
     shareInviteMessage: (projectName: string) => `Tritt dem Projekt „${projectName}" in der Rehearsly-App bei:`,
     shareInviteTitle: (projectName: string) => `Einladung zum Projekt ${projectName}`,
     manageMember: 'Mitglied verwalten',

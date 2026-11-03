@@ -1,33 +1,13 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.bg.primary,
   },
-  keyboardView: {
+  body: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.glass.border,
-  },
-  backButton: {
-    padding: Spacing.xs,
-  },
-  title: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
-  headerRight: {
-    width: 32,
   },
   scrollView: {
     flex: 1,
@@ -49,6 +29,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
+    minHeight: TouchTarget,
     padding: Spacing.md,
     fontSize: FontSize.base,
     color: Colors.text.primary,
@@ -65,6 +46,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
+    minHeight: TouchTarget,
     padding: Spacing.md,
   },
   timezoneSelectorLeft: {
@@ -76,42 +58,6 @@ export const styles = StyleSheet.create({
   timezoneSelectorValue: {
     fontSize: FontSize.base,
     color: Colors.text.primary,
-  },
-  bottomButtons: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    marginTop: Spacing.xl,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xxl,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: Colors.bg.tertiary,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.medium,
-    color: Colors.text.secondary,
-  },
-  createButton: {
-    flex: 1,
-    backgroundColor: Colors.accent.purple,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
-  },
-  createButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: '#fff',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   // Timezone picker modal styles
   timezoneModalOverlay: {
@@ -129,7 +75,8 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
   },
@@ -145,6 +92,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: TouchTarget,
     padding: Spacing.md,
     marginHorizontal: Spacing.md,
     marginVertical: Spacing.xs / 2,

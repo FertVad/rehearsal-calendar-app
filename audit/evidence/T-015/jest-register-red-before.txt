@@ -1,0 +1,40 @@
+# Review 1, point 1: registration's Jest red reaches the behaviour.
+# The tests now find the fields by their place in the form and the button by
+# its title, both the same in the form before T-015 (it had no ids).
+$ git restore --source=8fae51c -- src/features/auth/screens/RegisterScreen.tsx src/features/auth/styles/registerScreenStyles.ts
+# translations and accountRules as in HEAD
+$ npx jest --selectProjects frontend --silent RegisterScreen.test RegisterFlow.test
+
+PASS frontend src/features/auth/screens/__tests__/RegisterFlow.test.tsx (19.605 s)
+FAIL frontend src/features/auth/screens/__tests__/RegisterScreen.test.tsx (20.263 s)
+  ● stops a name of spaces and an over-long password before asking the server
+    Received element is not disabled:
+  ● counts the password in characters like the server, not in UTF-16 units
+    Unable to find an element with text: Пароль: от 8 символов и не длиннее 72 байт — это 72 латинские буквы или около 36 русских.
+  ● keeps the button off until the required fields are filled, with no alert (T-015)
+    Received element is not disabled:
+  ● says each problem under its own field, not in an alert, and forgets it on an edit (T-015)
+    expect(jest.fn()).not.toHaveBeenCalled()
+    Expected number of calls: 0
+    Received number of calls: 1
+    1: "Ошибка", "Неверный формат email"
+  ● Return goes field to field, and the last one sends the form (T-015)
+    Expected: "next"
+    Received: undefined
+  ● names the rule under the password from the rule itself, and shows the password on request (T-015)
+    Unable to find an element with text: Минимум 8 символов
+Tests:       6 failed, 8 passed, 14 total
+
+# Every failure is what the old form did: Sign Up live on an incomplete form,
+# the rule said in an alert and not under the field, the address said in an
+# alert, no Return types, no rule under the password. RegisterFlow (a late
+# answer after leaving opens nothing) is not T-015's and passes on both.
+
+$ git restore --source=HEAD -- <the same files>
+$ npx jest --selectProjects frontend --silent LoginScreen.test LoginFlow.test RegisterScreen.test RegisterFlow.test iconButtonLabels
+PASS frontend src/shared/components/__tests__/iconButtonLabels.test.ts
+PASS frontend src/features/auth/screens/__tests__/RegisterFlow.test.tsx
+PASS frontend src/features/auth/screens/__tests__/LoginFlow.test.tsx
+PASS frontend src/features/auth/screens/__tests__/LoginScreen.test.tsx
+PASS frontend src/features/auth/screens/__tests__/RegisterScreen.test.tsx
+Tests:       27 passed, 27 total

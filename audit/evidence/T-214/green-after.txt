@@ -1,0 +1,31 @@
+T-214 green after: flow 49 on HEAD d013046 (tap at 25%,18%, from 4563c0c / T-213).
+
+$ npm run e2e -- e2e/flows/03-create-project.yaml e2e/flows/49-touch-targets.yaml
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Create a project (1m 33s)
+[Passed] Touch targets are 44 pt (1m 44s)
+
+2/2 Flows Passed in 3m 18s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/46-create-project-closes-form.yaml e2e/flows/49-touch-targets.yaml
+Waiting for flows to complete...
+[Passed] Back from a new project is the projects list, not the form (1m 5s)
+[Passed] Touch targets are 44 pt (1m 43s)
+
+2/2 Flows Passed in 2m 48s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+(A run of 02, 13, 46 and 49 together hit the 10-minute command limit and was
+cut off. It is not counted. None of 02, 13, 46 makes a project for the
+director, whom 49 signs in as: 02 only opens the project form, 13 makes
+Dunsinane for Macduff, 46 makes Inverness for Banquo. Only 03 gives the
+director the short first card, so 03 then 49 is the run that checks the fix;
+46 then 49 shows 49 the seed's first card, as when it runs alone.)

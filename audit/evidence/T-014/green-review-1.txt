@@ -1,0 +1,30 @@
+# T-014 review 1 — green after (ba3413e, 51a0313, and the TodayRehearsals.test fix)
+
+## e2e, flow 49
+$ npm run e2e -- e2e/flows/49-touch-targets.yaml
+[e2e] running the flows
+[Passed] Touch targets are 44 pt (2m 7s)
+
+1/1 Flow Passed in 2m 7s
+
+# The period picker's days within 44..56 a side (screenshot 49-period-picker):
+#   date-range-calendar.day_<today>   (marked)  — width and height 50±6: passed
+#   date-range-calendar.day_<1st Sat> (plain)   — width and height 50±6: passed
+
+## Jest
+$ npx jest --selectProjects frontend --testPathPatterns 'TodayRehearsals|components/__tests__/WeeklyCalendar|iconButtonLabels|IconButton'
+PASS frontend src/shared/components/__tests__/iconButtonLabels.test.ts
+PASS frontend src/shared/components/__tests__/IconButton.test.tsx
+PASS frontend src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx
+PASS frontend src/features/calendar/components/__tests__/TodayRehearsals.test.tsx
+Tests:       28 passed, 28 total
+
+## Whole frontend suite (before the TodayRehearsals.test fix)
+Test Suites: 1 failed, 108 passed, 109 total
+Tests:       1 failed, 971 passed, 972 total
+# The one: TodayRehearsals "asks the store to toggle when the seen button is
+# pressed" looked the eye up by type Pressable; it is an IconButton now. Fixed
+# to find it by testID seen-toggle; green above.
+
+## Type-check
+$ npx tsc --noEmit -p .   (clean, before the test-only TodayRehearsals change)

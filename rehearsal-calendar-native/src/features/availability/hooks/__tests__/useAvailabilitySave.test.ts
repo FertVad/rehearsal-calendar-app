@@ -27,7 +27,6 @@ describe('useAvailabilitySave Hook', () => {
       success: 'Success',
     },
     availability: {
-      saved: 'Availability saved',
       saveError: 'Failed to save',
       cannotSave: 'Cannot Save',
       invalidSlot: 'Please fix the slot',
@@ -247,8 +246,8 @@ describe('useAvailabilitySave Hook', () => {
       expect(validation.isValid).toBe(false);
       expect(validation.errorTitle).toBe('Cannot Save');
       expect(validation.errorMessage).toContain('Slots overlap');
-      expect(validation.errorMessage).toContain('10:00 - 13:00');
-      expect(validation.errorMessage).toContain('12:00 - 14:00');
+      expect(validation.errorMessage).toContain('10:00–13:00');
+      expect(validation.errorMessage).toContain('12:00–14:00');
     });
 
     it('should skip validation for past dates', () => {
@@ -320,10 +319,12 @@ describe('useAvailabilitySave Hook', () => {
         { date: '2025-12-29', entries: [expect.objectContaining({ type: 'busy', isAllDay: false })] },
       ]);
       expect(availabilityAPI.bulkSet).not.toHaveBeenCalled();
-      expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 1 });
+      expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 1 }, expect.objectContaining({ '2025-12-29': expect.objectContaining({ mode: 'custom' }) }));
       expect(mockSetSaving).toHaveBeenCalledWith(true);
       expect(mockSetSaving).toHaveBeenLastCalledWith(false);
-      expect(Alert.alert).toHaveBeenCalledWith('Success', 'Availability saved');
+      // Said by the screen's notice, not an alert to dismiss (T-021).
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(result.current.error).toBeNull();
     });
 
     it('saves a slot past midnight from Save, ending on the next day (CC06)', async () => {
@@ -370,7 +371,7 @@ describe('useAvailabilitySave Hook', () => {
       changed['2025-12-29'] = 4;
       await act(async () => { finish(); await pending; });
 
-      expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 3 });
+      expect(markSaved).toHaveBeenCalledWith({ '2025-12-29': 3 }, { '2025-12-29': { mode: 'busy', slots: [] } });
     });
 
     it('leaves out days already past, and stops counting them as unsaved', async () => {
@@ -384,7 +385,7 @@ describe('useAvailabilitySave Hook', () => {
       });
 
       expect(availabilityAPI.saveDays).toHaveBeenCalledWith([expect.objectContaining({ date: '2025-12-29' })]);
-      expect(markSaved).toHaveBeenCalledWith({ '2025-11-30': 1, '2025-12-29': 2 });
+      expect(markSaved).toHaveBeenCalledWith({ '2025-11-30': 1, '2025-12-29': 2 }, expect.anything());
     });
 
     it('does not save if validation fails', async () => {
@@ -415,7 +416,9 @@ describe('useAvailabilitySave Hook', () => {
 
       expect(success).toBe(false);
       expect(markSaved).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to save');
+      // Written on the screen, not in an alert (T-021).
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(result.current.error).toBe('Failed to save');
       expect(mockSetSaving).toHaveBeenLastCalledWith(false);
     });
   });

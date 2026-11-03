@@ -1,0 +1,87 @@
+# A project's card and its page (T-025).
+#
+# The card is the project's name, role and description. An admin's also had
+# "Invite" and the invite code, about 90 of its 155-163 pt, which the project's
+# page has; and a tick in its corner marked the project opened last. Neither
+# is drawn now. The card is one element, so the tick is looked for on the
+# screenshot: nothing purple at the cards' right-hand side.
+#
+# A new rehearsal is put in from the project's page, by its upcoming ones: for
+# the project's admin, and the form opens on that project. Leonato runs two;
+# the form, given none, opens on the newer, the Orchard, so he opens the Watch.
+# Hero, an actor in the Watch, has no such button.
+appId: ${APP_ID}
+name: Project's card, and a new rehearsal from its page
+tags:
+  - projects
+  - rehearsals
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${LEONATO_EMAIL}
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Messina Watch.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- assertNotVisible: ".*Invite code.*"
+- takeScreenshot: 63-project-cards
+# Both cards, below the header's "+" and above "Join with a code".
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 63-project-cards
+      COLOUR: "#a855f7"
+      LEFT: "0.75"
+      RIGHT: "0.97"
+      TOP: "0.15"
+      BOTTOM: "0.35"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Messina Watch.*"
+      SEE: ".*New rehearsal.*"
+      WAIT_MS: "15000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: project-new-rehearsal
+      SEE: "Add Rehearsal"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-project
+      text: ".*Messina Watch.*"
+    timeout: 10000
+- assertNotVisible:
+    id: rehearsal-project
+    text: ".*Leonato Orchard.*"
+- takeScreenshot: 63-form-on-the-watch
+# The actor.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${HERO_EMAIL}
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Messina Watch.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Messina Watch.*"
+      SEE: ".*Upcoming Rehearsals.*"
+      WAIT_MS: "15000"
+- assertNotVisible:
+    id: project-new-rehearsal
+- assertNotVisible: ".*New rehearsal.*"
+- takeScreenshot: 63-actor-has-no-button

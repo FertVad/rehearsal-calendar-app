@@ -1,0 +1,25 @@
+T-020 — where the first recommendation begins, after the fix (ebb2e7b)
+Screenshot: after-58-planner-first-screen.png (flow 58's first, Olga Stage, Three Sisters, Week)
+
+$ node audit/evidence/T-020/measure.mjs after-58-planner-first-screen.png
+1178×2556 px, 3.000 px a point, column x=24.0 pt
+y    0.0 –   59.0 pt  #0d1117      status bar
+y   59.0 –  119.0 pt  #161b22      header "Smart Planner"
+y  119.0 –  120.0 pt  #2e343b
+y  120.0 –  136.0 pt  #0d1117
+y  136.0 –  180.0 pt  #13181f      the filters' row: 44 pt
+y  180.0 –  196.3 pt  #0d1117
+y  196.3 –  207.3 pt  ...          "Recommendations"           Nov 1 – Nov 7
+y  207.3 –  228.7 pt  #0d1117      (the day's header begins at 219: 28 pt, to 247)
+y  228.7 –  238.3 pt  ...          "Sun, Nov 1"
+y  238.3 –  247.3 pt  #0d1117
+y  247.3 –  303.3 pt  #191d23      its slot's row: 56 pt
+y  303.3 –  331.7 pt  #0d1117      (gap 4 + 12, next header 319–347)
+y  331.7 –  337.3 pt  ...          "Mon, Nov 2"
+y  337.3 –  347.3 pt  #0d1117
+y  347.3 –  403.3 pt  #191d23      its slot's row: 56 pt
+
+The first recommendation begins at y = 219 pt (its day's header), its slot at
+247; before, 435. A day of one slot is 100 pt (28 + 56 + 16), before 170.
+Maestro measured the same in flow 58: planner-filters 44±1, planner-day-*
+28±1, planner-row-* 56±1.

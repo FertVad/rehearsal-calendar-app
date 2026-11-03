@@ -1,0 +1,45 @@
+T-216 green after. jest.config.js: frontend ts-jest with isolatedModules: true
+(compile only). Same commands, same mtime bump as red-before-runs.txt.
+
+== Run 3: new mtime on the same three files, the same half of the frontend ==
+(the transform config changed too, so every file was also compiled anew:
+colder than run 2)
+$ node /tmp/t216/touch.mjs src/i18n/translations/common.ts src/i18n/translations/onboarding.ts src/shared/components/index.ts
+1793589457121.999 src/i18n/translations/common.ts
+1793589457121.999 src/i18n/translations/onboarding.ts
+1793589457121.999 src/shared/components/index.ts
+$ uptime
+ 5:17  up 35 days, 18:36, 1 user, load averages: 2.02 2.72 4.30
+$ npx jest --selectProjects frontend --maxWorkers=1 --silent --shard=1/2
+(59 lines PASS, none with a time printed: every file under 5 s)
+Test Suites: 59 passed, 59 total
+Tests:       439 passed, 439 total
+Time:        41.104 s, estimated 463 s
+$ uptime
+ 5:18  up 35 days, 18:37, 1 user, load averages: 2.16 2.65 4.19
+
+Run 2 (before): 498.855 s. Run 3 (after): 41.104 s. The same 59 files, 439 tests.
+
+== Run 4: new mtime again, the whole Jest stage as server/scripts/test.mjs runs it ==
+$ node /tmp/t216/touch.mjs src/i18n/translations/common.ts src/i18n/translations/onboarding.ts src/shared/components/index.ts
+$ uptime
+ 5:19  up 35 days, 18:38, 1 user, load averages: 1.62 2.41 4.00
+$ node --experimental-vm-modules node_modules/jest/bin/jest --maxWorkers=1 --silent
+FAIL backend server/__tests__/startup/runtimeStartup.test.js (8.797 s)
+Test Suites: 1 failed, 190 passed, 191 total
+Tests:       8 failed, 2109 passed, 2117 total
+Time:        261.335 s
+
+The red run's Jest stage: 1075.79 s, 191 files, 2117 tests. runtimeStartup
+fails in this session before and after (backend project, untouched here): its
+child server cannot read server/.env, which the OS forbids in this sandbox
+("Set JWT_SECRET in the process environment or an explicit SERVER_ENV_FILE");
+see audit/evidence/T-215/README.md. It passed in the red run itself.
+
+`npm test` as a whole stops here before Jest: three check-secrets tests about
+forbidden .env/key filenames fail in this sandbox for the same reason (T-215).
+
+== type-check ==
+$ npm run type-check
+> tsc --noEmit
+(no errors; tsc lists 244 files under __tests__, so test files stay type checked)

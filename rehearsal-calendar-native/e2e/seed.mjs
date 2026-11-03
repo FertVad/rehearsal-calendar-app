@@ -134,13 +134,64 @@ export const PEOPLE = {
   // books lands on their days.
   voynitsky: { email: 'voynitsky@e2e.test', firstName: 'Ivan', lastName: 'Voynitsky', onboarded: true },
   sonya: { email: 'sonya@e2e.test', firstName: 'Sonya', lastName: 'Serebryakova', onboarded: true },
+  // Creates a project and swipes it away (46): in no project, so the one card
+  // on his list is the one he made.
+  banquo: { email: 'banquo@e2e.test', firstName: 'Banquo', lastName: 'Lochaber', onboarded: true },
+  // Runs a company of thirteen, which the participants sheet searches, and a
+  // project of two (48). The twelve others are ISLANDERS, who never sign in.
+  prospero: { email: 'prospero@e2e.test', firstName: 'Prospero', lastName: 'Milan', onboarded: true },
+  // Runs a project the islanders are in, and is told somebody joined it (61):
+  // a tap on "New member" opens it on its members. Told its rehearsal was
+  // changed and answered, with when it is (62).
+  duncan: { email: 'duncan@e2e.test', firstName: 'King', lastName: 'Duncan', onboarded: true },
+  // An admin of his project who swipes one of its rehearsals away and opens
+  // the form from another's details, and an actor on both who has no swipe
+  // (51). A project of their own: a deleted rehearsal is gone for every flow.
+  claudius: { email: 'claudius@e2e.test', firstName: 'Claudius', lastName: 'King', onboarded: true },
+  gertrude: { email: 'gertrude@e2e.test', firstName: 'Gertrude', lastName: 'Queen', onboarded: true },
+  // An admin of her project who opens its rehearsal at 10:07 in the form and
+  // saves it untouched, and steps a new one's start by five minutes (54).
+  // Alone on it, so no other flow's times move.
+  cordelia: { email: 'cordelia@e2e.test', firstName: 'Cordelia', lastName: 'Lear', onboarded: true },
+  // Open the form's month in Spanish and in German, each in a project of her
+  // own (56): languages none of the others speak.
+  bernarda: { email: 'bernarda@e2e.test', firstName: 'Bernarda', lastName: 'Alba', onboarded: true, locale: 'es' },
+  courage: { email: 'courage@e2e.test', firstName: 'Anna', lastName: 'Fierling', onboarded: true, locale: 'de' },
+  // A day at the strip's edge, "Today" and a day of the month (57): on no
+  // other project, so his strip is only his.
+  telegin: { email: 'telegin@e2e.test', firstName: 'Ilya', lastName: 'Telegin', onboarded: true },
   // Neither has been through onboarding yet. One goes through it to the end
   // (09-onboarding), after which it is never shown to her again; the other
   // connects a calendar in it and comes back to the step (32), and needs it
   // still there whichever of the two runs first.
   newcomer: { email: 'newcomer@e2e.test', firstName: 'Nina', lastName: 'Newcomer', onboarded: false },
   perdita: { email: 'perdita@e2e.test', firstName: 'Perdita', lastName: 'Shepherd', onboarded: false },
+  // New here too, and her account speaks Russian: onboarding in Russian, her
+  // name in Cyrillic, the longest greeting of the four languages (60).
+  nina: { email: 'nina@e2e.test', firstName: 'Нина', lastName: 'Новикова', onboarded: false, locale: 'ru' },
+  // Looks over his profile: the last button, the language sheet's bottom, a
+  // zone found by search and chosen (61). An account of his own, since the
+  // zone he picks stays.
+  puck: { email: 'puck@e2e.test', firstName: 'Robin', lastName: 'Goodfellow', onboarded: true },
+  // An admin of two projects who opens "New rehearsal" on the older one's page,
+  // and an actor in it, who has no such button (63). Nothing is saved.
+  leonato: { email: 'leonato@e2e.test', firstName: 'Leonato', lastName: 'Governor', onboarded: true },
+  hero: { email: 'hero@e2e.test', firstName: 'Hero', lastName: 'Messina', onboarded: true },
+  // Busy all day on MARK_DAY, changes it and collapses the editor (64). In no
+  // project, so nothing another flow books lands on her days.
+  yelena: { email: 'yelena@e2e.test', firstName: 'Yelena', lastName: 'Serebryakova', onboarded: true },
+  // Reads the dates in Russian (65): the calendar's month, a rehearsal three
+  // days on in the upcoming ones, the availability's next month, the
+  // planner's tomorrow. Admin of a project of her own, Gaev in it.
+  marina: { email: 'marina@e2e.test', firstName: 'Marina', lastName: 'Nanny', onboarded: true, locale: 'ru' },
 };
+
+/** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
+const ISLANDERS = [
+  ['Ariel', 'Spirit'], ['Caliban', 'Island'], ['Miranda', 'Milan'], ['Ferdinand', 'Naples'],
+  ['Alonso', 'Naples'], ['Gonzalo', 'Counsellor'], ['Adrian', 'Lord'], ['Francisco', 'Lord'],
+  ['Trinculo', 'Jester'], ['Stephano', 'Butler'], ['Iris', 'Rainbow'], ['Juno', 'Queen'],
+];
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -189,6 +240,25 @@ export function zoneInstant(zone, offset, hours, minutes = 0) {
  */
 export function otherDayThisWeek() {
   return new Date().getDay() === 0 ? -1 : 1;
+}
+
+/** Twelve days on, or twelve back when that is next month: in this month's grid (57). */
+export function farDayThisMonth() {
+  const day = new Date();
+  const month = day.getMonth();
+  day.setDate(day.getDate() + 12);
+  return day.getMonth() === month ? 12 : -12;
+}
+
+/** This month's first Saturday and the Sunday after it, both in this month (41). */
+export function firstWeekendOfMonth() {
+  const day = new Date();
+  day.setDate(1);
+  while (day.getDay() !== 6) day.setDate(day.getDate() + 1);
+  const saturday = new Date(day);
+  day.setDate(day.getDate() + 1);
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return { saturday: ymd(saturday), sunday: ymd(day) };
 }
 
 /**
@@ -255,6 +325,8 @@ export async function seed({ client, apiUrl, timezone }) {
   if (!new RegExp(`^[${inviteFormat.alphabet}]{${inviteFormat.length}}$`).test(twelfth.inviteCode)) {
     throw new Error(`The server issued ${twelfth.inviteCode}, not a short invite code`);
   }
+  // A second invitation opened over Twelfth Night's, the screen still up (08).
+  const arden = await project('As You Like It', 'The forest of Arden', [], 'orsino');
   // Ranevskaya runs the orchard and Lopakhin is in it; he runs a project of his own.
   const { id: orchardId } = await project('The Cherry Orchard', 'Act IV', ['lopakhin'], 'ranevskaya');
   await project('Lopakhin Holdings', 'Summer cottages', [], 'lopakhin');
@@ -300,6 +372,74 @@ export async function seed({ client, apiUrl, timezone }) {
     `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
      VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
     [estate.id, ids.voynitsky, ids.sonya]);
+  // Bernarda's and Mutter's (56), one each, the same way.
+  for (const [name, key] of [['La casa de Bernarda Alba', 'bernarda'], ['Mutter Courage', 'courage']]) {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, 'Her own', $2, NOW(), NOW()) RETURNING id`, [name, timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids[key]]);
+  }
+  // Prospero's (48), the same way: The Tempest with all twelve islanders, and
+  // his cell with Ariel alone.
+  const islanders = [];
+  for (const [firstName, lastName] of ISLANDERS) {
+    const { rows: [islander] } = await client.query(
+      `INSERT INTO native_users (email, password_hash, first_name, last_name, timezone, locale, onboarding_completed, notifications_enabled)
+       VALUES ($1, $2, $3, $4, $5, 'en', TRUE, FALSE) RETURNING id`,
+      [`${firstName.toLowerCase()}@e2e.test`, hash, firstName, lastName, timezone]);
+    islanders.push(islander.id);
+  }
+  const prosperoProject = async (name, description, members) => {
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id`, [name, description, timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [made.id, ids.prospero]);
+    for (const member of members) {
+      await client.query(
+        `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+         VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+        [made.id, member]);
+    }
+  };
+  await prosperoProject('The Tempest', 'The island', islanders);
+  await prosperoProject('Prospero Cell', 'The books', [islanders[0]]);
+  // Duncan's (61), the same way, the islanders in it: a page longer than the
+  // screen, so opening it on its members scrolls.
+  const { rows: [castle] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Forres Castle', 'The great hall', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+    [castle.id, ids.duncan]);
+  for (const member of islanders) {
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+      [castle.id, member]);
+  }
+  // And his own short one, him alone in it: left open when "New member" of
+  // the castle is tapped (61, review of T-023). The older, so the castle
+  // stays the project his app opens on.
+  const { rows: [dunsinane] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Dunsinane', 'The hill', $1, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day') RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+    [dunsinane.id, ids.duncan]);
+  // Its rehearsal, two days on at 19:00, that he is told was changed and was
+  // answered (62). Put in as the project was: no sign-in, and nobody told.
+  await client.query(
+    `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+     VALUES ($1, 'Banquet', $2::timestamptz, $3::timestamptz, 'The great hall', $4, NOW(), NOW())`,
+    [castle.id, localInstant(2, 19), localInstant(2, 22), ids.duncan]);
   // Made in this order: the Estate is the newer, so the form opens on it.
   await project('Pishchik Mill', 'Flour', [], 'pishchik');
   await project('Pishchik Estate', 'Mortgaged', [], 'pishchik');
@@ -328,6 +468,25 @@ export async function seed({ client, apiUrl, timezone }) {
   const accountsId = await joined('Estate Accounts', 'The ledgers', 'polina', 'admin');
   const lighthouseId = await joined('Lighthouse', 'The night shift', 'yakov');
   const ballId = await joined('Estate Ball', 'The ballroom', 'olga', 'admin');
+  // Claudius its admin, Gertrude in it (51).
+  const courtId = await joined('Elsinore Court', 'The throne room', 'claudius', 'admin');
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+    [courtId, ids.gertrude]);
+  // Cordelia its admin (54).
+  const learId = await joined('Lear Court', 'The heath', 'cordelia', 'admin');
+  const dachaId = await joined('Dacha Evenings', 'The terrace', 'telegin');
+  // Leonato's two, Hero in the first (63). Made in this order: the Orchard is
+  // the newer, the one the form opens on when no project is given it.
+  const watchId = await joined('Messina Watch', 'The night watch', 'leonato', 'admin');
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+    [watchId, ids.hero]);
+  await joined('Leonato Orchard', 'The arbour', 'leonato', 'admin');
+  // Marina its admin (65).
+  const nurseryId = await joined('Nursery Tea', 'The samovar', 'marina', 'admin');
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -370,6 +529,9 @@ export async function seed({ client, apiUrl, timezone }) {
     lesson: await rehearsal(schoolId, 'Lesson plan', 2, 16, 17, ['gaev', 'medvedenko'], 'gaev'),
     midnight: await rehearsal(roundsId, 'Midnight call', 0, [0, 30], 1, ['chebutykin'], 'gaev', CHOSEN_ZONE),
     watch: await rehearsal(roundsId, 'Night watch', 1, 2, 3, ['chebutykin'], 'gaev', CHOSEN_ZONE),
+    // Three Sisters' only one, an hour and a half three days ago: the length a
+    // new one there is given (07, T-012). The Bear has none, so three hours.
+    sisters: await rehearsal(sistersId, 'Read-through', -3, 18, [19, 30], ['stage', 'masha', 'irina'], 'stage'),
     // Three days ago: on his project's page, under the past ones (39).
     monologue: await rehearsal(sorinEstateId, 'Old monologue', -3, 12, 13, ['gaev', 'sorin'], 'gaev'),
     // Hers and Gaev's, neither seen: "0/2" until she marks it (40).
@@ -379,6 +541,23 @@ export async function seed({ client, apiUrl, timezone }) {
     boat: await rehearsal(lighthouseId, 'Boat repair', otherDayThisWeek(), 12, 13, ['gaev', 'yakov'], 'gaev'),
     // Gaev's alone: Olga, its project's admin, is not on it — "0/1" (42).
     ball: await rehearsal(ballId, 'Ball rehearsal', 2, 12, 13, ['gaev'], 'gaev'),
+    // Claudius deletes the first by its swipe, Gaev and Gertrude told of it:
+    // "Participants (2)". He opens the form from the second's details (51).
+    court: await rehearsal(courtId, 'Court scene', 2, 15, 17, ['gaev', 'claudius', 'gertrude'], 'gaev'),
+    play: await rehearsal(courtId, 'Play within', 3, 15, 17, ['gaev', 'claudius', 'gertrude'], 'gaev'),
+    // Claudius deletes the first from its details on the project's page,
+    // Gertrude told of it, and edits the second from its details twice (52).
+    // Made by Gaev, signed in already: the seed's twenty sign-ins are spent.
+    ghost: await rehearsal(courtId, 'Ghost watch', 2, 19, 20, ['claudius', 'gertrude'], 'gaev'),
+    mousetrap: await rehearsal(courtId, 'The Mousetrap', 3, 19, 20, ['claudius', 'gertrude'], 'gaev'),
+    // Off the form's five-minute step, as a rehearsal made before it (54).
+    storm: await rehearsal(learId, 'Storm scene', 1, [10, 7], 12, ['cordelia'], 'gaev'),
+    // Today, three days on at the strip's edge, and a day of the month (57).
+    terrace: await rehearsal(dachaId, 'Tea on the terrace', 0, 12, 13, ['gaev', 'telegin'], 'gaev'),
+    guitar_tuning: await rehearsal(dachaId, 'Guitar tuning', 3, 12, 13, ['gaev', 'telegin'], 'gaev'),
+    planting: await rehearsal(dachaId, 'Tree planting', farDayThisMonth(), 12, 13, ['gaev', 'telegin'], 'gaev'),
+    // Three days on: in her upcoming ones, named by its date (65).
+    samovar: await rehearsal(nurseryId, 'Samovar', 3, 12, 13, ['gaev', 'marina'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),
@@ -393,22 +572,25 @@ export async function seed({ client, apiUrl, timezone }) {
   };
 
   // What the flow reads after moving the profile to Tokyo: the same instant on
-  // Tokyo's clock, six or seven hours on from Tel Aviv with summer time.
-  const tokyo = (instant) => new Intl.DateTimeFormat('en-GB',
-    { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(instant));
+  // Tokyo's clock, six or seven hours on from Tel Aviv with summer time — as
+  // the en_US simulator, on the 12-hour clock, shows it: "9:00 AM". A pattern
+  // for the flow: the space before AM/PM is ICU's narrow one, matched by "."
+  // (T-017).
+  const tokyo = (instant) => new Intl.DateTimeFormat('en-US',
+    { timeZone: 'Asia/Tokyo', hour: 'numeric', minute: '2-digit', hour12: true })
+    .format(new Date(instant)).replace(/\s/g, '.');
   const times = { watch_tokyo: tokyo(zoneInstant(CHOSEN_ZONE, 1, 2)) };
 
-  // The planner's week in Tel Aviv, as its header names it in English:
-  // "16-22 Oct", or "28 Oct - 3 Nov" across a month.
-  const plannerDay = (offset) => {
-    const day = new Date(`${zoneDate(CHOSEN_ZONE, offset)}T00:00:00Z`);
-    return { day: day.getUTCDate(), month: day.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }) };
-  };
-  const [first, last] = [plannerDay(0), plannerDay(6)];
+  // The planner's week in Tel Aviv, as its header names it in English, an
+  // interval of dates (T-017): "Oct 16 – Oct 22", "Oct 28 – Nov 3".
+  const plannerDay = (offset) => new Date(`${zoneDate(CHOSEN_ZONE, offset)}T00:00:00Z`)
+    .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   const labels = {
-    week_chosen: first.month === last.month
-      ? `${first.day}-${last.day} ${first.month}`
-      : `${first.day} ${first.month} - ${last.day} ${last.month}`,
+    week_chosen: `${plannerDay(0)} – ${plannerDay(6)}`,
+    // New York's offset today, as the timezone picker names it: "UTC-4" in
+    // its summer, "UTC-5" in its winter (23). Node's Intl has the offset.
+    new_york_offset: new Intl.DateTimeFormat('en', { timeZone: 'America/New_York', timeZoneName: 'shortOffset' })
+      .formatToParts(new Date()).find((part) => part.type === 'timeZoneName').value.replace('GMT', 'UTC'),
   };
 
   // Some of the cast are busy, so the planner has something to weigh.
@@ -422,6 +604,9 @@ export async function seed({ client, apiUrl, timezone }) {
   // the flow changes it behind the screen's back while the editor is open.
   const days = {
     before: localDate(2), mark: localDate(3), after: localDate(4), other: localDate(6),
+    // A day two months on, whose week is far below this month's title: the
+    // editor saved there stays there (10, T-021).
+    later: localDate(60),
     // Zarechnaya's slot (25), and Trigorin's (27): from 23:00 on the first to
     // 01:00 on the second.
     evening: localDate(5), morning: localDate(6),
@@ -429,16 +614,33 @@ export async function seed({ client, apiUrl, timezone }) {
     trip: localDate(4),
     // Yakov's day in the strip, and today (41).
     picked: localDate(otherDayThisWeek()), today: localDate(0),
+    // The phone's today, in run.mjs's SIMULATOR_ZONE: not called today (41).
+    phone_today: zoneDate('Pacific/Honolulu', 0),
     // The day Sonya marks busy, and the one after it, which stays free (45).
     tomorrow: localDate(1), after_tomorrow: localDate(2),
+    // A day gone, in the form's calendar (55).
+    yesterday: localDate(-1),
+    // Telegin's day at the strip's edge, and his day of the month (57).
+    edge: localDate(3), far: localDate(farDayThisMonth()),
+    // A weekend in this month's period picker, which begins its weeks on
+    // Monday, everyone's default: Sunday beside Saturday, not under it (41).
+    ...firstWeekendOfMonth(),
   };
   await call(apiUrl, 'PUT', '/native/availability/days', {
     token: await token('treplev'),
     body: { days: [{ date: days.other, entries: [{ startsAt: `${days.other}T00:00:00.000Z`, endsAt: `${days.other}T23:59:59.999Z`, type: 'busy', isAllDay: true }] }] },
   });
+  // The form's date as it names yesterday and tomorrow: "Saturday, October 31, 2026" (55).
+  for (const key of ['yesterday', 'tomorrow']) {
+    labels[key] = new Date(`${days[key]}T00:00:00Z`).toLocaleDateString('en-US',
+      { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  }
   // The day the editor's error names, in English: "October 27, 2026".
   labels.mark_day = new Date(`${days.mark}T00:00:00Z`).toLocaleDateString('en-US',
     { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  // This month's title in the editor, in English: "November 2026" (10).
+  labels.this_month = new Date(`${days.today}T00:00:00Z`).toLocaleDateString('en-US',
+    { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
   // Zarechnaya's own slot past midnight (25), the row PUT /availability/days
   // writes for it — written here, since the sign-ins are spent.
@@ -467,6 +669,11 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual', NULL),
             ($1, $4::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-early-train')`,
     [ids.shamrayev, localInstant(5, 23), localInstant(6, 1), localInstant(6, 0)]);
+  // Yelena's (64): MARK_DAY busy all day, as a save of that day writes it.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'manual')`,
+    [ids.yelena, `${days.mark}T00:00:00.000Z`, `${days.mark}T23:59:59.999Z`]);
 
   // Inboxes written as the server records a notification, a minute apart and
   // to the millisecond as it writes them: sign-ins are spent, and sixty
@@ -516,7 +723,8 @@ export async function seed({ client, apiUrl, timezone }) {
     password: PASSWORD,
     people: Object.fromEntries(Object.entries(PEOPLE).map(([key, person]) => [key, { id: ids[key], email: person.email }])),
     projects: { hamlet: hamletId, seagull: seagullId, sisters: sistersId, bear: bearId, twelfth: twelfth.id },
-    invites: { twelfth: twelfth.inviteCode },
+    // And Twelfth Night's typed in lowercase, as the field typed it (08, T-025).
+    invites: { twelfth: twelfth.inviteCode, arden: arden.inviteCode, twelfth_lowercase: twelfth.inviteCode.toLowerCase() },
     days,
     times,
     labels,

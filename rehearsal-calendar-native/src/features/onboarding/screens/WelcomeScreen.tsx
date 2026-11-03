@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { OnboardingStackParamList } from '../navigation/OnboardingNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -8,12 +9,6 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
 import { UserAvatar } from '../../../shared/components';
-
-type OnboardingStackParamList = {
-  Welcome: undefined;
-  WeekStart: undefined;
-  CalendarSync: undefined;
-};
 
 type WelcomeScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
 
@@ -28,7 +23,9 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
 
   return (
     <OnboardingStep
-      title={t.onboarding.welcome.title}
+      // One line with the name in it; it was "Welcome!", then the name, then
+      // "Rehearsly", each on a line of its own (T-022).
+      title={t.onboarding.welcome.greeting(user?.firstName || undefined)}
       description={t.onboarding.welcome.description}
       currentStep={0}
       totalSteps={4}
@@ -46,14 +43,6 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
             size={100}
           />
         </View>
-
-        {/* Greeting */}
-        <Text style={styles.greeting}>
-          {user?.firstName ? `${user.firstName}!` : ''}
-        </Text>
-
-        {/* App subtitle */}
-        <Text style={styles.subtitle}>{t.onboarding.welcome.subtitle}</Text>
 
         {/* Feature list */}
         <View style={styles.featuresList}>
@@ -89,18 +78,6 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   avatarContainer: {
-    marginBottom: 16,
-  },
-  greeting: {
-    fontSize: 28,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
-    color: Colors.accent.purple,
     marginBottom: 40,
   },
   featuresList: {

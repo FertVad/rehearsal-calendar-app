@@ -1,0 +1,182 @@
+T-216 red before and green after under the same 20 min limit as autodev's "tests" check.
+Runner: audit/evidence/T-216/budget-run.mjs (the stages of `npm test -- --silent`,
+server/scripts/test.mjs all, in its order; limit 1200 s; the stage that crosses
+it is killed by SIGTERM to its process group). A shell call here may not last
+10 min, so the run went over several calls; only the stages' own time counts.
+Jest: six --shard=i/6 processes, --maxWorkers=1 --silent, ADMIN_BROWSER_CHECK=0,
+together the 191 files and 2117 tests of the red run.
+Stages that fail in this sandbox before and after, and passed in the red run:
+secret scanner 3/33 (cannot read .env-named fixtures), e2e lock 1/12
+("what a dead run left running is stopped before the lock is taken": fails
+also run alone, `node --test e2e/__tests__/lock.test.mjs`), runtimeStartup
+8 tests (cannot read server/.env; T-215 README). Not stopped on failure, so
+every stage still ran and was timed. Each takes the same time before and after.
+
+Condition, both runs: the mtime of the three files T-022 rewrote is set anew,
+content unchanged (what a checkout or a commit does):
+$ node audit/evidence/T-216/touch.mjs src/i18n/translations/common.ts \
+    src/i18n/translations/onboarding.ts src/shared/components/index.ts
+
+======== RED BEFORE: jest.config.js of 9cf6f2e (the red run's commit) ========
+$ git restore --source=9cf6f2e -- rehearsal-calendar-native/jest.config.js
+$ git diff --stat
+ rehearsal-calendar-native/jest.config.js | 6 ------
+$ grep -c isolatedModules rehearsal-calendar-native/jest.config.js
+0
+$ node audit/evidence/T-216/touch.mjs <the three files>
+1793590983630 rehearsal-calendar-native/src/i18n/translations/common.ts
+1793590983630 rehearsal-calendar-native/src/i18n/translations/onboarding.ts
+1793590983630 rehearsal-calendar-native/src/shared/components/index.ts
+$ uptime
+ 5:43  up 35 days, 19:02, 1 user, load averages: 1.40 1.74 2.35
+
+$ node audit/evidence/T-216/budget-run.mjs before --reset
+[budget] before: stage "secret scanner" starts, used 0.0 s of 1200.0 s
+# tests 33
+# pass 30
+# fail 3
+[budget] before: stage "secret scanner" ended, code 1, 41.4 s; used 41.4 s of 1200.0 s
+[budget] before: stage "e2e lock" starts, used 41.4 s of 1200.0 s
+# tests 12
+# pass 11
+# fail 1
+[budget] before: stage "e2e lock" ended, code 1, 3.9 s; used 45.3 s of 1200.0 s
+[budget] before: stage "browser install" starts, used 45.3 s of 1200.0 s
+[budget] before: stage "browser install" ended, code 0, 2.1 s; used 47.3 s of 1200.0 s
+[budget] before: stage "jest 1/6" starts, used 47.3 s of 1200.0 s
+Test Suites: 32 passed, 32 total
+Tests:       347 passed, 347 total
+Time:        182.235 s
+[budget] before: stage "jest 1/6" ended, code 0, 183.8 s; used 231.1 s of 1200.0 s
+[budget] before: stage "jest 2/6" starts, used 231.1 s of 1200.0 s
+Test Suites: 32 passed, 32 total
+Tests:       342 passed, 342 total
+Time:        216.826 s
+[budget] before: stage "jest 2/6" ended, code 0, 218.4 s; used 449.6 s of 1200.0 s
+$ node audit/evidence/T-216/budget-run.mjs before
+[budget] before: stage "jest 3/6" starts, used 449.6 s of 1200.0 s
+FAIL backend server/__tests__/startup/runtimeStartup.test.js (8.71 s)
+FAIL server/__tests__/startup/runtimeStartup.test.js (8.71 s)
+Test Suites: 1 failed, 31 passed, 32 total
+Tests:       8 failed, 225 passed, 233 total
+Time:        161.621 s
+[budget] before: stage "jest 3/6" ended, code 1, 163.0 s; used 612.6 s of 1200.0 s
+[budget] before: stage "jest 4/6" starts, used 612.6 s of 1200.0 s
+Test Suites: 32 passed, 32 total
+Tests:       304 passed, 304 total
+Time:        199.564 s
+[budget] before: stage "jest 4/6" ended, code 0, 201.0 s; used 813.6 s of 1200.0 s
+$ node audit/evidence/T-216/budget-run.mjs before
+[budget] before: stage "jest 5/6" starts, used 813.6 s of 1200.0 s
+Test Suites: 32 passed, 32 total
+Tests:       431 passed, 431 total
+Time:        135.525 s
+[budget] before: stage "jest 5/6" ended, code 0, 137.0 s; used 950.7 s of 1200.0 s
+[budget] before: stage "jest 6/6" starts, used 950.7 s of 1200.0 s
+Test Suites: 31 passed, 31 total
+Tests:       460 passed, 460 total
+Time:        187.761 s
+[budget] before: stage "jest 6/6" ended, code 0, 189.4 s; used 1140.0 s of 1200.0 s
+$ node audit/evidence/T-216/budget-run.mjs before
+[budget] before: stage "admin DOM/CSP" starts, used 1140.0 s of 1200.0 s
+# tests 8
+# pass 8
+# fail 0
+[budget] before: stage "admin DOM/CSP" ended, code 0, 17.1 s; used 1157.1 s of 1200.0 s
+[budget] before: stage "admin errors" starts, used 1157.1 s of 1200.0 s
+[budget] before: stage "admin errors" stopped after 43.0 s: the run passed the 20 min limit (1200.1 s used, code null), as autodev's "не уложились в лимит 20 мин"
+$ uptime
+ 6:03  up 35 days, 19:22, 1 user, load averages: 2.82 2.62 2.55
+
+Red before: stopped by the limit at 1200 s, every test that ran passing apart
+from the sandbox ones above. Jest: 183.8 + 218.4 + 163.0 + 201.0 + 137.0 +
+189.4 = 1092.6 s for the 191 files (red run: 1075.79 s). The red run was
+stopped one stage later, in "invite", after "admin errors" (67.5 s).
+
+======== GREEN AFTER: jest.config.js of HEAD c4e62ae (isolatedModules) ========
+Limit unchanged (1200 s), runner unchanged, no retry.
+$ git restore --source=HEAD -- rehearsal-calendar-native/jest.config.js
+$ git status --short
+(jest.config.js clean)
+$ grep -c isolatedModules rehearsal-calendar-native/jest.config.js
+1
+$ node audit/evidence/T-216/touch.mjs <the three files>
+1793592230306 src/i18n/translations/common.ts
+1793592230306 src/i18n/translations/onboarding.ts
+1793592230306 src/shared/components/index.ts
+$ uptime
+ 6:03  up 35 days, 19:23, 1 user, load averages: 2.21 2.49 2.51
+
+$ node audit/evidence/T-216/budget-run.mjs after --reset
+[budget] after: stage "secret scanner" starts, used 0.0 s of 1200.0 s
+# tests 33
+# pass 30
+# fail 3
+[budget] after: stage "secret scanner" ended, code 1, 41.7 s; used 41.7 s of 1200.0 s
+[budget] after: stage "e2e lock" starts, used 41.7 s of 1200.0 s
+# tests 12
+# pass 11
+# fail 1
+[budget] after: stage "e2e lock" ended, code 1, 3.9 s; used 45.5 s of 1200.0 s
+[budget] after: stage "browser install" starts, used 45.5 s of 1200.0 s
+[budget] after: stage "browser install" ended, code 0, 1.9 s; used 47.4 s of 1200.0 s
+[budget] after: stage "jest 1/6" starts, used 47.4 s of 1200.0 s
+Test Suites: 32 passed, 32 total
+Tests:       347 passed, 347 total
+Time:        32.973 s, estimated 170 s
+[budget] after: stage "jest 1/6" ended, code 0, 34.5 s; used 81.9 s of 1200.0 s
+[budget] after: stage "jest 2/6" starts, used 81.9 s of 1200.0 s
+Test Suites: 32 passed, 32 total
+Tests:       342 passed, 342 total
+Time:        37.056 s, estimated 203 s
+[budget] after: stage "jest 2/6" ended, code 0, 38.7 s; used 120.7 s of 1200.0 s
+[budget] after: stage "jest 3/6" starts, used 120.7 s of 1200.0 s
+FAIL backend server/__tests__/startup/runtimeStartup.test.js (8.959 s)
+FAIL server/__tests__/startup/runtimeStartup.test.js (8.959 s)
+Test Suites: 1 failed, 31 passed, 32 total
+Tests:       8 failed, 225 passed, 233 total
+Time:        35.623 s, estimated 151 s
+[budget] after: stage "jest 3/6" ended, code 1, 37.3 s; used 157.9 s of 1200.0 s
+[budget] after: stage "jest 4/6" starts, used 157.9 s of 1200.0 s
+Test Suites: 32 passed, 32 total
+Tests:       304 passed, 304 total
+Time:        36.679 s, estimated 186 s
+[budget] after: stage "jest 4/6" ended, code 0, 38.4 s; used 196.3 s of 1200.0 s
+[budget] after: stage "jest 5/6" starts, used 196.3 s of 1200.0 s
+Test Suites: 32 passed, 32 total
+Tests:       431 passed, 431 total
+Time:        44.222 s, estimated 127 s
+[budget] after: stage "jest 5/6" ended, code 0, 45.9 s; used 242.2 s of 1200.0 s
+$ node audit/evidence/T-216/budget-run.mjs after
+[budget] after: stage "jest 6/6" starts, used 242.2 s of 1200.0 s
+Test Suites: 31 passed, 31 total
+Tests:       460 passed, 460 total
+Time:        65.366 s, estimated 177 s
+[budget] after: stage "jest 6/6" ended, code 0, 67.0 s; used 309.3 s of 1200.0 s
+[budget] after: stage "admin DOM/CSP" starts, used 309.3 s of 1200.0 s
+# tests 8
+# pass 8
+# fail 0
+[budget] after: stage "admin DOM/CSP" ended, code 0, 17.3 s; used 326.5 s of 1200.0 s
+[budget] after: stage "admin errors" starts, used 326.5 s of 1200.0 s
+# tests 18
+# pass 18
+# fail 0
+[budget] after: stage "admin errors" ended, code 0, 71.4 s; used 397.9 s of 1200.0 s
+[budget] after: stage "invite" starts, used 397.9 s of 1200.0 s
+# tests 11
+# pass 11
+# fail 0
+[budget] after: stage "invite" ended, code 0, 16.5 s; used 414.4 s of 1200.0 s
+[budget] after: stage "stored content" starts, used 414.4 s of 1200.0 s
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Time:        11.172 s
+[budget] after: stage "stored content" ended, code 0, 12.6 s; used 427.1 s of 1200.0 s
+[budget] after: every stage ran within the limit: 427.1 s of 1200.0 s
+$ uptime
+ 6:11  up 35 days, 19:30, 1 user, load averages: 2.07 2.12 2.29
+
+Green after: every stage ran, 427.1 s of the same 1200 s. Jest: 34.5 + 38.7 +
+37.3 + 38.4 + 45.9 + 67.0 = 261.8 s for the same 191 files and 2117 tests
+(before: 1092.6 s). The same tests pass and the same sandbox ones fail.

@@ -452,43 +452,32 @@ function merge(into, part) {
 }
 
 /**
- * Notify members when a new rehearsal is created
+ * Notify members when a new rehearsal is created — and when it is: "Hamlet:
+ * Full dress scheduled" made every reader open it to find out (T-023).
  */
-export async function notifyRehearsalCreated(rehearsal, projectName, members) {
+export async function notifyRehearsalCreated(rehearsal, projectName, members, options) {
   // The caller decides who is on the list — including leaving out the author.
   const userIds = members.map(m => m.user_id);
-  await sendLocalizedNotification(
-    userIds,
-    'newRehearsal',
-    { projectName, rehearsalTitle: rehearsal.title },
-    { type: 'rehearsal_created', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }
-  );
+  return sendAboutRehearsal(rehearsal, userIds, (locale, when) => {
+    const tr = t(locale, 'newRehearsal');
+    return { title: tr.title, body: tr.body({ projectName, rehearsalTitle: rehearsal.title, when }) };
+  }, { type: 'rehearsal_created', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }, options);
 }
 
 /**
- * Notify members when a rehearsal is updated
+ * Notify members when a rehearsal is updated, saying when it now is (T-023).
  * @param {string[]} changeKeys - keys from translations.changes (e.g. ['datetime', 'location'])
  */
-export async function notifyRehearsalUpdated(rehearsal, projectName, members, changeKeys) {
+export async function notifyRehearsalUpdated(rehearsal, projectName, members, changeKeys, options) {
   const userIds = members.map(m => m.user_id);
-  if (userIds.length === 0) return;
-
-  const locales = await getUserLocales(userIds);
-  const groups = groupByLocale(userIds, locales);
-
-  for (const [locale, ids] of groups.entries()) {
+  return sendAboutRehearsal(rehearsal, userIds, (locale, when) => {
     const tr = t(locale, 'rehearsalUpdated');
     const changesDict = t(locale, 'changes');
-    const localizedChanges = changeKeys && changeKeys.length > 0
+    const changes = changeKeys && changeKeys.length > 0
       ? changeKeys.map(k => changesDict[k] || k).join(', ')
       : changesDict.default;
-
-    await sendPushNotification(ids, {
-      title: tr.title,
-      body: tr.body({ projectName, rehearsalTitle: rehearsal.title, changes: localizedChanges }),
-      data: { type: 'rehearsal_updated', rehearsalId: rehearsal.id, projectId: rehearsal.project_id },
-    });
-  }
+    return { title: tr.title, body: tr.body({ projectName, rehearsalTitle: rehearsal.title, when, changes }) };
+  }, { type: 'rehearsal_updated', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }, options);
 }
 
 /**
@@ -505,15 +494,14 @@ export async function notifyRehearsalDeleted(rehearsal, projectName, members) {
 }
 
 /**
- * Notify admins when a member responds to a rehearsal
+ * Notify admins when a member responds to a rehearsal — which one, and when it
+ * is: "responded to a rehearsal" left an admin of several guessing (T-023).
  */
-export async function notifyMemberResponse(rehearsal, projectName, responderName, adminIds) {
-  await sendLocalizedNotification(
-    adminIds,
-    'memberResponse',
-    { responderName, projectName },
-    { type: 'member_response', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }
-  );
+export async function notifyMemberResponse(rehearsal, projectName, responderName, adminIds, options) {
+  return sendAboutRehearsal(rehearsal, adminIds, (locale, when) => {
+    const tr = t(locale, 'memberResponse');
+    return { title: tr.title, body: tr.body({ responderName, projectName, rehearsalTitle: rehearsal.title, when }) };
+  }, { type: 'member_response', rehearsalId: rehearsal.id, projectId: rehearsal.project_id }, options);
 }
 
 /**
@@ -525,13 +513,16 @@ export async function notifyMemberResponse(rehearsal, projectName, responderName
  * This used to tell the person who had just joined, who had tapped Join a
  * moment earlier and knew. The owner — whose invite link it was, and who
  * answers for who is in the room — was told nothing at all.
+ *
+ * The project's id goes with it, so a tap opens the project on its members;
+ * with the name alone the tap opened nothing (T-023).
  */
-export async function notifyMemberJoined(projectName, memberName, recipientIds) {
+export async function notifyMemberJoined(projectName, memberName, recipientIds, projectId) {
   await sendLocalizedNotification(
     recipientIds,
     'memberJoined',
     { memberName, projectName },
-    { type: 'member_joined', projectName }
+    { type: 'member_joined', projectName, projectId }
   );
 }
 
@@ -591,15 +582,17 @@ export async function notifyProjectDeleted(projectName, memberIds) {
 }
 
 /**
- * A rehearsal reminder, worded for each reader (R8: GR04).
+ * A notification about one rehearsal, worded for each reader (R8: GR04).
  *
- * Grouped by language and time zone rather than language alone: the title
+ * Grouped by language and time zone rather than language alone: the text
  * carries the rehearsal's start — today, tomorrow or the date, and the time —
  * as the reader's own clock shows it (reminderText.js), so two people in one
- * language but different zones read different times. `options.now` is the
- * moment the run sends at; the rest passes to sendPushNotification.
+ * language but different zones read different times. The reminders, a new or
+ * changed rehearsal and a response all say when this way (T-023).
+ * `compose(locale, when)` gives the title and body; `options.now` is the moment
+ * it is sent at; the rest passes to sendPushNotification.
  */
-async function sendRehearsalReminder(rehearsal, projectName, userIds, key, data, { now = new Date(), ...options } = {}) {
+async function sendAboutRehearsal(rehearsal, userIds, compose, data, { now = new Date(), ...options } = {}) {
   const outcome = emptyOutcome();
   if (userIds.length === 0) return outcome;
   const executor = options.executor || db;
@@ -618,16 +611,21 @@ async function sendRehearsalReminder(rehearsal, projectName, userIds, key, data,
     groups.get(group).ids.push(userId);
   }
 
+  // A row from the table, or a rehearsal as the service answers with it.
+  const startsAt = rehearsal.starts_at ?? rehearsal.startsAt;
   for (const { locale, timeZone, ids } of groups.values()) {
-    const tr = t(locale, key);
-    const when = reminderWhen(locale, rehearsal.starts_at, now, timeZone);
-    merge(outcome, await sendPushNotification(ids, {
-      title: tr.title({ when }),
-      body: tr.body({ projectName, rehearsalTitle: rehearsal.title }),
-      data,
-    }, options));
+    const when = reminderWhen(locale, startsAt, now, timeZone);
+    merge(outcome, await sendPushNotification(ids, { ...compose(locale, when), data }, options));
   }
   return outcome;
+}
+
+/** A reminder: the time in the title, the rehearsal in the body. */
+function sendRehearsalReminder(rehearsal, projectName, userIds, key, data, options) {
+  return sendAboutRehearsal(rehearsal, userIds, (locale, when) => {
+    const tr = t(locale, key);
+    return { title: tr.title({ when }), body: tr.body({ projectName, rehearsalTitle: rehearsal.title }) };
+  }, data, options);
 }
 
 /**

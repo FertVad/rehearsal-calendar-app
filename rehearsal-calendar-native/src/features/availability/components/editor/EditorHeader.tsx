@@ -1,10 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, FontWeight, Spacing } from '../../../../shared/constants/colors';
+import { IconButton } from '../../../../shared/components/IconButton';
+import { Colors, FontSize, FontWeight, Spacing, TouchTarget } from '../../../../shared/constants/colors';
 import { useI18n } from '../../../../contexts/I18nContext';
-import { getDateLocale } from '../../../../shared/utils/locale';
-import { parseDateString } from '../../../../shared/utils/time';
+import { formatDate } from '../../../../shared/utils/dateFormat';
 
 interface EditorHeaderProps {
   selectedCount: number;
@@ -24,22 +23,18 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
       <View style={styles.bottomSheetHeaderLeft}>
         <Text style={styles.bottomSheetTitle}>
           {selectedCount === 1 && selectedDate
-            // A calendar date, not an instant: new Date('2026-09-10') is the 9th west of UTC.
-            ? parseDateString(selectedDate).toLocaleDateString(getDateLocale(language), {
-                day: 'numeric',
-                month: 'long',
-              })
+            ? formatDate(selectedDate, 'dayMonth', language)
             : t.availability.selectedDates(selectedCount)}
         </Text>
         {selectedCount > 0 && (
-          <TouchableOpacity onPress={onClear} style={styles.clearButton}>
-            <Text style={styles.clearButtonText}>{t.common.clear}</Text>
+          <TouchableOpacity testID="availability-deselect" onPress={onClear} style={styles.clearButton}>
+            {/* It lets go of the days picked and leaves what is on them: "Clear"
+                read as emptying the day (T-021). */}
+            <Text style={styles.clearButtonText}>{t.common.deselect}</Text>
           </TouchableOpacity>
         )}
       </View>
-      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClear}>
-        <Ionicons name="chevron-down" size={24} color={Colors.text.secondary} />
-      </TouchableOpacity>
+      <IconButton testID="availability-collapse" icon="chevron-down" accessibilityLabel={t.common.close} onPress={onClear} />
     </View>
   );
 };
@@ -65,8 +60,9 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   clearButton: {
+    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
   },
   clearButtonText: {
     fontSize: FontSize.sm,

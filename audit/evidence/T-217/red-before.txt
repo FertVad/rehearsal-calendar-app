@@ -1,0 +1,59 @@
+T-217: flow 43 "Invite link at a cold start, turned down" - red before
+
+Red run: full e2e on auto/main 1da673f, 02.11.2026 07:56 (artifacts
+rehearsal-calendar-native/e2e/out/failed/full-e2e-1da673f-2026-11-02T05-49-54-364Z,
+not in git).
+
+  [Failed] Invite link at a cold start, turned down (2m 14s)
+  (Assertion is false: id: calendar-today is visible)
+
+The failed step is the last part: launched by rehearsalapp://invite/22222222,
+"Invitation not found", tap "Close", wait 15 s for the calendar.
+
+maestro.log - the tap was made, and Maestro thought it took:
+
+  07:02:40.899 Tapping on element: accessibilityText=Close, bounds=[157,490][235,534]
+  07:02:41.085 Try tapping at (196, 512) using hierarchy based logic for wait
+  07:02:42.055 Something have changed in the UI judging by view hierarchy. Proceed.
+  07:02:42.056 Assert that id: calendar-today is visible RUNNING
+  07:02:57.490 CommandFailed: Assertion is false: id: calendar-today is visible
+
+device-simulator.log - the touch never reached the app, with the signature of
+a lost tap (docs/e2e.md, "A lost tap", T-207):
+
+  07:02:41.329394 backboardd: we already have a service for senderID:1042C0E000232
+  07:02:41.336162 backboardd: didn't see a previous touch down or range-in event
+                  for pathIndex:2; skipping event   (x10, to 07:02:41.438925)
+
+The app said nothing: metro.log and the app's JS log have the 404 for the
+invite and nothing after it. A Close that reached the app calls goBack(), and a
+goBack() with nothing to go back to logs "The action 'GO_BACK' was not handled"
+in this dev build; neither shows up. The step-112 screenshot and hierarchy show
+the same "Invitation not found" screen as before the tap.
+
+T-207's scanner on the red run:
+
+  $ node audit/evidence/T-207/touch-scan.mjs rehearsal-calendar-native/e2e/out/failed/full-e2e-1da673f-2026-11-02T05-49-54-364Z
+  artifacts  Invite link at a cold start, turned down: digitizers 26, registered twice 1 (s after the app's last scene change: 11.56s/tap 0 after "unspecified -> foreground"), app scene changes 13, taps lost 1
+      lost 07:02:41.336 -> Something have changed in the UI judging by view hierarchy. Proceed.
+
+  1 flow logs, 26 digitizers attached, 1 registered twice, 1 taps lost
+
+The one lost tap of the run is the Close the flow failed on.
+
+Trying to make it happen again: flow 43 three times in a row in one Maestro
+run (e2e/out/t217-tools/loop-43.yaml, repeat x3, not in git), on the old flow,
+02.11.2026 08:03. Each pass took about 2 min, and the command was stopped at
+the 10-minute limit during the third pass. Both finished passes were green:
+
+  08:06:26.707 Tap on "Close" COMPLETED
+  08:06:26.944 Assert that id: calendar-today is visible COMPLETED
+  08:06:27.998 Run ../../flows/43-invite-cold-start-close.yaml COMPLETED
+  08:08:30.032 Tap on "Close" COMPLETED
+  08:08:30.276 Assert that id: calendar-today is visible COMPLETED
+  08:08:31.546 Run ../../flows/43-invite-cold-start-close.yaml COMPLETED
+
+As T-207 found, a lost tap cannot be caused on demand. It happens about once
+in 250 taps (83 in 20 606 in the logs kept on 25.10.2026), and this flow makes
+about 26. The red run above, with the backboardd lines at the moment of the
+tap, is the "red before".

@@ -1,0 +1,89 @@
+T-014 — touch targets, measured in Maestro's screen hierarchy (points, iPhone 16
+simulator "Rehearsly E2E", 393x852). Width x height of the element that takes
+the tap. "<44" marks a smaller side under 44. Texts that take no tap (titles,
+times, the clock) are left out.
+
+How: probe flows (kept out of the tree) walked the screens as the director and
+asserted an id that is not there with `optional: true`; Maestro dumps the
+hierarchy for each such step. Lists made by a script over the dumps.
+
+BEFORE — base 8fae51c (runs 2026-10-31_002259, _003307, _004058; and the red
+run of flow 49, _012731)
+------------------------------------------------------------------------------
+Calendar
+   53 x 24  calendar-today "Today"                    <44
+   42 x 64  calendar-day-* (41-42 wide, every day)    <44
+   57 x 33  seen-toggle "Mark as seen"                <44
+   78 x 43  tab-calendar / tab-projects / tab-create / tab-planner / tab-profile  <44
+  351 x 42  calendar-filter-option (dropdown rows)    <44
+  143 x 33  form: recommended time "09:00-23:00 (14h)" <44
+Inbox
+   24 x 24  "Back"                                    <44
+   38 x 38  "Mark all read"                           <44
+   38 x 38  "Clear all"                               <44
+Rehearsal sheet
+   31 x 31  "Close"                                   <44
+Rehearsal form
+   32 x 32  rehearsal-close "Cancel"                  <44
+   24 x 25  project picker "Close"                    <44
+Mark Busy
+   24 x 24  availability-close "Cancel"               <44
+   49 x 24  editor "Clear"                            <44
+   24 x 24  editor "Close" (chevron)                  <44
+  160 x 33  slot-0-start / slot-0-end                 <44
+Projects
+   36 x 37  "Create Project" (+)                      <44
+  325 x 35  card ", Invite"                           <44
+Project
+   24 x 24  "Back"                                    <44
+  361 x 23  ", Upcoming Rehearsals, 1, " (toggle)     <44
+  361 x 43  ", Share the link"                        <44
+Create project
+   32 x 32  "Back"                                    <44
+Planner
+   32 x 32  "Back"                                    <44
+  115 x 35  planner-period-week / -month / -custom    <44
+   63 x 29  planner-add-* "+ Add"                     <44
+Profile
+  114 x 34  profile-edit                              <44
+   24 x 25  language sheet "Close"                    <44
+  369 x 41  language-ru / -es / -de                   <44
+
+AFTER — 724a80f (runs 2026-10-31_013343 probe A, _014415 probe B, and the
+green run of flow 49)
+------------------------------------------------------------------------------
+Calendar
+   53 x 44  calendar-today "Today"
+   46 x 64  calendar-day-* (46-47 wide)
+   57 x 44  seen-toggle "Mark as seen"
+   78 x 44  every tab
+  143 x 44  form: recommended time
+Inbox
+   44 x 44  "Back"
+   44 x 44  "Mark all read"
+   44 x 44  "Clear all"   (4 pt apart, side by side, no overlap)
+Rehearsal sheet
+   45 x 45  "Close"  (47 pt in layout; iOS draws the 3/4 sheet at ~0.955 —
+                      a 44 pt cross measured 42 x 42 there)
+Rehearsal form
+   44 x 44  rehearsal-close, project picker "Close"
+   44 x 44  time picker "Cancel", "Done"; participants "Done"
+Mark Busy
+   44 x 44  availability-close, editor "Close"
+   49 x 44  editor "Clear"
+Projects / project / create project
+   44 x 44  "Create Project" (+), "Back", "Back"
+   (project's section toggle, share and invite rows: no longer under 44)
+Planner
+   44 x 44  "Back"
+  115 x 44  planner-period-*
+   63 x 44  planner-add-* "+ Add"
+Profile
+  114 x 44  profile-edit
+   44 x 44  language sheet "Close"; language rows no longer under 44
+
+Left as they are
+   login-email / login-password 351 x 42: the native field inside a 44 pt box
+     with a 1 pt border (minHeight 44 already).
+   profile-notifications 63 x 28: the system UISwitch.
+   "Sheet Grabber" 72 x 24: drawn by iOS.

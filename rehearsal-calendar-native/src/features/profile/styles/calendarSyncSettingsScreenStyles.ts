@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -13,19 +13,11 @@ export const styles = StyleSheet.create({
     padding: Spacing.xl,
     paddingBottom: Spacing.xxl * 2,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  backButton: {
-    marginRight: Spacing.md,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-    flex: 1,
+  explanation: {
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xl,
+    marginHorizontal: Spacing.sm,
   },
   section: {
     marginBottom: Spacing.xl,
@@ -193,6 +185,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: TouchTarget,
     padding: Spacing.md,
     backgroundColor: Colors.glass.bg,
     borderRadius: BorderRadius.md,
@@ -373,6 +366,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'space-between' as const,
+    minHeight: TouchTarget,
     paddingVertical: 12,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -416,6 +410,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.sm,
     marginTop: Spacing.md,
+    minHeight: TouchTarget,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,

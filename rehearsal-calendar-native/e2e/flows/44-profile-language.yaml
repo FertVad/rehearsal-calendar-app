@@ -10,6 +10,10 @@
 # matched. And the picker opened a second time was a second React Native
 # Modal on the screen, which iOS leaves out of the accessibility tree, so
 # "English" was drawn and not found (T-208, every sheet is an AppModal since).
+#
+# The tab taps go through tap-and-see.yaml: the simulator lost the one on the
+# profile tab after the restart, the calendar stayed, and the flow failed
+# looking for the sign-out (T-212; docs/e2e.md, "A lost tap").
 appId: ${APP_ID}
 name: The profile's language, kept by the account
 tags:
@@ -25,13 +29,15 @@ tags:
       id: tab-calendar
       text: "Calendar, tab.*"
     timeout: 30000
-- tapOn:
-    id: tab-profile
-- extendedWaitUntil:
-    visible:
-      id: profile-language
-      text: ".*English.*"
-    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: profile-language
+    text: ".*English.*"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -72,8 +78,12 @@ tags:
 - takeScreenshot: 44-russian-after-restart
 
 # Signed out, the app cleared, signed in again: Russian, from her account.
-- tapOn:
-    id: tab-profile
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Язык, Русский.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element:
       id: profile-logout
@@ -95,14 +105,59 @@ tags:
     text: "Профиль, tab.*"
 - takeScreenshot: 44-russian-from-account
 
-# Back to English.
+# «Помощь» opens the support page (T-011): it had no onPress, and a tap on it
+# left the profile on screen. The page comes from the server the app talks
+# to, here the local one, asked with ?lang=ru. Its language is chosen by
+# legal.js, which Safari does not run here: the server's CSP upgrades the
+# page's scripts to https, which the local http server does not answer. So
+# the flow reads only what the page says in every language, its address;
+# the link's language and legal.js keeping it are Jest's (ProfileScreen.about,
+# legalPageLanguage). The version is Jest's too: the build's is 1.0.0, the number
+# the screen had written in, and nothing on screen tells them apart.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Язык, Русский.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-help
+    direction: DOWN
+    centerElement: true
 - tapOn:
-    id: tab-profile
+    id: profile-help
+- extendedWaitUntil:
+    visible: ".*support@rehearsly.me.*"
+    timeout: 20000
+- assertNotVisible:
+    id: profile-help
+- takeScreenshot: 44-support-page
+- launchApp:
+    stopApp: false
 - extendedWaitUntil:
     visible:
-      id: profile-language
-      text: ".*Русский.*"
-    timeout: 10000
+      id: profile-help
+    timeout: 20000
+
+# Back to English.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Язык, Русский.*"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: profile-language
+    text: ".*Русский.*"
+# The profile is still scrolled down to Help, its language row clipped under
+# the title, which stays put (T-029): on screen to Maestro, and a tap on it
+# lands on the title. Taken back to the top first.
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:

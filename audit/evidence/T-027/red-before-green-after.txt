@@ -1,0 +1,79 @@
+T-027 — main buttons filled flat with #9333EA (Colors.accent.purpleFill)
+
+Base 8b5fe30, fix 18d12aa. "Before": the fix's app files put back with
+git restore --source=8b5fe30 -- <12 files under src>, test, flow and e2e
+scripts kept; then git restore --source=HEAD -- src.
+
+== Jest, src/shared/constants/__tests__/purpleFill.test.tsx ==
+npx jest --selectProjects frontend --testPathPatterns purpleFill
+
+-- before (8b5fe30 app code) --
+  ✓ the formula gives the ratios the decision was taken on
+  ✕ white on the fill is 4.5:1 at least
+      Matcher error: received value must be a string — Received has value: undefined
+  ✕ the bottom bar's main button is filled with it
+      Expected: undefined  Received: "#A855F7"
+  ✕ the purple GlassButton is filled with it, flat
+      gradients under the label: [["#A855F7", "#9333EA"]], expected []
+  ✕ nothing with white text on it is filled with #A855F7
+      + features/availability/styles/availabilityScreenStyles.ts saveHeaderButton
+      + features/calendar/components/WeeklyCalendar.tsx todayButton
+      + features/calendar/components/WeeklyCalendar.tsx badge
+      + features/calendar/styles/calendarScreenStyles.ts bellBadge
+      + features/calendar/styles/calendarScreenStyles.ts swipeActionEdit
+      + features/onboarding/screens/CalendarSyncScreen.tsx permissionButton
+      + features/profile/components/BugReportSheet.tsx sendButton
+      + features/projects/styles/joinProjectScreenStyles.ts primaryButton
+      + features/projects/styles/projectDetailScreenStyles.ts inviteButton
+      + features/projects/styles/projectDetailScreenStyles.ts memberAvatar
+      + shared/components/BottomActionBar.tsx primary
+      + shared/components/DateRangePicker.tsx confirmButton
+      + shared/components/buttons/GlassButton.tsx gradient
+Tests:       4 failed, 1 passed, 5 total
+
+-- after (18d12aa) --
+  ✓ the formula gives the ratios the decision was taken on
+  ✓ white on the fill is 4.5:1 at least
+  ✓ the bottom bar's main button is filled with it
+  ✓ the purple GlassButton is filled with it, flat
+  ✓ nothing with white text on it is filled with #A855F7
+Tests:       5 passed, 5 total
+
+White on #A855F7 3.96:1, on #9333EA 5.38:1 (WCAG 2.x relative luminance,
+the first test). Full frontend Jest after: 121/122 suites; the one red,
+AvailabilityQuietSave, passes alone (3/3) — timing under load, untouched.
+npx tsc --noEmit: clean. npm run check:secrets: pass.
+
+== e2e, e2e/flows/64-main-button-fill.yaml ==
+npm run e2e -- e2e/flows/64-main-button-fill.yaml
+
+-- before (8b5fe30 app code) --
+[Failed] Main buttons are filled with #9333EA (58s)
+maestro.log: CommandFailed: Error: 64-sign-in: #a855f7 drawn 110.33333333333333 x 43 pt there
+1/1 Flow Failed
+
+-- after (18d12aa) --
+[Passed] Main buttons are filled with #9333EA (1m 12s)
+[Passed] Project's card, and a new rehearsal from its page (2m 17s)   (flow 63: no-ink.js changed)
+2/2 Flows Passed in 3m 29s
+
+The red run stops at the first screen. For the other two, the old code was
+run once more with the flow's COLOUR swapped for one not on screen (the flow
+file restored from HEAD after), screenshots in before/. The flow's own
+regions measured on them with e2e/ink.mjs, #a855f7 ±12 a channel:
+
+before sign-in        #a855f7 drawn 110.3 x 43.0 pt
+before rehearsal-form #a855f7 drawn 82.7 x 38.7 pt
+before availability   #a855f7 drawn 82.7 x 38.7 pt
+after  sign-in        no #a855f7
+after  rehearsal-form no #a855f7
+after  availability   no #a855f7
+
+Screenshots: before/ and after/ — 64-sign-in.png (sign-in), 64-rehearsal-form.png
+(the rehearsal form, "Create Rehearsal"), 64-availability.png (availability,
+"Save"; the picked day stays #A855F7 — selection, unchanged by decision).
+
+Left on #A855F7 on purpose (selection or no text): the selected day of the
+week strip, the availability month and the profile calendar, the checked
+participant box, onboarding's active dot, the inbox's unread dot, the
+planner button's icon circle.

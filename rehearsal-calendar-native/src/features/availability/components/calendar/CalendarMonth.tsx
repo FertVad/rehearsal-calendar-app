@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing } from '../../../../shared/constants/colors';
 import { AvailabilityData } from '../../types';
@@ -6,6 +6,7 @@ import { getDaysInMonth, formatDate } from '../../utils';
 import { DAY_SIZE } from '../../constants';
 import { useI18n } from '../../../../contexts/I18nContext';
 import { useWeekStart } from '../../../../hooks/useWeekStart';
+import { formatDate as formatMonth } from '../../../../shared/utils/dateFormat';
 
 interface CalendarMonthProps {
   year: number;
@@ -15,6 +16,8 @@ interface CalendarMonthProps {
   today: string;
   onDayPress: (year: number, month: number, day: number) => void;
   getDayStatus: (date: string) => 'free' | 'busy' | 'partial' | 'none';
+  /** Where today's week begins, from the top of this month, once laid out. */
+  onTodayLayout?: (y: number) => void;
 }
 
 export const CalendarMonth: React.FC<CalendarMonthProps> = ({
@@ -25,10 +28,19 @@ export const CalendarMonth: React.FC<CalendarMonthProps> = ({
   today,
   onDayPress,
   getDayStatus,
+  onTodayLayout,
 }) => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const weekStartDay = useWeekStart();
   const days = getDaysInMonth(year, month, weekStartDay);
+
+  // Today's week, measured rather than added up from font sizes: the grid's
+  // place in the month and the day's row in the grid, as they were drawn.
+  const gridY = useRef<number | null>(null);
+  const todayY = useRef<number | null>(null);
+  const reportToday = () => {
+    if (gridY.current !== null && todayY.current !== null) onTodayLayout?.(gridY.current + todayY.current);
+  };
 
   // Get localized weekdays based on week start preference
   const weekdays = useMemo(() => {
@@ -58,7 +70,7 @@ export const CalendarMonth: React.FC<CalendarMonthProps> = ({
   return (
     <View style={styles.monthContainer}>
       <Text style={styles.monthTitle}>
-        {t.months[month]} {year}
+        {formatMonth(new Date(year, month, 1), 'monthYear', language)}
       </Text>
 
       {/* Weekday headers */}
@@ -69,7 +81,13 @@ export const CalendarMonth: React.FC<CalendarMonthProps> = ({
       </View>
 
       {/* Days grid */}
-      <View style={styles.daysGrid}>
+      <View
+        style={styles.daysGrid}
+        onLayout={onTodayLayout && ((event) => {
+          gridY.current = event.nativeEvent.layout.y;
+          reportToday();
+        })}
+      >
         {days.map((day, index) => {
           if (day === null) {
             return <View key={`empty-${index}`} style={styles.dayCell} />;
@@ -97,6 +115,10 @@ export const CalendarMonth: React.FC<CalendarMonthProps> = ({
                 isSelected && styles.dayCellSelected,
               ]}
               onPress={() => onDayPress(year, month, day)}
+              onLayout={isToday && onTodayLayout ? (event) => {
+                todayY.current = event.nativeEvent.layout.y;
+                reportToday();
+              } : undefined}
               disabled={false}
             >
               <Text style={[

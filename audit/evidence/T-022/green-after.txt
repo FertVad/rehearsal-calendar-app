@@ -1,0 +1,29 @@
+T-022 — green after (fix 1d848f8, flows c44bf88 and the next commit).
+
+$ npx jest --selectProjects frontend --silent --verbose src/features/onboarding/ src/navigation/__tests__/registeredRoutes.test.tsx src/shared/components/__tests__/iconButtonLabels.test.ts
+PASS iconButtonLabels.test.ts (3), useOnboarding.test.ts (1),
+     OnboardingStep.test.tsx (3), NotificationsScreen.test.tsx (3),
+     WelcomeScreen.test.tsx (2), WhatWhereScreen.test.tsx (7),
+     CalendarSyncScreen.test.tsx (8), registeredRoutes.test.tsx (2)
+Test Suites: 8 passed, 8 total
+Tests:       29 passed, 29 total
+
+$ npm run type-check
+tsc --noEmit — no errors
+
+$ npm run e2e -- e2e/flows/09-onboarding.yaml e2e/flows/32-onboarding-calendar-as-saved.yaml
+[Failed] Onboarding to the end, nothing granted (1m 37s) (Assertion is false: "Rehearsly" is not visible)
+[Passed] Onboarding shows the calendar that was saved (1m 4s)
+The screen hierarchy (step-044) had "Welcome, Nina!" and the application
+element, labelled "Rehearsly": the assertion was the flow's, not the app's,
+and was taken out.
+
+$ npm run e2e -- e2e/flows/09-onboarding.yaml
+[Passed] Onboarding to the end, nothing granted (2m 56s)
+1/1 Flow Passed in 2m 56s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screenshots of that run (e2e/out/artifacts/2026-11-02_002515): the calendar
+step, notifications and "What's where" have Back and the forward button at the
+same height; "Not now" and "Set up later" are 44 pt buttons above the bar;
+the profile after onboarding says the week starts on Sunday (en_US).

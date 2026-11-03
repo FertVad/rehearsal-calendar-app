@@ -1,0 +1,18 @@
+T-212 - "green after": flow 44 with its three profile-tab taps through
+e2e/subflows/tap-and-see.yaml, 29.10.2026.
+
+npm run e2e --prefix rehearsal-calendar-native -- e2e/flows/44-profile-language.yaml
+[e2e] running the flows
+[Passed] The profile's language, kept by the account (1m 58s)
+1/1 Flow Passed in 1m 58s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+node audit/evidence/T-207/load-e2e.mjs 8 1 e2e/flows/44-profile-language.yaml
+[load] 8 busy workers on 8 cores
+[Passed] The profile's language, kept by the account r1 (3m 47s)
+1/1 Flow Passed in 3m 49s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+No tap was lost in these runs, so no second tap was taken; what a lost tap
+does to tap-and-see.yaml was shown in T-207 (audit/evidence/T-207,
+tap-and-see-check.txt).

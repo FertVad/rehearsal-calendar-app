@@ -12,17 +12,19 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { PlannerStackParamList, SmartPlannerNavigation } from '../../../navigation';
 import { Colors } from '../../../shared/constants/colors';
-import type { SlotCategory } from '../types';
+import { IconButton } from '../../../shared/components/IconButton';
+import type { SlotCategory, TimeSlot } from '../types';
 import { useSmartPlanner } from '../hooks/useSmartPlanner';
 import { DayCard } from '../components/DayCard';
-import { MemberFilter } from '../components/MemberFilter';
+import { ParticipantPicker } from '../../../shared/components/ParticipantPicker';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
-import { getDateLocale } from '../../../shared/utils/locale';
 import { DateRangePicker } from '../../../shared/components/DateRangePicker';
 import { addDays, formatDateToString, parseDateString } from '../../../shared/utils/time';
+import { formatDateRange } from '../../../shared/utils/dateFormat';
 import { useToday } from '../../../shared/hooks/useClock';
 import { memberAvailabilityLimits } from '../../../shared/utils/memberAvailabilityLimits';
+import { canScheduleIn } from '../../../shared/utils/rehearsalRights';
 import { smartPlannerScreenStyles as styles } from '../styles';
 
 type Props = NativeStackScreenProps<PlannerStackParamList, 'SmartPlanner'>;
@@ -33,27 +35,10 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const { projects } = useProjects();
   const { t, language } = useI18n();
 
-  // Calendar dates of the profile's zone. Not new Date('YYYY-MM-DD'): that is
-  // UTC midnight, and the local getters below read it as the day before
-  // anywhere behind UTC.
-  const formatDateRange = useCallback((startDate: string, endDate: string): string => {
-    const start = parseDateString(startDate);
-    const end = parseDateString(endDate);
-
-    const locale = getDateLocale(language);
-    const options: Intl.DateTimeFormatOptions = { month: 'short' };
-
-    const startDay = start.getDate();
-    const endDay = end.getDate();
-    const startMonth = start.toLocaleDateString(locale, options);
-    const endMonth = end.toLocaleDateString(locale, options);
-
-    if (start.getMonth() === end.getMonth()) {
-      return `${startDay}-${endDay} ${startMonth}`;
-    }
-
-    return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
-  }, [language]);
+  // Calendar dates of the profile's zone, written as every interval of dates
+  // is: "29 окт. – 4 нояб." (dateFormat.ts).
+  const formatPeriod = useCallback((startDate: string, endDate: string): string =>
+    formatDateRange(startDate, endDate, language), [language]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'custom'>('week');
   const [selectedCategories] = useState<SlotCategory[]>([
@@ -63,7 +48,8 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     'bad',
   ]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
-  const [isProjectSelectorExpanded, setIsProjectSelectorExpanded] = useState(false);
+  // Which filter's choice is open under the row; the participants' is a sheet.
+  const [openChoice, setOpenChoice] = useState<'project' | 'period' | null>(null);
 
   // Today in the profile's zone: the planner's days are its days (cause fix 14).
   const today = useToday();
@@ -173,31 +159,55 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   }, [simpleMembers, projectId, membersProjectId]);
 
   const handleSelectProject = useCallback((newProjectId: string) => {
-    setIsProjectSelectorExpanded(false);
+    setOpenChoice(null);
     navigation.setParams({ projectId: newProjectId });
   }, [navigation]);
+
+  const handleSelectPeriod = useCallback((period: 'week' | 'month') => {
+    setOpenChoice(null);
+    setSelectedPeriod(period);
+  }, []);
+
+  // "Select Dates" becomes the period once dates are picked in it, so Cancel
+  // leaves the period it was. The segment chose 'custom' on the tap, and a
+  // cancelled picker left it selected over the week's dates (T-012).
+  const handleCustomPeriodClick = useCallback(() => {
+    setOpenChoice(null);
+    setShowDateRangePicker(true);
+  }, []);
 
   const handleDateRangeConfirm = useCallback((start: Date, end: Date) => {
     setCustomStartDate(start);
     setCustomEndDate(end);
+    setSelectedPeriod('custom');
   }, []);
 
-  const handleCustomPeriodClick = useCallback(() => {
-    setSelectedPeriod('custom');
-    setShowDateRangePicker(true);
-  }, []);
+  // A slot opens the form only for an admin of this project, the one person
+  // the form can put a rehearsal in it for (T-012).
+  const canSchedule = canScheduleIn(projects.find(p => p.id === projectId));
+  const createRehearsal = useCallback((slot: TimeSlot) => {
+    // AddRehearsal is on the app stack, above this tab. The slot is free time,
+    // so it gives the start; the form ends it the usual length on (T-012).
+    appNavigation.navigate('AddRehearsal', {
+      projectId,
+      prefilledDate: slot.date,
+      prefilledTime: slot.startTime,
+      // The slot is free for the people picked here, so the rehearsal starts
+      // with them; none picked means everyone, as in the planner itself (DP02).
+      prefilledMemberIds: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
+    });
+  }, [appNavigation, projectId, selectedMemberIds]);
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
       <View style={styles.header}>
-        <TouchableOpacity
-          accessibilityRole="button"
+        <IconButton
+          icon="arrow-back"
+          color={Colors.text.primary}
           accessibilityLabel={t.common.back}
           style={styles.backButton}
           onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-        </TouchableOpacity>
+        />
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerSubtitle}>{t.smartPlanner.title}</Text>
         </View>
@@ -205,141 +215,111 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
     </View>
   );
 
-  const renderProjectSelector = () => (
-    <View style={styles.projectSelectorContainer}>
-      <TouchableOpacity
-        testID="planner-project"
-        style={styles.projectSelectorButton}
-        onPress={() => setIsProjectSelectorExpanded(!isProjectSelectorExpanded)}
-      >
-        <Ionicons name="folder-outline" size={18} color={Colors.accent.purple} />
-        <Text style={styles.projectSelectorText}>{projectName}</Text>
-        <Ionicons
-          name={isProjectSelectorExpanded ? "chevron-up" : "chevron-down"}
-          size={18}
-          color={Colors.text.secondary}
-        />
-      </TouchableOpacity>
+  // The project, the period and the people, one row of 44 pt: "Hamlet ▾ ·
+  // Week ▾ · Participants: all (4) ▾", each opening its own choice. Three
+  // blocks of them took 232 pt, and the first recommendation began at y=435
+  // of 852 (owner, 30.10.2026; T-020).
+  const periodName = selectedPeriod === 'week'
+    ? t.smartPlanner.week
+    : selectedPeriod === 'month'
+      ? t.smartPlanner.month
+      : t.smartPlanner.customPeriod;
+  const toggleChoice = (choice: 'project' | 'period') =>
+    setOpenChoice(open => (open === choice ? null : choice));
 
-      {isProjectSelectorExpanded && (
-        <View style={styles.projectDropdown}>
-          {projects.filter(p => p.is_admin).map(proj => (
-            <TouchableOpacity
-              key={proj.id}
-              style={[
-                styles.projectOption,
-                proj.id === projectId && styles.projectOptionSelected
-              ]}
-              onPress={() => handleSelectProject(proj.id)}
-            >
-              <Text style={[
-                styles.projectOptionText,
-                proj.id === projectId && styles.projectOptionTextSelected
-              ]}>
-                {proj.name}
-              </Text>
-              {proj.id === projectId && (
-                <Ionicons name="checkmark" size={18} color={Colors.accent.purple} />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+  const renderOption = (
+    key: string,
+    label: string,
+    selected: boolean,
+    onPress: () => void,
+    testID?: string,
+  ) => (
+    <TouchableOpacity
+      key={key}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      style={[styles.option, selected && styles.optionSelected]}
+      onPress={onPress}
+    >
+      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+        {label}
+      </Text>
+      {selected && <Ionicons name="checkmark" size={18} color={Colors.accent.purple} />}
+    </TouchableOpacity>
+  );
+
+  const renderProjectChoice = () => (
+    <View style={styles.choice}>
+      {projects.filter(p => p.is_admin).map(proj => renderOption(
+        proj.id, proj.name, proj.id === projectId, () => handleSelectProject(proj.id),
+      ))}
     </View>
   );
 
-  const renderPeriodSelector = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{t.smartPlanner.period}</Text>
-      <View style={styles.periodButtons}>
-        <TouchableOpacity
-          style={[
-            styles.periodButton,
-            selectedPeriod === 'week' && styles.periodButtonActive,
-          ]}
-          onPress={() => setSelectedPeriod('week')}
-        >
-          <Text
-            style={[
-              styles.periodButtonText,
-              selectedPeriod === 'week' && styles.periodButtonTextActive,
-            ]}
-          >
-            {t.smartPlanner.week}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.periodButton,
-            selectedPeriod === 'month' && styles.periodButtonActive,
-          ]}
-          onPress={() => setSelectedPeriod('month')}
-        >
-          <Text
-            style={[
-              styles.periodButtonText,
-              selectedPeriod === 'month' && styles.periodButtonTextActive,
-            ]}
-          >
-            {t.smartPlanner.month}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.periodButton,
-            selectedPeriod === 'custom' && styles.periodButtonActive,
-          ]}
-          onPress={handleCustomPeriodClick}
-        >
-          <Text
-            style={[
-              styles.periodButtonText,
-              selectedPeriod === 'custom' && styles.periodButtonTextActive,
-            ]}
-          >
-            {t.smartPlanner.custom}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {selectedPeriod === 'custom' ? (
-        <TouchableOpacity
-          style={styles.customDateButton}
-          onPress={() => setShowDateRangePicker(true)}
-        >
-          <Text style={styles.customDateText}>
-            {formatDateRange(startDate, endDate)}
-          </Text>
-          <Ionicons name="calendar-outline" size={20} color={Colors.accent.purple} />
-        </TouchableOpacity>
-      ) : (
-        <Text style={styles.periodDate}>
-          {formatDateRange(startDate, endDate)}
-        </Text>
-      )}
+  // "Select Dates" opens the dates, and becomes the period once they are picked.
+  const renderPeriodChoice = () => (
+    <View style={styles.choice}>
+      {renderOption('week', t.smartPlanner.week, selectedPeriod === 'week',
+        () => handleSelectPeriod('week'), 'planner-period-week')}
+      {renderOption('month', t.smartPlanner.month, selectedPeriod === 'month',
+        () => handleSelectPeriod('month'), 'planner-period-month')}
+      {renderOption('custom', t.smartPlanner.custom, selectedPeriod === 'custom',
+        handleCustomPeriodClick, 'planner-period-custom')}
     </View>
   );
 
-  const renderMemberFilter = () => {
-    const selectAll = () => {
-      setSelectedMemberIds(simpleMembers.map(m => m.id));
-    };
-    const clearAll = () => {
-      setSelectedMemberIds([]);
-    };
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t.smartPlanner.members}</Text>
-        <MemberFilter
-          members={simpleMembers}
-          selected={selectedMemberIds}
-          onSelectionChange={setSelectedMemberIds}
-          onSelectAll={selectAll}
-          onClearAll={clearAll}
+  const renderFilters = () => (
+    <View style={styles.filtersContainer}>
+      <View testID="planner-filters" style={styles.filters}>
+        <TouchableOpacity
+          testID="planner-project"
+          style={styles.filter}
+          onPress={() => toggleChoice('project')}
+        >
+          <Text style={styles.filterText} numberOfLines={1}>{projectName}</Text>
+          <Ionicons
+            name={openChoice === 'project' ? 'chevron-up' : 'chevron-down'}
+            size={14}
+            color={Colors.text.secondary}
+          />
+        </TouchableOpacity>
+        <Text style={styles.filterDot}>·</Text>
+        <TouchableOpacity
+          testID="planner-period"
+          style={styles.filter}
+          onPress={() => toggleChoice('period')}
+        >
+          <Text style={styles.filterText} numberOfLines={1}>{periodName}</Text>
+          <Ionicons
+            name={openChoice === 'period' ? 'chevron-up' : 'chevron-down'}
+            size={14}
+            color={Colors.text.secondary}
+          />
+        </TouchableOpacity>
+        <Text style={styles.filterDot}>·</Text>
+        {/* Nobody picked is everyone here: the planner weighs the whole roster. */}
+        <ParticipantPicker
+          chip
+          people={simpleMembers}
+          selectedIds={selectedMemberIds}
+          onChange={setSelectedMemberIds}
+          noneLabel={t.smartPlanner.allMembers}
         />
       </View>
-    );
-  };
+      {openChoice === 'project' && renderProjectChoice()}
+      {openChoice === 'period' && renderPeriodChoice()}
+    </View>
+  );
+
+  // The dates the period covers, beside "Recommendations": the row names only
+  // the period.
+  const renderListTitle = () => (
+    <View style={styles.listTitle}>
+      <Text style={styles.listTitleText}>{t.smartPlanner.recommendations}</Text>
+      <Text style={styles.periodDate}>{formatPeriod(startDate, endDate)}</Text>
+    </View>
+  );
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -379,13 +359,16 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         minDate={parseDateString(today)}
         maxDays={memberAvailabilityLimits.maxDays}
       />
+      {/* The participants sheet is inside it for React's touches, overlay or
+          not: by default a tap on the sheet with its search's keyboard up
+          only put the keyboard away, a person found took two (T-010). */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
-        {renderProjectSelector()}
-        {renderPeriodSelector()}
-        {renderMemberFilter()}
+        {renderFilters()}
+        {renderListTitle()}
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -397,9 +380,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
         ) : filteredSlots.length === 0 ? (
           renderEmptyState()
         ) : (
-          <View style={styles.slotsContainer}>
-            <Text style={styles.sectionTitle}>{t.smartPlanner.recommendations}</Text>
-
+          <View>
             {/* Someone with no availability rows counts as free in every slot,
                 so a project where nobody has entered anything reports itself as
                 Perfect. Naming them is the difference between a recommendation
@@ -414,19 +395,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
                 key={date}
                 date={date}
                 slots={slots}
-                onCreateRehearsal={(slot) => {
-                  // AddRehearsal is on the app stack, above this tab.
-                  appNavigation.navigate('AddRehearsal', {
-                    projectId,
-                    prefilledDate: slot.date,
-                    prefilledTime: slot.startTime,
-                    prefilledEndTime: slot.endTime,
-                    // The slot is free for the people picked here, so the
-                    // rehearsal starts with them; none picked means everyone,
-                    // as in the planner itself (DP02).
-                    prefilledMemberIds: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
-                  });
-                }}
+                onCreateRehearsal={canSchedule ? createRehearsal : undefined}
               />
             ))}
           </View>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,14 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Clipboard from 'expo-clipboard';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';
 import { invitesAPI } from '../../../shared/services/api';
-import { inviteCodeFromUrl } from '../../../shared/utils/inviteCode';
+import { inviteCodeFromInput } from '../../../shared/utils/inviteCode';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { joinProjectScreenStyles as styles } from '../styles';
@@ -31,33 +33,44 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
   const { refreshProjects } = useProjects();
   const { t } = useI18n();
 
-  const [code, setCode] = useState(linkCode ?? '');
   const [typedCode, setTypedCode] = useState('');
   const [loading, setLoading] = useState(Boolean(linkCode));
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The invitation shown carries the code it was asked by, and joining sends
+  // that code: a second link opened over the first showed its own project and
+  // joined the first's (T-011 review).
   const [projectInfo, setProjectInfo] = useState<{
+    code: string;
     projectId: string;
     projectName: string;
     projectDescription?: string;
   } | null>(null);
+  // The code last asked about. An earlier answer that comes after it is not
+  // shown.
+  const askedCode = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!code) return;
-    checkAndFetchInviteInfo();
-  }, [code]);
+    if (!linkCode) return;
+    checkAndFetchInviteInfo(linkCode);
+  }, [linkCode]);
 
-  const handleSubmitCode = () => {
-    const entered = typedCode.trim();
-    if (!entered) return;
+  const changeCode = (text: string) => {
+    setTypedCode(text);
     setError(null);
-    setLoading(true);
-    // Pasting the whole link is the likelier gesture than copying the code out
-    // of it, so take the code out of a link by the same rule as opened links.
-    setCode(inviteCodeFromUrl(entered) ?? entered);
   };
 
-  const checkAndFetchInviteInfo = async () => {
+  const handleSubmitCode = () => {
+    if (!typedCode.trim() || loading) return;
+    // Pasting the whole link is the likelier gesture than copying the code out
+    // of it, so take the code out of a link by the same rule as opened links,
+    // and a code typed in lowercase in capitals (T-025).
+    // Asked here rather than on a change of state: the same code sent again
+    // after a failure is asked again.
+    fetchInviteInfo(inviteCodeFromInput(typedCode));
+  };
+
+  const checkAndFetchInviteInfo = async (inviteCode: string) => {
     try {
       // Check if user logged out recently (within last 5 seconds)
       const lastLogoutTime = await AsyncStorage.getItem('lastLogoutTime');
@@ -74,21 +87,26 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
       }
 
       // Proceed with fetching invite info
-      await fetchInviteInfo();
+      await fetchInviteInfo(inviteCode);
     } catch (err) {
       logger.error('Error checking logout time:', err);
       // If check fails, proceed anyway
-      await fetchInviteInfo();
+      await fetchInviteInfo(inviteCode);
     }
   };
 
-  const fetchInviteInfo = async () => {
+  const fetchInviteInfo = async (inviteCode: string) => {
+    askedCode.current = inviteCode;
+    const isLatest = () => askedCode.current === inviteCode;
     try {
       setLoading(true);
       setError(null);
-      const response = await invitesAPI.getInviteInfo(code);
-      setProjectInfo(response.data);
+      setProjectInfo(null);
+      const response = await invitesAPI.getInviteInfo(inviteCode);
+      if (!isLatest()) return;
+      setProjectInfo({ ...response.data, code: inviteCode });
     } catch (err: any) {
+      if (!isLatest()) return;
       if (err.response?.status === 404) {
         setError(t.projects.inviteNotFound);
       } else if (err.response?.status === 410) {
@@ -97,14 +115,15 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
         setError(t.projects.inviteLoadError);
       }
     } finally {
-      setLoading(false);
+      if (isLatest()) setLoading(false);
     }
   };
 
   const handleJoin = async () => {
+    if (!projectInfo) return;
     try {
       setJoining(true);
-      await invitesAPI.joinProject(code);
+      await invitesAPI.joinProject(projectInfo.code);
       await refreshProjects();
 
       // Clear the lastLogoutTime flag after successful join
@@ -125,6 +144,8 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
         });
       } else {
         setError(err.response?.data?.error || t.projects.joinError);
+        // A typed code goes back to its field, the error under it.
+        if (!linkCode) setProjectInfo(null);
       }
     } finally {
       setJoining(false);
@@ -135,10 +156,23 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
     navigation.goBack();
   };
 
-  // No code yet — ask for one
-  if (!code) {
+  // A sheet: Cancel on the left, the title in the middle (T-029). Join stays
+  // with the invitation it answers. Not while the join is out.
+  const header = (title: string) => (
+    <ScreenHeader
+      kind="modal"
+      title={title}
+      cancelLabel={t.common.cancel}
+      onCancel={joining ? undefined : handleCancel}
+    />
+  );
+
+  // No link — ask for a code until one names a project. A code that does not
+  // stays in the field with the error under it, to be corrected.
+  if (!linkCode && !projectInfo) {
     return (
       <SafeAreaView style={styles.container}>
+        {header(t.projects.joinByCode)}
         <KeyboardAvoidingView
           style={styles.content}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -147,37 +181,59 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
             <Ionicons name="key-outline" size={64} color={Colors.accent.purple} />
           </View>
 
-          <Text style={styles.title}>{t.projects.joinByCode}</Text>
           <Text style={styles.subtitle}>{t.projects.joinByCodeSubtitle}</Text>
 
-          <TextInput
-            style={styles.codeInput}
-            value={typedCode}
-            onChangeText={setTypedCode}
-            placeholder={t.projects.joinByCodePlaceholder}
-            placeholderTextColor={Colors.text.tertiary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="go"
-            onSubmitEditing={handleSubmitCode}
-          />
+          {/* Codes are capitals and digits, so the keyboard types capitals.
+              "Paste" is iOS's own control: it pastes without iOS asking
+              whether the app may read the clipboard (T-025). */}
+          <View style={styles.codeRow}>
+            <TextInput
+              testID="join-code-input"
+              style={[styles.codeInput, error && styles.codeInputError]}
+              value={typedCode}
+              onChangeText={changeCode}
+              placeholder={t.projects.joinByCodePlaceholder}
+              placeholderTextColor={Colors.text.tertiary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              returnKeyType="go"
+              onSubmitEditing={handleSubmitCode}
+            />
+            {Clipboard.isPasteButtonAvailable && (
+              <Clipboard.ClipboardPasteButton
+                testID="join-code-paste"
+                style={styles.pasteButton}
+                acceptedContentTypes={['plain-text']}
+                displayMode="iconOnly"
+                cornerStyle="medium"
+                backgroundColor={Colors.bg.secondary}
+                foregroundColor={Colors.accent.purple}
+                onPress={(data) => {
+                  if (data.type === 'text') changeCode(data.text);
+                }}
+              />
+            )}
+          </View>
+          {error && (
+            <Text testID="join-code-error" style={styles.codeError}>
+              {error}
+            </Text>
+          )}
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
+              testID="join-code-submit"
               style={[styles.button, styles.primaryButton]}
               onPress={handleSubmitCode}
-              disabled={!typedCode.trim()}
+              disabled={!typedCode.trim() || loading}
             >
-              <Text style={[styles.buttonText, styles.primaryButtonText]}>
-                {t.projects.join}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
-              onPress={handleCancel}
-            >
-              <Text style={styles.secondaryButtonText}>{t.projects.cancel}</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color={Colors.text.inverse} />
+              ) : (
+                <Text style={[styles.buttonText, styles.primaryButtonText]}>
+                  {t.projects.join}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -188,6 +244,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
+        {header(t.projects.projectInvitation)}
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={Colors.accent.purple} />
           <Text style={styles.loadingText}>{t.projects.loadingInvite}</Text>
@@ -199,16 +256,17 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
+        {header(t.projects.projectInvitation)}
         <View style={styles.centerContent}>
           <Ionicons name="alert-circle" size={64} color={Colors.accent.red} />
           <Text style={styles.errorTitle}>{t.projects.error}</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
-            style={styles.button}
-            onPress={linkCode ? handleCancel : () => { setCode(''); setError(null); }}
+            style={[styles.button, styles.primaryButton]}
+            onPress={handleCancel}
           >
-            <Text style={styles.buttonText}>
-              {linkCode ? t.projects.close : t.projects.tryAgain}
+            <Text style={[styles.buttonText, styles.primaryButtonText]}>
+              {t.projects.close}
             </Text>
           </TouchableOpacity>
         </View>
@@ -218,12 +276,11 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
 
   return (
     <SafeAreaView style={styles.container}>
+      {header(t.projects.projectInvitation)}
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Ionicons name="people" size={64} color={Colors.accent.purple} />
         </View>
-
-        <Text style={styles.title}>{t.projects.projectInvitation}</Text>
 
         <View style={styles.projectCard}>
           <Text testID="join-project-name" style={styles.projectName}>{projectInfo?.projectName}</Text>
@@ -255,14 +312,6 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
                 </Text>
               </>
             )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
-            onPress={handleCancel}
-            disabled={joining}
-          >
-            <Text style={styles.secondaryButtonText}>{t.projects.cancel}</Text>
           </TouchableOpacity>
         </View>
       </View>

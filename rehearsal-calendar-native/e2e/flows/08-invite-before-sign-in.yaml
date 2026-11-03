@@ -2,7 +2,7 @@
 # the invitation to its project (HN01, fix 9). The code is the server's own,
 # short with capitals; the link handler read only lowercase hex, so the code
 # never reached the queue, or a cut-off part of it did. Viola is in no project
-# yet, and Twelfth Night is in no other flow.
+# yet, and Twelfth Night and As You Like It are in no other flow.
 appId: ${APP_ID}
 name: Invite link before sign-in
 tags:
@@ -30,9 +30,130 @@ tags:
       text: "Twelfth Night"
     timeout: 20000
 - takeScreenshot: 08-invite-after-sign-in
+- tapOn: "Cancel"
+# A code typed by hand that names no project (T-011). The screen went to a
+# full-screen error whose "Try another code" was black on the dark background:
+# nothing to tap, no way out. The error is under the field now, and the code
+# stays in it to be corrected.
+- tapOn: "Projects, tab.*"
+- scrollUntilVisible:
+    element: ".*Join with a code"
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Join with a code"
+      SEE: "Code or link"
+      WAIT_MS: 10000
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: join-code-input
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: "NOSUCH42"
+      - assertVisible:
+          id: join-code-input
+          text: "NOSUCH42"
+- tapOn:
+    id: join-code-submit
+- extendedWaitUntil:
+    visible:
+      id: join-code-error
+      text: "Invitation not found"
+    timeout: 15000
+- assertVisible:
+    id: join-code-input
+    text: "NOSUCH42"
+- takeScreenshot: 08-wrong-code-under-the-field
+# The right code typed in lowercase (T-025). Codes are capitals and digits and
+# the server finds one exactly; the field typed lowercase, and the code was
+# "not found". The field types capitals now, and a short code goes in capitals.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: join-code-input
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - eraseText
+      - inputText: ${TWELFTH_LOWERCASE_INVITE}
+      - assertVisible:
+          id: join-code-input
+          text: "(?i)${TWELFTH_INVITE}"
+- tapOn:
+    id: join-code-submit
+- extendedWaitUntil:
+    visible:
+      id: join-project-name
+      text: "Twelfth Night"
+    timeout: 15000
+- takeScreenshot: 08-lowercase-code-found
+- tapOn: "Cancel"
+- extendedWaitUntil:
+    visible: ".*Join with a code"
+    timeout: 10000
+# The whole link pasted with "Paste" beside the field (T-025): iOS's own paste
+# control, which pastes without iOS asking whether the app may read the
+# clipboard. The link was copied elsewhere - on the simulator's pasteboard, not
+# Maestro's own - and its code is found.
+- runScript:
+    file: ../scripts/set-pasteboard.js
+    env:
+      SIMULATOR: ${SIMULATOR}
+      TEXT: rehearsalapp://invite/${TWELFTH_LOWERCASE_INVITE}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Join with a code"
+      SEE: "Code or link"
+      WAIT_MS: 10000
+- tapOn:
+    id: join-code-paste
+- extendedWaitUntil:
+    visible:
+      id: join-code-input
+      text: "rehearsalapp://invite/${TWELFTH_LOWERCASE_INVITE}"
+    timeout: 10000
+- takeScreenshot: 08-link-pasted
+- tapOn:
+    id: join-code-submit
+- extendedWaitUntil:
+    visible:
+      id: join-project-name
+      text: "Twelfth Night"
+    timeout: 15000
+- tapOn: "Cancel"
+- extendedWaitUntil:
+    visible: ".*Join with a code"
+    timeout: 10000
+# A second link opened over the first, the screen still up (T-011 review): it
+# showed As You Like It and joined Twelfth Night, the first link's code.
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: rehearsalapp://invite/${TWELFTH_INVITE}
+- extendedWaitUntil:
+    visible:
+      id: join-project-name
+      text: "Twelfth Night"
+    timeout: 20000
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: rehearsalapp://invite/${ARDEN_INVITE}
+- extendedWaitUntil:
+    visible:
+      id: join-project-name
+      text: "As You Like It"
+    timeout: 20000
 - tapOn:
     id: join-project-submit
 - tapOn: "Projects, tab.*"
 - extendedWaitUntil:
-    visible: ".*Twelfth Night.*"
+    visible: ".*As You Like It.*"
     timeout: 15000
+- assertNotVisible: ".*Twelfth Night.*"
+- takeScreenshot: 08-second-link-joined

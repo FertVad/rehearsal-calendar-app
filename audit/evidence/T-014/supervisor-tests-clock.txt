@@ -1,0 +1,54 @@
+T-014 - the supervisor's `npm test` failed on fed1ccc
+
+  FAIL src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx
+  ● Leaving with changes (T-013) › While a save is out, the form is the one
+    being saved (T-013, review 2) › Create: no edits meanwhile, and saved is what was sent
+    TypeError: api_1.projectsAPI.getMembersAvailabilityRange is not a function
+      at src/features/calendar/hooks/useRehearsalAvailability.ts:63:21
+
+Cause - the test read the machine's clock, not the T-014 change
+  After Create and OK the form starts over (useAddRehearsalForm.resetForm) at
+  the next whole hour of the wall clock with the usual three hours. jest runs
+  in America/New_York (jest.config.js). Between 21:00 and 22:59 there the
+  default runs past midnight, the form asks for both days' busy time
+  (projectsAPI.getMembersAvailabilityRange, cause fix 15), and the test's API
+  stand-in had no such function. The supervisor ran at ~04:40 Israel time =
+  ~21:40 New York. At any other hour the test passed, which is why it passed
+  on T-013 review 2 and in this task's own runs.
+
+Fix (test only, no app code)
+  - the suite's clock is the test's: Date is faked at 2026-10-31T02:30:00Z
+    (22:30 New York, the hour that failed), timers stay real for settle();
+    real timers back after each test;
+  - the API stand-in has getMembersAvailabilityRange, answered like
+    getMembersAvailability.
+
+Red before - the clock pinned at 22:30 New York, the stand-in as it was
+  npx jest --selectProjects frontend --testPathPatterns 'calendar/screens/__tests__/AddRehearsalScreen'
+      ✕ Create: no edits meanwhile, and saved is what was sent (216 ms)
+    TypeError: api_1.projectsAPI.getMembersAvailabilityRange is not a function
+  ● Leaving with changes (T-013) › While a save is out, the form is the one being saved (T-013, review 2) › Create: no edits meanwhile, and saved is what was sent
+  Tests:       1 failed, 17 passed, 18 total
+
+Green after - same clock, the stand-in complete
+      ✓ a save that fails keeps the edits, says so, and the form takes edits again (241 ms)
+      ✓ Create: no edits meanwhile, and saved is what was sent (267 ms)
+      ✓ the question's Save: no edits meanwhile, no way out until it is back, then closed once (223 ms)
+    ✓ after the load failed, Create sends nothing; trying again loads them, and then it saves (268 ms)
+    ✓ an edit closes at once once it has loaded, untouched (131 ms)
+    ✓ an existing rehearsal stays in its project, and its saved roster is what is sent (174 ms)
+    ✓ back on the planner's project after one that failed to load, it starts with the planner's people again (393 ms)
+    ✓ counts the people, and names someone picked who is busy at the time (158 ms)
+    ✓ Don't Save closes it the way it was being closed, and nothing is sent (169 ms)
+    ✓ picking the project already shown keeps the people (260 ms)
+    ✓ Save creates it, and the way out after that is not asked about (200 ms)
+    ✓ saves the people the planner planned for, not the whole project (478 ms)
+    ✓ says nothing for someone busy at another time of the day (152 ms)
+    ✓ something typed, a way out asks: Don't Save, Save, Cancel (158 ms)
+    ✓ typed and put back as it was is not a change (161 ms)
+    ✓ untouched, the form closes at once: what it filled in by itself is not a change (131 ms)
+    ✓ while the people are still loading, Save is not offered (100 ms)
+    ✓ while the project's members are loading, Create sends nothing and says why (116 ms)
+  Tests:       18 passed, 18 total
+
+  npx tsc --noEmit -p . : no errors.

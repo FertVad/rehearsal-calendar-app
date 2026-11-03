@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { AppNavigation } from '../../../navigation';
 import { useToday } from '../../../shared/hooks/useClock';
 import { endsNextDay } from '../../../shared/utils/time';
+import { formatClock, formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
+import { getDateLocale } from '../../../shared/utils/locale';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { CalendarMonth, EditorHeader, ModeInfo } from '../components';
 import { DayMode } from '../types';
 import { getDayStatus, displayedMode, formatDate, generateMonths } from '../utils';
@@ -29,7 +33,11 @@ import {
 } from '../hooks';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
+import { useLeaveGuard } from '../../../shared/hooks/useLeaveGuard';
 import { PickerModal } from '../../../shared/components/PickerModal';
+import { BottomActionBar, BottomActionButton } from '../../../shared/components/BottomActionBar';
+import { Toast, useToast } from '../../../shared/components/Toast';
+import { hapticSuccess } from '../../../shared/utils/haptics';
 
 type AvailabilityScreenProps = {
   navigation: AppNavigation<'MarkBusy'>;
@@ -37,26 +45,29 @@ type AvailabilityScreenProps = {
 
 export default function AvailabilityScreen({ navigation }: AvailabilityScreenProps) {
   const { t, language } = useI18n();
+  const uses24 = usePhoneUses24HourClock();
 
   // Use custom hook for availability data management
   const {
     availability,
     setAvailability,
     loading,
-    saving,
     setSaving,
     hasChanges,
+    differsFromSaved,
     changed,
     markChanged,
     markSaved,
     markSettled,
+    discardChanges,
     getDayState,
     loadAvailability,
     loadFailed,
   } = useAvailabilityData();
 
   // Save hook for validation and API submission
-  const { saveAvailability } = useAvailabilitySave();
+  const { saveAvailability, canSave, error: saveError, clearError } = useAvailabilitySave();
+  const toast = useToast();
 
   // Sync hook for calendar sync management
   const {
@@ -87,12 +98,30 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     today,
     getDayState,
     months,
+    // However the selection empties, the editor goes down through the guard
+    // (T-026); called on a tap, once `guard` below is there.
+    putAway: (clear) => guard.leave(clear),
   });
 
   const [refreshing, setRefreshing] = useState(false);
   // The past-date action applies to the past days of the selection, whichever
   // day was tapped first (review CC04).
   const selectionHasPast = editor.selectedDates.some((date) => date < today);
+
+  // Opened on this week, not the first of the month: by the end of a month
+  // the weeks gone filled the top of the screen (T-021). Once, on the first
+  // layout; after that the list stays where the person put it.
+  const openedOnToday = useRef(false);
+  const scrollToToday = (y: number) => {
+    if (openedOnToday.current) return;
+    openedOnToday.current = true;
+    editor.flatListRef.current?.scrollToOffset({ offset: y, animated: false });
+  };
+
+  // A failed save's reason belongs to the selection it was about.
+  useEffect(() => {
+    if (!editor.panelOpen) clearError();
+  }, [editor.panelOpen, clearError]);
 
   // Load last sync time on mount
   useEffect(() => {
@@ -107,15 +136,35 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     }, [performSmartSync, performAutoSync, loadAvailability])
   );
 
-  const handleSave = async () => {
-    const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
-    // A slot past midnight shows on the next day as read from the server, so
-    // a saved change to it is read back rather than left to the next visit.
-    if (saved) loadAvailability();
-    // Drop the selection so it is obvious the batch was committed; the sheet
-    // stays open because marking several days in a row is the common case.
-    editor.clearSelection();
-  };
+  // Closing with days changed and not saved asks first, however it is closed
+  // (T-013); saved there, the sheet closes once the save has gone through.
+  // Only a day that says something else than on the server is asked about.
+  // Every save goes through the guard, and while one is out the sheet takes
+  // no changes (review T-013 r2). Collapsing the editor, which takes Save out
+  // of sight, asks the same; "Don't Save" there puts the days back (T-026).
+  // The editor empties its selection only through `putAway`, that is here.
+  const guard = useLeaveGuard({
+    hasChanges: differsFromSaved,
+    canSave: () => canSave({ availability, changed, today, language, t }),
+    discard: discardChanges,
+    save: async (leaving) => {
+      const saved = await saveAvailability({ availability, changed, today, language, t, setSaving, markSaved });
+      if (leaving || !saved) return saved;
+      // Said without stopping anyone: a notice and a tap of the haptics, the
+      // calendar where it was. An alert had to be dismissed first (T-021).
+      hapticSuccess();
+      toast.show(t.common.saved);
+      // A slot past midnight shows on the next day as read from the server, so
+      // a saved change to it is read back rather than left to the next visit.
+      loadAvailability();
+      // Drop the selection so it is obvious the batch was committed; the sheet
+      // stays open because marking several days in a row is the common case.
+      // A failed save keeps it, with its reason above Save.
+      editor.clearSelection();
+      return saved;
+    },
+  });
+  const saving = guard.saving;
 
   // Pull-to-refresh: sync calendar + reload availability
   const onRefresh = async () => {
@@ -136,7 +185,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   // writes, and this only decides what is drawn.
   const shownMode = displayedMode(selectedDayState ?? undefined);
 
-  const renderMonth = ({ item }: { item: { year: number; month: number; key: string } }) => {
+  const renderMonth = ({ item, index }: { item: { year: number; month: number; key: string }; index: number }) => {
+    // The list begins with today's month, at the top of the list's content.
     return (
       <CalendarMonth
         year={item.year}
@@ -146,34 +196,43 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         today={today}
         onDayPress={(y, m, d) => editor.handleDayPress(y, m, d, formatDate)}
         getDayStatus={(date) => getDayStatus(date, availability)}
+        onTodayLayout={index === 0 ? scrollToToday : undefined}
       />
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>{t.availability.title}</Text>
-        {/* Only when pushed as the MarkBusy modal — the month list eats the
-            swipe-down dismiss, so without this there is no way back out. As a
-            tab root there is nothing to go back to and the button is hidden. */}
-        {navigation.canGoBack() && (
-          <TouchableOpacity
-            testID="availability-close"
-            onPress={() => navigation.goBack()}
-            accessibilityRole="button"
-            accessibilityLabel={t.common.cancel}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close" size={24} color={Colors.text.secondary} />
-          </TouchableOpacity>
-        )}
-      </View>
+    // While a save is out nothing here takes a tap (useLeaveGuard).
+    <SafeAreaView style={styles.container} pointerEvents={saving ? 'none' : 'auto'}>
+      {/* Cancel only when pushed as the MarkBusy modal — the month list eats
+          the swipe-down dismiss, so without it there is no way back out; with
+          days changed it asks first, as the swipe does (useLeaveGuard). With
+          nothing to go back to it is not there. Save is in the panel below
+          (T-009). Saving shows up here too, for the save from the close
+          question, whose panel may be gone. */}
+      <ScreenHeader
+        kind="modal"
+        title={t.availability.title}
+        cancelLabel={t.common.cancel}
+        onCancel={navigation.canGoBack() ? () => navigation.goBack() : undefined}
+        right={saving
+          ? <ActivityIndicator testID="availability-saving" size="small" color={Colors.accent.purple} />
+          : null}
+      />
 
       {/* Nothing marked yet — say what that costs, not just that it is empty.
           Being treated as free is what actually happens, and it is the whole
           reason to fill this in. */}
+      {/* A save from the close question that failed with no day picked: the
+          panel and its Save are down, so the reason is written here (T-021,
+          review). With the panel up it is above Save. */}
+      {saveError && !editor.panelOpen && (
+        <View style={styles.nothingMarked}>
+          <Ionicons name="warning" size={18} color={Colors.accent.red} />
+          <Text testID="availability-save-error" style={styles.nothingMarkedText}>{saveError}</Text>
+        </View>
+      )}
+
       {loadFailed ? (
         <View style={styles.nothingMarked}>
           <Ionicons name="cloud-offline-outline" size={18} color={Colors.accent.yellow} />
@@ -272,7 +331,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         <EditorHeader
           selectedCount={editor.selectedDates.length}
           selectedDate={editor.selectedDate}
-          onClear={editor.clearSelection}
+          onClear={editor.collapse}
         />
 
         <ScrollView style={styles.bottomSheetContent} showsVerticalScrollIndicator={false}>
@@ -414,7 +473,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                         style={styles.timeButton}
                         onPress={() => editor.openTimePicker(index, 'start')}
                       >
-                        <Text style={styles.timeValue}>{slot.start}</Text>
+                        <Text style={styles.timeValue}>{formatClock(slot.start, getDateLocale(language), uses24)}</Text>
                         <Ionicons name="time-outline" size={16} color={Colors.text.tertiary} />
                       </TouchableOpacity>
                     </View>
@@ -428,7 +487,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                         style={styles.timeButton}
                         onPress={() => editor.openTimePicker(index, 'end')}
                       >
-                        <Text style={styles.timeValue}>{slot.end}</Text>
+                        <Text style={styles.timeValue}>{formatClock(slot.end, getDateLocale(language), uses24)}</Text>
                         {/* An end before the start is the next morning, and says so. */}
                         {endsNextDay(slot.start, slot.end) ? (
                           <Text style={styles.importedSource} testID={`slot-${index}-next-day`}>
@@ -442,14 +501,14 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                   </View>
 
                   {selectedDayState.slots.length > 1 && (
-                    <TouchableOpacity
-                      accessibilityRole="button"
+                    <IconButton
+                      icon="trash-outline"
+                      size={18}
+                      color={Colors.accent.red}
                       accessibilityLabel={t.common.delete}
                       style={styles.removeSlotButton}
                       onPress={() => editor.removeSlot(index)}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={Colors.accent.red} />
-                    </TouchableOpacity>
+                    />
                   )}
                 </View>
               ))}
@@ -480,7 +539,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                     color={Colors.text.tertiary}
                   />
                   <Text style={styles.importedTime}>
-                    {slot.isAllDay ? t.availability.allDay : `${slot.start} – ${slot.end}`}
+                    {slot.isAllDay ? t.availability.allDay : formatTimeRange(slot.start, slot.end, getDateLocale(language), uses24)}
                   </Text>
                   <Text style={styles.importedSource}>
                     {slot.source === 'rehearsal'
@@ -504,29 +563,30 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           )}
         </ScrollView>
 
-        {/* Save sits with the work rather than in the header. The count is
-            spelled out because one press commits every date touched so far,
-            not just the one the sheet is showing. */}
-        {hasChanges && (
-          <View style={styles.sheetSaveBar}>
-            <TouchableOpacity
-              testID="availability-save"
-              style={[styles.sheetSaveButton, saving && styles.sheetSaveButtonDisabled]}
-              onPress={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color={Colors.text.inverse} />
-              ) : (
-                <Text style={styles.sheetSaveButtonText}>
-                  {editor.selectedDates.length > 1
-                    ? `${t.common.save} · ${t.availability.selectedDates(editor.selectedDates.length)}`
-                    : t.common.save}
-                </Text>
-              )}
-            </TouchableOpacity>
+        {/* A save that failed says why here, over the button that retries it
+            (T-021). */}
+        {saveError && editor.panelOpen && (
+          <View style={[styles.validationError, { marginHorizontal: Spacing.xl, marginTop: Spacing.sm }]}>
+            <Ionicons name="warning" size={18} color={Colors.accent.red} />
+            <Text testID="availability-save-error" style={[styles.validationErrorText, { flex: 1 }]}>{saveError}</Text>
           </View>
         )}
+
+        {/* Save sits with the work rather than in the header, there from the
+            first day picked and off until something changed (T-009). The
+            count is spelled out because one press commits every date touched
+            so far, not just the one the sheet is showing. */}
+        <BottomActionBar>
+          <BottomActionButton
+            testID="availability-save"
+            label={editor.selectedDates.length > 1
+              ? `${t.common.save} · ${t.availability.selectedDates(editor.selectedDates.length)}`
+              : t.common.save}
+            onPress={() => guard.save()}
+            disabled={!hasChanges}
+            loading={saving}
+          />
+        </BottomActionBar>
       </Animated.View>
 
       {/* Time Picker Modal — Cancel keeps the slot's time (usePickerDraft) */}
@@ -539,6 +599,8 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         title={editor.editingSlot?.field === 'start' ? t.availability.startTime : t.availability.endTime}
         language={language}
       />
+
+      <Toast message={toast.message} />
     </SafeAreaView>
   );
 }

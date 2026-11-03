@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingStep } from '../components';
@@ -29,7 +29,7 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
   // "Later" asks nothing, now or after onboarding: nothing in the background
   // shows the prompt (cause fix 20, GC01). The profile's switch is where it is
   // asked for later.
-  const goOn = () => navigation.navigate('WeekStart');
+  const goOn = () => navigation.navigate('WhatWhere');
 
   const handleAllow = async () => {
     hapticLight();
@@ -61,13 +61,14 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
           <Ionicons name="notifications-outline" size={56} color={Colors.accent.purple} />
         </View>
 
-        <View style={styles.row}>
+        {/* What a notification says, as a list: framed, they read as buttons. */}
+        <View testID="notification-example-added" style={styles.row}>
           <Ionicons name="add-circle-outline" size={20} color={Colors.accent.green} />
-          <Text style={styles.rowText}>{t.rehearsals.addRehearsal}</Text>
+          <Text style={styles.rowText}>{t.onboarding.notifications.exampleAdded}</Text>
         </View>
-        <View style={styles.row}>
+        <View testID="notification-example-time" style={styles.row}>
           <Ionicons name="time-outline" size={20} color={Colors.accent.yellow} />
-          <Text style={styles.rowText}>{t.rehearsals.updateRehearsal}</Text>
+          <Text style={styles.rowText}>{t.onboarding.notifications.exampleTimeChanged}</Text>
         </View>
       </View>
     </OnboardingStep>
@@ -86,15 +87,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 16,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.bg.secondary,
+    paddingHorizontal: 4,
   },
   rowText: {
     flex: 1,
-    fontSize: FontSize.sm,
-    color: Colors.text.secondary,
+    fontSize: FontSize.base,
+    color: Colors.text.primary,
   },
 });

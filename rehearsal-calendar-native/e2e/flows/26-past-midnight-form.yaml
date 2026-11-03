@@ -2,6 +2,8 @@
 # (cause fix 15: DF04). The form put the end on the start's day, so 01:00 came
 # before 23:00 and the form refused it; now the end says "next day", the
 # rehearsal is saved ending the next morning, and it opens again as it was.
+# On the way the end is put at the start: the form says so under the end and
+# offers no Create, without an alert (T-018).
 # Irina Arkadina is alone in a project of her own, so nobody else's days move.
 #
 # The times are set on the picker's wheels: each one is a single element whose
@@ -14,6 +16,7 @@ name: A rehearsal made from 23:00 to 01:00 ends the next morning
 tags:
   - calendar
   - rehearsals
+  - participants
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -30,16 +33,31 @@ tags:
 - tapOn:
     text: "Not Now"
     optional: true
+- runScript:
+    file: ../scripts/next-hour.js
 - tapOn:
     id: tab-create
 - tapOn: "Create Rehearsal"
 - extendedWaitUntil:
     visible: "Add Rehearsal"
     timeout: 10000
+# It opens at the next whole hour, not the one already begun: 07:00 at 07:02
+# was in the past (T-012). HOUR_AFTER if the hour turned on the way here.
+- assertVisible:
+    id: rehearsal-start-time
+    text: ".*(${output.NEXT_HOUR}|${output.HOUR_AFTER}).*"
+- takeScreenshot: 26-form-next-hour
+# Who takes part is one row that says how many: she alone (T-010).
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, 1 of 1"
+    timeout: 10000
 # Start: 11 PM, then the end: 1 AM, each on its own picker. Both are opened
-# whatever the hour of the run. The form starts at the hour it is; started
-# at 22:00 its end, 00:00, is already past midnight and stays when the start
-# moves, so only a run at 22:xx needed the end's picker - and that second
+# whatever the hour of the run. The form started at the hour it was, its end
+# two hours on; started at 22:00 its end, 00:00, was already past midnight
+# and stayed when the start moved, so only a run at 22:xx needed the end's
+# picker - and that second
 # picker of the form was drawn but not in the accessibility tree: React
 # Native's Modal left every second sheet a screen presented out of it (T-208,
 # AppModal). The flow failed at 22:xx and passed at every other hour.
@@ -68,6 +86,47 @@ tags:
 - extendedWaitUntil:
     notVisible: "Select Start Time"
     timeout: 10000
+# The end put at the start, 11 PM, is said under the end at once, and Create
+# is not offered; a tap on it brings no alert (T-018). It was an alert, and
+# only on Create.
+- tapOn:
+    id: rehearsal-end-time
+- extendedWaitUntil:
+    visible: "Select End Time"
+    timeout: 10000
+- repeat:
+    times: 30
+    while:
+      notVisible: "11 o’clock"
+    commands:
+      - tapOn:
+          point: "133,736"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "AM"
+    commands:
+      - tapOn:
+          point: "253,736"
+      - waitForAnimationToEnd
+- assertVisible: "PM"
+- tapOn: "Done"
+- extendedWaitUntil:
+    notVisible: "Select End Time"
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-end-time-error
+    text: "End time cannot be the same as start time"
+- assertVisible:
+    id: rehearsal-submit
+    enabled: false
+- tapOn:
+    id: rehearsal-submit
+- waitForAnimationToEnd
+- assertNotVisible: "Error"
+- assertNotVisible: "Rehearsal created"
+- takeScreenshot: 26-end-at-start
+# Then 1 AM, the next morning: the error goes.
 - tapOn:
     id: rehearsal-end-time
 - extendedWaitUntil:
@@ -95,12 +154,17 @@ tags:
     timeout: 10000
 - assertVisible:
     id: rehearsal-start-time
-    text: ".*23:00.*"
+    text: ".*11:00.PM.*"
 - assertVisible:
     id: rehearsal-end-time
-    text: ".*01:00.*"
+    text: ".*1:00.AM.*"
 - assertVisible:
     id: rehearsal-ends-next-day
+- assertNotVisible:
+    id: rehearsal-end-time-error
+- assertVisible:
+    id: rehearsal-submit
+    enabled: true
 - takeScreenshot: 26-form-ends-next-day
 - tapOn: "e.g. Act II run-through"
 - inputText: "Lakeside night"
@@ -117,14 +181,14 @@ tags:
 # Saved ending the next morning: the card gives the end its own date.
 - tapOn: "Calendar, tab.*"
 - scrollUntilVisible:
-    element: ".*23:00 — .*, 01:00.*Lakeside night.*"
+    element: ".*11:00.PM – .*, 1:00.AM.*Lakeside night.*"
     direction: DOWN
     timeout: 30000
 # Opened again, it is the same 23:00 to 01:00 the next day.
-- tapOn: ".*23:00 — .*, 01:00.*Lakeside night.*"
+- tapOn: ".*11:00.PM – .*, 1:00.AM.*Lakeside night.*"
 - extendedWaitUntil:
     visible:
       id: rehearsal-details-time
-      text: "23:00 — .*, 01:00"
+      text: "11:00.PM – .*, 1:00.AM"
     timeout: 15000
 - takeScreenshot: 26-reopened

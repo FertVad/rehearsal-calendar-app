@@ -5,6 +5,12 @@
 process.env.TZ = 'America/New_York';
 
 module.exports = {
+  // A worker whose heap is above this after a file is replaced before the next
+  // one. Every file leaves its modules behind; in one process for the whole run
+  // that reached 1.6 GB, and a single garbage collection there stopped the run
+  // for 3 s (T-215). npm test runs one worker, so files still go one
+  // at a time. Ignored by --runInBand, which has no worker to replace.
+  workerIdleMemoryLimit: '512MB',
   projects: [
     {
       // Frontend tests (React Hooks - no UI rendering)
@@ -16,6 +22,12 @@ module.exports = {
           tsconfig: {
             jsx: 'react',
             esModuleInterop: true,
+            // Each file is only compiled; npm run type-check (tsc) checks the
+            // types, test files included. Type checking here made a file's
+            // cache key the mtime of everything it imports, so a commit or a
+            // checkout touching translations sent every screen's test through
+            // the checker again, 7-19 s a file, and npm test past 20 min (T-216).
+            isolatedModules: true,
           },
         }],
       },
@@ -29,6 +41,7 @@ module.exports = {
         '^react-native$': '<rootDir>/src/__tests__/__mocks__/react-native.js',
         '^react-native-calendars$': '<rootDir>/src/__tests__/__mocks__/react-native-calendars.js',
         '^react-native-screens$': '<rootDir>/src/__tests__/__mocks__/react-native-screens.js',
+        '^react-native-safe-area-context$': '<rootDir>/src/__tests__/__mocks__/react-native-safe-area-context.js',
         '^@expo/vector-icons$': '<rootDir>/src/__tests__/__mocks__/expo-vector-icons.js',
         '^expo-clipboard$': '<rootDir>/src/__tests__/__mocks__/expo-clipboard.js',
         '^expo-calendar$': '<rootDir>/src/__tests__/__mocks__/expo-calendar.js',
@@ -37,6 +50,7 @@ module.exports = {
         '^expo-haptics$': '<rootDir>/src/__tests__/__mocks__/expo-haptics.js',
         '^expo-notifications$': '<rootDir>/src/__tests__/__mocks__/expo-notifications.js',
         '^expo-device$': '<rootDir>/src/__tests__/__mocks__/expo-device.js',
+        '^expo-localization$': '<rootDir>/src/__tests__/__mocks__/expo-localization.js',
         '^@react-navigation/native$': '<rootDir>/src/__tests__/__mocks__/react-navigation-native.js',
         '^@react-native-async-storage/async-storage$': '<rootDir>/src/__tests__/__mocks__/async-storage.js',
         // The real stack router, for checking a navigation is handled. Its built

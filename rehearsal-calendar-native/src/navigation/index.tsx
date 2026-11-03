@@ -1,5 +1,5 @@
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
-import { View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { NavigationContainer, useNavigation, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,12 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
-import { Colors } from '../shared/constants/colors';
+import { Colors, TouchTarget } from '../shared/constants/colors';
+import { IconButton } from '../shared/components/IconButton';
 import { hapticLight, hapticMedium } from '../shared/utils/haptics';
 import { inviteCodeFromUrl } from '../shared/utils/inviteCode';
 import { CreateActionSheet } from '../shared/components/CreateActionSheet';
+import { useProjects } from '../contexts/ProjectContext';
+import { canScheduleAny } from '../shared/utils/rehearsalRights';
 import { useNotifications } from '../shared/hooks/useNotifications';
-import { BetaBanner } from '../shared/components/BetaBanner';
 import { useAutoCalendarSync } from '../shared/hooks/useAutoCalendarSync';
 import { OnboardingNavigator } from '../features/onboarding';
 import JoinProjectScreen from '../features/projects/screens/JoinProjectScreen';
@@ -36,6 +38,7 @@ export type {
   AuthStackParamList,
   CalendarStackParamList,
   ProjectsStackParamList,
+  ProjectSection,
   PlannerStackParamList,
   ProfileStackParamList,
   TabParamList,
@@ -71,9 +74,12 @@ const EmptyCreateScreen = () => <View />;
 // The "+" is only an icon, so it says what it is: VoiceOver read nothing here.
 const CreateTabButton = React.memo(({ onPress, label }: { onPress: () => void; label: string }) => {
   return (
-    <TouchableOpacity
+    <IconButton
       testID="tab-create"
-      accessibilityRole="button"
+      icon="add-circle"
+      size={56}
+      color={Colors.accent.purple}
+      iconStyle={tabButtonStyles.icon}
       accessibilityLabel={label}
       style={tabButtonStyles.container}
       onPress={() => {
@@ -81,15 +87,7 @@ const CreateTabButton = React.memo(({ onPress, label }: { onPress: () => void; l
         onPress();
       }}
       activeOpacity={0.7}
-    >
-      <View style={tabButtonStyles.iconContainer}>
-        <Ionicons
-          name="add-circle"
-          size={56}
-          color={Colors.accent.purple}
-        />
-      </View>
-    </TouchableOpacity>
+    />
   );
 });
 
@@ -101,9 +99,7 @@ const tabButtonStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+  icon: {
     marginBottom: -14,
   },
 });
@@ -113,6 +109,9 @@ function ActionSheetWrapper() {
   const navigation = useNavigation<AppNavigation<'MainTabs'>>();
   const { showActionSheet, setShowActionSheet } = useActionSheet();
   const { language } = useI18n();
+  // "Create Rehearsal" only for someone with a project to put one in (T-012).
+  const { projects } = useProjects();
+  const canSchedule = canScheduleAny(projects);
 
   // Anyone can create a project: the paid tier was taken out of the app for
   // the App Store release — see docs/app-store-release.md
@@ -125,10 +124,10 @@ function ActionSheetWrapper() {
     <CreateActionSheet
       visible={showActionSheet}
       onClose={() => setShowActionSheet(false)}
-      onCreateRehearsal={() => {
+      onCreateRehearsal={canSchedule ? () => {
         setShowActionSheet(false);
         navigation.navigate('AddRehearsal', {});
-      }}
+      } : undefined}
       onMarkBusy={() => {
         setShowActionSheet(false);
         navigation.navigate('MarkBusy');
@@ -168,7 +167,6 @@ function TabNavigator() {
 
   return (
     <>
-      <BetaBanner />
       <AppTabs.Navigator
         screenOptions={{
           headerShown: false,
@@ -178,7 +176,9 @@ function TabNavigator() {
             borderTopColor: Colors.glass.border,
             paddingBottom: 28,
             paddingTop: 8,
-            height: 80,
+            // A tab is what is left between the paddings and the border: at 80
+            // it was 43 pt tall (T-014).
+            height: 8 + TouchTarget + 28 + 1,
           },
           tabBarActiveTintColor: Colors.accent.purple,
           tabBarInactiveTintColor: Colors.text.secondary,

@@ -1,0 +1,109 @@
+# The planner's list, denser (T-020; owner, 30.10.2026, on the UX audit of
+# 29.10): a day's header is 28 pt and a slot's row 52 (56 until T-026, owner
+# 02.11; "+ Add" in it stays 44). A day of one slot took 167 pt, and a week
+# four screens. The project, the period and the people
+# are one row of 44 pt, "Three Sisters ▾ · Week ▾ · Participants: all (3) ▾",
+# each opening its own choice: the three took 232 pt above the list, and the
+# first recommendation began at y=435 of the 852 (479 in the audit, before the
+# participants were one row; audit/evidence/T-020).
+#
+# Olga Stage's Three Sisters, as in flow 07: tomorrow is free for all three,
+# one slot, "All day" from 09:00. Nothing is saved.
+appId: ${APP_ID}
+name: Planner list is dense
+tags:
+  - planner
+  - participants
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${STAGE_EMAIL}
+- tapOn: "Planner, tab.*"
+- tapOn:
+    id: planner-project
+- tapOn: "Three Sisters"
+- extendedWaitUntil:
+    visible:
+      id: planner-slot-${TOMORROW_DAY}
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 58-planner-first-screen
+# Maestro matches an element's size: 28 and 52 pt, the row 44.
+- assertVisible:
+    id: planner-filters
+    height: 44
+    tolerance: 1
+- assertVisible:
+    id: planner-day-${TOMORROW_DAY}
+    height: 28
+    tolerance: 1
+- assertVisible:
+    id: planner-row-${TOMORROW_DAY}-09:00
+    height: 52
+    tolerance: 1
+# The period: its three, and the one picked names it in the row.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-period
+      SEE: "Select Dates"
+      WAIT_MS: "5000"
+- assertVisible:
+    id: planner-period-week
+    selected: true
+- takeScreenshot: 58-period-choice
+- tapOn:
+    id: planner-period-month
+- extendedWaitUntil:
+    visible:
+      id: planner-period
+      text: "Month.*"
+    timeout: 10000
+- assertNotVisible:
+    id: planner-period-week
+- extendedWaitUntil:
+    visible:
+      id: planner-slot-${TOMORROW_DAY}
+    timeout: 30000
+- tapOn:
+    id: planner-period
+- tapOn:
+    id: planner-period-week
+- extendedWaitUntil:
+    visible:
+      id: planner-period
+      text: "Week.*"
+    timeout: 10000
+# The project: the director's projects, and the one picked stays.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-project
+      SEE: "The Bear"
+      WAIT_MS: "5000"
+- takeScreenshot: 58-project-choice
+- tapOn: "Three Sisters"
+- extendedWaitUntil:
+    notVisible: "The Bear"
+    timeout: 10000
+# The people: their sheet, everyone in it.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "All participants, 3 of 3"
+      WAIT_MS: "5000"
+- takeScreenshot: 58-participants-choice
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, 3 of 3"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: planner-row-${TOMORROW_DAY}-09:00
+    timeout: 30000
+- takeScreenshot: 58-planner-after

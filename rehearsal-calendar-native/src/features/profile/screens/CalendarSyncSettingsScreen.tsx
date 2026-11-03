@@ -13,6 +13,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { useI18n } from '../../../contexts/I18nContext';
 import { GlassButton } from '../../../shared/components';
 import { styles } from '../styles/calendarSyncSettingsScreenStyles';
@@ -397,14 +398,15 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Pushed in the Profile tab: back to it, with its name (T-029). */}
+      <ScreenHeader
+        kind="stack"
+        title={t.calendarSync.title}
+        backTitle={t.profile.title}
+        onBack={() => navigation.goBack()}
+      />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.title}>{t.calendarSync.title}</Text>
-        </View>
+        <Text testID="calendar-sync-explanation" style={styles.explanation}>{t.calendarSync.explanation}</Text>
 
         {/* Permission Status */}
         {!hasPermission && (

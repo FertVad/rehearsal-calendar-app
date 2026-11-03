@@ -1,9 +1,12 @@
+import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import { availabilityAPI } from '../../../shared/services/api';
 import { AvailabilityData, DayState } from '../types';
 import { validateSlot, slotsOverlap } from '../utils';
 import { getDateLocale } from '../../../shared/utils/locale';
-import { clockRangeEndDate, dateTimeToOffsetISOInTimezone, parseDateString } from '../../../shared/utils/time';
+import { formatTimeRange } from '../../../shared/utils/clockFormat';
+import { formatDate } from '../../../shared/utils/dateFormat';
+import { clockRangeEndDate, dateTimeToOffsetISOInTimezone } from '../../../shared/utils/time';
 import { useTimezone } from '../../../shared/hooks/useClock';
 
 import { logger } from '../../../shared/utils/logger';
@@ -17,6 +20,8 @@ export const useAvailabilitySave = () => {
   // device's offset, so where the two differed a slot saved moved by the
   // difference — or onto another day (cause fix 14).
   const timezone = useTimezone();
+  const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
 
   /**
    * The date and time in the profile's zone, with its offset: the text names
@@ -91,13 +96,7 @@ export const useAvailabilitySave = () => {
           const slotValidation = validateSlot(slot);
 
           if (!slotValidation.isValid) {
-            const dateObj = parseDateString(date);
-            const locale = getDateLocale(language);
-            const formattedDate = dateObj.toLocaleDateString(locale, {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            });
+            const formattedDate = formatDate(date, 'dayMonthYear', language, { midSentence: true });
 
             return {
               isValid: false,
@@ -115,18 +114,13 @@ export const useAvailabilitySave = () => {
             const overlaps = slotsOverlap(slot1, slot2);
 
             if (overlaps) {
-              const dateObj = parseDateString(date);
               const locale = getDateLocale(language);
-              const formattedDate = dateObj.toLocaleDateString(locale, {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              });
+              const formattedDate = formatDate(date, 'dayMonthYear', language, { midSentence: true });
 
               return {
                 isValid: false,
                 errorTitle: t.availability.cannotSave,
-                errorMessage: `${t.common.error} (${formattedDate}):\n\n${t.availability.slotsOverlap}\n\nSlot ${j + 1}: ${slot1.start} - ${slot1.end}\nSlot ${k + 1}: ${slot2.start} - ${slot2.end}\n\n${t.availability.fixSlots}`,
+                errorMessage: `${t.common.error} (${formattedDate}):\n\n${t.availability.slotsOverlap}\n\nSlot ${j + 1}: ${formatTimeRange(slot1.start, slot1.end, locale)}\nSlot ${k + 1}: ${formatTimeRange(slot2.start, slot2.end, locale)}\n\n${t.availability.fixSlots}`,
               };
             }
           }
@@ -137,6 +131,25 @@ export const useAvailabilitySave = () => {
     return { isValid: true };
   };
 
+  /** The days a save sends, and what they hold. */
+  const pendingDays = (availability: AvailabilityData, changed: Record<string, number>, today: string) => {
+    const dates = Object.keys(changed).filter((date) => date >= today).sort();
+    const touched: AvailabilityData = {};
+    for (const date of dates) {
+      if (availability[date]) touched[date] = availability[date];
+    }
+    return { dates, touched };
+  };
+
+  /** A save would go through as things stand: no day it sends is refused. */
+  const canSave = ({ availability, changed, today, language, t }: {
+    availability: AvailabilityData;
+    changed: Record<string, number>;
+    today: string;
+    language: string;
+    t: any;
+  }): boolean => validateAvailability(pendingDays(availability, changed, today).touched, today, language, t).isValid;
+
   /**
    * Save the days the person changed — only those, each by name, each replaced
    * by exactly what it now holds (review CC05). The whole snapshot used to go,
@@ -145,6 +158,13 @@ export const useAvailabilitySave = () => {
    * The counters are read before the request and handed back afterwards: a day
    * edited while the save was out keeps a newer counter and stays unsaved
    * (review CC03). Past days cannot be saved and stop counting as changed.
+   * The days sent go back too, as what the server now holds (T-013).
+   *
+   * Success raises nothing here: the screen says it with a short notice, the
+   * sheet closing says it for a save on the way out. A failure is `error`,
+   * whichever Save it was — the sheet's own or the close question's: the
+   * screen stays open either way and writes it (T-021, review); an alert only
+   * told what the screen can show.
    */
   const saveAvailability = async ({ availability, changed, today, language, t, setSaving, markSaved }: {
     availability: AvailabilityData;
@@ -153,15 +173,12 @@ export const useAvailabilitySave = () => {
     language: string;
     t: any;
     setSaving: (saving: boolean) => void;
-    markSaved: (sent: Record<string, number>) => void;
+    markSaved: (sent: Record<string, number>, sentDays: AvailabilityData) => void;
   }): Promise<boolean> => {
     const sent = { ...changed };
-    const dates = Object.keys(sent).filter((date) => date >= today).sort();
+    const { dates, touched } = pendingDays(availability, sent, today);
+    setError(null);
     try {
-      const touched: AvailabilityData = {};
-      for (const date of dates) {
-        if (availability[date]) touched[date] = availability[date];
-      }
       const validation = validateAvailability(touched, today, language, t);
       if (!validation.isValid) {
         Alert.alert(validation.errorTitle!, validation.errorMessage!, [
@@ -175,12 +192,11 @@ export const useAvailabilitySave = () => {
         await availabilityAPI.saveDays(dates.map((date) => ({ date, entries: entriesForDay(date, availability[date]) })));
       }
 
-      markSaved(sent);
-      Alert.alert(t.rehearsals.success, t.availability.saved);
+      markSaved(sent, availability);
       return true;
     } catch (err: any) {
       logger.error('Failed to save availability:', err);
-      Alert.alert(t.common.error, err.response?.data?.error || t.availability.saveError);
+      setError(err.response?.data?.error || t.availability.saveError);
       return false;
     } finally {
       setSaving(false);
@@ -189,6 +205,10 @@ export const useAvailabilitySave = () => {
 
   return {
     saveAvailability,
+    /** Why the last save failed, until the next one or `clearError`. */
+    error,
+    clearError,
+    canSave,
     entriesForDay,
     prepareEntriesForAPI,
     validateAvailability,

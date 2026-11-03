@@ -12,9 +12,43 @@ import { emitDataChanged } from '../utils/dataChanged';
 import { hapticMedium } from '../utils/haptics';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnread } from '../../contexts/UnreadContext';
-import type { AppNavigation } from '../../navigation';
+import type { AppNavigation, ProjectSection } from '../../navigation';
 
 import { logger } from '../utils/logger';
+
+/**
+ * Open a project from a notification — a tapped push or a card in the inbox.
+ *
+ * ProjectDetail and the projects list both live two levels down — inside the
+ * Projects tab of MainTabs — so they have to be addressed through their
+ * parents. Naming them directly, as this did, throws "was not handled by any
+ * navigator" and the tap does nothing at all: every notification in the app
+ * was inert.
+ *
+ * A modal screen may be open over the tabs; `pop: true` closes it and goes
+ * back to them, where navigating without it pushed a copy of MainTabs over
+ * the modal (T-007). `initial: false`: over the projects list, even when
+ * the tab has not been opened yet. `section`: where on the project it opens.
+ */
+export function openProject(
+  navigation: Pick<AppNavigation, 'navigate'>,
+  projectId: string | number,
+  section?: ProjectSection
+) {
+  navigation.navigate('MainTabs', {
+    screen: 'Projects',
+    params: {
+      screen: 'ProjectDetail',
+      params: section ? { projectId: String(projectId), section } : { projectId: String(projectId) },
+      initial: false,
+    },
+  }, { pop: true });
+}
+
+/** Where on its project a notification of this type opens: "New member" on the members (T-023). */
+export function projectSectionOf(type: string): ProjectSection | undefined {
+  return type === 'member_joined' ? 'members' : undefined;
+}
 /**
  * Hook for managing push notifications
  * Should be called once in the root component (App.tsx)
@@ -143,24 +177,6 @@ export function useNotifications() {
   }, [user, refresh, markRead]);
 
   /**
-   * ProjectDetail and the projects list both live two levels down — inside the
-   * Projects tab of MainTabs — so they have to be addressed through their
-   * parents. Naming them directly, as this did, throws "was not handled by any
-   * navigator" and the tap does nothing at all: every notification in the app
-   * was inert.
-   *
-   */
-  const openProject = (projectId: string | number) => {
-    navigation.navigate('MainTabs', {
-      screen: 'Projects',
-      params: {
-        screen: 'ProjectDetail',
-        params: { projectId: String(projectId) },
-      },
-    });
-  };
-
-  /**
    * Open the rehearsal the notification is about.
    *
    * A notification names one rehearsal, so landing on the project list — or
@@ -172,8 +188,17 @@ export function useNotifications() {
     navigation.navigate('RehearsalDetails', { rehearsalId: String(rehearsalId) });
   };
 
+  /**
+   * The list itself, not just its tab: `pop: true` keeps the MainTabs that is
+   * there, and with it the Projects stack as it was left — naming only the tab
+   * showed whatever card was open there, even the project just deleted. The
+   * stack is taken back down to ProjectsMain the same way, with `pop: true`.
+   */
   const openProjectsList = () => {
-    navigation.navigate('MainTabs', { screen: 'Projects' });
+    navigation.navigate('MainTabs', {
+      screen: 'Projects',
+      params: { screen: 'ProjectsMain', pop: true },
+    }, { pop: true });
   };
 
   const handleNotificationNavigation = (data: any) => {
@@ -191,12 +216,18 @@ export function useNotifications() {
           // The rehearsal itself, falling back to its project only when the
           // notification did not carry an id.
           if (rehearsalId) openRehearsal(rehearsalId);
-          else if (projectId) openProject(projectId);
+          else if (projectId) openProject(navigation, projectId);
           break;
 
         case 'rehearsal_deleted':
           // No rehearsal left to open — the project is the nearest thing.
-          if (projectId) openProject(projectId);
+          if (projectId) openProject(navigation, projectId);
+          break;
+
+        case 'member_joined':
+          // On its members. One sent before it carried the project's id opens
+          // nothing (T-023).
+          if (projectId) openProject(navigation, projectId, projectSectionOf(type));
           break;
 
         case 'project_invite':

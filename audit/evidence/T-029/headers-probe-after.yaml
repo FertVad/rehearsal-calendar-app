@@ -1,0 +1,128 @@
+# T-029 probe, not kept: a screenshot of every screen's header as it is.
+appId: ${APP_ID}
+name: Headers probe
+tags:
+  - probe
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${OLGA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: hdr-calendar
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible: ".*Estate Ball.*"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: hdr-projects
+- tapOn: ".*Estate Ball.*"
+- extendedWaitUntil:
+    visible: ".*Share.*"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: hdr-project-detail
+- tapOn:
+    id: header-back
+- extendedWaitUntil:
+    visible: ".*Join with a code.*"
+    timeout: 10000
+- tapOn: ".*Join with a code.*"
+- extendedWaitUntil:
+    visible:
+      id: join-code-input
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: hdr-join
+- tapOn:
+    id: header-cancel
+- waitForAnimationToEnd
+- tapOn: "Create Project"
+- extendedWaitUntil:
+    visible: "Project Name"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: hdr-create-project
+- tapOn:
+    id: header-cancel
+- waitForAnimationToEnd
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-project
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: hdr-add-rehearsal
+- tapOn:
+    id: header-cancel
+- waitForAnimationToEnd
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- extendedWaitUntil:
+    visible:
+      id: availability-legend
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: hdr-busy
+- tapOn:
+    id: header-cancel
+- waitForAnimationToEnd
+- tapOn:
+    id: tab-calendar
+- tapOn: "Notifications"
+- waitForAnimationToEnd
+- takeScreenshot: hdr-inbox
+- tapOn:
+    id: header-cancel
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: rehearsalapp://rehearsal/${BALL_REHEARSAL}
+- extendedWaitUntil:
+    visible: "Participants"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: hdr-details
+- tapOn: "Close"
+- waitForAnimationToEnd
+- tapOn:
+    id: tab-profile
+- waitForAnimationToEnd
+- takeScreenshot: hdr-profile
+- tapOn:
+    id: profile-edit
+- waitForAnimationToEnd
+- takeScreenshot: hdr-edit-profile
+- tapOn:
+    id: profile-change-email
+- waitForAnimationToEnd
+- takeScreenshot: hdr-change-email
+- tapOn:
+    id: header-cancel
+- waitForAnimationToEnd
+- tapOn:
+    id: header-cancel
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: ".*Calendar Sync.*"
+    direction: DOWN
+    centerElement: true
+- tapOn: ".*Calendar Sync.*"
+- waitForAnimationToEnd
+- takeScreenshot: hdr-calendar-sync
+- tapOn:
+    id: header-back
+- waitForAnimationToEnd
+- tapOn:
+    id: tab-planner
+- waitForAnimationToEnd
+- takeScreenshot: hdr-planner

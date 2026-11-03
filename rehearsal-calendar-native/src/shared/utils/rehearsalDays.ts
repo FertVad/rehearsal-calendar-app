@@ -1,10 +1,12 @@
 import { Rehearsal } from '../types';
 import {
   datesBetween,
-  formatDateLocalized,
   intervalDates,
   isoToTimeStringInTimezone,
 } from './time';
+import { formatClock, formatRange, phoneUses24HourClock } from './clockFormat';
+import { formatDate } from './dateFormat';
+import { getDateLocale } from './locale';
 
 /**
  * A rehearsal as the screens show it: an interval, startsAt to endsAt, read in
@@ -40,15 +42,17 @@ export const rehearsalDates = (r: Rehearsal): string[] =>
   r.date ? datesBetween(r.date, lastDateOf(r) ?? r.date) : [];
 
 /**
- * "19:00 — 22:00", and with the end's date when it is on another day:
- * "23:00 — 11 Sep, 01:00".
+ * "19:00–22:00", and with the end's date when it is on another day:
+ * "23:00 – Sep 11, 01:00" — an interval with a date in it (clockFormat.ts).
+ * 12 or 24 hours as the phone is set; `language` is the app's.
  */
-export function rehearsalTimeLabel(r: Rehearsal, locale: string): string {
-  const start = r.time?.substring(0, 5) || '';
+export function rehearsalTimeLabel(r: Rehearsal, language: string, uses24 = phoneUses24HourClock()): string {
+  const locale = getDateLocale(language);
+  const start = formatClock(r.time, locale, uses24);
   if (!r.endTime) return start;
-  const end = r.endTime.substring(0, 5);
+  const end = formatClock(r.endTime, locale, uses24);
   const last = lastDateOf(r);
-  if (!last || last === r.date) return `${start} — ${end}`;
-  const endDay = formatDateLocalized(last, { day: 'numeric', month: 'short' }, locale);
-  return `${start} — ${endDay}, ${end}`;
+  if (!last || last === r.date) return formatRange('time', start, end);
+  const endDay = formatDate(last, 'dayMonthShort', language, { midSentence: true });
+  return formatRange('date', start, `${endDay}, ${end}`);
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet, ActivityIndicator, View, StyleProp, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { AUTH_BUTTON_HEIGHT } from '../../constants/spacing';
 
 /**
  * Sign in with Google button following Google's branding guidelines:
@@ -75,7 +76,7 @@ export default function GoogleSignInButton({
 
 const styles = StyleSheet.create({
   button: {
-    height: 52,
+    height: AUTH_BUTTON_HEIGHT,
     borderRadius: 12,
     // Google's guidelines call for a white surface with a neutral outline;
     // these values are theirs, not the app's palette, and shouldn't be themed.
@@ -95,9 +96,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
+  // The size iOS gives "Sign in with Apple" at AUTH_BUTTON_HEIGHT, measured
+  // on the simulator: the two labels sit one above the other (T-015).
   label: {
     color: '#1f1f1f',
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: '500',
   },
 });

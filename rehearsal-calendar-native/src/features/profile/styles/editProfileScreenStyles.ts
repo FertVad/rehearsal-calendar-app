@@ -1,28 +1,10 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.bg.primary,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.bg.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.default,
-  },
-  backButton: {
-    padding: Spacing.xs,
-  },
-  title: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
   },
   scrollView: {
     flex: 1,
@@ -62,6 +44,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.glass.border,
     borderRadius: BorderRadius.md,
+    minHeight: TouchTarget,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
     fontSize: FontSize.base,

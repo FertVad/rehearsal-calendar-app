@@ -17,12 +17,15 @@ export function looksLikeEmail(value: string): boolean {
 
 const utf8Length = (value: string) => new TextEncoder().encode(value).length;
 
+/** The fewest characters a password may have; the registration form names it under the field. */
+export const PASSWORD_MIN_LENGTH = 8;
+
 /**
- * At least 8 characters — counted as the server counts them, by code point, so
- * four emoji are four, not eight — and at most 72 bytes of UTF-8: bcrypt reads
- * no further, so a longer password would silently lose its tail. Not only
- * spaces, no NUL.
+ * At least PASSWORD_MIN_LENGTH characters — counted as the server counts them,
+ * by code point, so four emoji are four, not eight — and at most 72 bytes of
+ * UTF-8: bcrypt reads no further, so a longer password would silently lose its
+ * tail. Not only spaces, no NUL.
  */
 export function meetsPasswordRule(password: string): boolean {
-  return [...password].length >= 8 && utf8Length(password) <= 72 && password.trim() !== '' && !password.includes('\0');
+  return [...password].length >= PASSWORD_MIN_LENGTH && utf8Length(password) <= 72 && password.trim() !== '' && !password.includes('\0');
 }

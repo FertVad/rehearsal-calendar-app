@@ -5,6 +5,10 @@
 # midnight could not be saved at all. Now the evening holds it whole, "01:00,
 # next day", and saves it as it is; the morning shows its end, from the day
 # before. Only she is on her days (flow 24 has her rehearsal, days earlier).
+# Saved, the editor closes without asking; its mode picked again, the day says
+# what it said and closing does not ask either. Made busy and closed unsaved,
+# it asks first; its "Save" saves, and while that save is out the sheet takes
+# no changes; saved, it closes (T-013, review).
 appId: ${APP_ID}
 name: A busy slot past midnight is one slot, on both days
 tags:
@@ -47,11 +51,11 @@ tags:
 - extendedWaitUntil:
     visible:
       id: slot-0-start
-      text: "23:00.*"
+      text: "11:00.PM.*"
     timeout: 10000
 - assertVisible:
     id: slot-0-end
-    text: "01:00.*"
+    text: "1:00.AM.*"
 - assertVisible:
     id: slot-0-next-day
 # Saved as it is: picking its mode again makes the day one to save.
@@ -59,13 +63,20 @@ tags:
     id: mode-custom
 - tapOn:
     id: availability-save
+# Saved: a moment's "Saved", no alert to dismiss (T-021).
 - extendedWaitUntil:
-    visible: "Availability saved"
+    visible:
+      id: toast
+      text: "Saved"
     timeout: 15000
-- tapOn: "OK"
 # Away and back: the editor loads from the server again.
 - tapOn:
-    id: availability-close
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- assertNotVisible: "Don't Save"
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
@@ -84,7 +95,7 @@ tags:
 - tapOn:
     id: day-${MORNING_DAY}
 - extendedWaitUntil:
-    visible: ".*00:00 – 01:00.*"
+    visible: ".*12:00.AM–1:00.AM.*"
     timeout: 10000
 - assertVisible: ".*from the day before.*"
 - assertNotVisible:
@@ -107,6 +118,112 @@ tags:
 - extendedWaitUntil:
     visible:
       id: slot-0-end
-      text: "01:00.*"
+      text: "1:00.AM.*"
     timeout: 10000
 - takeScreenshot: 25-evening-slot-whole
+# Its mode picked again, the day says what it said: closing loses nothing and
+# goes at once. It used to count as a change and ask (T-013, review).
+- tapOn:
+    id: mode-custom
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 5000
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- assertNotVisible: "Don't Save"
+# A real change: busy all day. Let go of, the day asks as the editor's arrow
+# does (T-026, review); a tap outside the popover is its Cancel, and the
+# editor stays up with the change. Closed, the question's "Save" saves it.
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${EVENING_DAY}
+      text: ".*, Partial"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${EVENING_DAY}
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    visible:
+      id: slot-0-end
+      text: "1:00.AM.*"
+    timeout: 10000
+- tapOn:
+    id: mode-busy
+- tapOn:
+    id: day-${EVENING_DAY}
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+- tapOn:
+    point: "50%, 8%"
+- extendedWaitUntil:
+    notVisible: "Don't Save"
+    timeout: 5000
+- assertVisible:
+    id: mode-busy
+    selected: true
+# The save is held on its way.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: PUT
+      PATH: "/availability/days$"
+      OPEN: "1"
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+- takeScreenshot: 25-close-asks
+- tapOn: "Save"
+# While it is out the sheet shows it is saving and takes nothing: a tap on the
+# day neither lets go of it nor asks. A tap there used to go through, and the
+# day changed back meanwhile closed the sheet unasked, the save writing busy
+# over it (T-013, review 2).
+- extendedWaitUntil:
+    visible:
+      id: availability-saving
+    timeout: 5000
+- tapOn:
+    id: day-${EVENING_DAY}
+- assertNotVisible: "Don't Save"
+- assertVisible:
+    id: mode-busy
+    selected: true
+- takeScreenshot: 25-saving
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+# Saved: the sheet closes, nothing asked, and the day is busy, as it was sent.
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 15000
+- assertNotVisible: "Don't Save"
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${EVENING_DAY}
+      text: ".*, Busy"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000

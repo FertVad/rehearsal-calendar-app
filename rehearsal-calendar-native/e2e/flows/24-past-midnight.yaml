@@ -16,6 +16,6 @@ tags:
       EMAIL: ${ZARECHNAYA_EMAIL}
 # Today, under today's heading: the end with its own date.
 - extendedWaitUntil:
-    visible: ".*23:00 — .*, 01:00.*Night run.*"
+    visible: ".*11:00.PM – .*, 1:00.AM.*Night run.*"
     timeout: 30000
 - takeScreenshot: 24-night-run-today

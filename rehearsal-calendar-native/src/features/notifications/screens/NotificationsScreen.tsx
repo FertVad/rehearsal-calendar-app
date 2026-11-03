@@ -18,11 +18,14 @@ import { TouchableOpacity as GestureTouchable } from 'react-native-gesture-handl
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
+import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
 import { useUnread } from '../../../contexts/UnreadContext';
 import { logger } from '../../../shared/utils/logger';
 import { useRequestOrder } from '../../../shared/hooks/useSession';
+import { openProject, projectSectionOf } from '../../../shared/hooks/useNotifications';
 import { currentSession, isCurrentSession } from '../../../shared/services/session';
 import { styles } from '../styles/notificationsScreenStyles';
 import {
@@ -212,13 +215,10 @@ export default function NotificationsScreen() {
       return;
     }
 
-    if (projectId) {
-      navigation.goBack();
-      navigation.navigate('MainTabs', {
-        screen: 'Projects',
-        params: { screen: 'ProjectDetail', params: { projectId: String(projectId) } },
-      });
-    }
+    // The project is in the tabs under the inbox: back to them, not a copy
+    // pushed on top, and over the projects list (T-007) — opened as a tapped
+    // push opens it, "New member" on its members (T-023).
+    if (projectId) openProject(navigation, projectId, projectSectionOf(item.type));
   };
 
   const ageOf = (iso: string) => {
@@ -328,34 +328,40 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title} numberOfLines={1}>{t.notifications.title}</Text>
-
-        {/* Icons rather than words. Two text buttons beside a large title do not
-            fit in Russian and fit still less in German, so they overlapped. The
-            words survive as accessibility labels and in the confirmation. */}
-        {hasUnread && (
-          <TouchableOpacity
-            style={styles.headerAction}
-            onPress={markEverythingRead}
-            accessibilityLabel={t.notifications.markAllRead}
-          >
-            <Ionicons name="checkmark-done" size={22} color={Colors.accent.purple} />
-          </TouchableOpacity>
-        )}
-        {items.length > 0 && (
-          <TouchableOpacity
-            style={styles.headerAction}
-            onPress={confirmClearAll}
-            accessibilityLabel={t.notifications.clearAll}
-          >
-            <Ionicons name="trash-outline" size={22} color={Colors.accent.red} />
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* A sheet over the app: "Close" where every sheet has its way out —
+          there is nothing here to cancel (T-029). */}
+      <ScreenHeader
+        kind="modal"
+        title={t.notifications.title}
+        cancelLabel={t.common.close}
+        onCancel={() => navigation.goBack()}
+        right={
+          <>
+            {/* Icons rather than words. Two text buttons beside the title do
+                not fit in Russian and fit still less in German, so they
+                overlapped. The words survive as accessibility labels and in
+                the confirmation. 24 pt; the target stays 44. */}
+            {hasUnread && (
+              <IconButton
+                icon="checkmark-done"
+                size={24}
+                color={Colors.accent.purple}
+                onPress={markEverythingRead}
+                accessibilityLabel={t.notifications.markAllRead}
+              />
+            )}
+            {items.length > 0 && (
+              <IconButton
+                icon="trash-outline"
+                size={24}
+                color={Colors.accent.red}
+                onPress={confirmClearAll}
+                accessibilityLabel={t.notifications.clearAll}
+              />
+            )}
+          </>
+        }
+      />
 
       {loading ? (
         <ActivityIndicator style={styles.loading} color={Colors.accent.purple} />

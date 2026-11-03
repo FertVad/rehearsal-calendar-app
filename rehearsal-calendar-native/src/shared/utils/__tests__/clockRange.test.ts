@@ -74,12 +74,12 @@ describe('a rehearsal past midnight on the screens (DD02)', () => {
   });
 
   it('says which day it ends on, and only when that is another day', () => {
-    expect(rehearsalTimeLabel(night, 'en-US')).toBe('23:00 — Sep 11, 01:00');
+    expect(rehearsalTimeLabel(night, 'en')).toBe('23:00 – Sep 11, 01:00');
     const evening = rehearsalInZone(
       { id: 'e', startsAt: '2026-09-10T18:00:00Z', endsAt: '2026-09-10T21:00:00Z' },
       'UTC'
     );
-    expect(rehearsalTimeLabel(evening, 'en-US')).toBe('18:00 — 21:00');
+    expect(rehearsalTimeLabel(evening, 'en')).toBe('18:00–21:00');
   });
 });
 

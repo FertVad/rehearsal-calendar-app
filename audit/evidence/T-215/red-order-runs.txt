@@ -1,0 +1,97 @@
+T-215: the red run's file order (redOrderSequencer.cjs: the 178 files the red
+run's checks.log lists up to and including membersAvailabilityRange.test.js),
+one Jest run each, GC traced (node --trace-gc, filtered by gc-filter.mjs 300).
+Base: HEAD c353ad1. Machine: 8 cores, 8 GB.
+runtimeStartup.test.js fails in every run here (8 tests): it starts the app in
+a child that reads server/.env, which the OS forbids in this session.
+
+== A. in band, as npm test ran before the fix; no extra load
+   node --trace-gc --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --verbose \
+     --testSequencer ../audit/evidence/T-215/redOrderSequencer.cjs 2>&1 | node ../audit/evidence/T-215/gc-filter.mjs 300
+   (output tail; the run's earlier lines were PASS lines only and 6 more pauses)
+
+PASS backend server/__tests__/routes/authLogin.test.js
+  GC at 375985 ms: Scavenge 1571.1 -> 1559.2 MB, pause 1079.38 ms
+  GC at 380263 ms: Mark-Compact 1566.2 -> 1390.9 MB, pause 1232.92 ms
+PASS frontend src/__tests__/integration/authFlow.test.ts (10.522 s)
+...
+PASS frontend src/shared/components/__tests__/keyboardTaps.test.ts
+  GC at 439823 ms: Scavenge 1620.7 -> 1610.9 MB, pause 543.88 ms
+PASS frontend src/contexts/__tests__/UnreadContextMarkRead.test.tsx
+PASS backend server/__tests__/routes/htmlEscaping.test.js
+PASS frontend src/shared/services/calendar/__tests__/importScope.test.ts
+PASS backend server/__tests__/startup/fixtureBudget.test.js
+PASS frontend src/shared/utils/__tests__/clockFormat.test.ts
+PASS frontend src/__tests__/availabilityValidation.test.ts
+  GC at 461877 ms: Mark-Compact 1666.5 -> 1504.2 MB, pause 3130.88 ms
+PASS frontend src/shared/services/__tests__/api.timeout.test.ts (9.861 s)
+PASS frontend src/shared/services/calendar/__tests__/importSession.test.ts
+PASS backend server/__tests__/routes/membersAvailabilityRange.test.js
+✓ says whether they have ever recorded anything (78 ms)
+FAIL server/__tests__/startup/runtimeStartup.test.js (9.229 s)
+Tests:       8 failed, 2022 passed, 2030 total
+Time:        467.13 s
+=== 10 pauses of 300 ms or more; all pauses together 45.4 s
+
+   The same order with --logHeapUsage (no trace), heap after each file, tail:
+PASS frontend src/shared/utils/__tests__/clockRange.test.ts (1567 MB heap size)
+PASS frontend src/shared/components/__tests__/keyboardTaps.test.ts (1577 MB heap size)
+PASS frontend src/contexts/__tests__/UnreadContextMarkRead.test.tsx (1591 MB heap size)
+PASS backend server/__tests__/routes/htmlEscaping.test.js (1594 MB heap size)
+PASS frontend src/shared/services/calendar/__tests__/importScope.test.ts (1612 MB heap size)
+PASS backend server/__tests__/startup/fixtureBudget.test.js (1612 MB heap size)
+PASS frontend src/shared/utils/__tests__/clockFormat.test.ts (1623 MB heap size)
+PASS frontend src/__tests__/availabilityValidation.test.ts (8.886 s, 1509 MB heap size)
+PASS frontend src/shared/services/__tests__/api.timeout.test.ts (1526 MB heap size)
+PASS frontend src/shared/services/calendar/__tests__/importSession.test.ts (1527 MB heap size)
+PASS backend server/__tests__/routes/membersAvailabilityRange.test.js (1540 MB heap size)
+Time:        496.61 s
+
+   The pause of 3.1 s fell in the file just before the red run's failing one,
+   with nothing else loading the machine. One such pause in the first test of
+   membersAvailabilityRange, on a machine as loaded as the red run's (its whole
+   npm test took 486 s), is the 5 s timeout.
+
+== B. one worker with workerIdleMemoryLimit 512MB, as npm test runs after the fix; no extra load
+   node --trace-gc --experimental-vm-modules node_modules/jest/bin/jest.js --maxWorkers=1 --logHeapUsage --verbose \
+     --testSequencer ../audit/evidence/T-215/redOrderSequencer.cjs 2>&1 | node ../audit/evidence/T-215/gc-filter.mjs 300
+
+  GC at 15558 ms: Scavenge 414.0 -> 407.3 MB, pause 354.04 ms
+  GC at 11454 ms: Mark-Compact 332.6 -> 325.5 MB, pause 327.5 ms
+PASS backend server/__tests__/routes/authLogin.test.js (408 MB heap size)
+PASS frontend src/__tests__/availabilityValidation.test.ts (494 MB heap size)
+PASS frontend src/shared/services/__tests__/api.timeout.test.ts (9.971 s, 342 MB heap size)
+PASS backend server/__tests__/routes/membersAvailabilityRange.test.js (370 MB heap size)
+✓ says whether they have ever recorded anything (166 ms)
+Tests:       8 failed, 2022 passed, 2030 total
+Time:        401.581 s
+=== 2 pauses of 300 ms or more; all pauses together 19.8 s
+
+   (GC times are per process: the two pauses are in different workers.)
+
+== C. in band, the same order, 8 busy loops (1 per core)
+   node ../audit/evidence/T-215/red-order-repro.mjs in-band 1 540
+
+HEAD c353ad12d23f3bf591ce96f46e574ad98a8ef1c9
+mode in-band (--runInBand), burners 8, deadline 540 s
+  GC at 22316 ms: Mark-Compact 331.0 -> 322.7 MB, pause 948.62 ms
+  GC at 119959 ms: Mark-Compact 908.9 -> 542.8 MB, pause 387.17 ms
+  GC at 224215 ms: Scavenge 907.6 -> 906.7 MB, pause 313.88 ms
+  GC at 226150 ms: Mark-Compact 907.6 -> 736.1 MB, pause 809.38 ms
+  GC at 244083 ms: Mark-Compact 785.2 -> 761.1 MB, pause 558.04 ms
+  GC at 251721 ms: Scavenge 805.4 -> 796.4 MB, pause 326.62 ms
+  GC at 359203 ms: Scavenge 1134.6 -> 1122.9 MB, pause 724.25 ms
+  GC at 361279 ms: Mark-Compact 1125.4 -> 917.1 MB, pause 1526.25 ms
+  GC at 388495 ms: Scavenge 1014.0 -> 1002.7 MB, pause 610.17 ms
+  GC at 390136 ms: Mark-Compact 1003.7 -> 945.9 MB, pause 1347.17 ms
+  GC at 414431 ms: Scavenge 1026.2 -> 1018.7 MB, pause 311.71 ms
+  GC at 469721 ms: Scavenge 1207.4 -> 1197.3 MB, pause 867.79 ms
+  GC at 472768 ms: Mark-Compact 1205.2 -> 1051.0 MB, pause 1413 ms
+  GC at 473414 ms: Scavenge 1064.2 -> 1051.4 MB, pause 312.46 ms
+=== deadline reached, run killed
+=== 14 pauses of 300 ms or more; all pauses together 50.9 s
+=== jest exit null, 540.2 s
+
+   The run did not reach the failing file in 540 s, and longer is cut off by
+   the session's 10 minutes. It shows the pauses growing with the heap that
+   one process keeps for the whole run: 0.4 s at 0.9 GB, 1.5 s at 1.1 GB.

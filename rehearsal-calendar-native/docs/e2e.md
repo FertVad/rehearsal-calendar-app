@@ -96,6 +96,13 @@ the same, nothing on screen could tell them apart. Honolulu has no summer time
 and is not in the profile's list, so the zone picker names it at the top as
 the device's (flow 23).
 
+Being en_US, it is on the 12-hour clock, and the app shows times as the phone
+is set (T-017): a flow reads "6:00.PM–9:00.PM", the "." for the narrow space
+ICU puts before AM/PM; `WATCH_TOKYO_TIME` and `next-hour.js` give patterns of
+that form. A flow that needs the 24-hour clock launches with `arguments: {
+AppleICUForce24HourTime: "<true/>" }` — the key Settings writes, read among the
+user defaults as a property list: `"YES"` is a string and is ignored (flow 53).
+
 ## A lost tap
 
 The simulator loses about one tap in 250, and Maestro does not notice. For
@@ -111,7 +118,8 @@ every one of 9 198 taps, the lost ones too, so its own tap-again never runs
 (T-207; `audit/evidence/T-207`, `touch-scan.mjs` counts them in any run's
 artifacts). Most were the first tap of sign-in, which types inside `retry`;
 flow 30 failed on one at "Apple Calendar", flow 11 at "Change password and
-sign in" and, under load, at "Forgot password?" (T-209).
+sign in" and, under load, at "Forgot password?" (T-209), flow 44 at the
+profile tab after a restart (T-212).
 
 It is below the app, and cannot be made to happen on demand. The rule:
 
@@ -120,7 +128,9 @@ It is below the app, and cannot be made to happen on demand. The rule:
   id) or `TAP` (a text), `SEE` (the text it brings on screen) and `WAIT_MS`
   (the wait the flow had anyway). It taps and waits; if `SEE` is not there it
   taps once more - never more - and waits again, and then `SEE` must come.
-  No pause, no longer wait.
+  No pause, no longer wait. A tap whose result is something leaving the
+  screen gives `GONE` (the text that goes) instead of `SEE`: "Not Now" of the
+  "Save Password?" sheet at every sign-in (T-213).
 - Only for a tap that may be taken twice: the second comes when the first left
   no trace on screen, but a first that landed late would be repeated.
 - Every second tap is printed at the end of the run - `[e2e] taps taken again
@@ -217,7 +227,30 @@ it (flow 38).
 An inbox that grows while the app is open: `e2e/scripts/notify.js` with
 `MAIL_URL`, `EMAIL`, `COUNT` and `TITLE` records `COUNT` notifications through
 the server's own `recordNotifications`, titled "`TITLE` 1" (the oldest) to
-"`TITLE` `COUNT`" (flow 33).
+"`TITLE` `COUNT`" (flow 33). With `TYPE` it sends one as the server's own code
+sends it: `member_joined` with `PROJECT` and `MEMBER` (flow 61),
+`rehearsal_updated` with `REHEARSAL` (a title) and `CHANGE`, `member_response`
+with `REHEARSAL` and `MEMBER` (flow 62).
+
+How large an icon is drawn: a button that is only an icon is one element,
+44 a side, and Maestro sees nothing inside it. `e2e/scripts/icon-size.js` with
+`MAIL_URL`, `SHOT` (a `takeScreenshot` the flow took), `COLOUR` (`#rrggbb`),
+`LEFT`, `RIGHT`, `TOP`, `BOTTOM` (fractions of the screen) and `MIN_WIDTH` or
+`MIN_HEIGHT` (points) fails when the pixels of that colour there make a smaller
+box (`e2e/ink.mjs`; flow 62, the inbox's 24-point icons). `e2e/scripts/no-ink.js`
+with the same `SHOT`, `COLOUR` and region fails when anything there is drawn in
+that colour: an icon that must be gone from inside a card (flow 63, the tick the
+projects list no longer draws).
+
+What the server stored from a bug report: `e2e/scripts/bug-report-received.js`
+with `MAIL_URL`, `EMAIL`, `MESSAGE` and `SCREEN` fails unless the account has
+exactly one report with that text, sent from that screen (flow 47).
+
+Something copied in another app: `e2e/scripts/set-pasteboard.js` with
+`MAIL_URL`, `SIMULATOR` (`${SIMULATOR}`, the device's udid) and `TEXT` puts
+the text on the simulator's pasteboard (`xcrun simctl pbcopy`). Maestro's
+`setClipboard` keeps it to itself, for its own `pasteText`; iOS's paste
+control reads the system's (flow 08).
 
 An answer held while a flow takes several steps is held `OPEN`: the nine
 seconds of a plain hold are a clock the steps race. Flow 17 held its "All
@@ -273,7 +306,9 @@ whether it has gone, which waited seven seconds every time.
   types, checks the text landed and retries: the first keyboard after a cold
   launch is slow, and text typed before it is up goes nowhere. The inputs do not
   report focus, so there is nothing else to wait on. It also dismisses iOS's
-  "Save Password?" sheet, which covers the screen. A flow that acts before
+  "Save Password?" sheet, which covers the screen and hides the whole app from
+  Maestro, through `tap-and-see.yaml` with `GONE: "Not Now"`: one lost tap on
+  it left flow 51 waiting under the sheet (T-213). A flow that acts before
   signing in launches the app itself and then runs `sign-in-form.yaml`.
 - Maestro's `launchApp` grants the app every permission unless it is given
   `permissions:`, so the sign-in subflow's launch leaves calendar access

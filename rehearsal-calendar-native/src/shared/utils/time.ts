@@ -136,22 +136,6 @@ export const minuteRangesOverlap = (a: [number, number], b: [number, number]): b
   a[0] < b[1] && b[0] < a[1];
 
 /**
- * Format YYYY-MM-DD string to localized date string (e.g., "25 ноября, понедельник").
- */
-export const formatDateLocalized = (
-  dateStr: string,
-  options: Intl.DateTimeFormatOptions = {
-    day: 'numeric',
-    month: 'long',
-    weekday: 'long',
-  },
-  locale: string = 'ru-RU'
-): string => {
-  const date = parseDateString(dateStr);
-  return date.toLocaleDateString(locale, options);
-};
-
-/**
  * The calendar date `days` after `dateStr` ('YYYY-MM-DD'), stepped in UTC for
  * the reason datesBetween gives.
  */

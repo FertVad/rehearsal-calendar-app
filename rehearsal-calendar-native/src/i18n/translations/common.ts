@@ -15,7 +15,10 @@ export interface CommonTranslations {
   apply: string;
   or: string;
   selectAll: string;
-  clear: string;
+  /** Lets go of the days picked; nothing on them changes (T-021). */
+  deselect: string;
+  /** The short notice after a save went through (Toast, T-021). */
+  saved: string;
   change: string;
   selectPeriod: string;
   invalidDateRange: string;
@@ -24,6 +27,10 @@ export interface CommonTranslations {
   to: string;
   done: string;
   yes: string;
+  /** Leaving a sheet with unsaved changes: the destructive choice (useLeaveGuard). */
+  dontSave: string;
+  /** Its title where there is no action sheet (Android). */
+  unsavedChanges: string;
 }
 
 export interface NavTranslations {
@@ -39,14 +46,6 @@ export interface ActionSheetTranslations {
   createRehearsal: string;
   markBusy: string;
   createProject: string;
-}
-
-export interface BetaBannerTranslations {
-  title: string;
-  bugReport: string;
-  bugReportPlaceholder: string;
-  bugReportSent: string;
-  send: string;
 }
 
 export interface DaysTranslations {
@@ -86,7 +85,8 @@ export const ru = {
     apply: 'Применить',
     or: 'или',
     selectAll: 'Выбрать всех',
-    clear: 'Очистить',
+    deselect: 'Снять выбор',
+    saved: 'Сохранено',
     change: 'Сменить',
     selectPeriod: 'Выберите период',
     invalidDateRange: 'Выберите корректные даты начала и окончания.',
@@ -95,6 +95,8 @@ export const ru = {
     to: 'До:',
     done: 'Готово',
     yes: 'Да',
+    dontSave: 'Не сохранять',
+    unsavedChanges: 'Изменения не сохранены',
   },
   nav: {
     calendar: 'Календарь',
@@ -108,13 +110,6 @@ export const ru = {
     createRehearsal: 'Создать репетицию',
     markBusy: 'Отметить занятость',
     createProject: 'Создать проект',
-  },
-  betaBanner: {
-    title: 'Тестовый полёт',
-    bugReport: 'Баг-репорт',
-    bugReportPlaceholder: 'Опишите проблему...',
-    bugReportSent: 'Спасибо! Отчёт отправлен',
-    send: 'Отправить',
   },
   days: {
     monday: 'Понедельник',
@@ -134,10 +129,6 @@ export const ru = {
       sunday: 'Вс',
     },
   },
-  months: [
-    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-  ],
 };
 
 export const en = {
@@ -158,7 +149,8 @@ export const en = {
     apply: 'Apply',
     or: 'or',
     selectAll: 'Select All',
-    clear: 'Clear',
+    deselect: 'Deselect',
+    saved: 'Saved',
     change: 'Change',
     selectPeriod: 'Select Period',
     invalidDateRange: 'Choose valid start and end dates.',
@@ -167,6 +159,8 @@ export const en = {
     to: 'To:',
     done: 'Done',
     yes: 'Yes',
+    dontSave: "Don't Save",
+    unsavedChanges: 'Unsaved changes',
   },
   nav: {
     calendar: 'Calendar',
@@ -180,13 +174,6 @@ export const en = {
     createRehearsal: 'Create Rehearsal',
     markBusy: 'Mark Busy',
     createProject: 'Create Project',
-  },
-  betaBanner: {
-    title: 'Test Flight',
-    bugReport: 'Bug Report',
-    bugReportPlaceholder: 'Describe the issue...',
-    bugReportSent: 'Thanks! Report sent',
-    send: 'Send',
   },
   days: {
     monday: 'Monday',
@@ -206,10 +193,6 @@ export const en = {
       sunday: 'Sun',
     },
   },
-  months: [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ],
 };
 
 export const es = {
@@ -230,7 +213,8 @@ export const es = {
     apply: 'Aplicar',
     or: 'o',
     selectAll: 'Seleccionar todo',
-    clear: 'Limpiar',
+    deselect: 'Quitar selección',
+    saved: 'Guardado',
     change: 'Cambiar',
     selectPeriod: 'Seleccionar período',
     invalidDateRange: 'Elige fechas de inicio y fin válidas.',
@@ -239,6 +223,8 @@ export const es = {
     to: 'Hasta:',
     done: 'Listo',
     yes: 'Sí',
+    dontSave: 'No guardar',
+    unsavedChanges: 'Cambios sin guardar',
   },
   nav: {
     calendar: 'Calendario',
@@ -252,13 +238,6 @@ export const es = {
     createRehearsal: 'Crear ensayo',
     markBusy: 'Marcar ocupado',
     createProject: 'Crear proyecto',
-  },
-  betaBanner: {
-    title: 'Versión beta',
-    bugReport: 'Reportar error',
-    bugReportPlaceholder: 'Describe el problema...',
-    bugReportSent: '¡Gracias! Informe enviado',
-    send: 'Enviar',
   },
   days: {
     monday: 'Lunes',
@@ -278,10 +257,6 @@ export const es = {
       sunday: 'Dom',
     },
   },
-  months: [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ],
 };
 
 export const de = {
@@ -302,7 +277,8 @@ export const de = {
     apply: 'Anwenden',
     or: 'oder',
     selectAll: 'Alle auswählen',
-    clear: 'Löschen',
+    deselect: 'Auswahl aufheben',
+    saved: 'Gespeichert',
     change: 'Ändern',
     selectPeriod: 'Zeitraum auswählen',
     invalidDateRange: 'Wähle gültige Start- und Enddaten.',
@@ -311,6 +287,8 @@ export const de = {
     to: 'Bis:',
     done: 'Fertig',
     yes: 'Ja',
+    dontSave: 'Nicht sichern',
+    unsavedChanges: 'Nicht gesicherte Änderungen',
   },
   nav: {
     calendar: 'Kalender',
@@ -324,13 +302,6 @@ export const de = {
     createRehearsal: 'Probe erstellen',
     markBusy: 'Als beschäftigt markieren',
     createProject: 'Projekt erstellen',
-  },
-  betaBanner: {
-    title: 'Testflug',
-    bugReport: 'Fehler melden',
-    bugReportPlaceholder: 'Problem beschreiben...',
-    bugReportSent: 'Danke! Bericht gesendet',
-    send: 'Senden',
   },
   days: {
     monday: 'Montag',
@@ -350,8 +321,4 @@ export const de = {
       sunday: 'So',
     },
   },
-  months: [
-    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
-  ],
 };

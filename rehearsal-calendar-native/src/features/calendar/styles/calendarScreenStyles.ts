@@ -1,5 +1,5 @@
 import { StyleSheet, Dimensions } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const UPCOMING_CARD_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md;
@@ -54,7 +54,7 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
   },
   bellBadgeText: {
     fontSize: 10,
@@ -78,6 +78,7 @@ export const styles = StyleSheet.create({
   filterOption: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: TouchTarget,
     justifyContent: 'space-between',
     padding: Spacing.md,
     borderBottomWidth: 1,
@@ -102,7 +103,6 @@ export const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,
     marginBottom: Spacing.md,
-    textTransform: 'capitalize',
   },
   upcomingList: {
     gap: Spacing.sm,
@@ -132,8 +132,35 @@ export const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: Spacing.sm,
   },
-  iconButton: {
-    padding: Spacing.xs,
+  // An admin's swipe on a card (T-016): Edit, then Delete in red at the edge.
+  swipeActions: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    paddingLeft: Spacing.sm,
+  },
+  swipeAction: {
+    // The card's height: gesture-handler's touchable is not stretched for it.
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 2,
+    width: 84,
+    borderRadius: BorderRadius.md,
+  },
+  swipeActionEdit: {
+    backgroundColor: Colors.accent.purpleFill,
+  },
+  swipeActionDelete: {
+    backgroundColor: Colors.accent.red,
+  },
+  swipeActionText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.inverse,
+  },
+  swipeCardUnder: {
+    backgroundColor: Colors.bg.primary,
+    borderRadius: BorderRadius.md,
   },
   skeletonRow: {
     marginBottom: Spacing.sm,
@@ -250,9 +277,10 @@ export const styles = StyleSheet.create({
     color: Colors.accent.red,
   },
   // Seen button styles
+  // The eye's own 44 pt holds the space the padding used to.
   seenSection: {
     marginTop: Spacing.md,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.xs,
     borderTopWidth: 1,
     borderTopColor: Colors.glass.border,
     flexDirection: 'row',
@@ -262,7 +290,9 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    padding: Spacing.xs,
+    minWidth: TouchTarget,
+    minHeight: TouchTarget,
+    paddingHorizontal: Spacing.xs,
   },
   seenCount: {
     fontSize: FontSize.sm,

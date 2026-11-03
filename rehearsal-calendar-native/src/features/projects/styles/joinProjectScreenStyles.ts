@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -20,13 +20,6 @@ export const styles = StyleSheet.create({
   },
   iconContainer: {
     marginBottom: Spacing.xl,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.lg,
-    textAlign: 'center',
   },
   subtitle: {
     fontSize: FontSize.base,
@@ -64,17 +57,13 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
+    minHeight: TouchTarget,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
     borderRadius: BorderRadius.md,
   },
   primaryButton: {
-    backgroundColor: Colors.accent.purple,
-  },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
+    backgroundColor: Colors.accent.purpleFill,
   },
   buttonText: {
     fontSize: FontSize.base,
@@ -82,9 +71,6 @@ export const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: Colors.text.inverse,
-  },
-  secondaryButtonText: {
-    color: Colors.text.secondary,
   },
   loadingText: {
     fontSize: FontSize.base,
@@ -105,17 +91,39 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
 
-  codeInput: {
+  // The field, and iOS's paste control beside it, as tall.
+  codeRow: {
     width: '100%',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: Spacing.sm,
     marginTop: Spacing.xl,
     marginBottom: Spacing.md,
+  },
+  codeInput: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.glass.border,
     backgroundColor: Colors.bg.secondary,
     color: Colors.text.primary,
     fontSize: FontSize.base,
+  },
+  codeInputError: {
+    borderColor: Colors.accent.red,
+  },
+  // Its colours and corners are the control's own props: iOS takes no others.
+  pasteButton: {
+    width: TouchTarget + Spacing.sm,
+    minHeight: TouchTarget,
+  },
+  codeError: {
+    alignSelf: 'flex-start',
+    fontSize: FontSize.sm,
+    color: Colors.accent.red,
+    marginTop: -Spacing.sm,
+    marginBottom: Spacing.md,
   },
 });

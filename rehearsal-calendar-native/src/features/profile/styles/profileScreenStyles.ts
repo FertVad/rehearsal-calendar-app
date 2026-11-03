@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -12,14 +12,6 @@ export const styles = StyleSheet.create({
   content: {
     padding: Spacing.xl,
     paddingBottom: Spacing.xxl * 2,
-  },
-  header: {
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
   },
   userCard: {
     backgroundColor: Colors.glass.bg,
@@ -53,8 +45,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
     marginTop: Spacing.md,
+    minHeight: TouchTarget,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
     backgroundColor: Colors.accent.purpleDarkAlpha10,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
@@ -133,7 +125,9 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Spacing.xl,
+    // The cross's own 44 pt makes up the height the padding gave.
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
   },
@@ -145,6 +139,29 @@ export const styles = StyleSheet.create({
   timezoneList: {
     paddingBottom: Spacing.xxl,
   },
+  // The participant picker's search field, over the zones.
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.lg,
+    marginVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    height: TouchTarget,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.bg.tertiary,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 17,
+    color: Colors.text.primary,
+  },
+  searchEmpty: {
+    fontSize: FontSize.base,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    padding: Spacing.lg,
+  },
   weekStartOptions: {
     paddingBottom: Spacing.xl,
   },
@@ -152,6 +169,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: TouchTarget,
     padding: Spacing.md,
     marginHorizontal: Spacing.md,
     marginVertical: Spacing.xs / 2,

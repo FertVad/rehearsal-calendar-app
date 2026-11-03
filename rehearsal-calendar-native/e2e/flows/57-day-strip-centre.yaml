@@ -1,0 +1,128 @@
+# The calendar's strip of days, the selected one in its middle (T-019). It was
+# a week to a page, and the day picked could stand at the page's edge, or on
+# a page not shown. Telegin has "Tea on the terrace" today, "Guitar tuning"
+# three days on - the strip's right edge while today is in its middle - and
+# "Tree planting" twelve days off, in this month.
+#
+# A day is in the middle when a tap on the strip's middle is a tap on it: it
+# stays selected. Tapped at the edge, the day comes there; "Today" brings
+# today; a day picked in the month, opened from its name, comes there too.
+# Tomorrow has none: nothing of the selected day's takes room, the upcoming
+# list stays.
+appId: ${APP_ID}
+name: Day strip centres the day
+tags:
+  - calendar
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${TELEGIN_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Tea on the terrace.*"
+    timeout: 30000
+- takeScreenshot: 57-strip-today
+# The day at the edge.
+- tapOn:
+    id: calendar-day-${EDGE_DAY}
+- extendedWaitUntil:
+    notVisible: ".*Tea on the terrace.*"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: calendar-strip
+    point: "50%,50%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: calendar-day-${EDGE_DAY}
+    selected: true
+- assertVisible: ".*Guitar tuning.*"
+- takeScreenshot: 57-edge-day-in-middle
+# "Today".
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-today
+      SEE: ".*Tea on the terrace.*"
+      WAIT_MS: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: calendar-strip
+    point: "50%,50%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: calendar-day-${TODAY_DAY}
+    selected: true
+- assertVisible: ".*Tea on the terrace.*"
+# Tomorrow, a day with none: no "Tomorrow" over "Nothing today", the
+# upcoming list stays.
+- tapOn:
+    id: calendar-day-${TOMORROW_DAY}
+- extendedWaitUntil:
+    notVisible: ".*Tea on the terrace.*"
+    timeout: 10000
+- assertVisible:
+    id: calendar-day-${TOMORROW_DAY}
+    selected: true
+- assertNotVisible: ".*Nothing today.*"
+- assertNotVisible: "Tomorrow"
+- assertVisible: "Upcoming Events"
+- assertVisible: ".*Guitar tuning.*"
+- takeScreenshot: 57-empty-day
+# Today again, so the month opens on today's - tomorrow is next month's on
+# the month's last day.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-today
+      SEE: ".*Tea on the terrace.*"
+      WAIT_MS: 10000
+# The month, from its name: today the profile's, named so.
+- tapOn:
+    id: calendar-month
+- extendedWaitUntil:
+    visible:
+      id: calendar-month-grid.day_${FAR_DAY}
+    timeout: 10000
+- assertVisible:
+    id: calendar-month-grid.day_${TODAY_DAY}
+    text: ".*Today.*"
+- takeScreenshot: 57-month-open
+- tapOn:
+    id: calendar-month-grid.day_${FAR_DAY}
+- extendedWaitUntil:
+    notVisible:
+      id: calendar-month-grid.day_${TODAY_DAY}
+    timeout: 10000
+- extendedWaitUntil:
+    visible: ".*Tree planting.*"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: calendar-strip
+    point: "50%,50%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: calendar-day-${FAR_DAY}
+    selected: true
+- assertVisible: ".*Tree planting.*"
+- takeScreenshot: 57-month-day-in-middle
+# The name again closes the month.
+- tapOn:
+    id: calendar-month
+- extendedWaitUntil:
+    visible:
+      id: calendar-month-grid.day_${FAR_DAY}
+    timeout: 10000
+- tapOn:
+    id: calendar-month
+- extendedWaitUntil:
+    notVisible:
+      id: calendar-month-grid.day_${FAR_DAY}
+    timeout: 10000

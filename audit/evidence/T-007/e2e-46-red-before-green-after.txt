@@ -1,0 +1,28 @@
+e2e/flows/46-create-project-closes-form.yaml
+
+RED — CreateProjectScreen.tsx, NotificationsScreen.tsx, useNotifications.ts
+restored from c7100aa (git restore --source=c7100aa -- <files>):
+
+$ npm run e2e -- e2e/flows/46-create-project-closes-form.yaml
+[Failed] Back from a new project is the projects list, not the form (2m 21s) (Element not found: Text matching regex: Back)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-10-28T16:56:01.665Z  tapped "Back" again: no "My Projects" after the first tap
+
+What the screen showed (artifacts 2026-10-28_185311, step-050): the project
+had opened in a second copy of the tabs, presented as a sheet over the form
+(the sheet's rounded top edge shows under the status bar). Its Projects stack
+held only the project, so "Back" left it for the copy's first tab, the
+calendar, and the projects list never came; the form stayed under the sheet.
+
+GREEN — the fix in place:
+
+$ npm run e2e -- e2e/flows/46-create-project-closes-form.yaml
+[Passed] Back from a new project is the projects list, not the form (1m 47s)
+1/1 Flow Passed in 1m 47s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+(The first version of the flow went back with an edge swipe; Maestro's swipe
+from the left edge was not taken as iOS's back gesture and the project stayed
+up even with the fix — artifacts 2026-10-28_183731 — so the flow uses the
+project's back button, which leaves the same screen.)

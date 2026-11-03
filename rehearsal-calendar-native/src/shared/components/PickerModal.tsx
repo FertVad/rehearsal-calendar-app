@@ -7,11 +7,12 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { usePickerDraft } from '../hooks/usePickerDraft';
 import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
+import { timePickerLocale, usePhoneUses24HourClock, wheelMinuteInterval } from '../utils/clockFormat';
 
 interface PickerModalProps {
   visible: boolean;
@@ -35,6 +36,15 @@ export const PickerModal: React.FC<PickerModalProps> = ({
 }) => {
   const { t } = useI18n();
   const picker = usePickerDraft({ visible, value, onConfirm, onClose });
+  // A time's wheel follows the phone's 12/24 hours (clockFormat.ts) and steps
+  // by five minutes. Not for a time off the step, as an old rehearsal's 10:07:
+  // UIKit rounds the wheel to its interval (roundsToMinuteInterval, which the
+  // module does not expose), so it would open at 10:05 — that one turns by the
+  // minute, opens at 10:07 and is kept on Done unless turned (review T-017 r1).
+  const uses24 = usePhoneUses24HourClock();
+  const time = mode === 'time'
+    ? { is24Hour: uses24, locale: timePickerLocale(language, uses24), minuteInterval: wheelMinuteInterval(value) }
+    : { locale: language };
 
   // Android uses native modal, no custom UI needed
   if (Platform.OS === 'android' && visible) {
@@ -44,8 +54,7 @@ export const PickerModal: React.FC<PickerModalProps> = ({
         mode={mode}
         display="default"
         onChange={picker.change}
-        is24Hour={mode === 'time'}
-        locale={language}
+        {...time}
         themeVariant="dark"
         textColor={Colors.text.primary}
       />
@@ -60,11 +69,11 @@ export const PickerModal: React.FC<PickerModalProps> = ({
           <View style={styles.modalContent}>
             {/* Header with Cancel and Done buttons */}
             <View style={styles.header}>
-              <TouchableOpacity onPress={picker.cancel}>
+              <TouchableOpacity onPress={picker.cancel} style={styles.headerButton}>
                 <Text style={styles.cancelButton}>{t.common.cancel}</Text>
               </TouchableOpacity>
               <Text style={styles.title}>{title}</Text>
-              <TouchableOpacity onPress={picker.confirm}>
+              <TouchableOpacity onPress={picker.confirm} style={styles.headerButton}>
                 <Text style={styles.doneButton}>{t.common.done}</Text>
               </TouchableOpacity>
             </View>
@@ -76,8 +85,7 @@ export const PickerModal: React.FC<PickerModalProps> = ({
                 mode={mode}
                 display="spinner"
                 onChange={picker.change}
-                is24Hour={mode === 'time'}
-                locale={language}
+                {...time}
                 themeVariant="dark"
                 textColor={Colors.text.primary}
                 style={styles.picker}
@@ -109,9 +117,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
+  },
+  // Cancel and Done are words, but the tap is taken on 44 pt; the header's
+  // padding went into them.
+  headerButton: {
+    minWidth: TouchTarget,
+    minHeight: TouchTarget,
+    justifyContent: 'center',
   },
   title: {
     fontSize: FontSize.lg,

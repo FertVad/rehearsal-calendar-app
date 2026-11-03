@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../../shared/constants/colors';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
@@ -16,20 +16,6 @@ export const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.lg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  backButton: {
-    marginRight: Spacing.md,
-  },
-  title: {
-    flex: 1,
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
   },
   adminBadge: {
     marginLeft: Spacing.sm,
@@ -48,7 +34,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
+    minHeight: TouchTarget,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     borderRadius: BorderRadius.md,
@@ -64,10 +51,13 @@ export const styles = StyleSheet.create({
   section: {
     marginBottom: Spacing.xl,
   },
+  // Upcoming and past open and close on a tap here: 44 pt, the margin under
+  // it giving back what the height took.
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    minHeight: TouchTarget,
+    marginBottom: Spacing.xs,
     gap: Spacing.sm,
   },
   sectionTitle: {
@@ -87,6 +77,26 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
+  },
+  // The admin's "New rehearsal", under the upcoming ones' header (T-025): the
+  // dashed outline the app gives an optional extra action.
+  newRehearsalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    minHeight: TouchTarget,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.accent.purple,
+  },
+  newRehearsalText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.accent.purple,
   },
   emptyText: {
     fontSize: FontSize.sm,
@@ -173,7 +183,7 @@ export const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -263,25 +273,6 @@ export const styles = StyleSheet.create({
     color: Colors.accent.purple,
     fontWeight: FontWeight.semibold,
     textAlign: 'center',
-  },
-  // Delete Project Button
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderWidth: 1,
-    borderColor: Colors.accent.red,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing.lg,
-  },
-  deleteButtonText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.accent.red,
   },
 
   inviteCodeRow: {

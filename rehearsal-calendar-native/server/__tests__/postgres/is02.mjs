@@ -133,7 +133,7 @@ export async function probeIS02({ control, db, http, allowedPorts, serverRoot = 
   try {
     // Only this diagnostic fixture needs these actual route columns.
     await control.query(`ALTER TABLE native_users
-      ADD COLUMN password_hash TEXT, ADD COLUMN timezone TEXT DEFAULT 'UTC',
+      ADD COLUMN password_hash TEXT,
       ADD COLUMN last_login_at TIMESTAMPTZ, ADD COLUMN phone TEXT, ADD COLUMN avatar_url TEXT,
       ADD COLUMN email_notifications BOOLEAN DEFAULT TRUE, ADD COLUMN week_start_day INTEGER DEFAULT 1,
       ADD COLUMN onboarding_completed BOOLEAN DEFAULT FALSE`);

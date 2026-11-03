@@ -1,0 +1,8 @@
+$ npm run e2e -- e2e/flows/49-sign-in-and-register-forms.yaml e2e/flows/01-login.yaml e2e/flows/11-password-reset.yaml
+# code: fd95588 (fix 68cef65 + flow 49)
+
+[Passed] Sign-in and registration forms (1m 31s)
+[Passed] Sign in (35s)
+[Passed] Password reset by emailed code (1m 34s)
+3/3 Flows Passed in 3m 40s
+[e2e] taps taken again (tap-and-see.yaml): 0

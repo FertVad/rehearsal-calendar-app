@@ -1,0 +1,38 @@
+T-213 green after: flow 51 on the new sign-in-form.yaml and tap-and-see.yaml.
+
+$ cd rehearsal-calendar-native && npm run e2e -- e2e/flows/51-rehearsal-swipe-and-details.yaml
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] An admin swipes a rehearsal away, an actor has no swipe (3m 4s)
+
+1/1 Flow Passed in 3m 5s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+maestro.log (artifacts 2026-10-31_204606), the "Not Now" of each sign-in:
+
+Claudius
+20:48:38.851 Start: Assert that (Optional) "Not Now" is visible RUNNING
+20:48:40.634 Start: Run tap-and-see.yaml when "Not Now" is visible RUNNING
+20:48:42.696 Start: Assert that (Optional) "${GONE}" is not visible RUNNING
+20:48:43.849 Finished: Assert that (Optional) "${GONE}" is not visible COMPLETED
+20:48:45.068 Finished: Run flow when "${GONE}" is not visible COMPLETED
+20:48:45.182 Finished: Run tap-and-see.yaml when "Not Now" is visible COMPLETED
+20:48:45.604 Finished: Assert that ".*Court scene.*" is visible COMPLETED
+
+Gertrude
+20:49:41.282 Start: Assert that (Optional) "Not Now" is visible RUNNING
+20:49:41.658 Start: Run tap-and-see.yaml when "Not Now" is visible RUNNING
+20:49:43.478 Start: Assert that (Optional) "${GONE}" is not visible RUNNING
+20:49:44.567 Finished: Assert that (Optional) "${GONE}" is not visible COMPLETED
+20:49:45.772 Finished: Run flow when "${GONE}" is not visible COMPLETED
+20:49:45.812 Finished: Run tap-and-see.yaml when "Not Now" is visible COMPLETED
+20:49:46.230 Finished: Assert that ".*Play within.*" is visible COMPLETED
+
+The sheet's tap now costs about 4 s where it cost 2 (the check that it went);
+the last notVisible, asked again after a GONE already gone, was dropped before
+this run (tap-and-see-gone-check.txt, the end).
+
+Also on the new code: the three GONE checks (tap-and-see-gone-check.txt),
+whose sign-ins went through the same path, all three without a second tap.
