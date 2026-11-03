@@ -74,6 +74,76 @@ npm run e2e -- e2e/flows/20-save-before-availability.yaml e2e/flows/25-past-midn
 ```
 Flows 20 and 25 run the screen's close question of T-013 through the same guard.
 
+## Review (Astra): the last day picked, tapped again, collapsed unasked
+
+The calendar's `onDayPress` went straight to `editor.handleDayPress`; taking the
+only day out of the selection put the editor away, its Save with it, past the
+guard. Now a tap on the only day picked is the editor collapsing and goes through
+`guard.leave(editor.clearSelection)`, as the arrow and "Deselect" do — the
+selection cleared, not toggled, so "Save" (whose own save already drops the
+selection) does not pick the day back. Any other tap picks or lets go as before.
+
+Base for "red before": `b8023ab`. File put back to it for the red runs:
+`src/features/availability/screens/AvailabilityScreen.tsx`. The Jest mock of
+react-native got `Animated.FlatList` and `RefreshControl`, so the screen test can
+render the month list.
+
+Flows 10 and 25 let go of a changed day to have the editor down with the change
+unsaved — the very behaviour removed. They now meet the question there, cancel
+it, and go on with the close question as before; flow 25 checks the tap on the
+day during the save by "no question, still busy" instead of "editor not opened".
+
+### Jest — red before (b8023ab screen)
+
+```
+npx jest --selectProjects frontend --testPathPatterns AvailabilityLeave
+  ✕ … › by tapping the last day picked again › with days changed, it asks, and Don't Save puts them back and collapses
+    Expected number of calls: 1
+    Received number of calls: 0
+  ✕ … › by tapping the last day picked again › Save saves and collapses; the day is not picked back
+  ✕ … › by tapping the last day picked again › with nothing changed, it collapses at once
+    Expected number of calls: 1
+    Received number of calls: 0
+  ✓ … › by tapping the last day picked again › another day, the editor staying up, is picked without asking
+Tests:       3 failed, 13 passed, 16 total
+```
+
+### Jest — green after
+
+```
+npx jest --selectProjects frontend --silent
+Test Suites: 121 passed, 121 total
+Tests:       1107 passed, 1107 total
+```
+`npm run type-check`: clean.
+
+### e2e — red before (b8023ab screen)
+
+```
+npm run e2e -- e2e/flows/64-availability-collapse-asks.yaml
+[Failed] Availability editor asks before collapsing (2m 31s) (Assertion is false: "Don't Save" is visible)
+1/1 Flow Failed
+```
+Every earlier step passed (screenshots 64-collapse-asks, 64-dont-save-day-as-it-was,
+64-save-saved-and-collapsed taken); it fails at step 109, the day tapped again:
+the editor gone without a word, the day's unsaved busy dot left on the calendar.
+
+### e2e — green after
+
+```
+npm run e2e -- e2e/flows/64-availability-collapse-asks.yaml
+[Passed] Availability editor asks before collapsing (2m 29s)
+npm run e2e -- e2e/flows/10-availability-days.yaml
+[Passed] Availability saves the day it changed (3m 17s)
+npm run e2e -- e2e/flows/20-save-before-availability.yaml
+[Passed] Save before the availability is in (1m 19s)
+npm run e2e -- e2e/flows/25-past-midnight-availability.yaml
+[Passed] A busy slot past midnight is one slot, on both days (3m)
+```
+Before their update, flows 10 and 25 failed on the fix ("Element not found:
+availability-close" — the question's popover was up where they expected the
+editor gone).
+
 ## Seen on the simulator
 
 On this iOS the action sheet is a popover: "Don't Save" and "Save", no "Cancel"
