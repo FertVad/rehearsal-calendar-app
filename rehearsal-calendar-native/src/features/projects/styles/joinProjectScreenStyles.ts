@@ -70,7 +70,7 @@ export const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   primaryButton: {
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
   },
   secondaryButton: {
     backgroundColor: 'transparent',

@@ -30,6 +30,9 @@ export const Colors = {
   accent: {
     purple: '#A855F7',
     purpleDark: '#9333EA',
+    // Under white text — the main buttons, badges, avatars. White on it is
+    // 5.38:1; on `purple` 3.96:1, under the 4.5:1 text below 17 pt needs (T-027).
+    purpleFill: '#9333EA',
     blue: '#3b82f6',
     green: '#10b981',
     red: '#ef4444',

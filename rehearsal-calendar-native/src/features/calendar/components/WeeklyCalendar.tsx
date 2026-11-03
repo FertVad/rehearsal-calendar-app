@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: 12,
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
   },
   todayButtonText: {
     fontSize: FontSize.sm,
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badge: {
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
     borderRadius: 8,
     minWidth: 16,
     height: 16,

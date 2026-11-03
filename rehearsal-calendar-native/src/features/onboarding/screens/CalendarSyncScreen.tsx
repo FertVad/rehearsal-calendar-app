@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 24,
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
     borderRadius: BorderRadius.md,
   },
   permissionButtonText: {

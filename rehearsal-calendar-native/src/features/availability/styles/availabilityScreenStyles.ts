@@ -25,7 +25,7 @@ export const styles = StyleSheet.create({
   saveHeaderButton: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
     borderRadius: BorderRadius.md,
   },
   saveHeaderButtonText: {

@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   primary: {
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
   },
   secondary: {
     backgroundColor: Colors.bg.tertiary,

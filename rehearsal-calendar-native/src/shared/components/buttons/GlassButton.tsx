@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, BorderRadius, FontSize, FontWeight } from '../../constants/colors';
 
 interface GlassButtonProps {
@@ -42,18 +41,13 @@ export default function GlassButton({
         disabled={disabled || loading}
         activeOpacity={0.8}
       >
-        <LinearGradient
-          colors={[Colors.accent.purple, Colors.accent.purpleDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.purpleGradient}
-        >
+        <View style={styles.purpleContent}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={[styles.purpleText, textStyle]}>{title}</Text>
           )}
-        </LinearGradient>
+        </View>
       </TouchableOpacity>
     );
   }
@@ -101,8 +95,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     overflow: 'hidden',
     minHeight: 44,
+    backgroundColor: Colors.accent.purpleFill,
   },
-  purpleGradient: {
+  purpleContent: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',

@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
   },
   addButton: {
-    backgroundColor: Colors.accent.purpleDark,
+    backgroundColor: Colors.accent.purpleFill,
     minHeight: TouchTarget,
     justifyContent: 'center',
     paddingHorizontal: 12,

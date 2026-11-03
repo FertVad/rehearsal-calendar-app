@@ -65,10 +65,11 @@
  * It measures an icon on a screenshot a flow took, which Maestro cannot: a
  * button that is only an icon is one element, the size of its target (ink.mjs):
  *
- *   GET /ink?shot=<name>&colour=<#rrggbb>&left=&right=&top=&bottom=
+ *   GET /ink?shot=<name>&colour=<#rrggbb>&left=&right=&top=&bottom=[&tolerance=]
  *                                    { box: { width, height } } in points, of
  *                                    that colour within those fractions of the
- *                                    newest <name>.png in e2e/out/artifacts
+ *                                    newest <name>.png in e2e/out/artifacts;
+ *                                    within 40 a channel, or `tolerance`
  *
  * It reads back what the server stored from an account's bug reports, to show
  * a report sent from the app arrived (flow 47):
@@ -290,7 +291,8 @@ http.createServer((request, response) => {
       .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
     if (!shots.length) return answer(404, { error: `no screenshot ${name}` });
     const region = Object.fromEntries(['left', 'right', 'top', 'bottom'].map((side) => [side, Number(url.searchParams.get(side))]));
-    return answer(200, { box: inkBox(shots[0], { colour: url.searchParams.get('colour') || '', region }) });
+    const tolerance = url.searchParams.has('tolerance') ? Number(url.searchParams.get('tolerance')) : undefined;
+    return answer(200, { box: inkBox(shots[0], { colour: url.searchParams.get('colour') || '', region, tolerance }) });
   }
   if (request.method === 'GET' && url.pathname === '/notify') {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();

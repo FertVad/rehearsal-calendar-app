@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sendButton: {
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

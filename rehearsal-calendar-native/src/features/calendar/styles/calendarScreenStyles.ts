@@ -54,7 +54,7 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
   },
   bellBadgeText: {
     fontSize: 10,
@@ -149,7 +149,7 @@ export const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   swipeActionEdit: {
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
   },
   swipeActionDelete: {
     backgroundColor: Colors.accent.red,

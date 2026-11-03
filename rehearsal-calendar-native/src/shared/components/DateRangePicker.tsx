@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
   },
   confirmButton: {
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
   },
   confirmButtonText: {
     fontSize: FontSize.base,
