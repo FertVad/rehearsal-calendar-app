@@ -58,6 +58,32 @@ the lost tap passed (the slot whole, saved, read back on the morning and on
 the evening, the mode picked again closing unasked), and in the green run
 every step passed, to the day "Busy" after the save.
 
+## Review 1 (Astra)
+
+1. The second tap. The owner's decision (03.11.2026, 21:53, as on T-207's of
+   25.10.2026): a tap the simulator loses goes through `tap-and-see.yaml`,
+   one shared mechanism, at most one second tap, only when the first left
+   nothing on screen, each one printed by the run. The task's "no retries"
+   is about retries of a flow's own and raised limits, not this. The flow
+   stays as it is: no tap is lost without the mechanism, and there is no
+   other way past one, the loss being in backboardd (above).
+2. Red before, green after, on the same failure. A lost tap cannot be had
+   on demand: about one in 250, under load, never in nine tries and 48 taps
+   made for it (T-207 `red-before.txt`); here the old flow once alone passed,
+   and under load was cut by the 10-minute limit (`red-before.txt`). What
+   stands for it, piece by piece:
+   - the failure is a lost tap: `red-run-timeline.txt`, backboardd skipped
+     the touch on mode-busy and the day stayed "8, Partial";
+   - a lost tap on Busy gives this failure: `check/1-busy-tap-lost.yaml`,
+     the tap left out, red with `"Don't Save" is visible`, word for word;
+   - the screen is not in it: `guard-probe.txt`, the guard sees a Busy made
+     just before the tap on the day, a reload in between or not;
+   - the second tap, when the first left no result, gets the flow through,
+     and no third comes: T-207 `tap-and-see-check.txt`, red bare, green
+     through `tap-and-see.yaml` with one second tap printed, and the bound;
+   - the new flow passes: `green-after.txt`, the note after the first tap,
+     the steps after it as before.
+
 ## Tools
 
 - `check/1-busy-tap-lost.yaml` - run from rehearsal-calendar-native:
