@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "apple-signin-auth": "^1.7.6",
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
