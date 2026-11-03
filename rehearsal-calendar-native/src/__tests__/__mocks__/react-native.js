@@ -274,5 +274,9 @@ module.exports = {
     spring: jest.fn(),
     View: View,
     Text: Text,
+    // The month list of "Busy" (AvailabilityScreen).
+    FlatList: FlatList,
   },
+  // Pull to refresh, given to a list; nothing of its own here.
+  RefreshControl: () => null,
 };

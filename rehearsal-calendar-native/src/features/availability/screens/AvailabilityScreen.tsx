@@ -189,7 +189,15 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         selectedDates={editor.selectedDates}
         availability={availability}
         today={today}
-        onDayPress={(y, m, d) => editor.handleDayPress(y, m, d, formatDate)}
+        onDayPress={(y, m, d) => {
+          // The last day picked, tapped again, puts the editor away as its
+          // arrow does, and is asked about the same way (T-026, review).
+          if (editor.selectedDates.length === 1 && editor.selectedDates[0] === formatDate(y, m, d)) {
+            guard.leave(editor.clearSelection);
+          } else {
+            editor.handleDayPress(y, m, d, formatDate);
+          }
+        }}
         getDayStatus={(date) => getDayStatus(date, availability)}
         onTodayLayout={index === 0 ? scrollToToday : undefined}
       />

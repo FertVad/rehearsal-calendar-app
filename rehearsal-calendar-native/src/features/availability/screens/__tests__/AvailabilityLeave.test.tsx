@@ -32,7 +32,14 @@ jest.mock('../../../../shared/components/PickerModal', () => ({ PickerModal: () 
 jest.mock('../../components', () => {
   const { Pressable } = require('react-native');
   return {
-    CalendarMonth: () => null,
+    // November's 3rd, the day picked, and 4th, one not picked.
+    CalendarMonth: ({ year, month, onDayPress }: { year: number; month: number; onDayPress: (y: number, m: number, d: number) => void }) =>
+      year === 2026 && month === 10 ? (
+        <>
+          <Pressable testID="day-3" onPress={() => onDayPress(year, month, 3)} />
+          <Pressable testID="day-4" onPress={() => onDayPress(year, month, 4)} />
+        </>
+      ) : null,
     // Its arrow and "Deselect" both put the editor away through onClear.
     EditorHeader: ({ onClear }: { onClear: () => void }) => <Pressable testID="collapse" onPress={onClear} />,
     ModeInfo: () => null,
@@ -41,14 +48,16 @@ jest.mock('../../components', () => {
 
 let mockHasChanges = false;
 let mockCanSave = true;
+let mockLoading = true;
 const mockSave = jest.fn();
 const mockDiscard = jest.fn();
 const mockClearSelection = jest.fn();
+const mockDayPress = jest.fn();
 jest.mock('../../hooks', () => ({
   useAvailabilityData: () => ({
     availability: {},
     setAvailability: jest.fn(),
-    loading: true,
+    loading: mockLoading,
     saving: false,
     setSaving: jest.fn(),
     hasChanges: mockHasChanges,
@@ -78,7 +87,7 @@ jest.mock('../../hooks', () => ({
     panelAnimation: { interpolate: () => 0 },
     flatListRef: { current: null },
     validationError: null,
-    handleDayPress: jest.fn(),
+    handleDayPress: mockDayPress,
     handleModeChange: jest.fn(),
     clearSelection: mockClearSelection,
     deletePastDates: jest.fn(),
@@ -103,6 +112,7 @@ beforeEach(() => {
   (Navigation.useNavigation as jest.Mock).mockReturnValue(navigation);
   mockHasChanges = false;
   mockCanSave = true;
+  mockLoading = true;
 });
 
 /** The sheet's choice by its label, as a tap on it. */
@@ -277,5 +287,61 @@ describe('Collapsing the editor (T-026)', () => {
     expect(mockSave).toHaveBeenCalledTimes(1);
     expect(mockClearSelection).not.toHaveBeenCalled();
     expect(mockDiscard).not.toHaveBeenCalled();
+  });
+
+  // The last day picked, tapped again, puts the editor away too, and it went
+  // without a word (review T-026).
+  describe('by tapping the last day picked again', () => {
+    const tapDay = (screen: ReturnType<typeof render>, id: string) => {
+      act(() => { fireEvent.press(screen.getByTestId(id)); });
+    };
+
+    beforeEach(() => { mockLoading = false; });
+
+    it('with days changed, it asks, and Don\'t Save puts them back and collapses', async () => {
+      mockHasChanges = true;
+      const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+      tapDay(screen, 'day-3');
+      expect(showSheet).toHaveBeenCalledTimes(1);
+      expect(mockClearSelection).not.toHaveBeenCalled();
+
+      await choose(t.common.dontSave);
+      expect(mockDiscard).toHaveBeenCalledTimes(1);
+      expect(mockClearSelection).toHaveBeenCalledTimes(1);
+      expect(mockDayPress).not.toHaveBeenCalled();
+    });
+
+    it('Save saves and collapses; the day is not picked back', async () => {
+      mockHasChanges = true;
+      mockSave.mockImplementation(async () => { mockHasChanges = false; return true; });
+      const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+      tapDay(screen, 'day-3');
+      await choose(t.common.save);
+
+      expect(mockSave).toHaveBeenCalledTimes(1);
+      expect(mockClearSelection).toHaveBeenCalled();
+      expect(mockDayPress).not.toHaveBeenCalled();
+    });
+
+    it('with nothing changed, it collapses at once', () => {
+      const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+      tapDay(screen, 'day-3');
+
+      expect(showSheet).not.toHaveBeenCalled();
+      expect(mockClearSelection).toHaveBeenCalledTimes(1);
+    });
+
+    it('another day, the editor staying up, is picked without asking', () => {
+      mockHasChanges = true;
+      const screen = render(<AvailabilityScreen navigation={navigation} />);
+
+      tapDay(screen, 'day-4');
+
+      expect(showSheet).not.toHaveBeenCalled();
+      expect(mockDayPress).toHaveBeenCalledWith(2026, 10, 4, expect.any(Function));
+    });
   });
 });

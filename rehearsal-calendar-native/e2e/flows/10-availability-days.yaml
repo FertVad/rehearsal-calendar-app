@@ -238,8 +238,8 @@ tags:
       id: availability-legend
     timeout: 10000
 # A save that fails says why on the screen, not in an alert (T-021): the
-# sheet's own Save above that button, and the close question's Save with the
-# panel down on the screen itself, which stays open with the change. The
+# sheet's own Save above that button, and the close question's Save on the
+# screen, which stays open with the change. The
 # request is held past the app's ten seconds, so the app gives up on it.
 - tapOn:
     id: tab-create
@@ -289,13 +289,21 @@ tags:
     env:
       MAIL_URL: ${MAIL_URL}
       EXPECT: "1"
-# Let go of the day: the change stays, the panel and its Save go down.
+# Letting go of the day with it changed asks, as the editor's arrow does
+# (T-026, review); a tap outside the popover is its Cancel, and the editor
+# stays up with the change.
 - tapOn:
     id: day-${MARK_DAY}
 - extendedWaitUntil:
-    notVisible:
-      id: availability-save
+    visible: "Don't Save"
     timeout: 5000
+- tapOn:
+    point: "50%, 8%"
+- extendedWaitUntil:
+    notVisible: "Don't Save"
+    timeout: 5000
+- assertVisible:
+    id: availability-save
 - runScript:
     file: ../scripts/hold-answers.js
     env:
