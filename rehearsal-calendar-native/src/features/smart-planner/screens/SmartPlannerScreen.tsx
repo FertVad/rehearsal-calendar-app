@@ -19,10 +19,9 @@ import { DayCard } from '../components/DayCard';
 import { ParticipantPicker } from '../../../shared/components/ParticipantPicker';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
-import { getDateLocale } from '../../../shared/utils/locale';
 import { DateRangePicker } from '../../../shared/components/DateRangePicker';
 import { addDays, formatDateToString, parseDateString } from '../../../shared/utils/time';
-import { formatDateRange } from '../../../shared/utils/clockFormat';
+import { formatDateRange } from '../../../shared/utils/dateFormat';
 import { useToday } from '../../../shared/hooks/useClock';
 import { memberAvailabilityLimits } from '../../../shared/utils/memberAvailabilityLimits';
 import { canScheduleIn } from '../../../shared/utils/rehearsalRights';
@@ -37,9 +36,9 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   const { t, language } = useI18n();
 
   // Calendar dates of the profile's zone, written as every interval of dates
-  // is: "29 окт. – 4 нояб." (clockFormat.ts).
+  // is: "29 окт. – 4 нояб." (dateFormat.ts).
   const formatPeriod = useCallback((startDate: string, endDate: string): string =>
-    formatDateRange(startDate, endDate, getDateLocale(language)), [language]);
+    formatDateRange(startDate, endDate, language), [language]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'custom'>('week');
   const [selectedCategories] = useState<SlotCategory[]>([

@@ -7,7 +7,8 @@ const DATE_LOCALES: Record<string, string> = {
 
 /**
  * Maps the app's UI language to a BCP 47 locale tag for use with
- * Intl APIs (`toLocaleDateString`, `Intl.DateTimeFormat`, etc).
+ * Intl APIs. A date on a screen is one of dateFormat.ts's formats, which
+ * call it; a time is clockFormat.ts's.
  * Accepts a plain string so callers that receive `language` as a
  * prop don't have to import the Language type.
  */

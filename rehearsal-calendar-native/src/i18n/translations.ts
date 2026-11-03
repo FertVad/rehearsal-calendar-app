@@ -38,8 +38,6 @@ export interface Translations {
   onboarding: onboarding.OnboardingTranslations;
   // Days
   days: common.DaysTranslations;
-  // Months
-  months: string[];
 }
 
 export const ru: Translations = {

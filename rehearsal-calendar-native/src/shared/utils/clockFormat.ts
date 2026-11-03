@@ -1,5 +1,4 @@
 import { getCalendars, useCalendars } from 'expo-localization';
-import { formatDateLocalized } from './time';
 
 // =============================================================================
 // TIMES AND INTERVALS ON THE SCREENS (T-017, owner's decision 30.10.2026)
@@ -14,7 +13,7 @@ import { formatDateLocalized } from './time';
 // - An interval is written one way (HIG: "Build language patterns"). The
 //   screens had "09:00-10:00", "18:00 — 21:00" and "29 Oct - 4 Nov".
 //   Times: "18:00–21:00", an en dash with no spaces. Anything with a date in
-//   it: "29 Oct – 4 Nov", an en dash with spaces.
+//   it: "29 Oct – 4 Nov", an en dash with spaces (formatDateRange, dateFormat.ts).
 //
 // Server notification texts are not this: the server does not know the phone.
 // =============================================================================
@@ -65,15 +64,6 @@ export const formatRange = (kind: 'time' | 'date', from: string, to: string): st
 /** Two stored "HH:MM": "18:00–21:00", or "6:00 PM–9:00 PM". */
 export const formatTimeRange = (start: string, end: string, locale: string, uses24 = phoneUses24HourClock()): string =>
   formatRange('time', formatClock(start, locale, uses24), formatClock(end, locale, uses24));
-
-/** Two 'YYYY-MM-DD': "29 окт. – 4 нояб.", "Oct 29 – Nov 4". */
-export const formatDateRange = (
-  first: string,
-  last: string,
-  locale: string,
-  options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
-): string =>
-  formatRange('date', formatDateLocalized(first, options, locale), formatDateLocalized(last, options, locale));
 
 /**
  * The locale the time picker's wheel is given: the app's language, with the

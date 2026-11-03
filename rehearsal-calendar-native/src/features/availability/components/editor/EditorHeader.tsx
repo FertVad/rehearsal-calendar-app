@@ -3,8 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { IconButton } from '../../../../shared/components/IconButton';
 import { Colors, FontSize, FontWeight, Spacing, TouchTarget } from '../../../../shared/constants/colors';
 import { useI18n } from '../../../../contexts/I18nContext';
-import { getDateLocale } from '../../../../shared/utils/locale';
-import { parseDateString } from '../../../../shared/utils/time';
+import { formatDate } from '../../../../shared/utils/dateFormat';
 
 interface EditorHeaderProps {
   selectedCount: number;
@@ -24,11 +23,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
       <View style={styles.bottomSheetHeaderLeft}>
         <Text style={styles.bottomSheetTitle}>
           {selectedCount === 1 && selectedDate
-            // A calendar date, not an instant: new Date('2026-09-10') is the 9th west of UTC.
-            ? parseDateString(selectedDate).toLocaleDateString(getDateLocale(language), {
-                day: 'numeric',
-                month: 'long',
-              })
+            ? formatDate(selectedDate, 'dayMonth', language)
             : t.availability.selectedDates(selectedCount)}
         </Text>
         {selectedCount > 0 && (

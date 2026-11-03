@@ -180,6 +180,10 @@ export const PEOPLE = {
   // Busy all day on MARK_DAY, changes it and collapses the editor (64). In no
   // project, so nothing another flow books lands on her days.
   yelena: { email: 'yelena@e2e.test', firstName: 'Yelena', lastName: 'Serebryakova', onboarded: true },
+  // Reads the dates in Russian (65): the calendar's month, a rehearsal three
+  // days on in the upcoming ones, the availability's next month, the
+  // planner's tomorrow. Admin of a project of her own, Gaev in it.
+  marina: { email: 'marina@e2e.test', firstName: 'Marina', lastName: 'Nanny', onboarded: true, locale: 'ru' },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -481,6 +485,8 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
     [watchId, ids.hero]);
   await joined('Leonato Orchard', 'The arbour', 'leonato', 'admin');
+  // Marina its admin (65).
+  const nurseryId = await joined('Nursery Tea', 'The samovar', 'marina', 'admin');
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -550,6 +556,8 @@ export async function seed({ client, apiUrl, timezone }) {
     terrace: await rehearsal(dachaId, 'Tea on the terrace', 0, 12, 13, ['gaev', 'telegin'], 'gaev'),
     guitar_tuning: await rehearsal(dachaId, 'Guitar tuning', 3, 12, 13, ['gaev', 'telegin'], 'gaev'),
     planting: await rehearsal(dachaId, 'Tree planting', farDayThisMonth(), 12, 13, ['gaev', 'telegin'], 'gaev'),
+    // Three days on: in her upcoming ones, named by its date (65).
+    samovar: await rehearsal(nurseryId, 'Samovar', 3, 12, 13, ['gaev', 'marina'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),

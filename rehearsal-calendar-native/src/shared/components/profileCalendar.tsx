@@ -5,10 +5,11 @@
  * their days with these.
  */
 import React from 'react';
+import { Text } from 'react-native';
 import { DateData, LocaleConfig } from 'react-native-calendars';
 import PeriodDay, { PeriodDayProps } from 'react-native-calendars/src/calendar/day/period';
 import { Colors, FontSize, FontWeight, TouchTarget } from '../constants/colors';
-import { parseDateString } from '../utils/time';
+import { formatDate } from '../utils/dateFormat';
 import type { Language } from '../../i18n/translations';
 
 // Configure locales for react-native-calendars, one for every language of the
@@ -141,14 +142,12 @@ interface DayComponentProps extends Omit<PeriodDayProps, 'date'> {
  * phone's date and the profile's "today" (T-012 review). Here only the
  * profile's date is.
  */
-export function profileDay(today: string, todayLabel: string, locale: string) {
+export function profileDay(today: string, todayLabel: string, language: string) {
   return function ProfileDay({ date, marking, children, ...props }: DayComponentProps) {
     const dateString = date?.dateString;
     const label = [
       dateString === today && todayLabel,
-      dateString && parseDateString(dateString).toLocaleDateString(locale, {
-        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-      }),
+      dateString && formatDate(dateString, 'fullDate', language, { midSentence: true }),
       marking?.startingDay && 'period start',
       marking?.endingDay && 'period end',
       (marking?.disabled || props.state === 'disabled') && 'disabled',
@@ -159,4 +158,25 @@ export function profileDay(today: string, todayLabel: string, locale: string) {
       </PeriodDay>
     );
   };
+}
+
+const monthTitleStyle = {
+  fontSize: calendarTheme.textMonthFontSize,
+  fontWeight: calendarTheme.textMonthFontWeight,
+  color: calendarTheme.monthTextColor,
+  margin: 10,
+} as const;
+
+/**
+ * The month over the days, named as every month in the app is (dateFormat.ts):
+ * the library put "Ноябрь 2026" together from its own list of names, where
+ * the strip's month read "октябрь 2026 г." (T-028). Drawn as the library's
+ * own title is, with its testID.
+ */
+export function monthTitle(language: string) {
+  return (month?: { getFullYear(): number; getMonth(): number }, info?: { testID?: string }) => (
+    <Text allowFontScaling={false} style={monthTitleStyle} testID={info?.testID && `${info.testID}.title`}>
+      {month ? formatDate(new Date(month.getFullYear(), month.getMonth(), 1), 'monthYear', language) : ''}
+    </Text>
+  );
 }

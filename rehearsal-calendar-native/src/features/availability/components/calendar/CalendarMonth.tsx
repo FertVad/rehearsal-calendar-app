@@ -6,6 +6,7 @@ import { getDaysInMonth, formatDate } from '../../utils';
 import { DAY_SIZE } from '../../constants';
 import { useI18n } from '../../../../contexts/I18nContext';
 import { useWeekStart } from '../../../../hooks/useWeekStart';
+import { formatDate as formatMonth } from '../../../../shared/utils/dateFormat';
 
 interface CalendarMonthProps {
   year: number;
@@ -29,7 +30,7 @@ export const CalendarMonth: React.FC<CalendarMonthProps> = ({
   getDayStatus,
   onTodayLayout,
 }) => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const weekStartDay = useWeekStart();
   const days = getDaysInMonth(year, month, weekStartDay);
 
@@ -69,7 +70,7 @@ export const CalendarMonth: React.FC<CalendarMonthProps> = ({
   return (
     <View style={styles.monthContainer}>
       <Text style={styles.monthTitle}>
-        {t.months[month]} {year}
+        {formatMonth(new Date(year, month, 1), 'monthYear', language)}
       </Text>
 
       {/* Weekday headers */}

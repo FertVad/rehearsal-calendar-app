@@ -3,14 +3,14 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-nati
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { Colors, Spacing, BorderRadius, FontSize, FontWeight, TouchTarget } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
-import { getDateLocale } from '../../shared/utils/locale';
+import { formatDate } from '../utils/dateFormat';
 import { formatDateToString, parseDateString } from '../utils/time';
 import { calendarRangeDays } from '../utils/memberAvailabilityLimits';
 import { useToday } from '../hooks/useClock';
 import { useWeekStart } from '../../hooks/useWeekStart';
 import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
-import { calendarTheme, profileDay, withToday } from './profileCalendar';
+import { calendarTheme, monthTitle, profileDay, withToday } from './profileCalendar';
 
 interface DateRangePickerProps {
   visible: boolean;
@@ -122,9 +122,10 @@ export function DateRangePicker({
 
   const calendarMarks = withToday(markedDates, today, phoneToday, minDateStr);
   const dayComponent = useMemo(
-    () => profileDay(today, t.common.today, getDateLocale(language)),
+    () => profileDay(today, t.common.today, language),
     [today, t.common.today, language]
   );
+  const renderHeader = useMemo(() => monthTitle(language), [language]);
 
   const handleDayPress = (day: DateData) => {
     if (!startDate || (startDate && endDate)) {
@@ -160,13 +161,8 @@ export function DateRangePicker({
     onClose();
   };
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '—';
-    // A calendar date, not an instant: new Date('2026-09-10') is the 9th west of UTC.
-    const date = parseDateString(dateStr);
-    const locale = getDateLocale(language);
-    return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
-  };
+  const shownDate = (dateStr: string | null) =>
+    dateStr ? formatDate(dateStr, 'dayMonthShort', language) : '—';
 
   return (
     <AppModal
@@ -183,14 +179,14 @@ export function DateRangePicker({
           <View style={styles.selectedRange}>
             <View style={styles.dateBox}>
               <Text style={styles.dateLabel}>{t.common.from}</Text>
-              <Text style={styles.dateValue}>{formatDate(startDate)}</Text>
+              <Text style={styles.dateValue}>{shownDate(startDate)}</Text>
             </View>
             <View style={styles.arrow}>
               <Text style={styles.arrowText}>→</Text>
             </View>
             <View style={styles.dateBox}>
               <Text style={styles.dateLabel}>{t.common.to}</Text>
-              <Text style={styles.dateValue}>{formatDate(endDate)}</Text>
+              <Text style={styles.dateValue}>{shownDate(endDate)}</Text>
             </View>
           </View>
 
@@ -203,6 +199,7 @@ export function DateRangePicker({
             onDayPress={handleDayPress}
             markingType={'period'}
             dayComponent={dayComponent}
+            renderHeader={renderHeader}
             markedDates={calendarMarks}
             minDate={minDateStr}
             style={styles.calendar}

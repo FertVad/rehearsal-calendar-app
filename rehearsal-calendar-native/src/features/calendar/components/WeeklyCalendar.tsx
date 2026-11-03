@@ -7,7 +7,7 @@ import { addDays, parseDateString } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
 import { rehearsalDates } from '../../../shared/utils/rehearsalDays';
 import { useI18n } from '../../../contexts/I18nContext';
-import { getDateLocale } from '../../../shared/utils/locale';
+import { formatDate } from '../../../shared/utils/dateFormat';
 import { DayCalendar } from '../../../shared/components/DayCalendar';
 import { hapticMedium } from '../../../shared/utils/haptics';
 
@@ -140,11 +140,10 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
     if (Math.abs(x - Math.round(x / DAY_WIDTH) * DAY_WIDTH) < 1) settle(x);
   }, [settle]);
 
-  const monthYear = useMemo(() => {
-    const locale = getDateLocale(language);
-    const options: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
-    return parseDateString(days[middleIndex]?.date ?? today).toLocaleDateString(locale, options);
-  }, [days, middleIndex, today, language]);
+  const monthYear = useMemo(
+    () => formatDate(days[middleIndex]?.date ?? today, 'monthYear', language),
+    [days, middleIndex, today, language],
+  );
 
   const [monthOpen, setMonthOpen] = useState(false);
   const handlePickInMonth = useCallback((date: string) => {

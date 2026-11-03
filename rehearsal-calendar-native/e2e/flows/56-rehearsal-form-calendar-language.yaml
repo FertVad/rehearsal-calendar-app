@@ -45,7 +45,7 @@ tags:
     timeout: 5000
 - assertVisible:
     id: rehearsal-date-calendar.header
-    text: ".*(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Octubre|Noviembre|Diciembre) 20[0-9][0-9].*"
+    text: ".*(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Octubre|Noviembre|Diciembre) de 20[0-9][0-9].*"
 - assertVisible:
     id: rehearsal-date-calendar.day_${TODAY_DAY}
     enabled: true

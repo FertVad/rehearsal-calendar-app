@@ -103,7 +103,6 @@ export const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,
     marginBottom: Spacing.md,
-    textTransform: 'capitalize',
   },
   upcomingList: {
     gap: Spacing.sm,

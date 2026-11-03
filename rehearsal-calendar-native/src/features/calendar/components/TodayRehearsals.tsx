@@ -2,11 +2,11 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { Colors } from '../../../shared/constants/colors';
 import { Rehearsal, Project } from '../../../shared/types';
-import { addDays, formatDateLocalized } from '../../../shared/utils/time';
+import { addDays } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
-import { getDateLocale } from '../../../shared/utils/locale';
+import { formatDate } from '../../../shared/utils/dateFormat';
 import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
 import RehearsalCard from './RehearsalCard';
 
@@ -64,8 +64,7 @@ export default function TodayRehearsals({
   const dateLabel = useMemo(() => {
     if (selectedDate === today) return t.common.today;
     if (selectedDate === addDays(today, 1)) return t.calendar.tomorrow;
-    const locale = getDateLocale(language);
-    return formatDateLocalized(selectedDate, { day: 'numeric', month: 'long', weekday: 'long' }, locale);
+    return formatDate(selectedDate, 'weekdayDayMonth', language);
   }, [selectedDate, today, t, language]);
 
   if (loading) {

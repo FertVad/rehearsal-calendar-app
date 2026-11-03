@@ -14,8 +14,8 @@ import { Rehearsal } from '../../../shared/types';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useUnread } from '../../../contexts/UnreadContext';
-import { getDateLocale } from '../../../shared/utils/locale';
-import { addDays, formatDateLocalized } from '../../../shared/utils/time';
+import { formatDate } from '../../../shared/utils/dateFormat';
+import { addDays } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
 import { rehearsalOnDate } from '../../../shared/utils/rehearsalDays';
 import { canScheduleAny } from '../../../shared/utils/rehearsalRights';
@@ -171,8 +171,7 @@ export default function CalendarScreen() {
 
     if (dateStr === today) return t.common.today;
     if (dateStr === tomorrowStr) return t.calendar.tomorrow || 'Tomorrow';
-    const locale = getDateLocale(language);
-    return formatDateLocalized(dateStr, { day: 'numeric', month: 'short', weekday: 'short' }, locale);
+    return formatDate(dateStr, 'weekdayDayMonthShort', language);
   };
 
   return (

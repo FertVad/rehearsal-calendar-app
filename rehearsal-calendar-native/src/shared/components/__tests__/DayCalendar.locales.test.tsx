@@ -40,11 +40,12 @@ jest.mock('../../hooks/useClock', () => ({ useToday: () => '2026-11-01' }));
 
 import { DayCalendar } from '../DayCalendar';
 
+// Named as every month in the app is (dateFormat.ts, T-028).
 const NOVEMBER: Record<Language, string> = {
-  ru: 'Ноябрь',
-  en: 'November',
-  es: 'Noviembre',
-  de: 'November',
+  ru: 'Ноябрь 2026 г.',
+  en: 'November 2026',
+  es: 'Noviembre de 2026',
+  de: 'November 2026',
 };
 const MONDAY: Record<Language, string> = { ru: 'Пн', en: 'M', es: 'L', de: 'Mo' };
 
@@ -53,7 +54,7 @@ describe('DayCalendar in every language', () => {
     mockLanguage = language;
     const view = render(<DayCalendar value="2026-11-05" onChange={jest.fn()} testID="day-calendar" />);
     expect(view.getByTestId('day-calendar.header.title', { includeHiddenElements: true }))
-      .toHaveTextContent(new RegExp(`^${NOVEMBER[language]}\\s2026$`));
+      .toHaveTextContent(NOVEMBER[language]);
     // The week begins on Monday, named in its words.
     expect(view.getByTestId(`day-calendar.header.dayName_${MONDAY[language]}`, { includeHiddenElements: true })).toBeTruthy();
   });

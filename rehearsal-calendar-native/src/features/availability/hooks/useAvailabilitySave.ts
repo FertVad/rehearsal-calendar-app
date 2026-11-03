@@ -5,7 +5,8 @@ import { AvailabilityData, DayState } from '../types';
 import { validateSlot, slotsOverlap } from '../utils';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { formatTimeRange } from '../../../shared/utils/clockFormat';
-import { clockRangeEndDate, dateTimeToOffsetISOInTimezone, parseDateString } from '../../../shared/utils/time';
+import { formatDate } from '../../../shared/utils/dateFormat';
+import { clockRangeEndDate, dateTimeToOffsetISOInTimezone } from '../../../shared/utils/time';
 import { useTimezone } from '../../../shared/hooks/useClock';
 
 import { logger } from '../../../shared/utils/logger';
@@ -95,13 +96,7 @@ export const useAvailabilitySave = () => {
           const slotValidation = validateSlot(slot);
 
           if (!slotValidation.isValid) {
-            const dateObj = parseDateString(date);
-            const locale = getDateLocale(language);
-            const formattedDate = dateObj.toLocaleDateString(locale, {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            });
+            const formattedDate = formatDate(date, 'dayMonthYear', language, { midSentence: true });
 
             return {
               isValid: false,
@@ -119,13 +114,8 @@ export const useAvailabilitySave = () => {
             const overlaps = slotsOverlap(slot1, slot2);
 
             if (overlaps) {
-              const dateObj = parseDateString(date);
               const locale = getDateLocale(language);
-              const formattedDate = dateObj.toLocaleDateString(locale, {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              });
+              const formattedDate = formatDate(date, 'dayMonthYear', language, { midSentence: true });
 
               return {
                 isValid: false,

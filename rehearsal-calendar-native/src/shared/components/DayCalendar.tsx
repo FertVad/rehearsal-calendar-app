@@ -2,11 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { Colors } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
-import { getDateLocale } from '../utils/locale';
 import { formatDateToString, parseDateString } from '../utils/time';
 import { useToday } from '../hooks/useClock';
 import { useWeekStart } from '../../hooks/useWeekStart';
-import { calendarTheme, profileDay, withToday } from './profileCalendar';
+import { calendarTheme, monthTitle, profileDay, withToday } from './profileCalendar';
 
 interface DayCalendarProps {
   /** The chosen day, 'YYYY-MM-DD'. */
@@ -82,9 +81,10 @@ export function DayCalendar({
   }, [month, today, phoneToday, value, allowedPast, pastOpen, dotted]);
 
   const dayComponent = useMemo(
-    () => profileDay(today, t.common.today, getDateLocale(language)),
+    () => profileDay(today, t.common.today, language),
     [today, t.common.today, language]
   );
+  const renderHeader = useMemo(() => monthTitle(language), [language]);
 
   return (
     <Calendar
@@ -97,6 +97,7 @@ export function DayCalendar({
       maxDate={maxDate}
       markingType={'period'}
       dayComponent={dayComponent}
+      renderHeader={renderHeader}
       markedDates={markedDates}
       // On whatever it is put on.
       theme={{ ...calendarTheme, backgroundColor: 'transparent', calendarBackground: 'transparent' }}

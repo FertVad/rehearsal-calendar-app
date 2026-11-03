@@ -14,7 +14,6 @@ import { Rehearsal } from '../../../shared/types';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useSeen } from '../../../contexts/SeenContext';
-import { getDateLocale } from '../../../shared/utils/locale';
 import { rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
 import { usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 import { useDeleteRehearsal } from '../hooks/useDeleteRehearsal';
@@ -91,7 +90,7 @@ export default function RehearsalCard({
               <View style={styles.upcomingTimeRow}>
                 <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
                 <Text style={styles.upcomingTime} testID="rehearsal-card-time">
-                  {rehearsalTimeLabel(rehearsal, getDateLocale(language), uses24)}
+                  {rehearsalTimeLabel(rehearsal, language, uses24)}
                 </Text>
                 {isSynced && (
                   <Ionicons name="calendar" size={14} color={Colors.accent.green} />

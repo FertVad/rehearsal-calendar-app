@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import type { TimeSlot, SlotCategory } from '../types';
 import { SlotItem } from './SlotItem';
 import { useI18n } from '../../../contexts/I18nContext';
-import { getDateLocale } from '../../../shared/utils/locale';
+import { formatDate } from '../../../shared/utils/dateFormat';
 
 interface DayCardProps {
   date: string;
@@ -14,17 +14,6 @@ interface DayCardProps {
 
 export const DayCard: React.FC<DayCardProps> = React.memo(({ date, slots, onCreateRehearsal }) => {
   const { t, language } = useI18n();
-
-  // Format date for display
-  const formatDate = (dateStr: string): string => {
-    const d = new Date(dateStr + 'T00:00:00');
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    };
-    return d.toLocaleDateString(getDateLocale(language), options);
-  };
 
   // Group slots by category: the best first
   const ordered: TimeSlot[] = useMemo(() => {
@@ -47,7 +36,7 @@ export const DayCard: React.FC<DayCardProps> = React.memo(({ date, slots, onCrea
   return (
     <View style={styles.day}>
       <View testID={`planner-day-${date}`} style={styles.dateHeader}>
-        <Text style={styles.dateText}>{formatDate(date)}</Text>
+        <Text style={styles.dateText}>{formatDate(date, 'weekdayDayMonthShort', language)}</Text>
         <Text style={styles.slotCount}>{t.smartPlanner.slotsCount(slots.length)}</Text>
       </View>
 
@@ -76,7 +65,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#f9fafb',
-    textTransform: 'capitalize',
   },
   slotCount: {
     fontSize: 13,

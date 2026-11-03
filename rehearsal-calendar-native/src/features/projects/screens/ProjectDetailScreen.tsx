@@ -21,10 +21,9 @@ import { projectDetailScreenStyles as styles } from '../styles';
 import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
 import { DeleteButton } from '../../../shared/components/buttons/DeleteButton';
-import { parseDateString } from '../../../shared/utils/time';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { useTimezone, useToday } from '../../../shared/hooks/useClock';
-import { getDateLocale } from '../../../shared/utils/locale';
+import { formatDate } from '../../../shared/utils/dateFormat';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
 import * as Clipboard from 'expo-clipboard';
@@ -70,18 +69,6 @@ interface Rehearsal extends RehearsalInterval {
   status: string;
 }
 
-// A rehearsal's calendar date, in the reader's language. Not new Date(dateStr):
-// that reads '2026-09-10' as UTC midnight, the 9th anywhere west of UTC.
-export function formatDate(dateStr: string, language: string): string {
-  const date = parseDateString(dateStr);
-  const formatted = date.toLocaleDateString(getDateLocale(language), {
-    day: 'numeric',
-    month: 'short',
-  });
-  // Remove trailing period from Russian month abbreviations
-  return formatted.replace(/\.$/, '');
-}
-
 /**
  * One rehearsal in the project's lists, upcoming or past alike.
  *
@@ -105,7 +92,7 @@ export function RehearsalRow({ rehearsal, onPress, past = false }: {
     >
       <View style={[styles.rehearsalDate, past && styles.pastDate]}>
         <Text style={[styles.rehearsalDateText, past && styles.pastDateText]}>
-          {formatDate(rehearsal.date, language)}
+          {formatDate(rehearsal.date, 'dayMonthShort', language)}
         </Text>
       </View>
       <View style={styles.rehearsalInfo}>
@@ -115,7 +102,7 @@ export function RehearsalRow({ rehearsal, onPress, past = false }: {
         <View style={styles.rehearsalMeta}>
           <Ionicons name="time-outline" size={12} color={Colors.text.tertiary} />
           <Text style={styles.rehearsalTime}>
-            {rehearsalTimeLabel(rehearsal, getDateLocale(language), uses24)}
+            {rehearsalTimeLabel(rehearsal, language, uses24)}
           </Text>
         </View>
         {rehearsal.location ? (

@@ -6,23 +6,20 @@ import { rehearsalsAPI } from '../../../shared/services/api';
 import { unexportRehearsal } from '../../../shared/services/calendarSync';
 import { emitDataChanged } from '../../../shared/utils/dataChanged';
 import { getDateLocale } from '../../../shared/utils/locale';
-import { formatDateLocalized } from '../../../shared/utils/time';
+import { formatDate } from '../../../shared/utils/dateFormat';
 import { formatClock } from '../../../shared/utils/clockFormat';
 import { logger } from '../../../shared/utils/logger';
 import type { Rehearsal } from '../../../shared/types';
 import type { Translations } from '../../../i18n/translations';
 
 /**
- * "сб 31 окт, 15:00": the day and the start, as the confirmation names them.
- * Without the abbreviations' dots, which made "сб, 31 окт., 15:00" of it.
+ * "сб, 31 окт., 15:00": the day and the start, as the confirmation names them,
+ * inside its sentence (dateFormat.ts).
  */
-export function rehearsalWhen(r: Rehearsal, locale: string): string {
-  const start = formatClock(r.time, locale);
+export function rehearsalWhen(r: Rehearsal, language: string): string {
+  const start = formatClock(r.time, getDateLocale(language));
   if (!r.date) return start;
-  const day = [
-    formatDateLocalized(r.date, { weekday: 'short' }, locale),
-    formatDateLocalized(r.date, { day: 'numeric', month: 'short' }, locale),
-  ].join(' ').replace(/\./g, '');
+  const day = formatDate(r.date, 'weekdayDayMonthShort', language, { midSentence: true });
   return start ? `${day}, ${start}` : day;
 }
 
@@ -35,10 +32,10 @@ export function deletePrompt(
   r: Rehearsal,
   notified: number,
   t: Translations,
-  locale: string,
+  language: string,
 ): { title: string; message?: string } {
   return {
-    title: t.rehearsals.deleteTitle(r.title || null, rehearsalWhen(r, locale)),
+    title: t.rehearsals.deleteTitle(r.title || null, rehearsalWhen(r, language)),
     message: notified ? t.rehearsals.deleteNotifies(notified) : undefined,
   };
 }
@@ -84,7 +81,7 @@ export function useDeleteRehearsal() {
       return;
     }
 
-    const { title, message } = deletePrompt(rehearsal, notified, t, getDateLocale(language));
+    const { title, message } = deletePrompt(rehearsal, notified, t, language);
     Alert.alert(title, message, [
       { text: t.common.cancel, style: 'cancel' },
       {

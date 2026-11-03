@@ -9,11 +9,11 @@
 import { getCalendars } from 'expo-localization';
 import {
   formatClock,
-  formatDateRange,
   formatTimeRange,
   phoneUses24HourClock,
   timePickerLocale,
 } from '../clockFormat';
+import { formatDateRange } from '../dateFormat';
 import { rehearsalInZone, rehearsalTimeLabel } from '../rehearsalDays';
 
 const phoneOn = (uses24hourClock: boolean) =>
@@ -49,8 +49,8 @@ describe('a phone on the 24-hour clock', () => {
   });
 
   it('gives a rehearsal its interval, and the end its date when it is another day', () => {
-    expect(rehearsalTimeLabel(evening, 'en-US')).toBe('18:00–21:00');
-    expect(rehearsalTimeLabel(night, 'en-US')).toBe('23:00 – Sep 11, 01:00');
+    expect(rehearsalTimeLabel(evening, 'en')).toBe('18:00–21:00');
+    expect(rehearsalTimeLabel(night, 'en')).toBe('23:00 – Sep 11, 01:00');
   });
 
   it('gives the wheel the app\'s language with a 24-hour cycle', () => {
@@ -75,8 +75,8 @@ describe('a phone on the 12-hour clock', () => {
 
   it('writes an interval past midnight the same way', () => {
     expect(formatTimeRange('23:00', '01:00', 'en-US')).toMatch(/^11:00\sPM–1:00\sAM$/);
-    expect(rehearsalTimeLabel(night, 'en-US')).toMatch(/^11:00\sPM – Sep 11, 1:00\sAM$/);
-    expect(rehearsalTimeLabel(evening, 'en-US')).toMatch(/^6:00\sPM–9:00\sPM$/);
+    expect(rehearsalTimeLabel(night, 'en')).toMatch(/^11:00\sPM – Sep 11, 1:00\sAM$/);
+    expect(rehearsalTimeLabel(evening, 'en')).toMatch(/^6:00\sPM–9:00\sPM$/);
   });
 
   it('gives the wheel the app\'s language with a 12-hour cycle', () => {
@@ -86,7 +86,7 @@ describe('a phone on the 12-hour clock', () => {
 
 describe('a date interval', () => {
   it('is an en dash with spaces, each end in the language\'s own order', () => {
-    expect(formatDateRange('2026-10-29', '2026-11-04', 'en-US')).toBe('Oct 29 – Nov 4');
-    expect(formatDateRange('2026-10-29', '2026-11-04', 'ru-RU')).toBe('29 окт. – 4 нояб.');
+    expect(formatDateRange('2026-10-29', '2026-11-04', 'en')).toBe('Oct 29 – Nov 4');
+    expect(formatDateRange('2026-10-29', '2026-11-04', 'ru')).toBe('29 окт. – 4 нояб.');
   });
 });

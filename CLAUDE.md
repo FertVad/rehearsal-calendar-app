@@ -299,8 +299,10 @@ const { t, language, changeLanguage } = useI18n();
 // Dynamic strings (functions)
 <Text>{t.rehearsals.selectedCount(3, 10)}</Text>  // "Selected: 3 of 10"
 
-// Localized dates — all four languages, from one place
-date.toLocaleDateString(getDateLocale(language))   // shared/utils/locale.ts
+// Localized dates — all four languages, from one place: named formats,
+// Intl's form, a capital first letter (T-028). Nothing else calls
+// toLocaleDateString (dateFormat.test.ts)
+formatDate('2026-10-29', 'weekdayDayMonthShort', language)   // "Чт, 29 окт." — shared/utils/dateFormat.ts
 ```
 
 ### 8. Authorize the ids, not only the caller

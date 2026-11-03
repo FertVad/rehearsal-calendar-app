@@ -129,10 +129,6 @@ export const ru = {
       sunday: 'Вс',
     },
   },
-  months: [
-    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-  ],
 };
 
 export const en = {
@@ -197,10 +193,6 @@ export const en = {
       sunday: 'Sun',
     },
   },
-  months: [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ],
 };
 
 export const es = {
@@ -265,10 +257,6 @@ export const es = {
       sunday: 'Dom',
     },
   },
-  months: [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ],
 };
 
 export const de = {
@@ -333,8 +321,4 @@ export const de = {
       sunday: 'So',
     },
   },
-  months: [
-    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
-  ],
 };

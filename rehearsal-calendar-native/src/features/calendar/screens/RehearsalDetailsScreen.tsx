@@ -15,12 +15,11 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
-import { getDateLocale } from '../../../shared/utils/locale';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSeen } from '../../../contexts/SeenContext';
 import { Rehearsal, Project } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
-import { formatDateLocalized } from '../../../shared/utils/time';
+import { formatDate } from '../../../shared/utils/dateFormat';
 import { rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
 import { usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
@@ -263,10 +262,7 @@ export default function RehearsalDetailsScreen() {
     );
   }
 
-  const locale = getDateLocale(language);
-  const formattedDate = rehearsal.date
-    ? formatDateLocalized(rehearsal.date, { day: 'numeric', month: 'long', weekday: 'long' }, locale)
-    : '';
+  const formattedDate = rehearsal.date ? formatDate(rehearsal.date, 'weekdayDayMonth', language) : '';
 
   // One scroll view, one flow. Nesting flex: 1 containers inside a native sheet
   // is what put the header and the list on top of each other: the sheet does not
@@ -322,7 +318,7 @@ export default function RehearsalDetailsScreen() {
             <View style={styles.detailRow}>
               <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
               <Text style={styles.detailText} testID="rehearsal-details-time">
-                {rehearsalTimeLabel(rehearsal, locale, uses24)}
+                {rehearsalTimeLabel(rehearsal, language, uses24)}
               </Text>
             </View>
 
