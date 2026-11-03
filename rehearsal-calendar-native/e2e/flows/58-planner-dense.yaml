@@ -83,7 +83,12 @@ tags:
       SEE: "The Bear"
       WAIT_MS: "5000"
 - takeScreenshot: 58-project-choice
-- tapOn: "Three Sisters"
+# The picked one by its name, as a whole option (T-219): its checkmark's glyph
+# once rode in the name, "Three Sisters, ", and the tap found the name only
+# when iOS happened to show the option's text on its own.
+- tapOn:
+    text: "Three Sisters"
+    selected: true
 - extendedWaitUntil:
     notVisible: "The Bear"
     timeout: 10000

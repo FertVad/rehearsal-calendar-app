@@ -238,6 +238,8 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
       key={key}
       testID={testID}
       accessibilityRole="button"
+      // The name alone: without it iOS reads the checkmark's glyph into it.
+      accessibilityLabel={label}
       accessibilityState={{ selected }}
       style={[styles.option, selected && styles.optionSelected]}
       onPress={onPress}

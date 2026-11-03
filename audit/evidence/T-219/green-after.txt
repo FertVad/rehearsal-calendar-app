@@ -1,0 +1,16 @@
+T-219, green after: the option's name is its label.
+
+$ npm run e2e -- e2e/flows/58-planner-dense.yaml
+[Passed] Planner list is dense (1m 20s)
+1/1 Flow Passed in 1m 20s
+[e2e] taps taken again (tap-and-see.yaml): 0
+  Maestro's log, the tap on "Three Sisters", selected:
+    Tapping on element: accessibilityText=Three Sisters, resource-id=,
+    bounds=[17,233][376,277], selected=true — the option as a whole.
+
+$ npx jest --selectProjects frontend
+Test Suites: 126 passed, 126 total
+Tests:       1187 passed, 1187 total
+
+$ npx tsc --noEmit -p .
+(no output)

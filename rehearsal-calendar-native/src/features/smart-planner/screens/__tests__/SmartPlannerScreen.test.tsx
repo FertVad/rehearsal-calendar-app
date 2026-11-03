@@ -261,6 +261,8 @@ describe('The planner\'s list, dense (T-020)', () => {
     fireEvent.press(screen.getByTestId('planner-project'));
     expect(screen.getByText('Project B')).toBeTruthy();
     expect(screen.queryByText('Project C')).toBeNull();
+    // The picked one is named by its name alone, its checkmark not in it (T-219).
+    expect(screen.getByLabelText('Project A').props.accessibilityState).toEqual({ selected: true });
 
     // The people: their sheet.
     fireEvent.press(screen.getByTestId('participants-row'));
