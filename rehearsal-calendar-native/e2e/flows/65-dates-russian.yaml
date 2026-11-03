@@ -87,16 +87,18 @@ tags:
 - evalScript: ${console.log('65 dates ' + JSON.stringify([output.month, output.upcoming, output.plannerDay, output.availabilityMonth]))}
 # A month: "Ноябрь 2026 г.", in both places (iOS puts a narrow space before
 # "г."; the month's button adds its chevron's ", "). A day: "Чт, 6 нояб.",
-# the card's label beginning with it. Maestro let a regular expression pass
-# whatever it was given, so the check is in plain string methods, and what
-# does not match is named and fails the flow on its own.
+# the card's label beginning with it. Each with a capital first letter and
+# none after it: iOS names a Text as its style draws it, "Вт, 3 Нояб.".
+# Maestro let a regular expression pass whatever it was given, so the check
+# is in plain string methods, and what does not match is named and fails the
+# flow on its own.
 - evalScript: "${output.month = output.month.split(',')[0].trim()}"
-- evalScript: "${output.upcoming = output.upcoming.split(', , ')[0]}"
+- evalScript: "${output.upcoming = output.upcoming.split(',').slice(0, 2).join(',')}"
 - evalScript: "${output.wrong = ''}"
-- evalScript: "${output.wrong = output.wrong + (output.month.charAt(0) != output.month.charAt(0).toLowerCase() && output.month.slice(-2) == 'г.' ? '' : output.month + ' | ')}"
-- evalScript: "${output.wrong = output.wrong + (output.availabilityMonth.charAt(0) != output.availabilityMonth.charAt(0).toLowerCase() && output.availabilityMonth.slice(-2) == 'г.' ? '' : output.availabilityMonth + ' | ')}"
-- evalScript: "${output.wrong = output.wrong + (output.upcoming.charAt(0) != output.upcoming.charAt(0).toLowerCase() && output.upcoming.indexOf(', ') == 2 ? '' : output.upcoming + ' | ')}"
-- evalScript: "${output.wrong = output.wrong + (output.plannerDay.charAt(0) != output.plannerDay.charAt(0).toLowerCase() && output.plannerDay.indexOf(', ') == 2 ? '' : output.plannerDay + ' | ')}"
+- evalScript: "${output.wrong = output.wrong + (output.month.charAt(0) != output.month.charAt(0).toLowerCase() && output.month.slice(1) == output.month.slice(1).toLowerCase() && output.month.slice(-2) == 'г.' ? '' : output.month + ' | ')}"
+- evalScript: "${output.wrong = output.wrong + (output.availabilityMonth.charAt(0) != output.availabilityMonth.charAt(0).toLowerCase() && output.availabilityMonth.slice(1) == output.availabilityMonth.slice(1).toLowerCase() && output.availabilityMonth.slice(-2) == 'г.' ? '' : output.availabilityMonth + ' | ')}"
+- evalScript: "${output.wrong = output.wrong + (output.upcoming.charAt(0) != output.upcoming.charAt(0).toLowerCase() && output.upcoming.slice(1) == output.upcoming.slice(1).toLowerCase() && output.upcoming.indexOf(', ') == 2 ? '' : output.upcoming + ' | ')}"
+- evalScript: "${output.wrong = output.wrong + (output.plannerDay.charAt(0) != output.plannerDay.charAt(0).toLowerCase() && output.plannerDay.slice(1) == output.plannerDay.slice(1).toLowerCase() && output.plannerDay.indexOf(', ') == 2 ? '' : output.plannerDay + ' | ')}"
 - evalScript: "${console.log('65 not one format ' + JSON.stringify(output.wrong))}"
 - runFlow:
     when:

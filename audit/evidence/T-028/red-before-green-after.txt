@@ -1,0 +1,65 @@
+T-028 — dates: one module of formats, Intl's form, a capital first letter
+
+Base f045bfe, fix b299726 (flow 65's check tightened in the next commit).
+"Before": the fix's app files put back with
+git restore --source=f045bfe -- <23 files under src, tests excluded>;
+tests, flow 65, flow 56 and the seed kept; then git restore --source=HEAD -- src.
+dateFormat.ts is a new file and stayed in place, so the module's own tests
+pass on the old code too; what is red is the screens and the rule.
+
+== Jest ==
+npx jest --selectProjects frontend --testPathPatterns dateFormat --verbose
+
+-- before (f045bfe app code) --
+  ✕ nothing but the module formats a date with Intl
+      + features/availability/components/editor/EditorHeader.tsx:28
+      + features/availability/hooks/useAvailabilitySave.ts:100
+      + features/availability/hooks/useAvailabilitySave.ts:124
+      + features/calendar/components/WeeklyCalendar.tsx:146
+      + features/calendar/utils/rehearsalFormatters.ts:9
+      + features/projects/screens/ProjectDetailScreen.tsx:77
+      + features/smart-planner/components/DayCard.tsx:26
+      + shared/components/DateRangePicker.tsx:168
+      + shared/components/profileCalendar.tsx:149
+      + shared/utils/time.ts:151
+  ✕ no style capitalizes every word
+      + features/calendar/styles/calendarScreenStyles.ts
+      + features/smart-planner/components/DayCard.tsx
+  in ru  ✕ the calendar names the month over its strip   (got "октябрь 2026 г.")
+         ✕ the availability names a month the same way   (got "Ноябрь 2026")
+         ✕ the planner names a day with a capital first letter only ("чт, 29 окт.", capitalize)
+  in en  ✓ ✓ ✕ (textTransform: capitalize)
+  in es  ✕ ("octubre de 2026") ✕ ("Noviembre 2026") ✕ ("jue, 29 oct")
+  in de  ✓ ✓ ✕ (textTransform: capitalize)
+  every format in ru/en/es/de: 28 ✓ (module present, see above)
+Tests:       10 failed, 37 passed, 47 total
+
+-- after (b299726) --
+Tests:       47 passed, 47 total
+Full frontend Jest: 125 suites, 1166 tests passed. npx tsc --noEmit: clean.
+npm run check:secrets: pass.
+
+== e2e, e2e/flows/65-dates-russian.yaml ==
+npm run e2e -- e2e/flows/65-dates-russian.yaml
+
+-- before (f045bfe app code) --
+JsConsole: 65 dates ["ноябрь 2026 г., ","Пт, 6 нояб., , 12:00 PM–1:00 PM, Samovar, ...","Вт, 3 Нояб.","Декабрь 2026"]
+JsConsole: 65 not one format "ноябрь 2026 г. | Декабрь 2026 | Вт, 3 Нояб. | "
+[Failed] Dates in Russian, one format — Assertion is false: id: dates-not-in-one-format is visible
+1/1 Flow Failed
+
+-- after (b299726) --
+JsConsole: 65 dates ["Ноябрь 2026 г., ","Пт, 6 нояб., , 12:00 PM–1:00 PM, Samovar, ...","Вт, 3 нояб.","Декабрь 2026 г."]
+JsConsole: 65 not one format ""
+[Passed] Dates in Russian, one format
+[Passed] The form's month in Spanish and in German   (flow 56: "Noviembre de 2026")
+2/2 Flows Passed in 3m 29s
+
+iOS names a Text as its style draws it ("Вт, 3 Нояб." under capitalize), and
+puts a narrow space (U+202F) before "г.". Maestro's assertTrue passed a false
+regular-expression test in this run's first versions, so the flow checks in
+plain string methods and fails on an element that is never there.
+
+Screenshots, Russian, before/ and after/: 65-calendar.png (strip month,
+"Ближайшие События" → "Ближайшие события"), 65-planner.png ("Вт, 3 Нояб." →
+"Вт, 3 нояб."), 65-availability.png ("Декабрь 2026" → "Декабрь 2026 г.").
