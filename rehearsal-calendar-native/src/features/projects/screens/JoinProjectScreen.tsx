@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';
 import { invitesAPI } from '../../../shared/services/api';
@@ -155,11 +156,23 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
     navigation.goBack();
   };
 
+  // A sheet: Cancel on the left, the title in the middle (T-029). Join stays
+  // with the invitation it answers. Not while the join is out.
+  const header = (title: string) => (
+    <ScreenHeader
+      kind="modal"
+      title={title}
+      cancelLabel={t.common.cancel}
+      onCancel={joining ? undefined : handleCancel}
+    />
+  );
+
   // No link — ask for a code until one names a project. A code that does not
   // stays in the field with the error under it, to be corrected.
   if (!linkCode && !projectInfo) {
     return (
       <SafeAreaView style={styles.container}>
+        {header(t.projects.joinByCode)}
         <KeyboardAvoidingView
           style={styles.content}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -168,7 +181,6 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
             <Ionicons name="key-outline" size={64} color={Colors.accent.purple} />
           </View>
 
-          <Text style={styles.title}>{t.projects.joinByCode}</Text>
           <Text style={styles.subtitle}>{t.projects.joinByCodeSubtitle}</Text>
 
           {/* Codes are capitals and digits, so the keyboard types capitals.
@@ -223,13 +235,6 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
                 </Text>
               )}
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
-              onPress={handleCancel}
-            >
-              <Text style={styles.secondaryButtonText}>{t.projects.cancel}</Text>
-            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -239,6 +244,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
+        {header(t.projects.projectInvitation)}
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={Colors.accent.purple} />
           <Text style={styles.loadingText}>{t.projects.loadingInvite}</Text>
@@ -250,6 +256,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
+        {header(t.projects.projectInvitation)}
         <View style={styles.centerContent}>
           <Ionicons name="alert-circle" size={64} color={Colors.accent.red} />
           <Text style={styles.errorTitle}>{t.projects.error}</Text>
@@ -269,12 +276,11 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
 
   return (
     <SafeAreaView style={styles.container}>
+      {header(t.projects.projectInvitation)}
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Ionicons name="people" size={64} color={Colors.accent.purple} />
         </View>
-
-        <Text style={styles.title}>{t.projects.projectInvitation}</Text>
 
         <View style={styles.projectCard}>
           <Text testID="join-project-name" style={styles.projectName}>{projectInfo?.projectName}</Text>
@@ -306,14 +312,6 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
                 </Text>
               </>
             )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
-            onPress={handleCancel}
-            disabled={joining}
-          >
-            <Text style={styles.secondaryButtonText}>{t.projects.cancel}</Text>
           </TouchableOpacity>
         </View>
       </View>

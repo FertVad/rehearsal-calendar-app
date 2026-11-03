@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors } from '../../../shared/constants/colors';
-import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { GlassButton } from '../../../shared/components';
@@ -170,16 +170,14 @@ export default function ChangeEmailScreen({ navigation }: ChangeEmailScreenProps
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <View style={styles.header}>
-          <IconButton
-            icon="arrow-back"
-            color={Colors.text.primary}
-            accessibilityLabel={t.common.back}
-            onPress={() => navigation.goBack()}
-          />
-          <Text style={styles.title}>{t.profile.changeEmailTitle}</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        {/* A sheet over the profile's edit (T-029). The codes are sent and
+            confirmed below, a step at a time. */}
+        <ScreenHeader
+          kind="modal"
+          title={t.profile.changeEmailTitle}
+          cancelLabel={t.common.cancel}
+          onCancel={() => navigation.goBack()}
+        />
 
         <ScrollView
           style={styles.scrollView}

@@ -113,7 +113,7 @@ tags:
 - takeScreenshot: 64-save-saved-and-collapsed
 # Saved on the server: closed without asking, opened again, the day is free.
 - tapOn:
-    id: availability-close
+    id: header-cancel
 - extendedWaitUntil:
     notVisible:
       id: availability-legend

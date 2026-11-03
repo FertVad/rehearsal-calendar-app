@@ -12,18 +12,6 @@ export const styles = StyleSheet.create({
   content: {
     padding: Spacing.xl,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    // The "+" is 44 pt tall; the margin gives back what it took.
-    marginBottom: Spacing.sm,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-  },
   loadingState: {
     backgroundColor: Colors.glass.bg,
     borderWidth: 1,

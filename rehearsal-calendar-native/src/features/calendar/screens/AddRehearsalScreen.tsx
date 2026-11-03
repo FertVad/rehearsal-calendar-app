@@ -21,6 +21,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { ParticipantPicker, busyText } from '../../../shared/components/ParticipantPicker';
 import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { checkSchedulingConflicts } from '../../../shared/utils/conflictDetection';
 import { TimeRecommendations } from '../components/TimeRecommendations';
 import { PickerModal } from '../../../shared/components/PickerModal';
@@ -164,6 +165,20 @@ export default function AddRehearsalScreen() {
       {/* Create is in the bar below, which keeps it over the keyboard; it
           was at the end of this list, and typing the location hid it. */}
       <SafeAreaView style={styles.scrollView}>
+        {/* The screen is a modal whose body is a full-height ScrollView, so the
+            swipe-down dismiss gesture is swallowed by the list. Without Cancel
+            the only way out is creating the rehearsal; with changes it asks
+            first, as the swipe does (useLeaveGuard). Create is in the bar
+            below, not up here (T-009). */}
+        <ScreenHeader
+          kind="modal"
+          title={form.isEditMode ? t.rehearsals.editRehearsal : t.rehearsals.addRehearsal}
+          cancelLabel={t.common.cancel}
+          onCancel={() => {
+            Keyboard.dismiss();
+            navigation.goBack();
+          }}
+        />
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.content}
@@ -179,26 +194,6 @@ export default function AddRehearsalScreen() {
             </Text>
           </View>
         )}
-
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {form.isEditMode ? t.rehearsals.editRehearsal : t.rehearsals.addRehearsal}
-          </Text>
-          {/* The screen is a modal whose body is a full-height ScrollView, so the
-              swipe-down dismiss gesture is swallowed by the list. Without this the
-              only way out is creating the rehearsal. */}
-          <IconButton
-            testID="rehearsal-close"
-            icon="close"
-            style={styles.closeButton}
-            onPress={() => {
-              Keyboard.dismiss();
-              navigation.goBack();
-            }}
-            accessibilityLabel={t.common.cancel}
-          />
-        </View>
 
         {/* Form */}
         <View style={styles.form}>

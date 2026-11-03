@@ -16,6 +16,7 @@ import type { Language } from '../../../i18n/translations';
 import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/components';
 import { AppModal } from '../../../shared/components/AppModal';
 import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { DeleteButton } from '../../../shared/components/buttons/DeleteButton';
 import { BugReportSheet } from '../components/BugReportSheet';
 import { ProfileStackParamList } from '../../../navigation';
@@ -213,11 +214,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScreenHeader kind="root" title={t.profile.title} />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{t.profile.title}</Text>
-        </View>
 
         {loading ? (
           <>

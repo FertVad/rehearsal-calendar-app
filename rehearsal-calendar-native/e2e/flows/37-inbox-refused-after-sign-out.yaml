@@ -42,7 +42,8 @@ tags:
       BEFORE: "1"
       MS: "30000"
 - tapOn: "Mark all read"
-- tapOn: "Back"
+- tapOn:
+    id: header-cancel
 - tapOn:
     id: tab-profile
 - tapOn:

@@ -19,6 +19,7 @@ import { getDateLocale } from '../../../shared/utils/locale';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { CalendarMonth, EditorHeader, ModeInfo } from '../components';
 import { DayMode } from '../types';
 import { getDayStatus, displayedMode, formatDate, generateMonths } from '../utils';
@@ -203,26 +204,21 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
   return (
     // While a save is out nothing here takes a tap (useLeaveGuard).
     <SafeAreaView style={styles.container} pointerEvents={saving ? 'none' : 'auto'}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>{t.availability.title}</Text>
-        {/* Saving: shown here too, for the save from the close question,
-            whose panel may be gone. */}
-        {saving && (
-          <ActivityIndicator testID="availability-saving" size="small" color={Colors.accent.purple} style={{ marginLeft: 'auto', marginRight: Spacing.md }} />
-        )}
-        {/* Only when pushed as the MarkBusy modal — the month list eats the
-            swipe-down dismiss, so without this there is no way back out. As a
-            tab root there is nothing to go back to and the button is hidden. */}
-        {navigation.canGoBack() && (
-          <IconButton
-            testID="availability-close"
-            icon="close"
-            onPress={() => navigation.goBack()}
-            accessibilityLabel={t.common.cancel}
-          />
-        )}
-      </View>
+      {/* Cancel only when pushed as the MarkBusy modal — the month list eats
+          the swipe-down dismiss, so without it there is no way back out; with
+          days changed it asks first, as the swipe does (useLeaveGuard). With
+          nothing to go back to it is not there. Save is in the panel below
+          (T-009). Saving shows up here too, for the save from the close
+          question, whose panel may be gone. */}
+      <ScreenHeader
+        kind="modal"
+        title={t.availability.title}
+        cancelLabel={t.common.cancel}
+        onCancel={navigation.canGoBack() ? () => navigation.goBack() : undefined}
+        right={saving
+          ? <ActivityIndicator testID="availability-saving" size="small" color={Colors.accent.purple} />
+          : null}
+      />
 
       {/* Nothing marked yet — say what that costs, not just that it is empty.
           Being treated as free is what actually happens, and it is the whole

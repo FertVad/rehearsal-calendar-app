@@ -123,10 +123,10 @@ tags:
       TOP: "0.90"
       BOTTOM: "0.945"
 - tapOn:
-    id: rehearsal-close
+    id: header-cancel
 - extendedWaitUntil:
     notVisible:
-      id: rehearsal-close
+      id: header-cancel
     timeout: 10000
 # Availability: today picked, then busy all day — or free, if it already
 # was busy — so "Save" is on.

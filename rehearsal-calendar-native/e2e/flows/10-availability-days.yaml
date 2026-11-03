@@ -149,7 +149,7 @@ tags:
 # Away and back: the editor loads from the server again. Everything is saved,
 # so it closes without asking (T-013).
 - tapOn:
-    id: availability-close
+    id: header-cancel
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
@@ -227,7 +227,7 @@ tags:
 - tapOn: "Understood"
 # The overlapping slot is not saved: closing asks first (T-013).
 - tapOn:
-    id: availability-close
+    id: header-cancel
 - extendedWaitUntil:
     visible: "Don't Save"
     timeout: 5000
@@ -314,7 +314,7 @@ tags:
       ONCE: "1"
       MS: "40000"
 - tapOn:
-    id: availability-close
+    id: header-cancel
 - extendedWaitUntil:
     visible: "Don't Save"
     timeout: 5000
@@ -334,7 +334,7 @@ tags:
       MAIL_URL: ${MAIL_URL}
       EXPECT: "1"
 - tapOn:
-    id: availability-close
+    id: header-cancel
 - extendedWaitUntil:
     visible: "Don't Save"
     timeout: 5000

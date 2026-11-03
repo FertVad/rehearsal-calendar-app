@@ -12,22 +12,6 @@ export const styles = StyleSheet.create({
   content: {
     padding: Spacing.xl,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xl,
-  },
-  title: {
-    flex: 1,
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.xs,
-  },
-  closeButton: {
-    marginLeft: Spacing.md,
-  },
   projectName: {
     fontSize: FontSize.base,
     color: Colors.accent.purple,

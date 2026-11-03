@@ -45,7 +45,8 @@ tags:
     height: 50
     tolerance: 6
 - takeScreenshot: 49-calendar
-# The inbox: back, and its two actions side by side.
+# The inbox: its Close, and its two actions side by side. A text button in
+# the bar (T-029): its height is the target, its width the word.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -53,8 +54,7 @@ tags:
       SEE: "Mark all read"
       WAIT_MS: "10000"
 - assertVisible:
-    text: "Back"
-    width: 50
+    id: header-cancel
     height: 50
     tolerance: 6
 - assertVisible:
@@ -69,19 +69,20 @@ tags:
     tolerance: 6
     rightOf: "Mark all read"
 - takeScreenshot: 49-inbox
-- tapOn: "Back"
+- tapOn:
+    id: header-cancel
 - extendedWaitUntil:
     visible: ".*Act I run-through.*"
     timeout: 10000
-# A rehearsal's sheet: its cross.
+# A rehearsal's sheet: its Close, drawn smaller with the sheet (T-014).
 - tapOn: ".*Act I run-through.*"
 - extendedWaitUntil:
     visible:
       id: rehearsal-details-time
     timeout: 10000
 - assertVisible:
+    id: header-cancel
     text: "Close"
-    width: 50
     height: 50
     tolerance: 6
 - takeScreenshot: 49-details
@@ -90,7 +91,7 @@ tags:
     notVisible:
       id: rehearsal-details-time
     timeout: 10000
-# The rehearsal form: its cross, and the one on its project picker.
+# The rehearsal form: its Cancel, and the cross on its project picker.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -100,11 +101,10 @@ tags:
 - tapOn: "Create Rehearsal"
 - extendedWaitUntil:
     visible:
-      id: rehearsal-close
+      id: header-cancel
     timeout: 10000
 - assertVisible:
-    id: rehearsal-close
-    width: 50
+    id: header-cancel
     height: 50
     tolerance: 6
 - tapOn:
@@ -126,12 +126,12 @@ tags:
     notVisible: "Select Project"
     timeout: 10000
 - tapOn:
-    id: rehearsal-close
+    id: header-cancel
 - extendedWaitUntil:
     notVisible:
-      id: rehearsal-close
+      id: header-cancel
     timeout: 10000
-# Mark Busy: its cross, and the editor's "Deselect" (T-021) and chevron over a
+# Mark Busy: its Cancel, and the editor's "Deselect" (T-021) and chevron over a
 # day.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -145,8 +145,7 @@ tags:
       id: availability-legend
     timeout: 15000
 - assertVisible:
-    id: availability-close
-    width: 50
+    id: header-cancel
     height: 50
     tolerance: 6
 - runFlow:
@@ -175,12 +174,12 @@ tags:
       id: mode-free
     timeout: 10000
 - tapOn:
-    id: availability-close
+    id: header-cancel
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
     timeout: 10000
-# The projects: the "+", and "Back" on a project.
+# The projects: the "+", and "‹ My Projects" on a project (T-029).
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -200,17 +199,18 @@ tags:
 - tapOn:
     point: "25%,18%"
 - extendedWaitUntil:
-    notVisible: "My Projects"
+    visible:
+      id: header-back
     timeout: 15000
 - assertVisible:
-    text: "Back"
-    width: 50
+    id: header-back
     height: 50
     tolerance: 6
 - takeScreenshot: 49-project
-- tapOn: "Back"
+- tapOn:
+    id: header-back
 - extendedWaitUntil:
-    visible: "My Projects"
+    visible: ".*Join with a code.*"
     timeout: 10000
 # The planner: back, its periods, "+ Add" on a free slot.
 - runFlow:

@@ -51,7 +51,7 @@ tags:
     enabled: true
 - takeScreenshot: 56-month-in-spanish
 - tapOn:
-    id: rehearsal-close
+    id: header-cancel
 - runFlow:
     when:
       visible: "No guardar"
@@ -59,7 +59,7 @@ tags:
       - tapOn: "No guardar"
 - extendedWaitUntil:
     notVisible:
-      id: rehearsal-close
+      id: header-cancel
     timeout: 10000
 
 - runFlow:
@@ -101,7 +101,7 @@ tags:
     enabled: true
 - takeScreenshot: 56-month-in-german
 - tapOn:
-    id: rehearsal-close
+    id: header-cancel
 - runFlow:
     when:
       visible: "Nicht sichern"
@@ -109,5 +109,5 @@ tags:
       - tapOn: "Nicht sichern"
 - extendedWaitUntil:
     notVisible:
-      id: rehearsal-close
+      id: header-cancel
     timeout: 10000

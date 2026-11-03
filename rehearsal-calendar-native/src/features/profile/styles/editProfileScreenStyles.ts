@@ -6,21 +6,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg.primary,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.bg.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.default,
-  },
-  title: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
   scrollView: {
     flex: 1,
   },

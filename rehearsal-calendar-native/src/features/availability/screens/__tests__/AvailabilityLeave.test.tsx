@@ -143,6 +143,19 @@ it('with days changed, a way out asks: Don\'t Save, Save, Cancel', () => {
   });
 });
 
+// The header's Cancel (T-029) leaves as the cross did: by goBack, whose
+// removal the guard holds and asks about.
+it('Cancel in the header is that way out: goBack, held and asked about', () => {
+  mockHasChanges = true;
+  const view = render(<AvailabilityScreen navigation={navigation} />);
+
+  fireEvent.press(view.getByTestId('header-cancel'));
+
+  expect(navigation.goBack).toHaveBeenCalledTimes(1);
+  expect(__remove()).toBe(false);
+  expect(showSheet).toHaveBeenCalledTimes(1);
+});
+
 it('Don\'t Save closes it the way it was being closed; Cancel keeps it open', async () => {
   mockHasChanges = true;
   render(<AvailabilityScreen navigation={navigation} />);

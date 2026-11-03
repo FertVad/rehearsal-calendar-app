@@ -9,24 +9,6 @@ export const styles = StyleSheet.create({
   body: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.glass.border,
-  },
-  title: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
-  // As wide as the back button, so the title sits in the middle.
-  headerRight: {
-    width: TouchTarget,
-  },
   scrollView: {
     flex: 1,
   },

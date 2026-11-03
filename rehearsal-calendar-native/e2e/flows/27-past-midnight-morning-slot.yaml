@@ -98,7 +98,7 @@ tags:
     timeout: 15000
 # Away and back: the editor loads from the server again.
 - tapOn:
-    id: availability-close
+    id: header-cancel
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"

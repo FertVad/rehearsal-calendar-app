@@ -88,7 +88,7 @@ tags:
       id: rehearsal-project
     timeout: 5000
 - tapOn:
-    id: rehearsal-close
+    id: header-cancel
 - extendedWaitUntil:
     visible: "Don't Save"
     timeout: 5000
@@ -96,7 +96,7 @@ tags:
 - tapOn: "Don't Save"
 - extendedWaitUntil:
     notVisible:
-      id: rehearsal-close
+      id: header-cancel
     timeout: 10000
 - assertNotVisible: "Rehearsal created"
 - tapOn:
@@ -108,9 +108,9 @@ tags:
       text: "Participants, 1 of 1"
     timeout: 15000
 - tapOn:
-    id: rehearsal-close
+    id: header-cancel
 - extendedWaitUntil:
     notVisible:
-      id: rehearsal-close
+      id: header-cancel
     timeout: 10000
 - assertNotVisible: "Don't Save"

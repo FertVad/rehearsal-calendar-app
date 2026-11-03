@@ -35,7 +35,8 @@ tags:
     id: project-card
     text: ".*Pishchik Estate.*"
 - extendedWaitUntil:
-    notVisible: "My Projects"
+    visible:
+      id: header-back
     timeout: 15000
 - scrollUntilVisible:
     element:

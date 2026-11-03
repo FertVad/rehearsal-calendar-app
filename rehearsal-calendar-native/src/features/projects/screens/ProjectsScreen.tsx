@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { SkeletonLoader } from '../../../shared/components';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -31,10 +32,10 @@ export default function ProjectsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{t.projects.title}</Text>
+      <ScreenHeader
+        kind="root"
+        title={t.projects.title}
+        right={
           <IconButton
             icon="add-circle"
             size={28}
@@ -42,7 +43,9 @@ export default function ProjectsScreen() {
             accessibilityLabel={t.projects.createProject}
             onPress={handleCreateProject}
           />
-        </View>
+        }
+      />
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
 
         {/* Projects List */}
         {loading ? (

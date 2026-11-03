@@ -10,18 +10,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg.primary,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-  },
   saveHeaderButton: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,

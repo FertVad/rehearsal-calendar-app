@@ -21,13 +21,6 @@ export const styles = StyleSheet.create({
   iconContainer: {
     marginBottom: Spacing.xl,
   },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.lg,
-    textAlign: 'center',
-  },
   subtitle: {
     fontSize: FontSize.base,
     color: Colors.text.secondary,
@@ -72,20 +65,12 @@ export const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: Colors.accent.purpleFill,
   },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
   buttonText: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semibold,
   },
   primaryButtonText: {
     color: Colors.text.inverse,
-  },
-  secondaryButtonText: {
-    color: Colors.text.secondary,
   },
   loadingText: {
     fontSize: FontSize.base,

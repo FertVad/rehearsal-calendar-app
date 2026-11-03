@@ -19,6 +19,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
 import { useUnread } from '../../../contexts/UnreadContext';
@@ -327,41 +328,40 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <IconButton
-          icon="arrow-back"
-          color={Colors.text.primary}
-          accessibilityLabel={t.common.back}
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        />
-        <Text style={styles.title} numberOfLines={1}>{t.notifications.title}</Text>
-
-        {/* Icons rather than words. Two text buttons beside a large title do not
-            fit in Russian and fit still less in German, so they overlapped. The
-            words survive as accessibility labels and in the confirmation.
-            24 pt, the size of the other icons up here; the target stays 44. */}
-        {hasUnread && (
-          <IconButton
-            icon="checkmark-done"
-            size={24}
-            color={Colors.accent.purple}
-            style={styles.headerAction}
-            onPress={markEverythingRead}
-            accessibilityLabel={t.notifications.markAllRead}
-          />
-        )}
-        {items.length > 0 && (
-          <IconButton
-            icon="trash-outline"
-            size={24}
-            color={Colors.accent.red}
-            style={styles.headerAction}
-            onPress={confirmClearAll}
-            accessibilityLabel={t.notifications.clearAll}
-          />
-        )}
-      </View>
+      {/* A sheet over the app: "Close" where every sheet has its way out —
+          there is nothing here to cancel (T-029). */}
+      <ScreenHeader
+        kind="modal"
+        title={t.notifications.title}
+        cancelLabel={t.common.close}
+        onCancel={() => navigation.goBack()}
+        right={
+          <>
+            {/* Icons rather than words. Two text buttons beside the title do
+                not fit in Russian and fit still less in German, so they
+                overlapped. The words survive as accessibility labels and in
+                the confirmation. 24 pt; the target stays 44. */}
+            {hasUnread && (
+              <IconButton
+                icon="checkmark-done"
+                size={24}
+                color={Colors.accent.purple}
+                onPress={markEverythingRead}
+                accessibilityLabel={t.notifications.markAllRead}
+              />
+            )}
+            {items.length > 0 && (
+              <IconButton
+                icon="trash-outline"
+                size={24}
+                color={Colors.accent.red}
+                onPress={confirmClearAll}
+                accessibilityLabel={t.notifications.clearAll}
+              />
+            )}
+          </>
+        }
+      />
 
       {loading ? (
         <ActivityIndicator style={styles.loading} color={Colors.accent.purple} />

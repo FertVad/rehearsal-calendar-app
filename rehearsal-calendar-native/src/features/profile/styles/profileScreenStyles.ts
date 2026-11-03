@@ -13,14 +13,6 @@ export const styles = StyleSheet.create({
     padding: Spacing.xl,
     paddingBottom: Spacing.xxl * 2,
   },
-  header: {
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-  },
   userCard: {
     backgroundColor: Colors.glass.bg,
     borderWidth: 1,

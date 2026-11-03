@@ -54,7 +54,7 @@ tags:
 - assertNotVisible:
     id: availability-save
 - tapOn:
-    id: availability-close
+    id: header-cancel
 # Signed out from the profile: the app stays running.
 - tapOn:
     id: tab-profile

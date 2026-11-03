@@ -320,6 +320,20 @@ describe('Leaving with changes (T-013)', () => {
     });
   });
 
+  // The header's Cancel (T-029) leaves as the cross did: by goBack, whose
+  // removal the guard holds and asks about.
+  it('Cancel in the header is that way out: goBack, held and asked about', async () => {
+    const screen = await open();
+    type(screen, 'Rehearsal room');
+    mockNavigation.goBack.mockClear();
+
+    fireEvent.press(screen.getByTestId('header-cancel'));
+
+    expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
+    expect(leave()).toBe(false);
+    expect(showSheet).toHaveBeenCalledTimes(1);
+  });
+
   it('Don\'t Save closes it the way it was being closed, and nothing is sent', async () => {
     const screen = await open();
     type(screen, 'Rehearsal room');

@@ -34,7 +34,8 @@ tags:
       PATH: "^/api/native/notifications/read$"
       OPEN: "1"
 - tapOn: "Mark all read"
-- tapOn: "Back"
+- tapOn:
+    id: header-cancel
 - tapOn:
     id: tab-profile
 - scrollUntilVisible:

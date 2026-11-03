@@ -1,0 +1,93 @@
+# One style of header, a screen of each kind (T-029).
+#
+# The headers were four styles: a large title with a cross on its right (the
+# rehearsal form, "Busy"), a smaller title between a chevron and an empty box
+# (a new project, the profile's edit), a large title after an arrow (a
+# project, calendar sync, the inbox), and a large title alone (the tabs). Now:
+# - the first screen of a tab, "My Projects": a large title, no way back;
+# - a screen pushed in it, a project: "‹ My Projects" on the left, then the
+#   project's name;
+# - a sheet, "Create Project": "Cancel" on the left, the title right of it;
+#   "Create" stays in the bar at the bottom (T-009), and is not up here.
+# Olga only looks; Cancel leaves the form with nothing in it.
+appId: ${APP_ID}
+name: Screen headers, one style
+tags:
+  - projects
+  - navigation
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${OLGA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-projects
+      SEE: ".*Estate Ball.*"
+      WAIT_MS: "15000"
+- waitForAnimationToEnd
+- takeScreenshot: 66-root
+# A tab's first screen: the large title, nothing to go back to.
+- assertVisible:
+    id: screen-header-root
+- assertVisible: "My Projects"
+- assertNotVisible:
+    id: header-back
+- assertNotVisible:
+    id: header-cancel
+# A screen pushed in the tab: "‹" and the name of the list, the project's own
+# name to the right of it.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Estate Ball.*"
+      SEE: ".*Share the link.*"
+      WAIT_MS: "15000"
+- waitForAnimationToEnd
+- takeScreenshot: 66-stack
+- assertVisible:
+    id: header-back
+    text: ".*My Projects"
+- assertVisible:
+    id: header-title
+    text: "Estate Ball"
+    rightOf:
+      id: header-back
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-back
+      SEE: ".*Join with a code.*"
+      WAIT_MS: "10000"
+# A sheet: Cancel on the left, the title right of it, Create only at the
+# bottom.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Create Project"
+      SEE: "Project Name"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 66-modal
+- assertVisible:
+    id: header-cancel
+    text: "Cancel"
+- assertVisible:
+    id: header-title
+    text: "Create Project"
+    rightOf:
+      id: header-cancel
+- assertNotVisible:
+    id: header-back
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-cancel
+      GONE: "Project Name"
+      WAIT_MS: "10000"
+- assertVisible: ".*Join with a code.*"

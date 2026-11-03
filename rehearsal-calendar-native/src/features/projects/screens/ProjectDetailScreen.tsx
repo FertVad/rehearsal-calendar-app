@@ -14,7 +14,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
-import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import type { ProjectsStackParamList, ProjectDetailNavigation } from '../../../navigation';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../shared/services/api';
 import { projectDetailScreenStyles as styles } from '../styles';
@@ -443,6 +443,18 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Pushed in the Projects tab: back to the list, with its name (T-029). */}
+      <ScreenHeader
+        kind="stack"
+        title={project.name}
+        backTitle={t.projects.title}
+        onBack={() => navigation.goBack()}
+        right={project.is_admin ? (
+          <View style={styles.adminBadge}>
+            <Ionicons name="shield-checkmark" size={14} color={Colors.accent.purple} />
+          </View>
+        ) : null}
+      />
       <ScrollView
         ref={scrollRef}
         onLayout={(e) => setViewHeight(e.nativeEvent.layout.height)}
@@ -453,17 +465,6 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent.purple} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <IconButton icon="arrow-back" color={Colors.text.primary} accessibilityLabel={t.common.back} style={styles.backButton} onPress={() => navigation.goBack()} />
-          <Text style={styles.title} numberOfLines={1}>{project.name}</Text>
-          {project.is_admin && (
-            <View style={styles.adminBadge}>
-              <Ionicons name="shield-checkmark" size={14} color={Colors.accent.purple} />
-            </View>
-          )}
-        </View>
-
         {project.description && (
           <Text style={styles.description}>{project.description}</Text>
         )}

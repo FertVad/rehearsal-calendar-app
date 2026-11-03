@@ -24,12 +24,13 @@ tags:
     timeout: 15000
 - takeScreenshot: 46-project-opened
 # Back from the project. Maestro's swipe from the edge is not taken as the
-# back gesture, so the project's own back button; both leave the same screen.
+# back gesture, so the project's own "‹ My Projects"; both leave the same
+# screen. Not waited for by "My Projects", which that button itself says.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: "Back"
-      SEE: "My Projects"
+      TAP_ID: header-back
+      SEE: ".*Join with a code.*"
       WAIT_MS: 10000
 # The form's own fields are not there, under the list or anywhere.
 - assertNotVisible: "Project Name"

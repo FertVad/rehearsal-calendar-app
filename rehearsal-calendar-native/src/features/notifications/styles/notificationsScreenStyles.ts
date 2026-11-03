@@ -8,25 +8,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg.primary,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  backButton: {
-    marginRight: Spacing.xs,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-    flex: 1,
-  },
-  headerAction: {
-    marginLeft: Spacing.xs,
-  },
   // The panel the row slides off to reveal. Its height comes from the card's,
   // and the bottom margin matches so the two edges line up mid-swipe.
   deleteAction: {

@@ -150,6 +150,14 @@ tags:
 - assertVisible:
     id: profile-language
     text: ".*Русский.*"
+# The profile is still scrolled down to Help, its language row clipped under
+# the title, which stays put (T-029): on screen to Maestro, and a tap on it
+# lands on the title. Taken back to the top first.
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:

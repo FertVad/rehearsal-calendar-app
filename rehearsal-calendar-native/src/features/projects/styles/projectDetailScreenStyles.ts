@@ -17,20 +17,6 @@ export const styles = StyleSheet.create({
   content: {
     padding: Spacing.lg,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  backButton: {
-    marginRight: Spacing.xs,
-  },
-  title: {
-    flex: 1,
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-  },
   adminBadge: {
     marginLeft: Spacing.sm,
     padding: Spacing.xs,

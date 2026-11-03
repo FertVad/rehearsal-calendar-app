@@ -13,6 +13,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { hapticSuccess } from '../../../shared/utils/haptics';
 import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
@@ -87,15 +88,15 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
 
   return (
     <View style={styles.container}>
-      {/* The buttons are in the bar below, which keeps them over the keyboard
-          (T-009). */}
+      {/* Create is in the bar below, which keeps it over the keyboard (T-009);
+          Cancel is where every sheet has it (T-029). */}
       <SafeAreaView style={styles.body}>
-        {/* Header */}
-        <View style={styles.header}>
-          <IconButton icon="chevron-back" color={Colors.text.primary} accessibilityLabel={t.common.back} onPress={() => navigation.goBack()} />
-          <Text style={styles.title}>{t.projects.createProject}</Text>
-          <View style={styles.headerRight} />
-        </View>
+        <ScreenHeader
+          kind="modal"
+          title={t.projects.createProject}
+          cancelLabel={t.common.cancel}
+          onCancel={() => navigation.goBack()}
+        />
 
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Project Name */}
@@ -146,11 +147,6 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
       </SafeAreaView>
 
       <BottomActionBar>
-        <BottomActionButton
-          variant="secondary"
-          label={t.common.cancel}
-          onPress={() => navigation.goBack()}
-        />
         <BottomActionButton
           label={t.projects.create}
           onPress={() => {

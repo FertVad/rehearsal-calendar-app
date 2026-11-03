@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader, HeaderTextButton } from '../../../shared/components/ScreenHeader';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { useI18n } from '../../../contexts/I18nContext';
@@ -242,8 +242,13 @@ export default function RehearsalDetailsScreen() {
     return (
       <View style={styles.fill}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t.calendar.rehearsal}</Text>
-          <IconButton icon="close" accessibilityLabel={t.common.close} onPress={onClose} minSize={SHEET_TARGET} />
+          <ScreenHeader
+            kind="modal"
+            title={t.calendar.rehearsal}
+            cancelLabel={t.common.close}
+            onCancel={onClose}
+            target={SHEET_TARGET}
+          />
         </View>
         <View style={styles.centred}>
           <Text style={styles.missingText}>{t.rehearsals.notFound}</Text>
@@ -278,29 +283,31 @@ export default function RehearsalDetailsScreen() {
               above the rehearsal's own name, which said nothing the name did
               not and left two large texts fighting for the same band at the top
               of the sheet. The name is the heading; the grabber and a swipe
-              close the sheet, and the cross stays for those who look for one. */}
+              close the sheet, and "Close" is where every sheet has its way out
+              (T-029). */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle} numberOfLines={2}>
-              {rehearsal.title || t.calendar.rehearsal}
-            </Text>
-            {/* An admin's way to the form from here, so a rehearsal opened
-                from a notification can be changed too (T-016). Over this
-                sheet, which reads it again when the form saves. */}
-            {isAdmin && (
-              <Pressable
-                testID="rehearsal-details-edit"
-                accessibilityRole="button"
-                style={styles.headerAction}
-                hitSlop={4}
-                onPress={() => navigation.navigate('AddRehearsal', {
-                  rehearsalId: rehearsal.id,
-                  projectId: rehearsal.projectId,
-                })}
-              >
-                <Text style={styles.headerActionText}>{t.rehearsals.edit}</Text>
-              </Pressable>
-            )}
-            <IconButton icon="close" accessibilityLabel={t.common.close} onPress={onClose} minSize={SHEET_TARGET} />
+            <ScreenHeader
+              kind="modal"
+              title={rehearsal.title || t.calendar.rehearsal}
+              titleLines={2}
+              cancelLabel={t.common.close}
+              onCancel={onClose}
+              target={SHEET_TARGET}
+              // An admin's way to the form from here, so a rehearsal opened
+              // from a notification can be changed too (T-016). Over this
+              // sheet, which reads it again when the form saves.
+              right={isAdmin ? (
+                <HeaderTextButton
+                  testID="rehearsal-details-edit"
+                  label={t.rehearsals.edit}
+                  target={SHEET_TARGET}
+                  onPress={() => navigation.navigate('AddRehearsal', {
+                    rehearsalId: rehearsal.id,
+                    projectId: rehearsal.projectId,
+                  })}
+                />
+              ) : null}
+            />
           </View>
 
           <View style={styles.content}>
@@ -421,32 +428,12 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     textAlign: 'center',
   },
+  // The bar is ScreenHeader's; this only clears the sheet's grabber, which
+  // sits in the top few points, and draws the line under it.
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    // Clears the sheet's grabber, which sits in the top few points.
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glass.border,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-  },
-  headerAction: {
-    minHeight: SHEET_TARGET,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.sm,
-  },
-  headerActionText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.accent.purple,
   },
   content: {
     padding: Spacing.lg,

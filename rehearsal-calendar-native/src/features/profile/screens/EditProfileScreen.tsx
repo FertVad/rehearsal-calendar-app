@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors } from '../../../shared/constants/colors';
-import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader, HeaderTextButton } from '../../../shared/components/ScreenHeader';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { GlassButton, UserAvatar } from '../../../shared/components';
@@ -82,19 +82,25 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <View style={styles.header}>
-          <IconButton
-            icon="arrow-back"
-            color={Colors.text.primary}
-            accessibilityLabel={t.common.back}
-            onPress={() => {
-              hapticLight();
-              navigation.goBack();
-            }}
-          />
-          <Text style={styles.title}>{t.profile.editProfile}</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        {/* A sheet (T-029): Cancel on the left, Save on the right, where
+            iOS puts Done (HIG sheets.md). */}
+        <ScreenHeader
+          kind="modal"
+          title={t.profile.editProfile}
+          cancelLabel={t.common.cancel}
+          onCancel={() => {
+            hapticLight();
+            navigation.goBack();
+          }}
+          right={
+            <HeaderTextButton
+              testID="profile-save"
+              label={saving ? t.common.loading : t.common.save}
+              onPress={handleSave}
+              disabled={saving || !hasChanges}
+            />
+          }
+        />
 
         <ScrollView
           style={styles.scrollView}
@@ -169,14 +175,6 @@ export default function EditProfileScreen({ navigation }: EditProfileScreenProps
             </View>
           </View>
 
-          {/* Save Button */}
-          <GlassButton
-            title={saving ? t.common.loading : t.profile.saveChanges}
-            onPress={handleSave}
-            variant="purple"
-            disabled={saving || !hasChanges}
-            style={styles.saveButton}
-          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

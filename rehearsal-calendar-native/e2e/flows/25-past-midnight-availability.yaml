@@ -71,7 +71,7 @@ tags:
     timeout: 15000
 # Away and back: the editor loads from the server again.
 - tapOn:
-    id: availability-close
+    id: header-cancel
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
@@ -132,7 +132,7 @@ tags:
       id: availability-save
     timeout: 5000
 - tapOn:
-    id: availability-close
+    id: header-cancel
 - extendedWaitUntil:
     notVisible:
       id: availability-legend
@@ -186,7 +186,7 @@ tags:
       PATH: "/availability/days$"
       OPEN: "1"
 - tapOn:
-    id: availability-close
+    id: header-cancel
 - extendedWaitUntil:
     visible: "Don't Save"
     timeout: 5000

@@ -93,15 +93,16 @@ export function ProfileNavigator() {
         component={CalendarSyncSettingsScreen}
         options={{ headerShown: false }}
       />
+      {/* Forms with Cancel and Save, so sheets as the others are (T-029). */}
       <ProfileStackNav.Screen
         name="EditProfile"
         component={EditProfileScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
       <ProfileStackNav.Screen
         name="ChangeEmail"
         component={ChangeEmailScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
 
     </ProfileStackNav.Navigator>

@@ -90,7 +90,7 @@ tags:
       id: rehearsal-date-calendar
     timeout: 5000
 - tapOn:
-    id: rehearsal-close
+    id: header-cancel
 - runFlow:
     when:
       visible: "Don't Save"
@@ -98,5 +98,5 @@ tags:
       - tapOn: "Don't Save"
 - extendedWaitUntil:
     notVisible:
-      id: rehearsal-close
+      id: header-cancel
     timeout: 10000

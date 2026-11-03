@@ -13,20 +13,6 @@ export const styles = StyleSheet.create({
     padding: Spacing.xl,
     paddingBottom: Spacing.xxl * 2,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  backButton: {
-    marginRight: Spacing.xs,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.text.primary,
-    flex: 1,
-  },
   explanation: {
     fontSize: FontSize.sm,
     color: Colors.text.secondary,

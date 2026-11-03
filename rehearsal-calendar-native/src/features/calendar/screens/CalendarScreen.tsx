@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
 import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import TodayRehearsals from '../components/TodayRehearsals';
 import RehearsalCard from '../components/RehearsalCard';
@@ -176,6 +177,7 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScreenHeader kind="root" title={t.nav.calendar} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
