@@ -1,6 +1,6 @@
 # Disposable PostgreSQL: regression controls and original-defect probes
 
-Use Node **22.16.0**, pinned in the repository `.nvmrc`, and install native
+Use Node **26.13.0**, pinned in the repository `.nvmrc`, and install native
 dependencies with that same Node version. From `server/`:
 
 ```sh

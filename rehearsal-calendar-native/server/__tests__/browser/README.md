@@ -5,12 +5,12 @@ admin, invite and persisted-content browser suites. The application's `npm run c
 TypeScript checking and that same full test command. Jest filename matching does
 not control the browser stage: `server/scripts/test.mjs` explicitly executes it.
 
-From a fresh checkout, use Node **22.16.0** (pinned in the repository `.nvmrc`
+From a fresh checkout, use Node **26.13.0** (pinned in the repository `.nvmrc`
 and CI) for both dependency installation and test execution. `better-sqlite3`
 is a native module and cannot load a binding built for another Node ABI.
 The earlier H01 evidence used Node 20.19.2; that historical runtime is not the
 clean-install requirement. Locked React Native/Metro dependencies require at
-least Node 20.19.4, and Node 22.16.0 satisfies all declared Node engines in both
+least Node 20.19.4, and Node 26.13.0 satisfies all declared Node engines in both
 lockfiles. Reinstall dependencies after switching Node major versions.
 
 ```sh

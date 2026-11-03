@@ -15,7 +15,7 @@ set -euo pipefail
 
 LABEL=com.rehearsly.autodev
 REPO=${0:A:h:h:h}
-NODE=${AUTODEV_NODE:-$HOME/.nvm/versions/node/v22.16.0/bin/node}
+NODE=${AUTODEV_NODE:-$HOME/.nvm/versions/node/v26.13.0/bin/node}
 PLIST=$HOME/Library/LaunchAgents/$LABEL.plist
 LOG=$REPO/AUTODEV/.state/supervisor.log
 

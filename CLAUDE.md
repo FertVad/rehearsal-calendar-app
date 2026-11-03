@@ -1126,7 +1126,7 @@ Key documentation files:
 ## Tech Stack
 
 **Frontend**: React Native 0.81.5, Expo SDK 54, TypeScript, React Navigation 7.x
-**Backend**: Node.js 18+, Express.js 4.21.2, JWT authentication
+**Backend**: Node.js 26 (`.nvmrc`; Vercel takes `engines.node` 26.x), Express.js 4.21.2, JWT authentication
 **Database**: PostgreSQL server runtime; SQLite isolated test fixtures only
 **Testing**: Jest, @testing-library/react-native
 **Languages**: Russian, English, Spanish, German (full i18n support). A new key goes into the interface and all four locale blocks in `src/i18n/translations/` — the type will not compile otherwise.
