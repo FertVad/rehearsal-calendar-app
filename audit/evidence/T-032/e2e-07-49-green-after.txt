@@ -1,0 +1,21 @@
+T-032: the two other flows the planner's "Back" was in, on the fix.
+
+07 went back to the calendar by the planner's "Back"; it now checks there is
+none and takes the Calendar tab. 49 measured that "Back" as a touch target;
+the planner has none, and the flow waits for its "Planner" title instead.
+
+$ npm run e2e -- e2e/flows/07-planner-project-switch.yaml
+Waiting for flows to complete...
+[Passed] Planner follows the project (2m 12s)
+
+1/1 Flow Passed in 2m 13s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/49-touch-targets.yaml
+Waiting for flows to complete...
+[Passed] Touch targets are 44 pt (2m 10s)
+
+1/1 Flow Passed in 2m 11s
+
+[e2e] taps taken again (tap-and-see.yaml): 0

@@ -12,7 +12,6 @@ import CalendarSyncSettingsScreen from '../features/profile/screens/CalendarSync
 import EditProfileScreen from '../features/profile/screens/EditProfileScreen';
 import ChangeEmailScreen from '../features/profile/screens/ChangeEmailScreen';
 import SmartPlannerScreen from '../features/smart-planner/screens/SmartPlannerScreen';
-import SmartPlannerTabScreen from '../features/smart-planner/screens/SmartPlannerTabScreen';
 import type {
   AuthStackParamList,
   CalendarStackParamList,
@@ -68,15 +67,12 @@ export function ProjectsNavigator() {
 export function PlannerNavigator() {
   return (
     <PlannerStackNav.Navigator
-      initialRouteName="PlannerMain"
+      initialRouteName="SmartPlanner"
       screenOptions={{ headerShown: false }}
     >
-      <PlannerStackNav.Screen name="PlannerMain" component={SmartPlannerTabScreen} />
-      <PlannerStackNav.Screen
-        name="SmartPlanner"
-        component={SmartPlannerScreen}
-        options={{ headerShown: false }}
-      />
+      {/* The tab's first screen itself, not pushed over a placeholder that
+          replaced itself with it: nothing to go back to (T-032). */}
+      <PlannerStackNav.Screen name="SmartPlanner" component={SmartPlannerScreen} />
     </PlannerStackNav.Navigator>
   );
 }

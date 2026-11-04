@@ -12,7 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { PlannerStackParamList, SmartPlannerNavigation } from '../../../navigation';
 import { Colors } from '../../../shared/constants/colors';
-import { IconButton } from '../../../shared/components/IconButton';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import type { SlotCategory, TimeSlot } from '../types';
 import { useSmartPlanner } from '../hooks/useSmartPlanner';
 import { DayCard } from '../components/DayCard';
@@ -29,9 +29,54 @@ import { smartPlannerScreenStyles as styles } from '../styles';
 
 type Props = NativeStackScreenProps<PlannerStackParamList, 'SmartPlanner'>;
 
+/**
+ * The Planner tab's first and only screen: a large title, as the other tabs
+ * have, and nothing to go back to (owner, 04.11; T-032). It was a screen
+ * pushed over a placeholder that replaced itself with it, with a "←" that led
+ * out of the tab to the calendar and a small grey "Smart Planner" for a title.
+ *
+ * The project is the one asked for — the calendar's "Smart Planner", a choice
+ * in the row — or, opened from the tab, the first one, set in the params once
+ * so that it stays the same while the list of projects changes.
+ */
 export default function SmartPlannerScreen({ route, navigation }: Props) {
+  const { projects, loading } = useProjects();
+  const { t } = useI18n();
+  const projectId = route.params?.projectId;
+  const firstProjectId = projects[0]?.id;
+
+  useEffect(() => {
+    if (!projectId && firstProjectId) navigation.setParams({ projectId: firstProjectId });
+  }, [projectId, firstProjectId, navigation]);
+
+  const selectProject = useCallback((id: string) => {
+    navigation.setParams({ projectId: id });
+  }, [navigation]);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScreenHeader kind="root" title={t.nav.planner} />
+      {projectId ? (
+        <PlannerBody projectId={projectId} onSelectProject={selectProject} />
+      ) : loading || firstProjectId ? (
+        <View style={styles.noProject}>
+          <ActivityIndicator size="large" color={Colors.accent.purple} />
+        </View>
+      ) : (
+        <View style={styles.noProject}>
+          <Text style={styles.noProjectTitle}>{t.smartPlanner.title}</Text>
+          <Text style={styles.noProjectText}>{t.projects.createToUsePlanner}</Text>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+}
+
+function PlannerBody({ projectId, onSelectProject }: {
+  projectId: string;
+  onSelectProject: (projectId: string) => void;
+}) {
   const appNavigation = useNavigation<SmartPlannerNavigation>();
-  const { projectId } = route.params;
   const { projects } = useProjects();
   const { t, language } = useI18n();
 
@@ -160,8 +205,8 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
 
   const handleSelectProject = useCallback((newProjectId: string) => {
     setOpenChoice(null);
-    navigation.setParams({ projectId: newProjectId });
-  }, [navigation]);
+    onSelectProject(newProjectId);
+  }, [onSelectProject]);
 
   const handleSelectPeriod = useCallback((period: 'week' | 'month') => {
     setOpenChoice(null);
@@ -197,23 +242,6 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
       prefilledMemberIds: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
     });
   }, [appNavigation, projectId, selectedMemberIds]);
-
-  const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      <View style={styles.header}>
-        <IconButton
-          icon="arrow-back"
-          color={Colors.text.primary}
-          accessibilityLabel={t.common.back}
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        />
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.headerSubtitle}>{t.smartPlanner.title}</Text>
-        </View>
-      </View>
-    </View>
-  );
 
   // The project, the period and the people, one row of 44 pt: "Hamlet ▾ ·
   // Week ▾ · Participants: all (4) ▾", each opening its own choice. Three
@@ -350,8 +378,7 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {renderHeader()}
+    <>
       <DateRangePicker
         visible={showDateRangePicker}
         onClose={() => setShowDateRangePicker(false)}
@@ -403,6 +430,6 @@ export default function SmartPlannerScreen({ route, navigation }: Props) {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </>
   );
 }

@@ -309,3 +309,26 @@ describe('DP01 — member selection follows the project', () => {
     expect(screen.queryByText(/3 of 2/)).toBeNull();
   });
 });
+
+// T-032: the tab's first screen, a large title and no way back; opened from
+// the tab with no project, it is set to the first one in its params.
+describe('the Planner tab\'s root screen (T-032)', () => {
+  it('has the tab\'s large title and nothing to go back to', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    expect(screen.getByTestId('screen-header-root')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-header-root')).getByText(t.nav.planner)).toBeTruthy();
+    expect(screen.queryByTestId('header-back')).toBeNull();
+    expect(screen.queryByLabelText(t.common.back)).toBeNull();
+  });
+
+  it('opened from the tab, it takes the first project into its params', async () => {
+    const navigation = { setParams: jest.fn(), goBack: jest.fn() } as any;
+    const screen = render(
+      <SmartPlannerScreen route={{ key: 'planner', name: 'SmartPlanner' } as any} navigation={navigation} />,
+    );
+    await settle();
+    expect(navigation.setParams).toHaveBeenCalledWith({ projectId: 'A' });
+    expect(screen.getByTestId('screen-header-root')).toBeTruthy();
+  });
+});

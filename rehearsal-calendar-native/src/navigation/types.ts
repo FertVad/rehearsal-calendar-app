@@ -24,9 +24,10 @@ export type ProjectsStackParamList = {
   ProjectDetail: { projectId: string; section?: ProjectSection };
 };
 
+// The planner is the tab's one screen (T-032). Its project: the one the
+// calendar opened it on or picked in its row; none, the first project.
 export type PlannerStackParamList = {
-  PlannerMain: undefined;
-  SmartPlanner: { projectId: string };
+  SmartPlanner: { projectId?: string } | undefined;
 };
 
 export type ProfileStackParamList = {

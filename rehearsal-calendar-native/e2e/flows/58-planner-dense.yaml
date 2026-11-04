@@ -7,19 +7,52 @@
 # first recommendation began at y=435 of the 852 (479 in the audit, before the
 # participants were one row; audit/evidence/T-020).
 #
+# The planner is a tab's first screen, with the large title "Planner" the other
+# tabs have and the row right under it; it had a "←" back to the calendar and
+# a small grey "Smart Planner" over the row, as a screen pushed in from
+# somewhere (owner, 04.11; T-032). The calendar's "Smart Planner" opens the
+# same tab on its project, and with no "←" either.
+#
 # Olga Stage's Three Sisters, as in flow 07: tomorrow is free for all three,
 # one slot, "All day" from 09:00. Nothing is saved.
 appId: ${APP_ID}
 name: Planner list is dense
 tags:
   - planner
+  - calendar
   - participants
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
       EMAIL: ${STAGE_EMAIL}
+# From the calendar: the planner on one of her projects.
+- scrollUntilVisible:
+    element: ".*Smart Planner.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Smart Planner.*"
+      SEE: "Planner"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible:
+      id: planner-project
+      text: ".*(Three Sisters|The Bear).*"
+    timeout: 15000
+- assertVisible:
+    id: planner-filters
+    below: "Planner"
+- assertNotVisible: "Back"
+- takeScreenshot: 58-planner-from-calendar
 - tapOn: "Planner, tab.*"
+- assertVisible:
+    id: planner-filters
+    below: "Planner"
+- assertNotVisible: "Back"
 - tapOn:
     id: planner-project
 - tapOn: "Three Sisters"

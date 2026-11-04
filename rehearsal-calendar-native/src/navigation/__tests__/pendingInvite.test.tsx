@@ -97,7 +97,6 @@ jest.mock('../../features/profile/screens/CalendarSyncSettingsScreen', mockScree
 jest.mock('../../features/profile/screens/EditProfileScreen', mockScreen);
 jest.mock('../../features/profile/screens/ChangeEmailScreen', mockScreen);
 jest.mock('../../features/smart-planner/screens/SmartPlannerScreen', mockScreen);
-jest.mock('../../features/smart-planner/screens/SmartPlannerTabScreen', mockScreen);
 jest.mock('../../features/availability/screens/AvailabilityScreen', mockScreen);
 jest.mock('../../features/notifications/screens/NotificationsScreen', mockScreen);
 

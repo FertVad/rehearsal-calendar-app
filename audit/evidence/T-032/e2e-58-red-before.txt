@@ -1,0 +1,27 @@
+T-032: flow 58 (e2e/flows/58-planner-dense.yaml, as changed by T-032) on the
+old planner, base d670967 — the app code untouched, only the flow new.
+
+$ npm run e2e -- e2e/flows/58-planner-dense.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Planner list is dense (1m 48s) (Assertion is false: "Planner" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-11-04T23:07:35.289Z  tapped ".*Smart Planner.*" again: no "Planner" after the first tap
+
+The calendar's "Smart Planner" opened the planner on The Bear, under a "←"
+and a small grey "Smart Planner", with no "Planner" title: the step the flow
+failed on is before/failed-at-step-069-assertCondition-SEE.png (Maestro's
+own shot of it). The "again" tap is the subflow looking for the title that
+was not there, not a lost tap.

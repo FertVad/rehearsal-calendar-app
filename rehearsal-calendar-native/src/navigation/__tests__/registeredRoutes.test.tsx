@@ -66,7 +66,6 @@ jest.mock('../../features/profile/screens/CalendarSyncSettingsScreen', mockScree
 jest.mock('../../features/profile/screens/EditProfileScreen', mockScreen);
 jest.mock('../../features/profile/screens/ChangeEmailScreen', mockScreen);
 jest.mock('../../features/smart-planner/screens/SmartPlannerScreen', mockScreen);
-jest.mock('../../features/smart-planner/screens/SmartPlannerTabScreen', mockScreen);
 jest.mock('../../features/availability/screens/AvailabilityScreen', mockScreen);
 jest.mock('../../features/notifications/screens/NotificationsScreen', mockScreen);
 jest.mock('../../features/onboarding/screens', () => ({
@@ -100,7 +99,7 @@ const DECLARED = [
   { Calendar: true, Projects: true, Create: true, Planner: true, Profile: true } satisfies Record<keyof TabParamList, true>,
   { CalendarMain: true } satisfies Record<keyof CalendarStackParamList, true>,
   { ProjectsMain: true, ProjectDetail: true } satisfies Record<keyof ProjectsStackParamList, true>,
-  { PlannerMain: true, SmartPlanner: true } satisfies Record<keyof PlannerStackParamList, true>,
+  { SmartPlanner: true } satisfies Record<keyof PlannerStackParamList, true>,
   { ProfileMain: true, CalendarSyncSettings: true, EditProfile: true, ChangeEmail: true } satisfies Record<keyof ProfileStackParamList, true>,
 ].map((list) => Object.keys(list).sort().join(', '));
 
