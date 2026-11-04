@@ -29,6 +29,12 @@ JUnit and screenshots go to `e2e/out`.
   unchanged, listens for it, and answers `GET /code?to=<address>` on
   `127.0.0.1:3002` with the code in the latest message to that address; each
   message is also written to `e2e/out/mail`.
+- **A public page without its script.** The server's CSP says
+  `upgrade-insecure-requests`, which on https changes nothing; on the local
+  http server Safari fetched `/legal.js` from `https://127.0.0.1:3001`, and the
+  page had no language but English. `server-with-mailbox.mjs` takes only that
+  directive out of its answers, so a flow reads `/privacy` in Safari as people
+  do and switches its language by the page's buttons (flow 70, T-038).
 - **Ports 3001, 3002 or 8081 already taken.** A server or Metro already running is not
   reused: it could be pointed anywhere. What a dead e2e run left there is not
   that case — see below.

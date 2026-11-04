@@ -222,8 +222,21 @@ function holdAnswer(request, response, handle) {
   handle();
 }
 
+// The server's CSP says upgrade-insecure-requests: in production, on https, it
+// changes nothing; here, on plain http, Safari fetched legal.js and the styles
+// from https://127.0.0.1:3001, which is not there, so a public page had no
+// script — no language but English, its buttons dead (T-038, flow 70). Only
+// that directive is taken out of the answers this local server gives.
+function withoutUpgrade(response) {
+  const setHeader = response.setHeader.bind(response);
+  response.setHeader = (name, value) => setHeader(name, String(name).toLowerCase() === 'content-security-policy'
+    ? String(value).replace(/;?\s*upgrade-insecure-requests\b/, '')
+    : value);
+}
+
 // As app.listen would, with the hold in front.
 http.createServer((request, response) => {
+  withoutUpgrade(response);
   holdAnswer(request, response, () => app(request, response));
 }).listen(Number(process.env.PORT), process.env.HOST, () => {
   console.log('[e2e] server listening');
