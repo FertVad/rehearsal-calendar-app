@@ -94,9 +94,8 @@ it('nothing with white text on it is filled with #A855F7', () => {
   // `color` and writes its `textColor` on it, whatever the theme's
   // selected-day colours (T-031 review: the theme was changed, the days not).
   const markings = sources(SRC).flatMap((file) =>
-    [...readFileSync(file, 'utf8').matchAll(/\{[^{}]*\}/g)]
-      .filter(([body]) => /\bcolor: Colors\.accent\.purple,/.test(body)
-        && /\btextColor: ('white'|'#fff(fff)?'|Colors\.text\.inverse)/i.test(body))
-      .map(() => `${relative(SRC, file)} marking`));
+    [...readFileSync(file, 'utf8').matchAll(
+      /\bcolor: Colors\.accent\.purple,\s*\n\s*textColor: ('white'|'#fff(fff)?'|Colors\.text\.inverse)/gi,
+    )].map(() => `${relative(SRC, file)} marking`));
   expect([...found, ...gradients, ...markings]).toEqual([]);
 });

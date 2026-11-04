@@ -65,7 +65,7 @@ type Node = ReturnType<ReturnType<typeof render>['getByTestId']>;
 
 /** What a day is drawn with: the fills, the rings, its digit's colour. */
 function drawn(day: Node) {
-  const hosts = [day, ...day.findAll((node) => typeof node.type === 'string')];
+  const hosts = [day, ...day.findAll((node: Node) => typeof node.type === 'string')];
   const styles = hosts.map((node) => flatten(node.props.style));
   const text = hosts.find((node) => node.type === 'Text');
   return {
@@ -97,9 +97,9 @@ it('the rehearsal form\'s month: the day picked on purpleFill, today ringed', ()
 
 it("the month's arrows are purple, not the library's blue", () => {
   const view = render(<DayCalendar value="2026-11-05" onChange={jest.fn()} testID="cal" />);
-  const arrows = view.UNSAFE_root.findAll((node) => node.type === 'Image');
+  const arrows = view.UNSAFE_root.findAll((node: Node) => node.type === 'Image');
   expect(arrows.length).toBeGreaterThan(0);
-  arrows.forEach((arrow) => expect(flatten(arrow.props.style).tintColor).toBe(Colors.accent.purple));
+  arrows.forEach((arrow: Node) => expect(flatten(arrow.props.style).tintColor).toBe(Colors.accent.purple));
 });
 
 it('the period picker: both ends on purpleFill, today ringed', () => {
