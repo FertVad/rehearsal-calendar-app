@@ -98,8 +98,11 @@ PostgreSQL answers with ROLLBACK cannot be reported as success. Captured `tx`
 handles reject after the callback ends.
 
 The pool admits at most10 connections and100 queued acquisition requests.
-Acquisition, including opening a new connection, times out after10 seconds;
-timed-out queued work does not execute later. The number covers waking the
+Two deadlines bound acquisition. Waiting in the queue for a busy pool times
+out after 2 seconds; timed-out queued work does not execute later. Opening a
+new connection times out after 10 seconds. pg-pool has one option for both, so
+`database/db.js` gives a new connection its 10 s only while that connection is
+created and keeps 2 s for the queue. The 10 s covers waking the
 database: Neon suspends an idle compute ([scale to zero](https://neon.com/docs/introduction/scale-to-zero))
 and the next connection waits while it starts. Neon describes that start as
 usually a few hundred milliseconds, but its

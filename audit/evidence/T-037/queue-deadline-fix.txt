@@ -1,0 +1,30 @@
+T-037 follow-up: supervisor PG check failed on a64de44.
+
+Red (a64de44, supervisor run of npm run test:r0-postgres, R2_ADAPTER):
+{"check":"real max10/queue100/acquisition2s removes waiters with no late write","result":"FAIL","errorCode":"ERR_ASSERTION"}
+
+Cause: pg-pool uses one option, connectionTimeoutMillis, both for opening a new
+client and for the deadline of a request queued behind a full pool. Raising it
+to 10000 for Neon waking also made queued waiters wait 10 s instead of 2 s.
+
+Fix: database/db.js keeps connectionTimeoutMillis 2000 (queue deadline) and a
+RuntimePool subclass gives newClient() 10000 while the new client is created.
+
+Green (after, npm run test:r0-postgres):
+{"observation":"actual pg-pool saturation","maxClients":10,"rejectedWaiters":100,"queueAfter":0,"elapsedMs":2007}
+{"check":"real max10/queue100/acquisition2s removes waiters with no late write","result":"PASS"}
+{"scenario":"R2_ADAPTER","outcome":"PASS", ...all 14 contracts...}
+
+New-connection deadline still 10 s (stalled TCP endpoint that never answers the
+PostgreSQL handshake, initDatabase against it):
+{"code":"DATABASE_UNAVAILABLE","elapsedMs":10072,"connections":1}
+
+runtimeStartup.test.js now also asserts the stalled handshake lasts >= 9 s, so
+cutting new connections back to the 2 s queue deadline turns it red.
+
+Local limit: R2_STARTUP (PG) and jest __tests__/startup/runtimeStartup.test.js
+fail in this sandbox on HEAD as well, before and after the fix: the copied
+fixture writes and reads its own .env, and .env reads are denied by the OS
+here ("import-failed"). They are left to the supervisor run.
+Server jest: 74 suites passed; only runtimeStartup.test.js failed (same 8 on HEAD).
+runtimeRetry.test.js: 4/4 passed.

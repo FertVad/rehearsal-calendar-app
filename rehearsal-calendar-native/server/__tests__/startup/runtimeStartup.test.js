@@ -111,7 +111,10 @@ test('an owned stalled PostgreSQL handshake is bounded and not retried by reques
   const response = await fixture.request('/api/ready', { timeoutMs: 14000 });
   expect(response.status).toBe(503);
   expect(response.body).toEqual({ status: 'unavailable' });
-  expect(Date.now() - started).toBeLessThan(13000);
+  const elapsed = Date.now() - started;
+  // Not cut at the 2 s queued-acquisition deadline: a waking Neon gets 10 s.
+  expect(elapsed).toBeGreaterThanOrEqual(9000);
+  expect(elapsed).toBeLessThan(13000);
   expect(endpoint.connections).toBe(1);
   await publicPages(fixture);
   expect((await fixture.request('/api/ready')).status).toBe(503);

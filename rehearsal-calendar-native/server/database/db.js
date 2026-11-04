@@ -4,12 +4,29 @@ import pkg from 'pg';
 const { Pool } = pkg;
 const poolPolicy = Object.freeze({
   max: 10,
-  // Covers a Neon compute waking from scale-to-zero, which can take seconds;
-  // 2 s failed the first attempt after idle (T-037). docs/server-runtime.md.
-  connectionTimeoutMillis: 10000,
+  // Queued acquisition deadline: a waiter for a busy pool leaves after 2 s.
+  connectionTimeoutMillis: 2000,
   idleTimeoutMillis: 10000,
 });
+// Opening a new connection covers a Neon compute waking from scale to zero,
+// which can take seconds; 2 s failed the first attempt after idle (T-037).
+// docs/server-runtime.md.
+const connectTimeoutMs = 10000;
 const maximumQueuedAcquisitions = 100;
+
+// pg-pool reads one option, connectionTimeoutMillis, both for the queued
+// acquisition deadline (in connect()) and for opening a client (in newClient(),
+// which also hands the option to pg.Client). Both reads in newClient() are
+// synchronous, so the connect deadline applies to exactly that new client and
+// the queue keeps its own 2 s.
+class RuntimePool extends Pool {
+  newClient(pendingItem) {
+    const queueDeadline = this.options.connectionTimeoutMillis;
+    this.options.connectionTimeoutMillis = connectTimeoutMs;
+    try { return super.newClient(pendingItem); }
+    finally { this.options.connectionTimeoutMillis = queueDeadline; }
+  }
+}
 const probeTimeoutMs = 2000;
 
 let db;
@@ -51,7 +68,7 @@ function connectionString(options) {
 }
 
 function createRuntime(url) {
-  const pool = new Pool({ connectionString: url, ...poolPolicy });
+  const pool = new RuntimePool({ connectionString: url, ...poolPolicy });
   // pg-pool removes a failed idle client before emitting this event. Observe it
   // without logging driver messages/credentials or crashing the whole app.
   pool.on('error', () => {});
