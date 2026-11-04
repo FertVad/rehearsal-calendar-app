@@ -1,0 +1,43 @@
+T-031 review — Jest on the old colours (red)
+
+Source of the app at 3d14e6f (the commit reviewed) for profileCalendar.tsx,
+DayCalendar.tsx, DateRangePicker.tsx, CalendarMonth.tsx and
+RehearsalDetailsScreen.tsx; tests as in the fix:
+
+$ npx jest --selectProjects frontend --testPathPatterns 'calendarDayColours|purpleFill|RehearsalDetailsScreen'
+(console noise left out)
+
+FAIL frontend src/shared/constants/__tests__/purpleFill.test.tsx
+  ● nothing with white text on it is filled with #A855F7
+    - Expected  - 1
+    + Received  + 7
+    - Array []
+    + Array [
+    +   "features/availability/components/calendar/CalendarMonth.tsx dayCellSelected",
+    +   "shared/components/DateRangePicker.tsx marking",
+    +   "shared/components/DateRangePicker.tsx marking",
+    +   "shared/components/DateRangePicker.tsx marking",
+    +   "shared/components/DayCalendar.tsx marking",
+    + ]
+
+FAIL frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx
+  ● draws the project's name and folder in the secondary text's colour
+    Expected: "#8b949e"
+    Received: "#e6edf3"
+
+FAIL frontend src/shared/components/__tests__/calendarDayColours.test.tsx
+  ● the rehearsal form's month: the day picked on purpleFill, today ringed
+    expect(received).toContain(expected) // indexOf
+    Expected value: "#9333EA"
+    Received array: ["#A855F7"]
+  ● the month's arrows are purple, not the library's blue
+    Expected: "#A855F7"
+    Received: "#00BBF2"
+  ● the period picker: both ends on purpleFill, today ringed
+    Expected value: "#9333EA"
+    Received array: ["#A855F7", "#A855F7"]
+  ● the availability month: the days picked on purpleFill, today ringed
+    Expected value: "#9333EA"
+    Received array: ["#A855F7", "#A855F7"]
+
+Tests:       6 failed, 17 passed, 23 total

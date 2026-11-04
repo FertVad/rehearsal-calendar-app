@@ -1,0 +1,39 @@
+T-031 review — flow 71 with the month calendars
+
+$ npm run e2e -- e2e/flows/71-no-blue.yaml
+
+RED: the app's source at 3d14e6f (profileCalendar.tsx, DayCalendar.tsx,
+DateRangePicker.tsx, CalendarMonth.tsx, RehearsalDetailsScreen.tsx restored
+from it), the flow as in the fix. Run 2026-11-05_003504:
+
+  71-calendar: nothing in #3b82f6 there
+  71-rehearsal-details: nothing in #3b82f6 there
+  71-project: nothing in #3b82f6 there
+  71-manage-member: nothing in #3b82f6 there
+  71-profile: nothing in #3b82f6 there
+  nothing in #9333ea on 71-form-month there          <- the day picked was #A855F7
+  [Failed] Nothing is blue, purple is doing and choosing (2m 5s)
+
+  The flow stops at its first failure; the checks after it, measured on the
+  same screenshot (review-before/71-form-month.png) with probe-purple.mjs:
+    #a855f7 (tolerance 4), 0.5-0.87:  x from 193 to 264 pt -> 72 pt wide,
+      today's purple digit and the purple fill beside it; the check allows 46
+    #00bbf2 (tolerance 30), 0.44-0.87: 80 points, x 46 to 346 -> the arrows
+
+GREEN: the fix (3ad6cba). Run 2026-11-05_002636:
+
+  71-calendar: nothing in #3b82f6 there
+  71-rehearsal-details: nothing in #3b82f6 there
+  71-project: nothing in #3b82f6 there
+  71-manage-member: nothing in #3b82f6 there
+  71-profile: nothing in #3b82f6 there
+  71-form-month: #9333ea drawn 38 x 34 pt             <- tomorrow's fill
+  71-form-month: #a855f7 drawn 38 x 34 pt             <- today's ring, alone
+  71-form-month: nothing in #00bbf2 there             <- the arrows
+  71-availability-month: #9333ea drawn 47 x 47 pt     <- tomorrow's fill
+  71-availability-month: #a855f7 drawn 47 x 47 pt     <- today's ring, alone
+  71-onboarding-welcome: nothing in #3b82f6 there
+  [Passed] Nothing is blue, purple is doing and choosing (3m 29s)
+
+Screens: review-before/ (old: no availability month, the flow stopped
+before it) and review-after/.
