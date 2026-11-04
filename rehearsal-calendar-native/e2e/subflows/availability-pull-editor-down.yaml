@@ -1,0 +1,16 @@
+# The availability editor, up with one day picked, pulled down by its header
+# to the bottom of the screen, as a finger throws a sheet away (67-69).
+#
+# A swipe from the element (`from: id`) was too short for iOS: the screen's
+# own sheet, given it before T-030, sprang back instead of closing, and the
+# flow could not tell the fix from nothing. This one, from the header's row
+# (its "Deselect" is at 64% on the iPhone 16) to the bottom edge, closes the
+# screen's sheet when it is the one taking it.
+appId: ${APP_ID}
+---
+- assertVisible:
+    id: availability-deselect
+- swipe:
+    start: "50%, 64%"
+    end: "50%, 98%"
+    duration: 120

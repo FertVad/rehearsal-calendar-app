@@ -1,0 +1,58 @@
+# The availability editor pulled down by its handle with the day changed asks
+# as its arrow does, and "Save" saves and collapses it: the screen stays
+# (T-030; owner, 04.11.2026). The swipe had closed the whole screen, and
+# "Save" there saved and left for the tab under it.
+#
+# Mariya is busy all day on MARK_DAY, in no project; she saves it free.
+appId: ${APP_ID}
+name: Availability editor pulled down with a change asks, Save keeps the screen
+tags:
+  - availability
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MARIYA_EMAIL}
+- runFlow: ../subflows/availability-pick-mark-day.yaml
+- tapOn:
+    id: mode-free
+- runFlow: ../subflows/availability-pull-editor-down.yaml
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+- takeScreenshot: 68-pulled-down-asks
+# With the popover up the screen behind is out of reach: this "Save" is its.
+- tapOn: "Save"
+- extendedWaitUntil:
+    visible:
+      id: toast
+      text: "Saved"
+    timeout: 15000
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 10000
+- assertVisible:
+    id: availability-legend
+- assertVisible:
+    id: day-${MARK_DAY}
+    text: ".*, Free"
+- takeScreenshot: 68-saved-screen-stays
+# Saved on the server: closed without asking, opened again, the day is free.
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: availability-legend
+    timeout: 10000
+- assertNotVisible: "Don't Save"
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${MARK_DAY}
+      text: ".*, Free"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000

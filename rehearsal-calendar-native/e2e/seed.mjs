@@ -180,6 +180,10 @@ export const PEOPLE = {
   // Busy all day on MARK_DAY, changes it and collapses the editor (64). In no
   // project, so nothing another flow books lands on her days.
   yelena: { email: 'yelena@e2e.test', firstName: 'Yelena', lastName: 'Serebryakova', onboarded: true },
+  // The same day, busy all day, and the editor pulled down by its handle:
+  // she saves it free (68); he changes nothing (67), or nothing he keeps (69).
+  mariya: { email: 'mariya@e2e.test', firstName: 'Mariya', lastName: 'Voynitskaya', onboarded: true },
+  astrov: { email: 'astrov@e2e.test', firstName: 'Mikhail', lastName: 'Astrov', onboarded: true },
   // Reads the dates in Russian (65): the calendar's month, a rehearsal three
   // days on in the upcoming ones, the availability's next month, the
   // planner's tomorrow. Admin of a project of her own, Gaev in it.
@@ -669,11 +673,14 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual', NULL),
             ($1, $4::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-early-train')`,
     [ids.shamrayev, localInstant(5, 23), localInstant(6, 1), localInstant(6, 0)]);
-  // Yelena's (64): MARK_DAY busy all day, as a save of that day writes it.
-  await client.query(
-    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
-     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'manual')`,
-    [ids.yelena, `${days.mark}T00:00:00.000Z`, `${days.mark}T23:59:59.999Z`]);
+  // Yelena's (64), Mariya's and Astrov's (67-69): MARK_DAY busy all day, as a
+  // save of that day writes it.
+  for (const key of ['yelena', 'mariya', 'astrov']) {
+    await client.query(
+      `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+       VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'manual')`,
+      [ids[key], `${days.mark}T00:00:00.000Z`, `${days.mark}T23:59:59.999Z`]);
+  }
 
   // Inboxes written as the server records a notification, a minute apart and
   // to the millisecond as it writes them: sign-ins are spent, and sixty

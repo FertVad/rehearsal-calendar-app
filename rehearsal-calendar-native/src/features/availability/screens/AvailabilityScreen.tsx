@@ -31,6 +31,8 @@ import {
   useAvailabilitySync,
   useAvailabilityEditor,
 } from '../hooks';
+import { useSheetDrag } from '../hooks/useSheetDrag';
+import { GestureDetector } from 'react-native-gesture-handler';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useAutoCalendarSync } from '../../../shared/hooks/useAutoCalendarSync';
 import { useLeaveGuard } from '../../../shared/hooks/useLeaveGuard';
@@ -165,6 +167,10 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     },
   });
   const saving = guard.saving;
+
+  // The editor pulled down by its handle or header goes the way of its arrow,
+  // never the screen's (T-030).
+  const drag = useSheetDrag(editor.collapse);
 
   // Pull-to-refresh: sync calendar + reload availability
   const onRefresh = async () => {
@@ -314,25 +320,32 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
           {
             transform: [
               {
-                translateY: editor.panelAnimation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [PANEL_HEIGHT, 0],
-                }),
+                translateY: Animated.add(
+                  editor.panelAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [PANEL_HEIGHT, 0],
+                  }),
+                  drag.offset,
+                ),
               },
             ],
           },
         ]}
         pointerEvents={editor.panelOpen ? 'auto' : 'none'}
       >
-        {/* Handle */}
-        <View style={styles.bottomSheetHandle} />
+        {/* The handle and the header are what a finger takes the sheet down
+            by (useSheetDrag). */}
+        <GestureDetector gesture={drag.gesture}>
+          <View>
+            <View style={styles.bottomSheetHandle} />
 
-        {/* Header */}
-        <EditorHeader
-          selectedCount={editor.selectedDates.length}
-          selectedDate={editor.selectedDate}
-          onClear={editor.collapse}
-        />
+            <EditorHeader
+              selectedCount={editor.selectedDates.length}
+              selectedDate={editor.selectedDate}
+              onClear={editor.collapse}
+            />
+          </View>
+        </GestureDetector>
 
         <ScrollView style={styles.bottomSheetContent} showsVerticalScrollIndicator={false}>
           {/* Warning for past dates */}

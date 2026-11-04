@@ -1,0 +1,33 @@
+# "Mark Busy" opened from the tab bar's "+", MARK_DAY picked: the editor up
+# with the day busy all day, as the seed has it for whoever signs in (67-69).
+appId: ${APP_ID}
+---
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+# The days are read before the list is scrolled: a scroll that began before
+# they came looked for "Busy" on a day still blank and went on to May (T-030,
+# a green run). MARK_DAY is three days on, in the week the list opens on.
+- extendedWaitUntil:
+    visible:
+      id: day-${MARK_DAY}
+      text: ".*, Busy"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: day-${MARK_DAY}
+      text: ".*, Busy"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: day-in-reach.yaml
+    env:
+      DAY: ${MARK_DAY}
+- tapOn:
+    id: day-${MARK_DAY}
+- extendedWaitUntil:
+    visible:
+      id: mode-busy
+      selected: true
+    timeout: 10000

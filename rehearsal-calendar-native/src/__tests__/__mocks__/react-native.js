@@ -272,6 +272,8 @@ module.exports = {
       start: (done) => { value.value = toValue; if (done) done({ finished: true }); },
     })),
     spring: jest.fn(),
+    // The editor of "Busy" slides by its own animation and a finger's drag.
+    add: (a) => a,
     View: View,
     Text: Text,
     // The month list of "Busy" (AvailabilityScreen).
