@@ -1,0 +1,5 @@
+$ cd rehearsal-calendar-native && npx jest --selectProjects frontend --silent   (on the fix, 0e8cd3e's tree)
+Test Suites: 128 passed, 128 total
+Tests:       1195 passed, 1195 total
+
+$ npm run type-check   -> exit 0

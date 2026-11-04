@@ -1,0 +1,48 @@
+T-031 — flow e2e/flows/71-no-blue.yaml, red before and green after.
+
+RED — on 0e8cd3e with the fix's files put back as at b2beb41
+(git restore --source=b2beb41 -- <the ten src files>), seed and flow as committed:
+
+$ npm run e2e -- e2e/flows/71-no-blue.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Failed] Nothing is blue, purple is doing and choosing (1m 25s)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+maestro.log (artifacts 2026-11-04_231956):
+23:22:10.442 [ERROR] maestro.orchestra.Orchestra.executeCommands: [Command execution]
+CommandFailed: Error: 71-calendar: #3b82f6 drawn 185 x 378.6666666666667 pt there
+(today's ring in the strip, "Athens Wood" and its folder, the eye seen: before/71-calendar.png)
+
+The other five screens of the old code were shot by a copy of flow 71 with
+its no-ink checks taken out (run 2026-11-04_232547, passed; the copy deleted
+after): before/*.png. Blue there: the details' date and project icons, the
+eye and the count's eye; "Admin" on the project's page; the make-admin icon;
+the notifications and timezone icons of the profile; the people icon of
+onboarding's welcome.
+
+Then git restore --source=HEAD -- src.
+
+GREEN — on 0e8cd3e:
+
+$ npm run e2e -- e2e/flows/71-no-blue.yaml
+[Passed] Nothing is blue, purple is doing and choosing (2m 28s)
+1/1 Flow Passed in 2m 29s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screens: after/*.png (run 2026-11-04_233225). Copied by copy-shots.mjs.
+
+Contrast (WCAG, computed from the palette):
+- white on purpleFill #9333EA (the day picked, strip and month): 5.38:1 (was #A855F7, 3.96:1)
+- purpleFill on white (the picked day's count): 5.38:1
+- purple #A855F7 "Admin" on a member card (glass over #0d1117): 4.50:1, as "Owner" already was
+- text.secondary #8B949E (project name) on #161b22: 5.62:1
+- today's digit stays text.primary; the ring is purple, a non-text mark (3:1 suffices);
+  purple digits on the cell #161b22 would be 4.37:1, under 4.5, so the ring alone.
