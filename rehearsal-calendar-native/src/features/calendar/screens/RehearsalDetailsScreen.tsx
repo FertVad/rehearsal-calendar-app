@@ -213,7 +213,7 @@ export default function RehearsalDetailsScreen() {
           <Ionicons
             name={seen ? 'eye' : 'eye-off-outline'}
             size={20}
-            color={seen ? Colors.accent.blue : Colors.text.tertiary}
+            color={seen ? Colors.accent.purple : Colors.text.secondary}
           />
         )}
       </View>
@@ -317,7 +317,7 @@ export default function RehearsalDetailsScreen() {
                 opens no map (owner, 30.10). */}
             {/* Date */}
             <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={20} color={Colors.accent.blue} />
+              <Ionicons name="calendar-outline" size={20} color={Colors.text.secondary} />
               <Text style={styles.detailText}>{formattedDate}</Text>
             </View>
 
@@ -332,7 +332,7 @@ export default function RehearsalDetailsScreen() {
             {/* Project */}
             {project && (
               <View style={styles.detailRow}>
-                <Ionicons name="folder-outline" size={20} color={Colors.accent.blue} />
+                <Ionicons name="folder-outline" size={20} color={Colors.text.secondary} />
                 <Text style={styles.detailText}>{project.name}</Text>
               </View>
             )}
@@ -355,7 +355,7 @@ export default function RehearsalDetailsScreen() {
               </Text>
               {isAdmin && stats && (
                 <View style={styles.statBadge}>
-                  <Ionicons name="eye" size={16} color={Colors.accent.blue} />
+                  <Ionicons name="eye" size={16} color={Colors.accent.purple} />
                   <Text style={styles.statText} testID="rehearsal-details-seen-count">
                     {stats.confirmed}/{stats.invited}
                   </Text>

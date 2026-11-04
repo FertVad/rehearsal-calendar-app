@@ -199,7 +199,6 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
 
           <Text style={[
             styles.dayOfMonth,
-            isToday && styles.textToday,
             isSelected && styles.textSelected,
           ]}>
             {Number(item.date.slice(8))}
@@ -369,12 +368,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Today is ringed, the day picked is filled: both purple, told apart by
+  // the fill (T-031). The ring alone, not the digit: purple on this cell is
+  // 4.37:1, under the 4.5:1 text needs.
   dayToday: {
     borderWidth: 2,
-    borderColor: Colors.accent.blue,
+    borderColor: Colors.accent.purple,
   },
+  // Under white text: purpleFill (T-027).
   daySelected: {
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
   },
   dayOfWeek: {
     fontSize: FontSize.xs,
@@ -385,9 +388,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,
-  },
-  textToday: {
-    color: Colors.accent.blue,
   },
   textSelected: {
     color: Colors.text.inverse,
@@ -416,6 +416,6 @@ const styles = StyleSheet.create({
     color: Colors.text.inverse,
   },
   badgeTextSelected: {
-    color: Colors.accent.purple,
+    color: Colors.accent.purpleFill,
   },
 });

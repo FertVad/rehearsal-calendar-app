@@ -224,9 +224,11 @@ export const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 2,
   },
+  // The project is said, not coloured: purple is for doing and choosing
+  // (T-031). Its own colour is a dot of its own (T-036).
   upcomingProject: {
     fontSize: FontSize.sm,
-    color: Colors.accent.blue,
+    color: Colors.text.secondary,
     flex: 1,
   },
   upcomingLocationRow: {

@@ -188,6 +188,10 @@ export const PEOPLE = {
   // days on in the upcoming ones, the availability's next month, the
   // planner's tomorrow. Admin of a project of her own, Gaev in it.
   marina: { email: 'marina@e2e.test', firstName: 'Marina', lastName: 'Nanny', onboarded: true, locale: 'ru' },
+  // Looks for blue across the calendar, a rehearsal, her project and profile
+  // (71): an admin of Athens Wood, Gaev its owner, and on its one rehearsal.
+  // Her avatar is green: avatars keep their colours, blue among them.
+  titania: { email: 'titania@e2e.test', firstName: 'Titania', lastName: 'Queen', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -491,6 +495,8 @@ export async function seed({ client, apiUrl, timezone }) {
   await joined('Leonato Orchard', 'The arbour', 'leonato', 'admin');
   // Marina its admin (65).
   const nurseryId = await joined('Nursery Tea', 'The samovar', 'marina', 'admin');
+  // Titania its admin (71).
+  const woodId = await joined('Athens Wood', 'The fairy bower', 'titania', 'admin');
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -562,6 +568,8 @@ export async function seed({ client, apiUrl, timezone }) {
     planting: await rehearsal(dachaId, 'Tree planting', farDayThisMonth(), 12, 13, ['gaev', 'telegin'], 'gaev'),
     // Three days on: in her upcoming ones, named by its date (65).
     samovar: await rehearsal(nurseryId, 'Samovar', 3, 12, 13, ['gaev', 'marina'], 'gaev'),
+    // Tomorrow, in her upcoming ones; she marks it seen (71).
+    moonlit: await rehearsal(woodId, 'Moonlit dance', 1, 12, 13, ['gaev', 'titania'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),

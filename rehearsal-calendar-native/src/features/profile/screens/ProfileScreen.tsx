@@ -296,8 +296,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           {/* Notifications */}
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                <Ionicons name="notifications" size={20} color={Colors.accent.blue} />
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
+                <Ionicons name="notifications" size={20} color={Colors.accent.purple} />
               </View>
               <Text style={styles.settingLabel}>{t.profile.notifications}</Text>
             </View>
@@ -348,8 +348,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           {/* Timezone */}
           <TouchableOpacity testID="profile-timezone" style={styles.settingItem} onPress={() => { hapticLight(); setTimezoneModalVisible(true); }}>
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                <Ionicons name="globe" size={20} color={Colors.accent.blue} />
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
+                <Ionicons name="globe" size={20} color={Colors.accent.purple} />
               </View>
               <Text style={styles.settingLabel}>{t.profile.timezone}</Text>
             </View>

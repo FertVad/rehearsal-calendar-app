@@ -436,7 +436,8 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'owner': return Colors.accent.purple;
-      case 'admin': return Colors.accent.blue;
+      // As the admin badge in the header and on the cards (T-031).
+      case 'admin': return Colors.accent.purple;
       default: return Colors.text.tertiary;
     }
   };
@@ -680,7 +681,7 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
                 <Ionicons
                   name={selectedMember?.role === 'admin' ? 'remove-circle-outline' : 'shield-checkmark-outline'}
                   size={24}
-                  color={Colors.accent.blue}
+                  color={Colors.accent.purple}
                 />
                 <Text style={styles.modalActionText}>
                   {selectedMember?.role === 'admin' ? t.projects.removeAdmin : t.projects.makeAdmin}

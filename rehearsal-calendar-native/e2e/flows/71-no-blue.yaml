@@ -1,0 +1,211 @@
+# One colour for doing and choosing: purple (T-031, owner 04.11 after the
+# audit of 29.10, s03-6). Blue #3B82F6 stood beside it with no meaning of its
+# own: today's ring in the day strip, a rehearsal's project and its folder,
+# the eye of a rehearsal seen, the details' date and project icons, an
+# admin's role on a project's page and the make-admin icon, the notifications
+# and timezone icons of the profile, the people icon of onboarding's welcome.
+# Now today is ringed in purple and the day picked filled with #9333EA; the
+# eye seen is purple, unseen grey; the project is grey text; the icons sit on
+# purple.
+#
+# Each of those screens is looked over whole: nothing on it within a few
+# shades of #3B82F6. Avatars keep their colours, blue among them, so the two
+# signed in here have avatars of other colours — Titania's green, Perdita's
+# violet. Titania is the admin of Athens Wood, Gaev its owner, and on its one
+# rehearsal, tomorrow; she marks it seen. Perdita is new and only looks at
+# the welcome step, which flow 32 goes on from.
+appId: ${APP_ID}
+name: Nothing is blue, purple is doing and choosing
+tags:
+  - calendar
+  - rehearsals
+  - seen
+  - projects
+  - profile
+  - onboarding
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${TITANIA_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Moonlit dance.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      below: ".*Moonlit dance.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    id: seen-toggle
+    below: ".*Moonlit dance.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      below: ".*Moonlit dance.*"
+      selected: true
+    timeout: 10000
+# The strip with today in it, ringed and picked, and the card: its project,
+# the eye seen.
+- scrollUntilVisible:
+    element:
+      id: calendar-strip
+    direction: UP
+- waitForAnimationToEnd
+- assertVisible: ".*Moonlit dance.*"
+- takeScreenshot: 71-calendar
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-calendar
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+
+# The details: date and project, her own eye, the count an admin sees.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Moonlit dance.*"
+      SEE: "Participants"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-seen-count
+    timeout: 10000
+- assertVisible:
+    id: own-seen-toggle
+    selected: true
+- waitForAnimationToEnd
+- takeScreenshot: 71-rehearsal-details
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-rehearsal-details
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Close"
+      GONE: "Participants"
+      WAIT_MS: "10000"
+
+# The project's page: Gaev the owner, Titania the admin.
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Athens Wood.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Athens Wood.*"
+      SEE: ".*Upcoming Rehearsals.*"
+      WAIT_MS: "15000"
+- scrollUntilVisible:
+    element: ".*Titania Queen.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- assertVisible: ".*Leonid Gaev.*"
+- takeScreenshot: 71-project
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-project
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+# Her own row, managed: the make-admin icon. Cancelled, nothing changes.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Titania Queen.*"
+      SEE: "Manage Member"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 71-manage-member
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-manage-member
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Cancel"
+      GONE: "Manage Member"
+      WAIT_MS: "10000"
+
+# The profile's settings: notifications and timezone among them.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: profile-timezone
+- assertVisible:
+    id: profile-notifications
+- waitForAnimationToEnd
+- takeScreenshot: 71-profile
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-profile
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+
+# Onboarding's welcome, for someone new.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${PERDITA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 71-onboarding-welcome
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-onboarding-welcome
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"

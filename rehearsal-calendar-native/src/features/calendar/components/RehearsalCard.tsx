@@ -105,7 +105,7 @@ export default function RehearsalCard({
 
               {projectName && (
                 <View style={styles.upcomingProjectRow}>
-                  <Ionicons name="folder-outline" size={14} color={Colors.accent.blue} />
+                  <Ionicons name="folder-outline" size={14} color={Colors.text.secondary} />
                   <Text style={styles.upcomingProject} numberOfLines={1}>
                     {projectName}
                   </Text>
@@ -139,7 +139,7 @@ export default function RehearsalCard({
         <IconButton
           testID="seen-toggle"
           icon={currentResponse === 'yes' ? 'eye' : 'eye-off-outline'}
-          color={currentResponse === 'yes' ? Colors.accent.blue : Colors.text.secondary}
+          color={currentResponse === 'yes' ? Colors.accent.purple : Colors.text.secondary}
           accessibilityLabel={t.rehearsals.markSeen}
           accessibilityState={{ selected: currentResponse === 'yes', disabled: responding }}
           accessibilityValue={seenLabel ? { text: seenLabel } : undefined}

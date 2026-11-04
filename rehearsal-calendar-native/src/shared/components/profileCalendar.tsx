@@ -118,7 +118,8 @@ export const calendarTheme = {
   backgroundColor: Colors.bg.secondary,
   calendarBackground: Colors.bg.secondary,
   textSectionTitleColor: Colors.text.secondary,
-  selectedDayBackgroundColor: Colors.accent.purple,
+  // Under white text: purpleFill, as the day strip's (T-027, T-031).
+  selectedDayBackgroundColor: Colors.accent.purpleFill,
   selectedDayTextColor: '#ffffff',
   todayTextColor: Colors.accent.purple,
   dayTextColor: Colors.text.primary,
