@@ -16,7 +16,8 @@ Green (after, npm run test:r0-postgres):
 {"scenario":"R2_ADAPTER","outcome":"PASS", ...all 14 contracts...}
 
 New-connection deadline still 10 s (stalled TCP endpoint that never answers the
-PostgreSQL handshake, initDatabase against it):
+PostgreSQL handshake, initDatabase against it; script stall-handshake.mjs here,
+run as: node audit/evidence/T-037/stall-handshake.mjs <absolute path to server/database/db.js>):
 {"code":"DATABASE_UNAVAILABLE","elapsedMs":10072,"connections":1}
 
 runtimeStartup.test.js now also asserts the stalled handshake lasts >= 9 s, so
