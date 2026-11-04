@@ -14,6 +14,7 @@ import { rehearsalsAPI } from '../../../../shared/services/api';
 import { SeenProvider, useSeen } from '../../../../contexts/SeenContext';
 import { emitDataChanged } from '../../../../shared/utils/dataChanged';
 import { translations } from '../../../../i18n/translations';
+import { Colors } from '../../../../shared/constants/colors';
 import RehearsalDetailsScreen from '../RehearsalDetailsScreen';
 
 const mockNavigate = jest.fn();
@@ -300,4 +301,16 @@ describe('Rehearsal details: Edit and Delete (T-016)', () => {
     expect(screen.queryByTestId('rehearsal-details-edit')).toBeNull();
     expect(screen.queryByTestId('rehearsal-details-delete')).toBeNull();
   });
+});
+
+// Purple is doing and choosing; the project is neither, so its name and its
+// folder are the secondary text's colour (T-031, review: the folder was).
+it("draws the project's name and folder in the secondary text's colour", async () => {
+  answer('no');
+  const screen = await open();
+  const flatten = (style: unknown): Record<string, unknown> =>
+    Array.isArray(style) ? Object.assign({}, ...style.map(flatten)) : (style as Record<string, unknown>) ?? {};
+
+  expect(flatten(screen.getByText('Hamlet').props.style).color).toBe(Colors.text.secondary);
+  expect(flatten(screen.getByTestId('icon-Ionicons-folder-outline').props.style).color).toBe(Colors.text.secondary);
 });

@@ -333,7 +333,9 @@ export default function RehearsalDetailsScreen() {
             {project && (
               <View style={styles.detailRow}>
                 <Ionicons name="folder-outline" size={20} color={Colors.text.secondary} />
-                <Text style={styles.detailText}>{project.name}</Text>
+                <Text style={[styles.detailText, styles.projectText]} testID="rehearsal-details-project">
+                  {project.name}
+                </Text>
               </View>
             )}
 
@@ -448,6 +450,10 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     color: Colors.text.primary,
     flex: 1,
+  },
+  // The project, its name as its folder, is not coloured (T-031).
+  projectText: {
+    color: Colors.text.secondary,
   },
   divider: {
     height: 1,

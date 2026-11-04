@@ -5,7 +5,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { formatDateToString, parseDateString } from '../utils/time';
 import { useToday } from '../hooks/useClock';
 import { useWeekStart } from '../../hooks/useWeekStart';
-import { calendarTheme, monthTitle, profileDay, withToday } from './profileCalendar';
+import { calendarTheme, monthTitle, pickedDay, profileDay, withToday } from './profileCalendar';
 
 interface DayCalendarProps {
   /** The chosen day, 'YYYY-MM-DD'. */
@@ -73,8 +73,7 @@ export function DayCalendar({
       ...marked[value],
       startingDay: true,
       endingDay: true,
-      color: Colors.accent.purple,
-      textColor: 'white',
+      ...pickedDay,
       ...(marked[value]?.marked ? { dotColor: 'white' } : {}),
     };
     return withToday(marked, today, phoneToday, undefined);

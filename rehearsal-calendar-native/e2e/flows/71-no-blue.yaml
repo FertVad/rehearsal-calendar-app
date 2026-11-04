@@ -14,6 +14,12 @@
 # violet. Titania is the admin of Athens Wood, Gaev its owner, and on its one
 # rehearsal, tomorrow; she marks it seen. Perdita is new and only looks at
 # the welcome step, which flow 32 goes on from.
+#
+# The month calendars too (T-031 review): the rehearsal form's and the
+# availability editor's. Tomorrow picked is filled with #9333EA under its
+# white digit, not #A855F7 (3.96:1); today is a purple ring around a digit
+# of the text's colour, not a purple digit (4.37:1); the form's arrows are
+# purple, not the library's blue.
 appId: ${APP_ID}
 name: Nothing is blue, purple is doing and choosing
 tags:
@@ -186,6 +192,150 @@ tags:
       RIGHT: "1"
       TOP: "0"
       BOTTOM: "1"
+
+# The rehearsal form's month (T-031 review): the day picked, tomorrow, is
+# filled with #9333EA, not #A855F7, under its white digit; today is ringed.
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- tapOn:
+    id: rehearsal-date
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-date-calendar
+    timeout: 5000
+- runFlow:
+    when:
+      visible:
+        id: rehearsal-date-calendar.day_${TOMORROW_DAY}
+    commands:
+      - tapOn:
+          id: rehearsal-date-calendar.day_${TOMORROW_DAY}
+- waitForAnimationToEnd
+- takeScreenshot: 71-form-month
+# The month, under the date field and above the bottom button: the day
+# picked is a fill of #9333EA, a day wide; the only #A855F7 in its days is
+# today's ring, a day wide (the old purple digit beside the purple fill was
+# two); the arrows are not the library's blue #00BBF2.
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-form-month
+      COLOUR: "#9333ea"
+      TOLERANCE: "12"
+      MIN_WIDTH: "30"
+      MIN_HEIGHT: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.5"
+      BOTTOM: "0.87"
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-form-month
+      COLOUR: "#a855f7"
+      # Narrow: the white digit's edge on the #9333EA fill blends through
+      # colours within 12 of #A855F7.
+      TOLERANCE: "4"
+      MIN_WIDTH: "30"
+      MAX_WIDTH: "46"
+      MAX_HEIGHT: "46"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.5"
+      BOTTOM: "0.87"
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-form-month
+      COLOUR: "#00bbf2"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.44"
+      BOTTOM: "0.87"
+- tapOn:
+    id: header-cancel
+- runFlow:
+    when:
+      visible: "Don't Save"
+    commands:
+      - tapOn: "Don't Save"
+- extendedWaitUntil:
+    notVisible:
+      id: header-cancel
+    timeout: 10000
+
+# The availability month: tomorrow picked, today ringed.
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${TOMORROW_DAY}
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${TOMORROW_DAY}
+- tapOn:
+    id: day-${TOMORROW_DAY}
+- waitForAnimationToEnd
+- takeScreenshot: 71-availability-month
+# The days, under the legend and above the day's sheet: tomorrow a fill of
+# #9333EA; today, when its week is in sight, a ring of #A855F7 a day wide
+# and nothing else of it (it was a purple digit on a tint, beside a purple
+# fill).
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-availability-month
+      COLOUR: "#9333ea"
+      TOLERANCE: "12"
+      MIN_WIDTH: "30"
+      MIN_HEIGHT: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.2"
+      BOTTOM: "0.45"
+- runFlow:
+    when:
+      visible:
+        id: day-${TODAY_DAY}
+        below:
+          id: availability-legend
+    commands:
+      - runScript:
+          file: ../scripts/icon-size.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+            SHOT: 71-availability-month
+            COLOUR: "#a855f7"
+            TOLERANCE: "4"
+            MIN_WIDTH: "30"
+            # A day here is 47 pt; two are 94.
+            MAX_WIDTH: "60"
+            MAX_HEIGHT: "60"
+            LEFT: "0"
+            RIGHT: "1"
+            TOP: "0.2"
+            BOTTOM: "0.45"
+- tapOn:
+    id: header-cancel
+- runFlow:
+    when:
+      visible: "Don't Save"
+    commands:
+      - tapOn: "Don't Save"
 
 # Onboarding's welcome, for someone new.
 - runFlow:
