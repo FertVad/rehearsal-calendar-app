@@ -34,7 +34,7 @@ a local handler test is not a Vercel deployment test.
 Public documents, association files, invite fallback, admin HTML/assets and
 `GET /api/health` do not initialize PostgreSQL. Health is process liveness only.
 The first DB-dependent API request shares a single initialization attempt with
-concurrent requests. An unavailable or missing PostgreSQL target yields generic
+concurrent requests (after a failure, see the pause below). An unavailable or missing PostgreSQL target yields generic
 503 with `Cache-Control: no-store` before business/auth/crypto work.
 
 `GET /api/ready` initializes when needed and performs an explicit bounded
@@ -44,12 +44,31 @@ moment, not the presence of every application table/index or future availability
 It is never called by an added timer, scheduler or background monitor. Calling
 readiness can wake a sleeping database and incur compute charges.
 
-After failed initialization the process keeps serving public pages and rejects
-DB-dependent requests. Restore configuration/database access and restart the
-process, or explicitly recover through the adapter API. Incoming traffic does
-not continually retry a failed startup. After successful initialization the
-driver may acquire replacement connections as required by real queries; SQL is
-never automatically replayed by this adapter.
+After failed initialization the process keeps serving public pages and answers
+DB-dependent requests and readiness with 503 for a pause of 15 seconds, counted
+from the end of the failed attempt, without touching the database. The first
+DB-dependent or readiness request after the pause starts one new attempt;
+concurrent requests share it, exactly like the first one. If it fails too, a
+new pause begins. Traffic therefore never causes more than one connection
+attempt per pause, however many requests arrive, and nothing retries on its
+own: there is no timer, scheduler or background monitor, so an idle database
+can still scale to zero.
+
+Why a pause and not "unavailable until restart": on Vercel nobody restarts the
+process. An instance lives for minutes, and before T-037 an instance whose first
+attempt met a still-waking Neon compute answered 503 to all its traffic
+(observed for about four minutes after a redeploy on 4 November 2026, with a
+healthy database). Why 15 seconds: it is longer than one whole attempt (10 s
+connection timeout plus the 2 s probe), so attempts never run back to back, and
+it caps retry traffic at four attempts a minute per instance; at the same time
+it is short against an instance's life, so the users of that instance recover
+within seconds of the database becoming reachable. A broken configuration or a
+database that stays down still yields 503 everywhere; restore it, and the next
+request after the pause picks it up without a restart.
+
+After successful initialization the driver may acquire replacement connections
+as required by real queries; SQL is never automatically replayed by this
+adapter.
 
 Security configuration remains fail-fast: invalid JWT configuration/TTL or
 missing required production settings can still prevent startup. The public-page
@@ -79,9 +98,18 @@ PostgreSQL answers with ROLLBACK cannot be reported as success. Captured `tx`
 handles reject after the callback ends.
 
 The pool admits at most10 connections and100 queued acquisition requests.
-Acquisition times out after2 seconds; timed-out queued work does not execute
-later. Connection probes also have a2-second read timeout and discard uncertain
-clients. Business SQL has no blanket statement deadline: operations such as
+Acquisition, including opening a new connection, times out after10 seconds;
+timed-out queued work does not execute later. The number covers waking the
+database: Neon suspends an idle compute ([scale to zero](https://neon.com/docs/introduction/scale-to-zero))
+and the next connection waits while it starts. Neon describes that start as
+usually a few hundred milliseconds, but its
+[connection latency and timeouts](https://neon.com/docs/connect/connection-latency)
+guidance warns it can take seconds and recommends raising client connection
+timeouts to allow for it, in the order of 10 seconds rather than driver defaults
+of a few. The previous 2 seconds was shorter than an observed wake-up (T-037).
+A database that is really unreachable still fails within one bounded request
+(at most 10 s to connect plus the 2 s probe). Connection probes keep their
+own 2-second read timeout once connected and discard uncertain clients. Business SQL has no blanket statement deadline: operations such as
 IS02 set their own lock/statement limits. HTTP deadlines do not imply SQL
 cancellation or cancellation of an arbitrary JavaScript callback.
 

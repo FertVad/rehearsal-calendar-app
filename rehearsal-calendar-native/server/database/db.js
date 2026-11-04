@@ -4,7 +4,9 @@ import pkg from 'pg';
 const { Pool } = pkg;
 const poolPolicy = Object.freeze({
   max: 10,
-  connectionTimeoutMillis: 2000,
+  // Covers a Neon compute waking from scale-to-zero, which can take seconds;
+  // 2 s failed the first attempt after idle (T-037). docs/server-runtime.md.
+  connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 10000,
 });
 const maximumQueuedAcquisitions = 100;
