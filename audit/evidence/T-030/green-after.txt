@@ -1,0 +1,18 @@
+T-030 green after, on 60460db
+
+$ npm run e2e -- e2e/flows/67-availability-drag-collapses.yaml e2e/flows/68-availability-drag-save.yaml e2e/flows/69-availability-drag-dont-save.yaml
+Waiting for flows to complete...
+[Passed] Availability editor pulled down collapses, the screen stays (2m 34s)
+[Passed] Availability editor pulled down with a change asks, Save keeps the screen (1m 16s)
+[Passed] Availability editor pulled down with a change, Don't Save keeps the screen (1m 2s)
+
+3/3 Flows Passed in 4m 52s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/64-availability-collapse-asks.yaml
+[Passed] Availability editor asks before collapsing (2m 57s)
+
+1/1 Flow Passed in 2m 57s
+
+[e2e] taps taken again (tap-and-see.yaml): 0

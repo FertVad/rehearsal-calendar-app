@@ -1,0 +1,29 @@
+T-030 red before: flows 68 and 69 on the code before the fix
+(AvailabilityScreen.tsx and hooks/index.ts as at a978e40; flows, subflows and seed as in the fix)
+
+$ npm --prefix rehearsal-calendar-native run e2e -- e2e/flows/68-availability-drag-save.yaml e2e/flows/69-availability-drag-dont-save.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Availability editor pulled down with a change asks, Save keeps the screen (2m 35s) (Assertion is false: "Saved", id: toast is visible)
+[Failed] Availability editor pulled down with a change, Don't Save keeps the screen (1m 20s) (Assertion is false: id: availability-legend is visible)
+
+2/2 Flows Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Both got past "Don't Save" visible: the question came, the screen's close
+question (useLeaveGuard's usePreventRemove), as the owner saw it.
+Screenshots at the failures (e2e/out/artifacts/2026-11-04_193515):
+- 68, step-072-assertCondition-Saved.png: the Calendar tab. "Save" saved and
+  closed the whole screen, as on the owner's phone (there the tab under it was
+  a project's page).
+- 69, step-065-assertCondition-availability-legend.png: "Don't Save" closed
+  the whole screen.

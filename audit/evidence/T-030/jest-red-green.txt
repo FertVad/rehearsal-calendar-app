@@ -1,0 +1,17 @@
+T-030 Jest: src/features/availability/screens/__tests__/AvailabilityDrag.test.tsx
+
+Red: AvailabilityScreen.tsx restored from HEAD~1 (a978e40), test and mocks as in 60460db
+$ git restore --source=HEAD~1 -- src/features/availability/screens/AvailabilityScreen.tsx
+$ npx jest --selectProjects frontend --silent src/features/availability/screens/__tests__/AvailabilityDrag.test.tsx
+    TypeError: Cannot destructure property 'handlers' of '__gesture(...)' as it is undefined.
+    (the same for each of the 6 tests: the editor had no drag of its own)
+Tests:       6 failed, 6 total
+$ git restore --source=HEAD -- src/features/availability/screens/AvailabilityScreen.tsx
+
+Green, on 60460db:
+$ npx jest --selectProjects frontend --silent src/features/availability/screens/__tests__/AvailabilityDrag.test.tsx
+Tests:       6 passed, 6 total
+
+$ npx jest --selectProjects frontend --silent src/features/availability src/features/notifications src/navigation src/features/calendar/components
+Test Suites: 28 passed, 28 total
+Tests:       258 passed, 258 total
