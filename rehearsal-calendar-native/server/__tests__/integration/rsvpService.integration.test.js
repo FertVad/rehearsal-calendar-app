@@ -20,7 +20,8 @@ const mockDbGet = jest.fn();
 const mockDbAll = jest.fn();
 
 jest.unstable_mockModule('../../database/db.js', () => ({
-  default: { run: mockDbRun, get: mockDbGet, all: mockDbAll },
+  // A mark and its "seen" claim are one transaction (seenNotice.js).
+  default: { run: mockDbRun, get: mockDbGet, all: mockDbAll, transaction: (fn) => testDb.transaction(fn) },
   isPostgres: false,
 }));
 

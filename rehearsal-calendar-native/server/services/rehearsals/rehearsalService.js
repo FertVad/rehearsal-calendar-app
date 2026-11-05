@@ -5,6 +5,7 @@ import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
 import { ROSTER, viewerOf, rosterStats, checkParticipants, settleRoster, clearRoster, RosterRefused } from './roster.js';
 import { lockProject } from './projectLock.js';
+import { releaseSeenNotices } from './seenNotice.js';
 import { once } from '../idempotency.js';
 
 /**
@@ -449,7 +450,7 @@ async function editRehearsal(tx, rehearsalId, projectId, updateData) {
   // held until the commit, so a reminder run cannot claim people at the old
   // time between the move and the release (R8: GR05).
   const existing = await tx.get(
-    `SELECT starts_at FROM native_rehearsals WHERE id = $1 AND project_id = $2 FOR UPDATE`,
+    `SELECT starts_at, ends_at, location FROM native_rehearsals WHERE id = $1 AND project_id = $2 FOR UPDATE`,
     [rehearsalId, projectId]
   );
   // Deleted since the route found it: nothing to edit.
@@ -491,6 +492,11 @@ async function editRehearsal(tx, rehearsalId, projectId, updateData) {
   if (new Date(existing.starts_at).getTime() !== new Date(updatedRehearsal.starts_at).getTime()) {
     await tx.run(`DELETE FROM native_push_reminders WHERE rehearsal_id = $1`, [rehearsalId]);
   }
+
+  // Moved or relocated: whoever marks it seen now has seen something new, and
+  // the admins are told (seenNotice.js). The row is held, so a mark cannot
+  // claim between this edit and its release.
+  await releaseSeenNotices(tx, rehearsalId, existing, updatedRehearsal);
 
   // Participants first, slots second. bookRehearsalSlots reads the roster
   // (roster.js), so doing it the other way round books the

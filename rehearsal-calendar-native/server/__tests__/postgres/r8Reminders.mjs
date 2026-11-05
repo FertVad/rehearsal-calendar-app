@@ -314,6 +314,45 @@ export async function probeR8Reminders({ connectionString, control, allowedPorts
     assert.deepEqual(tokens, [eve], 'G02: only the token not registered again since the send goes');
     assert.equal(Number((await q(`SELECT count(*) FROM r0_fixture.native_push_tickets WHERE ticket_id LIKE 'gone-%'`)).rows[0].count), 0);
     contracts.push('a DeviceNotRegistered receipt removes the token unless it was registered again after the send (G02)');
+
+    // T-034: two "seen" marks at the same instant tell the admins once. The
+    // rehearsal's row is held so both requests are in flight together, then
+    // let go: each used to send its own "has seen it".
+    const ivy = await person('ivy');
+    await q('DELETE FROM r0_fixture.native_push_tokens WHERE user_id = $1', [ivy]);
+    const seenId = await rehearsal(new Date(now.getTime() + 30 * 24 * HOUR).toISOString(), [ivy]);
+    const mark = (response) => new Promise((resolve, reject) => {
+      const bytes = Buffer.from(JSON.stringify({ response }));
+      const req = http.request({ hostname: '127.0.0.1', port: server.address().port, method: 'POST',
+        path: `/api/native/rehearsals/${seenId}/respond`, headers: { Connection: 'close', 'Content-Type': 'application/json',
+          'Content-Length': bytes.length, Authorization: `Bearer ${generateTokens(ivy, 1).accessToken}` } }, (res) => {
+        const chunks = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.once('end', () => resolve(res.statusCode));
+      });
+      req.once('error', reject);
+      req.setTimeout(20000, () => req.destroy(new Error('T-034 respond request timed out')));
+      req.end(bytes);
+    });
+    const seenTold = async () => Number((await q(`SELECT count(*) FROM r0_fixture.native_notifications
+      WHERE user_id = $1 AND type = 'member_response' AND related_id = $2`, [owner, seenId])).rows[0].count);
+    await q('BEGIN');
+    let marks;
+    try {
+      await q('SELECT id FROM r0_fixture.native_rehearsals WHERE id = $1 FOR UPDATE', [seenId]);
+      marks = Promise.all([mark('yes'), mark('yes')]);
+      await until(async () => (await waitingOnLocks()) >= 2, 'both marks to wait on the rehearsal');
+      await q('COMMIT');
+    } catch (error) {
+      await q('ROLLBACK');
+      throw error;
+    }
+    assert.deepEqual(await marks, [200, 200]);
+    assert.equal(await seenTold(), 1, 'T-034: two marks at once must tell the admin once');
+    assert.equal(await mark('no'), 200);
+    assert.equal(await mark('yes'), 200);
+    assert.equal(await seenTold(), 1, 'T-034: unmarking and marking again must tell nobody');
+    contracts.push('two "seen" marks at once tell the admins once; unmark and mark again tells nobody (T-034)');
   } finally {
     if (previousSecret === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = previousSecret;
     await new Promise((resolve) => { server.close(() => resolve()); server.closeAllConnections(); });

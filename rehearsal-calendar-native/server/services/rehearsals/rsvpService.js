@@ -2,6 +2,7 @@ import { logger } from '../../utils/logger.js';
 import db from '../../database/db.js';
 import { fullName } from '../../utils/names.js';
 import { answer, rosterStats, rosterWithNames, placeOnRoster, RosterRefused } from './roster.js';
+import { claimSeenNotice } from './seenNotice.js';
 
 /**
  * Mark a rehearsal seen ('yes') or not yet seen ('no').
@@ -15,19 +16,34 @@ import { answer, rosterStats, rosterWithNames, placeOnRoster, RosterRefused } fr
  * @returns {Promise<{confirmed: number, invited: number}>} the rehearsal's counts
  */
 export async function respondToRehearsal(rehearsalId, userId, response, notes = null) {
+  return (await markRehearsal(rehearsalId, userId, response, notes)).stats;
+}
+
+/**
+ * The same mark, and whether the admins are to be told of it: a "seen" they
+ * have not been told of yet (seenNotice.js). Mark and claim are one
+ * transaction, so a claim never outlives a mark that failed.
+ *
+ * @returns {Promise<{stats: {confirmed: number, invited: number}, announce: boolean}>}
+ */
+export async function markRehearsal(rehearsalId, userId, response, notes = null) {
   if (response !== 'yes' && response !== 'no') {
     throw new RosterRefused(400, 'RESPONSE_INVALID', 'response must be "yes" or "no"');
   }
-  await answer(db, rehearsalId, userId, response, notes ?? null);
-
-  // Update rehearsal timestamp
-  await db.run('UPDATE native_rehearsals SET updated_at = NOW() WHERE id = $1', [rehearsalId]);
+  const announce = await db.transaction(async (tx) => {
+    // First, so the rehearsal's row is held: an edit that moves it waits for
+    // this mark, or this mark for the edit and its release (seenNotice.js).
+    await tx.run('UPDATE native_rehearsals SET updated_at = NOW() WHERE id = $1', [rehearsalId]);
+    await answer(tx, rehearsalId, userId, response, notes ?? null);
+    return response === 'yes' ? claimSeenNotice(tx, rehearsalId, userId) : false;
+  });
 
   // `invited` is the people on THIS rehearsal, which is what the list endpoint
   // and the participants screen both report. Counting the whole project here
   // made the number jump the moment you tapped — 2 of 5 became 3 of 8 — and
   // snap back on the next refresh.
-  return (await rosterStats(db, [Number(rehearsalId)])).get(Number(rehearsalId)) || { confirmed: 0, invited: 0 };
+  const stats = (await rosterStats(db, [Number(rehearsalId)])).get(Number(rehearsalId)) || { confirmed: 0, invited: 0 };
+  return { stats, announce };
 }
 
 /**
