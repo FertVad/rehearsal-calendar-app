@@ -67,6 +67,23 @@ PG: `two "seen" marks at once tell the admins once; unmark and mark again tells 
 Related suites (seenNotifications, rsvp integration, rehearsalNotifications, rehearsalRoster,
 lifecycleAtomicity, cronReminders, reminderScheduler): `Tests: 113 passed, 113 total`.
 
+## Supervisor PG check: D01 red, then green
+
+`--security-only` failed at D01: `relation "native_push_reminders" does not exist`, 500 on
+`POST /rehearsals/:id/respond`. D01 runs on the diagnostic subset `__tests__/postgres/fixture.sql`,
+which had no `native_push_reminders`; the "seen" mark now claims its notice there in the mark's
+transaction. Production has the table (migrations 002, 006; `init-native-schema.sql`), so the
+cause was the fixture, not the code: it now carries the table in its canonical shape. No
+migration, no schema change.
+
+After: every PG mode run one by one — `D01+R4_LIFECYCLE+R4_PUSH_TOKEN`, `A02+B03`, `B04`, `H04`,
+`IS02`, `F05`, `R2_SCHEMA+R2_MIGRATIONS`, `R3_EMAIL+R3_AUTH`, `R6_AVAILABILITY`, `R7_IMPORT`,
+`R8_REMINDERS` — `REGRESSION PASS`. `R2_STARTUP` (in `--r2-foundation-only` and `--security-only`)
+cannot run on this machine: its child loads the synthetic `.env` the fixture writes into a temp
+directory, and the OS policy here denies reading any `.env`
+(`Unable to load the explicitly selected server environment file`). Same cause as
+`runtimeStartup.test.js` below; it does not touch the fixture or this change.
+
 ## Mutation
 
 `releaseSeenNotices` made a no-op → `a new end time or place counts as a change too` fails
