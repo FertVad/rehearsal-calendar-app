@@ -39,3 +39,33 @@ Not in the task's list, named only: flow 13 loses a create's answer by a
 seconds. Not changed here.
 
 ## Green after (`green-after.txt`)
+
+## Supervisor's `npm test` on 206a8fe: `metro-watch.test.mjs` red
+
+`e2e/__tests__/metro-watch.test.mjs` failed with "the watcher heard nothing at
+all: []". The commit touched neither the test nor `metro.config.js`. The cause
+is in the test: on macOS Metro's watcher is `fs.watch` with `recursive` over
+FSEvents. Its stream starts on a thread of its own after `build()` resolves,
+and a file written before the stream listens is never heard. The test wrote
+its one app file right after `build()`. Alone, the stream is up in time. Under
+load it is not.
+
+Fix: the test writes an app file until it is heard (every 500 ms, up to 10 s).
+Only then does it write the e2e/out files, then a second app file until that
+is heard, and only then check that nothing from e2e/out came through.
+
+`metro-watch-parallel.mjs` here runs the test N times at once to make that
+load (`node audit/evidence/T-048/metro-watch-parallel.mjs 48`):
+
+| Test | Runs | Red |
+|---|---|---|
+| 206a8fe (before), `git restore --source=206a8fe` | 3 × 48 | 1, 2, 4 — all "the watcher heard nothing at all: []" |
+| 394ae22 (after) | 5 × 48 | 0 |
+
+The fix still catches what the test is for. With `metro.config.js` from before
+f14c44d (no blockList for e2e/out) it fails: "files written into e2e/out
+reached Metro as changes".
+
+In this session `lock.test.mjs` "what a dead run left running…" is red as
+well. The session's sandbox does not let `ps` run, so `startedAt` is empty.
+The test was green in the supervisor's run, and this task does not touch it.
