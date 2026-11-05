@@ -1,0 +1,40 @@
+T-035 — WeeklyCalendar.test.tsx on the old WeeklyCalendar.tsx / haptics.ts (base 22933e1), new tests added
+$ npx jest --selectProjects frontend --verbose src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx
+
+FAIL frontend src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx (14.294 s)
+  ✓ selects today when "Today" is pressed after another day was picked (1106 ms)
+  ✓ puts a day's count under its date, not over its name (462 ms)
+    ✓ is 72 pt tall, a day 44 pt wide or more (325 ms)
+    ✓ opens with the day selected in its middle (257 ms)
+    ✓ brings a day tapped at its edge to the middle, and selects it (804 ms)
+    ✓ selects the day a swipe stops on (479 ms)
+    ✓ brings today to the middle on "Today" (787 ms)
+    ✓ keeps its days 44 pt wide on a 320 pt screen (357 ms)
+    ✕ ticks once for every day crossing the middle, and selects only where it stops (722 ms)
+    ✕ ticks back the same way, a day at a time (914 ms)
+    ✕ brings a tapped day under the frame with the same ticks, no thump (940 ms)
+    ✕ brings today back with ticks, no thump (1402 ms)
+    ✕ does not let an interrupted swipe take the day a tap sent it to (804 ms)
+    ✕ has a frame standing in its middle, as wide as a day (389 ms)
+    ✓ opens on the month name, and the name closes it (792 ms)
+    ✓ begins the week on the profile's day, today the profile's, rehearsal days marked (310 ms)
+    ✓ selects a day picked in it, closes, and brings the day to the middle of the strip (954 ms)
+  ● The day strip as a wheel › ticks once for every day crossing the middle, and selects only where it stops
+    Expected number of calls: 3
+    Received number of calls: 0
+  ● The day strip as a wheel › ticks back the same way, a day at a time
+    Expected number of calls: 3
+    Received number of calls: 0
+  ● The day strip as a wheel › brings a tapped day under the frame with the same ticks, no thump
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● The day strip as a wheel › brings today back with ticks, no thump
+    Expected number of calls: 0
+    Received number of calls: 2
+  ● The day strip as a wheel › does not let an interrupted swipe take the day a tap sent it to
+    Expected: "2030-01-14"
+    Received: "2030-01-13"
+  ● The day strip as a wheel › has a frame standing in its middle, as wide as a day
+    Unable to find an element with testID: calendar-strip-frame
+Test Suites: 1 failed, 1 total
+Tests:       6 failed, 11 passed, 17 total
