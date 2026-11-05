@@ -53,20 +53,37 @@ async function watch() {
   return heard;
 }
 
+/**
+ * Writes `file` until the watcher hears it, a write every 500 ms, for 10 s.
+ * On macOS the watcher is fs.watch over FSEvents, and its stream starts on a
+ * thread of its own after build() is done: a file written before the stream
+ * listens is never heard. Under load that window was long enough to lose the
+ * one write the test made (supervisor's npm test, T-048).
+ */
+async function writeUntilHeard(heard, file) {
+  for (let waited = 0; waited < 10000; waited += 100) {
+    if (waited % 500 === 0) fs.writeFileSync(file, `export const at = ${waited};\n`);
+    await sleep(100);
+    if (heard.includes(file)) return true;
+  }
+  return false;
+}
+
 test("a screenshot Maestro writes into e2e/out is not a change to Metro; the app's files are", async () => {
   const heard = await watch();
+
+  // A file of the app's own, outside e2e/out: once it is heard, the watcher listens.
+  const ready = path.join(appDir, 'ready.ts');
+  assert.ok(await writeUntilHeard(heard, ready), `the watcher heard nothing at all: ${JSON.stringify(heard)}`);
 
   // What Maestro leaves for a step: a screenshot and the hierarchy beside it.
   fs.writeFileSync(path.join(outDir, 'step-033-tapOnElement-Allow_Full_Access.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
   fs.writeFileSync(path.join(outDir, 'step-033-tapOnElement-Allow_Full_Access.json'), '{}');
-  // A file of the app's own, outside e2e/out: the watcher is on, and hears it.
+  // Another app file, written after them: it is heard, so they had their chance to be.
   const appFile = path.join(appDir, 'probe.ts');
-  fs.writeFileSync(appFile, 'export {};\n');
-
-  for (let waited = 0; !heard.includes(appFile) && waited < 10000; waited += 100) await sleep(100);
+  assert.ok(await writeUntilHeard(heard, appFile), `the app file written after the screenshots was not heard: ${JSON.stringify(heard)}`);
   await sleep(500);
 
-  assert.ok(heard.includes(appFile), `the watcher heard nothing at all: ${JSON.stringify(heard)}`);
   assert.deepEqual(heard.filter((file) => file.startsWith(outDir)), [],
     'files written into e2e/out reached Metro as changes');
 });
