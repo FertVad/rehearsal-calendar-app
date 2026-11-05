@@ -9,7 +9,7 @@
  */
 import React from 'react';
 import { Text } from 'react-native';
-import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, act, waitFor, within } from '@testing-library/react-native';
 import { rehearsalsAPI } from '../../../../shared/services/api';
 import { SeenProvider, useSeen } from '../../../../contexts/SeenContext';
 import { emitDataChanged } from '../../../../shared/utils/dataChanged';
@@ -163,6 +163,65 @@ describe('Rehearsal details: one "seen" model (DD01)', () => {
     const screen = await open();
     await waitFor(() => expect(seenEyes(screen)).toBe(1));
     expect(screen.getByTestId('card').props.children).toBe('null');
+  });
+});
+
+describe('Rehearsal details: one\'s own row first (T-033)', () => {
+  // As the server gives them, by first name: this person (7) is second.
+  function answerByName() {
+    getResponses.mockResolvedValue({
+      data: {
+        allParticipants: [
+          { userId: '9', firstName: 'Angelo', lastName: 'Deputy', response: 'yes' },
+          { userId: '8', firstName: 'Other', lastName: 'Actor', response: 'no' },
+          { userId: '7', firstName: 'Me', lastName: 'Self', response: 'no' },
+          { userId: '10', firstName: 'Zed', lastName: 'Last', response: 'no' },
+        ],
+        stats: { confirmed: 1, invited: 4 },
+      },
+    });
+  }
+  const names = (screen: ReturnType<typeof render>) =>
+    screen.getAllByText(/^(Angelo Deputy|Other Actor|Me Self|Zed Last)$/).map((n) => n.props.children);
+
+  it('puts this person first, the others in the order they came', async () => {
+    answerByName();
+    const screen = await open();
+    expect(names(screen)).toEqual(['Me Self', 'Angelo Deputy', 'Other Actor', 'Zed Last']);
+  });
+
+  it('says "You" on that row, in the language of the app', async () => {
+    answerByName();
+    const screen = await open();
+    const own = screen.getByTestId('own-seen-toggle');
+    expect(within(own).getByText(translations.en.rehearsals.you)).toBeTruthy();
+    expect(own.props.accessibilityLabel).toBe('Me Self, You');
+    expect(screen.getAllByText('You')).toHaveLength(1);
+  });
+
+  it('puts an admin first too, and the count is the same', async () => {
+    isAdmin = true;
+    answerByName();
+    const screen = await open();
+    expect(names(screen)[0]).toBe('Me Self');
+    expect(screen.getByText('1/4')).toBeTruthy();
+  });
+
+  it('leaves the order alone when this person is not on it', async () => {
+    isAdmin = true;
+    getResponses.mockResolvedValue({
+      data: {
+        allParticipants: [
+          { userId: '9', firstName: 'Angelo', lastName: 'Deputy', response: 'yes' },
+          { userId: '8', firstName: 'Other', lastName: 'Actor', response: 'no' },
+        ],
+        stats: { confirmed: 1, invited: 2 },
+      },
+    });
+    const screen = await open();
+    expect(screen.getAllByText(/^(Angelo Deputy|Other Actor)$/).map((n) => n.props.children))
+      .toEqual(['Angelo Deputy', 'Other Actor']);
+    expect(screen.queryByText('You')).toBeNull();
   });
 });
 

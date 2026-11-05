@@ -192,6 +192,12 @@ export const PEOPLE = {
   // (71): an admin of Athens Wood, Gaev its owner, and on its one rehearsal.
   // Her avatar is green: avatars keep their colours, blue among them.
   titania: { email: 'titania@e2e.test', firstName: 'Titania', lastName: 'Queen', onboarded: true },
+  // One's own row first in a rehearsal's participants (72): on "Moated
+  // grange", by name Angelo, Mariana, Vincentio — Mariana an actor in the
+  // middle, Vincentio, its project's admin, last.
+  angelo: { email: 'angelo@e2e.test', firstName: 'Angelo', lastName: 'Deputy', onboarded: true },
+  mariana: { email: 'mariana@e2e.test', firstName: 'Mariana', lastName: 'Grange', onboarded: true },
+  vincentio: { email: 'vincentio@e2e.test', firstName: 'Vincentio', lastName: 'Duke', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -497,6 +503,14 @@ export async function seed({ client, apiUrl, timezone }) {
   const nurseryId = await joined('Nursery Tea', 'The samovar', 'marina', 'admin');
   // Titania its admin (71).
   const woodId = await joined('Athens Wood', 'The fairy bower', 'titania', 'admin');
+  // Vincentio its admin, Angelo and Mariana in it (72).
+  const viennaId = await joined('Vienna', 'The moated grange', 'vincentio', 'admin');
+  for (const key of ['angelo', 'mariana']) {
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+      [viennaId, ids[key]]);
+  }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -570,6 +584,8 @@ export async function seed({ client, apiUrl, timezone }) {
     samovar: await rehearsal(nurseryId, 'Samovar', 3, 12, 13, ['gaev', 'marina'], 'gaev'),
     // Tomorrow, in her upcoming ones; she marks it seen (71).
     moonlit: await rehearsal(woodId, 'Moonlit dance', 1, 12, 13, ['gaev', 'titania'], 'gaev'),
+    // Tomorrow, the three of Vienna on it, Gaev not: each reads their own row first (72).
+    grange: await rehearsal(viennaId, 'Moated grange', 1, 15, 16, ['angelo', 'mariana', 'vincentio'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),

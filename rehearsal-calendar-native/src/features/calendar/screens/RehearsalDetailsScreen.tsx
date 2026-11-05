@@ -39,6 +39,18 @@ interface AdminStats {
   invited: number;
 }
 
+/**
+ * The people on a rehearsal as this person reads them: their own row first —
+ * the one they tap — and the others in the order the server gave them (by
+ * name). Someone not on it, an admin looking in, gets the list as it came
+ * (T-033).
+ */
+function ownRowFirst<T extends { userId: string }>(people: T[], ownId: string | null): T[] {
+  const own = people.findIndex((p) => p.userId === ownId);
+  if (own <= 0) return people;
+  return [people[own], ...people.slice(0, own), ...people.slice(own + 1)];
+}
+
 // iOS draws this sheet smaller while it stands at three quarters of the
 // screen: 44 pt of layout measured 42 on the glass in Maestro's inspector
 // (T-014). 47 is 44 and more there.
@@ -155,13 +167,13 @@ export default function RehearsalDetailsScreen() {
           logger.warn('[RehearsalDetails] Response had no allParticipants');
           return;
         }
-        setParticipants(all.map((p) => ({
+        setParticipants(ownRowFirst(all.map((p) => ({
           userId: String(p.userId),
           firstName: p.firstName,
           lastName: p.lastName,
           // 'no' is "invited, not seen yet", the same as no answer.
           hasSeen: p.response === 'yes',
-        })));
+        })), ownId));
         const own = all.find((p) => String(p.userId) === ownId);
         const counts: AdminStats | undefined = res.data.stats;
         primeSeen(own ? { [rehearsalId]: own.response === 'yes' ? 'yes' : null } : {});
@@ -206,6 +218,7 @@ export default function RehearsalDetailsScreen() {
       <View style={styles.participantItem}>
         <View style={styles.participantInfo}>
           <Text style={styles.participantName}>{displayName}</Text>
+          {isCurrentUser && <Text style={styles.ownLabel}>{t.rehearsals.you}</Text>}
         </View>
         {responding ? (
           <ActivityIndicator size="small" color={Colors.accent.purple} />
@@ -225,7 +238,8 @@ export default function RehearsalDetailsScreen() {
           key={item.userId}
           testID="own-seen-toggle"
           accessibilityRole="button"
-          accessibilityLabel={displayName}
+          // What the row shows, the name and "You" under it.
+          accessibilityLabel={`${displayName}, ${t.rehearsals.you}`}
           accessibilityState={{ selected: seen, disabled: responding }}
           onPress={handleOwnToggle}
           disabled={responding}
@@ -509,6 +523,10 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
+  },
+  ownLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
   },
   loadingContainer: {
     padding: Spacing.xl,

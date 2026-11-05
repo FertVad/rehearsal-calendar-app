@@ -58,6 +58,8 @@ export interface RehearsalsTranslations {
   /** The card's swipe and the details' corner: open the rehearsal in the form. */
   edit: string;
   participants: string;
+  /** Under one's own name in a rehearsal's participants, the row put first. */
+  you: string;
   createRehearsal: string;
   updateRehearsal: string;
   loadMembersError: string;
@@ -166,6 +168,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     deleteError: 'Не удалось удалить репетицию',
     edit: 'Изменить',
     participants: 'Участники',
+    you: 'Вы',
     createRehearsal: 'Создать репетицию',
     updateRehearsal: 'Сохранить изменения',
     loadMembersError: 'Не удалось загрузить участников проекта',
@@ -267,6 +270,7 @@ needProject: 'Rehearsals show up once you are in a project',
     deleteError: 'Could not delete the rehearsal',
     edit: 'Edit',
     participants: 'Participants',
+    you: 'You',
     createRehearsal: 'Create Rehearsal',
     updateRehearsal: 'Save Changes',
     loadMembersError: 'Failed to load project members',
@@ -368,6 +372,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     deleteError: 'No se pudo eliminar el ensayo',
     edit: 'Editar',
     participants: 'Participantes',
+    you: 'Tú',
     createRehearsal: 'Crear ensayo',
     updateRehearsal: 'Guardar cambios',
     loadMembersError: 'No se pudieron cargar los miembros del proyecto',
@@ -469,6 +474,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     deleteError: 'Die Probe konnte nicht gelöscht werden',
     edit: 'Bearbeiten',
     participants: 'Teilnehmer',
+    you: 'Du',
     createRehearsal: 'Probe erstellen',
     updateRehearsal: 'Änderungen speichern',
     loadMembersError: 'Projektmitglieder konnten nicht geladen werden',
