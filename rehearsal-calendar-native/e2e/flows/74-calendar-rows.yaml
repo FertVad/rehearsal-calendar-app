@@ -98,6 +98,17 @@ tags:
     width: 44
     height: 44
     tolerance: 1
+# Its rows parted by a line 64 pt in, as in the upcoming list, though there
+# is no date column: on the 353 pt ground (393 less 20 a side) it is 289
+# long, not the 337 of a line 16 in.
+- assertVisible:
+    id: rehearsal-separator-day
+    width: 289
+    tolerance: 1
+- assertNotVisible:
+    id: rehearsal-separator-day
+    width: 337
+    tolerance: 1
 - takeScreenshot: 74-day-picked
 # A tap on the row still opens the rehearsal.
 - runFlow:

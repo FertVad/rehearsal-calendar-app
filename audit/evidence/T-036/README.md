@@ -57,14 +57,45 @@ Tests:       16 failed, 52 passed, 68 total
   choice, over the day): the flow now requires exactly the weekday and day
   of EDGE_DAY, the Samovar's — a stricter check than the case rule.
 
+## Review (Astra) — 2 fixes
+
+1. The palette held lime `#A3E635`, a green: ΔE from the status green said
+   nothing about it being one. The test now names the families — red
+   345–15°, yellow 35–70°, green 70–180°, blue 195–255°, purple 255–300°
+   (HSL hue; a colour of CIELAB chroma under 15 is a grey, of none) — checks
+   that each taken colour falls in its own, that lime, teal, rose and orchid
+   fall in theirs, and that no palette colour does. The same rule caught
+   salmon `#FDA4AF` (hue 353, a rose: red) — replaced too. New palette: pink
+   `#F472B6`, cyan `#22D3EE`, copper `#B4693C`, sand `#D6B38A`, stone
+   `#78716C`, silver `#E2E8F0`; all ≥ 3:1 on `bg.secondary` (lowest stone
+   3.61), ≥ ΔE 25 from the taken and from each other (closest copper–sand 32).
+2. In the day picked the line within a day was inset 16, not 64. Now one
+   inset, `SEPARATOR_INSET` = 64, in both lists. Flow 74 checks it on the day
+   picked: `rehearsal-separator-day` 289 wide (353 ground − 64), and none 337
+   (the old 16).
+
+Red before (fix files `git restore --source=HEAD` = `c06cc4a`, tests and flow new):
+
+```
+FAIL frontend src/shared/utils/__tests__/projectColor.test.ts
+  ● the palette › #A3E635 is of none of those families   Received: "green"
+  ● the palette › #FDA4AF is of none of those families   Received: "red"
+FAIL frontend src/features/calendar/components/__tests__/RehearsalList.test.tsx
+  ● the lines between rows › are inset 64 in a day’s own list too, where there is no date column
+    Expected: 64   Received: 16
+
+[Failed] The calendar's rehearsals are rows with a date column (2m 27s)
+(Assertion is false: id: rehearsal-separator-day, Size: 289xnull(tolerance: 1) is visible)
+```
+
+Green after: flow 74 `[Passed] (2m 12s)`; `after/*.png` retaken from that
+run (the day picked shows the line 64 in).
+
 ## Notes
 
-- Palette (`shared/utils/projectColor.ts`): pink, cyan, lime, sand, salmon,
-  silver. Orange `#FB923C` was tried and dropped: CIELAB ΔE 18 from the
-  status yellow. Test holds ≥ 3:1 on `bg.secondary` and ΔE ≥ 25.
-- Separators: within a day inset to where the text begins — 64 pt with the
-  date column, as specified; 16 pt in the day picked, which has no column
-  (the text begins there).
+- Palette (`shared/utils/projectColor.ts`): see the review above. Orange
+  `#FB923C` was tried and dropped: CIELAB ΔE 18 from the status yellow.
+- Separators: within a day 64 pt in, in both lists.
 - The count under the eye is hidden from VoiceOver (it was inside the button,
   which says it as its value) — VoiceOver hears the same as before.
 - `copy-shots.mjs` copies the latest run's screenshots here.

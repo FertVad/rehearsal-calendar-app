@@ -198,6 +198,14 @@ describe('the lines between rows', () => {
     expect(style(between[0]).marginLeft).toBeUndefined();
   });
 
+  it('are inset 64 in a day’s own list too, where there is no date column', () => {
+    const { getAllByTestId, queryAllByTestId } = list(upcoming.slice(0, 2), false);
+    const within = getAllByTestId('rehearsal-separator-day');
+    expect(within).toHaveLength(1);
+    expect(queryAllByTestId('rehearsal-separator-days')).toHaveLength(0);
+    expect(style(within[0]).marginLeft).toBe(64);
+  });
+
   it('put the rows on one rounded ground', () => {
     const { toJSON } = list();
     expect(flat((toJSON() as any).props.style)).toMatchObject({

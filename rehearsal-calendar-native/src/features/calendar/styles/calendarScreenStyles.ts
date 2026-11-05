@@ -7,6 +7,9 @@ const UPCOMING_CARD_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md;
 const REHEARSAL_ROW_HEIGHT = 88;
 /** The day on the left of a row; the text begins after it. */
 const DATE_COLUMN_WIDTH = 52;
+/** The line between two rows of one day begins 64 pt in, with a date column
+ *  or without (the day picked): where the upcoming list's text begins. */
+const SEPARATOR_INSET = Spacing.md + DATE_COLUMN_WIDTH;
 
 export const styles = StyleSheet.create({
   container: {
@@ -212,17 +215,14 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
     color: Colors.text.secondary,
   },
-  // A thin line between two rows of a day, from where the text begins; one
+  // A thin line between two rows of a day, 64 pt in, in both lists; one
   // across the whole ground between two days.
   rehearsalSeparator: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: Colors.border.default,
   },
   rehearsalSeparatorInset: {
-    marginLeft: Spacing.md + DATE_COLUMN_WIDTH,
-  },
-  rehearsalSeparatorInsetNoDate: {
-    marginLeft: Spacing.lg,
+    marginLeft: SEPARATOR_INSET,
   },
   // An admin's swipe on a row (T-016): Edit, then Delete in red at the edge.
   swipeActions: {

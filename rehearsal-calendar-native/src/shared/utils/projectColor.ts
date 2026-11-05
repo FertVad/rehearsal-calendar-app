@@ -8,17 +8,19 @@
  * the same colour, on every screen and every launch, the way an avatar keeps
  * its colour by its name.
  *
- * Kept away from the colours that already mean something (T-031): purple is
- * doing and choosing, green free, red busy, yellow the phone's calendar, and
- * there is no blue. Each is at least 3:1 against `bg.secondary`, the rows'
- * ground. `projectColor.test.ts` holds both.
+ * Kept out of the families of colour that already mean something (T-031):
+ * purple is doing and choosing, green free, red busy, yellow the phone's
+ * calendar, and there is no blue — no shade of them either, not a lime for
+ * green nor a rose for red. What is left: pink, cyan, the browns and oranges
+ * short of yellow, and greys. Each is at least 3:1 against `bg.secondary`,
+ * the rows' ground. `projectColor.test.ts` holds all of it.
  */
 export const PROJECT_PALETTE = [
   '#F472B6', // pink
   '#22D3EE', // cyan
-  '#A3E635', // lime
+  '#B4693C', // copper
   '#D6B38A', // sand
-  '#FDA4AF', // salmon
+  '#78716C', // stone
   '#E2E8F0', // silver
 ] as const;
 

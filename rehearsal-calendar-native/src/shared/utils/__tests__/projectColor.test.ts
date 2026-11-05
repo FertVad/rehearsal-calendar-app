@@ -1,6 +1,7 @@
 /**
  * A project's dot (T-036): one rule, from the project's id, in colours that
- * mean nothing else on the screen and can be seen on the rows' ground.
+ * mean nothing else on the screen and can be seen on the rows' ground. Far
+ * from each taken colour is not enough: no shade of their families either.
  */
 import fs from 'fs';
 import path from 'path';
@@ -52,7 +53,62 @@ const TAKEN: Record<string, string> = {
   blue: '#3b82f6',
 };
 
+/** HSL hue, in degrees: what a colour is called — red, yellow, green… */
+const hue = (hex: string): number => {
+  const [r, g, b] = rgb(hex).map((c) => c / 255);
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (d === 0) return 0;
+  const h = 60 * (max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4);
+  return h < 0 ? h + 360 : h;
+};
+/** CIELAB chroma: under 15 a colour reads as a grey, of no family. */
+const chroma = (hex: string): number => {
+  const [, a, b] = lab(hex);
+  return Math.hypot(a, b);
+};
+
+// The families those colours belong to, by hue: not only the status green,
+// but every green — a lime is one, however far it is from #10b981.
+const FAMILIES: Record<string, [number, number]> = {
+  red: [345, 15],
+  yellow: [35, 70],
+  green: [70, 180],
+  blue: [195, 255],
+  purple: [255, 300],
+};
+const familyOf = (hex: string): string | undefined => {
+  if (chroma(hex) < 15) return undefined;
+  const h = hue(hex);
+  return Object.keys(FAMILIES).find((name) => {
+    const [from, to] = FAMILIES[name];
+    return from < to ? h >= from && h < to : h >= from || h < to;
+  });
+};
+
+describe('the families of colour that mean something', () => {
+  it.each([
+    ['purple', Colors.accent.purple], ['purple', Colors.accent.purpleFill], ['green', Colors.accent.green],
+    ['red', Colors.accent.red], ['yellow', Colors.accent.yellow], ['blue', '#3b82f6'],
+  ])('hold the %s that is taken, %s', (family, colour) => {
+    expect(familyOf(colour)).toBe(family);
+  });
+
+  it.each([
+    ['green', '#A3E635'], // lime
+    ['green', '#2DD4BF'], // teal
+    ['red', '#FDA4AF'], // rose
+    ['purple', '#F0ABFC'], // orchid
+  ])('hold the shades of them too: %s %s', (family, colour) => {
+    expect(familyOf(colour)).toBe(family);
+  });
+});
+
 describe('the palette', () => {
+  it.each([...PROJECT_PALETTE])('%s is of none of those families', (colour) => {
+    expect(familyOf(colour)).toBeUndefined();
+  });
+
   it('has six to eight colours', () => {
     expect(PROJECT_PALETTE.length).toBeGreaterThanOrEqual(6);
     expect(PROJECT_PALETTE.length).toBeLessThanOrEqual(8);

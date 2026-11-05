@@ -20,8 +20,8 @@ interface RehearsalListProps {
  * "Upcoming Events" and in the day picked.
  *
  * The day is written in the column of its first rehearsal only; the next ones
- * of that day keep the column empty. A thin line inset to the text parts the
- * rows of one day, a line across the whole ground parts two days.
+ * of that day keep the column empty. A thin line 64 pt in parts the rows of
+ * one day in either list, a line across the whole ground parts two days.
  */
 export default function RehearsalList({
   rehearsals,
@@ -48,7 +48,7 @@ export default function RehearsalList({
                 testID={sameDay ? 'rehearsal-separator-day' : 'rehearsal-separator-days'}
                 style={[
                   styles.rehearsalSeparator,
-                  sameDay && (withDates ? styles.rehearsalSeparatorInset : styles.rehearsalSeparatorInsetNoDate),
+                  sameDay && styles.rehearsalSeparatorInset,
                 ]}
               />
             ) : null}
