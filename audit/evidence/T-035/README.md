@@ -23,6 +23,21 @@ Fix: `afe9083` (base `22933e1`). Files: `WeeklyCalendar.tsx`, `haptics.ts`
   `74-strip-wheel-after.mp4` — the flow's recording: a tap, "Today", a swipe.
 - `collect.mjs` copied these from `e2e/out/artifacts`.
 
+## Review 1 (`1f38405`)
+Two points: a tap, "Today" and the month handed their day to the list at
+once, while the frame still had the day before; and one scroll event jumping
+several days gave one tick. Now the animation's target is kept apart from the
+choice: the day is handed on only where the strip stops on it (Today as today
+to follow), and the centre ticks once for every day crossed.
+- `review-1-jest-red-before.txt` — the new and amended tests on the
+  component of `20424cc`: 4 of 20 fail, on both points.
+- `review-1-green-after.txt` — 20/20, the frontend 1220/1220, type-check;
+  flows 74, 41, 57 passed. On the device flow 74's tap reaches the list only
+  through the stop of the animated scroll (`onMomentumScrollEnd`), so its
+  pass is the check that the stop does come. The list's state mid-motion is
+  not seen by Maestro, which reads the screen only at rest; Jest holds it, and
+  no red e2e is possible for it.
+
 Not reproducible in the simulator: the haptic ticks themselves (Jest holds
 them), and the strip mid-motion (Maestro reads the screen only at rest; the
 recording shows it).
