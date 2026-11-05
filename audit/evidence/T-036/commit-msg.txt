@@ -1,0 +1,25 @@
+feat(calendar): a rehearsal is a row of 88 pt with a date column (T-036)
+
+The owner's choice B of 04.11 (audit 29.10, s04-1). The card was 203 pt -
+a date badge, an "Admin" badge, an icon to every line, the eye on a strip
+of its own - and the calendar showed one rehearsal whole.
+
+Now one row, the same in "Upcoming Events" and in the day picked
+(RehearsalList), the rows of a list on one rounded ground (bg.secondary,
+radius 12): the day in a 52 pt column on the first rehearsal of a day only,
+none under a day's heading; the title, 17 pt on one line; the time and the
+place, 15 pt; the project after its dot; the eye 44x44 with its count
+under it, hidden from VoiceOver, which hears it as the button's value as
+before. A thin line inset to the text within a day, one across between days.
+The phone's-calendar icon follows the time in the line's grey.
+
+Projects have no colour of their own, so the dot is the project's id on a
+palette of six in one place (shared/utils/projectColor.ts): at least 3:1 on
+the ground, CIELAB 25 or more from purple, green, red, yellow and blue and
+from each other (projectColor.test.ts). The server and its column untouched.
+
+Flow 74 shows it on a seeded account; flows 04, 14, 40, 71, 73 find the eye
+rightOf its row (it was below the card), 24 and 26 read the row's time after
+its title, 65 reads the date column's "ВС, 8".
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
