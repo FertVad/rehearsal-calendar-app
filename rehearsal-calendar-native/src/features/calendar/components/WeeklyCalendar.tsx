@@ -39,7 +39,8 @@ interface DayItem {
  * with its cell. Every day crossing the middle ticks, as the time wheel does;
  * the day under the frame is handed on to the list only where a swipe stops,
  * so the list does not jump while it moves. A tap, "Today" and the month
- * choose their day at once and bring it under the frame with the same ticks.
+ * bring their day under the frame with the same ticks, and it is handed on
+ * where the strip stops there, as a swipe's is.
  *
  * 72 pt tall, a day 48 wide: never under 44 (T-014), and about seven on a
  * phone's width.
@@ -108,17 +109,28 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   const target = useRef(selectedIndex);
   // A scroll of ours is on its way: a stop before its day is not a choice.
   const travelling = useRef(false);
+  // What a tap, "Today" or the month asked for, handed on to the list only
+  // when the strip stops on its day: "Today" hands on today to follow.
+  const pendingToday = useRef(false);
+
+  // The day under the frame moves to `index`: a tick for every day crossing
+  // the middle, however many one event jumps over — a fast fling or a long
+  // way to a day picked in the month passes several between two events.
+  const moveCentre = useCallback((index: number, ticking: boolean) => {
+    const crossed = Math.abs(index - centre.current);
+    if (crossed === 0) return;
+    centre.current = index;
+    setMiddleIndex(index);
+    if (ticking) for (let i = 0; i < crossed; i++) hapticSelection();
+  }, []);
 
   const scrollTo = useCallback((index: number, animated: boolean) => {
     target.current = index;
     travelling.current = animated;
     // Not animated, the days moved under the frame; nothing crossed it.
-    if (!animated) {
-      centre.current = index;
-      setMiddleIndex(index);
-    }
+    if (!animated) moveCentre(index, false);
     listRef.current?.scrollToOffset({ offset: index * DAY_WIDTH, animated });
-  }, []);
+  }, [moveCentre]);
 
   // The selected day goes to the middle, wherever it was chosen: a tap, the
   // month, "Today". When the days themselves move — today has — it is put
@@ -136,29 +148,48 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
 
   // A day crossing the middle comes under the frame, and ticks.
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = indexAt(event.nativeEvent.contentOffset.x);
-    if (index === centre.current) return;
-    centre.current = index;
-    setMiddleIndex(index);
-    hapticSelection();
-  }, [indexAt]);
+    moveCentre(indexAt(event.nativeEvent.contentOffset.x), true);
+  }, [indexAt, moveCentre]);
 
-  // A finger on the strip takes it from wherever a scroll of ours was going.
+  // A finger on the strip takes it from wherever a scroll of ours was going,
+  // and what it was going there for.
   const handleDragBegin = useCallback(() => {
     travelling.current = false;
+    pendingToday.current = false;
   }, []);
+
+  // The day under the frame, where the strip rests, is handed on to the list.
+  const choose = useCallback((index: number) => {
+    target.current = index;
+    if (pendingToday.current) {
+      pendingToday.current = false;
+      onShowToday();
+      return;
+    }
+    const date = days[index].date;
+    if (date !== selectedDate) onDaySelect(date);
+  }, [days, selectedDate, onDaySelect, onShowToday]);
 
   // Where the strip stops, the day under the frame is the one selected.
   const settle = useCallback((offsetX: number) => {
     const index = indexAt(offsetX);
     if (travelling.current && index !== target.current) return;
     travelling.current = false;
-    target.current = index;
-    centre.current = index;
-    setMiddleIndex(index);
-    const date = days[index].date;
-    if (date !== selectedDate) onDaySelect(date);
-  }, [indexAt, days, selectedDate, onDaySelect]);
+    moveCentre(index, true);
+    choose(index);
+  }, [indexAt, moveCentre, choose]);
+
+  // A tap, "Today" or the month: the strip is taken to the day, and the day is
+  // chosen where it stops there. Already under the frame, it is chosen now —
+  // no scroll comes to stop.
+  const bringIn = useCallback((index: number, today: boolean) => {
+    pendingToday.current = today;
+    scrollTo(index, true);
+    if (index === centre.current) {
+      travelling.current = false;
+      choose(index);
+    }
+  }, [scrollTo, choose]);
 
   const handleMomentumEnd = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     settle(event.nativeEvent.contentOffset.x);
@@ -178,16 +209,16 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   // The day comes under the frame with the strip's ticks, as from a tap.
   const handlePickInMonth = useCallback((date: string) => {
     setMonthOpen(false);
-    onDaySelect(date);
-  }, [onDaySelect]);
+    const index = indexOf.get(date);
+    if (index !== undefined) bringIn(index, false);
+  }, [indexOf, bringIn]);
 
   // Today's day, not only its place: this scrolled the strip back and left the
   // day picked before selected, so the list under it went on showing that day
   // (DD03).
   const handleGoToToday = useCallback(() => {
-    onShowToday();
-    scrollTo(indexOf.get(today)!, true);
-  }, [onShowToday, scrollTo, indexOf, today]);
+    bringIn(indexOf.get(today)!, true);
+  }, [bringIn, indexOf, today]);
 
   const renderDay = useCallback(({ item, index }: { item: DayItem; index: number }) => {
     // The day under the frame; the frame itself is drawn behind the strip.
@@ -203,7 +234,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected }}
         style={styles.dayTarget}
-        onPress={() => onDaySelect(item.date)}
+        onPress={() => bringIn(index, false)}
         onLongPress={onDayLongPress && (() => {
           hapticMedium();
           onDayLongPress(item.date);
@@ -249,7 +280,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         </View>
       </TouchableOpacity>
     );
-  }, [middleIndex, today, rehearsalCountMap, dayNames, onDaySelect, onDayLongPress]);
+  }, [middleIndex, today, rehearsalCountMap, dayNames, bringIn, onDayLongPress]);
 
   return (
     <View style={styles.container}>

@@ -57,12 +57,24 @@ function Calendar({ rehearsals = [] }: { rehearsals?: any[] }) {
   );
 }
 
+/** The strip stops with `day` under its frame, as a scroll's end does. */
+const stopOn = (screen: ReturnType<typeof render>, day: string) => {
+  const list = screen.UNSAFE_getByType(FlatList);
+  const { length } = list.props.getItemLayout(list.props.data, 0);
+  const index = list.props.data.findIndex((d: { date: string }) => d.date === day);
+  act(() => {
+    fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: index * length, y: 0 } } });
+  });
+};
+
 it('selects today when "Today" is pressed after another day was picked', () => {
   const screen = render(<Calendar />);
   fireEvent.press(screen.getByTestId('pick'));
+  stopOn(screen, '2030-01-12');
   expect(screen.getByTestId('selected').props.children).toBe('2030-01-12');
 
   fireEvent.press(screen.getByText('Today'));
+  stopOn(screen, '2030-01-10');
 
   expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
 });
@@ -140,9 +152,10 @@ describe('The day strip', () => {
     const list = strip(screen);
 
     fireEvent.press(screen.getByTestId('calendar-day-2030-01-13'));
+    expect(dayInMiddle(list, lastScroll())).toBe('2030-01-13');
+    stopOn(screen, '2030-01-13');
 
     expect(screen.getByTestId('selected').props.children).toBe('2030-01-13');
-    expect(dayInMiddle(list, lastScroll())).toBe('2030-01-13');
   });
 
   it('selects the day a swipe stops on', () => {
@@ -163,11 +176,13 @@ describe('The day strip', () => {
     const screen = render(<Calendar />);
     const list = strip(screen);
     fireEvent.press(screen.getByTestId('calendar-day-2030-01-13'));
+    stopOn(screen, '2030-01-13');
 
     fireEvent.press(screen.getByText('Today'));
+    expect(dayInMiddle(list, lastScroll())).toBe('2030-01-10');
+    stopOn(screen, '2030-01-10');
 
     expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
-    expect(dayInMiddle(list, lastScroll())).toBe('2030-01-10');
   });
 
   it('keeps its days 44 pt wide on a 320 pt screen', () => {
@@ -278,8 +293,9 @@ describe('The day strip as a wheel', () => {
     // Until the strip has moved, the frame still has the 10th.
     expect(highlighted(screen, '2030-01-10')).toBe(true);
 
-    // The animation passes the 11th and the 12th to the 13th.
+    // The animation passes the 11th and the 12th to the 13th; the list stays.
     for (const step of [0.5, 1, 1.5, 2, 2.5, 3]) scrollTo(list, start + length * step);
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
     act(() => {
       fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: start + 3 * length, y: 0 } } });
     });
@@ -314,7 +330,83 @@ describe('The day strip as a wheel', () => {
     act(() => {
       fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: offsetOf('2030-01-13'), y: 0 } } });
     });
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
+    stopOn(screen, '2030-01-14');
     expect(screen.getByTestId('selected').props.children).toBe('2030-01-14');
+  });
+
+  // A tap, "Today" and the month chose their day at once: the list under the
+  // strip showed the 13th while the frame still had the 10th (review, T-035).
+  it('hands on a tapped day, "Today" and a month\'s day only where the strip stops on them', () => {
+    const { Calendar: MonthGrid } = require('react-native-calendars');
+    const onDaySelect = jest.fn();
+    const onShowToday = jest.fn();
+    const screen = render(
+      <WeeklyCalendar rehearsals={[]} onDaySelect={onDaySelect} onShowToday={onShowToday} selectedDate="2030-01-10" />
+    );
+    const list = strip(screen);
+    const { length, offsetOf } = geometry(list);
+    const start = offsetOf('2030-01-10');
+
+    // A tap: on its way, nothing handed on; stopped on the 13th, the 13th.
+    fireEvent.press(screen.getByTestId('calendar-day-2030-01-13'));
+    scrollTo(list, start + length);
+    expect(onDaySelect).not.toHaveBeenCalled();
+    stopOn(screen, '2030-01-13');
+    expect(onDaySelect).toHaveBeenLastCalledWith('2030-01-13');
+    screen.rerender(
+      <WeeklyCalendar rehearsals={[]} onDaySelect={onDaySelect} onShowToday={onShowToday} selectedDate="2030-01-13" />
+    );
+    onDaySelect.mockClear();
+
+    // "Today": today to follow, once the strip is back on it.
+    fireEvent.press(screen.getByText('Today'));
+    scrollTo(list, start + length);
+    expect(onShowToday).not.toHaveBeenCalled();
+    stopOn(screen, '2030-01-10');
+    expect(onShowToday).toHaveBeenCalledTimes(1);
+    expect(onDaySelect).not.toHaveBeenCalled();
+    screen.rerender(
+      <WeeklyCalendar rehearsals={[]} onDaySelect={onDaySelect} onShowToday={onShowToday} selectedDate="2030-01-10" />
+    );
+
+    // The month: the day picked, once the strip stops on it.
+    fireEvent.press(screen.getByTestId('calendar-month'));
+    act(() => screen.UNSAFE_getByType(MonthGrid).props.onDayPress({ dateString: '2030-01-24' }));
+    scrollTo(list, start + 5 * length);
+    expect(onDaySelect).not.toHaveBeenCalled();
+    stopOn(screen, '2030-01-24');
+    expect(onDaySelect).toHaveBeenLastCalledWith('2030-01-24');
+  });
+
+  it('hands on a day tapped where the frame already is, with no scroll to wait for', () => {
+    const onShowToday = jest.fn();
+    const screen = render(
+      <WeeklyCalendar rehearsals={[]} onDaySelect={jest.fn()} onShowToday={onShowToday} selectedDate="2030-01-10" />
+    );
+    strip(screen);
+    fireEvent.press(screen.getByText('Today'));
+    expect(onShowToday).toHaveBeenCalledTimes(1);
+  });
+
+  // One tick for a change of day, not for each day crossed: a fling or the
+  // long way to a month's day passes several days between two events.
+  it('ticks for every day one event jumps over', () => {
+    const screen = render(<Calendar />);
+    const list = strip(screen);
+    const { length, offsetOf } = geometry(list);
+    const start = offsetOf('2030-01-10');
+
+    scrollTo(list, start + 3 * length);
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(3);
+    expect(highlighted(screen, '2030-01-13')).toBe(true);
+
+    // Back four at once to the 9th, then two more seen only at the stop.
+    scrollTo(list, start - length);
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(7);
+    stopOn(screen, '2030-01-07');
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(9);
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-07');
   });
 
   it('has a frame standing in its middle, as wide as a day', () => {
@@ -377,12 +469,14 @@ describe('The month', () => {
 
     act(() => screen.UNSAFE_getByType(MonthGrid).props.onDayPress({ dateString: '2030-01-24' }));
 
-    expect(screen.getByTestId('selected').props.children).toBe('2030-01-24');
     expect(screen.UNSAFE_queryByType(MonthGrid)).toBeNull();
     const strip = screen.UNSAFE_getByType(FlatList);
     const { length } = strip.props.getItemLayout(strip.props.data, 0);
     const pad = StyleSheet.flatten(strip.props.contentContainerStyle).paddingHorizontal;
     const offset = scrolls.mock.calls[scrolls.mock.calls.length - 1][0].offset;
     expect(strip.props.data[Math.floor((offset + 335 / 2 - pad) / length)].date).toBe('2030-01-24');
+    stopOn(screen, '2030-01-24');
+
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-24');
   });
 });
