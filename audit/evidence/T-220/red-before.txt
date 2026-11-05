@@ -1,35 +1,99 @@
-T-220 — red before: flow 30 as at d670967 fails the same way whenever the
-transport does not give up on the import within ten seconds.
+T-220 — red before
 
-iOS not giving up on 40 s of silence cannot be had on order. So the old flow
-was run with only that changed: the import held OPEN (hold-answers.js OPEN "1",
-the existing mode whose connection stays alive, so the app's transport does not
-give up) in place of MS "40000". Everything else — sign-in, the Apple Calendar
-tap through tap-and-see, the tap on Synchronize, the 40 s wait for
-"Sync error" — is flow 30 at d670967. Temporary file
-e2e/flows/t220-red-transport-waits.yaml, removed after the run, not committed.
+1. The red: the night run at d670967 itself (primary logs, red-run-log.txt).
+   Folder (working tree, not in git):
+   rehearsal-calendar-native/e2e/out/failed/full-e2e-d670967-2026-11-05T01-15-53-702Z/
+   [Failed] A sync whose import fails still exports (1m 40s) (Assertion is false: "Sync error" is visible)
+   device-simulator.log: the import task, timeouts(10.0, …), sent at 14:26:31.32,
+   received the hold's 200 at 14:27:11.35 (transaction_duration_ms=40024,
+   response_status=200); screen: "Synced successfully". No tap lost (taps taken
+   again: 0). This is the only red of the unchanged flow there is.
 
-$ npm run e2e -- e2e/flows/t220-red-transport-waits.yaml
-[e2e] seeding
-[e2e] starting Metro, pointed at the local server
-[e2e] checking the bundle talks to the local server
-[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
-[e2e] running the flows
+2. The reproduction the review asked for: flow 30 as at d670967, unchanged
+   (`git restore --source=d670967 -- e2e/flows/30-sync-import-fails-export-runs.yaml`),
+   in series, under load and in the night's order. 2026-11-05, this machine.
+   Maestro runs one file once per run, so for a series the flow was copied to
+   e2e/flows/t220-rep-<n>.yaml with only `name:` changed (" - rep <n>"); the
+   copies were removed after (not committed). Load: e2e/out/t220-burn.cjs, N
+   threads spinning on the host's 8 cores while `npm run e2e` runs. The three
+   scratch scripts (t220-copies.cjs, t220-burn.cjs, t220-history.cjs) are kept
+   next to this file; they ran from rehearsal-calendar-native/e2e/out.
 
-Waiting for flows to complete...
-[Failed] T-220 red - the transport does not give up (2m 13s) (Assertion is false: "Sync error" is visible)
+   a. Night order — the two flows the night ran just before it, then it:
+      $ npm run e2e -- e2e/flows/71-no-blue.yaml e2e/flows/49-sign-in-and-register-forms.yaml e2e/flows/30-sync-import-fails-export-runs.yaml
+      [Passed] Nothing is blue, purple is doing and choosing (3m 40s)
+      [Passed] Sign-in and registration forms (53s)
+      [Passed] A sync whose import fails still exports (1m 21s)
+      3/3 Flows Passed in 5m 54s
+      [e2e] taps taken again (tap-and-see.yaml): 0
+      metro.log: [CalendarSync] Import failed: {"code": "ECONNABORTED", "message": "timeout of 10000ms exceeded" …}
 
-1/1 Flow Failed
+   b. The file named four times (Maestro ran it once):
+      [Passed] A sync whose import fails still exports (2m 7s)
 
-[e2e] taps taken again (tap-and-see.yaml): 0
+   c. Series of three:
+      $ npm run e2e -- e2e/flows/t220-rep-1.yaml e2e/flows/t220-rep-2.yaml e2e/flows/t220-rep-3.yaml
+      [Passed] A sync whose import fails still exports - rep 1 (1m 48s)
+      [Passed] A sync whose import fails still exports - rep 2 (1m 11s)
+      [Passed] A sync whose import fails still exports - rep 3 (1m 11s)
+      3/3 Flows Passed in 4m 10s
+      metro.log, each: Import failed … "timeout of 10000ms exceeded"; Run completed: export success 1
 
-The same assertion as the night run, with no tap lost (taps taken again: 0).
+   d. Series of three under 16 threads: the command was cut at its 10 minutes;
+      rep 1 finished ("Sync error" seen, import failed after 10037 ms), rep 2 did
+      not reach the import.
 
-The same flow 30 at d670967, unchanged, on this tree the same day:
-$ npm run e2e -- e2e/flows/30-sync-import-fails-export-runs.yaml
-[Passed] A sync whose import fails still exports (1m 43s)
-1/1 Flow Passed in 1m 45s
-[e2e] taps taken again (tap-and-see.yaml): 0
-metro.log: Failed to import calendar events: {"code": "ECONNABORTED",
-"message": "timeout of 10000ms exceeded" …} — here iOS did give up at ten.
-So the flow's outcome is iOS's timer: green when it fires, red when it does not.
+   e. Under 12 threads:
+      $ node e2e/out/t220-burn.cjs 12 e2e/flows/t220-rep-1.yaml
+      [Passed] A sync whose import fails still exports - rep 1 (1m 53s)
+
+   f. After flow 70, the one that leaves SafariViewService up (it was up in the
+      night run's device log too, 14339 lines of it):
+      $ npm run e2e -- e2e/flows/70-privacy-lists-resend.yaml e2e/flows/30-sync-import-fails-export-runs.yaml
+      [Passed] Privacy policy lists Resend in every language (3m 39s)
+      [Passed] A sync whose import fails still exports (1m 25s)
+
+   g. Series of two under 8 threads:
+      $ node e2e/out/t220-burn.cjs 8 e2e/flows/t220-rep-1.yaml e2e/flows/t220-rep-2.yaml
+      [Passed] A sync whose import fails still exports - rep 1 (2m 51s)
+      [Passed] A sync whose import fails still exports - rep 2 (1m 24s)
+
+   h. The whole client and harness at d670967
+      (`git restore --source=d670967 -- src e2e`, restored to HEAD after), night
+      order: 71, 49, 30, then a copy. The command was cut at its 10 minutes
+      during the copy; flow 30 had finished: "Sync error" seen, import failed
+      after 10038 ms.
+
+   a–g ran on HEAD's app code (T-032, the planner tab — nothing of the sync
+   screen or the network) with HEAD's harness; its hold for MS is the one at
+   d670967 (5ee4655 only adds `drop`). h is d670967 throughout.
+
+   The device side of every run, from each flow's device-simulator.log
+   (node e2e/out/t220-history.cjs):
+   2026-11-05_042532  MS 40000  "Sync error" seen  import failed after 10033 ms   (first session)
+   2026-11-05_053258  MS 40000  "Sync error" seen  import failed after 10012 ms   a
+   2026-11-05_054329  MS 40000  "Sync error" seen  import failed after 10018 ms   b
+   2026-11-05_054935  MS 40000  "Sync error" seen  import failed after 10032 ms   c rep 1
+   2026-11-05_054935  MS 40000  "Sync error" seen  import failed after 10015 ms   c rep 2
+   2026-11-05_054935  MS 40000  "Sync error" seen  import failed after 10033 ms   c rep 3
+   2026-11-05_060047  MS 40000  "Sync error" seen  import failed after 10037 ms   d rep 1
+   2026-11-05_060917  MS 40000  "Sync error" seen  import failed after 10012 ms   e
+   2026-11-05_061615  MS 40000  "Sync error" seen  import failed after 10032 ms   f
+   2026-11-05_062708  MS 40000  "Sync error" seen  import failed after 10019 ms   g rep 1
+   2026-11-05_062708  MS 40000  "Sync error" seen  import failed after 10013 ms   g rep 2
+   2026-11-05_063603  MS 40000  "Sync error" seen  import failed after 10038 ms   h
+   night d670967      MS 40000  "Sync error" FAILED  import got the 200 after 40024 ms
+
+   Result: not reproduced. 12 of 12 runs of the unchanged flow green; in each
+   iOS gave up on the held import at ten seconds (-1001, "The request timed
+   out"). The night's red — iOS not giving up for 40 s — did not come again in
+   series, under load, after the night's flows, or on the d670967 tree. It is
+   rare, and what makes iOS skip its timer is not shown by these runs.
+
+3. Not a reproduction (kept for what it shows, no more): flow 30 at d670967
+   with the import held OPEN "1" (a live connection, iOS hears a byte every two
+   seconds and never gives up) in place of MS "40000" failed the same assertion,
+   "Sync error" is visible (2m 13s), no tap lost. The screen differs from the
+   night's — the sync still spinning, not "Synced successfully" — because OPEN
+   answers on release, not at 40 s. It only shows the flow's verdict rides on
+   iOS giving up, which the night log shows it once did not.

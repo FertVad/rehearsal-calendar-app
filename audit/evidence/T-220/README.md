@@ -41,13 +41,21 @@ way of making a request fail.
 
 ## Red before, green after
 
-- `red-before.txt`: flow 30 as at d670967 with the one thing changed that the
-  red run had — the transport not giving up (the import held `OPEN`, the
-  existing mode that keeps the connection alive) — fails with the same
-  assertion, no tap lost. The unchanged flow passed the same day with iOS
-  giving up at ten.
+- `red-before.txt`: the red is the night run at d670967 (its own logs,
+  `red-run-log.txt`). Reproduction of the unchanged flow, as the review asked
+  — in the night's order (71, 49, 30), after flow 70, in series, under 8, 12
+  and 16 threads of load, and once with the whole client and harness at
+  d670967: 12 runs, 12 green, iOS giving up at ten seconds each time. **Not
+  reproduced on order**; the night's red stands on its primary logs alone. The
+  earlier `OPEN` check is kept there, marked as not a reproduction.
 - `green-after.txt`: the fixed flow, two runs, both green; one import request
   dropped each time, import failed, export success 1.
+
+Review (Astra, P2, "red before not reproduced"): the reproduction was run as
+asked and is saved with its output; it stays green. Cell: simple × minor.
+What is left for the supervisor to accept or not is that this flaky red
+comes from iOS skipping a timer once in a night, which no series here
+brought back.
 
 ## Checked
 
