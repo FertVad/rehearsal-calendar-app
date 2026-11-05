@@ -759,21 +759,6 @@ export async function seed({ client, apiUrl, timezone }) {
   ]);
   await notify('solyony', [{ title: 'Duel at noon', read: false }]);
 
-  // A create whose answer never arrives (13). The first project named
-  // Dunsinane takes 13 seconds to insert — longer than the app's 10-second
-  // request timeout — so the app gives up and shows an error while the server
-  // goes on to commit it, its answer going to a closed connection. Only the
-  // first: what the app sends after that is answered at once. On this
-  // database alone; the schema the app runs on has no such trigger.
-  await client.query(`CREATE SEQUENCE e2e_lost_answer;
-    CREATE FUNCTION e2e_lose_answer() RETURNS trigger LANGUAGE plpgsql AS $$
-    BEGIN
-      IF NEW.name = 'Dunsinane' AND nextval('e2e_lost_answer') = 1 THEN PERFORM pg_sleep(13); END IF;
-      RETURN NEW;
-    END $$;
-    CREATE TRIGGER e2e_lose_answer BEFORE INSERT ON native_projects
-      FOR EACH ROW EXECUTE FUNCTION e2e_lose_answer()`);
-
   return {
     password: PASSWORD,
     people: Object.fromEntries(Object.entries(PEOPLE).map(([key, person]) => [key, { id: ids[key], email: person.email }])),

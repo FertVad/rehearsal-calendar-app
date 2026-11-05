@@ -53,6 +53,11 @@
  * (or when its `&ms=` lapses), not handed to the server: a request that fails
  * late, after something else has changed, when the flow says (flow 36).
  *
+ * With `&lose=1` the request is handled at once and its answer is lost: when
+ * the server has answered, the connection is closed with nothing sent. A change
+ * the server made whose answer never reached the app (flow 13); unlike `drop`,
+ * the request reaches the server.
+ *
  * With `&once=1` only the next matching request is held, and the ones after it
  * go through: a read on a slow connection and the change after it on a good
  * one (flow 36). A request held `before` says how the server answered it on
@@ -189,6 +194,51 @@ function holdOpen(request, response, hold) {
   console.log(`[e2e] holding the request ${request.method} ${pathname}, its connection open`);
 }
 
+// Hands the request to the server and, when its answer is ready, closes the
+// connection instead of sending it: the server did the work, the app never
+// hears of it. Nothing of the answer reaches the socket — Node sends the
+// headers with the first body bytes, and both go here.
+// What the server made for a lost answer, by its Idempotency-Key, so the log
+// says what a request sent again with that key was answered.
+const lostKeys = new Map();
+
+// The id an answer names: its object's (`{ project: { id } }`) or its own.
+function idIn(chunk) {
+  try {
+    const body = JSON.parse(String(chunk));
+    return Object.values(body).find((value) => value && value.id !== undefined)?.id ?? body.id;
+  } catch {
+    return undefined;
+  }
+}
+
+function loseAnswer(request, response, handle) {
+  const { pathname } = new URL(request.url, 'http://api');
+  const key = request.headers['idempotency-key'];
+  response.write = () => true;
+  response.end = (chunk) => {
+    const id = idIn(chunk);
+    if (key) lostKeys.set(key, id);
+    console.log(`[e2e] lost the answer to ${request.method} ${pathname} (key ${key || 'none'}): the server answered ${response.statusCode} with id ${id}, its connection closed, no answer`);
+    request.socket.destroy();
+    return response;
+  };
+  console.log(`[e2e] handling the request ${request.method} ${pathname} (key ${key || 'none'}), to lose its answer`);
+  handle();
+}
+
+// A request sent again with the key of a lost answer: what the server said.
+function logAgain(request, response) {
+  const key = request.headers['idempotency-key'];
+  if (!key || !lostKeys.has(key)) return;
+  const { pathname } = new URL(request.url, 'http://api');
+  const end = response.end.bind(response);
+  response.end = (chunk, ...rest) => {
+    console.log(`[e2e] ${request.method} ${pathname} again with the key of a lost answer (${key}): the server answered ${response.statusCode} with id ${idIn(chunk)}, the lost one had id ${lostKeys.get(key)}`);
+    return end(chunk, ...rest);
+  };
+}
+
 // Hands the request to `handle` — at once, or on release when its hold says
 // the request waits.
 function holdAnswer(request, response, handle) {
@@ -202,6 +252,7 @@ function holdAnswer(request, response, handle) {
     request.socket.destroy();
   };
   if (hold.drop && !hold.before) return drop();
+  if (hold.lose) return loseAnswer(request, response, handle);
   if (hold.open) return holdOpen(request, response, hold);
   let released = false;
   const release = (then) => () => {
@@ -261,6 +312,7 @@ function withoutUpgrade(response) {
 // As app.listen would, with the hold in front.
 http.createServer((request, response) => {
   withoutUpgrade(response);
+  logAgain(request, response);
   holdAnswer(request, response, () => app(request, response));
 }).listen(Number(process.env.PORT), process.env.HOST, () => {
   console.log('[e2e] server listening');
@@ -279,7 +331,8 @@ http.createServer((request, response) => {
     const before = url.searchParams.get('before') === '1';
     const once = url.searchParams.get('once') === '1';
     const drop = url.searchParams.get('drop') === '1';
-    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, until: Date.now() + HOLD_WINDOW_MS });
+    const lose = url.searchParams.get('lose') === '1';
+    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, lose, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
   }
   if (request.method === 'GET' && url.pathname === '/notify' && url.searchParams.get('type') === 'member_joined') {

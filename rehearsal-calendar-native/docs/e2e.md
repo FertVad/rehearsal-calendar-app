@@ -179,11 +179,6 @@ flow 42). Times are local to the machine,
 which is every profile's zone but Chebutykin's, whose are in his; the
 simulator's is another (see above).
 
-A create whose answer is lost (flow 13) is made in the seed too: a trigger on
-the disposable database makes the first insert of a project named Dunsinane
-take 13 seconds, longer than the app's 10-second request timeout, so the app
-gives up while the server commits. Only that database has it.
-
 A flow that needs something changed behind the app's back while it runs — what
 another device would do — calls the local server from `e2e/scripts` with
 `runScript`; `${API_URL}` is its address (flow 10). A rehearsal moved
@@ -222,6 +217,7 @@ without `ONCE` and the flow releases it when the network should be back (flow
 closed on release (or when its `MS` lapses), never handed to the server: a
 request that fails late, after something else has landed, when the flow says
 (flow 36).
+`LOSE: "1"` hands the request to the server and closes its connection instead of the answer: the change is made, the app's request fails (flow 13).
 
 When `DROP`, when `MS`. The app's ten seconds (`REQUEST_TIMEOUT_MS`) are not
 the app's: axios hands them to NSURLSession, and iOS gives up after ten seconds

@@ -18,10 +18,14 @@
 // connection at once, as when the network goes, and the request fails then.
 // With BEFORE, the request waits and its connection is closed on release (or
 // when MS lapses): it fails late, when the flow says.
+// ${LOSE}, when "1", lets the server handle the request and loses its answer:
+// the connection is closed instead, so the change is made and the app's
+// request fails.
 const wait = typeof MS === 'undefined' ? '' : '&ms=' + MS;
 const before = typeof BEFORE === 'undefined' ? '' : '&before=' + BEFORE;
 const open = typeof OPEN === 'undefined' ? '' : '&open=' + OPEN;
 const once = typeof ONCE === 'undefined' ? '' : '&once=' + ONCE;
 const drop = typeof DROP === 'undefined' ? '' : '&drop=' + DROP;
-const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait + before + open + once + drop);
+const lose = typeof LOSE === 'undefined' ? '' : '&lose=' + LOSE;
+const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait + before + open + once + drop + lose);
 if (!response.ok) throw new Error('hold answered ' + response.status + ': ' + response.body);
