@@ -27,8 +27,14 @@ tags:
 - tapOn:
     text: "Not Now"
     optional: true
-- tapOn:
-    id: tab-profile
+# The simulator lost this tap once and the flow scrolled the calendar for the
+# sync row (T-221), so it is taken once more if the profile did not open.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element: ".*Calendar Sync.*"
     direction: DOWN
