@@ -1,0 +1,82 @@
+# The calendar's strip of days turns as a time picker's wheel (T-035, owner
+# 04.11). A frame stands still in its middle and the day in it is the one
+# selected; a swipe stops on a day, and that day is selected and its list
+# shown; a day tapped comes into the frame. The highlight stayed with the day
+# picked before while the strip moved, and there was no frame: the fill went
+# with its cell.
+#
+# A day is in the frame when a tap on the frame is a tap on it: it stays
+# selected. Telegin has "Tea on the terrace" today, "Guitar tuning" at the
+# strip's right edge (flow 57).
+appId: ${APP_ID}
+name: Day strip turns as a wheel
+tags:
+  - calendar
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${TELEGIN_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Tea on the terrace.*"
+    timeout: 30000
+- assertVisible:
+    id: calendar-strip-frame
+- assertVisible:
+    id: calendar-day-${TODAY_DAY}
+    selected: true
+- takeScreenshot: 74-strip-today
+- startRecording: 74-strip-wheel
+# A day tapped at the edge comes into the frame.
+- tapOn:
+    id: calendar-day-${EDGE_DAY}
+- extendedWaitUntil:
+    notVisible: ".*Tea on the terrace.*"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: calendar-strip-frame
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: calendar-day-${EDGE_DAY}
+    selected: true
+- assertVisible: ".*Guitar tuning.*"
+- takeScreenshot: 74-tapped-day-in-frame
+# Back to today, then a swipe: where it stops, the day in the frame is the
+# one selected, and the list is that day's.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-today
+      SEE: ".*Tea on the terrace.*"
+      WAIT_MS: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- swipe:
+    from:
+      id: calendar-strip
+    direction: LEFT
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    notVisible: ".*Tea on the terrace.*"
+    timeout: 10000
+- assertNotVisible:
+    id: calendar-day-${TODAY_DAY}
+    selected: true
+- copyTextFrom:
+    id: "calendar-day-.*"
+    selected: true
+- evalScript: ${output.stoppedOn = maestro.copiedText}
+- takeScreenshot: 74-swipe-stopped
+- tapOn:
+    id: calendar-strip-frame
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    text: ${output.stoppedOn}
+    selected: true
+- assertNotVisible: ".*Tea on the terrace.*"
+- stopRecording

@@ -185,6 +185,153 @@ describe('The day strip', () => {
 });
 
 /**
+ * T-035: the strip turns as the wheel of a time picker does (owner, 04.11).
+ * A frame stands still in its middle and the day in it is the one selected:
+ * while the strip moves the highlight does not ride away with its cell, the
+ * next day comes under the frame. Every day crossing the middle gives a
+ * selection tick, as the time wheel's; the list under the strip changes to
+ * the day only where the strip stops. It stayed on the day picked before,
+ * and the day was chosen, with a medium thump, only on stopping.
+ */
+describe('The day strip as a wheel', () => {
+  const Haptics = require('expo-haptics');
+  const WIDTH = 335;
+  beforeEach(() => {
+    mockScrolls.mockClear();
+    Haptics.selectionAsync.mockClear();
+    Haptics.impactAsync.mockClear();
+  });
+
+  const strip = (screen: ReturnType<typeof render>) => {
+    const list = screen.UNSAFE_getByType(FlatList);
+    act(() => {
+      fireEvent(list, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: WIDTH, height: 72 } } });
+    });
+    return screen.UNSAFE_getByType(FlatList);
+  };
+  const geometry = (list: any) => {
+    const { length } = list.props.getItemLayout(list.props.data, 0);
+    const indexOf = (day: string) => list.props.data.findIndex((d: { date: string }) => d.date === day);
+    return { length, offsetOf: (day: string) => indexOf(day) * length };
+  };
+  const scrollTo = (list: any, x: number) => act(() => {
+    fireEvent(list, 'scroll', { nativeEvent: { contentOffset: { x, y: 0 } } });
+  });
+  const highlighted = (screen: ReturnType<typeof render>, day: string) =>
+    screen.getByTestId(`calendar-day-${day}`).props.accessibilityState?.selected;
+
+  it('ticks once for every day crossing the middle, and selects only where it stops', () => {
+    const screen = render(<Calendar />);
+    const list = strip(screen);
+    const { length, offsetOf } = geometry(list);
+    const start = offsetOf('2030-01-10');
+
+    // Under half a day: still the 10th, no tick.
+    scrollTo(list, start + length * 0.4);
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(0);
+    // The 11th, the 12th, then the 13th under the frame.
+    scrollTo(list, start + length * 0.6);
+    scrollTo(list, start + length * 1.2);
+    scrollTo(list, start + length * 1.7);
+    scrollTo(list, start + length * 2.6);
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(3);
+
+    // The highlight is the day under the frame, not the cell that had it...
+    expect(highlighted(screen, '2030-01-13')).toBe(true);
+    expect(highlighted(screen, '2030-01-10')).toBe(false);
+    // ...and the list under the strip has not moved yet.
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-10');
+
+    // It stops on the 13th: the day is chosen, with no second tick or thump.
+    act(() => {
+      fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: offsetOf('2030-01-13'), y: 0 } } });
+    });
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-13');
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(3);
+    expect(Haptics.impactAsync).not.toHaveBeenCalled();
+    // Chosen where it stands: not scrolled anywhere else.
+    expect(mockScrolls).not.toHaveBeenCalled();
+  });
+
+  it('ticks back the same way, a day at a time', () => {
+    const screen = render(<Calendar />);
+    const list = strip(screen);
+    const { length, offsetOf } = geometry(list);
+    const start = offsetOf('2030-01-10');
+
+    scrollTo(list, start - length * 0.6);
+    scrollTo(list, start - length * 1.6);
+    scrollTo(list, start - length * 0.9); // and back one
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(3);
+    expect(highlighted(screen, '2030-01-09')).toBe(true);
+  });
+
+  it('brings a tapped day under the frame with the same ticks, no thump', () => {
+    const screen = render(<Calendar />);
+    const list = strip(screen);
+    const { length, offsetOf } = geometry(list);
+    const start = offsetOf('2030-01-10');
+
+    fireEvent.press(screen.getByTestId('calendar-day-2030-01-13'));
+    expect(Haptics.impactAsync).not.toHaveBeenCalled();
+    expect(mockScrolls).toHaveBeenLastCalledWith({ offset: offsetOf('2030-01-13'), animated: true });
+    // Until the strip has moved, the frame still has the 10th.
+    expect(highlighted(screen, '2030-01-10')).toBe(true);
+
+    // The animation passes the 11th and the 12th to the 13th.
+    for (const step of [0.5, 1, 1.5, 2, 2.5, 3]) scrollTo(list, start + length * step);
+    act(() => {
+      fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: start + 3 * length, y: 0 } } });
+    });
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(3);
+    expect(highlighted(screen, '2030-01-13')).toBe(true);
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-13');
+  });
+
+  it('brings today back with ticks, no thump', () => {
+    const screen = render(<Calendar />);
+    const list = strip(screen);
+    const { length, offsetOf } = geometry(list);
+    fireEvent.press(screen.getByTestId('calendar-day-2030-01-12'));
+    for (const step of [1, 2]) scrollTo(list, offsetOf('2030-01-10') + length * step);
+    Haptics.selectionAsync.mockClear();
+
+    fireEvent.press(screen.getByText('Today'));
+    for (const step of [1, 0]) scrollTo(list, offsetOf('2030-01-10') + length * step);
+
+    expect(Haptics.impactAsync).not.toHaveBeenCalled();
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
+    expect(highlighted(screen, '2030-01-10')).toBe(true);
+  });
+
+  it('does not let an interrupted swipe take the day a tap sent it to', () => {
+    const screen = render(<Calendar />);
+    const list = strip(screen);
+    const { offsetOf } = geometry(list);
+
+    fireEvent.press(screen.getByTestId('calendar-day-2030-01-14'));
+    // A fling's end on the way, a day short.
+    act(() => {
+      fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: offsetOf('2030-01-13'), y: 0 } } });
+    });
+    expect(screen.getByTestId('selected').props.children).toBe('2030-01-14');
+  });
+
+  it('has a frame standing in its middle, as wide as a day', () => {
+    const screen = render(<Calendar />);
+    const list = strip(screen);
+    const style = screen.getByTestId('calendar-strip-frame').props.style;
+    const frame = Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+    const { length } = geometry(list);
+
+    expect(frame.position).toBe('absolute');
+    expect(frame.left + frame.width / 2).toBeCloseTo(WIDTH / 2);
+    expect(frame.width).toBeLessThanOrEqual(length);
+    expect(screen.getByTestId('calendar-strip-frame').props.pointerEvents).toBe('none');
+  });
+});
+
+/**
  * T-019: the month name opens the month under the header: the week from the
  * profile's day, today the profile's, the days with rehearsals marked. A day
  * picked in it is selected, the month closes, the strip brings the day to its

@@ -9,7 +9,7 @@ import { rehearsalDates } from '../../../shared/utils/rehearsalDays';
 import { useI18n } from '../../../contexts/I18nContext';
 import { formatDate } from '../../../shared/utils/dateFormat';
 import { DayCalendar } from '../../../shared/components/DayCalendar';
-import { hapticMedium } from '../../../shared/utils/haptics';
+import { hapticMedium, hapticSelection } from '../../../shared/utils/haptics';
 
 interface WeeklyCalendarProps {
   rehearsals: Rehearsal[];
@@ -33,6 +33,14 @@ interface DayItem {
  * day to the middle, a swipe stops on a day and selects it, "Today" brings
  * today. The week's first day plays no part here; it is the month's.
  *
+ * It turns as a time picker's wheel (T-035, owner 04.11): a frame stands still
+ * in the middle, and the day under it is the one highlighted — while the strip
+ * moves, the next day comes under the frame, the highlight does not ride off
+ * with its cell. Every day crossing the middle ticks, as the time wheel does;
+ * the day under the frame is handed on to the list only where a swipe stops,
+ * so the list does not jump while it moves. A tap, "Today" and the month
+ * choose their day at once and bring it under the frame with the same ticks.
+ *
  * 72 pt tall, a day 48 wide: never under 44 (T-014), and about seven on a
  * phone's width.
  */
@@ -41,6 +49,8 @@ const DAY_WIDTH = 48;
 const CARD_BORDER = 1;
 const CARD_PADDING_X = Spacing.xs;
 const CARD_INSET = CARD_BORDER + CARD_PADDING_X;
+/** The frame, as a day's cell is drawn: 2 pt in from either side. */
+const FRAME_INSET = 2;
 /** A year on each side of today, as the weeks were. */
 const RANGE_DAYS = 366;
 
@@ -90,13 +100,23 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   const indexOf = useMemo(() => new Map(days.map((d, i) => [d.date, i])), [days]);
   const selectedIndex = indexOf.get(selectedDate) ?? indexOf.get(today)!;
 
-  // The day in the middle while the strip moves, for the month it names.
+  // The day under the frame, highlighted and named by the month; it follows
+  // the strip as it moves, a tick each time it changes.
   const [middleIndex, setMiddleIndex] = useState(selectedIndex);
-  const middle = useRef(selectedIndex);
+  const centre = useRef(selectedIndex);
+  // Where the strip rests, or is being taken by a tap, "Today" or the month.
+  const target = useRef(selectedIndex);
+  // A scroll of ours is on its way: a stop before its day is not a choice.
+  const travelling = useRef(false);
 
   const scrollTo = useCallback((index: number, animated: boolean) => {
-    middle.current = index;
-    setMiddleIndex(index);
+    target.current = index;
+    travelling.current = animated;
+    // Not animated, the days moved under the frame; nothing crossed it.
+    if (!animated) {
+      centre.current = index;
+      setMiddleIndex(index);
+    }
     listRef.current?.scrollToOffset({ offset: index * DAY_WIDTH, animated });
   }, []);
 
@@ -107,28 +127,37 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   useEffect(() => {
     const moved = shownFirst.current !== firstDay;
     shownFirst.current = firstDay;
-    if (moved || middle.current !== selectedIndex) scrollTo(selectedIndex, !moved);
+    if (moved || target.current !== selectedIndex) scrollTo(selectedIndex, !moved);
   }, [selectedIndex, firstDay, scrollTo]);
 
   const indexAt = useCallback((offsetX: number) => (
     Math.min(days.length - 1, Math.max(0, Math.round(offsetX / DAY_WIDTH)))
   ), [days.length]);
 
+  // A day crossing the middle comes under the frame, and ticks.
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = indexAt(event.nativeEvent.contentOffset.x);
-    if (index !== middleIndex) setMiddleIndex(index);
-  }, [indexAt, middleIndex]);
+    if (index === centre.current) return;
+    centre.current = index;
+    setMiddleIndex(index);
+    hapticSelection();
+  }, [indexAt]);
 
-  // Where the strip stops, the day in the middle is the one selected.
+  // A finger on the strip takes it from wherever a scroll of ours was going.
+  const handleDragBegin = useCallback(() => {
+    travelling.current = false;
+  }, []);
+
+  // Where the strip stops, the day under the frame is the one selected.
   const settle = useCallback((offsetX: number) => {
     const index = indexAt(offsetX);
-    middle.current = index;
+    if (travelling.current && index !== target.current) return;
+    travelling.current = false;
+    target.current = index;
+    centre.current = index;
     setMiddleIndex(index);
     const date = days[index].date;
-    if (date !== selectedDate) {
-      hapticMedium();
-      onDaySelect(date);
-    }
+    if (date !== selectedDate) onDaySelect(date);
   }, [indexAt, days, selectedDate, onDaySelect]);
 
   const handleMomentumEnd = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -146,8 +175,8 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   );
 
   const [monthOpen, setMonthOpen] = useState(false);
+  // The day comes under the frame with the strip's ticks, as from a tap.
   const handlePickInMonth = useCallback((date: string) => {
-    hapticMedium();
     setMonthOpen(false);
     onDaySelect(date);
   }, [onDaySelect]);
@@ -156,13 +185,13 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   // day picked before selected, so the list under it went on showing that day
   // (DD03).
   const handleGoToToday = useCallback(() => {
-    hapticMedium();
     onShowToday();
     scrollTo(indexOf.get(today)!, true);
   }, [onShowToday, scrollTo, indexOf, today]);
 
-  const renderDay = useCallback(({ item }: { item: DayItem }) => {
-    const isSelected = item.date === selectedDate;
+  const renderDay = useCallback(({ item, index }: { item: DayItem; index: number }) => {
+    // The day under the frame; the frame itself is drawn behind the strip.
+    const isSelected = index === middleIndex;
     const isToday = item.date === today;
     const rehearsalCount = rehearsalCountMap.get(item.date) || 0;
 
@@ -174,10 +203,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected }}
         style={styles.dayTarget}
-        onPress={() => {
-          hapticMedium();
-          onDaySelect(item.date);
-        }}
+        onPress={() => onDaySelect(item.date)}
         onLongPress={onDayLongPress && (() => {
           hapticMedium();
           onDayLongPress(item.date);
@@ -188,7 +214,6 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         <View style={[
           styles.dayCell,
           isToday && styles.dayToday,
-          isSelected && styles.daySelected,
         ]}>
           <Text style={[
             styles.dayOfWeek,
@@ -224,7 +249,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         </View>
       </TouchableOpacity>
     );
-  }, [selectedDate, today, rehearsalCountMap, dayNames, onDaySelect, onDayLongPress]);
+  }, [middleIndex, today, rehearsalCountMap, dayNames, onDaySelect, onDayLongPress]);
 
   return (
     <View style={styles.container}>
@@ -272,36 +297,45 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
         />
       )}
 
-      {/* The days, the selected one in the middle */}
-      <FlatList
-        ref={listRef}
-        testID="calendar-strip"
-        style={styles.strip}
-        data={days}
-        renderItem={renderDay}
-        keyExtractor={(item) => item.date}
-        extraData={renderDay}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: edge }}
-        snapToInterval={DAY_WIDTH}
-        decelerationRate="fast"
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        onScrollEndDrag={handleDragEnd}
-        onMomentumScrollEnd={handleMomentumEnd}
-        onLayout={handleListLayout}
-        // An offset is the day's place less the edge: the day at `index` is in
-        // the middle at index * DAY_WIDTH.
-        getItemLayout={(_, index) => ({
-          length: DAY_WIDTH,
-          offset: DAY_WIDTH * index,
-          index,
-        })}
-        initialScrollIndex={selectedIndex}
-        initialNumToRender={15}
-        windowSize={11}
-      />
+      {/* The days, the selected one in the middle, under a frame that stays
+          there: drawn behind the strip, so the day's digits stand on it. */}
+      <View style={styles.strip}>
+        <View
+          testID="calendar-strip-frame"
+          pointerEvents="none"
+          style={[styles.frame, { left: edge + FRAME_INSET, width: DAY_WIDTH - 2 * FRAME_INSET }]}
+        />
+        <FlatList
+          ref={listRef}
+          testID="calendar-strip"
+          style={styles.strip}
+          data={days}
+          renderItem={renderDay}
+          keyExtractor={(item) => item.date}
+          extraData={renderDay}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: edge }}
+          snapToInterval={DAY_WIDTH}
+          decelerationRate="fast"
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          onScrollBeginDrag={handleDragBegin}
+          onScrollEndDrag={handleDragEnd}
+          onMomentumScrollEnd={handleMomentumEnd}
+          onLayout={handleListLayout}
+          // An offset is the day's place less the edge: the day at `index` is in
+          // the middle at index * DAY_WIDTH.
+          getItemLayout={(_, index) => ({
+            length: DAY_WIDTH,
+            offset: DAY_WIDTH * index,
+            index,
+          })}
+          initialScrollIndex={selectedIndex}
+          initialNumToRender={15}
+          windowSize={11}
+        />
+      </View>
     </View>
   );
 }
@@ -359,12 +393,13 @@ const styles = StyleSheet.create({
     width: DAY_WIDTH,
     height: STRIP_HEIGHT,
   },
+  // The days stand bare on the card, as a wheel's values do: a fill of their
+  // own would slide over the frame as they pass it (T-035).
   dayCell: {
     flex: 1,
-    marginHorizontal: 2,
+    marginHorizontal: FRAME_INSET,
     marginVertical: Spacing.xs,
     borderRadius: 12,
-    backgroundColor: Colors.bg.secondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -375,8 +410,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.accent.purple,
   },
-  // Under white text: purpleFill (T-027).
-  daySelected: {
+  // The fill of the day picked, standing still in the middle. Under white
+  // text: purpleFill (T-027).
+  frame: {
+    position: 'absolute',
+    top: Spacing.xs,
+    bottom: Spacing.xs,
+    borderRadius: 12,
     backgroundColor: Colors.accent.purpleFill,
   },
   dayOfWeek: {
