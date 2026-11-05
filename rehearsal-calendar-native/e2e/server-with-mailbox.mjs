@@ -26,9 +26,10 @@
  * what was true when it was asked. With `&before=1` the request waits instead,
  * and is handled on release: a change still on its way to the server, so what
  * is read meanwhile says what was true before it (flow 21). None waits past
- * HOLD_LIMIT_MS: the app gives up on a request after ten seconds, and a held
- * answer must still arrive. A flow that wants the request to fail as on no
- * network names a longer wait (`&ms=`, a minute at most).
+ * HOLD_LIMIT_MS: iOS may give up on a request after ten seconds of silence, and
+ * a held answer must still arrive. A longer wait (`&ms=`, a minute at most) is
+ * for a request released later by the flow; a flow that wants the request to
+ * fail as on no network drops it (`&drop=1`, below).
  *
  * With `&open=1` the request waits as with `before`, but its connection stays
  * open until release, however long the flow takes (OPEN_LIMIT_MS at most): the
@@ -47,7 +48,10 @@
  * certain: in a night run (T-220) an import with a ten-second timeout heard
  * nothing for 40 s, then got its 200 when the hold lapsed, and the flow saw a
  * sync that succeeded. A flow whose point is what the app does after a failed
- * request, not how long it waits, fails it with `drop`.
+ * request, not how long it waits, fails it with `drop`. With `&before=1` too,
+ * the request waits as with `before` and its connection is closed on release
+ * (or when its `&ms=` lapses), not handed to the server: a request that fails
+ * late, after something else has changed, when the flow says (flow 36).
  *
  * With `&once=1` only the next matching request is held, and the ones after it
  * go through: a read on a slow connection and the change after it on a good
@@ -193,11 +197,11 @@ function holdAnswer(request, response, handle) {
   const hold = holds.find((candidate) => candidate.method === request.method && candidate.path.test(pathname));
   if (!hold) return handle();
   if (hold.once) holds = holds.filter((candidate) => candidate !== hold);
-  if (hold.drop) {
+  const drop = () => {
     console.log(`[e2e] dropped the request ${request.method} ${pathname}: its connection closed, no answer`);
     request.socket.destroy();
-    return;
-  }
+  };
+  if (hold.drop && !hold.before) return drop();
   if (hold.open) return holdOpen(request, response, hold);
   let released = false;
   const release = (then) => () => {
@@ -209,6 +213,13 @@ function holdAnswer(request, response, handle) {
   };
   let onRelease;
   let limit;
+  if (hold.before && hold.drop) {
+    onRelease = release(drop);
+    limit = setTimeout(onRelease, hold.limitMs);
+    held.add(onRelease);
+    console.log(`[e2e] holding the request ${request.method} ${pathname}, to drop it on release`);
+    return;
+  }
   if (hold.before) {
     response.on('finish', () => {
       console.log(`[e2e] released ${request.method} ${pathname}: the server answered ${response.statusCode}`);

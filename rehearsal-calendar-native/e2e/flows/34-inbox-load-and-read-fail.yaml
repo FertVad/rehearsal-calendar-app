@@ -19,12 +19,13 @@ tags:
       MAIL_URL: ${MAIL_URL}
       METHOD: GET
       PATH: "^/api/native/notifications$"
-      # Past the app's ten seconds: the list does not come at all, as offline.
-      MS: "40000"
+      # The list does not come at all, as offline: its connection is closed
+      # (not held past ten seconds: those are iOS's, T-220).
+      DROP: "1"
 - tapOn: "Notifications"
 - extendedWaitUntil:
     visible: "Could not load notifications"
-    timeout: 25000
+    timeout: 15000
 - assertNotVisible: "Nothing yet"
 - takeScreenshot: 34-could-not-load
 - runScript:
@@ -38,21 +39,20 @@ tags:
       SEE: ".*Papers from the council.*"
       WAIT_MS: 15000
 - assertVisible: ".*Bread delivery.*"
-# "Mark all read" goes nowhere: held on its way past the app's ten seconds.
+# "Mark all read" goes nowhere: its connection is closed before the server.
 - runScript:
     file: ../scripts/hold-answers.js
     env:
       MAIL_URL: ${MAIL_URL}
       METHOD: POST
       PATH: "^/api/native/notifications/read$"
-      BEFORE: "1"
-      MS: "40000"
+      DROP: "1"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Mark all read"
       SEE: "Could not mark as read"
-      WAIT_MS: 25000
+      WAIT_MS: 15000
 - takeScreenshot: 34-could-not-mark-read
 - tapOn: "OK"
 # The cards are unread again, and the button with them.

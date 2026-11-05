@@ -1,0 +1,54 @@
+T-048 — the changed flows, one run each on the working tree (2026-11-05).
+
+$ npm run e2e -- e2e/flows/36-inbox-late-read-after-mark-all.yaml
+[Passed] Inbox late read after mark all (1m 14s)
+server.log 1201: [e2e] holding the request POST /api/native/notifications/read, to drop it on release
+server.log 1202: [e2e] dropped the request POST /api/native/notifications/read: its connection closed, no answer
+metro.log:
+  41 Request: POST /native/notifications/read          (the card's read, held)
+  42 Request: POST /native/notifications/read          (Mark all read)
+  43 Response: 200 POST /native/notifications/read     (Mark all read landed)
+  44 Response Error: Network Error POST /native/notifications/read   (the first, on release)
+  45 [Unread] Could not mark as read: {"code": "ERR_NETWORK", ...}
+  -> the late failure after the landed change, and the button stayed gone.
+
+$ npm run e2e -- e2e/flows/16-switch-account-unread-language.yaml
+[Passed] Switch accounts - count and language (1m 26s)
+server.log 1201-1203: dropped the request GET /api/native/notifications/unread-count (x3)
+metro.log 51 Request: GET /native/notifications/unread-count
+metro.log 53 Response Error: Network Error GET /native/notifications/unread-count
+metro.log 54 [Unread] Could not refresh the count: {"code": "ERR_NETWORK", ...}
+  -> one request of the app's, three drops: iOS resent the GET itself.
+
+$ npm run e2e -- e2e/flows/52-rehearsal-details-edit-and-delete.yaml
+[Passed] An admin edits and deletes from the details (3m 41s)
+server.log 1215-1217: dropped the request GET /api/native/rehearsals/30 (x3)
+server.log 1257-1259: dropped the request GET /api/native/rehearsals/29/responses (x3)
+metro.log 63 Response Error: Network Error GET /native/rehearsals/30
+metro.log 64 [RehearsalDetails] Could not load: {"code": "ERR_NETWORK", ...}
+metro.log 97 Response Error: Network Error GET /native/rehearsals/29/responses
+metro.log 98 [useDeleteRehearsal] Could not read who is on it: {"code": "ERR_NETWORK", ...}
+
+$ npm run e2e -- e2e/flows/34-inbox-load-and-read-fail.yaml
+[Passed] Inbox load and read fail (1m 55s)
+server.log 1201-1203: dropped the request GET /api/native/notifications (x3)
+server.log 1204: dropped the request POST /api/native/notifications/read
+metro.log 43-44 Network Error GET /native/notifications; [Notifications] Could not load: ERR_NETWORK
+metro.log 48-49 Network Error POST /native/notifications/read; [Unread] Could not mark the inbox read: ERR_NETWORK
+
+$ npm run e2e -- e2e/flows/37-inbox-refused-after-sign-out.yaml   (comment only)
+[Passed] Inbox change refused after sign-out (2m 35s)
+server.log 1201: holding the request POST /api/native/notifications/read
+server.log 1202: released POST /api/native/notifications/read: the server answered 401
+
+$ npm run e2e -- e2e/flows/10-availability-days.yaml
+[Passed] Availability saves the day it changed (3m 46s)
+server.log 1201-1202: dropped the request PUT /api/native/availability/days (one per save)
+metro.log 550-552: PUT /native/availability/days -> Network Error -> Failed to save availability: ERR_NETWORK
+metro.log 553-555: same, the close question's Save
+Two earlier runs of flow 10 did not reach the changed steps: one failed at
+line 247 (the "+" tap did not open its menu, "Mark Busy" not found — before
+any hold), one was cut by the 10-minute command limit mid-flow on a slow
+machine. Neither touched a hold.
+
+Every run: [e2e] taps taken again (tap-and-see.yaml): 0

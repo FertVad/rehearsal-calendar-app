@@ -240,7 +240,8 @@ tags:
 # A save that fails says why on the screen, not in an alert (T-021): the
 # sheet's own Save above that button, and the close question's Save on the
 # screen, which stays open with the change. The
-# request is held past the app's ten seconds, so the app gives up on it.
+# request fails: its connection is closed, as when the network goes (not held
+# past ten seconds — those are iOS's to keep, T-220).
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
@@ -270,9 +271,8 @@ tags:
       MAIL_URL: ${MAIL_URL}
       METHOD: PUT
       PATH: "/availability/days$"
-      BEFORE: "1"
+      DROP: "1"
       ONCE: "1"
-      MS: "40000"
 - tapOn:
     id: availability-save
 - extendedWaitUntil:
@@ -281,14 +281,9 @@ tags:
       text: "Failed to save availability"
       above:
         id: availability-save
-    timeout: 25000
+    timeout: 15000
 - assertNotVisible: "OK"
 - takeScreenshot: 10-save-error-above-save
-- runScript:
-    file: ../scripts/release-answers.js
-    env:
-      MAIL_URL: ${MAIL_URL}
-      EXPECT: "1"
 # Letting go of the day with it changed asks, as the editor's arrow does
 # (T-026, review); a tap outside the popover is its Cancel, and the editor
 # stays up with the change.
@@ -310,9 +305,8 @@ tags:
       MAIL_URL: ${MAIL_URL}
       METHOD: PUT
       PATH: "/availability/days$"
-      BEFORE: "1"
+      DROP: "1"
       ONCE: "1"
-      MS: "40000"
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:
@@ -323,16 +317,11 @@ tags:
     visible:
       id: availability-save-error
       text: "Failed to save availability"
-    timeout: 25000
+    timeout: 15000
 - assertNotVisible: "OK"
 - assertVisible:
     id: availability-legend
 - takeScreenshot: 10-save-error-on-close
-- runScript:
-    file: ../scripts/release-answers.js
-    env:
-      MAIL_URL: ${MAIL_URL}
-      EXPECT: "1"
 - tapOn:
     id: header-cancel
 - extendedWaitUntil:

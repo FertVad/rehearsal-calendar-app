@@ -304,3 +304,12 @@ range being built through UTC.
 - Push delivery is not verified: Expo's tickets say the message was accepted,
   and the receipts that say whether a phone got it are never fetched. `sent`
   means accepted.
+- The app's request timeout is iOS's timer of silence, not the app's own:
+  `REQUEST_TIMEOUT_MS` (10 s, [api.ts](../src/shared/services/api.ts)) is
+  handed by axios to NSURLSession as `timeoutInterval`, which iOS counts from
+  the last byte heard. In one e2e night run (T-220, on the simulator under
+  load) it did not fire in 40 s of silence: the request waited and got its
+  answer. The app sets no total limit of its own on purpose: it would count
+  the whole request, not the silence, and cut off a slow upload or read that
+  is still coming in, which today goes through. The e2e flows do not count on
+  iOS giving up (docs/e2e.md, `DROP`).

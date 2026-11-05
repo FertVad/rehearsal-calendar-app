@@ -194,8 +194,9 @@ A late answer is made the same way: `e2e/scripts/hold-answers.js` with
 `MAIL_URL`, `METHOD` and `PATH` (a regular expression on the path) holds the
 answers to matching requests until `release-answers.js` — the request is
 handled at once, only its answer waits, as on a slow network (flows 16–18,
-20). An answer waits nine seconds at most, inside the app's ten; `MS` makes it
-longer, and the app then gives up on the request as offline (flow 16). A hold
+20). An answer waits nine seconds at most, inside the ten seconds of silence
+after which iOS may give up on the request; `MS` makes it longer, for an
+answer the flow releases later (below: when `DROP`, when `MS`). A hold
 lapses after a minute, so a flow that fails before its release does not slow
 the next. `BEFORE: "1"` holds the request itself instead: the server handles
 it only on release, so a change is still on its way and what is read meanwhile
@@ -211,16 +212,32 @@ never a 304 to the app's cached copy (flow 17).
 through: a read on a slow connection, then a change on a good one (flow 36).
 `DROP: "1"` answers nothing: the server closes the request's connection at
 once, as when the network goes, and the app's request fails then and there
-(flow 30). A long `MS` fails a request only if iOS gives up on the silence,
-and it need not: in a night run (T-220) the import, ten seconds its timeout,
-heard nothing for 40 s and then got its 200 when the hold lapsed. A flow whose
-point is what the app does after a failed request uses `DROP`; `MS` past ten
-seconds is for one that shows the wait itself.
+(flow 30). A GET whose connection drops iOS sends again by itself (flow 16:
+one read in `metro.log`, three drops in `server.log`), so a dropped GET is held
+without `ONCE` and the flow releases it when the network should be back (flow
+52). With `BEFORE: "1"` too, the request waits and its connection is
+closed on release (or when its `MS` lapses), never handed to the server: a
+request that fails late, after something else has landed, when the flow says
+(flow 36).
+
+When `DROP`, when `MS`. The app's ten seconds (`REQUEST_TIMEOUT_MS`) are not
+the app's: axios hands them to NSURLSession, and iOS gives up after ten seconds
+of silence — or does not: in a night run (T-220) the import heard nothing for
+40 s and then got its 200 when the hold lapsed. So no flow counts on iOS giving
+up.
+- The point is a request that fails ("as offline", "does not come at all",
+  "goes nowhere"): `DROP`, and the wait for the error has no ten seconds in it
+  (flows 10, 16, 30, 34, 52). A failure that must come after something else:
+  `DROP` with `BEFORE`, and `release-answers.js` when it should (flow 36).
+- The point is a late answer the flow releases after something changed: `MS`
+  as long as the flow needs, and no check may depend on whether iOS gave up
+  first. Flow 37 needs it not to have given up yet: ten seconds of silence are
+  the least iOS waits, so from the tap to the release fits in them (below).
 A request held `BEFORE` puts the server's status in `server.log` on release
 ("the server answered 401"), so a flow that needs a real refusal shows it had
 one: a sign-out ends the tokens, and a change released after it is refused
-(flow 37). From the tap to the release must fit in the app's ten seconds, or
-the app gives up first and the failure is a timeout; bring the next controls
+(flow 37). From the tap to the release must fit in iOS's ten seconds of
+silence, or iOS may give up first and the failure is a timeout; bring the next controls
 into view before the tap.
 
 `EXPECT` on `release-answers.js` is how many answers must have been held: a
