@@ -1,0 +1,34 @@
+T-033 — one's own row first in a rehearsal's participants, "You" on it.
+Fix commit: aaf1454 (base ebedfd7).
+
+RED — flow 72 with RehearsalDetailsScreen.tsx and translations/calendar.ts
+restored from ebedfd7 (git restore --source=ebedfd7 -- <files>):
+
+$ npm run e2e -- e2e/flows/72-details-own-row-first.yaml
+[Failed] One's own row is first in a rehearsal's participants (1m 21s)
+  (Assertion is false: "Mariana Grange, You.*", id: own-seen-toggle is visible)
+1/1 Flow Failed
+Screenshot: before-actor.png — Angelo, Mariana, Vincentio; Mariana's row second, no "You".
+
+The director half, run once on its own from a temporary flow (deleted after;
+remove-temp-flow.mjs) because the run above stops at the actor:
+[Failed] tmp 72 director before (1m 26s)
+  (Assertion is false: "Vincentio Duke, You.*", id: own-seen-toggle is visible)
+Screenshot: before-director.png — Vincentio's row last, count 0/3.
+
+Files put back: git restore --source=HEAD -- <files>.
+
+GREEN — the same flow on aaf1454:
+$ npm run e2e -- e2e/flows/72-details-own-row-first.yaml
+[Passed] One's own row is first in a rehearsal's participants (1m 53s)
+1/1 Flow Passed in 1m 53s
+[e2e] taps taken again (tap-and-see.yaml): 0
+Screenshots: after-actor.png (Mariana first, "You"; Angelo, Vincentio after),
+after-director.png (Vincentio first, "You"; Angelo, Mariana after; count 0/3).
+
+Regression — flow 40 (the own row is the seen toggle; label matched as "Polina Andreyevna.*"):
+$ npm run e2e -- e2e/flows/40-details-seen-one-model.yaml
+[Passed] Details and the card read one seen mark (1m 19s)
+
+Jest after the fix: Tests: 1211 passed, 1211 total (jest-before.txt: 3 red before).
+type-check: tsc --noEmit clean.
