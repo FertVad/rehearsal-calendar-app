@@ -209,6 +209,13 @@ answers 200: it is asked without `If-None-Match`, so it gets its body back,
 never a 304 to the app's cached copy (flow 17).
 `ONCE: "1"` holds only the next matching request and lets the ones after it
 through: a read on a slow connection, then a change on a good one (flow 36).
+`DROP: "1"` answers nothing: the server closes the request's connection at
+once, as when the network goes, and the app's request fails then and there
+(flow 30). A long `MS` fails a request only if iOS gives up on the silence,
+and it need not: in a night run (T-220) the import, ten seconds its timeout,
+heard nothing for 40 s and then got its 200 when the hold lapsed. A flow whose
+point is what the app does after a failed request uses `DROP`; `MS` past ten
+seconds is for one that shows the wait itself.
 A request held `BEFORE` puts the server's status in `server.log` on release
 ("the server answered 401"), so a flow that needs a real refusal shows it had
 one: a sign-out ends the tokens, and a change released after it is refused

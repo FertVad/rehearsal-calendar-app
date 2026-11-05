@@ -41,6 +41,14 @@
  * or for a read the server answers 200: it is asked without If-None-Match, so
  * a read gets its body, never a 304 (flow 17, T-206).
  *
+ * With `&drop=1` the request is not handled and its connection is closed at
+ * once: the network gone, and the app's request fails then and there (flow 30).
+ * A long `&ms=` fails it only if iOS gives up on the silence, and that is not
+ * certain: in a night run (T-220) an import with a ten-second timeout heard
+ * nothing for 40 s, then got its 200 when the hold lapsed, and the flow saw a
+ * sync that succeeded. A flow whose point is what the app does after a failed
+ * request, not how long it waits, fails it with `drop`.
+ *
  * With `&once=1` only the next matching request is held, and the ones after it
  * go through: a read on a slow connection and the change after it on a good
  * one (flow 36). A request held `before` says how the server answered it on
@@ -185,6 +193,11 @@ function holdAnswer(request, response, handle) {
   const hold = holds.find((candidate) => candidate.method === request.method && candidate.path.test(pathname));
   if (!hold) return handle();
   if (hold.once) holds = holds.filter((candidate) => candidate !== hold);
+  if (hold.drop) {
+    console.log(`[e2e] dropped the request ${request.method} ${pathname}: its connection closed, no answer`);
+    request.socket.destroy();
+    return;
+  }
   if (hold.open) return holdOpen(request, response, hold);
   let released = false;
   const release = (then) => () => {
@@ -254,7 +267,8 @@ http.createServer((request, response) => {
     const limitMs = open ? OPEN_LIMIT_MS : Math.min(Number(url.searchParams.get('ms')) || HOLD_LIMIT_MS, HOLD_WINDOW_MS);
     const before = url.searchParams.get('before') === '1';
     const once = url.searchParams.get('once') === '1';
-    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, until: Date.now() + HOLD_WINDOW_MS });
+    const drop = url.searchParams.get('drop') === '1';
+    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
   }
   if (request.method === 'GET' && url.pathname === '/notify' && url.searchParams.get('type') === 'member_joined') {

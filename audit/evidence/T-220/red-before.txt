@@ -1,0 +1,35 @@
+T-220 — red before: flow 30 as at d670967 fails the same way whenever the
+transport does not give up on the import within ten seconds.
+
+iOS not giving up on 40 s of silence cannot be had on order. So the old flow
+was run with only that changed: the import held OPEN (hold-answers.js OPEN "1",
+the existing mode whose connection stays alive, so the app's transport does not
+give up) in place of MS "40000". Everything else — sign-in, the Apple Calendar
+tap through tap-and-see, the tap on Synchronize, the 40 s wait for
+"Sync error" — is flow 30 at d670967. Temporary file
+e2e/flows/t220-red-transport-waits.yaml, removed after the run, not committed.
+
+$ npm run e2e -- e2e/flows/t220-red-transport-waits.yaml
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] T-220 red - the transport does not give up (2m 13s) (Assertion is false: "Sync error" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The same assertion as the night run, with no tap lost (taps taken again: 0).
+
+The same flow 30 at d670967, unchanged, on this tree the same day:
+$ npm run e2e -- e2e/flows/30-sync-import-fails-export-runs.yaml
+[Passed] A sync whose import fails still exports (1m 43s)
+1/1 Flow Passed in 1m 45s
+[e2e] taps taken again (tap-and-see.yaml): 0
+metro.log: Failed to import calendar events: {"code": "ECONNABORTED",
+"message": "timeout of 10000ms exceeded" …} — here iOS did give up at ten.
+So the flow's outcome is iOS's timer: green when it fires, red when it does not.

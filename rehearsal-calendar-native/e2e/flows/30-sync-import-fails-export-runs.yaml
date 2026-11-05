@@ -1,7 +1,6 @@
 # A sync whose import fails still exports, and says it failed (cause fix 17,
 # EO02, EI02). Semyon Medvedenko turns on sync with the phone's calendar and
-# presses Synchronize while the import's answer does not come, as with no
-# network. The screen ran the import and the export in one try: the failed
+# presses Synchronize while the import's request fails, as with no network. The screen ran the import and the export in one try: the failed
 # import jumped past the export, so his rehearsal never reached the calendar,
 # and the error said nothing of it. Now the export runs anyway, and the
 # result names both: the rehearsal exported, and what failed.
@@ -53,18 +52,22 @@ tags:
       TAP: ".*Apple Calendar.*"
       SEE: ".*Synchronize.*"
       WAIT_MS: 10000
-# The import's answer does not come within the app's ten seconds.
+# The import's request gets no answer: its connection is closed, as when the
+# network goes. It was an answer held 40 s, past the app's ten — but those ten
+# are iOS's to keep, and in a night run iOS waited the 40 s out and the import
+# got its 200 (T-220). The point here is what follows a failed import, not
+# how long the app waits for one.
 - runScript:
     file: ../scripts/hold-answers.js
     env:
       MAIL_URL: ${MAIL_URL}
       METHOD: POST
       PATH: "^/api/native/availability/imported/sync$"
-      MS: "40000"
+      DROP: "1"
 - tapOn: ".*Synchronize.*"
 - extendedWaitUntil:
     visible: "Sync error"
-    timeout: 40000
+    timeout: 20000
 # The export ran all the same, and the result says so.
 - assertVisible: ".*Exported rehearsals: 1.*"
 - takeScreenshot: 30-sync-import-fails-export-runs

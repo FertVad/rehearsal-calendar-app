@@ -4,7 +4,8 @@
 // (server-with-mailbox.mjs). What a slow network does to one
 // request and not to the next. Run by Maestro (runScript), which provides http.
 // ${MS}, when given, is how long each answer waits instead: past ten seconds
-// the app gives up on the request, as with no network.
+// the app gives up on the request, as with no network — if iOS does give up on
+// the silence, which is not certain (T-220); for a request that must fail, DROP.
 // ${BEFORE}, when "1", holds the request itself: it reaches the server only on
 // release, as a change still on its way does.
 // ${OPEN}, when "1", holds the request as BEFORE does and keeps its connection
@@ -12,9 +13,12 @@
 // takes.
 // ${ONCE}, when "1", holds only the next matching request; the ones after it
 // go through.
+// ${DROP}, when "1", answers nothing: the server closes the request's
+// connection at once, as when the network goes, and the request fails then.
 const wait = typeof MS === 'undefined' ? '' : '&ms=' + MS;
 const before = typeof BEFORE === 'undefined' ? '' : '&before=' + BEFORE;
 const open = typeof OPEN === 'undefined' ? '' : '&open=' + OPEN;
 const once = typeof ONCE === 'undefined' ? '' : '&once=' + ONCE;
-const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait + before + open + once);
+const drop = typeof DROP === 'undefined' ? '' : '&drop=' + DROP;
+const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait + before + open + once + drop);
 if (!response.ok) throw new Error('hold answered ' + response.status + ': ' + response.body);
