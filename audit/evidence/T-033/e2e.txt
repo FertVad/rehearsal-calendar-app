@@ -32,3 +32,25 @@ $ npm run e2e -- e2e/flows/40-details-seen-one-model.yaml
 
 Jest after the fix: Tests: 1211 passed, 1211 total (jest-before.txt: 3 red before).
 type-check: tsc --noEmit clean.
+
+REVIEW (Astra, P2): the own row's accessibilityLabel is the name alone again,
+as on ebedfd7 — VoiceOver is not changed (owner 30.10). Jest no longer checks
+the label; it still finds "You" drawn on that row. Flow 72 now matches the row
+by its label, "Mariana Grange" / "Vincentio Duke", and its place above the
+other two; the "You" under the name is not in Maestro's tree, and the
+screenshots above (taken of what is drawn, which did not change) show it.
+
+RED — the adapted flow 72, files restored from ebedfd7 as above:
+$ npm run e2e -- e2e/flows/72-details-own-row-first.yaml
+[Failed] One's own row is first in a rehearsal's participants (1m 49s)
+  (Assertion is false: "Angelo Deputy.*", Below id: own-seen-toggle is visible)
+1/1 Flow Failed
+Files put back: git restore --source=HEAD -- <files>; label edit re-applied.
+
+GREEN — the adapted flow on the fix:
+$ npm run e2e -- e2e/flows/72-details-own-row-first.yaml
+[Passed] One's own row is first in a rehearsal's participants (1m 55s)
+1/1 Flow Passed in 1m 55s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Jest: Tests: 1211 passed, 1211 total.

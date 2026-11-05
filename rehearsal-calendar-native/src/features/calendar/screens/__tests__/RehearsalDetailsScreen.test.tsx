@@ -195,7 +195,6 @@ describe('Rehearsal details: one\'s own row first (T-033)', () => {
     const screen = await open();
     const own = screen.getByTestId('own-seen-toggle');
     expect(within(own).getByText(translations.en.rehearsals.you)).toBeTruthy();
-    expect(own.props.accessibilityLabel).toBe('Me Self, You');
     expect(screen.getAllByText('You')).toHaveLength(1);
   });
 

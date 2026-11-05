@@ -7,6 +7,10 @@
 # "Moated grange", tomorrow, has Angelo, Mariana and Vincentio on it, in that
 # order by name. Mariana, an actor, was second; Vincentio, the admin of its
 # project, last. Each opens it and finds their own row above the other two.
+#
+# Maestro reads the row by its accessibility label, the name alone: VoiceOver
+# is left as it was (owner 30.10), so the "You" drawn under the name is not in
+# the tree. Jest checks it is on that row; the screenshots show it.
 appId: ${APP_ID}
 name: One's own row is first in a rehearsal's participants
 tags:
@@ -33,7 +37,7 @@ tags:
 - takeScreenshot: 72-actor-details
 - assertVisible:
     id: own-seen-toggle
-    text: "Mariana Grange, You.*"
+    text: "Mariana Grange"
 - assertVisible:
     text: "Angelo Deputy.*"
     below:
@@ -67,7 +71,7 @@ tags:
 - takeScreenshot: 72-director-details
 - assertVisible:
     id: own-seen-toggle
-    text: "Vincentio Duke, You.*"
+    text: "Vincentio Duke"
 - assertVisible:
     text: "Angelo Deputy.*"
     below:

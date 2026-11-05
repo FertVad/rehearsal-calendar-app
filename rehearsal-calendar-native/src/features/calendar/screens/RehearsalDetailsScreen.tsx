@@ -238,8 +238,7 @@ export default function RehearsalDetailsScreen() {
           key={item.userId}
           testID="own-seen-toggle"
           accessibilityRole="button"
-          // What the row shows, the name and "You" under it.
-          accessibilityLabel={`${displayName}, ${t.rehearsals.you}`}
+          accessibilityLabel={displayName}
           accessibilityState={{ selected: seen, disabled: responding }}
           onPress={handleOwnToggle}
           disabled={responding}
