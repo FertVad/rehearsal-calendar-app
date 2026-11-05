@@ -38,6 +38,24 @@ to follow), and the centre ticks once for every day crossed.
   not seen by Maestro, which reads the screen only at rest; Jest holds it, and
   no red e2e is possible for it.
 
+## Review 2 (`447ec6b`)
+Point 1: a finger let go with speed just on a day's edge was taken as the
+stop — the list changed to that day at once, then again after the momentum.
+The let-go is now a stop only if no momentum follows: it waits 100 ms, and
+`onMomentumScrollBegin` cancels it. Velocity alone was not used: Fabric
+sends it in `onScrollEndDrag` (RCTScrollViewComponentView.mm,
+`scrollViewWillEndDragging`), but a release that does not decelerate brings
+no momentum end, so nothing would be chosen. UIKit calls
+`scrollViewWillEndDragging` → `DidEndDragging` → `WillBeginDecelerating` in
+the same touch's end, so the momentum's begin comes right after the let-go.
+- `review-2-jest-red-before.txt` — the new case on the component of
+  `379e833`: the list gets the 11th at the let-go, before the stop on the 14th.
+- `review-2-green-after.txt` — 22/22, type-check, flow 74 passed on the
+  simulator (its swipe goes through the momentum path).
+Point 2 (an e2e or frames catching an early change of the list) is dropped by
+the owner's decision of 05.11: Jest holds "chosen only on stopping", e2e the
+end result, which flow 74 checks.
+
 Not reproducible in the simulator: the haptic ticks themselves (Jest holds
 them), and the strip mid-motion (Maestro reads the screen only at rest; the
 recording shows it).

@@ -1,0 +1,44 @@
+T-035 review 2 - green after, on 447ec6b (Node 22).
+
+npx jest --selectProjects frontend --testPathPatterns 'WeeklyCalendar.test'
+PASS frontend src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx (20.791 s)
+  ✓ selects today when "Today" is pressed after another day was picked
+  ✓ puts a day's count under its date, not over its name
+  The day strip
+    ✓ is 72 pt tall, a day 44 pt wide or more
+    ✓ opens with the day selected in its middle
+    ✓ brings a day tapped at its edge to the middle, and selects it
+    ✓ selects the day a swipe stops on
+    ✓ brings today to the middle on "Today"
+    ✓ keeps its days 44 pt wide on a 320 pt screen
+  The day strip as a wheel
+    ✓ ticks once for every day crossing the middle, and selects only where it stops
+    ✓ ticks back the same way, a day at a time
+    ✓ brings a tapped day under the frame with the same ticks, no thump
+    ✓ brings today back with ticks, no thump
+    ✓ does not let an interrupted swipe take the day a tap sent it to
+    ✓ hands on a tapped day, "Today" and a month's day only where the strip stops on them
+    ✓ hands on a day tapped where the frame already is, with no scroll to wait for
+    ✓ ticks for every day one event jumps over
+    ✓ has a frame standing in its middle, as wide as a day
+    let go by the finger
+      ✓ chooses nothing on a let-go with speed on a day's edge, then once where it rests
+      ✓ chooses the day let go on when no momentum follows
+  The month
+    ✓ opens on the month name, and the name closes it
+    ✓ begins the week on the profile's day, today the profile's, rehearsal days marked
+    ✓ selects a day picked in it, closes, and brings the day to the middle of the strip
+Tests: 22 passed, 22 total
+
+Full frontend project: 1221/1222. The one failure, AvailabilityQuietSave
+("the calendar stays while it is read back": a scrollToOffset seen), is in a
+screen that does not use the strip; run alone with the strip's suite, both
+pass (25/25). It fails only under the full run's load.
+
+npm run type-check (tsc --noEmit): clean.
+
+npm run e2e -- e2e/flows/74-day-strip-wheel.yaml:
+[Passed] Day strip turns as a wheel (2m 38s)
+1/1 Flow Passed
+Its swipe flies on after the finger: the choice it asserts comes through the
+momentum's end, past the let-go now waiting on onMomentumScrollBegin.
