@@ -1,6 +1,8 @@
 # T-034 — «Откликнулся на репетицию»: один раз на человека
 
-Fix commit: `9f43688` (base `0799bfd`). Server only — no screen changes, so no e2e flow.
+Fix commit: `9f43688` (base `0799bfd`). The fix is on the server, but what it changes is
+on screen: the admin's inbox. So it has a flow, `e2e/flows/73-seen-told-once.yaml`
+(review of T-034; see "On screen" at the end).
 
 Rule (one place): `rehearsal-calendar-native/server/services/rehearsals/seenNotice.js`.
 - A "yes" claims `(rehearsal_id, user_id, 'seen')` in `native_push_reminders`, in the
@@ -95,3 +97,57 @@ which clears every claim of the rehearsal.
 Full server Jest: 76 suites pass; `__tests__/startup/runtimeStartup.test.js` fails 8 tests
 identically on the base sources (child fixture reads its own `.env`, which this machine's OS
 policy denies) — environment, not this change.
+
+## On screen: flow 73 (review of T-034)
+
+The first report said "server only — no screen changes, so no e2e flow". Wrong: no client
+code changed, but the effect is in the admin's inbox. `e2e/flows/73-seen-told-once.yaml`
+(tags `seen`, `notifications`, `rehearsals`): Malvolio marks "Letter scene" (tomorrow 12:00,
+`Illyria House`, seeded for this flow alone) seen, unmarks, marks again; Olivia, its owner,
+has exactly one "responded … at 12:00 PM". Then `e2e/scripts/move-rehearsal.js` moves it to
+15:00 as from her other device; he unmarks and marks again; she has one at 12:00 and one at
+3:00 PM, no third. Every tap waits for the toggle to be enabled again (it is disabled while
+its answer is on the way), so each tap is a mark that reached the server.
+
+### Red before
+
+Server files of the fix restored from the base
+(`git restore --source=0799bfd -- server/services/rehearsals/rsvpService.js
+server/services/rehearsals/rehearsalService.js server/routes/native/rehearsals.js`),
+flow and seed as they are now; `npm run e2e -- e2e/flows/73-seen-told-once.yaml`:
+
+```
+[Failed] Seen told once (3m 50s) (Assertion is false: ".*Malvolio Steward responded to “Letter scene”.*", Index: 1 is not visible)
+1/1 Flow Failed
+```
+
+maestro.log: the three taps and their states pass, then
+
+```
+Assert that ".*Malvolio Steward responded to “Letter scene” \(.* at 12:00.PM\) in Illyria House.*" is visible COMPLETED
+Assert that ".*Malvolio Steward responded to “Letter scene”.*", Index: 1 is not visible FAILED
+```
+
+— the old code told her twice of one "seen".
+
+### Green after
+
+`git restore --source=HEAD -- <same files>`, same command:
+
+```
+[Passed] Seen told once (3m 2s)
+1/1 Flow Passed in 3m 3s
+[e2e] taps taken again (tap-and-see.yaml): 0
+```
+
+```
+Assert that ".*Malvolio Steward responded to “Letter scene”.*", Index: 1 is not visible COMPLETED
+Assert that ".*Malvolio Steward responded to “Letter scene” \(.* at 3:00.PM\) in Illyria House.*" is visible COMPLETED
+Assert that ".*Malvolio Steward responded to “Letter scene” \(.* at 12:00.PM\) in Illyria House.*" is visible COMPLETED
+Assert that ".*Malvolio Steward responded to “Letter scene”.*", Index: 2 is not visible COMPLETED
+```
+
+Final screenshot `73-told-again-after-the-move`: two "New response" cards, "(tomorrow at
+3:00 PM)" just now and "(tomorrow at 12:00 PM)" two minutes ago. An earlier green run reached
+the same last assertion but was cut by the tool's 10-minute limit at its final screenshot;
+the run above is the clean one.

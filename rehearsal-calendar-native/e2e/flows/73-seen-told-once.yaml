@@ -1,0 +1,150 @@
+# An admin hears of a person's "seen" once per rehearsal, and again only after
+# it moved (T-034; Apple, notifications.md: "Avoid sending multiple
+# notifications for the same thing"). Malvolio marks "Letter scene" seen,
+# unmarks it and marks it again: Olivia's inbox has one "responded" about it.
+# Olivia moves it from 12:00 to 15:00 from another device, he unmarks and marks
+# it once more: a second one, saying the new time. Every mark used to be
+# announced: two at 12:00 after the first look, three in all.
+#
+# Each tap waits for the toggle to be enabled again: it is disabled while its
+# answer is on the way, so the next tap is a new mark, not a lost one.
+appId: ${APP_ID}
+name: Seen told once
+tags:
+  - seen
+  - notifications
+  - rehearsals
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MALVOLIO_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Letter scene.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      below: ".*Letter scene.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+# Seen, unseen, seen.
+- tapOn:
+    id: seen-toggle
+    below: ".*Letter scene.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      below: ".*Letter scene.*"
+      selected: true
+      enabled: true
+    timeout: 10000
+- tapOn:
+    id: seen-toggle
+    below: ".*Letter scene.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      below: ".*Letter scene.*"
+      selected: false
+      enabled: true
+    timeout: 10000
+- tapOn:
+    id: seen-toggle
+    below: ".*Letter scene.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      below: ".*Letter scene.*"
+      selected: true
+      enabled: true
+    timeout: 10000
+# Olivia: one notice, at the time he saw.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${OLIVIA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Notifications"
+      SEE: "Mark all read"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible: ".*Malvolio Steward responded to “Letter scene” \\(.* at 12:00.PM\\) in Illyria House.*"
+    timeout: 15000
+- assertNotVisible:
+    text: ".*Malvolio Steward responded to “Letter scene”.*"
+    index: 1
+- takeScreenshot: 73-told-once
+# Moved three hours on, as from her other device.
+- runScript:
+    file: ../scripts/move-rehearsal.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${OLIVIA_EMAIL}
+      PASSWORD: ${PASSWORD}
+      REHEARSAL: ${LETTER_REHEARSAL}
+      HOURS: "3"
+# Malvolio again: still marked from before; unseen, seen.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MALVOLIO_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Letter scene.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      below: ".*Letter scene.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      below: ".*Letter scene.*"
+      selected: true
+      enabled: true
+    timeout: 10000
+- tapOn:
+    id: seen-toggle
+    below: ".*Letter scene.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      below: ".*Letter scene.*"
+      selected: false
+      enabled: true
+    timeout: 10000
+- tapOn:
+    id: seen-toggle
+    below: ".*Letter scene.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      below: ".*Letter scene.*"
+      selected: true
+      enabled: true
+    timeout: 10000
+# Olivia: the one from before, and one more, at the new time.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${OLIVIA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Notifications"
+      SEE: "Mark all read"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible: ".*Malvolio Steward responded to “Letter scene” \\(.* at 3:00.PM\\) in Illyria House.*"
+    timeout: 15000
+- assertVisible: ".*Malvolio Steward responded to “Letter scene” \\(.* at 12:00.PM\\) in Illyria House.*"
+- assertNotVisible:
+    text: ".*Malvolio Steward responded to “Letter scene”.*"
+    index: 2
+- takeScreenshot: 73-told-again-after-the-move

@@ -198,6 +198,11 @@ export const PEOPLE = {
   angelo: { email: 'angelo@e2e.test', firstName: 'Angelo', lastName: 'Deputy', onboarded: true },
   mariana: { email: 'mariana@e2e.test', firstName: 'Mariana', lastName: 'Grange', onboarded: true },
   vincentio: { email: 'vincentio@e2e.test', firstName: 'Vincentio', lastName: 'Duke', onboarded: true },
+  // Malvolio marks "Letter scene" seen, unmarks and marks it again, and again
+  // once it has moved; Olivia, who runs their house, is told once and once
+  // more (73, T-034). Nobody else in it, so no other flow's notices mix in.
+  olivia: { email: 'olivia@e2e.test', firstName: 'Olivia', lastName: 'Countess', onboarded: true },
+  malvolio: { email: 'malvolio@e2e.test', firstName: 'Malvolio', lastName: 'Steward', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -598,6 +603,25 @@ export async function seed({ client, apiUrl, timezone }) {
       },
     })).rehearsal.id,
   };
+
+  // Olivia's house (73), made as the server makes a project and a rehearsal:
+  // the sign-ins are spent. Tomorrow 12:00 to 13:00, Malvolio on it, not yet seen.
+  const { rows: [house] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Illyria House', 'The garden', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
+    [house.id, ids.olivia, ids.malvolio]);
+  const { rows: [letter] } = await client.query(
+    `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+     VALUES ($1, 'Letter scene', $2::timestamptz, $3::timestamptz, 'The box hedge', $4, NOW(), NOW()) RETURNING id`,
+    [house.id, localInstant(1, 12), localInstant(1, 13), ids.olivia]);
+  await client.query(
+    `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+     VALUES ($1, $2, 'no', NOW(), NOW())`,
+    [letter.id, ids.malvolio]);
+  rehearsals.letter = String(letter.id);
 
   // What the flow reads after moving the profile to Tokyo: the same instant on
   // Tokyo's clock, six or seven hours on from Tel Aviv with summer time — as
