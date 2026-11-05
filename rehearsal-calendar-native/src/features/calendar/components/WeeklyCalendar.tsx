@@ -54,6 +54,8 @@ const CARD_INSET = CARD_BORDER + CARD_PADDING_X;
 const FRAME_INSET = 2;
 /** A year on each side of today, as the weeks were. */
 const RANGE_DAYS = 366;
+/** How long a let-go waits for a momentum to begin before it is a stop. */
+const RELEASE_STOP_MS = 100;
 
 export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, onDayLongPress, selectedDate }: WeeklyCalendarProps) {
   const { t, language } = useI18n();
@@ -151,12 +153,26 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
     moveCentre(indexAt(event.nativeEvent.contentOffset.x), true);
   }, [indexAt, moveCentre]);
 
+  // A finger let go on a day's edge is not yet a stop: the strip may still
+  // fly on — it was taken as one, and the list changed to the day let go on,
+  // then again where the strip came to rest (review 2, T-035). The stop is
+  // waited for a moment; a momentum beginning — which UIKit starts in the
+  // same touch's end, right after the let-go — means the strip goes on, and
+  // its end is the stop. None coming, it stood still where it was let go.
+  const releasedStop = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelReleasedStop = useCallback(() => {
+    if (releasedStop.current !== null) clearTimeout(releasedStop.current);
+    releasedStop.current = null;
+  }, []);
+  useEffect(() => cancelReleasedStop, [cancelReleasedStop]);
+
   // A finger on the strip takes it from wherever a scroll of ours was going,
   // and what it was going there for.
   const handleDragBegin = useCallback(() => {
     travelling.current = false;
     pendingToday.current = false;
-  }, []);
+    cancelReleasedStop();
+  }, [cancelReleasedStop]);
 
   // The day under the frame, where the strip rests, is handed on to the list.
   const choose = useCallback((index: number) => {
@@ -192,13 +208,20 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
   }, [scrollTo, choose]);
 
   const handleMomentumEnd = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    cancelReleasedStop();
     settle(event.nativeEvent.contentOffset.x);
-  }, [settle]);
-  // A drag let go on a day, with nothing left to snap, has no momentum after it.
+  }, [cancelReleasedStop, settle]);
+  // A drag let go on a day, with nothing left to snap: a stop, unless a
+  // momentum follows.
   const handleDragEnd = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const x = event.nativeEvent.contentOffset.x;
-    if (Math.abs(x - Math.round(x / DAY_WIDTH) * DAY_WIDTH) < 1) settle(x);
-  }, [settle]);
+    cancelReleasedStop();
+    if (Math.abs(x - Math.round(x / DAY_WIDTH) * DAY_WIDTH) >= 1) return;
+    releasedStop.current = setTimeout(() => {
+      releasedStop.current = null;
+      settle(x);
+    }, RELEASE_STOP_MS);
+  }, [cancelReleasedStop, settle]);
 
   const monthYear = useMemo(
     () => formatDate(days[middleIndex]?.date ?? today, 'monthYear', language),
@@ -353,6 +376,7 @@ export default function WeeklyCalendar({ rehearsals, onDaySelect, onShowToday, o
           scrollEventThrottle={16}
           onScrollBeginDrag={handleDragBegin}
           onScrollEndDrag={handleDragEnd}
+          onMomentumScrollBegin={cancelReleasedStop}
           onMomentumScrollEnd={handleMomentumEnd}
           onLayout={handleListLayout}
           // An offset is the day's place less the edge: the day at `index` is in

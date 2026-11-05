@@ -409,6 +409,56 @@ describe('The day strip as a wheel', () => {
     expect(screen.getByTestId('selected').props.children).toBe('2030-01-07');
   });
 
+  // A finger let go with speed just on a day's edge was taken as the stop:
+  // the list changed to the 11th at once, then to the 14th where the strip
+  // came to rest (review 2, T-035). The stop is where it rests.
+  describe('let go by the finger', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+    const drag = (list: any, name: string, x: number, velocity = 0) => act(() => {
+      fireEvent(list, name, { nativeEvent: { contentOffset: { x, y: 0 }, velocity: { x: velocity, y: 0 } } });
+    });
+
+    it('chooses nothing on a let-go with speed on a day\'s edge, then once where it rests', () => {
+      const onDaySelect = jest.fn();
+      const screen = render(
+        <WeeklyCalendar rehearsals={[]} onDaySelect={onDaySelect} onShowToday={jest.fn()} selectedDate="2030-01-10" />
+      );
+      const list = strip(screen);
+      const { offsetOf } = geometry(list);
+
+      drag(list, 'scrollBeginDrag', offsetOf('2030-01-10'));
+      scrollTo(list, offsetOf('2030-01-11'));
+      drag(list, 'scrollEndDrag', offsetOf('2030-01-11'), 1.8);
+      drag(list, 'momentumScrollBegin', offsetOf('2030-01-11'));
+      act(() => { jest.advanceTimersByTime(1000); });
+      expect(onDaySelect).not.toHaveBeenCalled();
+
+      scrollTo(list, offsetOf('2030-01-13'));
+      expect(onDaySelect).not.toHaveBeenCalled();
+      drag(list, 'momentumScrollEnd', offsetOf('2030-01-14'));
+      act(() => { jest.advanceTimersByTime(1000); });
+      expect(onDaySelect).toHaveBeenCalledTimes(1);
+      expect(onDaySelect).toHaveBeenCalledWith('2030-01-14');
+    });
+
+    it('chooses the day let go on when no momentum follows', () => {
+      const onDaySelect = jest.fn();
+      const screen = render(
+        <WeeklyCalendar rehearsals={[]} onDaySelect={onDaySelect} onShowToday={jest.fn()} selectedDate="2030-01-10" />
+      );
+      const list = strip(screen);
+      const { offsetOf } = geometry(list);
+
+      drag(list, 'scrollBeginDrag', offsetOf('2030-01-10'));
+      scrollTo(list, offsetOf('2030-01-12'));
+      drag(list, 'scrollEndDrag', offsetOf('2030-01-12'));
+      act(() => { jest.advanceTimersByTime(1000); });
+      expect(onDaySelect).toHaveBeenCalledTimes(1);
+      expect(onDaySelect).toHaveBeenCalledWith('2030-01-12');
+    });
+  });
+
   it('has a frame standing in its middle, as wide as a day', () => {
     const screen = render(<Calendar />);
     const list = strip(screen);
