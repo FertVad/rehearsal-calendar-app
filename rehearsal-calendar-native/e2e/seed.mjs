@@ -203,6 +203,9 @@ export const PEOPLE = {
   // more (73, T-034). Nobody else in it, so no other flow's notices mix in.
   olivia: { email: 'olivia@e2e.test', firstName: 'Olivia', lastName: 'Countess', onboarded: true },
   malvolio: { email: 'malvolio@e2e.test', firstName: 'Malvolio', lastName: 'Steward', onboarded: true },
+  // The calendar's rows (74, T-036): two projects she runs, three rehearsals
+  // tomorrow and one the day after, and nobody else in them.
+  juliet: { email: 'juliet@e2e.test', firstName: 'Juliet', lastName: 'Capulet', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -623,6 +626,36 @@ export async function seed({ client, apiUrl, timezone }) {
     [letter.id, ids.malvolio]);
   rehearsals.letter = String(letter.id);
 
+  // Juliet's two (74), made as the server makes them: the sign-ins are spent.
+  // Tomorrow a titled one with a place, one with no place, one with no title;
+  // the day after, one whose title is longer than its row. She is on each.
+  const verona = {};
+  for (const name of ['Verona Square', 'Capulet House']) {
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, 'Fair Verona', $2, NOW(), NOW()) RETURNING id`, [name, timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [made.id, ids.juliet]);
+    verona[name] = made.id;
+  }
+  for (const [name, title, day, from, to, location] of [
+    ['Capulet House', 'Masked ball', 1, 10, 11, 'Great chamber'],
+    ['Verona Square', 'Street brawl', 1, 14, 15, null],
+    ['Verona Square', null, 1, 17, 18, 'Friar cell'],
+    ['Capulet House', 'Balcony scene in the orchard under the window at night', 2, 12, 13, 'Orchard'],
+  ]) {
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3::timestamptz, $4::timestamptz, $5, $6, NOW(), NOW()) RETURNING id`,
+      [verona[name], title, localInstant(day, from), localInstant(day, to), location, ids.juliet]);
+    await client.query(
+      `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+       VALUES ($1, $2, 'no', NOW(), NOW())`,
+      [made.id, ids.juliet]);
+  }
+
   // What the flow reads after moving the profile to Tokyo: the same instant on
   // Tokyo's clock, six or seven hours on from Tel Aviv with summer time — as
   // the en_US simulator, on the 12-hour clock, shows it: "9:00 AM". A pattern
@@ -686,6 +719,13 @@ export async function seed({ client, apiUrl, timezone }) {
   for (const key of ['yesterday', 'tomorrow']) {
     labels[key] = new Date(`${days[key]}T00:00:00Z`).toLocaleDateString('en-US',
       { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  }
+  // A row's date column for tomorrow and the day after, in English: "Thu"
+  // over "29" (74, T-036).
+  for (const key of ['tomorrow', 'after_tomorrow']) {
+    const day = new Date(`${days[key]}T00:00:00Z`);
+    labels[`${key}_weekday`] = day.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+    labels[`${key}_number`] = String(day.getUTCDate());
   }
   // The day the editor's error names, in English: "October 27, 2026".
   labels.mark_day = new Date(`${days.mark}T00:00:00Z`).toLocaleDateString('en-US',

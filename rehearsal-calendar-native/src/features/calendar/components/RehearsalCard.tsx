@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-// The card is inside a Swipeable, and React Native's own touchables take no
+// The row is inside a Swipeable, and React Native's own touchables take no
 // part in gesture-handler's arbitration: a swipe let slide back would open the
 // details as well (as in the inbox, NotificationsScreen).
 import { TouchableOpacity as GestureTouchable } from 'react-native-gesture-handler';
@@ -16,14 +16,18 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { useSeen } from '../../../contexts/SeenContext';
 import { rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
 import { usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
+import { formatDate } from '../../../shared/utils/dateFormat';
+import { parseDateString } from '../../../shared/utils/time';
+import { projectColor } from '../../../shared/utils/projectColor';
 import { useDeleteRehearsal } from '../hooks/useDeleteRehearsal';
 import type { AppNavigation } from '../../../navigation';
 
 interface RehearsalCardProps {
   rehearsal: Rehearsal;
-  /** Shown as a badge above the time — "Today", "Tomorrow", a date. Omitted
-   *  under a heading that already says which day these belong to. */
-  dateLabel?: string;
+  /** The date column on the left (T-036): `day` writes the rehearsal's day in
+   *  it, `blank` keeps its width empty — a later one of the same day. Omitted
+   *  under a heading that already says which day these belong to: no column. */
+  dateColumn?: 'day' | 'blank';
   /** The two lists disagreed on where this comes from — one read the project
    *  the rehearsal belongs to, the other the name denormalised onto it. The
    *  caller decides now. */
@@ -34,7 +38,13 @@ interface RehearsalCardProps {
 }
 
 /**
- * One rehearsal, as it appears in a list.
+ * One rehearsal, as a row of a list (T-036, owner's choice B of 04.11): 88 pt,
+ * the day on the left, the title, the time and place, the project with its
+ * dot, and the eye on the right.
+ *
+ * It was a card of 203 pt, with a date badge, an "Admin" badge, an icon to
+ * every line and the eye on a strip of its own: the calendar showed one
+ * rehearsal whole. The rows of a list share one ground (RehearsalList).
  *
  * Today's rehearsals and the upcoming ones used to render this separately, so
  * every change had to be made twice — which is how the rehearsal title nearly
@@ -46,7 +56,7 @@ interface RehearsalCardProps {
  */
 export default function RehearsalCard({
   rehearsal,
-  dateLabel,
+  dateColumn,
   projectName,
   isAdmin,
   isSynced = false,
@@ -73,69 +83,74 @@ export default function RehearsalCard({
         : `${stats.confirmed}`
       : null;
 
-  const card = (
-    <View style={styles.upcomingCard}>
-      <GestureTouchable onPress={onPress} activeOpacity={0.7}>
-        <View style={styles.upcomingCardRow}>
-          <View style={styles.upcomingCardLeftCol}>
-            {dateLabel ? (
-              <View style={styles.upcomingCardHeader}>
-                <View style={styles.upcomingDateBadge}>
-                  <Text style={styles.upcomingDateText}>{dateLabel}</Text>
-                </View>
-              </View>
+  const day = dateColumn === 'day' && rehearsal.date ? rehearsal.date : null;
+
+  const row = (
+    <View style={styles.rehearsalRow}>
+      <GestureTouchable
+        onPress={onPress}
+        activeOpacity={0.7}
+        // The outer box takes the row's width beside the eye; the inner one,
+        // the element that is tapped and read, its whole height.
+        containerStyle={styles.rehearsalRowMainBox}
+        style={[styles.rehearsalRowMain, !dateColumn && styles.rehearsalRowMainNoDate]}
+      >
+        {dateColumn ? (
+          <View style={styles.rehearsalDateColumn} testID="rehearsal-row-date">
+            {day ? (
+              <>
+                <Text style={styles.rehearsalWeekday} numberOfLines={1}>
+                  {formatDate(day, 'weekdayShort', language)}
+                </Text>
+                <Text style={styles.rehearsalDayNumber}>{parseDateString(day).getDate()}</Text>
+              </>
             ) : null}
+          </View>
+        ) : null}
 
-            <View style={styles.upcomingContent}>
-              <View style={styles.upcomingTimeRow}>
-                <Ionicons name="time-outline" size={14} color={Colors.accent.purple} />
-                <Text style={styles.upcomingTime} testID="rehearsal-card-time">
-                  {rehearsalTimeLabel(rehearsal, language, uses24)}
-                </Text>
-                {isSynced && (
-                  <Ionicons name="calendar" size={14} color={Colors.accent.green} />
-                )}
-              </View>
+        <View style={styles.rehearsalRowText}>
+          {rehearsal.title ? (
+            <Text style={styles.rehearsalRowTitle} numberOfLines={1}>
+              {rehearsal.title}
+            </Text>
+          ) : null}
 
-              {rehearsal.title ? (
-                <Text style={styles.upcomingTitle} numberOfLines={2}>
-                  {rehearsal.title}
-                </Text>
-              ) : null}
-
-              {projectName && (
-                <View style={styles.upcomingProjectRow}>
-                  <Ionicons name="folder-outline" size={14} color={Colors.text.secondary} />
-                  <Text style={styles.upcomingProject} numberOfLines={1}>
-                    {projectName}
-                  </Text>
-                </View>
-              )}
-
-              {rehearsal.location && (
-                <View style={styles.upcomingLocationRow}>
-                  <Ionicons name="location-outline" size={14} color={Colors.text.secondary} />
-                  <Text style={styles.upcomingLocation} numberOfLines={1}>
-                    {rehearsal.location}
-                  </Text>
-                </View>
-              )}
-            </View>
+          <View style={styles.rehearsalRowLine}>
+            <Text style={styles.rehearsalRowTime} testID="rehearsal-card-time">
+              {rehearsalTimeLabel(rehearsal, language, uses24)}
+            </Text>
+            {/* In the phone's calendar: said in the second line's colour —
+                green is a state, free (T-031). */}
+            {isSynced && (
+              <Ionicons
+                name="calendar"
+                size={13}
+                color={Colors.text.secondary}
+                style={styles.rehearsalRowSynced}
+              />
+            )}
+            {rehearsal.location ? (
+              <Text style={styles.rehearsalRowPlace} numberOfLines={1}>
+                {` · ${rehearsal.location}`}
+              </Text>
+            ) : null}
           </View>
 
-          {isAdmin && (
-            <View style={styles.upcomingCardAdminCol}>
-              <View style={styles.adminBadge}>
-                <Ionicons name="shield-checkmark" size={12} color={Colors.accent.purple} />
-                <Text style={styles.adminBadgeText}>{t.projects.admin}</Text>
-              </View>
+          {projectName ? (
+            <View style={styles.rehearsalRowLine}>
+              <View
+                style={[styles.rehearsalProjectDot, { backgroundColor: projectColor(rehearsal.projectId) }]}
+                testID="rehearsal-project-dot"
+              />
+              <Text style={styles.rehearsalRowProject} numberOfLines={1}>
+                {projectName}
+              </Text>
             </View>
-          )}
+          ) : null}
         </View>
       </GestureTouchable>
 
-      <View style={styles.seenSection}>
-        {/* Only an icon until someone has seen it: then the count beside it. */}
+      <View style={styles.seenColumn}>
         <IconButton
           testID="seen-toggle"
           icon={currentResponse === 'yes' ? 'eye' : 'eye-off-outline'}
@@ -149,15 +164,24 @@ export default function RehearsalCard({
             toggleSeen(rehearsal.id);
           }}
           disabled={responding}
-        >
-          {seenLabel && <Text style={styles.seenCount}>{seenLabel}</Text>}
-        </IconButton>
+        />
+        {/* Under the eye, outside its 44: the button already says it as its
+            value, as it did when the count was inside it. */}
+        {seenLabel && (
+          <Text
+            style={styles.seenCount}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            {seenLabel}
+          </Text>
+        )}
       </View>
     </View>
   );
 
   // No swipe for anyone else: there is nothing behind it they may do.
-  if (!isAdmin) return card;
+  if (!isAdmin) return row;
 
   const renderActions = () => (
     <View style={styles.swipeActions}>
@@ -198,11 +222,11 @@ export default function RehearsalCard({
       // Two actions are twice the inbox's one, and half their width — the
       // default — took a swipe across half the screen to open them.
       rightThreshold={40}
-      // Under the card's glass, so the actions do not show through it while it
-      // slides; at rest it is the screen's own colour.
-      childrenContainerStyle={styles.swipeCardUnder}
+      // The list's own ground, so the actions do not show through the row
+      // while it slides.
+      childrenContainerStyle={styles.swipeRowUnder}
     >
-      {card}
+      {row}
     </Swipeable>
   );
 }

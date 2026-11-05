@@ -20,17 +20,17 @@ tags:
 - scrollUntilVisible:
     element:
       id: seen-toggle
-      below: ".*Act I run-through.*"
+      rightOf: ".*Act I run-through.*"
     direction: DOWN
     centerElement: true
 - waitForAnimationToEnd
 - tapOn:
     id: seen-toggle
-    below: ".*Act I run-through.*"
+    rightOf: ".*Act I run-through.*"
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Act I run-through.*"
+      rightOf: ".*Act I run-through.*"
       selected: true
     timeout: 10000
 - runFlow:
@@ -43,12 +43,12 @@ tags:
 - scrollUntilVisible:
     element:
       id: seen-toggle
-      below: ".*Act I run-through.*"
+      rightOf: ".*Act I run-through.*"
     direction: DOWN
     centerElement: true
 - waitForAnimationToEnd
 - assertVisible:
     id: seen-toggle
-    below: ".*Act I run-through.*"
+    rightOf: ".*Act I run-through.*"
     text: "1/4"
 - takeScreenshot: 04-director-sees-one-of-four

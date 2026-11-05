@@ -9,8 +9,8 @@
 # days, under its title "Планер", and the availability's next month. Each is what Intl writes, its first
 # letter a capital: "Ноябрь 2026 г.", "Чт, 6 нояб.". Maestro matches text
 # without regard to case, so the texts are copied and checked in JavaScript,
-# after the three screens are shot. The card is one element, its label
-# beginning with the date. Nothing is saved.
+# after the three screens are shot. The row is one element, its label
+# beginning with its date column (T-036). Nothing is saved.
 appId: ${APP_ID}
 name: Dates in Russian, one format
 tags:
@@ -93,7 +93,7 @@ tags:
 - evalScript: ${console.log('65 dates ' + JSON.stringify([output.month, output.upcoming, output.plannerDay, output.availabilityMonth]))}
 # A month: "Ноябрь 2026 г.", in both places (iOS puts a narrow space before
 # "г."; the month's button adds its chevron's ", "). A day: "Чт, 6 нояб.",
-# the card's label beginning with it. Each with a capital first letter and
+# the planner's. Each with a capital first letter and
 # none after it: iOS names a Text as its style draws it, "Вт, 3 Нояб.".
 # Maestro let a regular expression pass whatever it was given, so the check
 # is in plain string methods, and what does not match is named and fails the
@@ -103,7 +103,11 @@ tags:
 - evalScript: "${output.wrong = ''}"
 - evalScript: "${output.wrong = output.wrong + (output.month.charAt(0) != output.month.charAt(0).toLowerCase() && output.month.slice(1) == output.month.slice(1).toLowerCase() && output.month.slice(-2) == 'г.' ? '' : output.month + ' | ')}"
 - evalScript: "${output.wrong = output.wrong + (output.availabilityMonth.charAt(0) != output.availabilityMonth.charAt(0).toLowerCase() && output.availabilityMonth.slice(1) == output.availabilityMonth.slice(1).toLowerCase() && output.availabilityMonth.slice(-2) == 'г.' ? '' : output.availabilityMonth + ' | ')}"
-- evalScript: "${output.wrong = output.wrong + (output.upcoming.charAt(0) != output.upcoming.charAt(0).toLowerCase() && output.upcoming.slice(1) == output.upcoming.slice(1).toLowerCase() && output.upcoming.indexOf(', ') == 2 ? '' : output.upcoming + ' | ')}"
+# The upcoming row's date column (T-036): Intl's short day of the week, in
+# capitals by the owner's choice, over the day — "ЧТ, 6" — that of EDGE_DAY,
+# the Samovar's.
+- evalScript: "${output.upcomingDay = ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'][new Date(EDGE_DAY + 'T12:00:00Z').getUTCDay()] + ', ' + Number(EDGE_DAY.slice(8))}"
+- evalScript: "${output.wrong = output.wrong + (output.upcoming == output.upcomingDay ? '' : output.upcoming + ' (' + output.upcomingDay + ') | ')}"
 - evalScript: "${output.wrong = output.wrong + (output.plannerDay.charAt(0) != output.plannerDay.charAt(0).toLowerCase() && output.plannerDay.slice(1) == output.plannerDay.slice(1).toLowerCase() && output.plannerDay.indexOf(', ') == 2 ? '' : output.plannerDay + ' | ')}"
 - evalScript: "${console.log('65 not one format ' + JSON.stringify(output.wrong))}"
 - runFlow:

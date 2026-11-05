@@ -25,38 +25,38 @@ tags:
 - scrollUntilVisible:
     element:
       id: seen-toggle
-      below: ".*Letter scene.*"
+      rightOf: ".*Letter scene.*"
     direction: DOWN
     centerElement: true
 - waitForAnimationToEnd
 # Seen, unseen, seen.
 - tapOn:
     id: seen-toggle
-    below: ".*Letter scene.*"
+    rightOf: ".*Letter scene.*"
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Letter scene.*"
+      rightOf: ".*Letter scene.*"
       selected: true
       enabled: true
     timeout: 10000
 - tapOn:
     id: seen-toggle
-    below: ".*Letter scene.*"
+    rightOf: ".*Letter scene.*"
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Letter scene.*"
+      rightOf: ".*Letter scene.*"
       selected: false
       enabled: true
     timeout: 10000
 - tapOn:
     id: seen-toggle
-    below: ".*Letter scene.*"
+    rightOf: ".*Letter scene.*"
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Letter scene.*"
+      rightOf: ".*Letter scene.*"
       selected: true
       enabled: true
     timeout: 10000
@@ -98,34 +98,34 @@ tags:
 - scrollUntilVisible:
     element:
       id: seen-toggle
-      below: ".*Letter scene.*"
+      rightOf: ".*Letter scene.*"
     direction: DOWN
     centerElement: true
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Letter scene.*"
+      rightOf: ".*Letter scene.*"
       selected: true
       enabled: true
     timeout: 10000
 - tapOn:
     id: seen-toggle
-    below: ".*Letter scene.*"
+    rightOf: ".*Letter scene.*"
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Letter scene.*"
+      rightOf: ".*Letter scene.*"
       selected: false
       enabled: true
     timeout: 10000
 - tapOn:
     id: seen-toggle
-    below: ".*Letter scene.*"
+    rightOf: ".*Letter scene.*"
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Letter scene.*"
+      rightOf: ".*Letter scene.*"
       selected: true
       enabled: true
     timeout: 10000

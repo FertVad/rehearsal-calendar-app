@@ -3,6 +3,10 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const UPCOMING_CARD_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md;
+/** A rehearsal's row in the calendar's lists (T-036). */
+const REHEARSAL_ROW_HEIGHT = 88;
+/** The day on the left of a row; the text begins after it. */
+const DATE_COLUMN_WIDTH = 52;
 
 export const styles = StyleSheet.create({
   container: {
@@ -120,19 +124,107 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.sm,
   },
-  upcomingCardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  // A list of rehearsals (T-036): rows on one rounded ground, 88 pt each —
+  // 12 above and below three lines of 22, 20 and 18 with 2 between them.
+  rehearsalList: {
+    backgroundColor: Colors.bg.secondary,
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
   },
-  upcomingCardLeftCol: {
+  rehearsalRow: {
+    flexDirection: 'row',
+    minHeight: REHEARSAL_ROW_HEIGHT,
+    backgroundColor: Colors.bg.secondary,
+  },
+  rehearsalRowMainBox: {
     flex: 1,
   },
-  upcomingCardAdminCol: {
-    alignItems: 'flex-end',
-    gap: Spacing.sm,
+  rehearsalRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    paddingLeft: Spacing.md,
   },
-  // An admin's swipe on a card (T-016): Edit, then Delete in red at the edge.
+  // No date column: the text begins where the screen's other lists begin.
+  rehearsalRowMainNoDate: {
+    paddingLeft: Spacing.lg,
+  },
+  rehearsalDateColumn: {
+    width: DATE_COLUMN_WIDTH,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingRight: Spacing.xs,
+  },
+  rehearsalWeekday: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: FontWeight.medium,
+    color: Colors.text.secondary,
+    textTransform: 'uppercase',
+  },
+  rehearsalDayNumber: {
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: FontWeight.bold,
+    color: Colors.text.primary,
+  },
+  rehearsalRowText: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 2,
+  },
+  rehearsalRowTitle: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.primary,
+  },
+  rehearsalRowLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rehearsalRowTime: {
+    fontSize: FontSize.md,
+    lineHeight: 20,
+    color: Colors.text.secondary,
+  },
+  rehearsalRowSynced: {
+    marginLeft: Spacing.xs,
+  },
+  rehearsalRowPlace: {
+    flexShrink: 1,
+    fontSize: FontSize.md,
+    lineHeight: 20,
+    color: Colors.text.secondary,
+  },
+  // The project is said, not coloured: purple is for doing and choosing
+  // (T-031). Its own colour is the dot before it (projectColor.ts).
+  rehearsalProjectDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  rehearsalRowProject: {
+    flexShrink: 1,
+    fontSize: FontSize.sm,
+    lineHeight: 18,
+    color: Colors.text.secondary,
+  },
+  // A thin line between two rows of a day, from where the text begins; one
+  // across the whole ground between two days.
+  rehearsalSeparator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border.default,
+  },
+  rehearsalSeparatorInset: {
+    marginLeft: Spacing.md + DATE_COLUMN_WIDTH,
+  },
+  rehearsalSeparatorInsetNoDate: {
+    marginLeft: Spacing.lg,
+  },
+  // An admin's swipe on a row (T-016): Edit, then Delete in red at the edge.
   swipeActions: {
     flexDirection: 'row',
     gap: Spacing.xs,
@@ -158,32 +250,13 @@ export const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: Colors.text.inverse,
   },
-  swipeCardUnder: {
-    backgroundColor: Colors.bg.primary,
-    borderRadius: BorderRadius.md,
+  // The list's ground under the row, so the actions do not show through it
+  // while it slides.
+  swipeRowUnder: {
+    backgroundColor: Colors.bg.secondary,
   },
   skeletonRow: {
     marginBottom: Spacing.sm,
-  },
-  upcomingDateBadge: {
-    backgroundColor: Colors.accent.purpleDarkAlpha15,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-  },
-  upcomingDateText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Colors.accent.purple,
-  },
-  adminBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    backgroundColor: Colors.accent.purpleDarkAlpha10,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
   },
   adminBadgeInline: {
     flexDirection: 'row',
@@ -201,45 +274,6 @@ export const styles = StyleSheet.create({
   },
   upcomingContent: {
     gap: Spacing.xs,
-  },
-  upcomingTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  upcomingTime: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-  },
-  upcomingProjectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  upcomingTitle: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.primary,
-    marginTop: 6,
-    marginBottom: 2,
-  },
-  // The project is said, not coloured: purple is for doing and choosing
-  // (T-031). Its own colour is a dot of its own (T-036).
-  upcomingProject: {
-    fontSize: FontSize.sm,
-    color: Colors.text.secondary,
-    flex: 1,
-  },
-  upcomingLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  upcomingLocation: {
-    fontSize: FontSize.sm,
-    color: Colors.text.secondary,
-    flex: 1,
   },
   emptyState: {
     backgroundColor: Colors.glass.bg,
@@ -278,26 +312,19 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.base,
     color: Colors.accent.red,
   },
-  // Seen button styles
-  // The eye's own 44 pt holds the space the padding used to.
-  seenSection: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-    flexDirection: 'row',
+  // The eye at the row's right, 44 a side, its count under it (T-036).
+  seenColumn: {
     alignItems: 'center',
-  },
-  seenButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    minWidth: TouchTarget,
-    minHeight: TouchTarget,
+    justifyContent: 'center',
     paddingHorizontal: Spacing.xs,
   },
+  seenButton: {
+    width: TouchTarget,
+    height: TouchTarget,
+  },
   seenCount: {
-    fontSize: FontSize.sm,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: FontWeight.semibold,
     color: Colors.text.secondary,
   },
@@ -310,9 +337,6 @@ export const styles = StyleSheet.create({
   todaySection: {
     marginTop: Spacing.xl,
     marginBottom: Spacing.xl,
-  },
-  todayList: {
-    gap: Spacing.sm,
   },
   smartPlannerButton: {
     flexDirection: 'row',

@@ -40,17 +40,17 @@ tags:
 - scrollUntilVisible:
     element:
       id: seen-toggle
-      below: ".*Moonlit dance.*"
+      rightOf: ".*Moonlit dance.*"
     direction: DOWN
     centerElement: true
 - waitForAnimationToEnd
 - tapOn:
     id: seen-toggle
-    below: ".*Moonlit dance.*"
+    rightOf: ".*Moonlit dance.*"
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Moonlit dance.*"
+      rightOf: ".*Moonlit dance.*"
       selected: true
     timeout: 10000
 # The strip with today in it, ringed and picked, and the card: its project,

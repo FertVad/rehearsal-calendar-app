@@ -9,14 +9,12 @@ import { IconButton } from '../../../shared/components/IconButton';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import TodayRehearsals from '../components/TodayRehearsals';
-import RehearsalCard from '../components/RehearsalCard';
+import RehearsalList from '../components/RehearsalList';
 import SmartPlannerButton from '../components/SmartPlannerButton';
 import { Rehearsal } from '../../../shared/types';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { useUnread } from '../../../contexts/UnreadContext';
-import { formatDate } from '../../../shared/utils/dateFormat';
-import { addDays } from '../../../shared/utils/time';
 import { useToday } from '../../../shared/hooks/useClock';
 import { rehearsalOnDate } from '../../../shared/utils/rehearsalDays';
 import { canScheduleAny } from '../../../shared/utils/rehearsalRights';
@@ -27,7 +25,7 @@ import { calendarScreenStyles as styles } from '../styles';
 export default function CalendarScreen() {
   const navigation = useNavigation<CalendarScreenNavigation>();
   const { projects } = useProjects();
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   // Today in the profile's zone, the one rehearsals are dated in (DF01).
   const today = useToday();
   // Until a day is picked, the day shown is today, and moves with it: at
@@ -165,15 +163,6 @@ export default function CalendarScreen() {
         return 0;
       });
   }, [rehearsals, selectedDate, today]);
-
-  // Get relative date label (Today, Tomorrow, or formatted date)
-  const getRelativeDateLabel = (dateStr: string) => {
-    const tomorrowStr = addDays(today, 1);
-
-    if (dateStr === today) return t.common.today;
-    if (dateStr === tomorrowStr) return t.calendar.tomorrow || 'Tomorrow';
-    return formatDate(dateStr, 'weekdayDayMonthShort', language);
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -342,24 +331,13 @@ export default function CalendarScreen() {
               <Text style={styles.emptyText}>{t.calendar.noUpcoming}</Text>
             </View>
           ) : (
-            <View style={styles.upcomingList}>
-              {upcomingRehearsals.map((rehearsal) => {
-                const project = projects.find(p => p.id === rehearsal.projectId);
-                // Check if user is admin for THIS specific rehearsal's project
-                const isAdminForThisRehearsal = project?.is_admin || false;
-
-                return (
-                  <RehearsalCard
-                    key={rehearsal.id}
-                    rehearsal={rehearsal}
-                    dateLabel={getRelativeDateLabel(rehearsal.date || '')}
-                    projectName={project?.name || rehearsal.projectName}
-                    isAdmin={isAdminForThisRehearsal}
-                    onPress={() => openDetails(rehearsal)}
-                  />
-                );
-              })}
-            </View>
+            // The day in a column of its own, on the first of each day (T-036).
+            <RehearsalList
+              rehearsals={upcomingRehearsals}
+              projects={projects}
+              withDates
+              onOpenRehearsal={openDetails}
+            />
           )}
         </View>
       </ScrollView>
