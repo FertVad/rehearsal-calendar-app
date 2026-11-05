@@ -1,0 +1,17 @@
+$ npm run e2e -- e2e/flows/65-dates-russian.yaml        # nav.planner: ru 'Планер', es 'Planificador', de 'Planer'
+[Passed] Dates in Russian, one format (1m 36s)
+1/1 Flow Passed in 1m 36s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/59-planner-filters-spanish.yaml
+[Passed] The planner's filters fit in Spanish (1m 24s)
+1/1 Flow Passed in 1m 24s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npx jest --selectProjects frontend --testPathPatterns "navPlanner|SmartPlannerScreen|screenHeaders|backToTabs"
+Tests:       45 passed, 45 total
+
+Screens: review/after/65-planner.png — "Планер" as the large title and the tab.
+review/after/failed-at-step-046-tapOnElement-Not_Now.png is not a failure:
+copy-shots.mjs copies Maestro's last step shot of every run, and this run passed.
+In Spanish (flow 59) the title and the tab read "Planificador" and fit.

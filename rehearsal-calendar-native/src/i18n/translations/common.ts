@@ -102,7 +102,7 @@ export const ru = {
     calendar: 'Календарь',
     projects: 'Проекты',
     addRehearsal: '',
-    planner: 'Planner',
+    planner: 'Планер',
     profile: 'Профиль',
   },
   actionSheet: {
@@ -230,7 +230,7 @@ export const es = {
     calendar: 'Calendario',
     projects: 'Proyectos',
     addRehearsal: '',
-    planner: 'Planner',
+    planner: 'Planificador',
     profile: 'Perfil',
   },
   actionSheet: {
@@ -294,7 +294,7 @@ export const de = {
     calendar: 'Kalender',
     projects: 'Projekte',
     addRehearsal: '',
-    planner: 'Planner',
+    planner: 'Planer',
     profile: 'Profil',
   },
   actionSheet: {

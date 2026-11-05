@@ -6,7 +6,7 @@
 #
 # Marina, whose account speaks Russian, reads the month over her strip, the
 # date of her rehearsal three days on among the upcoming ones, her planner's
-# days and the availability's next month. Each is what Intl writes, its first
+# days, under its title "Планер", and the availability's next month. Each is what Intl writes, its first
 # letter a capital: "Ноябрь 2026 г.", "Чт, 6 нояб.". Maestro matches text
 # without regard to case, so the texts are copied and checked in JavaScript,
 # after the three screens are shot. The card is one element, its label
@@ -57,6 +57,12 @@ tags:
     timeout: 30000
 - waitForAnimationToEnd
 - takeScreenshot: 65-planner
+# The planner's large title over its filters is the tab's name in her
+# language, "Планер"; it was "Planner" (T-032 review).
+- assertVisible:
+    text: "Планер"
+    above:
+      id: planner-filters
 - copyTextFrom:
     text: "[а-яё]+, \\d\\d? [а-яё]+\\.?"
 - evalScript: ${output.plannerDay = maestro.copiedText}

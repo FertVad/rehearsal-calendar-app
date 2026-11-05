@@ -1,0 +1,20 @@
+$ git restore --source=57587d0 -- src/i18n/translations/common.ts   # nav.planner 'Planner' in ru
+$ npm run e2e -- e2e/flows/65-dates-russian.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Dates in Russian, one format (1m 55s) (Assertion is false: "Планер", Above id: planner-filters is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screens: review/before/65-planner.png — the large title and the tab both read "Planner"
+in a Russian account; review/before/failed-at-step-065-assertCondition-.png.
