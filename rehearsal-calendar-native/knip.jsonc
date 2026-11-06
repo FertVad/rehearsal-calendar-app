@@ -63,14 +63,20 @@
       ]
     },
     // The server. server.js is what vercel.json builds; app.js is what the
-    // tests and scripts start; every npm script of the server runs a file in
-    // scripts/. public/ is static files; migrations/ is SQL run by
+    // tests and scripts start. Only the scripts that are run are entries:
+    // migrate.js and r0-postgres.mjs by server/package.json, seed-demo.mjs by
+    // hand (its header) and by __tests__/seedDemo.test.js. scripts/test.mjs is
+    // not listed: knip finds it itself through the app's "npm test" (listing it
+    // gives a "redundant entry" hint). Helpers such as demoDates.mjs are checked
+    // through their imports. public/ is static files; migrations/ is SQL run by
     // scripts/migrate.js.
     "server": {
       "entry": [
         "server.js!",
         "app.js!",
-        "scripts/**/*.{js,mjs}",
+        "scripts/migrate.js",
+        "scripts/r0-postgres.mjs",
+        "scripts/seed-demo.mjs",
         "__tests__/**/*.{js,mjs}"
       ],
       "project": [
@@ -99,5 +105,12 @@
     // code (T-043).
     "server/middleware/jwtMiddleware.js": ["duplicates"]
   },
+  // An export that its own file uses is live code, not dead code: without this
+  // knip reports 56 such exports and 20 exported types (ru/en/es/de that
+  // translations.ts builds its table from, roster.js constants, props types of
+  // the component in the same file…; audit/evidence/T-046/red-before.md). Only
+  // the `export` word is extra there; dropping it changes module shape, not
+  // removes garbage, and is outside T-046. A file or export used nowhere is
+  // still reported.
   "ignoreExportsUsedInFile": true
 }
