@@ -87,7 +87,7 @@ Universal Links не работают.
 
 **Версия Node** задана в трёх местах: `.nvmrc` в корне (CI), `engines.node` в `server/package.json` (Vercel), `NODE` по умолчанию в `tools/autodev/launchd.sh` (autodev); мажор у всех один, иначе падает `server/__tests__/environmentVersions.test.js`.
 Менять все три сразу, одним коммитом: сначала зелёный CI на новой версии, потом деплой.
-Vercel ставит ровно lock-файл (`installCommand: "npm ci"`), а CI сверяет нативные пакеты с Expo SDK (`npx expo install --check`; `jest` исключён в `expo.install.exclude`).
+При `builds` в `vercel.json` Vercel выполняет `npm install --no-audit` в `server/` (`installCommand` и прочие настройки сборки он не применяет), и тот ставит ровно lock-файл, пока lock согласован с `package.json`; согласованность до слияния держит `npm ci --prefix server` в CI (он падает на рассогласованном lock). CI же сверяет нативные пакеты с Expo SDK (`npx expo install --check`; `jest` исключён в `expo.install.exclude`).
 
 ### Домен `rehearsly.me`
 

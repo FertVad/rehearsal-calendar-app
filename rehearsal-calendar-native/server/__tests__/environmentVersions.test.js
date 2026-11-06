@@ -48,8 +48,18 @@ describe('environment versions', () => {
     expect(majors).toEqual({ ci: majors.ci, vercel: majors.ci, autodev: majors.ci });
   });
 
-  it('Vercel installs exactly the lock file', () => {
-    const { installCommand } = JSON.parse(read(serverFile('vercel.json')));
-    expect(installCommand).toBe('npm ci');
+  // With `builds`, Vercel ignores the project's Build and Development
+  // Settings: `vercel build` warns they "will not apply" and hands the builder
+  // only build.config, and @vercel/node then runs its own
+  // `npm install --no-audit`. An "installCommand": "npm ci" here would read as
+  // a guarantee that the deployment installs exactly the lock file while doing
+  // nothing — so none of these keys may sit next to `builds`. What keeps the
+  // lock file consistent with package.json before a merge is
+  // `npm ci --prefix server` in CI.
+  it('vercel.json with builds holds no settings Vercel would ignore', () => {
+    const config = JSON.parse(read(serverFile('vercel.json')));
+    if (!config.builds) return;
+    const ignored = ['installCommand', 'buildCommand', 'devCommand', 'outputDirectory'];
+    expect(ignored.filter(key => key in config)).toEqual([]);
   });
 });

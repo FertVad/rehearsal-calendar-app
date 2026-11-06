@@ -1,4 +1,7 @@
 T-041 — red before. server/__tests__/environmentVersions.test.js on the old files.
+Superseded in part: the test "Vercel installs exactly the lock file" (section 1 and its lines below)
+was replaced after review — Vercel ignores installCommand with `builds`. See vercel-builds.txt.
+The Node sections (2, 3) and the Expo check (4) stand.
 
 == 1. HEAD 175596a (Node already 26 everywhere; vercel.json without installCommand)
 $ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/environmentVersions.test.js
