@@ -1,0 +1,28 @@
+T-224 — red before. The fix's files put back as they were at 98a8125:
+  git restore --source=98a8125 -- src/contexts/AuthContext.tsx \
+    src/features/auth/screens/LoginScreen.tsx src/features/auth/screens/RegisterScreen.tsx
+(the tests and flow 49 at b0f76af), then `git restore --source=HEAD -- <the same files>`.
+
+== Jest: npx jest --selectProjects frontend --silent AuthErrorOwner ==
+FAIL frontend src/features/auth/screens/__tests__/AuthErrorOwner.test.tsx (13.364 s)
+  ● a refused sign-in is said on sign-in only, and is gone after registration and back
+    expect(received).toBeNull()
+    > 143 |   expect(on('register-screen').queryByText(t.auth.invalidCredentials)).toBeNull();
+  ● a refused Google sign-in is not carried to registration
+    expect(received).toBeNull()
+    > 162 |   expect(on('register-screen').queryByText(said)).toBeNull();
+  ● a refused registration is said on registration only, and not on sign-in after going back
+    expect(received).toBeNull()
+    > 172 |   expect(on('login-screen').queryByText(t.auth.emailUnavailable)).toBeNull();
+Tests:       3 failed, 3 total
+
+== e2e: npm run e2e -- e2e/flows/49-sign-in-and-register-forms.yaml ==
+[e2e] running the flows
+Waiting for flows to complete...
+[Failed] Sign-in and registration forms (2m 14s) (Assertion is false: "Wrong email or password" is not visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The flow stops at the first new check: on registration, right after
+"Create account" from a refused sign-in. The way back to sign-in is red in
+Jest above (its first and third tests).
