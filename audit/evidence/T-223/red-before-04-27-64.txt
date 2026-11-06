@@ -1,0 +1,107 @@
+T-223, review round 1 - flows 04, 27 and 64, red before.
+
+Flow 04 "Mark a rehearsal seen"
+================================
+
+1. The red run's own screen (full e2e on a5a5ba7, flow 04's step-093
+   hierarchy, the director's calendar):
+
+  "Duel scene, 1:00 PM-4:00 PM, Hamlet"                 [20,449][321,537]
+  seen-toggle  label "Mark as seen"  value "1/2"        [325,463][369,507]
+  "SAT, 7, Act I run-through, 6:00 PM-9:00 PM, ..."     [20,608][321,696]
+  seen-toggle  label "Mark as seen"  value "0/4"        [325,622][369,666]
+
+Every eye is right of every title, and all said "Mark as seen": `id:
+seen-toggle, rightOf: ".*Act I run-through.*"` took the first, Duel scene's
+(flow 06's, today), so Hamlet marked Duel scene (1/2) and Act I stayed 0/4.
+
+2. Flow 06 then the old flow 04, on HEAD a334e13 (same order as the night):
+
+$ npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml e2e/flows/04-mark-seen.yaml
+[Passed] From the planner to a rehearsal (2m 16s)
+[Failed] Mark a rehearsal seen (1m 40s) (Assertion is false: "1/4", id: seen-toggle, Right of ".*Act I run-through.*" is visible)
+
+1/2 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The same failure as the night's, no lost tap.
+
+A first try at binding the eye to its row (testID on the row, `childOf` with
+`containsDescendants`) found nothing: Maestro's iOS hierarchy puts the eye
+beside the row, not in it (e2e/out/artifacts/2026-11-06_154913, step-045):
+
+$ npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml e2e/flows/04-mark-seen.yaml
+[Passed] From the planner to a rehearsal (2m 14s)
+[Failed] Mark a rehearsal seen (1m 7s) (No visible element found: id: seen-toggle, Child of: id: rehearsal-row, Contains descendants: [".*Act I run-through.*"])
+
+So the eye now says which rehearsal it marks (its accessibility label), and
+the flow takes it by that.
+
+Unit test, the card at HEAD (src/features/calendar/components/RehearsalCard.tsx
+restored from a334e13), the new test in RehearsalList.test.tsx:
+
+$ npx jest --selectProjects frontend src/features/calendar/components/__tests__/RehearsalList.test.tsx -t "names the rehearsal its eye marks"
+    - Expected  - 2
+    + Received  + 2
+    -   "Mark as seen, Wrestling match",
+    -   "Mark as seen, Epilogue",
+    +   "Mark as seen",
+    +   "Mark as seen",
+Tests:       1 failed, 1294 skipped, 1295 total
+
+
+Flows 27 and 64 - one cause
+===========================
+
+1. The red run's journals.
+
+Flow 64 (Yelena), device-simulator.log and maestro.log (device clock -10:00,
+Maestro +02:00, same minutes and seconds):
+
+  01:47:12.535 / 12.545   GET /api/native/availability, twice (mount, focus)
+  13:47:12.703            Tap on "Mark Busy" COMPLETED
+  01:47:12.817 / 12.866   both answered 200
+  13:47:13.624            scrollUntilVisible: not found ".*, Busy", id day-2026-11-09 -> swipe
+  ... nine looks, nine swipes ...
+  13:47:43.967            Scrolling DOWN ... FAILED
+
+The look was taken while the editor said "Loading..." (it shows no list
+before its first read); the answers came in the next quarter second, the
+list mounted on this week; the swipe that followed the look went to the list,
+and the week of 9 November went up out of sight. scrollUntilVisible scrolls
+DOWN only. The failure's hierarchy (step-046): April and May 2027.
+
+Flow 27 (Trigorin): the same - the first look at "Loading...", 12 November
+Partial once the answer came, and the failure's hierarchy (step-064) at April
+and May 2027.
+
+The same race was found in a green run before and closed in
+e2e/subflows/availability-pick-mark-day.yaml (T-030): wait for the day with
+its status, then scroll. Flows 27 and 64 did not have it.
+
+2. Reproduced: the opening of each flow, its scroll unchanged, the editor
+opened again and again with its read of the availability answered later each
+time by the local server's /hold (audit/evidence/T-223/late-availability-repro.yaml,
+without the line marked "the fix"); the availability screen as at a334e13,
+which this change does not touch.
+
+Flow 27's opening (answer late by 1000, 1700, 2400, 3100, 3800 ms ...):
+
+$ npm run e2e -- e2e/flows/zz-t223-27-late.yaml
+[Failed] T-223 27 opening, availability answered late (2m 34s) (No visible element found: ".*, Partial", id: day-2026-11-12)
+1/1 Flow Failed
+
+  tries 1000-3100 ms found the day; at 3800 ms: nine looks, nine swipes,
+  the hierarchy at April and May 2027 (artifacts 2026-11-06_161152, step-165).
+
+Flow 64's opening (from 1000 ms):
+
+$ npm run e2e -- e2e/flows/zz-t223-64-late.yaml
+[Failed] T-223 64 opening, availability answered late (1m 49s) (No visible element found: ".*, Busy", id: day-2026-11-09)
+1/1 Flow Failed
+
+  the first try, 1000 ms: the hierarchy at April and May 2027 (artifacts
+  2026-11-06_162635, step-066).
+
+Both the red run's failures, the red run's message, the red run's screen.

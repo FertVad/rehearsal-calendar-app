@@ -26,3 +26,51 @@ $ npm run e2e -- e2e/flows/04-mark-seen.yaml
 [Passed] Mark a rehearsal seen (1m 52s)
 $ npm run e2e -- e2e/flows/27-past-midnight-morning-slot.yaml
 [Passed] A morning slot of his own outlives a save of the morning (3m 5s)
+
+Those passes alone said nothing of why the three failed (review round 1).
+Their causes and red: red-before-04-27-64.txt. After:
+
+Flow 04 - the eye says which rehearsal it marks ("Mark as seen, Act I
+run-through"), and the flow takes the eye by it; the director's count is read
+from that eye (copyTextFrom) and must be "1/4". Flow 06 first, as at night:
+
+$ npm run e2e -- e2e/flows/06-planner-to-rehearsal.yaml e2e/flows/04-mark-seen.yaml
+[Passed] From the planner to a rehearsal (2m 11s)
+[Passed] Mark a rehearsal seen (1m 26s)
+2/2 Flows Passed in 3m 37s
+
+maestro.log (artifacts 2026-11-06_155904): `copiedText == "1/4"} is true
+COMPLETED` - Act I's count, with Duel scene before it in the list. What 04
+guards, the seen mark reaching the server and counted against the
+rehearsal's own four, holds.
+
+$ npx jest --selectProjects frontend
+Test Suites: 134 passed, 134 total
+Tests:       1295 passed, 1295 total
+
+Flows 27 and 64 - each opening of the editor waits for the day with its
+status before it scrolls (as availability-pick-mark-day.yaml, T-030).
+
+The reproduction with the wait (late-availability-repro.yaml as written):
+
+$ npm run e2e -- e2e/flows/zz-t223-27-late.yaml      (late by 1700 ... 5200 ms, 3800 among them)
+[Passed] T-223 27 opening, availability answered late (2m 24s)
+1/1 Flow Passed in 2m 24s
+
+$ npm run e2e -- e2e/flows/zz-t223-64-late.yaml      (late by 1000 ... 5200 ms)
+[Passed] T-223 64 opening, availability answered late (2m 22s)
+1/1 Flow Passed in 2m 22s
+
+The flows themselves:
+
+$ npm run e2e -- e2e/flows/64-availability-collapse-asks.yaml e2e/flows/27-past-midnight-morning-slot.yaml
+[Passed] Availability editor asks before collapsing (2m 23s)
+[Passed] A morning slot of his own outlives a save of the morning (2m 7s)
+2/2 Flows Passed in 4m 30s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+What they guard holds: 27 - his 00:00-01:00 on the morning survives a save
+of the morning, beside the night's end (cause fix 15); 64 - collapsing the
+editor with a change asks, Cancel / Don't Save / Save each do what they say
+(T-026).

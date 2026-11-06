@@ -40,6 +40,16 @@ tags:
       SEE: "Mark Busy"
       WAIT_MS: 5000
 - tapOn: "Mark Busy"
+# The days are read before the list is scrolled, as availability-pick-mark-day
+# does (T-030): a scroll whose look came while "Loading..." swiped the list
+# that came meanwhile, the week of MORNING_DAY went up out of sight, and it
+# went on down to April (T-223). MORNING_DAY is six days on, in the first two
+# weeks the list opens on.
+- extendedWaitUntil:
+    visible:
+      id: day-${MORNING_DAY}
+      text: ".*, Partial"
+    timeout: 30000
 - scrollUntilVisible:
     element:
       id: day-${MORNING_DAY}
@@ -102,6 +112,12 @@ tags:
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
+# Opened again, it loads again: the days first, as above.
+- extendedWaitUntil:
+    visible:
+      id: day-${MORNING_DAY}
+      text: ".*, Partial"
+    timeout: 30000
 - scrollUntilVisible:
     element:
       id: day-${MORNING_DAY}

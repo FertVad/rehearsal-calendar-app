@@ -361,8 +361,15 @@ whether it has gone, which waited seven seconds every time.
   a flow never relies on what another one created. A flow that asserts on
   slots or busy times gets people of its own in the seed: a rehearsal another
   flow books for a shared person changes their day (flow 07 has its own
-  director for that). Find a control relative to
-  its own card (`below: ".*Act I run-through.*"`), not by `index`. A project
+  director for that). Find a control by its own card, not by `index` — and
+  not by `rightOf`/`below` a card's text either where the list has several
+  of it: every row's eye is right of every title, and Maestro took the first
+  in the list, a rehearsal another flow had put before it (T-223, flow 04).
+  `childOf` the row does not help: Maestro's iOS hierarchy puts the eye
+  beside the row, not in it. The control says which card it belongs to — the
+  seen eye is labelled `"Mark as seen, <title>"` — and the flow takes it by
+  `id:` and that label (`text: ".*Act I run-through"`); a value it shows (the
+  count) is read with `copyTextFrom` and `assertTrue`. A project
   opened in the planner arrives with its whole roster selected (DP01, flow
   07); a flow that needs another selection makes it itself.
 - A list item under the tab bar, or still scrolling, takes no tap: bring it
@@ -374,6 +381,13 @@ whether it has gone, which waited seven seconds every time.
   (`env: { DAY: ... }`), which waits for the list to rest and draws the day
   down below the legend (`availability-legend`). A day earlier than the one in
   view is looked for `UP` (flow 10).
+- The availability editor shows "Loading..." and no list until its first read
+  is in, every time it is opened. A `scrollUntilVisible` begun then looks at
+  "Loading...", and its swipe goes to the list that came meanwhile: the week
+  it wanted goes up out of sight, and the scroll goes on down to the spring
+  (T-030; flows 27 and 64, T-223). Wait for the day with its status first
+  (`extendedWaitUntil`, as `availability-pick-mark-day.yaml`), then scroll —
+  for a day in the two weeks the editor opens on.
 - A tap the flow then waits on the result of, where a lost tap has failed a
   flow, goes through `e2e/subflows/tap-and-see.yaml` (see "A lost tap"), not
   a `repeat` or `retry` of its own.
