@@ -23,7 +23,8 @@ npm run lint:fix             # Fix ESLint errors
 npm run type-check           # TypeScript type checking
 npm test                     # Run Jest tests
 npm run test:watch           # Run tests in watch mode
-npm run check                # Run all checks (secrets, type-check, tests)
+npm run check                # Run all checks (secrets, dead code, type-check, tests)
+npm run check:dead           # knip on app + server: an unused file, export or dependency fails it (knip.jsonc)
 
 # Security
 npm run check:secrets        # Check for exposed secrets/API keys
