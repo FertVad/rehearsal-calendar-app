@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCalendarsUsageDescription": "Rehearsly trägt deine Proben in deinen Kalender ein. Aus den gewählten Kalendern übernimmt die App nur, wann du belegt bist – nie, wie deine Termine heißen.",
+    "NSCalendarsFullAccessUsageDescription": "Rehearsly trägt deine Proben in deinen Kalender ein. Aus den gewählten Kalendern übernimmt die App nur, wann du belegt bist – nie, wie deine Termine heißen.",
+    "NSCalendarsWriteOnlyAccessUsageDescription": "Rehearsly trägt deine Proben in deinen Kalender ein."
+  }
+}
