@@ -6,8 +6,6 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import WelcomeScreen from '../WelcomeScreen';
 
-// Its native view is not in Jest; the buttons draw it.
-jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
 // The real button, without the rest of the components' index.
 jest.mock('../../../../shared/components', () => ({
   GlassButton: jest.requireActual('../../../../shared/components/buttons/GlassButton').default,

@@ -14,8 +14,6 @@ import { Colors } from '../colors';
 import { BottomActionButton } from '../../components/BottomActionBar';
 import GlassButton from '../../components/buttons/GlassButton';
 
-jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
-
 /** WCAG 2.x relative luminance of `#rrggbb`. */
 function luminance(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((i) => {
