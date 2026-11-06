@@ -45,7 +45,7 @@ await db.all(
 **Why:**
 - PostgreSQL natively uses `$N` placeholders
 - While `?` (SQLite syntax) technically works due to auto-conversion in `db.js`, using `$N` makes code clearer and more consistent
-- All route files now use `$N` syntax consistently ✅
+- Some older queries still use `?` (e.g. `routes/native/pushTokens.js`); new SQL uses `$N`
 
 **Technical Note:** The db wrapper auto-converts `?` → `$N` using this transform:
 ```javascript
@@ -57,28 +57,32 @@ However, explicit `$N` syntax is preferred for code clarity.
 
 ## Error Handling
 
-### All async routes MUST have try-catch:
+### Every async route goes through `asyncHandler`:
+
+Express 4 does not consume a returned promise, so a rejection in a bare
+`async` handler leaves the request without an answer.
+[`middleware/asyncHandler.js`](../server/middleware/asyncHandler.js) hands any
+throw or rejection to `next`, and `middleware/errorHandler.js` answers it
+(`__tests__/middleware/asyncBoundary.test.js`).
 
 ```javascript
 // ✅ CORRECT
-router.post('/endpoint', requireAuth, async (req, res) => {
-  try {
-    const userId = req.userId;
-    // ... your code
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Error message' });
-  }
-});
+router.post('/endpoint', requireAuth, asyncHandler(async (req, res) => {
+  const userId = req.userId;
+  // ... your code; a throw reaches the error handler
+  res.json({ success: true });
+}));
 
-// ❌ WRONG - No error handling
+// ❌ WRONG - a rejection is never answered
 router.post('/endpoint', requireAuth, async (req, res) => {
   const userId = req.userId;
-  // ... your code - can crash server if error occurs
+  // ... your code
   res.json({ success: true });
 });
 ```
+
+A handler still catches what it can answer itself (a 400, a 404); everything
+else it lets go to the boundary.
 
 ---
 
@@ -139,15 +143,16 @@ res.json(result); // Don't send raw data without wrapper
 
 ## Logging
 
-### Consistent log prefixes:
+### `logger` with a prefix, not `console`:
 
 ```javascript
-// ✅ CORRECT
-console.log('[RouteName] User logged in:', userId);
-console.error('[RouteName] Error:', error);
+// ✅ CORRECT - server/utils/logger.js; debug is hidden in production
+import { logger } from '../utils/logger.js';
+logger.debug('[RouteName] User logged in:', userId);
+logger.error('[RouteName] Error:', error);
 
 // ❌ WRONG
-console.log('User logged in');  // No context
+console.log('User logged in');  // No context, and shown in production
 ```
 
 ---

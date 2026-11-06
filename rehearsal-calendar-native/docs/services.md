@@ -35,7 +35,9 @@ Runtime-раздел обновлён 2026-09-19 для ветки исправ�
 
 ### Neon — PostgreSQL
 
-Боевая база. Четырнадцать таблиц с префиксом `native_*`.
+Боевая база. Схема — двадцать три таблицы с префиксом `native_*`
+([init-native-schema.sql](../server/database/init-native-schema.sql)); фактический
+каталог production здесь не проверялся.
 
 | | |
 |---|---|
@@ -143,8 +145,10 @@ MX-записи для входящей почты (ImprovMX), SPF и DKIM дл�
 серверы Expo, пакетом `expo-server-sdk`. Бесплатно, ключей в нашем коде не
 требует.
 
-> Доставка не отслеживается: тикет Expo означает «принято к отправке», а
-> receipts, которые говорят, дошло ли до телефона, мы не запрашиваем.
+> Доставка никому не показывается: тикет Expo означает «принято к отправке».
+> Receipts, которые говорят, дошло ли до телефона, читает крон напоминаний
+> (`checkPushReceipts`) и только для того, чтобы удалить токены устройств, которых
+> больше нет. Пока оба триггера выключены, receipts не читаются.
 
 **EAS Build / Submit** — сборка iOS-бинарника и загрузка в App Store Connect.
 Конфиг [eas.json](../eas.json). Профиль `production` готов, но блок
@@ -155,7 +159,7 @@ MX-записи для входящей почты (ImprovMX), SPF и DKIM дл�
 | | |
 |---|---|
 | Переменная на сервере | `APPLE_CLIENT_ID` (= bundle id `com.rehearsal.app`) |
-| Читается в | [server/utils/oauthVerification.js](../server/utils/oauthVerification.js) |
+| Читается в | [server/config/appleAuth.js](../server/config/appleAuth.js) (проверку токена делает [server/utils/oauthVerification.js](../server/utils/oauthVerification.js)) |
 | Цена | $99 / год |
 
 Что на нём держится: App ID `com.rehearsal.app` с capability Push Notifications,
@@ -228,7 +232,8 @@ MX-записи для входящей почты (ImprovMX), SPF и DKIM дл�
 | `BASE_URL` | Vercel | ломаются инвайт-ссылки и CORS |
 | `APPLE_CLIENT_ID` | Apple | Apple login отключён guard; OPS-IA01 production-проверка остаётся NOT_RUN |
 | `GOOGLE_CLIENT_ID_IOS` / `_ANDROID` / `_WEB` | Google | ничего: список есть в коде |
-| `RESEND_API_KEY`, `MAIL_FROM` | Resend | письма молча не уходят |
+| `EMAIL_TRANSPORT=resend`, `RESEND_API_KEY`, `EMAIL_FROM` | Resend | транспорт недоступен: маршруты, которым нужно письмо, отвечают 503 |
+| `EMAIL_CODE_SECRET` | коды из писем | берётся `JWT_SECRET` |
 | `ADMIN_PASSWORD_HASH` / `ADMIN_PASSWORD` | админка | не войти в `/admin` |
 | `ADMIN_JWT_SECRET` | админка | берётся `JWT_SECRET` |
 | `HOST` | — | `0.0.0.0` нужен, чтобы зайти с физического устройства |
@@ -245,5 +250,5 @@ MX-записи для входящей почты (ImprovMX), SPF и DKIM дл�
 | Напоминания не приходят | оба триггера выключены с 2026-09-12 — это ожидаемо |
 | Вход через Google отказывает | client ID в `constants/googleClients.js` против Google Console |
 | Инвайт-ссылка открывает сайт, а не приложение | `BASE_URL` и `apple-app-site-association` на том же origin |
-| Письма не приходят | `RESEND_API_KEY` в Vercel, DKIM и SPF в DNS |
-| Пуш принят, но не дошёл | доставка не отслеживается — receipts Expo не запрашиваются |
+| Письма не приходят | `EMAIL_TRANSPORT`, `RESEND_API_KEY`, `EMAIL_FROM` в Vercel, DKIM и SPF в DNS |
+| Пуш принят, но не дошёл | доставка никому не показывается; receipts Expo читает только крон напоминаний, чтобы удалить мёртвые токены |

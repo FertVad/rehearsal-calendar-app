@@ -1858,7 +1858,7 @@ interface RehearsalResponse {
   id: string;
   rehearsalId: string;
   userId: string;
-  response: "yes" | null;        // Binary seen system: 'yes' (seen) or null (unseen/deleted)
+  response: "yes" | "no";        // 'yes' — seen; 'no' — invited, not yet seen
   notes: string | null;
   createdAt: string;             // ISO 8601 timestamp
   updatedAt: string;             // ISO 8601 timestamp
@@ -1870,9 +1870,11 @@ interface RehearsalResponse {
 ```
 
 **Seen System Notes:**
-- Binary system: only 'yes' (seen) or null (unseen/deleted)
-- No 'no' or 'maybe' statuses
-- Sending null deletes the response record
+- Binary system: 'yes' (seen) or 'no' (invited, not yet seen); no 'maybe'
+- Having a row is what puts a person on the rehearsal; answering only updates
+  the caller's existing row and never creates or deletes one. Anything other
+  than 'yes'/'no' (null included) is `400 RESPONSE_INVALID`
+- In the client's state unseen is `null`; `toggleSeen` (`SeenContext`) sends it as 'no'
 - Client uses optimistic updates with eye icon toggle
 
 ### Availability Slot
