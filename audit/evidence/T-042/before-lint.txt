@@ -1,0 +1,27 @@
+T-042 — unused imports and locals BEFORE, source commit c191807.
+
+knip reports exports, not names unused inside a module. Those come from the project's
+own ESLint config (@typescript-eslint/no-unused-vars). Script: lint-unused.mjs next
+to this file.
+
+$ node audit/evidence/T-042/lint-unused.mjs rehearsal-calendar-native   (app code only; tests listed below)
+src/features/availability/components/calendar/CalendarMonth.tsx:27 'availability' is defined but never used.     KEPT: a prop in the component's signature (removing it is an API change)
+src/features/availability/components/editor/TimeSlotsEditor.tsx:23 'onSlotChange' is defined but never used.     KEPT: same, a prop
+src/features/availability/utils/slotHelpers.ts:1 'DayMode' is defined but never used.                              REMOVE (import)
+src/features/availability/utils/slotHelpers.ts:1 'TimeSlot' is defined but never used.                             REMOVE (import)
+src/features/calendar/hooks/useAddRehearsalForm.ts:58 'language' is assigned a value but never used.               REMOVE (destructured name; useI18n() stays for t)
+src/features/calendar/screens/CalendarScreen.tsx:1 'useRef' is defined but never used.                             REMOVE (import)
+src/features/calendar/screens/RehearsalDetailsScreen.tsx:20 'Project' is defined but never used.                   REMOVE (type import)
+src/features/calendar/styles/calendarScreenStyles.ts:5 'UPCOMING_CARD_WIDTH' is assigned a value but never used.   REMOVE (constant)
+src/features/onboarding/screens/CalendarSyncScreen.tsx:1 'useEffect' is defined but never used.                    REMOVE (import)
+src/features/profile/screens/ProfileScreen.tsx:8 'BottomTabScreenProps' is defined but never used.                 REMOVE (type import)
+src/features/profile/screens/ProfileScreen.tsx:9 'CompositeScreenProps' is defined but never used.                 REMOVE (type import)
+src/features/projects/screens/ProjectDetailScreen.tsx:10 'FlatList' is defined but never used.                     REMOVE (import)
+src/hooks/useWeekStart.ts:39 'error' is defined but never used.                                                    KEPT: a catch binding
+src/navigation/index.tsx:2 'Alert' is defined but never used.                                                      REMOVE (import)
+src/navigation/index.tsx:111 'language' is assigned a value but never used.                                        REMOVE (the line; nothing in ActionSheetWrapper reads useI18n, CreateActionSheet takes it itself)
+src/shared/components/UserAvatar.tsx:3 'Colors' is defined but never used.                                         REMOVE (import)
+src/shared/utils/availability.ts:14 'DAY_END' is assigned a value but never used.                                  REMOVE (constant)
+
+Also reported in tests and test mocks (src/**/__tests__, 28 names) — not app code, left as is.
+grep (whole word) per removed name inside its own file: each name appears only on the flagged line.

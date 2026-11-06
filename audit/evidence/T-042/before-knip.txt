@@ -1,0 +1,54 @@
+T-042 — report BEFORE, source commit c191807 (auto/main), knip 5.71.0, rehearsal-calendar-native/knip.json of this task.
+
+Entry points: index.ts, App.tsx, src tests and src/__tests__ (mocks, setup), e2e/**;
+plugins: expo (app.json), metro (metro.config.js), jest (jest.config.js).
+Project (what may be reported): src/**, e2e/**.
+
+Environment note: node_modules/@oxc-resolver/binding-darwin-arm64 (knip's resolver)
+was truncated on disk (1 307 710 bytes; dlopen: "segment __TEXT load command content
+extends beyond end of file"), so knip could not start. Re-extracted the locked version
+11.15.0 with `npm install --no-save` (via 11.14.0 to force a fresh extract); now
+1 902 064 bytes. package.json and package-lock.json unchanged.
+
+$ node node_modules/knip/bin/knip.js --directory rehearsal-calendar-native --no-progress \
+    --include files,exports,nsExports,types,nsTypes,enumMembers,classMembers,duplicates --include-entry-exports
+Unused exports (4)
+getWeekStart                 function  src/hooks/useWeekStart.ts:71:17
+GO_BACK                                src/shared/hooks/useLeaveGuard.ts:9:14
+getCalendarEvents  calendar  function  src/shared/services/calendar/import.ts:32:23
+onClockOf                              src/shared/utils/time.ts:276:14
+
+(Unused files: none. Unused types, enum members, class members, duplicate exports: none.)
+
+$ ... --production   (tests not entry points — informational only; these are used by
+                      tests, so per the task's entry points they are used and stay)
+Unused exports (10)
+getWeekStart            function  src/hooks/useWeekStart.ts:71:17
+localDate                         src/shared/hooks/useClock.ts:26:14
+GO_BACK                           src/shared/hooks/useLeaveGuard.ts:9:14
+getCalendarEvents       function  src/shared/services/calendar/import.ts:32:23
+resetSessionForTests    function  src/shared/services/session.ts:138:17
+clearAllMappings        function  src/shared/utils/calendarMappings.ts:326:23
+DATE_FORMATS                      src/shared/utils/dateFormat.ts:44:14
+onClockOf                         src/shared/utils/time.ts:276:14
+isStartOfDayInTimezone            src/shared/utils/time.ts:374:14
+isEndOfDayInTimezone              src/shared/utils/time.ts:389:14
+
+Default run also lists dependency findings outside this task's scope (src/):
+  Unused dependencies (1): expo-linear-gradient (package.json) — no import anywhere; left as is.
+  Unlisted dependencies (181): server test/runtime packages that live in server/package.json,
+  and @react-navigation/routers / core used by jest moduleNameMapper — not dead code.
+  Unresolved imports (1): metro-minify-terser (Expo's metro default) — not ours.
+
+grep cross-check (src, e2e, server, App.tsx, index.ts; whole word):
+$ grep -rnwE "getWeekStart|GO_BACK|getCalendarEvents|onClockOf" ...
+src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx:279:  const leave = (action: object = { type: 'GO_BACK' }) => {
+src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx:405:      expect(mockNavigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+src/features/availability/screens/__tests__/AvailabilityLeave.test.tsx:185:  expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+src/shared/utils/time.ts:276:export const onClockOf = ...                          (declaration)
+src/shared/hooks/useLeaveGuard.ts:9:export const GO_BACK: NavigationAction = ...    (declaration)
+src/shared/services/calendar/index.ts:36:  getCalendarEvents,                       (barrel re-export, nobody imports it)
+src/__tests__/__mocks__/react-navigation-native.js:24:  __remove(action = { type: 'GO_BACK' }) {
+src/shared/services/calendar/import.ts:32:export async function getCalendarEvents(  (declaration)
+src/hooks/useWeekStart.ts:71:export function getWeekStart(                         (declaration)
+=> the 'GO_BACK' hits are the navigation action's string literal, not the constant. All 4 confirmed unused.
