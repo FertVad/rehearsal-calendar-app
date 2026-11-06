@@ -193,16 +193,6 @@ person to edit the same day on two devices without reloading, and it costs
 their own edit, which they can see. Fixing it takes a revision per day and a
 conflict answer the editor would have to show.
 
-### A reminder can go out twice when a rehearsal is moved at the moment it is sent
-
-Each rehearsal is reminded in one transaction that holds the rehearsal while
-it sends (R8), so a move waits for a send in flight and then releases its
-claims. But the edit itself is still two statements — the new time, then the
-release — until cause fix 10 makes saving a rehearsal one transaction. A run
-that claims people for the *new* time in the milliseconds between the two has
-those claims released too, and the next run reminds them again: one extra
-push. Left for cause fix 10, which removes the gap rather than narrowing it.
-
 ### An inbox page can skip a row written with microseconds by something other than the server
 
 The inbox is paged by the place the last row holds, `(created_at, id)` (cause
@@ -273,8 +263,6 @@ range being built through UTC.
 |---|---|
 | [accountLinking.js:76](../server/utils/accountLinking.js#L76) | Email lookups are case-sensitive, so a Google sign-in can create a duplicate empty account instead of linking |
 | [api.ts:136](../src/shared/services/api.ts#L136) | A session revoked mid-use leaves the app showing signed-in UI with stale data until it is force-quit |
-| [availability.js:82](../server/routes/native/availability.js#L82) | Work outside the try block can leave a malformed request with no response at all, plus an unhandled rejection |
-| [members.js:141](../server/routes/native/members.js#L141) | The members-availability endpoint hands every member everyone else's email address |
 | [export.ts:236](../src/shared/services/calendar/export.ts#L236) | Changing the export calendar keeps writing rehearsals to the old one |
 | [calendarMappings.ts:22](../src/shared/utils/calendarMappings.ts#L22) | The cached connection id survives a user switch, so the next user's mappings never reach the server |
 | [inviteRedemption.js](../server/routes/native/inviteRedemption.js) | Invite codes are matched case-sensitively while the entry field disables auto-capitalisation, so a correctly dictated code typed in lowercase is rejected |
