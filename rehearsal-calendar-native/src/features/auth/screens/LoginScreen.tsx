@@ -37,7 +37,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const passwordInput = useRef<TextInput>(null);
   const { login, loginWithGoogle, loginWithApple, busy } = useAuth();
   const { t } = useI18n();
-  const { error, fail, clear } = useAttemptError(navigation);
+  const { error, fail, clear, here } = useAttemptError(navigation);
 
   // Google OAuth
   const { request, response, promptAsync } = useGoogleAuth();
@@ -100,7 +100,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       // Navigation handled by AuthProvider
     } catch (err: any) {
       fail(err);
-      Alert.alert(t.auth.googleSignInError, authErrorMessage(t, err));
+      if (here()) Alert.alert(t.auth.googleSignInError, authErrorMessage(t, err));
     } finally {
       setGoogleLoading(false);
     }
@@ -124,7 +124,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       // Navigation handled by AuthProvider
     } catch (err: any) {
       fail(err);
-      Alert.alert(t.auth.appleSignInError, authErrorMessage(t, err));
+      if (here()) Alert.alert(t.auth.appleSignInError, authErrorMessage(t, err));
     } finally {
       setAppleLoading(false);
     }

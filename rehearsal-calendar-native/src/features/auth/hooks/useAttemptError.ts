@@ -9,7 +9,8 @@ type Listens = { addListener: (type: 'blur' | 'focus', callback: () => void) => 
  * screen: a wrong password stayed under registration's fields, and a refused
  * registration on sign-in after going back. The screen stays mounted under the
  * next one in the stack, so leaving it is its blur, and an answer that comes
- * after the person has left is not said there either.
+ * after the person has left is not said there either — under the fields or in
+ * an alert over the next screen.
  */
 export function useAttemptError(navigation: Listens) {
   const [error, setError] = useState<AuthFlowError | null>(null);
@@ -29,10 +30,12 @@ export function useAttemptError(navigation: Listens) {
     };
   }, [navigation]);
 
+  /** Whether the person is still on this screen — an alert is said only then. */
+  const here = useCallback(() => focused.current, []);
   const fail = useCallback((failure: unknown) => {
     if (focused.current && failure instanceof AuthFlowError) setError(failure);
   }, []);
   const clear = useCallback(() => setError(null), []);
 
-  return { error, fail, clear };
+  return { error, fail, clear, here };
 }

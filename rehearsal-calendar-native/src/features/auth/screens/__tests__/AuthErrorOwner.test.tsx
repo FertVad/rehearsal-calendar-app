@@ -13,7 +13,7 @@
  * when a screen is left (blur) and come back to (focus).
  */
 import React from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { render, fireEvent, act, waitFor, within } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '../../../../contexts/AuthContext';
 import LoginScreen from '../LoginScreen';
@@ -132,6 +132,7 @@ beforeEach(() => {
   mockRegister.mockReset();
   mockLoginWithGoogle.mockReset();
   mockGoogle.response = null;
+  (Alert.alert as jest.Mock).mockClear();
 });
 
 it('a refused sign-in is said on sign-in only, and is gone after registration and back', async () => {
@@ -160,6 +161,26 @@ it('a refused Google sign-in is not carried to registration', async () => {
   await act(async () => undefined);
   await login.emit('blur');
   expect(on('register-screen').queryByText(said)).toBeNull();
+});
+
+it('a Google refusal that comes after leaving for registration is not alerted over it', async () => {
+  let refuse!: (reason: unknown) => void;
+  mockLoginWithGoogle.mockReturnValue(new Promise((_, reject) => { refuse = reject; }));
+  mockGoogle.response = { type: 'success' };
+  const { login } = stack();
+  await waitFor(() => expect(mockLoginWithGoogle).toHaveBeenCalled());
+
+  // "Create account" while Google is still being asked.
+  await login.emit('blur');
+  await act(async () => { refuse({ response: { status: 500, data: { error: 'Google is down' } } }); });
+  expect(Alert.alert).not.toHaveBeenCalled();
+});
+
+it('a Google refusal while on sign-in is still alerted there', async () => {
+  mockLoginWithGoogle.mockRejectedValue({ response: { status: 500, data: { error: 'Google is down' } } });
+  mockGoogle.response = { type: 'success' };
+  stack();
+  await waitFor(() => expect(Alert.alert).toHaveBeenCalledWith(t.auth.googleSignInError, expect.any(String)));
 });
 
 it('a refused registration is said on registration only, and not on sign-in after going back', async () => {
