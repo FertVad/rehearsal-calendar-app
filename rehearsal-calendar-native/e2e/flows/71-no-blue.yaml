@@ -20,6 +20,9 @@
 # white digit, not #A855F7 (3.96:1); today is a purple ring around a digit
 # of the text's colour, not a purple digit (4.37:1); the form's arrows are
 # purple, not the library's blue.
+#
+# The details' time (T-047): its clock is grey as the day's calendar, not
+# purple; the facts' rows hold nothing purple.
 appId: ${APP_ID}
 name: Nothing is blue, purple is doing and choosing
 tags:
@@ -101,6 +104,32 @@ tags:
       RIGHT: "1"
       TOP: "0"
       BOTTOM: "1"
+# The facts' rows, under the sheet's header (Close and Edit are purple) and
+# above the divider (the seen count's eye is): nothing purple. The time's
+# clock was #A855F7, meaning nothing and doing nothing (T-047); it is grey
+# #8B949E like the day's calendar above it, a 20-point glyph.
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-rehearsal-details
+      COLOUR: "#a855f7"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.39"
+      BOTTOM: "0.61"
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-rehearsal-details
+      COLOUR: "#8b949e"
+      TOLERANCE: "20"
+      MIN_WIDTH: "14"
+      LEFT: "0.03"
+      RIGHT: "0.12"
+      TOP: "0.45"
+      BOTTOM: "0.505"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:

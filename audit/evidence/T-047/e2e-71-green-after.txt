@@ -1,0 +1,20 @@
+T-047 review: flow 71 green on the fixed screen (28c4ba8's RehearsalDetailsScreen.tsx).
+
+npm run e2e -- e2e/flows/71-no-blue.yaml
+
+[e2e] running the flows
+[Passed] Nothing is blue, purple is doing and choosing (3m 50s)
+1/1 Flow Passed in 3m 51s
+
+The details' checks (node audit/evidence/T-047/copy-shots.mjs e2e/out/artifacts/2026-11-06_042622 e2e-71-green-after.png):
+../scripts/no-ink.js   SHOT 71-rehearsal-details COLOUR #3b82f6 TOLERANCE 30 whole screen             COMPLETED
+../scripts/no-ink.js   SHOT 71-rehearsal-details COLOUR #a855f7 LEFT 0 RIGHT 1 TOP 0.39 BOTTOM 0.61     COMPLETED
+../scripts/icon-size.js SHOT 71-rehearsal-details COLOUR #8b949e TOLERANCE 20 MIN_WIDTH 14
+                        LEFT 0.03 RIGHT 0.12 TOP 0.45 BOTTOM 0.505                                     COMPLETED
+
+Red before (e2e-71-red-before.txt, run 2026-11-06_041921):
+../scripts/no-ink.js   SHOT 71-rehearsal-details COLOUR #a855f7 LEFT 0 RIGHT 1 TOP 0.39 BOTTOM 0.61     FAILED
+  Error: 71-rehearsal-details: #a855f7 drawn 15.333333333333334 x 15 pt there
+
+Screenshots: e2e-71-red-before.png (purple clock), e2e-71-green-after.png (grey
+clock; Close, Edit, the seen count's eye and her own eye still purple).
