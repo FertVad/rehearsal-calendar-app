@@ -1,0 +1,18 @@
+# T-225 check 1, red: flow 59's start on the old sign-in-form.yaml, its tap on
+# "Sign In" taken out - what the red run's lost tap left (made on purpose: a
+# lost tap cannot be had on demand). The form stays filled in, nothing goes to
+# the server, and the wait for the calendar fails as in the red run.
+appId: ${APP_ID}
+name: T-225 check 1 - sign in with the tap on Sign In lost
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- runFlow:
+    file: sign-in-form-no-submit.yaml
+    env:
+      EMAIL: ${BERNARDA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000

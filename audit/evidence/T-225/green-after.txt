@@ -1,0 +1,41 @@
+T-225 green after - the new tap-and-see.yaml (GONE_ID) and sign-in-form.yaml
+("Sign In" through it), 2026-11-06.
+
+1. check/2-submit-first-lost.yaml: flow 59's start, "Sign In" through a copy
+   of tap-and-see.yaml whose first tap is taken out (the lost one).
+
+$ cd rehearsal-calendar-native && npm run e2e -- ../audit/evidence/T-225/check/2-submit-first-lost.yaml
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] T-225 check 2 - sign in, first tap on Sign In lost, through tap-and-see (1m 30s)
+
+1/1 Flow Passed in 1m 30s
+
+[e2e] taps taken again (tap-and-see.yaml): 1
+[e2e]   2026-11-06T20:43:57.812Z  tapped "id login-submit" again: no "id login-submit gone" after the first tap
+
+2. Flow 59 itself (and, before the fix, on the old code: passed too - no tap
+   lost in that run, a lost tap cannot be had on demand).
+
+$ npm run e2e -- e2e/flows/59-planner-filters-spanish.yaml          (old code, d289dff)
+[Passed] The planner's filters fit in Spanish (1m 58s)
+1/1 Flow Passed in 1m 59s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/59-planner-filters-spanish.yaml          (new code)
+[Passed] The planner's filters fit in Spanish (1m 47s)
+1/1 Flow Passed in 1m 47s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screenshot 59-filters-spanish: "La casa de... ▾ · Período p... ▾ ·
+Parti...os (1) ▾" - the three filters in the row, each with its chevron, none
+past the right edge: the T-020 bug flow 59 guards has not come back.
+
+3. Callers of sign-in-form.yaml whose sign-in screen may not speak English.
+
+$ npm run e2e -- e2e/flows/16-switch-account-unread-language.yaml e2e/flows/60-onboarding-russian.yaml
+[Passed] Switch accounts - count and language (1m 53s)
+[Passed] Onboarding in Russian, the greeting on one line (1m 3s)
+2/2 Flows Passed in 2m 56s
+[e2e] taps taken again (tap-and-see.yaml): 0

@@ -1,0 +1,45 @@
+T-225 - the red run's sign-in on one clock (full e2e, auto/main 98a8125,
+2026-11-06; e2e/out/failed/full-e2e-98a8125-2026-11-06T19-52-08-097Z, not in
+git), flow 59 "The planner's filters fit in Spanish".
+
+$ node audit/evidence/T-207/timeline.mjs "<that dir>/artifacts/The planner's filters fit in Spanish" 20:21:00
+
+20:21:00.419  maestro  Assert that "${EMAIL}", id: login-email is visible
+20:21:00.634  maestro    Retry 3 times COMPLETED
+20:21:00.634  maestro  Run ${output.signInTries = 0}
+20:21:00.643  maestro  Retry 3 times
+20:21:00.643  maestro    Retry 3 times RUNNING
+20:21:00.643  maestro  Tap on id: login-password
+20:21:02.168  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+20:21:02.170  maestro  Wait for animation to end within 3000 ms
+20:21:05.137  maestro  Run ${output.signInTries += 1}
+20:21:05.198  maestro  Run flow when ${output.signInTries > 1} is true
+20:21:05.399  maestro  Input text ${PASSWORD}
+20:21:07.293  maestro  Assert that "${'•'.repeat(PASSWORD.length)}", id: login-password is vi
+20:21:08.186  maestro    Retry 3 times COMPLETED
+20:21:08.187  maestro  Tap on id: login-submit
+20:21:08.985  device   tap digitizer registered twice
+20:21:08.996  device   touch dropped (move/lift with no touch down)
+20:21:09.725  maestro    Something have changed in the UI judging by view hierarchy. Proceed.
+20:21:09.728  maestro  Assert that (Optional) "Not Now" is visible
+20:21:20.475  maestro  Run tap-and-see.yaml when "Not Now" is visible
+20:21:20.864  maestro  Assert that id: calendar-filter is visible
+
+device-simulator.log, the lines behind the two "device" ones:
+
+38615 20:21:08.985547 backboardd: we already have a service for senderID:1016BC00001B8
+38619 20:21:08.986286 backboardd: init: <BKDirectTouchState: 0x10969f560; ... senderID: 0x1016BC00001B8 ...>
+38625 20:21:08.986557 backboardd: init: <BKDirectTouchState: 0x10969d5e0; ... senderID: 0x1016BC00001B8 ...>
+38626 20:21:08.986637 backboardd: touch down without previous range event: 2
+38629 20:21:08.996030 backboardd: didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+      (x10, to 20:21:09.096)
+38692 20:21:09.197769 backboardd: cancel -- digitizer did disappear: ... contacts: [pathIndex: 2; touchIdentifier: 293; touching; locked; ...
+38698 20:21:09.198033 backboardd: canceling paths contacts: [pathIndex: 2; touchIdentifier: 293; touching; ...
+
+Two touch states for one digitizer: the touch down went to one, the lift to
+the other, and the touch was cancelled - the T-207 lost tap. The button got no
+press. At the failure (step-030) the hierarchy still holds the form:
+login-email "bernarda@e2e.test", login-password "••••••••••••••" (14, the
+password's length; the screenshot draws the secure field empty), login-submit
+enabled. No sheet, no error: the sign-in was never asked for, and the flow
+waited 30 s for a calendar.

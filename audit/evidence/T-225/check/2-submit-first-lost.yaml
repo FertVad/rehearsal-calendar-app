@@ -1,0 +1,19 @@
+# T-225 check 2, green: the same start on the new sign-in-form.yaml, whose tap
+# on "Sign In" goes through tap-and-see.yaml with GONE_ID - here a copy whose
+# first tap is taken out, the lost one. "Sign In" stays on screen, the subflow
+# says so to the run and taps once more: the calendar comes, and the run
+# prints one tap taken again.
+appId: ${APP_ID}
+name: T-225 check 2 - sign in, first tap on Sign In lost, through tap-and-see
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- runFlow:
+    file: sign-in-form-first-lost.yaml
+    env:
+      EMAIL: ${BERNARDA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
