@@ -1,4 +1,12 @@
-# T-046 — knip в `npm run check` и CI: «красное до» и проверка (база cc1bde0)
+# T-046 — knip в `npm run check` и CI: «красное до» и проверка
+
+Проверенные ревизии:
+- база (до задачи, knip нет в `check`) — `cc1bde0`;
+- первый прогон «красное/зелёное» ниже — исходники `b2f431e` (конфиг и скрипты; `03b0790`
+  добавил только этот файл);
+- после ревью — исходники `18825dc` (`knip.jsonc`: перечислены запускаемые серверные
+  скрипты, комментарий к `ignoreExportsUsedInFile`; проба в `server/scripts/`), красный
+  прогон того же набора проб — на конфиге `03b0790`. См. «После ревью» в конце.
 
 knip 5.71.0 из `rehearsal-calendar-native/node_modules`. Конфиг —
 `rehearsal-calendar-native/knip.jsonc` (был `knip.json`; переименован, чтобы
@@ -97,3 +105,82 @@ expo-system-ui: NOT installed in rehearsal-calendar-native
 
 CI: job `check` (`.github/workflows/check.yml`) ставит зависимости приложения и сервера
 и запускает `npm run check` — `check:dead` идёт в нём, отдельный шаг не нужен.
+
+## После ревью (исходники 18825dc)
+
+### `scripts/**` больше не точка входа целиком
+
+В конфиге `03b0790` `server/scripts/**/*.{js,mjs}` объявлял точкой входа любой серверный
+скрипт. Теперь точки входа — только запускаемые: `migrate.js`, `r0-postgres.mjs`
+(`server/package.json`), `seed-demo.mjs` (вручную и из `__tests__/seedDemo.test.js`);
+`test.mjs` knip находит сам по `npm test` приложения (явная запись дала подсказку
+«Remove redundant entry pattern»). `demoDates.mjs` проверяется через импорты.
+
+`probe.mjs add` теперь кладёт ещё и `server/scripts/t046DeadProbe.mjs`.
+
+Красное — конфиг `03b0790` (`git restore --source=03b0790 -- knip.jsonc`): проба в
+`server/scripts/` проходит.
+```
+$ node ../audit/evidence/T-046/probe.mjs add
+added src/shared/utils/t046DeadProbe.ts
+added server/utils/t046DeadProbe.js
+added server/scripts/t046DeadProbe.mjs
+$ npm run check:dead
+> knip --no-progress
+Unused files (2)
+server/utils/t046DeadProbe.js
+src/shared/utils/t046DeadProbe.ts
+exit=1
+```
+
+Конфиг `18825dc` (`git restore --source=HEAD -- knip.jsonc`), те же пробы:
+```
+$ npm run check:dead
+> knip --no-progress
+Unused files (3)
+server/scripts/t046DeadProbe.mjs
+server/utils/t046DeadProbe.js
+src/shared/utils/t046DeadProbe.ts
+exit=1
+$ npm run check
+> npm run check:secrets && npm run check:dead && npm run type-check && npm test
+{"summary":"pass","mode":"worktree","files":1677,"findings":0,"errors":0}
+> knip --no-progress
+Unused files (3)
+server/scripts/t046DeadProbe.mjs
+server/utils/t046DeadProbe.js
+src/shared/utils/t046DeadProbe.ts
+exit=1
+```
+
+Зелёное — без проб:
+```
+$ node ../audit/evidence/T-046/probe.mjs remove
+$ npm run check:dead
+> knip --no-progress
+exit=0
+$ npm run check:secrets
+{"summary":"pass","mode":"worktree","files":1677,"findings":0,"errors":0}
+```
+
+### Почему `ignoreExportsUsedInFile: true`
+
+С `false` knip находит экспорты, которые используются в своём же файле (выдержка):
+```
+Unused exports (56)
+migrationPolicy      server/database/migrations/core.mjs:8:14
+ADMIN_ROLES          server/services/rehearsals/roster.js:25:14
+ru                   src/i18n/translations.ts:43:14
+en                   src/i18n/translations.ts:55:14
+toLogSafe  function  src/shared/utils/logger.ts:109:17
+…
+Unused exported types (20)
+IconButtonProps  interface  src/shared/components/IconButton.tsx:8:18
+LoggedError      interface  src/shared/utils/logger.ts:22:18
+…
+exit=1
+```
+Этот код используется, лишнее в нём только слово `export`. Убрать его — значит изменить
+форму модулей, а не убрать мусор; это вне T-046. Файлы и экспорты, которые нигде не
+используются, knip по-прежнему находит. Почему флаг нужен — написано в комментарии
+в `knip.jsonc`.
