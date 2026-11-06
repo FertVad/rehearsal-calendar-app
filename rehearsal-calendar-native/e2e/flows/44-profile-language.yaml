@@ -125,6 +125,7 @@ tags:
       id: profile-help
     direction: DOWN
     centerElement: true
+- takeScreenshot: 44-profile-about
 - tapOn:
     id: profile-help
 - extendedWaitUntil:
@@ -138,6 +139,44 @@ tags:
 - extendedWaitUntil:
     visible:
       id: profile-help
+    timeout: 20000
+
+# «Политика конфиденциальности» (T-039): App Review 5.1.1 wants the policy
+# opened from the app itself, and it was only a link at the foot of the
+# support page. Its row is in About, between Help and the bug report. A tap
+# opens the server's /privacy with ?lang=ru, and the page, its script run
+# since T-038, shows its Russian and hides its English. Safari is closed
+# first: a link opened into the running one kept the page it had (flow 70).
+- scrollUntilVisible:
+    element:
+      id: profile-privacy
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    id: profile-privacy
+    text: ".*Политика конфиденциальности.*"
+    below:
+      id: profile-help
+- assertVisible:
+    id: profile-report-bug
+    below:
+      id: profile-privacy
+- takeScreenshot: 44-profile-privacy-row
+- stopApp: com.apple.mobilesafari
+- tapOn:
+    id: profile-privacy
+- extendedWaitUntil:
+    visible: "Политика конфиденциальности"
+    timeout: 20000
+- assertNotVisible:
+    id: profile-privacy
+- assertNotVisible: "Privacy Policy"
+- takeScreenshot: 44-privacy-page
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: profile-privacy
     timeout: 20000
 
 # Back to English.

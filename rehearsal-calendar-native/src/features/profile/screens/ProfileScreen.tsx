@@ -29,7 +29,7 @@ import {
   unregisterPushToken,
 } from '../../../shared/services/notifications';
 import { explainPushRegistration } from '../../../shared/utils/pushAlert';
-import { supportPageUrl } from '../../../shared/services/api';
+import { privacyPageUrl, supportPageUrl } from '../../../shared/services/api';
 
 type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 
@@ -420,6 +420,25 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                 <Ionicons name="help-circle" size={20} color={Colors.accent.red} />
               </View>
               <Text style={styles.settingLabel}>{t.profile.help}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
+          </TouchableOpacity>
+
+          {/* The policy opened from the app itself, as App Review 5.1.1 asks
+              (T-039): it was only a link at the foot of the support page. */}
+          <TouchableOpacity
+            testID="profile-privacy"
+            style={styles.settingItem}
+            onPress={() => {
+              hapticLight();
+              Linking.openURL(privacyPageUrl(language));
+            }}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
+                <Ionicons name="shield-checkmark" size={20} color={Colors.accent.purple} />
+              </View>
+              <Text style={styles.settingLabel}>{t.profile.privacyPolicy}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.text.tertiary} />
           </TouchableOpacity>

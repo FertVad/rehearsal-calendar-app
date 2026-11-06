@@ -15,6 +15,7 @@ export interface ProfileTranslations {
   about: string;
   version: string;
   help: string;
+  privacyPolicy: string;
   reportBug: string;
   reportBugPlaceholder: string;
   reportBugSend: string;
@@ -91,6 +92,7 @@ export const ru = {
     about: 'О приложении',
     version: 'Версия',
     help: 'Помощь',
+    privacyPolicy: 'Политика конфиденциальности',
     reportBug: 'Сообщить об ошибке',
     reportBugPlaceholder: 'Опишите проблему...',
     reportBugSend: 'Отправить',
@@ -170,6 +172,7 @@ export const en = {
     about: 'About',
     version: 'Version',
     help: 'Help',
+    privacyPolicy: 'Privacy Policy',
     reportBug: 'Report a Bug',
     reportBugPlaceholder: 'Describe the issue...',
     reportBugSend: 'Send',
@@ -249,6 +252,7 @@ export const es = {
     about: 'Acerca de',
     version: 'Versión',
     help: 'Ayuda',
+    privacyPolicy: 'Política de privacidad',
     reportBug: 'Reportar un error',
     reportBugPlaceholder: 'Describe el problema...',
     reportBugSend: 'Enviar',
@@ -328,6 +332,7 @@ export const de = {
     about: 'Über',
     version: 'Version',
     help: 'Hilfe',
+    privacyPolicy: 'Datenschutzerklärung',
     reportBug: 'Fehler melden',
     reportBugPlaceholder: 'Problem beschreiben...',
     reportBugSend: 'Senden',
