@@ -336,7 +336,7 @@ export default function RehearsalDetailsScreen() {
 
             {/* Time */}
             <View style={styles.detailRow}>
-              <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
+              <Ionicons name="time-outline" size={20} color={Colors.text.secondary} />
               <Text style={styles.detailText} testID="rehearsal-details-time">
                 {rehearsalTimeLabel(rehearsal, language, uses24)}
               </Text>

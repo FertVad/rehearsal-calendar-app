@@ -372,3 +372,15 @@ it("draws the project's name and folder in the secondary text's colour", async (
   expect(flatten(screen.getByText('Hamlet').props.style).color).toBe(Colors.text.secondary);
   expect(flatten(screen.getByTestId('icon-Ionicons-folder-outline').props.style).color).toBe(Colors.text.secondary);
 });
+
+// The time is a line of the details, as the day above it is: it means nothing
+// and does nothing, so its clock is grey like the day's calendar (T-047).
+it("draws the time's clock in the secondary text's colour, as the day's calendar", async () => {
+  answer('no');
+  const screen = await open();
+  const flatten = (style: unknown): Record<string, unknown> =>
+    Array.isArray(style) ? Object.assign({}, ...style.map(flatten)) : (style as Record<string, unknown>) ?? {};
+
+  expect(flatten(screen.getByTestId('icon-Ionicons-calendar-outline').props.style).color).toBe(Colors.text.secondary);
+  expect(flatten(screen.getByTestId('icon-Ionicons-time-outline').props.style).color).toBe(Colors.text.secondary);
+});
