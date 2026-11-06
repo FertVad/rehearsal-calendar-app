@@ -51,8 +51,17 @@ appId: ${APP_ID}
       - assertVisible:
           id: login-password
           text: ${'•'.repeat(PASSWORD.length)}
-- tapOn:
-    id: login-submit
+# A lost tap on "Sign In" left the form filled in and flow 59 waiting 30 s for
+# a calendar that was never asked for (T-225), so it goes through
+# tap-and-see.yaml too: the button leaves the screen when the app goes on to
+# the calendar, or when iOS's sheet covers it all. Its label is in the
+# language the screen speaks, so it is waited on by its id.
+- runFlow:
+    file: tap-and-see.yaml
+    env:
+      TAP_ID: login-submit
+      GONE_ID: login-submit
+      WAIT_MS: 10000
 # iOS offers to keep the password, over the whole screen: while its sheet is
 # up Maestro sees nothing of the app. A tap on "Not Now" the simulator lost
 # left it there, and flow 51 waited 30 s for a calendar under it (T-213), so

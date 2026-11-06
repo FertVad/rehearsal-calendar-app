@@ -128,7 +128,8 @@ sign in" and, under load, at "Forgot password?" (T-209), flow 44 at the
 profile tab after a restart (T-212), flow 25 at "Busy" in the availability
 editor, whose day then closed unasked with nothing changed (T-218), flow 49 at
 the registration form's first "Show password", so the second went to the same
-eye and the repeat stayed hidden (T-223).
+eye and the repeat stayed hidden (T-223), flow 59 at "Sign In", the form left
+filled in and the calendar never asked for (T-225).
 
 It is below the app, and cannot be made to happen on demand. The rule:
 
@@ -139,7 +140,9 @@ It is below the app, and cannot be made to happen on demand. The rule:
   taps once more - never more - and waits again, and then `SEE` must come.
   No pause, no longer wait. A tap whose result is something leaving the
   screen gives `GONE` (the text that goes) instead of `SEE`: "Not Now" of the
-  "Save Password?" sheet at every sign-in (T-213).
+  "Save Password?" sheet at every sign-in (T-213); or `GONE_ID` (its id), for
+  a control whose label is in the screen's language: "Sign In"
+  (`login-submit`) at every sign-in (T-225).
 - Only for a tap that may be taken twice: the second comes when the first left
   no trace on screen, but a first that landed late would be repeated.
 - Every second tap is printed at the end of the run - `[e2e] taps taken again
@@ -344,7 +347,9 @@ whether it has gone, which waited seven seconds every time.
 - Sign in through `e2e/subflows/sign-in.yaml` (`env: { EMAIL: ... }`). It
   types, checks the text landed and retries: the first keyboard after a cold
   launch is slow, and text typed before it is up goes nowhere. The inputs do not
-  report focus, so there is nothing else to wait on. It also dismisses iOS's
+  report focus, so there is nothing else to wait on. It taps "Sign In"
+  through `tap-and-see.yaml` with `GONE_ID: login-submit`: one lost tap on it
+  left flow 59 on a filled-in form (T-225). It also dismisses iOS's
   "Save Password?" sheet, which covers the screen and hides the whole app from
   Maestro, through `tap-and-see.yaml` with `GONE: "Not Now"`: one lost tap on
   it left flow 51 waiting under the sheet (T-213). A flow that acts before

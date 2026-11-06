@@ -7,14 +7,16 @@
 #   env: TAP_ID (an id) or TAP (a text, regex) - what to tap
 #        SEE     - a text (regex) the tap brings on screen, or
 #        GONE    - a text (regex) the tap takes off it (T-213: "Not Now" of
-#                  iOS's "Save Password?" sheet, which hides the whole app)
+#                  iOS's "Save Password?" sheet, which hides the whole app), or
+#        GONE_ID - an id the tap takes off it (T-225: "login-submit", whose
+#                  label is in whichever language the sign-in screen speaks)
 #        WAIT_MS - how long the flow already waited for it
 #
-# Tap, wait for SEE (or for GONE to go); if it has not, say so to the run
-# (e2e/scripts/tap-again.js, printed after the flows) and tap once more - never
-# more - and wait again, and then it must. Only for a tap that can be taken
-# twice without harm: the second comes only when the first left no trace on
-# screen.
+# Tap, wait for SEE (or for GONE / GONE_ID to go); if it has not, say so to the
+# run (e2e/scripts/tap-again.js, printed after the flows) and tap once more -
+# never more - and wait again, and then it must. Only for a tap that can be
+# taken twice without harm: the second comes only when the first left no trace
+# on screen.
 appId: ${APP_ID}
 ---
 - runFlow:
@@ -35,7 +37,7 @@ appId: ${APP_ID}
 - evalScript: ${output.tapSeen = false}
 - runFlow:
     when:
-      true: ${typeof GONE === 'undefined'}
+      true: ${typeof SEE !== 'undefined'}
     commands:
       - extendedWaitUntil:
           visible: ${SEE}
@@ -61,6 +63,21 @@ appId: ${APP_ID}
             - evalScript: ${output.tapSeen = true}
 - runFlow:
     when:
+      true: ${typeof GONE_ID !== 'undefined'}
+    commands:
+      - extendedWaitUntil:
+          notVisible:
+            id: ${GONE_ID}
+          timeout: ${WAIT_MS}
+          optional: true
+      - runFlow:
+          when:
+            notVisible:
+              id: ${GONE_ID}
+          commands:
+            - evalScript: ${output.tapSeen = true}
+- runFlow:
+    when:
       true: ${!output.tapSeen}
     commands:
       - runScript:
@@ -68,7 +85,7 @@ appId: ${APP_ID}
           env:
             MAIL_URL: ${MAIL_URL}
             TAP: "${typeof TAP_ID !== 'undefined' ? 'id ' + TAP_ID : TAP}"
-            SEE: "${typeof GONE !== 'undefined' ? GONE + ' gone' : SEE}"
+            SEE: "${typeof SEE !== 'undefined' ? SEE : (typeof GONE !== 'undefined' ? GONE : 'id ' + GONE_ID) + ' gone'}"
       - runFlow:
           when:
             true: ${typeof TAP_ID !== 'undefined'}
@@ -82,7 +99,7 @@ appId: ${APP_ID}
             - tapOn: ${TAP}
 - runFlow:
     when:
-      true: ${typeof GONE === 'undefined'}
+      true: ${typeof SEE !== 'undefined'}
     commands:
       - extendedWaitUntil:
           visible: ${SEE}
@@ -95,4 +112,12 @@ appId: ${APP_ID}
     commands:
       - extendedWaitUntil:
           notVisible: ${GONE}
+          timeout: ${WAIT_MS}
+- runFlow:
+    when:
+      true: ${typeof GONE_ID !== 'undefined' && !output.tapSeen}
+    commands:
+      - extendedWaitUntil:
+          notVisible:
+            id: ${GONE_ID}
           timeout: ${WAIT_MS}
