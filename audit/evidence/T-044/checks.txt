@@ -1,0 +1,35 @@
+T-044 — checks after removing expo-linear-gradient (JS side), base f80edc6, local macOS sandbox
+
+$ npx jest --selectProjects frontend          (run from rehearsal-calendar-native)
+Test Suites: 133 passed, 133 total
+Tests:       1290 passed, 1290 total
+
+$ npm run type-check
+> tsc --noEmit            (no output, exit 0)
+
+$ node node_modules/expo/bin/cli install --check    (= npx expo install --check, as in T-041)
+Skipped checking dependencies: jest. These dependencies are listed in expo.install.exclude in package.json.
+Dependencies are up to date
+exit=0
+
+$ npm run check:secrets
+{"summary":"pass","mode":"worktree","files":1672,"findings":0,"errors":0}
+
+$ node ../audit/evidence/T-044/lock-check.mjs . expo-linear-gradient
+dependencies: lock root == package.json
+devDependencies: lock root == package.json
+lock entries for expo-linear-gradient: 0
+lock packages that depend on expo-linear-gradient: none
+
+$ git grep -n "expo-linear-gradient\|LinearGradient" -- rehearsal-calendar-native/src rehearsal-calendar-native/App.tsx rehearsal-calendar-native/index.ts rehearsal-calendar-native/e2e rehearsal-calendar-native/app.json
+(no output)
+
+Notes
+- `npm uninstall expo-linear-gradient` and `npm prune` were refused by this sandbox's
+  command policy, so package.json and package-lock.json were edited by hand to exactly
+  what uninstall writes: the root "dependencies" key and the
+  "node_modules/expo-linear-gradient" entry (no other lock entry referenced it).
+  The worktree's node_modules still holds the unpacked package until the next
+  `npm ci`/`npm install`; nothing imports it (grep above), so tests do not depend on it.
+- Server tests are not affected (no server file changed); not rerun here.
+- ios/, pod install, expo prebuild: not touched — native side goes with the release build.

@@ -34,7 +34,18 @@ Unused devDependencies: нет. По `import-grep.mjs` без импортов �
 типы (`eslint`, `knip`, `typescript`, `@types/jest`, `@types/react`) — используются
 как CLI/типы.
 
-### expo-linear-gradient — не используется, но нативный → не удалён (BLOCKED)
+### expo-linear-gradient — удалён (JS-сторона), решение владельца от 06.11.2026
+
+После BLOCKED владелец решил: удалить сейчас только JS-сторону; `ios/`, `pod install`,
+`expo prebuild` и Debug-сборка с нуля — при сборке релиза. Сделано:
+- `package.json`, `package-lock.json` — пакет убран (вручную, ровно как `npm uninstall`:
+  сама команда отклонена политикой песочницы; см. `checks.txt`, `lock-check.mjs`);
+- убраны четыре мёртвых `jest.mock('expo-linear-gradient', …)` — к трём онбординговым
+  добавился `src/shared/constants/__tests__/purpleFill.test.tsx:17`. Градиент из кнопок
+  ушёл в T-027 (18d12aa, плоская заливка `#9333EA`), моки остались после него.
+Проверки — `checks.txt`.
+
+Ниже — исходный разбор, на котором был BLOCKED:
 - В коде приложения ни одного импорта (`git grep -i "LinearGradient"` по `src/`,
   `App.tsx`, `index.ts`, `e2e/`): только три мёртвых `jest.mock('expo-linear-gradient', …)`
   в тестах онбординга (`OnboardingStep.test.tsx:13`, `WelcomeScreen.test.tsx:10`,
