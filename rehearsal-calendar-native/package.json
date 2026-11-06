@@ -67,5 +67,12 @@
     "ts-jest": "^29.2.5",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "jest"
+      ]
+    }
+  }
 }

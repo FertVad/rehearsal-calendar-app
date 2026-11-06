@@ -85,6 +85,10 @@ Universal Links не работают.
 `express.static` разрешает пути в рантайме, бандлер не догадается, что папка
 нужна, и выкинет её.
 
+**Версия Node** задана в трёх местах: `.nvmrc` в корне (CI), `engines.node` в `server/package.json` (Vercel), `NODE` по умолчанию в `tools/autodev/launchd.sh` (autodev); мажор у всех один, иначе падает `server/__tests__/environmentVersions.test.js`.
+Менять все три сразу, одним коммитом: сначала зелёный CI на новой версии, потом деплой.
+Vercel ставит ровно lock-файл (`installCommand: "npm ci"`), а CI сверяет нативные пакеты с Expo SDK (`npx expo install --check`; `jest` исключён в `expo.install.exclude`).
+
 ### Домен `rehearsly.me`
 
 Регистратор и где лежит DNS — *вписать сюда*. Через DNS завязаны три вещи:
