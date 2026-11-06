@@ -312,6 +312,13 @@ and green after. The simulator's clock is the Mac's, and moving it would take
 a test hook in the app's code, a mechanism of its own for a rare case (cause
 fix 14: "today" after a change of zone hours after the app opened).
 
+A fix that shows on screen only while a Google or Apple sign-in is still
+under way — the refusal arrives after the person has left the screen — is
+proved by Jest with the real `AuthProvider`, red before and green after. The
+stand has no Google or Apple provider, and one that held the request open
+would be a test path in the sign-in code, a mechanism of its own for a rare
+case (T-224: a late refusal alerted on the registration screen).
+
 Every flow carries `tags:` naming the parts of the app it walks through —
 `smoke`, `auth`, `calendar`, `projects`, `rehearsals`, `seen`,
 `notifications`, `planner`, and new ones as flows need them (`availability`,
