@@ -1,0 +1,42 @@
+T-043 — after (rehearsal-calendar-native/server)
+
+$ node rehearsal-calendar-native/node_modules/knip/bin/knip.js --directory rehearsal-calendar-native/server \
+    --config audit/evidence/T-043/knip.server.json --no-progress --no-exit-code --exclude unlisted
+Unused exports (1)
+schemaTableNames  database/schema/inspect.mjs:16:14
+Duplicate exports (1)
+authenticateToken|requireAuth  middleware/jwtMiddleware.js
+
+$ ... same, plus --production
+Unused files (8)
+database/migrations/artifacts.mjs
+database/migrations/cli.mjs
+database/migrations/core.mjs
+database/migrations/errors.mjs
+database/migrations/history.mjs
+database/migrations/sql.mjs
+database/schema/inspect.mjs
+database/schema/manifest.mjs
+Unused exports (2)
+closeDatabase       function  database/db.js:276:17
+respondToRehearsal  function  services/rehearsals/rsvpService.js:18:23
+Duplicate exports (1)
+authenticateToken|requireAuth  middleware/jwtMiddleware.js
+(everything left is explained in removed.md, "Оставлено намеренно")
+
+$ node audit/evidence/T-043/lint-unused.mjs rehearsal-calendar-native
+server/__tests__/integration/availability.integration.test.js:11 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/availability.integration.test.js:14 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/calendarSync.integration.test.js:10 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/calendarSync.integration.test.js:13 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/invites.integration.test.js:10 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/invites.integration.test.js:14 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/projects.integration.test.js:10 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/projects.integration.test.js:13 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/projects.integration.test.js:383 @typescript-eslint/no-unused-vars 'rehearsal' is assigned a value but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/rehearsals.integration.test.js:10 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/rehearsals.integration.test.js:13 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/rsvp.integration.test.js:10 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/rsvp.integration.test.js:13 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/middleware/jwtMiddleware.js:56 @typescript-eslint/no-unused-vars 'err' is defined but never used.
+total 14
