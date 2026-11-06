@@ -187,9 +187,9 @@ MX-записи для входящей почты (ImprovMX), SPF и DKIM дл�
 
 | | |
 |---|---|
-| Переменные | `RESEND_API_KEY`, `MAIL_FROM` |
-| Читается в | [server/utils/mailer.js](../server/utils/mailer.js) |
-| Без ключа | `sendMail` молча возвращает `false`, ничего не роняя |
+| Переменные | `EMAIL_TRANSPORT=resend`, `RESEND_API_KEY`, `EMAIL_FROM` |
+| Читается в | [server/services/email/transport.js](../server/services/email/transport.js) |
+| Без ключа | транспорт недоступен: маршруты, которым нужно письмо, отвечают 503 |
 
 Нужен для подтверждения почты (закрывает находку аудита A01 — захват аккаунта по
 чужому адресу) и для восстановления пароля.

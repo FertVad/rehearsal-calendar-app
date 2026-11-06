@@ -168,27 +168,3 @@ export function timestampToISO(timestamp) {
   }
   return new Date(timestamp).toISOString();
 }
-
-/**
- * Convert availability slots with TIMESTAMPTZ to API response format
- * @param {Array} slots - Array of availability slots from database with starts_at/ends_at
- * @param {string} timezone - IANA timezone for the user
- * @returns {Array} - Slots formatted for API response
- *
- * @example
- * formatAvailabilitySlotsResponse([
- *   { starts_at: new Date(...), ends_at: new Date(...), is_all_day: false }
- * ], "Asia/Jerusalem")
- */
-export function formatAvailabilitySlotsResponse(slots, timezone) {
-  return slots.map(slot => {
-    return {
-      startsAt: timestampToISO(slot.starts_at),
-      endsAt: timestampToISO(slot.ends_at),
-      isAllDay: slot.is_all_day,
-      type: slot.type,
-      title: slot.title,
-      notes: slot.notes,
-    };
-  });
-}
