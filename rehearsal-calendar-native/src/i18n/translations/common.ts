@@ -4,22 +4,15 @@ export interface CommonTranslations {
   retry: string;
   back: string;
   delete: string;
-  add: string;
-  edit: string;
   close: string;
   today: string;
   loading: string;
   error: string;
   success: string;
-  noData: string;
-  apply: string;
-  or: string;
-  selectAll: string;
   /** Lets go of the days picked; nothing on them changes (T-021). */
   deselect: string;
   /** The short notice after a save went through (Toast, T-021). */
   saved: string;
-  change: string;
   selectPeriod: string;
   invalidDateRange: string;
   dateRangeTooLong: (maxDays: number) => string;
@@ -49,13 +42,6 @@ export interface ActionSheetTranslations {
 }
 
 export interface DaysTranslations {
-  monday: string;
-  tuesday: string;
-  wednesday: string;
-  thursday: string;
-  friday: string;
-  saturday: string;
-  sunday: string;
   short: {
     monday: string;
     tuesday: string;
@@ -74,20 +60,13 @@ export const ru = {
     retry: 'Повторить',
     back: 'Назад',
     delete: 'Удалить',
-    add: 'Добавить',
-    edit: 'Редактировать',
     close: 'Закрыть',
     today: 'Сегодня',
     loading: 'Загрузка...',
     error: 'Ошибка',
     success: 'Успех',
-    noData: 'Нет данных',
-    apply: 'Применить',
-    or: 'или',
-    selectAll: 'Выбрать всех',
     deselect: 'Снять выбор',
     saved: 'Сохранено',
-    change: 'Сменить',
     selectPeriod: 'Выберите период',
     invalidDateRange: 'Выберите корректные даты начала и окончания.',
     dateRangeTooLong: (maxDays: number) => `Выберите период не длиннее ${maxDays} дней, включая первый и последний день.`,
@@ -112,13 +91,6 @@ export const ru = {
     createProject: 'Создать проект',
   },
   days: {
-    monday: 'Понедельник',
-    tuesday: 'Вторник',
-    wednesday: 'Среда',
-    thursday: 'Четверг',
-    friday: 'Пятница',
-    saturday: 'Суббота',
-    sunday: 'Воскресенье',
     short: {
       monday: 'Пн',
       tuesday: 'Вт',
@@ -138,20 +110,13 @@ export const en = {
     retry: 'Try again',
     back: 'Back',
     delete: 'Delete',
-    add: 'Add',
-    edit: 'Edit',
     close: 'Close',
     today: 'Today',
     loading: 'Loading...',
     error: 'Error',
     success: 'Success',
-    noData: 'No data',
-    apply: 'Apply',
-    or: 'or',
-    selectAll: 'Select All',
     deselect: 'Deselect',
     saved: 'Saved',
-    change: 'Change',
     selectPeriod: 'Select Period',
     invalidDateRange: 'Choose valid start and end dates.',
     dateRangeTooLong: (maxDays: number) => `Choose a range of up to ${maxDays} days, including the first and last day.`,
@@ -176,13 +141,6 @@ export const en = {
     createProject: 'Create Project',
   },
   days: {
-    monday: 'Monday',
-    tuesday: 'Tuesday',
-    wednesday: 'Wednesday',
-    thursday: 'Thursday',
-    friday: 'Friday',
-    saturday: 'Saturday',
-    sunday: 'Sunday',
     short: {
       monday: 'Mon',
       tuesday: 'Tue',
@@ -202,20 +160,13 @@ export const es = {
     retry: 'Reintentar',
     back: 'Atrás',
     delete: 'Eliminar',
-    add: 'Añadir',
-    edit: 'Editar',
     close: 'Cerrar',
     today: 'Hoy',
     loading: 'Cargando...',
     error: 'Error',
     success: 'Éxito',
-    noData: 'Sin datos',
-    apply: 'Aplicar',
-    or: 'o',
-    selectAll: 'Seleccionar todo',
     deselect: 'Quitar selección',
     saved: 'Guardado',
-    change: 'Cambiar',
     selectPeriod: 'Seleccionar período',
     invalidDateRange: 'Elige fechas de inicio y fin válidas.',
     dateRangeTooLong: (maxDays: number) => `Elige un período de hasta ${maxDays} días, incluidos el primero y el último.`,
@@ -240,13 +191,6 @@ export const es = {
     createProject: 'Crear proyecto',
   },
   days: {
-    monday: 'Lunes',
-    tuesday: 'Martes',
-    wednesday: 'Miércoles',
-    thursday: 'Jueves',
-    friday: 'Viernes',
-    saturday: 'Sábado',
-    sunday: 'Domingo',
     short: {
       monday: 'Lun',
       tuesday: 'Mar',
@@ -266,20 +210,13 @@ export const de = {
     retry: 'Erneut versuchen',
     back: 'Zurück',
     delete: 'Löschen',
-    add: 'Hinzufügen',
-    edit: 'Bearbeiten',
     close: 'Schließen',
     today: 'Heute',
     loading: 'Wird geladen...',
     error: 'Fehler',
     success: 'Erfolg',
-    noData: 'Keine Daten',
-    apply: 'Anwenden',
-    or: 'oder',
-    selectAll: 'Alle auswählen',
     deselect: 'Auswahl aufheben',
     saved: 'Gespeichert',
-    change: 'Ändern',
     selectPeriod: 'Zeitraum auswählen',
     invalidDateRange: 'Wähle gültige Start- und Enddaten.',
     dateRangeTooLong: (maxDays: number) => `Wähle einen Zeitraum von höchstens ${maxDays} Tagen, einschließlich des ersten und letzten Tages.`,
@@ -304,13 +241,6 @@ export const de = {
     createProject: 'Projekt erstellen',
   },
   days: {
-    monday: 'Montag',
-    tuesday: 'Dienstag',
-    wednesday: 'Mittwoch',
-    thursday: 'Donnerstag',
-    friday: 'Freitag',
-    saturday: 'Samstag',
-    sunday: 'Sonntag',
     short: {
       monday: 'Mo',
       tuesday: 'Di',

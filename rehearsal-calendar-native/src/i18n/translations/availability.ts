@@ -1,8 +1,5 @@
 export interface AvailabilityTranslations {
   title: string;
-  available: string;
-  unavailable: string;
-  timeSlots: string;
   addSlot: string;
   from: string;
   to: string;
@@ -12,10 +9,7 @@ export interface AvailabilityTranslations {
   couldNotLoad: string;
   busy: string;
   partial: string;
-  legend: string;
-  saving: string;
   saveError: string;
-  selectDates: string;
   busyTime: string;
   /** Heading over the rows the user did not enter: phone-calendar events and rehearsals. */
   fromCalendar: string;
@@ -47,15 +41,12 @@ export interface AvailabilityTranslations {
 
 export interface SmartPlannerTranslations {
   title: string;
-  period: string;
-  members: string;
   recommendations: string;
   analyzing: string;
   noSlots: string;
   noSlotsMessage: string;
   errorLoading: string;
   week: string;
-  twoWeeks: string;
   month: string;
   custom: string;
   customPeriod: string;
@@ -64,18 +55,7 @@ export interface SmartPlannerTranslations {
   /** Named members who have never recorded availability and so count as free. */
   unknownAvailability: (names: string) => string;
   addButton: string;
-  selectAll: string;
-  selectMembers: string;
-  applyFilter: string;
-  perfect: string;
-  good: string;
-  possible: string;
-  difficult: string;
-  available: string;
-  busy: string;
-  selectedMembers: string;
   allMembers: string;
-  noneSelected: string;
   allAvailable: string;
   allBusy: string;
   busyPrefix: string;
@@ -84,9 +64,6 @@ export interface SmartPlannerTranslations {
 export const ru = {
   availability: {
     title: 'Занятость',
-    available: 'Доступен',
-    unavailable: 'Недоступен',
-    timeSlots: 'Временные слоты',
     addSlot: 'Добавить слот',
     from: 'С',
     to: 'До',
@@ -95,10 +72,7 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     free: 'Свободен',
     busy: 'Занят',
     partial: 'Частично',
-    legend: 'Легенда',
-    saving: 'Сохранение...',
     saveError: 'Не удалось сохранить занятость',
-    selectDates: 'Выберите даты',
     busyTime: 'Время когда занят',
     fromCalendar: 'Уже есть в этот день',
     fromDeviceCalendar: 'из календаря',
@@ -125,15 +99,12 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
   },
   smartPlanner: {
     title: 'Smart Planner',
-    period: 'Период',
-    members: 'Участники',
     recommendations: 'Рекомендации',
     analyzing: 'Анализируем доступность...',
     noSlots: 'Пока показывать нечего',
     noSlotsMessage: 'Здесь появляются часы, когда свободна вся команда. Для этого участники должны отметить свою занятость — или попробуйте другой период.',
     errorLoading: 'Ошибка загрузки',
     week: 'Неделя',
-    twoWeeks: 'Две недели',
     month: 'Месяц',
     custom: 'Выбрать даты',
     customPeriod: 'Свой период',
@@ -148,18 +119,7 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     allDay: 'Весь день',
     unknownAvailability: (names: string) => `Нет данных о занятости: ${names}. В расчёте они считаются свободными.`,
     addButton: '+ Добавить',
-    selectAll: 'Все',
-    selectMembers: 'Участники',
-    applyFilter: 'Применить',
-    perfect: 'Идеально',
-    good: 'Хорошо',
-    possible: 'Возможно',
-    difficult: 'Сложно',
-    available: 'Свободны',
-    busy: 'Заняты',
-    selectedMembers: 'выбрано',
     allMembers: 'Все участники',
-    noneSelected: 'Никто не выбран',
     allAvailable: 'Все свободны',
     allBusy: 'Все заняты',
     busyPrefix: 'Заняты',
@@ -169,9 +129,6 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
 export const en = {
   availability: {
     title: 'Availability',
-    available: 'Available',
-    unavailable: 'Unavailable',
-    timeSlots: 'Time slots',
     addSlot: 'Add slot',
     from: 'From',
     to: 'To',
@@ -180,10 +137,7 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     free: 'Free',
     busy: 'Busy',
     partial: 'Partial',
-    legend: 'Legend',
-    saving: 'Saving...',
     saveError: 'Failed to save availability',
-    selectDates: 'Select dates',
     busyTime: 'Busy time',
     fromCalendar: 'Already on this day',
     fromDeviceCalendar: 'from calendar',
@@ -210,15 +164,12 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
   },
   smartPlanner: {
     title: 'Smart Planner',
-    period: 'Period',
-    members: 'Members',
     recommendations: 'Recommendations',
     analyzing: 'Analyzing availability...',
     noSlots: 'Nothing to show yet',
     noSlotsMessage: 'This is where the hours everyone can make show up. For that, people have to mark their time — or try another period.',
     errorLoading: 'Error loading',
     week: 'Week',
-    twoWeeks: 'Two Weeks',
     month: 'Month',
     custom: 'Select Dates',
     customPeriod: 'Custom Period',
@@ -226,18 +177,7 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     allDay: 'All day',
     unknownAvailability: (names: string) => `No availability recorded: ${names}. They are counted as free.`,
     addButton: '+ Add',
-    selectAll: 'All',
-    selectMembers: 'Members',
-    applyFilter: 'Apply',
-    perfect: 'Perfect',
-    good: 'Good',
-    possible: 'Possible',
-    difficult: 'Difficult',
-    available: 'Available',
-    busy: 'Busy',
-    selectedMembers: 'selected',
     allMembers: 'All Members',
-    noneSelected: 'None selected',
     allAvailable: 'All available',
     allBusy: 'All busy',
     busyPrefix: 'Busy',
@@ -247,9 +187,6 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
 export const es = {
   availability: {
     title: 'Disponibilidad',
-    available: 'Disponible',
-    unavailable: 'No disponible',
-    timeSlots: 'Franjas horarias',
     addSlot: 'Añadir franja',
     from: 'Desde',
     to: 'Hasta',
@@ -258,10 +195,7 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     free: 'Libre',
     busy: 'Ocupado',
     partial: 'Parcial',
-    legend: 'Leyenda',
-    saving: 'Guardando...',
     saveError: 'No se pudo guardar la disponibilidad',
-    selectDates: 'Selecciona las fechas',
     busyTime: 'Hora en que estás ocupado',
     fromCalendar: 'Ya hay algo ese día',
     fromDeviceCalendar: 'del calendario',
@@ -288,15 +222,12 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
   },
   smartPlanner: {
     title: 'Smart Planner',
-    period: 'Período',
-    members: 'Miembros',
     recommendations: 'Recomendaciones',
     analyzing: 'Analizando disponibilidad...',
     noSlots: 'Nada que mostrar todavía',
     noSlotsMessage: 'Aquí aparecen las horas en que todos pueden. Para eso hay que marcar el tiempo — o prueben otro período.',
     errorLoading: 'Error al cargar',
     week: 'Semana',
-    twoWeeks: 'Dos semanas',
     month: 'Mes',
     custom: 'Elegir fechas',
     customPeriod: 'Período personalizado',
@@ -304,18 +235,7 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     allDay: 'Todo el día',
     unknownAvailability: (names: string) => `Sin disponibilidad registrada: ${names}. Se cuentan como libres.`,
     addButton: '+ Añadir',
-    selectAll: 'Todos',
-    selectMembers: 'Miembros',
-    applyFilter: 'Aplicar',
-    perfect: 'Perfecto',
-    good: 'Bueno',
-    possible: 'Posible',
-    difficult: 'Difícil',
-    available: 'Disponibles',
-    busy: 'Ocupados',
-    selectedMembers: 'seleccionados',
     allMembers: 'Todos los miembros',
-    noneSelected: 'Nadie seleccionado',
     allAvailable: 'Todos disponibles',
     allBusy: 'Todos ocupados',
     busyPrefix: 'Ocupados',
@@ -325,9 +245,6 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
 export const de = {
   availability: {
     title: 'Verfügbarkeit',
-    available: 'Verfügbar',
-    unavailable: 'Nicht verfügbar',
-    timeSlots: 'Zeitfenster',
     addSlot: 'Zeitfenster hinzufügen',
     from: 'Von',
     to: 'Bis',
@@ -336,10 +253,7 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     free: 'Frei',
     busy: 'Beschäftigt',
     partial: 'Teilweise',
-    legend: 'Legende',
-    saving: 'Wird gespeichert...',
     saveError: 'Verfügbarkeit konnte nicht gespeichert werden',
-    selectDates: 'Daten auswählen',
     busyTime: 'Beschäftigte Zeit',
     fromCalendar: 'An diesem Tag schon vorhanden',
     fromDeviceCalendar: 'aus dem Kalender',
@@ -366,15 +280,12 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
   },
   smartPlanner: {
     title: 'Smart Planner',
-    period: 'Zeitraum',
-    members: 'Mitglieder',
     recommendations: 'Empfehlungen',
     analyzing: 'Verfügbarkeit wird analysiert...',
     noSlots: 'Noch nichts zu zeigen',
     noSlotsMessage: 'Hier erscheinen die Stunden, die allen passen. Dafür müssen die Leute ihre Zeiten eintragen — oder versuch einen anderen Zeitraum.',
     errorLoading: 'Ladefehler',
     week: 'Woche',
-    twoWeeks: 'Zwei Wochen',
     month: 'Monat',
     custom: 'Daten auswählen',
     customPeriod: 'Eigener Zeitraum',
@@ -383,18 +294,7 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     allDay: 'Ganztägig',
     unknownAvailability: (names: string) => `Keine Verfügbarkeit hinterlegt: ${names}. Sie zählen als frei.`,
     addButton: '+ Hinzufügen',
-    selectAll: 'Alle',
-    selectMembers: 'Mitglieder',
-    applyFilter: 'Anwenden',
-    perfect: 'Perfekt',
-    good: 'Gut',
-    possible: 'Möglich',
-    difficult: 'Schwierig',
-    available: 'Verfügbar',
-    busy: 'Beschäftigt',
-    selectedMembers: 'ausgewählt',
     allMembers: 'Alle Mitglieder',
-    noneSelected: 'Niemand ausgewählt',
     allAvailable: 'Alle verfügbar',
     allBusy: 'Alle beschäftigt',
     busyPrefix: 'Beschäftigt',

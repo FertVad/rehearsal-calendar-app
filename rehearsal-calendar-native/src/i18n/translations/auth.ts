@@ -1,6 +1,4 @@
 export interface AuthTranslations {
-  login: string;
-  register: string;
   loginTitle: string;
   registerTitle: string;
   loginSubtitle: string;
@@ -23,7 +21,6 @@ export interface AuthTranslations {
   showPassword: string;
   hidePassword: string;
   passwordsMismatch: string;
-  loginError: string;
   registerError: string;
   emailPlaceholder: string;
   passwordPlaceholder: string;
@@ -35,7 +32,6 @@ export interface AuthTranslations {
   // OAuth translations
   orContinueWith: string;
   signInWithGoogle: string;
-  signInWithApple: string;
   googleSignInError: string;
   appleSignInError: string;
   accountLinked: string;
@@ -89,8 +85,6 @@ export interface AuthTranslations {
 
 export const ru = {
   auth: {
-    login: 'Вход',
-    register: 'Регистрация',
     loginTitle: 'Rehearsly',
     registerTitle: 'Создать аккаунт',
     loginSubtitle: 'Войдите в свой аккаунт',
@@ -116,7 +110,6 @@ export const ru = {
     showPassword: 'Показать пароль',
     hidePassword: 'Скрыть пароль',
     passwordsMismatch: 'Пароли не совпадают',
-    loginError: 'Ошибка входа',
     registerError: 'Ошибка регистрации',
     emailPlaceholder: 'your@email.com',
     passwordPlaceholder: '••••••••',
@@ -128,7 +121,6 @@ export const ru = {
     // OAuth translations
     orContinueWith: 'или войти через',
     signInWithGoogle: 'Войти через Google',
-    signInWithApple: 'Войти через Apple',
     googleSignInError: 'Ошибка входа через Google',
     appleSignInError: 'Ошибка входа через Apple',
     accountLinked: 'Аккаунты связаны',
@@ -179,8 +171,6 @@ export const ru = {
 
 export const en = {
   auth: {
-    login: 'Login',
-    register: 'Sign Up',
     loginTitle: 'Rehearsly',
     registerTitle: 'Create Account',
     loginSubtitle: 'Sign in to your account',
@@ -201,7 +191,6 @@ export const en = {
     showPassword: 'Show password',
     hidePassword: 'Hide password',
     passwordsMismatch: 'Passwords do not match',
-    loginError: 'Login Error',
     registerError: 'Registration Error',
     emailPlaceholder: 'your@email.com',
     passwordPlaceholder: '••••••••',
@@ -213,7 +202,6 @@ export const en = {
     // OAuth translations
     orContinueWith: 'or continue with',
     signInWithGoogle: 'Sign in with Google',
-    signInWithApple: 'Sign in with Apple',
     googleSignInError: 'Google Sign-In Error',
     appleSignInError: 'Apple Sign-In Error',
     accountLinked: 'Account Linked',
@@ -264,8 +252,6 @@ export const en = {
 
 export const es = {
   auth: {
-    login: 'Iniciar sesión',
-    register: 'Registrarse',
     loginTitle: 'Rehearsly',
     registerTitle: 'Crear cuenta',
     loginSubtitle: 'Inicia sesión en tu cuenta',
@@ -286,7 +272,6 @@ export const es = {
     showPassword: 'Mostrar contraseña',
     hidePassword: 'Ocultar contraseña',
     passwordsMismatch: 'Las contraseñas no coinciden',
-    loginError: 'Error de inicio de sesión',
     registerError: 'Error de registro',
     emailPlaceholder: 'tu@email.com',
     passwordPlaceholder: '••••••••',
@@ -298,7 +283,6 @@ export const es = {
     // OAuth translations
     orContinueWith: 'o continuar con',
     signInWithGoogle: 'Iniciar sesión con Google',
-    signInWithApple: 'Iniciar sesión con Apple',
     googleSignInError: 'Error al iniciar sesión con Google',
     appleSignInError: 'Error al iniciar sesión con Apple',
     accountLinked: 'Cuenta vinculada',
@@ -349,8 +333,6 @@ export const es = {
 
 export const de = {
   auth: {
-    login: 'Anmelden',
-    register: 'Registrieren',
     loginTitle: 'Rehearsly',
     registerTitle: 'Konto erstellen',
     loginSubtitle: 'Melde dich bei deinem Konto an',
@@ -371,7 +353,6 @@ export const de = {
     showPassword: 'Passwort anzeigen',
     hidePassword: 'Passwort verbergen',
     passwordsMismatch: 'Passwörter stimmen nicht überein',
-    loginError: 'Anmeldefehler',
     registerError: 'Registrierungsfehler',
     emailPlaceholder: 'deine@email.com',
     passwordPlaceholder: '••••••••',
@@ -383,7 +364,6 @@ export const de = {
     // OAuth translations
     orContinueWith: 'oder fortfahren mit',
     signInWithGoogle: 'Mit Google anmelden',
-    signInWithApple: 'Mit Apple anmelden',
     googleSignInError: 'Fehler bei der Google-Anmeldung',
     appleSignInError: 'Fehler bei der Apple-Anmeldung',
     accountLinked: 'Konto verknüpft',

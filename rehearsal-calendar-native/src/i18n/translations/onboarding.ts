@@ -12,15 +12,12 @@ export interface OnboardingTranslations {
     greeting: (firstName?: string) => string;
     description: string;
     next: string;
-    skip: string;
   };
   notifications: {
     title: string;
     description: string;
     allow: string;
     later: string;
-    back: string;
-    skip: string;
     /** Examples of what a notification says. */
     exampleAdded: string;
     exampleTimeChanged: string;
@@ -37,9 +34,6 @@ export interface OnboardingTranslations {
     laterWhere: (path: string) => string;
     noCalendars: string;
     settingUp: string;
-    finish: string;
-    finishWithoutSync: string;
-    back: string;
     permissionRequired: string;
     grantPermission: string;
   };
@@ -74,15 +68,12 @@ feature3: 'Репетиция уходит всем в календарь',
       greeting: (firstName?: string) => (firstName ? `Добро пожаловать, ${firstName}!` : 'Добро пожаловать!'),
       description: 'Планируйте репетиции, управляйте расписанием и синхронизируйте календари в одном месте',
       next: 'Начать',
-      skip: 'Пропустить',
     },
     notifications: {
       title: 'Уведомления',
       description: 'Придёт сообщение, когда вас позовут на репетицию или когда её время изменится. Без них об изменении легко узнать последним.',
       allow: 'Включить',
       later: 'Не сейчас',
-      back: 'Назад',
-      skip: 'Пропустить',
       exampleAdded: 'Вас добавили в репетицию',
       exampleTimeChanged: 'Время репетиции изменилось',
     },
@@ -96,9 +87,6 @@ feature3: 'Репетиция уходит всем в календарь',
       laterWhere: (path: string) => `Это можно сделать потом: ${path}`,
       noCalendars: 'Календари не найдены',
       settingUp: 'Подключаем календарь…',
-      finish: 'Завершить',
-      finishWithoutSync: 'Продолжить без синхронизации',
-      back: 'Назад',
       permissionRequired: 'Требуется разрешение',
       grantPermission: 'Предоставить доступ',
     },
@@ -131,15 +119,12 @@ feature3: 'The rehearsal lands in everyone\'s calendar',
       greeting: (firstName?: string) => (firstName ? `Welcome, ${firstName}!` : 'Welcome!'),
       description: 'Plan rehearsals, manage schedules, and sync calendars in one place',
       next: 'Get Started',
-      skip: 'Skip',
     },
     notifications: {
       title: 'Notifications',
       description: 'You will hear when someone puts you on a rehearsal, and when its time changes. Without them, you find out last.',
       allow: 'Turn on',
       later: 'Not now',
-      back: 'Back',
-      skip: 'Skip',
       exampleAdded: 'You were added to a rehearsal',
       exampleTimeChanged: 'A rehearsal’s time changed',
     },
@@ -153,9 +138,6 @@ feature3: 'The rehearsal lands in everyone\'s calendar',
       laterWhere: (path: string) => `You can do it later in ${path}`,
       noCalendars: 'No calendars found',
       settingUp: 'Setting up calendar sync…',
-      finish: 'Finish',
-      finishWithoutSync: 'Continue without sync',
-      back: 'Back',
       permissionRequired: 'Permission required',
       grantPermission: 'Grant Access',
     },
@@ -188,15 +170,12 @@ feature3: 'El ensayo llega al calendario de cada uno',
       greeting: (firstName?: string) => (firstName ? `¡Bienvenido, ${firstName}!` : '¡Bienvenido!'),
       description: 'Planifica ensayos, gestiona horarios y sincroniza calendarios en un solo lugar',
       next: 'Empezar',
-      skip: 'Omitir',
     },
     notifications: {
       title: 'Notificaciones',
       description: 'Les avisamos cuando alguien los ponga en un ensayo y cuando cambie la hora. Sin ellas, se enteran los últimos.',
       allow: 'Activar',
       later: 'Ahora no',
-      back: 'Atrás',
-      skip: 'Omitir',
       exampleAdded: 'Te añadieron a un ensayo',
       exampleTimeChanged: 'Cambió la hora de un ensayo',
     },
@@ -210,9 +189,6 @@ feature3: 'El ensayo llega al calendario de cada uno',
       laterWhere: (path: string) => `Pueden hacerlo después en ${path}`,
       noCalendars: 'No se encontraron calendarios',
       settingUp: 'Configurando la sincronización…',
-      finish: 'Finalizar',
-      finishWithoutSync: 'Continuar sin sincronizar',
-      back: 'Atrás',
       permissionRequired: 'Permiso requerido',
       grantPermission: 'Conceder acceso',
     },
@@ -245,15 +221,12 @@ feature3: 'Die Probe landet in jedem Kalender',
       greeting: (firstName?: string) => (firstName ? `Willkommen, ${firstName}!` : 'Willkommen!'),
       description: 'Plane Proben, verwalte Termine und synchronisiere Kalender an einem Ort',
       next: 'Loslegen',
-      skip: 'Überspringen',
     },
     notifications: {
       title: 'Mitteilungen',
       description: 'Du hörst es, wenn dich jemand zu einer Probe einträgt und wenn sich die Zeit ändert. Ohne sie erfährst du es zuletzt.',
       allow: 'Einschalten',
       later: 'Jetzt nicht',
-      back: 'Zurück',
-      skip: 'Überspringen',
       exampleAdded: 'Du wurdest zu einer Probe eingetragen',
       exampleTimeChanged: 'Die Zeit einer Probe hat sich geändert',
     },
@@ -267,9 +240,6 @@ feature3: 'Die Probe landet in jedem Kalender',
       laterWhere: (path: string) => `Das geht auch später unter ${path}`,
       noCalendars: 'Keine Kalender gefunden',
       settingUp: 'Kalendersynchronisation wird eingerichtet …',
-      finish: 'Fertigstellen',
-      finishWithoutSync: 'Ohne Synchronisation fortfahren',
-      back: 'Zurück',
       permissionRequired: 'Berechtigung erforderlich',
       grantPermission: 'Zugriff gewähren',
     },

@@ -8,9 +8,6 @@ export interface ProjectsTranslations {
   projectName: string;
   projectDescription: string;
   create: string;
-  copyLink: string;
-  linkCopied: string;
-  loading: string;
   selectProject: string;
   namePlaceholder: string;
   descriptionPlaceholder: string;
@@ -22,11 +19,9 @@ export interface ProjectsTranslations {
   pastRehearsals: string;
   noUpcomingRehearsals: string;
   newRehearsal: string;
-  inviteMembers: string;
   members: string;
   timezone: string;
   selectTimezone: string;
-  inviteLinkCopied: string;
   inviteLinkError: string;
   fetchError: string;
   haveInvite: string;
@@ -82,9 +77,6 @@ export const ru = {
     projectName: 'Название проекта',
     projectDescription: 'Описание',
     create: 'Создать',
-    copyLink: 'Копировать ссылку',
-    linkCopied: 'Ссылка скопирована!',
-    loading: 'Загрузка проектов...',
     selectProject: 'Выбрать проект',
     namePlaceholder: 'Введите название',
     descriptionPlaceholder: 'Введите описание',
@@ -96,11 +88,9 @@ export const ru = {
     pastRehearsals: 'Прошедшие репетиции',
     noUpcomingRehearsals: 'Нет запланированных репетиций',
     newRehearsal: 'Новая репетиция',
-    inviteMembers: 'Пригласить участников',
     members: 'Участники',
     timezone: 'Часовой пояс',
     selectTimezone: 'Выберите часовой пояс',
-    inviteLinkCopied: 'Ссылка-приглашение скопирована в буфер обмена',
     inviteLinkError: 'Не удалось создать ссылку-приглашение',
     fetchError: 'Не удалось загрузить данные проекта',
     shareLink: 'Поделиться ссылкой',
@@ -157,9 +147,6 @@ export const en = {
     projectName: 'Project Name',
     projectDescription: 'Description',
     create: 'Create',
-    copyLink: 'Copy Link',
-    linkCopied: 'Link copied!',
-    loading: 'Loading projects...',
     selectProject: 'Select Project',
     namePlaceholder: 'Enter name',
     descriptionPlaceholder: 'Enter description',
@@ -171,11 +158,9 @@ export const en = {
     pastRehearsals: 'Past Rehearsals',
     noUpcomingRehearsals: 'No upcoming rehearsals',
     newRehearsal: 'New rehearsal',
-    inviteMembers: 'Invite Members',
     members: 'Members',
     timezone: 'Timezone',
     selectTimezone: 'Select Timezone',
-    inviteLinkCopied: 'Invite link copied to clipboard',
     inviteLinkError: 'Failed to create invite link',
     fetchError: 'Failed to load project data',
     shareLink: 'Share the link',
@@ -232,9 +217,6 @@ export const es = {
     projectName: 'Nombre del proyecto',
     projectDescription: 'Descripción',
     create: 'Crear',
-    copyLink: 'Copiar enlace',
-    linkCopied: '¡Enlace copiado!',
-    loading: 'Cargando proyectos...',
     selectProject: 'Seleccionar proyecto',
     namePlaceholder: 'Introduce el nombre',
     descriptionPlaceholder: 'Introduce la descripción',
@@ -246,11 +228,9 @@ export const es = {
     pastRehearsals: 'Ensayos pasados',
     noUpcomingRehearsals: 'No hay ensayos programados',
     newRehearsal: 'Nuevo ensayo',
-    inviteMembers: 'Invitar miembros',
     members: 'Miembros',
     timezone: 'Zona horaria',
     selectTimezone: 'Seleccionar zona horaria',
-    inviteLinkCopied: 'Enlace de invitación copiado al portapapeles',
     inviteLinkError: 'No se pudo crear el enlace de invitación',
     fetchError: 'No se pudieron cargar los datos del proyecto',
     shareLink: 'Compartir el enlace',
@@ -307,9 +287,6 @@ export const de = {
     projectName: 'Projektname',
     projectDescription: 'Beschreibung',
     create: 'Erstellen',
-    copyLink: 'Link kopieren',
-    linkCopied: 'Link kopiert!',
-    loading: 'Projekte werden geladen...',
     selectProject: 'Projekt auswählen',
     namePlaceholder: 'Namen eingeben',
     descriptionPlaceholder: 'Beschreibung eingeben',
@@ -321,11 +298,9 @@ export const de = {
     pastRehearsals: 'Vergangene Proben',
     noUpcomingRehearsals: 'Keine geplanten Proben',
     newRehearsal: 'Neue Probe',
-    inviteMembers: 'Mitglieder einladen',
     members: 'Mitglieder',
     timezone: 'Zeitzone',
     selectTimezone: 'Zeitzone auswählen',
-    inviteLinkCopied: 'Einladungslink in die Zwischenablage kopiert',
     inviteLinkError: 'Einladungslink konnte nicht erstellt werden',
     fetchError: 'Projektdaten konnten nicht geladen werden',
     shareLink: 'Link teilen',

@@ -238,8 +238,9 @@ describe('The planner\'s list, dense (T-020)', () => {
     expect(within(row).getByText('Project A')).toBeTruthy();
     expect(within(row).getByText(t.smartPlanner.week)).toBeTruthy();
     expect(within(row).getByText('Participants: all (3)')).toBeTruthy();
-    // Nothing else stands above the list.
-    expect(screen.queryByText(t.smartPlanner.period)).toBeNull();
+    // Nothing else stands above the list: the "Period" heading it once had is gone
+    // (its key too, T-045).
+    expect(screen.queryByText('Period')).toBeNull();
   });
 
   it('opens each filter\'s own choice from the row', async () => {
