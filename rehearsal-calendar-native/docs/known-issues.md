@@ -259,20 +259,18 @@ range being built through UTC.
 
 ### Medium
 
-| Where | Claim |
-|---|---|
-| [accountLinking.js:76](../server/utils/accountLinking.js#L76) | Email lookups are case-sensitive, so a Google sign-in can create a duplicate empty account instead of linking |
-| [api.ts:136](../src/shared/services/api.ts#L136) | A session revoked mid-use leaves the app showing signed-in UI with stale data until it is force-quit |
-| [export.ts:236](../src/shared/services/calendar/export.ts#L236) | Changing the export calendar keeps writing rehearsals to the old one |
-| [calendarMappings.ts:22](../src/shared/utils/calendarMappings.ts#L22) | The cached connection id survives a user switch, so the next user's mappings never reach the server |
-| [inviteRedemption.js](../server/routes/native/inviteRedemption.js) | Invite codes are matched case-sensitively while the entry field disables auto-capitalisation, so a correctly dictated code typed in lowercase is rejected |
+Empty: all five have been fixed since and their rows deleted — a session
+revoked mid-use now signs the app out, changing the export calendar moves the
+rehearsals to the new one, the cached connection id is reset when the account
+on the device changes, email lookups go through the normalised address, and the
+client sends a short invite code in capitals, as issued (T-025).
 
 ### Low
 
 | Where | Claim |
 |---|---|
-| [auth.js:26](../server/routes/auth.js#L26) | Registration confirms whether an email already has an account, while login is deliberately generic |
-| [AuthContext.tsx:163](../src/contexts/AuthContext.tsx#L163) | A failed timezone auto-sync is never retried, so an OAuth signup can store rehearsal times as UTC wall-clock |
+| [auth.js:73](../server/routes/auth.js#L73) | Registration confirms whether an email already has an account (409 `EMAIL_TAKEN`), while login is deliberately generic |
+| [AuthContext.tsx:297](../src/contexts/AuthContext.tsx#L297) | A failed first timezone sync is never retried (`hasTimezoneSynced` is set before the request), so an OAuth signup can store rehearsal times as UTC wall-clock |
 
 ---
 
