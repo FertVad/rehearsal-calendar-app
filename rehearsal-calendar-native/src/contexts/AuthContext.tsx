@@ -61,8 +61,9 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (data: ProfileUpdate) => Promise<void>;
   deleteAccount: () => Promise<{ deletedProjects: number }>;
-  /** The last failure, kept whole so the screens can say it in the app's language. */
-  error: AuthFlowError | null;
+  // No failure is kept here: each call throws its own, whole, and the screen
+  // that made the attempt says it (T-224). One error for every screen was
+  // shown by whichever form was open.
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserState(next);
   }, []);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<AuthFlowError | null>(null);
   // Separate from `loading`: the navigator replaces everything with a spinner
   // while `loading` is true, so a form toggling it was unmounted mid-request —
   // a failed registration landed back on Login, and the code screen could
@@ -144,7 +144,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const beginAttempt = useCallback(() => {
     signInAttempt.current += 1;
-    setError(null);
     setBusy(true);
     return signInAttempt.current;
   }, []);
@@ -328,8 +327,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (failure.code === 'EMAIL_NOT_VERIFIED') {
         // The password was right; the address still waits for its code.
         rememberPendingSignIn(failure.details.email ?? email.trim().toLowerCase(), password);
-      } else {
-        setError(failure);
       }
       throw failure;
     } finally {
@@ -347,10 +344,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return created;
     } catch (err: any) {
       if (!isCurrent(attempt)) return null;
-      const failure = toAuthFlowError(err, 'Registration failed');
-      // A taken address gets its own answer on the screen, not this line.
-      if (failure.code !== 'EMAIL_TAKEN') setError(failure);
-      throw failure;
+      throw toAuthFlowError(err, 'Registration failed');
     } finally {
       endAttempt(attempt);
     }
@@ -453,9 +447,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Status and the server's message are in the logged summary; the
       // request, with the ID token in its body, is not.
       logger.error('[Auth] Google login error:', err);
-      const failure = toAuthFlowError(err, 'Google sign-in failed');
-      setError(failure);
-      throw failure;
+      throw toAuthFlowError(err, 'Google sign-in failed');
     } finally {
       endAttempt(attempt);
     }
@@ -471,9 +463,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { linked: started && Boolean(response.data.linked) };
     } catch (err: any) {
       if (!isCurrent(attempt)) return { linked: false };
-      const failure = toAuthFlowError(err, 'Apple sign-in failed');
-      setError(failure);
-      throw failure;
+      throw toAuthFlowError(err, 'Apple sign-in failed');
     } finally {
       endAttempt(attempt);
     }
@@ -548,7 +538,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // about a session that is gone: it writes nothing (see logout).
     const session = signInAttempt.current;
     try {
-      setError(null);
       const response = await authAPI.updateMe(data);
       if (session !== signInAttempt.current) return;
       const updatedUser = response.data.user;
@@ -559,16 +548,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await syncUserPreferences(updatedUser);
     } catch (err: any) {
       if (session !== signInAttempt.current) return;
-      const failure = toAuthFlowError(err, 'Update failed');
-      setError(failure);
       // Whole, with its code: the screen says it in the person's language.
-      throw failure;
+      throw toAuthFlowError(err, 'Update failed');
     }
   }, [setUser]);
 
   const deleteAccount = useCallback(async () => {
     try {
-      setError(null);
       setLoading(true);
 
       // Call delete account API
@@ -591,9 +577,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { deletedProjects: deletedProjects || 0 };
     } catch (err: any) {
-      const failure = toAuthFlowError(err, 'Failed to delete account');
-      setError(failure);
-      throw new Error(failure.message);
+      throw new Error(toAuthFlowError(err, 'Failed to delete account').message);
     } finally {
       setLoading(false);
     }
@@ -621,7 +605,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         updateUser,
         deleteAccount,
-        error,
       }}
     >
       {children}

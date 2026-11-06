@@ -43,13 +43,13 @@ jest.mock('../../../../shared/services/appleAuth', () => ({
   isAppleAuthAvailable: () => Promise.resolve(false),
 }));
 
-const navigation: any = { navigate: jest.fn() };
+const navigation: any = { navigate: jest.fn(), addListener: jest.fn(() => () => undefined) };
 const screen = () => render(<LoginScreen navigation={navigation} route={{ key: 'l', name: 'Login' } as any} />);
 
 beforeEach(() => {
   (Alert.alert as jest.Mock).mockReset();
   navigation.navigate.mockReset();
-  Object.assign(mockAuth, { busy: false, error: null, login: jest.fn(() => Promise.resolve()), loginWithGoogle: jest.fn(), loginWithApple: jest.fn() });
+  Object.assign(mockAuth, { busy: false, login: jest.fn(() => Promise.resolve()), loginWithGoogle: jest.fn(), loginWithApple: jest.fn() });
 });
 
 it('opens the reset with the address already typed', () => {

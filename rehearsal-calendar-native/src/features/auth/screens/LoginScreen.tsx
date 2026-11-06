@@ -21,6 +21,7 @@ import { loginScreenStyles as styles } from '../styles';
 import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
 import { normalizeEmail } from '../utils/accountRules';
 import PasswordField from '../components/PasswordField';
+import { useAttemptError } from '../hooks/useAttemptError';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useGoogleAuth, getGoogleIdToken } from '../../../shared/services/googleAuth';
 import { signInWithApple, isAppleAuthAvailable } from '../../../shared/services/appleAuth';
@@ -34,8 +35,9 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [appleLoading, setAppleLoading] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
   const passwordInput = useRef<TextInput>(null);
-  const { login, loginWithGoogle, loginWithApple, busy, error } = useAuth();
+  const { login, loginWithGoogle, loginWithApple, busy } = useAuth();
   const { t } = useI18n();
+  const { error, fail, clear } = useAttemptError(navigation);
 
   // Google OAuth
   const { request, response, promptAsync } = useGoogleAuth();
@@ -58,6 +60,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const handleLogin = async () => {
     if (!filled || busy) return;
 
+    clear();
     try {
       await login(email, password);
       // Navigation handled by AuthProvider
@@ -65,9 +68,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       // The password was right, the address still waits for its code (R3).
       if (err instanceof AuthFlowError && err.code === 'EMAIL_NOT_VERIFIED') {
         navigation.navigate('VerifyEmail', { email: err.details.email ?? email.trim().toLowerCase() });
+        return;
       }
-      // Any other failure is the context's error, shown under the fields —
-      // once, not again in an alert (T-015).
+      // Any other failure is shown under the fields — once, not again in an
+      // alert (T-015) — and on this screen only (T-224).
+      fail(err);
     }
   };
 
@@ -81,6 +86,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       }
 
       // Send to backend
+      clear();
       const result = await loginWithGoogle(idToken);
 
       // Show message if account was linked
@@ -93,6 +99,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
       // Navigation handled by AuthProvider
     } catch (err: any) {
+      fail(err);
       Alert.alert(t.auth.googleSignInError, authErrorMessage(t, err));
     } finally {
       setGoogleLoading(false);
@@ -107,6 +114,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       // User dismissed the Apple sheet — leave the screen untouched.
       if (!credential) return;
 
+      clear();
       const result = await loginWithApple(credential.identityToken, credential.user);
 
       if (result.linked) {
@@ -115,6 +123,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
       // Navigation handled by AuthProvider
     } catch (err: any) {
+      fail(err);
       Alert.alert(t.auth.appleSignInError, authErrorMessage(t, err));
     } finally {
       setAppleLoading(false);

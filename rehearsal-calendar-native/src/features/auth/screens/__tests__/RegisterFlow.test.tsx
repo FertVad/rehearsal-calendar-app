@@ -49,7 +49,7 @@ jest.mock('../../../../shared/components', () => {
   };
 });
 
-const navigation: any = { navigate: jest.fn(), popTo: jest.fn() };
+const navigation: any = { navigate: jest.fn(), popTo: jest.fn(), addListener: jest.fn(() => () => undefined) };
 let auth: ReturnType<typeof useAuth>;
 function Capture() { auth = useAuth(); return null; }
 

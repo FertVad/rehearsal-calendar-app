@@ -31,7 +31,7 @@ jest.mock('../../../../shared/components', () => {
   };
 });
 
-const navigation: any = { navigate: jest.fn(), popTo: jest.fn() };
+const navigation: any = { navigate: jest.fn(), popTo: jest.fn(), addListener: jest.fn(() => () => undefined) };
 const form = () => render(<RegisterScreen navigation={navigation} route={{ key: 'r', name: 'Register' } as any} />);
 // The fields by their place in the form, the button by its title: the form
 // before T-015 had no ids, and its red run must reach what it did.
@@ -54,15 +54,16 @@ beforeEach(() => {
   navigation.popTo.mockReset();
   Object.assign(mockAuth, {
     busy: false,
-    error: null,
     register: jest.fn(() => Promise.resolve({ email: 'anna@example.com', delivery: 'sent' })),
     forgetPendingSignIn: jest.fn(),
   });
 });
 
-it('shows a failure under the fields in the app language, never the server English', () => {
-  mockAuth.error = new AuthFlowError('Email is not available right now', 'EMAIL_UNAVAILABLE', 503);
+it('shows a failure under the fields in the app language, never the server English', async () => {
+  mockAuth.register.mockRejectedValue(new AuthFlowError('Email is not available right now', 'EMAIL_UNAVAILABLE', 503));
   const view = form();
+  fill(view, {});
+  await submit(view);
   expect(view.getByText(t.auth.emailUnavailable)).toBeTruthy();
   expect(view.queryByText('Email is not available right now')).toBeNull();
 });

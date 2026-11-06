@@ -336,7 +336,6 @@ it('turns a sign-in to an unconfirmed address into the code screen', async () =>
   await act(async () => { failure = await auth.login('NEW@example.com', 'long-enough-1').catch((error) => error); });
   expect(failure.code).toBe('EMAIL_NOT_VERIFIED');
   expect(auth.pendingEmail).toBe('new@example.com');
-  expect(auth.error).toBeNull();
   let delivery: any;
   await act(async () => { delivery = await auth.resendConfirmation(); });
   expect(delivery).toBe('sent');
