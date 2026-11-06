@@ -12,20 +12,6 @@ export const styles = StyleSheet.create({
   content: {
     padding: Spacing.xl,
   },
-  loadingState: {
-    backgroundColor: Colors.glass.bg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.xxl,
-    alignItems: 'center',
-    marginTop: Spacing.xxl,
-  },
-  loadingText: {
-    fontSize: FontSize.base,
-    color: Colors.text.secondary,
-    marginTop: Spacing.md,
-  },
   errorState: {
     backgroundColor: Colors.glass.bg,
     borderWidth: 1,

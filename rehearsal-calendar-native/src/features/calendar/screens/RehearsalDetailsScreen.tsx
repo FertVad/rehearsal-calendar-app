@@ -17,7 +17,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSeen } from '../../../contexts/SeenContext';
-import { Rehearsal, Project } from '../../../shared/types';
+import { Rehearsal } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDate } from '../../../shared/utils/dateFormat';
 import { rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';

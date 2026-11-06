@@ -5,9 +5,6 @@ import type { NavigationAction } from '@react-navigation/native';
 import { useI18n } from '../../contexts/I18nContext';
 import type { AppNavigation } from '../../navigation/types';
 
-/** The way out a screen's own close takes, as its goBack does. */
-export const GO_BACK: NavigationAction = { type: 'GO_BACK' };
-
 /**
  * A sheet with unsaved changes is not left without asking (T-013).
  *

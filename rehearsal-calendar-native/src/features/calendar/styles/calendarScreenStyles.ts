@@ -1,8 +1,6 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const UPCOMING_CARD_WIDTH = SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md;
 /** A rehearsal's row in the calendar's lists (T-036). */
 const REHEARSAL_ROW_HEIGHT = 88;
 /** The day on the left of a row; the text begins after it. */
@@ -294,11 +292,6 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     padding: Spacing.xxl,
     alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: FontSize.base,
-    color: Colors.text.secondary,
-    marginTop: Spacing.md,
   },
   errorState: {
     backgroundColor: Colors.glass.bg,

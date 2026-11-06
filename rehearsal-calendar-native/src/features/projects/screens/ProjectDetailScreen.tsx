@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  FlatList,
   RefreshControl,
 } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';

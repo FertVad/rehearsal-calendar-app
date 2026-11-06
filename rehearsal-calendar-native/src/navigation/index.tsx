@@ -1,5 +1,5 @@
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
-import { View, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { NavigationContainer, useNavigation, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -108,7 +108,6 @@ const tabButtonStyles = StyleSheet.create({
 function ActionSheetWrapper() {
   const navigation = useNavigation<AppNavigation<'MainTabs'>>();
   const { showActionSheet, setShowActionSheet } = useActionSheet();
-  const { language } = useI18n();
   // "Create Rehearsal" only for someone with a project to put one in (T-012).
   const { projects } = useProjects();
   const canSchedule = canScheduleAny(projects);

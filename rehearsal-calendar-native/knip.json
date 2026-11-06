@@ -1,25 +1,27 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
-    "index.ts",
-    "App.tsx",
-    "server/server.js"
+    "index.ts!",
+    "App.tsx!",
+    "src/**/*.{test,spec}.{ts,tsx}",
+    "src/__tests__/**/*.{ts,tsx,js}",
+    "e2e/**/*.{js,mjs}"
   ],
   "project": [
-    "src/**/*.{ts,tsx}",
-    "server/**/*.{js,ts}"
+    "src/**/*.{ts,tsx,js}!",
+    "e2e/**/*.{js,mjs}"
   ],
   "ignore": [
-    "**/*.test.{ts,tsx,js}",
-    "**/__tests__/**",
-    "**/node_modules/**"
+    "e2e/out/**"
   ],
-  "ignoreDependencies": [
-    "@react-navigation/stack",
-    "react-native-gesture-handler",
-    "i18next",
-    "react-i18next",
-    "date-fns"
-  ],
+  "expo": {
+    "config": ["app.json"]
+  },
+  "metro": {
+    "config": ["metro.config.js"]
+  },
+  "jest": {
+    "config": ["jest.config.js"]
+  },
   "ignoreExportsUsedInFile": true
 }

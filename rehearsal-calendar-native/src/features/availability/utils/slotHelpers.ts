@@ -1,4 +1,4 @@
-import { DayMode, DayState, TimeSlot } from '../types';
+import { DayState } from '../types';
 
 /**
  * Helper to apply changes to all selected dates
