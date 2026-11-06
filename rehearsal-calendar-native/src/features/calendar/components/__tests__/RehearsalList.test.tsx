@@ -185,6 +185,16 @@ describe('the row', () => {
     // Not inside the 44: the eye's box stays a square.
     expect(eye.findAll((n: any) => n.props.children === '2/3')).toHaveLength(0);
   });
+
+  it('names the rehearsal its eye marks, so one eye is told from the next (T-223)', () => {
+    const { getAllByTestId } = list();
+    expect(getAllByTestId('seen-toggle').map((eye) => eye.props.accessibilityLabel)).toEqual([
+      'Mark as seen, Wrestling match',
+      'Mark as seen, Epilogue',
+      // No title, nothing to name.
+      'Mark as seen',
+    ]);
+  });
 });
 
 describe('the lines between rows', () => {

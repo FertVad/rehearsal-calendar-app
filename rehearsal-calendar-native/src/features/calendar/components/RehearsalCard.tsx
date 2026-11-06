@@ -155,7 +155,12 @@ export default function RehearsalCard({
           testID="seen-toggle"
           icon={currentResponse === 'yes' ? 'eye' : 'eye-off-outline'}
           color={currentResponse === 'yes' ? Colors.accent.purple : Colors.text.secondary}
-          accessibilityLabel={t.rehearsals.markSeen}
+          // Which rehearsal it marks: every row's eye said only "Mark as
+          // seen", so VoiceOver and Voice Control had a list of the same
+          // button, and the flows took whichever came first (T-223).
+          accessibilityLabel={
+            rehearsal.title ? `${t.rehearsals.markSeen}, ${rehearsal.title}` : t.rehearsals.markSeen
+          }
           accessibilityState={{ selected: currentResponse === 'yes', disabled: responding }}
           accessibilityValue={seenLabel ? { text: seenLabel } : undefined}
           style={styles.seenButton}
