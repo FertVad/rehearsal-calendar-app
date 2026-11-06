@@ -47,6 +47,36 @@ describe('iOS permission prompt texts', () => {
     for (const key of declared) expect(appJson.expo.ios.infoPlist[key]).toBe(en[key]);
   });
 
+  // app.json is not what the build gets. expo-calendar is one of the legacy
+  // plugins @expo/prebuild-config applies on its own even when `plugins` does
+  // not list it, and with no options it writes both NSReminders* keys with its
+  // English default. What lands in Info.plist is app.json after that plugin.
+  it('the infoPlist after the expo-calendar plugin has the calendar texts and no reminder keys', async () => {
+    const entry = (appJson.expo.plugins ?? []).find((p: unknown) =>
+      (Array.isArray(p) ? p[0] : p) === 'expo-calendar');
+    const options = Array.isArray(entry) ? entry[1] : undefined;
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const withCalendar = require(path.join(root, 'node_modules/expo-calendar/app.plugin.js'));
+    const plugin = withCalendar.default ?? withCalendar;
+    const config = plugin(JSON.parse(JSON.stringify(appJson.expo)), options);
+    const result = await config.mods.ios.infoPlist({
+      ...config,
+      modResults: { ...appJson.expo.ios.infoPlist },
+      modRequest: { platform: 'ios', modName: 'infoPlist', projectRoot: root, platformProjectRoot: path.join(root, 'ios'), introspect: true },
+    });
+    const infoPlist = result.modResults;
+
+    expect(Object.keys(infoPlist).filter((k) => k.startsWith('NSReminders'))).toEqual([]);
+    const en = localeIos('en');
+    const calendarKeys = Object.keys(infoPlist).filter((k) => k.startsWith('NSCalendars')).sort();
+    expect(calendarKeys).toEqual([
+      'NSCalendarsFullAccessUsageDescription',
+      'NSCalendarsUsageDescription',
+      'NSCalendarsWriteOnlyAccessUsageDescription',
+    ]);
+    for (const key of calendarKeys) expect(infoPlist[key]).toBe(en[key]);
+  });
+
   it('each language words it its own way', () => {
     for (const key of declared) {
       const texts = LANGUAGES.map((lang) => localeIos(lang)[key]);

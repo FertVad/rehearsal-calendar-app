@@ -91,7 +91,13 @@
           "color": "#A855F7"
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-calendar",
+        {
+          "remindersPermission": false
+        }
+      ]
     ],
     "extra": {
       "eas": {
