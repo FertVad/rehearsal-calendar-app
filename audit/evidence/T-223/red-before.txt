@@ -1,0 +1,54 @@
+T-223 - flow 49 "Sign-in and registration forms", red before.
+
+1. The red run's own journal (full e2e on auto/main a5a5ba7, 06.11.2026,
+   e2e/out/failed/full-e2e-a5a5ba7-2026-11-06T12-08-52-826Z, flow "Sign-in and
+   registration forms").
+
+maestro.log, the two taps on the registration form's eyes:
+
+13:13:43.104 Tap on "Show password" RUNNING
+13:13:43.531 Tapping on element: accessibilityText=Show password, bounds=[329,457][373,501]   <- the password's eye
+13:13:51.046 Something have changed in the UI judging by view hierarchy. Proceed.
+13:13:51.081 Tap on "Show password" COMPLETED
+13:13:51.081 Tap on "Show password" RUNNING
+13:13:52.198 Tapping on element: accessibilityText=Show password, bounds=[329,457][373,501]   <- the same eye again
+13:13:54.749 Tap on "Show password" COMPLETED
+13:13:54.749 Assert that "Show password" is not visible RUNNING
+13:14:13.220 CommandFailed: Assertion is false: "Show password" is not visible
+
+device-simulator.log, the digitizers XCTest attached in that window (one per tap):
+
+13:13:50.038304 backboardd digitizer attached                                   <- 17th tap, the first "Show password"
+13:13:50.038575 backboardd we already have a service for senderID:103AC4E000369
+13:13:50.049816 backboardd didn't see a previous touch down or range-in event for pathIndex:2; skipping event  (x8 to 13:13:50.139)
+13:13:53.597985 backboardd digitizer attached                                   <- 18th tap, the second, taken
+
+node audit/evidence/T-207/touch-scan.mjs rehearsal-calendar-native/e2e/out/failed/full-e2e-a5a5ba7-2026-11-06T12-08-52-826Z
+artifacts  Sign-in and registration forms: digitizers 18, registered twice 2 (s after the app's last scene change: 4.68s/tap 1 after "unspecified -> foreground", 32.97s/tap 13 after "unspecified -> foreground"), app scene changes 6, taps lost 2
+    lost 13:12:52.062 -> Something have changed in the UI judging by view hierarchy. Proceed.   (the first login-email tap, taken again by the flow's typing retry)
+    lost 13:13:50.049 -> Something have changed in the UI judging by view hierarchy. Proceed.   (the first "Show password")
+4 flow logs, 74 digitizers attached, 2 registered twice, 2 taps lost
+
+The first "Show password" is the simulator's lost tap (docs/e2e.md "A lost
+tap", T-207): backboardd registered its digitizer twice and dropped the touch;
+Maestro said the UI changed and went on. The password's eye was still "Show
+password", so the second tap went to it as well, and showed it; the repeat's
+eye was never tapped and stayed "Show password". The failure screenshot
+(step-060) shows exactly that: the password's eye crossed out, the repeat's
+open. Nothing in the app is involved.
+
+2. The same flow at a5a5ba7 without that tap (the first of the two
+   `tapOn: "Show password"` deleted - what backboardd did), run alone:
+
+$ npm run e2e -- e2e/flows/49-sign-in-and-register-forms.yaml
+[e2e] running the flows
+[Failed] Sign-in and registration forms (2m 2s) (Assertion is false: "Show password" is not visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+touch-scan on that run (e2e/out/artifacts/2026-11-06_142758): digitizers 12,
+taps lost 0 - the same failure with no lost tap, only the missing one. Its
+screenshot (step-052-assertCondition-Show_password.png) is the red run's: the
+password shown, the repeat hidden, "Show password" on the repeat's eye.

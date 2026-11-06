@@ -68,12 +68,24 @@ env:
 - assertNotVisible: "Login Error"
 - assertNotVisible: "OK"
 - takeScreenshot: 49-sign-in-refused
-# The password can be shown.
-- tapOn: "Show password"
+# The password can be shown. Each eye goes through tap-and-see: the simulator
+# loses a tap now and then (docs/e2e.md, "A lost tap"), and a lost eye leaves
+# its label as it was (T-223).
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Show password"
+      SEE: "Hide password"
+      WAIT_MS: 5000
 - assertVisible:
     id: login-password
     text: ${WRONG}
-- tapOn: "Hide password"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Hide password"
+      SEE: "Show password"
+      WAIT_MS: 5000
 - assertVisible:
     id: login-password
     text: ${'•'.repeat(WRONG.length)}
@@ -102,10 +114,21 @@ env:
 # Both passwords shown: a hidden new password next to an address is where iOS
 # offers a strong password in place of the keyboard, and the flow's typing
 # would go nowhere. Once the first is shown, the second is the one still
-# labelled "Show password".
-- tapOn: "Show password"
-- tapOn: "Show password"
-- assertNotVisible: "Show password"
+# labelled "Show password". A lost first tap sent the second to the first eye
+# as well, and the repeat stayed hidden (T-223): each waits for its own result,
+# the first for a "Hide password", the second for no "Show password" left.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Show password"
+      SEE: "Hide password"
+      WAIT_MS: 5000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Show password"
+      GONE: "Show password"
+      WAIT_MS: 5000
 # Return goes field to field: the name, the last name left empty, the address,
 # the password, its repeat.
 - tapOn:

@@ -1,0 +1,28 @@
+T-223 - after: flow 49's four eye taps go through e2e/subflows/tap-and-see.yaml
+(the first registration eye waits for "Hide password", the second for no
+"Show password" left; on sign-in, Show waits for "Hide password", Hide for
+"Show password").
+
+$ npm run e2e -- e2e/flows/49-sign-in-and-register-forms.yaml
+[Passed] Sign-in and registration forms (2m 16s)
+
+1/1 Flow Passed in 2m 16s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The whole flow passed, so what it guards (T-015) has not come back: Sign In
+and Sign Up stay off until filled, Return goes field to field and sends from
+the last, the refusal is said once under the fields with no alert, both
+passwords can be shown, the registration's problems are said under their
+fields.
+
+The task's other flows, each run alone on this tree (their red-run failures
+had no lost tap: touch-scan found 2 lost taps in the run's 4 flow logs, both
+in flow 49):
+
+$ npm run e2e -- e2e/flows/64-availability-collapse-asks.yaml
+[Passed] Availability editor asks before collapsing (2m 3s)
+$ npm run e2e -- e2e/flows/04-mark-seen.yaml
+[Passed] Mark a rehearsal seen (1m 52s)
+$ npm run e2e -- e2e/flows/27-past-midnight-morning-slot.yaml
+[Passed] A morning slot of his own outlives a save of the morning (3m 5s)

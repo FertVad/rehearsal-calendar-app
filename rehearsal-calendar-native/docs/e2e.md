@@ -126,7 +126,9 @@ artifacts). Most were the first tap of sign-in, which types inside `retry`;
 flow 30 failed on one at "Apple Calendar" and at the profile tab (T-221), flow 11 at "Change password and
 sign in" and, under load, at "Forgot password?" (T-209), flow 44 at the
 profile tab after a restart (T-212), flow 25 at "Busy" in the availability
-editor, whose day then closed unasked with nothing changed (T-218).
+editor, whose day then closed unasked with nothing changed (T-218), flow 49 at
+the registration form's first "Show password", so the second went to the same
+eye and the repeat stayed hidden (T-223).
 
 It is below the app, and cannot be made to happen on demand. The rule:
 
