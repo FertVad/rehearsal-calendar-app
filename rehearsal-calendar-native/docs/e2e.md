@@ -184,6 +184,29 @@ flow 42). Times are local to the machine,
 which is every profile's zone but Chebutykin's, whose are in his; the
 simulator's is another (see above).
 
+### A run past midnight
+
+The seed is made for one day, the machine's today, and the app's today turns
+at the machine's midnight. One Maestro over the whole set started at 23:09 ran
+every flow after 00:00 against yesterday's seed: `TODAY_DAY` was a day before
+the app's, and each flow about today failed at once — seven of them on
+T-225 (T-226). So `run.mjs` gives Maestro the flows in batches that end before
+midnight — as many as fit at 10 minutes a flow (`FLOW_BOUND_MS`; the longest
+takes about 3) — and, when not one fits, waits for midnight. Before each batch
+it compares the day with the seed's; a day that turned gets a database of its
+own in the same container (`rehearsly_e2e_<YYYYMMDD>`), the server restarted
+on it and the seed made again, so the next flows get the new day's
+`${…_DAY}`, `${…_LABEL}` and ids. Far from midnight the whole set is one batch,
+one Maestro. The batches' reports are merged into `e2e/out/junit.xml`
+(`e2e/junit.mjs`), rewritten after each, and their screenshots go to one
+folder under `e2e/out/artifacts`, a Maestro folder per batch inside it;
+`server.log` and `migrate.log` go on across the days, and `seed.json` is the
+last day's.
+
+To see it without waiting for the night, run with `TZ` of a zone where
+midnight is a few minutes off: the seed, the profiles and Maestro all take the
+runner's zone; the simulator keeps Honolulu.
+
 A flow that needs something changed behind the app's back while it runs — what
 another device would do — calls the local server from `e2e/scripts` with
 `runScript`; `${API_URL}` is its address (flow 10). A rehearsal moved

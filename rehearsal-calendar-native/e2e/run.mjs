@@ -48,8 +48,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getText } from './http.mjs';
+import { mergeJunit } from './junit.mjs';
 import { takeLock } from './lock.mjs';
-import { seed } from './seed.mjs';
+import { localDate, seed } from './seed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SERVER = path.join(ROOT, 'server');
@@ -122,15 +123,15 @@ for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
  * and takes the group down when it closes: a run killed outright takes its
  * server and Metro with it, in the developer's sandbox too.
  */
-function background(name, command, args, options) {
+function background(name, command, args, options, { append = false } = {}) {
   const logFile = path.join(OUT, `${name}.log`);
-  const log = fs.openSync(logFile, 'w');
+  const log = fs.openSync(logFile, append ? 'a' : 'w');
   const child = spawn(process.execPath, [path.join(E2E, 'watchdog.mjs'), command, ...args],
     { ...options, detached: true, stdio: ['pipe', log, log] });
   // Its own group outlives a run killed outright; the lock names it for the next.
   lock.record(name, child.pid);
   teardown.push(() => { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ } });
-  child.once('exit', (code) => { if (!tornDown) console.error(`[e2e] ${name} exited (${code}) — see ${logFile}`); });
+  child.once('exit', (code) => { if (!tornDown && !child.stopping) console.error(`[e2e] ${name} exited (${code}) — see ${logFile}`); });
   return child;
 }
 
@@ -358,6 +359,138 @@ function simulator() {
 
 // ---- the run --------------------------------------------------------------
 
+// ---- a day's database, server and seed ------------------------------------
+
+/**
+ * What the flows are given is seeded for one day — the machine's today, the
+ * zone of everyone's profile (seed.mjs): TODAY_DAY, the rehearsals of today
+ * and tomorrow, the labels. A run that went on past midnight showed flows the
+ * app's new today against yesterday's seed, and every flow about today failed
+ * after 00:00 (T-226: the whole set started at 23:09). So the flows go to
+ * Maestro in batches that end before midnight, and before each batch a day
+ * that turned gets a day of its own: a new database in the same container, the
+ * server restarted on it, the seed made again. The flows find the world they
+ * were written for, as on a run started that morning.
+ *
+ * A batch is as many flows as fit before midnight at FLOW_BOUND_MS each — the
+ * longest flow takes about 3 minutes. When not one fits, the run waits for
+ * midnight rather than start a flow the day would turn under: its sign-in
+ * on the old day, its calendar on the new. Not one Maestro a flow all the
+ * time: each costs some 50 s to start, an hour on the whole set.
+ */
+const FLOW_BOUND_MS = 10 * 60 * 1000;
+
+/** Until the machine's next midnight, in ms. */
+function untilMidnight(now = new Date()) {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now;
+}
+
+const serverEnv = (databaseUrl) => ({
+  PATH: process.env.PATH,
+  HOME: os.homedir(),
+  NODE_ENV: 'development',
+  PORT: String(API_PORT),
+  HOST: API_HOST,
+  DATABASE_URL: databaseUrl,
+  JWT_SECRET: randomBytes(32).toString('base64'),
+  CRON_SECRET: randomBytes(32).toString('base64'),
+  BASE_URL: `http://${API_HOST}:${API_PORT}`,
+  EMAIL_TRANSPORT: 'capture-for-tests',
+  // A flow that plays a phone puts a push token on this server
+  // (e2e/device); a send to it must not reach Expo. Nothing listens here.
+  EXPO_BASE_URL: 'http://127.0.0.1:9',
+  MAIL_HOST: API_HOST,
+  MAIL_PORT: String(MAIL_PORT),
+});
+
+function migrate(databaseUrl, { append = false } = {}) {
+  const migrateLog = fs.openSync(path.join(OUT, 'migrate.log'), append ? 'a' : 'w');
+  execFileSync(process.execPath, ['scripts/migrate.js', '--fresh'], {
+    cwd: SERVER,
+    env: { PATH: process.env.PATH, HOME: os.homedir(), DATABASE_URL: databaseUrl },
+    stdio: ['ignore', migrateLog, migrateLog],
+    timeout: 120000,
+  });
+}
+
+/** server.js through server-with-mailbox.mjs: the codes it mails stay in that process, and the flows read them from MAIL_URL. */
+async function startServer(databaseUrl, { append = false } = {}) {
+  const server = background('server', process.execPath, [path.join(E2E, 'server-with-mailbox.mjs')],
+    { cwd: SERVER, env: serverEnv(databaseUrl) }, { append });
+  await waitFor('the local server', async () => (await fetch(`${API_URL}/ready`)).ok, 30000);
+  await waitFor('the mailbox', async () => (await fetch(`${MAIL_URL}/code?to=`)).status === 404, 10000);
+  return server;
+}
+
+async function stopServer(server) {
+  if (server.exitCode === null && server.signalCode === null) {
+    server.stopping = true;
+    const exited = new Promise((resolve) => server.once('exit', resolve));
+    try { process.kill(-server.pid, 'SIGTERM'); } catch { /* already gone */ }
+    await exited;
+  }
+  await waitFor('the server\'s ports to close', async () =>
+    !(await inUse(API_PORT, API_HOST)) && !(await inUse(MAIL_PORT, API_HOST)), 10000);
+}
+
+/** The seed, made for the machine's today: `{ date, seeded }`, the date taken before it began. */
+async function seedDay(databaseUrl) {
+  const date = localDate(0);
+  const client = new pg.Client({ connectionString: databaseUrl });
+  await client.connect();
+  let seeded;
+  try {
+    seeded = await seed({ client, apiUrl: API_URL, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+  } finally {
+    await client.end();
+  }
+  fs.writeFileSync(path.join(OUT, 'seed.json'), JSON.stringify(seeded, null, 2));
+  return { date, seeded };
+}
+
+/** A database of its own for `date`, next to the first in the same container. */
+async function databaseFor(firstUrl, date) {
+  const name = `rehearsly_e2e_${date.replace(/-/g, '')}`;
+  const client = new pg.Client({ connectionString: firstUrl });
+  await client.connect();
+  try {
+    await client.query(`DROP DATABASE IF EXISTS ${name}`);
+    await client.query(`CREATE DATABASE ${name}`);
+  } finally {
+    await client.end();
+  }
+  const url = new URL(firstUrl);
+  url.pathname = `/${name}`;
+  assertLocalDatabase(url.href);
+  return url.href;
+}
+
+/** What a day's seed gives the flows, as Maestro's -e variables. */
+function variablesFor(seeded, udid) {
+  const variables = ['-e', `PASSWORD=${seeded.password}`, '-e', `APP_ID=${BUNDLE_ID}`,
+    '-e', `API_URL=${API_URL}`, '-e', `MAIL_URL=${MAIL_URL}`, '-e', `SIMULATOR=${udid}`,
+    ...Object.entries(seeded.people).flatMap(([key, person]) => ['-e', `${key.toUpperCase()}_EMAIL=${person.email}`]),
+    ...Object.entries(seeded.invites).flatMap(([key, code]) => ['-e', `${key.toUpperCase()}_INVITE=${code}`]),
+    ...Object.entries(seeded.days).flatMap(([key, date]) => ['-e', `${key.toUpperCase()}_DAY=${date}`]),
+    ...Object.entries(seeded.times).flatMap(([key, time]) => ['-e', `${key.toUpperCase()}_TIME=${time}`]),
+    ...Object.entries(seeded.labels).flatMap(([key, label]) => ['-e', `${key.toUpperCase()}_LABEL=${label}`]),
+    ...Object.entries(seeded.rehearsals).flatMap(([key, id]) => ['-e', `${key.toUpperCase()}_REHEARSAL=${id}`])];
+  return variables;
+}
+
+/** The flows to run, one file each, in the order Maestro ran the folder: by name. */
+function flowFiles(given) {
+  return (given.length ? given : [path.join(E2E, 'flows')]).flatMap((entry) => (fs.statSync(entry).isDirectory()
+    ? fs.readdirSync(entry).filter((name) => /\.ya?ml$/.test(name) && name !== 'config.yaml').sort().map((name) => path.join(entry, name))
+    : [entry]));
+}
+
+/** Maestro's name for a run's folder, which the supervisor's pruning looks for (YYYY-MM-DD_HHMMSS). */
+function runStamp(at = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}_${pad(at.getHours())}${pad(at.getMinutes())}${pad(at.getSeconds())}`;
+}
+
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   await environment(async () => {
@@ -376,50 +509,13 @@ async function main() {
   assertLocalDatabase(databaseUrl);
 
   step('provisioning the canonical schema');
-  const migrateLog = fs.openSync(path.join(OUT, 'migrate.log'), 'w');
-  execFileSync(process.execPath, ['scripts/migrate.js', '--fresh'], {
-    cwd: SERVER,
-    env: { PATH: process.env.PATH, HOME: os.homedir(), DATABASE_URL: databaseUrl },
-    stdio: ['ignore', migrateLog, migrateLog],
-    timeout: 120000,
-  });
+  migrate(databaseUrl);
 
   step('starting the local server');
-  // server.js through server-with-mailbox.mjs: the codes it mails stay in that
-  // process, and the flows read them from MAIL_URL.
-  background('server', process.execPath, [path.join(E2E, 'server-with-mailbox.mjs')], {
-    cwd: SERVER,
-    env: {
-      PATH: process.env.PATH,
-      HOME: os.homedir(),
-      NODE_ENV: 'development',
-      PORT: String(API_PORT),
-      HOST: API_HOST,
-      DATABASE_URL: databaseUrl,
-      JWT_SECRET: randomBytes(32).toString('base64'),
-      CRON_SECRET: randomBytes(32).toString('base64'),
-      BASE_URL: `http://${API_HOST}:${API_PORT}`,
-      EMAIL_TRANSPORT: 'capture-for-tests',
-      // A flow that plays a phone puts a push token on this server
-      // (e2e/device); a send to it must not reach Expo. Nothing listens here.
-      EXPO_BASE_URL: 'http://127.0.0.1:9',
-      MAIL_HOST: API_HOST,
-      MAIL_PORT: String(MAIL_PORT),
-    },
-  });
-  await waitFor('the local server', async () => (await fetch(`${API_URL}/ready`)).ok, 30000);
-  await waitFor('the mailbox', async () => (await fetch(`${MAIL_URL}/code?to=`)).status === 404, 10000);
+  let server = await startServer(databaseUrl);
 
   step('seeding');
-  const client = new pg.Client({ connectionString: databaseUrl });
-  await client.connect();
-  let seeded;
-  try {
-    seeded = await seed({ client, apiUrl: API_URL, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-  } finally {
-    await client.end();
-  }
-  fs.writeFileSync(path.join(OUT, 'seed.json'), JSON.stringify(seeded, null, 2));
+  let day = await seedDay(databaseUrl);
 
   step('starting Metro, pointed at the local server');
   // Not CI mode: it turns the file watcher off, and an edit would never reach
@@ -481,31 +577,61 @@ async function main() {
   simctl('install', udid, APP);
   watchReportedAddress(udid);
 
-  const variables = ['-e', `PASSWORD=${seeded.password}`, '-e', `APP_ID=${BUNDLE_ID}`,
-    '-e', `API_URL=${API_URL}`, '-e', `MAIL_URL=${MAIL_URL}`, '-e', `SIMULATOR=${udid}`,
-    ...Object.entries(seeded.people).flatMap(([key, person]) => ['-e', `${key.toUpperCase()}_EMAIL=${person.email}`]),
-    ...Object.entries(seeded.invites).flatMap(([key, code]) => ['-e', `${key.toUpperCase()}_INVITE=${code}`]),
-    ...Object.entries(seeded.days).flatMap(([key, date]) => ['-e', `${key.toUpperCase()}_DAY=${date}`]),
-    ...Object.entries(seeded.times).flatMap(([key, time]) => ['-e', `${key.toUpperCase()}_TIME=${time}`]),
-    ...Object.entries(seeded.labels).flatMap(([key, label]) => ['-e', `${key.toUpperCase()}_LABEL=${label}`]),
-    ...Object.entries(seeded.rehearsals).flatMap(([key, id]) => ['-e', `${key.toUpperCase()}_REHEARSAL=${id}`])];
-
   if (stayUp) {
     step(`up. Simulator ${udid}; server ${API_URL}; seed in ${path.join(OUT, 'seed.json')}`);
-    step(`password for every account: ${seeded.password}. Ctrl-C takes it all down.`);
+    step(`password for every account: ${day.seeded.password}. Ctrl-C takes it all down.`);
     setInterval(() => {}, 1 << 30);
     await new Promise(() => {});
   }
 
   step('running the flows');
-  try {
-    execFileSync(MAESTRO, ['--device', udid, 'test', ...(flows.length ? flows : [path.join(E2E, 'flows')]),
-      '--format', 'junit', '--output', path.join(OUT, 'junit.xml'),
-      '--test-output-dir', path.join(OUT, 'artifacts'), ...variables], { stdio: 'inherit', env: MAESTRO_ENV });
-  } catch {
-    process.exitCode = 1;
+  // One folder for the run's artifacts, as one Maestro made it: the
+  // supervisor keeps the newest folder of a red run (maestro-artifacts.txt).
+  const artifacts = path.join(OUT, 'artifacts', runStamp());
+  const parts = path.join(OUT, 'junit-parts');
+  fs.rmSync(parts, { recursive: true, force: true });
+  fs.mkdirSync(parts, { recursive: true });
+  const reports = [];
+  const earlierTaps = [];
+  const queue = flowFiles(flows);
+  for (let index = 0; index < queue.length;) {
+    if (localDate(0) !== day.date) {
+      step(`the day turned (${day.date} → ${localDate(0)}): a new database, server and seed for it`);
+      await stopServer(server);
+      earlierTaps.push(...tapsAgain());
+      const url = await databaseFor(databaseUrl, localDate(0));
+      migrate(url, { append: true });
+      server = await startServer(url, { append: true });
+      day = await seedDay(url);
+    }
+    const fit = Math.floor(untilMidnight() / FLOW_BOUND_MS);
+    if (!fit) {
+      step(`midnight in ${Math.ceil(untilMidnight() / 1000)} s, before a flow could end: waiting for it`);
+      await sleep(untilMidnight() + 1000);
+      continue;
+    }
+    const batch = queue.slice(index, index + fit);
+    index += batch.length;
+    const report = path.join(parts, `${String(reports.length).padStart(3, '0')}.xml`);
+    let code = 0;
+    try {
+      execFileSync(MAESTRO, ['--device', udid, 'test', ...batch, '--format', 'junit', '--output', report,
+        '--test-output-dir', artifacts, ...variablesFor(day.seeded, udid)], { stdio: 'inherit', env: MAESTRO_ENV });
+    } catch (error) {
+      code = error.status ?? 1;
+      process.exitCode = 1;
+    }
+    reports.push({ files: batch.map((flow) => path.relative(ROOT, flow)), xml: fs.existsSync(report) ? fs.readFileSync(report, 'utf8') : null, code });
+    // After every flow, so a run cut short still says what it ran.
+    fs.writeFileSync(path.join(OUT, 'junit.xml'), mergeJunit(reports));
   }
-  reportTapsAgain();
+  reportTapsAgain(earlierTaps);
+}
+
+/** The taps the server running now was told of; it starts its log afresh (server-with-mailbox.mjs). */
+function tapsAgain() {
+  const log = path.join(OUT, 'taps-again.log');
+  return fs.existsSync(log) ? fs.readFileSync(log, 'utf8').split('\n').filter(Boolean) : [];
 }
 
 /**
@@ -514,9 +640,8 @@ async function main() {
  * Maestro reports it done (docs/e2e.md, T-207). Printed every run, so how often
  * it happens stays in sight.
  */
-function reportTapsAgain() {
-  const log = path.join(OUT, 'taps-again.log');
-  const lines = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').split('\n').filter(Boolean) : [];
+function reportTapsAgain(earlier = []) {
+  const lines = [...earlier, ...tapsAgain()];
   step(`taps taken again (tap-and-see.yaml): ${lines.length}`);
   for (const line of lines) step(`  ${line}`);
 }
