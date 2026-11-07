@@ -1,0 +1,38 @@
+T-234 green after.
+
+1. The fix with the same slow sign-in: flow 42 as fixed (hold between
+   sign-in-fill.yaml and sign-in-submit.yaml), the same 65 s wait put before
+   sign-in-fill.yaml for this run only.
+
+$ npm run e2e -- e2e/flows/42-details-count-projects-late.yaml
+[Passed] Details count when the projects come late (2m 53s)
+
+1/1 Flow Passed in 2m 53s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+$ grep "e2e\]" e2e/out/server.log
+[e2e] server listening
+[e2e] mailbox on 127.0.0.1:3002
+[e2e] holding the request GET /api/native/projects, its connection open
+[e2e] released GET /api/native/projects: the server answered 200
+
+2. As committed (no wait), with flow 01 for sign-in.yaml -> sign-in-form.yaml,
+   now its two halves:
+
+$ npm run e2e -- e2e/flows/42-details-count-projects-late.yaml e2e/flows/01-login.yaml
+[Passed] Details count when the projects come late (2m 22s)
+[Passed] Sign in (42s)
+
+2/2 Flows Passed in 3m 4s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+$ grep "e2e\]" e2e/out/server.log
+[e2e] server listening
+[e2e] mailbox on 127.0.0.1:3002
+[e2e] holding the request GET /api/native/projects, its connection open
+[e2e] released GET /api/native/projects: the server answered 200
+
+The bug flow 42 guards (the details dropped an admin's count when the
+participants answered before the projects, and never asked again) has not come
+back: with the projects really held, "0/1" was not there before the release
+and came after it.

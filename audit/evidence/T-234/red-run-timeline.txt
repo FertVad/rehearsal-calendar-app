@@ -1,0 +1,33 @@
+T-234 red run: supervisor's checks on T-229, 0fc37bc, 2026-11-07
+(e2e/out/failed/T-229-2026-11-07T15-15-54-322Z, Maestro folder
+e2e/out/artifacts/2026-11-07_170844, not in git).
+
+checks.log:
+  [Failed] Details count when the projects come late (2m 34s) (Assertion is false: "0/1" is not visible)
+  [e2e] taps taken again (tap-and-see.yaml): 0
+
+The failed step is `assertNotVisible: "0/1"`, before the release: the count
+was on screen while the projects should still have been held.
+
+server.log, every [e2e] line of the run (4 flows):
+  [e2e] server listening
+  [e2e] mailbox on 127.0.0.1:3002
+  [e2e] pushed role_changed about Verona Square to the simulator
+No "holding the request GET /api/native/projects": the hold caught nothing.
+
+commands.json of flow 42 (epoch ms; status; duration ms):
+  1794064227056  runScript hold-answers.js (OPEN)            COMPLETED  1923
+                 -> hold made at ~1794064228979, lapses at +60000 (HOLD_WINDOW_MS)
+  1794064228983  runFlow sign-in-form.yaml                    COMPLETED  75309
+  1794064242818    retry: email                               COMPLETED  45733
+  1794064251814      assertVisible "olga@e2e.test" login-email FAILED   17374
+                     (cold keyboard dropped the typing; the retry erased and typed again)
+  1794064294829    tap login-submit (tap-and-see)             COMPLETED  2248
+                     -> 67.8 s after the hold: past its minute
+  1794064297252    login-submit gone (first tap took, no tap again)
+
+So the projects the sign-in asked for came at once, Olga was an admin
+before the details opened, and "0/1" was there when the flow said it must not
+be. Not a lost tap (no tap taken again, the submit button went at once), not
+the app: the flow's hold was made before steps of unknown length and its
+minute ran out on them.

@@ -14,7 +14,17 @@ tags:
 - launchApp:
     clearState: true
     clearKeychain: true
-# Her projects held, the connection open, until the release below.
+- runFlow:
+    file: ../subflows/sign-in-fill.yaml
+    env:
+      EMAIL: ${OLGA_EMAIL}
+# Her projects held, the connection open, until the release below. The hold
+# goes on once the form is filled, just before the tap that asks for them: a
+# hold lapses a minute after it is made, and the typing before it may take
+# longer — the keyboard of a cold launch drops what is typed and the email
+# goes in again. Held before the typing, the sign-in of a red run (T-234)
+# asked for the projects 68 s later, the hold was gone, and they came at once,
+# with the count.
 - runScript:
     file: ../scripts/hold-answers.js
     env:
@@ -23,9 +33,7 @@ tags:
       PATH: "^/api/native/projects$"
       OPEN: "1"
 - runFlow:
-    file: ../subflows/sign-in-form.yaml
-    env:
-      EMAIL: ${OLGA_EMAIL}
+    file: ../subflows/sign-in-submit.yaml
 - extendedWaitUntil:
     visible:
       id: calendar-filter

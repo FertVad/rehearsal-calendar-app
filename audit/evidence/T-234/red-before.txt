@@ -1,0 +1,37 @@
+T-234 red before: flow 42 on the old code (0fc37bc), its sign-in slowed down
+as in the red run. Between the hold and sign-in-form.yaml, for this run only:
+
+  - extendedWaitUntil:
+      visible: "T-234 never on screen"
+      timeout: 65000
+      optional: true
+
+(the red run's sign-in took 75 s, the tap came 67.8 s after the hold).
+
+$ npm run e2e -- e2e/flows/42-details-count-projects-late.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs e2e/flows/42-details-count-projects-late.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Details count when the projects come late (3m 6s) (Assertion is false: "0/1" is not visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ grep "e2e\]" e2e/out/server.log
+[e2e] server listening
+[e2e] mailbox on 127.0.0.1:3002
+
+The same failure, the same step, and as in the red run no "holding": the hold
+lapsed before the sign-in asked for the projects.
