@@ -2,6 +2,8 @@
   "ios": {
     "NSCalendarsUsageDescription": "Rehearsly заносит репетиции в ваш календарь. Из событий выбранных календарей берутся только часы, когда вы заняты, — названия остаются при вас.",
     "NSCalendarsFullAccessUsageDescription": "Rehearsly заносит репетиции в ваш календарь. Из событий выбранных календарей берутся только часы, когда вы заняты, — названия остаются при вас.",
-    "NSCalendarsWriteOnlyAccessUsageDescription": "Rehearsly заносит репетиции в ваш календарь."
+    "NSCalendarsWriteOnlyAccessUsageDescription": "Rehearsly заносит репетиции в ваш календарь.",
+    "NSRemindersUsageDescription": "Rehearsly работает только с календарём и не запрашивает доступ к напоминаниям.",
+    "NSRemindersFullAccessUsageDescription": "Rehearsly работает только с календарём и не запрашивает доступ к напоминаниям."
   }
 }
