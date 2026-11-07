@@ -1,10 +1,75 @@
 T-226 — green after: the runner gives each day its own seed
 ============================================================
 
+Source commits:
+- Sections 0a–0c: b1e2692 (the review's fixes on top of b463ff3), HEAD of a
+  tree when they ran, no source file changed (only audit/evidence files
+  being written).
+- Sections 1–4: recorded before b463ff3 was committed, on the working tree
+  whose run.mjs and junit.mjs went into b463ff3; the commit was not written
+  down then, and b1e2692 has since changed run.mjs (the bound, the deadline,
+  the artifacts). They prove the reseed across midnight, which b1e2692 keeps
+  unchanged; section 0a is the same flow on b1e2692.
+
+0a. Flow 41 on b1e2692, far from midnight (06:15 IST)
+-----------------------------------------------------
+$ npm run e2e -- e2e/flows/41-today-selects-today.yaml
+[e2e] running the flows
+[Passed] Today selects today (2m 26s)
+1/1 Flow Passed in 2m 26s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Artifacts, one level as keepFailedRun takes them (artifacts/<run>/<flow>):
+e2e/out/artifacts/2026-11-07_061839:
+  metro.log  server.log  Today selects today  xctest_runner_2026-11-07_061905.log
+e2e/out/artifacts/2026-11-07_061839/Today selects today:
+  commands.json  logs  manifest.json  takeScreenshot
+(b463ff3 left them a level lower: 2026-11-07_055316/2026-11-07_055326/<flow>.)
+
+0b. A wait the supervisor's limit has no room for is not begun (b1e2692)
+-----------------------------------------------------------------------
+America/Bogota (UTC-5), midnight at 05:00 UTC; started about 04:51:50 UTC.
+One flow: the limit is 750 s. Setup done 04:55:15 UTC, 285 s to midnight —
+not one flow fits (5 min), and the wait, the reseed, a Maestro and the flow
+would end past the limit, so the run stops as not ready instead of being
+killed by the supervisor before Maestro:
+
+$ TZ=America/Bogota npm run e2e -- e2e/flows/41-today-selects-today.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[e2e] not ready, not the change: midnight in 285 s, before a flow could end, and a wait for it would outlast the supervisor's limit (750 s for 1 flows) — run it again after 00:00
+(ended 04:55:23 UTC; the "not ready" prefix is printed only for an
+EnvironmentError, exit code 75 — the supervisor's "e2e не поднялись", taken
+again after its 15-minute pause, past midnight.)
+
+0c. The plan against the supervisor's limit, and the artifacts (b1e2692)
+------------------------------------------------------------------------
+$ node --test e2e/__tests__/midnight.test.mjs e2e/__tests__/junit.test.mjs
+✔ the flows of every Maestro, in the order run, under one testsuite
+✔ a Maestro that wrote no report fails each of its flows with its exit code
+✔ the runner's limit is the supervisor's
+✔ the review's path: one flow from 23:47 with a 3 min 19 s setup runs at once and ends in its limit
+✔ the longest flow alone (70, 200 s): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ flow 41 alone (134 s): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ the two longest (70, 26): begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ the task's seven flows: begun any second of the half hour before midnight, ends in the supervisor's limit or stops before it
+✔ far from midnight the whole set is one batch
+✔ the batches' flows are where the supervisor takes a red run's from: artifacts/<run>/<flow>
+ℹ pass 10  ℹ fail 0
+Red on b463ff3's behaviour: review-red-before.txt. npm test runs both files
+now (server/scripts/test.mjs).
+
 The fix (e2e/run.mjs, e2e/junit.mjs, docs/e2e.md "A run past midnight"):
 Maestro gets the flows in batches that end before the machine's midnight (as
-many as fit at 10 minutes a flow; when none fits, the run waits for
-midnight). Before each batch the day is compared with the seed's; a day that
+many as fit at 10 minutes a flow in b463ff3, 5 in b1e2692; when none fits,
+the run waits for midnight, in b1e2692 only if the wait fits the
+supervisor's limit). Before each batch the day is compared with the seed's; a day that
 turned gets a new database in the same container, the server restarted on it
 and the seed made again. Far from midnight the whole set is still one Maestro.
 
