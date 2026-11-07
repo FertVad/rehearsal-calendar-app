@@ -63,6 +63,22 @@ export function nextStep({ now = new Date(), left, deadline = Infinity }) {
 }
 
 /**
+ * The run's exit code: 0 green, 1 a flow failed or the run broke, 75 the
+ * machine not ready. `failed` — a batch already failed; `error` — how the run
+ * stopped early: 'machine' (75's, a stop before midnight among them), another
+ * truthy value for any other error, null when it ran to its end.
+ *
+ * A stop for the machine after a batch failed is still 1 (review of T-226): a
+ * 75 makes the supervisor take the run as the machine's, keep no red result
+ * and register no flake, and a green retry hides the failure.
+ */
+export function exitCode({ failed, error = null }) {
+  if (error === 'machine') return failed ? 1 : 75;
+  if (error) return 1;
+  return failed ? 1 : 0;
+}
+
+/**
  * Maestro puts a folder of its own, named for when it started, under
  * --test-output-dir; with a batch a Maestro the run's folder held one per
  * batch, artifacts/<run>/<batch>/<flow>. The supervisor keeps a red run's

@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { e2eLimitMs, failedFlows, maestroRuns } from '../../../tools/autodev/lib/checks.mjs';
-import { flattenBatches, limitMs, nextStep } from '../midnight.mjs';
+import { exitCode, flattenBatches, limitMs, nextStep } from '../midnight.mjs';
 
 const S = 1000;
 // Measured: a setup of 3 min 19 s (T-226 green) to 3 min 39 s (T-226 red),
@@ -62,6 +62,27 @@ for (const [name, flows] of Object.entries(runs)) {
     }
   });
 }
+
+test('the second review\'s path: a batch failed, then no wait for midnight — the run ends 1, not 75', () => {
+  // Two flows from 23:50, a 3 min 39 s setup: the first a batch of its own,
+  // failed; then midnight too near for a flow and a wait past the limit.
+  const start = new Date(2026, 10, 6, 23, 50).getTime();
+  const deadline = start + limitMs(2);
+  let now = start + SETUP;
+  assert.deepEqual(nextStep({ now: new Date(now), left: 2, deadline }), { take: 1 });
+  now += MAESTRO + 134 * S;
+  const failed = true;
+  assert.ok(nextStep({ now: new Date(now), left: 1, deadline }).stop);
+  assert.equal(exitCode({ failed, error: 'machine' }), 1);
+});
+
+test('a stop for the machine with nothing failed is 75; the other ends as before', () => {
+  assert.equal(exitCode({ failed: false, error: 'machine' }), 75);
+  assert.equal(exitCode({ failed: false, error: 'error' }), 1);
+  assert.equal(exitCode({ failed: true, error: 'error' }), 1);
+  assert.equal(exitCode({ failed: true }), 1);
+  assert.equal(exitCode({ failed: false }), 0);
+});
 
 test('far from midnight the whole set is one batch', () => {
   assert.deepEqual(nextStep({ now: new Date(2026, 10, 6, 9), left: 80 }), { take: 80 });

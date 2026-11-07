@@ -50,7 +50,7 @@ import { fileURLToPath } from 'node:url';
 import { getText } from './http.mjs';
 import { mergeJunit } from './junit.mjs';
 import { takeLock } from './lock.mjs';
-import { flattenBatches, limitMs, nextStep } from './midnight.mjs';
+import { exitCode, flattenBatches, limitMs, nextStep } from './midnight.mjs';
 import { localDate, seed } from './seed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -95,6 +95,8 @@ const forceBuild = argv.includes('--build');
 const flows = argv.filter((arg) => !arg.startsWith('--')).map((flow) => path.resolve(flow));
 
 const step = (text) => console.log(`[e2e] ${text}`);
+/** A batch of flows failed: the run ends 1 however it stops after (exitCode, e2e/midnight.mjs). */
+let flowsFailed = false;
 
 /** The machine is not ready: nothing the change under test did. Exit 75. */
 class EnvironmentError extends Error {}
@@ -621,6 +623,7 @@ async function main() {
         '--test-output-dir', artifacts, ...variablesFor(day.seeded, udid)], { stdio: 'inherit', env: MAESTRO_ENV });
     } catch (error) {
       code = error.status ?? 1;
+      flowsFailed = true;
       process.exitCode = 1;
     }
     flattenBatches(artifacts);
@@ -652,7 +655,8 @@ function reportTapsAgain(earlier = []) {
 main()
   .catch((error) => {
     const machine = error instanceof EnvironmentError;
-    console.error(`[e2e] ${machine ? 'not ready, not the change: ' : ''}${error.message}`);
-    process.exitCode = machine ? 75 : 1;
+    const why = !machine ? '' : flowsFailed ? 'stopped, a flow had already failed (junit.xml): ' : 'not ready, not the change: ';
+    console.error(`[e2e] ${why}${error.message}`);
+    process.exitCode = exitCode({ failed: flowsFailed, error: machine ? 'machine' : 'error' });
   })
   .finally(tearDown);
