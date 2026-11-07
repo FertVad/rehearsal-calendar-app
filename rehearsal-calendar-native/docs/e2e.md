@@ -291,6 +291,14 @@ made on the spot — Expo's servers are never asked, and the server's
 the app is the simulator it is (flow 23). The app's own code has no hook for
 it (flow 38).
 
+A push itself can be delivered: `e2e/scripts/push.js` with `MAIL_URL`,
+`SIMULATOR`, `APP_ID`, `TYPE` (`role_changed`), `PROJECT` and `ROLE` hands the
+simulator what `notifyRoleChanged` sends, its data under `body` as Expo puts
+it for iOS, through `xcrun simctl push`; the app's received-push listener
+gets it as from a phone (flow 75). A role changed on another device:
+`e2e/scripts/set-role.js` with `API_URL`, `EMAIL` (the owner), `PASSWORD`,
+`PROJECT` (a name), `MEMBER` (an address) and `ROLE` (flows 75, 76).
+
 An inbox that grows while the app is open: `e2e/scripts/notify.js` with
 `MAIL_URL`, `EMAIL`, `COUNT` and `TITLE` records `COUNT` notifications through
 the server's own `recordNotifications`, titled "`TITLE` 1" (the oldest) to

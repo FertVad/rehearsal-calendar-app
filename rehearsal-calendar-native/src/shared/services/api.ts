@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { logger } from '../utils/logger';
-import { currentSession, isCurrentSession, reportSessionExpired, SessionEndedError, SessionStamp } from './session';
+import { emitDataChanged } from '../utils/dataChanged';
+import { currentSession,isCurrentSession, reportSessionExpired, SessionEndedError, SessionStamp } from './session';
 
 /**
  * API Configuration
@@ -99,6 +100,8 @@ const REQUEST_TIMEOUT_MS = 10000;
 // as any other request.
 const EMAIL_SEND_TIMEOUT_MS = 8000;
 const sendsEmails = (count: number) => ({ timeout: REQUEST_TIMEOUT_MS + count * EMAIL_SEND_TIMEOUT_MS });
+
+const PROJECTS_LIST = '/native/projects';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -212,6 +215,15 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
 
+    // "Not allowed" to someone signed in: the role the app went by may be
+    // stale — taken away on another device — so the projects, where it is read
+    // from, are read again and the buttons it showed go (T-229). Not for the
+    // list itself, which would ask again after every refusal.
+    if (status === 403 && sentWith && isCurrentSession(originalRequest.session)
+        && !(originalRequest.method === 'get' && url === PROJECTS_LIST)) {
+      emitDataChanged('projects');
+    }
+
     return Promise.reject(error);
   }
 );
@@ -308,7 +320,7 @@ export const authAPI = {
 export const projectsAPI = {
   // Get all projects for authenticated user
   getUserProjects: () =>
-    api.get('/native/projects'),
+    api.get(PROJECTS_LIST),
 
   // Get single project
   getProject: (projectId: string) =>

@@ -49,6 +49,17 @@ export function openProject(
 export function projectSectionOf(type: string): ProjectSection | undefined {
   return type === 'member_joined' ? 'members' : undefined;
 }
+
+/**
+ * A push that changes what the person may do in a project: a role given or
+ * taken, a removal, a deletion. The list of projects — where the role is read
+ * from — is read again at once, received in the app or opened by a tap, so an
+ * admin's buttons come and go when the owner changes the role (T-229).
+ */
+const CHANGES_PROJECTS = new Set(['role_changed', 'member_removed', 'project_deleted']);
+function reloadProjectsFor(data: any) {
+  if (CHANGES_PROJECTS.has(data?.type)) emitDataChanged('projects');
+}
 /**
  * Hook for managing push notifications
  * Should be called once in the root component (App.tsx)
@@ -96,6 +107,7 @@ export function useNotifications() {
         // app was restarted, even though its event had just been written to the
         // calendar.
         emitDataChanged('rehearsals');
+        reloadProjectsFor(notification.request.content.data);
       });
 
       // Listen for user interaction with notification
@@ -106,6 +118,7 @@ export function useNotifications() {
 
         // Navigate based on notification type
         handleNotificationNavigation(data);
+        reloadProjectsFor(data);
 
         if ((data as any)?.notificationId) markRead([Number((data as any).notificationId)]);
         else refresh();
@@ -131,6 +144,7 @@ export function useNotifications() {
 
             const data = response.notification.request.content.data as any;
             handleNotificationNavigation(data);
+            reloadProjectsFor(data);
             if (data?.notificationId) markRead([Number(data.notificationId)]);
             else refresh();
           })

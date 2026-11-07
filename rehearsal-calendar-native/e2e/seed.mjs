@@ -206,6 +206,12 @@ export const PEOPLE = {
   // The calendar's rows (74, T-036): two projects she runs, three rehearsals
   // tomorrow and one the day after, and nobody else in them.
   juliet: { email: 'juliet@e2e.test', firstName: 'Juliet', lastName: 'Capulet', onboarded: true },
+  // An actor whom Gaev makes an admin of their project while the app is open
+  // (T-229): Benvolio is told by a push (75), Mercutio by nothing, and sees it
+  // on coming back to the app (76). Each in no other project, so the planner's
+  // projects are that one or none.
+  benvolio: { email: 'benvolio@e2e.test', firstName: 'Benvolio', lastName: 'Montague', onboarded: true },
+  mercutio: { email: 'mercutio@e2e.test', firstName: 'Mercutio', lastName: 'Escalus', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -519,6 +525,9 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
       [viennaId, ids[key]]);
   }
+  // Actors in them, made admins while the flow runs (75, 76).
+  await joined('Verona Square', 'The public place', 'benvolio');
+  await joined('Verona Masque', 'The Capulet feast', 'mercutio');
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {

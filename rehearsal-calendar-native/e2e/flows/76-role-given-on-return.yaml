@@ -1,0 +1,43 @@
+# A role given with no push to tell of it — notifications off — arrives when
+# the app comes back (T-229). Mercutio is an actor in Verona Masque, and in the
+# planner its slots have no "+ Add". Gaev makes him an admin from another
+# device, and no push comes. He sends the app away and opens it again, not
+# restarted: the projects are read again on the way back, and the slots have
+# "+ Add". The old app read them only at sign-in, so the role waited for a
+# restart.
+appId: ${APP_ID}
+name: Role given, seen on return
+tags:
+  - planner
+  - projects
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MERCUTIO_EMAIL}
+- tapOn: "Planner, tab.*"
+- extendedWaitUntil:
+    visible:
+      id: planner-project
+      text: ".*Verona Masque.*"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "All available"
+    timeout: 15000
+- assertNotVisible: "\\+ Add"
+- runScript:
+    file: ../scripts/set-role.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${GAEV_EMAIL}
+      PASSWORD: ${PASSWORD}
+      PROJECT: "Verona Masque"
+      MEMBER: ${MERCUTIO_EMAIL}
+      ROLE: admin
+- pressKey: Home
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: "\\+ Add"
+    timeout: 15000
+- takeScreenshot: 76-planner-as-admin-on-return

@@ -11,7 +11,7 @@
  * a listener reloads what it owns rather than trying to patch a single record,
  * which is how two copies of the same list start disagreeing.
  */
-type Topic = 'rehearsals';
+type Topic = 'rehearsals' | 'projects';
 
 const listeners = new Map<Topic, Set<() => void>>();
 

@@ -1,0 +1,52 @@
+# A role given while the app is open arrives with its push (T-229). Benvolio
+# is an actor in Verona Square, and in the planner its slots have no "+ Add".
+# Gaev makes him an admin from another device; the server tells him so by a
+# push, delivered here through `xcrun simctl push` (a simulator gets none from
+# Expo). The old app moved the unread count and nothing else: the projects,
+# where the role is read from, were read only at sign-in, and the slots stayed
+# without "+ Add" until a restart. Nothing is pulled, nothing restarted, the
+# app is not sent away.
+appId: ${APP_ID}
+name: Role given by push
+tags:
+  - planner
+  - projects
+  - notifications
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${BENVOLIO_EMAIL}
+- tapOn: "Planner, tab.*"
+- extendedWaitUntil:
+    visible:
+      id: planner-project
+      text: ".*Verona Square.*"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "All available"
+    timeout: 15000
+- assertNotVisible: "\\+ Add"
+- takeScreenshot: 75-planner-as-actor
+- runScript:
+    file: ../scripts/set-role.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${GAEV_EMAIL}
+      PASSWORD: ${PASSWORD}
+      PROJECT: "Verona Square"
+      MEMBER: ${BENVOLIO_EMAIL}
+      ROLE: admin
+- runScript:
+    file: ../scripts/push.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SIMULATOR: ${SIMULATOR}
+      APP_ID: ${APP_ID}
+      TYPE: role_changed
+      PROJECT: "Verona Square"
+      ROLE: admin
+- extendedWaitUntil:
+    visible: "\\+ Add"
+    timeout: 15000
+- takeScreenshot: 75-planner-as-admin

@@ -100,6 +100,13 @@
  *   GET /pasteboard?device=<udid>&text=<t>   `xcrun simctl pbcopy` on that
  *                                            simulator
  *
+ * It delivers a push to the app on the simulator, which receives none from
+ * Expo — as the server's own would arrive (flow 75, T-229):
+ *
+ *   GET /push?device=<udid>&app=<bundle>&type=role_changed&project=<name>&role=<r>
+ *                                            `xcrun simctl push` of what
+ *                                            notifyRoleChanged sends
+ *
  * And it keeps count of the taps the flows had to take again:
  *
  *   GET /tap-again?tap=<what>&see=<what>   e2e/subflows/tap-and-see.yaml did not
@@ -425,6 +432,32 @@ http.createServer((request, response) => {
       return answer(200, { copied: true });
     });
     child.stdin.end(url.searchParams.get('text') || '');
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/push') {
+    const device = url.searchParams.get('device') || '';
+    if (!/^[0-9A-F-]{36}$/i.test(device)) return answer(400, { error: `no simulator ${device}` });
+    const app = url.searchParams.get('app') || '';
+    if (!/^[\w.-]+$/.test(app)) return answer(400, { error: `no app ${app}` });
+    const type = url.searchParams.get('type');
+    const projectName = url.searchParams.get('project') || '';
+    // The data notifyRoleChanged sends (pushNotificationService.js), where
+    // Expo's servers put it for iOS: under "body", which expo-notifications
+    // reads as a remote notification's data.
+    const data = type === 'role_changed'
+      ? { type, projectName, newRole: url.searchParams.get('role') || 'admin' }
+      : null;
+    if (!data) return answer(400, { error: `no push of type ${type}` });
+    const payload = {
+      aps: { alert: { title: 'Role changed', body: `${projectName}: ${data.newRole}` }, sound: 'default' },
+      body: data,
+    };
+    const child = execFile('xcrun', ['simctl', 'push', device, app, '-'], { timeout: 30000 }, (error) => {
+      if (error) return answer(500, { error: String(error) });
+      console.log(`[e2e] pushed ${type} about ${projectName} to the simulator`);
+      return answer(200, { pushed: true });
+    });
+    child.stdin.end(JSON.stringify(payload));
     return;
   }
   if (request.method === 'GET' && url.pathname === '/tap-again') {

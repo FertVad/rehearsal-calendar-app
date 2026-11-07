@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useEffect, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, ReactNode } from 'react';
+import { AppState } from 'react-native';
 import { projectsAPI } from '../shared/services/api';
+import { onDataChanged } from '../shared/utils/dataChanged';
 import { Project } from '../shared/types';
 import { useAuth } from './AuthContext';
 import { logger } from '../shared/utils/logger';
@@ -11,7 +13,8 @@ interface ProjectContextType {
   loading: boolean;
   error: string | null;
   setSelectedProject: (project: Project | null) => void;
-  refreshProjects: () => Promise<void>;
+  /** `quiet`: behind the list on screen, without its skeleton (pull to refresh). */
+  refreshProjects: (options?: { quiet?: boolean }) => Promise<void>;
   createProject: (idempotencyKey: string, name: string, description?: string, timezone?: string) => Promise<Project>;
 }
 
@@ -36,29 +39,59 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     [projects, selectedId]
   );
 
-  const fetchProjects = async () => {
+  // `quiet`: a re-read behind a list already on screen (T-229) — no skeleton
+  // over it, and a failure keeps the list it has rather than replacing it with
+  // an error; the next trigger tries again.
+  const fetchProjects = async ({ quiet = false }: { quiet?: boolean } = {}) => {
     if (!user) return;
     const current = beginLoad();
 
-    setLoading(true);
-    setError(null);
+    if (!quiet) {
+      setLoading(true);
+      setError(null);
+    }
 
     try {
       const response = await projectsAPI.getUserProjects();
       if (!current()) return;
       setProjects(response.data.projects || []);
+      setError(null);
     } catch (err: any) {
       if (!current()) return;
       logger.error('Failed to fetch projects:', err);
-      setError(err.message || 'Failed to load projects');
+      if (!quiet) setError(err.message || 'Failed to load projects');
     } finally {
+      // Whichever load is newest ends the loading, a quiet one included: it
+      // may have overtaken a loud one that set it.
       if (current()) setLoading(false);
     }
   };
 
-  const refreshProjects = async () => {
-    await fetchProjects();
+  const refreshProjects = async (options?: { quiet?: boolean }) => {
+    await fetchProjects(options);
   };
+
+  // The role is the server's, and it changes on another device: the owner
+  // makes someone an admin, removes them, deletes the project. The list used
+  // to be read only at sign-in, after a join and after a delete, so a role
+  // given or taken stayed as it was until the app was restarted (T-229). It is
+  // read again whenever the app comes forward, and whenever something says
+  // the projects changed — a push about a role, a removal or a deletion, a
+  // pull on the projects screen, the server refusing an admin action (403).
+  const latestFetch = useRef(fetchProjects);
+  latestFetch.current = fetchProjects;
+  useEffect(() => {
+    if (!user) return;
+    const reread = () => { latestFetch.current({ quiet: true }); };
+    const offChanged = onDataChanged('projects', reread);
+    const foreground = AppState.addEventListener('change', (state) => {
+      if (state === 'active') reread();
+    });
+    return () => {
+      offChanged();
+      foreground.remove();
+    };
+  }, [user, session]);
 
   const createProject = async (
     idempotencyKey: string, name: string, description?: string, timezone?: string,
