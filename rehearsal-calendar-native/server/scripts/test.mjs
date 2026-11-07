@@ -71,7 +71,7 @@ try {
     runNode(['--test', 'scripts/__tests__/check-secrets.test.mjs'], appDirectory);
     console.log('[tests] Running the e2e lock regressions with real processes.');
     runNode(['--test', 'e2e/__tests__/lock.test.mjs', 'e2e/__tests__/watchdog.test.mjs', 'e2e/__tests__/http.test.mjs',
-      'e2e/__tests__/metro-watch.test.mjs'], appDirectory);
+      'e2e/__tests__/metro-watch.test.mjs', 'e2e/__tests__/junit.test.mjs', 'e2e/__tests__/midnight.test.mjs'], appDirectory);
   }
   await prepareBrowser({ withDeps: mode === 'install' && args.includes('--with-deps') });
   if (mode === 'all' || mode === 'backend') {

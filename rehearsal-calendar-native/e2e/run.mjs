@@ -50,6 +50,7 @@ import { fileURLToPath } from 'node:url';
 import { getText } from './http.mjs';
 import { mergeJunit } from './junit.mjs';
 import { takeLock } from './lock.mjs';
+import { flattenBatches, limitMs, nextStep } from './midnight.mjs';
 import { localDate, seed } from './seed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -372,18 +373,12 @@ function simulator() {
  * server restarted on it, the seed made again. The flows find the world they
  * were written for, as on a run started that morning.
  *
- * A batch is as many flows as fit before midnight at FLOW_BOUND_MS each — the
- * longest flow takes about 3 minutes. When not one fits, the run waits for
- * midnight rather than start a flow the day would turn under: its sign-in
- * on the old day, its calendar on the new. Not one Maestro a flow all the
- * time: each costs some 50 s to start, an hour on the whole set.
+ * A batch is as many flows as fit before midnight at FLOW_BOUND_MS each
+ * (e2e/midnight.mjs). When not one fits, the run waits for midnight rather
+ * than start a flow the day would turn under — unless the wait would outlast
+ * the supervisor's limit; then it stops as not ready. Not one Maestro a flow
+ * all the time: each costs some 50 s to start, an hour on the whole set.
  */
-const FLOW_BOUND_MS = 10 * 60 * 1000;
-
-/** Until the machine's next midnight, in ms. */
-function untilMidnight(now = new Date()) {
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now;
-}
 
 const serverEnv = (databaseUrl) => ({
   PATH: process.env.PATH,
@@ -585,8 +580,9 @@ async function main() {
   }
 
   step('running the flows');
-  // One folder for the run's artifacts, as one Maestro made it: the
-  // supervisor keeps the newest folder of a red run (maestro-artifacts.txt).
+  // One folder for the run's artifacts, a flow's folder in it, as one Maestro
+  // made it: the supervisor keeps the newest folder of a red run
+  // (maestro-artifacts.txt) and from the reviewer's tree its failed flows'.
   const artifacts = path.join(OUT, 'artifacts', runStamp());
   const parts = path.join(OUT, 'junit-parts');
   fs.rmSync(parts, { recursive: true, force: true });
@@ -594,6 +590,8 @@ async function main() {
   const reports = [];
   const earlierTaps = [];
   const queue = flowFiles(flows);
+  // The supervisor's clock started with this process (e2e/midnight.mjs).
+  const deadline = performance.timeOrigin + limitMs(queue.length);
   for (let index = 0; index < queue.length;) {
     if (localDate(0) !== day.date) {
       step(`the day turned (${day.date} → ${localDate(0)}): a new database, server and seed for it`);
@@ -604,13 +602,17 @@ async function main() {
       server = await startServer(url, { append: true });
       day = await seedDay(url);
     }
-    const fit = Math.floor(untilMidnight() / FLOW_BOUND_MS);
-    if (!fit) {
-      step(`midnight in ${Math.ceil(untilMidnight() / 1000)} s, before a flow could end: waiting for it`);
-      await sleep(untilMidnight() + 1000);
+    const next = nextStep({ left: queue.length - index, deadline });
+    if (next.stop) {
+      throw new EnvironmentError(`midnight in ${Math.ceil(next.stop / 1000)} s, before a flow could end, and a wait for it `
+        + `would outlast the supervisor's limit (${Math.round(limitMs(queue.length) / 1000)} s for ${queue.length} flows) — run it again after 00:00`);
+    }
+    if (next.wait) {
+      step(`midnight in ${Math.ceil(next.wait / 1000)} s, before a flow could end: waiting for it`);
+      await sleep(next.wait);
       continue;
     }
-    const batch = queue.slice(index, index + fit);
+    const batch = queue.slice(index, index + next.take);
     index += batch.length;
     const report = path.join(parts, `${String(reports.length).padStart(3, '0')}.xml`);
     let code = 0;
@@ -621,6 +623,7 @@ async function main() {
       code = error.status ?? 1;
       process.exitCode = 1;
     }
+    flattenBatches(artifacts);
     reports.push({ files: batch.map((flow) => path.relative(ROOT, flow)), xml: fs.existsSync(report) ? fs.readFileSync(report, 'utf8') : null, code });
     // After every flow, so a run cut short still says what it ran.
     fs.writeFileSync(path.join(OUT, 'junit.xml'), mergeJunit(reports));

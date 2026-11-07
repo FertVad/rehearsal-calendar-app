@@ -191,15 +191,24 @@ at the machine's midnight. One Maestro over the whole set started at 23:09 ran
 every flow after 00:00 against yesterday's seed: `TODAY_DAY` was a day before
 the app's, and each flow about today failed at once — seven of them on
 T-225 (T-226). So `run.mjs` gives Maestro the flows in batches that end before
-midnight — as many as fit at 10 minutes a flow (`FLOW_BOUND_MS`; the longest
-takes about 3) — and, when not one fits, waits for midnight. Before each batch
+midnight — as many as fit at 5 minutes a flow (`FLOW_BOUND_MS` in
+`e2e/midnight.mjs`: the longest, flow 70, takes 3 min 20 s, and a Maestro 54 s
+to start) — and, when not one fits, waits for midnight. The wait is time the
+supervisor's limit does not give (a setup and 2.5 minutes a flow, 12.5 minutes
+for one; `e2eLimitMs`), so the runner keeps the same deadline from its start:
+a wait it could not end in it — with the new day's seed, a Maestro and the
+flows left at the longest's time each — is not begun, and the run stops as not
+ready (75), to be taken again after midnight. `e2e/__tests__/midnight.test.mjs`
+plays it for any start in the half hour before midnight. Before each batch
 it compares the day with the seed's; a day that turned gets a database of its
 own in the same container (`rehearsly_e2e_<YYYYMMDD>`), the server restarted
 on it and the seed made again, so the next flows get the new day's
 `${…_DAY}`, `${…_LABEL}` and ids. Far from midnight the whole set is one batch,
 one Maestro. The batches' reports are merged into `e2e/out/junit.xml`
 (`e2e/junit.mjs`), rewritten after each, and their screenshots go to one
-folder under `e2e/out/artifacts`, a Maestro folder per batch inside it;
+folder under `e2e/out/artifacts`, a flow's folder in it as from one Maestro —
+each batch's Maestro folder is emptied into it, where the supervisor takes a
+red run's failed flows from (`artifacts/<run>/<flow>`);
 `server.log` and `migrate.log` go on across the days, and `seed.json` is the
 last day's.
 
