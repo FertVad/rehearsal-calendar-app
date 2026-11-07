@@ -47,6 +47,15 @@ CREATE TABLE native_notifications (
   title TEXT, body TEXT, data JSONB, related_type TEXT, related_id INTEGER,
   read_at TIMESTAMPTZ, sent_at TIMESTAMPTZ, created_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- Canonical shape (init-native-schema.sql; migration 006): marking "seen"
+-- claims its announcement here in the mark's own transaction (T-034).
+CREATE TABLE native_push_reminders (
+  id SERIAL PRIMARY KEY,
+  rehearsal_id INTEGER NOT NULL REFERENCES native_rehearsals(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES native_users(id) ON DELETE CASCADE,
+  reminder_type VARCHAR(10) NOT NULL, sent_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (rehearsal_id, user_id, reminder_type)
+);
 CREATE TABLE r0_transaction_probe (id SERIAL PRIMARY KEY, value TEXT NOT NULL);
 
 -- Reproducible synthetic seed: owner=1, member=2, outsider=3, project=1.

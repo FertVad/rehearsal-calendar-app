@@ -1,0 +1,25 @@
+T-049 — flow 13 with LOSE (hold-answers.js) instead of the seed's pg_sleep(13).
+Run: npm run e2e -- e2e/flows/13-create-project-lost-answer.yaml, 05.11.2026.
+
+[Passed] A create tapped again after its answer was lost makes one project (2m 43s)
+1/1 Flow Passed in 2m 43s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+e2e/out/server.log — the first POST handled, its connection closed with no
+answer; the second with the same key answered with the same project:
+
+1201:[e2e] handling the request POST /api/native/projects (key mw3j07s5-0596do841u-pmhugd4a1s), to lose its answer
+1202:[e2e] lost the answer to POST /api/native/projects (key mw3j07s5-0596do841u-pmhugd4a1s): the server answered 201 with id 42, its connection closed, no answer
+1203:[e2e] POST /api/native/projects again with the key of a lost answer (mw3j07s5-0596do841u-pmhugd4a1s): the server answered 201 with id 42, the lost one had id 42
+
+e2e/out/metro.log — the first request failed with a network error; the next
+is the app's own (the second tap). iOS did not send the POST again by itself:
+one request per tap, one "handling" line in server.log for the lost one (T-048).
+
+42: LOG  [DEBUG] Request: POST /native/projects undefined
+43: ERROR  [ERROR] Response Error: Network Error POST /native/projects undefined
+44: LOG  [DEBUG] Request: POST /native/projects undefined
+45: LOG  [DEBUG] Response: 201 POST /native/projects
+
+No ten seconds of iOS anywhere in it: the error comes as soon as the server
+has answered (the flow waits for "Network Error", not "timeout").

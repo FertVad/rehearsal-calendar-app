@@ -16,7 +16,10 @@ tags:
 - extendedWaitUntil:
     visible: ".*Name-day toast.*"
     timeout: 15000
-# The next "read" only, past the app's ten seconds: it does not come back.
+# The next "read" only is held on its way, and fails when released: its
+# connection closed, not handed to the server. Not left to iOS's ten seconds,
+# which it need not keep (T-220): the failure comes when the flow says, after
+# "Mark all read" has landed.
 - runScript:
     file: ../scripts/hold-answers.js
     env:
@@ -24,6 +27,7 @@ tags:
       METHOD: POST
       PATH: "^/api/native/notifications/read$"
       BEFORE: "1"
+      DROP: "1"
       MS: "30000"
       ONCE: "1"
 - tapOn: ".*Brickworks shift.*"
@@ -31,14 +35,15 @@ tags:
 - extendedWaitUntil:
     notVisible: "Mark all read"
     timeout: 10000
-# The first "read" gives up at ten seconds. The button would be back by then.
-- extendedWaitUntil:
-    visible: "Mark all read"
-    timeout: 20000
-    optional: true
-- assertNotVisible: "Mark all read"
-- takeScreenshot: 36-still-read
+# Now the first "read" fails. The old screen put the button back at once.
 - runScript:
     file: ../scripts/release-answers.js
     env:
       MAIL_URL: ${MAIL_URL}
+      EXPECT: "1"
+- extendedWaitUntil:
+    visible: "Mark all read"
+    timeout: 5000
+    optional: true
+- assertNotVisible: "Mark all read"
+- takeScreenshot: 36-still-read

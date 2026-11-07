@@ -1,0 +1,390 @@
+# One colour for doing and choosing: purple (T-031, owner 04.11 after the
+# audit of 29.10, s03-6). Blue #3B82F6 stood beside it with no meaning of its
+# own: today's ring in the day strip, a rehearsal's project and its folder,
+# the eye of a rehearsal seen, the details' date and project icons, an
+# admin's role on a project's page and the make-admin icon, the notifications
+# and timezone icons of the profile, the people icon of onboarding's welcome.
+# Now today is ringed in purple and the day picked filled with #9333EA; the
+# eye seen is purple, unseen grey; the project is grey text; the icons sit on
+# purple.
+#
+# Each of those screens is looked over whole: nothing on it within a few
+# shades of #3B82F6. Avatars keep their colours, blue among them, so the two
+# signed in here have avatars of other colours — Titania's green, Perdita's
+# violet. Titania is the admin of Athens Wood, Gaev its owner, and on its one
+# rehearsal, tomorrow; she marks it seen. Perdita is new and only looks at
+# the welcome step, which flow 32 goes on from.
+#
+# The month calendars too (T-031 review): the rehearsal form's and the
+# availability editor's. Tomorrow picked is filled with #9333EA under its
+# white digit, not #A855F7 (3.96:1); today is a purple ring around a digit
+# of the text's colour, not a purple digit (4.37:1); the form's arrows are
+# purple, not the library's blue.
+#
+# The details' time (T-047): its clock is grey as the day's calendar, not
+# purple; the facts' rows hold nothing purple.
+appId: ${APP_ID}
+name: Nothing is blue, purple is doing and choosing
+tags:
+  - calendar
+  - rehearsals
+  - seen
+  - projects
+  - profile
+  - onboarding
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${TITANIA_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Moonlit dance.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      rightOf: ".*Moonlit dance.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    id: seen-toggle
+    rightOf: ".*Moonlit dance.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      rightOf: ".*Moonlit dance.*"
+      selected: true
+    timeout: 10000
+# The strip with today in it, ringed and picked, and the card: its project,
+# the eye seen.
+- scrollUntilVisible:
+    element:
+      id: calendar-strip
+    direction: UP
+- waitForAnimationToEnd
+- assertVisible: ".*Moonlit dance.*"
+- takeScreenshot: 71-calendar
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-calendar
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+
+# The details: date and project, her own eye, the count an admin sees.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Moonlit dance.*"
+      SEE: "Participants"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-seen-count
+    timeout: 10000
+- assertVisible:
+    id: own-seen-toggle
+    selected: true
+- waitForAnimationToEnd
+- takeScreenshot: 71-rehearsal-details
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-rehearsal-details
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+# The facts' rows, under the sheet's header (Close and Edit are purple) and
+# above the divider (the seen count's eye is): nothing purple. The time's
+# clock was #A855F7, meaning nothing and doing nothing (T-047); it is grey
+# #8B949E like the day's calendar above it, a 20-point glyph.
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-rehearsal-details
+      COLOUR: "#a855f7"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.39"
+      BOTTOM: "0.61"
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-rehearsal-details
+      COLOUR: "#8b949e"
+      TOLERANCE: "20"
+      MIN_WIDTH: "14"
+      LEFT: "0.03"
+      RIGHT: "0.12"
+      TOP: "0.45"
+      BOTTOM: "0.505"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Close"
+      GONE: "Participants"
+      WAIT_MS: "10000"
+
+# The project's page: Gaev the owner, Titania the admin.
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Athens Wood.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Athens Wood.*"
+      SEE: ".*Upcoming Rehearsals.*"
+      WAIT_MS: "15000"
+- scrollUntilVisible:
+    element: ".*Titania Queen.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- assertVisible: ".*Leonid Gaev.*"
+- takeScreenshot: 71-project
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-project
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+# Her own row, managed: the make-admin icon. Cancelled, nothing changes.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Titania Queen.*"
+      SEE: "Manage Member"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 71-manage-member
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-manage-member
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Cancel"
+      GONE: "Manage Member"
+      WAIT_MS: "10000"
+
+# The profile's settings: notifications and timezone among them.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: profile-timezone
+- assertVisible:
+    id: profile-notifications
+- waitForAnimationToEnd
+- takeScreenshot: 71-profile
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-profile
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"
+
+# The rehearsal form's month (T-031 review): the day picked, tomorrow, is
+# filled with #9333EA, not #A855F7, under its white digit; today is ringed.
+- tapOn:
+    id: tab-create
+- tapOn: "Create Rehearsal"
+- extendedWaitUntil:
+    visible: "Add Rehearsal"
+    timeout: 10000
+- tapOn:
+    id: rehearsal-date
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-date-calendar
+    timeout: 5000
+- runFlow:
+    when:
+      visible:
+        id: rehearsal-date-calendar.day_${TOMORROW_DAY}
+    commands:
+      - tapOn:
+          id: rehearsal-date-calendar.day_${TOMORROW_DAY}
+- waitForAnimationToEnd
+- takeScreenshot: 71-form-month
+# The month, under the date field and above the bottom button: the day
+# picked is a fill of #9333EA, a day wide; the only #A855F7 in its days is
+# today's ring, a day wide (the old purple digit beside the purple fill was
+# two); the arrows are not the library's blue #00BBF2.
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-form-month
+      COLOUR: "#9333ea"
+      TOLERANCE: "12"
+      MIN_WIDTH: "30"
+      MIN_HEIGHT: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.5"
+      BOTTOM: "0.87"
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-form-month
+      COLOUR: "#a855f7"
+      # Narrow: the white digit's edge on the #9333EA fill blends through
+      # colours within 12 of #A855F7.
+      TOLERANCE: "4"
+      MIN_WIDTH: "30"
+      MAX_WIDTH: "46"
+      MAX_HEIGHT: "46"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.5"
+      BOTTOM: "0.87"
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-form-month
+      COLOUR: "#00bbf2"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.44"
+      BOTTOM: "0.87"
+- tapOn:
+    id: header-cancel
+- runFlow:
+    when:
+      visible: "Don't Save"
+    commands:
+      - tapOn: "Don't Save"
+- extendedWaitUntil:
+    notVisible:
+      id: header-cancel
+    timeout: 10000
+
+# The availability month: tomorrow picked, today ringed.
+- tapOn:
+    id: tab-create
+- tapOn: "Mark Busy"
+- scrollUntilVisible:
+    element:
+      id: day-${TOMORROW_DAY}
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- runFlow:
+    file: ../subflows/day-in-reach.yaml
+    env:
+      DAY: ${TOMORROW_DAY}
+- tapOn:
+    id: day-${TOMORROW_DAY}
+- waitForAnimationToEnd
+- takeScreenshot: 71-availability-month
+# The days, under the legend and above the day's sheet: tomorrow a fill of
+# #9333EA; today, when its week is in sight, a ring of #A855F7 a day wide
+# and nothing else of it (it was a purple digit on a tint, beside a purple
+# fill).
+- runScript:
+    file: ../scripts/icon-size.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-availability-month
+      COLOUR: "#9333ea"
+      TOLERANCE: "12"
+      MIN_WIDTH: "30"
+      MIN_HEIGHT: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.2"
+      BOTTOM: "0.45"
+- runFlow:
+    when:
+      visible:
+        id: day-${TODAY_DAY}
+        below:
+          id: availability-legend
+    commands:
+      - runScript:
+          file: ../scripts/icon-size.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+            SHOT: 71-availability-month
+            COLOUR: "#a855f7"
+            TOLERANCE: "4"
+            MIN_WIDTH: "30"
+            # A day here is 47 pt; two are 94.
+            MAX_WIDTH: "60"
+            MAX_HEIGHT: "60"
+            LEFT: "0"
+            RIGHT: "1"
+            TOP: "0.2"
+            BOTTOM: "0.45"
+- tapOn:
+    id: header-cancel
+- runFlow:
+    when:
+      visible: "Don't Save"
+    commands:
+      - tapOn: "Don't Save"
+
+# Onboarding's welcome, for someone new.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${PERDITA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: onboarding-skip
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 71-onboarding-welcome
+- runScript:
+    file: ../scripts/no-ink.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 71-onboarding-welcome
+      COLOUR: "#3b82f6"
+      TOLERANCE: "30"
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0"
+      BOTTOM: "1"

@@ -17,6 +17,7 @@ jest.mock('expo-constants', () => ({
 jest.mock('../../../../shared/services/api', () => ({
   authAPI: { registerPushToken: jest.fn(), unregisterPushToken: jest.fn(() => Promise.resolve()) },
   supportPageUrl: (language: string) => `http://127.0.0.1:3001/support?lang=${language}`,
+  privacyPageUrl: (language: string) => `http://127.0.0.1:3001/privacy?lang=${language}`,
 }));
 jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { firstName: 'Masha', email: 'm@example.com' }, loading: false }),
@@ -59,6 +60,30 @@ it('opens the support page in the app’s language from Help', async () => {
   const view = await profile();
   fireEvent.press(view.getByText('Помощь'));
   expect(mockOpenURL).toHaveBeenCalledWith('http://127.0.0.1:3001/support?lang=ru');
+});
+
+// T-039: the policy was reachable only from the foot of the support page;
+// App Review 5.1.1 wants it opened from the app itself.
+it.each([
+  ['en', 'Privacy Policy'],
+  ['ru', 'Политика конфиденциальности'],
+  ['es', 'Política de privacidad'],
+  ['de', 'Datenschutzerklärung'],
+])('opens the privacy policy in the app’s language (%s)', async (language, label) => {
+  mockLanguage.current = language;
+  const view = await profile();
+  fireEvent.press(view.getByText(label));
+  expect(mockOpenURL).toHaveBeenCalledWith(`http://127.0.0.1:3001/privacy?lang=${language}`);
+});
+
+it('puts the policy between Help and Report a Bug', async () => {
+  mockLanguage.current = 'en';
+  const view = await profile();
+  // In the tree's order, the screen's from the top.
+  const ids = view
+    .getAllByTestId(/^profile-(help|privacy|report-bug)$/)
+    .map((row) => row.props.testID);
+  expect(ids).toEqual(['profile-help', 'profile-privacy', 'profile-report-bug']);
 });
 
 it('shows the version the app was built as, not one written into the screen', async () => {

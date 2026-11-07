@@ -14,7 +14,7 @@
       "backgroundColor": "#0d1117"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.rehearsal.app",
       "buildNumber": "1",
       "associatedDomains": ["applinks:rehearsly.me"],
@@ -33,12 +33,16 @@
           }
         ],
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCalendarsUsageDescription": "This app needs access to your calendar to sync rehearsals and show your availability.",
-        "NSCalendarsFullAccessUsageDescription": "This app needs full access to your calendar to sync rehearsals and import events as availability slots.",
-        "NSCalendarsWriteOnlyAccessUsageDescription": "This app needs write access to your calendar to export rehearsals.",
-        "NSRemindersUsageDescription": "This app may set reminders for your rehearsals.",
-        "NSRemindersFullAccessUsageDescription": "This app needs full access to reminders for rehearsal notifications."
+        "NSCalendarsUsageDescription": "Rehearsly adds your rehearsals to your calendar. From the calendars you pick it takes only the hours you are busy, never what your events are called.",
+        "NSCalendarsFullAccessUsageDescription": "Rehearsly adds your rehearsals to your calendar. From the calendars you pick it takes only the hours you are busy, never what your events are called.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "Rehearsly adds your rehearsals to your calendar."
       }
+    },
+    "locales": {
+      "en": "./locales/en.json",
+      "ru": "./locales/ru.json",
+      "es": "./locales/es.json",
+      "de": "./locales/de.json"
     },
     "android": {
       "versionCode": 1,
@@ -87,7 +91,13 @@
           "color": "#A855F7"
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-calendar",
+        {
+          "remindersPermission": false
+        }
+      ]
     ],
     "extra": {
       "eas": {

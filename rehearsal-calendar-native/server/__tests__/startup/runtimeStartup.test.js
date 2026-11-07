@@ -70,7 +70,7 @@ test('an owned standalone child exits when its parent IPC channel closes', async
   expect(endpoint.connections).toBe(0);
 });
 
-test('failed initialization is shared, cached and cannot take public routes offline', async () => {
+test('failed initialization is shared, not retried within the pause and cannot take public routes offline', async () => {
   const endpoint = await refusal();
   const fixture = copied({ databaseUrl: endpoint.url });
   await fixture.start({ mode: 'framework', vercel: true });
@@ -102,15 +102,19 @@ test('failed initialization is shared, cached and cannot take public routes offl
   expect(fixture.connectionAttempts).toBe(1);
 });
 
-test('an owned stalled PostgreSQL handshake is bounded and not retried by following requests', async () => {
+test('an owned stalled PostgreSQL handshake is bounded and not retried by requests within the pause', async () => {
   const endpoint = await refusal({ stall: true });
   const fixture = copied({ databaseUrl: endpoint.url });
   await fixture.start();
   const started = Date.now();
-  const response = await fixture.request('/api/ready', { timeoutMs: 6500 });
+  // The 10 s connection timeout (database/db.js) bounds the handshake.
+  const response = await fixture.request('/api/ready', { timeoutMs: 14000 });
   expect(response.status).toBe(503);
   expect(response.body).toEqual({ status: 'unavailable' });
-  expect(Date.now() - started).toBeLessThan(5500);
+  const elapsed = Date.now() - started;
+  // Not cut at the 2 s queued-acquisition deadline: a waking Neon gets 10 s.
+  expect(elapsed).toBeGreaterThanOrEqual(9000);
+  expect(elapsed).toBeLessThan(13000);
   expect(endpoint.connections).toBe(1);
   await publicPages(fixture);
   expect((await fixture.request('/api/ready')).status).toBe(503);

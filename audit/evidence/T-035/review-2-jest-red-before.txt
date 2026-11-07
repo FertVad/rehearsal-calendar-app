@@ -1,0 +1,27 @@
+T-035 review 2 - red before.
+WeeklyCalendar.tsx restored from 379e833 (git restore --source=379e833), tests of 447ec6b.
+npx jest --selectProjects frontend --testPathPatterns 'WeeklyCalendar.test' (Node 22)
+
+FAIL frontend src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx (25.321 s)
+  ...
+  The day strip as a wheel
+    ...
+    let go by the finger
+      ✕ chooses nothing on a let-go with speed on a day's edge, then once where it rests (798 ms)
+      ✓ chooses the day let go on when no momentum follows (849 ms)
+  ...
+
+  ● The day strip as a wheel › let go by the finger › chooses nothing on a let-go with speed on a day's edge, then once where it rests
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: "2030-01-11"
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 21 passed, 22 total
+
+The let-go on the 11th, with speed 1.8 and a momentum begun, handed the 11th
+to the list at once; the strip came to rest on the 14th.

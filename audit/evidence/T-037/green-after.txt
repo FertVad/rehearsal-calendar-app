@@ -1,0 +1,29 @@
+T-037 green after (rehearsal-calendar-native/server, Node 22).
+
+1. NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/startup/runtimeRetry.test.js
+PASS __tests__/startup/runtimeRetry.test.js
+  ✓ the pause is a bounded number of seconds (12 ms)
+  ✓ a failed attempt answers 503 within the pause and makes one new attempt after it (116 ms)
+  ✓ concurrent requests after the pause share a single attempt (23 ms)
+  ✓ a second failure starts a new pause counted from its end (22 ms)
+Tests:       4 passed, 4 total
+
+2. Full server suite: NODE_OPTIONS=--experimental-vm-modules npx jest
+Test Suites: 1 failed, 74 passed, 75 total
+Tests:       8 failed, 1055 passed, 1063 total
+The one failing suite is __tests__/startup/runtimeStartup.test.js. In this agent
+sandbox the OS refuses reads of any file named .env, including the fixture's own
+synthetic one, so every child started with SERVER_ENV_FILE exits with "Unable to
+load the explicitly selected server environment file" before the code under test
+runs (diagnosed by importing the copied server.js directly). The three tests that
+pass are exactly the ones that do not select that file. To be checked by the
+supervisor's run.
+
+3. The same copied-entrypoint fixture, started with the configuration passed in
+the process environment instead of the .env file (temporary script, removed):
+{"stall":true,"statuses":[503,503,503],"elapsed":10121,"again":[503,503,503],"connections":1,"attempts":1}
+{"stall":false,"statuses":[503,503,503],"elapsed":70,"again":[503,503,503],"connections":1,"attempts":1}
+- stalled handshake: three concurrent /api/ready share one attempt, bounded by
+  the 10 s connection timeout; following requests within the pause make no new
+  connection.
+- refused connection: same, one connection, no retry within the pause.

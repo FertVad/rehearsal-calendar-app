@@ -1,0 +1,35 @@
+T-041 (review, revised item 3) — vercel.json with `builds` holds no settings Vercel would ignore.
+Test: server/__tests__/environmentVersions.test.js,
+  "vercel.json with builds holds no settings Vercel would ignore".
+It replaces "Vercel installs exactly the lock file": with `builds`, Vercel does not apply
+installCommand (Vercel CLI 50.25.4, commands/build: "Build and Development Settings ... will not apply",
+buildConfig = { ...build.config }; @vercel/node runs `npm install --no-audit`).
+
+== Red before: source commit d17c849 (vercel.json with "installCommand": "npm ci")
+$ git diff --stat d17c849 -- rehearsal-calendar-native/server/vercel.json     (empty: the file is as on d17c849)
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/environmentVersions.test.js
+FAIL __tests__/environmentVersions.test.js
+  ● environment versions › vercel.json with builds holds no settings Vercel would ignore
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "installCommand",
+    + ]
+
+      at Object.toEqual (__tests__/environmentVersions.test.js:63:50)
+
+Tests:       1 failed, 1 passed, 2 total
+
+== Green after: installCommand removed from vercel.json
+$ git diff --stat d17c849^ -- rehearsal-calendar-native/server/vercel.json    (empty: the task leaves vercel.json unchanged)
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/environmentVersions.test.js
+PASS __tests__/environmentVersions.test.js
+  environment versions
+    ✓ CI, Vercel and autodev run one Node major (19 ms)
+    ✓ vercel.json with builds holds no settings Vercel would ignore (2 ms)
+
+Tests:       2 passed, 2 total

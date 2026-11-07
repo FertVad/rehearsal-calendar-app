@@ -1,9 +1,9 @@
 # A create whose answer was lost, tapped again, makes one project (cause fix
-# 10: B02). Macduff creates Dunsinane; the seed makes the server take longer
-# than the app waits, so the app says it failed while the server commits the
-# project anyway. He taps Create again on the same form. The app sends the
-# key of the first try (and of a third, should the second be lost too), and
-# the server answers with the project it made:
+# 10: B02). Macduff creates Dunsinane; the server makes the project and the
+# local server loses its answer (hold-answers.js, LOSE), so the app says it
+# failed. He taps Create again on the same form. The app sends the key of the
+# first try (and of a third, should the second be lost too), and the server
+# answers with the project it made:
 # reopened, the app lists Dunsinane once. Each tap used to make a project of
 # its own, and he found two.
 appId: ${APP_ID}
@@ -20,27 +20,28 @@ tags:
 - tapOn: "Create Project"
 - tapOn: "Enter name"
 - inputText: "Dunsinane"
+# The first create only: the server makes the project, and its connection is
+# closed with no answer. No ten seconds of iOS in it: a seed that made the
+# server slower than the app's timeout counted on iOS giving up, and iOS once
+# waited 40 s (T-220, T-048). iOS sends a POST that lost its connection no
+# second time (T-048), so the next one is the app's own.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: POST
+      PATH: "^/api/native/projects$"
+      LOSE: "1"
+      ONCE: "1"
 - tapOn: "Create"
-# The app stops waiting after ten seconds; the server is still at it.
 - extendedWaitUntil:
-    visible: ".*timeout.*"
-    timeout: 30000
+    visible: ".*Network Error.*"
+    timeout: 20000
 - takeScreenshot: 13-lost-answer
 - tapOn: "OK"
 - tapOn: "Create"
-# The second try waits on the first one's row until it commits
-# (services/idempotency.js). On a loaded machine the first commits late, and
-# the app gives up on the second too: he taps once more, as anyone would. Every
-# try carries the same key, so however many there are, there is one project.
-- extendedWaitUntil:
-    visible: ".*(Lord Macduff, Owner|timeout).*"
-    timeout: 30000
-- runFlow:
-    when:
-      visible: ".*timeout.*"
-    commands:
-      - tapOn: "OK"
-      - tapOn: "Create"
+# The first try was committed before its answer was lost, so the second is
+# answered with its project at once (services/idempotency.js).
 - extendedWaitUntil:
     visible: ".*Lord Macduff, Owner.*"
     timeout: 30000

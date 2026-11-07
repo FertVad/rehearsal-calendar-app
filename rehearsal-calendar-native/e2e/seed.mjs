@@ -180,10 +180,32 @@ export const PEOPLE = {
   // Busy all day on MARK_DAY, changes it and collapses the editor (64). In no
   // project, so nothing another flow books lands on her days.
   yelena: { email: 'yelena@e2e.test', firstName: 'Yelena', lastName: 'Serebryakova', onboarded: true },
+  // The same day, busy all day, and the editor pulled down by its handle:
+  // she saves it free (68); he changes nothing (67), or nothing he keeps (69).
+  mariya: { email: 'mariya@e2e.test', firstName: 'Mariya', lastName: 'Voynitskaya', onboarded: true },
+  astrov: { email: 'astrov@e2e.test', firstName: 'Mikhail', lastName: 'Astrov', onboarded: true },
   // Reads the dates in Russian (65): the calendar's month, a rehearsal three
   // days on in the upcoming ones, the availability's next month, the
   // planner's tomorrow. Admin of a project of her own, Gaev in it.
   marina: { email: 'marina@e2e.test', firstName: 'Marina', lastName: 'Nanny', onboarded: true, locale: 'ru' },
+  // Looks for blue across the calendar, a rehearsal, her project and profile
+  // (71): an admin of Athens Wood, Gaev its owner, and on its one rehearsal.
+  // Her avatar is green: avatars keep their colours, blue among them.
+  titania: { email: 'titania@e2e.test', firstName: 'Titania', lastName: 'Queen', onboarded: true },
+  // One's own row first in a rehearsal's participants (72): on "Moated
+  // grange", by name Angelo, Mariana, Vincentio — Mariana an actor in the
+  // middle, Vincentio, its project's admin, last.
+  angelo: { email: 'angelo@e2e.test', firstName: 'Angelo', lastName: 'Deputy', onboarded: true },
+  mariana: { email: 'mariana@e2e.test', firstName: 'Mariana', lastName: 'Grange', onboarded: true },
+  vincentio: { email: 'vincentio@e2e.test', firstName: 'Vincentio', lastName: 'Duke', onboarded: true },
+  // Malvolio marks "Letter scene" seen, unmarks and marks it again, and again
+  // once it has moved; Olivia, who runs their house, is told once and once
+  // more (73, T-034). Nobody else in it, so no other flow's notices mix in.
+  olivia: { email: 'olivia@e2e.test', firstName: 'Olivia', lastName: 'Countess', onboarded: true },
+  malvolio: { email: 'malvolio@e2e.test', firstName: 'Malvolio', lastName: 'Steward', onboarded: true },
+  // The calendar's rows (74, T-036): two projects she runs, three rehearsals
+  // tomorrow and one the day after, and nobody else in them.
+  juliet: { email: 'juliet@e2e.test', firstName: 'Juliet', lastName: 'Capulet', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -487,6 +509,16 @@ export async function seed({ client, apiUrl, timezone }) {
   await joined('Leonato Orchard', 'The arbour', 'leonato', 'admin');
   // Marina its admin (65).
   const nurseryId = await joined('Nursery Tea', 'The samovar', 'marina', 'admin');
+  // Titania its admin (71).
+  const woodId = await joined('Athens Wood', 'The fairy bower', 'titania', 'admin');
+  // Vincentio its admin, Angelo and Mariana in it (72).
+  const viennaId = await joined('Vienna', 'The moated grange', 'vincentio', 'admin');
+  for (const key of ['angelo', 'mariana']) {
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+      [viennaId, ids[key]]);
+  }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -558,6 +590,10 @@ export async function seed({ client, apiUrl, timezone }) {
     planting: await rehearsal(dachaId, 'Tree planting', farDayThisMonth(), 12, 13, ['gaev', 'telegin'], 'gaev'),
     // Three days on: in her upcoming ones, named by its date (65).
     samovar: await rehearsal(nurseryId, 'Samovar', 3, 12, 13, ['gaev', 'marina'], 'gaev'),
+    // Tomorrow, in her upcoming ones; she marks it seen (71).
+    moonlit: await rehearsal(woodId, 'Moonlit dance', 1, 12, 13, ['gaev', 'titania'], 'gaev'),
+    // Tomorrow, the three of Vienna on it, Gaev not: each reads their own row first (72).
+    grange: await rehearsal(viennaId, 'Moated grange', 1, 15, 16, ['angelo', 'mariana', 'vincentio'], 'gaev'),
     // 23:00 yesterday to 01:00 today, so it is on today too (24).
     night: (await call(apiUrl, 'POST', `/native/projects/${nightId}/rehearsals`, {
       token: await token('gaev'),
@@ -570,6 +606,55 @@ export async function seed({ client, apiUrl, timezone }) {
       },
     })).rehearsal.id,
   };
+
+  // Olivia's house (73), made as the server makes a project and a rehearsal:
+  // the sign-ins are spent. Tomorrow 12:00 to 13:00, Malvolio on it, not yet seen.
+  const { rows: [house] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Illyria House', 'The garden', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
+    [house.id, ids.olivia, ids.malvolio]);
+  const { rows: [letter] } = await client.query(
+    `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+     VALUES ($1, 'Letter scene', $2::timestamptz, $3::timestamptz, 'The box hedge', $4, NOW(), NOW()) RETURNING id`,
+    [house.id, localInstant(1, 12), localInstant(1, 13), ids.olivia]);
+  await client.query(
+    `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+     VALUES ($1, $2, 'no', NOW(), NOW())`,
+    [letter.id, ids.malvolio]);
+  rehearsals.letter = String(letter.id);
+
+  // Juliet's two (74), made as the server makes them: the sign-ins are spent.
+  // Tomorrow a titled one with a place, one with no place, one with no title;
+  // the day after, one whose title is longer than its row. She is on each.
+  const verona = {};
+  for (const name of ['Verona Square', 'Capulet House']) {
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, 'Fair Verona', $2, NOW(), NOW()) RETURNING id`, [name, timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [made.id, ids.juliet]);
+    verona[name] = made.id;
+  }
+  for (const [name, title, day, from, to, location] of [
+    ['Capulet House', 'Masked ball', 1, 10, 11, 'Great chamber'],
+    ['Verona Square', 'Street brawl', 1, 14, 15, null],
+    ['Verona Square', null, 1, 17, 18, 'Friar cell'],
+    ['Capulet House', 'Balcony scene in the orchard under the window at night', 2, 12, 13, 'Orchard'],
+  ]) {
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3::timestamptz, $4::timestamptz, $5, $6, NOW(), NOW()) RETURNING id`,
+      [verona[name], title, localInstant(day, from), localInstant(day, to), location, ids.juliet]);
+    await client.query(
+      `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+       VALUES ($1, $2, 'no', NOW(), NOW())`,
+      [made.id, ids.juliet]);
+  }
 
   // What the flow reads after moving the profile to Tokyo: the same instant on
   // Tokyo's clock, six or seven hours on from Tel Aviv with summer time — as
@@ -635,6 +720,13 @@ export async function seed({ client, apiUrl, timezone }) {
     labels[key] = new Date(`${days[key]}T00:00:00Z`).toLocaleDateString('en-US',
       { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
   }
+  // A row's date column for tomorrow and the day after, in English: "Thu"
+  // over "29" (74, T-036).
+  for (const key of ['tomorrow', 'after_tomorrow']) {
+    const day = new Date(`${days[key]}T00:00:00Z`);
+    labels[`${key}_weekday`] = day.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+    labels[`${key}_number`] = String(day.getUTCDate());
+  }
   // The day the editor's error names, in English: "October 27, 2026".
   labels.mark_day = new Date(`${days.mark}T00:00:00Z`).toLocaleDateString('en-US',
     { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -669,11 +761,14 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual', NULL),
             ($1, $4::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-early-train')`,
     [ids.shamrayev, localInstant(5, 23), localInstant(6, 1), localInstant(6, 0)]);
-  // Yelena's (64): MARK_DAY busy all day, as a save of that day writes it.
-  await client.query(
-    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
-     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'manual')`,
-    [ids.yelena, `${days.mark}T00:00:00.000Z`, `${days.mark}T23:59:59.999Z`]);
+  // Yelena's (64), Mariya's and Astrov's (67-69): MARK_DAY busy all day, as a
+  // save of that day writes it.
+  for (const key of ['yelena', 'mariya', 'astrov']) {
+    await client.query(
+      `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+       VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', TRUE, 'manual')`,
+      [ids[key], `${days.mark}T00:00:00.000Z`, `${days.mark}T23:59:59.999Z`]);
+  }
 
   // Inboxes written as the server records a notification, a minute apart and
   // to the millisecond as it writes them: sign-ins are spent, and sixty
@@ -703,21 +798,6 @@ export async function seed({ client, apiUrl, timezone }) {
     { title: 'Name-day toast', read: false },
   ]);
   await notify('solyony', [{ title: 'Duel at noon', read: false }]);
-
-  // A create whose answer never arrives (13). The first project named
-  // Dunsinane takes 13 seconds to insert — longer than the app's 10-second
-  // request timeout — so the app gives up and shows an error while the server
-  // goes on to commit it, its answer going to a closed connection. Only the
-  // first: what the app sends after that is answered at once. On this
-  // database alone; the schema the app runs on has no such trigger.
-  await client.query(`CREATE SEQUENCE e2e_lost_answer;
-    CREATE FUNCTION e2e_lose_answer() RETURNS trigger LANGUAGE plpgsql AS $$
-    BEGIN
-      IF NEW.name = 'Dunsinane' AND nextval('e2e_lost_answer') = 1 THEN PERFORM pg_sleep(13); END IF;
-      RETURN NEW;
-    END $$;
-    CREATE TRIGGER e2e_lose_answer BEFORE INSERT ON native_projects
-      FOR EACH ROW EXECUTE FUNCTION e2e_lose_answer()`);
 
   return {
     password: PASSWORD,

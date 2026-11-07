@@ -1,0 +1,20 @@
+T-035, review 1 — on 1f38405, Node 22
+
+npx jest --selectProjects frontend --testPathPatterns WeeklyCalendar
+Tests:       20 passed, 20 total
+
+npx jest --selectProjects frontend (all)
+Test Suites: 130 passed, 130 total
+Tests:       1220 passed, 1220 total
+(an earlier run had AvailabilityQuietSave's "calendar stays while it is read
+back" fail once on a scroll of the availability calendar; it passed on the
+run after, unchanged — it does not render the day strip.)
+
+npm run type-check — clean
+
+npm run e2e -- e2e/flows/74-day-strip-wheel.yaml   1/1 Flow Passed
+  (a run before it failed at startRecording, RECORDING_FAILED exit_code=16,
+  just after a run cut off by the 10-minute tool limit — the machine, not
+  the flow)
+npm run e2e -- e2e/flows/41-today-selects-today.yaml   1/1 Flow Passed
+npm run e2e -- e2e/flows/57-day-strip-centre.yaml   1/1 Flow Passed

@@ -9,7 +9,8 @@
  * left, a screen pushed in a tab has "‹" with the name of the one under it,
  * the first screen of a tab has a large title.
  *
- * The planner's own "←" is left as it is: the owner has not decided on it.
+ * The planner kept its own "←" until the owner decided on it (04.11): it is
+ * a tab's first screen, a large title and nothing to go back to (T-032).
  */
 import React from 'react';
 import { readFileSync, readdirSync, statSync } from 'fs';
@@ -35,14 +36,11 @@ const SCREENS: Record<string, 'modal' | 'stack' | 'root'> = {
   'features/calendar/screens/CalendarScreen.tsx': 'root',
   'features/projects/screens/ProjectsScreen.tsx': 'root',
   'features/profile/screens/ProfileScreen.tsx': 'root',
+  'features/smart-planner/screens/SmartPlannerScreen.tsx': 'root',
 };
 
-/** Not this task's: the planner (its "←" waits for the owner), and the
- *  sign-in and onboarding, which are forms with no bar. */
-const OUTSIDE = [
-  'features/smart-planner/screens/SmartPlannerScreen.tsx',
-  'features/smart-planner/screens/SmartPlannerTabScreen.tsx',
-];
+/** The sign-in and onboarding: forms with no bar. */
+const OUTSIDE: string[] = [];
 
 function screens(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

@@ -109,24 +109,4 @@ router.delete('/', requireAuth, asyncHandler(async (req, res) => {
   }
 }));
 
-/**
- * GET /api/native/push-tokens
- * Get all push tokens for current user (debug)
- */
-router.get('/', requireAuth, asyncHandler(async (req, res) => {
-  try {
-    const userId = req.userId;
-
-    const tokens = await db.all(
-      'SELECT id, device_type, device_name, last_active_at, created_at FROM native_push_tokens WHERE user_id = ?',
-      [userId]
-    );
-
-    res.json({ success: true, data: tokens });
-  } catch (err) {
-    logger.error('[PushToken] Get tokens error:', err);
-    res.status(500).json({ error: 'Failed to get push tokens' });
-  }
-}));
-
 export default router;

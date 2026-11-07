@@ -54,8 +54,8 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
           </View>
 
           <View style={styles.featureItem}>
-            <View style={[styles.featureIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-              <Ionicons name="people-outline" size={24} color={Colors.accent.blue} />
+            <View style={[styles.featureIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
+              <Ionicons name="people-outline" size={24} color={Colors.accent.purple} />
             </View>
             <Text style={styles.featureText}>{t.onboarding.welcome.feature2}</Text>
           </View>

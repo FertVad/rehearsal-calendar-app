@@ -11,8 +11,6 @@ export interface TimeRange {
 export const WORKDAY_START = '09:00';
 export const WORKDAY_END = '23:00';
 
-const DAY_END = 23 * 60 + 59;
-
 // Re-export for backward compatibility
 export const toMinutes = timeToMinutes;
 export const toTimeString = minutesToTime;

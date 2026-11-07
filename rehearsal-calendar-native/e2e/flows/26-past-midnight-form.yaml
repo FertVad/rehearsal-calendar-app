@@ -181,11 +181,11 @@ tags:
 # Saved ending the next morning: the card gives the end its own date.
 - tapOn: "Calendar, tab.*"
 - scrollUntilVisible:
-    element: ".*11:00.PM – .*, 1:00.AM.*Lakeside night.*"
+    element: "(?s)(?=.*Lakeside night)(?=.*11:00.PM – .*, 1:00.AM).*"
     direction: DOWN
     timeout: 30000
 # Opened again, it is the same 23:00 to 01:00 the next day.
-- tapOn: ".*11:00.PM – .*, 1:00.AM.*Lakeside night.*"
+- tapOn: "(?s)(?=.*Lakeside night)(?=.*11:00.PM – .*, 1:00.AM).*"
 - extendedWaitUntil:
     visible:
       id: rehearsal-details-time

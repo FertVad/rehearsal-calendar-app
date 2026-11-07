@@ -6,34 +6,32 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg.primary,
   },
-  headerContainer: {
-    backgroundColor: Colors.bg.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.default,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.bg.secondary,
-  },
-  backButton: {
-    marginRight: Spacing.xs,
-  },
-  headerTextContainer: {
+  // No project yet: its loading, or the hint to make one.
+  noProject: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
   },
-  headerSubtitle: {
-    fontSize: FontSize.sm,
+  noProjectTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
+  },
+  noProjectText: {
+    fontSize: FontSize.base,
     color: Colors.text.secondary,
-    marginTop: 2,
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
   },
+  // The filters' row right under the large title (T-032).
   scrollContent: {
     padding: Spacing.lg,
+    paddingTop: Spacing.sm,
   },
   filtersContainer: {
     marginBottom: Spacing.md,

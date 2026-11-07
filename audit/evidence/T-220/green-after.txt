@@ -1,0 +1,39 @@
+T-220 — green after: flow 30 fails the import by closing its connection
+(hold-answers.js DROP "1"), not by waiting on iOS's ten seconds.
+
+Run 1:
+$ npm run e2e -- e2e/flows/30-sync-import-fails-export-runs.yaml
+[Passed] A sync whose import fails still exports (1m 49s)
+1/1 Flow Passed in 1m 49s
+[e2e] taps taken again (tap-and-see.yaml): 0
+server.log 1168: [e2e] dropped the request POST /api/native/availability/imported/sync: its connection closed, no answer
+metro.log:
+  Request: POST /native/availability/imported/sync
+  Response Error: Network Error POST /native/availability/imported/sync
+  [CalendarSync] Import failed: {"code": "ERR_NETWORK", "message": "Network Error", …}
+  [Sync] Run completed: {"export": {"result": {… "failed": 0, "rehearsals": 1, "success": 1}, "status": "done"},
+                         "import": {"error": "Network Error", "status": "failed"}}
+
+Run 2:
+[Passed] A sync whose import fails still exports (1m 44s)
+1/1 Flow Passed in 1m 44s
+[e2e] taps taken again (tap-and-see.yaml): 0
+server.log 1168: [e2e] dropped the request POST /api/native/availability/imported/sync: its connection closed, no answer
+metro.log 59: [CalendarSync] Import failed: {"code": "ERR_NETWORK", "message": "Network Error", …}
+metro.log 90: Run completed: export done (success 1, failed 0), import failed ("Network Error")
+
+Run 3 (after the review's reproduction runs, tree back at HEAD 08c6874):
+[Passed] A sync whose import fails still exports (1m 14s)
+1/1 Flow Passed in 1m 14s
+[e2e] taps taken again (tap-and-see.yaml): 0
+server.log: [e2e] dropped the request POST /api/native/availability/imported/sync: its connection closed, no answer
+metro.log:  [CalendarSync] Import failed: {"code": "ERR_NETWORK", "message": "Network Error", …}
+            [Sync] Run completed: export done (failed 0, rehearsals 1, success 1), import failed ("Network Error")
+
+One import request each run (one "dropped" line): iOS did not resend the POST.
+The import fails at once, with no timer of iOS's in between.
+
+The bug the flow guards (cause fix 17, EO02: a failed import skipped the
+export) has not come back: in all three runs the import failed and the export
+still wrote the rehearsal (success 1), and the alert said "Sync error" with
+"Exported rehearsals: 1".

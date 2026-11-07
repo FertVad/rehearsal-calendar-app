@@ -16,7 +16,7 @@ import {
   RehearsalTimesInvalid,
 } from '../../services/rehearsals/rehearsalService.js';
 import {
-  respondToRehearsal,
+  markRehearsal,
   getRehearsalResponses,
   getUserResponse,
 } from '../../services/rehearsals/rsvpService.js';
@@ -272,10 +272,11 @@ router.post('/:rehearsalId/respond', requireAuth, asyncHandler(async (req, res) 
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    const stats = await respondToRehearsal(rehearsalId, userId, response, notes);
+    const { stats, announce } = await markRehearsal(rehearsalId, userId, response, notes);
 
-    // Send push notifications to admins when member responds
-    if (response === 'yes') {
+    // The admins hear of a "seen" once per person, and again only after the
+    // rehearsal has moved; unmarking tells nobody (seenNotice.js).
+    if (announce) {
       try {
         const responder = await db.get('SELECT first_name, last_name FROM native_users WHERE id = ?', [userId]);
         const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [rehearsal.project_id]);

@@ -238,8 +238,9 @@ describe('The planner\'s list, dense (T-020)', () => {
     expect(within(row).getByText('Project A')).toBeTruthy();
     expect(within(row).getByText(t.smartPlanner.week)).toBeTruthy();
     expect(within(row).getByText('Participants: all (3)')).toBeTruthy();
-    // Nothing else stands above the list.
-    expect(screen.queryByText(t.smartPlanner.period)).toBeNull();
+    // Nothing else stands above the list: the "Period" heading it once had is gone
+    // (its key too, T-045).
+    expect(screen.queryByText('Period')).toBeNull();
   });
 
   it('opens each filter\'s own choice from the row', async () => {
@@ -261,6 +262,8 @@ describe('The planner\'s list, dense (T-020)', () => {
     fireEvent.press(screen.getByTestId('planner-project'));
     expect(screen.getByText('Project B')).toBeTruthy();
     expect(screen.queryByText('Project C')).toBeNull();
+    // The picked one is named by its name alone, its checkmark not in it (T-219).
+    expect(screen.getByLabelText('Project A').props.accessibilityState).toEqual({ selected: true });
 
     // The people: their sheet.
     fireEvent.press(screen.getByTestId('participants-row'));
@@ -305,5 +308,28 @@ describe('DP01 — member selection follows the project', () => {
     // With the fix: selectedMemberIds = [b1,b2] → "2 of 2 selected" (or
     // "All Members" if still loading). "3 of 2" never appears.
     expect(screen.queryByText(/3 of 2/)).toBeNull();
+  });
+});
+
+// T-032: the tab's first screen, a large title and no way back; opened from
+// the tab with no project, it is set to the first one in its params.
+describe('the Planner tab\'s root screen (T-032)', () => {
+  it('has the tab\'s large title and nothing to go back to', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    expect(screen.getByTestId('screen-header-root')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-header-root')).getByText(t.nav.planner)).toBeTruthy();
+    expect(screen.queryByTestId('header-back')).toBeNull();
+    expect(screen.queryByLabelText(t.common.back)).toBeNull();
+  });
+
+  it('opened from the tab, it takes the first project into its params', async () => {
+    const navigation = { setParams: jest.fn(), goBack: jest.fn() } as any;
+    const screen = render(
+      <SmartPlannerScreen route={{ key: 'planner', name: 'SmartPlanner' } as any} navigation={navigation} />,
+    );
+    await settle();
+    expect(navigation.setParams).toHaveBeenCalledWith({ projectId: 'A' });
+    expect(screen.getByTestId('screen-header-root')).toBeTruthy();
   });
 });

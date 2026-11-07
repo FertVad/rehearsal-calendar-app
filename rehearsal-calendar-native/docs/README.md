@@ -31,11 +31,14 @@ Complete documentation for the Rehearsal Calendar Native App project.
 | [API Documentation](api-documentation.md) | Complete REST API reference with examples |
 | [API Standards](api-standards.md) | API conventions, naming, error format |
 
-### Setup Guides
+### Server and testing
 
 | Document | Description |
 |----------|-------------|
+| [Server Runtime](server-runtime.md) | PostgreSQL-only runtime, safe local startup, database lifecycle |
+| [Server Migrations](server-migrations.md) | The explicit migration CLI: `--dry`, `--apply`, `--fresh`, `--adopt` |
+| [E2E](e2e.md) | Maestro flows on a disposable local stack: how to run, write and tag them |
 
 ---
 
-**Last Updated:** 2026-08-22
+**Last Updated:** 2026-11-06

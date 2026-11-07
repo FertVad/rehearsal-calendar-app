@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCalendarsUsageDescription": "Rehearsly adds your rehearsals to your calendar. From the calendars you pick it takes only the hours you are busy, never what your events are called.",
+    "NSCalendarsFullAccessUsageDescription": "Rehearsly adds your rehearsals to your calendar. From the calendars you pick it takes only the hours you are busy, never what your events are called.",
+    "NSCalendarsWriteOnlyAccessUsageDescription": "Rehearsly adds your rehearsals to your calendar."
+  }
+}

@@ -1,0 +1,46 @@
+T-042 — report AFTER the removal (working tree on top of c191807). Node v26.13.0 on PATH.
+
+1. knip (same config, same categories as before-knip.txt)
+$ node node_modules/knip/bin/knip.js --directory rehearsal-calendar-native --no-progress \
+    --include files,exports,nsExports,types,nsTypes,enumMembers,classMembers,duplicates
+(no output)
+knip exit 0
+
+   On the way: after getWeekStart went, knip reported one more —
+     Unused exports (1)  getDayOffset  function  src/hooks/useWeekStart.ts:56:17
+   (its only caller was getWeekStart; grep -rnw getDayOffset src e2e server: the declaration only).
+   Removed too; the run above is after it.
+
+2. StyleSheet keys
+$ node audit/evidence/T-042/unused-styles.mjs rehearsal-calendar-native
+StyleSheet keys checked: 712
+Unused keys (0):
+Files indexing a styles object dynamically (0):
+
+3. Unused imports and locals (app code; tests not touched)
+$ node audit/evidence/T-042/lint-unused.mjs rehearsal-calendar-native | grep -v __tests__
+src/features/availability/components/calendar/CalendarMonth.tsx:27 'availability' is defined but never used.   (prop — kept)
+src/features/availability/components/editor/TimeSlotsEditor.tsx:23 'onSlotChange' is defined but never used.   (prop — kept)
+src/hooks/useWeekStart.ts:39 'error' is defined but never used.                                                 (catch binding — kept)
+   On the way: removing UPCOMING_CARD_WIDTH left SCREEN_WIDTH (and the Dimensions import) in
+   calendarScreenStyles.ts unused; removed.
+
+4. Checks
+$ npm run type-check            -> tsc --noEmit, no errors
+$ npx jest --selectProjects frontend --silent
+Test Suites: 133 passed, 133 total
+Tests:       1290 passed, 1290 total
+$ npm run check:secrets         -> {"summary":"pass","mode":"worktree","files":1659,"findings":0,"errors":0}
+
+5. e2e (single flows; the full set is the supervisor's nightly run)
+$ npm run e2e -- e2e/flows/01-login.yaml
+[Passed] Sign in (1m 15s)                                           1/1 Flow Passed
+$ npm run e2e -- e2e/flows/10-calendar-sync.yaml e2e/flows/49-sign-in-and-register-forms.yaml
+[Passed] Calendar sync settings, with and without calendar access (2m 13s)
+[Passed] Sign-in and registration forms (1m)                         2/2 Flows Passed
+$ npm run e2e -- e2e/flows/03-create-project.yaml e2e/flows/10-availability-days.yaml
+[Passed] Create a project (2m 13s)
+[Passed] Availability saves the day it changed (3m 1s)               2/2 Flows Passed
+   Taps taken again: 0 in every run.
+
+Nothing on screen changes (only code nobody reads was removed), so no new flow.

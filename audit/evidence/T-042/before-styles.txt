@@ -1,0 +1,92 @@
+T-042 — StyleSheet keys BEFORE, source commit c191807.
+
+knip does not look inside StyleSheet.create, and ESLint's react-native/no-unused-styles
+only sees a style object used in the file that declares it (it reports 0 here: most
+screens import theirs from features/*/styles/*.ts). So the tool is the TypeScript
+language service: for each key of each StyleSheet.create({...}) in src/ (tests
+excluded), findReferences over the whole tsconfig program (src, tests, App.tsx,
+index.ts). Script: unused-styles.mjs next to this file.
+
+$ node audit/evidence/T-042/unused-styles.mjs rehearsal-calendar-native
+StyleSheet keys checked: 763
+Unused keys (51):
+  src/features/projects/styles/projectsScreenStyles.ts:15 loadingState
+  src/features/projects/styles/projectsScreenStyles.ts:24 loadingText
+  src/features/availability/styles/availabilityScreenStyles.ts:13 saveHeaderButton
+  src/features/availability/styles/availabilityScreenStyles.ts:19 saveHeaderButtonText
+  src/features/availability/styles/availabilityScreenStyles.ts:24 saveHeaderButtonDisabled
+  src/features/availability/styles/availabilityScreenStyles.ts:316 modeInfo
+  src/features/availability/styles/availabilityScreenStyles.ts:326 modeInfoText
+  src/features/calendar/styles/calendarScreenStyles.ts:298 loadingText
+  src/features/calendar/styles/addRehearsalScreenStyles.ts:15 projectName
+  src/features/auth/styles/registerScreenStyles.ts:81 divider
+  src/features/auth/styles/registerScreenStyles.ts:86 dividerLine
+  src/features/auth/styles/registerScreenStyles.ts:91 dividerText
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:43 permissionGranted
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:87 settingRight
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:93 settingValue
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:97 settingHint
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:104 intervalButtonsContainer
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:110 intervalButton
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:120 intervalButtonActive
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:124 intervalButtonText
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:129 intervalButtonTextActive
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:138 syncHint
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:146 statusCard
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:153 statusRow
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:159 statusLabel
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:163 statusValue
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:168 errorContainer
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:177 errorText
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:228 modalOverlay
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:233 modalContainer
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:239 modalContent
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:245 modalHeader
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:253 modalTitle
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:258 calendarList
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:261 calendarItem
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:272 calendarItemSelected
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:276 calendarItemLeft
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:282 calendarIcon
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:289 calendarInfo
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:292 calendarName
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:298 calendarMeta
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:304 calendarColor
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:310 calendarDetails
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:313 calendarTitle
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:317 calendarTitleSelected
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:321 calendarSource
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:325 writableBadge
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:334 writableText
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:338 emptyState
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:352 modalFooter
+  src/features/profile/styles/calendarSyncSettingsScreenStyles.ts:357 modalSaveButton
+Files indexing a styles object dynamically (styles[x]) (0):
+
+grep cross-check: grep-keys.mjs next to this file. Per key, whole word in the
+declaring file and in all of e2e/ and server/; in all of src/ a property read
+`.key` or `['key']`.
+  - 31 keys: 0 hits anywhere.
+  - 20 keys have hits, every one on a different style object, checked by the
+    importing line of each file:
+      loadingState  -> TodayRehearsals (calendarScreenStyles)
+      loadingText   -> AvailabilityScreen (availability styles), TimeRecommendations,
+                       CalendarSyncScreen (own StyleSheet), JoinProjectScreen
+                       (joinProjectScreenStyles), SmartPlannerScreen (smartPlannerScreenStyles)
+      modeInfo, modeInfoText -> ModeInfo.tsx (own StyleSheet)
+      projectName   -> JoinProjectScreen, ProjectsScreen (their own styles); the
+                       rest are the data field rehearsal.projectName / server code
+      divider, dividerLine, dividerText -> LoginScreen (loginScreenStyles),
+                       RehearsalDetailsScreen (own); e2e/71-no-blue.yaml: a comment
+      settingRight, settingValue, modalOverlay, modalContent, modalHeader, modalTitle
+                    -> ProfileScreen (profileScreenStyles), AddRehearsalScreen
+                       (addRehearsalScreenStyles), ProjectDetailScreen
+                       (projectDetailScreenStyles), PickerModal, BugReportSheet (own)
+      errorContainer, errorText -> auth screens (login/registerScreenStyles),
+                       CalendarScreen, ChangeEmail/EditProfile (editProfileScreenStyles),
+                       JoinProject, ProjectDetail, ProjectsScreen (their own)
+      calendarItem, calendarItemSelected, calendarItemLeft -> CalendarSyncScreen (own)
+      emptyState    -> CalendarScreen, ProjectsScreen, SmartPlannerScreen (their own)
+    CalendarSyncSettingsScreen imports calendarSyncSettingsScreenStyles directly and
+    reads none of its 39 listed keys. No testID or route is a style key.
+  => all 51 confirmed unused.

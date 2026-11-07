@@ -1,0 +1,26 @@
+T-219, red before: the flow and the Jest test of this task, the screen as at
+d9200ac (git restore --source=d9200ac -- src/features/smart-planner/screens/SmartPlannerScreen.tsx).
+
+The full run's failure, d9200ac, 03.11.2026 (e2e/out/failed/full-e2e-d9200ac-2026-11-03T21-47-11-971Z):
+[Failed] Planner list is dense (1m 6s) (Element not found: Text matching regex: Three Sisters)
+  the screen's hierarchy at that step, the option picked:
+    "accessibilityText" : "Three Sisters, <Ionicons checkmark glyph, 3 bytes of the private-use range>"
+  and no element "Three Sisters" on its own.
+
+The old flow, unchanged, at d9200ac, 03.11.2026 23:58 — green the same evening:
+$ npm run e2e -- e2e/flows/58-planner-dense.yaml
+[Passed] Planner list is dense (1m 52s)
+  Maestro's log: the second tap on "Three Sisters" landed on the option's
+  inner text, bounds [29,246][118,263] — an element iOS showed this time and
+  not in the failed run. The name the tap needs was there by chance.
+
+$ npx jest --selectProjects frontend -t "opens each filter" SmartPlannerScreen
+    ✕ opens each filter's own choice from the row (456 ms)
+  ● The planner's list, dense (T-020) › opens each filter's own choice from the row
+    Unable to find an element with accessibility label: Project A
+Tests:       1 failed, 10 skipped, 11 total
+
+$ npm run e2e -- e2e/flows/58-planner-dense.yaml      (the flow of this task)
+[Failed] Planner list is dense (2m 13s) (Element not found: Text matching regex: Three Sisters, Selected)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0

@@ -24,7 +24,7 @@
   <!-- ============================= ENGLISH ============================= -->
   <section data-content="en">
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: 20 August 2026</p>
+    <p class="updated">Last updated: 4 November 2026</p>
 
     <p class="lede">
       Rehearsly stores what it needs to schedule rehearsals and nothing more.
@@ -55,6 +55,11 @@
           <td>Password, stored only as a bcrypt hash</td>
           <td>To sign you in</td>
           <td>Only if you register with email</td>
+        </tr>
+        <tr>
+          <td>One-time email codes — we keep only a keyed hash of the code and the address it went to; a code works for 15 minutes</td>
+          <td>To confirm your address, reset your password or change your email</td>
+          <td>When you ask for a code</td>
         </tr>
         <tr>
           <td>Google or Apple account identifier and email</td>
@@ -134,6 +139,7 @@
     <ul>
       <li><strong>Neon</strong> — database hosting (United States)</li>
       <li><strong>Vercel</strong> — server hosting</li>
+      <li><strong>Resend</strong> — sends the emails with your codes for sign-up, password reset and a change of address; it receives your email address and the message (EU, Ireland)</li>
       <li><strong>Expo Push Service</strong>, and through it Apple's APNs — delivery of notifications</li>
       <li><strong>Google</strong> and <strong>Apple</strong> — only if you choose their sign-in</li>
     </ul>
@@ -143,7 +149,7 @@
     <p>
       Your data lives for as long as your account does. Delete the account and
       everything tied to it — availability, imported calendar events, push
-      tokens, project memberships — is removed along with it. Projects where you
+      tokens, email code records, project memberships — is removed along with it. Projects where you
       were the only administrator are deleted too, which the app warns you about
       before it proceeds.
     </p>
@@ -187,7 +193,7 @@
   <!-- ============================= РУССКИЙ ============================= -->
   <section data-content="ru" hidden>
     <h1>Политика конфиденциальности</h1>
-    <p class="updated">Обновлено: 20 августа 2026</p>
+    <p class="updated">Обновлено: 4 ноября 2026</p>
 
     <p class="lede">
       Rehearsly хранит только то, что нужно для планирования репетиций. Мы не
@@ -218,6 +224,11 @@
           <td>Пароль — только в виде bcrypt-хеша</td>
           <td>Вход в приложение</td>
           <td>Только при регистрации по почте</td>
+        </tr>
+        <tr>
+          <td>Одноразовые коды из писем — храним не сам код, а его хеш с секретным ключом и адрес, на который он ушёл; код действует 15 минут</td>
+          <td>Подтвердить почту, сбросить пароль или сменить адрес</td>
+          <td>Когда вы запрашиваете код</td>
         </tr>
         <tr>
           <td>Идентификатор и почта аккаунта Google или Apple</td>
@@ -297,6 +308,7 @@
     <ul>
       <li><strong>Neon</strong> — хостинг базы данных (США)</li>
       <li><strong>Vercel</strong> — хостинг сервера</li>
+      <li><strong>Resend</strong> — отправка писем с кодами при регистрации, сбросе пароля и смене адреса; получает ваш адрес и текст письма (ЕС, Ирландия)</li>
       <li><strong>Expo Push Service</strong> и через него APNs от Apple — доставка уведомлений</li>
       <li><strong>Google</strong> и <strong>Apple</strong> — только если вы выбрали вход через них</li>
     </ul>
@@ -306,7 +318,7 @@
     <p>
       Данные живут ровно столько, сколько существует аккаунт. Удалите его — и
       вместе с ним удалится всё связанное: занятость, импортированные события,
-      push-токены, участие в проектах. Проекты, где вы были единственным
+      push-токены, записи о кодах из писем, участие в проектах. Проекты, где вы были единственным
       администратором, тоже удаляются, о чём приложение предупреждает заранее.
     </p>
 
@@ -349,7 +361,7 @@
   <!-- ============================= ESPAÑOL ============================= -->
   <section data-content="es" hidden>
     <h1>Política de privacidad</h1>
-    <p class="updated">Última actualización: 20 de agosto de 2026</p>
+    <p class="updated">Última actualización: 4 de noviembre de 2026</p>
 
     <p class="lede">
       Rehearsly guarda lo necesario para planificar ensayos y nada más. No
@@ -381,6 +393,11 @@
           <td>Contraseña, almacenada solo como hash bcrypt</td>
           <td>Iniciar sesión</td>
           <td>Solo si te registras con correo</td>
+        </tr>
+        <tr>
+          <td>Códigos de un solo uso enviados por correo — guardamos solo un hash con clave del código y la dirección a la que se envió; cada código vale 15 minutos</td>
+          <td>Confirmar tu correo, restablecer la contraseña o cambiar de dirección</td>
+          <td>Cuando pides un código</td>
         </tr>
         <tr>
           <td>Identificador y correo de tu cuenta de Google o Apple</td>
@@ -460,6 +477,7 @@
     <ul>
       <li><strong>Neon</strong> — alojamiento de la base de datos (Estados Unidos)</li>
       <li><strong>Vercel</strong> — alojamiento del servidor</li>
+      <li><strong>Resend</strong> — envío de los correos con códigos para el registro, el restablecimiento de la contraseña y el cambio de dirección; recibe tu correo y el texto del mensaje (UE, Irlanda)</li>
       <li><strong>Expo Push Service</strong> y, a través de él, APNs de Apple — envío de notificaciones</li>
       <li><strong>Google</strong> y <strong>Apple</strong> — solo si eliges su acceso</li>
     </ul>
@@ -468,8 +486,8 @@
     <h2>Cuánto tiempo los conservamos</h2>
     <p>
       Tus datos existen mientras exista tu cuenta. Al eliminarla desaparece todo
-      lo asociado: disponibilidad, eventos importados, tokens de notificaciones y
-      pertenencia a proyectos. También se eliminan los proyectos en los que eras
+      lo asociado: disponibilidad, eventos importados, tokens de notificaciones,
+      registros de códigos enviados por correo y pertenencia a proyectos. También se eliminan los proyectos en los que eras
       el único administrador, algo que la aplicación te advierte antes de
       continuar.
     </p>
@@ -514,7 +532,7 @@
   <!-- ============================= DEUTSCH ============================= -->
   <section data-content="de" hidden>
     <h1>Datenschutzerklärung</h1>
-    <p class="updated">Zuletzt aktualisiert: 20. August 2026</p>
+    <p class="updated">Zuletzt aktualisiert: 4. November 2026</p>
 
     <p class="lede">
       Rehearsly speichert, was für die Probenplanung nötig ist — und nicht mehr.
@@ -545,6 +563,11 @@
           <td>Passwort, ausschließlich als bcrypt-Hash</td>
           <td>Anmeldung</td>
           <td>Nur bei Registrierung per E-Mail</td>
+        </tr>
+        <tr>
+          <td>Einmalcodes per E-Mail — gespeichert wird nur ein mit Schlüssel gebildeter Hash des Codes und die Adresse, an die er ging; ein Code gilt 15 Minuten</td>
+          <td>Adresse bestätigen, Passwort zurücksetzen oder E-Mail-Adresse ändern</td>
+          <td>Wenn du einen Code anforderst</td>
         </tr>
         <tr>
           <td>Kennung und E-Mail deines Google- oder Apple-Kontos</td>
@@ -625,6 +648,7 @@
     <ul>
       <li><strong>Neon</strong> — Datenbank-Hosting (USA)</li>
       <li><strong>Vercel</strong> — Server-Hosting</li>
+      <li><strong>Resend</strong> — Versand der E-Mails mit Codes für Registrierung, Passwort-Zurücksetzen und Adressänderung; erhält deine E-Mail-Adresse und den Text der Nachricht (EU, Irland)</li>
       <li><strong>Expo Push Service</strong> und darüber Apples APNs — Zustellung von Benachrichtigungen</li>
       <li><strong>Google</strong> und <strong>Apple</strong> — nur wenn du deren Anmeldung wählst</li>
     </ul>
@@ -634,7 +658,7 @@
     <p>
       Deine Daten existieren, solange dein Konto existiert. Löschst du es,
       verschwindet alles Zugehörige: Verfügbarkeit, importierte Termine,
-      Push-Tokens und Projektmitgliedschaften. Projekte, in denen du der einzige
+      Push-Tokens, Einträge zu E-Mail-Codes und Projektmitgliedschaften. Projekte, in denen du der einzige
       Administrator warst, werden ebenfalls gelöscht — darauf weist die App vor
       der Bestätigung hin.
     </p>

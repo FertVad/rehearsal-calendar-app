@@ -26,26 +26,6 @@ import { assertSession, sessionWork, SessionStamp } from '../session';
 
 
 /**
- * Get calendar events from selected calendars
- * Date range: -30 days to +365 days (to avoid performance issues)
- */
-export async function getCalendarEvents(
-  calendarIds: string[],
-  startDate: Date,
-  endDate: Date
-): Promise<Calendar.Event[]> {
-  try {
-    const { byCalendar } = await fetchCalendarEvents(calendarIds, startDate, endDate);
-    const events = [...byCalendar.values()].flat();
-    logger.debug(`[CalendarSync] Total events fetched: ${events.length}`);
-    return events;
-  } catch (error) {
-    logger.error('[CalendarSync] Failed to get calendar events:', error);
-    throw error;
-  }
-}
-
-/**
  * Reads the selected calendars one by one, reporting which could not be read.
  *
  * Carrying on past a failed calendar is right — the others still sync — but the

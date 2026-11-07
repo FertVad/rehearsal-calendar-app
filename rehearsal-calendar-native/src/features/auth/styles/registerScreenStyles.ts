@@ -78,21 +78,6 @@ export const styles = StyleSheet.create({
   registerButton: {
     marginTop: Spacing.lg,
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: Spacing.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.glass.border,
-  },
-  dividerText: {
-    color: Colors.text.secondary,
-    fontSize: FontSize.sm,
-    marginHorizontal: Spacing.md,
-  },
   loginButton: {
     marginTop: Spacing.md,
   },

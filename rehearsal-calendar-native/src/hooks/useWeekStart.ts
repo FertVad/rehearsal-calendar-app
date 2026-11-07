@@ -46,36 +46,3 @@ export function useWeekStart(): WeekStartDay {
 
   return weekStart;
 }
-
-/**
- * Get the offset for a day of week based on week start preference.
- * @param weekStart - Week start preference ('monday' or 'sunday')
- * @param dayOfWeek - Day of week from Date.getDay() (0=Sunday, 6=Saturday)
- * @returns Offset value (0-6) where 0 is the start of the week
- */
-export function getDayOffset(weekStart: WeekStartDay, dayOfWeek: number): number {
-  if (weekStart === 'monday') {
-    // Convert Sunday (0) to 6, and Monday (1) to 0
-    return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  }
-  // For Sunday start, use as-is
-  return dayOfWeek;
-}
-
-/**
- * Get the start of the week for a given date based on week start preference.
- * @param date - The date to get the week start for
- * @param weekStart - Week start preference ('monday' or 'sunday')
- * @returns Date object representing the start of the week
- */
-export function getWeekStart(date: Date, weekStart: WeekStartDay): Date {
-  const day = date.getDay();
-  const offset = getDayOffset(weekStart, day);
-
-  const weekStartDate = new Date(date);
-  weekStartDate.setDate(date.getDate() - offset);
-  weekStartDate.setHours(0, 0, 0, 0);
-
-  return weekStartDate;
-}
-

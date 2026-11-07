@@ -1,0 +1,28 @@
+# The availability editor pulled down by its handle collapses, and the screen
+# stays (T-030; owner, 04.11.2026). The handle promised a drag the sheet did
+# not have: the swipe went to the MarkBusy modal and closed the whole screen.
+# Nothing changed, nothing is asked.
+#
+# Astrov is busy all day on MARK_DAY, in no project; nothing here is saved.
+appId: ${APP_ID}
+name: Availability editor pulled down collapses, the screen stays
+tags:
+  - availability
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${ASTROV_EMAIL}
+- runFlow: ../subflows/availability-pick-mark-day.yaml
+- runFlow: ../subflows/availability-pull-editor-down.yaml
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 10000
+- assertNotVisible: "Don't Save"
+- assertVisible:
+    id: availability-legend
+- assertVisible:
+    id: day-${MARK_DAY}
+    text: ".*, Busy"
+- takeScreenshot: 67-pulled-down-screen-stays

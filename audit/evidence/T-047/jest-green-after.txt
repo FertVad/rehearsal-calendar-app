@@ -1,0 +1,9 @@
+$ npx jest --selectProjects frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx
+(after: time-outline color={Colors.text.secondary})
+
+PASS frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx (12.353 s)
+...
+Tests:       1277 passed, 1277 total
+
+$ npx tsc --noEmit
+(no output)

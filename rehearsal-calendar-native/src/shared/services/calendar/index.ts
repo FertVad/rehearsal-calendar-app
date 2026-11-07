@@ -33,7 +33,6 @@ export {
 
 // Import Functions (Calendar → App)
 export {
-  getCalendarEvents,
   importCalendarEventsToAvailability,
   removeAllImportedSlots,
 } from './import';

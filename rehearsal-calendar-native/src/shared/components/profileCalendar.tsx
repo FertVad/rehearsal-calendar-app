@@ -109,8 +109,26 @@ const dayTheme = {
       left: 0,
       right: 0,
     },
+    // Today is ringed in purple, its digit as any other's, as in the day
+    // strip (T-031): a purple digit on the sheet is 4.37:1, under the 4.5:1
+    // text needs, and a fill would read as the day picked.
+    today: {
+      borderWidth: 2,
+      borderColor: Colors.accent.purple,
+      borderRadius: 17,
+    },
   },
 };
+
+/**
+ * The day picked, as a period day's marking: the library draws a marked day
+ * with the marking's `color` and `textColor`, never the theme's selected-day
+ * colours. White text, so purpleFill under it (T-027, T-031).
+ */
+export const pickedDay = {
+  color: Colors.accent.purpleFill,
+  textColor: Colors.text.inverse,
+} as const;
 
 /** The calendar's colours and type, on the sheet's background. */
 export const calendarTheme = {
@@ -118,9 +136,12 @@ export const calendarTheme = {
   backgroundColor: Colors.bg.secondary,
   calendarBackground: Colors.bg.secondary,
   textSectionTitleColor: Colors.text.secondary,
-  selectedDayBackgroundColor: Colors.accent.purple,
-  selectedDayTextColor: '#ffffff',
-  todayTextColor: Colors.accent.purple,
+  // The month's arrows are doing: purple. The library's own is a blue,
+  // #00BBF2 (T-031 review).
+  arrowColor: Colors.accent.purple,
+  selectedDayBackgroundColor: pickedDay.color,
+  selectedDayTextColor: pickedDay.textColor,
+  todayTextColor: Colors.text.primary,
   dayTextColor: Colors.text.primary,
   textDisabledColor: Colors.text.tertiary,
   monthTextColor: Colors.text.primary,

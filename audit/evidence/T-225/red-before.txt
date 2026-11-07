@@ -1,0 +1,31 @@
+T-225 red before - check 1 on the old code (d289dff: tap-and-see.yaml and
+sign-in-form.yaml restored from it), 2026-11-06.
+
+check/1-submit-lost.yaml: flow 59's start - launch, the old sign-in-form.yaml
+with its tap on "Sign In" taken out (what the red run's lost tap left; made by
+make-checks.mjs), then flow 59's wait for the calendar.
+
+$ cd rehearsal-calendar-native && npm run e2e -- ../audit/evidence/T-225/check/1-submit-lost.yaml
+
+> rehearsal-calendar-native@1.0.0 e2e
+> node e2e/run.mjs ../audit/evidence/T-225/check/1-submit-lost.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] T-225 check 1 - sign in with the tap on Sign In lost (1m 51s) (Assertion is false: id: calendar-filter is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+The same failure as the red run's ("Assertion is false: id: calendar-filter
+is visible", after 30 s): nothing on the way noticed that "Sign In" did not
+take - the "Not Now" wait is optional, and it has no sheet to see.

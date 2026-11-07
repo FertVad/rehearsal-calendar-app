@@ -33,6 +33,8 @@ const FORMATS = {
   weekdayDayMonth: { weekday: 'long', day: 'numeric', month: 'long' },
   /** "Чт, 29 окт.", "Thu, Oct 29", "Jue, 29 oct", "Do., 29. Okt." */
   weekdayDayMonthShort: { weekday: 'short', day: 'numeric', month: 'short' },
+  /** "Чт", "Thu", "Jue", "Do" — over the day in a rehearsal row's date column (T-036). */
+  weekdayShort: { weekday: 'short' },
   /** The day of the week, the day, the month and the year, all in full. */
   fullDate: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
 } as const satisfies Record<string, Intl.DateTimeFormatOptions>;

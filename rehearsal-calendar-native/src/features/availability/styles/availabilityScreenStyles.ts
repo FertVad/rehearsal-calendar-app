@@ -10,20 +10,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg.primary,
   },
-  saveHeaderButton: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.accent.purpleFill,
-    borderRadius: BorderRadius.md,
-  },
-  saveHeaderButtonText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text.inverse,
-  },
-  saveHeaderButtonDisabled: {
-    opacity: 0.7,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -312,20 +298,5 @@ export const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
     color: Colors.accent.red,
-  },
-  modeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.glass.bg,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  modeInfoText: {
-    flex: 1,
-    fontSize: FontSize.sm,
-    color: Colors.text.secondary,
   },
 });

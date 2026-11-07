@@ -30,21 +30,9 @@ EAS `projectId` прописан. Платежи намеренно выключ
 `APPLE_KEY_ID` и `APPLE_PRIVATE_KEY` нужны лишь для server-to-server обмена,
 которого у нас нет.
 
-**0.1 — конкретно.** Сейчас плагин лежит в `_disabled_plugins` с комментарием
-про Personal Team. Платный аккаунт есть → перенести обратно:
-
-```json
-"plugins": [
-  "expo-web-browser",
-  ["expo-notifications", {
-    "icon": "./assets/notification-icon.png",
-    "color": "#A855F7"
-  }]
-]
-```
-
-После правки обязательно `npx expo prebuild --clean` — плагин прописывает
-`aps-environment` в entitlements, без этого APNs не поднимется.
+**0.1.** `expo-notifications` стоит в `plugins` в `app.json`. После любой правки
+плагинов — `npx expo prebuild --clean`: плагин прописывает `aps-environment` в
+entitlements, без этого APNs не поднимется.
 
 ---
 
@@ -57,6 +45,12 @@ EAS `projectId` прописан. Платежи намеренно выключ
 - [ ] Создать запись приложения в App Store Connect (имя «Rehearsly», основной язык, bundle ID)
 
 > Имя «Rehearsly» надо занять пораньше — оно резервируется за записью приложения.
+
+**Только iPhone** (решение владельца 04.11.2026). `ios.supportsTablet: false` в
+`app.json`, `TARGETED_DEVICE_FAMILY = 1` в Xcode-проекте. На iPad приложение
+никто не проверял, а проверяющие Apple открывают сборку и на iPad. Добавить
+iPad потом можно, убрать после публикации — нет. `ios/` не в git: после
+`prebuild` проверь, что в проекте осталось `1`, а не `"1,2"`.
 
 ---
 
@@ -189,20 +183,5 @@ iframe AllPay.
 В обеих схемах доступ к функциям придётся заново решать на бэкенде: таблицы
 `native_subscription_*` / `native_payment_*` удалены из базы 2026-09-05 —
 ничего их не читало, строки выгружены перед удалением.
-
-## Известный технический долг (не блокирует релиз)
-
-- **Админка держится на послаблении CSP** — [`server.js`](../server/server.js)
-  выдаёт строгую политику всему серверу, но `/admin` получает
-  `'unsafe-inline'` для скриптов и `script-src-attr`: таблицы рендерятся
-  конкатенацией строк с `onclick=`, а nonce на inline-обработчики не действует.
-  Чтобы снять послабление, рендеринг нужно перевести на `addEventListener`.
-  XSS закрыты экранированием, CSP здесь — эшелон обороны, а не единственная преграда.
-- **Route-тесты покрывают только `members` и `projects`** — слой заведён
-  (`__tests__/routes/`), матрицу стоит расширить на остальные роуты.
-
-- ESLint 9 не запускается — в проекте `.eslintrc`, нужен `eslint.config.js`
-- `scripts/check-secrets.sh` находит собственные паттерны → `npm run check` всегда красный
-- `better-sqlite3` собран под Node 20; на Node 22 бэкенд-тесты падают, лечится `npm rebuild`
 
 ---

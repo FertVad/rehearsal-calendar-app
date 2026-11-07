@@ -23,7 +23,8 @@ npm run lint:fix             # Fix ESLint errors
 npm run type-check           # TypeScript type checking
 npm test                     # Run Jest tests
 npm run test:watch           # Run tests in watch mode
-npm run check                # Run all checks (secrets, type-check, tests)
+npm run check                # Run all checks (secrets, dead code, type-check, tests)
+npm run check:dead           # knip on app + server: an unused file, export or dependency fails it (knip.jsonc)
 
 # Security
 npm run check:secrets        # Check for exposed secrets/API keys
@@ -78,7 +79,7 @@ src/
 │   ├── services/         # API client, calendar sync
 │   ├── utils/           # Helper functions
 │   └── types/           # TypeScript types
-└── i18n/                # Translations (Russian/English)
+└── i18n/                # Translations (Russian, English, Spanish, German)
 ```
 
 ### Backend Structure
@@ -240,10 +241,10 @@ Binary "I've seen this" toggle using eye icon. No 'maybe' status.
 // IN FRONTEND STATE (RSVPStatus): 'yes' (seen) or null (unseen)
 ```
 
-`useRSVP` translates between the two — `null` in UI state maps to `'no'` on the wire:
+`toggleSeen` in `src/contexts/SeenContext.tsx` translates between the two — `null` in UI state maps to `'no'` on the wire:
 ```typescript
-const newStatus = currentStatus === 'yes' ? null : 'yes';   // UI state
-const serverStatus = currentStatus === 'yes' ? 'no' : 'yes'; // wire value
+const next: RSVPStatus = current === 'yes' ? null : 'yes';   // UI state
+const onTheWire = current === 'yes' ? 'no' : 'yes';          // wire value
 ```
 
 The backend **updates** the caller's existing row and never creates or deletes
@@ -422,7 +423,7 @@ and the server reconciles inside them (`POST /availability/imported/sync`, R7).
 
 Analyzes member availability and recommends optimal rehearsal times:
 - Loads availability for all project members in a date range
-- Categorizes slots: Perfect (100% free), Good (80%+), Possible (50%+), Difficult (<50%)
+- Categorizes slots (`categorizeSlot` in `utils/slotGenerator.ts`): `perfect` (nobody busy), `good` (up to 25% busy), `ok` (up to 50%), `bad` (more than 50%)
 - Supports filtering by specific members
 - Uses batch API endpoint for performance
 
@@ -668,7 +669,6 @@ Password-protected web admin panel at `/admin`. Uses JWT auth via `ADMIN_PASSWOR
 **Features**:
 - User stats (total, new this week/month, not signed in for 30 days — sign-ins, not use: a session renews without one)
 - Users table with pagination
-- Transactions table with pagination
 - Bug reports table with inline status management
 
 **Auth**: `server/middleware/adminAuth.js` — bcrypt password login → JWT token (24h expiry)
@@ -886,7 +886,7 @@ screen reached after it (the email code) never appears
 ✅ **Fix**: forms use `busy` from `useAuth()`; `loading` is only the session
 restore at start
 
-While `loading` is true, `RootNavigator` renders a spinner instead of the
+While `loading` is true, the root `Navigation` (`src/navigation/index.tsx`) renders a spinner instead of the
 `NavigationContainer`, so a request that toggles it unmounts the auth stack
 and remounts it at its first route. Logout and account deletion still use it —
 they end signed out anyway.
@@ -979,10 +979,13 @@ GOOGLE_CLIENT_ID_ANDROID=your-android-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_ID_WEB=your-web-client-id.apps.googleusercontent.com
 
 # OAuth Configuration (Apple Sign-In)
-APPLE_CLIENT_ID=com.rehearsal.app
-APPLE_TEAM_ID=YOUR_TEAM_ID
-APPLE_KEY_ID=YOUR_KEY_ID
-APPLE_PRIVATE_KEY=  # Contents of .p8 file or path to file
+APPLE_CLIENT_ID=com.rehearsal.app  # the only Apple variable the server reads
+
+# Email (codes for sign-up, password reset, email change)
+EMAIL_TRANSPORT=resend  # unset: routes that need an email answer 503 (services/email/transport.js)
+RESEND_API_KEY=
+EMAIL_FROM=
+EMAIL_CODE_SECRET=      # optional, falls back to JWT_SECRET
 
 # Admin Dashboard
 ADMIN_PASSWORD_HASH=  # bcrypt hash (recommended). Generate: see Admin Dashboard section above
@@ -1044,8 +1047,7 @@ cannot be inferred from a local fixture or an old claim that baseline ran.
 ## Testing
 
 **Both suites are green.** `npm test` from `rehearsal-calendar-native` runs the
-frontend and the server together: 650 tests across 47 suites, zero failures.
-Anything red is new. (The three long-standing failures in
+frontend and the server together, with zero failures. Anything red is new. (The three long-standing failures in
 `TodayRehearsals.test.tsx` are gone as of 2026-09-01.)
 
 Route-level and service-level tests are the ones that catch things. Several

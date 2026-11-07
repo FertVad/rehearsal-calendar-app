@@ -193,16 +193,6 @@ person to edit the same day on two devices without reloading, and it costs
 their own edit, which they can see. Fixing it takes a revision per day and a
 conflict answer the editor would have to show.
 
-### A reminder can go out twice when a rehearsal is moved at the moment it is sent
-
-Each rehearsal is reminded in one transaction that holds the rehearsal while
-it sends (R8), so a move waits for a send in flight and then releases its
-claims. But the edit itself is still two statements — the new time, then the
-release — until cause fix 10 makes saving a rehearsal one transaction. A run
-that claims people for the *new* time in the milliseconds between the two has
-those claims released too, and the next run reminds them again: one extra
-push. Left for cause fix 10, which removes the gap rather than narrowing it.
-
 ### An inbox page can skip a row written with microseconds by something other than the server
 
 The inbox is paged by the place the last row holds, `(created_at, id)` (cause
@@ -269,38 +259,33 @@ range being built through UTC.
 
 ### Medium
 
-| Where | Claim |
-|---|---|
-| [accountLinking.js:76](../server/utils/accountLinking.js#L76) | Email lookups are case-sensitive, so a Google sign-in can create a duplicate empty account instead of linking |
-| [api.ts:136](../src/shared/services/api.ts#L136) | A session revoked mid-use leaves the app showing signed-in UI with stale data until it is force-quit |
-| [slotGenerator.ts:191](../src/features/smart-planner/utils/slotGenerator.ts#L191) | A range spanning a DST transition repeats one day and drops the last |
-| [availability.js:82](../server/routes/native/availability.js#L82) | Work outside the try block can leave a malformed request with no response at all, plus an unhandled rejection |
-| [members.js:141](../server/routes/native/members.js#L141) | The members-availability endpoint hands every member everyone else's email address |
-| [import.ts:58](../src/shared/services/calendar/import.ts#L58) | One calendar failing to read makes the import delete everything previously imported from it |
-| [export.ts:236](../src/shared/services/calendar/export.ts#L236) | Changing the export calendar keeps writing rehearsals to the old one |
-| [calendarMappings.ts:22](../src/shared/utils/calendarMappings.ts#L22) | The cached connection id survives a user switch, so the next user's mappings never reach the server |
-| [inviteRedemption.js](../server/routes/native/inviteRedemption.js) | Invite codes are matched case-sensitively while the entry field disables auto-capitalisation, so a correctly dictated code typed in lowercase is rejected |
-| [useNotifications.ts:83](../src/shared/hooks/useNotifications.ts#L83) | `getLastNotificationResponseAsync` is re-read when the user object changes, replaying an already-handled tap |
-| [AvailabilityScreen.tsx:81](../src/features/availability/screens/AvailabilityScreen.tsx#L81) | `today` is the UTC date while the grid is built from local dates, so after local midnight the wrong day is ringed |
+Empty: all five have been fixed since and their rows deleted — a session
+revoked mid-use now signs the app out, changing the export calendar moves the
+rehearsals to the new one, the cached connection id is reset when the account
+on the device changes, email lookups go through the normalised address, and the
+client sends a short invite code in capitals, as issued (T-025).
 
 ### Low
 
 | Where | Claim |
 |---|---|
-| [UnreadContext.tsx](../src/contexts/UnreadContext.tsx) | The unread badge is not cleared on logout, so the next person on the device sees the previous user's count |
-| [auth.js:26](../server/routes/auth.js#L26) | Registration confirms whether an email already has an account, while login is deliberately generic |
-| [reminderScheduler.js:28](../server/services/notifications/reminderScheduler.js#L28) | The day-before reminder is titled "Rehearsal tomorrow" for anything 12–24h out, including later the same day |
-| [reminderScheduler.js:89](../server/services/notifications/reminderScheduler.js#L89) | A failed reminder query is reported as a successful run with nothing due |
-| [NotificationsScreen.tsx:94](../src/features/notifications/screens/NotificationsScreen.tsx#L94) | Project-level notifications carry no projectId, so tapping them navigates nowhere |
-| [NotificationsScreen.tsx:64](../src/features/notifications/screens/NotificationsScreen.tsx#L64) | A failed inbox load is shown as an empty inbox while the bell still reports unread |
-| [AuthContext.tsx:163](../src/contexts/AuthContext.tsx#L163) | A failed timezone auto-sync is never retried, so an OAuth signup can store rehearsal times as UTC wall-clock |
+| [auth.js:73](../server/routes/auth.js#L73) | Registration confirms whether an email already has an account (409 `EMAIL_TAKEN`), while login is deliberately generic |
+| [AuthContext.tsx:297](../src/contexts/AuthContext.tsx#L297) | A failed first timezone sync is never retried (`hasTimezoneSynced` is set before the request), so an OAuth signup can store rehearsal times as UTC wall-clock |
 
 ---
 
 ## Known and left alone on purpose — not defects
 
-- `/admin` runs under a relaxed CSP because its tables are built with inline
-  `onclick` — see the tech-debt list in [app-store-release.md](app-store-release.md).
-- Push delivery is not verified: Expo's tickets say the message was accepted,
-  and the receipts that say whether a phone got it are never fetched. `sent`
-  means accepted.
+- Push delivery is not shown to anyone: Expo's ticket says the message was
+  accepted, and `sent` means accepted. The receipts are read by the reminder
+  cron (`checkPushReceipts`) only to drop tokens of devices no longer
+  registered.
+- The app's request timeout is iOS's timer of silence, not the app's own:
+  `REQUEST_TIMEOUT_MS` (10 s, [api.ts](../src/shared/services/api.ts)) is
+  handed by axios to NSURLSession as `timeoutInterval`, which iOS counts from
+  the last byte heard. In one e2e night run (T-220, on the simulator under
+  load) it did not fire in 40 s of silence: the request waited and got its
+  answer. The app sets no total limit of its own on purpose: it would count
+  the whole request, not the silence, and cut off a slow upload or read that
+  is still coming in, which today goes through. The e2e flows do not count on
+  iOS giving up (docs/e2e.md, `DROP`).

@@ -22,17 +22,17 @@ tags:
 - scrollUntilVisible:
     element:
       id: seen-toggle
-      below: ".*Orchard walk.*"
+      rightOf: ".*Orchard walk.*"
     direction: DOWN
     centerElement: true
 - waitForAnimationToEnd
 - tapOn:
     id: seen-toggle
-    below: ".*Orchard walk.*"
+    rightOf: ".*Orchard walk.*"
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Orchard walk.*"
+      rightOf: ".*Orchard walk.*"
       selected: true
     timeout: 10000
 # Signed out from the profile, not by relaunching: the app stays running.
@@ -55,14 +55,14 @@ tags:
 - scrollUntilVisible:
     element:
       id: seen-toggle
-      below: ".*Orchard walk.*"
+      rightOf: ".*Orchard walk.*"
     direction: DOWN
     centerElement: true
 - waitForAnimationToEnd
 # He has not marked it: her mark is not his.
 - assertVisible:
     id: seen-toggle
-    below: ".*Orchard walk.*"
+    rightOf: ".*Orchard walk.*"
     selected: false
 - takeScreenshot: 14-lopakhin-not-seen
 # The form opens on a project he runs, not on hers.

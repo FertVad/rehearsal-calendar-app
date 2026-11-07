@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, FontWeight } from '../constants/colors';
+import { FontWeight } from '../constants/colors';
 
 interface UserAvatarProps {
   firstName: string;

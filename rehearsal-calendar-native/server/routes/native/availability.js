@@ -2,11 +2,8 @@ import { asyncHandler } from '../../middleware/asyncHandler.js';
 import express, { Router } from 'express';
 import db from '../../database/db.js';
 import { requireAuth } from '../../middleware/jwtMiddleware.js';
-import {
-  timestampToISO,
-  formatAvailabilitySlotsResponse,
-} from '../../utils/timezone.js';
-import { AVAILABILITY_TYPES, DEFAULT_TIMEZONE, AVAILABILITY_SOURCES } from '../../constants/timezone.js';
+import { timestampToISO } from '../../utils/timezone.js';
+import { DEFAULT_TIMEZONE, AVAILABILITY_SOURCES } from '../../constants/timezone.js';
 import { AvailabilityInvalid, checkDays, checkBulkEntries, replaceManualDays, lockOwnAvailability, deleteManualDay } from '../../services/availability/manualDays.js';
 import { ImportInvalid, checkSync, applySync } from '../../services/availability/importScope.js';
 
@@ -32,9 +29,6 @@ async function getUserTimezone(userId) {
 router.get('/', requireAuth, asyncHandler(async (req, res) => {
   try {
     const userId = req.userId;
-
-    // Get user's timezone
-    const timezone = await getUserTimezone(userId);
 
     // Get availability from DB using new TIMESTAMPTZ columns
     const availability = await db.all(

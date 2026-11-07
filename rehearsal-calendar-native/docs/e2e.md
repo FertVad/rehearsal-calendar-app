@@ -29,6 +29,12 @@ JUnit and screenshots go to `e2e/out`.
   unchanged, listens for it, and answers `GET /code?to=<address>` on
   `127.0.0.1:3002` with the code in the latest message to that address; each
   message is also written to `e2e/out/mail`.
+- **A public page without its script.** The server's CSP says
+  `upgrade-insecure-requests`, which on https changes nothing; on the local
+  http server Safari fetched `/legal.js` from `https://127.0.0.1:3001`, and the
+  page had no language but English. `server-with-mailbox.mjs` takes only that
+  directive out of its answers, so a flow reads `/privacy` in Safari as people
+  do and switches its language by the page's buttons (flow 70, T-038).
 - **Ports 3001, 3002 or 8081 already taken.** A server or Metro already running is not
   reused: it could be pointed anywhere. What a dead e2e run left there is not
   that case — see below.
@@ -117,9 +123,13 @@ watching `e2e/out`. Maestro 2.11 said "Something have changed in the UI" after
 every one of 9 198 taps, the lost ones too, so its own tap-again never runs
 (T-207; `audit/evidence/T-207`, `touch-scan.mjs` counts them in any run's
 artifacts). Most were the first tap of sign-in, which types inside `retry`;
-flow 30 failed on one at "Apple Calendar", flow 11 at "Change password and
+flow 30 failed on one at "Apple Calendar" and at the profile tab (T-221), flow 11 at "Change password and
 sign in" and, under load, at "Forgot password?" (T-209), flow 44 at the
-profile tab after a restart (T-212).
+profile tab after a restart (T-212), flow 25 at "Busy" in the availability
+editor, whose day then closed unasked with nothing changed (T-218), flow 49 at
+the registration form's first "Show password", so the second went to the same
+eye and the repeat stayed hidden (T-223), flow 59 at "Sign In", the form left
+filled in and the calendar never asked for (T-225).
 
 It is below the app, and cannot be made to happen on demand. The rule:
 
@@ -130,7 +140,9 @@ It is below the app, and cannot be made to happen on demand. The rule:
   taps once more - never more - and waits again, and then `SEE` must come.
   No pause, no longer wait. A tap whose result is something leaving the
   screen gives `GONE` (the text that goes) instead of `SEE`: "Not Now" of the
-  "Save Password?" sheet at every sign-in (T-213).
+  "Save Password?" sheet at every sign-in (T-213); or `GONE_ID` (its id), for
+  a control whose label is in the screen's language: "Sign In"
+  (`login-submit`) at every sign-in (T-225).
 - Only for a tap that may be taken twice: the second comes when the first left
   no trace on screen, but a first that landed late would be repeated.
 - Every second tap is printed at the end of the run - `[e2e] taps taken again
@@ -172,14 +184,12 @@ flow 42). Times are local to the machine,
 which is every profile's zone but Chebutykin's, whose are in his; the
 simulator's is another (see above).
 
-A create whose answer is lost (flow 13) is made in the seed too: a trigger on
-the disposable database makes the first insert of a project named Dunsinane
-take 13 seconds, longer than the app's 10-second request timeout, so the app
-gives up while the server commits. Only that database has it.
-
 A flow that needs something changed behind the app's back while it runs — what
 another device would do — calls the local server from `e2e/scripts` with
-`runScript`; `${API_URL}` is its address (flow 10). A code the server
+`runScript`; `${API_URL}` is its address (flow 10). A rehearsal moved
+by its admin elsewhere: `e2e/scripts/move-rehearsal.js` with `API_URL`,
+`EMAIL`, `PASSWORD`, `REHEARSAL` (an id, `${<KEY>_REHEARSAL}`) and `HOURS`
+saves it that many hours later, title and place as they were (flow 73). A code the server
 mailed is read the same way: `e2e/scripts/read-code.js` with `MAIL_URL`
 (`${MAIL_URL}`), `TO` and `NAME` puts it in `${output.<NAME>}` (flows 11, 12).
 
@@ -187,8 +197,9 @@ A late answer is made the same way: `e2e/scripts/hold-answers.js` with
 `MAIL_URL`, `METHOD` and `PATH` (a regular expression on the path) holds the
 answers to matching requests until `release-answers.js` — the request is
 handled at once, only its answer waits, as on a slow network (flows 16–18,
-20). An answer waits nine seconds at most, inside the app's ten; `MS` makes it
-longer, and the app then gives up on the request as offline (flow 16). A hold
+20). An answer waits nine seconds at most, inside the ten seconds of silence
+after which iOS may give up on the request; `MS` makes it longer, for an
+answer the flow releases later (below: when `DROP`, when `MS`). A hold
 lapses after a minute, so a flow that fails before its release does not slow
 the next. `BEFORE: "1"` holds the request itself instead: the server handles
 it only on release, so a change is still on its way and what is read meanwhile
@@ -202,11 +213,35 @@ answers 200: it is asked without `If-None-Match`, so it gets its body back,
 never a 304 to the app's cached copy (flow 17).
 `ONCE: "1"` holds only the next matching request and lets the ones after it
 through: a read on a slow connection, then a change on a good one (flow 36).
+`DROP: "1"` answers nothing: the server closes the request's connection at
+once, as when the network goes, and the app's request fails then and there
+(flow 30). A GET whose connection drops iOS sends again by itself (flow 16:
+one read in `metro.log`, three drops in `server.log`), so a dropped GET is held
+without `ONCE` and the flow releases it when the network should be back (flow
+52). With `BEFORE: "1"` too, the request waits and its connection is
+closed on release (or when its `MS` lapses), never handed to the server: a
+request that fails late, after something else has landed, when the flow says
+(flow 36).
+`LOSE: "1"` hands the request to the server and closes its connection instead of the answer: the change is made, the app's request fails (flow 13).
+
+When `DROP`, when `MS`. The app's ten seconds (`REQUEST_TIMEOUT_MS`) are not
+the app's: axios hands them to NSURLSession, and iOS gives up after ten seconds
+of silence — or does not: in a night run (T-220) the import heard nothing for
+40 s and then got its 200 when the hold lapsed. So no flow counts on iOS giving
+up.
+- The point is a request that fails ("as offline", "does not come at all",
+  "goes nowhere"): `DROP`, and the wait for the error has no ten seconds in it
+  (flows 10, 16, 30, 34, 52). A failure that must come after something else:
+  `DROP` with `BEFORE`, and `release-answers.js` when it should (flow 36).
+- The point is a late answer the flow releases after something changed: `MS`
+  as long as the flow needs, and no check may depend on whether iOS gave up
+  first. Flow 37 needs it not to have given up yet: ten seconds of silence are
+  the least iOS waits, so from the tap to the release fits in them (below).
 A request held `BEFORE` puts the server's status in `server.log` on release
 ("the server answered 401"), so a flow that needs a real refusal shows it had
 one: a sign-out ends the tokens, and a change released after it is refused
-(flow 37). From the tap to the release must fit in the app's ten seconds, or
-the app gives up first and the failure is a timeout; bring the next controls
+(flow 37). From the tap to the release must fit in iOS's ten seconds of
+silence, or iOS may give up first and the failure is a timeout; bring the next controls
 into view before the tap.
 
 `EXPECT` on `release-answers.js` is how many answers must have been held: a
@@ -280,6 +315,13 @@ and green after. The simulator's clock is the Mac's, and moving it would take
 a test hook in the app's code, a mechanism of its own for a rare case (cause
 fix 14: "today" after a change of zone hours after the app opened).
 
+A fix that shows on screen only while a Google or Apple sign-in is still
+under way — the refusal arrives after the person has left the screen — is
+proved by Jest with the real `AuthProvider`, red before and green after. The
+stand has no Google or Apple provider, and one that held the request open
+would be a test path in the sign-in code, a mechanism of its own for a rare
+case (T-224: a late refusal alerted on the registration screen).
+
 Every flow carries `tags:` naming the parts of the app it walks through —
 `smoke`, `auth`, `calendar`, `projects`, `rehearsals`, `seen`,
 `notifications`, `planner`, and new ones as flows need them (`availability`,
@@ -305,7 +347,9 @@ whether it has gone, which waited seven seconds every time.
 - Sign in through `e2e/subflows/sign-in.yaml` (`env: { EMAIL: ... }`). It
   types, checks the text landed and retries: the first keyboard after a cold
   launch is slow, and text typed before it is up goes nowhere. The inputs do not
-  report focus, so there is nothing else to wait on. It also dismisses iOS's
+  report focus, so there is nothing else to wait on. It taps "Sign In"
+  through `tap-and-see.yaml` with `GONE_ID: login-submit`: one lost tap on it
+  left flow 59 on a filled-in form (T-225). It also dismisses iOS's
   "Save Password?" sheet, which covers the screen and hides the whole app from
   Maestro, through `tap-and-see.yaml` with `GONE: "Not Now"`: one lost tap on
   it left flow 51 waiting under the sheet (T-213). A flow that acts before
@@ -329,8 +373,15 @@ whether it has gone, which waited seven seconds every time.
   a flow never relies on what another one created. A flow that asserts on
   slots or busy times gets people of its own in the seed: a rehearsal another
   flow books for a shared person changes their day (flow 07 has its own
-  director for that). Find a control relative to
-  its own card (`below: ".*Act I run-through.*"`), not by `index`. A project
+  director for that). Find a control by its own card, not by `index` — and
+  not by `rightOf`/`below` a card's text either where the list has several
+  of it: every row's eye is right of every title, and Maestro took the first
+  in the list, a rehearsal another flow had put before it (T-223, flow 04).
+  `childOf` the row does not help: Maestro's iOS hierarchy puts the eye
+  beside the row, not in it. The control says which card it belongs to — the
+  seen eye is labelled `"Mark as seen, <title>"` — and the flow takes it by
+  `id:` and that label (`text: ".*Act I run-through"`); a value it shows (the
+  count) is read with `copyTextFrom` and `assertTrue`. A project
   opened in the planner arrives with its whole roster selected (DP01, flow
   07); a flow that needs another selection makes it itself.
 - A list item under the tab bar, or still scrolling, takes no tap: bring it
@@ -342,6 +393,13 @@ whether it has gone, which waited seven seconds every time.
   (`env: { DAY: ... }`), which waits for the list to rest and draws the day
   down below the legend (`availability-legend`). A day earlier than the one in
   view is looked for `UP` (flow 10).
+- The availability editor shows "Loading..." and no list until its first read
+  is in, every time it is opened. A `scrollUntilVisible` begun then looks at
+  "Loading...", and its swipe goes to the list that came meanwhile: the week
+  it wanted goes up out of sight, and the scroll goes on down to the spring
+  (T-030; flows 27 and 64, T-223). Wait for the day with its status first
+  (`extendedWaitUntil`, as `availability-pick-mark-day.yaml`), then scroll —
+  for a day in the two weeks the editor opens on.
 - A tap the flow then waits on the result of, where a lost tap has failed a
   flow, goes through `e2e/subflows/tap-and-see.yaml` (see "A lost tap"), not
   a `repeat` or `retry` of its own.

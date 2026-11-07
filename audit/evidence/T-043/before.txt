@@ -1,0 +1,53 @@
+T-043 — before, at fd53e38 (rehearsal-calendar-native/server)
+
+$ node rehearsal-calendar-native/node_modules/knip/bin/knip.js --directory rehearsal-calendar-native/server \
+    --config audit/evidence/T-043/knip.server.json --no-progress --no-exit-code --exclude unlisted
+Unused files (1)
+utils/mailer.js
+Unused exports (1)
+schemaTableNames  database/schema/inspect.mjs:16:14
+Duplicate exports (1)
+authenticateToken|requireAuth  middleware/jwtMiddleware.js
+
+$ ... same, plus --production   (tests and scripts/ are not production entries)
+Unused files (10)
+database/migrations/artifacts.mjs
+database/migrations/cli.mjs
+database/migrations/core.mjs
+database/migrations/errors.mjs
+database/migrations/history.mjs
+database/migrations/sql.mjs
+database/schema/inspect.mjs
+database/schema/manifest.mjs
+utils/mailer.js
+utils/mailTokens.js
+Unused exports (2)
+closeDatabase       function  database/db.js:276:17
+respondToRehearsal  function  services/rehearsals/rsvpService.js:18:23
+Duplicate exports (1)
+authenticateToken|requireAuth  middleware/jwtMiddleware.js
+
+(Without --exclude unlisted knip also lists 66 "unlisted dependencies": @jest/globals in
+64 test files and node-fetch in two tests, which only mock it. Package manifests are
+out of scope.)
+
+$ node audit/evidence/T-043/lint-unused.mjs rehearsal-calendar-native
+server/__tests__/integration/availability.integration.test.js:11 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/availability.integration.test.js:14 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/calendarSync.integration.test.js:10 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/calendarSync.integration.test.js:13 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/invites.integration.test.js:10 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/invites.integration.test.js:14 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/projects.integration.test.js:10 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/projects.integration.test.js:13 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/projects.integration.test.js:383 @typescript-eslint/no-unused-vars 'rehearsal' is assigned a value but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/rehearsals.integration.test.js:10 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/rehearsals.integration.test.js:13 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/rsvp.integration.test.js:10 @typescript-eslint/no-unused-vars 'jest' is defined but never used. Allowed unused vars must match /^_/u.
+server/__tests__/integration/rsvp.integration.test.js:13 @typescript-eslint/no-unused-vars 'clearIntegrationDb' is defined but never used. Allowed unused vars must match /^_/u.
+server/middleware/jwtMiddleware.js:56 @typescript-eslint/no-unused-vars 'err' is defined but never used.
+server/routes/native/availability.js:7 @typescript-eslint/no-unused-vars 'formatAvailabilitySlotsResponse' is defined but never used. Allowed unused vars must match /^_/u.
+server/routes/native/availability.js:9 @typescript-eslint/no-unused-vars 'AVAILABILITY_TYPES' is defined but never used. Allowed unused vars must match /^_/u.
+server/routes/native/availability.js:37 @typescript-eslint/no-unused-vars 'timezone' is assigned a value but never used. Allowed unused vars must match /^_/u.
+server/utils/timezone.js:183 @typescript-eslint/no-unused-vars 'timezone' is defined but never used. Allowed unused args must match /^_/u.
+total 18

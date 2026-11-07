@@ -1,0 +1,23 @@
+T-218: does the screen's guard see a "Busy" made just before the tap on the day?
+
+guard-probe.test.tsx, the real AvailabilityScreen and its hooks (as
+AvailabilityPutAway.test.tsx stands them up), on the code as it is (1e8f24c).
+Run as rehearsal-calendar-native/src/features/availability/screens/__tests__/T218Probe.test.tsx:
+
+$ npx jest --selectProjects frontend --testPathPatterns T218Probe --verbose
+  ✓ Busy, then the day tapped at once: asks (284 ms)
+  ✓ Busy, the reload answering after it, then the day: still busy, asks (86 ms)
+Tests:       2 passed, 2 total
+
+1. Day picked, Busy, the day tapped at once (each tap its own event, as on
+   the phone): the close question comes.
+2. The same with the screen's second load (its focus reload, which goes out
+   with the first at the opening) held, and answered between Busy and the tap
+   with the slot as the server has it: the day stays Busy (keepDrafts), and
+   the tap asks.
+
+So the guard sees an edit made just before the tap, a reload in between or
+not. What the red run lacked was the edit: the tap on Busy never reached the
+app (red-run-timeline.txt). Not kept in the suite: it passes on the old code
+and fixes nothing; AvailabilityPutAway.test.tsx ("with the day changed, it
+asks") already holds case 1 for "Free".

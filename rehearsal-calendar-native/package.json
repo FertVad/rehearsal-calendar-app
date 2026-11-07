@@ -13,7 +13,8 @@
     "lint": "eslint src/ --ext .ts,.tsx",
     "lint:fix": "eslint src/ --ext .ts,.tsx --fix",
     "type-check": "tsc --noEmit",
-    "check": "npm run check:secrets && npm run type-check && npm test",
+    "check": "npm run check:secrets && npm run check:dead && npm run type-check && npm test",
+    "check:dead": "knip --no-progress",
     "e2e": "node e2e/run.mjs",
     "e2e:up": "node e2e/run.mjs --up",
     "check:secrets": "bash scripts/check-secrets.sh",
@@ -37,7 +38,6 @@
     "expo-constants": "~18.0.14",
     "expo-device": "^8.0.10",
     "expo-haptics": "~15.0.8",
-    "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.12",
     "expo-localization": "~17.0.9",
     "expo-notifications": "~0.32.17",
@@ -67,5 +67,12 @@
     "ts-jest": "^29.2.5",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "jest"
+      ]
+    }
+  }
 }

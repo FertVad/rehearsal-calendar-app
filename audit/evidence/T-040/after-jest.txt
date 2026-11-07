@@ -1,0 +1,24 @@
+T-040 — green after: locales/{en,ru,es,de}.json, expo.locales in app.json,
+NSReminders* removed.
+
+$ npx jest --selectProjects frontend --testPathPatterns permissionTexts
+Running one project: frontend
+PASS frontend src/__tests__/permissionTexts.test.ts (5.584 s)
+  iOS permission prompt texts
+    ✓ declares the calendar descriptions (4303 ms)
+    ✓ en has a text for every declared description and nothing else (135 ms)
+    ✓ ru has a text for every declared description and nothing else (24 ms)
+    ✓ es has a text for every declared description and nothing else (35 ms)
+    ✓ de has a text for every declared description and nothing else (34 ms)
+    ✓ the English locale says what the infoPlist fallback says (2 ms)
+    ✓ each language words it its own way (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+
+Reminders: no requestRemindersPermissionsAsync / EntityTypes.REMINDER anywhere
+in src/ or App.tsx (only EntityTypes.EVENT in management.ts and
+deviceCalendars.ts; permissions.ts asks for the calendar only), and no
+expo-calendar config plugin that would need them.
+No e2e: the prompt text comes from the native project, ios/ is not updated
+here (owner's decision, 06.11).

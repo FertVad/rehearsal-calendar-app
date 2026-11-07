@@ -15,6 +15,7 @@ export interface ProfileTranslations {
   about: string;
   version: string;
   help: string;
+  privacyPolicy: string;
   reportBug: string;
   reportBugPlaceholder: string;
   reportBugSend: string;
@@ -37,9 +38,6 @@ export interface ProfileTranslations {
   lastNamePlaceholder: string;
   emailPlaceholder: string;
   firstNameRequired: string;
-  emailRequired: string;
-  emailInvalid: string;
-  saveChanges: string;
   profileUpdated: string;
   updateError: string;
   avatarHint: string;
@@ -91,6 +89,7 @@ export const ru = {
     about: 'О приложении',
     version: 'Версия',
     help: 'Помощь',
+    privacyPolicy: 'Политика конфиденциальности',
     reportBug: 'Сообщить об ошибке',
     reportBugPlaceholder: 'Опишите проблему...',
     reportBugSend: 'Отправить',
@@ -116,9 +115,6 @@ export const ru = {
     lastNamePlaceholder: 'Введите фамилию',
     emailPlaceholder: 'Введите email',
     firstNameRequired: 'Имя обязательно',
-    emailRequired: 'Email обязателен',
-    emailInvalid: 'Неверный формат email',
-    saveChanges: 'Сохранить изменения',
     profileUpdated: 'Профиль обновлен',
     updateError: 'Ошибка обновления профиля',
     avatarHint: 'Аватар генерируется автоматически на основе вашего email',
@@ -170,6 +166,7 @@ export const en = {
     about: 'About',
     version: 'Version',
     help: 'Help',
+    privacyPolicy: 'Privacy Policy',
     reportBug: 'Report a Bug',
     reportBugPlaceholder: 'Describe the issue...',
     reportBugSend: 'Send',
@@ -195,9 +192,6 @@ export const en = {
     lastNamePlaceholder: 'Enter last name',
     emailPlaceholder: 'Enter email',
     firstNameRequired: 'First name is required',
-    emailRequired: 'Email is required',
-    emailInvalid: 'Invalid email format',
-    saveChanges: 'Save Changes',
     profileUpdated: 'Profile updated',
     updateError: 'Failed to update profile',
     avatarHint: 'Avatar is automatically generated based on your email',
@@ -249,6 +243,7 @@ export const es = {
     about: 'Acerca de',
     version: 'Versión',
     help: 'Ayuda',
+    privacyPolicy: 'Política de privacidad',
     reportBug: 'Reportar un error',
     reportBugPlaceholder: 'Describe el problema...',
     reportBugSend: 'Enviar',
@@ -274,9 +269,6 @@ export const es = {
     lastNamePlaceholder: 'Introduce tu apellido',
     emailPlaceholder: 'Introduce el correo',
     firstNameRequired: 'El nombre es obligatorio',
-    emailRequired: 'El correo es obligatorio',
-    emailInvalid: 'Formato de correo no válido',
-    saveChanges: 'Guardar cambios',
     profileUpdated: 'Perfil actualizado',
     updateError: 'Error al actualizar el perfil',
     avatarHint: 'El avatar se genera automáticamente a partir de tu correo',
@@ -328,6 +320,7 @@ export const de = {
     about: 'Über',
     version: 'Version',
     help: 'Hilfe',
+    privacyPolicy: 'Datenschutzerklärung',
     reportBug: 'Fehler melden',
     reportBugPlaceholder: 'Problem beschreiben...',
     reportBugSend: 'Senden',
@@ -353,9 +346,6 @@ export const de = {
     lastNamePlaceholder: 'Nachnamen eingeben',
     emailPlaceholder: 'E-Mail eingeben',
     firstNameRequired: 'Vorname ist erforderlich',
-    emailRequired: 'E-Mail ist erforderlich',
-    emailInvalid: 'Ungültiges E-Mail-Format',
-    saveChanges: 'Änderungen speichern',
     profileUpdated: 'Profil aktualisiert',
     updateError: 'Profil konnte nicht aktualisiert werden',
     avatarHint: 'Der Avatar wird automatisch aus deiner E-Mail-Adresse erstellt',

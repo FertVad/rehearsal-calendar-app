@@ -1,0 +1,116 @@
+// knip: dead files, exports and dependencies in the app and the server.
+// npm run check:dead runs it (part of npm run check and of CI); any finding
+// fails the check. Every exception below says why it is not dead code — add a
+// new one only the same way.
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    // The app. jest.config.js also runs the server's tests (the "backend"
+    // project); knip gives server/ files to the server workspace below, so
+    // their imports are checked against server/package.json.
+    ".": {
+      "entry": [
+        "index.ts!",
+        "App.tsx!",
+        "src/**/*.{test,spec}.{ts,tsx}",
+        "src/__tests__/**/*.{ts,tsx,js}",
+        "e2e/**/*.{js,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,js}!",
+        "e2e/**/*.{js,mjs}"
+      ],
+      "ignore": [
+        // What a Maestro run writes (screenshots, logs); not in git.
+        "e2e/out/**"
+      ],
+      "expo": {
+        "config": ["app.json"]
+      },
+      "metro": {
+        "config": ["metro.config.js"]
+      },
+      "jest": {
+        "config": ["jest.config.js"]
+      },
+      "ignoreDependencies": [
+        // knip's Expo plugin assumes OTA updates unless app.json says
+        // "updates": {"enabled": false}. The app ships no expo-updates; there is
+        // nothing to remove, only a package knip thinks is missing.
+        "expo-updates",
+        // knip's Expo plugin asks for it because app.json sets
+        // userInterfaceStyle. Not installed and not imported: a missing package
+        // by knip's guess, not dead code.
+        "expo-system-ui",
+        // Comes with @react-navigation/native (-> core -> routers). Tests use the
+        // real router and link parser (jest.config.js moduleNameMapper,
+        // src/navigation/__tests__); nothing to remove.
+        "@react-navigation/routers",
+        "@react-navigation/core",
+        // Expo's getDefaultConfig in metro.config.js names its own transformer
+        // inside node_modules/expo/node_modules/@expo/metro-config.
+        "@expo/metro-config",
+        // Comes with react-native (@react-native/community-cli-plugin);
+        // e2e/__tests__/metro-watch.test.mjs checks Metro's own file watcher.
+        "metro",
+        // Comes with eslint 9; eslint.config.js imports its recommended rules.
+        "@eslint/js"
+      ],
+      "ignoreUnresolved": [
+        // Metro's default minifier, named by Expo's default config; it comes
+        // with metro-transform-worker and Metro resolves it from there.
+        "metro-minify-terser"
+      ]
+    },
+    // The server. server.js is what vercel.json builds; app.js is what the
+    // tests and scripts start. Only the scripts that are run are entries:
+    // migrate.js and r0-postgres.mjs by server/package.json, seed-demo.mjs by
+    // hand (its header) and by __tests__/seedDemo.test.js. scripts/test.mjs is
+    // not listed: knip finds it itself through the app's "npm test" (listing it
+    // gives a "redundant entry" hint). Helpers such as demoDates.mjs are checked
+    // through their imports. public/ is static files; migrations/ is SQL run by
+    // scripts/migrate.js.
+    "server": {
+      "entry": [
+        "server.js!",
+        "app.js!",
+        "scripts/migrate.js",
+        "scripts/r0-postgres.mjs",
+        "scripts/seed-demo.mjs",
+        "__tests__/**/*.{js,mjs}"
+      ],
+      "project": [
+        "**/*.{js,mjs}!",
+        "!public/**",
+        "!migrations/**"
+      ],
+      "ignoreDependencies": [
+        // Comes with jest (jest-runtime depends on it); every server test
+        // imports `jest` from it under native ES modules.
+        "@jest/globals",
+        // Comes with apple-signin-auth and google-auth-library (gaxios). Two
+        // tests stub the transport apple-signin-auth fetches Apple's keys with.
+        "node-fetch"
+      ]
+    }
+  },
+  "ignoreIssues": {
+    // schemaTableNames is unused, but the file is part of the schema manifest
+    // hash (server/database/schema/README.md, "immutable"); editing it is a
+    // schema change, not a cleanup (T-043, removed.md).
+    "server/database/schema/inspect.mjs": ["exports"],
+    // requireAuth is the "backwards compatibility" alias of authenticateToken,
+    // and both are used (routes/auth.js imports requireAuth, the other routes
+    // authenticateToken). Merging them is a change to authorization, not dead
+    // code (T-043).
+    "server/middleware/jwtMiddleware.js": ["duplicates"]
+  },
+  // An export that its own file uses is live code, not dead code: without this
+  // knip reports 56 such exports and 20 exported types (ru/en/es/de that
+  // translations.ts builds its table from, roster.js constants, props types of
+  // the component in the same file…; audit/evidence/T-046/red-before.md). Only
+  // the `export` word is extra there; dropping it changes module shape, not
+  // removes garbage, and is outside T-046. A file or export used nowhere is
+  // still reported.
+  "ignoreExportsUsedInFile": true
+}

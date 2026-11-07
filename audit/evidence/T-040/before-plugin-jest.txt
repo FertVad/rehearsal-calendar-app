@@ -1,0 +1,43 @@
+T-040 review fix — red before: app.json of 59610c2 (no expo-calendar entry in plugins), new test in place.
+$ npx jest --selectProjects frontend --testPathPatterns permissionTexts
+
+Running one project: frontend
+FAIL frontend src/__tests__/permissionTexts.test.ts
+  iOS permission prompt texts
+    ✓ declares the calendar descriptions (508 ms)
+    ✓ en has a text for every declared description and nothing else (4 ms)
+    ✓ ru has a text for every declared description and nothing else (2 ms)
+    ✓ es has a text for every declared description and nothing else (2 ms)
+    ✓ de has a text for every declared description and nothing else (4 ms)
+    ✓ the English locale says what the infoPlist fallback says (1 ms)
+    ✕ the infoPlist after the expo-calendar plugin has the calendar texts and no reminder keys (263 ms)
+    ✓ each language words it its own way (3 ms)
+
+  ● iOS permission prompt texts › the infoPlist after the expo-calendar plugin has the calendar texts and no reminder keys
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "NSRemindersUsageDescription",
+    +   "NSRemindersFullAccessUsageDescription",
+    + ]
+
+      67 |     const infoPlist = result.modResults;
+      68 |
+    > 69 |     expect(Object.keys(infoPlist).filter((k) => k.startsWith('NSReminders'))).toEqual([]);
+         |                                                                               ^
+      70 |     const en = localeIos('en');
+      71 |     const calendarKeys = Object.keys(infoPlist).filter((k) => k.startsWith('NSCalendars')).sort();
+      72 |     expect(calendarKeys).toEqual([
+
+      at Object.<anonymous> (src/__tests__/permissionTexts.test.ts:69:79)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 passed, 8 total
+Snapshots:   0 total
+Time:        3.698 s, estimated 6 s
+Ran all test suites matching permissionTexts.

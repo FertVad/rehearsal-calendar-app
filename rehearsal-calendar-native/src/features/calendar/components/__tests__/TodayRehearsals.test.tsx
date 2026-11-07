@@ -256,8 +256,43 @@ describe('TodayRehearsals Component', () => {
       expect(getByText('14:00–16:00')).toBeTruthy();
       expect(getByText('Project Alpha')).toBeTruthy();
       expect(getByText('Project Beta')).toBeTruthy();
-      expect(getByText('Studio A')).toBeTruthy();
-      expect(getByText('Studio B')).toBeTruthy();
+      // The place after the time, on its line (T-036).
+      expect(getByText(' · Studio A')).toBeTruthy();
+      expect(getByText(' · Studio B')).toBeTruthy();
+    });
+
+    // T-036: the heading over the list names the day, so the rows have no
+    // date column; one ground, a line from the text between two rows.
+    it('has no date column under the day’s heading', () => {
+      const { queryAllByTestId } = render(
+        <TodayRehearsals
+          rehearsals={mockRehearsals}
+          selectedDate="2025-12-29"
+          loading={false}
+          projects={mockProjects}
+          onOpenRehearsal={mockOnOpenRehearsal}
+        />
+      );
+
+      expect(queryAllByTestId('rehearsal-row-date')).toHaveLength(0);
+      expect(queryAllByTestId('rehearsal-separator-day')).toHaveLength(1);
+      expect(queryAllByTestId('rehearsal-separator-days')).toHaveLength(0);
+    });
+
+    it('parts a rehearsal begun the evening before from today’s by a line of the day', () => {
+      const lateYesterday: Rehearsal = { ...mockRehearsals[0], id: 'r0', date: '2025-12-28' };
+      const { queryAllByTestId } = render(
+        <TodayRehearsals
+          rehearsals={[lateYesterday, mockRehearsals[1]]}
+          selectedDate="2025-12-29"
+          loading={false}
+          projects={mockProjects}
+          onOpenRehearsal={mockOnOpenRehearsal}
+        />
+      );
+
+      expect(queryAllByTestId('rehearsal-separator-day')).toHaveLength(1);
+      expect(queryAllByTestId('rehearsal-separator-days')).toHaveLength(0);
     });
 
     it('should display time without end time if missing', () => {
@@ -282,8 +317,9 @@ describe('TodayRehearsals Component', () => {
   });
 
   describe('Admin Controls', () => {
-    it('should show admin badge and controls for admin projects', () => {
-      const { getAllByText, UNSAFE_getAllByType } = render(
+    // T-036: the row has no "Admin" badge; an admin's is the one with a swipe.
+    it('draws no admin badge on an admin’s row', () => {
+      const { queryByText, queryAllByTestId } = render(
         <TodayRehearsals
           rehearsals={mockRehearsals}
           selectedDate="2025-12-29"
@@ -293,8 +329,9 @@ describe('TodayRehearsals Component', () => {
         />
       );
 
-      // First rehearsal is in admin project, should show Admin badge
-      expect(getAllByText('Admin').length).toBeGreaterThan(0);
+      expect(queryByText('Admin')).toBeNull();
+      expect(queryAllByTestId('icon-Ionicons-shield-checkmark')).toHaveLength(0);
+      expect(queryAllByTestId('rehearsal-swipe-edit')).toHaveLength(1);
     });
 
     // T-016: no bin or pencil on the card; a swipe to the left has them.
@@ -459,7 +496,8 @@ describe('TodayRehearsals Component', () => {
 
       // invited is how many are on the rehearsal, not how many still owe an
       // answer, so it is the denominator rather than something to add to it
-      expect(getByText('5/10')).toBeTruthy();
+      // Under the eye, hidden from VoiceOver: the eye says it as its value.
+      expect(getByText('5/10', { includeHiddenElements: true })).toBeTruthy();
     });
 
     it('should display only confirmed count for non-admin projects', () => {
@@ -533,8 +571,9 @@ describe('TodayRehearsals Component', () => {
         />
       );
 
-      // Should not display location row
-      expect(queryByText('Studio A')).toBeNull();
+      // The time alone on its line
+      expect(queryByText(/Studio A/)).toBeNull();
+      expect(queryByText('10:00–12:00')).toBeTruthy();
     });
 
     it('should handle rehearsal with no matching project', () => {

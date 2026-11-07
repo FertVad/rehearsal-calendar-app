@@ -135,7 +135,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
               onPress={() => setTimezonePickerVisible(true)}
             >
               <View style={styles.timezoneSelectorLeft}>
-                <Ionicons name="globe" size={20} color={Colors.accent.blue} />
+                <Ionicons name="globe" size={20} color={Colors.accent.purple} />
                 <Text style={styles.timezoneSelectorValue}>
                   {getTimezoneLabel(projectTimezone)}
                 </Text>

@@ -1,0 +1,67 @@
+T-037 red before: __tests__/startup/runtimeRetry.test.js against runtime.js at 2697ed4
+(git restore --source=HEAD -- runtime.js; db.js already carried the new timeout, which this unit test does not touch).
+Command: cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/startup/runtimeRetry.test.js
+(Code-frame lines and the JWT_SECRET development warning trimmed.)
+
+FAIL __tests__/startup/runtimeRetry.test.js
+  ✕ the pause is a bounded number of seconds (14 ms)
+  ✕ a failed attempt answers 503 within the pause and makes one new attempt after it (138 ms)
+  ✕ concurrent requests after the pause share a single attempt (32 ms)
+  ✕ a second failure starts a new pause counted from its end (12 ms)
+
+  ● the pause is a bounded number of seconds
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Matcher error: received value must be a number or bigint
+
+    Received has value: undefined
+
+      at Object.toBeGreaterThanOrEqual (__tests__/startup/runtimeRetry.test.js:59:38)
+
+  ● a failed attempt answers 503 within the pause and makes one new attempt after it
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 503
+
+      at Object.toBe (__tests__/startup/runtimeRetry.test.js:82:24)
+
+  ● concurrent requests after the pause share a single attempt
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 5
+
+      Array [
+    -   200,
+    -   200,
+    -   200,
+    -   200,
+    -   200,
+    +   503,
+    +   503,
+    +   503,
+    +   503,
+    +   503,
+      ]
+
+    >  98 |   expect(responses.map(r => r.status)).toEqual(Array(5).fill(200));
+
+      at Object.toEqual (__tests__/startup/runtimeRetry.test.js:98:40)
+
+  ● a second failure starts a new pause counted from its end
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 2
+    Received number of calls: 1
+
+      at Object.toHaveBeenCalledTimes (__tests__/startup/runtimeRetry.test.js:110:24)
+
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 4 total
+
+The old runtime never makes a second attempt: after the pause every request is still 503.

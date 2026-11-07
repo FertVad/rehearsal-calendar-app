@@ -1,0 +1,41 @@
+$ cd rehearsal-calendar-native && npx jest --selectProjects frontend src/shared/constants/__tests__/noBlue.test.ts
+(on b2beb41, before the fix; the test file alone added)
+
+  ● the palette has no blue
+
+    expect(received).not.toContain(expected)
+    Expected value: not "blue"
+      at Object.<anonymous> (src/shared/constants/__tests__/noBlue.test.ts:33:42)
+
+  ● no source paints blue, but for the avatars
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 21
+
+    - Array []
+    + Array [
+    +   "features/calendar/components/RehearsalCard.tsx:108: <Ionicons name=\"folder-outline\" size={14} color={Colors.accent.blue} />",
+    +   "features/calendar/components/RehearsalCard.tsx:142: color={currentResponse === 'yes' ? Colors.accent.blue : Colors.text.secondary}",
+    +   "features/calendar/components/WeeklyCalendar.tsx:374: borderColor: Colors.accent.blue,",
+    +   "features/calendar/components/WeeklyCalendar.tsx:390: color: Colors.accent.blue,",
+    +   "features/calendar/screens/RehearsalDetailsScreen.tsx:216: color={seen ? Colors.accent.blue : Colors.text.tertiary}",
+    +   "features/calendar/screens/RehearsalDetailsScreen.tsx:320: <Ionicons name=\"calendar-outline\" size={20} color={Colors.accent.blue} />",
+    +   "features/calendar/screens/RehearsalDetailsScreen.tsx:335: <Ionicons name=\"folder-outline\" size={20} color={Colors.accent.blue} />",
+    +   "features/calendar/screens/RehearsalDetailsScreen.tsx:358: <Ionicons name=\"eye\" size={16} color={Colors.accent.blue} />",
+    +   "features/calendar/styles/calendarScreenStyles.ts:229: color: Colors.accent.blue,",
+    +   "features/onboarding/screens/WelcomeScreen.tsx:57: <View style={[styles.featureIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>",
+    +   "features/onboarding/screens/WelcomeScreen.tsx:58: <Ionicons name=\"people-outline\" size={24} color={Colors.accent.blue} />",
+    +   "features/profile/screens/ProfileScreen.tsx:299: <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>",
+    +   "features/profile/screens/ProfileScreen.tsx:300: <Ionicons name=\"notifications\" size={20} color={Colors.accent.blue} />",
+    +   "features/profile/screens/ProfileScreen.tsx:351: <View style={[styles.settingIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>",
+    +   "features/profile/screens/ProfileScreen.tsx:352: <Ionicons name=\"globe\" size={20} color={Colors.accent.blue} />",
+    +   "features/projects/screens/CreateProjectScreen.tsx:138: <Ionicons name=\"globe\" size={20} color={Colors.accent.blue} />",
+    +   "features/projects/screens/ProjectDetailScreen.tsx:439: case 'admin': return Colors.accent.blue;",
+    +   "features/projects/screens/ProjectDetailScreen.tsx:683: color={Colors.accent.blue}",
+    +   "shared/constants/colors.ts:36: blue: '#3b82f6',",
+    + ]
+
+Test Suites: 1 failed, 127 passed, 128 total
+Tests:       2 failed, 1193 passed, 1195 total

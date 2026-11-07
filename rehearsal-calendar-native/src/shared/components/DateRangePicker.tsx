@@ -10,7 +10,7 @@ import { useToday } from '../hooks/useClock';
 import { useWeekStart } from '../../hooks/useWeekStart';
 import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
-import { calendarTheme, monthTitle, profileDay, withToday } from './profileCalendar';
+import { calendarTheme, monthTitle, pickedDay, profileDay, withToday } from './profileCalendar';
 
 interface DateRangePickerProps {
   visible: boolean;
@@ -81,16 +81,14 @@ export function DateRangePicker({
     // Mark start date
     marked[startDate] = {
       startingDay: true,
-      color: Colors.accent.purple,
-      textColor: 'white',
+      ...pickedDay,
     };
 
     // Mark end date
     if (endDate) {
       marked[endDate] = {
         endingDay: true,
-        color: Colors.accent.purple,
-        textColor: 'white',
+        ...pickedDay,
       };
 
       // Mark range between start and end
@@ -112,8 +110,7 @@ export function DateRangePicker({
       marked[startDate] = {
         startingDay: true,
         endingDay: true,
-        color: Colors.accent.purple,
-        textColor: 'white',
+        ...pickedDay,
       };
     }
 

@@ -17,7 +17,7 @@ import { useI18n } from '../../../contexts/I18nContext';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSeen } from '../../../contexts/SeenContext';
-import { Rehearsal, Project } from '../../../shared/types';
+import { Rehearsal } from '../../../shared/types';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { formatDate } from '../../../shared/utils/dateFormat';
 import { rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
@@ -37,6 +37,18 @@ interface Participant {
 interface AdminStats {
   confirmed: number;
   invited: number;
+}
+
+/**
+ * The people on a rehearsal as this person reads them: their own row first —
+ * the one they tap — and the others in the order the server gave them (by
+ * name). Someone not on it, an admin looking in, gets the list as it came
+ * (T-033).
+ */
+function ownRowFirst<T extends { userId: string }>(people: T[], ownId: string | null): T[] {
+  const own = people.findIndex((p) => p.userId === ownId);
+  if (own <= 0) return people;
+  return [people[own], ...people.slice(0, own), ...people.slice(own + 1)];
 }
 
 // iOS draws this sheet smaller while it stands at three quarters of the
@@ -155,13 +167,13 @@ export default function RehearsalDetailsScreen() {
           logger.warn('[RehearsalDetails] Response had no allParticipants');
           return;
         }
-        setParticipants(all.map((p) => ({
+        setParticipants(ownRowFirst(all.map((p) => ({
           userId: String(p.userId),
           firstName: p.firstName,
           lastName: p.lastName,
           // 'no' is "invited, not seen yet", the same as no answer.
           hasSeen: p.response === 'yes',
-        })));
+        })), ownId));
         const own = all.find((p) => String(p.userId) === ownId);
         const counts: AdminStats | undefined = res.data.stats;
         primeSeen(own ? { [rehearsalId]: own.response === 'yes' ? 'yes' : null } : {});
@@ -206,6 +218,7 @@ export default function RehearsalDetailsScreen() {
       <View style={styles.participantItem}>
         <View style={styles.participantInfo}>
           <Text style={styles.participantName}>{displayName}</Text>
+          {isCurrentUser && <Text style={styles.ownLabel}>{t.rehearsals.you}</Text>}
         </View>
         {responding ? (
           <ActivityIndicator size="small" color={Colors.accent.purple} />
@@ -213,7 +226,7 @@ export default function RehearsalDetailsScreen() {
           <Ionicons
             name={seen ? 'eye' : 'eye-off-outline'}
             size={20}
-            color={seen ? Colors.accent.blue : Colors.text.tertiary}
+            color={seen ? Colors.accent.purple : Colors.text.secondary}
           />
         )}
       </View>
@@ -317,13 +330,13 @@ export default function RehearsalDetailsScreen() {
                 opens no map (owner, 30.10). */}
             {/* Date */}
             <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={20} color={Colors.accent.blue} />
+              <Ionicons name="calendar-outline" size={20} color={Colors.text.secondary} />
               <Text style={styles.detailText}>{formattedDate}</Text>
             </View>
 
             {/* Time */}
             <View style={styles.detailRow}>
-              <Ionicons name="time-outline" size={20} color={Colors.accent.purple} />
+              <Ionicons name="time-outline" size={20} color={Colors.text.secondary} />
               <Text style={styles.detailText} testID="rehearsal-details-time">
                 {rehearsalTimeLabel(rehearsal, language, uses24)}
               </Text>
@@ -332,8 +345,10 @@ export default function RehearsalDetailsScreen() {
             {/* Project */}
             {project && (
               <View style={styles.detailRow}>
-                <Ionicons name="folder-outline" size={20} color={Colors.accent.blue} />
-                <Text style={styles.detailText}>{project.name}</Text>
+                <Ionicons name="folder-outline" size={20} color={Colors.text.secondary} />
+                <Text style={[styles.detailText, styles.projectText]} testID="rehearsal-details-project">
+                  {project.name}
+                </Text>
               </View>
             )}
 
@@ -355,7 +370,7 @@ export default function RehearsalDetailsScreen() {
               </Text>
               {isAdmin && stats && (
                 <View style={styles.statBadge}>
-                  <Ionicons name="eye" size={16} color={Colors.accent.blue} />
+                  <Ionicons name="eye" size={16} color={Colors.accent.purple} />
                   <Text style={styles.statText} testID="rehearsal-details-seen-count">
                     {stats.confirmed}/{stats.invited}
                   </Text>
@@ -449,6 +464,10 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     flex: 1,
   },
+  // The project, its name as its folder, is not coloured (T-031).
+  projectText: {
+    color: Colors.text.secondary,
+  },
   divider: {
     height: 1,
     backgroundColor: Colors.glass.border,
@@ -503,6 +522,10 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
+  },
+  ownLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.text.secondary,
   },
   loadingContainer: {
     padding: Spacing.xl,

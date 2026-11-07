@@ -1,0 +1,17 @@
+T-041 — green after.
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/environmentVersions.test.js
+PASS __tests__/environmentVersions.test.js
+  environment versions
+    ✓ CI, Vercel and autodev run one Node major (18 ms)
+    ✓ vercel.json with builds holds no settings Vercel would ignore (2 ms)
+(rerun after review; the former test "Vercel installs exactly the lock file" is gone, see vercel-builds.txt)
+
+Tests:       2 passed, 2 total
+
+Root Jest, backend project (where npm test runs it): PASS backend server/__tests__/environmentVersions.test.js
+
+$ cd rehearsal-calendar-native && node node_modules/expo/bin/cli install --check    (= npx expo install --check)
+Skipped checking dependencies: jest. These dependencies are listed in expo.install.exclude in package.json. Learn more: https://docs.expo.dev/more/expo-cli/#configuring-dependency-validation
+Dependencies are up to date
+Exit code 0

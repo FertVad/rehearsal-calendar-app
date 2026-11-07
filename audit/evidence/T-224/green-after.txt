@@ -1,0 +1,23 @@
+T-224 — green after (b0f76af).
+
+== e2e: npm run e2e -- e2e/flows/49-sign-in-and-register-forms.yaml ==
+[e2e] running the flows
+Waiting for flows to complete...
+[Passed] Sign-in and registration forms (3m 12s)
+1/1 Flow Passed in 3m 13s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+== Jest: AuthErrorOwner LoginFlow LoginScreen RegisterFlow RegisterScreen AuthContext ==
+PASS frontend src/contexts/__tests__/AuthContext.push.test.tsx
+PASS frontend src/features/auth/screens/__tests__/RegisterFlow.test.tsx
+PASS frontend src/features/auth/screens/__tests__/LoginScreen.test.tsx
+PASS frontend src/features/auth/screens/__tests__/AuthErrorOwner.test.tsx
+PASS frontend src/features/auth/screens/__tests__/LoginFlow.test.tsx
+PASS frontend src/features/auth/screens/__tests__/RegisterScreen.test.tsx
+PASS frontend src/contexts/__tests__/AuthContext.test.tsx
+Tests:       66 passed, 66 total
+
+== Jest: src/features/auth src/contexts src/features/profile src/navigation ==
+Tests:       206 passed, 206 total
+
+== tsc --noEmit: no errors ==

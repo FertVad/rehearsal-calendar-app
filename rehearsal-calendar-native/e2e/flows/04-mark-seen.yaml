@@ -14,23 +14,25 @@ tags:
 - extendedWaitUntil:
     visible: ".*Act I run-through.*"
     timeout: 30000
-# The toggle of that card: other flows may have put rehearsals before it, and
-# then it sits under the tab bar (flow 06's "Duel scene" takes the first slot
-# offered — late in the day, tomorrow morning). Bring it to the middle first.
+# The toggle of that card, by the rehearsal its label names: every eye is
+# right of every title, and "rightOf" took flow 06's "Duel scene" when it came
+# first (T-223). Other flows may have put rehearsals before it, and then it
+# sits under the tab bar (flow 06's takes the first slot offered — late in the
+# day, tomorrow morning). Bring it to the middle first.
 - scrollUntilVisible:
     element:
       id: seen-toggle
-      below: ".*Act I run-through.*"
+      text: ".*Act I run-through"
     direction: DOWN
     centerElement: true
 - waitForAnimationToEnd
 - tapOn:
     id: seen-toggle
-    below: ".*Act I run-through.*"
+    text: ".*Act I run-through"
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Act I run-through.*"
+      text: ".*Act I run-through"
       selected: true
     timeout: 10000
 - runFlow:
@@ -43,12 +45,14 @@ tags:
 - scrollUntilVisible:
     element:
       id: seen-toggle
-      below: ".*Act I run-through.*"
+      text: ".*Act I run-through"
     direction: DOWN
     centerElement: true
 - waitForAnimationToEnd
-- assertVisible:
+# The count is the eye's value, its label the rehearsal: one selector cannot
+# ask for both, so the value is read from that eye.
+- copyTextFrom:
     id: seen-toggle
-    below: ".*Act I run-through.*"
-    text: "1/4"
+    text: ".*Act I run-through"
+- assertTrue: ${maestro.copiedText == "1/4"}
 - takeScreenshot: 04-director-sees-one-of-four

@@ -45,13 +45,13 @@ tags:
 - scrollUntilVisible:
     element:
       id: seen-toggle
-      below: ".*Accounts review.*"
+      rightOf: ".*Accounts review.*"
     direction: DOWN
     centerElement: true
 - extendedWaitUntil:
     visible:
       id: seen-toggle
-      below: ".*Accounts review.*"
+      rightOf: ".*Accounts review.*"
       selected: true
       text: "1/2"
     timeout: 10000

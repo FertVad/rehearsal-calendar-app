@@ -1,0 +1,7 @@
+T-035 — after the fix
+$ npx tsc --noEmit        (no output: clean)
+$ npx jest --selectProjects frontend --verbose src/features/calendar/components/__tests__/WeeklyCalendar.test.tsx
+Tests:       17 passed, 17 total
+
+The whole frontend project, run once while working (the path pattern was not applied, so it ran everything):
+Tests:       1217 passed, 1217 total

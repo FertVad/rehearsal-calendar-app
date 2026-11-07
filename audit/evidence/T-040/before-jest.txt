@@ -1,0 +1,32 @@
+T-040 — red before: src/__tests__/permissionTexts.test.ts on the old app.json
+(no expo.locales, NSReminders* still declared).
+
+$ npx jest --selectProjects frontend src/__tests__/permissionTexts.test.ts
+(the run took the whole frontend project; output condensed to the new file's
+failures — the other 132 suites passed)
+
+  ● iOS permission prompt texts › en has a text for every declared description and nothing else
+    expo.locales.en is not set in app.json
+  ● iOS permission prompt texts › ru has a text for every declared description and nothing else
+    expo.locales.ru is not set in app.json
+  ● iOS permission prompt texts › es has a text for every declared description and nothing else
+    expo.locales.es is not set in app.json
+  ● iOS permission prompt texts › de has a text for every declared description and nothing else
+    expo.locales.de is not set in app.json
+  ● iOS permission prompt texts › the English locale says what the infoPlist fallback says
+
+    expo.locales.en is not set in app.json
+
+      20 | function localeIos(lang: string): Record<string, string> {
+      21 |   const file = appJson.expo.locales?.[lang];
+    > 22 |   if (typeof file !== 'string') throw new Error(`expo.locales.${lang} is not set in app.json`);
+         |                                       ^
+      23 |   return JSON.parse(fs.readFileSync(path.join(root, file), 'utf8')).ios ?? {};
+      24 | }
+
+  ● iOS permission prompt texts › each language words it its own way
+
+    expo.locales.en is not set in app.json
+
+Test Suites: 1 failed, 132 passed, 133 total
+Tests:       6 failed, 1283 passed, 1289 total

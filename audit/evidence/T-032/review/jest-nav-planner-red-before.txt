@@ -1,0 +1,13 @@
+$ npx jest --selectProjects frontend --testPathPatterns navPlanner   # on 57587d0, common.ts unchanged
+FAIL frontend src/i18n/__tests__/navPlanner.test.ts
+    ✕ ru: Планер (371 ms)
+    ✓ en: Planner (1 ms)
+    ✕ es: Planificador (2 ms)
+    ✕ de: Planer (1 ms)
+    Expected: "Планер"
+    Received: "Planner"
+    Expected: "Planificador"
+    Received: "Planner"
+    Expected: "Planer"
+    Received: "Planner"
+Tests:       3 failed, 1 passed, 4 total

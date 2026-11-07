@@ -1,0 +1,82 @@
+# One's own row first in a rehearsal's participants, and "You" on it (T-033,
+# owner 04.11 after the audit of 29.10, s05-2). The rows came as the server
+# gives them, by first name, and one's own — the row that marks it seen — was
+# wherever the name put it. Now it is first, with "You" under the name; the
+# others keep their order.
+#
+# "Moated grange", tomorrow, has Angelo, Mariana and Vincentio on it, in that
+# order by name. Mariana, an actor, was second; Vincentio, the admin of its
+# project, last. Each opens it and finds their own row above the other two.
+#
+# Maestro reads the row by its accessibility label, the name alone: VoiceOver
+# is left as it was (owner 30.10), so the "You" drawn under the name is not in
+# the tree. Jest checks it is on that row; the screenshots show it.
+appId: ${APP_ID}
+name: One's own row is first in a rehearsal's participants
+tags:
+  - rehearsals
+  - seen
+---
+# The actor.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MARIANA_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Moated grange.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element: ".*Moated grange.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn: ".*Moated grange.*"
+- extendedWaitUntil:
+    visible: "Angelo Deputy.*"
+    timeout: 15000
+- takeScreenshot: 72-actor-details
+- assertVisible:
+    id: own-seen-toggle
+    text: "Mariana Grange"
+- assertVisible:
+    text: "Angelo Deputy.*"
+    below:
+      id: own-seen-toggle
+- assertVisible:
+    text: "Vincentio Duke.*"
+    below:
+      id: own-seen-toggle
+- tapOn: "Close"
+
+# The director: the admin of the project, who sees the count.
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${VINCENTIO_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Moated grange.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element: ".*Moated grange.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn: ".*Moated grange.*"
+- extendedWaitUntil:
+    visible: "Angelo Deputy.*"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "0/3"
+    timeout: 10000
+- takeScreenshot: 72-director-details
+- assertVisible:
+    id: own-seen-toggle
+    text: "Vincentio Duke"
+- assertVisible:
+    text: "Angelo Deputy.*"
+    below:
+      id: own-seen-toggle
+- assertVisible:
+    text: "Mariana Grange.*"
+    below:
+      id: own-seen-toggle

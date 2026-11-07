@@ -30,6 +30,9 @@ const EXPECTED: Record<DateFormatName, Record<'ru' | 'en' | 'es' | 'de', string>
   weekdayDayMonthShort: {
     ru: 'Чт, 29 окт.', en: 'Thu, Oct 29', es: 'Jue, 29 oct', de: 'Do., 29. Okt.',
   },
+  weekdayShort: {
+    ru: 'Чт', en: 'Thu', es: 'Jue', de: 'Do',
+  },
   fullDate: {
     ru: 'Четверг, 29 октября 2026 г.',
     en: 'Thursday, October 29, 2026',

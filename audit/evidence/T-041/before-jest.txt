@@ -1,0 +1,53 @@
+T-041 — red before. server/__tests__/environmentVersions.test.js on the old files.
+Superseded in part: the test "Vercel installs exactly the lock file" (section 1 and its lines below)
+was replaced after review — Vercel ignores installCommand with `builds`. See vercel-builds.txt.
+The Node sections (2, 3) and the Expo check (4) stand.
+
+== 1. HEAD 175596a (Node already 26 everywhere; vercel.json without installCommand)
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/environmentVersions.test.js
+FAIL __tests__/environmentVersions.test.js
+  environment versions
+    ✓ CI, Vercel and autodev run one Node major (19 ms)
+    ✕ Vercel installs exactly the lock file (6 ms)
+
+  ● environment versions › Vercel installs exactly the lock file
+    Expected: "npm ci"
+    Received: undefined
+
+Tests:       1 failed, 1 passed, 2 total
+
+== 2. git restore --source=1e8f24c^ -- .nvmrc rehearsal-calendar-native/server/package.json
+   (the state of the Node incident: engines.node ">=18.0.0 <25", .nvmrc 22.16.0)
+FAIL __tests__/environmentVersions.test.js
+  environment versions
+    ✕ CI, Vercel and autodev run one Node major (11 ms)
+    ✕ Vercel installs exactly the lock file (9 ms)
+
+  ● environment versions › CI, Vercel and autodev run one Node major
+    server engines.node must name one major as "N.x", got ">=18.0.0 <25".
+
+Tests:       2 failed, 2 total
+
+== 3. Only .nvmrc from 1e8f24c^ (22.16.0); engines 26.x and launchd.sh v26.13.0 as on HEAD
+FAIL __tests__/environmentVersions.test.js
+  ● environment versions › CI, Vercel and autodev run one Node major
+    expect(received).toEqual(expected) // deep equality
+      Object {
+    -   "autodev": 22,
+    +   "autodev": 26,
+        "ci": 22,
+    -   "vercel": 22,
+    +   "vercel": 26,
+      }
+
+Tests:       2 failed, 2 total
+
+Then: git restore --source=HEAD -- .nvmrc rehearsal-calendar-native/server/package.json
+
+== 4. Expo SDK check, package.json as on HEAD (no expo.install.exclude)
+$ cd rehearsal-calendar-native && node node_modules/expo/bin/cli install --check    (= npx expo install --check)
+The following packages should be updated for best compatibility with the installed expo version:
+  jest@30.2.0 - expected version: ~29.7.0
+Your project may not work correctly until you install the expected versions of the packages.
+Found outdated dependencies
+Exit code 1

@@ -8,7 +8,7 @@ import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';
 import { formatDate } from '../../../shared/utils/dateFormat';
 import { isRehearsalSynced } from '../../../shared/utils/calendarStorage';
-import RehearsalCard from './RehearsalCard';
+import RehearsalList from './RehearsalList';
 
 interface TodayRehearsalsProps {
   rehearsals: Rehearsal[];
@@ -32,11 +32,6 @@ export default function TodayRehearsals({
 }: TodayRehearsalsProps) {
   const { t, language } = useI18n();
   const [syncedRehearsals, setSyncedRehearsals] = useState<Record<string, boolean>>({});
-
-  // Memoize project lookup to avoid repeated searches (MUST be before early returns!)
-  const projectsMap = useMemo(() => {
-    return new Map(projects.map(p => [p.id, p]));
-  }, [projects]);
 
   // Check which rehearsals are synced to calendar
   // Memoize rehearsal IDs to avoid re-running when rehearsal content changes
@@ -86,24 +81,14 @@ export default function TodayRehearsals({
   return (
     <View style={styles.todaySection}>
       <Text style={styles.sectionTitle}>{dateLabel}</Text>
-      <View style={styles.todayList}>
-        {rehearsals.map((rehearsal) => {
-          const project = rehearsal.projectId ? projectsMap.get(rehearsal.projectId) : undefined;
-          const isAdminForThisRehearsal = project?.is_admin || false;
-
-          return (
-            <RehearsalCard
-              key={rehearsal.id}
-              rehearsal={rehearsal}
-              projectName={project?.name || rehearsal.projectName}
-              isAdmin={isAdminForThisRehearsal}
-              isSynced={syncedRehearsals[rehearsal.id]}
-              onPress={() => onOpenRehearsal(rehearsal)}
-            />
-          );
-        })}
-      </View>
-
+      {/* No date column: the heading above names the day (T-036). */}
+      <RehearsalList
+        rehearsals={rehearsals}
+        projects={projects}
+        withDates={false}
+        synced={syncedRehearsals}
+        onOpenRehearsal={onOpenRehearsal}
+      />
     </View>
   );
 }

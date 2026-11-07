@@ -178,15 +178,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.xs,
   },
+  // Today is ringed, the days picked are filled: both purple, told apart by
+  // the fill (T-031). The digit stays the text's colour: purple on the
+  // screen's background is under the 4.5:1 text needs.
   dayCellToday: {
-    backgroundColor: Colors.accent.purpleDarkAlpha20,
+    borderWidth: 2,
+    borderColor: Colors.accent.purple,
     borderRadius: DAY_SIZE / 2,
   },
   dayCellPast: {
     opacity: 0.3,
   },
+  // Under white text: purpleFill (T-027).
   dayCellSelected: {
-    backgroundColor: Colors.accent.purple,
+    backgroundColor: Colors.accent.purpleFill,
     borderRadius: DAY_SIZE / 2,
   },
   dayText: {
@@ -195,7 +200,6 @@ const styles = StyleSheet.create({
   },
   dayTextToday: {
     fontWeight: FontWeight.bold,
-    color: Colors.accent.purple,
   },
   dayTextPast: {
     color: Colors.text.tertiary,

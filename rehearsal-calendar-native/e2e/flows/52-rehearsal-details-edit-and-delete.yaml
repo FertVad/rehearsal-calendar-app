@@ -79,9 +79,10 @@ tags:
       MAIL_URL: ${MAIL_URL}
       METHOD: GET
       PATH: "^/api/native/rehearsals/${MOUSETRAP_REHEARSAL}$"
-      # Past the app's ten seconds: the read does not come at all.
-      MS: "15000"
-      ONCE: "1"
+      # The read does not come at all: its connection is closed (not held
+      # past ten seconds: those are iOS's, T-220). Every one until the release,
+      # not ONCE: iOS sends a GET whose connection dropped again by itself.
+      DROP: "1"
 - assertVisible:
     id: rehearsal-submit
 - tapOn:
@@ -90,11 +91,10 @@ tags:
     visible: "Rehearsal updated successfully"
     timeout: 15000
 - tapOn: "OK"
-# Until the app has given up on the read: the old sheet said "not available"
-# then, and this goes on at once.
+# The read failed at once: the old sheet said "not available" then.
 - extendedWaitUntil:
     visible: "This rehearsal is not available.*"
-    timeout: 13000
+    timeout: 5000
     optional: true
 - assertNotVisible: "This rehearsal is not available.*"
 - assertVisible: ".*The Mousetrap.*"
@@ -103,6 +103,10 @@ tags:
 - assertVisible:
     id: rehearsal-details-delete
 - takeScreenshot: 52-read-again-lost
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
 
 # The next save, read again on a good network: the sheet shows it.
 - runFlow:
@@ -182,8 +186,9 @@ tags:
       MAIL_URL: ${MAIL_URL}
       METHOD: GET
       PATH: "^/api/native/rehearsals/${GHOST_REHEARSAL}/responses$"
-      MS: "15000"
-      ONCE: "1"
+      # Lost: its connection is closed (not held past iOS's ten seconds, T-220),
+      # and iOS's own resend with it, until the release.
+      DROP: "1"
 - scrollUntilVisible:
     element:
       id: rehearsal-details-delete
@@ -194,9 +199,13 @@ tags:
     id: rehearsal-details-delete
 - extendedWaitUntil:
     visible: "Could not find out who will be told it is cancelled.*"
-    timeout: 20000
+    timeout: 10000
 - assertNotVisible: "Delete “Ghost watch”.*"
 - takeScreenshot: 52-roster-not-read
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
 - tapOn: "Try again"
 - extendedWaitUntil:
     visible: "Delete “Ghost watch”, .*, 7:00.PM\\?"

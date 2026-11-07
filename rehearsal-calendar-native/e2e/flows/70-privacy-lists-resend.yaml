@@ -1,0 +1,76 @@
+# The privacy policy, as someone reads it in Safari, names Resend among the
+# providers that process their data — in each of its four languages (T-038).
+# Since 04.11 the server mails sign-up, password-reset and change-of-address
+# codes through Resend (EU, Ireland), and the page did not say so.
+#
+# The page is the local server's own /privacy (API_URL without /api), opened in
+# English; the other languages are reached by the page's own buttons, as a
+# reader switches them. (A second link opened into the running Safari, closed
+# or not, left the page in English.) Each language is written on its own, so
+# each is read on its own: the line is matched by its words, not only the name,
+# since "Resend" in bold is an element of its own.
+appId: com.apple.mobilesafari
+name: Privacy policy lists Resend in every language
+tags:
+  - legal
+---
+- stopApp
+- openLink:
+    link: ${API_URL.replace('/api', '')}/privacy?lang=en
+- extendedWaitUntil:
+    visible: "Privacy Policy"
+    timeout: 30000
+- scrollUntilVisible:
+    element: ".*sends the emails with your codes.*Ireland.*"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: 70-privacy-en
+
+- scrollUntilVisible:
+    element: "Русский"
+    direction: UP
+    timeout: 60000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Русский"
+      SEE: "Политика конфиденциальности"
+      WAIT_MS: 10000
+- scrollUntilVisible:
+    element: ".*отправка писем с кодами.*Ирландия.*"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: 70-privacy-ru
+
+- scrollUntilVisible:
+    element: "Español"
+    direction: UP
+    timeout: 60000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Español"
+      SEE: "Política de privacidad"
+      WAIT_MS: 10000
+- scrollUntilVisible:
+    element: ".*envío de los correos con códigos.*Irlanda.*"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: 70-privacy-es
+
+- scrollUntilVisible:
+    element: "Deutsch"
+    direction: UP
+    timeout: 60000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Deutsch"
+      SEE: "Datenschutzerklärung"
+      WAIT_MS: 10000
+- scrollUntilVisible:
+    element: ".*Versand der E-Mails mit Codes.*Irland.*"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: 70-privacy-de
+- stopApp

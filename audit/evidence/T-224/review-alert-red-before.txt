@@ -1,0 +1,32 @@
+T-224, review remark (Astra, P2): a late Google/Apple refusal was still alerted over registration.
+
+Red before: commit 3c9cbb0's test, with the fix files taken from its parent
+(git restore --source=HEAD~1 -- src/features/auth/hooks/useAttemptError.ts
+ src/features/auth/screens/LoginScreen.tsx src/features/auth/screens/RegisterScreen.tsx)
+
+$ npx jest --selectProjects frontend --runTestsByPath src/features/auth/screens/__tests__/AuthErrorOwner.test.tsx
+  ✓ a refused sign-in is said on sign-in only, and is gone after registration and back (296 ms)
+  ✓ a refused Google sign-in is not carried to registration (56 ms)
+  ✕ a Google refusal that comes after leaving for registration is not alerted over it (46 ms)
+  ✓ a Google refusal while on sign-in is still alerted there (80 ms)
+  ✓ a refused registration is said on registration only, and not on sign-in after going back (107 ms)
+    Expected number of calls: 0
+    Received number of calls: 1
+    1: "Google Sign-In Error", "Something went wrong. Try again"
+Tests:       1 failed, 4 passed, 5 total
+
+Green after (git restore --source=HEAD -- the same files):
+
+$ npx jest --selectProjects frontend --runTestsByPath AuthErrorOwner LoginScreen RegisterScreen LoginFlow RegisterFlow (auth screen tests)
+PASS frontend src/features/auth/screens/__tests__/RegisterFlow.test.tsx
+PASS frontend src/features/auth/screens/__tests__/LoginScreen.test.tsx
+PASS frontend src/features/auth/screens/__tests__/LoginFlow.test.tsx
+PASS frontend src/features/auth/screens/__tests__/AuthErrorOwner.test.tsx
+PASS frontend src/features/auth/screens/__tests__/RegisterScreen.test.tsx
+Tests:       31 passed, 31 total
+
+npx tsc --noEmit: exit 0
+
+No e2e for this remark: the alert needs a Google/Apple sign-in still in flight
+while the person taps Create account; the e2e stack has no Google/Apple
+provider to hold a request open. Flow 49's checks from b0f76af are unchanged.

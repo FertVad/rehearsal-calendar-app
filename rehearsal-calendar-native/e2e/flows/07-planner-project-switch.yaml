@@ -209,8 +209,10 @@ tags:
 # on the pull-to-refresh spinner, and iOS left the calendar under it (T-011).
 # Maestro reads no coordinates, so the filter is tapped where it belongs - its
 # middle, 18% down an iPhone 16, under the calendar's large title (T-029) - and
-# its list must open; 60 pt lower, the tap lands above it.
-- tapOn: "Back"
+# its list must open; 60 pt lower, the tap lands above it. The planner is a
+# tab's first screen with nothing to go back to, so the way is the tab (T-032).
+- assertNotVisible: "Back"
+- tapOn: "Calendar, tab.*"
 - extendedWaitUntil:
     visible:
       id: calendar-filter

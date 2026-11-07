@@ -1,0 +1,23 @@
+T-030 red before: flow 67 on the code before the fix
+(AvailabilityScreen.tsx and hooks/index.ts as at a978e40; flows, subflows and seed as in the fix)
+
+$ npm --prefix rehearsal-calendar-native run e2e -- e2e/flows/67-availability-drag-collapses.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Availability editor pulled down collapses, the screen stays (2m 40s) (Assertion is false: id: availability-legend is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screenshot at the failure (step-070-assertCondition-availability-legend.png,
+e2e/out/artifacts/2026-11-04_192731): the Calendar tab. The swipe down on the
+editor's header closed the whole MarkBusy screen.

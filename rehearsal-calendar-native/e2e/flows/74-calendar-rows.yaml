@@ -1,0 +1,121 @@
+# A rehearsal in the calendar is a row of 88 pt (T-036, owner 04.11 after the
+# audit of 29.10, s04-1, choice B). It was a card of 203 pt - a date badge,
+# an "Admin" badge, an icon to each line, the eye on a strip of its own - and
+# the calendar showed one whole. Now: the day in a column on the left, the
+# title, the time and the place on one line, the project with its dot, the
+# eye 44 a side on the right; at least three rows whole on the screen.
+#
+# Juliet runs both of her projects and is on each of their rehearsals:
+# tomorrow "Masked ball" at 10 in the Great chamber, "Street brawl" at 2 with
+# no place, one with no title at 5 in the Friar cell; the day after, a title
+# longer than its row. The day is named on the first of tomorrow's three
+# only; in the list of the day picked, under the day's heading, on none.
+appId: ${APP_ID}
+name: The calendar's rehearsals are rows with a date column
+tags:
+  - calendar
+  - rehearsals
+  - seen
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${JULIET_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Masked ball.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 74-calendar
+# 88 pt, the row a title and the one without: the element tapped is the row
+# but its eye.
+- assertVisible:
+    text: "(?s).*Masked ball.*"
+    height: 88
+    tolerance: 1
+- assertVisible:
+    text: "(?s)(?=.*5:00.PM–6:00.PM)(?=.*Friar cell).*"
+    height: 88
+    tolerance: 1
+# The eye at its right, 44 a side.
+- assertVisible:
+    id: seen-toggle
+    rightOf: ".*Masked ball.*"
+    width: 44
+    height: 44
+    tolerance: 1
+# Three rows whole above the tab bar: the third's eye too.
+- assertVisible: ".*Street brawl.*"
+- assertVisible:
+    id: seen-toggle
+    rightOf: "(?s)(?=.*5:00.PM–6:00.PM)(?=.*Friar cell).*"
+# The day on the first of tomorrow's, the time and the place on one line.
+# The row reads its texts joined by ", ": "FRI, 6, Masked ball, 10:00 AM–
+# 11:00 AM,  · Great chamber, Capulet House".
+- assertVisible:
+    text: "(?is)${TOMORROW_WEEKDAY_LABEL}, ${TOMORROW_NUMBER_LABEL}, Masked ball, 10:00.AM–11:00.AM, +· Great chamber, Capulet House"
+# Not on the next of that day; no place, the time alone.
+- assertVisible:
+    text: "(?s)(?=.*Street brawl)(?=.*2:00.PM–3:00.PM).*"
+- assertNotVisible:
+    text: "(?is)(?=.*\\b${TOMORROW_WEEKDAY_LABEL}\\b)(?=.*Street brawl).*"
+- assertNotVisible:
+    text: "(?s)(?=.*Street brawl)(?=.*·).*"
+# No badges: neither the day's nor the admin's.
+- assertNotVisible:
+    text: "(?s)(?=.*Masked ball)(?=.*(Tomorrow|Admin)).*"
+# The day after: its own day in its column, the long title on its one line.
+- scrollUntilVisible:
+    element: ".*Balcony scene.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- assertVisible:
+    text: "(?is)(?=.*\\b${AFTER_TOMORROW_WEEKDAY_LABEL}\\b)(?=.*Balcony scene).*"
+    height: 88
+    tolerance: 1
+- takeScreenshot: 74-calendar-day-after
+# Tomorrow picked: its three under its heading, no date column.
+- scrollUntilVisible:
+    element:
+      id: calendar-strip
+    direction: UP
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: calendar-day-${TOMORROW_DAY}
+      SEE: "Tomorrow"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "(?s).*Masked ball.*"
+    height: 88
+    tolerance: 1
+- assertNotVisible:
+    text: "(?is)(?=.*\\b${TOMORROW_WEEKDAY_LABEL}\\b)(?=.*Masked ball).*"
+- assertVisible:
+    id: seen-toggle
+    rightOf: ".*Masked ball.*"
+    width: 44
+    height: 44
+    tolerance: 1
+# Its rows parted by a line 64 pt in, as in the upcoming list, though there
+# is no date column: on the 353 pt ground (393 less 20 a side) it is 289
+# long, not the 337 of a line 16 in.
+- assertVisible:
+    id: rehearsal-separator-day
+    width: 289
+    tolerance: 1
+- assertNotVisible:
+    id: rehearsal-separator-day
+    width: 337
+    tolerance: 1
+- takeScreenshot: 74-day-picked
+# A tap on the row still opens the rehearsal.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Masked ball.*"
+      SEE: "10:00.AM.*11:00.AM"
+      WAIT_MS: "10000"
+- assertVisible:
+    id: rehearsal-details-time

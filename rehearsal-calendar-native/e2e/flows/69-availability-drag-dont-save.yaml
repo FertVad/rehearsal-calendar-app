@@ -1,0 +1,33 @@
+# The availability editor pulled down by its handle with the day changed asks
+# as its arrow does, and "Don't Save" puts the day back and collapses it: the
+# screen stays (T-030; owner, 04.11.2026). The swipe had closed the whole
+# screen.
+#
+# Astrov is busy all day on MARK_DAY, in no project; nothing here is saved.
+appId: ${APP_ID}
+name: Availability editor pulled down with a change, Don't Save keeps the screen
+tags:
+  - availability
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${ASTROV_EMAIL}
+- runFlow: ../subflows/availability-pick-mark-day.yaml
+- tapOn:
+    id: mode-free
+- runFlow: ../subflows/availability-pull-editor-down.yaml
+- extendedWaitUntil:
+    visible: "Don't Save"
+    timeout: 5000
+- tapOn: "Don't Save"
+- extendedWaitUntil:
+    notVisible:
+      id: availability-save
+    timeout: 10000
+- assertVisible:
+    id: availability-legend
+- assertVisible:
+    id: day-${MARK_DAY}
+    text: ".*, Busy"
+- takeScreenshot: 69-dont-save-screen-stays

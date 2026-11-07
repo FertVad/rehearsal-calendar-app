@@ -1,51 +1,29 @@
 export interface CalendarTranslations {
-  title: string;
-  rehearsalsFor: string;
-  selectProject: string;
   needProject: string;
-  myRehearsals: string;
   allProjects: string;
-  filterByProject: string;
   loading: string;
-  location: string;
-  time: string;
   upcomingEvents: string;
-  todayRehearsals: string;
   noUpcoming: string;
   tomorrow: string;
   todayButton: string;
   smartPlannerSubtitle: string;
-  rehearsalsCount: (count: number) => string;
   rehearsal: string;
-  upcomingCount: (count: number) => string;
 }
 
 export interface RehearsalsTranslations {
   addRehearsal: string;
   editRehearsal: string;
-  myRehearsals: string;
-  upcoming: string;
-  noUpcoming: string;
-  willAppear: string;
   rehearsalTitle: string;
   rehearsalTitlePlaceholder: string;
-  scene: string;
   date: string;
-  time: string;
   startTime: string;
   endTime: string;
-  duration: string;
-  notes: string;
-  actors: string;
   location: string;
   project: string;
   selectProject: string;
-  selectDate: string;
   selectStartTime: string;
   selectEndTime: string;
   locationPlaceholder: string;
-  creating: string;
-  created: string;
   createError: string;
   deleteConfirm: string;
   /** The confirmation's title: the rehearsal's name, if it has one, its day and start. */
@@ -58,6 +36,8 @@ export interface RehearsalsTranslations {
   /** The card's swipe and the details' corner: open the rehearsal in the form. */
   edit: string;
   participants: string;
+  /** Under one's own name in a rehearsal's participants, the row put first. */
+  you: string;
   createRehearsal: string;
   updateRehearsal: string;
   loadMembersError: string;
@@ -99,11 +79,8 @@ export interface RehearsalsTranslations {
   /** Beside the name of someone busy the whole day. */
   wholeDay: string;
   admin: string;
-  rehearsalDetails: string;
   /** Shown when a rehearsal cannot be opened — deleted, or the reader was taken off it. */
   notFound: string;
-  like: string;
-  unlike: string;
   recommendedTime: string;
   noAvailableTime: string;
   hoursShort: string;
@@ -111,52 +88,30 @@ export interface RehearsalsTranslations {
 
 export const ru = {
   calendar: {
-    title: 'Календарь репетиций',
-    rehearsalsFor: 'Репетиции на',
 needProject: 'Репетиции появятся, когда вы окажетесь в проекте',
-    selectProject: 'Выберите проект в разделе "Проекты"',
-    myRehearsals: 'Мои репетиции',
     allProjects: 'Все проекты',
-    filterByProject: 'Фильтр по проекту',
     loading: 'Загрузка репетиций...',
-    location: 'Место',
-    time: 'Время',
     upcomingEvents: 'Ближайшие события',
-    todayRehearsals: 'Репетиции на сегодня',
     noUpcoming: 'Репетиций пока не назначено',
     tomorrow: 'Завтра',
     todayButton: 'Сегодня',
     smartPlannerSubtitle: 'Найти оптимальное время для репетиции',
-    rehearsalsCount: (count: number) => `Репетиции (${count})`,
     rehearsal: 'Репетиция',
-    upcomingCount: (count: number) => `Предстоящие (${count})`,
   },
   rehearsals: {
     addRehearsal: 'Добавить репетицию',
     editRehearsal: 'Редактировать репетицию',
-    myRehearsals: 'Мои репетиции',
-    upcoming: 'Предстоящие',
-    noUpcoming: 'Репетиций пока не назначено',
-    willAppear: 'Тут будут ваши репетиции',
     rehearsalTitle: 'Название',
     rehearsalTitlePlaceholder: 'Например: Прогон второго акта',
-    scene: 'Сцена',
     date: 'Дата',
-    time: 'Время',
     startTime: 'Начало',
     endTime: 'Конец',
-    duration: 'Длительность',
-    notes: 'Заметки',
-    actors: 'Актёры',
     location: 'Место проведения',
     project: 'Проект',
     selectProject: 'Выберите проект',
-    selectDate: 'Выберите дату',
     selectStartTime: 'Выберите время начала',
     selectEndTime: 'Выберите время окончания',
     locationPlaceholder: 'Адрес или название места',
-    creating: 'Создание...',
-    created: 'Репетиция создана',
     createError: 'Ошибка создания репетиции',
     deleteConfirm: 'Удалить',
     deleteTitle: (title: string | null, when: string) =>
@@ -166,6 +121,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     deleteError: 'Не удалось удалить репетицию',
     edit: 'Изменить',
     participants: 'Участники',
+    you: 'Вы',
     createRehearsal: 'Создать репетицию',
     updateRehearsal: 'Сохранить изменения',
     loadMembersError: 'Не удалось загрузить участников проекта',
@@ -200,10 +156,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     andMore: (count: number) => `и ещё ${count}`,
     wholeDay: 'весь день',
     admin: 'админ',
-    rehearsalDetails: 'Детали репетиции',
     notFound: 'Репетиция не найдена. Возможно, её удалили или вас сняли с неё.',
-    like: 'Иду',
-    unlike: 'Отменить',
     recommendedTime: 'Рекомендованное время',
     noAvailableTime: 'Нет свободного времени для всех выбранных участников',
     hoursShort: 'ч',
@@ -212,52 +165,30 @@ needProject: 'Репетиции появятся, когда вы окажет�
 
 export const en = {
   calendar: {
-    title: 'Rehearsal Calendar',
-    rehearsalsFor: 'Rehearsals for',
 needProject: 'Rehearsals show up once you are in a project',
-    selectProject: 'Select a project in "Projects" section',
-    myRehearsals: 'My Rehearsals',
     allProjects: 'All Projects',
-    filterByProject: 'Filter by Project',
     loading: 'Loading rehearsals...',
-    location: 'Location',
-    time: 'Time',
     upcomingEvents: 'Upcoming Events',
-    todayRehearsals: "Today's Rehearsals",
     noUpcoming: 'Nothing scheduled yet',
     tomorrow: 'Tomorrow',
     todayButton: 'Today',
     smartPlannerSubtitle: 'Find the best time for rehearsal',
-    rehearsalsCount: (count: number) => `Rehearsals (${count})`,
     rehearsal: 'Rehearsal',
-    upcomingCount: (count: number) => `Upcoming (${count})`,
   },
   rehearsals: {
     addRehearsal: 'Add Rehearsal',
     editRehearsal: 'Edit Rehearsal',
-    myRehearsals: 'My Rehearsals',
-    upcoming: 'Upcoming',
-    noUpcoming: 'Nothing scheduled yet',
-    willAppear: 'Your rehearsals will be here',
     rehearsalTitle: 'Title',
     rehearsalTitlePlaceholder: 'e.g. Act II run-through',
-    scene: 'Scene',
     date: 'Date',
-    time: 'Time',
     startTime: 'Start Time',
     endTime: 'End Time',
-    duration: 'Duration',
-    notes: 'Notes',
-    actors: 'Actors',
     location: 'Location',
     project: 'Project',
     selectProject: 'Select Project',
-    selectDate: 'Select Date',
     selectStartTime: 'Select Start Time',
     selectEndTime: 'Select End Time',
     locationPlaceholder: 'Address or venue name',
-    creating: 'Creating...',
-    created: 'Rehearsal created',
     createError: 'Error creating rehearsal',
     deleteConfirm: 'Delete',
     deleteTitle: (title: string | null, when: string) =>
@@ -267,6 +198,7 @@ needProject: 'Rehearsals show up once you are in a project',
     deleteError: 'Could not delete the rehearsal',
     edit: 'Edit',
     participants: 'Participants',
+    you: 'You',
     createRehearsal: 'Create Rehearsal',
     updateRehearsal: 'Save Changes',
     loadMembersError: 'Failed to load project members',
@@ -301,10 +233,7 @@ needProject: 'Rehearsals show up once you are in a project',
     andMore: (count: number) => `and ${count} more`,
     wholeDay: 'all day',
     admin: 'admin',
-    rehearsalDetails: 'Rehearsal Details',
     notFound: 'This rehearsal is not available. It may have been deleted, or you were taken off it.',
-    like: 'Going',
-    unlike: 'Cancel',
     recommendedTime: 'Recommended Time',
     noAvailableTime: 'No available time for all selected participants',
     hoursShort: 'h',
@@ -313,52 +242,30 @@ needProject: 'Rehearsals show up once you are in a project',
 
 export const es = {
   calendar: {
-    title: 'Calendario de ensayos',
-    rehearsalsFor: 'Ensayos para',
 needProject: 'Los ensayos aparecen cuando estén en un proyecto',
-    selectProject: 'Selecciona un proyecto en la sección "Proyectos"',
-    myRehearsals: 'Mis ensayos',
     allProjects: 'Todos los proyectos',
-    filterByProject: 'Filtrar por proyecto',
     loading: 'Cargando ensayos...',
-    location: 'Lugar',
-    time: 'Hora',
     upcomingEvents: 'Próximos eventos',
-    todayRehearsals: 'Ensayos de hoy',
     noUpcoming: 'Nada programado todavía',
     tomorrow: 'Mañana',
     todayButton: 'Hoy',
     smartPlannerSubtitle: 'Encuentra el mejor horario para ensayar',
-    rehearsalsCount: (count: number) => `Ensayos (${count})`,
     rehearsal: 'Ensayo',
-    upcomingCount: (count: number) => `Próximos (${count})`,
   },
   rehearsals: {
     addRehearsal: 'Añadir ensayo',
     editRehearsal: 'Editar ensayo',
-    myRehearsals: 'Mis ensayos',
-    upcoming: 'Próximos',
-    noUpcoming: 'Nada programado todavía',
-    willAppear: 'Aquí estarán sus ensayos',
     rehearsalTitle: 'Título',
     rehearsalTitlePlaceholder: 'Ej.: Pasada del segundo acto',
-    scene: 'Escena',
     date: 'Fecha',
-    time: 'Hora',
     startTime: 'Inicio',
     endTime: 'Fin',
-    duration: 'Duración',
-    notes: 'Notas',
-    actors: 'Actores',
     location: 'Lugar',
     project: 'Proyecto',
     selectProject: 'Seleccionar proyecto',
-    selectDate: 'Seleccionar fecha',
     selectStartTime: 'Seleccionar hora de inicio',
     selectEndTime: 'Seleccionar hora de fin',
     locationPlaceholder: 'Dirección o nombre del lugar',
-    creating: 'Creando...',
-    created: 'Ensayo creado',
     createError: 'Error al crear el ensayo',
     deleteConfirm: 'Eliminar',
     deleteTitle: (title: string | null, when: string) =>
@@ -368,6 +275,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     deleteError: 'No se pudo eliminar el ensayo',
     edit: 'Editar',
     participants: 'Participantes',
+    you: 'Tú',
     createRehearsal: 'Crear ensayo',
     updateRehearsal: 'Guardar cambios',
     loadMembersError: 'No se pudieron cargar los miembros del proyecto',
@@ -402,10 +310,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     andMore: (count: number) => `y ${count} más`,
     wholeDay: 'todo el día',
     admin: 'admin',
-    rehearsalDetails: 'Detalles del ensayo',
     notFound: 'Este ensayo no está disponible. Puede que se haya eliminado o que los hayan quitado de él.',
-    like: 'Voy',
-    unlike: 'Cancelar',
     recommendedTime: 'Hora recomendada',
     noAvailableTime: 'No hay tiempo disponible para todos los participantes seleccionados',
     hoursShort: 'h',
@@ -414,52 +319,30 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
 
 export const de = {
   calendar: {
-    title: 'Probenkalender',
-    rehearsalsFor: 'Proben für',
 needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
-    selectProject: 'Wähle ein Projekt im Bereich „Projekte" aus',
-    myRehearsals: 'Meine Proben',
     allProjects: 'Alle Projekte',
-    filterByProject: 'Nach Projekt filtern',
     loading: 'Proben werden geladen...',
-    location: 'Ort',
-    time: 'Zeit',
     upcomingEvents: 'Nächste Ereignisse',
-    todayRehearsals: 'Heutige Proben',
     noUpcoming: 'Noch nichts angesetzt',
     tomorrow: 'Morgen',
     todayButton: 'Heute',
     smartPlannerSubtitle: 'Finde die beste Probezeit',
-    rehearsalsCount: (count: number) => `Proben (${count})`,
     rehearsal: 'Probe',
-    upcomingCount: (count: number) => `Bevorstehend (${count})`,
   },
   rehearsals: {
     addRehearsal: 'Probe hinzufügen',
     editRehearsal: 'Probe bearbeiten',
-    myRehearsals: 'Meine Proben',
-    upcoming: 'Bevorstehend',
-    noUpcoming: 'Noch nichts angesetzt',
-    willAppear: 'Hier stehen deine Proben',
     rehearsalTitle: 'Titel',
     rehearsalTitlePlaceholder: 'z. B. Durchlauf zweiter Akt',
-    scene: 'Szene',
     date: 'Datum',
-    time: 'Zeit',
     startTime: 'Beginn',
     endTime: 'Ende',
-    duration: 'Dauer',
-    notes: 'Notizen',
-    actors: 'Darsteller',
     location: 'Ort',
     project: 'Projekt',
     selectProject: 'Projekt auswählen',
-    selectDate: 'Datum auswählen',
     selectStartTime: 'Startzeit auswählen',
     selectEndTime: 'Endzeit auswählen',
     locationPlaceholder: 'Adresse oder Name des Ortes',
-    creating: 'Wird erstellt...',
-    created: 'Probe erstellt',
     createError: 'Fehler beim Erstellen der Probe',
     deleteConfirm: 'Löschen',
     deleteTitle: (title: string | null, when: string) =>
@@ -469,6 +352,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     deleteError: 'Die Probe konnte nicht gelöscht werden',
     edit: 'Bearbeiten',
     participants: 'Teilnehmer',
+    you: 'Du',
     createRehearsal: 'Probe erstellen',
     updateRehearsal: 'Änderungen speichern',
     loadMembersError: 'Projektmitglieder konnten nicht geladen werden',
@@ -503,10 +387,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     andMore: (count: number) => `und ${count} weitere`,
     wholeDay: 'ganztägig',
     admin: 'Admin',
-    rehearsalDetails: 'Probendetails',
     notFound: 'Diese Probe ist nicht verfügbar. Vielleicht wurde sie gelöscht, oder du wurdest abgemeldet.',
-    like: 'Ich komme',
-    unlike: 'Abmelden',
     recommendedTime: 'Empfohlene Zeit',
     noAvailableTime: 'Keine verfügbare Zeit für alle ausgewählten Teilnehmer',
     hoursShort: 'Std.',

@@ -76,13 +76,18 @@ const getApiUrl = (): string => {
 const API_URL = getApiUrl();
 
 /**
- * The support page, in the app's language. The server that answers the API
+ * A page of the site, in the app's language. The server that answers the API
  * serves the site too (one origin, for Universal Links), so the page is taken
  * from the same place: rehearsly.me in production, the local server in
  * development and e2e.
  */
-export const supportPageUrl = (language: string): string =>
-  `${API_URL.replace(/\/api\/?$/, '')}/support?lang=${encodeURIComponent(language)}`;
+const sitePageUrl = (page: string, language: string): string =>
+  `${API_URL.replace(/\/api\/?$/, '')}/${page}?lang=${encodeURIComponent(language)}`;
+
+export const supportPageUrl = (language: string): string => sitePageUrl('support', language);
+
+/** The privacy policy, opened from the profile itself (T-039, App Review 5.1.1). */
+export const privacyPageUrl = (language: string): string => sitePageUrl('privacy', language);
 
 const REQUEST_TIMEOUT_MS = 10000;
 // A request that sends email answers only after the provider does: the server

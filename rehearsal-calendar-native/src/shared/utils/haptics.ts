@@ -21,6 +21,15 @@ export const hapticMedium = () => {
 };
 
 /**
+ * Selection tick, the one a time picker's wheel gives for every value
+ * passing under its frame.
+ * Use for: a value changing under a wheel or strip as it moves
+ */
+export const hapticSelection = () => {
+  Haptics.selectionAsync();
+};
+
+/**
  * Success notification haptic
  * Use for: successful operations, saves
  */

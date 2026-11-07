@@ -212,18 +212,14 @@ tags:
 - extendedWaitUntil:
     visible: ".*Join with a code.*"
     timeout: 10000
-# The planner: back, its periods, "+ Add" on a free slot.
+# The planner: its periods, "+ Add" on a free slot. A tab's first screen, it
+# has no "Back" (T-032).
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Planner, tab.*"
-      SEE: "Smart Planner"
+      SEE: "Planner"
       WAIT_MS: "10000"
-- assertVisible:
-    text: "Back"
-    width: 50
-    height: 50
-    tolerance: 6
 # The period is a filter in the row, its choices under it (T-020).
 - assertVisible:
     id: planner-period

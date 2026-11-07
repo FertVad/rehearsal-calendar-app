@@ -1028,53 +1028,58 @@ members of the project.
 {
   "responses": [
     {
-      "id": "1",
+      "id": 1,
       "rehearsalId": "1",
       "userId": "1",
       "response": "yes",
-      "notes": "I'll be there on time",
-      "firstName": "John",
-      "lastName": "Doe",
-      "email": "john@example.com",
+      "notes": null,
       "createdAt": "2024-03-01T10:00:00.000Z",
-      "updatedAt": "2024-03-01T10:00:00.000Z"
+      "updatedAt": "2024-03-01T10:00:00.000Z",
+      "user": { "id": "1", "name": "John Doe" }
     },
     {
-      "id": "2",
+      "id": 2,
       "rehearsalId": "1",
       "userId": "2",
       "response": "no",
-      "notes": "Conflict with another commitment",
-      "firstName": "Jane",
-      "lastName": "Smith",
-      "email": "jane@example.com",
+      "notes": null,
       "createdAt": "2024-03-01T11:30:00.000Z",
-      "updatedAt": "2024-03-01T11:30:00.000Z"
+      "updatedAt": "2024-03-01T11:30:00.000Z",
+      "user": { "id": "2", "name": "Jane Smith" }
     }
+  ],
+  "allParticipants": [
+    { "userId": "1", "firstName": "John", "lastName": "Doe", "response": "yes" },
+    { "userId": "2", "firstName": "Jane", "lastName": "Smith", "response": "no" }
   ],
   "stats": {
     "confirmed": 1,
-    "invited": 1
+    "invited": 2
   }
 }
 ```
 
 **Error Responses:**
-- `403 Forbidden`: User is not a project member
-  ```json
-  { "error": "Access denied" }
-  ```
-- `404 Not Found`: Rehearsal not found
+- `404 Not Found`: the rehearsal does not exist, or the caller may not see it — the two are indistinguishable
   ```json
   { "error": "Rehearsal not found" }
   ```
+- `500 Internal Server Error`
+  ```json
+  { "error": "Failed to fetch responses" }
+  ```
 
 **Notes:**
-- Includes user information (name, email) for each response
+- `responses[].id` is the user's id, as a number; `userId` is the same id as a string
+- Each person carries a name only (`user.name` in `responses`, `firstName` and
+  `lastName` in `allParticipants`) — no email
+- `allParticipants` lists everyone on the rehearsal, ordered by first and last
+  name; `responses` lists the same people
 - Stats: `confirmed` is how many said 'yes', `invited` is how many are on this
   rehearsal — not how many are in the project. Every path that reports the
   counter divides by the same thing
-- The seen system is binary - users either have 'yes' response or no response at all
+- Everyone on a rehearsal has an answer: `"no"` (invited, not yet seen) from the
+  moment they are added, `"yes"` once they mark it seen. `"no"` is not a decline
 
 ---
 
@@ -1523,7 +1528,6 @@ GET /native/projects/1/members/availability?startDate=2024-03-15&endDate=2024-03
       "userId": "1",
       "firstName": "John",
       "lastName": "Doe",
-      "email": "john@example.com",
       "dates": [
         {
           "date": "2024-03-15",
@@ -1559,7 +1563,6 @@ GET /native/projects/1/members/availability?startDate=2024-03-15&endDate=2024-03
       "userId": "2",
       "firstName": "Jane",
       "lastName": "Smith",
-      "email": "jane@example.com",
       "dates": [
         {
           "date": "2024-03-15",
@@ -1858,7 +1861,7 @@ interface RehearsalResponse {
   id: string;
   rehearsalId: string;
   userId: string;
-  response: "yes" | null;        // Binary seen system: 'yes' (seen) or null (unseen/deleted)
+  response: "yes" | "no";        // 'yes' — seen; 'no' — invited, not yet seen
   notes: string | null;
   createdAt: string;             // ISO 8601 timestamp
   updatedAt: string;             // ISO 8601 timestamp
@@ -1870,9 +1873,11 @@ interface RehearsalResponse {
 ```
 
 **Seen System Notes:**
-- Binary system: only 'yes' (seen) or null (unseen/deleted)
-- No 'no' or 'maybe' statuses
-- Sending null deletes the response record
+- Binary system: 'yes' (seen) or 'no' (invited, not yet seen); no 'maybe'
+- Having a row is what puts a person on the rehearsal; answering only updates
+  the caller's existing row and never creates or deletes one. Anything other
+  than 'yes'/'no' (null included) is `400 RESPONSE_INVALID`
+- In the client's state unseen is `null`; `toggleSeen` (`SeenContext`) sends it as 'no'
 - Client uses optimistic updates with eye icon toggle
 
 ### Availability Slot

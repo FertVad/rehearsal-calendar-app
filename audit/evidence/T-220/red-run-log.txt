@@ -1,0 +1,46 @@
+T-220 — the night run's red, from its own logs
+Folder (working tree, not in git):
+rehearsal-calendar-native/e2e/out/failed/full-e2e-d670967-2026-11-05T01-15-53-702Z/
+
+1. Maestro, commands.json of "A sync whose import fails still exports" (UTC):
+COMPLETED 00:26:28.004  2520 ms runFlow tap-and-see TAP ".*Apple Calendar.*" SEE ".*Synchronize.*"
+                              -> SEE visible after the first tap (tapSeen = true; the retry step SKIPPED)
+COMPLETED 00:26:30.524    57 ms runScript hold-answers.js POST ^/api/native/availability/imported/sync$ MS 40000
+COMPLETED 00:26:30.581  4208 ms tapOn ".*Synchronize.*"
+FAILED    00:26:34.789 40385 ms assertCondition visible "Sync error" timeout 40000
+checks.log: "[e2e] taps taken again (tap-and-see.yaml): 0"
+=> no tap was lost: the Synchronize tap worked (handleSynchronize ran, see 3). Not T-207.
+
+2. Screenshot step-071-assertCondition-Sync_error.png (end of the wait):
+   alert "Synced successfully / Imported: 0 / Exported rehearsals: 1".
+   The import did not fail.
+
+3. metro.log 5416-5444:
+   [Sync] handleSynchronize called -> Starting synchronization
+   Request: POST /native/availability/imported/sync
+   Response: 200 POST /native/availability/imported/sync
+   [CalendarSync] Synced: 0 added, 0 updated, 0 removed, 0 adopted, 0 unchanged
+   ... export: Batch sync complete: 1 success, 0 failed
+   Run completed: import done, export done (1)
+
+4. server.log 1634: "[e2e] holding the answer to POST /api/native/availability/imported/sync"
+   (the only import request held; its hold was MS 40000)
+
+5. device-simulator.log (simulator clock -10:00, so 14:26 = 00:26 UTC):
+145947 14:26:31.322461 Task <5C7BB2EA…>.<6> resuming, timeouts(10.0, 604800.0)
+145950 14:26:31.323549 [C11 … url: http://127.0.0.1:3001/api/native/availability/imported/sync] start
+145967 14:26:31.324955 Task <5C7BB2EA…>.<6> sent request, body S 386
+       (no line of the task between these two: no -1001, no timeout)
+393272 14:27:11.347299 Task <5C7BB2EA…>.<6> received response, status 200
+393281 14:27:11.347586 Task <5C7BB2EA…>.<6> summary for task success {transaction_duration_ms=40024, response_status=200 …}
+398804 14:27:12.157080 'Synced successfully' on screen
+
+Cause: the flow made the import fail by holding its answer 40 s and counting
+on the app giving up after ten. The app's ten seconds are the axios timeout,
+which React Native hands to NSURLSession as the request's timeoutInterval
+("timeouts(10.0, …)"); iOS is the one to give up. Here it did not: the task
+heard nothing for 40.0 s, received the 200 the hold sent when it lapsed, and
+the import succeeded. The flow's wait for "Sync error" (40 s from 00:26:34.8)
+ended at 00:27:15.2, three seconds after the success alert. In a green run
+(this tree, 2026-11-05) the same task gives up at ten: metro.log
+"Failed to import calendar events: ECONNABORTED timeout of 10000ms exceeded".

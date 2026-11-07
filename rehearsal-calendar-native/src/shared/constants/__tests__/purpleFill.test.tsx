@@ -14,8 +14,6 @@ import { Colors } from '../colors';
 import { BottomActionButton } from '../../components/BottomActionBar';
 import GlassButton from '../../components/buttons/GlassButton';
 
-jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
-
 /** WCAG 2.x relative luminance of `#rrggbb`. */
 function luminance(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((i) => {
@@ -65,7 +63,6 @@ it('the purple GlassButton is filled with it, flat', () => {
 const SRC = join(__dirname, '..', '..', '..');
 const NO_TEXT_ON_IT = new Set([
   'features/calendar/components/WeeklyCalendar.tsx daySelected',
-  'features/availability/components/calendar/CalendarMonth.tsx dayCellSelected',
   'shared/components/ParticipantPicker.tsx boxOn',
   'features/onboarding/components/OnboardingProgress.tsx dotActive',
   'features/notifications/styles/notificationsScreenStyles.ts unreadDot',
@@ -91,5 +88,12 @@ it('nothing with white text on it is filled with #A855F7', () => {
   const gradients = sources(SRC)
     .filter((file) => /colors=\{\[Colors\.accent\.purple,/.test(readFileSync(file, 'utf8')))
     .map((file) => `${relative(SRC, file)} gradient`);
-  expect([...found, ...gradients]).toEqual([]);
+  // A react-native-calendars day marking: the library fills the day with its
+  // `color` and writes its `textColor` on it, whatever the theme's
+  // selected-day colours (T-031 review: the theme was changed, the days not).
+  const markings = sources(SRC).flatMap((file) =>
+    [...readFileSync(file, 'utf8').matchAll(
+      /\bcolor: Colors\.accent\.purple,\s*\n\s*textColor: ('white'|'#fff(fff)?'|Colors\.text\.inverse)/gi,
+    )].map(() => `${relative(SRC, file)} marking`));
+  expect([...found, ...gradients, ...markings]).toEqual([]);
 });

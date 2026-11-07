@@ -1,0 +1,16 @@
+T-045: after removing the 150 unused keys (interface + ru/en/es/de, 750 entries)
+
+Removal: each key path was removed from its interface and the four language
+objects; the script checked every key went exactly 5 times. Four section
+headings left with nothing under them in calendarSync.ts were dropped
+(// Rehearsal indicators, // Phase 2: Import Actions / Import Status /
+Auto-import Frequency). One test read a removed key to check the old "Period"
+heading is gone (SmartPlannerScreen.test.tsx); it now checks the literal text.
+
+npm run type-check            -> tsc --noEmit, no errors
+npx jest --selectProjects frontend
+Test Suites: 134 passed, 134 total
+Tests:       1294 passed, 1294 total
+(src/i18n/__tests__/unusedKeys.test.ts among them: every key read,
+ t.availability[status] and t.profile[option.labelKey] still pick their keys,
+ the four languages have the same keys)

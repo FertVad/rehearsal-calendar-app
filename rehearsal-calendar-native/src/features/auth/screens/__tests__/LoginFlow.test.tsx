@@ -61,7 +61,7 @@ jest.mock('../../../../shared/services/appleAuth', () => ({
   isAppleAuthAvailable: () => Promise.resolve(false),
 }));
 
-const navigation: any = { navigate: jest.fn() };
+const navigation: any = { navigate: jest.fn(), addListener: jest.fn(() => () => undefined) };
 let auth: ReturnType<typeof useAuth>;
 function Capture() { auth = useAuth(); return null; }
 

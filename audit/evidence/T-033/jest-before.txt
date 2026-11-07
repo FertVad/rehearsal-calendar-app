@@ -1,0 +1,13 @@
+T-033 — Jest on the old RehearsalDetailsScreen (base ebedfd7), the new tests added
+$ npx jest --selectProjects frontend RehearsalDetailsScreen
+
+FAIL frontend src/features/calendar/screens/__tests__/RehearsalDetailsScreen.test.tsx
+  ● Rehearsal details: one's own row first (T-033) › puts this person first, the others in the order they came
+  ● Rehearsal details: one's own row first (T-033) › says "You" on that row, in the language of the app
+  ● Rehearsal details: one's own row first (T-033) › puts an admin first too, and the count is the same
+    Expected: "Me Self"
+    Received: "Angelo Deputy"
+Tests:       3 failed, 1208 passed, 1211 total
+
+The fourth new test (this person not on the rehearsal: the order left alone,
+no "You") passes before and after: it guards the fix, it does not show the defect.

@@ -1,0 +1,41 @@
+T-043 — checks, at ca57828 (code commit), Node 26.13.0, local macOS sandbox
+
+$ npm run check:secrets
+{"summary":"pass","mode":"worktree","files":1664,"findings":0,"errors":0}
+
+$ npm run type-check
+> tsc --noEmit            (no output, exit 0)
+
+$ cd server && NODE_OPTIONS=--experimental-vm-modules npx jest
+FAIL __tests__/startup/runtimeStartup.test.js
+Test Suites: 1 failed, 76 passed, 77 total
+Tests:       8 failed, 1067 passed, 1075 total
+(An earlier run showed "2 failed" suites / 36 tests; rerun: only runtimeStartup.)
+
+runtimeStartup on the base fd53e38 (files of the change restored with
+`git restore --source=fd53e38`, then back with `git restore --source=HEAD`):
+  ✕ the same 8 tests, ✓ the same 3 — "Tests: 8 failed, 3 passed, 11 total".
+Cause is the sandbox, not the change: the fixture copies the server into a temp
+directory, writes a synthetic .env there and imports server.js from it
+(`import-failed`); this machine's OS refuses reads of .env files. The three
+passing tests are those that never load that .env.
+
+$ cd server && npm run test:r0-postgres -- --security-only
+controls, A02, B03, B04, D01, H04, IS02, R2_ADAPTER  PASS
+R2_STARTUP  "probe failed unexpectedly" — the same copied-entrypoint fixture as
+            above; on base fd53e38 (`--r2-foundation-only`) it fails the same way.
+The run stops at the first failure, so the rest ran one mode at a time:
+--f05-only                   controls, F05 PASS
+--r2-migrations-schema-only  controls, R2_SCHEMA, R2_MIGRATIONS PASS
+--r3-only                    controls, R3_EMAIL, R3_AUTH PASS
+--r4-only                    controls, D01, R4_LIFECYCLE, R4_PUSH_TOKEN PASS
+--r6-only                    controls, R6_AVAILABILITY PASS
+--r7-only                    controls, R7_IMPORT PASS
+--r8-only                    controls, R8_REMINDERS PASS
+
+`npm test` (scripts/test.mjs backend) here also fails in
+scripts/__tests__/check-secrets.test.mjs: its synthetic git fixtures exit 128 in
+this sandbox — client tooling, untouched by this task.
+
+Not run here: the full e2e (the supervisor runs it at night). The change is
+server-only; no screen changes, so no e2e scenario.

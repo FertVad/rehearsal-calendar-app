@@ -9,11 +9,12 @@
  */
 import React from 'react';
 import { Text } from 'react-native';
-import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, act, waitFor, within } from '@testing-library/react-native';
 import { rehearsalsAPI } from '../../../../shared/services/api';
 import { SeenProvider, useSeen } from '../../../../contexts/SeenContext';
 import { emitDataChanged } from '../../../../shared/utils/dataChanged';
 import { translations } from '../../../../i18n/translations';
+import { Colors } from '../../../../shared/constants/colors';
 import RehearsalDetailsScreen from '../RehearsalDetailsScreen';
 
 const mockNavigate = jest.fn();
@@ -165,6 +166,64 @@ describe('Rehearsal details: one "seen" model (DD01)', () => {
   });
 });
 
+describe('Rehearsal details: one\'s own row first (T-033)', () => {
+  // As the server gives them, by first name: this person (7) is second.
+  function answerByName() {
+    getResponses.mockResolvedValue({
+      data: {
+        allParticipants: [
+          { userId: '9', firstName: 'Angelo', lastName: 'Deputy', response: 'yes' },
+          { userId: '8', firstName: 'Other', lastName: 'Actor', response: 'no' },
+          { userId: '7', firstName: 'Me', lastName: 'Self', response: 'no' },
+          { userId: '10', firstName: 'Zed', lastName: 'Last', response: 'no' },
+        ],
+        stats: { confirmed: 1, invited: 4 },
+      },
+    });
+  }
+  const names = (screen: ReturnType<typeof render>) =>
+    screen.getAllByText(/^(Angelo Deputy|Other Actor|Me Self|Zed Last)$/).map((n) => n.props.children);
+
+  it('puts this person first, the others in the order they came', async () => {
+    answerByName();
+    const screen = await open();
+    expect(names(screen)).toEqual(['Me Self', 'Angelo Deputy', 'Other Actor', 'Zed Last']);
+  });
+
+  it('says "You" on that row, in the language of the app', async () => {
+    answerByName();
+    const screen = await open();
+    const own = screen.getByTestId('own-seen-toggle');
+    expect(within(own).getByText(translations.en.rehearsals.you)).toBeTruthy();
+    expect(screen.getAllByText('You')).toHaveLength(1);
+  });
+
+  it('puts an admin first too, and the count is the same', async () => {
+    isAdmin = true;
+    answerByName();
+    const screen = await open();
+    expect(names(screen)[0]).toBe('Me Self');
+    expect(screen.getByText('1/4')).toBeTruthy();
+  });
+
+  it('leaves the order alone when this person is not on it', async () => {
+    isAdmin = true;
+    getResponses.mockResolvedValue({
+      data: {
+        allParticipants: [
+          { userId: '9', firstName: 'Angelo', lastName: 'Deputy', response: 'yes' },
+          { userId: '8', firstName: 'Other', lastName: 'Actor', response: 'no' },
+        ],
+        stats: { confirmed: 1, invited: 2 },
+      },
+    });
+    const screen = await open();
+    expect(screen.getAllByText(/^(Angelo Deputy|Other Actor)$/).map((n) => n.props.children))
+      .toEqual(['Angelo Deputy', 'Other Actor']);
+    expect(screen.queryByText('You')).toBeNull();
+  });
+});
+
 describe('Rehearsal details: Edit and Delete (T-016)', () => {
   it("gives an admin Edit, which opens the form on this rehearsal", async () => {
     isAdmin = true;
@@ -300,4 +359,28 @@ describe('Rehearsal details: Edit and Delete (T-016)', () => {
     expect(screen.queryByTestId('rehearsal-details-edit')).toBeNull();
     expect(screen.queryByTestId('rehearsal-details-delete')).toBeNull();
   });
+});
+
+// Purple is doing and choosing; the project is neither, so its name and its
+// folder are the secondary text's colour (T-031, review: the folder was).
+it("draws the project's name and folder in the secondary text's colour", async () => {
+  answer('no');
+  const screen = await open();
+  const flatten = (style: unknown): Record<string, unknown> =>
+    Array.isArray(style) ? Object.assign({}, ...style.map(flatten)) : (style as Record<string, unknown>) ?? {};
+
+  expect(flatten(screen.getByText('Hamlet').props.style).color).toBe(Colors.text.secondary);
+  expect(flatten(screen.getByTestId('icon-Ionicons-folder-outline').props.style).color).toBe(Colors.text.secondary);
+});
+
+// The time is a line of the details, as the day above it is: it means nothing
+// and does nothing, so its clock is grey like the day's calendar (T-047).
+it("draws the time's clock in the secondary text's colour, as the day's calendar", async () => {
+  answer('no');
+  const screen = await open();
+  const flatten = (style: unknown): Record<string, unknown> =>
+    Array.isArray(style) ? Object.assign({}, ...style.map(flatten)) : (style as Record<string, unknown>) ?? {};
+
+  expect(flatten(screen.getByTestId('icon-Ionicons-calendar-outline').props.style).color).toBe(Colors.text.secondary);
+  expect(flatten(screen.getByTestId('icon-Ionicons-time-outline').props.style).color).toBe(Colors.text.secondary);
 });

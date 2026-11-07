@@ -1,0 +1,37 @@
+T-035, review 1 — the strip's suite of 1f38405 against the component of 20424cc
+(git restore --source=20424cc -- src/features/calendar/components/WeeklyCalendar.tsx)
+npx jest --selectProjects frontend --testPathPatterns WeeklyCalendar, Node 22
+
+  ✓ selects today when "Today" is pressed after another day was picked
+  ✓ puts a day's count under its date, not over its name
+    ✓ is 72 pt tall, a day 44 pt wide or more
+    ✓ opens with the day selected in its middle
+    ✓ brings a day tapped at its edge to the middle, and selects it
+    ✓ selects the day a swipe stops on
+    ✓ brings today to the middle on "Today"
+    ✓ keeps its days 44 pt wide on a 320 pt screen
+    ✓ ticks once for every day crossing the middle, and selects only where it stops
+    ✓ ticks back the same way, a day at a time
+    ✕ brings a tapped day under the frame with the same ticks, no thump
+    ✓ brings today back with ticks, no thump
+    ✕ does not let an interrupted swipe take the day a tap sent it to
+    ✕ hands on a tapped day, "Today" and a month's day only where the strip stops on them
+    ✓ hands on a day tapped where the frame already is, with no scroll to wait for
+    ✕ ticks for every day one event jumps over
+    ✓ has a frame standing in its middle, as wide as a day
+    ✓ opens on the month name, and the name closes it
+    ✓ begins the week on the profile's day, today the profile's, rehearsal days marked
+    ✓ selects a day picked in it, closes, and brings the day to the middle of the strip
+  ● The day strip as a wheel › brings a tapped day under the frame with the same ticks, no thump
+    Expected: "2030-01-10"
+    Received: "2030-01-13"
+  ● The day strip as a wheel › does not let an interrupted swipe take the day a tap sent it to
+    Expected: "2030-01-10"
+    Received: "2030-01-14"
+  ● The day strip as a wheel › hands on a tapped day, "Today" and a month's day only where the strip stops on them
+    Expected number of calls: 0
+    Received number of calls: 1
+  ● The day strip as a wheel › ticks for every day one event jumps over
+    Expected number of calls: 3
+    Received number of calls: 1
+Tests:       4 failed, 16 passed, 20 total

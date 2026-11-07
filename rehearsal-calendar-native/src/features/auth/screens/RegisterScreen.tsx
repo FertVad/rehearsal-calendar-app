@@ -19,6 +19,7 @@ import { registerScreenStyles as styles } from '../styles';
 import { AuthFlowError, authErrorMessage } from '../utils/authErrors';
 import { looksLikeEmail, meetsPasswordRule, normalizeEmail, PASSWORD_MIN_LENGTH } from '../utils/accountRules';
 import PasswordField from '../components/PasswordField';
+import { useAttemptError } from '../hooks/useAttemptError';
 
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 type Field = 'firstName' | 'lastName' | 'email' | 'password' | 'confirmPassword';
@@ -39,8 +40,9 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const emailInput = useRef<TextInput>(null);
   const passwordInput = useRef<TextInput>(null);
   const confirmInput = useRef<TextInput>(null);
-  const { register, busy, error, forgetPendingSignIn } = useAuth();
+  const { register, busy, forgetPendingSignIn } = useAuth();
   const { t, language } = useI18n();
+  const { error, fail, clear, here } = useAttemptError(navigation);
 
   // Leaving the form drops a registration still in flight: its late answer
   // must not open a code screen nobody is looking at (review R3-24).
@@ -70,6 +72,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const handleRegister = async () => {
     if (!filled || busy || !validateForm()) return;
 
+    clear();
     try {
       // No session yet: the account waits for the code just emailed (R3).
       const created = await register(email, password, firstName, lastName || undefined, language);
@@ -77,6 +80,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       navigation.navigate('VerifyEmail', { email: created.email, delivery: created.delivery });
     } catch (err) {
       if (err instanceof AuthFlowError && err.code === 'EMAIL_TAKEN') {
+        if (!here()) return;
         // Sign in, or — when someone else registered the address — take it back
         // with a code to the mailbox (R3 contract).
         Alert.alert(t.auth.emailTakenTitle, t.auth.emailTakenMessage, [
@@ -86,7 +90,8 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
         ]);
         return;
       }
-      Alert.alert(t.auth.registerError, authErrorMessage(t, err));
+      fail(err);
+      if (here()) Alert.alert(t.auth.registerError, authErrorMessage(t, err));
     }
   };
 

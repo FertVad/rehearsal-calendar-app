@@ -1,0 +1,18 @@
+T-047 review: flow 71 red on the old screen.
+
+RehearsalDetailsScreen.tsx put back as at 567e817
+(git restore --source=567e817 -- rehearsal-calendar-native/src/features/calendar/screens/RehearsalDetailsScreen.tsx),
+then: npm run e2e -- e2e/flows/71-no-blue.yaml
+
+[e2e] running the flows
+[Failed] Nothing is blue, purple is doing and choosing (1m 32s)
+1/1 Flow Failed
+
+Failed step (e2e/out/artifacts/2026-11-06_041921/.../commands.json):
+  runScript ../scripts/no-ink.js
+  env: SHOT 71-rehearsal-details, COLOUR #a855f7, LEFT 0, RIGHT 1, TOP 0.39, BOTTOM 0.61
+  error: "Error: 71-rehearsal-details: #a855f7 drawn 15.333333333333334 x 15 pt there"
+
+The one purple thing in the facts' rows: the time's clock, a 20-point
+Ionicons glyph drawn in Colors.accent.purple. Screenshot: e2e-71-red-before.png (copied by copy-shots.mjs).
+Afterwards: git restore --source=HEAD -- <the same file>.

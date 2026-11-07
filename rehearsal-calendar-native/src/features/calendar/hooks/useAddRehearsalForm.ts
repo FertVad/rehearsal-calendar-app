@@ -55,7 +55,7 @@ export function useAddRehearsalForm({
   routeParams,
 }: UseAddRehearsalFormProps) {
   const navigation = useNavigation<NavigationType>();
-  const { language, t } = useI18n();
+  const { t } = useI18n();
 
   // Extract route params
   const { projectId: prefilledProjectId, prefilledDate, prefilledTime } = routeParams || {};

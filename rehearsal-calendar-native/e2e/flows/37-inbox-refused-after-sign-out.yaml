@@ -6,8 +6,10 @@
 # "Could not mark as read" up over the sign-in screen. Flow 22 cannot show
 # this: its open connection answers 200 before the server has said anything.
 #
-# From the tap to the release must stay inside the app's ten seconds, or the
-# app gives up on the request while he is still signed in. So "Log out" is
+# From the tap to the release must stay inside ten seconds: those are iOS's
+# timer of silence on the request, the least it waits before it may give up
+# (it may also wait longer, T-220, which changes nothing here). Given up
+# sooner, the request would fail while he is still signed in. So "Log out" is
 # brought into view first; the profile keeps its scroll.
 appId: ${APP_ID}
 name: Inbox change refused after sign-out

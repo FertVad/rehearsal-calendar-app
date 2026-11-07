@@ -12,11 +12,6 @@ export const styles = StyleSheet.create({
   content: {
     padding: Spacing.xl,
   },
-  projectName: {
-    fontSize: FontSize.base,
-    color: Colors.accent.purple,
-    fontWeight: FontWeight.medium,
-  },
   form: {
     gap: Spacing.lg,
   },

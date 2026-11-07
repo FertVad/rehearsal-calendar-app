@@ -1,0 +1,61 @@
+# T-223: the flow used to reproduce flows 27 and 64's red, run from
+# rehearsal-calendar-native/e2e/flows/ as zz-t223-27-late.yaml (Trigorin,
+# MORNING_DAY, ".*, Partial") and zz-t223-64-late.yaml (Yelena, MARK_DAY,
+# ".*, Busy"); removed after. This is the 64 one. The editor is opened again
+# and again with its read of the availability answered later each time (by
+# the local server's /hold, flows 16-18), so the answer lands at another
+# moment of scrollUntilVisible's look-then-swipe.
+#
+# Red: without the extendedWaitUntil marked "the fix" below — the scroll as
+# flows 27 and 64 had it.
+# Green: with it — the wait flows 27 and 64 now have.
+appId: ${APP_ID}
+name: T-223 64 opening, availability answered late
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${YELENA_EMAIL}
+- evalScript: ${output.late = 300}
+- repeat:
+    times: 7
+    commands:
+      - evalScript: ${output.late = output.late + 700}
+      - evalScript: ${console.log('T-223 try, answer late by ' + output.late + ' ms')}
+      - runFlow:
+          file: ../subflows/tap-and-see.yaml
+          env:
+            TAP_ID: tab-create
+            SEE: "Mark Busy"
+            WAIT_MS: 5000
+      - runScript:
+          file: ../scripts/hold-answers.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+            METHOD: GET
+            PATH: "^/api/native/availability$"
+            MS: ${output.late}
+      - tapOn: "Mark Busy"
+      # the fix
+      - extendedWaitUntil:
+          visible:
+            id: day-${MARK_DAY}
+            text: ".*, Busy"
+          timeout: 30000
+      - scrollUntilVisible:
+          element:
+            id: day-${MARK_DAY}
+            text: ".*, Busy"
+          direction: DOWN
+          centerElement: true
+          timeout: 30000
+      - runScript:
+          file: ../scripts/release-answers.js
+          env:
+            MAIL_URL: ${MAIL_URL}
+      - tapOn:
+          id: header-cancel
+      - extendedWaitUntil:
+          notVisible:
+            id: availability-legend
+          timeout: 10000

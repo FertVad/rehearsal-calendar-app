@@ -1,0 +1,56 @@
+T-033 — one's own row first in a rehearsal's participants, "You" on it.
+Fix commit: aaf1454 (base ebedfd7).
+
+RED — flow 72 with RehearsalDetailsScreen.tsx and translations/calendar.ts
+restored from ebedfd7 (git restore --source=ebedfd7 -- <files>):
+
+$ npm run e2e -- e2e/flows/72-details-own-row-first.yaml
+[Failed] One's own row is first in a rehearsal's participants (1m 21s)
+  (Assertion is false: "Mariana Grange, You.*", id: own-seen-toggle is visible)
+1/1 Flow Failed
+Screenshot: before-actor.png — Angelo, Mariana, Vincentio; Mariana's row second, no "You".
+
+The director half, run once on its own from a temporary flow (deleted after;
+remove-temp-flow.mjs) because the run above stops at the actor:
+[Failed] tmp 72 director before (1m 26s)
+  (Assertion is false: "Vincentio Duke, You.*", id: own-seen-toggle is visible)
+Screenshot: before-director.png — Vincentio's row last, count 0/3.
+
+Files put back: git restore --source=HEAD -- <files>.
+
+GREEN — the same flow on aaf1454:
+$ npm run e2e -- e2e/flows/72-details-own-row-first.yaml
+[Passed] One's own row is first in a rehearsal's participants (1m 53s)
+1/1 Flow Passed in 1m 53s
+[e2e] taps taken again (tap-and-see.yaml): 0
+Screenshots: after-actor.png (Mariana first, "You"; Angelo, Vincentio after),
+after-director.png (Vincentio first, "You"; Angelo, Mariana after; count 0/3).
+
+Regression — flow 40 (the own row is the seen toggle; label matched as "Polina Andreyevna.*"):
+$ npm run e2e -- e2e/flows/40-details-seen-one-model.yaml
+[Passed] Details and the card read one seen mark (1m 19s)
+
+Jest after the fix: Tests: 1211 passed, 1211 total (jest-before.txt: 3 red before).
+type-check: tsc --noEmit clean.
+
+REVIEW (Astra, P2): the own row's accessibilityLabel is the name alone again,
+as on ebedfd7 — VoiceOver is not changed (owner 30.10). Jest no longer checks
+the label; it still finds "You" drawn on that row. Flow 72 now matches the row
+by its label, "Mariana Grange" / "Vincentio Duke", and its place above the
+other two; the "You" under the name is not in Maestro's tree, and the
+screenshots above (taken of what is drawn, which did not change) show it.
+
+RED — the adapted flow 72, files restored from ebedfd7 as above:
+$ npm run e2e -- e2e/flows/72-details-own-row-first.yaml
+[Failed] One's own row is first in a rehearsal's participants (1m 49s)
+  (Assertion is false: "Angelo Deputy.*", Below id: own-seen-toggle is visible)
+1/1 Flow Failed
+Files put back: git restore --source=HEAD -- <files>; label edit re-applied.
+
+GREEN — the adapted flow on the fix:
+$ npm run e2e -- e2e/flows/72-details-own-row-first.yaml
+[Passed] One's own row is first in a rehearsal's participants (1m 55s)
+1/1 Flow Passed in 1m 55s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Jest: Tests: 1211 passed, 1211 total.

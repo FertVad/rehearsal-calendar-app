@@ -37,6 +37,9 @@
      the code under test is mocked to UTC. Pin `timeZone` in the expectation.
    - Or a hardcoded future date that has since become the past.
 
+6. **`npm run check` (or CI) fails at `check:dead`**
+   - `npm run check:dead` runs knip (`knip.jsonc`) over the app and the server: delete the unused file, export or dependency it names; an exception goes into `knip.jsonc` only with a comment saying why it is not dead code.
+
 ---
 
 **Full docs**: [CLAUDE.md](../../CLAUDE.md)
