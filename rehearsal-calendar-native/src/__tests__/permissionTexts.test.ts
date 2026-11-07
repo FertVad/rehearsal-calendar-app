@@ -47,11 +47,28 @@ describe('iOS permission prompt texts', () => {
     for (const key of declared) expect(appJson.expo.ios.infoPlist[key]).toBe(en[key]);
   });
 
+  it('declares the reminder descriptions, which the app never asks for', () => {
+    expect(declared).toEqual(expect.arrayContaining([
+      'NSRemindersFullAccessUsageDescription',
+      'NSRemindersUsageDescription',
+    ]));
+  });
+
   // app.json is not what the build gets. expo-calendar is one of the legacy
   // plugins @expo/prebuild-config applies on its own even when `plugins` does
-  // not list it, and with no options it writes both NSReminders* keys with its
-  // English default. What lands in Info.plist is app.json after that plugin.
-  it('the infoPlist after the expo-calendar plugin has the calendar texts and no reminder keys', async () => {
+  // not list it: with no options it keeps the texts app.json gives, and with
+  // `remindersPermission: false` it deletes both NSReminders* keys. What lands
+  // in Info.plist is app.json after that plugin.
+  //
+  // The reminder keys must land even though the app never asks for reminders.
+  // expo-calendar's native module reads the reminders permission when it is
+  // created (CalendarModule OnCreate → initializePermittedEntities →
+  // RemindersPermissionRequester.getPermissions), and without the key it calls
+  // EXFatal. In a Release build that stopped the other Expo modules from
+  // registering: the JavaScript found no ExpoPushTokenManager, and TestFlight
+  // build 1.0.0 (1) opened on a black screen (07.11.2026). No e2e flow saw it,
+  // because the e2e build's ios/ was not regenerated after T-040.
+  it('the infoPlist after the expo-calendar plugin has the calendar and reminder texts', async () => {
     const entry = (appJson.expo.plugins ?? []).find((p: unknown) =>
       (Array.isArray(p) ? p[0] : p) === 'expo-calendar');
     const options = Array.isArray(entry) ? entry[1] : undefined;
@@ -66,15 +83,16 @@ describe('iOS permission prompt texts', () => {
     });
     const infoPlist = result.modResults;
 
-    expect(Object.keys(infoPlist).filter((k) => k.startsWith('NSReminders'))).toEqual([]);
     const en = localeIos('en');
-    const calendarKeys = Object.keys(infoPlist).filter((k) => k.startsWith('NSCalendars')).sort();
-    expect(calendarKeys).toEqual([
+    const keys = Object.keys(infoPlist).filter((k) => /^NS(Calendars|Reminders)/.test(k)).sort();
+    expect(keys).toEqual([
       'NSCalendarsFullAccessUsageDescription',
       'NSCalendarsUsageDescription',
       'NSCalendarsWriteOnlyAccessUsageDescription',
+      'NSRemindersFullAccessUsageDescription',
+      'NSRemindersUsageDescription',
     ]);
-    for (const key of calendarKeys) expect(infoPlist[key]).toBe(en[key]);
+    for (const key of keys) expect(infoPlist[key]).toBe(en[key]);
   });
 
   it('each language words it its own way', () => {

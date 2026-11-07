@@ -2,6 +2,8 @@
   "ios": {
     "NSCalendarsUsageDescription": "Rehearsly anota los ensayos en el calendario. De los calendarios elegidos solo toma las horas ocupadas, nunca el nombre de los eventos.",
     "NSCalendarsFullAccessUsageDescription": "Rehearsly anota los ensayos en el calendario. De los calendarios elegidos solo toma las horas ocupadas, nunca el nombre de los eventos.",
-    "NSCalendarsWriteOnlyAccessUsageDescription": "Rehearsly anota los ensayos en el calendario del teléfono."
+    "NSCalendarsWriteOnlyAccessUsageDescription": "Rehearsly anota los ensayos en el calendario del teléfono.",
+    "NSRemindersUsageDescription": "Rehearsly solo trabaja con el calendario y nunca pide acceso a tus recordatorios.",
+    "NSRemindersFullAccessUsageDescription": "Rehearsly solo trabaja con el calendario y nunca pide acceso a tus recordatorios."
   }
 }
