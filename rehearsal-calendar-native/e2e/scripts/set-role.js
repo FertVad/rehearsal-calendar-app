@@ -1,7 +1,7 @@
 // Makes ${MEMBER} (an address) ${ROLE} ("admin" or "member") of the project
 // named ${PROJECT} through the local server's API, as its owner ${EMAIL} would
 // from another device: signed in on its own, then the role changed on the
-// member's row (flows 75, 76).
+// member's row (flows 75, 76, 77).
 // Run by Maestro (runScript), which provides http and json.
 function call(method, route, token, body) {
   const response = http.request(API_URL + route, {

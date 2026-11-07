@@ -91,8 +91,22 @@ export function useAddRehearsalForm({
   const [startTime, setStartTime] = useState(opening);
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
-  const [localSelectedProject, setLocalSelectedProject] = useState<Project | null>(
-    selectedProject?.is_admin ? selectedProject : null
+  // The project the form is on, by id: the form's choice is the id, and the
+  // project is that id in the list as it is now (T-229 review). A copy kept
+  // from when it was chosen held its role from then, so an admin taken off it
+  // elsewhere still had Create, and the server refused it. A project the
+  // person is no longer admin of is no project here: Create is not offered,
+  // and nothing else is picked in its place unasked.
+  const [chosenProjectId, setChosenProjectId] = useState<string | null>(
+    selectedProject?.is_admin ? selectedProject.id : null
+  );
+  const localSelectedProject = useMemo(
+    () => adminProjects.find(p => p.id === chosenProjectId) ?? null,
+    [adminProjects, chosenProjectId]
+  );
+  const setLocalSelectedProject = useCallback(
+    (project: Project | null) => setChosenProjectId(project?.id ?? null),
+    []
   );
   // The end is the usual length after the start until someone sets it: picked
   // in its picker, or an edit's own. It follows the start, and the project's
@@ -134,14 +148,18 @@ export function useAddRehearsalForm({
   // chosen in the calendar, whose other past days take no tap (T-018).
   const [savedDate, setSavedDate] = useState<string | undefined>(undefined);
 
-  // Prefill form from route params
+  // The route's project, once per route, as soon as it is one the person is
+  // admin of: not again on each new list, which put it back over the project
+  // chosen in the form since — the list is read again on the way back to the
+  // app, and the next Create went to the route's project (T-229 review).
+  const prefilledFor = useRef<string | null>(null);
   useEffect(() => {
-    if (prefilledProjectId) {
-      const project = projects.find(p => p.id === prefilledProjectId);
-      if (project && project.is_admin) {
-        setLocalSelectedProject(project);
-        setSelectedProject(project);
-      }
+    if (!prefilledProjectId || prefilledFor.current === prefilledProjectId) return;
+    const project = projects.find(p => p.id === prefilledProjectId);
+    if (project && project.is_admin) {
+      prefilledFor.current = prefilledProjectId;
+      setChosenProjectId(project.id);
+      setSelectedProject(project);
     }
   }, [prefilledProjectId, projects]);
 
@@ -173,15 +191,11 @@ export function useAddRehearsalForm({
     // Don't override if we have a prefilled project
     if (prefilledProjectId) return;
 
-    // If current selection is not an admin project, select the default
-    if (localSelectedProject && !localSelectedProject.is_admin) {
-      setLocalSelectedProject(defaultProject);
-      if (defaultProject) {
-        setSelectedProject(defaultProject);
-      }
-    } else if (!localSelectedProject && defaultProject) {
-      // If no project selected and there is a default, select it
-      setLocalSelectedProject(defaultProject);
+    // Nothing chosen yet: the default. A project chosen and since taken from
+    // the person stays chosen and shows as none, rather than the form moving
+    // to another project by itself (T-229 review).
+    if (!chosenProjectId && defaultProject) {
+      setChosenProjectId(defaultProject.id);
       setSelectedProject(defaultProject);
     }
   }, [defaultProject, prefilledProjectId]);
@@ -355,7 +369,7 @@ export function useAddRehearsalForm({
     setShowProjectPicker(false);
     if (isEditMode || project.id === localSelectedProject?.id) return;
     touch('project', 'participants');
-    setLocalSelectedProject(project);
+    setChosenProjectId(project.id);
     setSelectedProject(project); // Also update global context
     setParticipants({ projectId: project.id, ids: [], settled: false });
   };

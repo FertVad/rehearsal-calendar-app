@@ -297,7 +297,7 @@ simulator what `notifyRoleChanged` sends, its data under `body` as Expo puts
 it for iOS, through `xcrun simctl push`; the app's received-push listener
 gets it as from a phone (flow 75). A role changed on another device:
 `e2e/scripts/set-role.js` with `API_URL`, `EMAIL` (the owner), `PASSWORD`,
-`PROJECT` (a name), `MEMBER` (an address) and `ROLE` (flows 75, 76).
+`PROJECT` (a name), `MEMBER` (an address) and `ROLE` (flows 75, 76, 77).
 
 An inbox that grows while the app is open: `e2e/scripts/notify.js` with
 `MAIL_URL`, `EMAIL`, `COUNT` and `TITLE` records `COUNT` notifications through

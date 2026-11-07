@@ -19,24 +19,28 @@ export const useRehearsalMembers = (project: Project | null) => {
   const [loaded, setLoaded] = useState<Loaded>({ projectId: null, members: [], failed: false });
   const [loading, setLoading] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // By id: the project list is read again behind the form (T-229), and the
+  // same project read anew is not another project to load the members of.
+  const projectId = project?.id ?? null;
 
   useEffect(() => {
     let current = true;
 
-    if (!project) {
+    if (!projectId) {
       setLoaded({ projectId: null, members: [], failed: false });
+      setLoading(false);
       return;
     }
 
     setLoading(true);
-    projectsAPI.getMembers(project.id)
+    projectsAPI.getMembers(projectId)
       .then((response) => {
-        if (current) setLoaded({ projectId: project.id, members: response.data.members || [], failed: false });
+        if (current) setLoaded({ projectId, members: response.data.members || [], failed: false });
       })
       .catch((error) => {
         if (!current) return;
         logger.error('Failed to load members:', error);
-        setLoaded({ projectId: project.id, members: [], failed: true });
+        setLoaded({ projectId, members: [], failed: true });
       })
       .finally(() => {
         if (current) setLoading(false);
@@ -45,7 +49,7 @@ export const useRehearsalMembers = (project: Project | null) => {
     return () => {
       current = false;
     };
-  }, [project, attempt]);
+  }, [projectId, attempt]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
   const forThisProject = project != null && loaded.projectId === project.id;

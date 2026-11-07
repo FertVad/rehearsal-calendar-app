@@ -53,8 +53,11 @@ const projects = [
   { id: 'A', name: 'Project A', is_admin: true, timezone: 'UTC', created_at: '2026-01-01T00:00:00Z' },
   { id: 'B', name: 'Project B', is_admin: true, timezone: 'UTC', created_at: '2026-01-02T00:00:00Z' },
 ];
+// The list as ProjectContext holds it now: read again behind the form, it is
+// a new list of new objects (T-229).
+const mockList: { current: typeof projects } = { current: projects };
 jest.mock('../../../../contexts/ProjectContext', () => ({
-  useProjects: () => ({ projects, selectedProject: null, setSelectedProject: jest.fn() }),
+  useProjects: () => ({ projects: mockList.current, selectedProject: null, setSelectedProject: jest.fn() }),
 }));
 const mockUser: { id: string; timezone: string; weekStartDay?: string } = { id: 'me', timezone: 'UTC' };
 jest.mock('../../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: mockUser }) }));
@@ -105,6 +108,7 @@ beforeEach(() => {
   create.mockResolvedValue({ data: { rehearsal: { id: 'new' } } });
   update.mockResolvedValue({ data: { rehearsal: { id: 'r1' } } });
   routeParams = { projectId: 'A', prefilledDate: '2026-11-10', prefilledTime: '10:00' };
+  mockList.current = projects;
 });
 afterEach(() => {
   jest.useRealTimers();
@@ -186,6 +190,50 @@ describe('Picking the project (R9-01)', () => {
     await submit(screen, t.rehearsals.updateRehearsal);
 
     expect(sentRoster(update)).toEqual(['9']);
+  });
+});
+
+// The projects are read again behind an open form — back to the app, a push
+// about a role, a 403 (T-229) — and the form is on what is chosen in it, with
+// the role as it is now (T-229 review).
+describe('The projects read again while the form is open (T-229 review)', () => {
+  const readAgain = async (screen: ReturnType<typeof render>, change: (p: typeof projects[number]) => object = () => ({})) => {
+    mockList.current = projects.map((p) => ({ ...p, ...change(p) }));
+    screen.rerender(<AddRehearsalScreen />);
+    await settle();
+    await settle();
+  };
+
+  it('keeps the project picked in the form over the planner\'s, and creates it there', async () => {
+    const screen = await open();
+    await pickProject(screen, 'Project A', 'Project B');
+
+    await readAgain(screen);
+    await submit(screen);
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][0]).toBe('B');
+  });
+
+  it('with the admin role taken off the project shown, Create is not offered and sends nothing', async () => {
+    const screen = await open();
+    expect(offered(screen)).toBe(true);
+
+    await readAgain(screen, (p) => (p.id === 'A' ? { is_admin: false } : {}));
+
+    expect(offered(screen)).toBe(false);
+    expect(screen.getByTestId('rehearsal-project-error')).toBeTruthy();
+    await submit(screen);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('does not load the members again for the same project read anew', async () => {
+    const screen = await open();
+    const loads = getMembers.mock.calls.length;
+
+    await readAgain(screen);
+
+    expect(getMembers).toHaveBeenCalledTimes(loads);
   });
 });
 

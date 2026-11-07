@@ -212,6 +212,9 @@ export const PEOPLE = {
   // projects are that one or none.
   benvolio: { email: 'benvolio@e2e.test', firstName: 'Benvolio', lastName: 'Montague', onboarded: true },
   mercutio: { email: 'mercutio@e2e.test', firstName: 'Mercutio', lastName: 'Escalus', onboarded: true },
+  // An admin of two of Gaev's projects with the rehearsal form open while the
+  // projects are read again behind it, and the role on one taken (77, T-229).
+  tybalt: { email: 'tybalt@e2e.test', firstName: 'Tybalt', lastName: 'Capulet', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -528,6 +531,9 @@ export async function seed({ client, apiUrl, timezone }) {
   // Actors in them, made admins while the flow runs (75, 76).
   await joined('Verona Square', 'The public place', 'benvolio');
   await joined('Verona Masque', 'The Capulet feast', 'mercutio');
+  // Tybalt an admin of both; the Ball made last, the role taken from it (77).
+  await joined('Feud Street', 'The duel', 'tybalt', 'admin');
+  await joined('Feud Ball', 'The masked dance', 'tybalt', 'admin');
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
