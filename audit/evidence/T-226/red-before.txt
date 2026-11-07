@@ -1,0 +1,69 @@
+T-226 — "Today selects today" and six more fail only after the machine's midnight
+==============================================================================
+
+1. The supervisor's red run (e2e/out/failed/T-225-2026-11-06T23-02-14-995Z)
+---------------------------------------------------------------------------
+Machine zone: Asia/Jerusalem (IST, UTC+2).
+
+checks.log:
+  ### 2026-11-06T21:09:43.999Z e2e: node e2e/run.mjs <all 80 flows>   (23:09 IST, Nov 6)
+seed.json (written at seeding, before Metro):
+  "today": "2026-11-06", "tomorrow": "2026-11-07", "labels.tomorrow": "Saturday, November 7, 2026"
+
+Maestro's folder for each flow (e2e/out/artifacts/2026-11-06_231322), local time:
+  23:15 Sign in .................................................. Passed
+  ...   every flow up to 23:59 ....................................... Passed
+  00:08 A past rehearsal keeps its title .............................. Passed
+  00:10 Today selects today ............................. FAILED ".*Lamp trimming.*" is visible
+  00:32 The form's date is a month ...................... FAILED day_2026-11-06, enabled is visible
+  00:33 The form's month in Spanish and in German ....... FAILED day_2026-11-06, enabled is visible
+  00:34 Day strip centres the day ....................... FAILED ".*Tea on the terrace.*" is visible
+  00:44 Main buttons are filled with #9333EA ............ FAILED mode-busy not found
+  01:00 The calendar's rehearsals are rows .............. FAILED "Sat, 7, Masked ball ..." is visible
+  01:02 Day strip turns as a wheel ...................... FAILED ".*Tea on the terrace.*" is visible
+
+All 7 failures are after 00:00 IST; no flow before midnight failed. The app's
+today was Nov 7, the seed's Nov 6: "Lamp trimming" and "Tea on the terrace"
+are seeded for TODAY_DAY (now yesterday), day_2026-11-06 is yesterday in the
+form's month and disabled, "Sat, 7" is TOMORROW and now today's row.
+taps-again: 0 — tap-and-see.yaml retook no tap; no flow lost a tap. Not the
+simulator: the seed was a day old.
+
+2. Reproduced on the old runner (HEAD 355a2d8 e2e/run.mjs), on demand
+--------------------------------------------------------------------
+The machine's clock cannot be moved, but the runner's zone can: the seed,
+everyone's profile and Maestro all take TZ. America/Noronha (UTC-2) has its
+midnight at 02:00 UTC; the run was started at 23:57:49 there, so the seed was
+made before midnight and the flow ran after it.
+
+$ git restore --source=HEAD~1 -- e2e/run.mjs        # the runner before the fix
+$ TZ=America/Noronha npm run e2e -- e2e/flows/41-today-selects-today.yaml
+01:57:49
+Fri Nov  6 23:57:49 -02 2026
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Today selects today (2m 10s) (Assertion is false: ".*Lamp trimming.*" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+02:04:45
+Sat Nov  7 00:04:45 -02 2026
+
+e2e/out/seed.json written 2026-11-07T03:58:04+0200 = 23:58:04 Noronha:
+  "today": "2026-11-06"   "tomorrow": "2026-11-07"
+junit.xml: testcase timestamp="2026-11-07T00:02:22" (Noronha)
+  <failure>Assertion is false: ".*Lamp trimming.*" is visible
+
+The same assertion as the night's red run, on demand, with no tap retaken.
+
+Control, same old runner, same zone, nowhere near midnight (01:12 UTC,
+23:12 Noronha; seed and flow on one day):
+[Passed] Today selects today (2m 42s)

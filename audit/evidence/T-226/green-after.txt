@@ -1,0 +1,88 @@
+T-226 — green after: the runner gives each day its own seed
+============================================================
+
+The fix (e2e/run.mjs, e2e/junit.mjs, docs/e2e.md "A run past midnight"):
+Maestro gets the flows in batches that end before the machine's midnight (as
+many as fit at 10 minutes a flow; when none fits, the run waits for
+midnight). Before each batch the day is compared with the seed's; a day that
+turned gets a new database in the same container, the server restarted on it
+and the seed made again. Far from midnight the whole set is still one Maestro.
+
+1. The red-before scenario, on the fixed runner, across a midnight
+------------------------------------------------------------------
+America/St_Johns (UTC-3:30), midnight at 03:30 UTC; started 23:55:22 there.
+
+$ TZ=America/St_Johns npm run e2e -- e2e/flows/41-today-selects-today.yaml
+Fri Nov  6 23:55:22 NST 2026
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[e2e] midnight in 79 s, before a flow could end: waiting for it
+[e2e] the day turned (2026-11-06 → 2026-11-07): a new database, server and seed for it
+
+Waiting for flows to complete...
+[Passed] Today selects today (2m 14s)
+
+1/1 Flow Passed in 2m 14s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+Sat Nov  7 00:03:36 NST 2026
+
+e2e/out/seed.json (the new day's): "today": "2026-11-07", "tomorrow": "2026-11-08"
+junit.xml: testcase timestamp="2026-11-07T00:01:11" status="SUCCESS"
+server.log: two starts, the first day's and the new day's (appended).
+
+On the old runner the same setup failed: red-before.txt, section 2
+(".*Lamp trimming.*" is visible).
+
+An earlier attempt at the 03:00 UTC boundary (America/Sao_Paulo) was cut by
+the tool's 10-minute limit, not by the run: it had waited for midnight and
+reseeded at 00:00:11 ("today": "2026-11-07"), and Maestro, killed at 00:00:37,
+wrote no report — junit.xml then held the flow as
+  status="ERROR" <failure>Maestro wrote no report for this flow (exit code 143)
+so a cut-short Maestro's flows are failures, not left out.
+
+2. The task's flows on the fixed runner, machine zone (Asia/Jerusalem, 04:0x)
+----------------------------------------------------------------------------
+$ npm run e2e -- e2e/flows/55-rehearsal-form-calendar.yaml e2e/flows/56-rehearsal-form-calendar-language.yaml
+[Passed] The form's date is a month, and the past takes no tap (1m 57s)
+[Passed] The form's month in Spanish and in German (2m 8s)
+2/2 Flows Passed in 4m 5s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/64-main-button-fill.yaml e2e/flows/74-calendar-rows.yaml
+[Passed] Main buttons are filled with #9333EA (2m 19s)
+[Passed] The calendar's rehearsals are rows with a date column (1m 15s)
+2/2 Flows Passed in 3m 34s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ npm run e2e -- e2e/flows/57-day-strip-centre.yaml e2e/flows/74-day-strip-wheel.yaml
+[Passed] Day strip centres the day (2m 4s)
+[Passed] Day strip turns as a wheel (1m 25s)
+2/2 Flows Passed in 3m 29s
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+$ TZ=America/Noronha npm run e2e -- e2e/flows/41-today-selects-today.yaml   (01:43 UTC, far from midnight)
+[Passed] Today selects today (2m 4s)
+
+Two runs only one flow a Maestro (an approach tried and dropped) measured
+what a Maestro costs to start: 41 ended 23:28:39, 57 began 23:29:33 — 54 s;
+with --no-reinstall-driver 53 s. Hence batches, not a Maestro a flow.
+
+3. The merged report
+--------------------
+$ node --test e2e/__tests__/junit.test.mjs
+✔ the flows of every Maestro, in the order run, under one testsuite
+✔ a Maestro that wrote no report fails each of its flows with its exit code
+ℹ pass 2  ℹ fail 0
+
+4. The bug flow 41 guards (DD03: "Today" in the week strip selects today)
+-----------------------------------------------------------------------
+Not back: flow 41 passes on every run that is not cut by a midnight (section
+1 and 2). The night's failure was at its first wait, ".*Lamp trimming.*"
+visible after sign-in, before any "Today" tap — the seed's today, not the
+strip.
