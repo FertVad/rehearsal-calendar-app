@@ -1,0 +1,47 @@
+T-229, review 1 (Astra), red before. The form's hooks restored from ff3bba2,
+the commit reviewed:
+  git restore --source=ff3bba2 -- src/features/calendar/hooks/useAddRehearsalForm.ts \
+    src/features/calendar/hooks/useRehearsalMembers.ts
+(tests, flow 77, seed and set-role.js as in 2c567dc), then put back with
+git restore --source=HEAD -- <same files>.
+
+== Jest: npx jest --selectProjects frontend -t "read again while the form is open" AddRehearsalScreen
+    ✕ keeps the project picked in the form over the planner's, and creates it there (662 ms)
+    ✕ with the admin role taken off the project shown, Create is not offered and sends nothing (115 ms)
+    ✕ does not load the members again for the same project read anew (137 ms)
+  ● The projects read again while the form is open (T-229 review) › keeps the project picked in the form over the planner's, and creates it there
+    Expected: "B"
+    Received: "A"
+  ● The projects read again while the form is open (T-229 review) › with the admin role taken off the project shown, Create is not offered and sends nothing
+    Expected: false
+    Received: true
+  ● The projects read again while the form is open (T-229 review) › does not load the members again for the same project read anew
+    Expected number of calls: 1
+    Received number of calls: 2
+Tests:       3 failed, 27 skipped, 30 total
+
+== e2e: npm run e2e -- e2e/flows/77-rehearsal-form-projects-read-again.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Failed] Rehearsal form, the projects read again (2m 16s) (Assertion is false: ".*Feud Ball.*", id: rehearsal-project is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Artifacts: e2e/out/artifacts/2026-11-07_162222, screenshot
+step-127-assertCondition-Feud_Ball.png: Feud Ball was picked in the form
+before Home; back in the app the form is on Feud Street again, "Masked dance"
+typed, Create offered — it would have gone to Feud Street.
+
+The flow stops at its first failure, so its second half (the role taken off
+Feud Ball with the form open) is red here in Jest only: Create offered
+(Received: true).

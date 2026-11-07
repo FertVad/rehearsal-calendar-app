@@ -1,0 +1,15 @@
+{
+  "task": "T-229",
+  "review": 1,
+  "base": "ff3bba2",
+  "sourceCommit": "2c567dc6dc80a5e152e7e6914c823dbbeb9813fd",
+  "sourceTree": "884f034d3b6f52f6865879b432344e8c6a762381",
+  "changedAppFiles": {
+    "rehearsal-calendar-native/src/features/calendar/hooks/useAddRehearsalForm.ts": "27edd0ee805e9c427062f4ca1c73bf2e77cb11ed868f02f776ce95ecf4cdbadc",
+    "rehearsal-calendar-native/src/features/calendar/hooks/useRehearsalMembers.ts": "4c3818a8238881452df1b9e25d7865ae95e81efa7b00e0e990d01030a7b62876"
+  },
+  "flows": {
+    "rehearsal-calendar-native/e2e/flows/77-rehearsal-form-projects-read-again.yaml": "bc5231a3bda66032759c140c9de7cae0ac9222796dc1dc24d95c9549b4d9b483"
+  },
+  "logs": ["review-1-red-before.txt", "review-1-green-after.txt"]
+}
