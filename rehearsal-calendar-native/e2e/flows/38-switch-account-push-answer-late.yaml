@@ -29,8 +29,14 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- tapOn:
-    id: tab-profile
+# Every tap on the profile tab goes through tap-and-see.yaml: the simulator
+# loses one now and then (docs/e2e.md, "A lost tap").
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element:
       id: profile-notifications
@@ -71,8 +77,12 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- tapOn:
-    id: tab-profile
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element:
       id: profile-notifications
@@ -102,8 +112,16 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- tapOn:
-    id: tab-profile
+# The simulator lost this tap once, after the restart (T-234: backboardd's
+# "we already have a service for senderID", the calendar left on screen and
+# the switch never found), as it lost flow 44's (T-212): through
+# tap-and-see.yaml, like the profile tab above.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
 - scrollUntilVisible:
     element:
       id: profile-notifications

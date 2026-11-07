@@ -1,0 +1,25 @@
+Flow 38 as committed (three profile-tab taps through tap-and-see.yaml):
+
+$ npm run e2e -- e2e/flows/38-switch-account-push-answer-late.yaml
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Switch accounts - a push registration answered late (2m 3s)
+
+1/1 Flow Passed in 2m 3s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Its last step, Andrei's switch `checked: false` after Natasha's held answer
+was released (release-answers.js EXPECT 1), passed: the bug it guards has not
+come back.
+
+Flow 42, the task's flow:
+
+$ npm run e2e -- e2e/flows/42-details-count-projects-late.yaml
+Waiting for flows to complete...
+[Passed] Details count when the projects come late (1m 28s)
+
+1/1 Flow Passed in 1m 28s
+
+[e2e] taps taken again (tap-and-see.yaml): 0

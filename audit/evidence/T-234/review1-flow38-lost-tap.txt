@@ -1,0 +1,24 @@
+Red run: supervisor's checks on 545b8ed, 2026-11-07, all flows.
+Artifacts: rehearsal-calendar-native/e2e/out/artifacts/2026-11-07_202939/
+  "Switch accounts - a push registration answered late"
+
+logs/maestro.log (after Natasha's answer is released):
+464:21:28:18.827 Launch app "${APP_ID}" RUNNING
+467:21:28:24.500 Launch app "${APP_ID}" COMPLETED
+468:21:28:24.501 Assert that id: calendar-filter is visible RUNNING
+469:21:28:35.476 Assert that id: calendar-filter is visible COMPLETED
+470:21:28:35.639 Tap on id: tab-profile RUNNING
+471:21:28:35.928 Tapping on element: ... resource-id=tab-profile, bounds=[314,780][393,824] ...
+477:21:28:37.019 Tap on id: tab-profile COMPLETED
+478:21:28:37.019 Scrolling DOWN until id: profile-notifications is visible ... timeout 20000 ms RUNNING
+496:21:28:59.993 Scrolling DOWN until id: profile-notifications is visible ... FAILED
+
+logs/device-simulator.log, half a second after the tap:
+192850:2026-11-07 21:28:36.448563+0200  localhost backboardd[24408]: (BackBoardHIDEventFoundation) [com.apple.BackBoard:HID] we already have a service for senderID:105EBD6000333
+192864:2026-11-07 21:28:36.461826+0200  localhost backboardd[24408]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+192865:2026-11-07 21:28:36.461868+0200  localhost backboardd[24408]: [com.apple.BackBoard:TouchEvents] didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+  ... (9 more "skipping event" lines to 21:28:36.565485)
+No other "we already have a service" line in this flow's device log.
+
+screenshots/step-143-scrollUntilVisible-profile-notifications.png: the
+Calendar tab, "Calendar" tab selected — the profile tab never opened.

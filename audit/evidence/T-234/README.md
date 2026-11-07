@@ -42,3 +42,33 @@ No limit raised, no retry added.
 `green-after.txt`: the fixed flow with the same 65 s wait passes (the
 projects held and released), and as committed with flow 01 (sign-in.yaml).
 The bug flow 42 guards has not come back.
+
+## Review 1: flow 38 failed in the checks on 545b8ed
+
+The checks ran every flow (sign-in-form.yaml changed). Flow 42 passed; flow
+38 "Switch accounts - a push registration answered late" failed at its last
+`scrollUntilVisible: profile-notifications` (artifacts
+e2e/out/artifacts/2026-11-07_202939, not in git).
+
+Cause, from the red run's journal (`review1-flow38-lost-tap.txt`): after the
+`launchApp` restart, `tapOn: tab-profile` at 21:28:35.928 was reported done,
+and at 21:28:36.448 backboardd logged "we already have a service for
+senderID", then "didn't see a previous touch down ... skipping event": the
+simulator lost the tap (docs/e2e.md, "A lost tap", T-207). The failure
+screenshot is the calendar, not the profile; the scroll searched it 20 s for a
+switch that is on another tab. Flow 44 lost the same tap after a restart
+(T-212). Not the sign-in split: the sign-in before it passed and the calendar
+was on screen.
+
+Check without the tap (`review1-red-without-tap.txt`): flow 38 with that tap
+skipped fails the same way, "No visible element found: id:
+profile-notifications".
+
+Fix: flow 38's three taps on the profile tab go through
+`e2e/subflows/tap-and-see.yaml` (`SEE: ".*Language, English.*"`, as flows
+30, 44 and 71). No limit raised, no retry of its own.
+
+Green after (`review1-green-after.txt`): flow 38 passes, and its last step —
+Andrei's switch still off after Natasha's late answer was released (EXPECT 1)
+— holds, so the bug it guards (cause fix 20) has not come back. Flow 42
+passes too.

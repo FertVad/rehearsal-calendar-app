@@ -129,7 +129,8 @@ profile tab after a restart (T-212), flow 25 at "Busy" in the availability
 editor, whose day then closed unasked with nothing changed (T-218), flow 49 at
 the registration form's first "Show password", so the second went to the same
 eye and the repeat stayed hidden (T-223), flow 59 at "Sign In", the form left
-filled in and the calendar never asked for (T-225).
+filled in and the calendar never asked for (T-225), flow 38 at the profile tab
+after a restart (T-234).
 
 It is below the app, and cannot be made to happen on demand. The rule:
 
