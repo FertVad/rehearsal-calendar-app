@@ -49,7 +49,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getText } from './http.mjs';
 import { mergeJunit } from './junit.mjs';
-import { takeLock } from './lock.mjs';
+import { LOCK, takeLock } from './lock.mjs';
 import { exitCode, flattenBatches, limitMs, nextStep } from './midnight.mjs';
 import { localDate, seed } from './seed.mjs';
 
@@ -63,8 +63,8 @@ const BUILD = path.join(E2E, '.build');
 const PREBUILT = process.env.E2E_APP || null;
 const APP = PREBUILT || path.join(BUILD, 'Build', 'Products', 'Debug-iphonesimulator', 'Rehearsly.app');
 // One run at a time on this machine: the simulator and ports 3001/8081 are
-// shared. It also names what each run started (lock.mjs).
-const LOCK = '/tmp/rehearsly-e2e.lock';
+// shared. It also names what each run started (lock.mjs), and a heavy job
+// held under it (hold-lock.mjs, T-231) is waited for as another run is.
 let lock = null;
 const pg = createRequire(path.join(SERVER, 'package.json'))('pg');
 

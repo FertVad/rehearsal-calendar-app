@@ -76,6 +76,35 @@ the system closes it when the run dies, SIGKILL included. That does not need
 lock could not identify a dead run's groups, and a run cut off by a tool's
 time limit left both on their ports (T-203, 2026-10-11).
 
+## Heavy jobs beside a run
+
+The lock serializes e2e runs, and a heavy job on the same Mac is not one
+unless it takes the lock too. On 2026-11-07 the full run of 224a38a went on
+while another session was building an iOS Release build and running it on a
+simulator of its own (9d265da, committed 11:30:49, says so; nothing else of
+that weight is known to have run then). From 11:08 to 11:37 the machine was
+choked: an app install took 3-5 minutes instead of 4 s, Maestro's
+`clearAppState` 73 s, `Apply configuration` 36 s, and one flow's launch ten
+minutes before it failed. Flow 40 launched at 11:35:31; the app asked Metro
+for its bundle, Metro took 96 s over it (`iOS Bundled 96576ms index.ts (1
+module)`, every other mid-run bundle in 37 kept red runs under 14 s), and iOS
+gave up at 60 s (`NSURLErrorDomain -1001`). The dev client drew "Could not
+connect to development server" and the flow failed at `login-submit` before
+any step of its own (T-231, `audit/evidence/T-231`). No tap was lost:
+`tap-and-see.yaml` was never reached.
+
+So a heavy job goes under the lock:
+
+```bash
+node e2e/hold-lock.mjs xcodebuild -workspace ios/Rehearsly.xcworkspace -scheme Rehearsly -configuration Release ...
+```
+
+`hold-lock.mjs` waits for a run that is going, runs the job in a group of its
+own that the lock names, and exits with its code. An e2e run started
+meanwhile waits for the job, its log naming it, as for another run (up to an
+hour, then exit 75). A holder killed outright leaves the job to the next run,
+which stops it as it stops a dead run's server and Metro.
+
 ## Exit codes
 
 | Code | Meaning |

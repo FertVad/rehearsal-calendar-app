@@ -1,0 +1,24 @@
+T-231: cd rehearsal-calendar-native && node --test e2e/__tests__/lock.test.mjs (changed tree)
+
+✔ a free lock is taken, names its run, and is released (25.523875ms)
+✖ what a dead run left running is stopped before the lock is taken (141.632166ms)
+✔ a pid that now belongs to another process is left alone (19.675375ms)
+✔ a lock in the old form, a bare pid, is taken over once its run is gone (17.882542ms)
+✔ a heavy job waits for a live e2e run, then runs under the lock and gives back its code (10178.621833ms)
+✔ an e2e run waits for a heavy job under the lock, and names it (1375.793209ms)
+✖ a heavy job whose holder was killed outright is stopped by the next e2e run (326.89075ms)
+✔ a live run is waited for, not cleared (327.842042ms)
+ℹ tests 8
+ℹ pass 6
+ℹ fail 2
+
+Both failures need `ps`, which this session's sandbox denies:
+  node -e "import { startedAt } from './e2e/lock.mjs'; …startedAt(process.pid)"  ->  ""
+With no start time clearLeftovers() leaves a group alone (lock.mjs). The first
+is the old, unchanged test. It fails here the same way, and it passes where
+`ps` runs (the supervisor's npm test). docs/e2e.md "A run that died" already
+notes the sandbox's lack of `ps`.
+
+Red before for the three new tests: on HEAD e2e/hold-lock.mjs does not exist.
+
+Other e2e runner tests (watchdog, http, metro-watch, junit, midnight): 19 of 19 pass.

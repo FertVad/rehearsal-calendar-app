@@ -12,6 +12,12 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 
+/**
+ * The machine's one lock: e2e runs take it, and so do heavy jobs beside them
+ * through e2e/hold-lock.mjs (T-231, docs/e2e.md).
+ */
+export const LOCK = '/tmp/rehearsly-e2e.lock';
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 // A lock just created is empty until its run writes it.
@@ -33,7 +39,9 @@ function holderOf(file) {
   let data;
   try { data = JSON.parse(text); } catch { data = null; }
   if (typeof data === 'number') return { pid: data, since: null, groups: [] };
-  if (data && Number(data.pid)) return { pid: Number(data.pid), since: data.since ?? null, groups: Array.isArray(data.groups) ? data.groups : [] };
+  if (data && Number(data.pid)) {
+    return { pid: Number(data.pid), since: data.since ?? null, groups: Array.isArray(data.groups) ? data.groups : [], what: data.what ?? null };
+  }
   return Date.now() - fs.statSync(file).mtimeMs > FRESH_MS ? { pid: 0, since: null, groups: [] } : null;
 }
 
@@ -60,9 +68,10 @@ function writeAtomic(file, data) {
 /**
  * Waits for a live run to finish, clears up after a dead one, then holds the
  * lock. Returns `record(name, pid)` for each background group and `release()`.
+ * `what` names a holder that is not an e2e run (hold-lock.mjs's job).
  */
-export async function takeLock(file, { timeoutMs = 60 * 60 * 1000, pollMs = 10000, log = () => {} } = {}) {
-  const held = { pid: process.pid, since: startedAt(process.pid), groups: [] };
+export async function takeLock(file, { timeoutMs = 60 * 60 * 1000, pollMs = 10000, log = () => {}, what = null } = {}) {
+  const held = { pid: process.pid, since: startedAt(process.pid), groups: [], ...(what ? { what } : {}) };
   const deadline = Date.now() + timeoutMs;
   for (let said = false; ;) {
     try {
@@ -79,7 +88,11 @@ export async function takeLock(file, { timeoutMs = 60 * 60 * 1000, pollMs = 1000
       fs.rmSync(file, { force: true });
       continue;
     }
-    if (!said) { log(`another e2e run (pid ${holder.pid}) is going; waiting for it`); said = true; }
+    if (!said) {
+      log(holder.what ? `a job under the e2e lock (pid ${holder.pid}: ${holder.what}) is going; waiting for it`
+        : `another e2e run (pid ${holder.pid}) is going; waiting for it`);
+      said = true;
+    }
     if (Date.now() >= deadline) throw new Error('Gave up waiting for the other e2e run');
     await sleep(pollMs);
   }

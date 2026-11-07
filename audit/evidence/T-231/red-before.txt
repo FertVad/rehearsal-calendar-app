@@ -1,0 +1,46 @@
+T-231 red before, on HEAD 228c00a (runner unchanged), 2026-11-07 ~13:00 local.
+Command (from the tree's root):
+  node audit/evidence/T-231/metro-stall.mjs e2e/flows/40-details-seen-one-model.yaml 75
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[probe 2026-11-07T11:00:45.781Z] flows started; watching metro.log from byte 2717 for the app's bundle request
+
+Waiting for flows to complete...
+[probe 2026-11-07T11:03:03.918Z] the app asked Metro for its bundle: SIGSTOP to Metro's group 56203 for 75 s
+[Failed] Details and the card read one seen mark (1m 52s) (Assertion is false: id: login-submit is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+[probe 2026-11-07T11:04:18.981Z] SIGCONT to Metro's group 56203
+[probe 2026-11-07T11:04:21.995Z] e2e/run.mjs exited 1
+
+Artifacts: rehearsal-calendar-native/e2e/out/artifacts/2026-11-07_130043/
+"Details and the card read one seen mark"/logs/maestro.log:
+  13:03:01.591 Launch app "${APP_ID}" with clear state and clear keychain COMPLETED
+  13:03:02.001 Assert that id: login-submit is visible RUNNING
+  13:04:03.304 Assert that id: login-submit is visible FAILED
+  13:04:03.435 CommandFailed: Assertion is false: id: login-submit is visible
+logs/device-simulator.log (HST):
+  01:03:01.67 Task <612C…>.<1> resuming, timeouts(10.0, …)    (/status)
+  01:03:02.09 Task <612C…>.<1> summary for task success, 397 ms
+  01:03:02.13 Task <9E4A…>.<1> resuming, timeouts(60.0, …)    (the bundle)
+  01:03:03.79 Task <9E4A…>.<1> received response, status 200  (headers; then Metro stopped)
+  01:04:03.93 [C2 … url: http://localhost:8081/.expo/.virtual-metro-entry.bundle …] cancel
+  01:04:03.98 [C2 …] cancelled                                 (iOS's 60 s)
+Screen at the failure: the launch's black screen (the red box races Maestro's
+60 s wait; in the original red run, slower everywhere, it was already up).
+
+Same in the original red run (full-e2e-224a38a-…/artifacts/Details and the card read one seen mark):
+  11:35:32.09 C2 … virtual-metro-entry.bundle start (connected on ::1:8081 in 3 ms)
+  11:36:32.43 Task <6D55…>.<1> finished with error [-1001] "The request timed out."
+  11:36:32.44 C2 cancel / cancelled
+  metro.log: "iOS Bundled 96576ms index.ts (1 module)"
+  screen: "Could not connect to development server." (red box), failure at login-submit.

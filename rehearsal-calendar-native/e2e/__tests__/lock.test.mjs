@@ -81,6 +81,62 @@ test('a lock in the old form, a bare pid, is taken over once its run is gone', a
   lock.release();
 });
 
+// A heavy job beside an e2e run (T-231): hold-lock.mjs runs it under the lock.
+const HOLD = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'hold-lock.mjs');
+function hold(file, ...command) {
+  const child = spawn(process.execPath, [HOLD, ...command], {
+    env: { ...process.env, REHEARSLY_E2E_LOCK: file }, stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  children.push(child);
+  let said = '';
+  child.stderr.on('data', (chunk) => { said += chunk; });
+  child.said = () => said;
+  child.done = new Promise((resolve) => child.on('exit', (code) => resolve(code)));
+  return child;
+}
+async function until(check, ms = 5000) {
+  for (const end = Date.now() + ms; !check(); await sleep(50)) assert.ok(Date.now() < end, 'timed out');
+}
+
+test('a heavy job waits for a live e2e run, then runs under the lock and gives back its code', async () => {
+  const file = path.join(dir, 'hold-wait.lock');
+  const marker = path.join(dir, 'hold-wait.ran');
+  const run = await takeLock(file);
+  const job = hold(file, '/bin/sh', '-c', `echo ran > "${marker}"; exit 3`);
+  await until(() => /another e2e run .* waiting for it/.test(job.said()));
+  await sleep(300);
+  assert.equal(fs.existsSync(marker), false, 'the job ran while the e2e run held the lock');
+  run.release();
+  assert.equal(await job.done, 3);
+  assert.equal(fs.existsSync(marker), true);
+  assert.equal(fs.existsSync(file), false, 'the job left the lock behind');
+});
+
+test('an e2e run waits for a heavy job under the lock, and names it', async () => {
+  const file = path.join(dir, 'hold-held.lock');
+  const job = hold(file, '/bin/sleep', '1');
+  await until(() => fs.existsSync(file) && JSON.parse(fs.readFileSync(file, 'utf8')).groups.length === 1);
+  const said = [];
+  const run = await takeLock(file, { pollMs: 50, log: (line) => said.push(line) });
+  assert.equal(await job.done, 0);
+  assert.match(said[0], /a job under the e2e lock \(pid \d+: \/bin\/sleep 1\) is going; waiting for it/);
+  run.release();
+});
+
+test('a heavy job whose holder was killed outright is stopped by the next e2e run', async () => {
+  const file = path.join(dir, 'hold-dead.lock');
+  const job = hold(file, '/bin/sleep', '60');
+  await until(() => fs.existsSync(file) && JSON.parse(fs.readFileSync(file, 'utf8')).groups.length === 1);
+  const { pgid } = JSON.parse(fs.readFileSync(file, 'utf8')).groups[0];
+  job.kill('SIGKILL');
+  await job.done;
+  assert.equal(alive(pgid), true);
+  const run = await takeLock(file);
+  await sleep(100);
+  assert.equal(alive(pgid), false, 'the dead holder\'s job is still running');
+  run.release();
+});
+
 test('a live run is waited for, not cleared', async () => {
   const file = path.join(dir, 'live.lock');
   const server = group();
