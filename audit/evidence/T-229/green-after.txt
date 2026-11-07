@@ -1,0 +1,40 @@
+T-229 — green after, on e595b6a (tree e33d739b25b143621644f6e3e8267ec719e7017c).
+
+== Jest: npx jest --selectProjects frontend --testPathPatterns "roleFreshness|api.forbidden|ProjectContext|ProjectsScreen|useNotifications" --verbose
+PASS frontend src/shared/services/__tests__/api.forbidden.test.ts
+  ✓ reloads the projects when an admin action is refused with 403
+  ✓ does not for other refusals, nor without a session
+  ✓ does not when the list itself is refused, which would ask again and again
+PASS frontend src/features/projects/screens/__tests__/ProjectsScreen.test.tsx (2 tests)
+PASS frontend src/contexts/__tests__/ProjectContext.test.tsx (5 tests)
+PASS frontend src/shared/hooks/__tests__/useNotifications.push.test.tsx (2 tests)
+PASS frontend src/contexts/__tests__/ProjectContext.roleFreshness.test.tsx
+  ✓ gives the admin role when its push arrives in the app
+  ✓ gives the admin role when its push is opened by a tap
+  ✓ reads a push about a rehearsal as no reason to read the projects
+  ✓ takes away a project its member was removed from, by its push
+  ✓ gives the admin role when the app comes back to the foreground, without a push
+  ✓ gives the admin role on a pull on the projects screen
+  ✓ takes the admin role away when the server refused an admin action
+  ✓ keeps the list on screen while it is read again, and when that read fails
+  ✓ keeps the newer answer when the older read answers last (rule 11)
+Tests:       21 passed, 21 total
+
+Whole frontend project (before the commit, same code): Test Suites: 137 passed,
+Tests: 1313 passed. npm run type-check: clean. npm run check:secrets: pass,
+0 findings. npm run check:dead: clean.
+
+== e2e: npm run e2e -- e2e/flows/75-role-given-by-push.yaml e2e/flows/76-role-given-on-return.yaml
+[e2e] running the flows
+Waiting for flows to complete...
+[Passed] Role given by push (1m 24s)
+[Passed] Role given, seen on return (47s)
+2/2 Flows Passed in 2m 11s
+[e2e] taps taken again (tap-and-see.yaml): 0
+server.log: [e2e] pushed role_changed about Verona Square to the simulator
+
+Not this task's, failing in this sandbox on the base too: npm test stops in
+scripts/__tests__/check-secrets.test.mjs (3 git fixtures with forbidden file
+names, exit 128 — the OS refuses them), and e2e/__tests__/lock.test.mjs "what
+a dead run left running is stopped" needs `ps` (docs/e2e.md: the sandbox does
+not let it run).

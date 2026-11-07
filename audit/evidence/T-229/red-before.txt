@@ -1,0 +1,44 @@
+T-229 — red before. App files restored from the base 228c00a:
+  git restore --source=228c00a -- src/contexts/ProjectContext.tsx \
+    src/features/projects/screens/ProjectsScreen.tsx src/shared/hooks/useNotifications.ts \
+    src/shared/services/api.ts src/shared/utils/dataChanged.ts
+(tests, flows, seed, e2e scripts and mailbox as in e595b6a), then put back with
+git restore --source=HEAD -- <same files>.
+
+== Jest: npx jest --selectProjects frontend --testPathPatterns "roleFreshness|api.forbidden" --verbose
+FAIL frontend src/shared/services/__tests__/api.forbidden.test.ts
+  ✕ reloads the projects when an admin action is refused with 403 (567 ms)
+  ✓ does not for other refusals, nor without a session (16 ms)
+  ✓ does not when the list itself is refused, which would ask again and again (5 ms)
+FAIL frontend src/contexts/__tests__/ProjectContext.roleFreshness.test.tsx (16.174 s)
+  ✕ gives the admin role when its push arrives in the app (1677 ms)
+  ✕ gives the admin role when its push is opened by a tap (1085 ms)
+  ✓ reads a push about a rehearsal as no reason to read the projects (81 ms)
+  ✕ takes away a project its member was removed from, by its push (4324 ms)
+  ✕ gives the admin role when the app comes back to the foreground, without a push (1080 ms)
+  ✕ gives the admin role on a pull on the projects screen (64 ms)
+  ✕ takes the admin role away when the server refused an admin action (5207 ms)
+  ✕ keeps the list on screen while it is read again, and when that read fails (72 ms)
+  ✕ keeps the newer answer when the older read answers last (rule 11) (1078 ms)
+Tests:       9 failed, 3 passed, 12 total
+(The three passing are the "does not" guards, which hold on both.)
+
+== e2e: npm run e2e -- e2e/flows/75-role-given-by-push.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+Waiting for flows to complete...
+[Failed] Role given by push (1m 50s) (Assertion is false: "\+ Add" is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+server.log: [e2e] pushed role_changed about Verona Square to the simulator
+(the push was delivered; the old app did not read the projects again)
+
+== e2e: npm run e2e -- e2e/flows/76-role-given-on-return.yaml
+[Failed] Role given, seen on return (1m 58s) (Assertion is false: "\+ Add" is visible)
+1/1 Flow Failed
