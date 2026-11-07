@@ -4,8 +4,8 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
+    "android": "node e2e/hold-lock.mjs expo run:android",
+    "ios": "node e2e/hold-lock.mjs expo run:ios",
     "web": "expo start --web",
     "test": "node server/scripts/test.mjs all",
     "test:unit": "ADMIN_BROWSER_CHECK=0 NODE_OPTIONS=--experimental-vm-modules jest",

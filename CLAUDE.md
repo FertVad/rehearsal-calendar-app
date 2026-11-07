@@ -1120,9 +1120,11 @@ one. Never point the simulator app at a Metro the runner did not start.
 any `xcodebuild`, `expo run:ios --configuration Release`, a local EAS build, a
 second simulator) beside an e2e run chokes the machine; on 2026-11-07 one
 made Metro take 96 s over the app's bundle, past iOS's 60 s, and a flow failed
-on the dev client's "Could not connect to development server" (T-231). Run it
-as `node e2e/hold-lock.mjs <command> [args...]` from `rehearsal-calendar-native`:
-it waits for a run that is going, and a run started meanwhile waits for it.
+on the dev client's "Could not connect to development server" (T-231).
+`npm run ios` / `npm run android` take the lock themselves. Run anything else
+as `node e2e/hold-lock.mjs <command> [args...]` from `rehearsal-calendar-native`,
+never `npx expo run:ios` directly: it waits for a run that is going, and a run
+started meanwhile waits for it.
 
 ## Autonomous Development
 

@@ -1,0 +1,24 @@
+$ node ../audit/evidence/T-231/job-beside-run.mjs e2e/flows/40-details-seen-one-model.yaml direct
+# (from rehearsal-calendar-native; Maestro's JVM "WARNING" lines left out)
+# The job starts directly, as `npm run ios` started expo before the fix.
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[beside 2026-11-07T12:01:57.063Z] the e2e run's flows started; starting the job directly
+[job 2026-11-07T12:01:58.613Z] started beside an e2e run (Metro group 78789); waiting for the app's bundle request
+
+Waiting for flows to complete...
+[job 2026-11-07T12:04:22.102Z] the app asked Metro for its bundle: SIGSTOP to Metro for 75 s
+[Failed] Details and the card read one seen mark (2m 9s) (Assertion is false: id: login-submit is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+[job 2026-11-07T12:05:37.136Z] SIGCONT to Metro
+[beside 2026-11-07T12:05:37.375Z] e2e/run.mjs exited 1
+[beside 2026-11-07T12:05:37.375Z] the job exited 0

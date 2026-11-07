@@ -93,7 +93,10 @@ connect to development server" and the flow failed at `login-submit` before
 any step of its own (T-231, `audit/evidence/T-231`). No tap was lost:
 `tap-and-see.yaml` was never reached.
 
-So a heavy job goes under the lock:
+So a heavy job goes under the lock. `npm run ios` and `npm run android` take
+it themselves (`package.json` runs expo through `e2e/hold-lock.mjs`), so
+`npm run ios -- --configuration Release` does. Anything else goes through it
+directly:
 
 ```bash
 node e2e/hold-lock.mjs xcodebuild -workspace ios/Rehearsly.xcworkspace -scheme Rehearsly -configuration Release ...
@@ -102,8 +105,11 @@ node e2e/hold-lock.mjs xcodebuild -workspace ios/Rehearsly.xcworkspace -scheme R
 `hold-lock.mjs` waits for a run that is going, runs the job in a group of its
 own that the lock names, and exits with its code. An e2e run started
 meanwhile waits for the job, its log naming it, as for another run (up to an
-hour, then exit 75). A holder killed outright leaves the job to the next run,
-which stops it as it stops a dead run's server and Metro.
+hour, then exit 75). The job runs through `watchdog.mjs`, as the server and
+Metro do. A holder killed outright takes its job down within 5 s, without
+`ps`, and the next run does not take the lock until the job's group has ended.
+Where `ps` runs, it also stops the group itself. The job's stdin is not the
+terminal: it runs without keyboard input (Ctrl-C still stops it).
 
 ## Exit codes
 

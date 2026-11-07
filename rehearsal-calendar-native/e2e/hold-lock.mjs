@@ -3,7 +3,7 @@
  * Runs a heavy job on this Mac under the e2e lock (T-231):
  *
  *   node e2e/hold-lock.mjs <command> [args...]
- *   node e2e/hold-lock.mjs xcodebuild -workspace ios/Rehearsly.xcworkspace -configuration Release ...
+ *   npm run ios -- --configuration Release      (package.json runs expo through it)
  *
  * It waits for an e2e run that is going, holds the lock while the job runs,
  * and exits with the job's code. An e2e run started meanwhile waits for the
@@ -17,11 +17,17 @@
  * "Could not connect to development server", and flow 40 failed before its
  * first step of its own (docs/e2e.md, "Heavy jobs beside a run").
  *
- * The job runs in a process group of its own, which the lock names: if this
- * process is killed outright, the next e2e run stops the job before it starts,
- * as it stops a dead run's server and Metro.
+ * The job runs through watchdog.mjs, in a process group of its own that the
+ * lock names, with a pipe from this process as the watchdog's stdin. If this
+ * process is killed outright the system closes the pipe and the watchdog takes
+ * the job down — no `ps` needed, which the developer's sandbox denies. The
+ * next run waits for that group to end before it takes the lock (lock.mjs:
+ * clearLeftovers), so the job never runs beside it. The job's own stdin is
+ * therefore not the terminal: it runs without keyboard input.
  */
 import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { LOCK, takeLock } from './lock.mjs';
 
 const [command, ...args] = process.argv.slice(2);
@@ -30,9 +36,10 @@ if (!command) {
   process.exit(64);
 }
 
+const WATCHDOG = path.join(path.dirname(fileURLToPath(import.meta.url)), 'watchdog.mjs');
 const say = (text) => console.error(`[hold-lock] ${text}`);
 const lock = await takeLock(process.env.REHEARSLY_E2E_LOCK || LOCK, { log: say, what: [command, ...args].join(' ') });
-const job = spawn(command, args, { stdio: 'inherit', detached: true });
+const job = spawn(process.execPath, [WATCHDOG, command, ...args], { stdio: ['pipe', 'inherit', 'inherit'], detached: true });
 job.once('spawn', () => lock.record('job', job.pid));
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   process.on(signal, () => { try { process.kill(-job.pid, signal); } catch { /* gone */ } });

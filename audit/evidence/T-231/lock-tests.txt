@@ -1,24 +1,44 @@
-T-231: cd rehearsal-calendar-native && node --test e2e/__tests__/lock.test.mjs (changed tree)
+T-231 review round: cd rehearsal-calendar-native && node --test e2e/__tests__/lock.test.mjs
 
-✔ a free lock is taken, names its run, and is released (25.523875ms)
-✖ what a dead run left running is stopped before the lock is taken (141.632166ms)
-✔ a pid that now belongs to another process is left alone (19.675375ms)
-✔ a lock in the old form, a bare pid, is taken over once its run is gone (17.882542ms)
-✔ a heavy job waits for a live e2e run, then runs under the lock and gives back its code (10178.621833ms)
-✔ an e2e run waits for a heavy job under the lock, and names it (1375.793209ms)
-✖ a heavy job whose holder was killed outright is stopped by the next e2e run (326.89075ms)
-✔ a live run is waited for, not cleared (327.842042ms)
-ℹ tests 8
-ℹ pass 6
-ℹ fail 2
+== Changed tree ==
+✔ a free lock is taken, names its run, and is released (20.491625ms)
+✖ what a dead run left running is stopped before the lock is taken (30330.066542ms)
+✔ a pid that now belongs to another process is left alone (15969.4755ms)
+✔ a lock in the old form, a bare pid, is taken over once its run is gone (461.615166ms)
+✔ a heavy job waits for a live e2e run, then runs under the lock and gives back its code (12207.665166ms)
+✔ an e2e run waits for a heavy job under the lock, and names it (1426.250041ms)
+✔ a heavy job whose holder was killed outright is stopped by the next e2e run (584.901333ms)
+✔ without ps, a dead holder's job ends before the next run takes the lock (5686.351666ms)
+✔ npm run ios and android build under the lock (1.429791ms)
+✔ npm run ios waits for a live e2e run, then runs expo (11390.701375ms)
+✔ a live run is waited for, not cleared (329.370625ms)
+ℹ tests 11
+ℹ pass 10
+ℹ fail 1
 
-Both failures need `ps`, which this session's sandbox denies:
-  node -e "import { startedAt } from './e2e/lock.mjs'; …startedAt(process.pid)"  ->  ""
-With no start time clearLeftovers() leaves a group alone (lock.mjs). The first
-is the old, unchanged test. It fails here the same way, and it passes where
-`ps` runs (the supervisor's npm test). docs/e2e.md "A run that died" already
-notes the sandbox's lack of `ps`.
+The one failure is the old, unchanged test, and it fails only because this
+session's sandbox denies `ps` (startedAt() returns ""). Its groups are bare
+/bin/sleep, with no watchdog, so nothing ends them here. It passes where `ps`
+runs (the supervisor's npm test). Without `ps`, clearLeftovers() now waits up
+to 15 s for each such group, which is why it and "a pid that now belongs to
+another process" take 15-30 s here. With `ps` they take milliseconds.
 
-Red before for the three new tests: on HEAD e2e/hold-lock.mjs does not exist.
+== Red before: the same test file on d878c4a's hold-lock.mjs, lock.mjs, watchdog.mjs, package.json ==
+$ git restore --source=d878c4a -- e2e/hold-lock.mjs e2e/lock.mjs e2e/watchdog.mjs package.json
+$ node --test --test-name-pattern="without ps|npm run ios|holder was killed" e2e/__tests__/lock.test.mjs
+✖ a heavy job whose holder was killed outright is stopped by the next e2e run (282.694ms)
+  AssertionError: the dead holder's job is still running
+✖ without ps, a dead holder's job ends before the next run takes the lock (888.004292ms)
+  AssertionError: the next run took the lock while the dead holder's job was running
+  + actual - expected   { + left: true  - left: false }
+✖ npm run ios and android build under the lock (22.430625ms)
+  + 'expo run:ios'
+  - 'node e2e/hold-lock.mjs expo run:ios'
+✖ npm run ios waits for a live e2e run, then runs expo (60113.108375ms)
+  AssertionError: timed out      (expo ran at once; no "waiting for it")
+ℹ tests 4
+ℹ pass 0
+ℹ fail 4
 
 Other e2e runner tests (watchdog, http, metro-watch, junit, midnight): 19 of 19 pass.
+npm run check:dead: clean.

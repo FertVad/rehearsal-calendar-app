@@ -34,4 +34,5 @@ process.stdin.on('close', () => end());
 process.stdin.on('error', () => end());
 process.stdin.resume();
 for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(signal, () => end(signal));
+child.on('error', (error) => { console.error(`watchdog.mjs: ${command}: ${error.message}`); process.exit(127); });
 child.on('exit', (code, signal) => process.exit(code ?? (signal ? 1 : 0)));

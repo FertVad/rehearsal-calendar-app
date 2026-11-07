@@ -137,6 +137,64 @@ test('a heavy job whose holder was killed outright is stopped by the next e2e ru
   run.release();
 });
 
+// Where ps cannot run (the developer's sandbox): no PATH, so startedAt() is ''.
+const NO_PS = { PATH: '/nonexistent' };
+const LOCK_URL = new URL('../lock.mjs', import.meta.url).href;
+
+test('without ps, a dead holder\'s job ends before the next run takes the lock', async () => {
+  const file = path.join(dir, 'hold-dead-nops.lock');
+  // A job deaf to SIGTERM: only its watchdog's SIGKILL to the group ends it.
+  const job = spawn(process.execPath, [HOLD, '/bin/sh', '-c', 'trap "" TERM; /bin/sleep 60'], {
+    env: { ...NO_PS, REHEARSLY_E2E_LOCK: file }, stdio: ['ignore', 'ignore', 'ignore'],
+  });
+  children.push(job);
+  await until(() => fs.existsSync(file) && JSON.parse(fs.readFileSync(file, 'utf8')).groups.length === 1);
+  const { pgid } = JSON.parse(fs.readFileSync(file, 'utf8')).groups[0];
+  await sleep(300);
+  job.kill('SIGKILL');
+  await new Promise((resolve) => job.on('exit', resolve));
+  const next = spawn(process.execPath, ['--input-type=module', '-e', `
+    import { takeLock } from ${JSON.stringify(LOCK_URL)};
+    const lock = await takeLock(${JSON.stringify(file)});
+    let left; try { process.kill(-${pgid}, 0); left = true; } catch { left = false; }
+    lock.release();
+    console.log(JSON.stringify({ left }));
+  `], { env: NO_PS, stdio: ['ignore', 'pipe', 'inherit'] });
+  let out = '';
+  next.stdout.on('data', (chunk) => { out += chunk; });
+  assert.equal(await new Promise((resolve) => next.on('exit', resolve)), 0);
+  assert.deepEqual(JSON.parse(out), { left: false }, 'the next run took the lock while the dead holder\'s job was running');
+});
+
+const APP = path.join(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+
+test('npm run ios and android build under the lock', () => {
+  const { scripts } = JSON.parse(fs.readFileSync(path.join(APP, 'package.json'), 'utf8'));
+  assert.equal(scripts.ios, 'node e2e/hold-lock.mjs expo run:ios');
+  assert.equal(scripts.android, 'node e2e/hold-lock.mjs expo run:android');
+});
+
+test('npm run ios waits for a live e2e run, then runs expo', { timeout: 120000 }, async () => {
+  const file = path.join(dir, 'npm-ios.lock');
+  const run = await takeLock(file);
+  const npm = spawn('npm', ['run', 'ios', '--', '--help'], {
+    cwd: APP, env: { ...process.env, REHEARSLY_E2E_LOCK: file }, stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  children.push(npm);
+  let out = '';
+  let err = '';
+  npm.stdout.on('data', (chunk) => { out += chunk; });
+  npm.stderr.on('data', (chunk) => { err += chunk; });
+  const done = new Promise((resolve) => npm.on('exit', resolve));
+  await until(() => /another e2e run .* waiting for it/.test(err), 60000);
+  await sleep(2000);
+  assert.doesNotMatch(out + err, /Usage/i, 'expo ran while an e2e run held the lock');
+  run.release();
+  assert.equal(await done, 0);
+  assert.match(out + err, /run:ios/);
+  assert.equal(fs.existsSync(file), false, 'npm run ios left the lock behind');
+});
+
 test('a live run is waited for, not cleared', async () => {
   const file = path.join(dir, 'live.lock');
   const server = group();

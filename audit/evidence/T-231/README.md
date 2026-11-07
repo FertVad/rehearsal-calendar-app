@@ -72,6 +72,30 @@ the failure was still the launch's black screen. Maestro's 60 s wait and
 iOS's 60 s timeout end within a second of each other, so whether the red box
 is up yet is a race. The original run, slower everywhere, caught the red box.
 
+## Red before and green after, with a job beside the run (review round 1)
+
+`red-before.txt` stalls Metro unconditionally, so it is red on any code, and
+a plain green run of flow 40 passed before the fix too. Neither shows the fix.
+So `job-beside-run.mjs` runs flow 40 and, once its flows start, starts a job
+beside it: `starve-metro.mjs`, a stand-in for the build, which stops the
+run's Metro for 75 s at the app's bundle request if an e2e run holds the lock.
+The same harness runs the job in two ways:
+
+- `direct`, as `npm run ios` ran expo before the fix (`expo run:ios`):
+  `beside-direct-red.txt`. The job stopped Metro at the bundle request, and the
+  run failed as the original did: `[Failed] Details and the card read one seen
+  mark (2m 9s) (Assertion is false: id: login-submit is visible)`, exit 1.
+- `locked`, through `e2e/hold-lock.mjs`, as `npm run ios` runs it now:
+  `beside-locked-green.txt`. The job logged `another e2e run (pid 81602) is
+  going; waiting for it`, flow 40 passed in 2m 5s, and then the job started
+  and found no Metro to starve.
+
+`npm run ios` itself is checked against a held lock in `lock.test.mjs` ("npm
+run ios waits for a live e2e run, then runs expo"): it really runs `npm run
+ios -- --help`, which waits for the run and prints expo's help only after the
+lock is released. On d878c4a's `package.json` that test times out because expo
+runs at once (`lock-tests.txt`).
+
 ## The fix
 
 The cause is a job beside the run that the lock did not cover. Raising a
@@ -85,6 +109,16 @@ So the fix lets heavy jobs take the same lock:
   exits with the job's code. An e2e run started meanwhile waits for it, and its
   log names the job. A holder killed outright leaves its job to the next run,
   which stops it as it stops a dead run's server and Metro.
+- `npm run ios` and `npm run android` run expo through it (`package.json`), so
+  `npm run ios -- --configuration Release` takes the lock (review round 1).
+- The job runs through `e2e/watchdog.mjs` with a pipe from `hold-lock.mjs`,
+  like the server and Metro of a run. If the holder is killed outright, the
+  watchdog ends the job's group within 5 s, without `ps`. Where `ps` cannot
+  run, the next run's `clearLeftovers()` waits (up to 15 s) for a dead holder's
+  group to end before it takes the lock, and does not signal a group it cannot
+  identify. Before this, the next `takeLock` took the lock while the old job
+  ran on (review round 1). The job's stdin is not the terminal, so it runs
+  without keyboard input.
 - `e2e/lock.mjs` exports the lock's path (`LOCK`, which `run.mjs` and
   `hold-lock.mjs` share) and keeps the holder's `what`.
 - The rule is in `CLAUDE.md` (End-to-End) and `docs/e2e.md` ("Heavy jobs beside a run").
@@ -92,14 +126,17 @@ So the fix lets heavy jobs take the same lock:
 Tests (`e2e/__tests__/lock.test.mjs`, real processes; `lock-tests.txt`):
 a job waits for a live run, runs after it, and gives back its code; a run
 waits for a held job and names it; a dead holder's job is stopped by the next
-run. On HEAD `hold-lock.mjs` does not exist, so all three fail. In this
-session `ps` is denied (`startedAt` returns ""), so both "a dead … is stopped"
-tests fail here. One of them is the old, unchanged test, which fails here the
-same way. They need `ps`, as on the supervisor.
+run; without `ps`, a dead holder's job that ignores SIGTERM has ended by the
+time the next run holds the lock; `npm run ios`/`android` go through
+`hold-lock.mjs`, and `npm run ios` waits for a held lock. On d878c4a's
+sources the last four fail. In this session `ps` is denied, so only the old,
+unchanged "what a dead run left running is stopped" test fails here, on bare
+`sleep` groups with no watchdog. It passes where `ps` runs, as on the supervisor.
 
 ## The bug flow 40 guards (cause fix 22, DD01)
 
 `npm run e2e -- e2e/flows/40-details-seen-one-model.yaml` on the changed tree
 passed in 2m 2s (`green-flow-40.txt`). Details read "1/2" after the tap, her
 toggle is selected, and the card reads `1/2`, selected. The bug has not
-come back.
+come back. On this round's tree flow 40 passed again, with the job waiting
+beside it (`beside-locked-green.txt`).

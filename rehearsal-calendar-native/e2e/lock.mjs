@@ -47,11 +47,31 @@ function holderOf(file) {
 
 const running = ({ pid, since }) => Boolean(pid) && (since ? startedAt(pid) === since : alive(pid));
 
-/** Stops the groups a dead run recorded — those still led by the process it started. */
+/** Whether a process group still has a member. */
+const groupAlive = (pgid) => { try { process.kill(-pgid, 0); return true; } catch (error) { return error.code === 'EPERM'; } };
+// watchdog.mjs takes its group down within 5 s of its holder's death.
+const WATCHDOG_MS = 15000;
+
+/**
+ * Stops the groups a dead run recorded — those still led by the process it
+ * started. Where `ps` cannot run (the developer's sandbox), a group cannot be
+ * identified and is not signalled; it was started through watchdog.mjs, which
+ * ends it once the holder is dead, and the lock is not taken until it has
+ * ended (T-231: a heavy job kept running beside the next run).
+ */
 export async function clearLeftovers(groups, { log = () => {} } = {}) {
   for (const { name, pgid, since } of groups) {
-    // Gone, or the pid belongs to something else by now.
-    if (!pgid || !since || startedAt(pgid) !== since) continue;
+    if (!pgid) continue;
+    const now = startedAt(pgid);
+    if (!now) {
+      if (!groupAlive(pgid)) continue;
+      log(`waiting for the ${name} a dead run left behind (group ${pgid}) to end`);
+      for (const end = Date.now() + WATCHDOG_MS; groupAlive(pgid) && Date.now() < end;) await sleep(250);
+      if (groupAlive(pgid)) log(`group ${pgid} is still running and, without ps, cannot be told to be the ${name}`);
+      continue;
+    }
+    // The pid belongs to something else by now.
+    if (!since || now !== since) continue;
     log(`stopping the ${name} a dead run left behind (group ${pgid})`);
     try { process.kill(-pgid, 'SIGTERM'); } catch { continue; }
     for (let i = 0; i < 40 && alive(pgid); i++) await sleep(250);
