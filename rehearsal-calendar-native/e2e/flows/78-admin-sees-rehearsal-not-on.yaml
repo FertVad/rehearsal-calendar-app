@@ -1,0 +1,53 @@
+# An admin sees every rehearsal of their project under "All Projects", the
+# ones they are not on too (T-232, owner 07.11: "the admin must see all the
+# rehearsals"). "All Projects" used to give only the rehearsals the reader is
+# on, while the project's own filter gave an admin all of them: the owner, an
+# admin off the cast, found theirs under the project and not under "All".
+#
+# Olga is the admin of Estate Ball and not on its "Ball rehearsal" (Gaev's
+# alone, in two days). It is in her calendar, the row says she is not in the
+# cast, and there is no eye — there is nothing for her to mark, the server
+# would refuse it (NOT_ON_REHEARSAL). Her details say the same. Nothing here
+# changes the data; flow 42 opens the same rehearsal by link.
+appId: ${APP_ID}
+name: An admin sees a rehearsal they are not on, marked so
+tags:
+  - calendar
+  - rehearsals
+  - seen
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${OLGA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+# The filter as the calendar opens: every project.
+- assertVisible:
+    id: calendar-filter
+    text: ".*All Projects.*"
+# The row reads its texts joined: the title, the time, the place, the project
+# and the mark.
+- extendedWaitUntil:
+    visible: "(?s).*Ball rehearsal.*Estate Ball.*You are not in the cast.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 78-all-projects-not-in-cast
+# Her only rehearsal, and no eye anywhere.
+- assertNotVisible:
+    id: seen-toggle
+# Her details say it too, and have no row of hers to mark.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(?s).*Ball rehearsal.*You are not in the cast.*"
+      SEE: "Leonid Gaev.*"
+      WAIT_MS: "15000"
+- assertVisible:
+    id: rehearsal-details-not-on-roster
+    text: "You are not in the cast"
+- assertNotVisible:
+    id: own-seen-toggle
+- takeScreenshot: 78-details-not-in-cast
