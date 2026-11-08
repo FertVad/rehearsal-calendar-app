@@ -80,9 +80,10 @@ time limit left both on their ports (T-203, 2026-10-11).
 
 The lock serializes e2e runs, and a heavy job on the same Mac is not one
 unless it takes the lock too. On 2026-11-07 the full run of 224a38a went on
-while another session was building an iOS Release build and running it on a
-simulator of its own (9d265da, committed 11:30:49, says so; nothing else of
-that weight is known to have run then). From 11:08 to 11:37 the machine was
+while an interactive Claude session ran `xcodebuild` by hand: a Release build
+for a simulator of its own, then an `archive` (9d265da, committed 11:30:49,
+says so; `npm run ios` was not run, and nothing else of that weight is known
+to have run then). From 11:08 to 11:37 the machine was
 choked: an app install took 3-5 minutes instead of 4 s, Maestro's
 `clearAppState` 73 s, `Apply configuration` 36 s, and one flow's launch ten
 minutes before it failed. Flow 40 launched at 11:35:31; the app asked Metro
@@ -93,23 +94,31 @@ connect to development server" and the flow failed at `login-submit` before
 any step of its own (T-231, `audit/evidence/T-231`). No tap was lost:
 `tap-and-see.yaml` was never reached.
 
-So a heavy job goes under the lock. `npm run ios` and `npm run android` take
-it themselves (`package.json` runs expo through `e2e/hold-lock.mjs`), so
-`npm run ios -- --configuration Release` does. Anything else goes through it
-directly:
+So a heavy job goes under the lock. That case — `xcodebuild` called
+directly — goes through `e2e/hold-lock.mjs`:
 
 ```bash
-node e2e/hold-lock.mjs xcodebuild -workspace ios/Rehearsly.xcworkspace -scheme Rehearsly -configuration Release ...
+node e2e/hold-lock.mjs xcodebuild -workspace ios/Rehearsly.xcworkspace -scheme Rehearsly -configuration Release -sdk iphonesimulator ...
+node e2e/hold-lock.mjs xcodebuild -workspace ios/Rehearsly.xcworkspace -scheme Rehearsly -configuration Release archive ...
 ```
+
+`npm run ios` and `npm run android` take the lock themselves (`package.json`
+runs expo through `e2e/hold-lock.mjs`), so `npm run ios -- --configuration
+Release` does too.
 
 `hold-lock.mjs` waits for a run that is going, runs the job in a group of its
 own that the lock names, and exits with its code. An e2e run started
 meanwhile waits for the job, its log naming it, as for another run (up to an
 hour, then exit 75). The job runs through `watchdog.mjs`, as the server and
-Metro do. A holder killed outright takes its job down within 5 s, without
-`ps`, and the next run does not take the lock until the job's group has ended.
-Where `ps` runs, it also stops the group itself. The job's stdin is not the
-terminal: it runs without keyboard input (Ctrl-C still stops it).
+Metro do: the command in a group of its own, the watchdog outside it, told of
+its holder's life by a pipe on fd 3. When the holder dies, killed outright
+too, or the command exits, the watchdog stops the command's whole group —
+whatever the command started included — within 5 s, without `ps`, and exits
+only once that group is empty. The next run waits for the watchdog's group to
+end; if anything of it is still running after 15 s, it does not take the lock
+and exits 75, naming the group. Where `ps` runs, it also stops the group
+itself. The job keeps the terminal as stdin, so `npm run ios -- --device`
+asks for a device and expo's keys work.
 
 ## Exit codes
 

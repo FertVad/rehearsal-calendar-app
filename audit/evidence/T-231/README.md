@@ -133,10 +133,33 @@ sources the last four fail. In this session `ps` is denied, so only the old,
 unchanged "what a dead run left running is stopped" test fails here, on bare
 `sleep` groups with no watchdog. It passes where `ps` runs, as on the supervisor.
 
+## Review round 2 (reviews/T-231-r2.md)
+
+- The watchdog exited with its command, which cancelled its delayed SIGKILL
+  of the group, so a build's children outlived a holder killed outright.
+  Now the command runs in a group of its own that the watchdog is not in.
+  The watchdog stops that whole group when the holder dies, a signal comes,
+  or the command exits, and exits only once `kill(-pgid, 0)` finds no one in
+  it. It needs no `ps`. The server and Metro of a run go the same way.
+- `clearLeftovers()` does not take the lock while a dead holder's group has a
+  member. After 15 s it fails, naming the group (exit 75 for a run). It also
+  waits for the group, not just its leader, where `ps` runs.
+- The holder's life reaches the watchdog on a pipe at fd 3. The command's
+  stdin is the terminal again, so `npm run ios -- --device` can ask for a device.
+- The fact behind the job: on 07.11 it was `xcodebuild` run by hand from an
+  interactive session (a Release build for a simulator, then `archive`), not
+  `npm run ios`. `docs/e2e.md` and `hold-lock.mjs` say so, with
+  `node e2e/hold-lock.mjs xcodebuild …` as the example.
+
+Red before and green after are in `round2-tests.txt`. On 8f47559 three new
+tests fail: the Node → sleep chain, a leftover group with its leader gone,
+and stdin reaching the job. With the round-2 fix they pass, and so does flow 40.
+
 ## The bug flow 40 guards (cause fix 22, DD01)
 
 `npm run e2e -- e2e/flows/40-details-seen-one-model.yaml` on the changed tree
 passed in 2m 2s (`green-flow-40.txt`). Details read "1/2" after the tap, her
 toggle is selected, and the card reads `1/2`, selected. The bug has not
 come back. On this round's tree flow 40 passed again, with the job waiting
-beside it (`beside-locked-green.txt`).
+beside it (`beside-locked-green.txt`). On round 2's tree it passed
+in 1m 15s (`round2-tests.txt`), the server and Metro started through the new watchdog.

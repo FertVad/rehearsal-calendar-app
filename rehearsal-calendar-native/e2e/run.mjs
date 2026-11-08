@@ -122,15 +122,16 @@ for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
 
 /**
  * A long-running process in its own group, logged to e2e/out, stopped on
- * teardown — and through watchdog.mjs, which holds a pipe from this process
- * and takes the group down when it closes: a run killed outright takes its
- * server and Metro with it, in the developer's sandbox too.
+ * teardown — and through watchdog.mjs, which holds a pipe from this process on
+ * fd 3 and takes the command's whole group down when it closes: a run killed
+ * outright takes its server and Metro, and what they started, with it, in the
+ * developer's sandbox too. The watchdog exits once that group is empty.
  */
 function background(name, command, args, options, { append = false } = {}) {
   const logFile = path.join(OUT, `${name}.log`);
   const log = fs.openSync(logFile, append ? 'a' : 'w');
   const child = spawn(process.execPath, [path.join(E2E, 'watchdog.mjs'), command, ...args],
-    { ...options, detached: true, stdio: ['pipe', log, log] });
+    { ...options, detached: true, stdio: ['ignore', log, log, 'pipe'] });
   // Its own group outlives a run killed outright; the lock names it for the next.
   lock.record(name, child.pid);
   teardown.push(() => { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ } });

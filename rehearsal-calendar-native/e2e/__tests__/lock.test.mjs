@@ -10,8 +10,10 @@ import { takeLock, startedAt } from '../lock.mjs';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-lock-'));
 const children = [];
+const strays = [];
 after(() => {
   for (const child of children) { try { process.kill(-child.pid, 'SIGKILL'); } catch { /* gone */ } }
+  for (const pid of strays) { try { process.kill(pid, 'SIGKILL'); } catch { /* gone */ } }
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
@@ -85,12 +87,15 @@ test('a lock in the old form, a bare pid, is taken over once its run is gone', a
 const HOLD = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'hold-lock.mjs');
 function hold(file, ...command) {
   const child = spawn(process.execPath, [HOLD, ...command], {
-    env: { ...process.env, REHEARSLY_E2E_LOCK: file }, stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, REHEARSLY_E2E_LOCK: file }, stdio: ['pipe', 'pipe', 'pipe'],
   });
   children.push(child);
   let said = '';
+  let out = '';
   child.stderr.on('data', (chunk) => { said += chunk; });
+  child.stdout.on('data', (chunk) => { out += chunk; });
   child.said = () => said;
+  child.out = () => out;
   child.done = new Promise((resolve) => child.on('exit', (code) => resolve(code)));
   return child;
 }
@@ -135,6 +140,48 @@ test('a heavy job whose holder was killed outright is stopped by the next e2e ru
   await sleep(100);
   assert.equal(alive(pgid), false, 'the dead holder\'s job is still running');
   run.release();
+});
+
+test('a heavy job\'s own children end before the next run takes the lock', { timeout: 60000 }, async () => {
+  const file = path.join(dir, 'hold-chain.lock');
+  // Node starting a child of its own, as a build starts its workers.
+  const job = hold(file, process.execPath, '-e',
+    "const c = require('node:child_process').spawn('/bin/sleep', ['60'], { stdio: 'ignore' }); console.log(c.pid); setInterval(() => {}, 1000);");
+  await until(() => /^\d+\n/.test(job.out()));
+  const worker = Number(job.out().trim());
+  strays.push(worker);
+  assert.equal(alive(worker), true);
+  job.kill('SIGKILL');
+  await job.done;
+  const run = await takeLock(file);
+  const left = alive(worker);
+  run.release();
+  assert.equal(left, false, 'the next run took the lock while the dead holder\'s job\'s child was running');
+});
+
+test('the lock is not taken while a dead run\'s group has a member, its leader gone', async () => {
+  const file = path.join(dir, 'leftover.lock');
+  // A group whose leader has exited and whose member runs on; nothing will stop it.
+  const leader = spawn('/bin/sh', ['-c', '/bin/sleep 60 & echo $!'], { detached: true, stdio: ['ignore', 'pipe', 'ignore'] });
+  const member = await new Promise((resolve) => leader.stdout.once('data', (chunk) => resolve(Number(String(chunk).trim()))));
+  children.push({ pid: leader.pid });
+  await new Promise((resolve) => leader.on('exit', resolve));
+  assert.equal(alive(member), true);
+  fs.writeFileSync(file, JSON.stringify({ pid: await deadPid(), since: 'never', groups: [
+    { name: 'job', pgid: leader.pid, since: 'Mon Jan  1 00:00:00 2001' },
+  ] }));
+  await assert.rejects(takeLock(file, { leftoversMs: 1000 }), new RegExp(`process group ${leader.pid}\\) is still running`));
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).since, 'never', 'the lock was taken');
+  fs.rmSync(file);
+});
+
+test('a heavy job reads the terminal: what is typed reaches it', async () => {
+  const file = path.join(dir, 'hold-stdin.lock');
+  // As expo's device prompt waits for a choice.
+  const job = hold(file, '/bin/sh', '-c', 'read line; echo "got:$line"');
+  job.stdin.end('device-2\n');
+  assert.equal(await job.done, 0);
+  assert.match(job.out(), /got:device-2/);
 });
 
 // Where ps cannot run (the developer's sandbox): no PATH, so startedAt() is ''.

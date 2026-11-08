@@ -49,33 +49,42 @@ const running = ({ pid, since }) => Boolean(pid) && (since ? startedAt(pid) === 
 
 /** Whether a process group still has a member. */
 const groupAlive = (pgid) => { try { process.kill(-pgid, 0); return true; } catch (error) { return error.code === 'EPERM'; } };
-// watchdog.mjs takes its group down within 5 s of its holder's death.
+// watchdog.mjs takes its command's group down within 5 s of its holder's death.
 const WATCHDOG_MS = 15000;
+
+async function untilEnded(pgid, ms) {
+  for (const end = Date.now() + ms; groupAlive(pgid) && Date.now() < end;) await sleep(250);
+  return !groupAlive(pgid);
+}
 
 /**
  * Stops the groups a dead run recorded — those still led by the process it
- * started. Where `ps` cannot run (the developer's sandbox), a group cannot be
- * identified and is not signalled; it was started through watchdog.mjs, which
- * ends it once the holder is dead, and the lock is not taken until it has
- * ended (T-231: a heavy job kept running beside the next run).
+ * started — and returns once each is empty: the lock is not taken while any
+ * member of one runs, its leader gone or not (T-231: a build's children ran on
+ * beside the next run). Where `ps` cannot run (the developer's sandbox), or the
+ * leader is gone, a group cannot be identified and is not signalled; it was
+ * started through watchdog.mjs, which ends it once the holder is dead. One
+ * still running after `waitMs` is an error, naming it: the lock stays untaken.
  */
-export async function clearLeftovers(groups, { log = () => {} } = {}) {
+export async function clearLeftovers(groups, { log = () => {}, waitMs = WATCHDOG_MS } = {}) {
   for (const { name, pgid, since } of groups) {
     if (!pgid) continue;
     const now = startedAt(pgid);
     if (!now) {
       if (!groupAlive(pgid)) continue;
       log(`waiting for the ${name} a dead run left behind (group ${pgid}) to end`);
-      for (const end = Date.now() + WATCHDOG_MS; groupAlive(pgid) && Date.now() < end;) await sleep(250);
-      if (groupAlive(pgid)) log(`group ${pgid} is still running and, without ps, cannot be told to be the ${name}`);
+      if (!await untilEnded(pgid, waitMs)) {
+        throw new Error(`the ${name} a dead run left behind (process group ${pgid}) is still running, so the lock is not taken; stop it (kill -KILL -${pgid}) and start again`);
+      }
       continue;
     }
     // The pid belongs to something else by now.
     if (!since || now !== since) continue;
     log(`stopping the ${name} a dead run left behind (group ${pgid})`);
     try { process.kill(-pgid, 'SIGTERM'); } catch { continue; }
-    for (let i = 0; i < 40 && alive(pgid); i++) await sleep(250);
-    if (alive(pgid)) { try { process.kill(-pgid, 'SIGKILL'); } catch { /* gone */ } }
+    if (await untilEnded(pgid, 10000)) continue;
+    try { process.kill(-pgid, 'SIGKILL'); } catch { /* gone */ }
+    if (!await untilEnded(pgid, 5000)) throw new Error(`the ${name} a dead run left behind (process group ${pgid}) outlived SIGKILL, so the lock is not taken`);
   }
 }
 
@@ -90,7 +99,7 @@ function writeAtomic(file, data) {
  * lock. Returns `record(name, pid)` for each background group and `release()`.
  * `what` names a holder that is not an e2e run (hold-lock.mjs's job).
  */
-export async function takeLock(file, { timeoutMs = 60 * 60 * 1000, pollMs = 10000, log = () => {}, what = null } = {}) {
+export async function takeLock(file, { timeoutMs = 60 * 60 * 1000, pollMs = 10000, log = () => {}, what = null, leftoversMs } = {}) {
   const held = { pid: process.pid, since: startedAt(process.pid), groups: [], ...(what ? { what } : {}) };
   const deadline = Date.now() + timeoutMs;
   for (let said = false; ;) {
@@ -104,7 +113,13 @@ export async function takeLock(file, { timeoutMs = 60 * 60 * 1000, pollMs = 1000
     try { holder = holderOf(file); } catch (error) { if (error.code === 'ENOENT') continue; throw error; }
     if (!holder) { await sleep(200); continue; }
     if (!running(holder)) {
-      await clearLeftovers(holder.groups, { log });
+      try {
+        await clearLeftovers(holder.groups, { log, ...(leftoversMs ? { waitMs: leftoversMs } : {}) });
+      } catch (error) {
+        // Without ps a group cannot be told from another that got its number.
+        error.message += `; if that group is not the dead run's, remove ${file}`;
+        throw error;
+      }
       fs.rmSync(file, { force: true });
       continue;
     }
