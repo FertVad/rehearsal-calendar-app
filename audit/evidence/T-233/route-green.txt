@@ -1,0 +1,34 @@
+T-233 — route test with the fix.
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/rehearsalNotifications.test.js
+
+PASS __tests__/routes/rehearsalNotifications.test.js
+    ✓ tells the people put on a new rehearsal (175 ms)
+    ✓ does not tell the author about the rehearsal they just scheduled (27 ms)
+    ✓ leaves out a project member who is not on it (24 ms)
+    ✓ tells the roster when the rehearsal changes (55 ms)
+    ✓ tells the roster when the rehearsal is cancelled (43 ms)
+    ✓ leaves the editor out when a rehearsal is moved (78 ms)
+    ✓ leaves out whoever cancelled it (58 ms)
+    ✓ says nothing at all when the editor is the only one on it (42 ms)
+    ✓ names only the field that moved (44 ms)
+    ✓ names only the place when only the place changed (41 ms)
+    ✓ names both when both changed (42 ms)
+    ✓ stays quiet when the form comes back unchanged (40 ms)
+    ✓ does not tell the rest of the cast when only the roster changed (46 ms)
+    ✓ tells whoever was added, and only them, which rehearsal they are now on (50 ms)
+    ✓ tells whoever was taken off, and nobody else (56 ms)
+    ✓ says nothing about the cast when the cast is as it was (58 ms)
+    ✓ gives each person one notification for one save (45 ms)
+    ✓ tells the editor nothing when they put themselves on it or take themselves off (62 ms)
+    ✓ lets it be announced again on the new date (43 ms)
+    ✓ does not re-announce one that was merely renamed (59 ms)
+Tests:       20 passed, 20 total
+
+Also green: __tests__/integration/rehearsalNoticeText.integration.test.js
+(7 passed: the added/removed texts in ru and en, their types and what a tap
+opens), rehearsalRoster.test.js and the integration suite (208 passed).
+Whole server suite: only appleAuth.test.js and runtimeStartup.test.js fail,
+8 tests, the same 8 on the base code 2d94078 (this machine's sandbox).
+Frontend: 1324 passed (backToTabs.test.tsx: "taken off a rehearsal" opens the
+calendar from a push and from the inbox). type-check clean.

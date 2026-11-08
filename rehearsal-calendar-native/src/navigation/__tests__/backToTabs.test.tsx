@@ -214,6 +214,46 @@ describe('"New member" opens its project on the members (T-023)', () => {
   });
 });
 
+describe('"Taken off a rehearsal" opens the calendar, not the rehearsal (T-233)', () => {
+  const calendarOpened = { screen: 'Calendar', params: { screen: 'CalendarMain' } };
+
+  it('from a tapped push, over a modal', async () => {
+    open('MainTabs', 'CreateProject');
+    const listen = Notifications.addNotificationResponseReceivedListener as jest.Mock;
+    listen.mockClear();
+    const { renderHook } = require('@testing-library/react-native');
+    renderHook(() => useNotifications());
+    await act(async () => {});
+    act(() => listen.mock.calls[0][0]({
+      notification: { request: { content: { data: { type: 'rehearsal_removed', projectId: 3 } } } },
+    }));
+
+    expect(stack()).toEqual(['MainTabs']);
+    expect(top().params).toEqual(calendarOpened);
+  });
+
+  it('from the inbox, though it names its project', async () => {
+    open('MainTabs', 'Notifications');
+    mockList.mockResolvedValueOnce({
+      data: {
+        notifications: [{
+          id: 8, type: 'rehearsal_removed', title: 'You were taken off a rehearsal',
+          body: 'Hamlet: Full dress, tomorrow at 7:00 PM — you are no longer on it', data: { projectId: 3 },
+          relatedType: 'project', relatedId: 3, read: false, createdAt: new Date().toISOString(),
+        }],
+        unreadCount: 1,
+        nextCursor: null,
+      },
+    });
+    const view = render(<NotificationsScreen />);
+    await act(async () => { mockFocus.run?.(); });
+    await act(async () => { fireEvent.press(await view.findByText('You were taken off a rehearsal')); });
+
+    expect(stack()).toEqual(['MainTabs']);
+    expect(top().params).toEqual(calendarOpened);
+  });
+});
+
 // The tabs and the Projects stack, each handed its changed params the way
 // useNavigationBuilder hands them to a nested navigator.
 const tabNames = ['Calendar', 'Projects', 'Create', 'Planner', 'Profile'];

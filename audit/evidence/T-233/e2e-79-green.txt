@@ -1,0 +1,27 @@
+T-233 — flow 79 with the fix (git restore --source=HEAD).
+
+$ npm run e2e -- e2e/flows/79-added-to-rehearsal-told.yaml
+
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+
+Waiting for flows to complete...
+[Passed] Added to a rehearsal, told (1m 13s)
+
+1/1 Flow Passed in 1m 13s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Screenshots (e2e/out/artifacts/2026-11-08_054419/Added to a rehearsal, told/takeScreenshot/):
+- 79-added-in-inbox.png: Orlando's inbox, one unread card, calendar icon —
+  "You were added to a rehearsal / Frederick Court: Wrestling match scheduled
+  tomorrow at 4:00 PM at The lawn".
+- 79-added-opens-rehearsal.png: the tap opened "Wrestling match" — Monday,
+  November 9, 4:00 PM–5:00 PM, Frederick Court, The lawn; Participants:
+  Orlando Boys (You, his own seen toggle) and Rosalind Duke.

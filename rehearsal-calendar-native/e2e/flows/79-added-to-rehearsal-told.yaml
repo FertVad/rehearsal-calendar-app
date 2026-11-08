@@ -27,22 +27,24 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Notifications"
-      SEE: "Mark all read"
+      # The inbox, with something in it or not: nothing at all is what
+      # Orlando got before (T-233), and the wait below is what says so.
+      SEE: "(Mark all read|Nothing yet)"
       WAIT_MS: "15000"
 - extendedWaitUntil:
-    visible: ".*You were added to a rehearsal.*Forest of Arden: Wrestling match scheduled (tomorrow|on .*) at 4:00.PM at The lawn.*"
+    visible: ".*You were added to a rehearsal.*Frederick Court: Wrestling match scheduled (tomorrow|on .*) at 4:00.PM at The lawn.*"
     timeout: 15000
 - takeScreenshot: 79-added-in-inbox
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP: ".*Forest of Arden: Wrestling match scheduled.*"
+      TAP: ".*Frederick Court: Wrestling match scheduled.*"
       SEE: "The lawn"
       WAIT_MS: "15000"
 # The rehearsal itself, its project, and him on it: his own "seen" to mark.
 - assertVisible:
     id: rehearsal-details-project
-    text: "Forest of Arden"
+    text: "Frederick Court"
 - extendedWaitUntil:
     visible:
       id: own-seen-toggle

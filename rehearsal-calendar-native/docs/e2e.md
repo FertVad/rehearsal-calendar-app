@@ -222,7 +222,10 @@ another device would do — calls the local server from `e2e/scripts` with
 `runScript`; `${API_URL}` is its address (flow 10). A rehearsal moved
 by its admin elsewhere: `e2e/scripts/move-rehearsal.js` with `API_URL`,
 `EMAIL`, `PASSWORD`, `REHEARSAL` (an id, `${<KEY>_REHEARSAL}`) and `HOURS`
-saves it that many hours later, title and place as they were (flow 73). A code the server
+saves it that many hours later, title and place as they were (flow 73). A
+person put on a rehearsal there: `e2e/scripts/add-to-rehearsal.js` with the
+same and `MEMBER` (an address in its project) saves it as it is, its cast
+kept and the member added (flow 79). A code the server
 mailed is read the same way: `e2e/scripts/read-code.js` with `MAIL_URL`
 (`${MAIL_URL}`), `TO` and `NAME` puts it in `${output.<NAME>}` (flows 11, 12).
 
