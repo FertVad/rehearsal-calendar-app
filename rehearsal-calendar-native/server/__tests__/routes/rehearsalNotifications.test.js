@@ -25,6 +25,8 @@ let bystanderId;
 const created = jest.fn();
 const updated = jest.fn();
 const deleted = jest.fn();
+const addedTo = jest.fn();
+const removedFrom = jest.fn();
 
 beforeAll(async () => {
   testDb = await setupIntegrationDb();
@@ -55,6 +57,8 @@ beforeAll(async () => {
     notifyRehearsalCreated: created,
     notifyRehearsalUpdated: updated,
     notifyRehearsalDeleted: deleted,
+    notifyAddedToRehearsal: addedTo,
+    notifyRemovedFromRehearsal: removedFrom,
     notifyMemberResponse: noop,
     notifyMemberJoined: noop,
     notifyAdminAppointed: noop,
@@ -86,6 +90,8 @@ beforeEach(() => {
   created.mockClear();
   updated.mockClear();
   deleted.mockClear();
+  addedTo.mockClear();
+  removedFrom.mockClear();
 });
 
 const auth = (userId) => ['Authorization', `Bearer ${generateTokens(userId, 1).accessToken}`];
@@ -291,9 +297,9 @@ describe('What the change announcement names', () => {
     expect(updated).not.toHaveBeenCalled();
   });
 
-  it('stays quiet when only the roster changed', async () => {
-    // Whoever was added or removed sees it in their own list; the rest of the
-    // cast does not need telling that the rehearsal itself is as it was.
+  it('does not tell the rest of the cast when only the roster changed', async () => {
+    // Whoever was added is told (below); the rest of the cast does not need
+    // telling that the rehearsal itself is as it was.
     const res = await create();
 
     const put = await save(res.body.rehearsal.id, {
@@ -302,6 +308,105 @@ describe('What the change announcement names', () => {
 
     expect(put.status).toBe(200);
     expect(updated).not.toHaveBeenCalled();
+  });
+});
+
+describe('Those put on or taken off an existing rehearsal are told (T-233)', () => {
+  // On TestFlight the owner was added to five rehearsals already scheduled and
+  // heard nothing: an edit announced only a moved time, place or name, and a
+  // change of cast to nobody — "those added or removed see it in their own
+  // lists", which they only did if they happened to open the app.
+  const START = '2026-09-20T18:00:00.000Z';
+  const END = '2026-09-20T20:00:00.000Z';
+
+  const create = (participant_ids) =>
+    request(app)
+      .post(`/api/native/projects/${testData.projectId}/rehearsals`)
+      .set(...auth(testData.adminId))
+      .send({ title: 'Прогон', location: 'Большая сцена', startsAt: START, endsAt: END, participant_ids });
+
+  const save = (rehearsalId, overrides) =>
+    request(app)
+      .put(`/api/native/projects/${testData.projectId}/rehearsals/${rehearsalId}`)
+      .set(...auth(testData.adminId))
+      .send({ title: 'Прогон', location: 'Большая сцена', startsAt: START, endsAt: END, ...overrides });
+
+  it('tells whoever was added, and only them, which rehearsal they are now on', async () => {
+    const res = await create([testData.memberId]);
+    const id = res.body.rehearsal.id;
+
+    const put = await save(id, { participant_ids: [testData.memberId, bystanderId] });
+
+    expect(put.status).toBe(200);
+    expect(addedTo).toHaveBeenCalledTimes(1);
+    expect(recipients(addedTo)).toEqual([bystanderId]);
+    // The rehearsal itself, so the notice can say when and where.
+    expect(addedTo.mock.calls[0][0]).toMatchObject({ id: String(id), location: 'Большая сцена' });
+    expect(removedFrom).not.toHaveBeenCalled();
+    expect(updated).not.toHaveBeenCalled();
+  });
+
+  it('tells whoever was taken off, and nobody else', async () => {
+    const res = await create([testData.memberId, bystanderId]);
+
+    const put = await save(res.body.rehearsal.id, { participant_ids: [testData.memberId] });
+
+    expect(put.status).toBe(200);
+    expect(removedFrom).toHaveBeenCalledTimes(1);
+    expect(recipients(removedFrom)).toEqual([bystanderId]);
+    expect(addedTo).not.toHaveBeenCalled();
+    expect(updated).not.toHaveBeenCalled();
+  });
+
+  it('says nothing about the cast when the cast is as it was', async () => {
+    const res = await create([testData.memberId]);
+    const id = res.body.rehearsal.id;
+
+    // Named again, and not named at all: neither is a change of cast.
+    await save(id, { participant_ids: [testData.memberId] });
+    await save(id, {});
+
+    expect(addedTo).not.toHaveBeenCalled();
+    expect(removedFrom).not.toHaveBeenCalled();
+    expect(updated).not.toHaveBeenCalled();
+  });
+
+  it('gives each person one notification for one save', async () => {
+    // Moved, one added, one removed, one staying: the newcomer is told they are
+    // on it — not also that its time moved — the one removed that they are off
+    // it, and only the one who stays that the time changed.
+    const res = await create([testData.memberId, bystanderId]);
+    const thirdId = Number(testDb.run(
+      `INSERT INTO native_users (email, password_hash, first_name) VALUES (?, ?, ?)`,
+      [`third-${Date.now()}@test.com`, 'hash', 'Third']
+    ).lastInsertId);
+    testDb.run(
+      `INSERT INTO native_project_members (project_id, user_id, role, status) VALUES (?, ?, 'member', 'active')`,
+      [testData.projectId, thirdId]
+    );
+
+    const put = await save(res.body.rehearsal.id, {
+      startsAt: '2026-09-21T18:00:00.000Z',
+      endsAt: '2026-09-21T20:00:00.000Z',
+      participant_ids: [testData.memberId, thirdId],
+    });
+
+    expect(put.status).toBe(200);
+    expect(recipients(addedTo)).toEqual([thirdId]);
+    expect(recipients(removedFrom)).toEqual([bystanderId]);
+    expect(recipients(updated)).toEqual([Number(testData.memberId)]);
+    expect(updated.mock.calls[0][3]).toEqual(['datetime']);
+  });
+
+  it('tells the editor nothing when they put themselves on it or take themselves off', async () => {
+    const res = await create([testData.memberId]);
+    const id = res.body.rehearsal.id;
+
+    await save(id, { participant_ids: [testData.memberId, testData.adminId] });
+    await save(id, { participant_ids: [testData.memberId] });
+
+    expect(addedTo).not.toHaveBeenCalled();
+    expect(removedFrom).not.toHaveBeenCalled();
   });
 });
 

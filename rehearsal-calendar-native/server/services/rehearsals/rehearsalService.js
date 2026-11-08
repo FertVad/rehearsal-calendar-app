@@ -3,7 +3,7 @@ import db from '../../database/db.js';
 import { localRangeToTimestamps, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
-import { viewerOf, visibleRehearsals, rosterStats, checkParticipants, settleRoster, clearRoster, RosterRefused } from './roster.js';
+import { viewerOf, visibleRehearsals, rosterOf, rosterStats, checkParticipants, settleRoster, clearRoster, RosterRefused } from './roster.js';
 import { lockProject } from './projectLock.js';
 import { releaseSeenNotices } from './seenNotice.js';
 import { once } from '../idempotency.js';
@@ -371,7 +371,9 @@ async function insertRehearsal(tx, projectId, userId, rehearsalData) {
  * @param {number} rehearsalId - Rehearsal ID
  * @param {number} projectId - Project ID
  * @param {object} updateData - Update data
- * @returns {Promise<object|null>} - Updated rehearsal; null when it is gone
+ * @returns {Promise<{ rehearsal: object, added: number[], removed: number[], kept: number[] }|null>}
+ *   The updated rehearsal and who this edit put on it, took off it and left on
+ *   it (user ids, active members only); null when it is gone
  */
 export async function updateRehearsal(rehearsalId, projectId, updateData) {
   return db.transaction((tx) => editRehearsal(tx, rehearsalId, projectId, updateData));
@@ -396,6 +398,11 @@ async function editRehearsal(tx, rehearsalId, projectId, updateData) {
   );
   // Deleted since the route found it: nothing to edit.
   if (!existing) return null;
+
+  // Who is on it before this edit, read with the row held, so the roster the
+  // route announces against is the one this edit replaced and not one a
+  // concurrent edit left behind (T-233).
+  const before = (await rosterOf(tx, rehearsalId)).map((row) => Number(row.user_id));
 
   // Update rehearsal using new TIMESTAMPTZ columns
   const updatedRehearsal = await tx.get(
@@ -459,16 +466,27 @@ async function editRehearsal(tx, rehearsalId, projectId, updateData) {
     tx
   );
 
+  // And after it, in the same transaction: the difference is who this edit
+  // put on the rehearsal and who it took off, each told once by the route.
+  const after = (await rosterOf(tx, rehearsalId)).map((row) => Number(row.user_id));
+  const wasOn = new Set(before);
+  const isOn = new Set(after);
+
   return {
-    id: String(updatedRehearsal.id),
-    projectId: String(updatedRehearsal.project_id),
-    title: updatedRehearsal.title,
-    description: updatedRehearsal.description,
-    startsAt: timestampToISO(updatedRehearsal.starts_at),
-    endsAt: timestampToISO(updatedRehearsal.ends_at),
-    location: updatedRehearsal.location,
-    createdAt: updatedRehearsal.created_at,
-    updatedAt: updatedRehearsal.updated_at,
+    rehearsal: {
+      id: String(updatedRehearsal.id),
+      projectId: String(updatedRehearsal.project_id),
+      title: updatedRehearsal.title,
+      description: updatedRehearsal.description,
+      startsAt: timestampToISO(updatedRehearsal.starts_at),
+      endsAt: timestampToISO(updatedRehearsal.ends_at),
+      location: updatedRehearsal.location,
+      createdAt: updatedRehearsal.created_at,
+      updatedAt: updatedRehearsal.updated_at,
+    },
+    added: after.filter((id) => !wasOn.has(id)),
+    removed: before.filter((id) => !isOn.has(id)),
+    kept: after.filter((id) => wasOn.has(id)),
   };
 }
 

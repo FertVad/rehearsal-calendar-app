@@ -7,6 +7,17 @@
 // do: `when` is the rehearsal's start in the reader's zone (reminderText.js).
 const translations = {
   ru: {
+    // Put on a rehearsal that already existed, and taken off one (T-233).
+    addedToRehearsal: {
+      title: 'Вас добавили в репетицию',
+      body: ({ projectName, rehearsalTitle, when, location }) =>
+        `${projectName}: ${rehearsalTitle || 'Репетиция'} назначена ${when}${location ? `, место: ${location}` : ''}`,
+    },
+    removedFromRehearsal: {
+      title: 'Вас убрали из репетиции',
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${rehearsalTitle || 'Репетиция'}, ${when} — вас убрали из состава`,
+    },
     newRehearsal: {
       title: 'Новая репетиция',
       body: ({ projectName, rehearsalTitle, when }) =>
@@ -83,6 +94,17 @@ const translations = {
     },
   },
   en: {
+    // Put on a rehearsal that already existed, and taken off one (T-233).
+    addedToRehearsal: {
+      title: 'You were added to a rehearsal',
+      body: ({ projectName, rehearsalTitle, when, location }) =>
+        `${projectName}: ${rehearsalTitle || 'Rehearsal'} scheduled ${when}${location ? ` at ${location}` : ''}`,
+    },
+    removedFromRehearsal: {
+      title: 'You were taken off a rehearsal',
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${rehearsalTitle || 'Rehearsal'}, ${when} — you are no longer on it`,
+    },
     newRehearsal: {
       title: 'New rehearsal',
       body: ({ projectName, rehearsalTitle, when }) =>
@@ -159,6 +181,17 @@ const translations = {
     },
   },
   es: {
+    // Put on a rehearsal that already existed, and taken off one (T-233).
+    addedToRehearsal: {
+      title: 'Te han añadido a un ensayo',
+      body: ({ projectName, rehearsalTitle, when, location }) =>
+        `${projectName}: ${rehearsalTitle || 'Ensayo'} programado ${when}${location ? ` en ${location}` : ''}`,
+    },
+    removedFromRehearsal: {
+      title: 'Te han quitado de un ensayo',
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${rehearsalTitle || 'Ensayo'}, ${when} — ya no estás en él`,
+    },
     newRehearsal: {
       title: 'Nuevo ensayo',
       body: ({ projectName, rehearsalTitle, when }) =>
@@ -235,6 +268,17 @@ const translations = {
     },
   },
   de: {
+    // Put on a rehearsal that already existed, and taken off one (T-233).
+    addedToRehearsal: {
+      title: 'Du wurdest zu einer Probe hinzugefügt',
+      body: ({ projectName, rehearsalTitle, when, location }) =>
+        `${projectName}: ${rehearsalTitle || 'Probe'} angesetzt ${when}${location ? `, Ort: ${location}` : ''}`,
+    },
+    removedFromRehearsal: {
+      title: 'Du wurdest von einer Probe genommen',
+      body: ({ projectName, rehearsalTitle, when }) =>
+        `${projectName}: ${rehearsalTitle || 'Probe'}, ${when} — du bist nicht mehr dabei`,
+    },
     newRehearsal: {
       title: 'Neue Probe',
       body: ({ projectName, rehearsalTitle, when }) =>

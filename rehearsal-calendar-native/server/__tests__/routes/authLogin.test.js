@@ -46,6 +46,8 @@ jest.unstable_mockModule('../../services/notifications/pushNotificationService.j
   notifyRehearsalCreated: noop,
   notifyRehearsalUpdated: noop,
   notifyRehearsalDeleted: noop,
+  notifyAddedToRehearsal: noop,
+  notifyRemovedFromRehearsal: noop,
   notifyMemberResponse: noop,
   notifyMemberJoined: noop,
   notifyAdminAppointed: noop,

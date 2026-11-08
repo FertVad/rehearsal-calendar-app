@@ -45,6 +45,19 @@ export function openProject(
   }, { pop: true });
 }
 
+/**
+ * Open the calendar from a notification: "you were taken off a rehearsal".
+ * The rehearsal is no longer theirs to open, and the calendar is where it has
+ * just disappeared from (T-233). `pop: true`, as above, closes a modal over
+ * the tabs instead of pushing a second MainTabs on top of it.
+ */
+export function openCalendar(navigation: Pick<AppNavigation, 'navigate'>) {
+  navigation.navigate('MainTabs', {
+    screen: 'Calendar',
+    params: { screen: 'CalendarMain' },
+  }, { pop: true });
+}
+
 /** Where on its project a notification of this type opens: "New member" on the members (T-023). */
 export function projectSectionOf(type: string): ProjectSection | undefined {
   return type === 'member_joined' ? 'members' : undefined;
@@ -236,6 +249,11 @@ export function useNotifications() {
         case 'rehearsal_deleted':
           // No rehearsal left to open — the project is the nearest thing.
           if (projectId) openProject(navigation, projectId);
+          break;
+
+        case 'rehearsal_removed':
+          // Taken off it: the rehearsal is not theirs to open any more.
+          openCalendar(navigation);
           break;
 
         case 'member_joined':

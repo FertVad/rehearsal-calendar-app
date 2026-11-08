@@ -58,6 +58,8 @@ beforeAll(async () => {
     notifyRehearsalCreated: async (_rehearsal, _project, rows) => { notified.created.push(recipients(rows)); },
     notifyRehearsalUpdated: async (_rehearsal, _project, rows) => { notified.updated.push(recipients(rows)); },
     notifyRehearsalDeleted: async (_rehearsal, _project, rows) => { notified.deleted.push(recipients(rows)); },
+    notifyAddedToRehearsal: noop,
+    notifyRemovedFromRehearsal: noop,
     notifyMemberResponse: noop,
     notifyMemberJoined: noop,
     notifyAdminAppointed: noop,

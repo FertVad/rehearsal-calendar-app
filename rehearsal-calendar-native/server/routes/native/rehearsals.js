@@ -27,6 +27,8 @@ import {
   notifyRehearsalCreated,
   notifyRehearsalUpdated,
   notifyRehearsalDeleted,
+  notifyAddedToRehearsal,
+  notifyRemovedFromRehearsal,
   notifyMemberResponse,
 } from '../../services/notifications/pushNotificationService.js';
 
@@ -156,19 +158,37 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(asyn
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
 
-    const updatedRehearsal = await updateRehearsal(rehearsalId, projectId, req.body);
+    const edit = await updateRehearsal(rehearsalId, projectId, req.body);
 
     // Deleted between the check above and the edit.
-    if (!updatedRehearsal) {
+    if (!edit) {
       return res.status(404).json({ error: 'Rehearsal not found' });
     }
+    const updatedRehearsal = edit.rehearsal;
 
-    // The roster, not the project — see the note on creation. Participants are
-    // already settled by this point, so newcomers to the rehearsal are included
-    // and anyone dropped from it is not.
+    // The roster, not the project — see the note on creation. Who was put on
+    // it, taken off it and left on it comes from the edit's own transaction,
+    // the roster read before and after it was settled (T-233).
+    //
+    // One save, one notification each. Whoever made the change gets none.
+    // Someone added is told they are on it, as of a new rehearsal, and not
+    // also that its time moved; someone removed is told so, as of a
+    // cancellation — it is gone from their calendar and they know why. Only
+    // those who were on it and stay are told what changed, and only when
+    // something they can see did.
     try {
       const project = await db.get('SELECT name FROM native_projects WHERE id = ?', [projectId]);
-      const members = await rosterOf(db, updatedRehearsal.id);
+      const others = (ids) => ids.filter((id) => id !== Number(userId)).map((id) => ({ user_id: id }));
+      const added = others(edit.added);
+      const removed = others(edit.removed);
+      const toNotify = others(edit.kept);
+
+      if (added.length > 0) {
+        await notifyAddedToRehearsal(updatedRehearsal, project.name, added);
+      }
+      if (removed.length > 0) {
+        await notifyRemovedFromRehearsal(updatedRehearsal, project.name, removed);
+      }
 
       // What actually changed, not what the request happened to carry. The app
       // sends the whole form on save, so listing every field that arrived meant
@@ -181,11 +201,8 @@ router.put('/:projectId/rehearsals/:rehearsalId', requireAuth, asyncHandler(asyn
       if ((rehearsal.location || '') !== (updatedRehearsal.location || '')) changeKeys.push('location');
       if ((rehearsal.title || '') !== (updatedRehearsal.title || '')) changeKeys.push('title');
 
-      // Everyone on it except whoever made the change; they were there.
-      const toNotify = members.filter((m) => Number(m.user_id) !== Number(userId));
-
-      // Nothing worth announcing when nothing visible changed. The roster may
-      // still have, and those added or removed see it in their own lists.
+      // Nothing worth announcing to those who stay when nothing visible
+      // changed; those added or removed were told above.
       if (changeKeys.length > 0 && toNotify.length > 0) {
         await notifyRehearsalUpdated(updatedRehearsal, project.name, toNotify, changeKeys);
       }

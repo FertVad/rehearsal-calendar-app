@@ -494,6 +494,39 @@ export async function notifyRehearsalDeleted(rehearsal, projectName, members) {
 }
 
 /**
+ * Tell people put on a rehearsal that already existed that they are on it —
+ * which, when and where, as of a new rehearsal (T-233). The type is the new
+ * rehearsal's, so a tap opens it on every build of the app.
+ */
+export async function notifyAddedToRehearsal(rehearsal, projectName, members, options) {
+  const userIds = members.map(m => m.user_id);
+  return sendAboutRehearsal(rehearsal, userIds, (locale, when) => {
+    const tr = t(locale, 'addedToRehearsal');
+    return {
+      title: tr.title,
+      body: tr.body({ projectName, rehearsalTitle: rehearsal.title, when, location: rehearsal.location }),
+    };
+  }, {
+    type: 'rehearsal_created',
+    rehearsalId: rehearsal.id,
+    projectId: rehearsal.project_id ?? rehearsal.projectId,
+  }, options);
+}
+
+/**
+ * Tell people taken off a rehearsal that they were (T-233): it has gone from
+ * their calendar, as a cancelled one does, and they should know why. No
+ * rehearsal id — they can no longer open it; a tap opens the calendar.
+ */
+export async function notifyRemovedFromRehearsal(rehearsal, projectName, members, options) {
+  const userIds = members.map(m => m.user_id);
+  return sendAboutRehearsal(rehearsal, userIds, (locale, when) => {
+    const tr = t(locale, 'removedFromRehearsal');
+    return { title: tr.title, body: tr.body({ projectName, rehearsalTitle: rehearsal.title, when }) };
+  }, { type: 'rehearsal_removed', projectId: rehearsal.project_id ?? rehearsal.projectId }, options);
+}
+
+/**
  * Notify admins when a member responds to a rehearsal — which one, and when it
  * is: "responded to a rehearsal" left an admin of several guessing (T-023).
  */

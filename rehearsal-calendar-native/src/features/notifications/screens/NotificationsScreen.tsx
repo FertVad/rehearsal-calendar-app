@@ -25,7 +25,7 @@ import { notificationsAPI } from '../../../shared/services/api';
 import { useUnread } from '../../../contexts/UnreadContext';
 import { logger } from '../../../shared/utils/logger';
 import { useRequestOrder } from '../../../shared/hooks/useSession';
-import { openProject, projectSectionOf } from '../../../shared/hooks/useNotifications';
+import { openCalendar, openProject, projectSectionOf } from '../../../shared/hooks/useNotifications';
 import { currentSession, isCurrentSession } from '../../../shared/services/session';
 import { styles } from '../styles/notificationsScreenStyles';
 import {
@@ -204,6 +204,13 @@ export default function NotificationsScreen() {
     // had plainly dealt with the thing. It opens at once; if the server did not
     // take the "read", the card is unread again when the reader comes back.
     if (!item.read) markShown([item.id], () => markRead([item.id]));
+
+    // Taken off a rehearsal: to the calendar it has left, not the rehearsal,
+    // which they can no longer see (T-233).
+    if (item.type === 'rehearsal_removed') {
+      openCalendar(navigation);
+      return;
+    }
 
     const rehearsalId = item.relatedType === 'rehearsal' ? item.relatedId : null;
     const projectId = item.data?.projectId ?? (item.relatedType === 'project' ? item.relatedId : null);

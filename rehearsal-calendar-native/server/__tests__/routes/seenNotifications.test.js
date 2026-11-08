@@ -39,6 +39,8 @@ beforeAll(async () => {
     notifyRehearsalCreated: noop,
     notifyRehearsalUpdated: noop,
     notifyRehearsalDeleted: noop,
+    notifyAddedToRehearsal: noop,
+    notifyRemovedFromRehearsal: noop,
     notifyMemberResponse: told,
     notifyMemberJoined: noop,
     notifyAdminAppointed: noop,
