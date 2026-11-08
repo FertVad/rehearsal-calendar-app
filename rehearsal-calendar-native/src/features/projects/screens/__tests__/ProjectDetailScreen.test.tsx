@@ -8,6 +8,8 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import { projectsAPI, rehearsalsAPI, invitesAPI } from '../../../../shared/services/api';
 import ProjectDetailScreen from '../ProjectDetailScreen';
+import { translations } from '../../../../i18n/translations';
+import { AxiosError } from 'axios';
 
 jest.mock('../../../../contexts/I18nContext', () => ({
   useI18n: () => ({ t: require('../../../../i18n/translations').translations.en, language: 'en' }),
@@ -80,6 +82,25 @@ it('names a past rehearsal by its title and times it as an upcoming one is', asy
   expect(screen.getByText('Old monologue')).toBeTruthy();
   // Both rows give the interval, from the same label.
   expect(screen.getAllByText('18:00–21:00')).toHaveLength(2);
+});
+
+// A project that could not be loaded says why, in the app's words: it said
+// "Failed to load project" whether the phone was offline or the server down
+// (T-228).
+it("says there is no connection when the project could not be loaded for it (T-228)", async () => {
+  const { Alert } = require('react-native');
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  (projectsAPI.getProject as jest.Mock).mockRejectedValue(new AxiosError('Network Error', 'ERR_NETWORK', undefined, {}));
+  render(
+    <ProjectDetailScreen
+      route={{ key: 'ProjectDetail', name: 'ProjectDetail', params: { projectId: 'p1' } } as any}
+      navigation={{ navigate: jest.fn(), goBack: jest.fn(), setOptions: jest.fn() } as any}
+    />
+  );
+  await settle();
+
+  expect(alert).toHaveBeenCalledWith(translations.en.common.error, translations.en.common.noConnection);
+  alert.mockRestore();
 });
 
 describe('opened on its members (T-023)', () => {

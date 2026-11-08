@@ -174,10 +174,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
     const providerCalendars = getProviderCalendars(provider);
 
     if (providerCalendars.length === 0) {
-      Alert.alert(
-        t.common.error,
-        `No writable ${provider === 'google' ? 'Google' : 'Apple'} calendar found`
-      );
+      Alert.alert(t.common.error, t.calendarSync.noWritableCalendars);
       return;
     }
 
@@ -367,7 +364,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       imported = run.import.result.success;
       if (run.import.result.failed > 0) problems.push(t.calendarSync.importIncomplete(run.import.result.failed));
     } else if (run.import.status === 'failed') {
-      problems.push(run.import.error || t.calendarSync.syncError);
+      problems.push(requestErrorMessage(t, run.import.error, t.calendarSync.syncError));
     }
 
     let exported = 0;
@@ -375,7 +372,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       exported = run.export.result.success;
       if (run.export.result.failed > 0) problems.push(t.calendarSync.exportIncomplete(run.export.result.failed));
     } else if (run.export.status === 'failed') {
-      problems.push(run.export.error || t.calendarSync.syncError);
+      problems.push(requestErrorMessage(t, run.export.error, t.calendarSync.syncError));
     }
 
     if (run.export.status === 'done' && run.export.result.rehearsals === 0 && problems.length === 0) {

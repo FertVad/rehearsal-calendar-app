@@ -222,6 +222,7 @@ export const PEOPLE = {
   orlando: { email: 'orlando@e2e.test', firstName: 'Orlando', lastName: 'Boys', onboarded: true },
   // Shares an invite link to his project while the network is gone, his
   // account in Russian (80, T-228). A project of his own: no invite is made.
+  // Sends a bug report with the network gone (81): nothing reaches the server.
   khlestakov: { email: 'khlestakov@e2e.test', firstName: 'Ivan', lastName: 'Khlestakov', onboarded: true, locale: 'ru' },
 };
 

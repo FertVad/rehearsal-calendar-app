@@ -59,5 +59,8 @@ export function authErrorMessage(t: Translations, error: unknown): string {
   // so it gets the app's words instead (review of T-130). No answer at all is
   // the network, which the person can do something about.
   if (failure && failure.status === undefined) return t.auth.noConnection;
+  // The server's own trouble: unavailable, as every other window says it
+  // (requestErrorMessage, T-228), not "something went wrong".
+  if (failure?.status !== undefined && failure.status >= 500) return t.common.serverUnavailable;
   return t.auth.requestFailed;
 }

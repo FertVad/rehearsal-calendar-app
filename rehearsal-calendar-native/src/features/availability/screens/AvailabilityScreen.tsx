@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { AppNavigation } from '../../../navigation';
 import { useToday } from '../../../shared/hooks/useClock';
 import { endsNextDay } from '../../../shared/utils/time';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { formatClock, formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 import { getDateLocale } from '../../../shared/utils/locale';
 import { Ionicons } from '@expo/vector-icons';
@@ -373,7 +374,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
                       style: 'destructive',
                       onPress: () =>
                         editor.deletePastDates((error) => {
-                          if (error) Alert.alert(t.common.error, t.availability.saveError);
+                          if (error) Alert.alert(t.common.error, requestErrorMessage(t, error, t.availability.saveError));
                         })
                     }
                   ]

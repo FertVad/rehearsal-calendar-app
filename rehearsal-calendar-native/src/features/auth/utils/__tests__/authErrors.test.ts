@@ -50,8 +50,12 @@ describe('authErrorMessage', () => {
     const t = translations[language as keyof typeof translations];
     const offline = toAuthFlowError(new Error('Network Error'), 'Could not send the code');
     expect(authErrorMessage(t, offline)).toBe(t.auth.noConnection);
-    expect(authErrorMessage(t, new AuthFlowError('Something else', undefined, 500))).toBe(t.auth.requestFailed);
+    expect(authErrorMessage(t, new AuthFlowError('Something else', undefined, 400))).toBe(t.auth.requestFailed);
     expect(authErrorMessage(t, new AuthFlowError('Something else', 'SOME_NEW_CODE', 400))).toBe(t.auth.requestFailed);
+    // A 5xx is the server's trouble, not the request's: said as the rest of
+    // the app says it (T-228), not as "something went wrong".
+    expect(authErrorMessage(t, new AuthFlowError('Internal server error', undefined, 500))).toBe(t.common.serverUnavailable);
+    expect(authErrorMessage(t, new AuthFlowError('Bad gateway', undefined, 502))).toBe(t.common.serverUnavailable);
     expect(authErrorMessage(t, new Error('Failed to get ID token from Google'))).toBe(t.auth.requestFailed);
     expect(authErrorMessage(t, 'not an error')).toBe(t.auth.requestFailed);
     for (const key of ['noConnection', 'requestFailed'] as const) {

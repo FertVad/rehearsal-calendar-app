@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useI18n } from '../../../contexts/I18nContext';
 import { bugReportsAPI } from '../../../shared/services/api';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { Colors } from '../../../shared/constants/colors';
 import { AppModal } from '../../../shared/components/AppModal';
 import { IconButton } from '../../../shared/components/IconButton';
@@ -32,8 +33,10 @@ export function BugReportSheet({ visible, onClose }: { visible: boolean; onClose
       setMessage('');
       onClose();
       Alert.alert(t.common.success, t.profile.reportBugSent);
-    } catch {
-      Alert.alert(t.common.error, 'Failed to send report');
+    } catch (err) {
+      // In the app's language, and why: no connection, the server down, or
+      // its own words (T-228). It said "Failed to send report" in English.
+      Alert.alert(t.common.error, requestErrorMessage(t, err, t.profile.reportBugFailed));
     } finally {
       setSending(false);
     }

@@ -41,7 +41,10 @@ import type {
 export type DirectionOutcome<T> =
   | { status: 'off' } // not switched on: nothing was done
   | { status: 'done'; result: T }
-  | { status: 'failed'; error: string };
+  // What it threw, whole: the screen says it in the app's language
+  // (requestErrorMessage). Its message alone was axios's "Network Error"
+  // offline (T-228).
+  | { status: 'failed'; error: unknown };
 
 export interface SyncRun {
   import: DirectionOutcome<ImportResult>;
@@ -140,7 +143,7 @@ async function eachDirection<T>(name: string, work: () => Promise<T | null>): Pr
   } catch (error: any) {
     if (error instanceof SessionEndedError) throw error;
     logger.error(`[CalendarSync] ${name} failed:`, error);
-    return { status: 'failed', error: error?.message || '' };
+    return { status: 'failed', error };
   }
 }
 

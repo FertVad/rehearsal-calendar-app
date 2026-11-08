@@ -9,6 +9,7 @@
 import React from 'react';
 import { Alert } from 'react-native';
 import { render, fireEvent, act } from '@testing-library/react-native';
+import { AxiosError } from 'axios';
 import CalendarSyncSettingsScreen from '../CalendarSyncSettingsScreen';
 import { translations } from '../../../../i18n/translations';
 
@@ -98,12 +99,15 @@ it('does not say "synced" when a calendar could not be read', async () => {
 it('names both when the import fails and the export runs', async () => {
   // That the export runs at all is the sync's (useAutoCalendarSync.test.ts,
   // "One direction failing"); the screen reports what each came to.
-  mockSync.synchronize.mockResolvedValue(run({ status: 'failed', error: 'Network Error' }));
+  // The failed one in the app's language: with no answer the error's own
+  // message is axios's "Network Error" (T-228).
+  mockSync.synchronize.mockResolvedValue(run({ status: 'failed', error: new AxiosError('Network Error', 'ERR_NETWORK', undefined, {}) }));
 
   const [title, message] = await synchronize();
 
   expect(title).toBe(t.calendarSync.syncError);
-  expect(message).toContain('Network Error');
+  expect(message).toContain(t.common.noConnection);
+  expect(message).not.toContain('Network Error');
   expect(message).toContain(`${t.calendarSync.exportedRehearsals}: 1`);
 });
 
@@ -117,10 +121,31 @@ it.each([true, false])('says at the top what sync does (calendar access: %s)', (
 });
 
 it('says when the export could not run', async () => {
-  mockSync.synchronize.mockResolvedValue(run(undefined, { status: 'failed', error: 'Request timed out' }));
+  mockSync.synchronize.mockResolvedValue(run(undefined, { status: 'failed', error: new AxiosError('timeout of 30000ms exceeded', 'ECONNABORTED', undefined, {}) }));
 
   const [title, message] = await synchronize();
 
   expect(title).toBe(t.calendarSync.syncError);
-  expect(message).toContain('Request timed out');
+  expect(message).toContain(t.common.noConnection);
+  expect(message).not.toContain('timeout of');
+});
+
+it('says the server is unavailable when it answered 5xx (T-228)', async () => {
+  const down = new AxiosError('Request failed with status code 502', 'ERR_BAD_RESPONSE', undefined, {},
+    { status: 502, data: {}, statusText: '', headers: {}, config: {} as any });
+  mockSync.synchronize.mockResolvedValue(run(undefined, { status: 'failed', error: down }));
+
+  const [, message] = await synchronize();
+
+  expect(message).toContain(t.common.serverUnavailable);
+  expect(message).not.toContain('status code');
+});
+
+it('says a sync error, not the message, when what failed was no request (T-228)', async () => {
+  mockSync.synchronize.mockResolvedValue(run({ status: 'failed', error: new Error('EKEventStore denied') }));
+
+  const [, message] = await synchronize();
+
+  expect(message).toContain(t.calendarSync.syncError);
+  expect(message).not.toContain('EKEventStore');
 });

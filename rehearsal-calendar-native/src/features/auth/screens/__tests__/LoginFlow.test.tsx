@@ -73,7 +73,7 @@ beforeEach(() => {
 const refusals: [string, unknown, string][] = [
   ['a wrong password', { response: { status: 401, data: { error: 'Invalid credentials' } } }, t.auth.invalidCredentials],
   ['no network', Object.assign(new Error('Network Error'), { request: {} }), t.auth.noConnection],
-  ['the server failing', { response: { status: 500, data: { error: 'Internal error' } } }, t.auth.requestFailed],
+  ['the server failing', { response: { status: 500, data: { error: 'Internal error' } } }, t.common.serverUnavailable],
   ['too many tries', { response: { status: 429, data: { error: 'Slow down', code: 'RATE_LIMITED', retryAfter: 30 } } }, t.auth.rateLimited(30)],
 ];
 

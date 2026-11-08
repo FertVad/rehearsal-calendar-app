@@ -1,0 +1,73 @@
+# A bug report with no network is said in the account's language (T-228,
+# review). Its window said "Failed to send report" — written in English, in
+# every interface, and the same whether the phone was offline or the server
+# down. Khlestakov, whose account speaks Russian, sends a report from the
+# profile while its request goes nowhere (its connection closed, as when the
+# network goes): the window says there is no connection, in Russian. The error
+# stays an error: the sheet stays open with what he wrote.
+appId: ${APP_ID}
+name: A bug report with no network says so in the account's language
+tags:
+  - profile
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${KHLESTAKOV_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-report-bug
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-report-bug
+      SEE: "Опишите проблему\\.\\.\\."
+      WAIT_MS: "10000"
+- tapOn:
+    id: bug-report-message
+- inputText: "The mayor cannot see the calendar"
+- assertVisible: "The mayor cannot see the calendar"
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: POST
+      PATH: "^/api/native/bug-reports$"
+      # Goes nowhere: its connection is closed, never held past iOS's ten
+      # seconds (T-220).
+      DROP: "1"
+# Not tap-and-see: the window that answers it is the point, and a second tap
+# would send again.
+- tapOn:
+    id: bug-report-send
+- extendedWaitUntil:
+    visible: "Нет соединения\\. Проверьте интернет и попробуйте ещё раз\\."
+    timeout: 15000
+- assertVisible: "Ошибка"
+- assertNotVisible: ".*Failed to send report.*"
+- assertNotVisible: ".*Network Error.*"
+- takeScreenshot: 81-bug-report-no-network
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+- tapOn: "OK"
+# Not sent, and not said to be: what he wrote is still there to send again.
+- assertVisible: "The mayor cannot see the calendar"
+- assertNotVisible: "Спасибо! Отчёт отправлен"

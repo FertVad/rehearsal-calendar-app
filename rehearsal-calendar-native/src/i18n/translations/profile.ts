@@ -20,6 +20,7 @@ export interface ProfileTranslations {
   reportBugPlaceholder: string;
   reportBugSend: string;
   reportBugSent: string;
+  reportBugFailed: string;
   logout: string;
   deleteAccount: string;
   deleteAccountConfirm: string;
@@ -94,6 +95,7 @@ export const ru = {
     reportBugPlaceholder: 'Опишите проблему...',
     reportBugSend: 'Отправить',
     reportBugSent: 'Спасибо! Отчёт отправлен',
+    reportBugFailed: 'Не удалось отправить отчёт',
     logout: 'Выйти из аккаунта',
     deleteAccount: 'Удалить аккаунт',
     deleteAccountConfirm: 'Удалить аккаунт?',
@@ -171,6 +173,7 @@ export const en = {
     reportBugPlaceholder: 'Describe the issue...',
     reportBugSend: 'Send',
     reportBugSent: 'Thanks! Report sent',
+    reportBugFailed: 'Could not send the report',
     logout: 'Log out',
     deleteAccount: 'Delete Account',
     deleteAccountConfirm: 'Delete Account?',
@@ -248,6 +251,7 @@ export const es = {
     reportBugPlaceholder: 'Describe el problema...',
     reportBugSend: 'Enviar',
     reportBugSent: '¡Gracias! Informe enviado',
+    reportBugFailed: 'No se pudo enviar el informe',
     logout: 'Cerrar sesión',
     deleteAccount: 'Eliminar cuenta',
     deleteAccountConfirm: '¿Eliminar cuenta?',
@@ -325,6 +329,7 @@ export const de = {
     reportBugPlaceholder: 'Problem beschreiben...',
     reportBugSend: 'Senden',
     reportBugSent: 'Danke! Bericht gesendet',
+    reportBugFailed: 'Der Bericht konnte nicht gesendet werden',
     logout: 'Abmelden',
     deleteAccount: 'Konto löschen',
     deleteAccountConfirm: 'Konto löschen?',

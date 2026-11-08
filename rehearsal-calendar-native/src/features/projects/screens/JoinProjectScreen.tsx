@@ -113,7 +113,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
       } else if (err.response?.status === 410) {
         setError(t.projects.inviteExpired);
       } else {
-        setError(t.projects.inviteLoadError);
+        setError(requestErrorMessage(t, err, t.projects.inviteLoadError));
       }
     } finally {
       if (isLatest()) setLoading(false);

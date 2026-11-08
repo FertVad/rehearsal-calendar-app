@@ -1,0 +1,20 @@
+T-228, review: flow 81 (a bug report with no network, account in Russian),
+run against the old BugReportSheet.tsx (git restore --source=bf2194c).
+
+$ npm run e2e -- e2e/flows/81-bug-report-no-network-language.yaml
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] running the flows
+[Failed] A bug report with no network says so in the account's language (2m 25s) (Assertion is false: "Нет соединения\. Проверьте интернет и попробуйте ещё раз\." is visible)
+
+1/1 Flow Failed
+
+The screen at the failed step (e2e/out/artifacts/2026-11-08_073130/…/
+step-102-assertCondition-Нет_соединения_._Проверь.png): the Russian sheet
+"Сообщить об ошибке", over it the window "Ошибка" — "Failed to send report",
+in English, with the request dropped.

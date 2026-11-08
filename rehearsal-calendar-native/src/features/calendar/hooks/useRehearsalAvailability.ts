@@ -4,6 +4,7 @@ import { projectsAPI } from '../../../shared/services/api';
 import { Project } from '../../../shared/types';
 import { TimeRange } from '../../../shared/utils/availability';
 import { logger } from '../../../shared/utils/logger';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 
 import { addDays } from '../../../shared/utils/time';
 
@@ -87,7 +88,7 @@ export const useRehearsalAvailability = (
           message: error.message,
           status: error.response?.status,
         });
-        Alert.alert(t.common.error, t.rehearsals.loadAvailabilityError);
+        Alert.alert(t.common.error, requestErrorMessage(t, error, t.rehearsals.loadAvailabilityError));
         setLoaded({ key, availability: {}, failed: true });
       })
       .finally(() => {

@@ -48,6 +48,16 @@ it("no error window or error state shows an error's .message (T-228)", () => {
   expect(raw).toEqual([]);
 });
 
+it('no error window says a written-in text instead of the language\'s (T-228)', () => {
+  // The bug report's window said "Failed to send report" — English in every
+  // interface, and the same offline and with the server down.
+  const written = sources(SRC).flatMap((file) =>
+    calls(readFileSync(file, 'utf8'))
+      .filter(({ call, args }) => call === 'Alert.alert' && /^\s*t\.common\.error\s*,\s*['"`]/.test(args))
+      .map(({ line }) => `${relative(SRC, file)}:${line} — error window says a written-in text; use requestErrorMessage`));
+  expect(written).toEqual([]);
+});
+
 it("the server's own words reach a window only through requestErrorMessage (T-228)", () => {
   const own = sources(SRC).flatMap((file) =>
     calls(readFileSync(file, 'utf8'))

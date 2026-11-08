@@ -20,6 +20,7 @@ import { endAfter, nextRoundHour } from '../utils/rehearsalDefaults';
 import { useUsualDuration } from './useUsualDuration';
 
 import { logger } from '../../../shared/utils/logger';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 type NavigationType = NativeStackNavigationProp<AppStackParamList>;
 
 interface RouteParams {
@@ -239,7 +240,7 @@ export function useAddRehearsalForm({
         // (review DF03), so a form that could not load closes.
         logger.error('Failed to load rehearsal:', error);
         const gone = error?.response?.status === 404;
-        Alert.alert(t.common.error, gone ? t.rehearsals.notFound : t.rehearsals.loadRehearsalError);
+        Alert.alert(t.common.error, gone ? t.rehearsals.notFound : requestErrorMessage(t, error, t.rehearsals.loadRehearsalError));
         navigation.goBack();
       } finally {
         setLoadingRehearsal(false);

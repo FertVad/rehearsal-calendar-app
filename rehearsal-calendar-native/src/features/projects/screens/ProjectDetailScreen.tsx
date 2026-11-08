@@ -180,7 +180,7 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
       setIsOwner(projectData.is_owner);
     } catch (err) {
       logger.error('Failed to fetch project data:', err);
-      Alert.alert(t.common.error, t.projects.fetchError);
+      Alert.alert(t.common.error, requestErrorMessage(t, err, t.projects.fetchError));
     } finally {
       setLoading(false);
       setRefreshing(false);
