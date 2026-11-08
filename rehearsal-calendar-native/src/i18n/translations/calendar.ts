@@ -64,6 +64,9 @@ export interface RehearsalsTranslations {
   /** In place of the eye: an admin sees this rehearsal but is not on it, so
    *  there is nothing to mark (T-232). */
   notOnRoster: string;
+  /** The count under the eye, for VoiceOver, where there is no eye to say it
+   *  as its value — a rehearsal the reader is not on (T-232). */
+  seenCount: (count: string) => string;
   noProjects: string;
   noAdminProjects: string;
   createNewProject: string;
@@ -147,6 +150,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     seenError: 'Не удалось отметить просмотр',
     markSeen: 'Отметить просмотренным',
     notOnRoster: 'Вы не в составе',
+    seenCount: (count: string) => `Просмотрели: ${count}`,
     noProjects: 'Нет проектов',
     noAdminProjects: 'Нет проектов, где вы являетесь администратором',
     createNewProject: 'Создать новый проект',
@@ -225,6 +229,7 @@ needProject: 'Rehearsals show up once you are in a project',
     seenError: 'Could not mark it as seen',
     markSeen: 'Mark as seen',
     notOnRoster: 'You are not in the cast',
+    seenCount: (count: string) => `Seen: ${count}`,
     noProjects: 'No projects',
     noAdminProjects: 'No projects where you are an administrator',
     createNewProject: 'Create New Project',
@@ -303,6 +308,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     seenError: 'No se pudo marcar como visto',
     markSeen: 'Marcar como visto',
     notOnRoster: 'No estás en el reparto',
+    seenCount: (count: string) => `Vistos: ${count}`,
     noProjects: 'No hay proyectos',
     noAdminProjects: 'No hay proyectos en los que seas administrador',
     createNewProject: 'Crear nuevo proyecto',
@@ -381,6 +387,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     seenError: 'Konnte nicht als gesehen markiert werden',
     markSeen: 'Als gesehen markieren',
     notOnRoster: 'Du bist nicht in der Besetzung',
+    seenCount: (count: string) => `Gesehen: ${count}`,
     noProjects: 'Keine Projekte',
     noAdminProjects: 'Keine Projekte, in denen du Administrator bist',
     createNewProject: 'Neues Projekt erstellen',

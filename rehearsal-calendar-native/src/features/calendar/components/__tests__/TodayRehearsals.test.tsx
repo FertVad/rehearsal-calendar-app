@@ -45,6 +45,7 @@ jest.mock('../../../../contexts/I18nContext', () => ({
       rehearsals: {
         markSeen: 'Mark as seen',
         notOnRoster: 'You are not in the cast',
+        seenCount: require('../../../../i18n/translations').translations.en.rehearsals.seenCount,
         edit: 'Edit',
         deleteConfirm: 'Delete',
         deleteTitle: require('../../../../i18n/translations').translations.en.rehearsals.deleteTitle,
@@ -500,8 +501,39 @@ describe('TodayRehearsals Component', () => {
       expect(icons.filter(i => String(i.props.name).startsWith('eye'))).toHaveLength(0);
       expect(getByTestId('rehearsal-not-on-roster')).toHaveTextContent(' · You are not in the cast');
       expect(getByText('Project Alpha')).toBeTruthy();
-      expect(getByText('5/10', { includeHiddenElements: true })).toBeTruthy();
       expect(mockToggleSeen).not.toHaveBeenCalled();
+    });
+
+    // With no eye there is no button to say the count as its value: the count
+    // says itself, or VoiceOver reads a row whose number it never speaks.
+    // Read as VoiceOver would — hidden elements left out (the default).
+    it('lets VoiceOver read the count of a rehearsal the reader is not on', () => {
+      const { getByLabelText } = render(
+        <TodayRehearsals
+          rehearsals={[{ ...mockRehearsals[0], onRoster: false }]}
+          selectedDate="2025-12-29"
+          loading={false}
+          projects={mockProjects}
+          onOpenRehearsal={mockOnOpenRehearsal}
+        />
+      );
+
+      expect(getByLabelText('Seen: 5/10')).toHaveTextContent('5/10');
+    });
+
+    it('leaves the count to the eye where there is one, said once', () => {
+      const { getByTestId, queryByText } = render(
+        <TodayRehearsals
+          rehearsals={[{ ...mockRehearsals[0], onRoster: true }]}
+          selectedDate="2025-12-29"
+          loading={false}
+          projects={mockProjects}
+          onOpenRehearsal={mockOnOpenRehearsal}
+        />
+      );
+
+      expect(getByTestId('seen-toggle').props.accessibilityValue).toEqual({ text: '5/10' });
+      expect(queryByText('5/10')).toBeNull();
     });
 
     it('keeps the eye, and says nothing, on one the reader is on', () => {

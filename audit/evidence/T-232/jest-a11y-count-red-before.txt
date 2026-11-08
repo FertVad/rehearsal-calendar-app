@@ -1,0 +1,18 @@
+T-232 review (Astra P2): the seen count of a rehearsal the reader is not on is
+hidden from VoiceOver once the eye — which said it as its value — is gone.
+
+Run on the card as committed in 5a0f55d (RehearsalCard.tsx restored from HEAD),
+with the new tests in TodayRehearsals.test.tsx; hidden elements left out (the
+RNTL default, as VoiceOver reads it):
+
+$ npx jest --selectProjects frontend src/features/calendar/components/__tests__/TodayRehearsals.test.tsx -t "count" --verbose
+
+      ✕ lets VoiceOver read the count of a rehearsal the reader is not on (771 ms)
+      ✓ leaves the count to the eye where there is one, said once (63 ms)
+  ● TodayRehearsals Component › RSVP Button › lets VoiceOver read the count of a rehearsal the reader is not on
+    Unable to find an element with accessibility label: Seen: 5/10
+
+  (rendered tree: <Text accessibilityElementsHidden={true}
+   importantForAccessibility="no-hide-descendants">5/10</Text>, no eye)
+
+Tests: 1 failed, 74 passed (of those matching "count")

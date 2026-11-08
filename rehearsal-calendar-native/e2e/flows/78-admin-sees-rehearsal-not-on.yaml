@@ -38,6 +38,12 @@ tags:
 # Her only rehearsal, and no eye anywhere.
 - assertNotVisible:
     id: seen-toggle
+# The count is hers to read still, VoiceOver too: with no eye to say it as its
+# value it says itself (T-232 review). Hidden from accessibility, it was not
+# found here at all.
+- assertVisible:
+    id: seen-count
+    text: "Seen: .*"
 # Her details say it too, and have no row of hers to mark.
 - runFlow:
     file: ../subflows/tap-and-see.yaml

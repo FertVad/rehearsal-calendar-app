@@ -188,16 +188,29 @@ export default function RehearsalCard({
         />
         )}
         {/* Under the eye, outside its 44: the button already says it as its
-            value, as it did when the count was inside it. */}
-        {seenLabel && (
-          <Text
-            style={styles.seenCount}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          >
-            {seenLabel}
-          </Text>
-        )}
+            value, as it did when the count was inside it. With no eye — a
+            rehearsal the reader is not on — the count says itself, or an
+            admin off the cast would see the number and VoiceOver not read it. */}
+        {seenLabel &&
+          (notOnRoster ? (
+            <Text
+              style={styles.seenCount}
+              testID="seen-count"
+              accessible
+              accessibilityLabel={t.rehearsals.seenCount(seenLabel)}
+            >
+              {seenLabel}
+            </Text>
+          ) : (
+            <Text
+              style={styles.seenCount}
+              testID="seen-count"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
+              {seenLabel}
+            </Text>
+          ))}
       </View>
     </View>
   );
