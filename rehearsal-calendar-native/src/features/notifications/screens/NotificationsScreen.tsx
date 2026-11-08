@@ -22,7 +22,8 @@ import { IconButton } from '../../../shared/components/IconButton';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { useI18n } from '../../../contexts/I18nContext';
 import { notificationsAPI } from '../../../shared/services/api';
-import { useUnread } from '../../../contexts/UnreadContext';
+import { useUnread, type ChangeAnswer } from '../../../contexts/UnreadContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { logger } from '../../../shared/utils/logger';
 import { useRequestOrder } from '../../../shared/hooks/useSession';
 import { openCalendar, openProject, projectSectionOf } from '../../../shared/hooks/useNotifications';
@@ -66,8 +67,10 @@ export default function NotificationsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
   // The last read of the list failed (NI05). An empty list said "Nothing yet"
-  // when the server had not been reached at all.
-  const [loadError, setLoadError] = useState(false);
+  // when the server had not been reached at all. The error itself, not a flag:
+  // no connection and the server down are said apart (T-228).
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const loadErrorText = loadError ? requestErrorMessage(t, loadError, t.notifications.loadError) : null;
 
   // A list read while a change was on its way may still hold the deleted card,
   // or the read one as unread: reads and changes on this screen go in one order
@@ -110,11 +113,11 @@ export default function NotificationsScreen() {
       const res = await notificationsAPI.list();
       if (answer()) {
         setInbox((prev) => withFirstPage(prev, pageOf(res.data)));
-        setLoadError(false);
+        setLoadError(null);
       } else landed = false;
     } catch (err) {
       logger.warn('[Notifications] Could not load:', err);
-      if (answer()) setLoadError(true);
+      if (answer()) setLoadError(err ?? new Error('load failed'));
       else landed = false;
     } finally {
       // The spinner stays while the read is still to be made again.
@@ -137,11 +140,11 @@ export default function NotificationsScreen() {
       const res = await notificationsAPI.list(cursor);
       if (answer()) {
         setInbox((prev) => withNextPage(prev, pageOf(res.data), cursor));
-        setLoadError(false);
+        setLoadError(null);
       }
     } catch (err) {
       logger.warn('[Notifications] Could not load more:', err);
-      if (answer()) setLoadError(true);
+      if (answer()) setLoadError(err ?? new Error('load failed'));
     } finally {
       loadingMoreRef.current = false;
       setLoadingMore(false);
@@ -158,7 +161,7 @@ export default function NotificationsScreen() {
   // through: the first read failing late put the card back unread, though the
   // server had it read (review).
   const marks = useRef(new Map<number, { out: number; landed: boolean }>());
-  const markShown = useCallback(async (ids: number[], send: () => Promise<boolean>) => {
+  const markShown = useCallback(async (ids: number[], send: () => Promise<ChangeAnswer>) => {
     for (const id of ids) {
       const mark = marks.current.get(id) ?? { out: 0, landed: false };
       mark.out += 1;
@@ -167,7 +170,8 @@ export default function NotificationsScreen() {
     const covered = new Set(ids);
     setItems((prev) => prev.map((n) => (covered.has(n.id) ? { ...n, read: true } : n)));
 
-    const ok = await change(send);
+    const answer = await change(send);
+    const ok = answer === true;
     const back = new Set<number>();
     for (const id of ids) {
       const mark = marks.current.get(id);
@@ -181,7 +185,7 @@ export default function NotificationsScreen() {
     if (back.size > 0) {
       setItems((prev) => prev.map((n) => (back.has(n.id) ? { ...n, read: false } : n)));
     }
-    return ok;
+    return answer;
   }, [change, setItems]);
 
   // The whole inbox, by name — the pages not loaded too. The badge follows the
@@ -189,8 +193,10 @@ export default function NotificationsScreen() {
   // whose own read is still on its way.
   const markEverythingRead = useCallback(async () => {
     const ids = items.filter((n) => !n.read || marks.current.has(n.id)).map((n) => n.id);
-    const ok = await markShown(ids, () => markAllRead());
-    if (!ok) Alert.alert(t.common.error, t.notifications.markReadError);
+    const answer = await markShown(ids, () => markAllRead());
+    if (answer !== true) {
+      Alert.alert(t.common.error, requestErrorMessage(t, answer?.failed, t.notifications.markReadError));
+    }
   }, [items, markAllRead, markShown, t]);
 
   useFocusEffect(
@@ -228,6 +234,10 @@ export default function NotificationsScreen() {
     if (projectId) openProject(navigation, projectId, projectSectionOf(item.type));
   };
 
+  // What a change that failed is called: its own error, in the app's language.
+  const failedText = (answer: Exclude<ChangeAnswer, true>, fallback: string) =>
+    requestErrorMessage(t, answer?.failed, fallback);
+
   const ageOf = (iso: string) => {
     const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
     if (minutes < 1) return t.notifications.justNow;
@@ -247,8 +257,8 @@ export default function NotificationsScreen() {
     const wasAt = items.findIndex((n) => n.id === item.id);
     setItems((prev) => prev.filter((n) => n.id !== item.id));
 
-    const ok = await change(() => remove(item.id));
-    if (ok) return;
+    const answer = await change(() => remove(item.id));
+    if (answer === true) return;
 
     // Put it back where it was, from memory. Asking the server for the list
     // instead was wrong in the one case this matters: with no connection that
@@ -261,7 +271,7 @@ export default function NotificationsScreen() {
       return restored;
     });
 
-    Alert.alert(t.common.error, t.notifications.deleteError);
+    Alert.alert(t.common.error, failedText(answer, t.notifications.deleteError));
   };
 
   const confirmClearAll = () => {
@@ -276,10 +286,10 @@ export default function NotificationsScreen() {
           const before = inbox;
           setInbox(emptyInbox);
 
-          const ok = await change(() => removeAll());
-          if (!ok) {
+          const answer = await change(() => removeAll());
+          if (answer !== true) {
             setInbox(before);
-            Alert.alert(t.common.error, t.notifications.deleteError);
+            Alert.alert(t.common.error, failedText(answer, t.notifications.deleteError));
           }
         },
       },
@@ -391,7 +401,7 @@ export default function NotificationsScreen() {
           ListHeaderComponent={
             loadError && items.length > 0 ? (
               <Text testID="inbox-load-error" style={styles.loadErrorBanner}>
-                {t.notifications.loadError}
+                {loadErrorText}
               </Text>
             ) : null
           }
@@ -412,7 +422,7 @@ export default function NotificationsScreen() {
             loadError ? (
               <View style={styles.empty}>
                 <Ionicons name="cloud-offline-outline" size={48} color={Colors.text.tertiary} />
-                <Text style={styles.emptyTitle}>{t.notifications.loadError}</Text>
+                <Text style={styles.emptyTitle}>{loadErrorText}</Text>
                 <TouchableOpacity testID="inbox-retry" style={styles.more} onPress={() => load()}>
                   <Text style={styles.moreText}>{t.common.retry}</Text>
                 </TouchableOpacity>

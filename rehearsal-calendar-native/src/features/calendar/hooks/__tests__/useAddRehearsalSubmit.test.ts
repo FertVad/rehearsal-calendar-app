@@ -686,4 +686,38 @@ describe('useAddRehearsalSubmit Hook', () => {
       expect(reloadAvailability).toHaveBeenCalled();
     });
   });
+
+  // Under the participants, a failed load said its fixed words: no connection
+  // and the server down alike (T-228, review 2). Said from the error now; the
+  // form still saves nothing, and still offers to try again.
+  describe('A failed load under the participants says why (T-228)', () => {
+    const { en } = jest.requireActual('../../../../i18n/translations');
+    const offline = { isAxiosError: true, code: 'ERR_NETWORK', request: {} };
+    const serverDown = { isAxiosError: true, response: { status: 503, data: {} } };
+
+    it.each([
+      ['no connection', offline, en.common.noConnection],
+      ['the server down', serverDown, en.common.serverUnavailable],
+    ])('the members, with %s', (_, error, said) => {
+      const reloadMembers = jest.fn();
+      const props: any = { ...defaultProps, t: en, participantsSettled: false, membersFailed: true, membersError: error, reloadMembers };
+      const { result } = renderHook(() => useAddRehearsalSubmit(props));
+
+      expect(result.current.issues.participants).toMatchObject({ text: said, failed: true });
+      expect(result.current.canSubmit()).toBe(false);
+      result.current.issues.participants!.retry!();
+      expect(reloadMembers).toHaveBeenCalled();
+    });
+
+    it.each([
+      ['no connection', offline, en.common.noConnection],
+      ['the server down', serverDown, en.common.serverUnavailable],
+    ])('the availability, with %s', (_, error, said) => {
+      const props: any = { ...defaultProps, t: en, selectedMemberIds: ['user1'], availabilityReady: false, availabilityFailed: true, availabilityError: error };
+      const { result } = renderHook(() => useAddRehearsalSubmit(props));
+
+      expect(result.current.issues.participants).toMatchObject({ text: said, failed: true });
+      expect(result.current.canSubmit()).toBe(false);
+    });
+  });
 });

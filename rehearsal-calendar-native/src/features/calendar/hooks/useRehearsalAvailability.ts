@@ -10,7 +10,8 @@ import { addDays } from '../../../shared/utils/time';
 
 /** Each person's busy time on the rehearsal's day, and on the next one when it runs into it. */
 type AvailabilityMap = Record<string, { timeRanges: TimeRange[]; nextDayRanges?: TimeRange[] }>;
-type Loaded = { key: string | null; availability: AvailabilityMap; failed: boolean };
+// `error`: what the failed load failed with, kept for its text (T-228); null when it did not fail.
+type Loaded = { key: string | null; availability: AvailabilityMap; error: unknown };
 
 // Format date as YYYY-MM-DD
 const formatDate = (d: Date): string => {
@@ -39,7 +40,7 @@ export const useRehearsalAvailability = (
   /** The rehearsal ends the next morning: that day's busy time is asked for too. */
   endsNextDay = false
 ) => {
-  const [loaded, setLoaded] = useState<Loaded>({ key: null, availability: {}, failed: false });
+  const [loaded, setLoaded] = useState<Loaded>({ key: null, availability: {}, error: null });
   const [loading, setLoading] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
@@ -54,7 +55,7 @@ export const useRehearsalAvailability = (
 
     if (!project || key === null) {
       logger.debug('[useRehearsalAvailability] Skipping - no project or members');
-      setLoaded({ key: null, availability: {}, failed: false });
+      setLoaded({ key: null, availability: {}, error: null });
       setLoading(false);
       return;
     }
@@ -80,7 +81,7 @@ export const useRehearsalAvailability = (
             };
           }
         }
-        setLoaded({ key, availability: availabilityMap, failed: false });
+        setLoaded({ key, availability: availabilityMap, error: null });
       })
       .catch((error: any) => {
         if (!current) return;
@@ -89,7 +90,7 @@ export const useRehearsalAvailability = (
           status: error.response?.status,
         });
         Alert.alert(t.common.error, requestErrorMessage(t, error, t.rehearsals.loadAvailabilityError));
-        setLoaded({ key, availability: {}, failed: true });
+        setLoaded({ key, availability: {}, error: error ?? new Error('availability load failed') });
       })
       .finally(() => {
         if (current) setLoading(false);
@@ -105,9 +106,11 @@ export const useRehearsalAvailability = (
   return {
     memberAvailability: forThisQuestion ? loaded.availability : {},
     loading: loading || (key !== null && !forThisQuestion),
-    failed: forThisQuestion && loaded.failed && !loading,
+    failed: forThisQuestion && loaded.error != null && !loading,
+    /** What it failed with, for requestErrorMessage (T-228). */
+    error: forThisQuestion && !loading ? loaded.error : null,
     /** Nobody to check, or the answer for exactly what the form shows. */
-    ready: key === null || (forThisQuestion && !loaded.failed && !loading),
+    ready: key === null || (forThisQuestion && loaded.error == null && !loading),
     reload,
   };
 };

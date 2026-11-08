@@ -66,11 +66,20 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
     getDayState,
     loadAvailability,
     loadFailed,
+    loadError,
   } = useAvailabilityData();
 
   // Save hook for validation and API submission
   const { saveAvailability, canSave, error: saveError, clearError } = useAvailabilitySave();
   const toast = useToast();
+
+  // Why the load failed, in the app's language — no connection is not the
+  // server down — then that what is shown is the last that loaded (T-228).
+  // A failure that is not a request's keeps the old words.
+  const loadErrorText = (error: unknown) => {
+    const why = requestErrorMessage(t, error, '');
+    return why ? `${why} ${t.availability.lastLoadedShown}` : t.availability.couldNotLoad;
+  };
 
   // Sync hook for calendar sync management
   const {
@@ -243,7 +252,7 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
       {loadFailed ? (
         <View style={styles.nothingMarked}>
           <Ionicons name="cloud-offline-outline" size={18} color={Colors.accent.yellow} />
-          <Text style={styles.nothingMarkedText}>{t.availability.couldNotLoad}</Text>
+          <Text testID="availability-load-error" style={styles.nothingMarkedText}>{loadErrorText(loadError)}</Text>
         </View>
       ) : (
         Object.keys(availability).length === 0 && (

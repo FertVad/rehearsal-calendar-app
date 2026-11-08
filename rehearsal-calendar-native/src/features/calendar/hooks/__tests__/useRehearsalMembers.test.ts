@@ -9,6 +9,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useRehearsalMembers } from '../useRehearsalMembers';
 import { projectsAPI } from '../../../../shared/services/api';
+import { requestErrorMessage } from '../../../../shared/utils/requestError';
+import { en } from '../../../../i18n/translations';
 
 jest.mock('../../../../shared/services/api', () => ({ projectsAPI: { getMembers: jest.fn() } }));
 
@@ -34,6 +36,21 @@ it('hands out no list while the new project\'s is in flight', async () => {
   expect(result.current.loading).toBe(true);
   await act(async () => { second.resolve({ data: { members: [member('2')] } }); });
   expect(result.current.members).toEqual([member('2')]);
+});
+
+// The form's alert and its participants row say why from this: kept as
+// `failed: true` only, both said "Failed to load project members" offline and
+// with the server down alike (T-228, review 2). Saving stays blocked.
+it.each([
+  ['no connection', { isAxiosError: true, code: 'ERR_NETWORK', request: {} }, en.common.noConnection],
+  ['the server down', { isAxiosError: true, response: { status: 503, data: {} } }, en.common.serverUnavailable],
+])('keeps what the load failed with, %s', async (_, error, said) => {
+  (projectsAPI.getMembers as jest.Mock).mockRejectedValueOnce(error);
+  const { result } = renderHook(() => useRehearsalMembers(project('A')));
+
+  await waitFor(() => expect(result.current.failed).toBe(true));
+  expect(result.current.ready).toBe(false);
+  expect(requestErrorMessage(en, result.current.error, en.rehearsals.loadMembersError)).toBe(said);
 });
 
 it('drops a late answer for a project the form has left', async () => {

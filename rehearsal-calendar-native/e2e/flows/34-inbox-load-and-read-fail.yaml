@@ -4,10 +4,16 @@
 # tries again and the cards are there; he marks them all read and that does
 # not reach the server either: the old screen showed them read, with no word
 # of it, while the server and the bell still had them unread.
+#
+# Each says why, in the app's language (T-228, review 2): no answer is "No
+# connection", not the fixed "Could not load notifications" or "Could not mark
+# as read" that stood for the server down as well. A deletion that goes
+# nowhere says so too, and the card comes back.
 appId: ${APP_ID}
 name: Inbox load and read fail
 tags:
   - notifications
+  - language
 ---
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -24,9 +30,10 @@ tags:
       DROP: "1"
 - tapOn: "Notifications"
 - extendedWaitUntil:
-    visible: "Could not load notifications"
+    visible: "No connection\\. Check the internet and try again\\."
     timeout: 15000
 - assertNotVisible: "Nothing yet"
+- assertNotVisible: "Could not load notifications"
 - takeScreenshot: 34-could-not-load
 - runScript:
     file: ../scripts/release-answers.js
@@ -51,12 +58,37 @@ tags:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP: "Mark all read"
-      SEE: "Could not mark as read"
+      SEE: "No connection\\. Check the internet and try again\\."
       WAIT_MS: 15000
+- assertNotVisible: "Could not mark as read"
 - takeScreenshot: 34-could-not-mark-read
 - tapOn: "OK"
 # The cards are unread again, and the button with them.
 - assertVisible: "Mark all read"
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+# A deletion that goes nowhere: its connection is closed before the server.
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: DELETE
+      PATH: "^/api/native/notifications/[0-9]+$"
+      DROP: "1"
+- swipe:
+    from: ".*Bread delivery.*"
+    direction: LEFT
+- tapOn: "Delete"
+- extendedWaitUntil:
+    visible: "No connection\\. Check the internet and try again\\."
+    timeout: 15000
+- assertNotVisible: "Could not delete"
+- takeScreenshot: 34-could-not-delete
+- tapOn: "OK"
+# Put back where it was: the server never heard of it.
+- assertVisible: ".*Bread delivery.*"
 - runScript:
     file: ../scripts/release-answers.js
     env:

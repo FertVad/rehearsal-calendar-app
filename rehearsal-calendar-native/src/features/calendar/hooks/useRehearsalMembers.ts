@@ -3,7 +3,8 @@ import { projectsAPI } from '../../../shared/services/api';
 import { Project, ProjectMember } from '../../../shared/types';
 
 import { logger } from '../../../shared/utils/logger';
-type Loaded = { projectId: string | null; members: ProjectMember[]; failed: boolean };
+// `error`: what the failed load failed with, kept for its text (T-228); null when it did not fail.
+type Loaded = { projectId: string | null; members: ProjectMember[]; error: unknown };
 
 /**
  * The members of the project the form is on.
@@ -16,7 +17,7 @@ type Loaded = { projectId: string | null; members: ProjectMember[]; failed: bool
  * an empty one would put nobody on the rehearsal (review R9-02).
  */
 export const useRehearsalMembers = (project: Project | null) => {
-  const [loaded, setLoaded] = useState<Loaded>({ projectId: null, members: [], failed: false });
+  const [loaded, setLoaded] = useState<Loaded>({ projectId: null, members: [], error: null });
   const [loading, setLoading] = useState(false);
   const [attempt, setAttempt] = useState(0);
   // By id: the project list is read again behind the form (T-229), and the
@@ -27,7 +28,7 @@ export const useRehearsalMembers = (project: Project | null) => {
     let current = true;
 
     if (!projectId) {
-      setLoaded({ projectId: null, members: [], failed: false });
+      setLoaded({ projectId: null, members: [], error: null });
       setLoading(false);
       return;
     }
@@ -35,12 +36,12 @@ export const useRehearsalMembers = (project: Project | null) => {
     setLoading(true);
     projectsAPI.getMembers(projectId)
       .then((response) => {
-        if (current) setLoaded({ projectId, members: response.data.members || [], failed: false });
+        if (current) setLoaded({ projectId, members: response.data.members || [], error: null });
       })
       .catch((error) => {
         if (!current) return;
         logger.error('Failed to load members:', error);
-        setLoaded({ projectId, members: [], failed: true });
+        setLoaded({ projectId, members: [], error: error ?? new Error('members load failed') });
       })
       .finally(() => {
         if (current) setLoading(false);
@@ -53,13 +54,15 @@ export const useRehearsalMembers = (project: Project | null) => {
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
   const forThisProject = project != null && loaded.projectId === project.id;
-  const failed = forThisProject && loaded.failed && !loading;
+  const failed = forThisProject && loaded.error != null && !loading;
   return {
     members: forThisProject ? loaded.members : [],
     loading: loading || (project != null && !forThisProject),
     failed,
+    /** What it failed with, for requestErrorMessage: no connection is not the server down (T-228). */
+    error: failed ? loaded.error : null,
     /** The list is this project's, loaded and not failed. */
-    ready: forThisProject && !loading && !loaded.failed,
+    ready: forThisProject && !loading && loaded.error == null,
     reload,
   };
 };

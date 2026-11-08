@@ -7,6 +7,8 @@ export interface AvailabilityTranslations {
   nothingMarked: string;
   /** Shown instead of nothingMarked when the load failed — an empty screen is not proof of an empty diary. */
   couldNotLoad: string;
+  /** After why the load failed (requestErrorMessage): what the screen shows instead (T-228). */
+  lastLoadedShown: string;
   busy: string;
   partial: string;
   saveError: string;
@@ -69,6 +71,7 @@ export const ru = {
     to: 'До',
 nothingMarked: 'Отметьте, когда вы заняты. Пока вы этого не сделали, вас считают свободным.',
     couldNotLoad: 'Нет связи. Показано последнее, что удалось загрузить — ваши отметки на месте.',
+    lastLoadedShown: 'Показано последнее, что удалось загрузить — ваши отметки на месте.',
     free: 'Свободен',
     busy: 'Занят',
     partial: 'Частично',
@@ -134,6 +137,7 @@ export const en = {
     to: 'To',
 nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.',
     couldNotLoad: 'No connection. Showing the last that loaded — your entries are safe.',
+    lastLoadedShown: 'Showing the last that loaded — your entries are safe.',
     free: 'Free',
     busy: 'Busy',
     partial: 'Partial',
@@ -192,6 +196,7 @@ export const es = {
     to: 'Hasta',
 nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los ven libres.',
     couldNotLoad: 'Sin conexión. Se muestra lo último que se cargó — tus marcas están a salvo.',
+    lastLoadedShown: 'Se muestra lo último que se cargó — tus marcas están a salvo.',
     free: 'Libre',
     busy: 'Ocupado',
     partial: 'Parcial',
@@ -250,6 +255,7 @@ export const de = {
     to: 'Bis',
 nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als frei.',
     couldNotLoad: 'Keine Verbindung. Angezeigt wird der letzte geladene Stand — deine Einträge sind sicher.',
+    lastLoadedShown: 'Angezeigt wird der letzte geladene Stand — deine Einträge sind sicher.',
     free: 'Frei',
     busy: 'Beschäftigt',
     partial: 'Teilweise',

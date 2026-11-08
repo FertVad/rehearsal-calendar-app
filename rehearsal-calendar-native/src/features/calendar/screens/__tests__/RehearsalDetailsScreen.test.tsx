@@ -352,6 +352,20 @@ describe('Rehearsal details: Edit and Delete (T-016)', () => {
     expect(screen.getByText(translations.en.rehearsals.notFound)).toBeTruthy();
   });
 
+  // Opened with no connection, it said "not found": a failed read kept as
+  // true could only say that (T-228, review 2).
+  it.each([
+    ['no connection', { isAxiosError: true, code: 'ERR_NETWORK', request: {} }, translations.en.common.noConnection],
+    ['the server down', { isAxiosError: true, response: { status: 503, data: {} } }, translations.en.common.serverUnavailable],
+  ])('says why it could not open with %s, not "not found" (T-228)', async (_, error, said) => {
+    answer('no');
+    (rehearsalsAPI.getById as jest.Mock).mockReset().mockRejectedValue(error);
+    const screen = await open();
+
+    expect(screen.getByText(said)).toBeTruthy();
+    expect(screen.queryByText(translations.en.rehearsals.notFound)).toBeNull();
+  });
+
   it('gives an actor neither', async () => {
     answer('no');
     const screen = await open();

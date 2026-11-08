@@ -23,6 +23,7 @@ import { formatDate } from '../../../shared/utils/dateFormat';
 import { rehearsalInZone, rehearsalTimeLabel } from '../../../shared/utils/rehearsalDays';
 import { usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
 import { onDataChanged } from '../../../shared/utils/dataChanged';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { useDeleteRehearsal } from '../hooks/useDeleteRehearsal';
 import type { AppNavigation, AppStackParamList } from '../../../navigation';
 
@@ -81,7 +82,10 @@ export default function RehearsalDetailsScreen() {
   const { responseFor, statsFor, isResponding, toggleSeen, beginRead } = useSeen();
 
   const [rehearsal, setRehearsal] = useState<Rehearsal | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  // What the last read failed with, null when it did not: gone (404) is "not
+  // found", and no connection or the server down is said as such — it read
+  // "not found" offline as well (T-228).
+  const [loadError, setLoadError] = useState<unknown>(null);
   // Read again when a rehearsal changes: saved in the form "Edit" opens over
   // this sheet, which comes back to it (T-016).
   const [reads, setReads] = useState(0);
@@ -98,7 +102,7 @@ export default function RehearsalDetailsScreen() {
         if (!alive) return;
         // Days and times from the interval, as the calendar reads them.
         setRehearsal(rehearsalInZone(res.data.rehearsal, userTimezone));
-        setLoadFailed(false);
+        setLoadError(null);
       })
       .catch((err: any) => {
         logger.warn('[RehearsalDetails] Could not load:', err);
@@ -107,7 +111,7 @@ export default function RehearsalDetailsScreen() {
         // a bad network — leaves the details as they were last read, rather
         // than "not found" with Edit and Delete hidden (review T-016).
         if (err?.response?.status === 404) setRehearsal(null);
-        setLoadFailed(true);
+        setLoadError(err ?? new Error('load failed'));
       });
 
     return () => {
@@ -251,7 +255,7 @@ export default function RehearsalDetailsScreen() {
     return <View key={item.userId}>{content}</View>;
   };
 
-  if (loadFailed && !rehearsal) {
+  if (loadError && !rehearsal) {
     return (
       <View style={styles.fill}>
         <View style={styles.header}>
@@ -264,7 +268,11 @@ export default function RehearsalDetailsScreen() {
           />
         </View>
         <View style={styles.centred}>
-          <Text style={styles.missingText}>{t.rehearsals.notFound}</Text>
+          <Text style={styles.missingText}>
+            {(loadError as any)?.response?.status === 404
+              ? t.rehearsals.notFound
+              : requestErrorMessage(t, loadError, t.rehearsals.notFound)}
+          </Text>
         </View>
       </View>
     );

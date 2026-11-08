@@ -19,6 +19,7 @@ import type { AppStackParamList, AppNavigation } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
 import { getDateLocale } from '../../../shared/utils/locale';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { ParticipantPicker, busyText } from '../../../shared/components/ParticipantPicker';
 import { IconButton } from '../../../shared/components/IconButton';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
@@ -88,11 +89,13 @@ export default function AddRehearsalScreen() {
     selectedMemberIds: form.selectedMemberIds,
     participantsSettled: form.participantsSettled,
     membersFailed: membersLoad.failed,
+    membersError: membersLoad.error,
     reloadMembers: membersLoad.reload,
     members,
     memberAvailability,
     availabilityReady: availabilityLoad.ready,
     availabilityFailed: availabilityLoad.failed,
+    availabilityError: availabilityLoad.error,
     reloadAvailability: availabilityLoad.reload,
     resetForm: form.resetForm,
     fields: form.fields,
@@ -153,7 +156,7 @@ export default function AddRehearsalScreen() {
   // again; until then nothing is saved (useAddRehearsalSubmit).
   useEffect(() => {
     if (!membersLoad.failed) return;
-    Alert.alert(t.common.error, t.rehearsals.loadMembersError, [
+    Alert.alert(t.common.error, requestErrorMessage(t, membersLoad.error, t.rehearsals.loadMembersError), [
       { text: t.common.cancel, style: 'cancel' },
       { text: t.common.retry, onPress: membersLoad.reload },
     ]);
