@@ -1,0 +1,22 @@
+T-232 — Jest on the old client code (red before)
+RehearsalCard.tsx and calendarSync.ts restored from 528d75a; the new tests in
+TodayRehearsals.test.tsx and syncCost.test.ts kept.
+
+$ git restore --source=528d75a -- src/features/calendar/components/RehearsalCard.tsx src/shared/services/calendarSync.ts
+$ npx jest --selectProjects frontend -- src/features/calendar/components/__tests__/TodayRehearsals.test.tsx src/shared/hooks/__tests__/syncCost.test.ts
+
+FAIL frontend src/shared/hooks/__tests__/syncCost.test.ts
+  ● The export keeps to the rehearsals the person is on › leaves out a rehearsal the batch marks as not theirs
+    - Expected  - 0
+    + Received  + 1
+    (the rehearsal with onRoster: false went to syncAllRehearsals)
+FAIL frontend src/features/calendar/components/__tests__/TodayRehearsals.test.tsx
+  ● TodayRehearsals Component › RSVP Button › gives a rehearsal the reader is not on no eye, and says so
+    expect(queryByTestId('seen-toggle')).toBeNull()
+    Received: {"_fiber": {... "elementType": "TouchableOpacity", ...}}   (the eye was there)
+Tests:       2 failed, 29 passed, 31 total
+
+After the fix (files back at the working version):
+PASS frontend src/shared/hooks/__tests__/syncCost.test.ts
+PASS frontend src/features/calendar/components/__tests__/TodayRehearsals.test.tsx
+Tests:       31 passed, 31 total

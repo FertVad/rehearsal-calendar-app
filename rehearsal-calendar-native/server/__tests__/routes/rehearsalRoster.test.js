@@ -206,6 +206,45 @@ describe('Who can read a rehearsal\'s cast', () => {
   });
 });
 
+describe('"All projects" shows what the project filter shows (T-232)', () => {
+  const batch = (userId) => request(app)
+    .get(`/api/native/rehearsals/batch?projectIds=${testData.projectId}`).set(...auth(userId));
+  const byProject = (userId) => request(app)
+    .get(`/api/native/projects/${testData.projectId}/rehearsals`).set(...auth(userId));
+  const ids = (res) => res.body.rehearsals.map((r) => Number(r.id));
+
+  it('gives an admin who is not on a rehearsal that rehearsal, marked as not on it', async () => {
+    const res = await batch(owner());
+    expect(res.status).toBe(200);
+    expect(ids(res)).toEqual([rehearsalId]);
+    expect(res.body.rehearsals[0]).toMatchObject({ onRoster: false, userResponse: null,
+      adminStats: { confirmed: 0, invited: 1 } });
+    // Seeing it is not being on it: no row, no busy hours.
+    expect(rosterRows().map((row) => Number(row.user_id))).not.toContain(owner());
+    expect(slotsOf(owner())).toHaveLength(0);
+  });
+
+  it('gives an admin the same rehearsals in both modes', async () => {
+    const all = await batch(owner());
+    const one = await byProject(owner());
+    expect(ids(all)).toEqual(ids(one));
+    expect(one.body.rehearsals.map((r) => r.onRoster)).toEqual([false]);
+  });
+
+  it('keeps from a member a rehearsal they are not on', async () => {
+    const res = await batch(bystanderId);
+    expect(res.status).toBe(200);
+    expect(res.body.rehearsals).toEqual([]);
+    expect((await byProject(bystanderId)).body.rehearsals).toEqual([]);
+  });
+
+  it('gives a member the rehearsal they are on, marked as on it', async () => {
+    const res = await batch(member());
+    expect(ids(res)).toEqual([rehearsalId]);
+    expect(res.body.rehearsals[0]).toMatchObject({ onRoster: true, userResponse: 'no', adminStats: null });
+  });
+});
+
 describe('A leftover row puts nobody anywhere', () => {
   it('leaves someone who has left out of the change announcement and the busy slots', async () => {
     const res = await update(body({ startsAt: '2026-10-03T17:00:00.000Z', endsAt: '2026-10-03T19:00:00.000Z' }));

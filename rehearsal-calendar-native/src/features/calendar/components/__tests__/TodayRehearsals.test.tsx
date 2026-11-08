@@ -44,6 +44,7 @@ jest.mock('../../../../contexts/I18nContext', () => ({
       },
       rehearsals: {
         markSeen: 'Mark as seen',
+        notOnRoster: 'You are not in the cast',
         edit: 'Edit',
         deleteConfirm: 'Delete',
         deleteTitle: require('../../../../i18n/translations').translations.en.rehearsals.deleteTitle,
@@ -478,6 +479,44 @@ describe('TodayRehearsals Component', () => {
       const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
       const eyeOffIcon = icons.find(i => i.props.name === 'eye-off-outline');
       expect(eyeOffIcon).toBeTruthy();
+    });
+
+    // T-232: an admin sees every rehearsal of their project, those they are
+    // not on too. Nothing to mark there — the server says NOT_ON_REHEARSAL —
+    // so no eye, and the row says why; the admin's count stays.
+    it('gives a rehearsal the reader is not on no eye, and says so', () => {
+      const { queryByTestId, getByTestId, getByText, UNSAFE_queryAllByType } = render(
+        <TodayRehearsals
+          rehearsals={[{ ...mockRehearsals[0], onRoster: false }]}
+          selectedDate="2025-12-29"
+          loading={false}
+          projects={mockProjects}
+          onOpenRehearsal={mockOnOpenRehearsal}
+        />
+      );
+
+      expect(queryByTestId('seen-toggle')).toBeNull();
+      const icons = UNSAFE_queryAllByType(require('@expo/vector-icons').Ionicons);
+      expect(icons.filter(i => String(i.props.name).startsWith('eye'))).toHaveLength(0);
+      expect(getByTestId('rehearsal-not-on-roster')).toHaveTextContent(' · You are not in the cast');
+      expect(getByText('Project Alpha')).toBeTruthy();
+      expect(getByText('5/10', { includeHiddenElements: true })).toBeTruthy();
+      expect(mockToggleSeen).not.toHaveBeenCalled();
+    });
+
+    it('keeps the eye, and says nothing, on one the reader is on', () => {
+      const { getByTestId, queryByTestId } = render(
+        <TodayRehearsals
+          rehearsals={[{ ...mockRehearsals[0], onRoster: true }]}
+          selectedDate="2025-12-29"
+          loading={false}
+          projects={mockProjects}
+          onOpenRehearsal={mockOnOpenRehearsal}
+        />
+      );
+
+      expect(getByTestId('seen-toggle')).toBeTruthy();
+      expect(queryByTestId('rehearsal-not-on-roster')).toBeNull();
     });
 
   });

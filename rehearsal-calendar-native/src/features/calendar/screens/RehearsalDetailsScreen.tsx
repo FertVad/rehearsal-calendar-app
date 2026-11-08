@@ -360,6 +360,18 @@ export default function RehearsalDetailsScreen() {
               </View>
             )}
 
+            {/* An admin looking in on a rehearsal they are not on (T-232):
+                said, as on the card, and there is no row of theirs below to
+                mark. */}
+            {rehearsal.onRoster === false && (
+              <View style={styles.detailRow}>
+                <Ionicons name="person-outline" size={20} color={Colors.text.secondary} />
+                <Text style={[styles.detailText, styles.projectText]} testID="rehearsal-details-not-on-roster">
+                  {t.rehearsals.notOnRoster}
+                </Text>
+              </View>
+            )}
+
             {/* Participants Section */}
             <View style={styles.divider} />
 

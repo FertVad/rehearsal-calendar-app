@@ -102,3 +102,30 @@ describe('One sync with nothing to do', () => {
     expect(Object.keys(knownMappings)).toContain('1');
   });
 });
+
+// T-232: the batch is everything this person may see — for an admin, every
+// rehearsal of their projects. Their phone's calendar is only the ones they
+// are on: someone else's call is not their time.
+describe('The export keeps to the rehearsals the person is on', () => {
+  it('leaves out a rehearsal the batch marks as not theirs', async () => {
+    (rehearsalsAPI.getBatch as jest.Mock).mockResolvedValue({
+      data: {
+        rehearsals: [
+          { id: '1', startsAt: '', endsAt: '', onRoster: true },
+          { id: '2', startsAt: '', endsAt: '', onRoster: false },
+        ],
+      },
+    });
+    await runOneSync();
+
+    const [exported] = (syncAllRehearsals as jest.Mock).mock.calls[0];
+    expect(exported.map((r: { id: string }) => r.id)).toEqual(['1']);
+  });
+
+  it('keeps one without the mark, as a server that sent only theirs gave it', async () => {
+    await runOneSync();
+
+    const [exported] = (syncAllRehearsals as jest.Mock).mock.calls[0];
+    expect(exported.map((r: { id: string }) => r.id)).toEqual(['1']);
+  });
+});

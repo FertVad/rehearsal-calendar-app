@@ -1,0 +1,45 @@
+T-232 — route test on the old code (red before)
+Base: 528d75a, rehearsalService.js / roster.js unchanged; only the new describe in
+server/__tests__/routes/rehearsalRoster.test.js added.
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest __tests__/routes/rehearsalRoster.test.js
+
+  ● "All projects" shows what the project filter shows (T-232) › gives an admin who is not on a rehearsal that rehearsal, marked as not on it
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 1
+
+    - Array [
+    -   13,
+    - ]
+    + Array []
+
+      217 |     const res = await batch(owner());
+      218 |     expect(res.status).toBe(200);
+    > 219 |     expect(ids(res)).toEqual([rehearsalId]);
+
+  ● "All projects" shows what the project filter shows (T-232) › gives an admin the same rehearsals in both modes
+
+    - Array [
+    -   14,
+    - ]
+    + Array []
+
+    > 230 |     expect(ids(all)).toEqual(ids(one));
+
+  ● "All projects" shows what the project filter shows (T-232) › gives a member the rehearsal they are on, marked as on it
+
+    expect(received).toMatchObject(expected)
+
+      Object {
+        "adminStats": null,
+    -   "onRoster": true,
+        "userResponse": "no",
+      }
+
+    > 244 |     expect(res.body.rehearsals[0]).toMatchObject({ onRoster: true, userResponse: 'no', adminStats: null });
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 15 passed, 18 total

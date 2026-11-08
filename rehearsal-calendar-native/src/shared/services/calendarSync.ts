@@ -93,7 +93,14 @@ async function exportRehearsals(
   const projectsRes = await projectsAPI.getUserProjects();
   const projectIds = (projectsRes.data?.projects || []).map((p: any) => p.id);
   const res = projectIds.length > 0 ? await rehearsalsAPI.getBatch(projectIds) : null;
-  const rehearsals = (res?.data?.rehearsals || []).map(toRehearsalWithProject);
+  // The batch is everything this person may see, which for an admin is every
+  // rehearsal of their projects (T-232). Their calendar is only the ones they
+  // are on: someone else's call is not their time. Only an explicit false is
+  // left out — a rehearsal without the field came from a server that sent only
+  // those they are on, and dropping it would take its event back.
+  const rehearsals = (res?.data?.rehearsals || [])
+    .filter((r: any) => r.onRoster !== false)
+    .map(toRehearsalWithProject);
 
   const mappings = await getAllMappings(session);
 

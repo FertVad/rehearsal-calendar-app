@@ -3,7 +3,7 @@ import db from '../../database/db.js';
 import { localRangeToTimestamps, timestampToISO, timestampToLocal } from '../../utils/timezone.js';
 import { DEFAULT_TIMEZONE } from '../../constants/timezone.js';
 import { getProjectTimezone, formatDateString, bookRehearsalSlots, updateRehearsalSlots, deleteRehearsalSlots } from './slotService.js';
-import { ROSTER, viewerOf, rosterStats, checkParticipants, settleRoster, clearRoster, RosterRefused } from './roster.js';
+import { viewerOf, visibleRehearsals, rosterStats, checkParticipants, settleRoster, clearRoster, RosterRefused } from './roster.js';
 import { lockProject } from './projectLock.js';
 import { releaseSeenNotices } from './seenNotice.js';
 import { once } from '../idempotency.js';
@@ -55,53 +55,15 @@ export async function checkRehearsalExists(rehearsalId, projectId = null) {
  * @returns {Promise<Array>} - Array of rehearsals with admin stats
  */
 export async function getRehearsalsForProjects(projectIds, userId) {
-  if (projectIds.length === 0) {
-    return [];
-  }
-
-  // Check user membership for all projects in one query
-  const memberships = await db.all(
-    `SELECT project_id FROM native_project_members
-     WHERE project_id IN (${projectIds.map(() => '?').join(',')})
-     AND user_id = ?
-     AND status = 'active'`,
-    [...projectIds, userId]
-  );
-
-  const accessibleProjectIds = memberships.map(m => String(m.project_id));
-
-  if (accessibleProjectIds.length === 0) {
-    return [];
-  }
-
-  // The caller's calendar: only rehearsals they are on.
-  const rehearsals = await db.all(
-    `SELECT r.*, p.name as project_name,
-            mine.response as user_response
-     FROM native_rehearsals r
-     JOIN native_projects p ON r.project_id = p.id
-     JOIN ${ROSTER} mine ON mine.rehearsal_id = r.id AND mine.user_id = ?
-     WHERE r.project_id IN (${accessibleProjectIds.map(() => '?').join(',')})
-     ORDER BY r.starts_at DESC`,
-    [userId, ...accessibleProjectIds]
-  );
+  // What this person may see, by the same rule as one project's list
+  // (visibleRehearsals, T-232): in a project they run, every rehearsal; in one
+  // they are a member of, those they are on. `onRoster` says which, so the
+  // phone's calendar export keeps to the ones they are on.
+  const rehearsals = await visibleRehearsals(db, projectIds, userId);
 
   // Admins also see how many of the cast have seen each one.
-  const projectAdminMap = {};
-  const membershipsWithRole = await db.all(
-    `SELECT project_id, role FROM native_project_members
-     WHERE project_id IN (${accessibleProjectIds.map(() => '?').join(',')})
-     AND user_id = ?
-     AND status = 'active'`,
-    [...accessibleProjectIds, userId]
-  );
-
-  for (const m of membershipsWithRole) {
-    projectAdminMap[m.project_id] = (m.role === 'owner' || m.role === 'admin');
-  }
-
   const adminRehearsalIds = rehearsals
-    .filter(r => projectAdminMap[r.project_id])
+    .filter(r => Number(r.viewer_is_admin) === 1)
     .map(r => Number(r.id));
   // `invited` is the people on THIS rehearsal, not the size of the project.
   const statsMap = await rosterStats(db, adminRehearsalIds);
@@ -118,6 +80,7 @@ export async function getRehearsalsForProjects(projectIds, userId) {
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     userResponse: r.user_response || null,
+    onRoster: Number(r.on_roster) === 1,
     adminStats: adminRehearsalIds.includes(Number(r.id)) ? (statsMap.get(Number(r.id)) || { confirmed: 0, invited: 0 }) : null,
   }));
 }
@@ -141,35 +104,10 @@ export async function getProjectRehearsals(projectId, userId) {
   const userTimezone = userResult?.timezone || DEFAULT_TIMEZONE;
   logger.debug(`[getProjectRehearsals] User timezone: ${userTimezone}`);
 
-  // Check if user is admin
-  const isAdmin = await checkUserIsAdmin(projectId, userId);
-  logger.debug(`[getProjectRehearsals] isAdmin: ${isAdmin}`);
-
-  let rehearsals;
-
-  if (isAdmin) {
-    // Admin: get all rehearsals for the project (with optional RSVP data)
-    rehearsals = await db.all(
-      `SELECT r.*, mine.response as user_response
-       FROM native_rehearsals r
-       LEFT JOIN ${ROSTER} mine ON mine.rehearsal_id = r.id AND mine.user_id = $2
-       WHERE r.project_id = $1
-       ORDER BY r.starts_at DESC`,
-      [projectId, userId]
-    );
-    logger.debug(`[getProjectRehearsals] Admin query returned ${rehearsals.length} rehearsals`);
-  } else {
-    // Regular member: only get rehearsals where user is invited
-    rehearsals = await db.all(
-      `SELECT r.*, mine.response as user_response
-       FROM native_rehearsals r
-       JOIN ${ROSTER} mine ON mine.rehearsal_id = r.id AND mine.user_id = $2
-       WHERE r.project_id = $1
-       ORDER BY r.starts_at DESC`,
-      [projectId, userId]
-    );
-    logger.debug(`[getProjectRehearsals] Member query returned ${rehearsals.length} rehearsals`);
-  }
+  // The same rule as "All projects" (visibleRehearsals, T-232): an admin gets
+  // every rehearsal of the project, a member the ones they are on.
+  const rehearsals = await visibleRehearsals(db, [projectId], userId);
+  logger.debug(`[getProjectRehearsals] Query returned ${rehearsals.length} rehearsals`);
 
   const result = rehearsals.map(r => {
     const startsAtISO = timestampToISO(r.starts_at);
@@ -200,6 +138,7 @@ export async function getProjectRehearsals(projectId, userId) {
       createdAt: r.created_at,
       updatedAt: r.updated_at,
       userResponse: r.user_response || null,
+      onRoster: Number(r.on_roster) === 1,
     };
   });
 
@@ -269,6 +208,8 @@ export async function getRehearsalById(rehearsalId, userId) {
     createdAt: rehearsal.created_at,
     updatedAt: rehearsal.updated_at,
     userResponse: own?.response || null,
+    // An admin may open one they are not on: nothing to answer there.
+    onRoster: Boolean(own),
   };
 }
 

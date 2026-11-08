@@ -61,6 +61,9 @@ export interface RehearsalsTranslations {
   seenError: string;
   /** The eye on a rehearsal, for VoiceOver: it is only an icon. */
   markSeen: string;
+  /** In place of the eye: an admin sees this rehearsal but is not on it, so
+   *  there is nothing to mark (T-232). */
+  notOnRoster: string;
   noProjects: string;
   noAdminProjects: string;
   createNewProject: string;
@@ -143,6 +146,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     availabilityChecking: 'Занятость участников на этот день ещё проверяется.',
     seenError: 'Не удалось отметить просмотр',
     markSeen: 'Отметить просмотренным',
+    notOnRoster: 'Вы не в составе',
     noProjects: 'Нет проектов',
     noAdminProjects: 'Нет проектов, где вы являетесь администратором',
     createNewProject: 'Создать новый проект',
@@ -220,6 +224,7 @@ needProject: 'Rehearsals show up once you are in a project',
     availabilityChecking: "The participants' availability for this day is still being checked.",
     seenError: 'Could not mark it as seen',
     markSeen: 'Mark as seen',
+    notOnRoster: 'You are not in the cast',
     noProjects: 'No projects',
     noAdminProjects: 'No projects where you are an administrator',
     createNewProject: 'Create New Project',
@@ -297,6 +302,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     availabilityChecking: 'Aún se está comprobando la disponibilidad de los participantes para este día.',
     seenError: 'No se pudo marcar como visto',
     markSeen: 'Marcar como visto',
+    notOnRoster: 'No estás en el reparto',
     noProjects: 'No hay proyectos',
     noAdminProjects: 'No hay proyectos en los que seas administrador',
     createNewProject: 'Crear nuevo proyecto',
@@ -374,6 +380,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     availabilityChecking: 'Die Verfügbarkeit der Teilnehmenden für diesen Tag wird noch geprüft.',
     seenError: 'Konnte nicht als gesehen markiert werden',
     markSeen: 'Als gesehen markieren',
+    notOnRoster: 'Du bist nicht in der Besetzung',
     noProjects: 'Keine Projekte',
     noAdminProjects: 'Keine Projekte, in denen du Administrator bist',
     createNewProject: 'Neues Projekt erstellen',

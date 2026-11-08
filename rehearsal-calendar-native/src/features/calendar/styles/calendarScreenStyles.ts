@@ -213,6 +213,14 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
     color: Colors.text.secondary,
   },
+  // "You are not in the cast", after the project: an admin's view of a
+  // rehearsal they are not on (T-232). The project gives way first.
+  rehearsalRowNotOnRoster: {
+    flexShrink: 0,
+    fontSize: FontSize.sm,
+    lineHeight: 18,
+    color: Colors.text.secondary,
+  },
   // A thin line between two rows of a day, 64 pt in, in both lists; one
   // across the whole ground between two days.
   rehearsalSeparator: {
