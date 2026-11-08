@@ -215,6 +215,11 @@ export const PEOPLE = {
   // An admin of two of Gaev's projects with the rehearsal form open while the
   // projects are read again behind it, and the role on one taken (77, T-229).
   tybalt: { email: 'tybalt@e2e.test', firstName: 'Tybalt', lastName: 'Capulet', onboarded: true },
+  // Rosalind puts Orlando on "Wrestling match", already scheduled with her
+  // alone on it; he finds it in his inbox and opens it from there (79, T-233).
+  // Nobody else in their project, so no other flow's notices mix in.
+  rosalind: { email: 'rosalind@e2e.test', firstName: 'Rosalind', lastName: 'Duke', onboarded: true },
+  orlando: { email: 'orlando@e2e.test', firstName: 'Orlando', lastName: 'Boys', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -640,6 +645,25 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2, 'no', NOW(), NOW())`,
     [letter.id, ids.malvolio]);
   rehearsals.letter = String(letter.id);
+
+  // Rosalind's forest (79), the same way: tomorrow 16:00 to 17:00, she alone
+  // on it, Orlando in the project but not on it until the flow puts him there.
+  const { rows: [arden] } = await client.query(
+    `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+     VALUES ('Forest of Arden', 'The court in exile', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+  await client.query(
+    `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+     VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW())`,
+    [arden.id, ids.rosalind, ids.orlando]);
+  const { rows: [wrestling] } = await client.query(
+    `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+     VALUES ($1, 'Wrestling match', $2::timestamptz, $3::timestamptz, 'The lawn', $4, NOW(), NOW()) RETURNING id`,
+    [arden.id, localInstant(1, 16), localInstant(1, 17), ids.rosalind]);
+  await client.query(
+    `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+     VALUES ($1, $2, 'no', NOW(), NOW())`,
+    [wrestling.id, ids.rosalind]);
+  rehearsals.wrestling = String(wrestling.id);
 
   // Juliet's two (74), made as the server makes them: the sign-ins are spent.
   // Tomorrow a titled one with a place, one with no place, one with no title;

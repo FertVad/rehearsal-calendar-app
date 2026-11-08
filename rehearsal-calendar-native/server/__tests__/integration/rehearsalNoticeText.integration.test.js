@@ -37,6 +37,8 @@ const {
   notifyRehearsalUpdated,
   notifyMemberResponse,
   notifyMemberJoined,
+  notifyAddedToRehearsal,
+  notifyRemovedFromRehearsal,
 } = await import('../../services/notifications/pushNotificationService.js');
 
 // Intl separates "3:00" from "PM" with a narrow no-break space.
@@ -110,6 +112,37 @@ describe('Each reader is told when, on their own clock and in their own language
 
     expect(inboxOf(natasha)[0].body).toMatch(/^Hamlet: Full dress назначена вт, 6 окт\.? в 22:00$/);
     expect(inboxOf(john)[0].body).toBe('Hamlet: Full dress scheduled on Tue, Oct 6 at 3:00 PM');
+  });
+});
+
+describe('Put on or taken off a rehearsal (T-233)', () => {
+  it('whoever is added is told which one, when and where, and a tap opens it', async () => {
+    await notifyAddedToRehearsal({ ...rehearsal, location: 'Main stage' }, 'Hamlet', readers(), { now });
+
+    const [ru] = inboxOf(natasha);
+    const [en] = inboxOf(john);
+    expect(ru.title).toBe('Вас добавили в репетицию');
+    expect(ru.body).toBe('Hamlet: Full dress назначена завтра в 22:00, место: Main stage');
+    expect(en.title).toBe('You were added to a rehearsal');
+    expect(en.body).toBe('Hamlet: Full dress scheduled tomorrow at 3:00 PM at Main stage');
+    // As a new rehearsal: the inbox and a tapped push open it.
+    expect(en.type).toBe('rehearsal_created');
+    expect(en.related_type).toBe('rehearsal');
+    expect(String(en.related_id)).toBe(rehearsal.id);
+  });
+
+  it('whoever is taken off is told so, and a tap does not try to open it', async () => {
+    await notifyRemovedFromRehearsal(rehearsal, 'Hamlet', readers(), { now });
+
+    const [ru] = inboxOf(natasha);
+    const [en] = inboxOf(john);
+    expect(ru.title).toBe('Вас убрали из репетиции');
+    expect(ru.body).toBe('Hamlet: Full dress, завтра в 22:00 — вас убрали из состава');
+    expect(en.body).toBe('Hamlet: Full dress, tomorrow at 3:00 PM — you are no longer on it');
+    // No rehearsal to open — they can no longer see it; the app opens the calendar.
+    expect(en.type).toBe('rehearsal_removed');
+    expect(en.data.rehearsalId).toBeUndefined();
+    expect(en.related_type).not.toBe('rehearsal');
   });
 });
 

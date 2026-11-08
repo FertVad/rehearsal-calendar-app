@@ -1,0 +1,52 @@
+# Someone put on a rehearsal already scheduled is told, and the notice opens it
+# (T-233). On TestFlight the owner was added to five rehearsals and heard
+# nothing: an edit announced a moved time, place or name, and a change of cast
+# to nobody — "those added see it in their own lists", if they happened to open
+# the app. Rosalind puts Orlando on "Wrestling match" (tomorrow at 16:00, The
+# lawn) from another device, as the app's save sends it; his inbox says which
+# one, when and where, and a tap opens it, with him on it.
+appId: ${APP_ID}
+name: Added to a rehearsal, told
+tags:
+  - notifications
+  - rehearsals
+---
+- runScript:
+    file: ../scripts/add-to-rehearsal.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${ROSALIND_EMAIL}
+      PASSWORD: ${PASSWORD}
+      REHEARSAL: ${WRESTLING_REHEARSAL}
+      MEMBER: ${ORLANDO_EMAIL}
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${ORLANDO_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Notifications"
+      SEE: "Mark all read"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible: ".*You were added to a rehearsal.*Forest of Arden: Wrestling match scheduled (tomorrow|on .*) at 4:00.PM at The lawn.*"
+    timeout: 15000
+- takeScreenshot: 79-added-in-inbox
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Forest of Arden: Wrestling match scheduled.*"
+      SEE: "The lawn"
+      WAIT_MS: "15000"
+# The rehearsal itself, its project, and him on it: his own "seen" to mark.
+- assertVisible:
+    id: rehearsal-details-project
+    text: "Forest of Arden"
+- extendedWaitUntil:
+    visible:
+      id: own-seen-toggle
+    timeout: 15000
+- assertNotVisible:
+    id: rehearsal-details-not-on-roster
+- takeScreenshot: 79-added-opens-rehearsal
