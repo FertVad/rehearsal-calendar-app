@@ -155,6 +155,13 @@ Red before and green after are in `round2-tests.txt`. On 8f47559 three new
 tests fail: the Node → sleep chain, a leftover group with its leader gone,
 and stdin reaching the job. With the round-2 fix they pass, and so does flow 40.
 
+`fake-ps/ps` is a stand-in for `ps -o lstart= -p <pid>`. It was written so
+lock.test.mjs's two `ps`-dependent tests could run in this session, where
+the real `ps` is denied. Making it executable and running it were denied
+too, so **it was never run and proves nothing**. Those two tests are left to
+the supervisor's `npm test`, where `ps` runs. The file is kept only because
+the session could not delete it.
+
 ## The bug flow 40 guards (cause fix 22, DD01)
 
 `npm run e2e -- e2e/flows/40-details-seen-one-model.yaml` on the changed tree
