@@ -1,5 +1,9 @@
-T-227 — the Release launch check on HEAD's app.json and locales/, green.
-(git restore --source=HEAD -- app.json locales/ after the red run.)
+T-227 — the Release launch check on the fixed app.json and locales/, green.
+Run on 2026-11-08 shortly after the red run, before 202bca1 was committed, with
+the runner then uncommitted in the working tree; its source commit was not
+recorded (see manifest.json). app.json and locales/ were put back after the red
+run (git restore --source=HEAD -- app.json locales/): blobs 8e18b38 and c79900d,
+those of 9d265da and of 202bca1 alike.
 
 The first attempt regenerated the project — the inputs had changed back
 (hash 66d6c3728e4a); Info.plist again has both NSReminders* keys — and was cut

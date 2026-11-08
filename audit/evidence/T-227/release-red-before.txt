@@ -1,8 +1,10 @@
 T-227 — the Release launch check on the configuration before 9d265da, red.
 app.json and locales/ put back as they were before the fix
-(git restore --source=9d265da^ -- app.json locales/): no NSReminders* keys,
-expo-calendar with { remindersPermission: false }. Everything else as on HEAD
-with this task's runner.
+(git restore --source=9d265da^ -- app.json locales/; blobs bf948e4 and 8945d1c):
+no NSReminders* keys, expo-calendar with { remindersPermission: false }. Run on
+2026-11-08 at 00:34 (the device log's time), before 202bca1 was committed, with
+the runner then uncommitted in the working tree; that tree's commit was not
+recorded (see manifest.json).
 
 The first attempt was cut by the 10-minute limit of the developer's command,
 after the project was regenerated (inputs changed: prebuild 6 s, pod install

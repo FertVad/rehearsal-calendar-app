@@ -1,0 +1,32 @@
+T-227 review 1, P1 — node_modules not installed from package-lock.json.
+Source: 7edb740 (tree 103537b). Red: e2e/native.mjs as in 202bca1
+(git restore --source=HEAD -- e2e/native.mjs before 7edb740 was committed).
+
+Red, 202bca1's native.mjs — there is no check; the test cannot import it:
+$ node --test e2e/__tests__/native.test.mjs
+SyntaxError: The requested module '../native.mjs' does not provide an export named 'installedMismatch'
+✖ e2e/__tests__/native.test.mjs
+ℹ pass 0
+ℹ fail 1
+
+And the case is real in this tree: expo-linear-gradient was taken out of
+package.json and the lock in T-044 (8241242) and is still installed — npm's
+node_modules/.package-lock.json still lists it. 202bca1 would hash the lock,
+prebuild with --no-install, autolink it and stamp the project as the commit's.
+installedMismatch() on this tree (349–446 ms):
+[ 'node_modules/expo-linear-gradient is installed and the lock does not have it' ]
+
+Green, 7edb740:
+$ node --test e2e/__tests__/native.test.mjs
+✔ the project is made anew when app.json, the locales, the assets or the packages change — not the JS
+✔ node_modules not installed from package-lock.json is refused, not stamped as this commit's
+✔ an app is used only when it was built from these inputs
+✔ the flows in e2e/release run on Release, the rest on Debug; none given is both sets
+✔ a Release bundle for the local server passes
+✔ a Release bundle that could reach another API is refused
+ℹ tests 6
+ℹ pass 6
+ℹ fail 0
+
+The Release launch flow was not rerun: on this tree the run now stops with 75
+until npm ci is run in it, which is the machine's install and not this task's.
