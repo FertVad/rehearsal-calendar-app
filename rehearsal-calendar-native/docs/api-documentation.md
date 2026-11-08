@@ -747,7 +747,9 @@ Retrieve all rehearsals for a specific project.
       "endsAt": "2024-03-15T17:00:00.000Z",
       "location": "Main Theatre",
       "createdAt": "2024-03-01T10:00:00.000Z",
-      "updatedAt": "2024-03-01T10:00:00.000Z"
+      "updatedAt": "2024-03-01T10:00:00.000Z",
+      "userResponse": null,
+      "onRoster": false
     }
   ]
 }
@@ -760,9 +762,65 @@ Retrieve all rehearsals for a specific project.
   ```
 
 **Notes:**
+- Which rehearsals: an owner or admin of the project gets every one of them, a
+  member only those they are on (`visibleRehearsals` in `roster.js`) — the same
+  rule as the batch below
+- `onRoster`: whether the caller is on the rehearsal. `false` is an admin looking
+  at one they are not on: they cannot answer it (`403 NOT_ON_REHEARSAL`), and it
+  is not theirs for the phone's calendar or busy time
+- `userResponse`: the caller's `'yes'`/`'no'`, `null` when not on it
 - Rehearsals are sorted by start time (newest first)
 - All timestamps are in ISO 8601 format with timezone information
 - `title` and `description` may be null
+
+---
+
+#### 1a. Get Rehearsals for Several Projects ("All projects")
+
+The calendar's "All projects" in one request.
+
+**Endpoint:** `GET /native/rehearsals/batch?projectIds=1,2,3`
+
+**Authentication Required:** Yes
+
+**Query Parameters:**
+- `projectIds` (string, required): comma-separated project ids. A project the
+  caller is not an active member of gives nothing
+
+**Success Response (200):**
+```json
+{
+  "rehearsals": [
+    {
+      "id": "7",
+      "projectId": "2",
+      "projectName": "Estate Ball",
+      "title": "Ball rehearsal",
+      "description": null,
+      "startsAt": "2026-11-10T22:00:00.000Z",
+      "endsAt": "2026-11-10T23:00:00.000Z",
+      "location": "Main hall",
+      "createdAt": "2026-11-08T10:00:00.000Z",
+      "updatedAt": "2026-11-08T10:00:00.000Z",
+      "userResponse": null,
+      "onRoster": false,
+      "adminStats": { "confirmed": 0, "invited": 1 }
+    }
+  ]
+}
+```
+
+**Errors:** `400` without `projectIds`.
+
+**Notes:**
+- Everything the caller may see, by the rule of the single project's list
+  (T-232): in a project they own or administer, every rehearsal; in one they are
+  a member of, only those they are on
+- `onRoster` as above. The app shows `false` as "you are not in the cast",
+  without the seen eye, and its calendar export (`calendarSync.ts`) leaves such
+  rehearsals out
+- `adminStats` (seen / people on the rehearsal) for the projects the caller
+  administers, `null` elsewhere
 
 ---
 

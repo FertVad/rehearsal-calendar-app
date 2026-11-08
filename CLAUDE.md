@@ -263,6 +263,18 @@ answers and add newcomers as `'no'`; wiping the rows and reinserting everyone as
 `'yes'` marks the whole cast as having seen a rehearsal at the exact moment it
 changed, and dropping a `'no'` row removes that person from the call.
 
+**Seeing a rehearsal is not being on it** (T-232). Who may *see* one is also
+roster.js's: an admin or owner of the project sees every rehearsal of it, a
+member only those they are on — `viewerOf` for one rehearsal,
+`visibleRehearsals` for the lists, the same rule for "All projects" (`GET
+/native/rehearsals/batch`) and for one project's filter. Each rehearsal in them
+carries `onRoster`. One with `onRoster: false` — an admin looking in — shows "you
+are not in the cast" and no eye on the card and in the details, since there is
+nothing to answer (`NOT_ON_REHEARSAL`); the phone-calendar export
+(`calendarSync.ts`) leaves it out. Busy slots, reminders and notices read the
+roster itself, never the visible list, so an admin's calendar and time hold only
+the rehearsals they are on.
+
 **Order matters when updating.** `bookRehearsalSlots` reads the roster out of
 `native_rehearsal_responses`, so participants must be settled *before* the
 availability is rebuilt. The other way round books whoever was on the rehearsal
