@@ -350,7 +350,8 @@ describe('useRehearsals Hook', () => {
       });
 
       expect(result.current.loading).toBe(false);
-      expect(result.current.error).toBe('Network error');
+      // Still an error, in the app's words, not the error's own (T-228).
+      expect(result.current.error).toBe('Что-то пошло не так. Попробуйте ещё раз');
       expect(result.current.rehearsals).toEqual([]);
       expect(consoleError).toHaveBeenCalledWith(
         '[ERROR] Failed to fetch rehearsals:',

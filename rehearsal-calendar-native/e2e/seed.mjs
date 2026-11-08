@@ -220,6 +220,9 @@ export const PEOPLE = {
   // Nobody else in their project, so no other flow's notices mix in.
   rosalind: { email: 'rosalind@e2e.test', firstName: 'Rosalind', lastName: 'Duke', onboarded: true },
   orlando: { email: 'orlando@e2e.test', firstName: 'Orlando', lastName: 'Boys', onboarded: true },
+  // Shares an invite link to his project while the network is gone, his
+  // account in Russian (80, T-228). A project of his own: no invite is made.
+  khlestakov: { email: 'khlestakov@e2e.test', firstName: 'Ivan', lastName: 'Khlestakov', onboarded: true, locale: 'ru' },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -523,6 +526,8 @@ export async function seed({ client, apiUrl, timezone }) {
   await joined('Leonato Orchard', 'The arbour', 'leonato', 'admin');
   // Marina its admin (65).
   const nurseryId = await joined('Nursery Tea', 'The samovar', 'marina', 'admin');
+  // Khlestakov its admin (80).
+  await joined('Town Inspection', 'The inn', 'khlestakov', 'admin');
   // Titania its admin (71).
   const woodId = await joined('Athens Wood', 'The fairy bower', 'titania', 'admin');
   // Vincentio its admin, Angelo and Mariana in it (72).

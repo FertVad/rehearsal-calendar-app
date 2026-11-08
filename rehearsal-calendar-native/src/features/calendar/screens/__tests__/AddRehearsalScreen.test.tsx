@@ -13,6 +13,7 @@
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import { ActionSheetIOS, Alert } from 'react-native';
+import { AxiosError } from 'axios';
 import { translations } from '../../../../i18n/translations';
 import { projectsAPI, rehearsalsAPI } from '../../../../shared/services/api';
 import { setProfileTimezone } from '../../../../shared/utils/time';
@@ -478,10 +479,11 @@ describe('Leaving with changes (T-013)', () => {
       leave();
       await choose(t.common.save);
 
-      await act(async () => { fail(new Error('offline')); });
+      await act(async () => { fail(new AxiosError('Network Error', 'ERR_NETWORK', undefined, {})); });
       await settle();
 
-      expect(Alert.alert).toHaveBeenCalledWith(t.common.error, 'offline');
+      // Said in the app's language, not axios's "Network Error" (T-228).
+      expect(Alert.alert).toHaveBeenCalledWith(t.common.error, t.common.noConnection);
       expect(closes()).toBe(0);
       type(screen, 'Room B');
       expect(location(screen)).toBe('Room B');

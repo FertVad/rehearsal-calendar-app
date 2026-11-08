@@ -15,6 +15,7 @@ import {
 } from '../../../shared/utils/time';
 import { exportRehearsal } from '../../../shared/services/calendarSync';
 import { emitDataChanged } from '../../../shared/utils/dataChanged';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useIdempotencyKey } from '../../../shared/hooks/useIdempotencyKey';
 import { useTimezone } from '../../../shared/hooks/useClock';
@@ -195,7 +196,7 @@ export function useAddRehearsalSubmit({
       Alert.alert(
         t.common.error,
         participantsLeft ? t.rehearsals.participantsLeft
-          : error.response?.data?.error || error.message || errorMessage
+          : requestErrorMessage(t, error, errorMessage)
       );
       return false;
     } finally {

@@ -20,6 +20,7 @@ import { invitesAPI } from '../../../shared/services/api';
 import { inviteCodeFromInput } from '../../../shared/utils/inviteCode';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { joinProjectScreenStyles as styles } from '../styles';
 
 import { logger } from '../../../shared/utils/logger';
@@ -143,7 +144,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
           routes: [{ name: 'MainTabs' }],
         });
       } else {
-        setError(err.response?.data?.error || t.projects.joinError);
+        setError(requestErrorMessage(t, err, t.projects.joinError));
         // A typed code goes back to its field, the error under it.
         if (!linkCode) setProjectInfo(null);
       }

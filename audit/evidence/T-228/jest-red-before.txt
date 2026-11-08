@@ -1,0 +1,45 @@
+T-228 — Jest on the old code (sources as at f685b72, new tests added)
+$ npx jest --selectProjects frontend src/shared/utils/__tests__/errorWindowsSayNoMessage.test.ts
+
+FAIL src/shared/utils/__tests__/errorWindowsSayNoMessage.test.ts (6.999 s)
+  ● no error window or error state shows an error's .message (T-228)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 24
+
+    - Array []
+    + Array [
+    +   "contexts/ProjectContext.tsx:62 — setError shows .message; use requestErrorMessage",
+    +   "contexts/SeenContext.tsx:115 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/calendar/hooks/useAddRehearsalSubmit.ts:195 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/calendar/hooks/useDeleteRehearsal.ts:85 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/calendar/hooks/useDeleteRehearsal.ts:95 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/calendar/hooks/useRehearsals.ts:161 — setError shows .message; use requestErrorMessage",
+    +   "features/onboarding/hooks/useOnboarding.ts:31 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/onboarding/hooks/useOnboarding.ts:41 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/onboarding/screens/CalendarSyncScreen.tsx:154 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/onboarding/screens/WhatWhereScreen.tsx:50 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/profile/screens/CalendarSyncSettingsScreen.tsx:227 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/profile/screens/CalendarSyncSettingsScreen.tsx:274 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/profile/screens/CalendarSyncSettingsScreen.tsx:304 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/profile/screens/CalendarSyncSettingsScreen.tsx:356 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/profile/screens/ProfileScreen.tsx:128 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/profile/screens/ProfileScreen.tsx:156 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/profile/screens/ProfileScreen.tsx:170 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/profile/screens/ProfileScreen.tsx:186 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/profile/screens/ProfileScreen.tsx:206 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/projects/hooks/useInviteLink.ts:34 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/projects/screens/CreateProjectScreen.tsx:83 — Alert.alert shows .message; use requestErrorMessage",
+    +   "features/smart-planner/hooks/useSmartPlanner.ts:125 — setError shows .message; use requestErrorMessage",
+    + ]
+
+      46 |       .filter(({ args }) => /\??\.message\b/.test(args))
+      47 |       .map(({ call, line }) => `${relative(SRC, file)}:${line} — ${call} shows .message; use requestErrorMessage`));
+    > 48 |   expect(raw).toEqual([]);
+         |               ^
+      49 | });
+
+Test Suites: 1 failed, 138 passed, 139 total
+Tests:       1 failed, 1343 passed, 1344 total

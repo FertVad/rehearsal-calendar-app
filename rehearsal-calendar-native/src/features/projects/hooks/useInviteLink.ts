@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, Share } from 'react-native';
 import { invitesAPI } from '../../../shared/services/api';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 
 /**
  * Creates an invite link and hands it to the system share sheet.
@@ -33,7 +34,7 @@ export const useInviteLink = () => {
     } catch (err: any) {
       Alert.alert(
         t.common.error,
-        err.response?.data?.error || err.message || t.projects.inviteLinkError
+        requestErrorMessage(t, err, t.projects.inviteLinkError)
       );
     } finally {
       setGeneratingFor(null);

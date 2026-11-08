@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import type { Language } from '../../../i18n/translations';
 import { GlassButton, SkeletonLoader, UserAvatar } from '../../../shared/components';
 import { AppModal } from '../../../shared/components/AppModal';
@@ -125,7 +126,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert(t.profile.errorTitle, err.message || t.profile.notificationError);
+      Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.notificationError));
       // Revert state on error
       setNotificationsEnabled(before);
     }
@@ -153,7 +154,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       await updateUser({ locale: newLanguage });
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert(t.profile.errorTitle, err.message || t.profile.languageError);
+      Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.languageError));
     }
   };
 
@@ -167,7 +168,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       closeTimezones();
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert(t.profile.errorTitle, err.message || t.profile.timezoneError);
+      Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.timezoneError));
     }
   };
 
@@ -183,7 +184,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       setWeekStartModalVisible(false);
       hapticSuccess();
     } catch (err: any) {
-      Alert.alert(t.profile.errorTitle, err.message || t.profile.weekStartError);
+      Alert.alert(t.profile.errorTitle, requestErrorMessage(t, err, t.profile.weekStartError));
     }
   };
 
@@ -203,7 +204,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         deletedProjects > 0 ? t.profile.deleteAccountProjectsWarning(deletedProjects) : undefined
       );
     } catch (err: any) {
-      Alert.alert(t.profile.deleteAccountError, err.message);
+      Alert.alert(t.profile.deleteAccountError, requestErrorMessage(t, err, t.auth.requestFailed));
     } finally {
       setDeletingAccount(false);
       setDeleteAccountModalVisible(false);

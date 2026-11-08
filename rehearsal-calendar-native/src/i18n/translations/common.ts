@@ -8,6 +8,10 @@ export interface CommonTranslations {
   today: string;
   loading: string;
   error: string;
+  /** A request that got no answer: no network, a timeout (requestErrorMessage, T-228). */
+  noConnection: string;
+  /** A request the server answered with a 5xx (requestErrorMessage, T-228). */
+  serverUnavailable: string;
   success: string;
   /** Lets go of the days picked; nothing on them changes (T-021). */
   deselect: string;
@@ -64,6 +68,8 @@ export const ru = {
     today: 'Сегодня',
     loading: 'Загрузка...',
     error: 'Ошибка',
+    noConnection: 'Нет соединения. Проверьте интернет и попробуйте ещё раз.',
+    serverUnavailable: 'Сервер недоступен. Попробуйте позже.',
     success: 'Успех',
     deselect: 'Снять выбор',
     saved: 'Сохранено',
@@ -114,6 +120,8 @@ export const en = {
     today: 'Today',
     loading: 'Loading...',
     error: 'Error',
+    noConnection: 'No connection. Check the internet and try again.',
+    serverUnavailable: 'The server is unavailable. Try again later.',
     success: 'Success',
     deselect: 'Deselect',
     saved: 'Saved',
@@ -164,6 +172,8 @@ export const es = {
     today: 'Hoy',
     loading: 'Cargando...',
     error: 'Error',
+    noConnection: 'Sin conexión. Revisa internet e inténtalo de nuevo.',
+    serverUnavailable: 'El servidor no está disponible. Inténtalo más tarde.',
     success: 'Éxito',
     deselect: 'Quitar selección',
     saved: 'Guardado',
@@ -214,6 +224,8 @@ export const de = {
     today: 'Heute',
     loading: 'Wird geladen...',
     error: 'Fehler',
+    noConnection: 'Keine Verbindung. Prüfe das Internet und versuche es erneut.',
+    serverUnavailable: 'Der Server ist nicht erreichbar. Versuche es später erneut.',
     success: 'Erfolg',
     deselect: 'Auswahl aufheben',
     saved: 'Gespeichert',

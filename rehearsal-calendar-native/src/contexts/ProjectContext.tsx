@@ -11,7 +11,8 @@ interface ProjectContextType {
   projects: Project[];
   selectedProject: Project | null;
   loading: boolean;
-  error: string | null;
+  /** The failed load itself; the screen says it in its language (requestErrorMessage, T-228). */
+  error: unknown;
   setSelectedProject: (project: Project | null) => void;
   /** `quiet`: behind the list on screen, without its skeleton (pull to refresh). */
   refreshProjects: (options?: { quiet?: boolean }) => Promise<void>;
@@ -31,7 +32,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   // is the list's, not a copy taken when it was picked (BC02).
   const [selectedId, setSelectedId] = useSessionState<string | null>(null);
   const [loading, setLoading] = useSessionState(false);
-  const [error, setError] = useSessionState<string | null>(null);
+  const [error, setError] = useSessionState<unknown>(null);
   const beginLoad = useLatestRequest();
 
   const selectedProject = useMemo(
@@ -59,7 +60,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       if (!current()) return;
       logger.error('Failed to fetch projects:', err);
-      if (!quiet) setError(err.message || 'Failed to load projects');
+      if (!quiet) setError(err ?? new Error('Failed to load projects'));
     } finally {
       // Whichever load is newest ends the loading, a quiet one included: it
       // may have overtaken a loud one that set it.

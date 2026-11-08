@@ -19,6 +19,7 @@ import { AppStackParamList } from '../../../navigation';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { createProjectScreenStyles as styles } from '../styles';
 import { AppModal } from '../../../shared/components/AppModal';
 import { ModalSheet } from '../../../shared/components/ModalSheet';
@@ -80,7 +81,7 @@ export default function CreateProjectScreen({ navigation }: CreateProjectScreenP
         },
       }, { pop: true });
     } catch (err: any) {
-      Alert.alert(t.common.error, err.message || t.projects.createError);
+      Alert.alert(t.common.error, requestErrorMessage(t, err, t.projects.createError));
     } finally {
       setCreating(false);
     }

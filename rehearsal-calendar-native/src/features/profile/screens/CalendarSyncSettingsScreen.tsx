@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../shared/constants/colors';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { GlassButton } from '../../../shared/components';
 import { styles } from '../styles/calendarSyncSettingsScreenStyles';
 import { useCalendarSync } from '../../calendar/hooks/useCalendarSync';
@@ -224,7 +225,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       await updateSettings(patch);
       return true;
     } catch (error: any) {
-      Alert.alert(t.common.error, error?.message || t.calendarSync.syncError);
+      Alert.alert(t.common.error, requestErrorMessage(t, error, t.calendarSync.syncError));
       return false;
     }
   };
@@ -301,7 +302,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
               }
             } catch (error: any) {
               logger.error('[Sync] Failed to remove exported events:', error);
-              Alert.alert(t.common.error, error?.message || t.calendarSync.syncError);
+              Alert.alert(t.common.error, requestErrorMessage(t, error, t.calendarSync.syncError));
             } finally {
               setIsRemoving(false);
             }
@@ -353,7 +354,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
       run = await synchronize();
     } catch (error: any) {
       logger.error('[Sync] ❌ Error during synchronization:', error);
-      Alert.alert(t.calendarSync.syncError || 'Sync Error', error?.message || 'Failed to synchronize calendars');
+      Alert.alert(t.calendarSync.syncError || 'Sync Error', requestErrorMessage(t, error, t.auth.requestFailed));
       return;
     }
     // Ended with the session: there is nobody to tell.

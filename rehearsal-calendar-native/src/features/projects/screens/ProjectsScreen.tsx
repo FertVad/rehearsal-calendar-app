@@ -9,6 +9,7 @@ import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { SkeletonLoader } from '../../../shared/components';
 import { useProjects } from '../../../contexts/ProjectContext';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { projectsScreenStyles as styles } from '../styles';
 import type { ProjectsScreenNavigation } from '../../../navigation';
 
@@ -82,7 +83,7 @@ export default function ProjectsScreen() {
           </View>
         ) : error ? (
           <View style={styles.errorState}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText}>{requestErrorMessage(t, error, t.auth.requestFailed)}</Text>
           </View>
         ) : projects.length === 0 ? (
           <View style={styles.emptyState}>

@@ -1,0 +1,65 @@
+# A request with no answer is said in the account's language (T-228).
+# The owner's iPhone on LTE, 07.11.2026: three "Share link" requests timed out,
+# and the error window of a Russian interface said axios's "Network Error".
+# Khlestakov, whose account speaks Russian, shares his project's invite link
+# while its request goes nowhere (its connection closed, as when the network
+# goes): the window says there is no connection, in Russian, and not
+# "Network Error". The error stays an error; only its words change.
+appId: ${APP_ID}
+name: An invite with no network says so in the account's language
+tags:
+  - projects
+  - invite
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${KHLESTAKOV_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-projects
+- extendedWaitUntil:
+    visible:
+      id: project-card
+      text: ".*Town Inspection.*"
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: project-card
+    text: ".*Town Inspection.*"
+- extendedWaitUntil:
+    visible: "Поделиться ссылкой"
+    timeout: 15000
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: POST
+      PATH: "^/api/native/projects/[^/]+/invite$"
+      # Goes nowhere: its connection is closed, never held past iOS's ten
+      # seconds (T-220).
+      DROP: "1"
+# Not tap-and-see: the window that answers it is the point, and a second tap
+# would ask again.
+- tapOn: "Поделиться ссылкой"
+- extendedWaitUntil:
+    visible: "Нет соединения\\. Проверьте интернет и попробуйте ещё раз\\."
+    timeout: 15000
+- assertVisible: "Ошибка"
+- assertNotVisible: ".*Network Error.*"
+- takeScreenshot: 80-invite-no-network
+- runScript:
+    file: ../scripts/release-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}

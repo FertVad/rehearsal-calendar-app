@@ -5,6 +5,7 @@
  */
 import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
+import { AxiosError } from 'axios';
 import { useAddRehearsalSubmit } from '../useAddRehearsalSubmit';
 import { rehearsalsAPI } from '../../../../shared/services/api';
 import { checkSchedulingConflicts } from '../../../../shared/utils/conflictDetection';
@@ -57,6 +58,7 @@ describe('useAddRehearsalSubmit Hook', () => {
   const mockT = {
     common: {
       error: 'Error',
+      noConnection: 'No connection',
       cancel: 'Cancel',
     },
     rehearsals: {
@@ -446,9 +448,10 @@ describe('useAddRehearsalSubmit Hook', () => {
   });
 
   describe('Error Handling', () => {
+    // No answer: the connection, in the app's words, not axios's (T-228).
     it('should show error alert on creation failure', async () => {
       (rehearsalsAPI.create as jest.Mock).mockRejectedValue(
-        new Error('Network error')
+        new AxiosError('Network Error', 'ERR_NETWORK', undefined, {})
       );
 
       const { result } = renderHook(() =>
@@ -461,7 +464,7 @@ describe('useAddRehearsalSubmit Hook', () => {
 
       expect(Alert.alert).toHaveBeenCalledWith(
         'Error',
-        'Network error'
+        'No connection'
       );
       expect(result.current.loading).toBe(false);
     });
@@ -508,7 +511,7 @@ describe('useAddRehearsalSubmit Hook', () => {
 
       expect(Alert.alert).toHaveBeenCalledWith(
         'Error',
-        'Update failed'
+        'Failed to update'
       );
     });
   });

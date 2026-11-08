@@ -24,6 +24,7 @@ import { onDataChanged } from '../../../shared/utils/dataChanged';
 import { useTimezone, useToday } from '../../../shared/hooks/useClock';
 import { formatDate } from '../../../shared/utils/dateFormat';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { useProjects } from '../../../contexts/ProjectContext';
 import * as Clipboard from 'expo-clipboard';
 import { useInviteLink } from '../hooks';
@@ -227,7 +228,7 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
       const res = await invitesAPI.createInvite(projectId);
       setInviteCode(res.data?.inviteCode ?? null);
     } catch (err: any) {
-      Alert.alert(t.common.error, err.response?.data?.error || t.projects.inviteLinkError);
+      Alert.alert(t.common.error, requestErrorMessage(t, err, t.projects.inviteLinkError));
     } finally {
       setRevealingCode(false);
     }
@@ -311,7 +312,7 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
 
               Alert.alert(t.common.success, t.projects.memberRemoved);
             } catch (err: any) {
-              Alert.alert(t.common.error, err.response?.data?.error || t.projects.memberActionError);
+              Alert.alert(t.common.error, requestErrorMessage(t, err, t.projects.memberActionError));
             } finally {
               setMemberActionLoading(false);
             }
@@ -353,7 +354,7 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
 
               Alert.alert(t.common.success, t.projects.roleUpdated);
             } catch (err: any) {
-              Alert.alert(t.common.error, err.response?.data?.error || t.projects.memberActionError);
+              Alert.alert(t.common.error, requestErrorMessage(t, err, t.projects.memberActionError));
             } finally {
               setMemberActionLoading(false);
             }
@@ -396,7 +397,7 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
               }, 300);
             } catch (err: any) {
               setIsDeleting(false);
-              Alert.alert(t.common.error, err.response?.data?.error || t.projects.deleteProjectError);
+              Alert.alert(t.common.error, requestErrorMessage(t, err, t.projects.deleteProjectError));
             }
           },
         },

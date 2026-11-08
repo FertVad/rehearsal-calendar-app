@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { useAuth } from '../../../contexts/AuthContext';
 import { rehearsalsAPI } from '../../../shared/services/api';
 import { unexportRehearsal } from '../../../shared/services/calendarSync';
@@ -92,7 +93,7 @@ export function useDeleteRehearsal() {
             await rehearsalsAPI.delete(projectId, rehearsal.id);
           } catch (err: any) {
             logger.error('[useDeleteRehearsal] Failed to delete rehearsal:', err);
-            Alert.alert(t.common.error, err.response?.data?.error || err.message || t.rehearsals.deleteError);
+            Alert.alert(t.common.error, requestErrorMessage(t, err, t.rehearsals.deleteError));
             return;
           }
 

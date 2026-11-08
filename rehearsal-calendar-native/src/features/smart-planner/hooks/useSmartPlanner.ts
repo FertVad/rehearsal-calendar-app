@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNow, useTimezone } from '../../../shared/hooks/useClock';
 import { useI18n } from '../../../contexts/I18nContext';
+import { requestErrorMessage } from '../../../shared/utils/requestError';
 import { projectsAPI } from '../../../shared/services/api';
 import type { Project, ProjectMember } from '../../../shared/types';
 import type { TimeSlot, SlotCategory, Member, AvailabilityData } from '../types';
@@ -122,7 +123,7 @@ export function useSmartPlanner({
       } catch (err: any) {
         logger.error('[Smart Planner] Error loading data:', err);
         if (mounted) {
-          setError(err.response?.data?.error || err.message || 'Failed to load data');
+          setError(requestErrorMessage(t, err, t.auth.requestFailed));
           setMemberAvailability([]);
           setLoadedRangeKey(null);
         }

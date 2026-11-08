@@ -577,7 +577,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { deletedProjects: deletedProjects || 0 };
     } catch (err: any) {
-      throw new Error(toAuthFlowError(err, 'Failed to delete account').message);
+      // Whole, with its status: the screen says no connection or the server's
+      // own words in the person's language (T-228).
+      throw toAuthFlowError(err, 'Failed to delete account');
     } finally {
       setLoading(false);
     }
