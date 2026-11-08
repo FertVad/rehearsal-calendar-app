@@ -23,6 +23,9 @@ if (process.env.REHEARSLY_E2E === '1') {
     config.resolver.blockList ?? [],
     new RegExp(`^${root}[\\\\/]\\.env[^\\\\/]*$`),
     new RegExp(`^${root}[\\\\/]e2e[\\\\/]out[\\\\/]`),
+    // The iOS project e2e generates and its builds (e2e/native.mjs): a GB of
+    // Pods and several of DerivedData, none of it the app's JS.
+    new RegExp(`^${root}[\\\\/]e2e[\\\\/]\\.(?:native|build)[\\\\/]`),
   );
 
   // A simulator cannot receive push, so registering stops before the server

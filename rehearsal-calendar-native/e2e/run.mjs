@@ -2,11 +2,15 @@
 /**
  * The app end to end, on a simulator, against nothing real.
  *
- *   npm run e2e                  every flow in e2e/flows, then everything is taken down
- *   npm run e2e -- <flow.yaml>…  only those flows
+ *   npm run e2e                  every flow in e2e/flows on the Debug app and every
+ *                                flow in e2e/release on the Release app, then
+ *                                everything is taken down
+ *   npm run e2e -- <flow.yaml>…  only those flows; one in e2e/release builds and
+ *                                runs the Release app
  *   npm run e2e:up               stands it all up and keeps it up — for Maestro MCP
  *                                or Studio — until Ctrl-C
- *   --build                      rebuild the app even when a build is there
+ *   --build                      generate the iOS project and build the app anew
+ *                                even when they are there
  *
  * What it stands up, and what it refuses:
  *
@@ -27,8 +31,13 @@
  *   that the address the app reports on start is watched, and the run stops if
  *   it is ever another. Ports 3001, 3002 and 8081 must be free: a server or Metro
  *   already running there is not ours to reuse, and could be pointed anywhere.
- * - The app: a Debug build (Release talks to production) on a simulator of its
- *   own, "Rehearsly E2E", so no other simulator's data is touched.
+ * - The app: built from an iOS project `expo prebuild` makes of this tree's
+ *   app.json, in e2e/.native, never the tree's ios/ (e2e/native.mjs, T-227),
+ *   on a simulator of its own, "Rehearsly E2E", so no other simulator's data
+ *   is touched. A Debug build for the flows in e2e/flows, its JS from Metro; a
+ *   Release build, as the App Store gets it, for those in e2e/release — its JS
+ *   bundled with the same REHEARSLY_E2E and local address as Metro's, and
+ *   checked the same way before it is installed.
  *
  * Everything it writes goes to e2e/out: logs, the seed, JUnit, screenshots.
  *
@@ -51,6 +60,7 @@ import { getText } from './http.mjs';
 import { mergeJunit } from './junit.mjs';
 import { LOCK, takeLock } from './lock.mjs';
 import { exitCode, flattenBatches, limitMs, nextStep } from './midnight.mjs';
+import { appPath, buildApp, builtFrom, checkReleaseBundle, inputsHash, MachineError, prepareProject, splitFlows } from './native.mjs';
 import { localDate, seed } from './seed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -58,10 +68,10 @@ const SERVER = path.join(ROOT, 'server');
 const E2E = path.join(ROOT, 'e2e');
 const OUT = path.join(E2E, 'out');
 const BUILD = path.join(E2E, '.build');
-// A worktree without the iOS Pods (the autodev supervisor's) uses an app built
-// elsewhere: E2E_APP names it. The JS comes from this tree's Metro either way.
+// A Debug app built elsewhere (the supervisor names the main tree's) is used
+// only when it was built from the inputs this tree has (e2e/native.mjs): an app
+// of another app.json is the stale build T-227 is about.
 const PREBUILT = process.env.E2E_APP || null;
-const APP = PREBUILT || path.join(BUILD, 'Build', 'Products', 'Debug-iphonesimulator', 'Rehearsly.app');
 // One run at a time on this machine: the simulator and ports 3001/8081 are
 // shared. It also names what each run started (lock.mjs), and a heavy job
 // held under it (hold-lock.mjs, T-231) is waited for as another run is.
@@ -102,6 +112,10 @@ let flowsFailed = false;
 class EnvironmentError extends Error {}
 async function environment(work) {
   try { return await work(); } catch (error) { throw error instanceof EnvironmentError ? error : new EnvironmentError(error.message); }
+}
+/** The native build: the network failing pod install is the machine's; any other failure is the change's. */
+function nativeStep(work) {
+  try { return work(); } catch (error) { throw error instanceof MachineError ? new EnvironmentError(error.message) : error; }
 }
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -153,7 +167,7 @@ function keepLogs(startedAt) {
     for (const run of fs.readdirSync(artifacts)) {
       const dir = path.join(artifacts, run);
       if (!fs.statSync(dir).isDirectory() || fs.statSync(dir).birthtimeMs < startedAt) continue;
-      for (const name of ['server.log', 'metro.log']) {
+      for (const name of ['server.log', 'metro.log', 'release-device.log']) {
         const log = path.join(OUT, name);
         if (fs.existsSync(log)) fs.copyFileSync(log, path.join(dir, name));
       }
@@ -478,7 +492,7 @@ function variablesFor(seeded, udid) {
 
 /** The flows to run, one file each, in the order Maestro ran the folder: by name. */
 function flowFiles(given) {
-  return (given.length ? given : [path.join(E2E, 'flows')]).flatMap((entry) => (fs.statSync(entry).isDirectory()
+  return given.flatMap((entry) => (fs.statSync(entry).isDirectory()
     ? fs.readdirSync(entry).filter((name) => /\.ya?ml$/.test(name) && name !== 'config.yaml').sort().map((name) => path.join(entry, name))
     : [entry]));
 }
@@ -489,11 +503,74 @@ function runStamp(at = new Date()) {
   return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}_${pad(at.getHours())}${pad(at.getMinutes())}${pad(at.getSeconds())}`;
 }
 
+// ---- the apps --------------------------------------------------------------
+
+/** The Debug app of this tree's native inputs (`hash`): one built from them, or built now. */
+function debugApp(udid, hash) {
+  if (PREBUILT && builtFrom(PREBUILT, hash)) {
+    step(`the Debug app: E2E_APP, built from these inputs (${PREBUILT})`);
+    return PREBUILT;
+  }
+  if (PREBUILT) step(`E2E_APP (${PREBUILT}) was not built from this tree's app.json and packages: not used`);
+  const app = appPath(BUILD, 'Debug');
+  if (!forceBuild && builtFrom(app, hash)) {
+    step('the Debug app was built from these inputs: kept');
+    return app;
+  }
+  step('building the Debug app — from nothing it takes a while');
+  return buildApp({ configuration: 'Debug', udid, build: BUILD, hash, log: path.join(OUT, 'build.log'),
+    env: { ...process.env, RCT_NO_LAUNCH_PACKAGER: '1' } });
+}
+
+/**
+ * The Release app, built now: its JS is in it, bundled by Metro with what the
+ * dev Metro of a run gets — REHEARSLY_E2E (metro.config.js), the local
+ * address, no .env file read at all (EXPO_NO_DOTENV) — and checked before it
+ * is installed (checkReleaseBundle).
+ */
+function releaseApp(udid, hash) {
+  step('building the Release app, its JS bundled for the local server');
+  const app = appPath(BUILD, 'Release');
+  const js = path.join(path.dirname(app), 'main.jsbundle');
+  const bytecode = path.join(app, 'main.jsbundle');
+  // A bundle of an earlier build is never the one checked.
+  for (const file of [js, bytecode]) fs.rmSync(file, { force: true });
+  const { CI: _ci, ...inherited } = process.env;
+  buildApp({ configuration: 'Release', udid, build: BUILD, hash, log: path.join(OUT, 'build-release.log'),
+    env: { ...inherited, RCT_NO_LAUNCH_PACKAGER: '1', EXPO_PUBLIC_API_URL: API_URL, EXPO_PUBLIC_E2E: '1',
+      REHEARSLY_E2E: '1', EXPO_NO_DOTENV: '1', EXPO_NO_TELEMETRY: '1' } });
+  step('checking the Release bundle talks to the local server');
+  checkReleaseBundle({ js: fs.readFileSync(js, 'utf8'), bytecode: fs.readFileSync(bytecode), apiUrl: API_URL });
+  return app;
+}
+
+/**
+ * What the app says on the device while the Release flows run, for the
+ * reason a launch failed: a native exception, a module JS could not find.
+ */
+function watchDevice(udid) {
+  const child = background('release-device', 'xcrun', ['simctl', 'spawn', udid, 'log', 'stream', '--style', 'compact',
+    '--level', 'debug', '--predicate', 'process == "Rehearsly"'], { cwd: ROOT });
+  return () => {
+    child.stopping = true;
+    try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ }
+    const log = path.join(OUT, 'release-device.log');
+    // Errors and faults only ("2026-11-08 00:34:51.437 E  Rehearsly[…] …"),
+    // each said once: the debug level has the ATS dictionary's NSException* keys.
+    const said = new Set();
+    const fatal = (fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '').split('\n')
+      .filter((line) => /^\S+ \S+ [EF]\s/.test(line) && /Exception|Cannot find native module|EXFatal|RCTFatal|Fatal/i.test(line))
+      .filter((line) => { const what = line.replace(/^.*?\]\s*/, ''); return !said.has(what) && said.add(what); });
+    step(`the Release app's device log: ${fatal.length} error(s) of a failed start (${log})`);
+    for (const line of fatal.slice(0, 10)) step(`  ${line.slice(0, 300)}`);
+  };
+}
+
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
+  const { debug: debugFlows, release: releaseFlows } = stayUp ? { debug: [], release: [] } : splitFlows(flows, flowFiles);
   await environment(async () => {
     assert.ok(fs.existsSync(MAESTRO), `Maestro is not installed at ${MAESTRO}`);
-    if (PREBUILT) assert.ok(fs.existsSync(PREBUILT), `E2E_APP ${PREBUILT} does not exist`);
     lock = await takeLock(LOCK, { log: step });
     teardown.push(() => lock.release());
     teardown.push(keepLogs(Date.now()));
@@ -501,6 +578,18 @@ async function main() {
     await requireFree(MAIL_PORT, 'mailbox');
     await requireFree(METRO_PORT, 'Metro');
   });
+
+  // The apps before anything else is up: a build is the heaviest thing this
+  // Mac does, and Metro, the simulator and the database would only crowd it
+  // (T-231). The iOS project is the one this tree's app.json makes.
+  const udid = await environment(simulator);
+  const hash = inputsHash();
+  step(`native inputs ${hash.slice(0, 12)} (app.json, locales, assets, packages)`);
+  nativeStep(() => prepareProject({ hash, log: path.join(OUT, 'prepare.log'), step, force: forceBuild }));
+  const apps = {
+    Debug: stayUp || debugFlows.length ? nativeStep(() => debugApp(udid, hash)) : null,
+    Release: releaseFlows.length ? nativeStep(() => releaseApp(udid, hash)) : null,
+  };
 
   step('starting a disposable PostgreSQL');
   const databaseUrl = await environment(startDatabase);
@@ -515,6 +604,104 @@ async function main() {
   step('seeding');
   let day = await seedDay(databaseUrl);
 
+  // The Release app carries its JS; Metro is for the Debug one.
+  if (apps.Debug) await startMetro();
+  await environment(() => {
+    step(`booting ${DEVICE.name} (${udid})`);
+    simctl('bootstatus', udid, '-b');
+    teardown.push(() => simctl('shutdown', udid));
+    if (pinLocale(udid)) {
+      step('switching it to English and rebooting');
+      simctl('shutdown', udid);
+      simctl('bootstatus', udid, '-b');
+    }
+    quietKeyboard(udid);
+    pinZone(udid);
+    showSimulator(udid);
+  });
+
+  if (stayUp) {
+    simctl('install', udid, apps.Debug);
+    watchReportedAddress(udid);
+    step(`up. Simulator ${udid}; server ${API_URL}; seed in ${path.join(OUT, 'seed.json')}`);
+    step(`password for every account: ${day.seeded.password}. Ctrl-C takes it all down.`);
+    setInterval(() => {}, 1 << 30);
+    await new Promise(() => {});
+  }
+
+  // One folder for the run's artifacts, a flow's folder in it, as one Maestro
+  // made it: the supervisor keeps the newest folder of a red run
+  // (maestro-artifacts.txt) and from the reviewer's tree its failed flows'.
+  const artifacts = path.join(OUT, 'artifacts', runStamp());
+  const parts = path.join(OUT, 'junit-parts');
+  fs.rmSync(parts, { recursive: true, force: true });
+  fs.mkdirSync(parts, { recursive: true });
+  const reports = [];
+  const earlierTaps = [];
+  // The supervisor's clock started with this process (e2e/midnight.mjs).
+  const total = releaseFlows.length + debugFlows.length;
+  const deadline = performance.timeOrigin + limitMs(total);
+  let left = total;
+
+  async function runFlows(queue) {
+    for (let index = 0; index < queue.length;) {
+      if (localDate(0) !== day.date) {
+        step(`the day turned (${day.date} → ${localDate(0)}): a new database, server and seed for it`);
+        await stopServer(server);
+        earlierTaps.push(...tapsAgain());
+        const url = await databaseFor(databaseUrl, localDate(0));
+        migrate(url, { append: true });
+        server = await startServer(url, { append: true });
+        day = await seedDay(url);
+      }
+      const next = nextStep({ left, deadline });
+      if (next.stop) {
+        throw new EnvironmentError(`midnight in ${Math.ceil(next.stop / 1000)} s, before a flow could end, and a wait for it `
+          + `would outlast the supervisor's limit (${Math.round(limitMs(total) / 1000)} s for ${total} flows) — run it again after 00:00`);
+      }
+      if (next.wait) {
+        step(`midnight in ${Math.ceil(next.wait / 1000)} s, before a flow could end: waiting for it`);
+        await sleep(next.wait);
+        continue;
+      }
+      const batch = queue.slice(index, index + next.take);
+      index += batch.length;
+      left -= batch.length;
+      const report = path.join(parts, `${String(reports.length).padStart(3, '0')}.xml`);
+      let code = 0;
+      try {
+        execFileSync(MAESTRO, ['--device', udid, 'test', ...batch, '--format', 'junit', '--output', report,
+          '--test-output-dir', artifacts, ...variablesFor(day.seeded, udid)], { stdio: 'inherit', env: MAESTRO_ENV });
+      } catch (error) {
+        code = error.status ?? 1;
+        flowsFailed = true;
+        process.exitCode = 1;
+      }
+      flattenBatches(artifacts);
+      reports.push({ files: batch.map((flow) => path.relative(ROOT, flow)), xml: fs.existsSync(report) ? fs.readFileSync(report, 'utf8') : null, code });
+      // After every flow, so a run cut short still says what it ran.
+      fs.writeFileSync(path.join(OUT, 'junit.xml'), mergeJunit(reports));
+    }
+  }
+
+  // Release first: a few minutes, and a black screen there is the news.
+  if (releaseFlows.length) {
+    step('installing the Release app and running its flows');
+    simctl('install', udid, apps.Release);
+    const stopWatching = watchDevice(udid);
+    try { await runFlows(releaseFlows); } finally { stopWatching(); }
+  }
+  if (debugFlows.length) {
+    step('installing the Debug app and running the flows');
+    simctl('install', udid, apps.Debug);
+    watchReportedAddress(udid);
+    await runFlows(debugFlows);
+  }
+  reportTapsAgain(earlierTaps);
+}
+
+/** Metro for the Debug app, its bundle checked to talk to the local server only. */
+async function startMetro() {
   step('starting Metro, pointed at the local server');
   // Not CI mode: it turns the file watcher off, and an edit would never reach
   // the app. With no terminal attached Expo does not prompt anyway.
@@ -545,94 +732,6 @@ async function main() {
     throw error.code === 'DEADLINE' ? new EnvironmentError(error.message) : error;
   }
   checkBundle(bundle);
-  const udid = await environment(simulator);
-  await environment(() => {
-    step(`booting ${DEVICE.name} (${udid})`);
-    simctl('bootstatus', udid, '-b');
-    teardown.push(() => simctl('shutdown', udid));
-    if (pinLocale(udid)) {
-      step('switching it to English and rebooting');
-      simctl('shutdown', udid);
-      simctl('bootstatus', udid, '-b');
-    }
-    quietKeyboard(udid);
-    pinZone(udid);
-    showSimulator(udid);
-  });
-
-  if (!PREBUILT && (forceBuild || !fs.existsSync(APP))) {
-    step('building the Debug app — the first build takes a while');
-    const buildLog = fs.openSync(path.join(OUT, 'build.log'), 'w');
-    execFileSync('xcodebuild', ['-workspace', 'ios/Rehearsly.xcworkspace', '-scheme', 'Rehearsly',
-      '-configuration', 'Debug', '-sdk', 'iphonesimulator', '-destination', `id=${udid}`,
-      '-derivedDataPath', BUILD, 'build'], {
-      cwd: ROOT,
-      env: { ...process.env, RCT_NO_LAUNCH_PACKAGER: '1' },
-      stdio: ['ignore', buildLog, buildLog],
-      timeout: 60 * 60 * 1000,
-    });
-  }
-  simctl('install', udid, APP);
-  watchReportedAddress(udid);
-
-  if (stayUp) {
-    step(`up. Simulator ${udid}; server ${API_URL}; seed in ${path.join(OUT, 'seed.json')}`);
-    step(`password for every account: ${day.seeded.password}. Ctrl-C takes it all down.`);
-    setInterval(() => {}, 1 << 30);
-    await new Promise(() => {});
-  }
-
-  step('running the flows');
-  // One folder for the run's artifacts, a flow's folder in it, as one Maestro
-  // made it: the supervisor keeps the newest folder of a red run
-  // (maestro-artifacts.txt) and from the reviewer's tree its failed flows'.
-  const artifacts = path.join(OUT, 'artifacts', runStamp());
-  const parts = path.join(OUT, 'junit-parts');
-  fs.rmSync(parts, { recursive: true, force: true });
-  fs.mkdirSync(parts, { recursive: true });
-  const reports = [];
-  const earlierTaps = [];
-  const queue = flowFiles(flows);
-  // The supervisor's clock started with this process (e2e/midnight.mjs).
-  const deadline = performance.timeOrigin + limitMs(queue.length);
-  for (let index = 0; index < queue.length;) {
-    if (localDate(0) !== day.date) {
-      step(`the day turned (${day.date} → ${localDate(0)}): a new database, server and seed for it`);
-      await stopServer(server);
-      earlierTaps.push(...tapsAgain());
-      const url = await databaseFor(databaseUrl, localDate(0));
-      migrate(url, { append: true });
-      server = await startServer(url, { append: true });
-      day = await seedDay(url);
-    }
-    const next = nextStep({ left: queue.length - index, deadline });
-    if (next.stop) {
-      throw new EnvironmentError(`midnight in ${Math.ceil(next.stop / 1000)} s, before a flow could end, and a wait for it `
-        + `would outlast the supervisor's limit (${Math.round(limitMs(queue.length) / 1000)} s for ${queue.length} flows) — run it again after 00:00`);
-    }
-    if (next.wait) {
-      step(`midnight in ${Math.ceil(next.wait / 1000)} s, before a flow could end: waiting for it`);
-      await sleep(next.wait);
-      continue;
-    }
-    const batch = queue.slice(index, index + next.take);
-    index += batch.length;
-    const report = path.join(parts, `${String(reports.length).padStart(3, '0')}.xml`);
-    let code = 0;
-    try {
-      execFileSync(MAESTRO, ['--device', udid, 'test', ...batch, '--format', 'junit', '--output', report,
-        '--test-output-dir', artifacts, ...variablesFor(day.seeded, udid)], { stdio: 'inherit', env: MAESTRO_ENV });
-    } catch (error) {
-      code = error.status ?? 1;
-      flowsFailed = true;
-      process.exitCode = 1;
-    }
-    flattenBatches(artifacts);
-    reports.push({ files: batch.map((flow) => path.relative(ROOT, flow)), xml: fs.existsSync(report) ? fs.readFileSync(report, 'utf8') : null, code });
-    // After every flow, so a run cut short still says what it ran.
-    fs.writeFileSync(path.join(OUT, 'junit.xml'), mergeJunit(reports));
-  }
-  reportTapsAgain(earlierTaps);
 }
 
 /** The taps the server running now was told of; it starts its log afresh (server-with-mailbox.mjs). */

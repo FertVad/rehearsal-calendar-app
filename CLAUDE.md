@@ -1102,12 +1102,27 @@ npm run test:coverage       # With coverage
 ### End-to-End (Maestro)
 ```bash
 cd rehearsal-calendar-native
-npm run e2e                 # flows in e2e/flows on the "Rehearsly E2E" simulator
+npm run e2e                 # e2e/flows on Debug + e2e/release on Release, "Rehearsly E2E" simulator
+npm run e2e -- e2e/release/01-launch.yaml   # only the Release launch check
 npm run e2e:up              # stay up for Maestro MCP / Studio until Ctrl-C
 ```
 Everything is local and thrown away: a PostgreSQL container, the server with an
-environment built from nothing, its own Metro, a Debug build, a seed made
-through the API. See [e2e.md](rehearsal-calendar-native/docs/e2e.md).
+environment built from nothing, its own Metro, a seed made through the API.
+See [e2e.md](rehearsal-calendar-native/docs/e2e.md).
+
+**The app e2e runs is built from this tree's `app.json`, never from `ios/`.**
+`e2e/native.mjs` generates its own iOS project in `e2e/.native`
+(`expo prebuild --clean`, then `pod install`) whenever `app.json`, `locales/`,
+`assets/` or the packages changed — their hash stamps the project and every app
+built from it, and an app of other inputs (`E2E_APP` included) is not used. The
+`ios/` of the main checkout, where releases are built, is never touched. The
+full run also builds **Release** for the simulator from the same project, its
+JS bundled with `REHEARSLY_E2E=1` and the local address and checked like the
+dev bundle, and runs `e2e/release/` on it: the app must reach the sign-in
+screen. TestFlight 1.0.0 (1) opened on a black screen because `app.json` had
+lost the `NSReminders*` keys (expo-calendar's `EXFatal`), and the old e2e build
+from a stale `ios/` could not see it (T-227). A Release build is only for the
+full run or a flow named from `e2e/release` — not for a task's checks (8 GB).
 
 **Setting `EXPO_PUBLIC_API_URL` does not decide where a dev build talks.** In
 development Expo bundles the project's `.env` files and lets them win over the

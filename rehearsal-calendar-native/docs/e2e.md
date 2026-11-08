@@ -6,16 +6,71 @@ flows and takes it down.
 
 ```bash
 cd rehearsal-calendar-native
-npm run e2e                       # every flow in e2e/flows, then teardown
+npm run e2e                       # e2e/flows on Debug, e2e/release on Release, then teardown
 npm run e2e -- e2e/flows/01-login.yaml
+npm run e2e -- e2e/release/01-launch.yaml   # only the Release launch check
 npm run e2e:up                    # stay up for Maestro MCP / Studio; Ctrl-C ends it
-npm run e2e -- --build            # rebuild the app (after native changes)
+npm run e2e -- --build            # generate the iOS project and build anew anyway
 ```
 
-Needs: Docker Desktop with a local `postgres:15` image, Xcode, Maestro in
-`~/.maestro/bin` (2.11.0), Node 22. The first run builds the Debug app into
-`e2e/.build` (about 4 GB, ten minutes); later runs reuse it. Logs, the seed,
-JUnit and screenshots go to `e2e/out`.
+Needs: Docker Desktop with a local `postgres:15` image, Xcode, CocoaPods,
+Maestro in `~/.maestro/bin` (2.11.0), Node 22. Logs, the seed, JUnit and
+screenshots go to `e2e/out`.
+
+## What the app is built from
+
+The app under test is built from an iOS project `expo prebuild` makes of this
+tree's `app.json` — as the App Store build is made — never from `ios/`, which
+is not in git and in the main checkout is the project releases are built from
+(`e2e/native.mjs`, T-227).
+
+- **The project.** `e2e/.native` is a project root of its own: copies of
+  `app.json` and `package.json`, links to `assets/`, `locales/` and
+  `node_modules/`; prebuild reads nothing else of the tree (no `.env`).
+  `expo prebuild --platform ios --clean`, then `pod install`, give
+  `e2e/.native/ios`. Both run again whenever their inputs changed: `app.json`,
+  `package.json`, `package-lock.json`, `node_modules/.package-lock.json`,
+  `locales/`, `assets/` and the recipe itself. Their hash stamps the project
+  (`inputs.sha256`) and every app built from it (`Rehearsly.app.inputs`); a
+  project or app with another stamp is not used — `E2E_APP`, the main tree's
+  app the supervisor names, only when its stamp is this tree's. Measured on the
+  8 GB Mac: the hash 40 ms, prebuild 6 s, `pod install` 7 minutes — so the
+  project is made only when the inputs change, not on every run.
+- **Debug**, for `e2e/flows`: built into `e2e/.build` when the project's inputs
+  changed and kept until they change again; its JS comes from Metro.
+- **Release**, for `e2e/release`: built on every run that has a Release flow —
+  the full run, or one named (`npm run e2e -- e2e/release/01-launch.yaml`) —
+  since its JS is inside it. The build phase bundles from the tree (the
+  project's `.xcode.env.local` sets `PROJECT_ROOT`), with `REHEARSLY_E2E=1`, the
+  local address and `EXPO_NO_DOTENV=1`. Before it is installed the JS Metro
+  wrote is checked: `envApiUrl` and `PRODUCTION_API_URL` written in as the local
+  server, no `process.env.EXPO_PUBLIC_API_URL` left to read at run time, no
+  `.env` module; and the Hermes bytecode the app runs carries the local address
+  and no `rehearsly.me/api`. The Release flows run first, the app's device log
+  streamed to `e2e/out/release-device.log`; a failed start prints its errors
+  (`MissingCalendarPListValueException`, `Cannot find native module …`).
+- **Builds.** Before the database, the server, Metro and the simulator start,
+  under the e2e lock (T-231). `-jobs 4` on 8 GB (eight compilers of React
+  Native's C++ fit worse), `ONLY_ACTIVE_ARCH=YES` (Release builds x86_64 too
+  otherwise). React Native's codegen rewrites its sources at the start of every
+  build, so all that includes them compiles again — about ten minutes here, and
+  a build cut off began anew; `CLANG_ENABLE_COMPILE_CACHE=YES` (its cache in
+  `e2e/.build`) takes what is unchanged from earlier builds. A Release build
+  from nothing took three to four ten-minute tries, the last 5.5 minutes; with
+  the cache warm the Release check takes about ten minutes.
+
+What it caught: TestFlight 1.0.0 (1) opened on a black screen. T-040 had taken
+the `NSReminders*` keys out of `app.json`; expo-calendar calls `EXFatal`
+without them when its module is created, and in Release the other Expo
+modules were never registered (9d265da). With `app.json` and `locales/` as
+before 9d265da, `e2e/release/01-launch.yaml` fails on a black screen, the
+device log saying `ExpoCalendar.MissingCalendarPListValueException` and
+`Cannot find native module 'ExpoPushTokenManager'`; on the fix it reaches
+sign-in (`audit/evidence/T-227`).
+
+A task that changes `app.json`, `locales/`, `assets/` or the packages makes the
+next run generate the project and build Debug from it: some 7 minutes and a
+build that does not fit a single flow's limit the first time.
 
 ## What it refuses
 
