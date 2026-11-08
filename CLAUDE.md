@@ -1114,7 +1114,10 @@ See [e2e.md](rehearsal-calendar-native/docs/e2e.md).
 `e2e/native.mjs` generates its own iOS project in `e2e/.native`
 (`expo prebuild --clean`, then `pod install`) whenever `app.json`, `locales/`,
 `assets/` or the packages changed — their hash stamps the project and every app
-built from it, and an app of other inputs (`E2E_APP` included) is not used. The
+built from it, and an app of other inputs (`E2E_APP` included) is not used.
+`node_modules` must be what `package-lock.json` says (versions, and no package
+the lock lacks), or the run stops with 75 and asks for `npm ci`: the hash
+covers the lock, not what is installed. The
 `ios/` of the main checkout, where releases are built, is never touched. The
 full run also builds **Release** for the simulator from the same project, its
 JS bundled with `REHEARSLY_E2E=1` and the local address and checked like the

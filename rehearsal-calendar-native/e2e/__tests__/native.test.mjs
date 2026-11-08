@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { appStamp, builtFrom, checkReleaseBundle, inputsHash, RELEASE_FLOWS, splitFlows } from '../native.mjs';
+import { appStamp, builtFrom, checkReleaseBundle, inputsHash, installedMismatch, MachineError, RELEASE_FLOWS,
+  requireInstalledAsLocked, splitFlows } from '../native.mjs';
 
 const API = 'http://127.0.0.1:3001/api';
 
@@ -42,6 +43,40 @@ test('the project is made anew when app.json, the locales, the assets or the pac
     write(file, text);
     assert.notEqual(inputsHash(root), before, `${file} changed and the project would be kept`);
   }
+});
+
+test('node_modules not installed from package-lock.json is refused, not stamped as this commit\'s', () => {
+  const { root, write } = tree();
+  const pkg = (name, version) => write(`node_modules/${name}/package.json`, JSON.stringify({ name, version }));
+  const lock = (packages) => write('package-lock.json', JSON.stringify({ lockfileVersion: 3, packages: { '': {}, ...packages } }));
+  lock({
+    'node_modules/expo-calendar': { version: '15.0.8' },
+    'node_modules/@expo/config': { version: '12.0.1' },
+    'node_modules/expo-calendar/node_modules/semver': { version: '7.6.0' },
+    'node_modules/fsevents': { version: '2.3.3', optional: true },
+    'node_modules/local': { resolved: 'packages/local', link: true },
+  });
+  pkg('expo-calendar', '15.0.8');
+  pkg('@expo/config', '12.0.1');
+  pkg('expo-calendar/node_modules/semver', '7.6.0');
+  write('node_modules/.bin/expo', '');
+  write('node_modules/.package-lock.json', '{}');
+  assert.deepEqual(installedMismatch(root), [], 'installed as locked; an optional package of another platform may be missing');
+  requireInstalledAsLocked(root);
+
+  // The lockfile moved on and node_modules did not — the supervisor's, shared with the main checkout.
+  pkg('expo-calendar', '14.0.6');
+  // A native package the commit removed (T-044, expo-linear-gradient) is still there for autolinking.
+  pkg('expo-linear-gradient', '15.0.7');
+  pkg('@expo/vector-icons', '15.0.2');
+  fs.rmSync(path.join(root, 'node_modules/@expo/config'), { recursive: true });
+  assert.deepEqual(installedMismatch(root).sort(), [
+    'node_modules/@expo/config 12.0.1 is not installed',
+    'node_modules/@expo/vector-icons is installed and the lock does not have it',
+    'node_modules/expo-calendar is 14.0.6, the lock has 15.0.8',
+    'node_modules/expo-linear-gradient is installed and the lock does not have it',
+  ]);
+  assert.throws(() => requireInstalledAsLocked(root), (error) => error instanceof MachineError && /npm ci/.test(error.message));
 });
 
 test('an app is used only when it was built from these inputs', () => {

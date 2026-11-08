@@ -36,6 +36,15 @@ is not in git and in the main checkout is the project releases are built from
   app the supervisor names, only when its stamp is this tree's. Measured on the
   8 GB Mac: the hash 40 ms, prebuild 6 s, `pod install` 7 minutes — so the
   project is made only when the inputs change, not on every run.
+- **The packages.** Prebuild runs with `--no-install` on the tree's
+  `node_modules`, and autolinking links what is there, so before anything is
+  hashed or built `node_modules` is checked against `package-lock.json`
+  (`installedMismatch`, about 0.4 s): every locked package installed at its
+  version (an optional one may be missing — another platform's), and nothing at
+  the top of `node_modules` the lock does not have (a native module a commit
+  removed). Otherwise the run stops with 75 — the machine's install, not the
+  change — and says to run `npm ci`. The supervisor's `node_modules` is not
+  reinstalled when a commit changes the lock.
 - **Debug**, for `e2e/flows`: built into `e2e/.build` when the project's inputs
   changed and kept until they change again; its JS comes from Metro.
 - **Release**, for `e2e/release`: built on every run that has a Release flow —

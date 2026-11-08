@@ -60,7 +60,7 @@ import { getText } from './http.mjs';
 import { mergeJunit } from './junit.mjs';
 import { LOCK, takeLock } from './lock.mjs';
 import { exitCode, flattenBatches, limitMs, nextStep } from './midnight.mjs';
-import { appPath, buildApp, builtFrom, checkReleaseBundle, inputsHash, MachineError, prepareProject, splitFlows } from './native.mjs';
+import { appPath, buildApp, builtFrom, checkReleaseBundle, inputsHash, MachineError, prepareProject, requireInstalledAsLocked, splitFlows } from './native.mjs';
 import { localDate, seed } from './seed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -583,6 +583,9 @@ async function main() {
   // Mac does, and Metro, the simulator and the database would only crowd it
   // (T-231). The iOS project is the one this tree's app.json makes.
   const udid = await environment(simulator);
+  // The hash covers the lockfile, not what is installed: node_modules not
+  // installed from it would be built and stamped as this commit's.
+  nativeStep(() => requireInstalledAsLocked());
   const hash = inputsHash();
   step(`native inputs ${hash.slice(0, 12)} (app.json, locales, assets, packages)`);
   nativeStep(() => prepareProject({ hash, log: path.join(OUT, 'prepare.log'), step, force: forceBuild }));

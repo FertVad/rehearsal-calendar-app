@@ -85,6 +85,56 @@ export function inputsHash(root = ROOT) {
   return hash.digest('hex');
 }
 
+/**
+ * What is installed in node_modules against package-lock.json; a list of
+ * what differs, empty when they agree. The project is linked to node_modules
+ * and prebuild runs with --no-install, so what autolinking finds there is what
+ * the app is built of — and the supervisor's node_modules is the main
+ * checkout's, which a change of the lockfile does not reinstall. A package the
+ * lock has at another version, a package it has that is not there (unless
+ * optional: one for another platform), a package at the top of node_modules
+ * the lock does not have (autolinking would link a native module the commit
+ * removed): each is a project the commit does not make.
+ */
+export function installedMismatch(root = ROOT) {
+  const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  const packages = lock.packages ?? {};
+  const problems = [];
+  for (const [where, entry] of Object.entries(packages)) {
+    if (!where || entry.link || entry.inBundle) continue;
+    const manifest = path.join(root, where, 'package.json');
+    if (!fs.existsSync(manifest)) {
+      if (!entry.optional) problems.push(`${where} ${entry.version} is not installed`);
+      continue;
+    }
+    const installed = JSON.parse(fs.readFileSync(manifest, 'utf8')).version;
+    if (entry.version && installed !== entry.version) problems.push(`${where} is ${installed}, the lock has ${entry.version}`);
+  }
+  const modules = path.join(root, 'node_modules');
+  const top = (dir, prefix = '') => (fs.existsSync(dir) ? fs.readdirSync(dir) : [])
+    .filter((name) => !name.startsWith('.'))
+    .flatMap((name) => (name.startsWith('@') && !prefix ? top(path.join(dir, name), `${name}/`) : [`${prefix}${name}`]));
+  for (const name of top(modules)) {
+    if (!packages[`node_modules/${name}`] && fs.existsSync(path.join(modules, name, 'package.json'))) {
+      problems.push(`node_modules/${name} is installed and the lock does not have it`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * Refuses node_modules that are not what package-lock.json says
+ * (`installedMismatch`): the machine's install, not the commit, so a
+ * MachineError — the run says neither green nor red of the change.
+ */
+export function requireInstalledAsLocked(root = ROOT) {
+  const problems = installedMismatch(root);
+  if (problems.length) {
+    throw new MachineError(`node_modules is not what package-lock.json says (${problems.length}): `
+      + `${problems.slice(0, 8).join('; ')}${problems.length > 8 ? '; …' : ''} — run npm ci in ${root}`);
+  }
+}
+
 const read = (file) => { try { return fs.readFileSync(file, 'utf8').trim(); } catch { return null; } };
 
 /** The stamp next to a built app: the inputs of the project it was built from. */
