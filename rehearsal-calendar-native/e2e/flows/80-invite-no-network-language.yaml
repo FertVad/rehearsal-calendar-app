@@ -38,8 +38,9 @@ tags:
 - tapOn:
     id: project-card
     text: ".*Town Inspection.*"
+# The button is one element, its icon's empty label first: ", Поделиться ссылкой".
 - extendedWaitUntil:
-    visible: "Поделиться ссылкой"
+    visible: ".*Поделиться ссылкой"
     timeout: 15000
 - runScript:
     file: ../scripts/hold-answers.js
@@ -52,7 +53,7 @@ tags:
       DROP: "1"
 # Not tap-and-see: the window that answers it is the point, and a second tap
 # would ask again.
-- tapOn: "Поделиться ссылкой"
+- tapOn: ".*Поделиться ссылкой"
 - extendedWaitUntil:
     visible: "Нет соединения\\. Проверьте интернет и попробуйте ещё раз\\."
     timeout: 15000
