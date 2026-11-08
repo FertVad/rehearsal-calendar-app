@@ -40,7 +40,7 @@ import { MEMORY, waitFor, waitOver } from './lib/limits.mjs';
 import * as P from './lib/prompts.mjs';
 import { appendReport, loadState, parseDecisions, parseTasks, saveState, writeAtomic } from './lib/store.mjs';
 import { auditTasks, taskMarkdown } from './lib/audit.mjs';
-import { flakeTask, flakeTitle, insertAfter, insertBefore, nextFlakeId } from './lib/flakes.mjs';
+import { flakeTask, flakeTitle, nextFlakeId, queueFound } from './lib/flakes.mjs';
 import { NIGHT, fullE2eDue, regressionTask, regressionTitle } from './lib/nightly.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -574,10 +574,9 @@ function evidenceLine(kept, steps) {
 }
 
 /**
- * Puts a task the supervisor found next in the queue: after the current
- * task, or before the first one not started. The same title still open gets
- * `again` as a note instead; one done is queued anew — what it fixed is back.
- * Its id.
+ * Puts a task the supervisor found into the queue, behind the tasks people
+ * queued (queueFound). The same title still open gets `again` as a note
+ * instead; one done is queued anew — what it fixed is back. Its id.
  */
 function queueTask(state, title, block, again) {
   const file = path.join(DIR, 'TASKS.md');
@@ -589,9 +588,9 @@ function queueTask(state, title, block, again) {
     return known.id;
   }
   const id = nextFlakeId(text);
-  const first = tasks.find((queued) => !['done', 'skipped', 'deferred'].includes(state.tasks[queued.id]?.phase));
-  writeAtomic(file, state.current ? insertAfter(text, state.current, block(id))
-    : first ? insertBefore(text, first.id, block(id)) : `${text.trimEnd()}\n\n${block(id)}`);
+  const waiting = tasks.filter((queued) => queued.id !== state.current
+    && !['done', 'skipped', 'deferred'].includes(state.tasks[queued.id]?.phase));
+  writeAtomic(file, queueFound(text, waiting, block(id)));
   return id;
 }
 

@@ -1,9 +1,9 @@
 /**
  * A test that fails and then passes on the same commits is flaky: not the
  * task's failure, and not something to fix inside it. The task goes on, and
- * the test becomes a task of its own, queued right after the one it hit —
- * with what failed, so its developer starts from the evidence (owner,
- * 2026-10-10: three in one day, none of them T-109's).
+ * the test becomes a task of its own — with what failed, so its developer
+ * starts from the evidence (owner, 2026-10-10: three in one day, none of them
+ * T-109's). It waits behind the tasks people queued (queueFound).
  */
 
 const MARKS = [
@@ -82,19 +82,28 @@ ${evidence}
 `;
 }
 
-/** Puts a task block right after task `afterId`'s block — next in the queue. */
-export function insertAfter(tasksMarkdown, afterId, block) {
-  const start = tasksMarkdown.search(new RegExp(`^## ${afterId}\\b`, 'm'));
-  if (start < 0) return `${tasksMarkdown.trimEnd()}\n\n${block}`;
-  const rest = tasksMarkdown.slice(start + 1);
-  const next = rest.search(/^## T-\d{3,}\b/m);
-  if (next < 0) return `${tasksMarkdown.trimEnd()}\n\n${block}`;
-  const at = start + 1 + next;
-  return `${tasksMarkdown.slice(0, at)}${block}\n${tasksMarkdown.slice(at)}`;
+/** A task the supervisor queued itself: a flaky test, or flows red again in the full run (nightly.mjs). */
+export function isFoundTask(title) {
+  return /^(Нестабильный тест|Полный e2e красный): /.test(title);
 }
 
-/** Puts a task block right before task `beforeId`'s block — first in the queue. */
-export function insertBefore(tasksMarkdown, beforeId, block) {
+/**
+ * Puts a task the supervisor found into the queue: behind every waiting task
+ * a person queued, ahead of the supervisor's own still waiting; at the end
+ * when none of those wait. `waiting` is the tasks not yet finished, in file
+ * order, the current one left out.
+ *
+ * Owner, 07.11.2026: «обнаруженные баги поставь в очередь первыми». Queued
+ * right after the current task, T-234 — a flaky flow in T-229's checks — was
+ * taken at once, ahead of T-232 and T-233, bugs he had found in the app.
+ */
+export function queueFound(tasksMarkdown, waiting, block) {
+  const own = waiting.find((task) => isFoundTask(task.title));
+  return own ? insertBefore(tasksMarkdown, own.id, block) : `${tasksMarkdown.trimEnd()}\n\n${block}`;
+}
+
+/** Puts a task block right before task `beforeId`'s block. */
+function insertBefore(tasksMarkdown, beforeId, block) {
   const at = tasksMarkdown.search(new RegExp(`^## ${beforeId}\\b`, 'm'));
   if (at < 0) return `${tasksMarkdown.trimEnd()}\n\n${block}`;
   return `${tasksMarkdown.slice(0, at)}${block}\n${tasksMarkdown.slice(at)}`;

@@ -45,8 +45,8 @@ A task set aside twice keeps the earlier work too, as `auto/deferred/T-…-1`.
 
 **A red check is run once more on the same commits.** Green the second time,
 the test is flaky, not the task's: the task goes on to review, and the test is
-queued as a task of its own right after it — `T-2NN Нестабильный тест: …`,
-with what failed (`lib/flakes.mjs`). An e2e run that exits 75 is the machine,
+queued as a task of its own — `T-2NN Нестабильный тест: …`, with what failed
+(`lib/flakes.mjs`). An e2e run that exits 75 is the machine,
 not the task: no attempt is counted, and the checks run again in 15 minutes,
 then hourly.
 
@@ -60,8 +60,15 @@ the commit the current task started from — in the reviewer's tree, between
 steps: once a night from 01:00 to 06:00 when auto/main has moved, and as the
 control run when the queue is done (`lib/nightly.mjs`). Red flows run again on
 their own: red twice is a `T-2NN Полный e2e красный: …` task, green the
-second time a `Нестабильный тест`, either first in the queue and naming its
-flows, so its checks run them. A run the machine spoiled — not ready, asleep,
+second time a `Нестабильный тест`, either naming its flows, so its checks run
+them.
+
+**What the supervisor finds waits behind what people queued** (owner,
+07.11.2026: bugs found in the app go first). A flaky test or a red full run
+goes behind every waiting task a person put in `TASKS.md`, ahead of the
+supervisor's own tasks still waiting, at the end when none wait
+(`queueFound`). It used to go right after the current task, so T-234, a
+flaky flow in T-229's checks, was taken ahead of T-232 and T-233. A run the machine spoiled — not ready, asleep,
 out of time — is tried again after an hour. The last one is in `STATUS.md`.
 
 **Flows the Maestro driver never ran are run again**, once, in a run of
