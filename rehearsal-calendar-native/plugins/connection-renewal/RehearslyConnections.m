@@ -77,19 +77,20 @@ static NSURLSession *RehearslySessionFactory(id self, SEL _cmd, NSURLSessionConf
   return session;
 }
 
+// When the app's image loads, before anything runs: React Native makes its
+// session on the first request. Not `+load`, which RCT_EXPORT_MODULE defines.
+__attribute__((constructor)) static void RehearslyNoteSessions(void)
+{
+  Method factory = class_getClassMethod([NSURLSession class], @selector(sessionWithConfiguration:delegate:delegateQueue:));
+  RehearslyOriginalSessionFactory = method_setImplementation(factory, (IMP)RehearslySessionFactory);
+}
+
 @interface RehearslyConnections : NSObject <RCTBridgeModule>
 @end
 
 @implementation RehearslyConnections
 
 RCT_EXPORT_MODULE()
-
-+ (void)load
-{
-  // Before anything runs: React Native makes its session on the first request.
-  Method factory = class_getClassMethod([NSURLSession class], @selector(sessionWithConfiguration:delegate:delegateQueue:));
-  RehearslyOriginalSessionFactory = method_setImplementation(factory, (IMP)RehearslySessionFactory);
-}
 
 + (BOOL)requiresMainQueueSetup
 {

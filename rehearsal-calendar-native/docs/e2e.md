@@ -373,6 +373,21 @@ closed on release (or when its `MS` lapses), never handed to the server: a
 request that fails late, after something else has landed, when the flow says
 (flow 36).
 `LOSE: "1"` hands the request to the server and closes its connection instead of the answer: the change is made, the app's request fails (flow 13).
+`DEAD: "1"` changes the network under the app at the matching request: its
+connection and every other one the app has open go silent — read, never
+answered, never closed — and a new connection is answered as usual; with
+`ONCE` the hold goes after that request. `server.log` names the connection
+each request on that path came on ("connection #3, which the network left
+behind", "connection #4, a live one"). The phone after LTE→5G (flow 82,
+T-240). The app's request fails when iOS gives up on the silence; on the
+simulator that came as a network error within the flow's wait.
+
+A request that got no answer (timeout, broken connection, offline) makes the
+app flush React Native's connection pool and send a read or a sign-in once
+more (`api.ts`, `plugins/connection-renewal`, T-240): a GET held with `DROP`
+is asked twice by the app, besides iOS's own repeat, so hold it without
+`ONCE` when it must fail. A change — POST, PUT, DELETE other than a sign-in
+— is not sent again, and `DROP`/`LOSE` with `ONCE` on one fails as before.
 
 When `DROP`, when `MS`. The app's ten seconds (`REQUEST_TIMEOUT_MS`) are not
 the app's: axios hands them to NSURLSession, and iOS gives up after ten seconds
