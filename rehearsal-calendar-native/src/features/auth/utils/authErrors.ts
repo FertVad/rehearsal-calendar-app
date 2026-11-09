@@ -1,4 +1,5 @@
 import type { Translations } from '../../../i18n/translations';
+import { gotNoAnswer } from '../../../shared/utils/noAnswer';
 
 /** What the server said about sending an email: accepted, refused, or no answer. */
 export type DeliveryOutcome = 'sent' | 'failed' | 'unknown';
@@ -15,6 +16,8 @@ export class AuthFlowError extends Error {
     readonly code?: string,
     readonly status?: number,
     readonly details: { email?: string; retryAfter?: number; field?: string } = {},
+    /** The request heard nothing back from the network (gotNoAnswer, T-240). */
+    readonly noAnswer = false,
   ) {
     super(message);
     this.name = 'AuthFlowError';
@@ -28,6 +31,7 @@ export function toAuthFlowError(err: any, fallback: string): AuthFlowError {
     typeof data.code === 'string' ? data.code : undefined,
     err?.response?.status,
     { email: data.email, retryAfter: data.retryAfter, field: data.field },
+    gotNoAnswer(err),
   );
 }
 
@@ -56,9 +60,11 @@ export function authErrorMessage(t: Translations, error: unknown): string {
   }
   if (failure?.status === 401) return t.auth.invalidCredentials;
   // Anything else is English — the server's text or the app's own fallback —
-  // so it gets the app's words instead (review of T-130). No answer at all is
-  // the network, which the person can do something about.
-  if (failure && failure.status === undefined) return t.auth.noConnection;
+  // so it gets the app's words instead (review of T-130). No answer from the
+  // network is the connection, which the person can do something about. Not
+  // every failure without a status is: a session that ended, or code that
+  // threw after the answer, says something went wrong (T-240).
+  if (failure?.noAnswer) return t.auth.noConnection;
   // The server's own trouble: unavailable, as every other window says it
   // (requestErrorMessage, T-228), not "something went wrong".
   if (failure?.status !== undefined && failure.status >= 500) return t.common.serverUnavailable;

@@ -58,6 +58,16 @@
  * the server made whose answer never reached the app (flow 13); unlike `drop`,
  * the request reaches the server.
  *
+ * With `&dead=1` the network changes under the app: the request's connection
+ * and every other connection the app has open go silent — whatever arrives on
+ * them is read and never answered, and they are not closed, as a connection
+ * the phone left on its old network looks from the app (T-240, the owner's
+ * iPhone going from LTE to 5G). A new connection is answered as usual. Each
+ * request on a silent one, and each later request on the same path, is logged
+ * with its connection's number, so the log shows which connection a retry
+ * took. A silent connection is closed after HOLD_WINDOW_MS, if the app has not
+ * given up on it first.
+ *
  * With `&once=1` only the next matching request is held, and the ones after it
  * go through: a read on a slow connection and the change after it on a good
  * one (flow 36). A request held `before` says how the server answered it on
@@ -246,6 +256,50 @@ function logAgain(request, response) {
   };
 }
 
+// The app's connections, numbered as they come, and those the network left
+// behind (`&dead=1`): read, never answered, never closed by us before
+// HOLD_WINDOW_MS.
+const connections = new Set();
+const silent = new WeakSet();
+let connectionCount = 0;
+// The paths a `dead` hold named, for HOLD_WINDOW_MS: their requests are logged
+// with the connection each came on.
+let watched = [];
+
+function trackConnection(socket) {
+  socket.e2eNumber = ++connectionCount;
+  connections.add(socket);
+  socket.on('close', () => connections.delete(socket));
+}
+
+function goSilent() {
+  for (const socket of connections) {
+    if (silent.has(socket)) continue;
+    silent.add(socket);
+    // Node closes an idle connection after its keep-alive time; one the
+    // network left behind is not closed, it is just never heard from again.
+    socket.setTimeout(0);
+    setTimeout(() => socket.destroy(), HOLD_WINDOW_MS).unref();
+  }
+}
+
+// True when the request came on a silent connection: it is read and dropped
+// on the floor, with no answer.
+function swallowed(request) {
+  const { pathname } = new URL(request.url, 'http://api');
+  watched = watched.filter((watch) => watch.until > Date.now());
+  const number = request.socket.e2eNumber;
+  if (silent.has(request.socket)) {
+    console.log(`[e2e] ${request.method} ${pathname} on connection #${number}, which the network left behind: no answer`);
+    request.resume();
+    return true;
+  }
+  if (watched.some((watch) => watch.method === request.method && watch.path.test(pathname))) {
+    console.log(`[e2e] ${request.method} ${pathname} on connection #${number}, a live one`);
+  }
+  return false;
+}
+
 // Hands the request to `handle` — at once, or on release when its hold says
 // the request waits.
 function holdAnswer(request, response, handle) {
@@ -254,6 +308,13 @@ function holdAnswer(request, response, handle) {
   const hold = holds.find((candidate) => candidate.method === request.method && candidate.path.test(pathname));
   if (!hold) return handle();
   if (hold.once) holds = holds.filter((candidate) => candidate !== hold);
+  if (hold.dead) {
+    goSilent();
+    watched.push({ method: hold.method, path: hold.path, until: Date.now() + HOLD_WINDOW_MS });
+    console.log(`[e2e] the network changed: ${request.method} ${pathname} on connection #${request.socket.e2eNumber} and ${connections.size - 1} other connection(s) went silent`);
+    request.resume();
+    return;
+  }
   const drop = () => {
     console.log(`[e2e] dropped the request ${request.method} ${pathname}: its connection closed, no answer`);
     request.socket.destroy();
@@ -318,10 +379,11 @@ function withoutUpgrade(response) {
 
 // As app.listen would, with the hold in front.
 http.createServer((request, response) => {
+  if (swallowed(request)) return;
   withoutUpgrade(response);
   logAgain(request, response);
   holdAnswer(request, response, () => app(request, response));
-}).listen(Number(process.env.PORT), process.env.HOST, () => {
+}).on('connection', trackConnection).listen(Number(process.env.PORT), process.env.HOST, () => {
   console.log('[e2e] server listening');
 });
 
@@ -339,7 +401,8 @@ http.createServer((request, response) => {
     const once = url.searchParams.get('once') === '1';
     const drop = url.searchParams.get('drop') === '1';
     const lose = url.searchParams.get('lose') === '1';
-    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, lose, until: Date.now() + HOLD_WINDOW_MS });
+    const dead = url.searchParams.get('dead') === '1';
+    holds.push({ method, path: new RegExp(url.searchParams.get('path') || '^$'), limitMs, before, open, once, drop, lose, dead, until: Date.now() + HOLD_WINDOW_MS });
     return answer(200, { holding: holds.length });
   }
   if (request.method === 'GET' && url.pathname === '/notify' && url.searchParams.get('type') === 'member_joined') {

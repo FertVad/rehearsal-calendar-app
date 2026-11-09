@@ -1,8 +1,6 @@
 import type { Translations } from '../../i18n/translations';
 import { AuthFlowError } from '../../features/auth/utils/authErrors';
-
-/** axios's own codes for a request that got no answer. */
-const NO_ANSWER_CODES = new Set(['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT']);
+import { gotNoAnswer } from './noAnswer';
 
 /**
  * What a failed request is called on screen, in the app's language (T-228).
@@ -27,7 +25,7 @@ export function requestErrorMessage(t: Translations, error: unknown, fallback: s
   // Thrown whole by AuthContext (toAuthFlowError): the answer's status and the
   // server's text are kept on it, the response itself is not.
   if (err instanceof AuthFlowError) {
-    if (err.status === undefined) return err.code ? fallback : t.common.noConnection;
+    if (err.status === undefined) return err.noAnswer ? t.common.noConnection : fallback;
     if (err.status >= 500) return t.common.serverUnavailable;
     return err.message || fallback;
   }
@@ -39,8 +37,9 @@ export function requestErrorMessage(t: Translations, error: unknown, fallback: s
     return typeof said === 'string' && said.trim() ? said : fallback;
   }
 
-  if (err && (err.isAxiosError || err.request !== undefined || NO_ANSWER_CODES.has(err.code))) {
-    return t.common.noConnection;
-  }
+  // Only a request that heard nothing from the network (T-240): a cancelled
+  // one, a session that ended or an error thrown after the answer is not "no
+  // connection".
+  if (gotNoAnswer(err)) return t.common.noConnection;
   return fallback;
 }

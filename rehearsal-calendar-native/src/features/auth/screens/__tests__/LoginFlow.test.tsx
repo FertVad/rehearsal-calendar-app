@@ -10,6 +10,8 @@
 import React from 'react';
 import { Alert } from 'react-native';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { AxiosError } from 'axios';
+import { SessionEndedError } from '../../../../shared/services/session';
 import { AuthProvider, useAuth } from '../../../../contexts/AuthContext';
 import LoginScreen from '../LoginScreen';
 import { translations } from '../../../../i18n/translations';
@@ -72,7 +74,10 @@ beforeEach(() => {
 
 const refusals: [string, unknown, string][] = [
   ['a wrong password', { response: { status: 401, data: { error: 'Invalid credentials' } } }, t.auth.invalidCredentials],
-  ['no network', Object.assign(new Error('Network Error'), { request: {} }), t.auth.noConnection],
+  // As axios rejects it: an AxiosError with its code and no response (T-240).
+  ['no network', new AxiosError('Network Error', 'ERR_NETWORK', undefined, {}), t.auth.noConnection],
+  // A session that ended is not the network (T-240).
+  ['a session that ended', new SessionEndedError(), t.auth.requestFailed],
   ['the server failing', { response: { status: 500, data: { error: 'Internal error' } } }, t.common.serverUnavailable],
   ['too many tries', { response: { status: 429, data: { error: 'Slow down', code: 'RATE_LIMITED', retryAfter: 30 } } }, t.auth.rateLimited(30)],
 ];

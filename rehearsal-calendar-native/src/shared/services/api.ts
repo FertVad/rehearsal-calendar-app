@@ -4,7 +4,9 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { logger } from '../utils/logger';
 import { emitDataChanged } from '../utils/dataChanged';
+import { gotNoAnswer } from '../utils/noAnswer';
 import { currentSession,isCurrentSession, reportSessionExpired, SessionEndedError, SessionStamp } from './session';
+import { renewConnections } from './connections';
 
 /**
  * API Configuration
@@ -121,6 +123,19 @@ const api = axios.create({
 const inSession = (session?: SessionStamp) =>
   session === undefined ? undefined : ({ session } as Record<string, unknown>);
 
+/**
+ * A request that may be sent again when it got no answer (T-240): a read, or
+ * one marked `repeatable` — a sign-in, whose repeat signs in again and
+ * changes nothing else. A change is not: its first try may have reached the
+ * server, and a create is repeated by the person, under its idempotency key.
+ */
+const REPEATABLE = { repeatable: true } as Record<string, unknown>;
+
+const isRepeatable = (config: any) => {
+  const method = String(config?.method ?? 'get').toLowerCase();
+  return method === 'get' || method === 'head' || config?.repeatable === true;
+};
+
 api.interceptors.request.use(
   async (config) => {
     const session = (config as any).session ?? currentSession();
@@ -166,6 +181,10 @@ async function refreshSession(): Promise<string> {
     response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken }, { timeout: REQUEST_TIMEOUT_MS });
   } catch (error: any) {
     if (refusesSession(error?.response?.status) && isCurrentSession(session)) reportSessionExpired();
+    // Not sent again: the server rotates the pair, and a refresh it handled
+    // whose answer was lost spent the token. The connection it took is
+    // suspect all the same (see the response interceptor).
+    if (gotNoAnswer(error)) await renewConnections();
     throw error;
   }
   if (!isCurrentSession(session)) throw new SessionEndedError();
@@ -224,6 +243,20 @@ api.interceptors.response.use(
       emitDataChanged('projects');
     }
 
+    // No answer: the connection the request took may be one the network left
+    // behind, and iOS would hand the next request the same one (T-240). The
+    // pool is flushed, so whatever goes next — this request again, or the
+    // person's next tap — goes down a new connection; a request that may be
+    // repeated is sent again once, now. One that is not fails as before.
+    if (gotNoAnswer(error) && originalRequest && !originalRequest._renewed) {
+      originalRequest._renewed = true;
+      await renewConnections();
+      if (isRepeatable(originalRequest) && isCurrentSession(originalRequest.session)) {
+        logger.warn(`No answer to ${originalRequest.method?.toUpperCase()} ${url}; sending it again on a new connection`);
+        return api(originalRequest);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
@@ -242,8 +275,10 @@ export const authAPI = {
   resendVerification: (email: string, password: string) =>
     api.post('/auth/verify-email/resend', { email, password }, sendsEmails(1)),
 
+  // A sign-in is sent again when it got no answer (T-240): a repeat issues
+  // another session and changes nothing else.
   login: (email: string, password: string) =>
-    api.post('/auth/login', { email, password }),
+    api.post('/auth/login', { email, password }, REPEATABLE),
 
   // A forgotten password, with a code emailed to the address (R3). The request
   // answers alike with and without an account; the confirmation answers with
@@ -285,12 +320,13 @@ export const authAPI = {
 
   logout: () => api.post('/auth/logout'),
 
-  // OAuth Authentication
+  // OAuth Authentication. Repeatable as login is: the provider's token is
+  // checked again and a session issued again.
   loginWithGoogle: (idToken: string) =>
-    api.post('/auth/google', { idToken }),
+    api.post('/auth/google', { idToken }, REPEATABLE),
 
   loginWithApple: (idToken: string, user?: any) =>
-    api.post('/auth/apple', { idToken, user }),
+    api.post('/auth/apple', { idToken, user }, REPEATABLE),
 
   // Auth Provider Management
   getAuthProviders: () =>

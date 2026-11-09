@@ -7,6 +7,7 @@ import { AxiosError } from 'axios';
 import { requestErrorMessage } from '../requestError';
 import { translations, Language } from '../../../i18n/translations';
 import { AuthFlowError, toAuthFlowError } from '../../../features/auth/utils/authErrors';
+import { SessionEndedError } from '../../services/session';
 
 const LANGUAGES: Language[] = ['ru', 'en', 'es', 'de'];
 const FALLBACK = 'Could not create the invite link';
@@ -73,4 +74,19 @@ it("never shows the message of an error that is not a request's", () => {
   expect(requestErrorMessage(t, 'boom', FALLBACK)).toBe(FALLBACK);
   expect(requestErrorMessage(t, undefined, FALLBACK)).toBe(FALLBACK);
   expect(requestErrorMessage(t, new AuthFlowError('Sign in again', 'SIGN_IN_AGAIN'), FALLBACK)).toBe(FALLBACK);
+});
+
+// Only a request that heard nothing from the network is "no connection"
+// (T-240): not a session that ended, a request the app cancelled, or code
+// that threw after the answer — whole or turned into an AuthFlowError.
+it('does not call a failure that got through "no connection"', () => {
+  for (const error of [
+    new SessionEndedError(),
+    new AxiosError('canceled', 'ERR_CANCELED', undefined, {}),
+    new TypeError("Cannot read properties of undefined (reading 'user')"),
+  ]) {
+    expect(requestErrorMessage(t, error, FALLBACK)).toBe(FALLBACK);
+    expect(requestErrorMessage(t, toAuthFlowError(error, 'Update failed'), FALLBACK)).toBe(FALLBACK);
+  }
+  expect(requestErrorMessage(t, toAuthFlowError(timeout(), 'Update failed'), FALLBACK)).toBe(t.common.noConnection);
 });

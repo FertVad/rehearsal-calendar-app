@@ -18,6 +18,8 @@
         // app.json's config plugin; dsyms.mjs is what its build phase runs.
         "plugins/prebuilt-dsyms/withPrebuiltDsyms.js",
         "plugins/prebuilt-dsyms/dsyms.mjs",
+        // app.json's config plugin that compiles RehearslyConnections.m into the app (T-240).
+        "plugins/connection-renewal/withConnectionRenewal.js",
         "plugins/**/__tests__/**/*.mjs"
       ],
       "project": [

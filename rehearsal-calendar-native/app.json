@@ -96,7 +96,8 @@
       ],
       "expo-localization",
       "expo-calendar",
-      "./plugins/prebuilt-dsyms/withPrebuiltDsyms"
+      "./plugins/prebuilt-dsyms/withPrebuiltDsyms",
+      "./plugins/connection-renewal/withConnectionRenewal"
     ],
     "extra": {
       "eas": {

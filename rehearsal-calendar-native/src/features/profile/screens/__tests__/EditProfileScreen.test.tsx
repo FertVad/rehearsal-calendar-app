@@ -62,7 +62,8 @@ it('says a refused name and a lost connection in the app language, not the serve
   mockAuth.updateUser.mockRejectedValueOnce(new AuthFlowError('Name is not valid', 'NAME_INVALID', 400));
   await act(async () => { fireEvent.press(view.getByTestId('profile-save')); });
   expect(Alert.alert).toHaveBeenLastCalledWith(t.profile.updateError, t.auth.nameInvalid);
-  mockAuth.updateUser.mockRejectedValueOnce(new AuthFlowError('Update failed'));
+  // No answer from the network, as toAuthFlowError marks it (T-240).
+  mockAuth.updateUser.mockRejectedValueOnce(new AuthFlowError('Update failed', undefined, undefined, {}, true));
   await act(async () => { fireEvent.press(view.getByTestId('profile-save')); });
   expect(Alert.alert).toHaveBeenLastCalledWith(t.profile.updateError, t.auth.noConnection);
 });

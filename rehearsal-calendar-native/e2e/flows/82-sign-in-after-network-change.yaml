@@ -1,0 +1,64 @@
+# A sign-in sent down a connection the network left behind goes through
+# (T-240). The owner's iPhone, TestFlight 1.0.0 (3), 09.11.2026: the phone
+# went from LTE to 5G just after a sign-out, the Google sign-in went down the
+# connection the sign-out had used, which was dead, heard nothing for ten
+# seconds and said "no connection" — and the next try took the same dead
+# connection and said it again, with the network working all along.
+#
+# Here the network changes as the sign-in goes out (hold-answers.js, DEAD):
+# its connection and every other one the app has open go silent, a new one is
+# answered. The sign-in must arrive on a new connection and the person land on
+# the calendar, never seeing "no connection". server.log names the connection
+# each try came on.
+appId: ${APP_ID}
+name: A sign-in on a connection the network left behind goes through
+tags:
+  - auth
+  - network
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- runFlow:
+    file: ../subflows/sign-in-fill.yaml
+    env:
+      EMAIL: ${DIRECTOR_EMAIL}
+- runScript:
+    file: ../scripts/hold-answers.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      METHOD: POST
+      PATH: "^/api/auth/login$"
+      DEAD: "1"
+      ONCE: "1"
+# One tap, not tap-and-see.yaml: its second tap, after the first try failed,
+# is the person trying again, which on the simulator's HTTP/1.1 takes a new
+# connection anyway and would hide the failure this flow is about. A lost tap
+# fails the flow here (about one in 250, docs/e2e.md).
+- tapOn:
+    id: login-submit
+# Ten seconds of silence on the dead connection, then the sign-in on a new
+# one: the form goes, for the calendar or for iOS's offer to keep the
+# password over it. Before the fix the form stayed, saying "no connection".
+- extendedWaitUntil:
+    notVisible:
+      id: login-submit
+    timeout: 40000
+- assertNotVisible: "No connection to the server.*"
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 10000
+    optional: true
+- runFlow:
+    when:
+      visible: "Not Now"
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Not Now"
+      GONE: "Not Now"
+      WAIT_MS: 5000
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- takeScreenshot: 82-signed-in-after-network-change

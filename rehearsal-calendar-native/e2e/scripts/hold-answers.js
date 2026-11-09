@@ -26,6 +26,11 @@ const before = typeof BEFORE === 'undefined' ? '' : '&before=' + BEFORE;
 const open = typeof OPEN === 'undefined' ? '' : '&open=' + OPEN;
 const once = typeof ONCE === 'undefined' ? '' : '&once=' + ONCE;
 const drop = typeof DROP === 'undefined' ? '' : '&drop=' + DROP;
+// ${DEAD}, when "1", changes the network under the app at the matching
+// request: its connection and every other one the app has open go silent —
+// read, never answered, never closed — and a new connection is answered as
+// usual (T-240).
 const lose = typeof LOSE === 'undefined' ? '' : '&lose=' + LOSE;
-const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait + before + open + once + drop + lose);
+const dead = typeof DEAD === 'undefined' ? '' : '&dead=' + DEAD;
+const response = http.get(MAIL_URL + '/hold?method=' + METHOD + '&path=' + encodeURIComponent(PATH) + wait + before + open + once + drop + lose + dead);
 if (!response.ok) throw new Error('hold answered ' + response.status + ': ' + response.body);

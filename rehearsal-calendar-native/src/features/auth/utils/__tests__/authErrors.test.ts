@@ -6,7 +6,9 @@
  * person's language. Every code the new flows can meet has a message in all
  * four languages.
  */
+import { AxiosError } from 'axios';
 import { AuthFlowError, toAuthFlowError, authErrorMessage } from '../authErrors';
+import { SessionEndedError } from '../../../../shared/services/session';
 import { translations } from '../../../../i18n/translations';
 
 const CODES = ['CODE_INVALID', 'CODE_EXPIRED', 'CODE_LOCKED', 'CODE_MISSING', 'ALREADY_VERIFIED', 'EMAIL_UNAVAILABLE',
@@ -48,8 +50,10 @@ describe('authErrorMessage', () => {
   // language (review of T-130).
   it.each(Object.keys(translations))('says no answer and an unknown failure in %s, not in English', (language) => {
     const t = translations[language as keyof typeof translations];
-    const offline = toAuthFlowError(new Error('Network Error'), 'Could not send the code');
+    const offline = toAuthFlowError(new AxiosError('Network Error', 'ERR_NETWORK', undefined, {}), 'Could not send the code');
     expect(authErrorMessage(t, offline)).toBe(t.auth.noConnection);
+    const timedOut = toAuthFlowError(new AxiosError('timeout of 10000ms exceeded', 'ECONNABORTED', undefined, {}), 'Login failed');
+    expect(authErrorMessage(t, timedOut)).toBe(t.auth.noConnection);
     expect(authErrorMessage(t, new AuthFlowError('Something else', undefined, 400))).toBe(t.auth.requestFailed);
     expect(authErrorMessage(t, new AuthFlowError('Something else', 'SOME_NEW_CODE', 400))).toBe(t.auth.requestFailed);
     // A 5xx is the server's trouble, not the request's: said as the rest of
@@ -61,6 +65,22 @@ describe('authErrorMessage', () => {
     for (const key of ['noConnection', 'requestFailed'] as const) {
       expect(t.auth[key].length).toBeGreaterThan(0);
       if (language !== 'en') expect(t.auth[key]).not.toBe(translations.en.auth[key]);
+    }
+  });
+
+  // "No connection" only for a request that heard nothing from the network
+  // (T-240). Every failure without a status used to be called that: a session
+  // that ended, code that threw after the server had answered, a request the
+  // app cancelled itself.
+  it.each(Object.keys(translations))('does not call a failure that got through "no connection" in %s', (language) => {
+    const t = translations[language as keyof typeof translations];
+    for (const error of [
+      new SessionEndedError(),
+      new TypeError("Cannot read properties of undefined (reading 'id')"),
+      new Error('Network Error'),
+      new AxiosError('canceled', 'ERR_CANCELED', undefined, {}),
+    ]) {
+      expect(authErrorMessage(t, toAuthFlowError(error, 'Google sign-in failed'))).toBe(t.auth.requestFailed);
     }
   });
 });
