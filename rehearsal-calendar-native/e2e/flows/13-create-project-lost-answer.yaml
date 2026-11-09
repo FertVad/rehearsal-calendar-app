@@ -34,9 +34,12 @@ tags:
       LOSE: "1"
       ONCE: "1"
 - tapOn: "Create"
+# No answer is said in the app's language, not axios's "Network Error"
+# (T-228, requestErrorMessage).
 - extendedWaitUntil:
-    visible: ".*Network Error.*"
+    visible: "No connection\\. Check the internet and try again\\."
     timeout: 20000
+- assertNotVisible: ".*Network Error.*"
 - takeScreenshot: 13-lost-answer
 - tapOn: "OK"
 - tapOn: "Create"

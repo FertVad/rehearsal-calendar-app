@@ -241,7 +241,9 @@ tags:
 # sheet's own Save above that button, and the close question's Save on the
 # screen, which stays open with the change. The
 # request fails: its connection is closed, as when the network goes (not held
-# past ten seconds — those are iOS's to keep, T-220).
+# past ten seconds — those are iOS's to keep, T-220). With no answer, why is
+# no connection, in the app's language; the save's own "Failed to save
+# availability" is for a failure that is not the network's (T-228).
 - tapOn:
     id: tab-create
 - tapOn: "Mark Busy"
@@ -278,7 +280,7 @@ tags:
 - extendedWaitUntil:
     visible:
       id: availability-save-error
-      text: "Failed to save availability"
+      text: "No connection\\. Check the internet and try again\\."
       above:
         id: availability-save
     timeout: 15000
@@ -316,7 +318,7 @@ tags:
 - extendedWaitUntil:
     visible:
       id: availability-save-error
-      text: "Failed to save availability"
+      text: "No connection\\. Check the internet and try again\\."
     timeout: 15000
 - assertNotVisible: "OK"
 - assertVisible:
