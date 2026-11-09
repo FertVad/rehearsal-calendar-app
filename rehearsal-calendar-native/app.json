@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rehearsal.app",
+      "appleTeamId": "9N28BHP37Z",
       "buildNumber": "3",
       "associatedDomains": ["applinks:rehearsly.me"],
       "config": {
