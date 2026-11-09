@@ -212,9 +212,14 @@ export const PEOPLE = {
   // projects are that one or none.
   benvolio: { email: 'benvolio@e2e.test', firstName: 'Benvolio', lastName: 'Montague', onboarded: true },
   mercutio: { email: 'mercutio@e2e.test', firstName: 'Mercutio', lastName: 'Escalus', onboarded: true },
-  // An admin of two of Gaev's projects with the rehearsal form open while the
+  // An admin of two of Capulet's projects with the rehearsal form open while the
   // projects are read again behind it, and the role on one taken (77, T-229).
   tybalt: { email: 'tybalt@e2e.test', firstName: 'Tybalt', lastName: 'Capulet', onboarded: true },
+  // Their owner, on no rehearsal and with no busy time: the form's cast is
+  // free at any hour, so Create makes the rehearsal at once (77, T-236). With
+  // Gaev, on two rehearsals today at 12:00, a run between 08:00 and 11:59
+  // met "Schedule Conflict" instead.
+  capulet: { email: 'capulet@e2e.test', firstName: 'Lord', lastName: 'Capulet', onboarded: true },
   // Rosalind puts Orlando on "Wrestling match", already scheduled with her
   // alone on it; he finds it in his inbox and opens it from there (79, T-233).
   // Nobody else in their project, so no other flow's notices mix in.
@@ -542,9 +547,19 @@ export async function seed({ client, apiUrl, timezone }) {
   // Actors in them, made admins while the flow runs (75, 76).
   await joined('Verona Square', 'The public place', 'benvolio');
   await joined('Verona Masque', 'The Capulet feast', 'mercutio');
-  // Tybalt an admin of both; the Ball made last, the role taken from it (77).
-  await joined('Feud Street', 'The duel', 'tybalt', 'admin');
-  await joined('Feud Ball', 'The masked dance', 'tybalt', 'admin');
+  // Capulet's, Tybalt an admin of both; the Ball made last, the role taken
+  // from it (77). Not Gaev's: he is busy today, and the form's default time
+  // would meet him at some hours of the day (T-236). Inserted as Frederick
+  // Court is below: the sign-ins are spent.
+  for (const [name, description] of [['Feud Street', 'The duel'], ['Feud Ball', 'The masked dance']]) {
+    const { rows: [feud] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id`, [name, description, timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'admin', 'active', NOW(), NOW())`,
+      [feud.id, ids.capulet, ids.tybalt]);
+  }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {

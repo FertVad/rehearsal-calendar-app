@@ -1,0 +1,39 @@
+T-236 red before: flow 77 on 82b1af5 (HEAD at the start of the task), tree unchanged.
+Started Mon Nov  9 10:56:37 IST 2026; the form opened at 11:02 local.
+
+$ npm run e2e -- e2e/flows/77-rehearsal-form-projects-read-again.yaml
+[e2e] native inputs 66d6c3728e4a (app.json, locales, assets, packages)
+[e2e] the iOS project is the one app.json, the locales and the packages make now: kept
+[e2e] the Debug app was built from these inputs: kept
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+[Failed] Rehearsal form, the projects read again (1m 52s) (Assertion is false: "Rehearsal created" is visible)
+
+1/1 Flow Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+What is on screen at the failing step (artifacts 2026-11-09_105939,
+step-136-assertCondition-Rehearsal_created.png), as in the nightly run's
+(full-e2e-82b1af5-2026-11-09T08-48-50-682Z, form at 10:45):
+
+  Add Rehearsal, Project: Feud Ball, Title: Masked dance,
+  Start 12:00 PM, End 3:00 PM (night run: 11:00 AM - 2:00 PM)
+  Alert "Schedule Conflict - Leonid Gaev is busy at this time.
+  Are you sure you want to create this rehearsal?" [Create Anyway] [Cancel]
+
+Cause: no commit in 0fc37bc..82b1af5. The flow (written in 2c567dc, T-229)
+depends on the hour it runs at. The form opens on today, the next round hour,
+for three hours (nextRoundHour, usual duration). Feud Street and Feud Ball were
+made by the seed's `joined`, owned by Gaev, so he is in the form's cast; Gaev
+is on "Lamp trimming" and "Tea on the terrace" today 12:00-13:00. A run that
+opens the form between 08:00 and 11:59 on the machine's clock meets the
+conflict alert, and "Rehearsal created" never comes. The last green full run
+(0fc37bc) opened it at another hour; the nightly 82b1af5 run at 10:45 and the
+rerun at 11:02 both hit it.

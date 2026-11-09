@@ -1,6 +1,9 @@
 # The rehearsal form holds what is chosen in it, with the role as it is now,
 # while the projects are read again behind it (T-229 review). Tybalt is an
-# admin of Feud Street and Feud Ball, Gaev's.
+# admin of Feud Street and Feud Ball, Capulet's. Capulet is on no rehearsal and
+# has no busy time, so the form's default time is free at any hour: with Gaev
+# as their owner, busy today at 12:00, a run between 08:00 and 11:59 got
+# "Schedule Conflict" at Create (T-236).
 #
 # He opens the form from Feud Street's page and picks Feud Ball in it. He
 # sends the app away and opens it again: the projects are read again on the
@@ -8,7 +11,7 @@
 # there. The form put the page's project back over his choice on each new
 # list, and the rehearsal went to Feud Street.
 #
-# Then, with the form open on Feud Ball, Gaev takes the admin role on it away
+# Then, with the form open on Feud Ball, Capulet takes the admin role on it away
 # from another device. Back in the app the form says no project is chosen and
 # Create is not offered. It held a copy of the project with the role from
 # when it was chosen, and Create sent what the server refused.
@@ -129,7 +132,7 @@ tags:
     file: ../scripts/set-role.js
     env:
       API_URL: ${API_URL}
-      EMAIL: ${GAEV_EMAIL}
+      EMAIL: ${CAPULET_EMAIL}
       PASSWORD: ${PASSWORD}
       PROJECT: "Feud Ball"
       MEMBER: ${TYBALT_EMAIL}
