@@ -1,16 +1,29 @@
 T-227 — the Release launch check on the configuration before 9d265da, red.
-app.json and locales/ put back as they were before the fix
-(git restore --source=9d265da^ -- app.json locales/; blobs bf948e4 and 8945d1c):
-no NSReminders* keys, expo-calendar with { remindersPermission: false }. Run on
-2026-11-08 at 00:34 (the device log's time), before 202bca1 was committed, with
-the runner then uncommitted in the working tree; that tree's commit was not
-recorded (see manifest.json).
+Source: commit 49b63786f7ab7055cdba6239ccfa5acdeb0131bb, tree
+b3ad34fdb415b24e8fe58415b58e1405344a0fc1 (the same as the green run), with
+only this change, made in rehearsal-calendar-native/:
 
-The first attempt was cut by the 10-minute limit of the developer's command,
-after the project was regenerated (inputs changed: prebuild 6 s, pod install
-about 7 min) and while Release was building; the generated Info.plist had no
-NSReminders* key (grep -c NSReminders e2e/.native/ios/Rehearsly/Info.plist: 0),
-as in TestFlight 1.0.0 (1). The second attempt kept the project and finished:
+$ git restore --source=9d265da^ -- app.json locales/
+
+git status then: M app.json, M locales/{de,en,es,ru}.json, nothing else.
+Blobs: app.json bf948e4 (9d265da^), locales/ 8945d1c (9d265da^); at HEAD they
+are 8e18b38 and c79900d. No NSReminders* keys, expo-calendar with
+{ remindersPermission: false }. Run on 2026-11-09 after the green one; put
+back afterwards with `git restore --source=HEAD -- app.json locales/`, git
+status empty again.
+
+The first attempt regenerated the project (inputs changed) and was cut by the
+developer's 10-minute command limit while Release was building:
+
+[e2e] native inputs 36e7db90e882 (app.json, locales, assets, packages)
+[e2e] generating the iOS project from app.json (expo prebuild, pod install, some 7 minutes) — its inputs changed
+[e2e]   prebuild 5 s, pod install 259 s
+[e2e] building the Release app, its JS bundled for the local server
+
+The generated Info.plist had no NSReminders* key
+(grep -c NSReminders e2e/.native/ios/Rehearsly/Info.plist: 0), as in
+TestFlight 1.0.0 (1). The second attempt was cut the same way while the flow
+was running. The third kept the project and the build and finished:
 
 $ npm run e2e -- e2e/release/01-launch.yaml
 [e2e] native inputs 36e7db90e882 (app.json, locales, assets, packages)
@@ -18,6 +31,7 @@ $ npm run e2e -- e2e/release/01-launch.yaml
 [e2e] building the Release app, its JS bundled for the local server
 [e2e] checking the Release bundle talks to the local server
 [e2e] starting a disposable PostgreSQL
+[e2e] stopping the database a dead run left behind (a6ca1715890e)
 [e2e] provisioning the canonical schema
 [e2e] starting the local server
 [e2e] seeding
@@ -25,22 +39,25 @@ $ npm run e2e -- e2e/release/01-launch.yaml
 [e2e] installing the Release app and running its flows
 
 Waiting for flows to complete...
-[Failed] Release opens on sign-in (1m 31s) (Assertion is false: id: login-submit is visible)
+[Failed] Release opens on sign-in (1m 24s) (Assertion is false: id: login-submit is visible)
 
 1/1 Flow Failed
 
+[e2e] the Release app's device log: 3 error(s) of a failed start (…/e2e/out/release-device.log)
+[e2e]   2026-11-08 18:54:26.028 E  Rehearsly[96024:3ae7bb0] [com.facebook.react.log:native] The operation couldn’t be completed. (ExpoCalendar.MissingCalendarPListValueException error 1.)
+[e2e]   2026-11-08 18:54:26.061 E  Rehearsly[96024:3ae7bed] [com.facebook.react.log:javascript] [runtime not ready]: Error: Cannot find native module 'ExpoPushTokenManager'
+[e2e]   2026-11-08 18:54:26.062 E  Rehearsly[96024:3ae7bed] [com.facebook.react.log:native] Unhandled JS Exception: [runtime not ready]: Error: Cannot find native module 'ExpoPushTokenManager'
+[e2e] taps taken again (tap-and-see.yaml): 0
 (exit 1)
 
-On screen at the failure (release-red-before.png, Maestro step 004): black,
-only the status bar — TestFlight 1.0.0 (1) exactly.
+(Maestro's JVM warnings about sun.misc.Unsafe left out. The device log's
+times are as the simulator's log stream printed them, 2026-11-08 18:54; the
+Mac's clock and the screenshot said 2026-11-09 06:55.)
 
-The app's device log (xcrun simctl spawn … log stream, e2e/out/release-device.log),
-its errors (release-red-before-device.log):
+On screen at the failure (release-red-before.png, Maestro's step 004,
+assertCondition login-submit): black, only the status bar — TestFlight
+1.0.0 (1) exactly.
 
-E  Rehearsly [com.facebook.react.log:native] The operation couldn’t be completed. (ExpoCalendar.MissingCalendarPListValueException error 1.)
-E  Rehearsly [com.facebook.react.log:javascript] [runtime not ready]: Error: Cannot find native module 'ExpoPushTokenManager'
-E  Rehearsly [com.facebook.react.log:native] Unhandled JS Exception: [runtime not ready]: Error: Cannot find native module 'ExpoPushTokenManager'
-
-(The run printed this log's lines with a filter that also took the ATS
-dictionary's NSException* keys at the debug level; the filter now keeps errors
-and faults only, each once, and prints these three.)
+release-red-before-device.log: the error-level lines of e2e/out/release-device.log
+naming MissingCalendarPListValueException or "Cannot find native module"
+(the run prints each once; the log has the JS one twice).

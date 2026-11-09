@@ -1,14 +1,15 @@
-T-227 — the Release launch check on the fixed app.json and locales/, green.
-Run on 2026-11-08 shortly after the red run, before 202bca1 was committed, with
-the runner then uncommitted in the working tree; its source commit was not
-recorded (see manifest.json). app.json and locales/ were put back after the red
-run (git restore --source=HEAD -- app.json locales/): blobs 8e18b38 and c79900d,
-those of 9d265da and of 202bca1 alike.
+T-227 — the Release launch check on the committed tip, green.
+Source: commit 49b63786f7ab7055cdba6239ccfa5acdeb0131bb, tree
+b3ad34fdb415b24e8fe58415b58e1405344a0fc1; git status empty, nothing changed.
+Run on 2026-11-09 at 06:27 (Mac's clock), before the red run.
 
-The first attempt regenerated the project — the inputs had changed back
-(hash 66d6c3728e4a); Info.plist again has both NSReminders* keys — and was cut
-by the developer's 10-minute command limit while Release was building. The
-second kept the project and finished:
+The project the run kept was generated from these inputs (hash 66d6c3728e4a,
+the same as app.json and locales/ of 9d265da). An earlier attempt through
+`node e2e/hold-lock.mjs npm run e2e …` printed nothing for 10 minutes and a
+second one showed why: run.mjs waits for the e2e lock that hold-lock.mjs
+itself holds ("a job under the e2e lock (pid 82807: npm run e2e -- …) is
+going; waiting for it"). npm run e2e takes the same lock on its own, so it was
+run directly:
 
 $ npm run e2e -- e2e/release/01-launch.yaml
 [e2e] native inputs 66d6c3728e4a (app.json, locales, assets, packages)
@@ -16,7 +17,6 @@ $ npm run e2e -- e2e/release/01-launch.yaml
 [e2e] building the Release app, its JS bundled for the local server
 [e2e] checking the Release bundle talks to the local server
 [e2e] starting a disposable PostgreSQL
-[e2e] stopping the database a dead run left behind (a60ed3f7aef9)
 [e2e] provisioning the canonical schema
 [e2e] starting the local server
 [e2e] seeding
@@ -24,25 +24,19 @@ $ npm run e2e -- e2e/release/01-launch.yaml
 [e2e] installing the Release app and running its flows
 
 Waiting for flows to complete...
-[Passed] Release opens on sign-in (35s)
+[Passed] Release opens on sign-in (45s)
 
-1/1 Flow Passed in 35s
+1/1 Flow Passed in 45s
 
 [e2e] the Release app's device log: 0 error(s) of a failed start (…/e2e/out/release-device.log)
 [e2e] taps taken again (tap-and-see.yaml): 0
 
-On screen (release-green-after.png, the flow's takeScreenshot): the sign-in
-screen.
+(Maestro's JVM warnings about sun.misc.Unsafe left out.)
 
-The bundle the check read (Build/Products/Release-iphonesimulator/main.jsbundle):
-envApiUrl = "http://127.0.0.1:3001/api", PRODUCTION_API_URL = "http://127.0.0.1:3001/api",
-no process.env.EXPO_PUBLIC_API_URL left; the app's Hermes bytecode carries the
-local address and no "rehearsly.me/api". Given another address
-(http://127.0.0.1:9999/api) the same bundle is refused.
+On screen (release-green-after.png, the flow's takeScreenshot
+release-01-sign-in): the sign-in screen — Rehearsly, Email, Password,
+Sign In, Google and Apple.
 
-Timings on this Mac (8 GB, 2026-11-08): input hash 40 ms; expo prebuild 6 s;
-pod install 427 s. A Release build from nothing did not fit in one 10-minute
-command: React Native's codegen rewrites its sources at the start of every
-build, so an interrupted build began again with everything that includes them.
-With clang's compilation cache (CLANG_ENABLE_COMPILE_CACHE) each attempt kept
-what it had compiled; the last one of the first Release build took 332 s.
+The bundle check passed ("checking the Release bundle talks to the local
+server"): the Release JS and its bytecode carry the local server's address,
+not production's.

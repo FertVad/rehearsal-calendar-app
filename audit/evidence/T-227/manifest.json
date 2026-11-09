@@ -4,43 +4,42 @@
     {
       "name": "release-launch-red-before",
       "what": "npm run e2e -- e2e/release/01-launch.yaml with app.json and locales/ as before 9d265da",
-      "when": "2026-11-08T00:34+02:00 (device log)",
-      "sourceCommit": null,
-      "sourceTree": null,
-      "sourceNote": "Not recorded. The runner (e2e/native.mjs, e2e/run.mjs) was uncommitted in the working tree; it was committed later in 202bca1, which postdates this run and is not claimed as its source. The native inputs' hash the run printed, 36e7db90e882, covers app.json, package files, locales/ and assets/ only — not the runner or the JS.",
+      "when": "2026-11-09T06:53+02:00 (Mac's clock; the simulator's log stream printed 2026-11-08 18:54)",
+      "sourceCommit": "49b63786f7ab7055cdba6239ccfa5acdeb0131bb",
+      "sourceTree": "b3ad34fdb415b24e8fe58415b58e1405344a0fc1",
       "changesFromSource": {
         "command": "git restore --source=9d265da^ -- app.json locales/",
-        "base": "355a2d88d93b64006bc3d6d3f7264c989bf63696",
+        "cwd": "rehearsal-calendar-native",
         "blobs": {
           "rehearsal-calendar-native/app.json": "bf948e451a9a1e7361235af01d447af4c5857a1b",
           "rehearsal-calendar-native/locales": "8945d1cc1c180cabe8c8c45e3d4567ea649135cf"
-        }
+        },
+        "undone": "git restore --source=HEAD -- app.json locales/; git status empty"
       },
+      "nativeInputs": "36e7db90e882",
       "result": "red: black screen; MissingCalendarPListValueException, Cannot find native module 'ExpoPushTokenManager'",
       "files": {
-        "release-red-before.txt": "91202ae87733010de41ee69e50acfd35fb77fb415c19a932136d9e03062fea32",
-        "release-red-before.png": "6dde4dc48c33f01a578a30441bbd1b74572460110c74b985c9a6de0f9a4700e5",
-        "release-red-before-device.log": "6f7cbd3b4f67dd29da9e653792782c75dba146cfd9dbdf1d2dfb6f83aefe70bb"
+        "release-red-before.txt": "23eb11cf0218c194856aef3ef7c2631110fc1c75db756f6c060c2e6af58caa82",
+        "release-red-before.png": "b44fa282f575f5b85e5198b95dbc3c756cf7075573278309109851b81a9235c7",
+        "release-red-before-device.log": "6dc97852a10932a68f52f53febee1b3f59cee7cb332c2af718e045a2da85d78b"
       }
     },
     {
       "name": "release-launch-green-after",
-      "what": "npm run e2e -- e2e/release/01-launch.yaml with app.json and locales/ restored",
-      "when": "2026-11-08, after the red run and before 202bca1 (13:35)",
-      "sourceCommit": null,
-      "sourceTree": null,
-      "sourceNote": "Not recorded, as for the red run. What is pinned is the configuration: app.json and locales/ blobs equal to those of 9d265da and 202bca1. Native inputs' hash printed: 66d6c3728e4a.",
-      "changesFromSource": {
-        "command": "git restore --source=HEAD -- app.json locales/",
-        "blobs": {
-          "rehearsal-calendar-native/app.json": "8e18b3820bcf4e9c7a76aa4a0f9e5fde2e3135d4",
-          "rehearsal-calendar-native/locales": "c79900df3e8ecc6e704234d0fb3710086ddd47bf"
-        }
+      "what": "npm run e2e -- e2e/release/01-launch.yaml on the committed tip, unchanged",
+      "when": "2026-11-09T06:27+02:00 (Mac's clock), before the red run",
+      "sourceCommit": "49b63786f7ab7055cdba6239ccfa5acdeb0131bb",
+      "sourceTree": "b3ad34fdb415b24e8fe58415b58e1405344a0fc1",
+      "changesFromSource": null,
+      "blobs": {
+        "rehearsal-calendar-native/app.json": "8e18b3820bcf4e9c7a76aa4a0f9e5fde2e3135d4",
+        "rehearsal-calendar-native/locales": "c79900df3e8ecc6e704234d0fb3710086ddd47bf"
       },
+      "nativeInputs": "66d6c3728e4a",
       "result": "green: the sign-in screen",
       "files": {
-        "release-green-after.txt": "0c42f060ed4b1932c3d91f260f162fe6a87c9ee1514e3443bb1f78a4a5cc4827",
-        "release-green-after.png": "898abd6288ea1a680178e06a24351bfd67eb94f328dad605e137a8eb25ec014e"
+        "release-green-after.txt": "66a4cc95e7afbe463b37a7a27657c9d124a2604d2079d628f764642c6e6c9198",
+        "release-green-after.png": "876a96b5fde253f2f2b020409c95eaff70ee8a2991a04b60fd161fa7a52bbd58"
       }
     },
     {
@@ -65,5 +64,5 @@
       }
     }
   ],
-  "notRun": "The Release launch flow on 7edb740: this tree's node_modules still has expo-linear-gradient (removed in T-044), so the run stops with 75 until npm ci is run here."
+  "note": "Both Release runs were made with npm run e2e directly, not through node e2e/hold-lock.mjs: run.mjs takes the same e2e lock itself, so under hold-lock it waits for its own parent (release-green-after.txt)."
 }

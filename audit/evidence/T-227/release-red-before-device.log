@@ -1,4 +1,4 @@
-2026-11-08 00:34:51.200 E  Rehearsly[18299:397c331] [com.facebook.react.log:native] The operation couldn’t be completed. (ExpoCalendar.MissingCalendarPListValueException error 1.)
-2026-11-08 00:34:51.437 E  Rehearsly[18299:397c36f] [com.facebook.react.log:javascript] [runtime not ready]: Error: Cannot find native module 'ExpoPushTokenManager'
-2026-11-08 00:34:51.437 E  Rehearsly[18299:397c36f] [com.facebook.react.log:native] Unhandled JS Exception: [runtime not ready]: Error: Cannot find native module 'ExpoPushTokenManager'
-2026-11-08 00:34:51.441 E  Rehearsly[18299:397c36f] [com.facebook.react.log:javascript] [runtime not ready]: Error: Cannot find native module 'ExpoPushTokenManager'
+2026-11-08 18:54:26.028 E  Rehearsly[96024:3ae7bb0] [com.facebook.react.log:native] The operation couldn’t be completed. (ExpoCalendar.MissingCalendarPListValueException error 1.)
+2026-11-08 18:54:26.061 E  Rehearsly[96024:3ae7bed] [com.facebook.react.log:javascript] [runtime not ready]: Error: Cannot find native module 'ExpoPushTokenManager'
+2026-11-08 18:54:26.062 E  Rehearsly[96024:3ae7bed] [com.facebook.react.log:native] Unhandled JS Exception: [runtime not ready]: Error: Cannot find native module 'ExpoPushTokenManager'
+2026-11-08 18:54:26.068 E  Rehearsly[96024:3ae7bed] [com.facebook.react.log:javascript] [runtime not ready]: Error: Cannot find native module 'ExpoPushTokenManager'
