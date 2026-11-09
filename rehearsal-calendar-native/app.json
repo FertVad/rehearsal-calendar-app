@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rehearsal.app",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "associatedDomains": ["applinks:rehearsly.me"],
       "config": {
         "googleSignIn": {
