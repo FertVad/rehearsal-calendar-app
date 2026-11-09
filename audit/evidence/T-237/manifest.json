@@ -1,0 +1,58 @@
+{
+  "task": "T-237",
+  "sourceCommit": "9a2757c81f1f0311f7c9e3e2ce4eed060428f415",
+  "sourceTree": "80bb8eb77d811451e56d86eeaad87b0eacec332b",
+  "base": "e328e1787b423d795e34c19c1b2843764b389b9b",
+  "changedFiles": {
+    "rehearsal-calendar-native/app.json": "c44f89706d3df1933f3bba1f91631bf19fd1b6198d0e1344ce3d90cb237ebc96",
+    "rehearsal-calendar-native/docs/app-store-release.md": "eb978628cd15a2c57b247692f4279a1dfd177404dfa97ca200bb439abce1dac2",
+    "rehearsal-calendar-native/e2e/__tests__/native.test.mjs": "52b0c470dd12e8024a94196e9299f29d1ca2ae54666761a1f92a8a26a64f2779",
+    "rehearsal-calendar-native/e2e/native.mjs": "a49e9aebce36fd26d9ab4a246dc7f18da00f9b2399ea99b48ef452f2964bf60e",
+    "rehearsal-calendar-native/knip.jsonc": "6fd99e23be729a252ac18dfd0a75f4af71112d1e63371c911a1f8d8f92314042",
+    "rehearsal-calendar-native/plugins/prebuilt-dsyms/__tests__/dsyms.test.mjs": "497705b23bb4348de85a5a7c03c6cf1d93b3bec7259037765169cffde35ac450",
+    "rehearsal-calendar-native/plugins/prebuilt-dsyms/checksums.json": "d8cbf01fda1cdc6edc4fe4bab6ac2dd0c61e01823ec611562c6be2d631b63122",
+    "rehearsal-calendar-native/plugins/prebuilt-dsyms/dsyms.mjs": "8b72e7263da02b1f7a975c88e540652594310d4a2428adf2e80ad97eb9ab3bf6",
+    "rehearsal-calendar-native/plugins/prebuilt-dsyms/withPrebuiltDsyms.js": "74ccbd0be6bb8e3fe97474b70c952a48fa88da8d06e18d5c9243f0f40c16607f",
+    "rehearsal-calendar-native/server/scripts/test.mjs": "7fe2c5e98a0c14ea93c97dd6adc593d4454294e2d471b25e71160dc5f7213a1d"
+  },
+  "runs": [
+    {
+      "name": "archive-red-before",
+      "what": "Release archive (generic iOS, CODE_SIGNING_ALLOWED=NO) of e328e17, project by e2e/native.mjs prepareProject",
+      "sourceCommit": "e328e1787b423d795e34c19c1b2843764b389b9b",
+      "result": "red: dSYMs/ has only Rehearsly.app.dSYM; React 76FBCEE9…, ReactNativeDependencies B35F1182…, hermes 80D5528F… without dSYM",
+      "file": "red-before.txt"
+    },
+    {
+      "name": "archive-green-after",
+      "what": "the same archive with the working tree committed as sourceCommit (tests and docs edited after the build only)",
+      "sourceCommit": "9a2757c81f1f0311f7c9e3e2ce4eed060428f415",
+      "result": "green: dSYMs of all three in dSYMs/, UUIDs equal to the frameworks in Rehearsly.app/Frameworks; xcrun dwarfdump agrees",
+      "file": "green-after.txt"
+    },
+    {
+      "name": "native-test",
+      "what": "node --test e2e/__tests__/native.test.mjs, red with e2e/native.mjs from e328e17",
+      "result": "red fail 1, green pass 6",
+      "file": "tests.txt"
+    },
+    {
+      "name": "dsyms-test",
+      "what": "node --test plugins/prebuilt-dsyms/__tests__/dsyms.test.mjs",
+      "result": "pass 9",
+      "file": "tests.txt"
+    },
+    {
+      "name": "e2e-release-launch",
+      "what": "npm run e2e -- e2e/release/01-launch.yaml",
+      "result": "NOT_RUN: pod install did not finish in 10 min twice (Maven ~80 KB/s)",
+      "file": "tests.txt"
+    }
+  ],
+  "files": {
+    "red-before.txt": "f5cefe193a9b921acc024e8e8b003dba45093c53bc1f64b70935ad48667ab18a",
+    "green-after.txt": "40a29cf0e47957cc1067998ce21e083b030841ae585d263a107ed9b2c098ccb6",
+    "published.txt": "d636b648ad366cec348c87d38bb740a329ed5694fe5e773d0e8fdd9c522be092",
+    "tests.txt": "05255aa72e5f5c6902a70f04cddfbfdf9c286de9045c964fe9787be5b34fb58d"
+  }
+}

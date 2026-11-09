@@ -1,0 +1,36 @@
+T-237 tests.
+
+1. e2e/__tests__/native.test.mjs — the e2e project is made anew when app.json's own plugin changes
+   (the phase it writes is in the project; a project kept from before would not have it).
+
+   red: git restore --source=e328e17 -- e2e/native.mjs; node --test e2e/__tests__/native.test.mjs
+   ✖ the project is made anew when app.json, its plugins, the locales, the assets or the packages change — not the JS
+     AssertionError [ERR_ASSERTION]: plugins/prebuilt-dsyms/withPrebuiltDsyms.js changed and the project would be kept
+   ℹ pass 5
+   ℹ fail 1
+   undone: git restore --source=HEAD -- e2e/native.mjs (git status: only audit/evidence/T-237 untracked)
+
+   green (9a2757c): ℹ pass 6  ℹ fail 0
+
+2. plugins/prebuilt-dsyms/__tests__/dsyms.test.mjs (new; in npm test after the e2e regressions)
+   ✔ the UUIDs of a thin and of a universal Mach-O, arch by arch
+   ✔ Release: the three dSYMs go beside the app's, each with the UUID of the framework the app embeds; the next build takes them from the cache
+   ✔ a dSYM that is not of the embedded framework fails the build, and is not put beside the app
+   ✔ a tarball whose sha256 is not the pinned one fails the build and is not cached
+   ✔ a React Native version with no pinned checksums fails the build — before any download
+   ✔ Maven without the tarball fails the build
+   ✔ a build that makes no dSYMs (Debug) gets none of these either, and downloads nothing
+   ✔ an archive is checked framework by framework: each arch of each needs a dSYM with its UUID
+   ✔ the config plugin adds the phase to the app target once, with the frameworks as inputs and the dSYMs as outputs
+   ℹ pass 9  ℹ fail 0
+   On the old code the module does not exist; the red of the fix is the archive (red-before.txt).
+
+3. npm run type-check: clean. npm run check:secrets: {"summary":"pass","files":1789,"findings":0}.
+   npm run check:dead (knip): no findings.
+
+4. npm run e2e -- e2e/release/01-launch.yaml: NOT_RUN (machine). Twice the project had to be generated
+   anew (app.json and plugins/ changed, so nativeInputs did), and twice pod install did not finish in
+   the session's 10 minutes: it downloads React Native's prebuilt tarballs from repo1.maven.org, at
+   ~80 KB/s that afternoon (e2e/out/prepare.log: reactnative-dependencies-debug 18.3 MB, "0:04:11 left");
+   two hours before, the same pod install took 105-135 s. The phase itself on e2e's Release simulator
+   slices (arm64 + x86_64): green-after.txt, "Simulator".

@@ -1,0 +1,34 @@
+T-237 red: a Release archive of the current code has no dSYM of React, ReactNativeDependencies or hermes.
+
+Source: HEAD e328e17, app.json as committed (no withPrebuiltDsyms). The iOS project was generated
+the way e2e generates it (e2e/native.mjs prepareProject, force): expo prebuild --platform ios --clean
+into e2e/.native, pod install (4 s + 135 s). Not the main checkout's ios/.
+
+Archive:
+  node e2e/hold-lock.mjs env EXPO_NO_DOTENV=1 xcodebuild -quiet \
+    -workspace e2e/.native/ios/Rehearsly.xcworkspace -scheme Rehearsly -configuration Release \
+    -destination generic/platform=iOS -archivePath /tmp/t237-red.xcarchive -derivedDataPath /tmp/t237-dd \
+    -jobs 4 CODE_SIGNING_ALLOWED=NO CLANG_ENABLE_COMPILE_CACHE=YES archive
+  (a clean DerivedData: the command was cut twice by the session's 10-minute limit and resumed
+  over the same DerivedData; the third run finished the archive)
+
+$ node plugins/prebuilt-dsyms/dsyms.mjs check-archive /tmp/t237-red.xcarchive    (exit 1)
+dSYMs/:
+UUID: 44E83DAA-29AB-3E9C-A388-28064100B0D0 (arm64) dSYMs/Rehearsly.app.dSYM/Contents/Resources/DWARF/Rehearsly
+
+Products/Applications/Rehearsly.app/Frameworks:
+UUID: 76FBCEE9-3517-30B3-9DC6-62C4E914E908 (arm64) Products/Applications/Rehearsly.app/Frameworks/React.framework/React — NO dSYM
+UUID: B35F1182-B82E-3372-8A74-A4FE502C0906 (arm64) Products/Applications/Rehearsly.app/Frameworks/ReactNativeDependencies.framework/ReactNativeDependencies — NO dSYM
+UUID: 80D5528F-2C78-3B90-B90F-747E89A9F880 (arm64) Products/Applications/Rehearsly.app/Frameworks/hermes.framework/hermes — NO dSYM
+
+xcrun dwarfdump --uuid:
+UUID: 44E83DAA-29AB-3E9C-A388-28064100B0D0 (arm64) /tmp/t237-red.xcarchive/dSYMs/Rehearsly.app.dSYM/Contents/Resources/DWARF/Rehearsly
+UUID: 76FBCEE9-3517-30B3-9DC6-62C4E914E908 (arm64) /tmp/t237-red.xcarchive/Products/Applications/Rehearsly.app/Frameworks/React.framework/React
+UUID: B35F1182-B82E-3372-8A74-A4FE502C0906 (arm64) /tmp/t237-red.xcarchive/Products/Applications/Rehearsly.app/Frameworks/ReactNativeDependencies.framework/ReactNativeDependencies
+UUID: 80D5528F-2C78-3B90-B90F-747E89A9F880 (arm64) /tmp/t237-red.xcarchive/Products/Applications/Rehearsly.app/Frameworks/hermes.framework/hermes
+
+3 framework arch(s) without a dSYM: React.framework (arm64), ReactNativeDependencies.framework (arm64), hermes.framework (arm64)
+
+The three UUIDs are the ones of Apple's "Upload Symbols Failed" for 1.0.0 (3):
+React 76FBCEE9-3517-30B3-9DC6-62C4E914E908, ReactNativeDependencies B35F1182-B82E-3372-8A74-A4FE502C0906,
+hermes 80D5528F-2C78-3B90-B90F-747E89A9F880. dSYMs/ has only the app's own.

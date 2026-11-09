@@ -1,0 +1,69 @@
+T-237 green: a Release archive with withPrebuiltDsyms has the dSYM of React, ReactNativeDependencies and
+hermes, each with the UUID of the framework in Products/Applications/Rehearsly.app/Frameworks.
+
+Source: the working tree of the T-237 commit (app.json with "./plugins/prebuilt-dsyms/withPrebuiltDsyms").
+The iOS project generated as e2e generates it (e2e/native.mjs prepareProject, force; prebuild 4 s,
+pod install 105 s). The generated target has the phase, between [CP] Copy Pods Resources and
+[CP] Embed Pods Frameworks:
+
+  509BC9336DA44F63B6575A0B /* [Rehearsly] dSYMs of the prebuilt React Native frameworks */
+  inputPaths:  ${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React
+               ${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies
+               ${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes
+               $(PROJECT_DIR)/../plugins/prebuilt-dsyms/dsyms.mjs, $(PROJECT_DIR)/../plugins/prebuilt-dsyms/checksums.json
+  outputPaths: $(DWARF_DSYM_FOLDER_PATH)/{React,ReactNativeDependencies,hermes}.framework.dSYM
+  script:      "$NODE_BINARY" "$PROJECT_DIR/../plugins/prebuilt-dsyms/dsyms.mjs" phase
+
+Archive (same command as red-before.txt, -archivePath /tmp/t237-green.xcarchive, same DerivedData;
+cut by the 10-minute limit three times, the fourth run: ** ARCHIVE SUCCEEDED **, 456 s,
+"CompilationCacheMetrics: 657 hits / 657 cacheable tasks (100%)").
+
+The phase in the build log:
+React.framework.dSYM 0.81.5: 76FBCEE9-3517-30B3-9DC6-62C4E914E908 (arm64) -> …/ArchiveIntermediates/Rehearsly/BuildProductsPath/Release-iphoneos/React.framework.dSYM
+ReactNativeDependencies.framework.dSYM 0.81.5: B35F1182-B82E-3372-8A74-A4FE502C0906 (arm64) -> …/Release-iphoneos/ReactNativeDependencies.framework.dSYM
+hermes.framework.dSYM 0.81.5: 80D5528F-2C78-3B90-B90F-747E89A9F880 (arm64) -> …/Release-iphoneos/hermes.framework.dSYM
+
+$ node plugins/prebuilt-dsyms/dsyms.mjs check-archive /tmp/t237-green.xcarchive    (exit 0)
+dSYMs/:
+UUID: 76FBCEE9-3517-30B3-9DC6-62C4E914E908 (arm64) dSYMs/React.framework.dSYM/Contents/Resources/DWARF/React
+UUID: B35F1182-B82E-3372-8A74-A4FE502C0906 (arm64) dSYMs/ReactNativeDependencies.framework.dSYM/Contents/Resources/DWARF/ReactNativeDependencies
+UUID: 44E83DAA-29AB-3E9C-A388-28064100B0D0 (arm64) dSYMs/Rehearsly.app.dSYM/Contents/Resources/DWARF/Rehearsly
+UUID: 80D5528F-2C78-3B90-B90F-747E89A9F880 (arm64) dSYMs/hermes.framework.dSYM/Contents/Resources/DWARF/hermes
+
+Products/Applications/Rehearsly.app/Frameworks:
+UUID: 76FBCEE9-3517-30B3-9DC6-62C4E914E908 (arm64) Products/Applications/Rehearsly.app/Frameworks/React.framework/React — dSYM React.framework.dSYM
+UUID: B35F1182-B82E-3372-8A74-A4FE502C0906 (arm64) Products/Applications/Rehearsly.app/Frameworks/ReactNativeDependencies.framework/ReactNativeDependencies — dSYM ReactNativeDependencies.framework.dSYM
+UUID: 80D5528F-2C78-3B90-B90F-747E89A9F880 (arm64) Products/Applications/Rehearsly.app/Frameworks/hermes.framework/hermes — dSYM hermes.framework.dSYM
+
+xcrun dwarfdump --uuid:
+UUID: 76FBCEE9-3517-30B3-9DC6-62C4E914E908 (arm64) /tmp/t237-green.xcarchive/dSYMs/React.framework.dSYM/Contents/Resources/DWARF/React
+UUID: B35F1182-B82E-3372-8A74-A4FE502C0906 (arm64) /tmp/t237-green.xcarchive/dSYMs/ReactNativeDependencies.framework.dSYM/Contents/Resources/DWARF/ReactNativeDependencies
+UUID: 44E83DAA-29AB-3E9C-A388-28064100B0D0 (arm64) /tmp/t237-green.xcarchive/dSYMs/Rehearsly.app.dSYM/Contents/Resources/DWARF/Rehearsly
+UUID: 80D5528F-2C78-3B90-B90F-747E89A9F880 (arm64) /tmp/t237-green.xcarchive/dSYMs/hermes.framework.dSYM/Contents/Resources/DWARF/hermes
+UUID: 76FBCEE9-3517-30B3-9DC6-62C4E914E908 (arm64) /tmp/t237-green.xcarchive/Products/Applications/Rehearsly.app/Frameworks/React.framework/React
+UUID: B35F1182-B82E-3372-8A74-A4FE502C0906 (arm64) /tmp/t237-green.xcarchive/Products/Applications/Rehearsly.app/Frameworks/ReactNativeDependencies.framework/ReactNativeDependencies
+UUID: 80D5528F-2C78-3B90-B90F-747E89A9F880 (arm64) /tmp/t237-green.xcarchive/Products/Applications/Rehearsly.app/Frameworks/hermes.framework/hermes
+
+every framework has its dSYM
+
+The app's own dSYM has the same UUID as in red-before.txt (44E83DAA-…): the same code, only the
+three dSYMs added. The device app has one arch (arm64), so one UUID per framework.
+
+Simulator (e2e's Release build: arm64 + x86_64). The phase run on the slices of e2e's last Release
+simulator build (e2e/.build/…/Release-iphonesimulator/XCFrameworkIntermediates), real Pods and checksums:
+React.framework.dSYM 0.81.5: EF74B41B-2D52-3C90-A0D8-B011130C76F3 (x86_64), 44929430-CE2E-33C4-9984-67D9488BCD69 (arm64)
+ReactNativeDependencies.framework.dSYM 0.81.5: DB17BFF1-C4C4-3254-BF0A-10F6C967EEDA (x86_64), 8A5CB7C1-40E7-3D52-9C07-A66F9ABE2EC2 (arm64)
+hermes.framework.dSYM 0.81.5: 47523131-0F5F-395A-9F76-71E54B94A600 (x86_64), E968DCE3-413B-39D3-B1AB-335C6F7FBBAB (arm64)
+exit 0 — all three copied.
+
+Not matching fails. The same run on the Debug simulator build's slices (Debug binaries of React
+Native, other UUIDs than the Release dSYMs):
+error: React.framework.dSYM (reactnative-core-dSYM-release 0.81.5) is not of the React the app embeds:
+434F146C-3AD3-3540-9480-F2E36A3DD6A1 (x86_64), AC487519-D12B-3ED8-B013-5010EC9BC032 (arm64) not in it —
+…/e2e/.build/Build/Products/Debug-iphonesimulator/XCFrameworkIntermediates/React-Core-prebuilt/React.framework/React
+exit 1 — nothing copied. (A Debug build itself never gets here: DEBUG_INFORMATION_FORMAT is dwarf.)
+
+Unit tests (node --test plugins/prebuilt-dsyms/__tests__/dsyms.test.mjs, also in npm test): 9 pass —
+Mach-O thin/universal UUIDs; Release copies the three, cache reused, a cut-short download cleared;
+UUID mismatch, sha256 mismatch, no pinned version, HTTP 404 each fail and copy nothing; Debug skips
+without a download; check-archive; the config plugin adds the phase once to the app target.
