@@ -112,6 +112,67 @@ iPad потом можно, убрать после публикации — н�
 - [ ] Заполнить **Export Compliance** — у нас `ITSAppUsesNonExemptEncryption: false`, вопрос не всплывёт
 - [ ] Раздать внутренним тестерам, прогнать основные сценарии на реальном устройстве
 
+### dSYM готовых фреймворков React Native (T-237)
+
+`React.framework`, `ReactNativeDependencies.framework` и `hermes.framework`
+приходят в приложение собранными (pods `React-Core-prebuilt`,
+`ReactNativeDependencies`, `hermes-engine` качают их с Maven), поэтому Xcode
+не делает для них dSYM. Архив 1.0.0 (3) ушёл без них, и Apple ответила
+«Upload Symbols Failed»: сбой внутри React или Hermes в отчётах App Store
+Connect не расшифровать.
+
+React Native публикует их dSYM рядом с бинарниками, той же версии:
+`react-native-artifacts-<версия>-{reactnative-core,reactnative-dependencies,hermes-framework}-dSYM-release.tar.gz`
+на Maven Central. Их кладёт в сборку config plugin
+`plugins/prebuilt-dsyms/withPrebuiltDsyms.js` (стоит в `plugins` в `app.json`,
+так что `expo prebuild --clean` его не теряет). Он добавляет в target
+`Rehearsly` шаг `[Rehearsly] dSYMs of the prebuilt React Native frameworks`,
+который запускает `plugins/prebuilt-dsyms/dsyms.mjs phase`:
+
+- работает, только когда сборка делает dSYM (`DEBUG_INFORMATION_FORMAT =
+  dwarf-with-dsym`, то есть Release — и архив, и Release для симулятора в e2e);
+  в Debug ничего не качает;
+- версию берёт из `ios/Pods/Manifest.lock`, архив скачивает один раз в
+  `~/Library/Caches/rehearsly/prebuilt-dsyms/<версия>/` (≈470 МБ на версию,
+  первая Release-сборка после смены версии дольше на время загрузки);
+- **sha256 архива должен совпасть с закреплённым** в
+  `plugins/prebuilt-dsyms/checksums.json`, иначе сборка падает;
+- **UUID каждого dSYM должны совпасть с UUID фреймворка, который встраивается
+  в приложение**, по каждой архитектуре, иначе сборка падает;
+- кладёт dSYM в `DWARF_DSYM_FOLDER_PATH`, рядом с `Rehearsly.app.dSYM`, откуда
+  `xcodebuild archive` забирает их в `dSYMs/` архива.
+
+**Проверка архива перед загрузкой** (из `rehearsal-calendar-native/`):
+
+```bash
+node plugins/prebuilt-dsyms/dsyms.mjs check-archive <путь>.xcarchive
+```
+
+Печатает UUID всех dSYM и всех фреймворков в `Products/Applications/Rehearsly.app/Frameworks`
+(своим чтением и `xcrun dwarfdump --uuid`, они должны совпасть) и
+завершается с кодом 1, если у какого-то фреймворка нет dSYM с его UUID.
+Последний раз (1.0.0, RN 0.81.5): React `76FBCEE9-…`, ReactNativeDependencies
+`B35F1182-…`, hermes `80D5528F-…` — dSYM для всех трёх
+(`audit/evidence/T-237/`).
+
+**После обновления React Native** Release-сборка упадёт с «checksums.json pins
+no sha256 of … <версия>» — так и должно быть. Закрепить суммы новой версии:
+
+```bash
+node plugins/prebuilt-dsyms/dsyms.mjs pin <версия react-native>
+```
+
+Берёт sha256 из файлов `.sha256` рядом с архивами на Maven; закоммитить
+`checksums.json`. Совпадение UUID с фреймворками сборка проверит сама.
+
+Если сборка упала на шаге:
+- «has sha256 …, checksums.json pins …» — с Maven пришёл не тот файл (или
+  сумма закреплена неверно). Не обходить: разобраться, что скачалось;
+- «is not of the … the app embeds» — dSYM не от встроенного фреймворка
+  (например, Pods собраны из исходников или другой версии). Архив с таким
+  dSYM символы не расшифрует;
+- «HTTP …» / сеть — Maven недоступен, повторить.
+
 ---
 
 ## Фаза 4. Метаданные App Store Connect

@@ -45,7 +45,8 @@ export const RELEASE_FLOWS = path.join(ROOT, 'e2e', 'release');
 
 const PREBUILD = ['prebuild', '--platform', 'ios', '--no-install', '--clean'];
 const COPIED = ['app.json', 'package.json'];
-const LINKED = ['assets', 'locales', 'node_modules'];
+// plugins/: app.json's own config plugins, and the scripts their build phases run.
+const LINKED = ['assets', 'locales', 'node_modules', 'plugins'];
 // A Release build bundles the JS in a build phase that takes the project root
 // to be the folder above ios/ — here e2e/.native, which has no code. The phase
 // reads ios/.xcode.env.local last, so the JS is bundled from the tree, with its
@@ -62,7 +63,8 @@ const files = (dir) => (fs.existsSync(dir)
 /**
  * What the generated project and the native code built from it are made of:
  * the app's config and what it points at (icons, permission texts in every
- * language), the packages as declared, locked and installed.
+ * language, its own config plugins), the packages as declared, locked and
+ * installed.
  */
 export function nativeInputs(root = ROOT) {
   return [
@@ -72,6 +74,7 @@ export function nativeInputs(root = ROOT) {
     path.join(root, 'node_modules', '.package-lock.json'),
     ...files(path.join(root, 'locales')),
     ...files(path.join(root, 'assets')),
+    ...files(path.join(root, 'plugins')).filter((file) => !file.split(path.sep).includes('__tests__')),
   ].filter((file) => fs.existsSync(file)).sort();
 }
 

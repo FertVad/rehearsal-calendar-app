@@ -24,7 +24,7 @@ function tree() {
   return { root, write };
 }
 
-test('the project is made anew when app.json, the locales, the assets or the packages change — not the JS', () => {
+test('the project is made anew when app.json, its plugins, the locales, the assets or the packages change — not the JS', () => {
   const { root, write } = tree();
   const first = inputsHash(root);
   assert.equal(inputsHash(root), first);
@@ -38,6 +38,9 @@ test('the project is made anew when app.json, the locales, the assets or the pac
     ['assets/icon.png', 'another png'],
     ['package-lock.json', '{"lockfileVersion":3}'],
     ['node_modules/.package-lock.json', '{}'],
+    // T-237: app.json's own config plugin writes a build phase into the project.
+    ['plugins/prebuilt-dsyms/withPrebuiltDsyms.js', 'module.exports = (config) => config;'],
+    ['plugins/prebuilt-dsyms/checksums.json', '{}'],
   ]) {
     const before = inputsHash(root);
     write(file, text);

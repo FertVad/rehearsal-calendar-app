@@ -14,11 +14,16 @@
         "App.tsx!",
         "src/**/*.{test,spec}.{ts,tsx}",
         "src/__tests__/**/*.{ts,tsx,js}",
-        "e2e/**/*.{js,mjs}"
+        "e2e/**/*.{js,mjs}",
+        // app.json's config plugin; dsyms.mjs is what its build phase runs.
+        "plugins/prebuilt-dsyms/withPrebuiltDsyms.js",
+        "plugins/prebuilt-dsyms/dsyms.mjs",
+        "plugins/**/__tests__/**/*.mjs"
       ],
       "project": [
         "src/**/*.{ts,tsx,js}!",
-        "e2e/**/*.{js,mjs}"
+        "e2e/**/*.{js,mjs}",
+        "plugins/**/*.{js,mjs}"
       ],
       "ignore": [
         // What a Maestro run writes (screenshots, logs); not in git.
