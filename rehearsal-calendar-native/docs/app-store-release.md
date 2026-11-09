@@ -130,8 +130,12 @@ React Native публикует их dSYM рядом с бинарниками, 
 который запускает `plugins/prebuilt-dsyms/dsyms.mjs phase`:
 
 - работает, только когда сборка делает dSYM (`DEBUG_INFORMATION_FORMAT =
-  dwarf-with-dsym`, то есть Release — и архив, и Release для симулятора в e2e);
-  в Debug ничего не качает;
+  dwarf-with-dsym`) и встраивает Release-вариант трёх фреймворков (в
+  `GCC_PREPROCESSOR_DEFINITIONS` нет `DEBUG=1` — по тому же признаку поды
+  выбирают Debug или Release), то есть Release — и архив, и Release для
+  симулятора в e2e. В Debug цель Expo тоже делает dSYM приложения, но поды
+  встраивают Debug-вариант, dSYM которого React Native не публикует: там шаг
+  ничего не качает и не проверяет;
 - версию берёт из `ios/Pods/Manifest.lock`, архив скачивает один раз в
   `~/Library/Caches/rehearsly/prebuilt-dsyms/<версия>/` (≈470 МБ на версию,
   первая Release-сборка после смены версии дольше на время загрузки);

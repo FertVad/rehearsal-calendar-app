@@ -189,6 +189,31 @@ test('a build that makes no dSYMs (Debug) gets none of these either, and downloa
   }
 });
 
+test('Debug that makes dSYMs (Expo\'s app target: dwarf-with-dsym, DEBUG=1) embeds the Debug React and Hermes: no release dSYMs, no download, no failure', async () => {
+  // e2e's Debug build: the app target makes its own dSYM, and the pods,
+  // seeing DEBUG=1, embed the Debug flavour of the three frameworks, whose
+  // UUIDs no release dSYM has (434F146C-… React, T-237's first e2e run).
+  const w = await world({ embedded: { React: U.other, ReactNativeDependencies: U.other, hermes: U.other } });
+  try {
+    const env = { ...w.env, CONFIGURATION: 'Debug', GCC_PREPROCESSOR_DEFINITIONS: 'DEBUG=1  COCOAPODS=1 FB_SONARKIT_ENABLED=1' };
+    assert.deepEqual(await w.run({ env }), []);
+    assert.equal(w.requests.length, 0);
+    assert.ok(!fs.existsSync(path.join(w.env.DWARF_DSYM_FOLDER_PATH, 'React.framework.dSYM')));
+  } finally {
+    w.close();
+  }
+});
+
+test('Release keeps the phase whatever else GCC_PREPROCESSOR_DEFINITIONS holds, as long as it is not DEBUG=1', async () => {
+  const w = await world();
+  try {
+    const env = { ...w.env, CONFIGURATION: 'Release', GCC_PREPROCESSOR_DEFINITIONS: 'COCOAPODS=1 NDEBUG=1 RCT_DEBUG=0' };
+    assert.equal((await w.run({ env })).length, 3);
+  } finally {
+    w.close();
+  }
+});
+
 test('an archive is checked framework by framework: each arch of each needs a dSYM with its UUID', () => {
   const archive = fs.mkdtempSync(path.join(os.tmpdir(), 'dsyms-archive-'));
   const app = path.join(archive, 'Products', 'Applications', 'Rehearsly.app');

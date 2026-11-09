@@ -1,0 +1,32 @@
+T-237, supervisor's e2e failed: the Debug build for the simulator ran the dSYM phase.
+
+e2e/out/build.log (Debug-iphonesimulator, target Rehearsly):
+    export CONFIGURATION\=Debug
+    export DEBUG_INFORMATION_FORMAT\=dwarf-with-dsym          <- Expo's app target makes a dSYM in Debug too
+    export GCC_PREPROCESSOR_DEFINITIONS\=DEBUG\=1\ \ COCOAPODS\=1\ FB_SONARKIT_ENABLED\=1
+  error: React.framework.dSYM (reactnative-core-dSYM-release 0.81.5) is not of the React the app embeds:
+         434F146C-3AD3-3540-9480-F2E36A3DD6A1 (x86_64), AC487519-D12B-3ED8-B013-5010EC9BC032 (arm64) not in it
+
+The pods (hermes-engine, ReactNativeDependencies, React-Core-prebuilt) embed the Debug flavour
+when GCC_PREPROCESSOR_DEFINITIONS has DEBUG=1 (react-native/sdks/hermes-engine/hermes-engine.podspec:79-82);
+the phase gated on DEBUG_INFORMATION_FORMAT alone, so it checked release dSYMs against Debug binaries.
+
+$ node --test rehearsal-calendar-native/plugins/prebuilt-dsyms/__tests__/dsyms.test.mjs   (on 9a2757c's dsyms.mjs)
+
+✔ the UUIDs of a thin and of a universal Mach-O, arch by arch (7.391583ms)
+✔ Release: the three dSYMs go beside the app's, each with the UUID of the framework the app embeds; the next build takes them from the cache (280.554333ms)
+✔ a dSYM that is not of the embedded framework fails the build, and is not put beside the app (194.083958ms)
+✔ a tarball whose sha256 is not the pinned one fails the build and is not cached (92.013583ms)
+✔ a React Native version with no pinned checksums fails the build — before any download (85.635167ms)
+✔ Maven without the tarball fails the build (88.5195ms)
+✔ a build that makes no dSYMs (Debug) gets none of these either, and downloads nothing (82.22925ms)
+✖ Debug that makes dSYMs (Expo's app target: dwarf-with-dsym, DEBUG=1) embeds the Debug React and Hermes: no release dSYMs, no download, no failure (113.452292ms)
+✔ Release keeps the phase whatever else GCC_PREPROCESSOR_DEFINITIONS holds, as long as it is not DEBUG=1 (183.184792ms)
+✔ an archive is checked framework by framework: each arch of each needs a dSYM with its UUID (10.242125ms)
+✔ the config plugin adds the phase to the app target once, with the frameworks as inputs and the dSYMs as outputs (253.594208ms)
+ℹ tests 11
+ℹ pass 10
+ℹ fail 1
+
+✖ Debug that makes dSYMs (Expo's app target: dwarf-with-dsym, DEBUG=1) embeds the Debug React and Hermes: no release dSYMs, no download, no failure (113.452292ms)
+  Error: React.framework.dSYM (reactnative-core-dSYM-release 0.81.5) is not of the React the app embeds: 11111111-2222-3333-4444-555555555555 (arm64) not in it — /var/folders/qv/yq628xd54pv_hh6l436fbyzc0000gn/T/dsyms-phase-Txakl5/XCFrameworkIntermediates/React-Core-prebuilt/React.framework/React

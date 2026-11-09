@@ -16,7 +16,10 @@
  *   node dsyms.mjs pin <version>          the checksums of a new version, into checksums.json
  *
  * The phase runs when the build makes dSYMs (DEBUG_INFORMATION_FORMAT
- * dwarf-with-dsym: Release, for a device or a simulator). Each tarball is
+ * dwarf-with-dsym) and embeds the Release flavour of the three (no DEBUG=1 in
+ * GCC_PREPROCESSOR_DEFINITIONS): Release, for a device or a simulator. Expo's
+ * Debug makes a dSYM of the app as well, but embeds the Debug flavour, of
+ * which React Native publishes no dSYMs. Each tarball is
  * downloaded once per version into a cache, and only if its sha256 is the one
  * pinned in checksums.json; then each dSYM's UUIDs must be those of the
  * framework the app embeds, arch by arch. Either not so, the build fails —
@@ -183,6 +186,15 @@ async function cachedArtifact({ cache, base, version, artifact, expected, slices
   }
 }
 
+/**
+ * Whether the three frameworks embedded are their Debug flavour: the pods'
+ * own "Replace … for the right configuration" phases take Debug exactly when
+ * GCC_PREPROCESSOR_DEFINITIONS has DEBUG=1 (hermes-engine.podspec,
+ * ReactNativeDependencies.podspec), else Release. Expo's app target makes a
+ * dSYM in Debug too, so DEBUG_INFORMATION_FORMAT alone does not tell.
+ */
+const debugFlavour = (env) => /(^|\s)DEBUG=1(\s|$)/.test(env.GCC_PREPROCESSOR_DEFINITIONS ?? '');
+
 const defaultCache = () => path.join(os.homedir(), 'Library', 'Caches', 'rehearsly', 'prebuilt-dsyms');
 
 /**
@@ -197,6 +209,10 @@ export async function copyDsyms({
 } = {}) {
   if (env.DEBUG_INFORMATION_FORMAT !== 'dwarf-with-dsym') {
     log(`DEBUG_INFORMATION_FORMAT is ${env.DEBUG_INFORMATION_FORMAT || 'unset'}: this build makes no dSYMs, nor these`);
+    return [];
+  }
+  if (debugFlavour(env)) {
+    log('GCC_PREPROCESSOR_DEFINITIONS has DEBUG=1: the pods embed the Debug React and Hermes, and React Native publishes dSYMs of the Release ones only');
     return [];
   }
   for (const name of ['PLATFORM_NAME', 'DWARF_DSYM_FOLDER_PATH', 'PODS_XCFRAMEWORKS_BUILD_DIR', 'PODS_ROOT']) {
