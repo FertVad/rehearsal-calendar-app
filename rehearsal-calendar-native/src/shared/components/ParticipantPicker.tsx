@@ -19,6 +19,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import type { Translations } from '../../i18n/translations';
 import { AppModal } from './AppModal';
 import { ModalSheet } from './ModalSheet';
+import { UserAvatar } from './UserAvatar';
 
 export interface PickerPerson {
   id: string;
@@ -38,14 +39,24 @@ interface ParticipantPickerProps {
   /** A second line under the row, for someone picked who is busy then. */
   conflict?: string;
   /**
-   * One filter in a row of them, "Participants: all (4) ▾", instead of a row
-   * of its own (the planner, T-020). The same sheet opens.
+   * The people by their faces, "(A)(B)(C)+5 All participants · 8 ›": the
+   * planner, under its period (T-241). The same sheet opens.
    */
-  chip?: boolean;
+  faces?: boolean;
 }
 
 /** Past this many people the sheet gets a search field. */
 export const SEARCH_OVER = 12;
+
+/** Faces shown in the stack before "+N". */
+const FACES = 3;
+const FACE_SIZE = 28;
+
+/** "Olga Stage" as the avatar takes it: initials of the first and last word. */
+function nameParts(name: string): { firstName: string; lastName?: string } {
+  const words = name.trim().split(/\s+/);
+  return { firstName: words[0] ?? '', lastName: words.length > 1 ? words[words.length - 1] : undefined };
+}
 
 /**
  * Who takes part: one row that says how many are picked, and a sheet to pick
@@ -65,7 +76,7 @@ export function ParticipantPicker({
   loading = false,
   noneLabel,
   conflict,
-  chip = false,
+  faces = false,
 }: ParticipantPickerProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -81,9 +92,8 @@ export function ParticipantPicker({
         ? noneLabel
         : t.rehearsals.participantsCount(picked, people.length);
   const disabled = loading || people.length === 0;
-  // Everyone, or nobody where that means everyone: "all (4)".
+  // Everyone, or nobody where that means everyone: "All participants · 4".
   const everyone = !disabled && (picked === people.length || (picked === 0 && !!noneLabel));
-  const chipText = `${t.rehearsals.participants}: ${everyone ? t.rehearsals.participantsAll(people.length) : value}`;
 
   const sheet = (
     <ParticipantSheet
@@ -96,21 +106,43 @@ export function ParticipantPicker({
     />
   );
 
-  if (chip) {
+  if (faces) {
+    // The ones picked, everyone where that is everyone; three faces, then "+N".
+    const shown = everyone ? people : people.filter(p => selectedIds.includes(p.id));
+    const more = shown.length - FACES;
+    // Its own row, the whole width: in a row of three it was cut in the middle
+    // in every language, "Partici…: all (8)" (owner, 09.11; T-241). The words
+    // wrap rather than end in "…".
+    const facesText = disabled ? value : everyone
+      ? t.rehearsals.participantsEveryone(people.length)
+      : t.rehearsals.participantsCount(picked, people.length);
     return (
       <>
         <TouchableOpacity
           testID="participants-row"
-          style={styles.chip}
+          style={styles.faces}
           onPress={() => setOpen(true)}
           disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={[t.rehearsals.participants, value].join(', ')}
           accessibilityState={{ disabled }}
         >
-          {/* Cut in the middle: the count, at its end, stays. */}
-          <Text style={styles.chipText} numberOfLines={1} ellipsizeMode="middle">{chipText}</Text>
-          {!disabled && <Ionicons name="chevron-down" size={14} color={Colors.text.secondary} />}
+          {shown.length > 0 && (
+            <View testID="participants-faces" style={styles.faceStack}>
+              {shown.slice(0, FACES).map((person, index) => (
+                <View key={person.id} style={index > 0 && styles.faceOverlap}>
+                  <UserAvatar {...nameParts(person.name)} size={FACE_SIZE} />
+                </View>
+              ))}
+              {more > 0 && (
+                <View style={[styles.faceOverlap, styles.faceMore]}>
+                  <Text style={styles.faceMoreText}>{`+${more}`}</Text>
+                </View>
+              )}
+            </View>
+          )}
+          <Text style={styles.facesText}>{facesText}</Text>
+          {!disabled && <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />}
         </TouchableOpacity>
         {sheet}
       </>
@@ -320,17 +352,42 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     flexShrink: 1,
   },
-  chip: {
-    height: TouchTarget,
+  faces: {
+    minHeight: TouchTarget + Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    flexShrink: 1,
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    backgroundColor: Colors.glass.bg,
+    borderRadius: BorderRadius.md,
   },
-  chipText: {
+  faceStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  faceOverlap: {
+    marginLeft: -FACE_SIZE / 3,
+  },
+  faceMore: {
+    width: FACE_SIZE,
+    height: FACE_SIZE,
+    borderRadius: FACE_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.bg.tertiary,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  faceMoreText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.primary,
+  },
+  facesText: {
+    flex: 1,
     fontSize: FontSize.md,
     color: Colors.text.primary,
-    flexShrink: 1,
   },
   conflict: {
     marginTop: 2,

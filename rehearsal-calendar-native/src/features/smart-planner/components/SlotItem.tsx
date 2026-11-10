@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { IconButton } from '../../../shared/components/IconButton';
 import type { TimeSlot } from '../types';
 import { useI18n } from '../../../contexts/I18nContext';
 import { WORKDAY_START, WORKDAY_END } from '../../../shared/utils/availability';
@@ -9,7 +10,7 @@ import { getDateLocale } from '../../../shared/utils/locale';
 
 interface SlotItemProps {
   slot: TimeSlot;
-  /** Absent: no "+ Add" — hidden, not dimmed, for someone who may not use it (T-012). */
+  /** Absent: no "+" — hidden, not dimmed, for someone who may not use it (T-012). */
   onCreateRehearsal?: (slot: TimeSlot) => void;
 }
 
@@ -41,12 +42,13 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
     return `${t.smartPlanner.busyPrefix}: ${names}`;
   };
 
+  const range = formatTimeRange(slot.startTime, slot.endTime, getDateLocale(language), uses24);
   const timeText = (): string => {
     // Check if entire workday
     if (slot.startTime === WORKDAY_START && slot.endTime === WORKDAY_END) {
       return t.smartPlanner.allDay;
     }
-    return formatTimeRange(slot.startTime, slot.endTime, getDateLocale(language), uses24);
+    return range;
   };
 
   const canCreateRehearsal = slot.busyMembers.length < slot.totalMembers;
@@ -58,20 +60,24 @@ export const SlotItem: React.FC<SlotItemProps> = React.memo(({ slot, onCreateReh
         <Text style={styles.time} numberOfLines={1}>{timeText()}</Text>
         <Text testID={`planner-slot-${slot.date}`} style={styles.status} numberOfLines={1}>{getStatusText()}</Text>
       </View>
+      {/* A square "+", the word gone: "+ Hinzufügen" took a fifth of the row
+          (owner, 09.11; T-241). It says what it adds, and when, aloud. */}
       {canCreateRehearsal && onCreateRehearsal && (
-        <TouchableOpacity
+        <IconButton
           testID={`planner-add-${slot.date}-${slot.startTime}`}
+          icon="add"
+          color="#fff"
           style={styles.addButton}
           onPress={() => onCreateRehearsal(slot)}
-        >
-          <Text style={styles.addButtonText}>{t.smartPlanner.addButton}</Text>
-        </TouchableOpacity>
+          accessibilityLabel={t.smartPlanner.addRehearsalAt(range)}
+        />
       )}
     </View>
   );
 });
 
-// 52 pt a slot, "+ Add" 44 inside it (owner, 02.11.2026; T-026; 56 in T-020).
+// 52 pt a slot, its "+" 44 × 44 inside it (owner, 02.11.2026; T-026; 56 in
+// T-020; square in T-241).
 const styles = StyleSheet.create({
   slot: {
     height: 52,
@@ -104,14 +110,10 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: Colors.accent.purpleFill,
-    minHeight: TouchTarget,
+    width: TouchTarget,
+    height: TouchTarget,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    borderRadius: 8,
   },
 });

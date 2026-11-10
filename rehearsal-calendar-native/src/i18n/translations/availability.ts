@@ -50,13 +50,14 @@ export interface SmartPlannerTranslations {
   errorLoading: string;
   week: string;
   month: string;
-  custom: string;
-  customPeriod: string;
+  /** The period's third segment, beside Week and Month: dates of one's own (T-241). */
+  dates: string;
   slotsCount: (count: number) => string;
   allDay: string;
   /** Named members who have never recorded availability and so count as free. */
   unknownAvailability: (names: string) => string;
-  addButton: string;
+  /** A slot's "+", read aloud: what it does and when (T-241). */
+  addRehearsalAt: (time: string) => string;
   allMembers: string;
   allAvailable: string;
   allBusy: string;
@@ -109,8 +110,7 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     errorLoading: 'Ошибка загрузки',
     week: 'Неделя',
     month: 'Месяц',
-    custom: 'Выбрать даты',
-    customPeriod: 'Свой период',
+    dates: 'Даты',
     slotsCount: (count: number) => {
       // 1 слот, 2 слота, 5 слотов — и 11..14 идут по последней форме
       const mod10 = count % 10;
@@ -121,7 +121,7 @@ nothingMarked: 'Отметьте, когда вы заняты. Пока вы э
     },
     allDay: 'Весь день',
     unknownAvailability: (names: string) => `Нет данных о занятости: ${names}. В расчёте они считаются свободными.`,
-    addButton: '+ Добавить',
+    addRehearsalAt: (time: string) => `Добавить репетицию ${time}`,
     allMembers: 'Все участники',
     allAvailable: 'Все свободны',
     allBusy: 'Все заняты',
@@ -175,12 +175,11 @@ nothingMarked: 'Mark when you are busy. Until you do, everyone sees you as free.
     errorLoading: 'Error loading',
     week: 'Week',
     month: 'Month',
-    custom: 'Select Dates',
-    customPeriod: 'Custom Period',
+    dates: 'Dates',
     slotsCount: (count: number) => `${count} ${count === 1 ? 'slot' : 'slots'}`,
     allDay: 'All day',
     unknownAvailability: (names: string) => `No availability recorded: ${names}. They are counted as free.`,
-    addButton: '+ Add',
+    addRehearsalAt: (time: string) => `Add rehearsal ${time}`,
     allMembers: 'All Members',
     allAvailable: 'All available',
     allBusy: 'All busy',
@@ -234,12 +233,11 @@ nothingMarked: 'Marquen cuándo están ocupados. Hasta entonces, los demás los 
     errorLoading: 'Error al cargar',
     week: 'Semana',
     month: 'Mes',
-    custom: 'Elegir fechas',
-    customPeriod: 'Período personalizado',
+    dates: 'Fechas',
     slotsCount: (count: number) => `${count} ${count === 1 ? 'franja' : 'franjas'}`,
     allDay: 'Todo el día',
     unknownAvailability: (names: string) => `Sin disponibilidad registrada: ${names}. Se cuentan como libres.`,
-    addButton: '+ Añadir',
+    addRehearsalAt: (time: string) => `Añadir ensayo ${time}`,
     allMembers: 'Todos los miembros',
     allAvailable: 'Todos disponibles',
     allBusy: 'Todos ocupados',
@@ -293,13 +291,12 @@ nothingMarked: 'Trag ein, wann du beschäftigt bist. Bis dahin giltst du als fre
     errorLoading: 'Ladefehler',
     week: 'Woche',
     month: 'Monat',
-    custom: 'Daten auswählen',
-    customPeriod: 'Eigener Zeitraum',
+    dates: 'Daten',
     // Zeitfenster is the same in the plural
     slotsCount: (count: number) => `${count} Zeitfenster`,
     allDay: 'Ganztägig',
     unknownAvailability: (names: string) => `Keine Verfügbarkeit hinterlegt: ${names}. Sie zählen als frei.`,
-    addButton: '+ Hinzufügen',
+    addRehearsalAt: (time: string) => `Probe hinzufügen ${time}`,
     allMembers: 'Alle Mitglieder',
     allAvailable: 'Alle verfügbar',
     allBusy: 'Alle beschäftigt',

@@ -21,6 +21,7 @@ import { StyleSheet } from 'react-native';
 import { render, fireEvent, act, within } from '@testing-library/react-native';
 import { translations } from '../../../../i18n/translations';
 import { projectsAPI } from '../../../../shared/services/api';
+import { formatTimeRange, phoneUses24HourClock } from '../../../../shared/utils/clockFormat';
 import SmartPlannerScreen from '../SmartPlannerScreen';
 
 const t = translations.en;
@@ -41,14 +42,14 @@ jest.mock('../../../../contexts/I18nContext', () => ({
 jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'me', timezone: 'UTC' } }),
 }));
+const ALL_PROJECTS = [
+  { id: 'A', name: 'Project A', is_admin: true, timezone: 'UTC', created_at: '2026-01-01T00:00:00Z' },
+  { id: 'B', name: 'Project B', is_admin: true, timezone: 'UTC', created_at: '2026-01-02T00:00:00Z' },
+  { id: 'C', name: 'Project C', is_admin: false, timezone: 'UTC', created_at: '2026-01-03T00:00:00Z' },
+];
+let mockProjects = ALL_PROJECTS;
 jest.mock('../../../../contexts/ProjectContext', () => ({
-  useProjects: () => ({
-    projects: [
-      { id: 'A', name: 'Project A', is_admin: true, timezone: 'UTC', created_at: '2026-01-01T00:00:00Z' },
-      { id: 'B', name: 'Project B', is_admin: true, timezone: 'UTC', created_at: '2026-01-02T00:00:00Z' },
-      { id: 'C', name: 'Project C', is_admin: false, timezone: 'UTC', created_at: '2026-01-03T00:00:00Z' },
-    ],
-  }),
+  useProjects: () => ({ projects: mockProjects }),
 }));
 jest.mock('../../../../hooks/useWeekStart', () => ({ useWeekStart: () => 'monday' }));
 jest.mock('../../../../shared/services/api', () => ({
@@ -58,9 +59,11 @@ jest.mock('../../../../shared/services/api', () => ({
     getMembersAvailabilityRange: jest.fn(),
   },
 }));
+const MORNING = '2026-01-01T08:00:00Z';
+let mockNow = MORNING;
 jest.mock('../../../../shared/hooks/useClock', () => ({
   // Fixed point in the past: all slots in today's range are "future" and render
-  useNow: () => new Date('2026-01-01T08:00:00Z'),
+  useNow: () => new Date(mockNow),
   useToday: () => '2026-01-01',
   useTimezone: () => 'America/New_York',
 }));
@@ -89,6 +92,8 @@ const navigate = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockProjects = ALL_PROJECTS;
+  mockNow = MORNING;
   navigate.mockClear();
 
   const { useNavigation } = require('@react-navigation/native');
@@ -127,7 +132,6 @@ describe('DP01 — roster reload within the same project (R5-01)', () => {
     }));
 
     // Trigger reload by switching to the Month period (changes date range).
-    fireEvent.press(screen.getByTestId('planner-period'));
     fireEvent.press(screen.getByTestId('planner-period-month'));
     await settle();
     await settle();
@@ -235,26 +239,127 @@ describe('A slot\'s "+ Add" (T-012)', () => {
 
     // The slots are there, to read; nothing on them opens the form.
     expect(screen.getAllByText(t.smartPlanner.allDay).length).toBeGreaterThan(0);
-    expect(screen.queryByText(t.smartPlanner.addButton)).toBeNull();
+    expect(screen.queryAllByTestId(/^planner-add-/)).toHaveLength(0);
   });
 });
 
 // T-012: the segment chose "Select Dates" on the tap, and a cancelled picker
-// left it selected over the week's dates.
-describe('Cancel in "Select Dates"', () => {
-  it('leaves the period it was', async () => {
+// left it selected over the week's dates. T-241: "Dates" is a segment.
+describe('Cancel in "Dates"', () => {
+  it('leaves the segment it was', async () => {
     const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
     await settle();
 
-    fireEvent.press(screen.getByTestId('planner-period'));
+    fireEvent.press(screen.getByTestId('planner-period-month'));
+    await settle();
     fireEvent.press(screen.getByTestId('planner-period-custom'));
+    expect(screen.getByTestId('date-range-cancel')).toBeTruthy();
     fireEvent.press(screen.getByTestId('date-range-cancel'));
     await settle();
 
-    expect(within(screen.getByTestId('planner-period')).getByText(t.smartPlanner.week)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('planner-period'));
-    expect(screen.getByTestId('planner-period-week').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('planner-period-month').props.accessibilityState).toMatchObject({ selected: true });
     expect(screen.getByTestId('planner-period-custom').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.getByTestId('planner-period-week').props.accessibilityState).toMatchObject({ selected: false });
+  });
+});
+
+// T-241 (owner, 09.11; board C): the project, the period and the people one
+// under another. In one row they were cut in every language.
+describe('The planner\'s filters, one under another (T-241)', () => {
+  it('names the project; with nothing else to run, no chevron and no tap', async () => {
+    mockProjects = [ALL_PROJECTS[0], ALL_PROJECTS[2]];
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    const project = screen.getByTestId('planner-project');
+    expect(within(project).getByText('Project A')).toBeTruthy();
+    expect(within(project).queryByTestId(/chevron/)).toBeNull();
+    expect(project.props.accessibilityRole).toBeUndefined();
+    expect(project.props.onClick ?? project.props.onPress).toBeUndefined();
+    fireEvent.press(project);
+    expect(screen.queryByLabelText('Project C')).toBeNull();
+  });
+
+  it('with another project to run, the name opens the choice, chevron and all', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    expect(within(screen.getByTestId('planner-project')).getByTestId('icon-Ionicons-chevron-down')).toBeTruthy();
+    expect(screen.getByTestId('planner-project').props.accessibilityRole).toBe('button');
+    // Not the name alone: that is the option's, under it.
+    expect(screen.getByTestId('planner-project').props.accessibilityLabel).toBe('Project, Project A');
+    // The name wraps, to a third line before it ends in "…".
+    expect(within(screen.getByTestId('planner-project')).getByText('Project A').props.numberOfLines).toBe(3);
+    fireEvent.press(screen.getByTestId('planner-project'));
+    expect(screen.getByLabelText('Project B')).toBeTruthy();
+  });
+
+  it('changes the period with one tap on its segment, the picked one in sight', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    const segments = ['week', 'month', 'custom'].map(p => screen.getByTestId(`planner-period-${p}`));
+    expect(segments.map(s => within(s).getByText(/.+/).props.children))
+      .toEqual([t.smartPlanner.week, t.smartPlanner.month, t.smartPlanner.dates]);
+    expect(segments[0].props.accessibilityState).toMatchObject({ selected: true });
+
+    fireEvent.press(screen.getByTestId('planner-period-month'));
+    await settle();
+    await settle();
+
+    expect(screen.getByTestId('planner-period-month').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('planner-period-week').props.accessibilityState).toMatchObject({ selected: false });
+    expect(getAvailability).toHaveBeenLastCalledWith('A', '2026-01-01', '2026-01-30');
+  });
+
+  it('says who takes part by their faces and a count, the words whole', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    const row = screen.getByTestId('participants-row');
+    expect(within(row).getByText('All participants · 3')).toBeTruthy();
+    expect(within(row).getByText('All participants · 3').props.numberOfLines).toBeUndefined();
+    // Everyone's three faces, Namea1 to Namea3: no "+N" for three.
+    expect(within(screen.getByTestId('participants-faces')).getAllByText('N')).toHaveLength(3);
+    expect(within(row).queryByText(/^\+\d/)).toBeNull();
+
+    fireEvent.press(row);
+    fireEvent.press(screen.getByTestId('participant-a2'));
+    await settle();
+    expect(within(screen.getByTestId('participants-row')).getByText('2 of 3')).toBeTruthy();
+  });
+
+  it('gives a slot a "+" that says what it adds, and when', async () => {
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    const add = screen.getByTestId('planner-add-2026-01-01-09:00');
+    expect(add.props.accessibilityRole).toBe('button');
+    expect(add.props.accessibilityLabel).toBe(
+      t.smartPlanner.addRehearsalAt(formatTimeRange('09:00', '23:00', 'en-US', phoneUses24HourClock())),
+    );
+    expect(screen.queryByText(/\+ Add/)).toBeNull();
+    const flat = (style: unknown): object => (Array.isArray(style)
+      ? Object.assign({}, ...style.map(flat)) : (style as object) ?? {});
+    expect(flat(add.props.style)).toMatchObject({ width: 44, height: 44 });
+  });
+
+  it('dates the list by its days: today gone, from tomorrow', async () => {
+    // Late on 1 January in the profile's day: its hours are past, and the
+    // week's list begins on the 2nd. The title said "Jan 1 – Jan 7" over it.
+    mockNow = '2026-01-02T03:59:00Z';
+    const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+    await settle();
+    await settle();
+
+    expect(screen.queryByTestId('planner-day-2026-01-01')).toBeNull();
+    expect(screen.getByTestId('planner-day-2026-01-02')).toBeTruthy();
+    expect(screen.getByText('Jan 2 – Jan 7')).toBeTruthy();
   });
 });
 
@@ -272,34 +377,29 @@ describe('The planner\'s list, dense (T-020)', () => {
     expect(height(screen.getByTestId('planner-row-2026-01-01-09:00'))).toBe(52);
   });
 
-  it('puts the project, the period and the people in one row of 44 pt', async () => {
+  it('puts the project, the period and the people above the list, nothing else', async () => {
     const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
     await settle();
     await settle();
 
-    const row = screen.getByTestId('planner-filters');
-    expect(height(row)).toBe(44);
-    expect(within(row).getByTestId('planner-project')).toBeTruthy();
-    expect(within(row).getByText('Project A')).toBeTruthy();
-    expect(within(row).getByText(t.smartPlanner.week)).toBeTruthy();
-    expect(within(row).getByText('Participants: all (3)')).toBeTruthy();
+    const filters = screen.getByTestId('planner-filters');
+    expect(within(filters).getByTestId('planner-project')).toBeTruthy();
+    expect(within(filters).getByText('Project A')).toBeTruthy();
+    expect(within(filters).getByTestId('planner-period')).toBeTruthy();
+    expect(within(filters).getByTestId('participants-row')).toBeTruthy();
     // Nothing else stands above the list: the "Period" heading it once had is gone
     // (its key too, T-045).
     expect(screen.queryByText('Period')).toBeNull();
   });
 
-  it('opens each filter\'s own choice from the row', async () => {
+  it('opens the project\'s and the people\'s choices', async () => {
     const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
     await settle();
     await settle();
 
-    // The period: closed until tapped, and the one picked names it in the row.
-    expect(screen.queryByTestId('planner-period-month')).toBeNull();
-    fireEvent.press(screen.getByTestId('planner-period'));
+    // The period: a tap on its segment, and the list's dates follow.
     fireEvent.press(screen.getByTestId('planner-period-month'));
     await settle();
-    expect(screen.queryByTestId('planner-period-month')).toBeNull();
-    expect(within(screen.getByTestId('planner-period')).getByText(t.smartPlanner.month)).toBeTruthy();
     expect(screen.getByText('Jan 1 – Jan 30')).toBeTruthy();
 
     // The project: the projects this person runs.
@@ -308,14 +408,16 @@ describe('The planner\'s list, dense (T-020)', () => {
     expect(screen.getByText('Project B')).toBeTruthy();
     expect(screen.queryByText('Project C')).toBeNull();
     // The picked one is named by its name alone, its checkmark not in it (T-219).
-    expect(screen.getByLabelText('Project A').props.accessibilityState).toEqual({ selected: true });
+    const options = screen.getAllByLabelText('Project A').filter(n => n.props.testID !== 'planner-project');
+    expect(options).toHaveLength(1);
+    expect(options[0].props.accessibilityState).toEqual({ selected: true });
 
     // The people: their sheet.
     fireEvent.press(screen.getByTestId('participants-row'));
     expect(screen.getByTestId('participants-all')).toBeTruthy();
     fireEvent.press(screen.getByTestId('participant-a2'));
     await settle();
-    expect(screen.getByText('Participants: 2 of 3')).toBeTruthy();
+    expect(screen.getByLabelText('Participants, 2 of 3')).toBeTruthy();
   });
 });
 
