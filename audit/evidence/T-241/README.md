@@ -31,7 +31,8 @@ e2e, `npm run e2e -- e2e/flows/59-planner-filters-spanish.yaml` (run 2026-11-10_
 
 `before/` — the same screen in es, en, ru, de over «Video musical “Fuego
 lento”» and «Musikvideo „Nachtschicht“», from a one-off shots flow on the
-old code: «Video musical “…» · «Se…» · «Partici…os (8)», «+ Añadir».
+old code (`before-shots-flow.yaml`, run from `e2e/flows` then moved here so
+that no run takes it): «Video musical “…» · «Se…» · «Partici…os (8)», «+ Añadir».
 
 ## Green after
 

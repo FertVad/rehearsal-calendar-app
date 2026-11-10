@@ -1,0 +1,83 @@
+# Temporary (T-241): the planner's filters as they were, in four languages over
+# Bianca's long names — only shots, run on the old code, then removed.
+appId: ${APP_ID}
+name: T-241 shots before
+tags:
+  - planner
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${BIANCA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn:
+    id: tab-planner
+- extendedWaitUntil:
+    visible:
+      id: planner-project
+    timeout: 15000
+- tapOn:
+    id: planner-project
+- tapOn: "Video musical “Fuego lento”"
+- extendedWaitUntil:
+    visible: "\\+ Añadir"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: before-planner-es
+- tapOn:
+    id: tab-profile
+- tapOn:
+    id: profile-language
+- tapOn:
+    id: language-en
+- extendedWaitUntil:
+    visible: "Profile, tab.*"
+    timeout: 10000
+- tapOn:
+    id: tab-planner
+- extendedWaitUntil:
+    visible: "\\+ Add"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: before-planner-en
+- tapOn:
+    id: tab-profile
+- tapOn:
+    id: profile-language
+- tapOn:
+    id: language-ru
+- extendedWaitUntil:
+    visible: "Профиль, tab.*"
+    timeout: 10000
+- tapOn:
+    id: tab-planner
+- extendedWaitUntil:
+    visible: "\\+ Добавить"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: before-planner-ru
+- tapOn:
+    id: tab-profile
+- tapOn:
+    id: profile-language
+- tapOn:
+    id: language-de
+- extendedWaitUntil:
+    visible: "Profil, tab.*"
+    timeout: 10000
+- tapOn:
+    id: tab-planner
+- tapOn:
+    id: planner-project
+- tapOn: "Musikvideo „Nachtschicht“"
+- extendedWaitUntil:
+    visible: "\\+ Hinzufügen"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: before-planner-de
