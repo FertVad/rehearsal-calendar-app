@@ -72,8 +72,9 @@ tags:
 - extendedWaitUntil:
     notVisible: "Mark Busy"
     timeout: 10000
-# The planner: his project's slots, to read, with no "+ Add" on them. A whole
-# free day is brought to the middle; its "+ Add" stood beside it.
+# The planner: his project's slots, to read, with no "+" on them, read aloud
+# "Add rehearsal" and its hours (T-241). A whole free day is brought to the
+# middle; its "+ Add" stood beside it.
 - tapOn: "Planner, tab.*"
 - scrollUntilVisible:
     element: "All day"
@@ -81,27 +82,21 @@ tags:
     centerElement: true
     timeout: 60000
 - waitForAnimationToEnd
-- assertNotVisible: "\\+ Add"
+- assertNotVisible: "Add rehearsal.*"
 - takeScreenshot: 41-planner-member
 # Its period picker: today is the profile's day, the week begins on Monday,
 # and Cancel leaves the period as it was. The list is taken to its top: scrolled
 # up only until Maestro sees it, it stopped under the status bar, the tap on it
 # was the status bar's, and no picker opened. It cannot be centred, so high up.
-# The period is one of the filters in a row, its choices under it (T-020).
+# The period is three segments, Dates the third (T-241).
 - scrollUntilVisible:
     element:
-      id: planner-period
+      id: planner-period-custom
     direction: UP
 - swipe:
     start: 50%, 40%
     end: 50%, 90%
 - waitForAnimationToEnd
-- runFlow:
-    file: ../subflows/tap-and-see.yaml
-    env:
-      TAP_ID: planner-period
-      SEE: "Select Dates"
-      WAIT_MS: "5000"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
@@ -122,5 +117,5 @@ tags:
     notVisible: "Select Period"
     timeout: 10000
 - assertVisible:
-    id: planner-period
-    text: "Week.*"
+    id: planner-period-week
+    selected: true

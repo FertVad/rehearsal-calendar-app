@@ -238,6 +238,9 @@ export const PEOPLE = {
   // Reads the sync screen's bar and its "Synced just now" in four languages,
   // and opens her project of a long name, "‹" beside it (84, T-239).
   katharina: { email: 'katharina@e2e.test', firstName: 'Katharina', lastName: 'Minola', onboarded: true },
+  // Reads the planner's filters in Spanish, English, Russian and German, over
+  // her two projects of long names (59, T-241). Her account speaks Spanish.
+  bianca: { email: 'bianca@e2e.test', firstName: 'Bianca', lastName: 'Minola', onboarded: true, locale: 'es' },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -592,6 +595,24 @@ export async function seed({ client, apiUrl, timezone }) {
       `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
        VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
       [demo.id, ids.katharina]);
+  }
+  // Bianca's two, of the long names the owner's mock-ups were tried on (59,
+  // T-241): the first with seven islanders, eight in all — three faces and
+  // "+5" — the second hers alone. Inserted: the sign-ins are spent.
+  for (const [name, cast] of [['Video musical “Fuego lento”', islanders.slice(0, 7)], ['Musikvideo „Nachtschicht“', []]]) {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, 'Long name', $2, NOW(), NOW()) RETURNING id`, [name, timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids.bianca]);
+    for (const member of cast) {
+      await client.query(
+        `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+         VALUES ($1, $2, 'member', 'active', NOW(), NOW())`,
+        [own.id, member]);
+    }
   }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.

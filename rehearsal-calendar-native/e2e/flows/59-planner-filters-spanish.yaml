@@ -1,13 +1,23 @@
-# The planner's row of filters in Spanish, with dates of her own picked
-# (T-020 review): "La casa de Bernarda Alba ▾ · Período personalizado ▾ ·
-# Participantes: todos (1) ▾". The period and the people kept their whole
-# words: the project was left its chevron, and the row ran past the screen's
-# right edge. Each gives way now, and the three fit in the row.
+# The planner's filters, whole, in four languages and over long names (owner,
+# 09.11, board C; T-241). In one row of 44 pt (T-020) each had a third of it,
+# and all three were cut in every language: «Шоу-балет «…» · «Нед…» ·
+# «Участ…все (8)», "Pulse Dance Co…" · "W…" · "Partici…: all (8)", and in
+# Spanish even "Compañía…" · "Sem…".
 #
-# Bernarda Alba, whose profile speaks Spanish, in a project of her own (56).
-# Nothing is saved.
+# Now one under another: the project's name, wrapping before it is cut, its
+# chevron opening the choice; Week | Month | Dates, three equal segments,
+# the picked one in sight; the people by three faces, "+5" and "Todos los
+# participantes · 8", a row of their own. A slot's "+ Añadir" is a square
+# "+", read aloud as "Añadir ensayo" and its hours.
+#
+# Bianca Minola, whose account speaks Spanish, runs «Video musical "Fuego
+# lento"», eight in it, and «Musikvideo „Nachtschicht"», hers alone; she reads
+# the planner in Spanish, English, Russian and German. Maestro reads a label
+# whole even where the screen cuts it, so the words are checked by their text,
+# the sizes by Maestro, and seen whole in the shots. Nothing is saved; her
+# language stays German.
 appId: ${APP_ID}
-name: The planner's filters fit in Spanish
+name: The planner's filters fit in four languages
 tags:
   - planner
   - participants
@@ -16,7 +26,7 @@ tags:
 - runFlow:
     file: ../subflows/sign-in.yaml
     env:
-      EMAIL: ${BERNARDA_EMAIL}
+      EMAIL: ${BIANCA_EMAIL}
 - extendedWaitUntil:
     visible:
       id: calendar-filter
@@ -28,61 +38,248 @@ tags:
 - tapOn:
     text: "Not Now"
     optional: true
+
+# Spanish.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: tab-planner
-      SEE: "Semana.*"
+      SEE: "Semana"
       WAIT_MS: "10000"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
-      TAP_ID: planner-period
-      SEE: "Elegir fechas"
-      WAIT_MS: "5000"
+      TAP_ID: planner-project
+      SEE: "Video musical “Fuego lento”"
+      WAIT_MS: "10000"
+- tapOn: "Video musical “Fuego lento”"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participantes, 8 de 8"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Añadir ensayo \\d.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 59-planner-es
+- assertVisible:
+    id: planner-project
+    text: "Proyecto, Video musical “Fuego lento”"
+# Three equal segments of the 393 pt of an iPhone 16: 393 - 2 × 16 - 2 × 2,
+# 119 each; the people's row the whole 361.
+- assertVisible:
+    id: planner-period-week
+    text: "Semana"
+    selected: true
+    width: 119
+    tolerance: 2
+- assertVisible:
+    id: planner-period-month
+    text: "Mes"
+    width: 119
+    tolerance: 2
+- assertVisible:
+    id: planner-period-custom
+    text: "Fechas"
+    width: 119
+    tolerance: 2
+- assertVisible:
+    id: participants-row
+    width: 361
+    tolerance: 2
+# The month, one tap.
+- tapOn:
+    id: planner-period-month
+- extendedWaitUntil:
+    visible:
+      id: planner-period-month
+      selected: true
+    timeout: 10000
+# The dates: their picker; its Cancel leaves the month (T-012).
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: planner-period-custom
       SEE: "Seleccionar período"
       WAIT_MS: "10000"
-# The week's seven days are picked already: "Listo" takes them.
-- tapOn: "Listo"
+- tapOn:
+    id: date-range-cancel
 - extendedWaitUntil:
     visible:
-      id: planner-period
-      text: "Período personalizado.*"
+      id: planner-period-month
+      selected: true
     timeout: 10000
-- waitForAnimationToEnd
-- takeScreenshot: 59-filters-spanish
-# The three have 393 - 2 × 16 - 2 × 12 - 26 = 311 pt of the row on the
-# iPhone 16, once the dots and the gaps are out (111, 99 and 103 here).
-# Maestro matches a size within a tolerance, 60 to 124 pt each: the project
-# is more than its chevron, and neither the period nor the people keep their
-# whole words.
 - assertVisible:
-    id: planner-filters
-    height: 44
-    tolerance: 1
-- assertVisible:
-    id: planner-project
-    width: 92
-    tolerance: 32
-- assertVisible:
-    id: planner-period
-    width: 92
-    tolerance: 32
-- assertVisible:
-    id: participants-row
-    width: 92
-    tolerance: 32
-# The people's, cut, still open their sheet.
+    id: planner-period-custom
+    selected: false
+- tapOn:
+    id: planner-period-week
+- extendedWaitUntil:
+    visible:
+      id: planner-period-week
+      selected: true
+    timeout: 10000
+# The people's row opens their sheet, everyone in it.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: participants-row
-      SEE: "Todos los participantes.*"
+      SEE: "Todos los participantes, 8 de 8"
       WAIT_MS: "5000"
-- takeScreenshot: 59-participants-spanish
+- takeScreenshot: 59-participants-es
 - tapOn:
     id: participants-done
+- extendedWaitUntil:
+    notVisible: "Todos los participantes, 8 de 8"
+    timeout: 10000
+
+# English.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Idioma, Español.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "English"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-en
+      SEE: "Profile, tab.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-planner
+      SEE: "Week"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible: "Add rehearsal \\d.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 59-planner-en
+- assertVisible:
+    id: planner-project
+    text: "Project, Video musical “Fuego lento”"
+- assertVisible:
+    id: participants-row
+    text: "Participants, 8 of 8"
+- assertVisible:
+    id: planner-period-week
+    text: "Week"
+    selected: true
+- assertVisible:
+    id: planner-period-month
+    text: "Month"
+- assertVisible:
+    id: planner-period-custom
+    text: "Dates"
+
+# Russian.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Русский"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-ru
+      SEE: "Профиль, tab.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-planner
+      SEE: "Неделя"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible: "Добавить репетицию \\d.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 59-planner-ru
+- assertVisible:
+    id: planner-project
+    text: "Проект, Video musical “Fuego lento”"
+- assertVisible:
+    id: participants-row
+    text: "Участники, 8 из 8"
+- assertVisible:
+    id: planner-period-week
+    text: "Неделя"
+    selected: true
+- assertVisible:
+    id: planner-period-month
+    text: "Месяц"
+- assertVisible:
+    id: planner-period-custom
+    text: "Даты"
+
+# German, over the other long name.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Язык, Русский.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-planner
+      SEE: "Woche"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-project
+      SEE: "Musikvideo „Nachtschicht“"
+      WAIT_MS: "10000"
+- tapOn: "Musikvideo „Nachtschicht“"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Teilnehmer, 1 von 1"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Probe hinzufügen \\d.*"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 59-planner-de
+- assertVisible:
+    id: planner-project
+    text: "Projekt, Musikvideo „Nachtschicht“"
+- assertVisible:
+    id: planner-period-week
+    text: "Woche"
+    selected: true
+- assertVisible:
+    id: planner-period-month
+    text: "Monat"
+- assertVisible:
+    id: planner-period-custom
+    text: "Daten"

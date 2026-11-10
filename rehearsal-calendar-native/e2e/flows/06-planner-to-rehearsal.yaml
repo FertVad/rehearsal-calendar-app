@@ -44,14 +44,15 @@ tags:
       text: "Participants, 2 of 4"
     timeout: 10000
 # The first slot offered, whichever day it falls on, brought to the middle of
-# the screen — under the tab bar or still moving, a tap misses it.
+# the screen — under the tab bar or still moving, a tap misses it. Its "+" is
+# an icon, read as "Add rehearsal" and the slot's hours (T-241).
 - scrollUntilVisible:
-    element: "\\+ Add"
+    element: "Add rehearsal \\d.*"
     direction: DOWN
     centerElement: true
 - waitForAnimationToEnd
 - tapOn:
-    text: "\\+ Add"
+    text: "Add rehearsal \\d.*"
     index: 0
 # The form's own row, below its project: the planner's says the same behind it.
 - extendedWaitUntil:

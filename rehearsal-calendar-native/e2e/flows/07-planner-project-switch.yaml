@@ -75,8 +75,8 @@ tags:
 # A rehearsal planned in that slot says on its participants row that he is
 # busy then, and his sheet row gives his hours (T-010). Only opened: nothing
 # is saved, so the slots stay as they were for the rest of the flow.
-# His slot is his busy hours, 10:00-14:00 tomorrow; its "+ Add" by its id, as
-# `rightOf` takes whichever "+ Add" comes first in the tree.
+# His slot is his busy hours, 10:00-14:00 tomorrow; its "+" by its id, as
+# `rightOf` takes whichever "+" comes first in the tree.
 - scrollUntilVisible:
     element:
       id: planner-add-${TOMORROW_DAY}-10:00
@@ -162,7 +162,7 @@ tags:
     text: ".*2 of 3.*"
 - assertNotVisible: "Busy: .*Grigory Smirnov.*"
 - takeScreenshot: 07-planner-three-sisters
-# Tomorrow is free for all three: "All day", 09:00-23:00. Its "+ Add" made a
+# Tomorrow is free for all three: "All day", 09:00-23:00. Its "+" made a
 # fourteen-hour rehearsal; it starts one at 09:00 for as long as Three
 # Sisters' last, its read-through three days ago: an hour and a half (T-012).
 # The form's "Recommended Time" is the same window, and a tap on it gives the

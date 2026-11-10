@@ -1,9 +1,9 @@
 # A role given with no push to tell of it — notifications off — arrives when
 # the app comes back (T-229). Mercutio is an actor in Verona Masque, and in the
-# planner its slots have no "+ Add". Gaev makes him an admin from another
+# planner its slots have no "+" ("Add rehearsal", T-241). Gaev makes him an admin from another
 # device, and no push comes. He sends the app away and opens it again, not
 # restarted: the projects are read again on the way back, and the slots have
-# "+ Add". The old app read them only at sign-in, so the role waited for a
+# "+". The old app read them only at sign-in, so the role waited for a
 # restart.
 appId: ${APP_ID}
 name: Role given, seen on return
@@ -24,7 +24,7 @@ tags:
 - extendedWaitUntil:
     visible: "All available"
     timeout: 15000
-- assertNotVisible: "\\+ Add"
+- assertNotVisible: "Add rehearsal \\d.*"
 - runScript:
     file: ../scripts/set-role.js
     env:
@@ -38,6 +38,6 @@ tags:
 - launchApp:
     stopApp: false
 - extendedWaitUntil:
-    visible: "\\+ Add"
+    visible: "Add rehearsal \\d.*"
     timeout: 15000
 - takeScreenshot: 76-planner-as-admin-on-return

@@ -212,7 +212,7 @@ tags:
 - extendedWaitUntil:
     visible: ".*Join with a code.*"
     timeout: 10000
-# The planner: its periods, "+ Add" on a free slot. A tab's first screen, it
+# The planner: its periods, the "+" on a free slot. A tab's first screen, it
 # has no "Back" (T-032).
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -220,19 +220,13 @@ tags:
       TAP: "Planner, tab.*"
       SEE: "Planner"
       WAIT_MS: "10000"
-# The period is a filter in the row, its choices under it (T-020).
-- assertVisible:
-    id: planner-period
-    height: 50
-    tolerance: 6
-- runFlow:
-    file: ../subflows/tap-and-see.yaml
-    env:
-      TAP_ID: planner-period
-      SEE: "Select Dates"
-      WAIT_MS: "5000"
+# The period is three segments, each 44 tall (T-241).
 - assertVisible:
     id: planner-period-week
+    height: 50
+    tolerance: 6
+- assertVisible:
+    id: planner-period-custom
     height: 50
     tolerance: 6
 # Its period picker: a day is 44 a side, drawn 38×34 as the library draws it
@@ -260,13 +254,15 @@ tags:
 - extendedWaitUntil:
     notVisible: "Select Period"
     timeout: 10000
+# A square "+" since T-241, read aloud "Add rehearsal" and its hours.
 - scrollUntilVisible:
-    element: "\\+ Add"
+    element: "Add rehearsal \\d.*"
     direction: DOWN
     centerElement: true
     timeout: 60000
 - assertVisible:
-    text: "\\+ Add"
+    text: "Add rehearsal \\d.*"
+    width: 50
     height: 50
     tolerance: 6
 - takeScreenshot: 49-planner
