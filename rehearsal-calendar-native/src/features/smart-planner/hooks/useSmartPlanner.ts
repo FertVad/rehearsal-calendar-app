@@ -43,7 +43,12 @@ export function useSmartPlanner({
   const rangeKey = JSON.stringify([projectId, startDate, endDate, userTimezone]);
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // The failed load itself, not its text: the text is the language's on
+  // screen now (T-228). Kept as words, it stayed in the language it failed in
+  // after a switch, and listing `t` in the load would have loaded it again
+  // for a change of language (T-243).
+  const [failure, setFailure] = useState<unknown>(null);
+  const error = failure != null ? requestErrorMessage(t, failure, t.auth.requestFailed) : null;
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [membersProjectId, setMembersProjectId] = useState<string | null>(null);
@@ -77,8 +82,10 @@ export function useSmartPlanner({
     let mounted = true;
 
     async function loadData() {
+      // A range refused is said by `rangeError` itself, in the language on
+      // screen; there is no load to have failed.
       if (rangeError) {
-        setError(rangeError);
+        setFailure(null);
         setMemberAvailability([]);
         setLoadedRangeKey(null);
         setLoading(false);
@@ -90,7 +97,7 @@ export function useSmartPlanner({
 
       try {
         setLoading(true);
-        setError(null);
+        setFailure(null);
 
         if (__DEV__) {
           logger.debug('[Smart Planner] Loading data for project:', projectId);
@@ -123,7 +130,7 @@ export function useSmartPlanner({
       } catch (err: any) {
         logger.error('[Smart Planner] Error loading data:', err);
         if (mounted) {
-          setError(requestErrorMessage(t, err, t.auth.requestFailed));
+          setFailure(err ?? new Error('planner load failed'));
           setMemberAvailability([]);
           setLoadedRangeKey(null);
         }
