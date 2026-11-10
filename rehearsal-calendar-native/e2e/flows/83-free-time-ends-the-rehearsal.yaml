@@ -56,10 +56,12 @@ tags:
       TAP_ID: planner-add-${TOMORROW_DAY}-13:00
       SEE: "Add Rehearsal"
       WAIT_MS: "10000"
+# Its label names anyone picked who is busy at the time: not waited for here,
+# the end below says it first.
 - extendedWaitUntil:
     visible:
       id: participants-row
-      text: "Participants, 3 of 3"
+      text: "Participants, 3 of 3.*"
       below:
         id: rehearsal-project
     timeout: 15000
