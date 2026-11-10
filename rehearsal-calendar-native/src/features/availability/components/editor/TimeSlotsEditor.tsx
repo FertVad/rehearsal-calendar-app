@@ -11,7 +11,6 @@ import { getDateLocale } from '../../../../shared/utils/locale';
 interface TimeSlotsEditorProps {
   slots: TimeSlot[];
   validationError: SlotValidationError | null;
-  onSlotChange: (index: number, field: 'start' | 'end', value: string) => void;
   onAddSlot: () => void;
   onRemoveSlot: (index: number) => void;
   onTimePickerOpen: (slotIndex: number, field: 'start' | 'end') => void;
@@ -20,7 +19,6 @@ interface TimeSlotsEditorProps {
 export default function TimeSlotsEditor({
   slots,
   validationError,
-  onSlotChange,
   onAddSlot,
   onRemoveSlot,
   onTimePickerOpen,

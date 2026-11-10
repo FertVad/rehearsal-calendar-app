@@ -119,12 +119,15 @@ export function useLeaveGuard({ hasChanges, canSave, save, discard }: {
   // Saved and rendered: the way out goes on. What was sent is all there is,
   // nothing having changed meanwhile; should something still be unsaved, it
   // is asked about.
+  // Once, in the render the save landed in: its `hasChanges` is the one that
+  // counts, and `ask` and `go`, new each render, are that render's (T-243).
   useEffect(() => {
     if (!saved) return;
     setSaved(null);
     if (hasChanges) ask(saved);
     else go(saved);
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+  }, [saved]);
 
   return {
     /** A save is out: the screen takes no edits and shows it is saving. */

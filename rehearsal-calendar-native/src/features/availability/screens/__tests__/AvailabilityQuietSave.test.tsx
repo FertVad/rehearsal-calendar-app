@@ -91,6 +91,8 @@ beforeEach(async () => {
   setProfileTimezone('UTC');
   await AsyncStorage.removeItem('availability-cache');
   (Navigation.useNavigation as jest.Mock).mockReturnValue(navigation);
+  // Focused once, on opening.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the screen's focus effect, run once as a focus would
   (Navigation.useFocusEffect as jest.Mock).mockImplementation((effect) => React.useEffect(effect, []));
   getAll.mockResolvedValue(loaded);
 });

@@ -108,7 +108,7 @@ describe('DateRangePicker Component', () => {
 
   describe('Date Selection', () => {
     it('should select start date on first press', () => {
-      const { getByText, UNSAFE_getAllByType } = render(
+      const { UNSAFE_getAllByType } = render(
         <DateRangePicker
           visible={true}
           onClose={mockOnClose}
@@ -142,7 +142,7 @@ describe('DateRangePicker Component', () => {
     });
 
     it('should handle overlay press to close', () => {
-      const { getByTestId, UNSAFE_getAllByType } = render(
+      const { UNSAFE_getAllByType } = render(
         <DateRangePicker
           visible={true}
           onClose={mockOnClose}
@@ -214,7 +214,7 @@ describe('DateRangePicker Component', () => {
     });
 
     it('should not call onConfirm when no dates selected', () => {
-      const { getByText, UNSAFE_getAllByType } = render(
+      const { UNSAFE_getAllByType } = render(
         <DateRangePicker
           visible={true}
           onClose={mockOnClose}
@@ -238,7 +238,7 @@ describe('DateRangePicker Component', () => {
       const startDate = new Date('2025-12-25');
       const endDate = new Date('2025-12-31');
 
-      const { getByText, rerender } = render(
+      const { getByText } = render(
         <DateRangePicker
           visible={true}
           onClose={mockOnClose}

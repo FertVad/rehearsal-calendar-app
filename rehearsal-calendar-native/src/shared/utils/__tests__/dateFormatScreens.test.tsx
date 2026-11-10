@@ -45,7 +45,7 @@ describe.each(LANGUAGES)('in %s', (language, october, november, thursday) => {
 
   it('the availability names a month the same way', () => {
     const screen = render(
-      <CalendarMonth year={2026} month={10} selectedDates={[]} availability={{}} today="2026-10-29"
+      <CalendarMonth year={2026} month={10} selectedDates={[]} today="2026-10-29"
         onDayPress={jest.fn()} getDayStatus={() => 'none'} />,
     );
     expect(screen.getByText(november)).toBeTruthy();

@@ -74,7 +74,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: jest.fn(() => Promise.resolve()),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const calendarStorage = require('../../utils/calendarStorage');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));

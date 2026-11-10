@@ -29,7 +29,7 @@ jest.mock('../../../../contexts/SeenContext', () => ({
 }));
 
 import TodayRehearsals from '../TodayRehearsals';
-import { Rehearsal, Project, RSVPStatus } from '../../../../shared/types';
+import { Rehearsal, Project } from '../../../../shared/types';
 import { formatDateToString } from '../../../../shared/utils/time';
 
 // Mock dependencies
@@ -156,20 +156,7 @@ describe('TodayRehearsals Component', () => {
     },
   ];
 
-  const mockRsvpResponses: Record<string, RSVPStatus> = {
-    r1: 'yes',
-    r2: null,
-  };
-
-  const mockAdminStats = {
-    r1: { confirmed: 5, invited: 10 },
-    r2: { confirmed: 0, invited: 5 },
-  };
-
-  const mockOnRSVP = jest.fn();
   const mockOnOpenRehearsal = jest.fn();
-  const mockSetRsvpResponses = jest.fn();
-  const mockSetAdminStats = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -424,8 +411,8 @@ describe('TodayRehearsals Component', () => {
 
       // Should not show Admin badge for non-admin project
       // The component only shows the badge when is_admin is true
-      const adminTexts = queryByText('Admin');
       // Admin text should not be present for non-admin rehearsal
+      expect(queryByText('Admin')).toBeNull();
     });
   });
 

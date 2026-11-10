@@ -120,7 +120,6 @@ it('the availability month: the days picked on purpleFill, today ringed', () => 
       year={2026}
       month={10}
       selectedDates={['2026-11-05']}
-      availability={{}}
       today="2026-11-02"
       onDayPress={jest.fn()}
       getDayStatus={() => 'none'}

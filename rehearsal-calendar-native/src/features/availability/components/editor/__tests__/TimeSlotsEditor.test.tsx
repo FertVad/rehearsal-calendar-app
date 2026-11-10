@@ -25,7 +25,6 @@ jest.mock('../../../../../contexts/I18nContext', () => ({
 }));
 
 describe('TimeSlotsEditor Component', () => {
-  const mockOnSlotChange = jest.fn();
   const mockOnAddSlot = jest.fn();
   const mockOnRemoveSlot = jest.fn();
   const mockOnTimePickerOpen = jest.fn();
@@ -49,7 +48,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={singleSlot}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -68,7 +66,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={multipleSlots}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -90,7 +87,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={singleSlot}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -105,7 +101,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={singleSlot}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -125,7 +120,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={singleSlot}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -143,7 +137,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={multipleSlots}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -161,7 +154,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={multipleSlots}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -187,7 +179,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={singleSlot}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -207,7 +198,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={singleSlot}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -227,7 +217,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={multipleSlots}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -245,23 +234,11 @@ describe('TimeSlotsEditor Component', () => {
 
   describe('Validation Error Display', () => {
     it('should not show error when validationError is null', () => {
-      const { queryByText } = render(
-        <TimeSlotsEditor
-          slots={singleSlot}
-          validationError={null}
-          onSlotChange={mockOnSlotChange}
-          onAddSlot={mockOnAddSlot}
-          onRemoveSlot={mockOnRemoveSlot}
-          onTimePickerOpen={mockOnTimePickerOpen}
-        />
-      );
-
       // Should not find any validation error
       const { UNSAFE_queryAllByType } = render(
         <TimeSlotsEditor
           slots={singleSlot}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -281,7 +258,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={singleSlot}
           validationError="sameStartEnd"
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -304,7 +280,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={multipleSlots}
           validationError="overlap"
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -318,7 +293,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={multipleSlots}
           validationError="sameStartEnd"
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -335,7 +309,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={multipleSlots}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -356,7 +329,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={singleSlot}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -375,7 +347,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={singleSlot}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -395,7 +366,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={[]}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -419,7 +389,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={manySlots}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}
@@ -445,7 +414,6 @@ describe('TimeSlotsEditor Component', () => {
         <TimeSlotsEditor
           slots={slotWithSeconds}
           validationError={null}
-          onSlotChange={mockOnSlotChange}
           onAddSlot={mockOnAddSlot}
           onRemoveSlot={mockOnRemoveSlot}
           onTimePickerOpen={mockOnTimePickerOpen}

@@ -20,7 +20,6 @@ const month = (onTodayLayout?: (y: number) => void) => render(
     year={2026}
     month={9}
     selectedDates={[]}
-    availability={{}}
     today="2026-10-29"
     onDayPress={jest.fn()}
     getDayStatus={() => 'none'}

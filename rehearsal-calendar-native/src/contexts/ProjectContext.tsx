@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { projectsAPI } from '../shared/services/api';
 import { onDataChanged } from '../shared/utils/dataChanged';
@@ -111,11 +111,20 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return newProject;
   };
 
+  // Loaded for each person and session; the load itself is this render's,
+  // which knows them (T-243).
   useEffect(() => {
     if (user) {
-      fetchProjects();
+      latestFetch.current();
     }
   }, [user, session]);
+
+  // One function for the session, so that a form may list it among what its
+  // effects use without running them again on every render (T-243).
+  const setSelectedProject = useCallback(
+    (project: Project | null) => setSelectedId(project?.id ?? null),
+    [setSelectedId]
+  );
 
   return (
     <ProjectContext.Provider
@@ -124,7 +133,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         selectedProject,
         loading,
         error,
-        setSelectedProject: (project) => setSelectedId(project?.id ?? null),
+        setSelectedProject,
         refreshProjects,
         createProject,
       }}

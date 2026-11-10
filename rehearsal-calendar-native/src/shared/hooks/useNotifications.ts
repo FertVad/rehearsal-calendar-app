@@ -201,6 +201,7 @@ export function useNotifications() {
         logger.debug('[useNotifications] Cleanup failed (expected on simulator):', error);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the listeners stay for the session: `handleNotificationNavigation` reads only `navigation`, whose `navigate` goes to the same navigator from any render, so the one they hold is never out of date (T-243)
   }, [user, refresh, markRead]);
 
   /**

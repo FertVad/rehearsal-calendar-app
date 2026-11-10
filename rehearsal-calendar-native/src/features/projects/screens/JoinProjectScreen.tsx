@@ -54,6 +54,7 @@ export default function JoinProjectScreen({ route, navigation }: JoinProjectScre
   useEffect(() => {
     if (!linkCode) return;
     checkAndFetchInviteInfo(linkCode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per link: the function is this render's and new on each, listed it would ask about the invite on every render (T-243)
   }, [linkCode]);
 
   const changeCode = (text: string) => {

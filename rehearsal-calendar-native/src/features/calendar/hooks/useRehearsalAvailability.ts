@@ -99,6 +99,7 @@ export const useRehearsalAvailability = (
     return () => {
       current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` is the question: the project's id, the days, the people and the rehearsal left out, all that the request reads; `project` and the member list are new objects on each render, and `t` only words the alert (T-243)
   }, [key, attempt]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);

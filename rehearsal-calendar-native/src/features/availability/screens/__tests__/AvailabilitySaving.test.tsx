@@ -85,6 +85,8 @@ beforeEach(async () => {
   (Navigation.useNavigation as jest.Mock).mockReturnValue(navigation);
   // Focused once, on opening: the shared mock runs it on every render, and
   // the load it starts renders again.
+  // Focused once, on opening.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the screen's focus effect, run once as a focus would
   (Navigation.useFocusEffect as jest.Mock).mockImplementation((effect) => React.useEffect(effect, []));
   // Saved: busy all day on 3 November.
   (availabilityAPI.getAll as jest.Mock).mockResolvedValue({ data: [{

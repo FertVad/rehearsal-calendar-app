@@ -11,7 +11,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import ModeSelector from '../ModeSelector';
-import { DayMode } from '../../../types/availability';
 
 describe('ModeSelector Component', () => {
   const mockOnModeChange = jest.fn();
@@ -309,7 +308,6 @@ describe('ModeSelector Component', () => {
       );
 
       // Custom icon should now be highlighted
-      const icons = require('@expo/vector-icons/Ionicons').default;
       expect(getByText('Частично')).toBeTruthy();
     });
 

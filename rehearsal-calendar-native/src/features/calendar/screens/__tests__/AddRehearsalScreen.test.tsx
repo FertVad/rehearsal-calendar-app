@@ -11,7 +11,7 @@
  * API, navigation and contexts standing in.
  */
 import React from 'react';
-import { render, fireEvent, act, waitFor, within } from '@testing-library/react-native';
+import { render, fireEvent, act, within } from '@testing-library/react-native';
 import { ActionSheetIOS, Alert } from 'react-native';
 import { Colors } from '../../../../shared/constants/colors';
 import { AxiosError } from 'axios';

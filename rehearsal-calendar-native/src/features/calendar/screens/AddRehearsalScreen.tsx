@@ -160,6 +160,7 @@ export default function AddRehearsalScreen() {
       { text: t.common.cancel, style: 'cancel' },
       { text: t.common.retry, onPress: membersLoad.reload },
     ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per failure: `failed` goes off while each load (a retry, another project) is out and on again when it fails, with its `error` in the same render; `reload` is stable, and a new language is no new failure to alert (T-243)
   }, [membersLoad.failed]);
 
   return (

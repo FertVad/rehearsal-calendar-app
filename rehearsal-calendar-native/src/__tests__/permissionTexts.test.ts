@@ -72,7 +72,6 @@ describe('iOS permission prompt texts', () => {
     const entry = (appJson.expo.plugins ?? []).find((p: unknown) =>
       (Array.isArray(p) ? p[0] : p) === 'expo-calendar');
     const options = Array.isArray(entry) ? entry[1] : undefined;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const withCalendar = require(path.join(root, 'node_modules/expo-calendar/app.plugin.js'));
     const plugin = withCalendar.default ?? withCalendar;
     const config = plugin(JSON.parse(JSON.stringify(appJson.expo)), options);

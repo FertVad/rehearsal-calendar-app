@@ -176,7 +176,7 @@ export function useAddRehearsalForm({
       setChosenProjectId(project.id);
       setSelectedProject(project);
     }
-  }, [prefilledProjectId, projects]);
+  }, [prefilledProjectId, projects, setSelectedProject]);
 
   // The route's day and time, once per route: not on each new project list,
   // which put them back over what was chosen - and, a list made anew on each
@@ -200,6 +200,7 @@ export function useAddRehearsalForm({
       setStartTime(parseTimeString(prefilledTime));
       setFreeUntil(prefilledFreeUntil ?? null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per route (above): `opening` never changes, and a new zone is no reason to put the route's day back over the one chosen since (T-243)
   }, [prefilledDate, prefilledTime, prefilledFreeUntil]);
 
   // Update selected project when projects list changes or default changes
@@ -214,7 +215,7 @@ export function useAddRehearsalForm({
       setChosenProjectId(defaultProject.id);
       setSelectedProject(defaultProject);
     }
-  }, [defaultProject, prefilledProjectId]);
+  }, [defaultProject, prefilledProjectId, chosenProjectId, setSelectedProject]);
 
   // Load rehearsal data in edit mode
   useEffect(() => {
@@ -263,6 +264,7 @@ export function useAddRehearsalForm({
     };
 
     loadRehearsal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per rehearsal: loaded again for a new language or zone it would put the saved fields back over the person's edits; the project comes with the id in one route (T-243)
   }, [routeParams?.rehearsalId]);
 
   // Handlers

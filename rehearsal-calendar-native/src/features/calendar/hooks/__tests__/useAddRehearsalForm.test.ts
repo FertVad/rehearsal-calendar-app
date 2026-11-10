@@ -6,7 +6,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { useAddRehearsalForm } from '../useAddRehearsalForm';
-import { rehearsalsAPI, projectsAPI } from '../../../../shared/services/api';
+import { rehearsalsAPI } from '../../../../shared/services/api';
 import { Project } from '../../../../shared/types';
 
 // Mock dependencies
@@ -226,7 +226,7 @@ describe('useAddRehearsalForm Hook', () => {
 
   describe('Prefill from Route Params', () => {
     it('should prefill project from projectId param', () => {
-      const { result } = renderHook(() =>
+      renderHook(() =>
         useAddRehearsalForm({
           projects: mockProjects,
           selectedProject: null,

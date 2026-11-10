@@ -10,15 +10,16 @@ const React = require('react');
 
 // Mock Calendar component with proper event handling
 const Calendar = React.forwardRef((props, ref) => {
+  // The handlers and the styling are taken out of what reaches the View.
   const {
-    onDayPress,
-    onDayLongPress,
-    onMonthChange,
+    onDayPress: _onDayPress,
+    onDayLongPress: _onDayLongPress,
+    onMonthChange: _onMonthChange,
     markedDates,
     minDate,
     maxDate,
-    markingType,
-    theme,
+    markingType: _markingType,
+    theme: _theme,
     ...otherProps
   } = props;
 

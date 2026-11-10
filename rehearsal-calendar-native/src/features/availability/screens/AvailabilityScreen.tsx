@@ -103,7 +103,6 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
 
   // Editor hook for selection, validation, time picker, and slot editing
   const editor = useAvailabilityEditor({
-    availability,
     setAvailability,
     markChanged,
     markSettled,
@@ -208,7 +207,6 @@ export default function AvailabilityScreen({ navigation }: AvailabilityScreenPro
         year={item.year}
         month={item.month}
         selectedDates={editor.selectedDates}
-        availability={availability}
         today={today}
         onDayPress={(y, m, d) => editor.handleDayPress(y, m, d, formatDate)}
         getDayStatus={(date) => getDayStatus(date, availability)}
