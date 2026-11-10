@@ -14,7 +14,8 @@
  *   screen's action on the right if it has one there (HIG sheets.md). Where
  *   the main action sits in the bar at the bottom (T-009), it is not repeated
  *   up here. Cancel leaves the way a swipe down does, through the leave guard
- *   of a screen with changes (T-013).
+ *   of a screen with changes (T-013). Its buttons are always whole; the
+ *   title gives way, over two lines (T-244, `ModalBar`).
  * - `stack` — a screen pushed in a tab: "‹" with the name of the screen
  *   under it, then the title. Where that name does not fit beside the
  *   title, "‹ Back"; where that does not either, "‹" alone — never a word
@@ -39,7 +40,7 @@ type Common = {
   title: string;
   /** What sits at the right end: the screen's action, a count, a spinner. */
   right?: React.ReactNode;
-  /** Lines the title may take before it is cut (the rehearsal's name: 2). */
+  /** Lines the title may take before it is cut: a sheet's 2, others' 1. */
   titleLines?: number;
   /** The side its buttons take a tap in, where iOS draws the screen smaller
    *  (the details sheet at three quarters). Never less than 44. */
@@ -79,24 +80,29 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     );
   }
 
+  if (props.kind === 'modal') {
+    return (
+      <ModalBar
+        title={title}
+        titleLines={props.titleLines ?? 2}
+        left={props.onCancel ? (
+          <TouchableOpacity
+            testID="header-cancel"
+            accessibilityRole="button"
+            style={[styles.textButton, tall]}
+            onPress={props.onCancel}
+          >
+            <Text style={styles.buttonText} numberOfLines={1}>{props.cancelLabel}</Text>
+          </TouchableOpacity>
+        ) : null}
+        right={right}
+      />
+    );
+  }
+
   return (
     <View style={styles.bar} testID={`screen-header-${props.kind}`}>
-      {props.kind === 'modal' ? (
-        <View style={[styles.side, styles.left]}>
-          {props.onCancel ? (
-            <TouchableOpacity
-              testID="header-cancel"
-              accessibilityRole="button"
-              style={[styles.textButton, tall]}
-              onPress={props.onCancel}
-            >
-              <Text style={styles.buttonText} numberOfLines={1}>{props.cancelLabel}</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      ) : (
-        <BackSide title={props.backTitle} word={props.backWord} onBack={props.onBack} tall={tall} />
-      )}
+      <BackSide title={props.backTitle} word={props.backWord} onBack={props.onBack} tall={tall} />
       <Text
         style={styles.title}
         numberOfLines={titleLines}
@@ -106,6 +112,53 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         {title}
       </Text>
       <View style={[styles.side, styles.right]}>{right}</View>
+    </View>
+  );
+}
+
+/**
+ * A sheet's bar: its buttons whole, the title what is left (T-244).
+ *
+ * The two ends took equal shares of the row beside a title of up to half of
+ * it, so a button wider than its share was cut: «Закрыть · Прогон всей
+ * программы · Измен…». As iOS's own bar, the buttons are never cut and the
+ * title gives way — it wraps, up to two lines, and is cut only at the end of
+ * the second. Each end is as wide as its button's words, measured where it
+ * stands (it is never squeezed: it does not shrink); both are then as wide as
+ * the wider, so the title stays in the middle of the screen.
+ */
+function ModalBar({ title, titleLines, left, right }: {
+  title: string;
+  titleLines: number;
+  left: React.ReactNode;
+  right: React.ReactNode;
+}) {
+  const [leftWidth, setLeftWidth] = React.useState<number>();
+  const [rightWidth, setRightWidth] = React.useState<number>();
+  const ends = leftWidth === undefined || rightWidth === undefined
+    ? undefined
+    : { minWidth: Math.ceil(Math.max(leftWidth, rightWidth)) };
+
+  return (
+    <View style={styles.bar} testID="screen-header-modal">
+      <View style={[styles.end, styles.left, ends]} testID="header-left-end">
+        <View style={styles.endContent} onLayout={(event) => setLeftWidth(event.nativeEvent.layout.width)}>
+          {left}
+        </View>
+      </View>
+      <Text
+        style={styles.modalTitle}
+        numberOfLines={titleLines}
+        accessibilityRole="header"
+        testID="header-title"
+      >
+        {title}
+      </Text>
+      <View style={[styles.end, styles.right, ends]} testID="header-right-end">
+        <View style={styles.endContent} onLayout={(event) => setRightWidth(event.nativeEvent.layout.width)}>
+          {right}
+        </View>
+      </View>
     </View>
   );
 }
@@ -248,6 +301,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  // A sheet's ends: as wide as what stands in them, never less (T-244).
+  end: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  endContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   left: {
     justifyContent: 'flex-start',
   },
@@ -257,6 +321,16 @@ const styles = StyleSheet.create({
   title: {
     flexShrink: 1,
     maxWidth: '50%',
+    fontSize: BAR_TEXT,
+    fontWeight: FontWeight.semibold,
+    color: Colors.text.primary,
+    textAlign: 'center',
+  },
+  // Between a sheet's ends, all that is left of the row.
+  modalTitle: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
     fontSize: BAR_TEXT,
     fontWeight: FontWeight.semibold,
     color: Colors.text.primary,

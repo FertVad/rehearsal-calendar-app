@@ -17,7 +17,7 @@ import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
 import { StyleSheet, Text } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
-import { ScreenHeader } from '../ScreenHeader';
+import { HeaderTextButton, ScreenHeader } from '../ScreenHeader';
 
 const SRC = join(__dirname, '..', '..', '..');
 
@@ -99,6 +99,68 @@ describe('ScreenHeader', () => {
   it('a sheet with nothing to go back to has no Cancel', () => {
     const view = render(<ScreenHeader kind="modal" title="Busy" cancelLabel="Cancel" />);
     expect(view.queryByTestId('header-cancel')).toBeNull();
+  });
+
+  // T-244: «Закрыть · Прогон всей программы · Измен…» on the rehearsal's
+  // sheet in Russian. The ends took equal shares of the row beside a title of
+  // up to half of it, so a button wider than its share was cut. Now the
+  // buttons are whole and the title gives way: it wraps, up to two lines.
+  describe('a sheet\'s buttons are never cut, the title gives way', () => {
+    const TITLE = 'Генеральный прогон всей программы с оркестром и светом';
+    const sheet = (titleLines?: number) => render(
+      <ScreenHeader kind="modal" title={TITLE} titleLines={titleLines} cancelLabel="Закрыть" onCancel={jest.fn()}
+        right={<HeaderTextButton testID="edit" label="Изменить" onPress={jest.fn()} />} />,
+    );
+    type Node = ReturnType<ReturnType<typeof render>['getByTestId']>;
+    /** The host views from `node` up to the bar: the bar's own child is the end it stands in. */
+    const upToBar = (view: ReturnType<typeof render>, node: Node) => {
+      const isBar = (at: Node) => typeof at.type === 'string' && at.props.testID === 'screen-header-modal';
+      const hosts: Node[] = [];
+      for (let at: Node | null = node; at && !isBar(at); at = at.parent) {
+        if (typeof at.type === 'string') hosts.push(at);
+      }
+      return hosts.reverse();
+    };
+    // The test's StyleSheet leaves an array as it is: merged here.
+    const merged = (value: unknown): Record<string, unknown> => Array.isArray(value)
+      ? Object.assign({}, ...value.map(merged))
+      : (value && typeof value === 'object' ? value as Record<string, unknown> : {});
+    const style = (node: Node) => merged(node.props.style);
+    /** Each end's words laid out as wide as given, where the end measures them. */
+    const laidOut = (view: ReturnType<typeof render>, cancel: number, edit: number) => {
+      for (const [id, width] of [['header-cancel', cancel], ['edit', edit]] as const) {
+        const [, inside] = upToBar(view, view.getByTestId(id));
+        fireEvent(inside, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width, height: 44 } } });
+      }
+    };
+
+    it('each end as wide as its button, never squeezed; both as wide as the wider', () => {
+      const view = sheet(2);
+      laidOut(view, 79, 96);
+      for (const id of ['header-cancel', 'edit']) {
+        const [end] = upToBar(view, view.getByTestId(id));
+        const own = style(end);
+        // Not a share of the row: not grown from nothing, not shrunk below its words.
+        expect(own.flexBasis).toBeUndefined();
+        expect(own.flexShrink ?? 0).toBe(0);
+        // "Изменить" whole, and "Закрыть" as wide, so the title is in the middle.
+        expect(own.minWidth).toBe(96);
+      }
+    });
+
+    it('the title takes what is left, over two lines', () => {
+      const view = sheet(2);
+      laidOut(view, 79, 96);
+      const title = view.getByTestId('header-title');
+      expect(style(title).flexShrink).toBe(1);
+      expect(style(title).maxWidth).toBeUndefined();
+      expect(title.props.numberOfLines).toBe(2);
+      expect(style(view.getByText('Изменить')).fontSize).toBe(17);
+    });
+
+    it('every sheet\'s title may take two lines', () => {
+      expect(sheet().getByTestId('header-title').props.numberOfLines).toBe(2);
+    });
   });
 
   /** The bar laid out: its left end `room` wide, the name and "Back" as wide as given. */
