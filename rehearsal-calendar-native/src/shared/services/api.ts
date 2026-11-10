@@ -248,10 +248,14 @@ api.interceptors.response.use(
     // pool is flushed, so whatever goes next — this request again, or the
     // person's next tap — goes down a new connection; a request that may be
     // repeated is sent again once, now. One that is not fails as before.
-    if (gotNoAnswer(error) && originalRequest && !originalRequest._renewed) {
-      originalRequest._renewed = true;
+    // Flushed after every attempt with no answer, the repeat's too: only the
+    // sending again is limited to once, or a repeat that also got none would
+    // leave its connection for the person's next tap.
+    if (gotNoAnswer(error) && originalRequest) {
       await renewConnections();
-      if (isRepeatable(originalRequest) && isCurrentSession(originalRequest.session)) {
+      if (!originalRequest._renewed && isRepeatable(originalRequest)
+          && isCurrentSession(originalRequest.session)) {
+        originalRequest._renewed = true;
         logger.warn(`No answer to ${originalRequest.method?.toUpperCase()} ${url}; sending it again on a new connection`);
         return api(originalRequest);
       }

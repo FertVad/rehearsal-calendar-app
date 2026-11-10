@@ -105,7 +105,13 @@ describe.each(['ECONNABORTED', 'ERR_NETWORK'] as const)('no answer as %s', (code
       return true;
     });
     await expect(authAPI.loginWithGoogle('id-token')).rejects.toMatchObject({ code });
-    expect(sent).toHaveLength(2);
+    expect(sent.map((request) => request.connection)).toEqual([1, 2]);
+
+    // The repeat's connection failed too, and is flushed as well: the
+    // person's next tap does not start on it.
+    expect(renew).toHaveBeenCalledTimes(2);
+    await expect(authAPI.loginWithGoogle('id-token')).resolves.toMatchObject({ status: 200 });
+    expect(sent.map((request) => request.connection)).toEqual([1, 2, 3]);
   });
 });
 
