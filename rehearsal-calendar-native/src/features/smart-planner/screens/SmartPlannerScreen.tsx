@@ -232,11 +232,13 @@ function PlannerBody({ projectId, onSelectProject }: {
   const canSchedule = canScheduleIn(projects.find(p => p.id === projectId));
   const createRehearsal = useCallback((slot: TimeSlot) => {
     // AddRehearsal is on the app stack, above this tab. The slot is free time,
-    // so it gives the start; the form ends it the usual length on (T-012).
+    // so it gives the start; the form ends it the usual length on (T-012), or
+    // sooner, when the first of those free at the start is busy (T-238).
     appNavigation.navigate('AddRehearsal', {
       projectId,
       prefilledDate: slot.date,
       prefilledTime: slot.startTime,
+      prefilledFreeUntil: slot.freeUntil,
       // The slot is free for the people picked here, so the rehearsal starts
       // with them; none picked means everyone, as in the planner itself (DP02).
       prefilledMemberIds: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,

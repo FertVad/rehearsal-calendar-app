@@ -1,0 +1,47 @@
+T-238 — red on the code before the fix (base 3411ea6), new tests only.
+Command (from rehearsal-calendar-native):
+  npx jest --selectProjects frontend --silent \
+    src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx \
+    src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx -t "T-238"
+Output (stack frames dropped):
+
+FAIL frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx
+  ● A slot's "+ Add" (T-012) › how far the free time goes (T-238) › everyone free, an hour before someone is busy: the free time ends when they are
+    - Expected  - 1
+    + Received  + 0
+      Object {
+    -   "prefilledFreeUntil": "14:00",
+        "prefilledTime": "13:00",
+      }
+  ● A slot's "+ Add" (T-012) › how far the free time goes (T-238) › someone busy at the start: it ends when the first of the others is
+    - Expected  - 1
+    + Received  + 0
+      Object {
+    -   "prefilledFreeUntil": "14:00",
+        "prefilledTime": "09:00",
+      }
+  ● A slot's "+ Add" (T-012) › how far the free time goes (T-238) › all day free: to the end of the working day
+    - Expected  - 1
+    + Received  + 0
+      Object {
+    -   "prefilledFreeUntil": "23:00",
+        "prefilledTime": "09:00",
+      }
+FAIL frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx (11.611 s)
+  ● Recommended time (T-238) › a window of 1 h with a usual 3 h: 13:00–14:00, and nobody is busy in it
+    Expected: "14:00"
+    Received: "16:00"
+  ● Recommended time (T-238) › everyone free all day: no 09:00–23:00 to tap, a line that says so
+    expect(screen.queryByText(/^09:00–23:00/)).toBeNull()
+    Received: {"_fiber": {... "elementType": "Text" ...}}   (the 09:00–23:00 button is there)
+  ● Recommended time (T-238) › someone busy at 14:00: the windows before and after are green, the colour of free
+    Expected: "#10b981"
+    Received: "rgba(251, 191, 36, 0.5)"
+  ● Recommended time (T-238) › from a planner slot an hour before someone is busy: it ends when they are
+    Expected: "14:00"
+    Received: "16:00"
+Tests:       7 failed, 43 skipped, 2 passed, 52 total
+
+Passing on the old code as well, as they should: "a window longer than the usual
+length: the usual length on (T-012)" (17:00 → 20:00) and "lengthened by hand past
+the free time, it warns as before" — the behaviour the fix keeps.

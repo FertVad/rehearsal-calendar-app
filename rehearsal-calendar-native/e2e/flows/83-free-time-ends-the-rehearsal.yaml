@@ -1,0 +1,138 @@
+# What is tapped as free time is what is put in (T-238; owner, 09.11). The
+# form's recommendation 1:00–2:00 PM, tapped, made a rehearsal 1:00–4:00 PM -
+# the usual three hours on - and the same form then said someone was busy
+# 2:00–5:00 PM. The planner's slot did the same.
+#
+# Beatrice runs Much Ado, three people and no rehearsal yet: its usual length
+# is three hours. Tomorrow Benedick is busy 9:00 AM–1:00 PM and Claudio
+# 2:00–5:00 PM. A tap on free time starts the rehearsal there and ends it the
+# usual length on, or when the first of those free at the start is busy,
+# whichever is sooner:
+# - the planner's 1:00 PM slot: 1:00–2:00 PM, nobody busy in it;
+# - the form's 5:00 PM window, six hours long: 5:00–8:00 PM (T-012);
+# - the form's 1:00 PM window: 1:00–2:00 PM again.
+# With Beatrice alone picked nobody is busy all day: no 9:00 AM–11:00 PM
+# window, a line that says everyone is free. Nothing is saved.
+appId: ${APP_ID}
+name: Free time tapped ends the rehearsal where it ends
+tags:
+  - planner
+  - rehearsals
+  - participants
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${BEATRICE_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- tapOn: "Planner, tab.*"
+- extendedWaitUntil:
+    visible:
+      id: planner-project
+      text: ".*Much Ado.*"
+    timeout: 15000
+# Tomorrow's free hour, everyone in it, brought to the middle of the screen.
+- scrollUntilVisible:
+    element:
+      id: planner-add-${TOMORROW_DAY}-13:00
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 83-planner-free-hour
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: planner-add-${TOMORROW_DAY}-13:00
+      SEE: "Add Rehearsal"
+      WAIT_MS: "10000"
+- extendedWaitUntil:
+    visible:
+      id: participants-row
+      text: "Participants, 3 of 3"
+      below:
+        id: rehearsal-project
+    timeout: 15000
+# The digit before the hour is not one: "11:00 PM" and "12:00 PM" are not these.
+- assertVisible:
+    id: rehearsal-start-time
+    text: "(.*[^0-9])?1:00.PM.*"
+- scrollUntilVisible:
+    element:
+      id: rehearsal-end-time
+    direction: DOWN
+- assertVisible:
+    id: rehearsal-end-time
+    text: "(.*[^0-9])?2:00.PM.*"
+# The day's availability is in once its windows are drawn: nobody picked is
+# busy in the rehearsal.
+- extendedWaitUntil:
+    visible:
+      id: recommendation-13:00
+    timeout: 15000
+- assertNotVisible:
+    id: participants-conflict
+- takeScreenshot: 83-form-from-planner
+# The form's own windows. Six free hours from 5:00 PM: the usual three.
+- tapOn:
+    id: recommendation-17:00
+- assertVisible:
+    id: rehearsal-start-time
+    text: "(.*[^0-9])?5:00.PM.*"
+- assertVisible:
+    id: rehearsal-end-time
+    text: "(.*[^0-9])?8:00.PM.*"
+# One free hour from 1:00 PM: that hour.
+- tapOn:
+    id: recommendation-13:00
+- assertVisible:
+    id: rehearsal-start-time
+    text: "(.*[^0-9])?1:00.PM.*"
+- assertVisible:
+    id: rehearsal-end-time
+    text: "(.*[^0-9])?2:00.PM.*"
+- assertNotVisible:
+    id: participants-conflict
+- takeScreenshot: 83-form-free-hour
+# Beatrice alone: free all day, and the working day is not offered as a window.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: participants-row
+      SEE: "All participants, 3 of 3"
+      WAIT_MS: "5000"
+- tapOn: "Benedick Padua.*"
+- tapOn: "Claudio Florence.*"
+- assertVisible:
+    id: participants-all
+    text: "All participants, 1 of 3"
+- tapOn:
+    id: participants-done
+- extendedWaitUntil:
+    visible:
+      id: recommendations-note
+      text: "Everyone is free all day"
+    timeout: 10000
+- assertNotVisible: ".*9:00.AM–11:00.PM.*"
+- takeScreenshot: 83-form-free-all-day
+- tapOn:
+    id: header-cancel
+- runFlow:
+    when:
+      visible: "Don't Save"
+    commands:
+      - tapOn: "Don't Save"
+- extendedWaitUntil:
+    notVisible:
+      id: header-cancel
+    timeout: 10000

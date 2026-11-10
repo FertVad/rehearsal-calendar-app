@@ -63,6 +63,11 @@ export type AppStackParamList = {
     prefilledDate?: string;
     /** A start: the form ends it the usual length on (rehearsalDefaults.ts). */
     prefilledTime?: string;
+    /**
+     * Where the free time from that start ends: the form's end is no later
+     * than this, if it is sooner than the usual length (T-238).
+     */
+    prefilledFreeUntil?: string;
     /** The people the planner planned the slot for; absent means everyone (DP02). */
     prefilledMemberIds?: string[];
   };

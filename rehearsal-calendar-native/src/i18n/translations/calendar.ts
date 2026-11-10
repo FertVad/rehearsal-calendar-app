@@ -89,6 +89,8 @@ export interface RehearsalsTranslations {
   notFound: string;
   recommendedTime: string;
   noAvailableTime: string;
+  /** In place of the recommendations: nobody picked is busy all working day (T-238). */
+  everyoneFreeAllDay: string;
   hoursShort: string;
 }
 
@@ -167,6 +169,7 @@ needProject: 'Репетиции появятся, когда вы окажет�
     notFound: 'Репетиция не найдена. Возможно, её удалили или вас сняли с неё.',
     recommendedTime: 'Рекомендованное время',
     noAvailableTime: 'Нет свободного времени для всех выбранных участников',
+    everyoneFreeAllDay: 'Все свободны весь день',
     hoursShort: 'ч',
   },
 };
@@ -246,6 +249,7 @@ needProject: 'Rehearsals show up once you are in a project',
     notFound: 'This rehearsal is not available. It may have been deleted, or you were taken off it.',
     recommendedTime: 'Recommended Time',
     noAvailableTime: 'No available time for all selected participants',
+    everyoneFreeAllDay: 'Everyone is free all day',
     hoursShort: 'h',
   },
 };
@@ -325,6 +329,7 @@ needProject: 'Los ensayos aparecen cuando estén en un proyecto',
     notFound: 'Este ensayo no está disponible. Puede que se haya eliminado o que los hayan quitado de él.',
     recommendedTime: 'Hora recomendada',
     noAvailableTime: 'No hay tiempo disponible para todos los participantes seleccionados',
+    everyoneFreeAllDay: 'Todos están libres todo el día',
     hoursShort: 'h',
   },
 };
@@ -404,6 +409,7 @@ needProject: 'Proben erscheinen, sobald du in einem Projekt bist',
     notFound: 'Diese Probe ist nicht verfügbar. Vielleicht wurde sie gelöscht, oder du wurdest abgemeldet.',
     recommendedTime: 'Empfohlene Zeit',
     noAvailableTime: 'Keine verfügbare Zeit für alle ausgewählten Teilnehmer',
+    everyoneFreeAllDay: 'Alle haben den ganzen Tag Zeit',
     hoursShort: 'Std.',
   },
 };

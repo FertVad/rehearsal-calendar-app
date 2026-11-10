@@ -183,6 +183,51 @@ describe('A slot\'s "+ Add" (T-012)', () => {
     expect(navigate.mock.calls[0][1]).not.toHaveProperty('prefilledEndTime');
   });
 
+  // T-238: the form put the usual three hours on a slot of one, over the
+  // people's busy time. The slot says how far the free time goes, for those
+  // free at its start; the form ends the rehearsal there if that is sooner.
+  describe('how far the free time goes (T-238)', () => {
+    const busy = (ranges: Record<string, [string, string]>) => ({
+      data: { availability: Object.entries(ranges).map(([userId, [start, end]]) => ({
+        userId, firstName: `Name${userId}`, hasData: true,
+        dates: [{ date: '2026-01-01', timeRanges: [{ start, end, type: 'busy' }] }],
+      })) },
+    });
+    const open = async () => {
+      const screen = render(<SmartPlannerScreen {...makeProps('A')} />);
+      await settle();
+      await settle();
+      return screen;
+    };
+
+    it('everyone free, an hour before someone is busy: the free time ends when they are', async () => {
+      getAvailability.mockResolvedValue(busy({ a1: ['09:00', '13:00'], a2: ['14:00', '17:00'] }));
+      const screen = await open();
+
+      fireEvent.press(screen.getByTestId('planner-add-2026-01-01-13:00'));
+
+      expect(navigate.mock.calls[0][1]).toMatchObject({ prefilledTime: '13:00', prefilledFreeUntil: '14:00' });
+    });
+
+    it('someone busy at the start: it ends when the first of the others is', async () => {
+      getAvailability.mockResolvedValue(busy({ a1: ['09:00', '13:00'], a2: ['14:00', '17:00'] }));
+      const screen = await open();
+
+      // 13:00, where a1 is free again, is not where the others stop being.
+      fireEvent.press(screen.getByTestId('planner-add-2026-01-01-09:00'));
+
+      expect(navigate.mock.calls[0][1]).toMatchObject({ prefilledTime: '09:00', prefilledFreeUntil: '14:00' });
+    });
+
+    it('all day free: to the end of the working day', async () => {
+      const screen = await open();
+
+      fireEvent.press(screen.getByTestId('planner-add-2026-01-01-09:00'));
+
+      expect(navigate.mock.calls[0][1]).toMatchObject({ prefilledTime: '09:00', prefilledFreeUntil: '23:00' });
+    });
+  });
+
   it('is shown only to an admin of the project', async () => {
     const screen = render(<SmartPlannerScreen {...makeProps('C')} />);
     await settle();

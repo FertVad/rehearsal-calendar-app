@@ -38,6 +38,8 @@ export const Colors = {
     green: '#10b981',
     red: '#ef4444',
     yellow: '#f59e0b',
+    // Under free time: a recommended window in the form (T-238).
+    greenAlpha15: 'rgba(16, 185, 129, 0.15)',
 
     // Translucent variants for backgrounds, highlights, borders
     purpleAlpha05: 'rgba(168, 85, 247, 0.05)',

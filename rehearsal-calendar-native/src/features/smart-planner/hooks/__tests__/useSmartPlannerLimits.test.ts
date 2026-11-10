@@ -37,7 +37,7 @@ beforeEach(() => {
     data: { availability: [{ userId: '1', firstName: 'One', hasData: true, dates: [] }] },
   });
   generation.mockImplementation((startDate) => [{
-    date: startDate, startTime: '10:00', endTime: '12:00', category: 'perfect',
+    date: startDate, startTime: '10:00', endTime: '12:00', freeUntil: '12:00', category: 'perfect',
     totalMembers: 1, freeMembers: 1, busyMembers: [],
   }]);
 });

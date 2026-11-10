@@ -1,0 +1,49 @@
+T-238 — green after the fix, same tests (plus the hook's own, rewritten for its new result).
+Command (from rehearsal-calendar-native):
+  npx jest --selectProjects frontend --silent --verbose \
+    src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx \
+    src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx \
+    src/features/calendar/hooks/__tests__/useTimeRecommendations.test.ts -t "T-238|useTimeRecommendations"
+
+PASS frontend src/features/calendar/hooks/__tests__/useTimeRecommendations.test.ts
+      ✓ says everyone is free all day, and offers no window, when no one is busy
+      ✓ busy only outside the working day is free all day too
+      ✓ should return empty array when everyone is busy all day
+      ✓ should return nothing when no members selected
+      ✓ should return nothing when no date selected
+      ✓ should find morning slot when afternoon is busy
+      ✓ should find afternoon slot when morning is busy
+      ✓ should find gap between two busy periods
+      ✓ should find multiple free gaps
+      ✓ should merge overlapping busy ranges
+      ✓ should merge adjacent busy ranges
+      ✓ should filter out slots shorter than 1 hour
+      ✓ should include slots exactly 1 hour long
+      ✓ should include slots longer than 1 hour
+      ✓ should clamp slot to workday start (09:00)
+      ✓ should clamp slot to workday end (23:00)
+      ✓ should ignore busy time outside workday hours
+      ✓ should treat tentative as busy (conflict)
+      ✓ should ignore available type (not a conflict)
+      ✓ should sort slots by start time (ascending)
+      ✓ should calculate integer duration for whole hours
+      ✓ should calculate fractional duration for partial hours
+      ✓ should recompute when members change
+      ✓ should recompute when availability changes
+      ✓ should recompute when date changes
+PASS frontend src/features/smart-planner/screens/__tests__/SmartPlannerScreen.test.tsx
+      ✓ everyone free, an hour before someone is busy: the free time ends when they are
+      ✓ someone busy at the start: it ends when the first of the others is
+      ✓ all day free: to the end of the working day
+PASS frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx
+    ✓ a window of 1 h with a usual 3 h: 13:00–14:00, and nobody is busy in it
+    ✓ a window longer than the usual length: the usual length on (T-012)
+    ✓ everyone free all day: no 09:00–23:00 to tap, a line that says so
+    ✓ someone busy at 14:00: the windows before and after are green, the colour of free
+    ✓ from a planner slot an hour before someone is busy: it ends when they are
+    ✓ lengthened by hand past the free time, it warns as before
+Tests:       43 skipped, 34 passed, 77 total
+
+Whole frontend project after the fix: npx jest --selectProjects frontend --silent
+  Tests:       1401 passed, 1401 total
+npm run type-check: clean.

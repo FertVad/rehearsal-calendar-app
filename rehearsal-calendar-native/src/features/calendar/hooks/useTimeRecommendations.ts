@@ -11,21 +11,38 @@ import {
   TimeRange,
 } from '../../../shared/utils/availability';
 
-export interface TimeSlot {
+/**
+ * A window in which everyone picked is free. A tap on it starts the rehearsal
+ * there and ends it the usual length on, or where the window ends if that is
+ * sooner (useAddRehearsalForm, T-238). Each window is free time, so they are
+ * all alike: the 'high'/'medium' they once had said only whether anyone was
+ * busy at some time of the day, and painted nearly every window yellow, the
+ * phone calendar's colour (T-238).
+ */
+export interface FreeWindow {
   startTime: string;
+  /** Where the free time ends: the first of the people picked is busy, or the working day is over. */
   endTime: string;
   duration: number;
-  confidence: 'high' | 'medium';
 }
 
-const WORK_START = toMinutes(WORKDAY_START);
-const WORK_END = toMinutes(WORKDAY_END);
+interface TimeRecommendationsResult {
+  /**
+   * Nobody picked is busy at any time of the working day. There is no window
+   * to offer then: 09:00–23:00 is not a rehearsal, and the time is the
+   * form's own (T-238).
+   */
+  freeAllDay: boolean;
+  windows: FreeWindow[];
+}
+
+const NONE: TimeRecommendationsResult = { freeAllDay: false, windows: [] };
 
 export const useTimeRecommendations = (
   selectedDate: string,
   members: ProjectMember[],
   memberAvailability: Record<string, { timeRanges: TimeRange[] }>,
-): TimeSlot[] => {
+): TimeRecommendationsResult => {
   const memberIds = useMemo(() => members.map(m => m.userId), [members]);
 
   const unionBusy = useMemo(() => {
@@ -46,31 +63,31 @@ export const useTimeRecommendations = (
   }, [memberIds, memberAvailability]);
 
   return useMemo(() => {
-    if (!selectedDate || memberIds.length === 0) return [];
+    if (!selectedDate || memberIds.length === 0) return NONE;
 
-    const free = busyToFreeGaps(unionBusy);
-    const slots = free
+    const free = busyToFreeGaps(unionBusy)
       .map(clampToWorkday)
-      .filter((r): r is TimeRange => Boolean(r))
+      .filter((r): r is TimeRange => Boolean(r));
+    if (free.length === 1 && free[0].start === WORKDAY_START && free[0].end === WORKDAY_END) {
+      return { freeAllDay: true, windows: [] };
+    }
+
+    const windows = free
       .map(r => ({ start: toMinutes(r.start), end: toMinutes(r.end) }))
       .filter(r => r.end - r.start >= 60) // At least 1 hour
       .map(r => {
-        const inWorkingHours = r.start >= WORK_START && r.end <= WORK_END;
         const hours = (r.end - r.start) / 60;
         const duration = Number.isInteger(hours)
           ? hours
           : Number(hours.toFixed(1));
-        const confidence: 'high' | 'medium' =
-          unionBusy.length === 0 && inWorkingHours ? 'high' : 'medium';
         return {
           startTime: toTimeString(r.start),
           endTime: toTimeString(r.end),
           duration,
-          confidence,
         };
       })
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-    return slots;
+    return { freeAllDay: false, windows };
   }, [selectedDate, memberIds, unionBusy]);
 };

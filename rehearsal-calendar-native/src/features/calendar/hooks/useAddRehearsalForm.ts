@@ -29,6 +29,8 @@ interface RouteParams {
   prefilledDate?: string;
   /** A start only: the end is the form's own rule (rehearsalDefaults.ts). */
   prefilledTime?: string;
+  /** Where the planner's free time from that start ends, 'HH:mm' (T-238). */
+  prefilledFreeUntil?: string;
 }
 
 /** What the form holds, field by field, as text to compare (T-013). */
@@ -59,7 +61,7 @@ export function useAddRehearsalForm({
   const { t } = useI18n();
 
   // Extract route params
-  const { projectId: prefilledProjectId, prefilledDate, prefilledTime } = routeParams || {};
+  const { projectId: prefilledProjectId, prefilledDate, prefilledTime, prefilledFreeUntil } = routeParams || {};
 
   // Filter projects - only show where user is admin
   const adminProjects = useMemo(() => projects.filter(p => p.is_admin), [projects]);
@@ -114,11 +116,23 @@ export function useAddRehearsalForm({
   // usual length once that is in (rehearsalDefaults.ts).
   const isEditMode = Boolean(routeParams?.rehearsalId && routeParams?.projectId);
   const usualMinutes = useUsualDuration(isEditMode ? null : localSelectedProject);
+  //
+  // A start taken from free time — a recommendation, a planner's slot — ends
+  // no later than that free time does: the usual length on, or the moment the
+  // first of the people free at the start is busy, whichever is sooner. Three
+  // hours on a free hour put the rehearsal on their busy time (T-238). A free
+  // time longer than the usual length still gives the usual length (T-012).
+  // Only for that start: one picked by hand, another day or another project's
+  // people are not the free time it came from.
   const [chosenEnd, setEndTime] = useState<Date | null>(null);
-  const endTime = useMemo(
-    () => chosenEnd ?? endAfter(startTime, usualMinutes),
-    [chosenEnd, startTime, usualMinutes]
-  );
+  const [freeUntil, setFreeUntil] = useState<string | null>(null);
+  const endTime = useMemo(() => {
+    if (chosenEnd) return chosenEnd;
+    const usual = endAfter(startTime, usualMinutes);
+    if (!freeUntil) return usual;
+    const free = parseTimeString(freeUntil, startTime);
+    return free > startTime && free < usual ? free : usual;
+  }, [chosenEnd, startTime, usualMinutes, freeUntil]);
   // Who is on the rehearsal, for which project, and whether that is settled
   // (review R9-01, R9-02). One owner: the project switch empties it and marks
   // it unsettled, starting it settles it — from the edited rehearsal's roster,
@@ -184,8 +198,9 @@ export function useAddRehearsalForm({
 
     if (prefilledTime) {
       setStartTime(parseTimeString(prefilledTime));
+      setFreeUntil(prefilledFreeUntil ?? null);
     }
-  }, [prefilledDate, prefilledTime]);
+  }, [prefilledDate, prefilledTime, prefilledFreeUntil]);
 
   // Update selected project when projects list changes or default changes
   useEffect(() => {
@@ -252,10 +267,11 @@ export function useAddRehearsalForm({
 
   // Handlers
   // A recommendation is free time, not a rehearsal: it gives the start, and the
-  // end is the usual length on (T-012).
-  const handleTimeSelect = (startTime: string) => {
+  // end is the usual length on (T-012) — within the free time (T-238).
+  const handleTimeSelect = (startTime: string, freeEnd?: string) => {
     touch('start', 'end');
     setStartTime(parseTimeString(startTime, date));
+    setFreeUntil(freeEnd ?? null);
     setEndTime(null);
   };
 
@@ -278,6 +294,7 @@ export function useAddRehearsalForm({
   const handleDateChange = (selectedDate: Date) => {
     touch('date');
     setDate(selectedDate);
+    setFreeUntil(null);
   };
 
   // The form's times are clock times on `date`; an end before the start is the
@@ -339,6 +356,7 @@ export function useAddRehearsalForm({
     // A start can move the end along with it.
     touch('start', 'end');
     setStartTime(selectedTime);
+    setFreeUntil(null);
     // An end nobody set follows the start. One that was set stays, unless a
     // later start passes it: then it goes back to following — the usual length
     // on, which may well be the next morning. A rehearsal that already ran
@@ -360,6 +378,7 @@ export function useAddRehearsalForm({
     setDate(start);
     setStartTime(start);
     setEndTime(null);
+    setFreeUntil(null);
     setLocation('');
   };
 
@@ -373,6 +392,7 @@ export function useAddRehearsalForm({
     setChosenProjectId(project.id);
     setSelectedProject(project); // Also update global context
     setParticipants({ projectId: project.id, ids: [], settled: false });
+    setFreeUntil(null);
   };
 
   const handleCreateProject = async () => {

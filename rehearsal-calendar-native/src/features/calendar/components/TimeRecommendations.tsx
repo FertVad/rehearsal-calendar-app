@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { ProjectMember } from '../../../shared/types';
-import { useTimeRecommendations, TimeSlot } from '../hooks/useTimeRecommendations';
+import { useTimeRecommendations, FreeWindow } from '../hooks/useTimeRecommendations';
 import { TimeRange } from '../../../shared/utils/availability';
 import { useI18n } from '../../../contexts/I18nContext';
 import { formatTimeRange, usePhoneUses24HourClock } from '../../../shared/utils/clockFormat';
@@ -12,8 +12,11 @@ interface TimeRecommendationsProps {
   selectedDate: string;
   selectedMembers: ProjectMember[];
   memberAvailability: Record<string, { timeRanges: TimeRange[] }>;
-  /** A window of free time gives the rehearsal its start, not its end (T-012). */
-  onTimeSelect: (startTime: string) => void;
+  /**
+   * A window of free time: its start is the rehearsal's, its end how far the
+   * rehearsal may run before someone is busy (T-012, T-238).
+   */
+  onTimeSelect: (startTime: string, freeUntil: string) => void;
   loading?: boolean;
 }
 
@@ -26,13 +29,13 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
 }) => {
   const { t, language } = useI18n();
   const uses24 = usePhoneUses24HourClock();
-  const recommendations = useTimeRecommendations(
+  const { freeAllDay, windows: recommendations } = useTimeRecommendations(
     selectedDate,
     selectedMembers,
     memberAvailability
   );
 
-  const formatRecommendation = (rec: TimeSlot) => {
+  const formatRecommendation = (rec: FreeWindow) => {
     const duration = rec.duration % 1 === 0 ? rec.duration : rec.duration.toFixed(1);
     return `${formatTimeRange(rec.startTime, rec.endTime, getDateLocale(language), uses24)} (${duration}${t.rehearsals.hoursShort})`;
   };
@@ -52,13 +55,15 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
     );
   }
 
-  if (recommendations.length === 0) {
+  // A day with nobody busy has no window to tap: 09:00–23:00 is the working
+  // day, not a rehearsal. A line says so, and the time is the form's (T-238).
+  if (freeAllDay || recommendations.length === 0) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>{t.rehearsals.recommendedTime}</Text>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            {t.rehearsals.noAvailableTime}
+          <Text testID="recommendations-note" style={styles.emptyText}>
+            {freeAllDay ? t.rehearsals.everyoneFreeAllDay : t.rehearsals.noAvailableTime}
           </Text>
         </View>
       </View>
@@ -74,14 +79,14 @@ export const TimeRecommendations: React.FC<TimeRecommendationsProps> = ({
         style={styles.slotsContainer}
         contentContainerStyle={styles.slotsContent}
       >
+        {/* Each window is time everyone picked is free: green, the colour
+            of free (colors.ts, T-031). */}
         {recommendations.map((rec) => (
           <TouchableOpacity
             key={`${rec.startTime}-${rec.endTime}`}
-            style={[
-              styles.slotButton,
-              rec.confidence === 'high' ? styles.slotHigh : styles.slotMedium,
-            ]}
-            onPress={() => onTimeSelect(rec.startTime)}
+            testID={`recommendation-${rec.startTime}`}
+            style={styles.slotButton}
+            onPress={() => onTimeSelect(rec.startTime, rec.endTime)}
           >
             <Text style={styles.slotText}>{formatRecommendation(rec)}</Text>
           </TouchableOpacity>
@@ -138,14 +143,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-  },
-  slotHigh: {
-    backgroundColor: Colors.accent.purpleAlpha15,
-    borderColor: Colors.accent.purple,
-  },
-  slotMedium: {
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
-    borderColor: 'rgba(251, 191, 36, 0.5)',
+    backgroundColor: Colors.accent.greenAlpha15,
+    borderColor: Colors.accent.green,
   },
   slotText: {
     fontSize: FontSize.sm,

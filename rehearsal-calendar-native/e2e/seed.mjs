@@ -229,6 +229,12 @@ export const PEOPLE = {
   // account in Russian (80, T-228). A project of his own: no invite is made.
   // Sends a bug report with the network gone (81): nothing reaches the server.
   khlestakov: { email: 'khlestakov@e2e.test', firstName: 'Ivan', lastName: 'Khlestakov', onboarded: true, locale: 'ru' },
+  // Beatrice runs a project of three with no rehearsal yet, so its usual
+  // length is three hours. Tomorrow Benedick is busy 09:00-13:00 and Claudio
+  // 14:00-17:00: everyone is free 13:00-14:00 and from 17:00 (83, T-238).
+  beatrice: { email: 'beatrice@e2e.test', firstName: 'Beatrice', lastName: 'Messina', onboarded: true },
+  benedick: { email: 'benedick@e2e.test', firstName: 'Benedick', lastName: 'Padua', onboarded: true },
+  claudio: { email: 'claudio@e2e.test', firstName: 'Claudio', lastName: 'Florence', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -560,6 +566,19 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'admin', 'active', NOW(), NOW())`,
       [feud.id, ids.capulet, ids.tybalt]);
   }
+  // Beatrice's, with Benedick and Claudio in it, and nobody else: nobody's
+  // rehearsals or busy time but theirs below (83, T-238). Inserted, as the
+  // Feud's are: the sign-ins are spent.
+  {
+    const { rows: [ado] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('Much Ado', 'The garden', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW()),
+              ($1, $4, 'member', 'active', NOW(), NOW())`,
+      [ado.id, ids.beatrice, ids.benedick, ids.claudio]);
+  }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.
   const at = (day, time, zone) => {
@@ -821,6 +840,12 @@ export async function seed({ client, apiUrl, timezone }) {
      VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual', NULL),
             ($1, $4::timestamptz, $3::timestamptz, 'busy', FALSE, 'google_calendar', 'e2e-early-train')`,
     [ids.shamrayev, localInstant(5, 23), localInstant(6, 1), localInstant(6, 0)]);
+  // Benedick's and Claudio's tomorrow (83): an hour free between them.
+  await client.query(
+    `INSERT INTO native_user_availability (user_id, starts_at, ends_at, type, is_all_day, source)
+     VALUES ($1, $2::timestamptz, $3::timestamptz, 'busy', FALSE, 'manual'),
+            ($4, $5::timestamptz, $6::timestamptz, 'busy', FALSE, 'manual')`,
+    [ids.benedick, localInstant(1, 9), localInstant(1, 13), ids.claudio, localInstant(1, 14), localInstant(1, 17)]);
   // Yelena's (64), Mariya's and Astrov's (67-69): MARK_DAY busy all day, as a
   // save of that day writes it.
   for (const key of ['yelena', 'mariya', 'astrov']) {

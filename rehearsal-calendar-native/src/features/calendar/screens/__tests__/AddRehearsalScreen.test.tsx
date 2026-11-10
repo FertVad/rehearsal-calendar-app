@@ -11,8 +11,9 @@
  * API, navigation and contexts standing in.
  */
 import React from 'react';
-import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, act, waitFor, within } from '@testing-library/react-native';
 import { ActionSheetIOS, Alert } from 'react-native';
+import { Colors } from '../../../../shared/constants/colors';
 import { AxiosError } from 'axios';
 import { translations } from '../../../../i18n/translations';
 import { projectsAPI, rehearsalsAPI } from '../../../../shared/services/api';
@@ -284,6 +285,101 @@ describe('The participants row (T-010)', () => {
 
     expect(screen.getByTestId('participants-row').props.accessibilityLabel).toBe('Participants, 3 of 3');
     expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+});
+
+// T-238 (owner, 09.11): the form offered 13:00–14:00 as free time, a tap made
+// it 13:00–16:00, and the same form then said someone was busy 14:00–17:00.
+// What is tapped is what is put in: the usual length on, but no further than
+// the free time goes.
+describe('Recommended time (T-238)', () => {
+  const busy = (ranges: Record<string, [string, string][]>) => ({
+    data: { availability: Object.entries(ranges).map(([userId, times]) => ({
+      userId,
+      dates: [{ date: '2026-11-10', timeRanges: times.map(([start, end]) => ({ start, end, type: 'busy' })) }],
+    })) },
+  });
+  const shown = (screen: ReturnType<typeof render>, testID: string) =>
+    within(screen.getByTestId(testID)).getByText(/^\d\d:\d\d$/).props.children;
+  // The style of the button a window is: the touchable around its text. Merged
+  // by hand: StyleSheet here is the test setup's stand-in.
+  const flat = (style: unknown): Record<string, unknown> =>
+    Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+  const windowStyle = (screen: ReturnType<typeof render>, label: RegExp) => {
+    let node: any = screen.getByText(label);
+    while (node && !flat(node.props.style).borderColor) node = node.parent;
+    return flat(node?.props.style);
+  };
+  const tapWindow = async (screen: ReturnType<typeof render>, label: RegExp) => {
+    fireEvent.press(screen.getByText(label));
+    await settle();
+  };
+
+  it('a window of 1 h with a usual 3 h: 13:00–14:00, and nobody is busy in it', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+
+    await tapWindow(screen, /^13:00–14:00/);
+
+    expect(shown(screen, 'rehearsal-start-time')).toBe('13:00');
+    expect(shown(screen, 'rehearsal-end-time')).toBe('14:00');
+    expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+
+  it('a window longer than the usual length: the usual length on (T-012)', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+
+    await tapWindow(screen, /^17:00–23:00/);
+
+    expect(shown(screen, 'rehearsal-start-time')).toBe('17:00');
+    expect(shown(screen, 'rehearsal-end-time')).toBe('20:00');
+  });
+
+  it('everyone free all day: no 09:00–23:00 to tap, a line that says so', async () => {
+    const screen = await open();
+    await settle();
+
+    expect(screen.queryByText(/^09:00–23:00/)).toBeNull();
+    expect(screen.getByText(t.rehearsals.everyoneFreeAllDay)).toBeTruthy();
+    // A line, not a button: the time is the form's own, the next whole hour.
+    expect(shown(screen, 'rehearsal-start-time')).toBe('10:00');
+  });
+
+  it('someone busy at 14:00: the windows before and after are green, the colour of free', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['14:00', '17:00']] }));
+    const screen = await open();
+
+    for (const label of [/^09:00–14:00/, /^17:00–23:00/]) {
+      const style = windowStyle(screen, label);
+      expect(style.borderColor).toBe(Colors.accent.green);
+      expect(style.backgroundColor).toBe(Colors.accent.greenAlpha15);
+    }
+  });
+
+  it('from a planner slot an hour before someone is busy: it ends when they are', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '9': [['14:00', '17:00']] }));
+    routeParams = { projectId: 'A', prefilledDate: '2026-11-10', prefilledTime: '13:00', prefilledFreeUntil: '14:00' };
+    const screen = await open();
+    await settle();
+
+    expect(shown(screen, 'rehearsal-start-time')).toBe('13:00');
+    expect(shown(screen, 'rehearsal-end-time')).toBe('14:00');
+    expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+
+  it('lengthened by hand past the free time, it warns as before', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+    await tapWindow(screen, /^13:00–14:00/);
+
+    act(() => {
+      const end = screen.UNSAFE_getAllByType(PickerModal).find((p) => p.props.title === t.rehearsals.selectEndTime)!;
+      end.props.onConfirm(new Date(2026, 10, 10, 16, 0));
+    });
+
+    expect(shown(screen, 'rehearsal-end-time')).toBe('16:00');
+    expect(screen.getByTestId('participants-conflict').props.children).toBe('Name9 busy 14:00–17:00');
   });
 });
 
