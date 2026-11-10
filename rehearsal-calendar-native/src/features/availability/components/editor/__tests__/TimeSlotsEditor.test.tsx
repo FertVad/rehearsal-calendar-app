@@ -133,7 +133,7 @@ describe('TimeSlotsEditor Component', () => {
       );
 
       // Find all Ionicons, trash-outline should not exist
-      const icons = UNSAFE_queryAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_queryAllByType(require('@expo/vector-icons/Ionicons').default);
       const trashIcons = icons.filter(i => i.props.name === 'trash-outline');
       expect(trashIcons.length).toBe(0);
     });
@@ -151,7 +151,7 @@ describe('TimeSlotsEditor Component', () => {
       );
 
       // Find all trash icons (should be 2, one for each slot)
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
       const trashIcons = icons.filter(i => i.props.name === 'trash-outline');
       expect(trashIcons.length).toBe(2);
     });
@@ -267,7 +267,7 @@ describe('TimeSlotsEditor Component', () => {
           onTimePickerOpen={mockOnTimePickerOpen}
         />
       );
-      const icons = UNSAFE_queryAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_queryAllByType(require('@expo/vector-icons/Ionicons').default);
       const warningIcon = icons.find(i => i.props.name === 'warning');
       expect(warningIcon).toBeUndefined();
     });
@@ -291,7 +291,7 @@ describe('TimeSlotsEditor Component', () => {
       expect(getByText(errorMessage)).toBeTruthy();
 
       // Should show warning icon
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
       const warningIcon = icons.find(i => i.props.name === 'warning');
       expect(warningIcon).toBeTruthy();
     });
@@ -363,7 +363,7 @@ describe('TimeSlotsEditor Component', () => {
         />
       );
 
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
       const timeIcons = icons.filter(i => i.props.name === 'time-outline');
 
       // Should have 2 time icons (one for start, one for end)
@@ -382,7 +382,7 @@ describe('TimeSlotsEditor Component', () => {
         />
       );
 
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
       const arrowIcon = icons.find(i => i.props.name === 'arrow-forward');
 
       expect(arrowIcon).toBeTruthy();
@@ -431,7 +431,7 @@ describe('TimeSlotsEditor Component', () => {
       expect(getAllByText('До').length).toBe(4);
 
       // Should have 4 remove buttons
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
       const trashIcons = icons.filter(i => i.props.name === 'trash-outline');
       expect(trashIcons.length).toBe(4);
     });

@@ -16,7 +16,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 // This one loses to the pan, which is the whole point.
 import { TouchableOpacity as GestureTouchable } from 'react-native-gesture-handler';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';

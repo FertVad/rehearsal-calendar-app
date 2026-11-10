@@ -5,7 +5,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 // part in gesture-handler's arbitration: a swipe let slide back would open the
 // details as well (as in the inbox, NotificationsScreen).
 import { TouchableOpacity as GestureTouchable } from 'react-native-gesture-handler';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { IconButton } from '../../../shared/components/IconButton';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';

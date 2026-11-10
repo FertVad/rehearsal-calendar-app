@@ -9,10 +9,10 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { translations, Language } from '../../../i18n/translations';
 
-jest.mock('react-native-calendars', () => ({
-  Calendar: jest.requireActual('react-native-calendars/src/calendar/index.js').default,
-  LocaleConfig: jest.requireActual('xdate'),
-}));
+// The real month grid. Its words come from the LocaleConfig profileCalendar.tsx
+// takes from the library's own dates (T-242): the grid has words in every
+// language only if that is the XDate the grid reads.
+jest.mock('react-native-calendars/src/calendar', () => jest.requireActual('react-native-calendars/src/calendar/index.js'));
 jest.mock('react-native-calendars/src/calendar/img/previous.png', () => 1);
 jest.mock('react-native-calendars/src/calendar/img/next.png', () => 2);
 // Untranspiled; the month is drawn without its swipes.

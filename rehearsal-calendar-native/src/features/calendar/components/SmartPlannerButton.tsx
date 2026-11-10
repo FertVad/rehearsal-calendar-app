@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { calendarScreenStyles as styles } from '../styles';
 import { useI18n } from '../../../contexts/I18nContext';

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions, LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize, FontWeight, Spacing, TouchTarget } from '../../../shared/constants/colors';
 import { Rehearsal } from '../../../shared/types';
 import { addDays, parseDateString } from '../../../shared/utils/time';

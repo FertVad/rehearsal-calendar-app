@@ -338,7 +338,7 @@ describe('The day strip as a wheel', () => {
   // A tap, "Today" and the month chose their day at once: the list under the
   // strip showed the 13th while the frame still had the 10th (review, T-035).
   it('hands on a tapped day, "Today" and a month\'s day only where the strip stops on them', () => {
-    const { Calendar: MonthGrid } = require('react-native-calendars');
+    const MonthGrid = require('react-native-calendars/src/calendar').default;
     const onDaySelect = jest.fn();
     const onShowToday = jest.fn();
     const screen = render(
@@ -480,7 +480,7 @@ describe('The day strip as a wheel', () => {
  * middle. The name again closes it.
  */
 describe('The month', () => {
-  const { Calendar: MonthGrid } = require('react-native-calendars');
+  const MonthGrid = require('react-native-calendars/src/calendar').default;
   const scrolls = mockScrolls;
   beforeEach(() => scrolls.mockClear());
 

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';

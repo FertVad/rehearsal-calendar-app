@@ -10,7 +10,7 @@ import {
   FlatList,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { IconButton } from '../../../shared/components/IconButton';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';

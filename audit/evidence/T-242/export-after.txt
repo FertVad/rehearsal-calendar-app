@@ -1,0 +1,24 @@
+export: /tmp/t242-after
+bundle: _expo/static/js/ios/index-bfe51cb3436a3f5fc22803c517d316f4.hbc — 2763608 bytes (2.76 MB)
+modules in the source map: 1968; source text: 6.68 MB
+fonts (1, 0.39 MB):
+  Ionicons.ttf  381 KB
+modules named in the source map:
+  no   lodash/lodash.js
+  no   node_modules/moment/
+  no   node_modules/recyclerlistview/
+  no   react-native-calendars/src/agenda/
+  no   react-native-calendars/src/expandableCalendar/
+  no   react-native-calendars/src/timeline/
+  no   react-native-calendars/src/timeline-list/
+  no   react-native-calendars/src/calendar-list/
+  no   react-native-calendars/src/infinite-list/
+  no   react-native-calendars/src/index.ts
+  no   @expo/vector-icons/build/IconsLazy.js
+strings in the .hbc:
+  no   server-fertvads-projects.vercel.app
+  no   http://localhost:3001
+  no   http://10.0.2.2:3001
+  YES  https://rehearsly.me
+@expo/vector-icons files (9): Ionicons.js, build/Ionicons.js, build/createIconSet.js, build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf, build/vendor/react-native-vector-icons/lib/create-icon-set.js, build/vendor/react-native-vector-icons/lib/create-icon-source-cache.js, build/vendor/react-native-vector-icons/lib/ensure-native-module-available.js, build/vendor/react-native-vector-icons/lib/icon-button.js, build/vendor/react-native-vector-icons/lib/object-utils.js
+react-native-calendars files (23): calendar/day/basic/index.js, calendar/day/basic/style.js, calendar/day/dot/index.js, calendar/day/dot/style.js, calendar/day/index.js, calendar/day/marking/index.js, calendar/day/marking/style.js, calendar/day/period/index.js, calendar/day/period/style.js, calendar/header/index.js, calendar/header/style.js, calendar/img/next.png, calendar/img/previous.png, calendar/index.js, calendar/style.js, commons/constants.js, componentUpdater.js, dateutils.js, day-state-manager.js, hooks.js, interface.js, services/index.js, style.js

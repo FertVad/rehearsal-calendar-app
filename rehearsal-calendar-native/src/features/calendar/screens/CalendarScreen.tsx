@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { CalendarScreenNavigation } from '../../../navigation';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
 import { IconButton } from '../../../shared/components/IconButton';

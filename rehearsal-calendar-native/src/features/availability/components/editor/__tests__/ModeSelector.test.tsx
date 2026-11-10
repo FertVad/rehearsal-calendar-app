@@ -42,7 +42,7 @@ describe('ModeSelector Component', () => {
         />
       );
 
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
 
       // Should have 3 icons (one for each mode)
       expect(icons.length).toBe(3);
@@ -233,7 +233,7 @@ describe('ModeSelector Component', () => {
         />
       );
 
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
       const checkmarkIcon = icons.find(i => i.props.name === 'checkmark-circle');
 
       expect(checkmarkIcon?.props.color).toBe('#10b981'); // Colors.accent.green
@@ -247,7 +247,7 @@ describe('ModeSelector Component', () => {
         />
       );
 
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
       const timeIcon = icons.find(i => i.props.name === 'time');
 
       expect(timeIcon?.props.color).toBe('#f59e0b'); // Colors.accent.yellow
@@ -261,7 +261,7 @@ describe('ModeSelector Component', () => {
         />
       );
 
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
       const closeIcon = icons.find(i => i.props.name === 'close-circle');
 
       expect(closeIcon?.props.color).toBe('#ef4444'); // Colors.accent.red
@@ -275,7 +275,7 @@ describe('ModeSelector Component', () => {
         />
       );
 
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
 
       // Custom and Busy should have tertiary (gray) color
       const timeIcon = icons.find(i => i.props.name === 'time');
@@ -309,7 +309,7 @@ describe('ModeSelector Component', () => {
       );
 
       // Custom icon should now be highlighted
-      const icons = require('@expo/vector-icons').Ionicons;
+      const icons = require('@expo/vector-icons/Ionicons').default;
       expect(getByText('Частично')).toBeTruthy();
     });
 

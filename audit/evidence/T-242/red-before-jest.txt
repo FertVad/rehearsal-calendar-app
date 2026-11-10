@@ -1,0 +1,59 @@
+T-242 — guard test on the old code (83663f8 sources; only the new test file added)
+$ npx jest --selectProjects frontend --runTestsByPath src/__tests__/bundleContents.test.ts
+
+FAIL frontend src/__tests__/bundleContents.test.ts
+  ✕ no app file imports a library entry file that pulls in what the app does not use (647 ms)
+  ✕ the link prefixes are the ones that open the app, with no dead or local address (4 ms)
+  ✕ the link prefixes are the app scheme and rehearsly.me (22 ms)
+  ● no app file imports a library entry file that pulls in what the app does not use
+    - Array []
+    + Array [
+    +   "features/availability/components/editor/ModeInfo.tsx:3 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/availability/components/editor/ModeSelector.tsx:3 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/availability/components/editor/TimeSlotsEditor.tsx:3 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/availability/screens/AvailabilityScreen.tsx:20 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/calendar/components/RehearsalCard.tsx:8 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/calendar/components/SmartPlannerButton.tsx:3 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/calendar/components/WeeklyCalendar.tsx:3 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/calendar/screens/AddRehearsalScreen.tsx:15 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/calendar/screens/CalendarScreen.tsx:5 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/calendar/screens/RehearsalDetailsScreen.tsx:11 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/notifications/screens/NotificationsScreen.tsx:19 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/onboarding/screens/CalendarSyncScreen.tsx:4 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/onboarding/screens/NotificationsScreen.tsx:4 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/onboarding/screens/WelcomeScreen.tsx:5 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/onboarding/screens/WhatWhereScreen.tsx:4 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/profile/screens/CalendarSyncSettingsScreen.tsx:14 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/profile/screens/ProfileScreen.tsx:9 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/projects/screens/CreateProjectScreen.tsx:13 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/projects/screens/JoinProjectScreen.tsx:15 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/projects/screens/ProjectDetailScreen.tsx:13 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/projects/screens/ProjectsScreen.tsx:4 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "features/smart-planner/screens/SmartPlannerScreen.tsx:10 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "navigation/index.tsx:6 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "shared/components/BottomActionBar.tsx:29 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "shared/components/DateRangePicker.tsx:3 — react-native-calendars' entry file, which requires Agenda, Timeline, lodash, moment",
+    +   "shared/components/DayCalendar.tsx:2 — react-native-calendars' entry file, which requires Agenda, Timeline, lodash, moment",
+    +   "shared/components/IconButton.tsx:3 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "shared/components/ParticipantPicker.tsx:13 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "shared/components/ScreenHeader.tsx:31 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "shared/components/Toast.tsx:21 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "shared/components/buttons/DeleteButton.tsx:3 — @expo/vector-icons' entry file, which requires all 19 icon fonts",
+    +   "shared/components/profileCalendar.tsx:9 — react-native-calendars' entry file, which requires Agenda, Timeline, lodash, moment",
+    + ]
+  ● the link prefixes are the ones that open the app, with no dead or local address
+    - Array []
+    + Array [
+    +   "linking.ts:8 — const localhostPrefix = Platform.OS === 'android'",
+    +   "linking.ts:9 — ? 'http://10.0.2.2:3001'",
+    +   "linking.ts:10 — : 'http://localhost:3001';",
+    +   "linking.ts:36 — 'https://server-fertvads-projects.vercel.app',",
+    +   "linking.ts:37 — localhostPrefix",
+    + ]
+  ● the link prefixes are the app scheme and rehearsly.me
+      Array [
+        "https://rehearsly.me",
+    +   "https://server-fertvads-projects.vercel.app",
+    +   "http://localhost:3001",
+      ]
+Test Suites: 1 failed, 1 total

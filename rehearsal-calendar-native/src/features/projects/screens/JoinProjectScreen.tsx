@@ -12,7 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { Colors } from '../../../shared/constants/colors';
 import { AppStackParamList } from '../../../navigation';

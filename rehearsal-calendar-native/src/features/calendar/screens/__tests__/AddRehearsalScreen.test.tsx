@@ -21,7 +21,7 @@ import { setProfileTimezone } from '../../../../shared/utils/time';
 import AddRehearsalScreen from '../AddRehearsalScreen';
 import { PickerModal } from '../../../../shared/components/PickerModal';
 // The shared stand-in (jest.config.js): what the form gives the calendar.
-import { Calendar } from 'react-native-calendars';
+import Calendar from 'react-native-calendars/src/calendar';
 // @ts-expect-error the mock's own helper (src/__tests__/__mocks__/expo-localization.js)
 import { __changeCalendars } from 'expo-localization';
 

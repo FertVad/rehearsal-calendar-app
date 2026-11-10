@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import { useI18n } from '../../../contexts/I18nContext';

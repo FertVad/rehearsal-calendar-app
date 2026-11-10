@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { IconButton } from '../../../../shared/components/IconButton';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../../shared/constants/colors';
 import { TimeSlot, SlotValidationError } from '../../types';

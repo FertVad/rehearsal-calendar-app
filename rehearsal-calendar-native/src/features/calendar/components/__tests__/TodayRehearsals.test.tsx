@@ -460,7 +460,7 @@ describe('TodayRehearsals Component', () => {
       );
 
       // Find Ionicons with name="eye" (seen)
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
       const eyeIcon = icons.find(i => i.props.name === 'eye');
       expect(eyeIcon).toBeTruthy();
     });
@@ -477,7 +477,7 @@ describe('TodayRehearsals Component', () => {
       );
 
       // Find Ionicons with name="eye-off-outline"
-      const icons = UNSAFE_getAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_getAllByType(require('@expo/vector-icons/Ionicons').default);
       const eyeOffIcon = icons.find(i => i.props.name === 'eye-off-outline');
       expect(eyeOffIcon).toBeTruthy();
     });
@@ -497,7 +497,7 @@ describe('TodayRehearsals Component', () => {
       );
 
       expect(queryByTestId('seen-toggle')).toBeNull();
-      const icons = UNSAFE_queryAllByType(require('@expo/vector-icons').Ionicons);
+      const icons = UNSAFE_queryAllByType(require('@expo/vector-icons/Ionicons').default);
       expect(icons.filter(i => String(i.props.name).startsWith('eye'))).toHaveLength(0);
       expect(getByTestId('rehearsal-not-on-roster')).toHaveTextContent(' · You are not in the cast');
       expect(getByText('Project Alpha')).toBeTruthy();

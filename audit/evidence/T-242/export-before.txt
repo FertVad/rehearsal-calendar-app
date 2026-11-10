@@ -1,0 +1,42 @@
+export: /tmp/t242-before
+bundle: _expo/static/js/ios/index-863ed3b141fa6494a31136f3755e791d.hbc — 3394736 bytes (3.39 MB)
+modules in the source map: 2105; source text: 7.76 MB
+fonts (19, 4.08 MB):
+  AntDesign.ttf  127 KB
+  Entypo.ttf  65 KB
+  EvilIcons.ttf  13 KB
+  Feather.ttf  54 KB
+  Fontisto.ttf  306 KB
+  FontAwesome.ttf  162 KB
+  FontAwesome5_Regular.ttf  33 KB
+  FontAwesome5_Solid.ttf  198 KB
+  FontAwesome5_Brands.ttf  131 KB
+  FontAwesome6_Regular.ttf  66 KB
+  FontAwesome6_Solid.ttf  414 KB
+  FontAwesome6_Brands.ttf  204 KB
+  Foundation.ttf  56 KB
+  Ionicons.ttf  381 KB
+  MaterialCommunityIcons.ttf  1277 KB
+  MaterialIcons.ttf  348 KB
+  Octicons.ttf  68 KB
+  SimpleLineIcons.ttf  53 KB
+  Zocial.ttf  25 KB
+modules named in the source map:
+  YES  lodash/lodash.js  (1 files)
+  YES  node_modules/moment/  (1 files)
+  YES  node_modules/recyclerlistview/  (26 files)
+  YES  react-native-calendars/src/agenda/  (6 files)
+  YES  react-native-calendars/src/expandableCalendar/  (13 files)
+  YES  react-native-calendars/src/timeline/  (8 files)
+  YES  react-native-calendars/src/timeline-list/  (2 files)
+  YES  react-native-calendars/src/calendar-list/  (4 files)
+  YES  react-native-calendars/src/infinite-list/  (1 files)
+  YES  react-native-calendars/src/index.ts  (1 files)
+  YES  @expo/vector-icons/build/IconsLazy.js  (1 files)
+strings in the .hbc:
+  YES  server-fertvads-projects.vercel.app
+  YES  http://localhost:3001
+  no   http://10.0.2.2:3001
+  YES  https://rehearsly.me
+@expo/vector-icons files (47): build/AntDesign.js, build/Entypo.js, build/EvilIcons.js, build/Feather.js, build/FontAwesome.js, build/FontAwesome5.js, build/FontAwesome6.js, build/Fontisto.js, build/Foundation.js, build/IconsLazy.js, build/Ionicons.js, build/MaterialCommunityIcons.js, build/MaterialIcons.js, build/Octicons.js, build/SimpleLineIcons.js, build/Zocial.js, build/createIconSet.js, build/createIconSetFromFontAwesome5.js, build/createIconSetFromFontAwesome6.js, build/createIconSetFromFontello.js, build/createIconSetFromIcoMoon.js, build/createMultiStyleIconSet.js, build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf, build/vendor/react-native-vector-icons/Fonts/Entypo.ttf, build/vendor/react-native-vector-icons/Fonts/EvilIcons.ttf, build/vendor/react-native-vector-icons/Fonts/Feather.ttf, build/vendor/react-native-vector-icons/Fonts/FontAwesome.ttf, build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Brands.ttf, build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf, build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Solid.ttf, build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Brands.ttf, build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Regular.ttf, build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Solid.ttf, build/vendor/react-native-vector-icons/Fonts/Fontisto.ttf, build/vendor/react-native-vector-icons/Fonts/Foundation.ttf, build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf, build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf, build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf, build/vendor/react-native-vector-icons/Fonts/Octicons.ttf, build/vendor/react-native-vector-icons/Fonts/SimpleLineIcons.ttf, build/vendor/react-native-vector-icons/Fonts/Zocial.ttf, build/vendor/react-native-vector-icons/lib/create-icon-set-from-fontello.js, build/vendor/react-native-vector-icons/lib/create-icon-set.js, build/vendor/react-native-vector-icons/lib/create-icon-source-cache.js, build/vendor/react-native-vector-icons/lib/ensure-native-module-available.js, build/vendor/react-native-vector-icons/lib/icon-button.js, build/vendor/react-native-vector-icons/lib/object-utils.js
+react-native-calendars files (65): Profiler.js, agenda/index.js, agenda/platform-style.ios.js, agenda/reservation-list/index.js, agenda/reservation-list/reservation.js, agenda/reservation-list/style.js, agenda/style.js, calendar-list/index.js, calendar-list/item.js, calendar-list/new.js, calendar-list/style.js, calendar/day/basic/index.js, calendar/day/basic/style.js, calendar/day/dot/index.js, calendar/day/dot/style.js, calendar/day/index.js, calendar/day/marking/index.js, calendar/day/marking/style.js, calendar/day/period/index.js, calendar/day/period/style.js, calendar/header/index.js, calendar/header/style.js, calendar/img/next.png, calendar/img/previous.png, calendar/index.js, calendar/style.js, commons/WeekDaysNames.js, commons/constants.js, componentUpdater.js, dateutils.js, day-state-manager.js, expandableCalendar/AgendaList/agendaList.js, expandableCalendar/AgendaList/commons.js, expandableCalendar/AgendaList/infiniteAgendaList.js, expandableCalendar/Context/Provider.js, expandableCalendar/Context/asCalendarConsumer.js, expandableCalendar/Context/index.js, expandableCalendar/Context/todayButton.js, expandableCalendar/WeekCalendar/index.js, expandableCalendar/WeekCalendar/new.js, expandableCalendar/commons.js, expandableCalendar/index.js, expandableCalendar/style.js, expandableCalendar/week.js, hooks.js, img/down.png, img/up.png, index.ts, infinite-list/index.js, interface.js, momentResolver.js, services/index.js, style.js, testIDs.js, timeline-list/index.js, timeline-list/useTimelinePages.js, timeline/EventBlock.js, timeline/NowIndicator.js, timeline/Packer.js, timeline/Timeline.js, timeline/TimelineHours.js, timeline/helpers/presenter.js, timeline/style.js, timeline/useTimelineOffset.js, velocityTracker.js

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, StyleProp, TextStyle, TouchableOpacityProps } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, TouchTarget } from '../constants/colors';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];

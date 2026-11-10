@@ -48,7 +48,7 @@ jest.mock('react-native', () => {
 });
 
 const calendarOf = (view: ReturnType<typeof render>) =>
-  view.UNSAFE_getByType(require('react-native-calendars').Calendar);
+  view.UNSAFE_getByType(require('react-native-calendars/src/calendar').default);
 // The range's own marks, without the day marked as today.
 const rangeMarks = (marks: Record<string, { color?: string }>) =>
   Object.keys(marks).filter((day) => marks[day].color);
@@ -271,7 +271,7 @@ describe('DateRangePicker Component', () => {
       );
 
       // Calendar component should receive minDate prop
-      const calendar = UNSAFE_getByType(require('react-native-calendars').Calendar);
+      const calendar = UNSAFE_getByType(require('react-native-calendars/src/calendar').default);
       expect(calendar.props.minDate).toBe('2025-12-20');
     });
   });
@@ -408,7 +408,7 @@ describe('DateRangePicker Component', () => {
           initialEndDate={new Date(9999, 11, 31)} />
       );
       expect(view.getByText('Maximum 90 days')).toBeTruthy();
-      const calendar = view.UNSAFE_getByType(require('react-native-calendars').Calendar);
+      const calendar = view.UNSAFE_getByType(require('react-native-calendars/src/calendar').default);
       expect(rangeMarks(calendar.props.markedDates)).toEqual([]);
       fireEvent.press(view.getByText('Готово'));
       expect(mockOnConfirm).not.toHaveBeenCalled();
@@ -417,10 +417,10 @@ describe('DateRangePicker Component', () => {
       // The user can immediately replace the rejected selection with a valid
       // 90-day inclusive range; the boundary itself remains usable.
       act(() => calendar.props.onDayPress({ dateString: '2026-01-01' }));
-      act(() => view.UNSAFE_getByType(require('react-native-calendars').Calendar)
+      act(() => view.UNSAFE_getByType(require('react-native-calendars/src/calendar').default)
         .props.onDayPress({ dateString: '2026-03-31' }));
       expect(view.queryByText('Maximum 90 days')).toBeNull();
-      expect(rangeMarks(view.UNSAFE_getByType(require('react-native-calendars').Calendar)
+      expect(rangeMarks(view.UNSAFE_getByType(require('react-native-calendars/src/calendar').default)
         .props.markedDates)).toHaveLength(90);
       fireEvent.press(view.getByText('Готово'));
       expect(mockOnConfirm).toHaveBeenCalledTimes(1);

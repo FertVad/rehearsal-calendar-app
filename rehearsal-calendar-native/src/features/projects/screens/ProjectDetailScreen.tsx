@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../shared/constants/colors';
 import { ScreenHeader } from '../../../shared/components/ScreenHeader';

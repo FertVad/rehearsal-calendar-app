@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
+// The month grid's own file: the library's entry file requires all its
+// calendars, lodash and moment with them (T-242, profileCalendar.tsx).
+import Calendar from 'react-native-calendars/src/calendar';
+import type { DateData } from 'react-native-calendars/src/types';
 import { Colors } from '../constants/colors';
 import { useI18n } from '../../contexts/I18nContext';
 import { formatDateToString, parseDateString } from '../utils/time';
 import { useToday } from '../hooks/useClock';
 import { useWeekStart } from '../../hooks/useWeekStart';
-import { calendarTheme, monthTitle, pickedDay, profileDay, withToday } from './profileCalendar';
+import { calendarTheme, LocaleConfig, monthTitle, pickedDay, profileDay, withToday } from './profileCalendar';
 
 interface DayCalendarProps {
   /** The chosen day, 'YYYY-MM-DD'. */

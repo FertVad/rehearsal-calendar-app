@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { hapticMedium, hapticSuccess } from '../../../shared/utils/haptics';
 import type { AppStackParamList, AppNavigation } from '../../../navigation';

@@ -39,11 +39,11 @@ module.exports = {
         '^@/(.*)$': '<rootDir>/src/$1',
         // Mock React Native modules
         '^react-native$': '<rootDir>/src/__tests__/__mocks__/react-native.js',
-        '^react-native-calendars$': '<rootDir>/src/__tests__/__mocks__/react-native-calendars.js',
+        '^react-native-calendars/src/calendar$': '<rootDir>/src/__tests__/__mocks__/react-native-calendars-calendar.js',
         '^react-native-screens$': '<rootDir>/src/__tests__/__mocks__/react-native-screens.js',
         '^react-native-gesture-handler$': '<rootDir>/src/__tests__/__mocks__/react-native-gesture-handler.js',
         '^react-native-safe-area-context$': '<rootDir>/src/__tests__/__mocks__/react-native-safe-area-context.js',
-        '^@expo/vector-icons$': '<rootDir>/src/__tests__/__mocks__/expo-vector-icons.js',
+        '^@expo/vector-icons/Ionicons$': '<rootDir>/src/__tests__/__mocks__/expo-vector-icons-Ionicons.js',
         '^expo-clipboard$': '<rootDir>/src/__tests__/__mocks__/expo-clipboard.js',
         '^expo-calendar$': '<rootDir>/src/__tests__/__mocks__/expo-calendar.js',
         '^expo-constants$': '<rootDir>/src/__tests__/__mocks__/expo-constants.js',

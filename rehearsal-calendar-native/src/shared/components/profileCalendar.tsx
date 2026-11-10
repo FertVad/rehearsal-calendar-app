@@ -6,11 +6,26 @@
  */
 import React from 'react';
 import { Text } from 'react-native';
-import { DateData, LocaleConfig } from 'react-native-calendars';
+import type { DateData } from 'react-native-calendars/src/types';
+import { parseDate } from 'react-native-calendars/src/interface';
 import PeriodDay, { PeriodDayProps } from 'react-native-calendars/src/calendar/day/period';
 import { Colors, FontSize, FontWeight, TouchTarget } from '../constants/colors';
 import { formatDate } from '../utils/dateFormat';
 import type { Language } from '../../i18n/translations';
+
+/**
+ * The library's LocaleConfig: its date class, XDate, whose `locales` and
+ * `defaultLocale` the month grid reads its words from. The library's entry
+ * file, the one that exports it by name, also requires Agenda, CalendarList,
+ * ExpandableCalendar and Timeline, and with them the whole of lodash, moment
+ * and recyclerlistview — about 1.2 MB of the bundle's 7.7 MB of source for a
+ * month grid (T-242). Here it is taken from a date the library makes, so it is
+ * the very XDate the grid uses, and xdate needs no place in package.json.
+ */
+export const LocaleConfig: {
+  locales: Record<string, unknown>;
+  defaultLocale: string;
+} = parseDate('2000-01-01').constructor;
 
 // Configure locales for react-native-calendars, one for every language of the
 // app: the calendars set the app's language as the library's default, and a

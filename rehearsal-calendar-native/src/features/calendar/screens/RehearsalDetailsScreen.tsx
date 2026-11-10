@@ -8,7 +8,7 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { ScreenHeader, HeaderTextButton } from '../../../shared/components/ScreenHeader';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, TouchTarget } from '../../../shared/constants/colors';

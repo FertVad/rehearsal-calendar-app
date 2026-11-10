@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSize, FontWeight, BorderRadius, TouchTarget } from '../../../shared/constants/colors';
 import { useI18n } from '../../../contexts/I18nContext';
 import { requestErrorMessage } from '../../../shared/utils/requestError';
