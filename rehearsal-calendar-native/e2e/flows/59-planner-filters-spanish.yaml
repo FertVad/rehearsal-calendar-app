@@ -13,9 +13,10 @@
 # Bianca Minola, whose account speaks Spanish, runs «Video musical "Fuego
 # lento"», eight in it, and «Musikvideo „Nachtschicht"», hers alone; she reads
 # the planner in Spanish, English, Russian and German. Maestro reads a label
-# whole even where the screen cuts it, so the words are checked by their text,
-# the sizes by Maestro, and seen whole in the shots. Nothing is saved; her
-# language stays German.
+# whole even where the screen cuts it, so in each language the cut is looked
+# for on the shot itself — the "…" iOS draws in place of what does not fit
+# (e2e/scripts/no-ellipsis.js, ink.mjs) — and the words are checked by their
+# text, the sizes by Maestro. Nothing is saved; her language stays German.
 appId: ${APP_ID}
 name: The planner's filters fit in four languages
 tags:
@@ -39,12 +40,15 @@ tags:
     text: "Not Now"
     optional: true
 
-# Spanish.
+# Spanish. The words drawn whole first, what was cut before the fix: the "…"
+# iOS draws for what does not fit, looked for on the shot between the status
+# bar and the tabs (e2e/scripts/no-ellipsis.js) — Maestro would read the label
+# whole all the same.
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:
       TAP_ID: tab-planner
-      SEE: "Semana"
+      SEE: "Recomendaciones"
       WAIT_MS: "10000"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
@@ -54,6 +58,20 @@ tags:
       WAIT_MS: "10000"
 - tapOn: "Video musical “Fuego lento”"
 - extendedWaitUntil:
+    visible: "\\d+ franjas?"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 59-planner-es
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 59-planner-es
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
+- extendedWaitUntil:
     visible:
       id: participants-row
       text: "Participantes, 8 de 8"
@@ -61,8 +79,6 @@ tags:
 - extendedWaitUntil:
     visible: "Añadir ensayo \\d.*"
     timeout: 30000
-- waitForAnimationToEnd
-- takeScreenshot: 59-planner-es
 - assertVisible:
     id: planner-project
     text: "Proyecto, Video musical “Fuego lento”"
@@ -164,6 +180,15 @@ tags:
     timeout: 30000
 - waitForAnimationToEnd
 - takeScreenshot: 59-planner-en
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 59-planner-en
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
 - assertVisible:
     id: planner-project
     text: "Project, Video musical “Fuego lento”"
@@ -211,6 +236,15 @@ tags:
     timeout: 30000
 - waitForAnimationToEnd
 - takeScreenshot: 59-planner-ru
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 59-planner-ru
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
 - assertVisible:
     id: planner-project
     text: "Проект, Video musical “Fuego lento”"
@@ -270,6 +304,15 @@ tags:
     timeout: 30000
 - waitForAnimationToEnd
 - takeScreenshot: 59-planner-de
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 59-planner-de
+      LEFT: "0"
+      RIGHT: "1"
+      TOP: "0.07"
+      BOTTOM: "0.9"
 - assertVisible:
     id: planner-project
     text: "Projekt, Musikvideo „Nachtschicht“"

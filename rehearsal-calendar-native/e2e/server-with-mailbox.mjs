@@ -97,6 +97,10 @@
  *                                    that colour within those fractions of the
  *                                    newest <name>.png in e2e/out/artifacts;
  *                                    within 40 a channel, or `tolerance`
+ *   GET /ellipses?shot=<name>&left=&right=&top=&bottom=
+ *                                    { ellipses: [{ left, top }] } in points,
+ *                                    each "…" drawn there in place of text
+ *                                    that did not fit (flow 59, T-241)
  *
  * It reads back what the server stored from an account's bug reports, to show
  * a report sent from the app arrived (flow 47):
@@ -136,7 +140,7 @@ import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
 import { notifyMemberJoined, notifyMemberResponse, notifyRehearsalUpdated } from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
-import { inkBox } from './ink.mjs';
+import { ellipses, inkBox } from './ink.mjs';
 
 const MAIL = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'mail');
 const ARTIFACTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'out', 'artifacts');
@@ -443,7 +447,7 @@ http.createServer((request, response) => {
     })().catch((error) => answer(500, { error: String(error) }));
     return;
   }
-  if (request.method === 'GET' && url.pathname === '/ink') {
+  if (request.method === 'GET' && (url.pathname === '/ink' || url.pathname === '/ellipses')) {
     // The newest screenshot of that name the flows took (e2e/out/artifacts).
     const name = path.basename(url.searchParams.get('shot') || '') + '.png';
     const shots = fs.readdirSync(ARTIFACTS, { recursive: true })
@@ -452,6 +456,7 @@ http.createServer((request, response) => {
       .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
     if (!shots.length) return answer(404, { error: `no screenshot ${name}` });
     const region = Object.fromEntries(['left', 'right', 'top', 'bottom'].map((side) => [side, Number(url.searchParams.get(side))]));
+    if (url.pathname === '/ellipses') return answer(200, { ellipses: ellipses(shots[0], { region }) });
     const tolerance = url.searchParams.has('tolerance') ? Number(url.searchParams.get('tolerance')) : undefined;
     return answer(200, { box: inkBox(shots[0], { colour: url.searchParams.get('colour') || '', region, tolerance }) });
   }

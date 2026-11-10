@@ -63,4 +63,36 @@ this task's code; left for its own task.
 
 `after/` — 59's shots in es, en, ru, de and the participants sheet.
 
+## Review (Astra, P2): 59 now looks for the cut on the screen
+
+Maestro reads a label whole however much of it is drawn, so 59's labels and
+sizes passed over a cut name. Now each of its four shots is searched for the
+"…" iOS draws in place of what does not fit (`e2e/ink.mjs` `ellipses`,
+`GET /ellipses` of the e2e server, `e2e/scripts/no-ellipsis.js`): three equal
+dots on the baseline of the letters before. And in Spanish the shot and the
+search come first, before anything only the new filters have, so on the old
+code the flow stops at the cut itself, not at "Semana".
+
+The detector on the shots (`e2e/__tests__/ink.test.mjs`, in `npm test`): 3
+"…" on each of `before/` (es, en, ru, de — «Video musical “…», «Se…»,
+«Partici…os»), none on `after/`.
+
+Red, fix files at `4d02578`, the flow and the detector new (run
+2026-11-10_143314; its shot in `red-ellipsis/`):
+
+```
+[Failed] The planner's filters fit in four languages (1m 22s)
+Error: 59-planner-es: text cut, "…" at 135,145 pt; 201,145 pt; 288,145 pt
+```
+
+Green, on the fix (run 2026-11-10_143911; shots in `after/`):
+
+```
+59-planner-es: no text cut there
+59-planner-en: no text cut there
+59-planner-ru: no text cut there
+59-planner-de: no text cut there
+[Passed] The planner's filters fit in four languages (2m 39s)
+```
+
 `copy-shots.mjs` copies a run's shots here.
