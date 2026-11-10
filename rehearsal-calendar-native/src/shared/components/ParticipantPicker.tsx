@@ -367,7 +367,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   faceOverlap: {
-    marginLeft: -FACE_SIZE / 3,
+    // A little over each other, both initials still whole.
+    marginLeft: -Spacing.xs,
   },
   faceMore: {
     width: FACE_SIZE,
