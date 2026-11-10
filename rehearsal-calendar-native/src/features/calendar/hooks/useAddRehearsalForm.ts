@@ -294,7 +294,9 @@ export function useAddRehearsalForm({
   const handleDateChange = (selectedDate: Date) => {
     touch('date');
     setDate(selectedDate);
-    setFreeUntil(null);
+    // Another day is not the free time the start came from; the day shown
+    // tapped again still is (T-238 review).
+    if (formatDateToString(selectedDate) !== formatDateToString(date)) setFreeUntil(null);
   };
 
   // The form's times are clock times on `date`; an end before the start is the
@@ -356,12 +358,14 @@ export function useAddRehearsalForm({
     // A start can move the end along with it.
     touch('start', 'end');
     setStartTime(selectedTime);
-    setFreeUntil(null);
+    // A start moved by hand is the person's own, not the free time's; the one
+    // shown confirmed as it was still is (T-238 review).
+    const start = formatDateToTimeString(selectedTime);
+    if (start !== startClock) setFreeUntil(null);
     // An end nobody set follows the start. One that was set stays, unless a
     // later start passes it: then it goes back to following — the usual length
     // on, which may well be the next morning. A rehearsal that already ran
     // overnight keeps its end, unless the start lands right on it.
-    const start = formatDateToTimeString(selectedTime);
     const wasOvernight = endsNextDay(startClock, endClock);
     if (isEmptyClockRange(start, endClock) || (!wasOvernight && endsNextDay(start, endClock))) {
       setEndTime(null);

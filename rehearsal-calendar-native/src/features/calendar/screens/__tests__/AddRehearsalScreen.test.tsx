@@ -381,6 +381,49 @@ describe('Recommended time (T-238)', () => {
     expect(shown(screen, 'rehearsal-end-time')).toBe('16:00');
     expect(screen.getByTestId('participants-conflict').props.children).toBe('Name9 busy 14:00–17:00');
   });
+
+  // T-238 review: the start's picker confirmed as it was, or the day shown
+  // tapped again, is no new start — the free time it came from still holds.
+  const confirmStart = (screen: ReturnType<typeof render>, hours: number, minutes = 0) => act(() => {
+    const start = screen.UNSAFE_getAllByType(PickerModal).find((p) => p.props.title === t.rehearsals.selectStartTime)!;
+    start.props.onConfirm(new Date(2026, 10, 10, hours, minutes));
+  });
+
+  it('the start confirmed unchanged keeps 13:00–14:00, with nobody busy in it', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+    await tapWindow(screen, /^13:00–14:00/);
+
+    confirmStart(screen, 13);
+    await settle();
+
+    expect(shown(screen, 'rehearsal-end-time')).toBe('14:00');
+    expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+
+  it('the day shown tapped again keeps 13:00–14:00, with nobody busy in it', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+    await tapWindow(screen, /^13:00–14:00/);
+
+    fireEvent.press(screen.getByTestId('rehearsal-date'));
+    act(() => { screen.UNSAFE_getByType(Calendar).props.onDayPress({ dateString: '2026-11-10' }); });
+    await settle();
+
+    expect(shown(screen, 'rehearsal-end-time')).toBe('14:00');
+    expect(screen.queryByTestId('participants-conflict')).toBeNull();
+  });
+
+  it('a start really moved is the person\'s own: the usual length on from it', async () => {
+    (projectsAPI.getMembersAvailability as jest.Mock).mockResolvedValue(busy({ '7': [['09:00', '13:00']], '9': [['14:00', '17:00']] }));
+    const screen = await open();
+    await tapWindow(screen, /^13:00–14:00/);
+
+    confirmStart(screen, 13, 30);
+    await settle();
+
+    expect(shown(screen, 'rehearsal-end-time')).toBe('16:30');
+  });
 });
 
 describe('Before the people are known (R9-02)', () => {

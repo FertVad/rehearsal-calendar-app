@@ -10,7 +10,8 @@
 # whichever is sooner:
 # - the planner's 1:00 PM slot: 1:00–2:00 PM, nobody busy in it;
 # - the form's 5:00 PM window, six hours long: 5:00–8:00 PM (T-012);
-# - the form's 1:00 PM window: 1:00–2:00 PM again.
+# - the form's 1:00 PM window: 1:00–2:00 PM again, and still so after the
+#   start's wheel is confirmed unchanged (T-238 review).
 # With Beatrice alone picked nobody is busy all day: no 9:00 AM–11:00 PM
 # window, a line that says everyone is free. Nothing is saved.
 appId: ${APP_ID}
@@ -106,6 +107,26 @@ tags:
 - assertNotVisible:
     id: participants-conflict
 - takeScreenshot: 83-form-free-hour
+# The start's wheel opened and confirmed as it was is no new start: still
+# 1:00–2:00 PM, nobody busy (T-238 review). It became 1:00–4:00 PM.
+- tapOn:
+    id: rehearsal-start-time
+- extendedWaitUntil:
+    visible: "Select Start Time"
+    timeout: 10000
+- tapOn: "Done"
+- extendedWaitUntil:
+    notVisible: "Select Start Time"
+    timeout: 10000
+- assertVisible:
+    id: rehearsal-start-time
+    text: "(.*[^0-9])?1:00.PM.*"
+- assertVisible:
+    id: rehearsal-end-time
+    text: "(.*[^0-9])?2:00.PM.*"
+- assertNotVisible:
+    id: participants-conflict
+- takeScreenshot: 83-form-start-confirmed
 # Beatrice alone: free all day, and the working day is not offered as a window.
 - runFlow:
     file: ../subflows/tap-and-see.yaml

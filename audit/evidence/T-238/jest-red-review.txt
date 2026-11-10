@@ -1,0 +1,24 @@
+T-238 review (P2): the free time's limit was dropped on an unchanged start or
+a re-tap of the day shown. Run on 576cd39 (before the fix), new tests only:
+
+$ npx jest --selectProjects frontend src/features/calendar/screens/__tests__/AddRehearsalScreen.test.tsx -t "T-238"
+
+  ● Recommended time (T-238) › the start confirmed unchanged keeps 13:00–14:00, with nobody busy in it
+
+    Expected: "14:00"
+    Received: "16:00"
+
+    > 400 |     expect(shown(screen, 'rehearsal-end-time')).toBe('14:00');
+
+  ● Recommended time (T-238) › the day shown tapped again keeps 13:00–14:00, with nobody busy in it
+
+    Expected: "14:00"
+    Received: "16:00"
+
+    > 413 |     expect(shown(screen, 'rehearsal-end-time')).toBe('14:00');
+
+Test Suites: 1 failed, 140 skipped, 1 passed, 2 of 142 total
+Tests:       2 failed, 1392 skipped, 10 passed, 1404 total
+
+(The third new test, "a start really moved ... the usual length on", passes
+before and after: it pins that a real change still drops the limit.)

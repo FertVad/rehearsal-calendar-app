@@ -1,0 +1,12 @@
+T-238 review (P2), e2e green: flow 83 with the start's wheel confirmed
+unchanged, on the fixed useAddRehearsalForm.ts.
+
+$ npm run e2e -- e2e/flows/83-free-time-ends-the-rehearsal.yaml
+[Passed] Free time tapped ends the rehearsal where it ends (1m 39s)
+
+1/1 Flow Passed in 1m 39s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Jest after the fix (frontend project): Tests: 1404 passed, 1404 total.
+npx tsc --noEmit: clean.
