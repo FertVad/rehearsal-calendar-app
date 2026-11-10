@@ -1,5 +1,10 @@
 export interface CalendarSyncTranslations {
   // Navigation
+  /**
+   * The screen's bar, between "‹ Profile" and nothing, at 17 pt on a 393 pt
+   * phone: «Синхронизация с календарём» was cut to «Синхронизация с ка…»
+   * (T-239). Shorter, never smaller.
+   */
   title: string;
   /**
    * What sync does, in one line at the top. Only the hours come in, never
@@ -36,7 +41,8 @@ export interface CalendarSyncTranslations {
   // Unified Sync
   autoSync: string;
   synchronize: string;
-  // Time formatting
+  // Time formatting: as inside a sentence ("Synced just now");
+  // formatLastSync gives the capital where they stand alone (T-239).
   justNow: string;
   minutesAgo: (minutes: number) => string;
   hoursAgo: (hours: number) => string;
@@ -51,7 +57,7 @@ export interface CalendarSyncTranslations {
 export const ru = {
   calendarSync: {
     // Navigation
-    title: 'Синхронизация с календарём',
+    title: 'Синхронизация',
     explanation: 'Репетиции попадают в календарь телефона, а из него сюда — только часы, когда вы заняты, без названий событий.',
     // Permissions
     permissionDenied: 'Доступ запрещён',
@@ -82,7 +88,7 @@ inCalendar: (count: number) => `В календаре: ${count}`,
     autoSync: 'Автосинхронизация',
     synchronize: 'Синхронизировать',
     // Time formatting
-    justNow: 'Только что',
+    justNow: 'только что',
     minutesAgo: (minutes: number) => `${minutes} мин назад`,
     hoursAgo: (hours: number) => `${hours}ч назад`,
     daysAgo: (days: number) => `${days}д назад`,
@@ -128,7 +134,7 @@ inCalendar: (count: number) => `In the calendar: ${count}`,
     autoSync: 'Auto Sync',
     synchronize: 'Synchronize',
     // Time formatting
-    justNow: 'Just now',
+    justNow: 'just now',
     minutesAgo: (minutes: number) => `${minutes} min ago`,
     hoursAgo: (hours: number) => `${hours}h ago`,
     daysAgo: (days: number) => `${days}d ago`,
@@ -143,7 +149,7 @@ inCalendar: (count: number) => `In the calendar: ${count}`,
 export const es = {
   calendarSync: {
     // Navigation
-    title: 'Sincronización de calendario',
+    title: 'Sincronización',
     explanation: 'Los ensayos pasan al calendario del teléfono, y de él solo llegan las horas en que estás ocupado, nunca qué son los eventos.',
     // Permissions
     permissionDenied: 'Acceso denegado',
@@ -174,7 +180,7 @@ inCalendar: (count: number) => `En el calendario: ${count}`,
     autoSync: 'Sincronización automática',
     synchronize: 'Sincronizar',
     // Time formatting
-    justNow: 'Ahora mismo',
+    justNow: 'ahora mismo',
     minutesAgo: (minutes: number) => `hace ${minutes} min`,
     hoursAgo: (hours: number) => `hace ${hours} h`,
     daysAgo: (days: number) => `hace ${days} d`,
@@ -189,7 +195,7 @@ inCalendar: (count: number) => `En el calendario: ${count}`,
 export const de = {
   calendarSync: {
     // Navigation
-    title: 'Kalendersynchronisation',
+    title: 'Kalender-Sync',
     explanation: 'Proben kommen in den Kalender deines Telefons, und von dort nur die Stunden, in denen du belegt bist – nie, was die Termine sind.',
     // Permissions
     permissionDenied: 'Zugriff verweigert',
@@ -220,7 +226,7 @@ inCalendar: (count: number) => `Im Kalender: ${count}`,
     autoSync: 'Auto-Sync',
     synchronize: 'Synchronisieren',
     // Time formatting
-    justNow: 'Gerade eben',
+    justNow: 'gerade eben',
     minutesAgo: (minutes: number) => `vor ${minutes} Min`,
     hoursAgo: (hours: number) => `vor ${hours} Std`,
     daysAgo: (days: number) => `vor ${days} T`,

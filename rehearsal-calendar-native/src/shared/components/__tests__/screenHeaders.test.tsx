@@ -101,11 +101,22 @@ describe('ScreenHeader', () => {
     expect(view.queryByTestId('header-cancel')).toBeNull();
   });
 
+  /** The bar laid out: its left end `room` wide, the name and "Back" as wide as given. */
+  const laidOut = (view: ReturnType<typeof render>, room: number, titleWidth: number, wordWidth: number) => {
+    const layout = (id: string, width: number) => fireEvent(
+      view.getByTestId(id, { includeHiddenElements: true }), 'layout',
+      { nativeEvent: { layout: { x: 0, y: 0, width, height: 22 } } });
+    layout('header-back-side', room);
+    layout('header-back-measure-title', titleWidth);
+    layout('header-back-measure-word', wordWidth);
+  };
+
   it('a pushed screen: "‹" with the name of the one under it, then the title', () => {
     const onBack = jest.fn();
     const view = render(
-      <ScreenHeader kind="stack" title="Estate Ball" backTitle="My Projects" onBack={onBack} />,
+      <ScreenHeader kind="stack" title="Estate Ball" backTitle="My Projects" backWord="Back" onBack={onBack} />,
     );
+    laidOut(view, 143, 92, 38);
     const [back, title] = order(view, ['header-back', 'header-title']);
     expect(back).toBeGreaterThanOrEqual(0);
     expect(back).toBeLessThan(title);
@@ -116,9 +127,51 @@ describe('ScreenHeader', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
+  // T-239: "‹ Проф…" beside the sync screen's title, "‹ My Pr…" beside
+  // "Hamlet — Demo Theatre". As iOS's generic back button: the name where it
+  // fits, else "Back", else the chevron alone — never a word cut short.
+  describe('"‹" never cuts its word short', () => {
+    const header = (room: number, titleWidth: number, wordWidth: number) => {
+      const view = render(
+        <ScreenHeader kind="stack" title="Hamlet — Demo Theatre" backTitle="My Projects" backWord="Back"
+          onBack={jest.fn()} />,
+      );
+      laidOut(view, room, titleWidth, wordWidth);
+      return view;
+    };
+    // The chevron, drawn 4 into the words, and 8 after them: 32 besides the words.
+    // The icon's mock is a Text of its own, "Icon: chevron-back".
+    const words = (view: ReturnType<typeof render>) =>
+      view.getByTestId('header-back').findAll((node: { type: unknown }) => node.type === 'Text')
+        .map((node: { props: { children?: unknown } }) => String(node.props.children))
+        .filter((text: string) => !text.startsWith('Icon:'));
+
+    it('the name of the screen under it, where it fits', () => {
+      expect(words(header(92 + 32, 92, 38))).toEqual(['My Projects']);
+    });
+
+    it('"Back" where the name does not', () => {
+      const view = header(94, 92, 38);
+      expect(words(view)).toEqual(['Back']);
+      expect(view.queryByText('My Projects')).toBeNull();
+    });
+
+    it('the chevron alone where neither does, still "Back" to VoiceOver', () => {
+      const view = header(60, 92, 38);
+      expect(words(view)).toEqual([]);
+      expect(view.getByTestId('header-back').props.accessibilityLabel).toBe('Back');
+    });
+
+    it('the words being measured are out of the accessibility tree', () => {
+      const view = header(200, 92, 38);
+      expect(view.getAllByText('My Projects')).toHaveLength(1);
+      expect(view.queryByText('Back')).toBeNull();
+    });
+  });
+
   it('a tab\'s first screen: a large title, nothing to go back to', () => {
     const root = render(<ScreenHeader kind="root" title="Calendar" />);
-    const bar = render(<ScreenHeader kind="stack" title="Calendar Sync" backTitle="Profile" onBack={jest.fn()} />);
+    const bar = render(<ScreenHeader kind="stack" title="Calendar Sync" backTitle="Profile" backWord="Back" onBack={jest.fn()} />);
     expect(root.queryByTestId('header-back')).toBeNull();
     expect(root.queryByTestId('header-cancel')).toBeNull();
 

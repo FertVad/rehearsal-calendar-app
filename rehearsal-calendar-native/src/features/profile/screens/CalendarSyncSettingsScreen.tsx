@@ -401,6 +401,7 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
         kind="stack"
         title={t.calendarSync.title}
         backTitle={t.profile.title}
+        backWord={t.common.back}
         onBack={() => navigation.goBack()}
       />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
@@ -562,14 +563,15 @@ export default function CalendarSyncSettingsScreen({ navigation }: CalendarSyncS
                 {settings?.lastExportTime && (
                   <View style={styles.syncStatus}>
                     <Ionicons name="checkmark-circle-outline" size={16} color={Colors.accent.green} />
-                    <Text style={styles.syncStatusText}>
-                      {t.calendarSync.syncedAgo(formatLastSync(settings.lastExportTime, t))}
+                    <Text testID="calendar-sync-status" style={styles.syncStatusText}>
+                      {t.calendarSync.syncedAgo(formatLastSync(settings.lastExportTime, t, 'inSentence'))}
                       {syncedCount > 0 ? ` · ${t.calendarSync.inCalendar(syncedCount)}` : ''}
                     </Text>
                   </View>
                 )}
 
                 <GlassButton
+                  testID="calendar-sync-run"
                   title={t.calendarSync.synchronize}
                   onPress={handleSynchronize}
                   variant="purple"

@@ -16,7 +16,10 @@
  *   up here. Cancel leaves the way a swipe down does, through the leave guard
  *   of a screen with changes (T-013).
  * - `stack` — a screen pushed in a tab: "‹" with the name of the screen
- *   under it, then the title.
+ *   under it, then the title. Where that name does not fit beside the
+ *   title, "‹ Back"; where that does not either, "‹" alone — never a word
+ *   cut short, as iOS's own `generic` back button (T-239: "‹ Проф…" beside
+ *   the sync screen's title, "‹ My Pr…" beside a long project name).
  * - `root` — the first screen of a tab: a large title, nothing to go back to.
  *
  * Inside the rehearsal details' `formSheet` the bar is a row in the sheet's
@@ -55,6 +58,8 @@ export type ScreenHeaderProps =
       onBack: () => void;
       /** The title of the screen "‹" goes back to. */
       backTitle: string;
+      /** "Back" in the app's language, for where `backTitle` does not fit. */
+      backWord: string;
     })
   | (Common & { kind: 'root' });
 
@@ -75,9 +80,9 @@ export function ScreenHeader(props: ScreenHeaderProps) {
 
   return (
     <View style={styles.bar} testID={`screen-header-${props.kind}`}>
-      <View style={[styles.side, styles.left]}>
-        {props.kind === 'modal' ? (
-          props.onCancel ? (
+      {props.kind === 'modal' ? (
+        <View style={[styles.side, styles.left]}>
+          {props.onCancel ? (
             <TouchableOpacity
               testID="header-cancel"
               accessibilityRole="button"
@@ -86,19 +91,11 @@ export function ScreenHeader(props: ScreenHeaderProps) {
             >
               <Text style={styles.buttonText} numberOfLines={1}>{props.cancelLabel}</Text>
             </TouchableOpacity>
-          ) : null
-        ) : (
-          <TouchableOpacity
-            testID="header-back"
-            accessibilityRole="button"
-            style={[styles.backButton, tall]}
-            onPress={props.onBack}
-          >
-            <Ionicons name="chevron-back" size={28} color={Colors.accent.purple} style={styles.chevron} />
-            <Text style={styles.buttonText} numberOfLines={1}>{props.backTitle}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          ) : null}
+        </View>
+      ) : (
+        <BackSide title={props.backTitle} word={props.backWord} onBack={props.onBack} tall={tall} />
+      )}
       <Text
         style={styles.title}
         numberOfLines={titleLines}
@@ -108,6 +105,86 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         {title}
       </Text>
       <View style={[styles.side, styles.right]}>{right}</View>
+    </View>
+  );
+}
+
+/** The chevron's glyph, drawn `Spacing.xs` into the words after it. */
+const CHEVRON = 28;
+/** What the back button takes besides its words: the chevron and the gap after them. */
+const BACK_CHROME = CHEVRON - Spacing.xs + Spacing.sm;
+
+/**
+ * What "‹" says, as iOS's `generic` back button: the screen it goes back to
+ * where that fits in `room`, else "Back", else nothing. `undefined` until
+ * the room and the words are measured.
+ */
+export function backLabel(
+  room: number | undefined,
+  title: { text: string; width: number | undefined },
+  word: { text: string; width: number | undefined },
+): string | null | undefined {
+  if (room === undefined || title.width === undefined || word.width === undefined) return undefined;
+  const fits = (width: number) => Math.ceil(width) + BACK_CHROME <= room;
+  if (fits(title.width)) return title.text;
+  if (fits(word.width)) return word.text;
+  return null;
+}
+
+/**
+ * The left end of a pushed screen's bar. It is as wide as the right end
+ * whatever stands in it, so its room is known before its words are chosen;
+ * the words are measured once, at their size, out of sight.
+ */
+function BackSide({ title, word, onBack, tall }: {
+  title: string;
+  word: string;
+  onBack: () => void;
+  tall: { minHeight: number };
+}) {
+  const [room, setRoom] = React.useState<number>();
+  const [titleWidth, setTitleWidth] = React.useState<number>();
+  const [wordWidth, setWordWidth] = React.useState<number>();
+  const label = backLabel(room, { text: title, width: titleWidth }, { text: word, width: wordWidth });
+
+  return (
+    <View
+      testID="header-back-side"
+      style={[styles.side, styles.left]}
+      onLayout={(event) => setRoom(event.nativeEvent.layout.width)}
+    >
+      <View
+        style={styles.measure}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Text
+          testID="header-back-measure-title"
+          style={styles.buttonText}
+          onLayout={(event) => setTitleWidth(event.nativeEvent.layout.width)}
+        >
+          {title}
+        </Text>
+        <Text
+          testID="header-back-measure-word"
+          style={styles.buttonText}
+          onLayout={(event) => setWordWidth(event.nativeEvent.layout.width)}
+        >
+          {word}
+        </Text>
+      </View>
+      <TouchableOpacity
+        testID="header-back"
+        accessibilityRole="button"
+        // The chevron alone is still "Back" to VoiceOver.
+        accessibilityLabel={label ? undefined : word}
+        style={[styles.backButton, tall]}
+        onPress={onBack}
+      >
+        <Ionicons name="chevron-back" size={CHEVRON} color={Colors.accent.purple} style={styles.chevron} />
+        {label ? <Text style={styles.buttonText} numberOfLines={1}>{label}</Text> : null}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -184,6 +261,15 @@ const styles = StyleSheet.create({
   },
   chevron: {
     marginRight: -Spacing.xs,
+  },
+  // Wide enough that no word is wrapped or cut while it is measured.
+  measure: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: 10000,
+    alignItems: 'flex-start',
+    opacity: 0,
   },
   buttonText: {
     fontSize: BAR_TEXT,

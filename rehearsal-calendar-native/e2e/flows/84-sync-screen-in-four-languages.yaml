@@ -1,0 +1,287 @@
+# The sync screen's bar and its last sync, in four languages; "‹" beside a
+# long title (T-239). Found in the landing's shots on 09.11:
+# - the line after a sync said "Synced Just now", «Синхронизировано Только
+#   что», "Sincronizado Ahora mismo", "Synchronisiert Gerade eben": the words
+#   were written with the capital they take alone, over the availability's
+#   month, and put in the middle of the sentence;
+# - the title was cut — «Синхронизация с ка…», "Sincronización de cal…",
+#   "Kalendersynchronisat…" — and in Russian "‹ Проф…" beside it; a project
+#   of a long name had "‹ My Pr…".
+# Now the title is short enough for a 393 pt phone at 17 pt («Синхронизация»,
+# "Calendar Sync", «Sincronización», "Kalender-Sync"), and "‹" says the name of
+# the screen under it where that fits, "Back" where it does not, nothing
+# where neither does — never a word cut short, as iOS's generic back button.
+#
+# Katharina opens her project "Hamlet — Demo Theatre" — "‹ Back" beside it —
+# then syncs with the phone's calendar in English, Russian, Spanish and
+# German, and reads the line and the bar each time. Maestro matches text
+# without regard to case, so the line is copied and compared in JavaScript.
+# Maestro reads a label whole even where the screen cuts it, so the title is
+# checked by its text and seen whole in the shots.
+appId: ${APP_ID}
+name: The sync screen's bar and last sync in four languages
+tags:
+  - profile
+  - calendar
+  - navigation
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${KATHARINA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+
+# A long title: "‹ Back", not "‹ My Pr…".
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-projects
+      SEE: ".*Hamlet — Demo Theatre.*"
+      WAIT_MS: "15000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Hamlet — Demo Theatre.*"
+      SEE: ".*Share the link.*"
+      WAIT_MS: "15000"
+- waitForAnimationToEnd
+- takeScreenshot: 84-project-long-title
+- assertVisible:
+    id: header-title
+    text: "Hamlet — Demo Theatre"
+- assertVisible:
+    id: header-back
+    text: ".*Back"
+- assertNotVisible:
+    id: header-back
+    text: ".*My Projects.*"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-back
+      SEE: ".*Join with a code.*"
+      WAIT_MS: "10000"
+
+# English.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-calendar-sync
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-calendar-sync
+      SEE: ".*Apple Calendar.*"
+      WAIT_MS: "15000"
+# Calendar access, where the app has not been given it yet.
+- tapOn:
+    text: "Grant Access"
+    optional: true
+- tapOn:
+    text: "Allow Full Access"
+    optional: true
+# Taken once more if the simulator lost it (T-207); a second tap only turns
+# sync on again.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Apple Calendar.*"
+      SEE: ".*Synchronize.*"
+      WAIT_MS: "10000"
+- tapOn:
+    id: calendar-sync-run
+- extendedWaitUntil:
+    visible: "Synced successfully"
+    timeout: 30000
+- tapOn: "OK"
+- extendedWaitUntil:
+    visible:
+      id: calendar-sync-status
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 84-sync-en
+- copyTextFrom:
+    id: calendar-sync-status
+- assertTrue: ${maestro.copiedText == "Synced just now"}
+- assertVisible:
+    id: header-title
+    text: "Calendar Sync"
+- assertVisible:
+    id: header-back
+    text: ".*Profile"
+
+# Russian, Spanish, German: the language changed in the profile, the sync
+# run again so its line says "just now".
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-back
+      SEE: ".*Language, English.*"
+      WAIT_MS: "10000"
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Русский"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-ru
+      SEE: "Профиль, tab.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-calendar-sync
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-calendar-sync
+      SEE: ".*Синхронизировано.*"
+      WAIT_MS: "15000"
+- tapOn:
+    id: calendar-sync-run
+- extendedWaitUntil:
+    visible: "Успешно синхронизировано"
+    timeout: 30000
+- tapOn: "OK"
+- waitForAnimationToEnd
+- takeScreenshot: 84-sync-ru
+- copyTextFrom:
+    id: calendar-sync-status
+- assertTrue: ${maestro.copiedText == "Синхронизировано только что"}
+- assertVisible:
+    id: header-title
+    text: "Синхронизация"
+- assertVisible:
+    id: header-back
+    text: ".*Профиль"
+
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-back
+      SEE: ".*Язык, Русский.*"
+      WAIT_MS: "10000"
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Español"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-es
+      SEE: "Perfil, tab.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-calendar-sync
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-calendar-sync
+      SEE: "Sincronizado .*"
+      WAIT_MS: "15000"
+- tapOn:
+    id: calendar-sync-run
+- extendedWaitUntil:
+    visible: "Sincronizado correctamente"
+    timeout: 30000
+- tapOn: "OK"
+- waitForAnimationToEnd
+- takeScreenshot: 84-sync-es
+- copyTextFrom:
+    id: calendar-sync-status
+- assertTrue: ${maestro.copiedText == "Sincronizado ahora mismo"}
+- assertVisible:
+    id: header-title
+    text: "Sincronización"
+- assertVisible:
+    id: header-back
+    text: ".*Perfil"
+
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-back
+      SEE: ".*Idioma, Español.*"
+      WAIT_MS: "10000"
+- swipe:
+    start: "50%, 40%"
+    end: "50%, 85%"
+    duration: 400
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element:
+      id: profile-calendar-sync
+    direction: DOWN
+    centerElement: true
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-calendar-sync
+      SEE: "Synchronisiert .*"
+      WAIT_MS: "15000"
+- tapOn:
+    id: calendar-sync-run
+- extendedWaitUntil:
+    visible: "Erfolgreich synchronisiert"
+    timeout: 30000
+- tapOn: "OK"
+- waitForAnimationToEnd
+- takeScreenshot: 84-sync-de
+- copyTextFrom:
+    id: calendar-sync-status
+- assertTrue: ${maestro.copiedText == "Synchronisiert gerade eben"}
+- assertVisible:
+    id: header-title
+    text: "Kalender-Sync"
+- assertVisible:
+    id: header-back
+    text: ".*Profil"

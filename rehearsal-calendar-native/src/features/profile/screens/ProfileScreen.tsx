@@ -377,7 +377,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </TouchableOpacity>
 
           {/* Calendar Sync */}
-          <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('CalendarSyncSettings')}>
+          <TouchableOpacity testID="profile-calendar-sync" style={styles.settingItem} onPress={() => navigation.navigate('CalendarSyncSettings')}>
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: Colors.accent.purpleAlpha15 }]}>
                 <Ionicons name="sync" size={20} color={Colors.accent.purple} />

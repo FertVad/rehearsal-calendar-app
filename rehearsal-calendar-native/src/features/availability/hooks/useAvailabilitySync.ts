@@ -55,7 +55,8 @@ export const useAvailabilitySync = () => {
    * Format last sync time for display
    */
   const formatLastSync = useCallback(
-    (lastSync: string | null, t: any) => sharedFormatLastSync(lastSync, t),
+    // On its own over the month, so with a capital (T-239).
+    (lastSync: string | null, t: any) => sharedFormatLastSync(lastSync, t, 'alone'),
     []
   );
 

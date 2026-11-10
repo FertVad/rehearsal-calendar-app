@@ -235,6 +235,9 @@ export const PEOPLE = {
   beatrice: { email: 'beatrice@e2e.test', firstName: 'Beatrice', lastName: 'Messina', onboarded: true },
   benedick: { email: 'benedick@e2e.test', firstName: 'Benedick', lastName: 'Padua', onboarded: true },
   claudio: { email: 'claudio@e2e.test', firstName: 'Claudio', lastName: 'Florence', onboarded: true },
+  // Reads the sync screen's bar and its "Synced just now" in four languages,
+  // and opens her project of a long name, "‹" beside it (84, T-239).
+  katharina: { email: 'katharina@e2e.test', firstName: 'Katharina', lastName: 'Minola', onboarded: true },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -578,6 +581,17 @@ export async function seed({ client, apiUrl, timezone }) {
        VALUES ($1, $2, 'owner', 'active', NOW(), NOW()), ($1, $3, 'member', 'active', NOW(), NOW()),
               ($1, $4, 'member', 'active', NOW(), NOW())`,
       [ado.id, ids.beatrice, ids.benedick, ids.claudio]);
+  }
+  // Katharina's, its name as long as the one the landing's shots cut the
+  // back button beside (84, T-239). Inserted: the sign-ins are spent.
+  {
+    const { rows: [demo] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('Hamlet — Demo Theatre', 'The landing''s shots', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [demo.id, ids.katharina]);
   }
 
   // `from` and `to` are hours, or [hours, minutes], on the machine's clock or `zone`'s.

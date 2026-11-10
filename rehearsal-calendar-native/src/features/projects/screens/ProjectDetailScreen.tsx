@@ -449,6 +449,7 @@ function ProjectDetail({ route, navigation }: ProjectDetailScreenProps) {
         kind="stack"
         title={project.name}
         backTitle={t.projects.title}
+        backWord={t.common.back}
         onBack={() => navigation.goBack()}
         right={project.is_admin ? (
           <View style={styles.adminBadge}>
