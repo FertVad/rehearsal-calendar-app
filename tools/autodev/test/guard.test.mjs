@@ -103,3 +103,17 @@ test('a DELETE is read whole: a WHERE on the next line scopes it, and test fixtu
   const unscoped = parseDiff(diff('rehearsal-calendar-native/server/services/cleanup.js', ["  await db.run('DELETE FROM native_users');"]));
   assert.equal(pauseReasons(unscoped.files, unscoped.added, unscoped.changes).length, 1);
 });
+
+test('a "delete from" in prose is not a statement: Markdown is read by people, not a database', () => {
+  // T-244 stopped on its evidence README: "52 (edit and delete from the details), 66 (screen headers)".
+  const diff = (file, lines) => [`diff --git a/${file} b/${file}`, `--- a/${file}`, `+++ b/${file}`, '@@ -1 +1,3 @@', ...lines.map((l) => `+${l}`)].join('\n');
+  const prose = parseDiff(diff('audit/evidence/T-244/README.md', [
+    '85 (new), 51 (swipe and details), 52 (edit and delete from the details),',
+    "66 (screen headers), 63 (a new rehearsal's form from a project).",
+  ]));
+  assert.deepEqual(pauseReasons(prose.files, prose.added, prose.changes), []);
+  const code = parseDiff(diff('rehearsal-calendar-native/server/services/cleanup.js', ['  // delete from the details', "  await db.run('DELETE FROM native_users');"]));
+  assert.deepEqual(pauseReasons(code.files, code.added, code.changes), ['DELETE без WHERE: DELETE FROM native_users']);
+  const commented = parseDiff(diff('rehearsal-calendar-native/server/services/cleanup.js', ['  await db.run(`DELETE FROM native_users', '    -- WHERE id = $1', '  `);']));
+  assert.deepEqual(pauseReasons(commented.files, commented.added, commented.changes), ['DELETE без WHERE: DELETE FROM native_users']);
+});

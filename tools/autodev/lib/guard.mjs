@@ -60,14 +60,22 @@ export function testIdsOnly(change) {
  *   testIDs are not a reason (testIdsOnly)
  * @returns reasons to pause, empty when the task may go on
  */
+/** A line that is all comment, in JavaScript, SQL or a shell script. */
+const COMMENT_LINE = /^\s*(\/\/|\/\*|\*|--|#)/;
+
 /**
  * DELETE statements with no WHERE, read whole: T-110's scoped deletes had
  * their WHERE on the next line and were taken for unscoped ones. Test code
- * clears its own in-memory fixtures and is not data deletion.
+ * clears its own in-memory fixtures and is not data deletion. Prose is read
+ * by people, not by a database — Markdown, and a line that is all comment:
+ * T-244 stopped on its evidence README's "52 (edit and delete from the
+ * details), 66 (screen headers)". A comment line is dropped before the
+ * statement is read, so a WHERE in a comment does not scope it either.
  */
 export function unscopedDeletes(file, addedLines) {
   if (/(^|\/)(__tests__|e2e)\//.test(file) || /\.test\.[cm]?[jt]sx?$/.test(file)) return [];
-  const text = addedLines.join('\n');
+  if (/\.(md|markdown)$/i.test(file)) return [];
+  const text = addedLines.filter((line) => !COMMENT_LINE.test(line)).join('\n');
   const found = [];
   for (const match of text.matchAll(/\bDELETE\s+FROM\b[^;`'"]*/gi)) {
     if (!/\bWHERE\b/i.test(match[0])) found.push(match[0].replace(/\s+/g, ' ').trim().slice(0, 120));
