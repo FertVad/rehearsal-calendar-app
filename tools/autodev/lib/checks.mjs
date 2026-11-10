@@ -2,7 +2,9 @@
  * The mechanical checks, run by the supervisor itself — not asked of an
  * agent, so a green result means the commands ran and passed:
  *
- * - always: secrets scan, type check, every Jest suite;
+ * - always: secrets scan, type check, dead code (knip: files, exports and
+ *   dependencies nothing uses, app and server), the lint's errors (its
+ *   warnings do not stop a task), every Jest suite;
  * - the app or its flows changed: the task's e2e flows (local only, see
  *   e2e/run.mjs) — the whole set runs at night (supervisor, fullE2e);
  * - the server changed: the PostgreSQL harness on a throwaway database.
@@ -276,6 +278,10 @@ export async function runChecks({ root, changedFiles, taskText, seedLines, node,
   for (const [name, args] of [
     ['secrets', ['run', 'check:secrets']],
     ['type-check', ['run', 'type-check']],
+    // Run by hand only until 10.11.2026, so nothing kept it at zero between
+    // the times someone remembered it (owner, 10.11).
+    ['dead', ['run', 'check:dead']],
+    ['lint', ['run', 'lint']],
     ['tests', ['test', '--', '--silent']],
   ]) {
     const step = await run(name, npm, args, opts(20 * 60 * 1000));

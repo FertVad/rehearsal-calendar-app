@@ -122,7 +122,8 @@ never fires twice.
 - Its own trees: `../reh_app-auto` on `auto/main` (the developer's) and
   `../reh_app-auto-review` (detached, the reviewer's). `node_modules` are links
   to the main tree's. Only `auto/main` is pushed; nothing is merged.
-- The checks are its own, not an agent's: secrets, types and every test; the
+- The checks are its own, not an agent's: secrets, types, dead code (knip),
+  the lint's errors and every test; the
   task's e2e flows when the app changed (with the main tree's built app,
   `E2E_APP`); the PostgreSQL harness when the server did.
 - Claude is the newest Claude Code on the machine (the VS Code extension's,
