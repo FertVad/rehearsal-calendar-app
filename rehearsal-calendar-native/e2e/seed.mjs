@@ -241,6 +241,9 @@ export const PEOPLE = {
   // Reads the planner's filters in Spanish, English, Russian and German, over
   // her two projects of long names (59, T-241). Her account speaks Spanish.
   bianca: { email: 'bianca@e2e.test', firstName: 'Bianca', lastName: 'Minola', onboarded: true, locale: 'es' },
+  // Opens his rehearsals of long names, «Изменить» beside them, in Russian and
+  // German, and the form from there (85, T-244). His account speaks Russian.
+  baptista: { email: 'baptista@e2e.test', firstName: 'Baptista', lastName: 'Minola', onboarded: true, locale: 'ru' },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -768,6 +771,31 @@ export async function seed({ client, apiUrl, timezone }) {
       `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
        VALUES ($1, $2, 'no', NOW(), NOW())`,
       [made.id, ids.juliet]);
+  }
+
+  // Baptista's (85, T-244): tomorrow the rehearsal the landing's shot cut
+  // «Изменить» beside, and a longer one, his alone. Inserted: the sign-ins are spent.
+  {
+    const { rows: [padua] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ('Padua Hall', 'The concert', $1, NOW(), NOW()) RETURNING id`, [timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [padua.id, ids.baptista]);
+    for (const [title, from] of [
+      ['Прогон всей программы', 10],
+      ['Генеральный прогон всей программы с оркестром и светом', 14],
+    ]) {
+      const { rows: [made] } = await client.query(
+        `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3::timestamptz, $4::timestamptz, 'Main hall', $5, NOW(), NOW()) RETURNING id`,
+        [padua.id, title, localInstant(1, from), localInstant(1, from + 2), ids.baptista]);
+      await client.query(
+        `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+         VALUES ($1, $2, 'no', NOW(), NOW())`,
+        [made.id, ids.baptista]);
+    }
   }
 
   // What the flow reads after moving the profile to Tokyo: the same instant on

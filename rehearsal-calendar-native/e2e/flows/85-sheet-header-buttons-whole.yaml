@@ -1,0 +1,305 @@
+# A sheet's buttons are whole beside a long title (T-244). Found in the
+# landing's shots on 10.11: the rehearsal's sheet in Russian read «Закрыть ·
+# Прогон всей программы · Измен…» — the title over two lines, and the button
+# on its right cut. The bar's ends took equal shares of the row beside a title
+# of up to half of it, and «Изменить» is wider than its share. Now, as iOS's
+# own bar, the buttons are whole and the title gives way: it wraps, up to two
+# lines, and is cut only at the end of the second.
+#
+# Baptista, whose account speaks Russian, opens his rehearsal «Прогон всей
+# программы» and a longer one, then the form from the first, in Russian and in
+# German ("Schließen", "Bearbeiten", "Abbrechen"). Maestro reads a label whole
+# however much of it is drawn, so the cut is looked for where it is drawn: the
+# "…" iOS draws in place of what does not fit, on the shot, over each end of
+# the bar (e2e/scripts/no-ellipsis.js) — not over the title, which may be cut
+# at the end of its second line (its "…" at 0.70 of the width in German). The
+# sheet's bar is at 0.30-0.40 of the height, the form's at 0.04-0.16.
+# Nothing is saved; his language stays German.
+appId: ${APP_ID}
+name: A sheet's buttons are whole beside a long title
+tags:
+  - rehearsals
+  - calendar
+  - navigation
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${BAPTISTA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+
+# Russian: «Прогон всей программы». Maestro matches without regard to case, so
+# the longer one, «Генеральный прогон всей программы…», is kept out by name.
+- scrollUntilVisible:
+    element: "(?!.*Генеральный).*Прогон всей программы.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(?!.*Генеральный).*Прогон всей программы.*"
+      SEE: "Изменить"
+      WAIT_MS: "15000"
+- waitForAnimationToEnd
+- takeScreenshot: 85-details-ru
+- assertVisible:
+    id: header-title
+    text: "Прогон всей программы"
+- assertVisible:
+    id: header-cancel
+    text: "Закрыть"
+- assertVisible:
+    id: rehearsal-details-edit
+    text: "Изменить"
+    rightOf:
+      id: header-title
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 85-details-ru
+      LEFT: "0"
+      RIGHT: "0.27"
+      TOP: "0.3"
+      BOTTOM: "0.4"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 85-details-ru
+      LEFT: "0.74"
+      RIGHT: "1"
+      TOP: "0.3"
+      BOTTOM: "0.4"
+
+# The form from there: «Отмена» beside «Редактировать репетицию».
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-details-edit
+      SEE: "Редактировать репетицию"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 85-form-ru
+- assertVisible:
+    id: header-cancel
+    text: "Отмена"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 85-form-ru
+      LEFT: "0"
+      RIGHT: "0.27"
+      TOP: "0.04"
+      BOTTOM: "0.16"
+# Nothing changed: Cancel leaves without asking, back to the sheet. By its
+# words: the sheet's own "header-cancel" is under the form.
+- tapOn: "Отмена"
+- extendedWaitUntil:
+    notVisible: "Редактировать репетицию"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-edit
+    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-cancel
+      GONE_ID: rehearsal-details-edit
+      WAIT_MS: "10000"
+
+# Longer: «Генеральный прогон всей программы с оркестром и светом».
+- scrollUntilVisible:
+    element: ".*Генеральный прогон.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Генеральный прогон.*"
+      SEE: "Изменить"
+      WAIT_MS: "15000"
+- waitForAnimationToEnd
+- takeScreenshot: 85-details-ru-longer
+- assertVisible:
+    id: header-title
+    text: "Генеральный прогон всей программы с оркестром и светом"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 85-details-ru-longer
+      LEFT: "0"
+      RIGHT: "0.27"
+      TOP: "0.3"
+      BOTTOM: "0.4"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 85-details-ru-longer
+      LEFT: "0.74"
+      RIGHT: "1"
+      TOP: "0.3"
+      BOTTOM: "0.4"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-cancel
+      GONE_ID: rehearsal-details-edit
+      WAIT_MS: "10000"
+
+# German, chosen in the profile.
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: tab-profile
+      SEE: ".*Язык, Русский.*"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: profile-language
+      SEE: "Deutsch"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: language-de
+      SEE: "Profil, tab.*"
+      WAIT_MS: "10000"
+- tapOn:
+    id: tab-calendar
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 10000
+- scrollUntilVisible:
+    element: "(?!.*Генеральный).*Прогон всей программы.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "(?!.*Генеральный).*Прогон всей программы.*"
+      SEE: "Bearbeiten"
+      WAIT_MS: "15000"
+- waitForAnimationToEnd
+- takeScreenshot: 85-details-de
+- assertVisible:
+    id: header-cancel
+    text: "Schließen"
+- assertVisible:
+    id: rehearsal-details-edit
+    text: "Bearbeiten"
+    rightOf:
+      id: header-title
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 85-details-de
+      LEFT: "0"
+      RIGHT: "0.27"
+      TOP: "0.3"
+      BOTTOM: "0.4"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 85-details-de
+      LEFT: "0.74"
+      RIGHT: "1"
+      TOP: "0.3"
+      BOTTOM: "0.4"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: rehearsal-details-edit
+      SEE: "Probe bearbeiten"
+      WAIT_MS: "10000"
+- waitForAnimationToEnd
+- takeScreenshot: 85-form-de
+- assertVisible:
+    id: header-cancel
+    text: "Abbrechen"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 85-form-de
+      LEFT: "0"
+      RIGHT: "0.27"
+      TOP: "0.04"
+      BOTTOM: "0.16"
+- tapOn: "Abbrechen"
+- extendedWaitUntil:
+    notVisible: "Probe bearbeiten"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-edit
+    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-cancel
+      GONE_ID: rehearsal-details-edit
+      WAIT_MS: "10000"
+- scrollUntilVisible:
+    element: ".*Генеральный прогон.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- waitForAnimationToEnd
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: ".*Генеральный прогон.*"
+      SEE: "Bearbeiten"
+      WAIT_MS: "15000"
+- waitForAnimationToEnd
+- takeScreenshot: 85-details-de-longer
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 85-details-de-longer
+      LEFT: "0"
+      RIGHT: "0.27"
+      TOP: "0.3"
+      BOTTOM: "0.4"
+- runScript:
+    file: ../scripts/no-ellipsis.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      SHOT: 85-details-de-longer
+      LEFT: "0.74"
+      RIGHT: "1"
+      TOP: "0.3"
+      BOTTOM: "0.4"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: header-cancel
+      GONE_ID: rehearsal-details-edit
+      WAIT_MS: "10000"

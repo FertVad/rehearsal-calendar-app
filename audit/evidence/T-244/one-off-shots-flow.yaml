@@ -1,0 +1,131 @@
+# One-off (T-244): flow 85's way through the sheets, shots only, nothing
+# checked, so the shots before the fix are taken in every language.
+appId: ${APP_ID}
+name: T-244 shots
+tags:
+  - evidence
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${BAPTISTA_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true
+- scrollUntilVisible:
+    element: "(?!.*Генеральный).*Прогон всей программы.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- waitForAnimationToEnd
+- tapOn: "(?!.*Генеральный).*Прогон всей программы.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-edit
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: shots-details-ru
+- tapOn:
+    id: rehearsal-details-edit
+- extendedWaitUntil:
+    visible: "Редактировать репетицию"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: shots-form-ru
+- tapOn: "Отмена"
+- extendedWaitUntil:
+    notVisible: "Редактировать репетицию"
+    timeout: 10000
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-details-edit
+    timeout: 10000
+- scrollUntilVisible:
+    element: ".*Генеральный прогон.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- waitForAnimationToEnd
+- tapOn: ".*Генеральный прогон.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-edit
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: shots-details-ru-longer
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-details-edit
+    timeout: 10000
+- tapOn:
+    id: tab-profile
+- extendedWaitUntil:
+    visible: ".*Язык, Русский.*"
+    timeout: 10000
+- tapOn:
+    id: profile-language
+- extendedWaitUntil:
+    visible: "Deutsch"
+    timeout: 10000
+- tapOn:
+    id: language-de
+- extendedWaitUntil:
+    visible: "Profil, tab.*"
+    timeout: 10000
+- tapOn:
+    id: tab-calendar
+- scrollUntilVisible:
+    element: "(?!.*Генеральный).*Прогон всей программы.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- waitForAnimationToEnd
+- tapOn: "(?!.*Генеральный).*Прогон всей программы.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-edit
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: shots-details-de
+- tapOn:
+    id: rehearsal-details-edit
+- extendedWaitUntil:
+    visible: "Probe bearbeiten"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: shots-form-de
+- tapOn: "Abbrechen"
+- extendedWaitUntil:
+    notVisible: "Probe bearbeiten"
+    timeout: 10000
+- tapOn:
+    id: header-cancel
+- extendedWaitUntil:
+    notVisible:
+      id: rehearsal-details-edit
+    timeout: 10000
+- scrollUntilVisible:
+    element: ".*Генеральный прогон.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- waitForAnimationToEnd
+- tapOn: ".*Генеральный прогон.*"
+- extendedWaitUntil:
+    visible:
+      id: rehearsal-details-edit
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: shots-details-de-longer
