@@ -165,8 +165,9 @@ tags:
 # Tomorrow is free for all three: "All day", 09:00-23:00. Its "+" made a
 # fourteen-hour rehearsal; it starts one at 09:00 for as long as Three
 # Sisters' last, its read-through three days ago: an hour and a half (T-012).
-# The form's "Recommended Time" is the same window, and a tap on it gives the
-# start the same way - it gave 09:00-23:00 too. Only opened, and closed again.
+# The form's "Recommended Time" offers no 09:00-23:00 window for a day nobody
+# is busy in, only a line that says so (T-238): the working day is not a
+# window to tap. Only opened, and closed again.
 - scrollUntilVisible:
     element:
       id: planner-add-${TOMORROW_DAY}-09:00
@@ -189,10 +190,12 @@ tags:
     timeout: 10000
 - takeScreenshot: 07-form-all-day
 - scrollUntilVisible:
-    element: "9:00.AM–11:00.PM \\(14h\\)"
+    element:
+      id: recommendations-note
+      text: "Everyone is free all day"
     direction: DOWN
     centerElement: true
-- tapOn: "9:00.AM–11:00.PM \\(14h\\)"
+- assertNotVisible: ".*11:00.PM \\(14h\\).*"
 - assertVisible:
     id: rehearsal-start-time
     text: ".*9:00.AM.*"
