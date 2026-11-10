@@ -29,6 +29,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontWeight, Spacing, TouchTarget } from '../constants/colors';
+import { IconButton } from './IconButton';
 
 /** iOS's own: the inline title and its buttons 17 pt, the large title 34. */
 const BAR_TEXT = 17;
@@ -174,17 +175,31 @@ function BackSide({ title, word, onBack, tall }: {
           {word}
         </Text>
       </View>
-      <TouchableOpacity
-        testID="header-back"
-        accessibilityRole="button"
-        // The chevron alone is still "Back" to VoiceOver.
-        accessibilityLabel={label ? undefined : word}
-        style={[styles.backButton, tall]}
-        onPress={onBack}
-      >
-        <Ionicons name="chevron-back" size={CHEVRON} color={Colors.accent.purple} style={styles.chevron} />
-        {label ? <Text style={styles.buttonText} numberOfLines={1}>{label}</Text> : null}
-      </TouchableOpacity>
+      {label === null ? (
+        // The chevron alone: an icon button, 44 a side, "Back" to VoiceOver.
+        <IconButton
+          testID="header-back"
+          icon="chevron-back"
+          size={CHEVRON}
+          color={Colors.accent.purple}
+          accessibilityLabel={word}
+          minSize={tall.minHeight}
+          onPress={onBack}
+        />
+      ) : (
+        <TouchableOpacity
+          testID="header-back"
+          accessibilityRole="button"
+          style={[styles.backButton, tall]}
+          onPress={onBack}
+        >
+          <Ionicons name="chevron-back" size={CHEVRON} color={Colors.accent.purple} style={styles.chevron} />
+          {/* Until the words are measured, the name takes its place unseen. */}
+          <Text style={[styles.buttonText, label === undefined && styles.unmeasured]} numberOfLines={1}>
+            {label ?? title}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -269,6 +284,9 @@ const styles = StyleSheet.create({
     top: 0,
     width: 10000,
     alignItems: 'flex-start',
+    opacity: 0,
+  },
+  unmeasured: {
     opacity: 0,
   },
   buttonText: {
