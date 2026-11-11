@@ -92,6 +92,22 @@ export function e2eFlowsFor({ app, changedFiles, taskText = '', seedLines = [] }
  * The flows a Maestro JUnit report says failed: `{ file, name, reason }`, file
  * relative to the app, reason the first line of its failure.
  */
+/**
+ * The failed flows a lost driver left with no verdict: every one from the
+ * first that Maestro reports as DeviceUnreachableException on, `failed` in the
+ * order they ran (Maestro's report keeps it). Once the XCTest driver on the
+ * simulator is gone, each flow after it fails at its first command, whatever
+ * Maestro then calls it: on 11.11.2026 the control run lost it at 10:57, and
+ * of the 21 flows after, 20 said DeviceUnreachableException and one "Unknown
+ * error" — its stopApp refused by the same device. A rule that every red flow
+ * must say so let all 21 through as flaky (T-246). A flow that failed before
+ * the first is its own failure.
+ */
+export function lostFlows(failed) {
+  const first = failed.findIndex((flow) => DRIVER_LOST.test(flow.reason));
+  return first < 0 ? [] : failed.slice(first);
+}
+
 export function failedFlows(junitXml) {
   const failed = [];
   for (const [, attrs, body = ''] of String(junitXml).matchAll(/<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g)) {
@@ -236,7 +252,8 @@ export async function runE2e({ root, node, log, env, flows = [], limitMs }) {
           const lines = failed.map((flow) => `[e2e] failed: ${flow.file} — ${flow.reason || 'причина не указана'}`);
           step.failures.push(...lines);
           step.tail = [step.tail, ...lines].join('\n');
-          if (failed.length && failed.every((flow) => DRIVER_LOST.test(flow.reason))) step.lost = failed.map((flow) => flow.file);
+          const lost = lostFlows(failed);
+          if (lost.length === failed.length) step.lost = lost.map((flow) => flow.file);
         }
       } catch { /* no report from this run */ }
     }
@@ -249,12 +266,17 @@ export async function runE2e({ root, node, log, env, flows = [], limitMs }) {
   // failed at their first command, and the same code passed 37/37 next time;
   // a developer session went on proving the change had nothing to do with it.
   // A flow that failed by itself keeps the run red.
+  // What failed is then the second run's: the first run's lines are flows with
+  // no verdict, and the note says once where they were lost. Put first, they
+  // named T-247 (11.11.2026) after flow 54, where the driver went, with 24 lost
+  // flows as what failed and 73's own failure in the second run cut off below.
+  // The note goes last: a flow's file in it could read as a failure line.
   if (step.lost.length && !step.timedOut && !step.environment) {
     const first = step;
-    const note = `[e2e] драйвер Maestro на симуляторе потерян: ${first.lost.length} сценариев не выполнены — прогоняю их ещё раз отдельно`;
+    const note = `[e2e] драйвер Maestro на симуляторе потерян: ${first.lost.length} сценариев не выполнены, начиная с ${first.lost[0]} — прогоняю их ещё раз отдельно`;
     fs.appendFileSync(log, `${note}\n`);
     step = await once(first.lost, e2eLimitMs(first.lost.length));
-    step.failures.unshift(...first.failures, note);
+    step.failures.push(note);
     step.tail = [note, step.tail].join('\n');
     step.driverLost = first.lost.length;
   }
