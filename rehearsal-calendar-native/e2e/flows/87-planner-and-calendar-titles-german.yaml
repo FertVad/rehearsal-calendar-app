@@ -1,0 +1,47 @@
+# The planner and the calendar's top, in German (T-249; owner, 11.11.2026).
+# - The planner is "Planner" in every language, as "Smart Planner" is: its
+#   tab and its large title. T-032 had made it "Planer" in German, "Планер"
+#   in Russian, "Planificador" in Spanish.
+# - The calendar is the app's main screen: no title over its project filter
+#   and bell. T-029 had put a large "Kalender" there. Its tab keeps the name.
+# Anna, whose account speaks German, only looks: nothing is saved. Flow 65
+# sees the same in Russian.
+appId: ${APP_ID}
+name: Planner and the calendar's top in German
+tags:
+  - calendar
+  - planner
+  - navigation
+  - language
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${COURAGE_EMAIL}
+- extendedWaitUntil:
+    visible:
+      id: calendar-filter
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 87-calendar-de
+- assertNotVisible:
+    id: screen-header-root
+- assertVisible:
+    id: tab-calendar
+    text: "Kalender, tab.*"
+- assertVisible:
+    id: tab-planner
+    text: "Planner, tab.*"
+- tapOn:
+    id: tab-planner
+- extendedWaitUntil:
+    visible:
+      id: planner-filters
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 87-planner-de
+- assertVisible:
+    text: "Planner"
+    above:
+      id: planner-filters
+- assertNotVisible: "Planer"

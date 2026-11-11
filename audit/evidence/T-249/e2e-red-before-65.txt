@@ -1,0 +1,23 @@
+T-249 — e2e on the old code: common.ts and CalendarScreen.tsx restored from bd4b8ac, flows from b9c64fa.
+$ npm run e2e -- e2e/flows/65-dates-russian.yaml e2e/flows/66-screen-headers.yaml e2e/flows/07-planner-project-switch.yaml
+
+[e2e] native inputs 1479426d10f0 (app.json, locales, assets, packages)
+[e2e] the iOS project is the one app.json, the locales and the packages make now: kept
+[e2e] the Debug app was built from these inputs: kept
+[e2e] starting a disposable PostgreSQL
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Failed] Dates in Russian, one format (1m 24s) (Assertion is false: id: screen-header-root is not visible)
+
+1/1 Flow Failed
+
+[e2e] stopped, a flow had already failed (junit.xml): midnight in 236 s, before a flow could end, and a wait for it would outlast the supervisor's limit (1050 s for 3 flows) — run it again after 00:00
+
+(Flow 65 red on the calendar's "Календарь" title, the first new assertion. 66 and 07 were not reached; run separately.)

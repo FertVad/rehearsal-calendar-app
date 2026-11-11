@@ -1,0 +1,22 @@
+T-249 — e2e on the old code: common.ts and CalendarScreen.tsx restored from bd4b8ac (git restore --source=bd4b8ac), flows as fixed.
+$ npm run e2e -- e2e/flows/87-planner-and-calendar-titles-german.yaml e2e/flows/66-screen-headers.yaml e2e/flows/07-planner-project-switch.yaml
+
+[e2e] provisioning the canonical schema
+[e2e] starting the local server
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+
+Waiting for flows to complete...
+[Failed] Planner and the calendar's top in German (1m 39s) (Assertion is false: id: screen-header-root is not visible)
+[Failed] Screen headers, one style (54s) (Assertion is false: id: screen-header-root is not visible)
+[Failed] Planner follows the project (2m 1s) (Assertion is false: ".*Three Sisters.*" is visible)
+
+3/3 Flows Failed
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+87 and 66: the large "Kalender"/"Calendar" title over the calendar's filter.
+07: the tap at 40%,12% lands on that title, so the filter's list never opens.
