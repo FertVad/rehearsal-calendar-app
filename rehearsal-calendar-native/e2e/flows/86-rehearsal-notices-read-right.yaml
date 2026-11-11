@@ -1,0 +1,108 @@
+# A new rehearsal and being put on one read right in Spanish, German and
+# Russian (T-248). Native speakers found the server's words wrong: Spanish
+# "Escena del balcón programado mañana" (scheduled tomorrow, not for
+# tomorrow, and the participle agreeing with a feminine title as if it were
+# masculine), German "Fechtszene angesetzt morgen um 18:00" (the participle
+# goes last), Russian "Прогон назначена" (a masculine title, a feminine
+# participle). The inbox shows the server's body as it is.
+#
+# Each reader is told of her rehearsal tomorrow at 18:00 as a save tells them,
+# by the server's own notifyRehearsalCreated and notifyAddedToRehearsal, in
+# her account's language (the seed: Laurencia es, Gretchen de, Katerina ru),
+# and reads both in her inbox. By the time this runs "tomorrow" may be a date.
+appId: ${APP_ID}
+name: Rehearsal notices read right in Spanish, German and Russian
+tags:
+  - notifications
+  - language
+---
+# Spanish: "programado para", and the participle agreeing with "Ensayo".
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: rehearsal_created
+      REHEARSAL: Escena del balcón
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${LAURENCIA_EMAIL}
+      TYPE: added_to_rehearsal
+      REHEARSAL: Escena del balcón
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${LAURENCIA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Notificaciones"
+      SEE: "(Marcar todas|Todavía nada)"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00 en Patio.*"
+    timeout: 15000
+- assertVisible: ".*Nuevo ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00.*"
+- takeScreenshot: 86-spanish
+# German: the participle last, the place after it.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${GRETCHEN_EMAIL}
+      TYPE: rehearsal_created
+      REHEARSAL: Fechtszene
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${GRETCHEN_EMAIL}
+      TYPE: added_to_rehearsal
+      REHEARSAL: Fechtszene
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${GRETCHEN_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Mitteilungen"
+      SEE: "(Alle als gelesen|Noch nichts)"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible: ".*Du wurdest zu einer Probe hinzugefügt.*Faust: Fechtszene (morgen|am .*) um 18:00 angesetzt, Ort: Probebühne.*"
+    timeout: 15000
+- assertVisible: ".*Neue Probe.*Faust: Fechtszene (morgen|am .*) um 18:00 angesetzt.*"
+- takeScreenshot: 86-german
+# Russian: the participle agreeing with "Репетиция", whatever the title.
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: rehearsal_created
+      REHEARSAL: Прогон
+- runScript:
+    file: ../scripts/notify.js
+    env:
+      MAIL_URL: ${MAIL_URL}
+      EMAIL: ${KATERINA_EMAIL}
+      TYPE: added_to_rehearsal
+      REHEARSAL: Прогон
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${KATERINA_EMAIL}
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP: "Уведомления"
+      SEE: "(Отметить все|Пока тихо)"
+      WAIT_MS: "15000"
+- extendedWaitUntil:
+    visible: ".*Вас добавили в репетицию.*Гроза: Репетиция «Прогон» назначена (завтра|.*) в 18:00, место: Малый зал.*"
+    timeout: 15000
+- assertVisible: ".*Новая репетиция.*Гроза: Репетиция «Прогон» назначена (завтра|.*) в 18:00.*"
+- takeScreenshot: 86-russian

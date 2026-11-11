@@ -88,6 +88,11 @@
  *                                                  that rehearsal changed, or
  *                                                  answered, sent as an edit
  *                                                  and a "yes" send it (flow 62)
+ *   GET /notify?to=<address>&type=rehearsal_created&rehearsal=<title>
+ *   GET /notify?to=<address>&type=added_to_rehearsal&rehearsal=<title>
+ *                                                  a new rehearsal, or one
+ *                                                  they were put on, in their
+ *                                                  language (flow 86)
  *
  * It measures an icon on a screenshot a flow took, which Maestro cannot: a
  * button that is only an icon is one element, the size of its target (ink.mjs):
@@ -138,7 +143,9 @@ import { fileURLToPath } from 'node:url';
 import { capturedEmails } from '../server/services/email/transport.js';
 import db from '../server/database/db.js';
 import { recordNotifications } from '../server/services/notifications/notificationStore.js';
-import { notifyMemberJoined, notifyMemberResponse, notifyRehearsalUpdated } from '../server/services/notifications/pushNotificationService.js';
+import {
+  notifyAddedToRehearsal, notifyMemberJoined, notifyMemberResponse, notifyRehearsalCreated, notifyRehearsalUpdated,
+} from '../server/services/notifications/pushNotificationService.js';
 import app from '../server/server.js';
 import { ellipses, inkBox } from './ink.mjs';
 
@@ -426,7 +433,8 @@ http.createServer((request, response) => {
     return;
   }
   const about = url.searchParams.get('type');
-  if (request.method === 'GET' && url.pathname === '/notify' && (about === 'rehearsal_updated' || about === 'member_response')) {
+  if (request.method === 'GET' && url.pathname === '/notify'
+    && ['rehearsal_updated', 'member_response', 'rehearsal_created', 'added_to_rehearsal'].includes(about)) {
     const to = (url.searchParams.get('to') || '').trim().toLowerCase();
     const title = url.searchParams.get('rehearsal') || '';
     (async () => {
@@ -435,10 +443,15 @@ http.createServer((request, response) => {
       const rehearsal = await db.get('SELECT * FROM native_rehearsals WHERE title = $1', [title]);
       if (!rehearsal) return answer(404, { error: `no rehearsal ${title}` });
       const project = await db.get('SELECT name FROM native_projects WHERE id = $1', [rehearsal.project_id]);
-      // As an edit and a "yes" tell them (routes/native/rehearsals.js), the
-      // server's own words, on the reader's clock.
+      // As an edit, a "yes", a new rehearsal and a cast that grew tell them
+      // (routes/native/rehearsals.js), the server's own words, on the reader's
+      // clock and in the reader's language.
       if (about === 'rehearsal_updated') {
         await notifyRehearsalUpdated(rehearsal, project.name, [{ user_id: user.id }], [url.searchParams.get('change') || 'location']);
+      } else if (about === 'rehearsal_created') {
+        await notifyRehearsalCreated(rehearsal, project.name, [{ user_id: user.id }]);
+      } else if (about === 'added_to_rehearsal') {
+        await notifyAddedToRehearsal(rehearsal, project.name, [{ user_id: user.id }]);
       } else {
         await notifyMemberResponse(rehearsal, project.name, url.searchParams.get('member') || 'Somebody', [user.id]);
       }

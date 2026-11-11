@@ -244,6 +244,13 @@ export const PEOPLE = {
   // Opens his rehearsals of long names, «Изменить» beside them, in Russian and
   // German, and the form from there (85, T-244). His account speaks Russian.
   baptista: { email: 'baptista@e2e.test', firstName: 'Baptista', lastName: 'Minola', onboarded: true, locale: 'ru' },
+  // Each told of a new rehearsal and of being put on one, by the server's own
+  // words in her account's language (86, T-248): the title of one whose
+  // gender the old participle got wrong, the German its word order. A project
+  // of her own each, so no other flow's notices mix in.
+  laurencia: { email: 'laurencia@e2e.test', firstName: 'Laurencia', lastName: 'Fuenteovejuna', onboarded: true, locale: 'es' },
+  gretchen: { email: 'gretchen@e2e.test', firstName: 'Gretchen', lastName: 'Faust', onboarded: true, locale: 'de' },
+  katerina: { email: 'katerina@e2e.test', firstName: 'Katerina', lastName: 'Kabanova', onboarded: true, locale: 'ru' },
 };
 
 /** Prospero's company (48), with him thirteen: one more than the sheet lists without a search. */
@@ -796,6 +803,32 @@ export async function seed({ client, apiUrl, timezone }) {
          VALUES ($1, $2, 'no', NOW(), NOW())`,
         [made.id, ids.baptista]);
     }
+  }
+
+  // Laurencia's, Gretchen's and Katerina's (86, T-248): tomorrow 18:00 to
+  // 20:00, she alone on it. Spanish a feminine title, Russian a masculine one:
+  // "Escena del balcón programado", "Прогон назначена" on the old words.
+  // Inserted: the sign-ins are spent.
+  for (const [key, project, title, location] of [
+    ['laurencia', 'Fuenteovejuna', 'Escena del balcón', 'Patio'],
+    ['gretchen', 'Faust', 'Fechtszene', 'Probebühne'],
+    ['katerina', 'Гроза', 'Прогон', 'Малый зал'],
+  ]) {
+    const { rows: [own] } = await client.query(
+      `INSERT INTO native_projects (name, description, timezone, created_at, updated_at)
+       VALUES ($1, 'Her own', $2, NOW(), NOW()) RETURNING id`, [project, timezone]);
+    await client.query(
+      `INSERT INTO native_project_members (project_id, user_id, role, status, invited_at, joined_at)
+       VALUES ($1, $2, 'owner', 'active', NOW(), NOW())`,
+      [own.id, ids[key]]);
+    const { rows: [made] } = await client.query(
+      `INSERT INTO native_rehearsals (project_id, title, starts_at, ends_at, location, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3::timestamptz, $4::timestamptz, $5, $6, NOW(), NOW()) RETURNING id`,
+      [own.id, title, localInstant(1, 18), localInstant(1, 20), location, ids[key]]);
+    await client.query(
+      `INSERT INTO native_rehearsal_responses (rehearsal_id, user_id, response, created_at, updated_at)
+       VALUES ($1, $2, 'no', NOW(), NOW())`,
+      [made.id, ids[key]]);
   }
 
   // What the flow reads after moving the profile to Tokyo: the same instant on

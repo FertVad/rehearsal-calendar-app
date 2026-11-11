@@ -1,0 +1,40 @@
+T-248 review: e2e/flows/86-rehearsal-notices-read-right.yaml, red on the old words.
+
+server/i18n/pushNotifications.js put back as at c1e2da3~1
+(git restore --source=c1e2da3~1 -- server/i18n/pushNotifications.js), the
+flow's seed, mailbox and script as now; restored with
+git restore --source=HEAD afterwards.
+
+== Run 1: the whole flow (it stops at its first language, Spanish) ==
+
+$ npm run e2e -- e2e/flows/86-rehearsal-notices-read-right.yaml
+[e2e] seeding
+[e2e] starting Metro, pointed at the local server
+[e2e] checking the bundle talks to the local server
+[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
+[e2e] installing the Debug app and running the flows
+[Failed] Rehearsal notices read right in Spanish, German and Russian (1m 18s) (Assertion is false: ".*Te han añadido a un ensayo.*Fuenteovejuna: Ensayo «Escena del balcón» programado para (mañana|el .*) a las 18:00 en Patio.*" is visible)
+1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+On screen (screen hierarchy, artifacts 2026-11-11_230024, step 079):
+  Fuenteovejuna: Escena del balcón programado mañana a las 18:00 en Patio, ahora mismo
+  Fuenteovejuna: Escena del balcón programado mañana a las 18:00, ahora mismo
+(its screenshot shows the two cards, "Te han añadido a un ensayo" and
+"Nuevo ensayo", each "Fuenteovejuna: Escena del balcón programado mañana a
+las 18:00")
+
+== Run 2: its German and Russian parts alone, as two temporary flows ==
+(the same steps as the flow's German and Russian sections, deleted after)
+
+$ npm run e2e -- e2e/flows/zz-tmp-86-german.yaml e2e/flows/zz-tmp-86-russian.yaml
+[Failed] 86 German part (1m 21s) (Assertion is false: ".*Du wurdest zu einer Probe hinzugefügt.*Faust: Fechtszene (morgen|am .*) um 18:00 angesetzt, Ort: Probebühne.*" is visible)
+[Failed] 86 Russian part (56s) (Assertion is false: ".*Вас добавили в репетицию.*Гроза: Репетиция «Прогон» назначена (завтра|.*) в 18:00, место: Малый зал.*" is visible)
+2/2 Flows Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+On screen (screen hierarchy, artifacts 2026-11-11_230630):
+  Faust: Fechtszene angesetzt morgen um 18:00, Ort: Probebühne, gerade eben
+  Faust: Fechtszene angesetzt morgen um 18:00, gerade eben
+  Гроза: Прогон назначена завтра в 18:00, место: Малый зал, только что
+  Гроза: Прогон назначена завтра в 18:00, только что

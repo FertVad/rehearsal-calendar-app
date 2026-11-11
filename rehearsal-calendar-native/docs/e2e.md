@@ -460,7 +460,9 @@ the server's own `recordNotifications`, titled "`TITLE` 1" (the oldest) to
 "`TITLE` `COUNT`" (flow 33). With `TYPE` it sends one as the server's own code
 sends it: `member_joined` with `PROJECT` and `MEMBER` (flow 61),
 `rehearsal_updated` with `REHEARSAL` (a title) and `CHANGE`, `member_response`
-with `REHEARSAL` and `MEMBER` (flow 62).
+with `REHEARSAL` and `MEMBER` (flow 62), `rehearsal_created` and
+`added_to_rehearsal` with `REHEARSAL` — a new rehearsal and one the reader was
+put on, in the reader's language (flow 86).
 
 How large an icon is drawn: a button that is only an icon is one element,
 44 a side, and Maestro sees nothing inside it. `e2e/scripts/icon-size.js` with

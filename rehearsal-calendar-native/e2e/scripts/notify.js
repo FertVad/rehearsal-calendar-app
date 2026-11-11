@@ -6,6 +6,8 @@
 // With TYPE "rehearsal_updated" or "member_response": the rehearsal titled
 // ${REHEARSAL} changed (${CHANGE}, "location" if none) or answered by
 // ${MEMBER}, sent as an edit and a "yes" send it (flow 62).
+// With TYPE "rehearsal_created" or "added_to_rehearsal": the rehearsal titled
+// ${REHEARSAL} new, or ${EMAIL} put on it, as a save sends it (flow 86).
 // Run by Maestro (runScript), which provides http.
 const type = typeof TYPE !== 'undefined' ? TYPE : '';
 const query = type === 'member_joined'
@@ -15,6 +17,8 @@ const query = type === 'member_joined'
       + '&change=' + encodeURIComponent(typeof CHANGE !== 'undefined' ? CHANGE : 'location')
     : type === 'member_response'
       ? '&type=member_response&rehearsal=' + encodeURIComponent(REHEARSAL) + '&member=' + encodeURIComponent(MEMBER)
-      : '&count=' + COUNT + '&title=' + encodeURIComponent(TITLE);
+      : type === 'rehearsal_created' || type === 'added_to_rehearsal'
+        ? '&type=' + type + '&rehearsal=' + encodeURIComponent(REHEARSAL)
+        : '&count=' + COUNT + '&title=' + encodeURIComponent(TITLE);
 const response = http.get(MAIL_URL + '/notify?to=' + encodeURIComponent(EMAIL) + query);
 if (!response.ok) throw new Error('notify answered ' + response.status + ': ' + response.body);
