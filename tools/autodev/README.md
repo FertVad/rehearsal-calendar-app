@@ -80,7 +80,10 @@ first command, and the same code passed 37/37 next time — a developer
 session went on proving that. On 11.11.2026 one of the 21 flows after it
 said "Unknown error", and a rule that every red flow must name the exception
 queued all 21 as flaky (T-246). A flow that failed before the driver was lost
-keeps the run red, and so does a driver lost again.
+keeps the run red, and so does a driver lost again. What failed is then the
+second run's alone, with one line saying where the first lost them: listed
+first, the lost flows named T-247 after flow 54, where the driver went, gave
+24 flows that never ran as what failed, and cut off the one that did fail, 73.
 
 **The e2e limit grows with the flows**: ten minutes of setup and two and a
 half per flow (`e2eLimitMs`). A fixed 45 minutes was outgrown on 26.10.2026 —

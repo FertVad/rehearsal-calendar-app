@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { e2eFlowsFor, e2eLimitMs, failedFlows, maestroRuns, pruneArtifacts, runChecks, stopChecks } from '../lib/checks.mjs';
+import { flakeTitle, isFailureLine } from '../lib/flakes.mjs';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'autodev-checks-'));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -169,16 +170,20 @@ function e2eRuns(name, first, later) {
   fs.mkdirSync(folder);
   fs.writeFileSync(path.join(folder, 'npm'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
   const report = (cases) => `<testsuite>${cases.map(([file, failure]) => `<testcase name="${file}" file="${file}" status="${failure ? 'ERROR' : 'SUCCESS'}">${failure ? `<failure>${failure}</failure>` : ''}</testcase>`).join('')}</testsuite>`;
+  // Maestro prints each failed flow as it goes, whatever failed it: "[Failed] Sign in (13s)".
+  const printed = (cases) => cases.filter(([, failure]) => failure).map(([file]) => `echo "[Failed] ${file} (1s)"`).join('\n');
   fs.writeFileSync(path.join(folder, 'node'), `#!/bin/sh
 shift
 echo "$*" >> calls.txt
 mkdir -p e2e/out
 if [ "$(wc -l < calls.txt)" -eq 1 ]; then
+${printed(first)}
 cat > e2e/out/junit.xml <<'XML'
 ${report(first)}
 XML
 exit 1
 fi
+${printed(later)}
 cat > e2e/out/junit.xml <<'XML'
 ${report(later)}
 XML
@@ -231,15 +236,38 @@ test('a flow that failed on its own is red, whatever the driver did after it', a
   assert.equal(fs.readFileSync(path.join(app, 'calls.txt'), 'utf8').trim().split('\n').length, 1);
 });
 
-test('lost again on the second run is red, with both runs in what failed', async () => {
+test('lost again on the second run is red, and what failed says both runs lost it', async () => {
   const app = appTree('lost-twice');
   const node = e2eRuns('lost-twice', [['e2e/flows/01-login.yaml'], ['e2e/flows/05-inbox.yaml', LOST]], [['e2e/flows/05-inbox.yaml', LOST]]);
   const result = await runChecks({ root: path.dirname(app), changedFiles: ['rehearsal-calendar-native/e2e/subflows/sign-in-form.yaml'], node, log: path.join(dir, 'lost-twice.log'), env });
   const e2e = result.steps.find((step) => step.name === 'e2e');
   assert.equal(e2e.ok, false);
   assert.equal(fs.readFileSync(path.join(app, 'calls.txt'), 'utf8').trim().split('\n').length, 2);
-  assert.equal(e2e.failures.filter((line) => line.includes('05-inbox.yaml — maestro.DeviceUnreachableException')).length, 2);
+  // The second run's loss flow by flow, the first one's in the note.
+  assert.equal(e2e.failures.filter((line) => line.includes('05-inbox.yaml — maestro.DeviceUnreachableException')).length, 1);
+  assert.ok(e2e.failures.some((line) => /^\[e2e\] драйвер Maestro.*1 сценари.*05-inbox\.yaml/.test(line)));
   assert.match(e2e.tail, /драйвер Maestro/);
+});
+
+test('after the lost flows ran again, what failed is the second run: a lost flow has no verdict', async () => {
+  // T-246's checks, 11.11.2026: the driver went during flow 54, and the 34
+  // flows from it on ran again; 33 passed and 73 failed. The flaky task queued
+  // from them, T-247, was named after flow 54, its "what failed" was 24 lost
+  // flows, and 73's own failure was cut off below them.
+  const app = appTree('lost-then-red');
+  const node = e2eRuns('lost-then-red',
+    [['e2e/flows/01-login.yaml'], ['e2e/flows/54-wheel.yaml', LOST], ['e2e/flows/73-seen.yaml', LOST]],
+    [['e2e/flows/54-wheel.yaml'], ['e2e/flows/73-seen.yaml', 'Assertion is true: id: seen-toggle is selected']]);
+  const result = await runChecks({ root: path.dirname(app), changedFiles: ['rehearsal-calendar-native/e2e/subflows/sign-in-form.yaml'], node, log: path.join(dir, 'lost-then-red.log'), env });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.equal(e2e.ok, false);
+  assert.equal(e2e.driverLost, 2);
+  assert.equal(flakeTitle([e2e]), 'Нестабильный тест: e2e/flows/73-seen.yaml');
+  assert.deepEqual(e2e.failures.filter(isFailureLine), [
+    '[Failed] e2e/flows/73-seen.yaml (1s)',
+    '[e2e] failed: e2e/flows/73-seen.yaml — Assertion is true: id: seen-toggle is selected',
+  ]);
+  assert.ok(e2e.failures.some((line) => /^\[e2e\] драйвер Maestro.*2 сценари.*54-wheel\.yaml/.test(line)), 'the run that lost them is said once, not flow by flow');
 });
 
 test('a folder beside the Maestro runs is not taken for the newest run', () => {

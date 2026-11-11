@@ -266,12 +266,17 @@ export async function runE2e({ root, node, log, env, flows = [], limitMs }) {
   // failed at their first command, and the same code passed 37/37 next time;
   // a developer session went on proving the change had nothing to do with it.
   // A flow that failed by itself keeps the run red.
+  // What failed is then the second run's: the first run's lines are flows with
+  // no verdict, and the note says once where they were lost. Put first, they
+  // named T-247 (11.11.2026) after flow 54, where the driver went, with 24 lost
+  // flows as what failed and 73's own failure in the second run cut off below.
+  // The note goes last: a flow's file in it could read as a failure line.
   if (step.lost.length && !step.timedOut && !step.environment) {
     const first = step;
-    const note = `[e2e] драйвер Maestro на симуляторе потерян: ${first.lost.length} сценариев не выполнены — прогоняю их ещё раз отдельно`;
+    const note = `[e2e] драйвер Maestro на симуляторе потерян: ${first.lost.length} сценариев не выполнены, начиная с ${first.lost[0]} — прогоняю их ещё раз отдельно`;
     fs.appendFileSync(log, `${note}\n`);
     step = await once(first.lost, e2eLimitMs(first.lost.length));
-    step.failures.unshift(...first.failures, note);
+    step.failures.push(note);
     step.tail = [note, step.tail].join('\n');
     step.driverLost = first.lost.length;
   }
