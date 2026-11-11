@@ -206,6 +206,22 @@ test('flows the Maestro driver never ran are run again, not called red', async (
   assert.deepEqual(e2e.flows, ['e2e/flows/01-login.yaml', 'e2e/flows/05-inbox.yaml', 'e2e/flows/30-sync.yaml']);
 });
 
+test('after the driver is lost, a flow is run again whatever Maestro called its failure', async () => {
+  // 11.11.2026, the control run on 3b38601: the driver went at 10:57, during
+  // flow 66; 20 of the 21 red flows said DeviceUnreachableException, and 70
+  // said "Unknown error" — its stopApp refused by the same lost device. All 21
+  // passed on their own, and were queued as flaky (T-246).
+  const app = appTree('lost-unknown');
+  const node = e2eRuns('lost-unknown', [['e2e/flows/01-login.yaml'], ['e2e/flows/05-inbox.yaml', LOST], ['e2e/flows/30-sync.yaml', 'Unknown error']],
+    [['e2e/flows/05-inbox.yaml'], ['e2e/flows/30-sync.yaml']]);
+  const result = await runChecks({ root: path.dirname(app), changedFiles: ['rehearsal-calendar-native/e2e/subflows/sign-in-form.yaml', 'rehearsal-calendar-native/e2e/flows/30-sync.yaml'], node, log: path.join(dir, 'lost-unknown.log'), env });
+  const e2e = result.steps.find((step) => step.name === 'e2e');
+  assert.equal(e2e.ok, true);
+  assert.deepEqual(fs.readFileSync(path.join(app, 'calls.txt'), 'utf8').trim().split('\n'),
+    ['e2e/flows/01-login.yaml e2e/flows/05-inbox.yaml e2e/flows/30-sync.yaml', 'e2e/flows/05-inbox.yaml e2e/flows/30-sync.yaml']);
+  assert.equal(e2e.driverLost, 2);
+});
+
 test('a flow that failed on its own is red, whatever the driver did after it', async () => {
   const app = appTree('lost-real');
   const node = e2eRuns('lost-real', [['e2e/flows/01-login.yaml', 'Assertion is false: "Calendar" is visible'], ['e2e/flows/05-inbox.yaml', LOST]], []);

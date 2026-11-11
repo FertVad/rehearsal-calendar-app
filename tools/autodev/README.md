@@ -72,12 +72,15 @@ flaky flow in T-229's checks, was taken ahead of T-232 and T-233. A run the mach
 out of time — is tried again after an hour. The last one is in `STATUS.md`.
 
 **Flows the Maestro driver never ran are run again**, once, in a run of
-their own: when every red flow of a run says `DeviceUnreachableException`,
-the XCTest driver on the simulator was lost and none of them was checked.
-On 27.10.2026 it exited 28 minutes into T-120's run, the 25 flows after it
-failed at their first command, and the same code passed 37/37 next time — a
-developer session went on proving that. A flow that failed by itself keeps
-the run red, and so does a driver lost again.
+their own: from the first red flow that says `DeviceUnreachableException`,
+the XCTest driver on the simulator was lost and no flow after it was
+checked, whatever Maestro calls its failure (`lostFlows`). On 27.10.2026 it
+exited 28 minutes into T-120's run, the 25 flows after it failed at their
+first command, and the same code passed 37/37 next time — a developer
+session went on proving that. On 11.11.2026 one of the 21 flows after it
+said "Unknown error", and a rule that every red flow must name the exception
+queued all 21 as flaky (T-246). A flow that failed before the driver was lost
+keeps the run red, and so does a driver lost again.
 
 **The e2e limit grows with the flows**: ten minutes of setup and two and a
 half per flow (`e2eLimitMs`). A fixed 45 minutes was outgrown on 26.10.2026 —
