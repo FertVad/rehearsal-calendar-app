@@ -34,6 +34,12 @@ export interface NavTranslations {
   calendar: string;
   projects: string;
   addRehearsal: string;
+  /**
+   * The Planner tab's label and its screen's large title: "Planner" in every
+   * language, as "Smart Planner" is — the owner's decision (11.11.2026, T-249).
+   * T-032 had translated it on a review's word; do not translate it again
+   * (navPlanner.test).
+   */
   planner: string;
   profile: string;
 }
@@ -87,7 +93,7 @@ export const ru = {
     calendar: 'Календарь',
     projects: 'Проекты',
     addRehearsal: '',
-    planner: 'Планер',
+    planner: 'Planner',
     profile: 'Профиль',
   },
   actionSheet: {
@@ -191,7 +197,7 @@ export const es = {
     calendar: 'Calendario',
     projects: 'Proyectos',
     addRehearsal: '',
-    planner: 'Planificador',
+    planner: 'Planner',
     profile: 'Perfil',
   },
   actionSheet: {
@@ -243,7 +249,7 @@ export const de = {
     calendar: 'Kalender',
     projects: 'Projekte',
     addRehearsal: '',
-    planner: 'Planer',
+    planner: 'Planner',
     profile: 'Profil',
   },
   actionSheet: {

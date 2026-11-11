@@ -6,7 +6,7 @@
 #
 # Marina, whose account speaks Russian, reads the month over her strip, the
 # date of her rehearsal three days on among the upcoming ones, her planner's
-# days, under its title "Планер", and the availability's next month. Each is what Intl writes, its first
+# days, under its title "Planner", and the availability's next month. Each is what Intl writes, its first
 # letter a capital: "Ноябрь 2026 г.", "Чт, 6 нояб.". Maestro matches text
 # without regard to case, so the texts are copied and checked in JavaScript,
 # after the three screens are shot. The row is one element, its label
@@ -27,6 +27,18 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
+# The calendar is the main screen: no "Календарь" over its filter (T-249).
+# The tab keeps the name; the planner's tab is "Planner" in Russian too.
+- waitForAnimationToEnd
+- takeScreenshot: 65-calendar-top
+- assertNotVisible:
+    id: screen-header-root
+- assertVisible:
+    id: tab-calendar
+    text: "Календарь, tab.*"
+- assertVisible:
+    id: tab-planner
+    text: "Planner, tab.*"
 # The calendar: the month over the strip, and the rehearsal three days on.
 - scrollUntilVisible:
     element:
@@ -50,10 +62,11 @@ tags:
     timeout: 30000
 - waitForAnimationToEnd
 - takeScreenshot: 65-planner
-# The planner's large title over its filters is the tab's name in her
-# language, "Планер"; it was "Planner" (T-032 review).
+# The planner's large title over its filters is "Planner" in every language,
+# as "Smart Planner" is: the owner's decision (T-249). T-032 had made it
+# "Планер"; so had the tab, which says "Planner" too.
 - assertVisible:
-    text: "Планер"
+    text: "Planner"
     above:
       id: planner-filters
 - copyTextFrom:

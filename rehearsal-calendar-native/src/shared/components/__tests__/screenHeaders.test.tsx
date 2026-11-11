@@ -11,6 +11,11 @@
  *
  * The planner kept its own "←" until the owner decided on it (04.11): it is
  * a tab's first screen, a large title and nothing to go back to (T-032).
+ *
+ * The calendar is the exception: it has no bar at all. It is the app's main
+ * screen, its top the project filter and the bell, as before T-029 put a
+ * large "Calendar" over them — the owner's decision (11.11.2026, T-249). The
+ * tab names it. Do not give it a title again.
  */
 import React from 'react';
 import { readFileSync, readdirSync, statSync } from 'fs';
@@ -22,7 +27,7 @@ import { HeaderTextButton, ScreenHeader } from '../ScreenHeader';
 const SRC = join(__dirname, '..', '..', '..');
 
 /** Every screen of the app and the kind of bar it has. */
-const SCREENS: Record<string, 'modal' | 'stack' | 'root'> = {
+const SCREENS: Record<string, 'modal' | 'stack' | 'root' | 'none'> = {
   'features/calendar/screens/AddRehearsalScreen.tsx': 'modal',
   'features/calendar/screens/RehearsalDetailsScreen.tsx': 'modal',
   'features/projects/screens/CreateProjectScreen.tsx': 'modal',
@@ -33,7 +38,8 @@ const SCREENS: Record<string, 'modal' | 'stack' | 'root'> = {
   'features/profile/screens/ChangeEmailScreen.tsx': 'modal',
   'features/projects/screens/ProjectDetailScreen.tsx': 'stack',
   'features/profile/screens/CalendarSyncSettingsScreen.tsx': 'stack',
-  'features/calendar/screens/CalendarScreen.tsx': 'root',
+  // The main screen: no title, by the owner's decision (T-249).
+  'features/calendar/screens/CalendarScreen.tsx': 'none',
   'features/projects/screens/ProjectsScreen.tsx': 'root',
   'features/profile/screens/ProfileScreen.tsx': 'root',
   'features/smart-planner/screens/SmartPlannerScreen.tsx': 'root',
@@ -62,6 +68,10 @@ describe('every screen takes its bar from ScreenHeader', () => {
   it.each(Object.entries(SCREENS))('%s: %s', (file, kind) => {
     const text = readFileSync(join(SRC, file), 'utf8');
     const kinds = [...text.matchAll(/<ScreenHeader\b[^>]*?kind="(\w+)"/g)].map((match) => match[1]);
+    if (kind === 'none') {
+      expect(text).not.toMatch(/<ScreenHeader\b/);
+      return;
+    }
     expect(kinds.length).toBeGreaterThan(0);
     expect(new Set(kinds)).toEqual(new Set([kind]));
   });

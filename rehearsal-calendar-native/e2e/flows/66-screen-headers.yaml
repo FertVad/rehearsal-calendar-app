@@ -4,6 +4,7 @@
 # rehearsal form, "Busy"), a smaller title between a chevron and an empty box
 # (a new project, the profile's edit), a large title after an arrow (a
 # project, calendar sync, the inbox), and a large title alone (the tabs). Now:
+# - the calendar, the main screen: no title (T-249);
 # - the first screen of a tab, "My Projects": a large title, no way back;
 # - a screen pushed in it, a project: "‹ My Projects" on the left, then the
 #   project's name;
@@ -13,6 +14,7 @@
 appId: ${APP_ID}
 name: Screen headers, one style
 tags:
+  - calendar
   - projects
   - navigation
 ---
@@ -24,6 +26,16 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
+# The calendar is the exception: the app's main screen, no title at all, its
+# top the project filter and the bell (owner, T-249; T-029 had put a large
+# "Calendar" over them). The tab still names it.
+- waitForAnimationToEnd
+- takeScreenshot: 66-calendar
+- assertNotVisible:
+    id: screen-header-root
+- assertVisible:
+    id: tab-calendar
+    text: "Calendar, tab.*"
 - runFlow:
     file: ../subflows/tap-and-see.yaml
     env:

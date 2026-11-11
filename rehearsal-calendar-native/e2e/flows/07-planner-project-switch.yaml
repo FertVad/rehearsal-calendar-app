@@ -211,8 +211,9 @@ tags:
 # Back to the calendar: in its place, not 60 pt down. The load on focus turned
 # on the pull-to-refresh spinner, and iOS left the calendar under it (T-011).
 # Maestro reads no coordinates, so the filter is tapped where it belongs - its
-# middle, 18% down an iPhone 16, under the calendar's large title (T-029) - and
-# its list must open; 60 pt lower, the tap lands above it. The planner is a
+# middle, 12% down an iPhone 16, at the top of the screen: the calendar has no
+# title over it (T-249; T-029 had put one there and moved the filter to 18%) -
+# and its list must open; 60 pt lower, the tap lands above it. The planner is a
 # tab's first screen with nothing to go back to, so the way is the tab (T-032).
 - assertNotVisible: "Back"
 - tapOn: "Calendar, tab.*"
@@ -228,7 +229,7 @@ tags:
     times: 2
     commands:
       - tapOn:
-          point: "40%,18%"
+          point: "40%,12%"
       - waitForAnimationToEnd:
           timeout: 3000
 - assertVisible: ".*Three Sisters.*"

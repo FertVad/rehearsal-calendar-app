@@ -6,7 +6,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../../../shared/constants/colors';
 import { SkeletonLoader } from '../../../shared/components';
 import { IconButton } from '../../../shared/components/IconButton';
-import { ScreenHeader } from '../../../shared/components/ScreenHeader';
 import WeeklyCalendar from '../components/WeeklyCalendar';
 import TodayRehearsals from '../components/TodayRehearsals';
 import RehearsalList from '../components/RehearsalList';
@@ -165,8 +164,10 @@ export default function CalendarScreen() {
   }, [rehearsals, selectedDate, today]);
 
   return (
+    // No title: the calendar is the app's main screen, and its top is the
+    // project filter and the bell (owner, 11.11.2026, T-249; T-029 had put a
+    // large "Calendar" over them). The tab names it.
     <SafeAreaView style={styles.container}>
-      <ScreenHeader kind="root" title={t.nav.calendar} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
