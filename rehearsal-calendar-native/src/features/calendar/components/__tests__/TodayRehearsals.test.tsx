@@ -397,23 +397,6 @@ describe('TodayRehearsals Component', () => {
       expect(queryByTestId('rehearsal-swipe-delete')).toBeNull();
       expect(queryByTestId('rehearsal-swipe-edit')).toBeNull();
     });
-
-    it('should not show admin controls for non-admin projects', () => {
-      const { queryByText } = render(
-        <TodayRehearsals
-          rehearsals={[mockRehearsals[1]]} // Only non-admin project rehearsal
-          selectedDate="2025-12-29"
-          loading={false}
-          projects={mockProjects}
-          onOpenRehearsal={mockOnOpenRehearsal}
-        />
-      );
-
-      // Should not show Admin badge for non-admin project
-      // The component only shows the badge when is_admin is true
-      // Admin text should not be present for non-admin rehearsal
-      expect(queryByText('Admin')).toBeNull();
-    });
   });
 
   describe('RSVP Button', () => {

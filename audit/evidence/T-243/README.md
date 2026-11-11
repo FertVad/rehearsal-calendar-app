@@ -50,9 +50,14 @@ instead (below).
   component and its test. The component itself is used only by its test —
   the screen draws the slots inline — which is outside this task.
 - `useWeekStart.ts:39` `error`: `catch {}`.
-- Tests and mocks (28): unused imports and bindings removed; one test that
-  asserted nothing (`TodayRehearsals.test.tsx`, "no admin controls") now
-  asserts what its comment says; mocks strip props as `_name`.
+- Tests and mocks (28): unused imports and bindings removed; mocks strip
+  props as `_name`. One test asserted nothing (`TodayRehearsals.test.tsx`,
+  "should not show admin controls for non-admin projects"): its unused
+  binding looked for an "Admin" badge the row no longer draws even for an
+  admin (T-036), so asserting it would pass with both swipe actions present
+  (review). Removed: "gives an actor no swipe" renders the same rehearsal and
+  asserts that neither `rehearsal-swipe-edit` nor `rehearsal-swipe-delete`
+  is there.
 - Two disable directives for `no-var-requires`, which no longer fires
   (`permissionTexts.test.ts:75`, `syncSession.test.ts:77`): removed.
 - Five `exhaustive-deps` in tests and mocks: the four `useFocusEffect` mocks
