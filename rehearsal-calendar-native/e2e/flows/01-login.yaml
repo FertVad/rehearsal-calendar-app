@@ -17,4 +17,13 @@ tags:
 - extendedWaitUntil:
     visible: ".*Act I run-through.*Hamlet.*"
     timeout: 30000
+# No "Save Password?" sheet after it, on the e2e simulator: its window going
+# away under Maestro's read of the screen ended the driver, and 21 flows after
+# it failed unreachable (T-246; noPasswordOffer in e2e/run.mjs). It came some
+# 0.3 s after the form went, so five seconds are long enough to see it.
+- extendedWaitUntil:
+    visible: "Not Now"
+    timeout: 5000
+    optional: true
+- assertNotVisible: "Not Now"
 - takeScreenshot: 01-calendar-after-sign-in

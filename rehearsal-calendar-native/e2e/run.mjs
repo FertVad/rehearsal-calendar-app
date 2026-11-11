@@ -347,6 +347,20 @@ function quietKeyboard(udid) {
 }
 
 /**
+ * iOS offers to keep the password after every sign-in: a "Save Password?"
+ * sheet over the whole screen, drawn by the keyboard's process (InputUI). Its
+ * scene goes away while Maestro's driver reads the screen, and once the
+ * driver's status-bar query met its window half gone: XCTest's
+ * kAXErrorInvalidUIElement failed the driver's one test, the driver ended, and
+ * every flow after it failed with DeviceUnreachableException — 21 of them, from
+ * flow 66 on (T-246). With AutoFill Passwords off (Settings → Passwords) iOS
+ * offers nothing, and there is no sheet to go. Kept across reboots.
+ */
+function noPasswordOffer(udid) {
+  simctl('spawn', udid, 'defaults', 'write', 'com.apple.WebUI', 'AutoFillPasswords', '-bool', 'false');
+}
+
+/**
  * The simulator's own zone, away from the machine's and so from everyone's
  * profile (seed.mjs). The app shows the zone the person chose, never the
  * device's (cause fix 14); with both the same, nothing on screen could tell
@@ -619,6 +633,7 @@ async function main() {
       simctl('bootstatus', udid, '-b');
     }
     quietKeyboard(udid);
+    noPasswordOffer(udid);
     pinZone(udid);
     showSimulator(udid);
   });

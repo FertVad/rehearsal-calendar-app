@@ -248,8 +248,8 @@ It is below the app, and cannot be made to happen on demand. The rule:
   (the wait the flow had anyway). It taps and waits; if `SEE` is not there it
   taps once more - never more - and waits again, and then `SEE` must come.
   No pause, no longer wait. A tap whose result is something leaving the
-  screen gives `GONE` (the text that goes) instead of `SEE`: "Not Now" of the
-  "Save Password?" sheet at every sign-in (T-213); or `GONE_ID` (its id), for
+  screen gives `GONE` (the text that goes) instead of `SEE`: "Not Now" of a
+  system sheet (T-213); or `GONE_ID` (its id), for
   a control whose label is in the screen's language: "Sign In"
   (`login-submit`) at every sign-in (T-225).
 - Only for a tap that may be taken twice: the second comes when the first left
@@ -522,10 +522,14 @@ whether it has gone, which waited seven seconds every time.
   launch is slow, and text typed before it is up goes nowhere. The inputs do not
   report focus, so there is nothing else to wait on. It taps "Sign In"
   through `tap-and-see.yaml` with `GONE_ID: login-submit`: one lost tap on it
-  left flow 59 on a filled-in form (T-225). It also dismisses iOS's
-  "Save Password?" sheet, which covers the screen and hides the whole app from
-  Maestro, through `tap-and-see.yaml` with `GONE: "Not Now"`: one lost tap on
-  it left flow 51 waiting under the sheet (T-213). A flow that acts before
+  left flow 59 on a filled-in form (T-225). iOS's "Save Password?" sheet
+  after a sign-in is off on the e2e simulator: the runner turns AutoFill
+  Passwords off at boot (`noPasswordOffer` in `e2e/run.mjs`). The sheet is
+  drawn by the keyboard's process, and once its window went away under
+  Maestro's read of the screen: XCTest failed the driver's one test with
+  kAXErrorInvalidUIElement, the driver ended, and the 21 flows after it failed
+  with `DeviceUnreachableException` (T-246). Flow 01 sees that it stays away. A
+  flow that acts before
   signing in launches the app itself and then runs `sign-in-form.yaml`.
 - Maestro's `launchApp` grants the app every permission unless it is given
   `permissions:`, so the sign-in subflow's launch leaves calendar access
