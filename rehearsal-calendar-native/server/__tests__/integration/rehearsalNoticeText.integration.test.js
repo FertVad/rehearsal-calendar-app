@@ -87,7 +87,7 @@ describe('Each reader is told when, on their own clock and in their own language
   it('a new rehearsal', async () => {
     await notifyRehearsalCreated(rehearsal, 'Hamlet', readers(), { now });
 
-    expect(inboxOf(natasha)[0].body).toBe('Hamlet: Full dress назначена завтра в 22:00');
+    expect(inboxOf(natasha)[0].body).toBe('Hamlet: Репетиция «Full dress» назначена завтра в 22:00');
     expect(inboxOf(john)[0].body).toBe('Hamlet: Full dress scheduled tomorrow at 3:00 PM');
   });
 
@@ -110,7 +110,7 @@ describe('Each reader is told when, on their own clock and in their own language
   it('further out, the date', async () => {
     await notifyRehearsalCreated(rehearsal, 'Hamlet', readers(), { now: new Date('2026-10-01T06:00:00Z') });
 
-    expect(inboxOf(natasha)[0].body).toMatch(/^Hamlet: Full dress назначена вт, 6 окт\.? в 22:00$/);
+    expect(inboxOf(natasha)[0].body).toMatch(/^Hamlet: Репетиция «Full dress» назначена вт, 6 окт\.? в 22:00$/);
     expect(inboxOf(john)[0].body).toBe('Hamlet: Full dress scheduled on Tue, Oct 6 at 3:00 PM');
   });
 });
@@ -122,7 +122,7 @@ describe('Put on or taken off a rehearsal (T-233)', () => {
     const [ru] = inboxOf(natasha);
     const [en] = inboxOf(john);
     expect(ru.title).toBe('Вас добавили в репетицию');
-    expect(ru.body).toBe('Hamlet: Full dress назначена завтра в 22:00, место: Main stage');
+    expect(ru.body).toBe('Hamlet: Репетиция «Full dress» назначена завтра в 22:00, место: Main stage');
     expect(en.title).toBe('You were added to a rehearsal');
     expect(en.body).toBe('Hamlet: Full dress scheduled tomorrow at 3:00 PM at Main stage');
     // As a new rehearsal: the inbox and a tapped push open it.
@@ -143,6 +143,110 @@ describe('Put on or taken off a rehearsal (T-233)', () => {
     expect(en.type).toBe('rehearsal_removed');
     expect(en.data.rehearsalId).toBeUndefined();
     expect(en.related_type).not.toBe('rehearsal');
+  });
+});
+
+/**
+ * Spanish and German, as native speakers read them (T-248).
+ *
+ * "Hamlet: Esgrima programado mañana" read as "was scheduled tomorrow" — the
+ * date the scheduling happened, not the rehearsal's: Spanish says "programado
+ * para". German puts the participle last: "morgen um 21:00 angesetzt", not
+ * "angesetzt morgen um 21:00".
+ */
+describe('Spanish and German say a rehearsal is set for a day, in their own word order (T-248)', () => {
+  let carmen; // Spanish, in Madrid
+  let klaus; // German, in Berlin
+  const latins = () => [{ user_id: carmen }, { user_id: klaus }];
+
+  beforeAll(() => {
+    carmen = addReader('carmen', 'es', 'Europe/Madrid');
+    klaus = addReader('klaus', 'de', 'Europe/Berlin');
+  });
+
+  // 19:00 UTC on the 6th is 21:00 in Madrid and in Berlin.
+  it('a new rehearsal tomorrow', async () => {
+    await notifyRehearsalCreated(rehearsal, 'Hamlet', latins(), { now });
+
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para mañana a las 21:00');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress morgen um 21:00 angesetzt');
+  });
+
+  it('a new rehearsal today', async () => {
+    await notifyRehearsalCreated(rehearsal, 'Hamlet', latins(), { now: new Date('2026-10-06T06:00:00Z') });
+
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para hoy a las 21:00');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress heute um 21:00 angesetzt');
+  });
+
+  it('a new rehearsal further out, on its date', async () => {
+    await notifyRehearsalCreated(rehearsal, 'Hamlet', latins(), { now: new Date('2026-10-01T06:00:00Z') });
+
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para el mar, 6 oct a las 21:00');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress am Di., 6. Okt. um 21:00 angesetzt');
+  });
+
+  it('added to one, with and without a place', async () => {
+    await notifyAddedToRehearsal({ ...rehearsal, location: 'Main stage' }, 'Hamlet', latins(), { now });
+
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para mañana a las 21:00 en Main stage');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress morgen um 21:00 angesetzt, Ort: Main stage');
+
+    await notifyAddedToRehearsal(rehearsal, 'Hamlet', latins(), { now });
+
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para mañana a las 21:00');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress morgen um 21:00 angesetzt');
+  });
+
+  it('added to one on its date, with a place', async () => {
+    await notifyAddedToRehearsal({ ...rehearsal, location: 'Main stage' }, 'Hamlet', latins(), { now: new Date('2026-10-01T06:00:00Z') });
+
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para el mar, 6 oct a las 21:00 en Main stage');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress am Di., 6. Okt. um 21:00 angesetzt, Ort: Main stage');
+  });
+
+  it('added to one today', async () => {
+    await notifyAddedToRehearsal(rehearsal, 'Hamlet', latins(), { now: new Date('2026-10-06T06:00:00Z') });
+
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Full dress» programado para hoy a las 21:00');
+    expect(inboxOf(klaus)[0].body).toBe('Hamlet: Full dress heute um 21:00 angesetzt');
+  });
+});
+
+/**
+ * The title is whatever the director typed, of any gender (T-248).
+ *
+ * A participle agreeing with it — "Прогон назначена", "Escena del balcón
+ * programado" — was wrong for every title not of the gender the text assumed.
+ * It agrees with the word "rehearsal" itself, which the title follows.
+ */
+describe('Any title reads correctly, whatever its gender (T-248)', () => {
+  let carmen;
+  let olga;
+  beforeAll(() => {
+    carmen = addReader('carmen2', 'es', 'Europe/Madrid');
+    olga = addReader('olga', 'ru', 'Asia/Jerusalem');
+  });
+
+  it('a feminine title in Spanish, a masculine one in Russian', async () => {
+    await notifyRehearsalCreated({ ...rehearsal, title: 'Escena del balcón' }, 'Hamlet', [{ user_id: carmen }], { now });
+    await notifyRehearsalCreated({ ...rehearsal, title: 'Прогон' }, 'Гамлет', [{ user_id: olga }], { now });
+
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo «Escena del balcón» programado para mañana a las 21:00');
+    expect(inboxOf(olga)[0].body).toBe('Гамлет: Репетиция «Прогон» назначена завтра в 22:00');
+  });
+
+  it('added to one with a neuter title in Russian', async () => {
+    await notifyAddedToRehearsal({ ...rehearsal, title: 'Чтение', location: 'Зал 2' }, 'Гамлет', [{ user_id: olga }], { now });
+
+    expect(inboxOf(olga)[0].body).toBe('Гамлет: Репетиция «Чтение» назначена завтра в 22:00, место: Зал 2');
+  });
+
+  it('with no title, the word "rehearsal" alone', async () => {
+    await notifyRehearsalCreated({ ...rehearsal, title: '' }, 'Hamlet', [{ user_id: carmen }, { user_id: olga }], { now });
+
+    expect(inboxOf(carmen)[0].body).toBe('Hamlet: Ensayo programado para mañana a las 21:00');
+    expect(inboxOf(olga)[0].body).toBe('Hamlet: Репетиция назначена завтра в 22:00');
   });
 });
 

@@ -5,13 +5,21 @@
 
 // A new or changed rehearsal and a response say when it is, as the reminders
 // do: `when` is the rehearsal's start in the reader's zone (reminderText.js).
+//
+// The title is whatever the director typed, of any gender, so no participle
+// agrees with it: in Russian and Spanish it agrees with the word "rehearsal",
+// which the title follows in quotes — "Репетиция «Прогон» назначена",
+// "Ensayo «Escena del balcón» programado" (T-248).
+const ruRehearsal = (title) => (title ? `Репетиция «${title}»` : 'Репетиция');
+const esRehearsal = (title) => (title ? `Ensayo «${title}»` : 'Ensayo');
+
 const translations = {
   ru: {
     // Put on a rehearsal that already existed, and taken off one (T-233).
     addedToRehearsal: {
       title: 'Вас добавили в репетицию',
       body: ({ projectName, rehearsalTitle, when, location }) =>
-        `${projectName}: ${rehearsalTitle || 'Репетиция'} назначена ${when}${location ? `, место: ${location}` : ''}`,
+        `${projectName}: ${ruRehearsal(rehearsalTitle)} назначена ${when}${location ? `, место: ${location}` : ''}`,
     },
     removedFromRehearsal: {
       title: 'Вас убрали из репетиции',
@@ -21,7 +29,7 @@ const translations = {
     newRehearsal: {
       title: 'Новая репетиция',
       body: ({ projectName, rehearsalTitle, when }) =>
-        `${projectName}: ${rehearsalTitle || 'Репетиция'} назначена ${when}`,
+        `${projectName}: ${ruRehearsal(rehearsalTitle)} назначена ${when}`,
     },
     rehearsalUpdated: {
       title: 'Изменена репетиция',
@@ -185,7 +193,8 @@ const translations = {
     addedToRehearsal: {
       title: 'Te han añadido a un ensayo',
       body: ({ projectName, rehearsalTitle, when, location }) =>
-        `${projectName}: ${rehearsalTitle || 'Ensayo'} programado ${when}${location ? ` en ${location}` : ''}`,
+        // "programado para": set for that day, not set on it (T-248).
+        `${projectName}: ${esRehearsal(rehearsalTitle)} programado para ${when}${location ? ` en ${location}` : ''}`,
     },
     removedFromRehearsal: {
       title: 'Te han quitado de un ensayo',
@@ -195,7 +204,7 @@ const translations = {
     newRehearsal: {
       title: 'Nuevo ensayo',
       body: ({ projectName, rehearsalTitle, when }) =>
-        `${projectName}: ${rehearsalTitle || 'Ensayo'} programado ${when}`,
+        `${projectName}: ${esRehearsal(rehearsalTitle)} programado para ${when}`,
     },
     rehearsalUpdated: {
       title: 'Ensayo actualizado',
@@ -272,7 +281,8 @@ const translations = {
     addedToRehearsal: {
       title: 'Du wurdest zu einer Probe hinzugefügt',
       body: ({ projectName, rehearsalTitle, when, location }) =>
-        `${projectName}: ${rehearsalTitle || 'Probe'} angesetzt ${when}${location ? `, Ort: ${location}` : ''}`,
+        // The participle goes last (T-248).
+        `${projectName}: ${rehearsalTitle || 'Probe'} ${when} angesetzt${location ? `, Ort: ${location}` : ''}`,
     },
     removedFromRehearsal: {
       title: 'Du wurdest von einer Probe genommen',
@@ -282,7 +292,7 @@ const translations = {
     newRehearsal: {
       title: 'Neue Probe',
       body: ({ projectName, rehearsalTitle, when }) =>
-        `${projectName}: ${rehearsalTitle || 'Probe'} angesetzt ${when}`,
+        `${projectName}: ${rehearsalTitle || 'Probe'} ${when} angesetzt`,
     },
     rehearsalUpdated: {
       title: 'Probe geändert',
