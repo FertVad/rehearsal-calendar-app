@@ -7,10 +7,12 @@ appId: ${APP_ID}
 # the calendar. Its label is in the language the screen speaks, so it is
 # waited on by its id.
 #
-# iOS's "Save Password?" sheet, which used to follow every sign-in, is off on
-# the e2e simulator (noPasswordOffer in e2e/run.mjs): its window going away
-# under a read of the screen ended Maestro's driver and every flow after it
-# (T-246). Flow 01 sees that it stays away.
+# iOS's "Save Password?" sheet, which used to follow every sign-in and hide the
+# app until "Not Now" was tapped, is off on the e2e simulator (noPasswordOffer
+# in e2e/run.mjs), so nothing here waits for it; flow 01 sees that it stays
+# away. Maestro's driver can still end on a scene of InputUI going away - the
+# keyboard's, after the typing above - which is Maestro's race and not the
+# sheet's (T-246; see noPasswordOffer).
 - runFlow:
     file: tap-and-see.yaml
     env:

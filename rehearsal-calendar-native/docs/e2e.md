@@ -217,6 +217,24 @@ that form. A flow that needs the 24-hour clock launches with `arguments: {
 AppleICUForce24HourTime: "<true/>" }` — the key Settings writes, read among the
 user defaults as a property list: `"YES"` is a string and is ignored (flow 53).
 
+AutoFill Passwords is off (`noPasswordOffer` in `run.mjs`): iOS offers no
+"Save Password?" sheet after a sign-in, and no flow waits for one.
+
+## A lost driver
+
+Maestro's iOS driver (2.11.0) is one long XCTest test. When its status-bar
+query meets a scene of InputUI, the keyboard's process, just as SpringBoard
+takes it down, XCTest fails with `kAXErrorInvalidUIElement` and the test ends,
+and with it the driver: every flow after that fails with
+`DeviceUnreachableException` (or "Unknown error", its first command failing
+with "Device became unreachable"), none of them having run. It was the
+password sheet going at flow 66 on 3b38601, and the keyboard going 4.5 s after
+it hid, with the sheet off, at flow 54 on d74e9d2 (T-246,
+`audit/evidence/T-246/`). It is a race inside Maestro's driver and no flow can
+take it out - not with waits and not with repeats. The supervisor runs every
+flow that failed after the first lost driver once more, on its own; those are
+not unstable flows. Turning the sheet off left it one cause fewer, not none.
+
 ## A lost tap
 
 The simulator loses about one tap in 250, and Maestro does not notice. For
@@ -248,8 +266,8 @@ It is below the app, and cannot be made to happen on demand. The rule:
   (the wait the flow had anyway). It taps and waits; if `SEE` is not there it
   taps once more - never more - and waits again, and then `SEE` must come.
   No pause, no longer wait. A tap whose result is something leaving the
-  screen gives `GONE` (the text that goes) instead of `SEE`: "Not Now" of a
-  system sheet (T-213); or `GONE_ID` (its id), for
+  screen gives `GONE` (the text that goes) instead of `SEE`: "Cancel" of an
+  invitation, `GONE: "Project Invitation"` (flow 43); or `GONE_ID` (its id), for
   a control whose label is in the screen's language: "Sign In"
   (`login-submit`) at every sign-in (T-225).
 - Only for a tap that may be taken twice: the second comes when the first left
@@ -524,12 +542,9 @@ whether it has gone, which waited seven seconds every time.
   through `tap-and-see.yaml` with `GONE_ID: login-submit`: one lost tap on it
   left flow 59 on a filled-in form (T-225). iOS's "Save Password?" sheet
   after a sign-in is off on the e2e simulator: the runner turns AutoFill
-  Passwords off at boot (`noPasswordOffer` in `e2e/run.mjs`). The sheet is
-  drawn by the keyboard's process, and once its window went away under
-  Maestro's read of the screen: XCTest failed the driver's one test with
-  kAXErrorInvalidUIElement, the driver ended, and the 21 flows after it failed
-  with `DeviceUnreachableException` (T-246). Flow 01 sees that it stays away. A
-  flow that acts before
+  Passwords off at boot (`noPasswordOffer` in `e2e/run.mjs`), so no flow waits
+  for it or taps "Not Now" (T-213 did, T-246 took it out). Flow 01 sees that it
+  stays away. A flow that acts before
   signing in launches the app itself and then runs `sign-in-form.yaml`.
 - Maestro's `launchApp` grants the app every permission unless it is given
   `permissions:`, so the sign-in subflow's launch leaves calendar access

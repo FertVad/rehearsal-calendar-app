@@ -1,0 +1,94 @@
+T-246 - the driver lost again, with the password sheet off. The cause named in
+d74e9d2 (the "Save Password?" sheet) was wrong: the sheet was one occasion of a
+race inside Maestro's driver, not the cause.
+
+1. The run: T-246's checks on d74e9d2, 11.11.2026 (88 flows, AutoFill Passwords
+   already off). Flow 01 passed: no sheet after a sign-in. The driver was lost
+   at 13:55:51 on flow 54 ("The wheel steps by five minutes and keeps an old
+   10:07"). Logs: rehearsal-calendar-native/e2e/out/artifacts/2026-11-11_124504/
+   The wheel steps by five minutes and keeps an old 10:07/logs/.
+
+2. maestro.log - the sign-in done, the calendar there, and the flow in one of
+   the now dead waits for "Not Now" (a sheet that no longer comes):
+
+     13:55:49.110 Run ../subflows/sign-in.yaml COMPLETED
+     13:55:49.386 Assert that id: calendar-filter is visible COMPLETED
+     13:55:49.386 Assert that (Optional) "Not Now" is visible RUNNING
+     (nothing after)
+
+3. device-xctest.log (its clock is the simulator's, Pacific/Honolulu: 01:55 is
+   13:55 here), line 151693..151703 - the same path as on flow 66:
+
+     01:55:51.204553 [ViewHierarchyHandler] Fetch status bar hierarchy - start
+       t = 4156.91s Get all elements bound by index for: Descendants matching type StatusBar
+     <unknown>:0: error: -[maestro_driver_iosUITests testHttpServer] : Failed to
+       resolve query: Failed to resolve remote element AX element pid: 21076, ...
+       (Underlying Error: Error kAXErrorInvalidUIElement getting snapshot for
+       element <AXUIElementRef ...> {pid=21076} ...)
+       t = 4157.05s Tear Down
+     Test Case '-[maestro_driver_iosUITests testHttpServer]' failed (4157.054 seconds).
+
+4. pid 21076 is InputUI (device-simulator.log: osservice<com.apple.InputUI>:21076).
+   There was no sheet; the keyboard of the sign-in hid at
+
+     33012 13:55:46.775972 SpringBoard: (TextInputUI) KeyboardTrackingCoordinator
+           Posted notification didHide
+
+   and 4.5 s later, inside the driver's status-bar query (51.2046 .. 51.331),
+   SpringBoard took InputUI's scene down:
+
+     49729 13:55:51.233760 SpringBoard: [SystemUIScene-[com.apple.InputUI]] scene content state changed: notReady
+     49737 13:55:51.234301 SpringBoard: [SystemUIScene-[com.apple.InputUI]] Removing parent scene.
+     49759 13:55:51.235314 SpringBoard: [osservice<com.apple.InputUI>:21076] Setting process visibility to: Background
+
+5. What it is. Maestro's iOS driver is one XCTest test. Its view-hierarchy
+   request reads the status bar; when that read meets a remote element of an
+   InputUI scene in the very milliseconds SpringBoard removes the scene, XCTest
+   fails the query with kAXErrorInvalidUIElement, which fails the test and ends
+   the driver; every later flow is DeviceUnreachableException. On flow 66
+   (3b38601) the scene was the password sheet's; on flow 54 (d74e9d2) it was
+   the keyboard's, whose scene goes some seconds after it hides, after every
+   sign-in. The race is in Maestro's driver (2.11.0; nothing on it in its
+   changelog up to 2.12.1). No flow can take it out - not with waits, not with
+   repeats - and none is changed for it. The supervisor survives it: every flow
+   failed after the first lost driver is run once more on its own (79f80b8).
+
+6. What d74e9d2 still gives, and what this commit adds:
+   - AutoFill Passwords stays off (noPasswordOffer in e2e/run.mjs): no sheet,
+     one tap fewer at every sign-in, one occasion of the race fewer. Not a fix
+     for the lost driver; the texts that said so (run.mjs, sign-in-submit.yaml,
+     01-login.yaml, docs/e2e.md, driver-lost-under-password-sheet.txt) now say
+     what is above. docs/e2e.md has "A lost driver".
+   - The waits for "Not Now" left in 25 flows (an optional 5-10 s wait each,
+     then an optional tap or tap-and-see) are taken out: with no sheet each
+     waited its whole timeout for nothing. In 11 and 49 tap-and-see's SEE keeps
+     only its other alternative ("New Action", "Join Rehearsly", "Sign in to
+     your account"), and 49's wait for "Join Rehearsly" after a SEE of it went
+     too. Flow 01 keeps its check that the sheet does not come. Only waits are
+     removed; none is added, lengthened or repeated.
+   - Green after the removal, 11.11.2026 (one flow file set per run):
+
+       npm run e2e -- e2e/flows/11-password-reset.yaml e2e/flows/49-sign-in-and-register-forms.yaml
+       [Passed] Password reset by emailed code (1m 54s)
+       [Passed] Sign-in and registration forms (59s)
+       2/2 Flows Passed in 2m 54s
+
+       npm run e2e -- e2e/flows/01-login.yaml e2e/flows/64-main-button-fill.yaml e2e/flows/82-sign-in-after-network-change.yaml
+       [Passed] Sign in (1m 4s)
+       [Passed] Main buttons are filled with #9333EA (1m 5s)
+       [Passed] A sign-in on a connection the network left behind goes through (41s)
+       3/3 Flows Passed in 2m 50s
+
+       npm run e2e -- e2e/flows/43-invite-cold-start-close.yaml e2e/flows/54-minute-step.yaml e2e/flows/66-screen-headers.yaml
+       [Passed] Invite link at a cold start, turned down (2m 45s)
+       [Passed] The wheel steps by five minutes and keeps an old 10:07 (1m 15s)
+       [Passed] Screen headers, one style (54s)
+       3/3 Flows Passed in 4m 55s
+
+       taps taken again (tap-and-see.yaml): 0 in each.
+
+     Flow 66 guards one style for the screens' headers; it passed: that bug
+     has not come back.
+   - Flow 54's own loss came during one of those dead waits, polling the screen
+     for "Not Now"; that does not make them the cause (flow 66's loss came after
+     a real tap on the sheet), and their removal is not claimed to end it.

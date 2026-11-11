@@ -20,13 +20,6 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
 # The simulator lost this tap once and the flow scrolled the calendar for the
 # sync row (T-221), so it is taken once more if the profile did not open.
 - runFlow:

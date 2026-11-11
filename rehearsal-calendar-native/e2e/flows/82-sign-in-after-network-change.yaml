@@ -38,25 +38,13 @@ tags:
 - tapOn:
     id: login-submit
 # Ten seconds of silence on the dead connection, then the sign-in on a new
-# one: the form goes, for the calendar or for iOS's offer to keep the
-# password over it. Before the fix the form stayed, saying "no connection".
+# one: the form goes for the calendar. Before the fix the form stayed, saying
+# "no connection".
 - extendedWaitUntil:
     notVisible:
       id: login-submit
     timeout: 40000
 - assertNotVisible: "No connection to the server.*"
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 10000
-    optional: true
-- runFlow:
-    when:
-      visible: "Not Now"
-    file: ../subflows/tap-and-see.yaml
-    env:
-      TAP: "Not Now"
-      GONE: "Not Now"
-      WAIT_MS: 5000
 - extendedWaitUntil:
     visible:
       id: calendar-filter

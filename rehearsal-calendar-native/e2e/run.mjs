@@ -348,13 +348,20 @@ function quietKeyboard(udid) {
 
 /**
  * iOS offers to keep the password after every sign-in: a "Save Password?"
- * sheet over the whole screen, drawn by the keyboard's process (InputUI). Its
- * scene goes away while Maestro's driver reads the screen, and once the
- * driver's status-bar query met its window half gone: XCTest's
- * kAXErrorInvalidUIElement failed the driver's one test, the driver ended, and
- * every flow after it failed with DeviceUnreachableException — 21 of them, from
- * flow 66 on (T-246). With AutoFill Passwords off (Settings → Passwords) iOS
- * offers nothing, and there is no sheet to go. Kept across reboots.
+ * sheet over the whole screen, which hid the app from Maestro until a flow
+ * tapped "Not Now". With AutoFill Passwords off (Settings → Passwords) iOS
+ * offers nothing: one sheet and one tap fewer at every sign-in, and no waits
+ * for it in the flows. Kept across reboots.
+ *
+ * It does not keep Maestro's driver alive. The driver (Maestro 2.11.0) is one
+ * long XCTest test; its status-bar query can meet a scene of InputUI, the
+ * keyboard's process, as SpringBoard takes it down — the sheet's, or the
+ * keyboard's own seconds after it hid — and XCTest's kAXErrorInvalidUIElement
+ * ends the test, the driver with it, and every flow after it fails with
+ * DeviceUnreachableException. It ended under the sheet at flow 66 (3b38601) and
+ * under the keyboard at flow 54 with the sheet off (d74e9d2) (T-246,
+ * audit/evidence/T-246). That race is Maestro's and stays; the supervisor runs
+ * the flows lost after it once more.
  */
 function noPasswordOffer(udid) {
   simctl('spawn', udid, 'defaults', 'write', 'com.apple.WebUI', 'AutoFillPasswords', '-bool', 'false');

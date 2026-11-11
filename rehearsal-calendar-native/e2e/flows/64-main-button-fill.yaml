@@ -79,18 +79,6 @@ tags:
 - tapOn:
     id: login-submit
 - extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 10000
-    optional: true
-- runFlow:
-    when:
-      visible: "Not Now"
-    file: ../subflows/tap-and-see.yaml
-    env:
-      TAP: "Not Now"
-      GONE: "Not Now"
-      WAIT_MS: 5000
-- extendedWaitUntil:
     visible:
       id: calendar-filter
     timeout: 30000

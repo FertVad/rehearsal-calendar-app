@@ -19,19 +19,11 @@ tags:
     file: ../subflows/sign-in.yaml
     env:
       EMAIL: ${TRIGORIN_EMAIL}
-# The calendar first. iOS's "Save Password?" sheet can come later than the
-# sign-in waits for it, over the tab bar; it is let go here too.
+# The calendar first.
 - extendedWaitUntil:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
 # A tap the simulator loses is taken once more (T-207).
 - runFlow:
     file: ../subflows/tap-and-see.yaml

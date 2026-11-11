@@ -32,13 +32,6 @@ tags:
     visible:
       id: calendar-filter
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Not Now"
-    timeout: 5000
-    optional: true
-- tapOn:
-    text: "Not Now"
-    optional: true
 
 # Spanish. The words drawn whole first, what was cut before the fix: the "…"
 # iOS draws for what does not fit, looked for on the shot between the status
