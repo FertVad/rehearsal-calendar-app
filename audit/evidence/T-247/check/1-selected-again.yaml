@@ -1,0 +1,42 @@
+# T-247 check: tap-and-see.yaml with SELECTED and RIGHT_OF, on a tap whose
+# first press leaves no result, made on purpose. Malvolio's "Letter scene" is
+# unseen; asked to see it unseen after a tap, the first tap marks it seen -
+# what a lost tap looks like to the flow - so the subflow says so to the run
+# and taps once more, and the second takes the mark back: the flow passes and
+# the run prints one tap taken again. Then a plain one, seen at the first tap:
+# no second.
+appId: ${APP_ID}
+name: T-247 check 1 - a toggle tapped again through tap-and-see
+---
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/sign-in.yaml
+    env:
+      EMAIL: ${MALVOLIO_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Letter scene.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      rightOf: ".*Letter scene.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- assertVisible:
+    id: seen-toggle
+    rightOf: ".*Letter scene.*"
+    selected: false
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP_ID: seen-toggle
+      RIGHT_OF: ".*Letter scene.*"
+      SELECTED: "false"
+      WAIT_MS: "5000"
+- runFlow:
+    file: ../../../../rehearsal-calendar-native/e2e/subflows/tap-and-see.yaml
+    env:
+      TAP_ID: seen-toggle
+      RIGHT_OF: ".*Letter scene.*"
+      SELECTED: "true"
+      WAIT_MS: "5000"

@@ -1,0 +1,18 @@
+T-247: flow 73 with its eye taps through tap-and-see.yaml (SELECTED, RIGHT_OF)
+
+  cd rehearsal-calendar-native
+  npm run e2e -- e2e/flows/73-seen-told-once.yaml
+
+[Passed] Seen told once (3m 43s)
+
+1/1 Flow Passed in 3m 43s
+
+[e2e] taps taken again (tap-and-see.yaml): 0
+
+Each of the five taps on the eye, through the subflow, took 2.4-2.9 s, tap to
+"Run ../subflows/tap-and-see.yaml COMPLETED" (Maestro 2026-11-11_201253), as
+the bare tap and its wait did before. The rest of the 3m 43s is the four
+sign-ins (the first one's email typed twice, inside its retry).
+
+What the flow guards (T-034) holds: Olivia's inbox had one "responded" for the
+three marks at 12:00, and one more after the move, at 3:00 PM - no third.

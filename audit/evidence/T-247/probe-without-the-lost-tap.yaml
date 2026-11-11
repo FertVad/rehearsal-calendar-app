@@ -1,0 +1,91 @@
+# T-247 probe, not a flow: 73 "Seen told once" up to the step that failed on
+# d74e9d2, with the tap the simulator lost (14:34:20.131, device-simulator.log)
+# left out. If the failure was that tap and nothing else, this fails the same
+# way, at the same assertion. Run from e2e/flows (its subflows are relative):
+# copied there as 73-probe-no-tap.yaml, `npm run e2e -- e2e/flows/73-probe-no-tap.yaml`,
+# then removed. Output: probe-without-the-lost-tap.txt.
+appId: ${APP_ID}
+name: Seen told once, the lost tap left out
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MALVOLIO_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Letter scene.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      rightOf: ".*Letter scene.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    id: seen-toggle
+    rightOf: ".*Letter scene.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      rightOf: ".*Letter scene.*"
+      selected: true
+      enabled: true
+    timeout: 10000
+- tapOn:
+    id: seen-toggle
+    rightOf: ".*Letter scene.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      rightOf: ".*Letter scene.*"
+      selected: false
+      enabled: true
+    timeout: 10000
+- tapOn:
+    id: seen-toggle
+    rightOf: ".*Letter scene.*"
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      rightOf: ".*Letter scene.*"
+      selected: true
+      enabled: true
+    timeout: 10000
+# Olivia's inbox, between the two, is left out too: it is not what failed.
+- runScript:
+    file: ../scripts/move-rehearsal.js
+    env:
+      API_URL: ${API_URL}
+      EMAIL: ${OLIVIA_EMAIL}
+      PASSWORD: ${PASSWORD}
+      REHEARSAL: ${LETTER_REHEARSAL}
+      HOURS: "3"
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${MALVOLIO_EMAIL}
+- extendedWaitUntil:
+    visible: ".*Letter scene.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: seen-toggle
+      rightOf: ".*Letter scene.*"
+    direction: DOWN
+    centerElement: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      rightOf: ".*Letter scene.*"
+      selected: true
+      enabled: true
+    timeout: 10000
+# The tap lost on d74e9d2, not taken.
+- extendedWaitUntil:
+    visible:
+      id: seen-toggle
+      rightOf: ".*Letter scene.*"
+      selected: false
+      enabled: true
+    timeout: 10000

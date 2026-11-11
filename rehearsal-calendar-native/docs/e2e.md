@@ -256,7 +256,8 @@ editor, whose day then closed unasked with nothing changed (T-218), flow 49 at
 the registration form's first "Show password", so the second went to the same
 eye and the repeat stayed hidden (T-223), flow 59 at "Sign In", the form left
 filled in and the calendar never asked for (T-225), flow 38 at the profile tab
-after a restart (T-234).
+after a restart (T-234), flow 73 at a rehearsal's eye after the move, the mark
+never taken back and no request sent (T-247, `audit/evidence/T-247`).
 
 It is below the app, and cannot be made to happen on demand. The rule:
 
@@ -269,7 +270,10 @@ It is below the app, and cannot be made to happen on demand. The rule:
   screen gives `GONE` (the text that goes) instead of `SEE`: "Cancel" of an
   invitation, `GONE: "Project Invitation"` (flow 43); or `GONE_ID` (its id), for
   a control whose label is in the screen's language: "Sign In"
-  (`login-submit`) at every sign-in (T-225).
+  (`login-submit`) at every sign-in (T-225). A toggle, whose label is the same
+  either way, gives `SELECTED` (`"true"` or `"false"`): the toggle tapped is
+  then so and enabled again; with `RIGHT_OF`, the text of its row, when every
+  row has one - a rehearsal's eye, `seen-toggle` (flow 73, T-247).
 - Only for a tap that may be taken twice: the second comes when the first left
   no trace on screen, but a first that landed late would be repeated.
 - Every second tap is printed at the end of the run - `[e2e] taps taken again

@@ -7,7 +7,11 @@
 # announced: two at 12:00 after the first look, three in all.
 #
 # Each tap waits for the toggle to be enabled again: it is disabled while its
-# answer is on the way, so the next tap is a new mark, not a lost one.
+# answer is on the way, so the next tap is a new mark, not a lost one. And
+# each goes through tap-and-see.yaml: the simulator lost the one after the
+# move on d74e9d2, the app got a touch-down and a cancel, and the flow waited
+# for a mark taken back that was never asked for (T-247, docs/e2e.md "A lost
+# tap").
 appId: ${APP_ID}
 name: Seen told once
 tags:
@@ -30,36 +34,27 @@ tags:
     centerElement: true
 - waitForAnimationToEnd
 # Seen, unseen, seen.
-- tapOn:
-    id: seen-toggle
-    rightOf: ".*Letter scene.*"
-- extendedWaitUntil:
-    visible:
-      id: seen-toggle
-      rightOf: ".*Letter scene.*"
-      selected: true
-      enabled: true
-    timeout: 10000
-- tapOn:
-    id: seen-toggle
-    rightOf: ".*Letter scene.*"
-- extendedWaitUntil:
-    visible:
-      id: seen-toggle
-      rightOf: ".*Letter scene.*"
-      selected: false
-      enabled: true
-    timeout: 10000
-- tapOn:
-    id: seen-toggle
-    rightOf: ".*Letter scene.*"
-- extendedWaitUntil:
-    visible:
-      id: seen-toggle
-      rightOf: ".*Letter scene.*"
-      selected: true
-      enabled: true
-    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: seen-toggle
+      RIGHT_OF: ".*Letter scene.*"
+      SELECTED: "true"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: seen-toggle
+      RIGHT_OF: ".*Letter scene.*"
+      SELECTED: "false"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: seen-toggle
+      RIGHT_OF: ".*Letter scene.*"
+      SELECTED: "true"
+      WAIT_MS: "10000"
 # Olivia: one notice, at the time he saw.
 - runFlow:
     file: ../subflows/sign-in.yaml
@@ -109,26 +104,20 @@ tags:
       selected: true
       enabled: true
     timeout: 10000
-- tapOn:
-    id: seen-toggle
-    rightOf: ".*Letter scene.*"
-- extendedWaitUntil:
-    visible:
-      id: seen-toggle
-      rightOf: ".*Letter scene.*"
-      selected: false
-      enabled: true
-    timeout: 10000
-- tapOn:
-    id: seen-toggle
-    rightOf: ".*Letter scene.*"
-- extendedWaitUntil:
-    visible:
-      id: seen-toggle
-      rightOf: ".*Letter scene.*"
-      selected: true
-      enabled: true
-    timeout: 10000
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: seen-toggle
+      RIGHT_OF: ".*Letter scene.*"
+      SELECTED: "false"
+      WAIT_MS: "10000"
+- runFlow:
+    file: ../subflows/tap-and-see.yaml
+    env:
+      TAP_ID: seen-toggle
+      RIGHT_OF: ".*Letter scene.*"
+      SELECTED: "true"
+      WAIT_MS: "10000"
 # Olivia: the one from before, and one more, at the new time.
 - runFlow:
     file: ../subflows/sign-in.yaml

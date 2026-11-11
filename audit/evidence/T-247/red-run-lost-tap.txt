@@ -1,0 +1,57 @@
+T-247: what failed flow 73 "Seen told once" on d74e9d2 (11.11.2026, T-246's checks)
+Logs: e2e/out/failed/T-246-2026-11-11T12-47-29-913Z, Maestro artifacts 2026-11-11_140329.
+
+1. Maestro (Seen told once/logs/maestro.log): after the move and the second sign-in,
+   the toggle is seen and enabled, and the one tap meant to unmark it:
+
+14:34:16.459 Assert that id: seen-toggle, enabled, Right of ".*Letter scene.*", selected is visible RUNNING
+14:34:17.904 ... COMPLETED
+14:34:17.973 Tap on id: seen-toggle, Right of ".*Letter scene.*" RUNNING
+14:34:19.293 Tapping on element: ... resource-id=seen-toggle, bounds=[325,397][369,441], enabled=true, selected=true
+14:34:19.551 Try tapping at (347, 419) using hierarchy based logic for wait
+14:34:20.846 Something have changed in the UI judging by view hierarchy. Proceed.
+14:34:20.879 Tap on id: seen-toggle ... COMPLETED
+14:34:20.880 Assert that id: seen-toggle, enabled, Right of ".*Letter scene.*", not selected is visible RUNNING
+14:34:31.443 CommandFailed: Assertion is false: ... not selected is visible
+
+   The toggle was enabled and on screen, at the point tapped (347, 419 is inside
+   [325,397][369,441]). Maestro says "Something have changed" after every tap,
+   lost ones too (docs/e2e.md, "A lost tap").
+
+2. The device (Seen told once/logs/device-simulator.log), inside that tap, the
+   signature of T-207 - XCTest's digitizer registered twice, the lift dropped,
+   the touch cancelled while still down:
+
+14:34:20.107553 backboardd: Connection added: IOHIDEventSystemConnection ... process:testmanagerd
+14:34:20.126980 backboardd: digitizer attached (sender 105AC0E0001BC)
+14:34:20.127598 backboardd: we already have a service for senderID:105AC0E0001BC
+14:34:20.128526 backboardd: *** unknown digitizer <BKIOHIDService ...>
+14:34:20.128802 backboardd: init: <BKDirectTouchState: 0x10d3110a0 ...>      (a second touch state)
+14:34:20.128943 backboardd: touch down without previous range event: 2
+14:34:20.131449 backboardd: didn't see a previous touch down or range-in event for pathIndex:2; skipping event
+   ... 9 more "skipping event" to 14:34:20.232805
+14:34:20.337223 backboardd: Connection removed: ... process:testmanagerd
+14:34:20.343621 backboardd: digitizer detached (sender 105AC0E0001BC)
+14:34:20.343740 backboardd: cancel -- digitizer did disappear: <BKDirectTouchState: 0x10d3110a0; ... contacts: [pathIndex: 2; touchIdentifier: 307; touching; ...
+14:34:20.343848 backboardd: canceling paths contacts: [pathIndex: 2; touchIdentifier: 307; touching; ... sceneID:com.rehearsal.app-default
+
+   The touch reached the app as a touch-down and then a cancel, never a lift:
+   no press, so no onPress, so no request.
+
+3. touch-scan (node audit/evidence/T-207/touch-scan.mjs rehearsal-calendar-native/e2e/out/artifacts):
+
+2026-11-11_140329  Seen told once: digitizers 26, registered twice 1 (...), app scene changes 18, taps lost 1
+    lost 14:34:20.131 -> Something have changed in the UI judging by view hierarchy. Proceed.
+
+   One tap lost in the flow, and it is this one. The flow's other 25 taps,
+   the three earlier ones on the same toggle among them, were whole.
+
+4. The server (metro.log 1343-1348): three POST /native/rehearsals/39/respond,
+   all 200 - the three taps of the first session. None after the second sign-in.
+
+5. Without that tap the flow fails the same way at the same step
+   (probe-without-the-lost-tap.txt).
+
+So the app did not refuse the tap: it never got one. The seen-toggle taps go
+through e2e/subflows/tap-and-see.yaml (T-207's one mechanism, one repeat),
+which now also takes a result that is the tapped toggle's own state.

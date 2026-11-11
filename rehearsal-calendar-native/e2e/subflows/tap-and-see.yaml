@@ -9,10 +9,15 @@
 #        GONE    - a text (regex) the tap takes off it (T-213: "Not Now" of
 #                  iOS's "Save Password?" sheet, which hides the whole app), or
 #        GONE_ID - an id the tap takes off it (T-225: "login-submit", whose
-#                  label is in whichever language the sign-in screen speaks)
+#                  label is in whichever language the sign-in screen speaks), or
+#        SELECTED - "true" or "false": the toggle tapped (TAP_ID, RIGHT_OF)
+#                  turns so and is enabled again (T-247: a rehearsal's eye,
+#                  seen-toggle, whose label is the same either way)
+#        RIGHT_OF - a text (regex) the TAP_ID is right of: its row, when every
+#                  row has one (T-223); SELECTED needs it
 #        WAIT_MS - how long the flow already waited for it
 #
-# Tap, wait for SEE (or for GONE / GONE_ID to go); if it has not, say so to the
+# Tap, wait for SEE (or for GONE / GONE_ID to go, or for SELECTED); if it has not, say so to the
 # run (e2e/scripts/tap-again.js, printed after the flows) and tap once more -
 # never more - and wait again, and then it must. Only for a tap that can be
 # taken twice without harm: the second comes only when the first left no trace
@@ -21,10 +26,17 @@ appId: ${APP_ID}
 ---
 - runFlow:
     when:
-      true: ${typeof TAP_ID !== 'undefined'}
+      true: ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'}
     commands:
       - tapOn:
           id: ${TAP_ID}
+- runFlow:
+    when:
+      true: ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'}
+    commands:
+      - tapOn:
+          id: ${TAP_ID}
+          rightOf: ${RIGHT_OF}
 - runFlow:
     when:
       true: ${typeof TAP_ID === 'undefined'}
@@ -76,6 +88,51 @@ appId: ${APP_ID}
               id: ${GONE_ID}
           commands:
             - evalScript: ${output.tapSeen = true}
+# A toggle: both states are on screen under one label, so it is asked for
+# itself, in the state the tap gives it. Enabled too: it is disabled while its
+# answer is on the way, and a tap then would be lost by the app.
+- runFlow:
+    when:
+      true: ${typeof SELECTED !== 'undefined' && SELECTED === 'true'}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: ${TAP_ID}
+            rightOf: ${RIGHT_OF}
+            selected: true
+            enabled: true
+          timeout: ${WAIT_MS}
+          optional: true
+      - runFlow:
+          when:
+            visible:
+              id: ${TAP_ID}
+              rightOf: ${RIGHT_OF}
+              selected: true
+              enabled: true
+          commands:
+            - evalScript: ${output.tapSeen = true}
+- runFlow:
+    when:
+      true: ${typeof SELECTED !== 'undefined' && SELECTED === 'false'}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: ${TAP_ID}
+            rightOf: ${RIGHT_OF}
+            selected: false
+            enabled: true
+          timeout: ${WAIT_MS}
+          optional: true
+      - runFlow:
+          when:
+            visible:
+              id: ${TAP_ID}
+              rightOf: ${RIGHT_OF}
+              selected: false
+              enabled: true
+          commands:
+            - evalScript: ${output.tapSeen = true}
 - runFlow:
     when:
       true: ${!output.tapSeen}
@@ -84,14 +141,21 @@ appId: ${APP_ID}
           file: ../scripts/tap-again.js
           env:
             MAIL_URL: ${MAIL_URL}
-            TAP: "${typeof TAP_ID !== 'undefined' ? 'id ' + TAP_ID : TAP}"
-            SEE: "${typeof SEE !== 'undefined' ? SEE : (typeof GONE !== 'undefined' ? GONE : 'id ' + GONE_ID) + ' gone'}"
+            TAP: "${typeof TAP_ID !== 'undefined' ? 'id ' + TAP_ID + (typeof RIGHT_OF !== 'undefined' ? ' right of ' + RIGHT_OF : '') : TAP}"
+            SEE: "${typeof SEE !== 'undefined' ? SEE : typeof SELECTED !== 'undefined' ? 'id ' + TAP_ID + ' selected ' + SELECTED : (typeof GONE !== 'undefined' ? GONE : 'id ' + GONE_ID) + ' gone'}"
       - runFlow:
           when:
-            true: ${typeof TAP_ID !== 'undefined'}
+            true: ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF === 'undefined'}
           commands:
             - tapOn:
                 id: ${TAP_ID}
+      - runFlow:
+          when:
+            true: ${typeof TAP_ID !== 'undefined' && typeof RIGHT_OF !== 'undefined'}
+          commands:
+            - tapOn:
+                id: ${TAP_ID}
+                rightOf: ${RIGHT_OF}
       - runFlow:
           when:
             true: ${typeof TAP_ID === 'undefined'}
@@ -120,4 +184,26 @@ appId: ${APP_ID}
       - extendedWaitUntil:
           notVisible:
             id: ${GONE_ID}
+          timeout: ${WAIT_MS}
+- runFlow:
+    when:
+      true: ${typeof SELECTED !== 'undefined' && SELECTED === 'true' && !output.tapSeen}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: ${TAP_ID}
+            rightOf: ${RIGHT_OF}
+            selected: true
+            enabled: true
+          timeout: ${WAIT_MS}
+- runFlow:
+    when:
+      true: ${typeof SELECTED !== 'undefined' && SELECTED === 'false' && !output.tapSeen}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: ${TAP_ID}
+            rightOf: ${RIGHT_OF}
+            selected: false
+            enabled: true
           timeout: ${WAIT_MS}
