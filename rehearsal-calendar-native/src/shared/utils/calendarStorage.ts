@@ -145,18 +145,6 @@ export async function getAllMappings(): Promise<Record<string, EventMapping>> {
 }
 
 /**
- * Clear all event mappings
- */
-export async function clearAllMappings(): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(KEYS.EXPORT_MAPPINGS);
-  } catch (error) {
-    logger.error('[CalendarStorage] Failed to clear mappings:', error);
-    throw error;
-  }
-}
-
-/**
  * ============================================================================
  * Leftover exported events (calendar eventId → rehearsalId)
  * ============================================================================

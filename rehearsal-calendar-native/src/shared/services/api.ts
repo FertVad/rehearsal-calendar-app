@@ -555,9 +555,6 @@ export const calendarSyncAPI = {
   // them are its own (ES02).
   deleteMappingByEvent: (eventType: 'rehearsal' | 'availability', internalEventId: string, deviceCalendarIds: string[], session?: SessionStamp) =>
     api.delete(`/native/calendar-sync/mappings/by-event/${eventType}/${internalEventId}`, { ...inSession(session), data: { deviceCalendarIds } }),
-
-  deleteMappings: (eventType: 'rehearsal' | 'availability', deviceCalendarIds: string[], session?: SessionStamp) =>
-    api.delete('/native/calendar-sync/mappings', { ...inSession(session), data: { eventType, deviceCalendarIds } }),
 };
 
 // Notifications API (the inbox — what was sent, and what is still unread)

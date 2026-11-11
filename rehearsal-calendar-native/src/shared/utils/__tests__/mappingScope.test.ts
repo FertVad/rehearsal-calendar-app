@@ -15,7 +15,6 @@ import {
   getAllMappings,
   getEventMapping,
   removeEventMapping,
-  clearAllMappings,
   saveEventMapping,
   resetConnectionCache,
 } from '../calendarMappings';
@@ -28,7 +27,6 @@ jest.mock('../../services/api', () => ({
     createOrUpdateConnection: jest.fn(),
     createOrUpdateMapping: jest.fn(),
     deleteMappingByEvent: jest.fn(),
-    deleteMappings: jest.fn(),
   },
 }));
 
@@ -50,7 +48,6 @@ beforeEach(async () => {
     row(7, 'phone-B', 'b-event-7', '2026-09-20T10:00:00.000Z'),
   ] } });
   (calendarSyncAPI.deleteMappingByEvent as jest.Mock).mockResolvedValue({ data: { success: true } });
-  (calendarSyncAPI.deleteMappings as jest.Mock).mockResolvedValue({ data: { success: true, deletedCount: 2 } });
 });
 
 describe('Reading the mappings', () => {
@@ -81,13 +78,6 @@ describe('Deleting the mappings', () => {
     await removeEventMapping('42');
 
     expect(calendarSyncAPI.deleteMappingByEvent).toHaveBeenCalledWith('rehearsal', '42', ['home', 'work'], expect.any(Number));
-  });
-
-  it('removing everything exported does so for this phone\'s calendars, in one request', async () => {
-    await clearAllMappings();
-
-    expect(calendarSyncAPI.deleteMappings).toHaveBeenCalledTimes(1);
-    expect(calendarSyncAPI.deleteMappings).toHaveBeenCalledWith('rehearsal', ['home', 'work'], expect.any(Number));
   });
 });
 

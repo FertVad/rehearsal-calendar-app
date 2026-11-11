@@ -344,33 +344,3 @@ export const intervalDates = (
   }
   return { first, last: last < first ? first : last };
 };
-
-/**
- * Check if a timestamp represents an all-day event based on time being 00:00
- *
- * @param isoTimestamp - ISO 8601 timestamp
- * @param timezone - User's IANA timezone
- * @returns True if the time is 00:00 in user's timezone
- */
-export const isStartOfDayInTimezone = (
-  isoTimestamp: string,
-  timezone: string
-): boolean => {
-  const timeStr = isoToTimeStringInTimezone(isoTimestamp, timezone);
-  return timeStr === '00:00';
-};
-
-/**
- * Check if a timestamp represents end of all-day event based on time being 23:59
- *
- * @param isoTimestamp - ISO 8601 timestamp
- * @param timezone - User's IANA timezone
- * @returns True if the time is 23:59 in user's timezone
- */
-export const isEndOfDayInTimezone = (
-  isoTimestamp: string,
-  timezone: string
-): boolean => {
-  const timeStr = isoToTimeStringInTimezone(isoTimestamp, timezone);
-  return timeStr === '23:59';
-};

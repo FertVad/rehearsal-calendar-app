@@ -44,7 +44,6 @@ jest.mock('../../services/api', () => ({
     createOrUpdateConnection: jest.fn((...args: unknown[]) => mockRequest('connections:create')(...args)),
     createOrUpdateMapping: jest.fn((...args: unknown[]) => mockRequest('mappings:create')(...args)),
     deleteMappingByEvent: jest.fn((...args: unknown[]) => mockRequest('mappings:delete')(...args)),
-    deleteMappings: jest.fn((...args: unknown[]) => mockRequest('mappings:delete-all')(...args)),
   },
 }));
 
@@ -66,7 +65,6 @@ jest.mock('../../utils/calendarStorage', () => ({
   getEventMapping: jest.fn(() => Promise.resolve(null)),
   removeEventMapping: jest.fn(() => Promise.resolve()),
   getAllMappings: jest.fn(() => Promise.resolve({})),
-  clearAllMappings: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('@react-native-async-storage/async-storage', () => ({

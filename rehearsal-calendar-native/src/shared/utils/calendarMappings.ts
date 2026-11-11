@@ -17,7 +17,6 @@ import {
   getEventMapping as getFromAsyncStorage,
   removeEventMapping as removeFromAsyncStorage,
   getAllMappings as getAllFromAsyncStorage,
-  clearAllMappings as clearAllFromAsyncStorage,
 } from './calendarStorage';
 
 import { logger } from './logger';
@@ -317,30 +316,5 @@ export async function getAllMappings(
     // Reachable on a fresh install or straight after a user switch, when the
     // cache is empty by design and one failed request is all it takes.
     throw new Error('Calendar mappings unavailable: server failed and nothing is cached');
-  }
-}
-
-/**
- * Clear all mappings (both DB and AsyncStorage)
- */
-export async function clearAllMappings(session: SessionStamp = currentSession()): Promise<void> {
-  try {
-    // Clear AsyncStorage
-    assertSession(session);
-    await clearAllFromAsyncStorage();
-
-    // Clear database — this device's mappings, in one request. It used to
-    // delete every mapping of the person, so "remove all exported" on one
-    // phone left the other's events in its calendar with nothing pointing at
-    // them (ES02).
-    try {
-      await calendarSyncAPI.deleteMappings('rehearsal', await listDeviceCalendarIds(), session);
-    } catch (error) {
-      if (error instanceof SessionEndedError) throw error;
-      logger.error('[CalendarMappings] Failed to clear DB mappings:', error);
-    }
-  } catch (error) {
-    logger.error('[CalendarMappings] Failed to clear mappings:', error);
-    throw error;
   }
 }

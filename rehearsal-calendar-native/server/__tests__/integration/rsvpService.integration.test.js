@@ -1,7 +1,7 @@
 /**
  * RSVP Service — the "seen" toggle.
  *
- * Goes through respondToRehearsal and getRehearsalResponses rather than
+ * Goes through markRehearsal and getRehearsalResponses rather than
  * driving SQL, because the bugs here were in the service: the stats it
  * returned counted the whole project instead of the people on the rehearsal,
  * so the number jumped on every tap and snapped back on the next refresh.
@@ -29,9 +29,12 @@ jest.unstable_mockModule('../../utils/logger.js', () => ({
   logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-const { respondToRehearsal, getRehearsalResponses, getUserResponse } = await import(
+const { markRehearsal, getRehearsalResponses, getUserResponse } = await import(
   '../../services/rehearsals/rsvpService.js'
 );
+
+// The rehearsal's counts after a mark, as the route sends them back.
+const respond = async (...args) => (await markRehearsal(...args)).stats;
 
 describe('Seen toggle', () => {
   let owner;
@@ -95,7 +98,7 @@ describe('Seen toggle', () => {
   });
 
   it('marks only the person who tapped', async () => {
-    await respondToRehearsal(rehearsalId, owner, 'yes', null, projectId);
+    await respond(rehearsalId, owner, 'yes');
 
     expect(await getUserResponse(rehearsalId, owner)).toMatchObject({ response: 'yes' });
     expect(await getUserResponse(rehearsalId, member)).toMatchObject({ response: 'no' });
@@ -103,13 +106,13 @@ describe('Seen toggle', () => {
 
   it('counts the people on the rehearsal, not the whole project', async () => {
     // Three active members in the project, two of them on this rehearsal
-    const stats = await respondToRehearsal(rehearsalId, owner, 'yes', null, projectId);
+    const stats = await respond(rehearsalId, owner, 'yes');
 
     expect(stats).toEqual({ confirmed: 1, invited: 2 });
   });
 
   it('agrees with what the participants screen reports', async () => {
-    const fromTap = await respondToRehearsal(rehearsalId, owner, 'yes', null, projectId);
+    const fromTap = await respond(rehearsalId, owner, 'yes');
     const fromScreen = await getRehearsalResponses(rehearsalId);
 
     expect(fromTap.confirmed).toBe(fromScreen.stats.confirmed);
@@ -117,8 +120,8 @@ describe('Seen toggle', () => {
   });
 
   it('takes the mark back without dropping the person from the rehearsal', async () => {
-    await respondToRehearsal(rehearsalId, owner, 'yes', null, projectId);
-    const stats = await respondToRehearsal(rehearsalId, owner, 'no', null, projectId);
+    await respond(rehearsalId, owner, 'yes');
+    const stats = await respond(rehearsalId, owner, 'no');
 
     expect(stats).toEqual({ confirmed: 0, invited: 2 });
     // Still invited — the row stays, it just says 'no'
@@ -127,7 +130,7 @@ describe('Seen toggle', () => {
 
   it('refuses anything that is not yes or no', async () => {
     await expect(
-      respondToRehearsal(rehearsalId, owner, 'maybe', null, projectId)
+      respond(rehearsalId, owner, 'maybe')
     ).rejects.toThrow(/yes.*no/i);
   });
 
@@ -142,7 +145,7 @@ describe('Seen toggle', () => {
     );
 
   it('refuses an answer from someone who is not on the rehearsal, and writes nothing', async () => {
-    await expect(respondToRehearsal(rehearsalId, outsider, 'yes', null, projectId))
+    await expect(respond(rehearsalId, outsider, 'yes'))
       .rejects.toMatchObject({ status: 403, code: 'NOT_ON_REHEARSAL' });
 
     expect(await getUserResponse(rehearsalId, outsider)).toBeNull();
@@ -156,8 +159,8 @@ describe('Seen toggle', () => {
        VALUES (?, ?, ?, 'busy', 'rehearsal', ?, 'Rehearsal')`,
       [member, '2026-09-14T10:00:00.000Z', '2026-09-14T13:00:00.000Z', String(rehearsalId)]
     );
-    await respondToRehearsal(rehearsalId, member, 'yes', null, projectId);
-    await respondToRehearsal(rehearsalId, member, 'no', null, projectId);
+    await respond(rehearsalId, member, 'yes');
+    await respond(rehearsalId, member, 'no');
 
     // 'no' means invited and not yet seen, so they are still on the call.
     expect(busySlotsFor(member)).toHaveLength(1);

@@ -1,0 +1,26 @@
+$ cd rehearsal-calendar-native && npx jest --selectProjects frontend src/__tests__/exportStar.test.ts
+  (base 5d48592 + only the new guard test)
+
+FAIL src/__tests__/exportStar.test.ts
+  ● every export * re-exports something
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 5
+
+    - Array []
+    + Array [
+    +   "shared/components/index.ts:5 — export * from './animations': nothing but a default export (or nothing), so nothing is re-exported",
+    +   "features/availability/components/editor/index.ts:4 — export * from './ModeSelector': nothing but a default export (or nothing), so nothing is re-exported",
+    +   "features/availability/components/editor/index.ts:5 — export * from './TimeSlotsEditor': nothing but a default export (or nothing), so nothing is re-exported",
+    + ]
+
+      57 | it('every export * re-exports something', () => {
+    > 58 |   expect(findings()).toEqual([]);
+         |                      ^
+      59 | }, 120000);
+
+(This run went over the whole frontend project; the only other failure was
+EditProfileScreen.test.tsx timing out at 10 s under the load of the full run
+in parallel — unrelated, it passes on its own; see the after-run.)

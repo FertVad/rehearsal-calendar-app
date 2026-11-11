@@ -13,16 +13,9 @@ import { claimSeenNotice } from './seenNotice.js';
  * knowing its id (review D02). Now an answer from anyone not on it is refused
  * and writes nothing (roster.js).
  *
- * @returns {Promise<{confirmed: number, invited: number}>} the rehearsal's counts
- */
-export async function respondToRehearsal(rehearsalId, userId, response, notes = null) {
-  return (await markRehearsal(rehearsalId, userId, response, notes)).stats;
-}
-
-/**
- * The same mark, and whether the admins are to be told of it: a "seen" they
- * have not been told of yet (seenNotice.js). Mark and claim are one
- * transaction, so a claim never outlives a mark that failed.
+ * Also says whether the admins are to be told of it: a "seen" they have not
+ * been told of yet (seenNotice.js). Mark and claim are one transaction, so a
+ * claim never outlives a mark that failed.
  *
  * @returns {Promise<{stats: {confirmed: number, invited: number}, announce: boolean}>}
  */

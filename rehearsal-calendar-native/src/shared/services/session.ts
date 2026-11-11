@@ -134,7 +134,14 @@ export function reportSessionExpired(): void {
   expiredListeners.forEach((listener) => listener());
 }
 
-/** Tests only: a fresh app. */
+/**
+ * Tests only: a fresh app. The session is module state, and each test of the
+ * session, the API and the contexts starts from none; the app itself never
+ * resets it (a sign-out is changeOwner). `@internal` tells knip --production
+ * that tests are its only users by design; plain knip still checks they are.
+ *
+ * @internal
+ */
 export function resetSessionForTests(): void {
   generation = 0;
   owner = null;

@@ -15,16 +15,12 @@
  */
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
-import { appTimezone, formatDateToString, onAppTimezone, todayIn, wallClockIn } from '../utils/time';
+import { appTimezone, formatDateToString, onAppTimezone, wallClockIn } from '../utils/time';
 
 /** The app's zone: the profile's, the device's only while the profile has none. */
 export function useTimezone(): string {
   return useSyncExternalStore(onAppTimezone, appTimezone);
 }
-
-/** The date in `timezone` now, 'YYYY-MM-DD'. */
-export const localDate = (now: Date = new Date(), timezone?: string): string =>
-  timezone ? todayIn(timezone, now) : formatDateToString(now);
 
 const POLL_MS = 30 * 1000;
 
