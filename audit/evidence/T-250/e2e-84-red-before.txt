@@ -1,28 +1,27 @@
-T-250 — flow 84 on the old words, red.
+T-250 — flow 84 on the old words, red for each of them.
 
-Fix commit 4c380ba. The translations it changed put back as they were
-(git restore --source=8110068 -- src/i18n/translations), flow 84 as in 4c380ba:
+The first red run (before review) stopped at "Share Link", before the sync's
+alerts and lines: it proved one word. Flow 84 now (595566e) waits for each
+alert whatever it says, checks the T-250 words where they show, and fails at
+the end naming every one that was wrong.
+
+All translations put back as they were before T-250
+(git restore --source=8110068 -- src/i18n/translations), flow 84 as in 595566e:
 
 $ npm run e2e -- e2e/flows/84-sync-screen-in-four-languages.yaml
 
-[e2e] native inputs 1479426d10f0 (app.json, locales, assets, packages)
-[e2e] the iOS project is the one app.json, the locales and the packages make now: kept
-[e2e] the Debug app was built from these inputs: kept
-[e2e] starting a disposable PostgreSQL
-[e2e] provisioning the canonical schema
-[e2e] starting the local server
-[e2e] seeding
-[e2e] starting Metro, pointed at the local server
-[e2e] checking the bundle talks to the local server
-[e2e] booting Rehearsly E2E (0E96462E-BD5B-4C19-9847-8E63D550B36E)
 [e2e] installing the Debug app and running the flows
-
-[Failed] The sync screen's bar and last sync in four languages (1m 45s) (Assertion is false: ".*Share Link.*" is visible)
-
+[Failed] The sync screen's bar and last sync in four languages (3m 45s) (Assertion is false: id: words-not-as-a-native-speaker-writes-them is visible)
 1/1 Flow Failed
+[e2e] taps taken again (tap-and-see.yaml): 0
 
-[e2e] taps taken again (tap-and-see.yaml): 1
-[e2e]   2026-11-12T07:15:58.249Z  tapped ".*Hamlet — Demo Theatre.*" again: no ".*Share Link.*" after the first tap
+maestro.log (e2e/out/artifacts/2026-11-12_201555):
+JsConsole: 84 not as a native speaker writes it: "en: Share Link | ru: the alert after a sync | es: the alert after a sync | es: the hours you are busy | de: the alert after a sync | de: the hours you are busy | "
 
-The project's button said "Share the link"; the flow reads "Share Link".
+That is: "Share the link"; «Успешно синхронизировано»; "Sincronizado
+correctamente"; "…en que estás ocupado…"; "Erfolgreich synchronisiert";
+"…in denen du belegt bist…".
+
 Then git restore --source=HEAD -- src/i18n/translations.
+
+On HEAD: [Passed] The sync screen's bar and last sync in four languages (3m 15s).

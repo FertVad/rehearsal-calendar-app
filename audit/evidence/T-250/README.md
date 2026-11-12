@@ -2,6 +2,9 @@
 
 Коммиты: `89e7da0` (пуши: rehearsalUpdated и мелочи), `4c380ba` (экраны и письма),
 `ecca467` (системный запрос iOS, de). База — `8110068`.
+После ревью: `0b4482d` (продление ≠ перенос; «a la 1:00»), `819776d` (падеж имён, прошедшее
+время после удаления аккаунта, Title Case), `6a158c7` (сценарий 89, «correctamente»),
+`595566e` (сценарий 84 проверяет все слова).
 
 ## Пуш «репетиция изменена» — итоговые тексты (для лендинга)
 
@@ -17,10 +20,20 @@
 | Только место | …: Кордебалет, завтра в 19:00 — новое место: Зал 2 | … , tomorrow at 7:00 PM — new location: Hall 2 | …, mañana a las 19:00 — nuevo lugar: Sala 2 | …, morgen um 19:00 – neuer Ort: Saal 2 |
 | Место убрали | … — место больше не указано | … — no location now | … — ya sin lugar asignado | … – kein Ort mehr |
 | Только название | …: Кордебалет, завтра в 19:00 — новое название | … — renamed | … — nuevo nombre | … – neuer Titel |
+| Продлили / сократили (начало то же) | …: Кордебалет, сегодня в 19:00 — теперь до 22:00 | …, today at 7:00 PM — now until 10:00 PM | …, hoy a las 19:00 — ahora hasta las 22:00 | …, heute um 19:00 – jetzt bis 22:00 |
+| То же + новое место | … — теперь до 22:00, новое место: Зал 2 | … — now until 10:00 PM, new location: Hall 2 | … — ahora hasta las 22:00, nuevo lugar: Sala 2 | … – jetzt bis 22:00, neuer Ort: Saal 2 |
+| Сдвинули начало, конец остался | … — теперь сегодня в 18:00 до 21:00 | … — now today at 6:00 PM until 9:00 PM | …, pasa a hoy a las 18:00 hasta las 21:00 | … – verlegt auf heute, 18:00 bis 21:00 |
+| Час «1» по-испански | — | — | … a la 1:00 / hasta la 1:30 (было «a las 1:00») | — |
 
 Было во всех языках: `Проект: Название, когда — дата/время` (`date/time`, `fecha/hora`, `Datum/Zeit`).
 Механизм: у дня переноса свои слова (`movedTo` в `pushNotifications.js`, `reminderWhen(..., 'movedTo')`):
 испанское «a el» → «al», немецкое «auf am» → «auf Di.,».
+
+**Ревью, замечание 1 (`0b4482d`).** Маршрут ставил `datetime` при любом изменении начала или конца,
+поэтому 19:00–21:00 → 19:00–22:00 читалось «теперь сегодня в 19:00» / «verlegt auf heute, 19:00», а новый
+конец терялся. Теперь `routes/native/rehearsals.js` различает: `datetime` — сдвинулось начало, `end` —
+изменилась длительность (конец сдвинулся не так, как начало). Простой перенос 19–21 → завтра 19–21 по-прежнему
+только `datetime`. Время конца — `clockTime()` в `reminderText.js`, по часам читателя (с «UTC», если пояса нет).
 
 ## Пуши и входящие (`server/i18n/pushNotifications.js`)
 
@@ -74,7 +87,8 @@
 | Ваша фамилия (опционально) / (опционально) | (необязательно) | калька |
 | Если с X есть аккаунт, на него отправлен… | Если на X зарегистрирован аккаунт, мы отправили туда… | «с адреса есть аккаунт» |
 | Это и есть ваш адрес | Это ваш текущий адрес | естественнее |
-| Будет удален 1 проект… / Будут удалены N проект(а/ов)… | Будет удалён 1 / 21 проект; Будут удалены 2 проекта; 5 проектов | число с существительным |
+| Будет удален 1 проект… / Будут удалены N проект(а/ов)… | Также удалён 1 / 21 проект; Также удалены 2 проекта; Также удалено 5 проектов, где вы были единственным администратором. | число с существительным; показывается под «Аккаунт удалён» — уже удалены, не «будут» (ревью, 3) |
+| Вы уверены, что хотите удалить ${имя} из проекта? / …назначить ${имя} администратором проекта? / …снять права администратора у ${имя}? | ${имя} больше не будет участником проекта. / ${имя} станет администратором проекта. / ${имя} больше не будет администратором проекта. | имя приходит в именительном («удалить Анна Смирнова»); теперь оно подлежащее (ревью, 2). Вопрос — в заголовке окна («Удалить участника?») |
 | Остальные участники потеряют их тоже. | Остальные участники тоже их потеряют. | порядок слов |
 | Аккаунт успешно удален / Профиль обновлен / Участник удален / Проект успешно удален / истек | Аккаунт удалён / Профиль обновлён / Участник удалён / Проект удалён / истёк | ё, как везде; «успешно» |
 | "Название" в кавычках-лапках (приглашение, удаление проекта) | «Название» | русские кавычки |
@@ -106,6 +120,8 @@
 | The company sees only the hours you are taken… | Your company sees only the hours you are busy… | "taken" |
 | …Everyone else in them loses them too. | …will lose them too. | tense |
 | Account successfully deleted | Account deleted | filler |
+| 1 project / N projects where you are the only admin will be deleted. | …where you were the only admin was / were deleted too. | shown after the deletion (review, 3) |
+| Clear all / Show older / Cannot save | Clear All / Show Older / Cannot Save | HIG title case: a button (also the alert's destructive button) and an alert title (review, 4) |
 | Invitation to project X / Join the project "X" / delete the project "X"? | Invitation to X / “X” | article, typographic quotes |
 
 ## Экраны — Español (одна форма обращения — «tú», как в письмах)
@@ -139,6 +155,8 @@
 | No se pudo unir al proyecto | Error al unirse al proyecto | «не удалось присоединить(ся)» — безлично-неверно |
 | …los proyectos que posees… Los demás integrantes también los pierden. | …que son tuyos… Los demás miembros también los perderán. | одно слово «miembro», время |
 | …en el que eres el único administrador | …que solo administras tú | род |
+| Se eliminará 1 proyecto / Se eliminarán N proyectos que solo administras tú. | También se ha / han eliminado … que solo administrabas tú. | после удаления (ревью, 3) |
+| Cuenta eliminada correctamente / Proyecto eliminado correctamente | Cuenta eliminada / Proyecto eliminado | калька, как «Ensayo actualizado» |
 | "X" | «X» | испанские кавычки |
 
 ## Экраны — Deutsch (одна форма — «du»)
@@ -171,6 +189,7 @@
 | Erstell eins, oder tritt… | Erstell eins oder tritt… | запятая |
 | Zum Administrator machen (?) / …zum Administrator des Projekts machen? | Administratorrechte geben (?) / …wirklich Administratorrechte für das Projekt geben? | род |
 | …in dem du der einzige Administrator bist… | …das nur du verwaltest… | род |
+| 1 Projekt, das nur du verwaltest, wird gelöscht. / N Projekte … werden gelöscht. | …, das nur du verwaltet hast, wurde ebenfalls gelöscht. / … wurden ebenfalls gelöscht. | после удаления (ревью, 3) |
 | Über | Über die App | неполное |
 | „X" | „X“ | закрывающая кавычка |
 
@@ -181,10 +200,16 @@ Planner и Smart Planner не переводились (T-249).
 1. **Перенос + переименование одним сохранением.** Пуш показывает новое название и новое время
    («Новое имя — теперь завтра в 19:00»), но не говорит «переименована»: старого названия в пуше нет.
    Нужно ли его передавать («Прогон → Генеральный прогон, теперь завтра в 19:00»)? Это уже смысл, не язык.
-2. **Английский регистр — что не сделано.** Не тронуты строки, правка которых меняет не только регистр
-   и задевает сценарии вне задачи: "No connection. Check the internet and try again." (13, 34, 10),
-   "Cannot save" / "Understood" (10), "Synced successfully" (31, 84 — оставлено), "Project successfully
-   deleted" (19), "Rehearsal updated successfully" (52). Предлагаю отдельной задачей вместе с этими сценариями.
+2. **Английский — что не сделано.** "Clear All", "Show Older", "Cannot Save" приведены (ревью).
+   "Mark all read" не тронут: это не надпись, а `accessibilityLabel` кнопки-иконки (текста на экране нет,
+   VoiceOver читает одинаково), а его сверяют 11 сценариев и 3 набора тестов. Не тронуты и строки, где
+   меняется не регистр, а слова: "No connection. Check the internet and try again." (13, 34, 10),
+   "Understood" (10), "Synced successfully" (31, 84), "Project successfully deleted" (19), "Rehearsal
+   updated successfully" (52) — это правка смысла кнопок/сообщений на английском, вне вычитки
+   четырёх языков; предлагаю отдельной задачей вместе с этими сценариями.
+7. **Продление: «теперь до 22:00» без дня.** Если новое окончание приходится на следующий день
+   (22:00–01:00), пуш скажет «теперь до 01:00» — так же, как форма показывает конец. Нужно ли «до 01:00
+   следующего дня»? Это смысл, не язык.
 3. **Немецкий «Teilnehmer» или «Teilnehmende».** Привёл к «Teilnehmer» (было вперемешку): короче для строк
    фильтров и как в Zoom/Teams. Если нужен гендерно-нейтральный вариант по всему приложению — скажите.
 4. **Испанский «miembro» или «integrante».** Привёл к «miembro» (было 12:2). «Integrante» нейтральнее, но длиннее.
@@ -203,3 +228,20 @@ Planner и Smart Planner не переводились (T-249).
 - e2e, зелёные на `4c380ba`: 16, 43, 44, 56, 59, 60, 61, 62, 65, 66, 80, 81, 84, 86;
   на `ecca467` (новая нативная сборка из-за locales): 01, 60.
 - `npm run check:secrets -- --staged` в этой песочнице не завершился за 2 минуты — не прогнан.
+
+### После ревью Астры
+
+- Сервер (замечание 1): 6 новых тестов красные на коде до `0b4482d` (`server-end-red-before.txt`);
+  `rehearsalNoticeText` + `rehearsalNotifications` + `rehearsalTimes` — 59/59. Весь серверный Jest —
+  1107/1115, падает только `startup/runtimeStartup` (8), как и до задачи.
+- Клиент (замечания 2–4): `src/i18n/__tests__/proofreading.test.ts` красный на строках до `819776d`
+  (`client-red-before.txt`); `npx jest --selectProjects frontend` — 1416/1416. `type-check` чисто,
+  `lint` — 0 ошибок, `check:dead` чисто. Maestro сверяет текст без учёта регистра, поэтому регистр
+  английских кнопок держит Jest; сценарии 10 и 49 обновлены и зелёные.
+- e2e (замечание 5): сценарий 84 больше не останавливается на первом слове — на строках 8110068 он
+  красный и называет все шесть (`e2e-84-red-before.txt`), на HEAD зелёный. Новый сценарий 89 —
+  конфликт занятости (es, ru), окна участника (ru), удаление аккаунта с двумя проектами (ru): на строках
+  8110068 красный по всем шести (`e2e-89-red-before-green-after.txt`), на HEAD зелёный.
+- `npm test` в песочнице останавливается на собственных тестах сканера секретов (3 синтетических
+  git-фикстуры с именами `.env` — ОС их запрещает); `node --test e2e/__tests__` — 44/46, падают два
+  теста блокировки (`lock.test`, убийство групп процессов) — оба не тронуты задачей.

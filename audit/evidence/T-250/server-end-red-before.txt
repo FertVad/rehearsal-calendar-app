@@ -1,0 +1,51 @@
+T-250 review, finding 1 — a longer rehearsal announced as moved. Red on the old code.
+
+Fix commit 0b4482d. Its sources put back as they were before it
+(git restore --source=HEAD~1 -- i18n/pushNotifications.js
+ services/notifications/reminderText.js
+ services/notifications/pushNotificationService.js routes/native/rehearsals.js),
+the tests as in 0b4482d:
+
+$ cd rehearsal-calendar-native/server && NODE_OPTIONS=--experimental-vm-modules npx jest \
+    __tests__/integration/rehearsalNoticeText __tests__/routes/rehearsalNotifications --silent
+
+  ● A changed rehearsal says what changed, as a native speaker says it (T-250) › made longer, the start where it was: until when, not moved
+    -   "Лебединое озеро: Кордебалет, hoy a las 21:00 — ahora hasta las 22:30",
+    -   "Лебединое озеро: Кордебалет, heute um 21:00 – jetzt bis 22:30",
+    -   "Лебединое озеро: Кордебалет, сегодня в 22:00 — теперь до 23:30",
+    -   "Лебединое озеро: Кордебалет, today at 8:00 PM — now until 9:30 PM",
+    +   "Лебединое озеро: Кордебалет, hoy a las 21:00 — nuevo nombre",
+    +   "Лебединое озеро: Кордебалет, heute um 21:00 – neuer Titel",
+    +   "Лебединое озеро: Кордебалет, сегодня в 22:00 — новое название",
+    +   "Лебединое озеро: Кордебалет, today at 8:00 PM — renamed",
+  ● … › made longer and to a new place
+    -   "Лебединое озеро: Кордебалет, hoy a las 21:00 — ahora hasta las 22:30, nuevo lugar: Зал 2",
+    -   "Лебединое озеро: Кордебалет, heute um 21:00 – jetzt bis 22:30, neuer Ort: Зал 2",
+    -   "Лебединое озеро: Кордебалет, сегодня в 22:00 — теперь до 23:30, новое место: Зал 2",
+    -   "Лебединое озеро: Кордебалет, today at 8:00 PM — now until 9:30 PM, new location: Зал 2",
+    +   "Лебединое озеро: Кордебалет, hoy a las 21:00 — nuevo lugar: Зал 2",
+    +   "Лебединое озеро: Кордебалет, heute um 21:00 – neuer Ort: Зал 2",
+    +   "Лебединое озеро: Кордебалет, сегодня в 22:00 — новое место: Зал 2",
+    +   "Лебединое озеро: Кордебалет, today at 8:00 PM — new location: Зал 2",
+  ● … › the start moved and the length changed: from when and until when
+    -   "Лебединое озеро: Кордебалет – verlegt auf heute, 20:00 bis 22:30",
+    -   "Лебединое озеро: Кордебалет — теперь сегодня в 21:00 до 23:30",
+    -   "Лебединое озеро: Кордебалет — now today at 7:00 PM until 9:30 PM",
+    +   "Лебединое озеро: Кордебалет – verlegt auf heute, 20:00",
+    +   "Лебединое озеро: Кордебалет — теперь сегодня в 21:00",
+    +   "Лебединое озеро: Кордебалет — now today at 7:00 PM",
+  ● … › one o'clock in Spanish is singular: "a la 1:00", "hasta la 1:30"
+    Expected: "Лебединое озеро: Кордебалет, mañana a la 1:00 — ahora hasta la 1:30"
+    Received: "Лебединое озеро: Кордебалет, mañana a las 1:00 — nuevo nombre"
+  ● What the change announcement names › names the end, not a move, when only the end changed
+    -   "end",
+    +   "datetime",
+  ● What the change announcement names › names the start and the end when the start moved and the end stayed
+    -   "end",
+Tests:       6 failed, 49 passed, 55 total
+
+The route's 'datetime' for an end-only change is the defect itself: the old
+notice made of it read "— теперь сегодня в 19:00" / "verlegt auf heute, 19:00".
+
+Then git restore --source=HEAD -- <the same files>. On 0b4482d:
+rehearsalNoticeText, rehearsalNotifications, rehearsalTimes — 59/59 passed.
